@@ -11,7 +11,7 @@ import {BELT_SPEEDS, blueprintAtSpeed, configAtSpeed} from "../../helpers/belt-s
 import {verifySplitterSpeedReport} from "./splitter-speed-research";
 import {Config} from "../../../../src/config";
 import {SimulationContext} from "../../../../src/crafting/sequence/simulation-context";
-import {InserterPickupMode} from "../../../../src/control-logic/inserter/modes/pickup/pickup-mode";
+import {bindHandPorts} from "../../../../src/simulation/components/hand-ports";
 
 interface Stack {id: number; at: number; count: number; item: string}
 interface Line {length: number; stacks: Stack[] | Record<string, never>}
@@ -28,13 +28,13 @@ function ordinaryBeltHand(config: Config, backedUp: boolean, item = "iron-plate"
     candidate.inserters[1].filters = [item];
     const simulation = SimulationContext.fromConfig(candidate);
     const input = simulation.inserters.find(i => i.entity_id.number === 2)!.inserter_state;
-    const mode = InserterPickupMode.create({inserterState: input, tick_provider: simulation.tick_provider,
+    const pickup = bindHandPorts({inserterState: input, tick_provider: simulation.tick_provider,
         sourceState: simulation.state_registry.getStateByEntityIdOrThrow(input.inserter.source.entity_id),
-        sinkState: simulation.state_registry.getStateByEntityIdOrThrow(input.inserter.sink.entity_id)});
+        sinkState: simulation.state_registry.getStateByEntityIdOrThrow(input.inserter.sink.entity_id)}).pickup;
     const counts: number[] = [];
     for (let tick = startTick; tick < startTick + 10; tick++) {
         simulation.tick_provider.setCurrentTick(tick);
-        mode.executeForTick();
+        pickup.pickup();
         expect(input.held_item?.item_name).toBe(item);
         counts.push(input.held_item!.quantity);
         if (input.held_item!.quantity === 16) return counts;

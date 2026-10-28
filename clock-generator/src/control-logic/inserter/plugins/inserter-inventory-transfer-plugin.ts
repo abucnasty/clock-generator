@@ -2,11 +2,11 @@ import { OpenRange } from "../../../data-types";
 import { InserterState } from "../../../state";
 import { TickProvider } from "../../current-tick-provider";
 import { InventoryTransferHistory } from "../../../crafting/sequence/inventory-transfer-history";
-import { ModePlugin, Transition } from "../../mode";
-import { InserterMode } from "../modes";
+import type { InserterObserver } from "../../../simulation/archetypes/inserter";
+import { InserterPhase } from "../../../simulation/status-codes";
 import { InserterTransferTrackerPlugin, TransferSnapshot } from "./inserter-transfer-tracker-plugin";
 
-export class InserterInventoryHistoryPlugin implements ModePlugin<InserterMode> {
+export class InserterInventoryHistoryPlugin implements InserterObserver {
 
     private readonly inserter_transfer_tracker_plugin: InserterTransferTrackerPlugin;
 
@@ -23,8 +23,8 @@ export class InserterInventoryHistoryPlugin implements ModePlugin<InserterMode> 
         );
     }
 
-    public onTransition(fromMode: InserterMode, transition: Transition<InserterMode>): void {
-        this.inserter_transfer_tracker_plugin.onTransition(fromMode, transition);
+    public onStatusChange(from: InserterPhase, to: InserterPhase): void {
+        this.inserter_transfer_tracker_plugin.onStatusChange(from, to);
     }
 
     private recordTransferSnapshot(snapshot: TransferSnapshot): void {

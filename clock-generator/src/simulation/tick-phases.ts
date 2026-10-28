@@ -1,5 +1,5 @@
-import { InserterStateMachine } from "../control-logic/inserter/inserter-state-machine";
 import { CraftingMachineArchetype } from "./archetypes/crafting-machine";
+import { InserterArchetype } from "./archetypes/inserter";
 import { MiningDrillArchetype } from "./archetypes/mining-drill";
 import { World } from "./world";
 
@@ -18,7 +18,7 @@ export const SAME_TICK_RULES = {
     8: "A swing back that ends asks the idle rule in the same tick, so a hand can start its pickup at once",
     9: "On a game clock a disabled inserter acts in its first enabled tick",
     10: "The pickup phase's enter step reads waits_for_sink before it clears it",
-    11: "A machine or chest pickup that finds nothing sets the phase to IDLE itself, with no event",
+    11: "A machine or chest pickup that finds nothing sets the status to IDLE itself, with no event; the Hand's phase stays PICKUP",
     12: "A control swap starts every inserter at IDLE with fresh scratch and a drill WORKING with fresh bars; status, hand, pickup arm and lanes are kept",
     13: "A machine's status rule asks out of fuel first, then whether a craft can go on, then output full",
     14: "A full productivity bar pays at the start of the next tick or after a finished craft, never on the tick it fills",
@@ -30,8 +30,8 @@ export const SAME_TICK_RULES = {
 export type SameTickRule = keyof typeof SAME_TICK_RULES;
 
 /**
- * Same-tick rules that no step of a tick upholds: a control swap is a new context with new state machines, so a new
- * World (simulation/world.ts), between runs and never in a tick
+ * Same-tick rules that no step of a tick upholds: a control swap is a new context with new inserter and drill
+ * archetypes, so a new World (simulation/world.ts), between runs and never in a tick
  */
 export const RULES_OUTSIDE_THE_TICK: readonly SameTickRule[] = [12];
 
@@ -89,13 +89,13 @@ export const TICK_PHASES: readonly TickPhaseRow[] = [
         order: "takers before feeders, the takers of one machine in the taker order (inserterUpdateOrder)",
         order_upholds: [2, 3, 4], run_by: "loop",
         steps: [
-            { step: InserterStep.CONTROL_TICK, name: "control_tick", does: "the enable control's own tick, where it has one", upholds: [] },
-            { step: InserterStep.PHASE_RULE, name: "phase_rule", does: "the phase's rule; on a change, observers (the phase written first), then exit and enter",
+            { step: InserterStep.CONTROL_TICK, name: "control_tick", does: "the enable control's own tick, where it has one (none has)", upholds: [] },
+            { step: InserterStep.PHASE_RULE, name: "phase_rule", does: "the Hand's phase rule; on a change, the status written, then observers, then exit and enter",
                 upholds: [1, 3, 8, 9, 10, 17] },
-            { step: InserterStep.PHASE_STEP, name: "phase_step", does: "the phase's step: pickup through the source's pickup port, drop through the sink's drop port (the hand's ports, bound at build)",
+            { step: InserterStep.PHASE_STEP, name: "phase_step", does: "the Hand's phase step: pickup through the source's pickup port, drop through the sink's drop port (the hand's ports, bound at build)",
                 upholds: [3, 11, 16] },
-            { step: InserterStep.TICK_OBSERVERS, name: "tick_observers", does: "tick plugins in the order added", upholds: [] },
-            { step: InserterStep.SHOWN_ENABLED, name: "shown_enabled", does: "whether the game shows it enabled after the tick", upholds: [] },
+            { step: InserterStep.TICK_OBSERVERS, name: "tick_observers", does: "tick observers in the order added", upholds: [] },
+            { step: InserterStep.SHOWN_ENABLED, name: "shown_enabled", does: "the inserter's Wakes: whether the game shows it enabled after the tick", upholds: [] },
         ],
     },
     {
@@ -152,19 +152,19 @@ function runDrills(drills: readonly MiningDrillArchetype[], tracer: TickTracer |
     }
 }
 
-function runInserters(inserters: readonly InserterStateMachine[], tracer: TickTracer | null): void {
+function runInserters(inserters: readonly InserterArchetype[], tracer: TickTracer | null): void {
     for (let index = 0; index < inserters.length; index++) {
         const inserter = inserters[index];
         if (tracer !== null) tracer.step(TickPhase.INSERTERS, index, InserterStep.CONTROL_TICK);
         inserter.tickControl();
         if (tracer !== null) tracer.step(TickPhase.INSERTERS, index, InserterStep.PHASE_RULE);
-        inserter.ruleStep();
+        inserter.phaseRule();
         if (tracer !== null) tracer.step(TickPhase.INSERTERS, index, InserterStep.PHASE_STEP);
-        inserter.modeStep();
+        inserter.phaseStep();
         if (tracer !== null) tracer.step(TickPhase.INSERTERS, index, InserterStep.TICK_OBSERVERS);
         inserter.tickObservers();
         if (tracer !== null) tracer.step(TickPhase.INSERTERS, index, InserterStep.SHOWN_ENABLED);
-        inserter.writeShownEnabled();
+        inserter.endOfTick();
     }
 }
 

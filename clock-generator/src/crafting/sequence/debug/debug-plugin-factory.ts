@@ -1,17 +1,15 @@
 import chalk from "chalk";
 import { TickProvider } from "../../../control-logic";
-import { InserterStateMachine } from "../../../control-logic/inserter/inserter-state-machine";
-import { InserterMode } from "../../../control-logic/inserter/modes";
 import { InserterHandContentsChangePlugin } from "../../../control-logic/inserter/plugins";
 import { CraftEventListenerPlugin } from "../../../control-logic/machine/plugins";
-import { ModePlugin } from "../../../control-logic/mode";
 import { reasonText } from "../../../control-logic/mode/reason-table";
 import { DrillState, MachineState } from "../../../state";
 import { DebugLoggerFactory } from "./debug-logger-factory";
 import { DebugSettingsProvider } from "./debug-settings-provider";
 import type { CraftingMachineArchetype, CraftingMachineObserver } from "../../../simulation/archetypes/crafting-machine";
+import type { InserterArchetype, InserterObserver } from "../../../simulation/archetypes/inserter";
 import type { DrillObserver } from "../../../simulation/archetypes/mining-drill";
-import { drillStatusOf, machineStatusOf } from "../../../simulation/status-codes";
+import { drillStatusOf, inserterStatusOf, machineStatusOf } from "../../../simulation/status-codes";
 import { CraftEventPluginSettings } from "./debug-settings";
 
 export class DebugPluginFactory {
@@ -27,9 +25,9 @@ export class DebugPluginFactory {
     }
 
 
-    public inserterHandContentsChangePlugin(inserter_state_machine: InserterStateMachine): InserterHandContentsChangePlugin {
-        const debugLog = this.log_factory.forEntity(inserter_state_machine.inserter_state.inserter);
-        return new InserterHandContentsChangePlugin(inserter_state_machine.inserter_state, (oldContents, newContents) => {
+    public inserterHandContentsChangePlugin(inserter: InserterArchetype): InserterHandContentsChangePlugin {
+        const debugLog = this.log_factory.forEntity(inserter.inserter_state.inserter);
+        return new InserterHandContentsChangePlugin(inserter.inserter_state, (oldContents, newContents) => {
             if (!newContents || !this.enabled()) {
                 return;
             }
@@ -40,16 +38,15 @@ export class DebugPluginFactory {
         })
     }
 
-    public inserterModeChangePlugin(inserter_state_machine: InserterStateMachine): ModePlugin<InserterMode> {
-        const debugLog = this.log_factory.forEntity(inserter_state_machine.inserter_state.inserter);
+    public inserterModeChangePlugin(inserter: InserterArchetype): InserterObserver {
+        const debugLog = this.log_factory.forEntity(inserter.inserter_state.inserter);
         const enabled = () => this.enabled();
         return {
-            onTransition(fromMode, transition) {
+            onStatusChange(from, to, reason_id) {
                 if (!enabled()) {
                     return;
                 }
-                const new_status = transition.toMode.status;
-                const message = `status=${new_status} \t reason="${transition.reason}"`;
+                const message = `status=${inserterStatusOf(to)} \t reason="${reasonText(reason_id)}"`;
 
                 debugLog(chalk.dim(message));
             },

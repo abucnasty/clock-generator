@@ -3,7 +3,7 @@ import { expect } from "vitest";
 import { Config } from "../../../../src/config";
 import { loadConfigFromFile } from "../../../../src/config/loader";
 import { SimulationContext } from "../../../../src/crafting/sequence/simulation-context";
-import { InserterPickupMode } from "../../../../src/control-logic/inserter/modes/pickup/pickup-mode";
+import { bindHandPorts } from "../../../../src/simulation/components/hand-ports";
 import { EntityState } from "../../../../src/state";
 import { GameFixturePaths } from "../../helpers/fixture-paths";
 
@@ -29,20 +29,20 @@ export function simulatedHand(config: Config): string {
     const input = context.inserters.find(inserter => inserter.inserter_state.inserter.source.entity_id.type === "belt")!.inserter_state;
     const source = context.state_registry.getStateByEntityIdOrThrow(input.inserter.source.entity_id);
     if (!EntityState.isBelt(source)) throw new Error("expected belt input");
-    const mode = InserterPickupMode.create({
+    const pickup = bindHandPorts({
         inserterState: input, sourceState: source, tick_provider: context.tick_provider,
         sinkState: context.state_registry.getStateByEntityIdOrThrow(input.inserter.sink.entity_id),
-    });
+    }).pickup;
     const configured = config.inserters.find(inserter => inserter.source.type === "belt")!;
     expect(input.inserter.pickup_length).toBe(configured.source.type === "belt" ? configured.source.pickup_length : undefined);
     expect(input.inserter.belt_supply).toBe("backed_up");
-    // creating the mode registers the inserter's pickup lanes on the belt
+    // binding the pickup port registers the inserter's pickup lanes on the belt
     expect([...source.lanes[0].pickupIds()].length).toBe(1);
     const grabs: number[] = [];
     for (let tick = 0; tick < 20 && (input.held_item?.quantity ?? 0) < 16; tick++) {
         context.tick_provider.setCurrentTick(tick);
         const before = input.held_item?.quantity ?? 0;
-        mode.executeForTick();
+        pickup.pickup();
         if ((input.held_item?.quantity ?? 0) > before) grabs.push(tick);
     }
     expect(input.held_item?.quantity).toBe(16);

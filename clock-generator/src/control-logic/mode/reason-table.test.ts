@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Mode } from "./mode";
-import { Transition } from "./mode-transition";
 import { reasonId, reasonText } from "./reason-table";
-
-const mode = { status: "IDLE" } as unknown as Mode;
 
 describe("the reason table", () => {
     it("gives equal texts one number, and the text back for it", () => {
@@ -21,11 +17,5 @@ describe("the reason table", () => {
         expect(() => reasonText(reasonId("reason table: last") + 1)).toThrow();
     });
 
-    it("is what a transition records its reason by", () => {
-        const first = new Transition(mode, ["reason", "table", "transition"].join(" "));
-        const second = new Transition(mode, "reason table transition");
-        expect(second.reason_id).toBe(first.reason_id);
-        expect(second.reason).toBe("reason table transition");
-        expect(reasonText(first.reason_id)).toBe(first.reason);
-    });
+    // what a change of an inserter's phase records its reason by: simulation/archetypes/inserter.test.ts
 });

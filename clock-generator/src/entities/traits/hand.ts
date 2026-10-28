@@ -24,7 +24,7 @@ export interface HandTrait {
     readonly items: readonly string[];
     /**
      * Whether it waits for a full hand before it swings: at a machine that places its results itself, and elsewhere
-     * (fullHandOf, which the pickup transition reads: pickup-mode-transition-evaluator.ts).
+     * (fullHandOf, which the Hand's pickup rule is bound to at build: simulation/archetypes/inserter.ts).
      */
     readonly full_hand: FullHand;
     /** The prototype's `wait_for_full_hand` (spec default false), recorded beside `full_hand` and read by nothing yet */

@@ -1,24 +1,25 @@
 import assert from "../../common/assert";
 import { BeltPickupLayout, pickupLaneLength, pickupTargetRadius } from "../../common/belt-pickup-layout";
 import type { TickProvider } from "../../control-logic/current-tick-provider";
-import { actsInTheTickTheBlockIsLifted, wokenByItsMachinesCraftStart } from "../../control-logic/inserter/waiting-inserter";
 import { FactorioDataService, ItemName } from "../../data";
 import { beltPickupCalibrated } from "../../entities/inserter/metadata/inserter-spec";
 import { BackedUpPickupLane } from "../../state/backed-up-pickup-lane";
 import { BeltPickupArm } from "../../state/belt-pickup-arm";
 import { BeltPickupLane } from "../../state/belt-pickup-lane";
-import { InserterStatus } from "../../state/entity-status";
 import type { InserterState } from "../../state/inserter-state";
 import type { TransportBelt } from "../archetypes/transport-belt";
+import { InserterPhase } from "../status-codes";
 import type { BeltLane, LanePickup } from "./belt-lane";
-import { CarriedItems, HandDropPort, HandPickupPort, HandScratch, takeIntoHand } from "./hand";
+import { CarriedItems, HandDropPort, HandPickupPort, HandReason, HandScratch, takeIntoHand } from "./hand";
+import { actsInTheTickTheBlockIsLifted, wokenByItsMachinesCraftStart } from "./machine-wakes";
 import type { MachineWakes } from "./machine-wakes";
 
 /**
  * A belt's pickup port, its lanes, as one hand reaches it: the stock the hand reaches on each lane (its slots in the
  * BeltLanes, bound at build and kept when the inserter's control is replaced), taken one belt stack a tick at most
  * (same-tick rule 16), from the lane nearest the inserter first. Only a kind of the calibration row runs the arm model.
- * A hand from a belt stops at every grab while the machine it puts into takes nothing of its item.
+ * A hand from a belt stops at every grab while the machine it puts into takes nothing of its item. The idle rule starts
+ * a pickup from a belt whenever its sink takes what the hand brings: the stacks are on their way.
  */
 export class BeltHandPickup implements HandPickupPort {
 
@@ -79,17 +80,17 @@ export class BeltHandPickup implements HandPickupPort {
     }
 
     /** Reads `waits_for_sink` before the pickup phase clears it (same-tick rule 10) */
-    public enter(from: InserterStatus): void {
+    public enter(from: InserterPhase): void {
         const scratch = this.scratch;
-        const waited_in_idle = from === InserterStatus.IDLE && this.state.waits_for_sink;
+        const waited_in_idle = from === InserterPhase.IDLE && this.state.waits_for_sink;
         // a hand that starts right after a swing back lands its first stack on the usual schedule
-        scratch.belt_grab_decided = !(waited_in_idle || from === InserterStatus.WAITING_FOR_SINK);
+        scratch.belt_grab_decided = !(waited_in_idle || from === InserterPhase.WAITING_FOR_SINK);
         // A hand that stopped part way because the machine was at its output block goes on in the tick another
         // inserter takes the products down, when the machine finished a craft in the tick before: that craft had
         // woken the inserter already (see `actsInTheTickTheBlockIsLifted`, the rule of the game with its recorded
         // cases: 248 hands of 248 went on in that tick, 843 of 843 a tick later)
         const wakes = this.sink_wakes;
-        if (from === InserterStatus.WAITING_FOR_SINK && wakes !== null && actsInTheTickTheBlockIsLifted(wakes)) {
+        if (from === InserterPhase.WAITING_FOR_SINK && wakes !== null && actsInTheTickTheBlockIsLifted(wakes)) {
             scratch.belt_grab_decided = true;
         }
         // A hand that waited for room the machine made by starting a craft finds it a tick after the start, which is
@@ -101,6 +102,11 @@ export class BeltHandPickup implements HandPickupPort {
 
     public key(): string {
         return `${this.scratch.belt_grab_decided}`;
+    }
+
+    public startsPickup(): boolean {
+        this.scratch.reason = HandReason.PICKUP_FROM_BELT;
+        return true;
     }
 
     public pickup(): void {
@@ -139,7 +145,7 @@ export class BeltHandPickup implements HandPickupPort {
                 return;
             }
 
-            takeIntoHand(state, held_item.item_name, pickup_quantity);
+            takeIntoHand(state, scratch, held_item.item_name, pickup_quantity);
             return;
         }
 
@@ -161,7 +167,7 @@ export class BeltHandPickup implements HandPickupPort {
             }
             const pickup_quantity = this.takeFromBelt(item_name, this.items.handSizeOf(item_name));
             if (pickup_quantity === 0) continue;
-            takeIntoHand(state, item_name, pickup_quantity);
+            takeIntoHand(state, scratch, item_name, pickup_quantity);
             return;
         }
         if (items.length === 0) state.trace?.record({ type: "wait", phase: "pickup", reason: "no_eligible_item" });

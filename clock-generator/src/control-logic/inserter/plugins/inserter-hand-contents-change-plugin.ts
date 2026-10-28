@@ -1,10 +1,9 @@
 import { InserterHandContents, InserterState } from "../../../state";
-import { ModePlugin, Transition } from "../../mode";
-import { InserterMode } from "../modes";
+import type { InserterObserver } from "../../../simulation/archetypes/inserter";
 
 type OnHandContentsChanged = (previousHeldItem: InserterHandContents | null, currentHeldItem: InserterHandContents | null) => void;
 
-export class InserterHandContentsChangePlugin implements ModePlugin<InserterMode> {
+export class InserterHandContentsChangePlugin implements InserterObserver {
 
     constructor(
         private readonly inserter_state: InserterState,
@@ -13,8 +12,6 @@ export class InserterHandContentsChangePlugin implements ModePlugin<InserterMode
 
     private previous: InserterHandContents | null = null;
 
-    public onTransition(fromMode: InserterMode, transition: Transition<InserterMode>): void {}
-    
     public executeForTick(): void {
 
         const previous = this.previous;

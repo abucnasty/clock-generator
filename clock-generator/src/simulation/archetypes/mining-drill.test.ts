@@ -220,12 +220,13 @@ describe("a drill's control rule", () => {
         expect(drill.drill_state.status).toBe(DrillStatus.WORKING);
     });
 
-    it("holds as a plain value only its status, which its key holds; its Control holds no plain value", () => {
+    it("holds as a plain value only its status, which its key holds; its Control only what kind of control it is", () => {
         const { drill } = machineBuild(440);
         const plainOf = (subject: object) => Object.entries(subject)
             .filter(([, value]) => value === null || typeof value !== "object").map(([key]) => key);
         expect(plainOf(drill)).toEqual(["status"]);
-        expect(plainOf(drill.control)).toEqual([]);
+        // read once at build, the same in every tick (a drill asks its control `enabled` only)
+        expect(plainOf(drill.control)).toEqual(["is_game_clock", "looks_ahead", "decider_build_order"]);
     });
 });
 

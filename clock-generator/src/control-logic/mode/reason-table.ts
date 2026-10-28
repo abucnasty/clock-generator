@@ -2,7 +2,8 @@
  * One copy of each reason text a transition gives, with a number for it. A reason made from a template ("machine has
  * 12 of iron-plate to pickup") is a new string on every transition; the histories record its number instead, and keep
  * the text once here. The table only grows, so a number never comes to stand for another text, whatever generation
- * recorded it.
+ * recorded it. The numbers are local to the process and depend on the order texts are first seen (module load order
+ * included), so they are never persisted raw: whatever leaves the process goes through `reasonText` or renumbers.
  */
 const IDS = new Map<string, number>();
 const TEXTS: string[] = [];

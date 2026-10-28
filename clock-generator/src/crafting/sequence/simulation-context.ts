@@ -1,8 +1,8 @@
 import { Config } from "../../config";
 import { orderByMachineDependencies } from "../../common/order-by-machine-dependencies";
 import { AlwaysEnabledControl, EnableControl, MutableTickProvider } from "../../control-logic";
-import { InserterStateMachine } from "../../control-logic/inserter/inserter-state-machine";
 import { CraftingMachineArchetype } from "../../simulation/archetypes/crafting-machine";
+import { InserterArchetype } from "../../simulation/archetypes/inserter";
 import { DEFAULT_TAKER_ORDER, InserterUpdates, TakerOrder } from "../../control-logic/inserter/competing-takers";
 import { ControlLogic } from "../../control-logic";
 import { Belt, Chest, Entity, EntityId, EntityRegistry, InserterFactory, Machine, WritableEntityRegistry } from "../../entities";
@@ -31,7 +31,7 @@ export class SimulationContext {
         public readonly entity_registry: WritableEntityRegistry,
         public readonly state_registry: WritableEntityStateRegistry,
         public readonly machines: CraftingMachineArchetype[],
-        public readonly inserters: InserterStateMachine[],
+        public readonly inserters: InserterArchetype[],
         public readonly drills: MiningDrillArchetype[],
         public readonly target_production_rate: TargetProductionRate,
         /** In what order inserters that compete for one machine's product are updated where the turn rule cannot decide */
@@ -90,8 +90,8 @@ export class SimulationContext {
         this.machines.forEach(it => debug_plugin_factory.forMachine(it));
 
         this.inserters.forEach(it => {
-            it.addPlugin(debug_plugin_factory.inserterModeChangePlugin(it));
-            it.addPlugin(debug_plugin_factory.inserterHandContentsChangePlugin(it));
+            it.addObserver(debug_plugin_factory.inserterModeChangePlugin(it));
+            it.addObserver(debug_plugin_factory.inserterHandContentsChangePlugin(it));
         });
 
         this.drills.forEach(it => {
@@ -101,7 +101,7 @@ export class SimulationContext {
 }
 
 type MachineInterceptor = (entity_state: EntityState) => CraftingMachineArchetype | null
-type InserterStateMachineInterceptor = (entity_state: EntityState) => InserterStateMachine | null
+type InserterArchetypeInterceptor = (entity_state: EntityState) => InserterArchetype | null
 
 /** The entities of a config: belts, machines, chests, inserters and drills, without any state */
 export function createEntityRegistryFromConfig(config: Config): EntityRegistry {
@@ -172,7 +172,7 @@ function createSimulationContextFromConfig(
     config: Config,
     interceptors: {
         machine_interceptor?: MachineInterceptor,
-        inserter_interceptor?: InserterStateMachineInterceptor,
+        inserter_interceptor?: InserterArchetypeInterceptor,
     } = {}
 ): SimulationContext {
     const entity_registry = createEntityRegistryFromConfig(config);
@@ -202,15 +202,15 @@ function createSimulationContextFromConfig(
             });
         })
 
-    const inserter_state_machines: InserterStateMachine[] = orderInsertersDownstreamFirst(
+    const inserter_archetypes: InserterArchetype[] = orderInsertersDownstreamFirst(
         entity_state_registry.getAllStates().filter(EntityState.isInserter)
     )
         .map(inserter_state => {
-            const possible_state_machine = interceptors.inserter_interceptor && interceptors.inserter_interceptor(inserter_state);
-            if (possible_state_machine) {
-                return possible_state_machine;
+            const possible_archetype = interceptors.inserter_interceptor && interceptors.inserter_interceptor(inserter_state);
+            if (possible_archetype) {
+                return possible_archetype;
             }
-            return InserterStateMachine.create({
+            return InserterArchetype.create({
                 inserter_state: inserter_state,
                 source_state: entity_state_registry.getStateByEntityIdOrThrow(inserter_state.inserter.source.entity_id),
                 sink_state: entity_state_registry.getStateByEntityIdOrThrow(inserter_state.inserter.sink.entity_id),
@@ -238,7 +238,7 @@ function createSimulationContextFromConfig(
         entity_registry,
         entity_state_registry,
         machine_state_machines,
-        inserter_state_machines,
+        inserter_archetypes,
         drill_state_machines,
         target_production_rate
     )
@@ -265,23 +265,25 @@ export function cloneSimulationContextWithInterceptors(
 
     const entity_state_registry = context.state_registry;
 
-    let new_inserters: InserterStateMachine[] | null = null
+    let new_inserters: InserterArchetype[] | null = null
     let new_drills: MiningDrillArchetype[] | null = null
 
     if (interceptors.inserter) {
-        new_inserters = context.inserters.map(inserter_state_machine => {
-            const inserter_state = inserter_state_machine.inserter_state;
+        new_inserters = context.inserters.map(inserter => {
+            const inserter_state = inserter.inserter_state;
             const source_state = entity_state_registry.getStateByEntityIdOrThrow(inserter_state.inserter.source.entity_id)
             const sink_state = entity_state_registry.getStateByEntityIdOrThrow(inserter_state.inserter.sink.entity_id)
-            const enable_control = interceptors.inserter!(inserter_state_machine.inserter_state, source_state, sink_state);
+            const enable_control = interceptors.inserter!(inserter.inserter_state, source_state, sink_state);
 
-            return InserterStateMachine.create({
-                inserter_state: inserter_state_machine.inserter_state,
+            // a new inserter over the same state: IDLE, a fresh scratch, the old one's observers; its status, hand, pickup
+            // arm and belt lanes kept (same-tick rule 12)
+            return InserterArchetype.create({
+                inserter_state: inserter.inserter_state,
                 source_state: source_state,
                 sink_state: sink_state,
                 enable_control: enable_control,
                 tick_provider: context.tick_provider,
-                plugins: inserter_state_machine.getPlugins()
+                observers: inserter.getObservers()
             })
         })
     }

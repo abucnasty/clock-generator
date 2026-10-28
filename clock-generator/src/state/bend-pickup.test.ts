@@ -4,7 +4,7 @@ import {expect, test} from "vitest";
 import {pickupLaneLength, pickupTargetRadius} from "../common/belt-pickup-layout";
 import {ConfigSchema} from "../config/schema";
 import {SimulationContext} from "../crafting/sequence/simulation-context";
-import {InserterPickupMode} from "../control-logic/inserter/modes/pickup/pickup-mode";
+import {bindHandPorts} from "../simulation/components/hand-ports";
 import {BeltSpeed} from "../entities/belt";
 import {BackedUpPickupLane} from "./backed-up-pickup-lane";
 import {BeltPickupLane} from "./belt-pickup-lane";
@@ -44,14 +44,14 @@ test("production curved pickup matches all 170 native hands from observed full s
         const lanes = clip.stock.map((stock, index) => new BackedUpPickupLane(BeltSpeed.TURBO_TRANSPORT_BELT,
             pickupLaneLength("bend-right-upstream", index + 1), 4, stock[0][0]));
         source.seedPickups(state.entity_id.id, lanes);
-        const mode = InserterPickupMode.create({inserterState: state, sourceState: source,
-            sinkState: context.state_registry.getStateByEntityIdOrThrow(state.inserter.sink.entity_id), tick_provider: context.tick_provider});
+        const pickup = bindHandPorts({inserterState: state, sourceState: source,
+            sinkState: context.state_registry.getStateByEntityIdOrThrow(state.inserter.sink.entity_id), tick_provider: context.tick_provider}).pickup;
         for (const frame of clip.frames) {
             context.tick_provider.setCurrentTick(frame.tick);
             if (frame.tick > 0) {
                 const stack = lanes[clip.lane - 1].peek(frame.tick);
                 const before = state.held_item?.quantity ?? 0;
-                mode.executeForTick();
+                pickup.pickup();
                 if ((state.held_item?.quantity ?? 0) > before) {
                     const observedRadius = Math.hypot(frame.hand[0], frame.hand[1] + 256);
                     const modeledRadius = pickupTargetRadius("bend-right-upstream", 1, clip.lane, stack!.position);
@@ -95,14 +95,14 @@ test("production curved pickup matches 1,039 full-moving native hands with their
         const lanes = clip.stock.map((stock, index) => new BeltPickupLane(BeltSpeed.TURBO_TRANSPORT_BELT,
             pickupLaneLength("bend-right-upstream", index + 1), 4, (stock[0][0] % 64) / 8));
         source.seedPickups(state.entity_id.id, lanes);
-        const mode = InserterPickupMode.create({inserterState: state, sourceState: source,
-            sinkState: context.state_registry.getStateByEntityIdOrThrow(state.inserter.sink.entity_id), tick_provider: context.tick_provider});
+        const pickup = bindHandPorts({inserterState: state, sourceState: source,
+            sinkState: context.state_registry.getStateByEntityIdOrThrow(state.inserter.sink.entity_id), tick_provider: context.tick_provider}).pickup;
         for (const frame of clip.frames) {
             context.tick_provider.setCurrentTick(frame.tick);
             if (frame.tick > 0) {
                 const stack = lanes[clip.lane - 1].peek(frame.tick);
                 const before = state.held_item?.quantity ?? 0;
-                mode.executeForTick();
+                pickup.pickup();
                 if ((state.held_item?.quantity ?? 0) > before) {
                     const observedRadius = Math.hypot(frame.hand[0], frame.hand[1] + 256);
                     const modeledRadius = pickupTargetRadius("bend-right-upstream", 1, clip.lane, stack!.position);

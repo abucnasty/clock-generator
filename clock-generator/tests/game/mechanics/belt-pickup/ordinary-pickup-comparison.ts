@@ -1,7 +1,7 @@
 import {expect} from "vitest";
 import {Config} from "../../../../src/config";
 import {SimulationContext} from "../../../../src/crafting/sequence/simulation-context";
-import {InserterPickupMode} from "../../../../src/control-logic/inserter/modes/pickup/pickup-mode";
+import {bindHandPorts} from "../../../../src/simulation/components/hand-ports";
 import {BeltPickupLane} from "../../../../src/state/belt-pickup-lane";
 import {EntityState} from "../../../../src/state";
 import {FixtureBeltSpeed} from "../../helpers/belt-speed-fixtures";
@@ -24,8 +24,8 @@ export function compareContinuousSimulator(config: Config, report: SameItemPicku
             return new BeltPickupLane(source.belt.belt_speed, input.inserter.pickup_length!, 4, phase);
         }));
     }
-    const mode = InserterPickupMode.create({inserterState: input, sourceState: source,
-        sinkState: context.state_registry.getStateByEntityIdOrThrow(input.inserter.sink.entity_id), tick_provider: context.tick_provider});
+    const pickup = bindHandPorts({inserterState: input, sourceState: source,
+        sinkState: context.state_registry.getStateByEntityIdOrThrow(input.inserter.sink.entity_id), tick_provider: context.tick_provider}).pickup;
     const differences: {tick: number; actual: number; predicted: number; actual_item?: string; predicted_item?: string; lane_mismatches?: number}[] = [];
     input.held_item = initial.held ? {item_name: initial.held_item!, quantity: initial.held} : null;
     let collecting = initial.held > 0;
@@ -39,7 +39,7 @@ export function compareContinuousSimulator(config: Config, report: SameItemPicku
         }
         if (sample.held > previous.held && previous.held === 0) collecting = true;
         if (!collecting) continue;
-        mode.executeForTick();
+        pickup.pickup();
         const predicted = input.held_item?.quantity ?? 0;
         let lane_mismatches = 0;
         const lanes = source.pickupsOf(input.entity_id.id)!;

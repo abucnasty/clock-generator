@@ -1,8 +1,8 @@
 import { DrillStatus, InserterStatus, MachineStatus } from "../state/entity-status";
 import { FactorioDrillState, FactorioMachineState } from "../state/factorio-state-names";
 
-// Small integer codes for what a component keeps in a tick, one to one with the strings the state machines keep
-// today. Histories, the UI, the recorder comparison and the digest keep the strings (P4 decision D3): a code maps to
+// Small integer codes for what a component keeps in a tick, one to one with the strings the state machines kept
+// before. Histories, the UI, the recorder comparison and the digest keep the strings (P4 decision D3): a code maps to
 // its string where an observer records it. The codes of a recorded history are another table (state/status-codes.ts).
 
 /** A machine's crafting status, named after `defines.entity_status` of the game's runtime API */

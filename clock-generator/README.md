@@ -550,7 +550,8 @@ src/
 │   ├── candidates/   # The clocks made from another clock, and their search
 │   ├── runner/       # Step-based execution framework
 │   └── sequence/     # Simulation logic and interceptors
-├── control-logic/    # Entity behavior and state machines
+├── control-logic/    # Enable controls, the takers' order and the observers that record histories
+├── simulation/       # The tick: archetypes, their components and the phase table
 ├── entities/         # Machine, inserter, belt, chest and drill models
 ├── state/            # Entity states and status categories
 ├── blueprints/       # Blueprint encoding/decoding

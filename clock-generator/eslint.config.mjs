@@ -16,7 +16,7 @@ export default defineConfig([
       globals: globals.node,
     },
     rules: {
-      // the modes, evaluators and plugins implement interfaces whose methods take what they may not need
+      // the ports and observers implement interfaces whose methods take what they may not need
       '@typescript-eslint/no-unused-vars': ['error', { args: 'none', ignoreRestSiblings: true }],
       '@typescript-eslint/no-explicit-any': 'off',
     },

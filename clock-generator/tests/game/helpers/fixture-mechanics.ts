@@ -5,7 +5,7 @@ import {Config} from "../../../src/config";
 import {loadConfigFromFile} from "../../../src/config/loader";
 import {SimulationContext} from "../../../src/crafting/sequence/simulation-context";
 import {CompositeControlLogic, TickControlLogic} from "../../../src/control-logic";
-import {InserterPickupMode} from "../../../src/control-logic/inserter/modes/pickup/pickup-mode";
+import {bindHandPorts} from "../../../src/simulation/components/hand-ports";
 import {BeltPickupLane} from "../../../src/state/belt-pickup-lane";
 import {EntityState} from "../../../src/state";
 import {GameFixturePaths} from "./fixture-paths";
@@ -62,13 +62,13 @@ export function firstHandPatterns(config: Config, handSize = 16): Set<string> {
         if (!EntityState.isBelt(source)) throw new Error("expected a belt input");
         if (!backed) source.seedPickups(input.entity_id.id, source.belt.lanes.map(lane =>
             new BeltPickupLane(source.belt.belt_speed, input.inserter.pickup_length!, lane.stack_size, phase)));
-        const mode = InserterPickupMode.create({inserterState: input, sourceState: source, tick_provider: context.tick_provider,
-            sinkState: context.state_registry.getStateByEntityIdOrThrow(input.inserter.sink.entity_id)});
+        const pickup = bindHandPorts({inserterState: input, sourceState: source, tick_provider: context.tick_provider,
+            sinkState: context.state_registry.getStateByEntityIdOrThrow(input.inserter.sink.entity_id)}).pickup;
         const grabs: number[] = [];
         for (let tick = 0; tick < 100 && (input.held_item?.quantity ?? 0) < handSize; tick++) {
             context.tick_provider.setCurrentTick(tick);
             const before = input.held_item?.quantity ?? 0;
-            mode.executeForTick();
+            pickup.pickup();
             if ((input.held_item?.quantity ?? 0) > before) grabs.push(tick);
         }
         expect(input.held_item?.quantity, "the hand fills").toBe(handSize);

@@ -1,7 +1,7 @@
 import { MutableTickProvider } from "../control-logic";
 import { inserterUpdateOrder } from "../control-logic/inserter/competing-takers";
-import { InserterStateMachine } from "../control-logic/inserter/inserter-state-machine";
 import { CraftingMachineArchetype } from "./archetypes/crafting-machine";
+import { InserterArchetype } from "./archetypes/inserter";
 import { SimulationContext } from "../crafting/sequence/simulation-context";
 import { EntityState } from "../state";
 import { ContainerStorage } from "./components/container-storage";
@@ -14,9 +14,10 @@ import { MiningDrillArchetype } from "./archetypes/mining-drill";
  * a store keyed by names: what an archetype is follows from its field.
  *
  * Built once for each run of a context (`SimulationTick`), never in a tick. A context with other controls is another
- * context with new state machines (`cloneSimulationContextWithInterceptors`), and gets a World of its own; the states
- * the two share stay as they are (same-tick rule 12). A World is a snapshot of the context's arrays: state machines put
- * into a context after its SimulationTick is built are not run, so a swap builds a new context and a new step.
+ * context with new inserter and drill archetypes (`cloneSimulationContextWithInterceptors`), and gets a World of its
+ * own; the states the two share stay as they are (same-tick rule 12). A World is a snapshot of the context's arrays:
+ * archetypes put into a context after its SimulationTick is built are not run, so a swap builds a new context and a new
+ * step.
  *
  * Belts and containers are filled for the phases to come and read by no step yet; filling them costs one pass over the
  * registry for each World, never one in a tick.
@@ -27,7 +28,7 @@ export class World {
         /** In the order of the state registry, which is the config's */
         public readonly drills: readonly MiningDrillArchetype[],
         /** Takers before feeders, the takers of one machine in the context's taker order (`inserterUpdateOrder`) */
-        public readonly inserters: readonly InserterStateMachine[],
+        public readonly inserters: readonly InserterArchetype[],
         /** In config order */
         public readonly machines: readonly CraftingMachineArchetype[],
         /** In config order; a belt has no step of its own in a tick yet */

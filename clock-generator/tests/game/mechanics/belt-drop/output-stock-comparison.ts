@@ -2,7 +2,7 @@ import {ConfigSchema} from "../../../../src/config/schema";
 import {SimulationContext} from "../../../../src/crafting/sequence/simulation-context";
 import {SimulationTick} from "../../../../src/crafting/runner/simulation-tick";
 import {EntityState} from "../../../../src/state";
-import {InserterStateMachine} from "../../../../src/control-logic/inserter/inserter-state-machine";
+import {InserterArchetype} from "../../../../src/simulation/archetypes/inserter";
 import {EnableControl} from "../../../../src/control-logic/enable-control";
 import {LaneTraffic} from "../../../../src/state/lane-traffic";
 import {ContainerStorage} from "../../../../src/simulation/components/container-storage";
@@ -30,7 +30,7 @@ export function compareOutputStock(clip: OutputClip) {
     const output = context.state_registry.getAllStates().find(EntityState.isBelt)!;
     const state = context.inserters[0].inserter_state;
     // The fixture is disabled before release. Ordinary re-enabling spends its first tick returning to idle.
-    context.inserters[0] = InserterStateMachine.create({inserter_state: state, source_state: source,
+    context.inserters[0] = InserterArchetype.create({inserter_state: state, source_state: source,
         sink_state: output, tick_provider: context.tick_provider,
         enable_control: EnableControl.lambda(() => context.tick_provider.getCurrentTick() > 0)});
     context.inserters[0].executeForTick();

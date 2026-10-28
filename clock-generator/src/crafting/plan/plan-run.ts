@@ -19,7 +19,6 @@ import Fraction, { fraction } from "../../data-types/fraction";
 import { ClockSchedule, createSignalPerInserterBlueprint, mergedClockTicks, SignalPerInserterBlueprint, SubtickClock } from "../blueprint";
 import { FactorioBlueprint } from "../../blueprints/blueprint";
 import { RelativeTickProvider, ResettableRegistry, TickProvider } from "../../control-logic";
-import { ModePlugin } from "../../control-logic/mode";
 import { CraftingMachineArchetype } from "../../simulation/archetypes/crafting-machine";
 import { EntityTransferCountMap, SerializableTransferPlan } from "../sequence/cycle/swing-counts";
 import { returnedTargetRefusal, TargetItem, targetInsertersOf, targetMachinesOf } from "../sequence/cycle/target-ends";
@@ -591,21 +590,21 @@ interface RecordedBuild {
     relative_tick_provider: TickProvider;
     inventory_transfer_history: InventoryTransferHistory;
     state_transition_history: StateTransitionHistory;
-    /** The plugins and machine and drill observers that only feed the two histories */
+    /** The observers of inserters, machines and drills that only feed the two histories */
     history_plugins: ReadonlySet<object>;
 }
 
-/** Every plugin on the inserters' state machines of a simulation, and every observer on its machines and drills */
+/** Every observer on the inserters, machines and drills of a simulation */
 function pluginsOf(context: SimulationContext): object[] {
-    return [...context.inserters.flatMap((it): ModePlugin<any>[] => it.getPlugins()),
+    return [...context.inserters.flatMap((it): object[] => it.getObservers()),
         ...context.machines.flatMap(it => it.getObservers()), ...context.drills.flatMap(it => it.getObservers())];
 }
 
-/** Takes the plugins and observers that only feed the two histories off every entity of these contexts */
+/** Takes the observers that only feed the two histories off every entity of these contexts */
 function detachHistoryPlugins(build: RecordedBuild, ...contexts: SimulationContext[]): void {
     for (const context of contexts) {
-        for (const state_machine of context.inserters) {
-            state_machine.removePlugins(build.history_plugins);
+        for (const inserter of context.inserters) {
+            inserter.removeObservers(build.history_plugins);
         }
         for (const machine of context.machines) {
             machine.removeObservers(build.history_plugins);
@@ -2414,7 +2413,7 @@ function configureInventoryTransferPlugins(
 
     // Add inserter inventory transfer plugins
     simulation_context.inserters.forEach(it => {
-        it.addPlugin(new InserterInventoryHistoryPlugin(
+        it.addObserver(new InserterInventoryHistoryPlugin(
             relative_tick_provider,
             it.inserter_state,
             inventory_transfer_history
@@ -2455,9 +2454,9 @@ function configureStateTransitionPlugins(
     // Add inserter state transition plugins
     simulation_context.inserters.forEach(it => {
         const recorder = state_transition_history.recorderFor(it.inserter_state.entity_id, "inserter");
-        it.addPlugin(new InserterStateTransitionTrackerPlugin(relative_tick_provider, recorder));
+        it.addObserver(new InserterStateTransitionTrackerPlugin(relative_tick_provider, recorder));
         if (factorio_states) {
-            it.addPlugin(new FactorioStatePlugin(relative_tick_provider, () => factorioInserterState(it.inserter_state, it.sink_state), recorder));
+            it.addObserver(new FactorioStatePlugin(relative_tick_provider, () => factorioInserterState(it.inserter_state, it.sink_state), recorder));
         }
     });
 

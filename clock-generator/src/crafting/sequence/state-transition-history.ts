@@ -17,7 +17,7 @@ export type StateTransitionEntityType = 'inserter' | 'machine' | 'drill';
 
 /**
  * What one entity records into the history: its state transitions and each change of the state the game would show.
- * The plugins of the entity's state machine call it; nothing is kept while the history does not record.
+ * The entity's observers call it; nothing is kept while the history does not record.
  */
 export class EntityTransitionRecorder {
     /** Recorded something since the history was last cleared, and so listed in it */

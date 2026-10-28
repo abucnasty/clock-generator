@@ -8,6 +8,11 @@ import { InserterTrace } from "./inserter-trace";
 
 
 type InserterStatusState = {
+    /**
+     * The status as written at the Hand's last change of phase, which the game's status of the inserter and the
+     * recordings read. It parts from the Hand's phase where a pickup finds nothing (set idle, the phase stays) and
+     * through a control swap (kept, the new Hand starts idle): same-tick rules 11 and 12.
+     */
     status: InserterStatus;
     tick: number;
 }

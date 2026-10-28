@@ -10,10 +10,9 @@ import { DrillStateTransitionTrackerPlugin } from "../../control-logic/drill/plu
 import { InserterStateTransitionTrackerPlugin } from "../../control-logic/inserter/plugins/inserter-state-transition-tracker-plugin";
 import { MachineStateTransitionTrackerPlugin } from "../../control-logic/machine/plugins/machine-state-transition-tracker-plugin";
 import { FactorioStatePlugin } from "../../control-logic/plugins/factorio-state-plugin";
-import { Mode, Transition } from "../../control-logic/mode";
 import { TickProvider } from "../../control-logic/current-tick-provider";
 import { reasonText } from "../../control-logic/mode/reason-table";
-import { CraftingStatus, DrillStatusCode, drillStatusOf, machineStatusOf } from "../../simulation/status-codes";
+import { CraftingStatus, DrillStatusCode, drillStatusOf, InserterPhase, inserterStatusOf, machineStatusOf } from "../../simulation/status-codes";
 import { EntityStatus, EntityTransitionRecorder, StateTransitionEntityType, StateTransitionHistory } from "./state-transition-history";
 import type {
     CompactStateTransitionHistory,
@@ -264,19 +263,18 @@ export function recordBothWays(seen: (recorded: RecordedBothWays) => void): { re
         restores.push(() => { target[key] = original; });
     };
 
-    for (const tracker of [InserterStateTransitionTrackerPlugin]) {
-        const prototype = tracker.prototype as unknown as { onTransition(fromMode: Mode, transition: Transition<Mode>): void };
-        patch(prototype, "onTransition", original => function (this: TrackerInternals, fromMode: Mode, transition: Transition<Mode>) {
-            const { recorder } = this;
-            legacyOf(recorder.history).recordTransition(recorder.entity_id, recorder.entity_type, {
-                tick: this.tick_provider.getCurrentTick(),
-                from_status: fromMode.status as EntityStatus,
-                to_status: transition.toMode.status as EntityStatus,
-                reason: transition.reason,
-            });
-            original.call(this, fromMode, transition);
+    // an inserter tells its observers of a change by its phase codes and the number of its reason
+    const inserter_tracker = InserterStateTransitionTrackerPlugin.prototype as unknown as { onStatusChange(from: InserterPhase, to: InserterPhase, reason_id: number): void };
+    patch(inserter_tracker, "onStatusChange", original => function (this: TrackerInternals, from: InserterPhase, to: InserterPhase, reason_id: number) {
+        const { recorder } = this;
+        legacyOf(recorder.history).recordTransition(recorder.entity_id, recorder.entity_type, {
+            tick: this.tick_provider.getCurrentTick(),
+            from_status: inserterStatusOf(from),
+            to_status: inserterStatusOf(to),
+            reason: reasonText(reason_id),
         });
-    }
+        original.call(this, from, to, reason_id);
+    });
     // a machine tells its observers of a change by its status codes and the number of its reason
     const machine_tracker = MachineStateTransitionTrackerPlugin.prototype as unknown as { onStatusChange(from: CraftingStatus, to: CraftingStatus, reason_id: number): void };
     patch(machine_tracker, "onStatusChange", original => function (this: TrackerInternals, from: CraftingStatus, to: CraftingStatus, reason_id: number) {

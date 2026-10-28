@@ -30,7 +30,7 @@ const evenly = (first: number, length: number, every: number, period: number) =>
 //
 // Two rules of the game are in it, and the simulator had neither:
 // - An inserter that waits for space in a machine acts in the tick after the one that wakes it (see
-//   IdleModeTransitionEvaluator). Without it the simulator left this state within a period and made 352.
+//   the idle rule of an inserter's Hand). Without it the simulator left this state within a period and made 352.
 // - A machine whose output block is more than a stack of its product goes on taking ingredients with the stack full
 //   (see OutputBlock.ingredients_blocked_at): the plastic plant, full at 100 plastic bars, took coal.
 // With both, a run of the simulator that starts in the state the game was in at sample 59 of that recording holds

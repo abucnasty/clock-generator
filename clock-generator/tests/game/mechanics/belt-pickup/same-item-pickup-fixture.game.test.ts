@@ -13,7 +13,7 @@ import { FactorioBlueprintFile } from "../../../../src/blueprints/blueprint";
 import { assessSameItemPickups, SameItemPickupProbe } from "./same-item-pickup-probe";
 import { Config } from "../../../../src/config";
 import { SimulationContext } from "../../../../src/crafting/sequence/simulation-context";
-import { InserterPickupMode } from "../../../../src/control-logic/inserter/modes/pickup/pickup-mode";
+import { bindHandPorts } from "../../../../src/simulation/components/hand-ports";
 
 const SAMPLE = GameFixturePaths.SAME_ITEM;
 
@@ -21,16 +21,16 @@ const SAMPLE = GameFixturePaths.SAME_ITEM;
 function simulatedHand(config: Config): string {
     const context = SimulationContext.fromConfig(config);
     const state = context.inserters.find(inserter => inserter.entity_id.number === 2)!.inserter_state;
-    const mode = InserterPickupMode.create({
+    const pickup = bindHandPorts({
         inserterState: state, tick_provider: context.tick_provider,
         sourceState: context.state_registry.getStateByEntityIdOrThrow(state.inserter.source.entity_id),
         sinkState: context.state_registry.getStateByEntityIdOrThrow(state.inserter.sink.entity_id),
-    });
+    }).pickup;
     const grabs: number[] = [];
     let previous = 0;
     for (let tick = 0; tick < 100 && previous < 16; tick++) {
         context.tick_provider.setCurrentTick(tick);
-        mode.executeForTick();
+        pickup.pickup();
         const held = state.held_item?.quantity ?? 0;
         if (held > previous) grabs.push(tick);
         previous = held;

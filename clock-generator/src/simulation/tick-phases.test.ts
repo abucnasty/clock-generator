@@ -10,15 +10,15 @@ import { ContainerStorage } from "./components/container-storage";
 
 /**
  * The order of a tick as this test knows it: a change of the phase table changes this copy in the same commit. Each
- * step with the method of today's state machine or archetype that runs it.
+ * step with the method of the archetype that runs it.
  */
 const EXPECTED: readonly { name: string; entities: TickPhaseRow["entities"]; run_by: TickPhaseRow["run_by"]; steps: [string, string][] }[] = [
     { name: "tick", entities: null, run_by: "loop", steps: [["increment", "incrementTick"]] },
     { name: "drills", entities: "drills", run_by: "loop",
         steps: [["control_rule", "controlRule"], ["mining", "miningStep"], ["tick_observers", "tickObservers"]] },
     { name: "inserters", entities: "inserters", run_by: "loop",
-        steps: [["control_tick", "tickControl"], ["phase_rule", "ruleStep"], ["phase_step", "modeStep"], ["tick_observers", "tickObservers"],
-            ["shown_enabled", "writeShownEnabled"]] },
+        steps: [["control_tick", "tickControl"], ["phase_rule", "phaseRule"], ["phase_step", "phaseStep"], ["tick_observers", "tickObservers"],
+            ["shown_enabled", "endOfTick"]] },
     { name: "machines", entities: "machines", run_by: "loop",
         steps: [["place_before", "placeResults"], ["held_to_output", "putHeldProductsInOutput"], ["status_rule", "statusRule"],
             ["status_step", "statusStep"], ["place_after", "placeResults"], ["end_of_tick", "endOfTick"]] },
@@ -101,9 +101,9 @@ function firstDifference(actual: readonly string[], expected: readonly string[])
 }
 
 /**
- * A run of the build with a tracer, and with every step method of every state machine recording its calls. The tracer
- * is told an index into the run's own World, which this names through a second World built the same way; the calls
- * name the state machine that was called, so they show the run's order whatever World it ran.
+ * A run of the build with a tracer, and with every step method of every archetype recording its calls. The tracer is
+ * told an index into the run's own World, which this names through a second World built the same way; the calls name
+ * the archetype that was called, so they show the run's order whatever World it ran.
  */
 function tracedRun(taker_order: TakerOrder) {
     const context = SimulationContext.fromConfig(BUILD);
@@ -120,10 +120,10 @@ function tracedRun(taker_order: TakerOrder) {
     };
     for (const row of EXPECTED) {
         if (row.entities === null) continue;
-        world[row.entities].forEach((state_machine, index) => {
-            const methods = state_machine as unknown as Record<string, () => void>;
+        world[row.entities].forEach((archetype, index) => {
+            const methods = archetype as unknown as Record<string, () => void>;
             for (const name of new Set(row.steps.map(([, method]) => method))) {
-                const original = methods[name].bind(state_machine);
+                const original = methods[name].bind(archetype);
                 methods[name] = () => {
                     called.push(`${now()} ${row.name} ${idOf(world, row.entities, index)} ${name}`);
                     original();
@@ -183,7 +183,7 @@ describe.each(ORDERS)("a traced run with the takers $taker_order", ({ taker_orde
         expect(firstDifference(run.traced, expectedSteps(order, TICKS, false))).toBeNull();
     });
 
-    it("runs every step of every entity in the order of the table, as the state machines are called", () => {
+    it("runs every step of every entity in the order of the table, as the archetypes are called", () => {
         expect(firstDifference(run.called, expectedSteps(order, TICKS, true))).toBeNull();
     });
 

@@ -2,8 +2,8 @@ import { handSizeFor } from "../../../entities";
 import { OpenRange } from "../../../data-types";
 import { InserterState, InserterStatus } from "../../../state";
 import { TickProvider } from "../../current-tick-provider";
-import { ModePlugin, Transition } from "../../mode";
-import { InserterMode } from "../modes";
+import type { InserterObserver } from "../../../simulation/archetypes/inserter";
+import { InserterPhase, inserterStatusOf } from "../../../simulation/status-codes";
 
 
 export interface TransferSnapshot {
@@ -22,8 +22,8 @@ export interface TransferSnapshot {
 type TransferStatusCallback = (snapshot: TransferSnapshot) => void
 
 /**
- * What the tracker keeps of the last entry into and exit from one status. The slot of a status is made once and
- * overwritten in place at every transition, so a warm-up of thousands of transitions allocates nothing.
+ * What the tracker keeps of the last entry into and exit from one phase. The slot of a phase is made once and
+ * overwritten in place at every change, so a warm-up of thousands of changes allocates nothing.
  */
 interface StatusSlot {
     tick: number;
@@ -32,7 +32,7 @@ interface StatusSlot {
     held_quantity: number;
 }
 
-export class InserterTransferTrackerPlugin implements ModePlugin<InserterMode> {
+export class InserterTransferTrackerPlugin implements InserterObserver {
 
     constructor(
         private readonly tick_provider: TickProvider,
@@ -45,24 +45,20 @@ export class InserterTransferTrackerPlugin implements ModePlugin<InserterMode> {
         private readonly isRecording: () => boolean = () => true,
     ) { }
 
-    private entered_tick: Map<InserterStatus, StatusSlot> = new Map();
-    private exited_tick: Map<InserterStatus, StatusSlot> = new Map();
+    private entered_tick: Map<InserterPhase, StatusSlot> = new Map();
+    private exited_tick: Map<InserterPhase, StatusSlot> = new Map();
 
-    onTransition(fromMode: InserterMode, transition: Transition<InserterMode>): void {
-        // read before the slot of the status being entered is overwritten (that may be the pickup's own)
-        const last_pickup_tick = this.entered_tick.get(InserterStatus.PICKUP)?.tick;
-        this.recordExitedTick(fromMode.status);
-        this.recordEnteredTick(transition.toMode.status);
+    onStatusChange(from: InserterPhase, to: InserterPhase): void {
+        // read before the slot of the phase being entered is overwritten (that may be the pickup's own)
+        const last_pickup_tick = this.entered_tick.get(InserterPhase.PICKUP)?.tick;
+        this.recordExitedTick(from);
+        this.recordEnteredTick(to);
 
-
-        const from_status = fromMode.status
-        const to_status = transition.toMode.status
-
-        if (from_status !== InserterStatus.SWING) {
+        if (from !== InserterPhase.SWING) {
             return;
         }
 
-        if (to_status === InserterStatus.DROP_OFF) {
+        if (to === InserterPhase.DROP) {
             return;
         }
 
@@ -70,7 +66,7 @@ export class InserterTransferTrackerPlugin implements ModePlugin<InserterMode> {
             return;
         }
 
-        const exited = this.exited_tick.get(InserterStatus.PICKUP);
+        const exited = this.exited_tick.get(InserterPhase.PICKUP);
         const current_tick = this.tick_provider.getCurrentTick();
 
         // Clamp pickup_tick to 0 if it's from the warmup period (before simulation started)
@@ -89,8 +85,8 @@ export class InserterTransferTrackerPlugin implements ModePlugin<InserterMode> {
                 current_tick,
             ),
             transition: {
-                from_status: from_status,
-                to_status: to_status,
+                from_status: inserterStatusOf(from),
+                to_status: inserterStatusOf(to),
             },
             // TODO: this assumes full transfer, should only work with stack inserters
             amount: exited!.held_item_name !== undefined ? exited!.held_quantity : handSizeFor(this.inserter_state.inserter, "")
@@ -99,18 +95,18 @@ export class InserterTransferTrackerPlugin implements ModePlugin<InserterMode> {
 
     }
 
-    private recordEnteredTick(status: InserterStatus): void {
-        this.writeSlot(this.entered_tick, status);
+    private recordEnteredTick(phase: InserterPhase): void {
+        this.writeSlot(this.entered_tick, phase);
     }
-    private recordExitedTick(status: InserterStatus): void {
-        this.writeSlot(this.exited_tick, status);
+    private recordExitedTick(phase: InserterPhase): void {
+        this.writeSlot(this.exited_tick, phase);
     }
 
-    private writeSlot(slots: Map<InserterStatus, StatusSlot>, status: InserterStatus): void {
-        let slot = slots.get(status);
+    private writeSlot(slots: Map<InserterPhase, StatusSlot>, phase: InserterPhase): void {
+        let slot = slots.get(phase);
         if (slot === undefined) {
             slot = { tick: 0, held_item_name: undefined, held_quantity: 0 };
-            slots.set(status, slot);
+            slots.set(phase, slot);
         }
         const held_item = this.inserter_state.held_item;
         slot.tick = this.tick_provider.getCurrentTick();

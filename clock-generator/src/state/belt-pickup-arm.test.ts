@@ -9,7 +9,7 @@ import {InserterState} from "./inserter-state";
 import {Config} from "../config";
 import {loadConfigFromFile} from "../config/loader";
 import {SimulationContext} from "../crafting/sequence/simulation-context";
-import {InserterPickupMode} from "../control-logic/inserter/modes/pickup/pickup-mode";
+import {bindHandPorts} from "../simulation/components/hand-ports";
 import {GameFixturePaths} from "../../tests/game/helpers/fixture-paths";
 
 // Native IDs and hand coordinates remain in the fixture as evidence; the model predicts collection and stock,
@@ -41,15 +41,15 @@ for (const clip of fixture.clips) test(`production pickup and stock match the no
         return new BeltPickupLane(BeltSpeed.TRANSPORT_BELT, 0.5, 4, phase);
     });
     source.seedPickups(state.entity_id.id, lanes);
-    const createMode = () => InserterPickupMode.create({inserterState: state, sourceState: source,
-        sinkState: context.state_registry.getStateByEntityIdOrThrow(state.inserter.sink.entity_id), tick_provider: context.tick_provider});
-    let mode = createMode();
+    const createPickup = () => bindHandPorts({inserterState: state, sourceState: source,
+        sinkState: context.state_registry.getStateByEntityIdOrThrow(state.inserter.sink.entity_id), tick_provider: context.tick_provider}).pickup;
+    let pickup = createPickup();
     const trace = context.traceInserter(2);
     for (const [tick, actual, , , near, far] of clip.frames) {
         context.tick_provider.setCurrentTick(tick);
         // Replace the control mid-hand: physical reach and lane holes must survive.
-        if (tick === clip.first_grab + 2) mode = createMode();
-        if (tick >= clip.first_grab && (state.held_item?.quantity ?? 0) < 16) mode.executeForTick();
+        if (tick === clip.first_grab + 2) pickup = createPickup();
+        if (tick >= clip.first_grab && (state.held_item?.quantity ?? 0) < 16) pickup.pickup();
         expect(state.held_item?.quantity ?? 0, `held at ${tick}`).toBe(actual);
         for (const [index, stock] of [near, far].entries()) {
             expect(lanes[index].snapshot(tick), `lane ${index + 1} at ${tick}`).toEqual(stock.map(([, position, count]) => [position, count]));

@@ -87,7 +87,7 @@ The total changes once from 32 to 36 items; iron and copper sink counts preserve
 Sixteen coarse controls at express/normal speed and twelve cutoff controls at all four speeds produced the
 [portable production clips](output-clips.json), alongside the original sixteen speed/stack-size runs. The cutoff
 controls request positions `128 + 2 × speed`, plus/minus one 1/256-tile unit. Each runs in an independent save.
-All 44 clips match the production state machine on every held quantity, finite source quantity and receiving-tile
+All 44 clips match the production inserter on every held quantity, finite source quantity and receiving-tile
 packet position (9,120 ticks). Only the one observed copper seed is supplied; later pickups and deposits are predicted.
 
 A deposit lands at its nominal spot plus one movement step, shifted upstream when preceding stock requires it.

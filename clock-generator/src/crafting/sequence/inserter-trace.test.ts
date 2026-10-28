@@ -5,8 +5,10 @@ import {SimulationContext} from "./simulation-context";
 import {SimulationTick} from "../runner/simulation-tick";
 import {simulationStateKey} from "../runner/steady-state";
 import {EntityState, InserterState, InserterStatus} from "../../state";
-import {InserterPickupMode} from "../../control-logic/inserter/modes/pickup/pickup-mode";
 import {BeltHandDrop} from "../../simulation/components/belt-hand-drop";
+import {HandScratch} from "../../simulation/components/hand";
+import {bindHandPorts} from "../../simulation/components/hand-ports";
+import {InserterPhase} from "../../simulation/status-codes";
 import {GameFixturePaths} from "../../../tests/game/helpers/fixture-paths";
 
 let config: Config;
@@ -20,9 +22,9 @@ function setup(sameItem = true) {
     const source = context.state_registry.getStateByEntityIdOrThrow(state.inserter.source.entity_id);
     if (!EntityState.isBelt(source)) throw Error("Expected a belt");
     const sink = context.state_registry.getStateByEntityIdOrThrow(state.inserter.sink.entity_id);
-    const createMode = () => InserterPickupMode.create({inserterState: state, sourceState: source,
-        sinkState: sink, tick_provider: context.tick_provider});
-    return {context, state, source, sink, createMode};
+    const createPickup = () => bindHandPorts({inserterState: state, sourceState: source,
+        sinkState: sink, tick_provider: context.tick_provider}).pickup;
+    return {context, state, source, sink, createPickup};
 }
 
 test("a bounded observer changes neither physical state nor repeat detection during an operating run", () => {
@@ -43,11 +45,11 @@ test("a bounded observer changes neither physical state nor repeat detection dur
 });
 
 test("records the actual empty pickup-window waits instead of inventing a fixed underground surcharge", () => {
-    const {context, state, createMode} = setup(false);
-    const mode = createMode(), trace = context.traceInserter(2);
+    const {context, state, createPickup} = setup(false);
+    const pickup = createPickup(), trace = context.traceInserter(2);
     for (let tick = 0; tick <= 5; tick++) {
         context.tick_provider.setCurrentTick(tick);
-        mode.executeForTick();
+        pickup.pickup();
     }
     expect(state.held_item?.quantity).toBe(16);
     expect(trace.events.filter(event => event.type === "pickup").map(event => event.tick)).toEqual([0, 1, 3, 5]);
@@ -58,13 +60,13 @@ test("records the actual empty pickup-window waits instead of inventing a fixed 
 });
 
 test("records physical fallback and stays attached across pickup-control replacement, not state cloning", () => {
-    const {context, state, createMode} = setup();
-    let mode = createMode();
+    const {context, state, createPickup} = setup();
+    let pickup = createPickup();
     const trace = context.traceInserter(2);
     for (let tick = 0; tick < 4; tick++) {
-        if (tick === 2) mode = createMode();
+        if (tick === 2) pickup = createPickup();
         context.tick_provider.setCurrentTick(tick);
-        mode.executeForTick();
+        pickup.pickup();
     }
     const lanes = trace.events.filter(event => event.type === "pickup_lane");
     expect(lanes.map(event => [event.lane, event.fallback])).toEqual([[1, false], [1, false], [2, true], [1, false]]);
@@ -73,22 +75,24 @@ test("records physical fallback and stays attached across pickup-control replace
 });
 
 test("distinguishes withheld supply, machine refusal and the existing first-grab decision tick", () => {
-    const {context, state, source, sink, createMode} = setup();
+    const {context, state, source, sink, createPickup} = setup();
     if (!EntityState.isMachine(sink)) throw Error("Expected machine");
     const trace = context.traceInserter(2);
-    let mode = createMode();
+    let pickup = createPickup();
     source.supply.withheld.add("iron-plate");
-    mode.executeForTick();
+    pickup.pickup();
     source.supply.withheld.clear();
     sink.inventoryState.setQuantity("iron-plate", 100);
     context.tick_provider.setCurrentTick(1);
-    mode.executeForTick();
+    pickup.pickup();
     sink.inventoryState.clear();
     state.waits_for_sink = true;
-    mode = createMode();
-    mode.onEnter({status: InserterStatus.IDLE, executeForTick() {}, onEnter() {}, onExit() {}});
+    pickup = createPickup();
+    // the pickup phase entered from idle after a wait: its enter step reads the flag, then the Hand clears it
+    pickup.enter(InserterPhase.IDLE);
+    state.waits_for_sink = false;
     context.tick_provider.setCurrentTick(2);
-    mode.executeForTick();
+    pickup.pickup();
     expect(trace.events.filter(event => event.type === "wait").map(event => event.reason))
         .toEqual(["supply_withheld", "destination_refused", "pickup_decision"]);
     expect(state.held_item).toBeNull();
@@ -98,7 +102,7 @@ test("output diagnostics distinguish a refused outlet from a wait for output spa
     const {context, state, source} = setup();
     state.held_item = {item_name: "iron-plate", quantity: 16};
     state.inventoryState.setQuantity("iron-plate", 16);
-    const drop = new BeltHandDrop(state, source, context.tick_provider);
+    const drop = new BeltHandDrop(state, new HandScratch(), source, context.tick_provider);
     const trace = context.traceInserter(2);
     source.supply.refused.add("iron-plate");
     drop.drop();
@@ -122,7 +126,7 @@ test("replacing a drop control preserves output stock through a partial hand and
             state.inventoryState.setQuantity("iron-plate", 16);
         }
         context.tick_provider.setCurrentTick(tick);
-        const replacement = new BeltHandDrop(state, source, context.tick_provider);
+        const replacement = new BeltHandDrop(state, new HandScratch(), source, context.tick_provider);
         replacement.enter();
         if (state.held_item) replacement.drop();
     }

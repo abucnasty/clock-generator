@@ -1,5 +1,4 @@
 import { TickProvider } from "../current-tick-provider";
-import { Mode, ModePlugin, Transition } from "../mode";
 
 /** Where the states of an entity are recorded (a recorder of the state transition history) */
 interface FactorioStateRecorder {
@@ -7,11 +6,12 @@ interface FactorioStateRecorder {
 }
 
 /**
- * Records the state an entity would show in Factorio, every tick it changes. It is sampled rather than taken from
- * the mode transitions because the game's state can change while the simulator's mode does not: an idle inserter
- * waits for items, then for the machine to take them, and stays idle throughout.
+ * Records the state an entity would show in Factorio, every tick it changes: an observer of the tick of an inserter, a
+ * machine or a drill. It is sampled rather than taken from the changes of status because the game's state can change
+ * while the simulator's phase does not: an idle inserter waits for items, then for the machine to take them, and stays
+ * idle throughout.
  */
-export class FactorioStatePlugin<M extends Mode> implements ModePlugin<M> {
+export class FactorioStatePlugin {
     private last_state: string | null = null;
 
     constructor(
@@ -19,8 +19,6 @@ export class FactorioStatePlugin<M extends Mode> implements ModePlugin<M> {
         private readonly derive: () => string,
         private readonly recorder: FactorioStateRecorder,
     ) {}
-
-    onTransition(fromMode: M, transition: Transition<M>): void {}
 
     executeForTick(): void {
         const state = this.derive();

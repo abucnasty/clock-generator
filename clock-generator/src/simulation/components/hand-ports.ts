@@ -26,13 +26,23 @@ export interface HandPortArgs {
 export interface HandPorts {
     pickup: HandPickupPort;
     drop: HandDropPort;
+    /** The record the ports and the hand's rules keep between ticks, fresh */
+    scratch: HandScratch;
+    /** The items the hand carries, bound once */
+    items: CarriedItems;
 }
 
 /**
  * Binds a hand to its source's pickup port and its sink's drop port, each by its archetype (a TransportBelt's lanes, a
- * CraftingMachine's output and Ingress, a Container's storage), with a fresh scratch record: once per state machine, so
- * a control swap starts the hand's scratch afresh (same-tick rule 12). The drop port is bound first, as the pickup asks
- * it whether the sink takes an item; the source's kind is checked first all the same.
+ * CraftingMachine's output and Ingress, a Container's storage), with a fresh scratch record: once per inserter archetype,
+ * so a control swap starts the hand's scratch afresh (same-tick rule 12). The drop port is bound first, as the pickup
+ * asks it whether the sink takes an item; the source's kind is checked first all the same.
+ *
+ * Tests and game-test helpers bind a pickup on its own with it (`bindHandPorts(args).pickup`, its `pickup()` a tick of
+ * the pickup phase). It binds as an archetype's build does, with the same side effects: a belt source gets this
+ * inserter's pickup slots on its lanes (kept if bound already), and a belt sink gets its drop slots (`ownDrop` or
+ * `sharedDrop`, a spot registered on the lane's traffic) and needs `tick_provider`. Beside a live archetype of the same
+ * inserter, a belt sink would get a second drop spot: bind such a pickup over a machine or a container.
  */
 export function bindHandPorts(args: HandPortArgs): HandPorts {
     const { inserterState: state, sourceState: source, sinkState: sink, tick_provider, decider_build_order } = args;
@@ -52,13 +62,13 @@ export function bindHandPorts(args: HandPortArgs): HandPorts {
     } else {
         pickup = new ContainerHandPickup(state, scratch, items, drop, source);
     }
-    return { pickup, drop };
+    return { pickup, drop, scratch, items };
 }
 
 function bindDrop(state: InserterState, scratch: HandScratch, items: CarriedItems, sink: EntityState, tick_provider?: TickProvider): HandDropPort {
     if (EntityState.isBelt(sink)) {
         assert(tick_provider !== undefined, "Belt drops need the simulation tick provider");
-        return new BeltHandDrop(state, sink, tick_provider);
+        return new BeltHandDrop(state, scratch, sink, tick_provider);
     }
     if (EntityState.isMachine(sink)) {
         return new MachineHandDrop(state, scratch, items, sink.ingress);

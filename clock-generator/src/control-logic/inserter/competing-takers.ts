@@ -1,6 +1,6 @@
 import { ControlLogic } from "../control-logic";
 import { EntityState, ReadableEntityStateRegistry } from "../../state";
-import { InserterStateMachine } from "./inserter-state-machine";
+import type { InserterArchetype } from "../../simulation/archetypes/inserter";
 
 /**
  * In what order the inserters that take one product from one machine are served in a tick. The game serves them in one
@@ -64,14 +64,14 @@ function rankedMembers<T>(members: readonly T[], number_of: (member: T) => numbe
  * first of them takes up to its hand and the next what is left (see TakerOrder). Every inserter that takes from a
  * machine stays ahead of the inserters that put into it, as the list has them (`orderInsertersDownstreamFirst`): a taker
  * served late among its competitors does not move an inserter of its own sink's feeders ahead of that sink's takers,
- * which the rule for windows that open together needs (`wokenThisTick`). The phase table's inserters phase runs them
+ * which the rule for windows that open together needs (`Hand.wokenThisTick`). The phase table's inserters phase runs them
  * in this order (simulation/tick-phases.ts).
  */
 export function inserterUpdateOrder(
-    inserters: readonly InserterStateMachine[],
+    inserters: readonly InserterArchetype[],
     states: ReadableEntityStateRegistry,
     order: TakerOrder = DEFAULT_TAKER_ORDER,
-): InserterStateMachine[] {
+): InserterArchetype[] {
     const list = [...inserters];
     const places_by_machine = new Map<string, number[]>();
     inserters.forEach((it, place) => {
@@ -81,7 +81,7 @@ export function inserterUpdateOrder(
         }
     });
     const draw = typeof order === "object" && "seed" in order ? seeded(order.seed) : null;
-    const groups: { places: number[]; ranked: InserterStateMachine[] }[] = [];
+    const groups: { places: number[]; ranked: InserterArchetype[] }[] = [];
     for (const places of places_by_machine.values()) {
         const machine = states.getStateByEntityId(inserters[places[0]].inserter_state.inserter.source.entity_id);
         if (places.length < 2 || machine === null || !EntityState.isMachine(machine)) {
@@ -98,10 +98,10 @@ export function inserterUpdateOrder(
 
 /** The inserters of a simulation, each tick updated in the order of `inserterUpdateOrder` */
 export class InserterUpdates implements ControlLogic {
-    private readonly updates: readonly InserterStateMachine[];
+    private readonly updates: readonly InserterArchetype[];
 
     constructor(
-        inserters: readonly InserterStateMachine[],
+        inserters: readonly InserterArchetype[],
         states: ReadableEntityStateRegistry,
         order: TakerOrder = DEFAULT_TAKER_ORDER,
     ) {
@@ -121,7 +121,7 @@ export class InserterUpdates implements ControlLogic {
  * of a taker of the machine it puts into, with the taker moved ahead of it: of the inserters whose turn has come (every
  * taker of its sink and every earlier member of its group gone), the one with the earliest place.
  */
-function orderWith(list: readonly InserterStateMachine[], groups: readonly { places: number[]; ranked: InserterStateMachine[] }[]): InserterStateMachine[] {
+function orderWith(list: readonly InserterArchetype[], groups: readonly { places: number[]; ranked: InserterArchetype[] }[]): InserterArchetype[] {
     // what the list has the right way round; a loop of machines has some of it the other way, which stays
     const downstream_first: [number, number][] = [];
     list.forEach((taker, before) => {
@@ -150,7 +150,7 @@ function orderWith(list: readonly InserterStateMachine[], groups: readonly { pla
         }
     }
     const done = placed.map(() => false);
-    const order: InserterStateMachine[] = [];
+    const order: InserterArchetype[] = [];
     while (order.length < placed.length) {
         let next = placed.findIndex((_, place) => !done[place] && waiting_for[place] === 0);
         // the competitors' order against a loop of machines: the earliest place goes

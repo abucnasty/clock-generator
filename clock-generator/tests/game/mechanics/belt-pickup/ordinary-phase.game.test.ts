@@ -4,7 +4,7 @@ import {expect, test} from "vitest";
 import {Config} from "../../../../src/config";
 import {loadConfigFromFile} from "../../../../src/config/loader";
 import {SimulationContext} from "../../../../src/crafting/sequence/simulation-context";
-import {InserterPickupMode} from "../../../../src/control-logic/inserter/modes/pickup/pickup-mode";
+import {bindHandPorts} from "../../../../src/simulation/components/hand-ports";
 import {recordInFactorio} from "../../../../src/harness/factorio-harness";
 import {BeltPickupLane} from "../../../../src/state/belt-pickup-lane";
 import {EntityState} from "../../../../src/state";
@@ -35,12 +35,12 @@ function compareFirstHand(config: Config, report: Report, speed: FixtureBeltSpee
         const phase = modulo(phaseOf(seed, index) / 8 + seed.tick * speed.units, 8);
         return new BeltPickupLane(source.belt.belt_speed, input.inserter.pickup_length!, 4, phase);
     }));
-    const mode = InserterPickupMode.create({inserterState: input, sourceState: source,
-        sinkState: context.state_registry.getStateByEntityIdOrThrow(input.inserter.sink.entity_id), tick_provider: context.tick_provider});
+    const pickup = bindHandPorts({inserterState: input, sourceState: source,
+        sinkState: context.state_registry.getStateByEntityIdOrThrow(input.inserter.sink.entity_id), tick_provider: context.tick_provider}).pickup;
     const differences: {offset: number; actual: number; predicted: number}[] = [];
     for (const sample of report.samples.filter(sample => sample.tick >= first && sample.tick <= last)) {
         context.tick_provider.setCurrentTick(sample.tick);
-        mode.executeForTick();
+        pickup.pickup();
         const predicted = input.held_item?.quantity ?? 0;
         if (predicted !== sample.held) differences.push({offset: sample.tick - first, actual: sample.held, predicted});
     }

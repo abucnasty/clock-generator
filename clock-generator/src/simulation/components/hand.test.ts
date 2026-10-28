@@ -1,21 +1,20 @@
 import { describe, test, expect, vi } from "vitest"
 import { mock } from 'vitest-mock-extended';
-import { IdleModeTransitionEvaluator } from "./idle-mode-transition-evaluator"
-import { EntityState, InserterState, MachineState } from "../../../state"
-import { TransportBelt } from "../../../simulation/archetypes/transport-belt"
-import { BeltStrategy } from "../../../common/entity-types"
-import { EntityId, Inserter, InserterMetadata, InserterStackSize, InserterTarget, Machine, MachineSpec, RecipeMetadata } from "../../../entities"
-import { ItemName } from "../../../data/factorio-data-types"
-import { InserterAnimation } from "../../../entities/inserter/inserter-animation"
-import { InserterAnimationOverrideConfig } from "../../../config/schema"
-import { InserterPickupMode, InserterWaitForSinkMode } from "../modes"
-import { InserterDisabledMode } from "../modes/disabled-mode"
-import { ModeTransition } from "../../mode";
-import { AlwaysEnabledControl } from "../../enable-control";
-import { MutableTickProvider } from "../../current-tick-provider";
-import { BeltSpeed, Lane } from "../../../entities/belt";
-import { ContainerStorage } from "../../../simulation/components/container-storage";
-import { bindHandPorts } from "../../../simulation/components/hand-ports";
+import { EntityState, InserterState, MachineState } from "../../state"
+import { InserterArchetype } from "../archetypes/inserter"
+import { TransportBelt } from "../archetypes/transport-belt"
+import { BeltStrategy } from "../../common/entity-types"
+import { EntityId, Inserter, InserterMetadata, InserterStackSize, InserterTarget, Machine, MachineSpec, RecipeMetadata } from "../../entities"
+import { ItemName } from "../../data/factorio-data-types"
+import { InserterAnimation } from "../../entities/inserter/inserter-animation"
+import { InserterAnimationOverrideConfig } from "../../config/schema"
+import { AlwaysEnabledControl, EnableControl } from "../../control-logic/enable-control";
+import { MutableTickProvider } from "../../control-logic/current-tick-provider";
+import { BeltSpeed, Lane } from "../../entities/belt";
+import { InserterPhase } from "../status-codes";
+import { ContainerStorage } from "./container-storage";
+import { Hand, STAY } from "./hand";
+import { bindHandPorts } from "./hand-ports";
 
 
 /** A turbo belt built by hand for a test, with the gate every belt has: nothing withheld, nothing refused */
@@ -23,12 +22,12 @@ function beltOf(lanes: Lane[] = [{ ingredient_name: "iron-plate", stack_size: 4 
     return TransportBelt.create({ entity_id: EntityId.forBelt(-1), belt_speed: BeltSpeed.TURBO_TRANSPORT_BELT, strategy: BeltStrategy.NORMAL, lanes });
 }
 
-/** The sink's drop port as the inserter's hand reaches it, bound as its state machine binds it */
-function sinkPortOf(inserter_state: InserterState, source_state: EntityState, sink_state: EntityState) {
-    return bindHandPorts({ inserterState: inserter_state, sourceState: source_state, sinkState: sink_state, tick_provider: new MutableTickProvider() }).drop;
+/** The inserter's Hand, bound as its archetype binds it, under `enable_control` */
+function handOf(inserter_state: InserterState, source_state: EntityState, sink_state: EntityState, enable_control: EnableControl = AlwaysEnabledControl): Hand {
+    return InserterArchetype.create({ inserter_state, source_state, sink_state, tick_provider: new MutableTickProvider(), enable_control }).hand;
 }
 
-describe("transitions (belt to machine)", () => {
+describe("an inserter's Hand (belt to machine)", () => {
 
     interface TestContext {
         inserterState: InserterState,
@@ -106,72 +105,35 @@ describe("transitions (belt to machine)", () => {
         }
     }
 
-    describe("IdleModeTransition", () => {
+    describe("its idle rule", () => {
 
-        test("transitions to PICKUP when able to pickup", () => {
+        test("starts a pickup when it can pick up", () => {
             const testContext = createTestContext();
+            const hand = handOf(testContext.inserterState, testContext.sourceState, testContext.sinkState);
 
-            const pickup_mode = mock<InserterPickupMode>();
-
-            const evaluator = IdleModeTransitionEvaluator.create({
-                inserter_state: testContext.inserterState,
-                source_state: testContext.sourceState,
-                sink_state: testContext.sinkState,
-                sink_port: sinkPortOf(testContext.inserterState, testContext.sourceState, testContext.sinkState),
-                pickup_mode: pickup_mode,
-                disabled_mode: mock(),
-                enable_control: AlwaysEnabledControl,
-            });
-
-            const nextMode = evaluator.evaluateTransition();
-
-            expect(nextMode).not.toBe(ModeTransition.NONE)
-            expect(nextMode?.toMode).toBe(pickup_mode);
+            expect(hand.rule()).toBe(InserterPhase.PICKUP);
         })
 
-        test("remains in IDLE when inputs are over the automated insertion limit of the machine", () => {
+        test("stays idle when the inputs are over the automated insertion limit of the machine", () => {
             const testContext = createTestContext();
-
-            const pickup_mode = mock<InserterPickupMode>();
-            const evaluator = IdleModeTransitionEvaluator.create({
-                inserter_state: testContext.inserterState,
-                source_state: testContext.sourceState,
-                sink_state: testContext.sinkState,
-                sink_port: sinkPortOf(testContext.inserterState, testContext.sourceState, testContext.sinkState),
-                pickup_mode: pickup_mode,
-                disabled_mode: mock(),
-                enable_control: AlwaysEnabledControl,
-            });
+            const hand = handOf(testContext.inserterState, testContext.sourceState, testContext.sinkState);
 
             const machineState = testContext.sinkState as MachineState;
             const automated_insertion_limit = machineState.machine.inputs.get("iron-plate")!.automated_insertion_limit;
             machineState.inventoryState.setQuantity("iron-plate", automated_insertion_limit.quantity);
 
-
-            const nextMode = evaluator.evaluateTransition();
-            expect(nextMode).toBe(ModeTransition.NONE)
+            expect(hand.rule()).toBe(STAY)
         })
 
-        test("remains in IDLE when target machine is output blocked", () => {
+        test("stays idle when the target machine is output blocked", () => {
             const testContext = createTestContext();
-
-            const pickup_mode = mock<InserterPickupMode>();
-            const evaluator = IdleModeTransitionEvaluator.create({
-                inserter_state: testContext.inserterState,
-                source_state: testContext.sourceState,
-                sink_state: testContext.sinkState,
-                sink_port: sinkPortOf(testContext.inserterState, testContext.sourceState, testContext.sinkState),
-                pickup_mode: pickup_mode,
-                disabled_mode: mock(),
-                enable_control: AlwaysEnabledControl
-            });
+            const hand = handOf(testContext.inserterState, testContext.sourceState, testContext.sinkState);
 
             const machineState = testContext.sinkState as MachineState;
             const output_block_quantity = machineState.machine.output.outputBlock.held_limit;
             machineState.inventoryState.setQuantity("iron-gear-wheel", output_block_quantity);
 
-            const nextMode = evaluator.evaluateTransition();
-            expect(nextMode).toBe(ModeTransition.NONE)
+            expect(hand.rule()).toBe(STAY)
         })
     })
 
@@ -194,8 +156,6 @@ describe("transitions (belt to machine)", () => {
                 sink: { entity_id: sink.entity_id, item_names: new Set(["iron-gear-wheel"]) },
                 filters: ["iron-gear-wheel"],
             }));
-            const pickup_mode = mock<InserterPickupMode>();
-            const disabled_mode = mock<InserterDisabledMode>();
             let tick = 0;
             const window_control = window_opens_at === undefined ? AlwaysEnabledControl : {
                 is_game_clock: true,
@@ -203,16 +163,13 @@ describe("transitions (belt to machine)", () => {
                 isEnabled: () => tick >= window_opens_at,
                 isEnabledIn: (ticks: number) => tick + ticks >= window_opens_at,
             };
-            const evaluator = IdleModeTransitionEvaluator.create({
-                inserter_state, source_state, sink_state: sink, sink_port: sinkPortOf(inserter_state, source_state, sink), pickup_mode,
-                disabled_mode,
-                enable_control: window_control,
-            });
+            // its Hand stays in its idle phase: each look runs the idle rule, whatever it gives
+            const hand = handOf(inserter_state, source_state, sink, window_control);
             const block = sink.machine.output.outputBlock;
             return {
-                sink, pickup_mode, disabled_mode,
+                sink,
                 /** The inserter looks at its sink in a tick */
-                look: () => { tick += 1; return evaluator.evaluateTransition(); },
+                look: () => { tick += 1; return hand.rule(); },
                 /** The machine ends a tick with its output at the block */
                 endTickAtTheBlock: (finished_craft: boolean) => {
                     sink.inventoryState.setQuantity(block.item_name, block.ingredients_blocked_at);
@@ -232,41 +189,41 @@ describe("transitions (belt to machine)", () => {
         };
 
         test("takes its first items a tick after the products are taken", () => {
-            const { look, endTickAtTheBlock, takeProducts, endTickUnderTheBlock, pickup_mode } = setup(machineWithGears());
+            const { look, endTickAtTheBlock, takeProducts, endTickUnderTheBlock } = setup(machineWithGears());
             endTickAtTheBlock(false);
-            expect(look()).toBe(ModeTransition.NONE);
+            expect(look()).toBe(STAY);
             takeProducts();
-            expect(look()).toBe(ModeTransition.NONE);
+            expect(look()).toBe(STAY);
             endTickUnderTheBlock();
-            expect(look()?.toMode).toBe(pickup_mode);
+            expect(look()).toBe(InserterPhase.PICKUP);
         })
 
         test("takes them in the tick the products are taken when the machine finished a craft the tick before", () => {
-            const { look, endTickAtTheBlock, takeProducts, pickup_mode } = setup(machineWithGears());
+            const { look, endTickAtTheBlock, takeProducts } = setup(machineWithGears());
             endTickAtTheBlock(false);
-            expect(look()).toBe(ModeTransition.NONE);
+            expect(look()).toBe(STAY);
             endTickAtTheBlock(true);
             takeProducts();
-            expect(look()?.toMode).toBe(pickup_mode);
+            expect(look()).toBe(InserterPhase.PICKUP);
         })
 
         test("is not held up when it only looks in the tick the products are taken: its arm came back, or its window opened", () => {
-            const { look, endTickAtTheBlock, takeProducts, pickup_mode } = setup(machineWithGears());
+            const { look, endTickAtTheBlock, takeProducts } = setup(machineWithGears());
             endTickAtTheBlock(false);
             takeProducts();
-            expect(look()?.toMode).toBe(pickup_mode);
+            expect(look()).toBe(InserterPhase.PICKUP);
         })
 
         test("waits a tick once: products taken again in the tick after do not hold it up again", () => {
-            const { look, endTickAtTheBlock, takeProducts, pickup_mode } = setup(machineWithGears());
+            const { look, endTickAtTheBlock, takeProducts } = setup(machineWithGears());
             endTickAtTheBlock(false);
-            expect(look()).toBe(ModeTransition.NONE);
+            expect(look()).toBe(STAY);
             takeProducts();
-            expect(look()).toBe(ModeTransition.NONE);
+            expect(look()).toBe(STAY);
             // the machine was back at its block when that tick was done, and is emptied again
             endTickAtTheBlock(false);
             takeProducts();
-            expect(look()?.toMode).toBe(pickup_mode);
+            expect(look()).toBe(InserterPhase.PICKUP);
         })
 
         // An inserter whose window of a clock of the game opens in a tick shows as enabled in the tick before and waits in
@@ -278,72 +235,72 @@ describe("transitions (belt to machine)", () => {
         // first (#268): in the tick of the take where the taker's decider was built after this one's, a tick later
         // where before, 9,189 of 9,189 windows over fifteen runs, each clock also built in reverse and renumbered.
         test("takes its first items a tick later when its window opens in the tick the products are taken", () => {
-            const { look, endTickAtTheBlock, takeProducts, endTickUnderTheBlock, pickup_mode, disabled_mode } = setup(machineWithGears(), 2);
+            const { look, endTickAtTheBlock, takeProducts, endTickUnderTheBlock } = setup(machineWithGears(), 2);
             endTickAtTheBlock(false);
-            expect(look()?.toMode).toBe(disabled_mode);
+            expect(look()).toBe(InserterPhase.DISABLED);
             takeProducts();
-            expect(look()).toBe(ModeTransition.NONE);
+            expect(look()).toBe(STAY);
             endTickUnderTheBlock();
-            expect(look()?.toMode).toBe(pickup_mode);
+            expect(look()).toBe(InserterPhase.PICKUP);
         })
 
         test("takes its first items a tick later when its window opens as the products are taken, though a craft finished the tick before", () => {
-            const { look, endTickAtTheBlock, takeProducts, disabled_mode } = setup(machineWithGears(), 2);
+            const { look, endTickAtTheBlock, takeProducts } = setup(machineWithGears(), 2);
             endTickAtTheBlock(false);
-            expect(look()?.toMode).toBe(disabled_mode);
+            expect(look()).toBe(InserterPhase.DISABLED);
             endTickAtTheBlock(true);
             takeProducts();
-            expect(look()).toBe(ModeTransition.NONE);
+            expect(look()).toBe(STAY);
         })
 
         test("takes them in the tick they are taken when the window of the inserter that takes them opens in that tick too, its decider built after this one's", () => {
-            const { sink, look, endTickAtTheBlock, takeProducts, pickup_mode, disabled_mode } = setup(machineWithGears(), 2, 1);
+            const { sink, look, endTickAtTheBlock, takeProducts } = setup(machineWithGears(), 2, 1);
             endTickAtTheBlock(false);
-            expect(look()?.toMode).toBe(disabled_mode);
+            expect(look()).toBe(InserterPhase.DISABLED);
             takeProducts();
             sink.windowOpeningTakeDecider = 2;
-            expect(look()?.toMode).toBe(pickup_mode);
+            expect(look()).toBe(InserterPhase.PICKUP);
         })
 
         test("takes them a tick later when the window of the inserter that takes them opens in that tick too, its decider built before this one's", () => {
-            const { sink, look, endTickAtTheBlock, takeProducts, endTickUnderTheBlock, pickup_mode, disabled_mode } = setup(machineWithGears(), 2, 1);
+            const { sink, look, endTickAtTheBlock, takeProducts, endTickUnderTheBlock } = setup(machineWithGears(), 2, 1);
             endTickAtTheBlock(false);
-            expect(look()?.toMode).toBe(disabled_mode);
+            expect(look()).toBe(InserterPhase.DISABLED);
             takeProducts();
             sink.windowOpeningTakeDecider = 0;
-            expect(look()).toBe(ModeTransition.NONE);
+            expect(look()).toBe(STAY);
             endTickUnderTheBlock();
-            expect(look()?.toMode).toBe(pickup_mode);
+            expect(look()).toBe(InserterPhase.PICKUP);
         })
 
         test("takes them a tick later where the order of its own decider or the taker's is not known", () => {
             for (const [own, taker] of [[undefined, 2], [1, -1]] as const) {
-                const { sink, look, endTickAtTheBlock, takeProducts, disabled_mode } = setup(machineWithGears(), 2, own);
+                const { sink, look, endTickAtTheBlock, takeProducts } = setup(machineWithGears(), 2, own);
                 endTickAtTheBlock(false);
-                expect(look()?.toMode).toBe(disabled_mode);
+                expect(look()).toBe(InserterPhase.DISABLED);
                 takeProducts();
                 sink.windowOpeningTakeDecider = taker;
-                expect(look()).toBe(ModeTransition.NONE);
+                expect(look()).toBe(STAY);
             }
         })
 
         test("is not held up when its window opens after the machine was cleared", () => {
-            const { look, endTickAtTheBlock, takeProducts, endTickUnderTheBlock, pickup_mode, disabled_mode } = setup(machineWithGears(), 3);
+            const { look, endTickAtTheBlock, takeProducts, endTickUnderTheBlock } = setup(machineWithGears(), 3);
             endTickAtTheBlock(false);
-            expect(look()?.toMode).toBe(disabled_mode);
+            expect(look()).toBe(InserterPhase.DISABLED);
             takeProducts();
             endTickUnderTheBlock();
-            expect(look()?.toMode).toBe(disabled_mode);
-            expect(look()?.toMode).toBe(pickup_mode);
+            expect(look()).toBe(InserterPhase.DISABLED);
+            expect(look()).toBe(InserterPhase.PICKUP);
         })
 
-        test("leaves an inserter that takes from a belt to its pickup mode, which lands the first stack a tick later", () => {
+        test("leaves an inserter that takes from a belt to its pickup phase, which lands the first stack a tick later", () => {
             const belt: TransportBelt = beltOf();
-            const { look, endTickAtTheBlock, takeProducts, pickup_mode } = setup(belt);
+            const { look, endTickAtTheBlock, takeProducts } = setup(belt);
             endTickAtTheBlock(false);
-            expect(look()).toBe(ModeTransition.NONE);
+            expect(look()).toBe(STAY);
             takeProducts();
-            expect(look()?.toMode).toBe(pickup_mode);
+            expect(look()).toBe(InserterPhase.PICKUP);
         })
 
         // Recorded in Factorio 2.1.21 on the thaeln scaffold (clock-generator/.scratch/geppetto/apprentice-m4-decider-latency.md):
@@ -354,13 +311,13 @@ describe("transitions (belt to machine)", () => {
             const belt = () => beltOf();
             /** Looks after the products are taken: the index of the first look that starts the pickup */
             const firstPickupLook = (window_opens_at?: number) => {
-                const { look, endTickAtTheBlock, takeProducts, endTickUnderTheBlock, pickup_mode, disabled_mode } = setup(belt(), window_opens_at);
+                const { look, endTickAtTheBlock, takeProducts, endTickUnderTheBlock } = setup(belt(), window_opens_at);
                 endTickAtTheBlock(false);
-                expect(look()?.toMode).toBe(window_opens_at === undefined ? undefined : disabled_mode);
+                expect(look()).toBe(window_opens_at === undefined ? STAY : InserterPhase.DISABLED);
                 takeProducts();
                 const picks_up: boolean[] = [];
                 for (let index = 0; index < 3; index++) {
-                    picks_up.push(look()?.toMode === pickup_mode);
+                    picks_up.push(look() === InserterPhase.PICKUP);
                     endTickUnderTheBlock();
                 }
                 return picks_up.indexOf(true);
@@ -375,28 +332,29 @@ describe("transitions (belt to machine)", () => {
         // the same windows flip, onto a belt and into a machine alike (chemical science: 82 and 166 swap sides).
         test("takes its first items from a belt in the tick the products are taken when the inserter that takes them, its window opening in that tick too, has its decider built after this one's", () => {
             const belt: TransportBelt = beltOf();
-            const { sink, look, endTickAtTheBlock, takeProducts, pickup_mode, disabled_mode } = setup(belt, 2, 0);
+            const { sink, look, endTickAtTheBlock, takeProducts } = setup(belt, 2, 0);
             endTickAtTheBlock(false);
-            expect(look()?.toMode).toBe(disabled_mode);
+            expect(look()).toBe(InserterPhase.DISABLED);
             takeProducts();
             sink.windowOpeningTakeDecider = 1;
-            expect(look()?.toMode).toBe(pickup_mode);
+            expect(look()).toBe(InserterPhase.PICKUP);
         })
 
         test("takes its first items from a belt a tick later when the inserter that takes them, its window opening in that tick too, has its decider built before this one's", () => {
             const belt: TransportBelt = beltOf();
-            const { sink, look, endTickAtTheBlock, takeProducts, endTickUnderTheBlock, pickup_mode, disabled_mode } = setup(belt, 2, 1);
+            const { sink, look, endTickAtTheBlock, takeProducts, endTickUnderTheBlock } = setup(belt, 2, 1);
             endTickAtTheBlock(false);
-            expect(look()?.toMode).toBe(disabled_mode);
+            expect(look()).toBe(InserterPhase.DISABLED);
             takeProducts();
             sink.windowOpeningTakeDecider = 0;
-            expect(look()).toBe(ModeTransition.NONE);
+            expect(look()).toBe(STAY);
             endTickUnderTheBlock();
-            expect(look()?.toMode).toBe(pickup_mode);
+            expect(look()).toBe(InserterPhase.PICKUP);
         })
     })
 
-    describe("InserterPickupMode (belt to machine)", () => {
+    // the pickup phase's step: the pickup port of the hand's source, bound as its archetype binds it
+    describe("its pickup (belt to machine)", () => {
 
         test("stops picking up from belt once stack size is reached", () => {
             const mockSource: TransportBelt = beltOf([
@@ -422,31 +380,31 @@ describe("transitions (belt to machine)", () => {
             }));
 
             const ticks = new MutableTickProvider();
-            const pickup_mode = InserterPickupMode.create({
+            const pickup = bindHandPorts({
                 tick_provider: ticks,
                 inserterState: inserterState,
                 sourceState: mockSource,
                 sinkState: mockSink,
-            });
+            }).pickup;
 
             // First pickup: 0 + 4 = 4
             ticks.incrementTick();
-            pickup_mode.executeForTick();
+            pickup.pickup();
             expect(inserterState.held_item?.quantity).toBe(4);
 
             // Second pickup: 4 + 4 = 8
             ticks.incrementTick();
-            pickup_mode.executeForTick();
+            pickup.pickup();
             expect(inserterState.held_item?.quantity).toBe(8);
 
             // Third pickup: 8 + 4 = 12 (should reach stack size)
             ticks.incrementTick();
-            pickup_mode.executeForTick();
+            pickup.pickup();
             expect(inserterState.held_item?.quantity).toBe(12);
 
             // Fourth pickup: should not exceed stack size of 12
             ticks.incrementTick();
-            pickup_mode.executeForTick();
+            pickup.pickup();
             expect(inserterState.held_item?.quantity).toBe(12);
             expect(inserterState.held_item?.quantity).toBeLessThanOrEqual(stack_size);
         })
@@ -474,34 +432,34 @@ describe("transitions (belt to machine)", () => {
             }));
 
             const ticks = new MutableTickProvider();
-            const pickup_mode = InserterPickupMode.create({
+            const pickup = bindHandPorts({
                 tick_provider: ticks,
                 inserterState: inserterState,
                 sourceState: mockSource,
                 sinkState: mockSink,
-            });
+            }).pickup;
 
             ticks.incrementTick();
-            pickup_mode.executeForTick();
+            pickup.pickup();
             expect(inserterState.held_item?.quantity).toBe(4);
 
             // the machine's output reaches the block: the hand waits with what it holds
             const block = mockSink.machine.output.outputBlock;
             mockSink.inventoryState.addQuantity(block.item_name, block.held_limit);
             ticks.incrementTick();
-            pickup_mode.executeForTick();
+            pickup.pickup();
             ticks.incrementTick();
-            pickup_mode.executeForTick();
+            pickup.pickup();
             expect(inserterState.held_item?.quantity).toBe(4);
 
             // the output drops under the block and the inserter comes back from waiting: one tick to decide, then the next stack
             mockSink.inventoryState.removeQuantity(block.item_name, 1);
-            pickup_mode.onEnter(new InserterWaitForSinkMode());
+            pickup.enter(InserterPhase.WAITING_FOR_SINK);
             ticks.incrementTick();
-            pickup_mode.executeForTick();
+            pickup.pickup();
             expect(inserterState.held_item?.quantity).toBe(4);
             ticks.incrementTick();
-            pickup_mode.executeForTick();
+            pickup.pickup();
             expect(inserterState.held_item?.quantity).toBe(8);
 
             // Again at the block, and this time the machine finished a craft in the tick before its products are taken:
@@ -509,14 +467,14 @@ describe("transitions (belt to machine)", () => {
             // 2.1.21: 248 hands of 248 went on in that tick, 843 of 843 a tick later without a craft the tick before.
             mockSink.inventoryState.addQuantity(block.item_name, 1);
             ticks.incrementTick();
-            pickup_mode.executeForTick();
+            pickup.pickup();
             expect(inserterState.held_item?.quantity).toBe(8);
             mockSink.outputBlockedAfterLastTick = true;
             mockSink.finishedCraftInLastTick = true;
             mockSink.inventoryState.removeQuantity(block.item_name, 1);
-            pickup_mode.onEnter(new InserterWaitForSinkMode());
+            pickup.enter(InserterPhase.WAITING_FOR_SINK);
             ticks.incrementTick();
-            pickup_mode.executeForTick();
+            pickup.pickup();
             expect(inserterState.held_item?.quantity).toBe(12);
         })
 
@@ -531,19 +489,19 @@ describe("transitions (belt to machine)", () => {
                 sink: { entity_id: sink.entity_id, item_names: new Set(["iron-gear-wheel"]) },
                 filters: ["iron-gear-wheel"],
             }));
-            const pickup_mode = InserterPickupMode.create({ inserterState: inserter_state, sourceState: source, sinkState: sink });
+            const pickup = bindHandPorts({ inserterState: inserter_state, sourceState: source, sinkState: sink }).pickup;
             source.inventoryState.setQuantity("iron-gear-wheel", 5);
-            pickup_mode.executeForTick();
+            pickup.pickup();
             expect(inserter_state.held_item?.quantity).toBe(5);
 
             const block = sink.machine.output.outputBlock;
             sink.inventoryState.setQuantity(block.item_name, block.ingredients_blocked_at);
             source.inventoryState.setQuantity("iron-gear-wheel", 5);
-            pickup_mode.executeForTick();
+            pickup.pickup();
             expect(inserter_state.held_item?.quantity).toBe(5);
 
             sink.inventoryState.setQuantity(block.item_name, 0);
-            pickup_mode.executeForTick();
+            pickup.pickup();
             expect(inserter_state.held_item?.quantity).toBe(10);
         })
 
@@ -571,26 +529,26 @@ describe("transitions (belt to machine)", () => {
             }));
 
             const ticks = new MutableTickProvider();
-            const pickup_mode = InserterPickupMode.create({
+            const pickup = bindHandPorts({
                 tick_provider: ticks,
                 inserterState: inserterState,
                 sourceState: mockSource,
                 sinkState: mockSink,
-            });
+            }).pickup;
 
             // First pickup
             ticks.incrementTick();
-            pickup_mode.executeForTick();
+            pickup.pickup();
             expect(inserterState.held_item?.quantity).toBe(4);
 
             // Second pickup
             ticks.incrementTick();
-            pickup_mode.executeForTick();
+            pickup.pickup();
             expect(inserterState.held_item?.quantity).toBe(8);
 
             // Third pickup
             ticks.incrementTick();
-            pickup_mode.executeForTick();
+            pickup.pickup();
             expect(inserterState.held_item?.quantity).toBe(10);
             expect(inserterState.held_item?.quantity).toBeLessThanOrEqual(stack_size);
         })
@@ -624,15 +582,15 @@ describe("transitions (belt to machine)", () => {
             }));
 
             const ticks = new MutableTickProvider();
-            const pickup_mode = InserterPickupMode.create({
+            const pickup = bindHandPorts({
                 tick_provider: ticks,
                 inserterState: inserterState,
                 sourceState: mockSource,
                 sinkState: mockSink,
-            });
+            }).pickup;
 
             ticks.incrementTick();
-            pickup_mode.executeForTick();
+            pickup.pickup();
 
             expect(inserterState.held_item?.item_name).toBe("copper-cable");
             expect(inserterState.held_item?.quantity).toBe(4);
@@ -671,13 +629,13 @@ describe("transitions (belt to machine)", () => {
                 filters: ["iron-plate", "copper-cable"]
             }));
 
-            const pickup_mode = InserterPickupMode.create({
+            const pickup = bindHandPorts({
                 inserterState: inserterState,
                 sourceState: mockSource,
                 sinkState: mockSink,
-            });
+            }).pickup;
 
-            pickup_mode.executeForTick();
+            pickup.pickup();
 
             expect(inserterState.held_item?.item_name).toBe("copper-cable");
             expect(inserterState.held_item?.quantity).toBeGreaterThan(0);

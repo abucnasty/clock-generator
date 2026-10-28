@@ -4,9 +4,7 @@ import { describe, expect, it } from "vitest";
 import { laneCapacity } from "../../config/lane-capacity-validator";
 import { parseConfig } from "../../config/loader";
 import { Config } from "../../config/schema";
-import { InserterPickupMode } from "../../control-logic/inserter/modes";
 import { BeltHandPickup } from "../../simulation/components/belt-hand-pickup";
-import { PickupModeTransitionEvaluator } from "../../control-logic/inserter/transitions/pickup-mode-transition-evaluator";
 import { lossLimitOf } from "../../crafting/backpressure-loss";
 import { SimulationContext } from "../../crafting/sequence/simulation-context";
 import { Chest } from "../chest/chest";
@@ -194,22 +192,18 @@ function checkDrills(registry: ReadableEntityRegistry, traits: ConfigTraits): vo
 }
 
 /**
- * What the simulator's control logic of each inserter decided at construction: whether it swings a part hand at its
- * source (pickup-mode-transition-evaluator.ts) and whether its belt pickup runs the calibrated arm (belt-hand-pickup.ts)
+ * What the simulator decided of each inserter when it built it: whether its Hand swings a part hand at its source (its
+ * pickup rule, bound in simulation/archetypes/inserter.ts) and whether its belt pickup runs the calibrated arm
+ * (belt-hand-pickup.ts)
  */
 function controlLogicOf(context: SimulationContext): Map<string, { swings_part_hands: boolean; belt_arm: boolean | null }> {
     const decided = new Map<string, { swings_part_hands: boolean; belt_arm: boolean | null }>();
-    for (const state_machine of context.inserters) {
-        const found = { swings_part_hands: false, belt_arm: null as boolean | null };
-        for (const [mode, evaluator] of (state_machine as unknown as { graph: Map<object, object> }).graph) {
-            if (evaluator instanceof PickupModeTransitionEvaluator) {
-                found.swings_part_hands = (evaluator as unknown as { swings_part_hands: boolean }).swings_part_hands;
-            }
-            if (mode instanceof InserterPickupMode && mode.port instanceof BeltHandPickup) {
-                found.belt_arm = (mode.port as unknown as { arm?: object }).arm !== undefined;
-            }
-        }
-        decided.set(state_machine.entity_id.id, found);
+    for (const inserter of context.inserters) {
+        const pickup = inserter.hand.pickup;
+        decided.set(inserter.entity_id.id, {
+            swings_part_hands: inserter.hand.swings_part_hands,
+            belt_arm: pickup instanceof BeltHandPickup ? (pickup as unknown as { arm?: object }).arm !== undefined : null,
+        });
     }
     return decided;
 }
@@ -228,8 +222,8 @@ function checkInserters(context: SimulationContext, traits: ConfigTraits): void 
         same(t.hand.research, fullResearchHandSize(type), `${id} research hand`);
         same(t.hand.items, Array.from(inserter.filtered_items), `${id} items in order`);
         same(t.hand.by_item.map(hand => [hand.item, hand.hand]), Array.from(inserter.hand_sizes ?? []), `${id} hands`);
-        // the full-hand rule as pickup-mode-transition-evaluator.ts decided it, at a machine that places its results
-        // itself, and as isBulkInserter gave it
+        // the full-hand rule as the Hand's pickup rule is bound to it, at a machine that places its results itself, and
+        // as isBulkInserter gave it
         const source = registry.getEntityById(inserter.source.entity_id);
         same(t.hand.full_hand.at_placing_source, BEFORE.bulk.has(type), `${id} full hand by the old rule`);
         if (source !== null && Entity.isMachine(source) && source.metadata.places_results === true) {
