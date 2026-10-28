@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import type { InserterCoverageIssue } from 'clock-generator/browser';
 import { bufferChest, infinityChest, inserter } from '../test/fixtures';
-import { buildValidationIssues, validationCountLabel, type BuildValidationIssue } from './buildValidation';
+import { buildValidationIssues, isRefused, validationCountLabel, type BuildValidationIssue } from './buildValidation';
 import { createDefaultConfig, type ChestFormData } from './configForm/formData';
 import { outputChestIssues, outputChestIssueTitle } from './outputChestIssues';
 import { focusIdOf, problemsOf, PROBLEM_TEXT } from './firstProblem';
@@ -100,4 +100,49 @@ it('keeps advice beside an error and other advice, the error still blocking and 
         .toEqual([{ source: 'engine', blocksGeneration: true }, { source: 'calibration', blocksGeneration: false }]);
     expect(buildValidationIssues({ ...none, lanesExactlyFull: 'Full', copyGapNeeded: 'Gap' }).map(issue => [issue.id, issue.text]))
         .toEqual([['lanes-exactly-full', 'Full'], ['copy-gap-needed', 'Gap']]);
+});
+
+const opening = "No clock can hold this build's target:";
+const machineLimit = 'Machine 1 (iron ore recycling) can make at most 720 crafts a second. Lower the target, or add machines or make them faster.';
+const inserterLimit = 'Inserters 3, 4, 5 and 6 can bring at most 480 a second of iron ore into the build. Lower the target, or give the machines more inserters.';
+
+it('lists each problem of a refusal as its own blocking error, with no config path, and opens them once', () => {
+    const issues = buildValidationIssues({ ...none, failure: { message: `${opening} ${machineLimit} ${inserterLimit}`,
+        diagnostics: [{ kind: 'refusal', opening, problems: [machineLimit, inserterLimit] }] } });
+    expect(issues.map(issue => issue.text)).toEqual([machineLimit, inserterLimit]);
+    expect(issues).toHaveLength(2);
+    expect(issues.every(issue => issue.blocksGeneration && issue.severity === 'error' && issue.source === 'refusal')).toBe(true);
+    expect(issues.map(issue => issue.lead)).toEqual([opening, opening]);
+    expect(issues.some(issue => /target output|items per second/i.test(issue.text))).toBe(false);
+    expect(new Set(issues.map(issue => issue.id)).size).toBe(2);
+    expect(isRefused(issues)).toBe(true);
+});
+
+it('shows a refusal without an opening as the one problem it is', () => {
+    const message = 'The current configuration cannot meet the target production rate. Total output capacity is 5 items/second, but target production rate is 6 items/second.';
+    const issues = buildValidationIssues({ ...none, failure: { message, diagnostics: [{ kind: 'refusal', problems: [message] }] } });
+    expect(issues).toMatchObject([{ text: message, source: 'refusal', lead: undefined }]);
+});
+
+it('has no refusal once the build has changed: the check then no longer counts as its failure', () => {
+    // App hands over `failure` only while the last check is for the build as it is
+    expect(isRefused(buildValidationIssues({ ...none }))).toBe(false);
+    expect(isRefused(collect([empty]))).toBe(false);
+});
+
+// the schema's errors keep a place to find, in the names the page shows
+it.each([
+    [['target_output', 'items_per_second'], 'Items per Second: Required'],
+    [['target_output', 'recipe'], 'Recipe: Required'],
+    [['machines', 1, 'recipe'], 'Machine 8 recipe: Required'],
+    [['inserters', 0, 'source', 'pickup_layout'], 'Inserter 4 source pickup layout: Required'],
+    [['belts', 0, 'lanes', 1, 'stack_size'], 'Belt 9 lane 2 stack size: Required'],
+    [['chests', 0, 'item_filter', 1, 'item_name'], 'Chest 7 item filter 2 item name: Required'],
+    [['chests', 0, 'item_filter'], 'Chest 7 item filter: Required'],
+    [['overrides', 'terminal_swing_count'], 'Advanced settings terminal swing count: Required'],
+    [[], 'Build: Required'],
+])('names the place of a schema error at %j as "%s", not as a config path', (path, text) => {
+    const issues = buildValidationIssues({ ...none, machines: [{ id: 5 }, { id: 8 }], inserters: [inserter(4)], belts: [{ id: 9 }],
+        chests: [empty], failure: { message: 'x', diagnostics: [{ kind: 'field', path, message: 'Required' }] } });
+    expect(issues.at(-1)?.text).toBe(text);
 });

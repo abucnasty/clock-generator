@@ -67,6 +67,8 @@ interface WorkflowBarProps {
     onCopy: () => void;
     /** Blocking validation errors, shared with the Build validation panel. */
     problems: Problem[];
+    /** The engine refused the build as it stands now: Generate is off until the build changes */
+    refused: boolean;
     /** Guidance for an empty build; validation details stay in the panel. */
     note: Problem | null;
     /** Nothing has been entered yet: the note is the next step, not a problem, and there is no count */
@@ -117,6 +119,7 @@ export function WorkflowBar({
     copied,
     onCopy,
     problems,
+    refused,
     note,
     startHere,
     onGoToProblem,
@@ -341,7 +344,7 @@ export function WorkflowBar({
                             </Button>
                         </Box>
                     </Tooltip>
-                    <Tooltip title={note?.text ?? CHECK_TEXT.generateTooltip} arrow describeChild placement="top" slotProps={{ popper: { disablePortal: true } }}>
+                    <Tooltip title={refused ? CHECK_TEXT.generateRefusedTooltip : note?.text ?? CHECK_TEXT.generateTooltip} arrow describeChild placement="top" slotProps={{ popper: { disablePortal: true } }}>
                         <span>
                             {/* filled only when it is the next step (generateFilled); a blank build has problems, so there
                                 the next step is the recipe (or the intro card's Paste) and Generate is outlined */}
@@ -351,8 +354,9 @@ export function WorkflowBar({
                                 size="small"
                                 onClick={onGenerate}
                                 color={generateFilled ? 'secondary' : 'inherit'}
-                                disabled={busy}
-                                aria-describedby={note ? ELEMENT_IDS.blockReason : undefined}
+                                // refused: the count chip beside the buttons says what, and the tooltip why it is off
+                                disabled={busy || refused}
+                                aria-describedby={note || refused ? ELEMENT_IDS.blockReason : undefined}
                                 startIcon={isLoading || checking === 'generate' ? <CircularProgress size={16} color="inherit" aria-hidden /> : undefined}
                             >
                                 {isLoading ? CHECK_TEXT.generating : checking === 'generate' ? CHECK_TEXT.checking : CHECK_TEXT.generate}

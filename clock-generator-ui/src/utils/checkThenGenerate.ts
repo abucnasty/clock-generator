@@ -11,6 +11,7 @@ export const CHECK_TEXT = {
     checking: 'Checking...',
     checkOnly: 'Check only',
     generateTooltip: 'Checks your build, then makes the clocks.',
+    generateRefusedTooltip: "The build can't be clocked as it is. Change it as Build validation says, then press Generate.",
     checkOnlyTooltip: 'Checks that your build can be clocked, without making any clocks.',
     chipPassed: 'Check passed',
     chipFailed: 'Check failed',
