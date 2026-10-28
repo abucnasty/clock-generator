@@ -3,7 +3,7 @@
 // (ci/duration-sequencer.ts), from the JUnit reports of a run: the generation-test-results-<n> artifacts of
 // the Test workflow (`gh run download <run> -p 'generation-test-results-*'`). Usage:
 //   node scripts/ci/update-generation-durations.js <directory with the downloaded artifacts> [more directories, of other runs]
-// A file in several reports (of several runs) gets their mean.
+// A file in several reports (of several runs) gets their median (one run of a shard that was starved of CPU is not to set the figure).
 // A file that is in no report keeps its old figure if it still exists; a file in the reports no longer on disk is dropped.
 const fs = require('node:fs');
 const path = require('node:path');
@@ -16,6 +16,11 @@ if (reportsDirs.length === 0) {
     process.exit(2);
 }
 
+const median = values => {
+    const sorted = [...values].sort((a, b) => a - b);
+    const middle = sorted.length >> 1;
+    return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+};
 const reports = [];
 for (const dir of reportsDirs) (function find(dir) {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -37,7 +42,7 @@ for (const report of reports) {
         if (fs.existsSync(path.join(packageDir, name))) (measured[name] ??= []).push(Number(time));
     }
 }
-for (const [name, times] of Object.entries(measured)) durations[name] = Math.round(times.reduce((a, b) => a + b, 0) / times.length * 10) / 10;
+for (const [name, times] of Object.entries(measured)) durations[name] = Math.round(median(times) * 10) / 10;
 const kept = Object.fromEntries(Object.entries(durations).filter(([key]) => fs.existsSync(path.join(packageDir, key))).sort(([a], [b]) => (a < b ? -1 : 1)));
 fs.writeFileSync(target, JSON.stringify(kept, null, 1) + '\n');
 console.log(`${Object.keys(kept).length} files from ${reports.length} reports, written to ${target}`);

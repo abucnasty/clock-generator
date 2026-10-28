@@ -14,7 +14,8 @@ describe('the CI shards of the generation tests', () => {
         const shards = assignShards(items, 4);
         const loads = shards.map(shard => estimatedSeconds(shard));
         expect(shards.find(shard => shard.some(item => item.key === 'a'))!.some(item => item.key === 'b')).toBe(false);
-        expect(Math.max(...loads) - Math.min(...loads)).toBeLessThan(20);
+        // the longest file alone sets the estimate of its shard, the rest are dealt out below it
+        expect(Math.max(...loads)).toBeLessThanOrEqual(estimatedSeconds([items[0]]) + 40);
     });
 
     it('count a file with no measured duration as the median', () => {

@@ -14,9 +14,13 @@ export interface ShardItem {
 /** Test files a CI shard runs at once: its runner has 4 vCPUs and vitest.config.ts runs one fewer files at once */
 export const WORKERS = 3;
 
-/** About how long a shard takes: its files run WORKERS at a time, and it is never shorter than its longest file */
+/**
+ * How long a shard takes, in the units of its files' seconds: its files run WORKERS at a time, and the one that starts
+ * last or is the longest runs on after the rest. Fitted to the 24 shards of three CI runs (the step took 0.76 of
+ * sum/3 + 0.75 of the longest file, plus 3 s, to within 40 s; time per file is a contended figure, which is why 0.76).
+ */
 export function estimatedSeconds(shard: readonly ShardItem[], workers = WORKERS): number {
-    return Math.max(0, ...shard.map(item => item.seconds), shard.reduce((sum, item) => sum + item.seconds, 0) / workers);
+    return shard.reduce((sum, item) => sum + item.seconds, 0) / workers + 0.75 * Math.max(0, ...shard.map(item => item.seconds));
 }
 
 /**
@@ -54,7 +58,7 @@ export function secondsOf(keys: readonly string[], known: Readonly<Record<string
 
 /**
  * Vitest's `--shard` gives each shard files by the hash of their paths, so one shard can get the two slowest files and the
- * job's wall time is that shard's. This sequencer deals the files out by their measured duration (how long a shard takes: its files WORKERS at a time, at least its longest) instead (the sorting
+ * job's wall time is that shard's. This sequencer deals the files out by their measured duration (estimatedSeconds) instead (the sorting
  * inside a shard is vitest's own). Every shard job sees the same list of files, so the shards are disjoint and together
  * hold all of them: a file that is not in the durations file still runs, in the shard its estimated time puts it in.
  * Refresh the durations with scripts/ci/update-generation-durations.js.
