@@ -1,0 +1,198 @@
+{
+  "schema": 1,
+  "sample": "STEEL_CARGO_WAGON",
+  "target": {
+    "item": "steel-plate",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 26,
+      "denominator": 1
+    }
+  },
+  "nodes": [
+    {
+      "key": "belt:1/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:1/lane:1#steel-plate"
+      ]
+    },
+    {
+      "key": "belt:1/lane:2",
+      "kind": "lane",
+      "ports": []
+    },
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:2",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "chest:1",
+      "kind": "container",
+      "ports": []
+    },
+    {
+      "key": "chest:2",
+      "kind": "container",
+      "ports": [
+        "chest:2#iron-ore",
+        "chest:2#iron-plate",
+        "chest:2#steel-plate"
+      ]
+    },
+    {
+      "key": "drill:1",
+      "kind": "drill",
+      "ports": []
+    },
+    {
+      "key": "sink",
+      "kind": "sink",
+      "ports": []
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/iron-plate",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "iron-plate",
+      "from": "chest:2#iron-plate",
+      "from_ports": [
+        "chest:2#iron-plate"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:2/steel-plate",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "steel-plate",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "chest:2#steel-plate",
+      "lands_in": "storage",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:3/steel-plate",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "steel-plate",
+      "from": "chest:2#steel-plate",
+      "from_ports": [
+        "chest:2#steel-plate"
+      ],
+      "to": "belt:1/lane:1#steel-plate",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:4/iron-plate",
+      "via": "inserter",
+      "entity": "inserter:4",
+      "group": "inserter:4",
+      "item": "iron-plate",
+      "from": "machine:2",
+      "from_ports": [
+        "machine:2"
+      ],
+      "to": "chest:2#iron-plate",
+      "lands_in": "storage",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:5/iron-ore",
+      "via": "inserter",
+      "entity": "inserter:5",
+      "group": "inserter:5",
+      "item": "iron-ore",
+      "from": "chest:2#iron-ore",
+      "from_ports": [
+        "chest:2#iron-ore"
+      ],
+      "to": "machine:2",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "placement:drill:1/iron-ore",
+      "via": "placement",
+      "entity": "drill:1",
+      "group": null,
+      "item": "iron-ore",
+      "from": "drill:1",
+      "from_ports": [
+        "drill:1"
+      ],
+      "to": "chest:2#iron-ore",
+      "lands_in": "storage",
+      "hand": null,
+      "floor_cycle": null,
+      "ceiling": null,
+      "terminal": null
+    }
+  ],
+  "components": [],
+  "order": [
+    "drill:1",
+    "chest:2#iron-ore",
+    "machine:2",
+    "chest:2#iron-plate",
+    "machine:1",
+    "chest:2#steel-plate",
+    "belt:1/lane:1#steel-plate",
+    "sink"
+  ],
+  "shared": {
+    "out": [],
+    "in": [],
+    "lanes": []
+  },
+  "terminal": [
+    "inserter:3/steel-plate"
+  ]
+}

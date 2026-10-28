@@ -1,0 +1,991 @@
+{
+  "schema": 1,
+  "target": {
+    "item": "production-science-pack",
+    "counts": "made",
+    "items_per_second": 120,
+    "copies": 7,
+    "per_copy": {
+      "numerator": 120,
+      "denominator": 7
+    }
+  },
+  "nodes": [
+    {
+      "key": "belt:1/lane:1",
+      "kind": "lane",
+      "entity": "belt:1",
+      "lane": {
+        "key": "belt:1/lane:1",
+        "belt": "belt:1",
+        "lane": 1,
+        "listed": true,
+        "item": "production-science-pack",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:1/lane:2",
+      "kind": "lane",
+      "entity": "belt:1",
+      "lane": {
+        "key": "belt:1/lane:2",
+        "belt": "belt:1",
+        "lane": 2,
+        "listed": true,
+        "item": "",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:2/lane:1",
+      "kind": "lane",
+      "entity": "belt:2",
+      "lane": {
+        "key": "belt:2/lane:1",
+        "belt": "belt:2",
+        "lane": 1,
+        "listed": true,
+        "item": "electric-furnace",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:2/lane:2",
+      "kind": "lane",
+      "entity": "belt:2",
+      "lane": {
+        "key": "belt:2/lane:2",
+        "belt": "belt:2",
+        "lane": 2,
+        "listed": true,
+        "item": "productivity-module",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "entity": "machine:1",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "production-science-pack",
+        "prototype": "assembling-machine-3",
+        "prototype_type": "assembling-machine",
+        "speed": 63.00781250000001,
+        "energy_required": 21,
+        "ticks_per_craft": 19.997520148791068,
+        "crafts_per_tick": 0.050006200396825407,
+        "productivity": 100,
+        "bonus_per_craft": 1,
+        "ticks_per_bonus": 19.997520148791068,
+        "inputs": [
+          {
+            "item": "electric-furnace",
+            "per_craft": 1,
+            "per_second": 3.000372023809524,
+            "per_tick": 0.0500062003968254
+          },
+          {
+            "item": "productivity-module",
+            "per_craft": 1,
+            "per_second": 3.000372023809524,
+            "per_tick": 0.0500062003968254
+          },
+          {
+            "item": "rail",
+            "per_craft": 30,
+            "per_second": 90.01116071428572,
+            "per_tick": 1.500186011904762
+          }
+        ],
+        "insertion_duration_ticks": 16.664600123992553,
+        "crafts_per_second": {
+          "numerator": 2100260416666667,
+          "denominator": 700000000000000
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "production-science-pack",
+            "amount": 3,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 6,
+            "per_second": {
+              "numerator": 360044642857143,
+              "denominator": 20000000000000
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 5,
+        "limits": [
+          {
+            "item": "electric-furnace",
+            "limit": 5,
+            "kind": "ingredient"
+          },
+          {
+            "item": "productivity-module",
+            "limit": 5,
+            "kind": "ingredient"
+          },
+          {
+            "item": "rail",
+            "limit": 150,
+            "kind": "ingredient"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "overload",
+        "per_result": [
+          {
+            "item": "production-science-pack",
+            "rule": "overload",
+            "ingredients_blocked_at": 15,
+            "held_limit": 15,
+            "stack": 200
+          }
+        ]
+      },
+      "recipe_selection": "fixed",
+      "placement": null,
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 375,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "machine:2",
+      "kind": "machine",
+      "entity": "machine:2",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "rail",
+        "prototype": "assembling-machine-3",
+        "prototype_type": "assembling-machine",
+        "speed": 46.37125,
+        "energy_required": 0.5,
+        "ticks_per_craft": 0.6469525837668815,
+        "crafts_per_tick": 1.5457083333333332,
+        "productivity": 0,
+        "bonus_per_craft": 0,
+        "ticks_per_bonus": 0,
+        "inputs": [
+          {
+            "item": "stone",
+            "per_craft": 1,
+            "per_second": 92.7425,
+            "per_tick": 1.5457083333333332
+          },
+          {
+            "item": "iron-stick",
+            "per_craft": 1,
+            "per_second": 92.7425,
+            "per_tick": 1.5457083333333332
+          },
+          {
+            "item": "steel-plate",
+            "per_craft": 1,
+            "per_second": 92.7425,
+            "per_tick": 1.5457083333333332
+          }
+        ],
+        "insertion_duration_ticks": 32.34762918834407,
+        "crafts_per_second": {
+          "numerator": 37097,
+          "denominator": 400
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "rail",
+            "amount": 2,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 2,
+            "per_second": {
+              "numerator": 37097,
+              "denominator": 200
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 100,
+        "limits": [
+          {
+            "item": "stone",
+            "limit": 100,
+            "kind": "ingredient"
+          },
+          {
+            "item": "iron-stick",
+            "limit": 100,
+            "kind": "ingredient"
+          },
+          {
+            "item": "steel-plate",
+            "limit": 100,
+            "kind": "ingredient"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "overload",
+        "per_result": [
+          {
+            "item": "rail",
+            "rule": "overload",
+            "ingredients_blocked_at": 200,
+            "held_limit": 100,
+            "stack": 100
+          }
+        ]
+      },
+      "recipe_selection": "fixed",
+      "placement": null,
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 375,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "machine:3",
+      "kind": "machine",
+      "entity": "machine:3",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "casting-steel",
+        "prototype": "foundry",
+        "prototype_type": "assembling-machine",
+        "speed": 122.5,
+        "energy_required": 3.2,
+        "ticks_per_craft": 1.5673469387755101,
+        "crafts_per_tick": 0.6380208333333334,
+        "productivity": 300,
+        "bonus_per_craft": 3,
+        "ticks_per_bonus": 4.70204081632653,
+        "inputs": [],
+        "insertion_duration_ticks": 18.024489795918367,
+        "crafts_per_second": {
+          "numerator": 1225,
+          "denominator": 32
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "steel-plate",
+            "amount": 1,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 4,
+            "per_second": {
+              "numerator": 1225,
+              "denominator": 8
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 46,
+        "limits": []
+      },
+      "output_block": {
+        "rule": "overload",
+        "per_result": [
+          {
+            "item": "steel-plate",
+            "rule": "overload",
+            "ingredients_blocked_at": 100,
+            "held_limit": 100,
+            "stack": 100
+          }
+        ]
+      },
+      "recipe_selection": "fixed",
+      "placement": null,
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 2500,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "machine:4",
+      "kind": "machine",
+      "entity": "machine:4",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "casting-iron-stick",
+        "prototype": "foundry",
+        "prototype_type": "assembling-machine",
+        "speed": 66.5,
+        "energy_required": 1,
+        "ticks_per_craft": 0.9022556390977443,
+        "crafts_per_tick": 1.1083333333333334,
+        "productivity": 150,
+        "bonus_per_craft": 1.5,
+        "ticks_per_bonus": 1.3533834586466165,
+        "inputs": [],
+        "insertion_duration_ticks": 7.12781954887218,
+        "crafts_per_second": {
+          "numerator": 133,
+          "denominator": 2
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "iron-stick",
+            "amount": 4,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 10,
+            "per_second": {
+              "numerator": 665,
+              "denominator": 1
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 79,
+        "limits": []
+      },
+      "output_block": {
+        "rule": "overload",
+        "per_result": [
+          {
+            "item": "iron-stick",
+            "rule": "overload",
+            "ingredients_blocked_at": 100,
+            "held_limit": 100,
+            "stack": 100
+          }
+        ]
+      },
+      "recipe_selection": "fixed",
+      "placement": null,
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 2500,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "drill:1",
+      "kind": "drill",
+      "entity": "drill:1",
+      "production": {
+        "kind": "resource",
+        "recipe_or_resource": "stone",
+        "prototype": "electric-mining-drill",
+        "prototype_type": "mining-drill",
+        "speed": 4.9194,
+        "energy_required": 1,
+        "ticks_per_craft": 12.196609342602754,
+        "crafts_per_tick": 0.08199000000000002,
+        "productivity": 269990,
+        "bonus_per_craft": null,
+        "ticks_per_bonus": null,
+        "inputs": [],
+        "insertion_duration_ticks": null,
+        "crafts_per_second": {
+          "numerator": 4919400000000001,
+          "denominator": 1000000000000000
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "stone",
+            "amount": 1,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 2700.9,
+            "per_second": {
+              "numerator": 7697975507999090,
+              "denominator": 579369839683
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "whole-items",
+        "payouts_count_as_finishes": null
+      },
+      "placement": {
+        "mechanism": "mining-drop",
+        "vector_to_place_result": [
+          0,
+          -1.85
+        ],
+        "target": "machine:2",
+        "per_result": [
+          {
+            "item": "stone",
+            "lands_in": "ingredients",
+            "into_machine_stop": 164
+          }
+        ],
+        "into_container": "room",
+        "phase": "before-mining",
+        "stops_while_stack_waits": false
+      },
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 90,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      }
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/production-science-pack",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "production-science-pack",
+      "from": "machine:1",
+      "to": "belt:1/lane:1",
+      "from_lanes": [],
+      "lands_in": "lane",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "production-science-pack"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 5,
+        "cycle": 12,
+        "pickup_to_drop": 9,
+        "per_second": {
+          "numerator": 80,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 4,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:2/iron-stick",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "iron-stick",
+      "from": "machine:4",
+      "to": "machine:2",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "iron-stick"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:3/rail",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "rail",
+      "from": "machine:2",
+      "to": "machine:1",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "rail"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:4/steel-plate",
+      "via": "inserter",
+      "entity": "inserter:4",
+      "group": "inserter:4",
+      "item": "steel-plate",
+      "from": "machine:3",
+      "to": "machine:2",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "steel-plate"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:5/productivity-module",
+      "via": "inserter",
+      "entity": "inserter:5",
+      "group": "inserter:5",
+      "item": "productivity-module",
+      "from": "belt:2/lane:2",
+      "to": "machine:1",
+      "from_lanes": [
+        "belt:2/lane:2"
+      ],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "productivity-module"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11,
+        "pickup_to_drop": 8,
+        "per_second": {
+          "numerator": 960,
+          "denominator": 11
+        }
+      },
+      "floor": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:6/electric-furnace",
+      "via": "inserter",
+      "entity": "inserter:6",
+      "group": "inserter:6",
+      "item": "electric-furnace",
+      "from": "belt:2/lane:1",
+      "to": "machine:1",
+      "from_lanes": [
+        "belt:2/lane:1"
+      ],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "electric-furnace"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11,
+        "pickup_to_drop": 8,
+        "per_second": {
+          "numerator": 960,
+          "denominator": 11
+        }
+      },
+      "floor": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "placement:drill:1/stone",
+      "via": "placement",
+      "entity": "drill:1",
+      "item": "stone",
+      "from": "drill:1",
+      "to": "machine:2",
+      "lands_in": "ingredients",
+      "into_machine_stop": 164,
+      "mechanism": "mining-drop",
+      "ceiling": null
+    }
+  ],
+  "capacity_groups": [
+    {
+      "group": "inserter:1",
+      "edges": [
+        {
+          "edge": "inserter:1/production-science-pack",
+          "item": "production-science-pack",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    },
+    {
+      "group": "inserter:2",
+      "edges": [
+        {
+          "edge": "inserter:2/iron-stick",
+          "item": "iron-stick",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:3",
+      "edges": [
+        {
+          "edge": "inserter:3/rail",
+          "item": "rail",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:4",
+      "edges": [
+        {
+          "edge": "inserter:4/steel-plate",
+          "item": "steel-plate",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:5",
+      "edges": [
+        {
+          "edge": "inserter:5/productivity-module",
+          "item": "productivity-module",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    },
+    {
+      "group": "inserter:6",
+      "edges": [
+        {
+          "edge": "inserter:6/electric-furnace",
+          "item": "electric-furnace",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    }
+  ]
+}

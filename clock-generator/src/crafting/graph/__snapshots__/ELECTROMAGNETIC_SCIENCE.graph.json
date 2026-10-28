@@ -1,0 +1,162 @@
+{
+  "schema": 1,
+  "sample": "ELECTROMAGNETIC_SCIENCE",
+  "target": {
+    "item": "electromagnetic-science-pack",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 30,
+      "denominator": 1
+    }
+  },
+  "nodes": [
+    {
+      "key": "belt:1/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:1/lane:1#accumulator"
+      ]
+    },
+    {
+      "key": "belt:1/lane:2",
+      "kind": "lane",
+      "ports": [
+        "belt:1/lane:2#supercapacitor"
+      ]
+    },
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "chest:1",
+      "kind": "container",
+      "ports": [
+        "chest:1#electromagnetic-science-pack"
+      ]
+    },
+    {
+      "key": "sink",
+      "kind": "sink",
+      "ports": []
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/supercapacitor",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "supercapacitor",
+      "from": "belt:1/lane:2#supercapacitor",
+      "from_ports": [
+        "belt:1/lane:2#supercapacitor"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:1/accumulator",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "accumulator",
+      "from": "belt:1/lane:1#accumulator",
+      "from_ports": [
+        "belt:1/lane:1#accumulator"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:2/electromagnetic-science-pack",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "electromagnetic-science-pack",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "chest:1#electromagnetic-science-pack",
+      "lands_in": "storage",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": "storage"
+    },
+    {
+      "key": "inserter:3/electromagnetic-science-pack",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "electromagnetic-science-pack",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "chest:1#electromagnetic-science-pack",
+      "lands_in": "storage",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": "storage"
+    }
+  ],
+  "components": [],
+  "order": [
+    "belt:1/lane:1#accumulator",
+    "belt:1/lane:2#supercapacitor",
+    "machine:1",
+    "chest:1#electromagnetic-science-pack",
+    "sink"
+  ],
+  "shared": {
+    "out": [
+      {
+        "at": "machine:1",
+        "item": "electromagnetic-science-pack",
+        "edges": [
+          "inserter:2/electromagnetic-science-pack",
+          "inserter:3/electromagnetic-science-pack"
+        ]
+      }
+    ],
+    "in": [
+      {
+        "at": "chest:1#electromagnetic-science-pack",
+        "item": "electromagnetic-science-pack",
+        "edges": [
+          "inserter:2/electromagnetic-science-pack",
+          "inserter:3/electromagnetic-science-pack"
+        ]
+      }
+    ],
+    "lanes": []
+  },
+  "terminal": [
+    "inserter:2/electromagnetic-science-pack",
+    "inserter:3/electromagnetic-science-pack"
+  ]
+}

@@ -1,0 +1,425 @@
+{
+  "schema": 1,
+  "sample": "JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS",
+  "target": {
+    "item": "rocket-fuel",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 60,
+      "denominator": 1
+    }
+  },
+  "nodes": [
+    {
+      "key": "belt:1/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:1/lane:1#bioflux"
+      ]
+    },
+    {
+      "key": "belt:1/lane:2",
+      "kind": "lane",
+      "ports": [
+        "belt:1/lane:2#jellynut"
+      ]
+    },
+    {
+      "key": "belt:2/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:2/lane:1#rocket-fuel"
+      ]
+    },
+    {
+      "key": "belt:2/lane:2",
+      "kind": "lane",
+      "ports": []
+    },
+    {
+      "key": "belt:3/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:3/lane:1#nutrients"
+      ]
+    },
+    {
+      "key": "belt:3/lane:2",
+      "kind": "lane",
+      "ports": []
+    },
+    {
+      "key": "belt:4/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:4/lane:1#nutrients"
+      ]
+    },
+    {
+      "key": "belt:4/lane:2",
+      "kind": "lane",
+      "ports": [
+        "belt:4/lane:2#jellynut-seed"
+      ]
+    },
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:2",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:3",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "sink",
+      "kind": "sink",
+      "ports": []
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/bioflux",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "bioflux",
+      "from": "belt:1/lane:1#bioflux",
+      "from_ports": [
+        "belt:1/lane:1#bioflux"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:2/rocket-fuel",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "rocket-fuel",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "belt:2/lane:1#rocket-fuel",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:3/jellynut",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "jellynut",
+      "from": "belt:1/lane:2#jellynut",
+      "from_ports": [
+        "belt:1/lane:2#jellynut"
+      ],
+      "to": "machine:2",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:4/rocket-fuel",
+      "via": "inserter",
+      "entity": "inserter:4",
+      "group": "inserter:4",
+      "item": "rocket-fuel",
+      "from": "machine:3",
+      "from_ports": [
+        "machine:3"
+      ],
+      "to": "belt:2/lane:1#rocket-fuel",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:5/bioflux",
+      "via": "inserter",
+      "entity": "inserter:5",
+      "group": "inserter:5",
+      "item": "bioflux",
+      "from": "belt:1/lane:1#bioflux",
+      "from_ports": [
+        "belt:1/lane:1#bioflux"
+      ],
+      "to": "machine:3",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:6/jelly",
+      "via": "inserter",
+      "entity": "inserter:6",
+      "group": "inserter:6",
+      "item": "jelly",
+      "from": "machine:2",
+      "from_ports": [
+        "machine:2"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:7/jelly",
+      "via": "inserter",
+      "entity": "inserter:7",
+      "group": "inserter:7",
+      "item": "jelly",
+      "from": "machine:2",
+      "from_ports": [
+        "machine:2"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:8/jelly",
+      "via": "inserter",
+      "entity": "inserter:8",
+      "group": "inserter:8",
+      "item": "jelly",
+      "from": "machine:2",
+      "from_ports": [
+        "machine:2"
+      ],
+      "to": "machine:3",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:9/jelly",
+      "via": "inserter",
+      "entity": "inserter:9",
+      "group": "inserter:9",
+      "item": "jelly",
+      "from": "machine:2",
+      "from_ports": [
+        "machine:2"
+      ],
+      "to": "machine:3",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:10/nutrients",
+      "via": "inserter",
+      "entity": "inserter:10",
+      "group": "inserter:10",
+      "item": "nutrients",
+      "from": "belt:3/lane:1#nutrients",
+      "from_ports": [
+        "belt:3/lane:1#nutrients"
+      ],
+      "to": "machine:1",
+      "lands_in": "fuel",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:11/jellynut-seed",
+      "via": "inserter",
+      "entity": "inserter:11",
+      "group": "inserter:11",
+      "item": "jellynut-seed",
+      "from": "machine:2",
+      "from_ports": [
+        "machine:2"
+      ],
+      "to": "belt:4/lane:2#jellynut-seed",
+      "lands_in": "lane",
+      "hand": 8,
+      "floor_cycle": 9,
+      "ceiling": {
+        "numerator": 160,
+        "denominator": 3
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:12/nutrients",
+      "via": "inserter",
+      "entity": "inserter:12",
+      "group": "inserter:12",
+      "item": "nutrients",
+      "from": "belt:3/lane:1#nutrients",
+      "from_ports": [
+        "belt:3/lane:1#nutrients"
+      ],
+      "to": "machine:2",
+      "lands_in": "fuel",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:13/nutrients",
+      "via": "inserter",
+      "entity": "inserter:13",
+      "group": "inserter:13",
+      "item": "nutrients",
+      "from": "belt:3/lane:1#nutrients",
+      "from_ports": [
+        "belt:3/lane:1#nutrients"
+      ],
+      "to": "machine:3",
+      "lands_in": "fuel",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    }
+  ],
+  "components": [],
+  "order": [
+    "belt:1/lane:1#bioflux",
+    "belt:1/lane:2#jellynut",
+    "belt:3/lane:1#nutrients",
+    "belt:4/lane:1#nutrients",
+    "machine:2",
+    "belt:4/lane:2#jellynut-seed",
+    "machine:1",
+    "machine:3",
+    "belt:2/lane:1#rocket-fuel",
+    "sink"
+  ],
+  "shared": {
+    "out": [
+      {
+        "at": "machine:2",
+        "item": "jelly",
+        "edges": [
+          "inserter:6/jelly",
+          "inserter:7/jelly",
+          "inserter:8/jelly",
+          "inserter:9/jelly"
+        ]
+      }
+    ],
+    "in": [
+      {
+        "at": "belt:2/lane:1#rocket-fuel",
+        "item": "rocket-fuel",
+        "edges": [
+          "inserter:2/rocket-fuel",
+          "inserter:4/rocket-fuel"
+        ]
+      },
+      {
+        "at": "machine:1",
+        "item": "jelly",
+        "edges": [
+          "inserter:6/jelly",
+          "inserter:7/jelly"
+        ]
+      },
+      {
+        "at": "machine:3",
+        "item": "jelly",
+        "edges": [
+          "inserter:8/jelly",
+          "inserter:9/jelly"
+        ]
+      }
+    ],
+    "lanes": [
+      {
+        "at": "belt:1/lane:1#bioflux",
+        "item": "bioflux",
+        "edges": [
+          "inserter:1/bioflux",
+          "inserter:5/bioflux"
+        ]
+      },
+      {
+        "at": "belt:3/lane:1#nutrients",
+        "item": "nutrients",
+        "edges": [
+          "inserter:10/nutrients",
+          "inserter:12/nutrients",
+          "inserter:13/nutrients"
+        ]
+      }
+    ]
+  },
+  "terminal": [
+    "inserter:2/rocket-fuel",
+    "inserter:4/rocket-fuel",
+    "inserter:11/jellynut-seed"
+  ]
+}

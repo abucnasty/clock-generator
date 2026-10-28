@@ -1,0 +1,2005 @@
+{
+  "schema": 1,
+  "target": {
+    "item": "lithium-plate",
+    "counts": "made",
+    "items_per_second": 80,
+    "copies": 1,
+    "per_copy": {
+      "numerator": 80,
+      "denominator": 1
+    }
+  },
+  "nodes": [
+    {
+      "key": "belt:1/lane:1",
+      "kind": "lane",
+      "entity": "belt:1",
+      "lane": {
+        "key": "belt:1/lane:1",
+        "belt": "belt:1",
+        "lane": 1,
+        "listed": true,
+        "item": "lithium-plate",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:1/lane:2",
+      "kind": "lane",
+      "entity": "belt:1",
+      "lane": {
+        "key": "belt:1/lane:2",
+        "belt": "belt:1",
+        "lane": 2,
+        "listed": true,
+        "item": "lithium-plate",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "entity": "machine:1",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "lithium",
+        "prototype": "cryogenic-plant",
+        "prototype_type": "assembling-machine",
+        "speed": 53.122,
+        "energy_required": 20,
+        "ticks_per_craft": 22.589510937088207,
+        "crafts_per_tick": 0.04426833333333334,
+        "productivity": 200,
+        "bonus_per_craft": 2,
+        "ticks_per_bonus": 45.179021874176414,
+        "inputs": [
+          {
+            "item": "holmium-plate",
+            "per_craft": 1,
+            "per_second": 2.6561000000000003,
+            "per_tick": 0.04426833333333334
+          }
+        ],
+        "insertion_duration_ticks": 7.529836979029403,
+        "crafts_per_second": {
+          "numerator": 5312200000000001,
+          "denominator": 2000000000000000
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "lithium",
+            "amount": 5,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 15,
+            "per_second": {
+              "numerator": 43161625006202,
+              "denominator": 1083333333489
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 5,
+        "limits": [
+          {
+            "item": "holmium-plate",
+            "limit": 5,
+            "kind": "ingredient"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "overload",
+        "per_result": [
+          {
+            "item": "lithium",
+            "rule": "overload",
+            "ingredients_blocked_at": 25,
+            "held_limit": 25,
+            "stack": 50
+          }
+        ]
+      },
+      "recipe_selection": "fixed",
+      "placement": null,
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 1500,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "machine:2",
+      "kind": "machine",
+      "entity": "machine:2",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "lithium",
+        "prototype": "cryogenic-plant",
+        "prototype_type": "assembling-machine",
+        "speed": 53.122,
+        "energy_required": 20,
+        "ticks_per_craft": 22.589510937088207,
+        "crafts_per_tick": 0.04426833333333334,
+        "productivity": 200,
+        "bonus_per_craft": 2,
+        "ticks_per_bonus": 45.179021874176414,
+        "inputs": [
+          {
+            "item": "holmium-plate",
+            "per_craft": 1,
+            "per_second": 2.6561000000000003,
+            "per_tick": 0.04426833333333334
+          }
+        ],
+        "insertion_duration_ticks": 7.529836979029403,
+        "crafts_per_second": {
+          "numerator": 5312200000000001,
+          "denominator": 2000000000000000
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "lithium",
+            "amount": 5,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 15,
+            "per_second": {
+              "numerator": 43161625006202,
+              "denominator": 1083333333489
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 5,
+        "limits": [
+          {
+            "item": "holmium-plate",
+            "limit": 5,
+            "kind": "ingredient"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "overload",
+        "per_result": [
+          {
+            "item": "lithium",
+            "rule": "overload",
+            "ingredients_blocked_at": 25,
+            "held_limit": 25,
+            "stack": 50
+          }
+        ]
+      },
+      "recipe_selection": "fixed",
+      "placement": null,
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 1500,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "machine:3",
+      "kind": "machine",
+      "entity": "machine:3",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "lithium-plate",
+        "prototype": "electric-furnace",
+        "prototype_type": "furnace",
+        "speed": 66,
+        "energy_required": 6.4,
+        "ticks_per_craft": 5.818181818181818,
+        "crafts_per_tick": 0.171875,
+        "productivity": 50,
+        "bonus_per_craft": 0.5,
+        "ticks_per_bonus": 2.909090909090909,
+        "inputs": [
+          {
+            "item": "lithium",
+            "per_craft": 1,
+            "per_second": 10.3125,
+            "per_tick": 0.171875
+          }
+        ],
+        "insertion_duration_ticks": 54.303030303030305,
+        "crafts_per_second": {
+          "numerator": 165,
+          "denominator": 16
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "lithium-plate",
+            "amount": 1,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 1.5,
+            "per_second": {
+              "numerator": 495,
+              "denominator": 32
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 14,
+        "limits": [
+          {
+            "item": "lithium",
+            "limit": 14,
+            "kind": "ingredient"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "stack",
+        "per_result": [
+          {
+            "item": "lithium-plate",
+            "rule": "stack",
+            "ingredients_blocked_at": 100,
+            "held_limit": 100,
+            "stack": 100
+          }
+        ]
+      },
+      "recipe_selection": "by-input",
+      "placement": null,
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 180,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "machine:4",
+      "kind": "machine",
+      "entity": "machine:4",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "lithium-plate",
+        "prototype": "electric-furnace",
+        "prototype_type": "furnace",
+        "speed": 66,
+        "energy_required": 6.4,
+        "ticks_per_craft": 5.818181818181818,
+        "crafts_per_tick": 0.171875,
+        "productivity": 50,
+        "bonus_per_craft": 0.5,
+        "ticks_per_bonus": 2.909090909090909,
+        "inputs": [
+          {
+            "item": "lithium",
+            "per_craft": 1,
+            "per_second": 10.3125,
+            "per_tick": 0.171875
+          }
+        ],
+        "insertion_duration_ticks": 54.303030303030305,
+        "crafts_per_second": {
+          "numerator": 165,
+          "denominator": 16
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "lithium-plate",
+            "amount": 1,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 1.5,
+            "per_second": {
+              "numerator": 495,
+              "denominator": 32
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 14,
+        "limits": [
+          {
+            "item": "lithium",
+            "limit": 14,
+            "kind": "ingredient"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "stack",
+        "per_result": [
+          {
+            "item": "lithium-plate",
+            "rule": "stack",
+            "ingredients_blocked_at": 100,
+            "held_limit": 100,
+            "stack": 100
+          }
+        ]
+      },
+      "recipe_selection": "by-input",
+      "placement": null,
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 180,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "machine:5",
+      "kind": "machine",
+      "entity": "machine:5",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "lithium-plate",
+        "prototype": "electric-furnace",
+        "prototype_type": "furnace",
+        "speed": 66,
+        "energy_required": 6.4,
+        "ticks_per_craft": 5.818181818181818,
+        "crafts_per_tick": 0.171875,
+        "productivity": 50,
+        "bonus_per_craft": 0.5,
+        "ticks_per_bonus": 2.909090909090909,
+        "inputs": [
+          {
+            "item": "lithium",
+            "per_craft": 1,
+            "per_second": 10.3125,
+            "per_tick": 0.171875
+          }
+        ],
+        "insertion_duration_ticks": 54.303030303030305,
+        "crafts_per_second": {
+          "numerator": 165,
+          "denominator": 16
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "lithium-plate",
+            "amount": 1,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 1.5,
+            "per_second": {
+              "numerator": 495,
+              "denominator": 32
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 14,
+        "limits": [
+          {
+            "item": "lithium",
+            "limit": 14,
+            "kind": "ingredient"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "stack",
+        "per_result": [
+          {
+            "item": "lithium-plate",
+            "rule": "stack",
+            "ingredients_blocked_at": 100,
+            "held_limit": 100,
+            "stack": 100
+          }
+        ]
+      },
+      "recipe_selection": "by-input",
+      "placement": null,
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 180,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "machine:6",
+      "kind": "machine",
+      "entity": "machine:6",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "lithium-plate",
+        "prototype": "electric-furnace",
+        "prototype_type": "furnace",
+        "speed": 66,
+        "energy_required": 6.4,
+        "ticks_per_craft": 5.818181818181818,
+        "crafts_per_tick": 0.171875,
+        "productivity": 50,
+        "bonus_per_craft": 0.5,
+        "ticks_per_bonus": 2.909090909090909,
+        "inputs": [
+          {
+            "item": "lithium",
+            "per_craft": 1,
+            "per_second": 10.3125,
+            "per_tick": 0.171875
+          }
+        ],
+        "insertion_duration_ticks": 54.303030303030305,
+        "crafts_per_second": {
+          "numerator": 165,
+          "denominator": 16
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "lithium-plate",
+            "amount": 1,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 1.5,
+            "per_second": {
+              "numerator": 495,
+              "denominator": 32
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 14,
+        "limits": [
+          {
+            "item": "lithium",
+            "limit": 14,
+            "kind": "ingredient"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "stack",
+        "per_result": [
+          {
+            "item": "lithium-plate",
+            "rule": "stack",
+            "ingredients_blocked_at": 100,
+            "held_limit": 100,
+            "stack": 100
+          }
+        ]
+      },
+      "recipe_selection": "by-input",
+      "placement": null,
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 180,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "machine:7",
+      "kind": "machine",
+      "entity": "machine:7",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "lithium-plate",
+        "prototype": "electric-furnace",
+        "prototype_type": "furnace",
+        "speed": 66,
+        "energy_required": 6.4,
+        "ticks_per_craft": 5.818181818181818,
+        "crafts_per_tick": 0.171875,
+        "productivity": 50,
+        "bonus_per_craft": 0.5,
+        "ticks_per_bonus": 2.909090909090909,
+        "inputs": [
+          {
+            "item": "lithium",
+            "per_craft": 1,
+            "per_second": 10.3125,
+            "per_tick": 0.171875
+          }
+        ],
+        "insertion_duration_ticks": 54.303030303030305,
+        "crafts_per_second": {
+          "numerator": 165,
+          "denominator": 16
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "lithium-plate",
+            "amount": 1,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 1.5,
+            "per_second": {
+              "numerator": 495,
+              "denominator": 32
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 14,
+        "limits": [
+          {
+            "item": "lithium",
+            "limit": 14,
+            "kind": "ingredient"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "stack",
+        "per_result": [
+          {
+            "item": "lithium-plate",
+            "rule": "stack",
+            "ingredients_blocked_at": 100,
+            "held_limit": 100,
+            "stack": 100
+          }
+        ]
+      },
+      "recipe_selection": "by-input",
+      "placement": null,
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 180,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "machine:8",
+      "kind": "machine",
+      "entity": "machine:8",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "lithium-plate",
+        "prototype": "electric-furnace",
+        "prototype_type": "furnace",
+        "speed": 66,
+        "energy_required": 6.4,
+        "ticks_per_craft": 5.818181818181818,
+        "crafts_per_tick": 0.171875,
+        "productivity": 50,
+        "bonus_per_craft": 0.5,
+        "ticks_per_bonus": 2.909090909090909,
+        "inputs": [
+          {
+            "item": "lithium",
+            "per_craft": 1,
+            "per_second": 10.3125,
+            "per_tick": 0.171875
+          }
+        ],
+        "insertion_duration_ticks": 54.303030303030305,
+        "crafts_per_second": {
+          "numerator": 165,
+          "denominator": 16
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "lithium-plate",
+            "amount": 1,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 1.5,
+            "per_second": {
+              "numerator": 495,
+              "denominator": 32
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 14,
+        "limits": [
+          {
+            "item": "lithium",
+            "limit": 14,
+            "kind": "ingredient"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "stack",
+        "per_result": [
+          {
+            "item": "lithium-plate",
+            "rule": "stack",
+            "ingredients_blocked_at": 100,
+            "held_limit": 100,
+            "stack": 100
+          }
+        ]
+      },
+      "recipe_selection": "by-input",
+      "placement": null,
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 180,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "chest:1",
+      "kind": "container",
+      "entity": "chest:1",
+      "storage": {
+        "kind": "constant",
+        "chest_type": "infinity-chest",
+        "capacity_by_item": [
+          {
+            "item": "holmium-plate",
+            "capacity": null
+          }
+        ],
+        "accepts": [
+          "holmium-plate"
+        ],
+        "gives": [
+          "holmium-plate"
+        ],
+        "items_put_in": [],
+        "never_refuses": true,
+        "constant_supply": true,
+        "slots": null,
+        "input_slots": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "chest:2",
+      "kind": "container",
+      "entity": "chest:2",
+      "storage": {
+        "kind": "constant",
+        "chest_type": "infinity-chest",
+        "capacity_by_item": [
+          {
+            "item": "holmium-plate",
+            "capacity": null
+          }
+        ],
+        "accepts": [
+          "holmium-plate"
+        ],
+        "gives": [
+          "holmium-plate"
+        ],
+        "items_put_in": [],
+        "never_refuses": true,
+        "constant_supply": true,
+        "slots": null,
+        "input_slots": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "chest:3",
+      "kind": "container",
+      "entity": "chest:3",
+      "storage": {
+        "kind": "weight",
+        "chest_type": "rocket-silo",
+        "capacity_by_item": [
+          {
+            "item": "lithium",
+            "capacity": 250
+          },
+          {
+            "item": "processing-unit",
+            "capacity": 100
+          },
+          {
+            "item": "low-density-structure",
+            "capacity": 50
+          },
+          {
+            "item": "rocket-fuel",
+            "capacity": 20
+          }
+        ],
+        "accepts": "any",
+        "gives": [
+          "lithium"
+        ],
+        "items_put_in": [
+          "lithium"
+        ],
+        "never_refuses": false,
+        "constant_supply": false,
+        "slots": null,
+        "input_slots": {
+          "overload_multiplier": 7,
+          "limits": [
+            {
+              "item": "processing-unit",
+              "limit": 7,
+              "kind": "silo-input"
+            },
+            {
+              "item": "low-density-structure",
+              "limit": 7,
+              "kind": "silo-input"
+            },
+            {
+              "item": "rocket-fuel",
+              "limit": 7,
+              "kind": "silo-input"
+            }
+          ]
+        }
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "chest:4",
+      "kind": "container",
+      "entity": "chest:4",
+      "storage": {
+        "kind": "constant",
+        "chest_type": "infinity-chest",
+        "capacity_by_item": [],
+        "accepts": "any",
+        "gives": [],
+        "items_put_in": [],
+        "never_refuses": true,
+        "constant_supply": true,
+        "slots": null,
+        "input_slots": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/holmium-plate",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "holmium-plate",
+      "from": "chest:1",
+      "to": "machine:1",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "holmium-plate"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:2/holmium-plate",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "holmium-plate",
+      "from": "chest:2",
+      "to": "machine:2",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "holmium-plate"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:3/lithium-plate",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "lithium-plate",
+      "from": "machine:3",
+      "to": "belt:1/lane:1",
+      "from_lanes": [],
+      "lands_in": "lane",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "lithium-plate"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 5,
+        "cycle": 12,
+        "pickup_to_drop": 9,
+        "per_second": {
+          "numerator": 80,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 4,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:4/lithium",
+      "via": "inserter",
+      "entity": "inserter:4",
+      "group": "inserter:4",
+      "item": "lithium",
+      "from": "machine:1",
+      "to": "chest:3",
+      "from_lanes": [],
+      "lands_in": "storage",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "lithium"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:5/lithium",
+      "via": "inserter",
+      "entity": "inserter:5",
+      "group": "inserter:5",
+      "item": "lithium",
+      "from": "machine:2",
+      "to": "chest:3",
+      "from_lanes": [],
+      "lands_in": "storage",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "lithium"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:6/lithium-plate",
+      "via": "inserter",
+      "entity": "inserter:6",
+      "group": "inserter:6",
+      "item": "lithium-plate",
+      "from": "machine:4",
+      "to": "belt:1/lane:1",
+      "from_lanes": [],
+      "lands_in": "lane",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "lithium-plate"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 5,
+        "cycle": 12,
+        "pickup_to_drop": 9,
+        "per_second": {
+          "numerator": 80,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 4,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:7/lithium",
+      "via": "inserter",
+      "entity": "inserter:7",
+      "group": "inserter:7",
+      "item": "lithium",
+      "from": "chest:3",
+      "to": "machine:3",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "lithium"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:8/lithium",
+      "via": "inserter",
+      "entity": "inserter:8",
+      "group": "inserter:8",
+      "item": "lithium",
+      "from": "chest:3",
+      "to": "machine:4",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "lithium"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:9/lithium",
+      "via": "inserter",
+      "entity": "inserter:9",
+      "group": "inserter:9",
+      "item": "lithium",
+      "from": "chest:3",
+      "to": "machine:5",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "lithium"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:10/lithium",
+      "via": "inserter",
+      "entity": "inserter:10",
+      "group": "inserter:10",
+      "item": "lithium",
+      "from": "chest:3",
+      "to": "machine:6",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "lithium"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:11/lithium-plate",
+      "via": "inserter",
+      "entity": "inserter:11",
+      "group": "inserter:11",
+      "item": "lithium-plate",
+      "from": "machine:5",
+      "to": "belt:1/lane:1",
+      "from_lanes": [],
+      "lands_in": "lane",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "lithium-plate"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 5,
+        "cycle": 12,
+        "pickup_to_drop": 9,
+        "per_second": {
+          "numerator": 80,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 4,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:12/lithium-plate",
+      "via": "inserter",
+      "entity": "inserter:12",
+      "group": "inserter:12",
+      "item": "lithium-plate",
+      "from": "machine:6",
+      "to": "belt:1/lane:1",
+      "from_lanes": [],
+      "lands_in": "lane",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "lithium-plate"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 5,
+        "cycle": 12,
+        "pickup_to_drop": 9,
+        "per_second": {
+          "numerator": 80,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 4,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:13/lithium",
+      "via": "inserter",
+      "entity": "inserter:13",
+      "group": "inserter:13",
+      "item": "lithium",
+      "from": "chest:3",
+      "to": "machine:7",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "lithium"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:14/lithium",
+      "via": "inserter",
+      "entity": "inserter:14",
+      "group": "inserter:14",
+      "item": "lithium",
+      "from": "chest:3",
+      "to": "machine:8",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "lithium"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:15/lithium-plate",
+      "via": "inserter",
+      "entity": "inserter:15",
+      "group": "inserter:15",
+      "item": "lithium-plate",
+      "from": "machine:7",
+      "to": "belt:1/lane:1",
+      "from_lanes": [],
+      "lands_in": "lane",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "lithium-plate"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 5,
+        "cycle": 12,
+        "pickup_to_drop": 9,
+        "per_second": {
+          "numerator": 80,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 4,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:16/lithium-plate",
+      "via": "inserter",
+      "entity": "inserter:16",
+      "group": "inserter:16",
+      "item": "lithium-plate",
+      "from": "machine:8",
+      "to": "belt:1/lane:1",
+      "from_lanes": [],
+      "lands_in": "lane",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "lithium-plate"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 5,
+        "cycle": 12,
+        "pickup_to_drop": 9,
+        "per_second": {
+          "numerator": 80,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 4,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    }
+  ],
+  "capacity_groups": [
+    {
+      "group": "inserter:1",
+      "edges": [
+        {
+          "edge": "inserter:1/holmium-plate",
+          "item": "holmium-plate",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:2",
+      "edges": [
+        {
+          "edge": "inserter:2/holmium-plate",
+          "item": "holmium-plate",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:3",
+      "edges": [
+        {
+          "edge": "inserter:3/lithium-plate",
+          "item": "lithium-plate",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    },
+    {
+      "group": "inserter:4",
+      "edges": [
+        {
+          "edge": "inserter:4/lithium",
+          "item": "lithium",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:5",
+      "edges": [
+        {
+          "edge": "inserter:5/lithium",
+          "item": "lithium",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:6",
+      "edges": [
+        {
+          "edge": "inserter:6/lithium-plate",
+          "item": "lithium-plate",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    },
+    {
+      "group": "inserter:7",
+      "edges": [
+        {
+          "edge": "inserter:7/lithium",
+          "item": "lithium",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:8",
+      "edges": [
+        {
+          "edge": "inserter:8/lithium",
+          "item": "lithium",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:9",
+      "edges": [
+        {
+          "edge": "inserter:9/lithium",
+          "item": "lithium",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:10",
+      "edges": [
+        {
+          "edge": "inserter:10/lithium",
+          "item": "lithium",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:11",
+      "edges": [
+        {
+          "edge": "inserter:11/lithium-plate",
+          "item": "lithium-plate",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    },
+    {
+      "group": "inserter:12",
+      "edges": [
+        {
+          "edge": "inserter:12/lithium-plate",
+          "item": "lithium-plate",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    },
+    {
+      "group": "inserter:13",
+      "edges": [
+        {
+          "edge": "inserter:13/lithium",
+          "item": "lithium",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:14",
+      "edges": [
+        {
+          "edge": "inserter:14/lithium",
+          "item": "lithium",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:15",
+      "edges": [
+        {
+          "edge": "inserter:15/lithium-plate",
+          "item": "lithium-plate",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    },
+    {
+      "group": "inserter:16",
+      "edges": [
+        {
+          "edge": "inserter:16/lithium-plate",
+          "item": "lithium-plate",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    }
+  ]
+}

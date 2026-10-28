@@ -1,0 +1,285 @@
+{
+  "schema": 1,
+  "sample": "LOGISTIC_SCIENCE_DI",
+  "target": {
+    "item": "logistic-science-pack",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 40,
+      "denominator": 1
+    }
+  },
+  "nodes": [
+    {
+      "key": "belt:1/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:1/lane:1#logistic-science-pack"
+      ]
+    },
+    {
+      "key": "belt:1/lane:2",
+      "kind": "lane",
+      "ports": []
+    },
+    {
+      "key": "belt:2/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:2/lane:1#logistic-science-pack"
+      ]
+    },
+    {
+      "key": "belt:2/lane:2",
+      "kind": "lane",
+      "ports": []
+    },
+    {
+      "key": "belt:3/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:3/lane:1#inserter"
+      ]
+    },
+    {
+      "key": "belt:3/lane:2",
+      "kind": "lane",
+      "ports": []
+    },
+    {
+      "key": "belt:4/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:4/lane:1#inserter"
+      ]
+    },
+    {
+      "key": "belt:4/lane:2",
+      "kind": "lane",
+      "ports": []
+    },
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:2",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:3",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:4",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:5",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "sink",
+      "kind": "sink",
+      "ports": []
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/logistic-science-pack",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "logistic-science-pack",
+      "from": "machine:2",
+      "from_ports": [
+        "machine:2"
+      ],
+      "to": "belt:1/lane:1#logistic-science-pack",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:2/inserter",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "inserter",
+      "from": "belt:3/lane:1#inserter",
+      "from_ports": [
+        "belt:3/lane:1#inserter"
+      ],
+      "to": "machine:2",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:3/iron-plate",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "iron-plate",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "machine:3",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:4/transport-belt",
+      "via": "inserter",
+      "entity": "inserter:4",
+      "group": "inserter:4",
+      "item": "transport-belt",
+      "from": "machine:3",
+      "from_ports": [
+        "machine:3"
+      ],
+      "to": "machine:2",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:5/iron-gear-wheel",
+      "via": "inserter",
+      "entity": "inserter:5",
+      "group": "inserter:5",
+      "item": "iron-gear-wheel",
+      "from": "machine:4",
+      "from_ports": [
+        "machine:4"
+      ],
+      "to": "machine:3",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:6/transport-belt",
+      "via": "inserter",
+      "entity": "inserter:6",
+      "group": "inserter:6",
+      "item": "transport-belt",
+      "from": "machine:3",
+      "from_ports": [
+        "machine:3"
+      ],
+      "to": "machine:5",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:7/logistic-science-pack",
+      "via": "inserter",
+      "entity": "inserter:7",
+      "group": "inserter:7",
+      "item": "logistic-science-pack",
+      "from": "machine:5",
+      "from_ports": [
+        "machine:5"
+      ],
+      "to": "belt:2/lane:1#logistic-science-pack",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:8/inserter",
+      "via": "inserter",
+      "entity": "inserter:8",
+      "group": "inserter:8",
+      "item": "inserter",
+      "from": "belt:4/lane:1#inserter",
+      "from_ports": [
+        "belt:4/lane:1#inserter"
+      ],
+      "to": "machine:5",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    }
+  ],
+  "components": [],
+  "order": [
+    "belt:3/lane:1#inserter",
+    "belt:4/lane:1#inserter",
+    "machine:1",
+    "machine:4",
+    "machine:3",
+    "machine:2",
+    "belt:1/lane:1#logistic-science-pack",
+    "machine:5",
+    "belt:2/lane:1#logistic-science-pack",
+    "sink"
+  ],
+  "shared": {
+    "out": [
+      {
+        "at": "machine:3",
+        "item": "transport-belt",
+        "edges": [
+          "inserter:4/transport-belt",
+          "inserter:6/transport-belt"
+        ]
+      }
+    ],
+    "in": [],
+    "lanes": []
+  },
+  "terminal": [
+    "inserter:1/logistic-science-pack",
+    "inserter:7/logistic-science-pack"
+  ]
+}

@@ -1,0 +1,1034 @@
+{
+  "schema": 1,
+  "sample": "REAL_THAELN_CELL09",
+  "target": {
+    "item": "utility-science-pack",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 960,
+      "denominator": 7
+    }
+  },
+  "nodes": [
+    {
+      "key": "belt:1/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:1/lane:1#processing-unit"
+      ]
+    },
+    {
+      "key": "belt:1/lane:2",
+      "kind": "lane",
+      "ports": [
+        "belt:1/lane:2#flying-robot-frame"
+      ]
+    },
+    {
+      "key": "belt:2/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:2/lane:1#flying-robot-frame"
+      ]
+    },
+    {
+      "key": "belt:2/lane:2",
+      "kind": "lane",
+      "ports": [
+        "belt:2/lane:2#processing-unit"
+      ]
+    },
+    {
+      "key": "belt:3/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:3/lane:1#utility-science-pack"
+      ]
+    },
+    {
+      "key": "belt:3/lane:2",
+      "kind": "lane",
+      "ports": []
+    },
+    {
+      "key": "belt:4/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:4/lane:1#utility-science-pack"
+      ]
+    },
+    {
+      "key": "belt:4/lane:2",
+      "kind": "lane",
+      "ports": []
+    },
+    {
+      "key": "belt:5/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:5/lane:1#coal"
+      ]
+    },
+    {
+      "key": "belt:5/lane:2",
+      "kind": "lane",
+      "ports": []
+    },
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:2",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:3",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:4",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:5",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:6",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:7",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:8",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:9",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:10",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:11",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:12",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:13",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "sink",
+      "kind": "sink",
+      "ports": []
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/processing-unit",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "processing-unit",
+      "from": "belt:1/lane:1#processing-unit",
+      "from_ports": [
+        "belt:1/lane:1#processing-unit"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:1/flying-robot-frame",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "flying-robot-frame",
+      "from": "belt:1/lane:2#flying-robot-frame",
+      "from_ports": [
+        "belt:1/lane:2#flying-robot-frame"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:2/processing-unit",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "processing-unit",
+      "from": "belt:2/lane:2#processing-unit",
+      "from_ports": [
+        "belt:2/lane:2#processing-unit"
+      ],
+      "to": "machine:2",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:2/flying-robot-frame",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "flying-robot-frame",
+      "from": "belt:2/lane:1#flying-robot-frame",
+      "from_ports": [
+        "belt:2/lane:1#flying-robot-frame"
+      ],
+      "to": "machine:2",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:3/utility-science-pack",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "utility-science-pack",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "belt:3/lane:1#utility-science-pack",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:4/utility-science-pack",
+      "via": "inserter",
+      "entity": "inserter:4",
+      "group": "inserter:4",
+      "item": "utility-science-pack",
+      "from": "machine:2",
+      "from_ports": [
+        "machine:2"
+      ],
+      "to": "belt:4/lane:1#utility-science-pack",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:5/low-density-structure",
+      "via": "inserter",
+      "entity": "inserter:5",
+      "group": "inserter:5",
+      "item": "low-density-structure",
+      "from": "machine:3",
+      "from_ports": [
+        "machine:3"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:6/low-density-structure",
+      "via": "inserter",
+      "entity": "inserter:6",
+      "group": "inserter:6",
+      "item": "low-density-structure",
+      "from": "machine:4",
+      "from_ports": [
+        "machine:4"
+      ],
+      "to": "machine:2",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:7/low-density-structure",
+      "via": "inserter",
+      "entity": "inserter:7",
+      "group": "inserter:7",
+      "item": "low-density-structure",
+      "from": "machine:3",
+      "from_ports": [
+        "machine:3"
+      ],
+      "to": "machine:5",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:8/low-density-structure",
+      "via": "inserter",
+      "entity": "inserter:8",
+      "group": "inserter:8",
+      "item": "low-density-structure",
+      "from": "machine:4",
+      "from_ports": [
+        "machine:4"
+      ],
+      "to": "machine:6",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:9/utility-science-pack",
+      "via": "inserter",
+      "entity": "inserter:9",
+      "group": "inserter:9",
+      "item": "utility-science-pack",
+      "from": "machine:5",
+      "from_ports": [
+        "machine:5"
+      ],
+      "to": "belt:3/lane:1#utility-science-pack",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:10/plastic-bar",
+      "via": "inserter",
+      "entity": "inserter:10",
+      "group": "inserter:10",
+      "item": "plastic-bar",
+      "from": "machine:7",
+      "from_ports": [
+        "machine:7"
+      ],
+      "to": "machine:3",
+      "lands_in": "ingredients",
+      "hand": 15,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 225,
+        "denominator": 2
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:11/coal",
+      "via": "inserter",
+      "entity": "inserter:11",
+      "group": "inserter:11",
+      "item": "coal",
+      "from": "belt:5/lane:1#coal",
+      "from_ports": [
+        "belt:5/lane:1#coal"
+      ],
+      "to": "machine:7",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:12/plastic-bar",
+      "via": "inserter",
+      "entity": "inserter:12",
+      "group": "inserter:12",
+      "item": "plastic-bar",
+      "from": "machine:7",
+      "from_ports": [
+        "machine:7"
+      ],
+      "to": "machine:4",
+      "lands_in": "ingredients",
+      "hand": 15,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 225,
+        "denominator": 2
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:13/utility-science-pack",
+      "via": "inserter",
+      "entity": "inserter:13",
+      "group": "inserter:13",
+      "item": "utility-science-pack",
+      "from": "machine:6",
+      "from_ports": [
+        "machine:6"
+      ],
+      "to": "belt:4/lane:1#utility-science-pack",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:14/processing-unit",
+      "via": "inserter",
+      "entity": "inserter:14",
+      "group": "inserter:14",
+      "item": "processing-unit",
+      "from": "belt:1/lane:1#processing-unit",
+      "from_ports": [
+        "belt:1/lane:1#processing-unit"
+      ],
+      "to": "machine:5",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:14/flying-robot-frame",
+      "via": "inserter",
+      "entity": "inserter:14",
+      "group": "inserter:14",
+      "item": "flying-robot-frame",
+      "from": "belt:1/lane:2#flying-robot-frame",
+      "from_ports": [
+        "belt:1/lane:2#flying-robot-frame"
+      ],
+      "to": "machine:5",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:15/processing-unit",
+      "via": "inserter",
+      "entity": "inserter:15",
+      "group": "inserter:15",
+      "item": "processing-unit",
+      "from": "belt:2/lane:2#processing-unit",
+      "from_ports": [
+        "belt:2/lane:2#processing-unit"
+      ],
+      "to": "machine:6",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:15/flying-robot-frame",
+      "via": "inserter",
+      "entity": "inserter:15",
+      "group": "inserter:15",
+      "item": "flying-robot-frame",
+      "from": "belt:2/lane:1#flying-robot-frame",
+      "from_ports": [
+        "belt:2/lane:1#flying-robot-frame"
+      ],
+      "to": "machine:6",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:16/processing-unit",
+      "via": "inserter",
+      "entity": "inserter:16",
+      "group": "inserter:16",
+      "item": "processing-unit",
+      "from": "belt:1/lane:1#processing-unit",
+      "from_ports": [
+        "belt:1/lane:1#processing-unit"
+      ],
+      "to": "machine:8",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:16/flying-robot-frame",
+      "via": "inserter",
+      "entity": "inserter:16",
+      "group": "inserter:16",
+      "item": "flying-robot-frame",
+      "from": "belt:1/lane:2#flying-robot-frame",
+      "from_ports": [
+        "belt:1/lane:2#flying-robot-frame"
+      ],
+      "to": "machine:8",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:17/processing-unit",
+      "via": "inserter",
+      "entity": "inserter:17",
+      "group": "inserter:17",
+      "item": "processing-unit",
+      "from": "belt:2/lane:2#processing-unit",
+      "from_ports": [
+        "belt:2/lane:2#processing-unit"
+      ],
+      "to": "machine:9",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:17/flying-robot-frame",
+      "via": "inserter",
+      "entity": "inserter:17",
+      "group": "inserter:17",
+      "item": "flying-robot-frame",
+      "from": "belt:2/lane:1#flying-robot-frame",
+      "from_ports": [
+        "belt:2/lane:1#flying-robot-frame"
+      ],
+      "to": "machine:9",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:18/utility-science-pack",
+      "via": "inserter",
+      "entity": "inserter:18",
+      "group": "inserter:18",
+      "item": "utility-science-pack",
+      "from": "machine:8",
+      "from_ports": [
+        "machine:8"
+      ],
+      "to": "belt:3/lane:1#utility-science-pack",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:19/plastic-bar",
+      "via": "inserter",
+      "entity": "inserter:19",
+      "group": "inserter:19",
+      "item": "plastic-bar",
+      "from": "machine:7",
+      "from_ports": [
+        "machine:7"
+      ],
+      "to": "machine:10",
+      "lands_in": "ingredients",
+      "hand": 15,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 225,
+        "denominator": 2
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:20/plastic-bar",
+      "via": "inserter",
+      "entity": "inserter:20",
+      "group": "inserter:20",
+      "item": "plastic-bar",
+      "from": "machine:7",
+      "from_ports": [
+        "machine:7"
+      ],
+      "to": "machine:11",
+      "lands_in": "ingredients",
+      "hand": 15,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 225,
+        "denominator": 2
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:21/utility-science-pack",
+      "via": "inserter",
+      "entity": "inserter:21",
+      "group": "inserter:21",
+      "item": "utility-science-pack",
+      "from": "machine:9",
+      "from_ports": [
+        "machine:9"
+      ],
+      "to": "belt:4/lane:1#utility-science-pack",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:22/low-density-structure",
+      "via": "inserter",
+      "entity": "inserter:22",
+      "group": "inserter:22",
+      "item": "low-density-structure",
+      "from": "machine:10",
+      "from_ports": [
+        "machine:10"
+      ],
+      "to": "machine:8",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:23/low-density-structure",
+      "via": "inserter",
+      "entity": "inserter:23",
+      "group": "inserter:23",
+      "item": "low-density-structure",
+      "from": "machine:11",
+      "from_ports": [
+        "machine:11"
+      ],
+      "to": "machine:9",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:24/utility-science-pack",
+      "via": "inserter",
+      "entity": "inserter:24",
+      "group": "inserter:24",
+      "item": "utility-science-pack",
+      "from": "machine:12",
+      "from_ports": [
+        "machine:12"
+      ],
+      "to": "belt:3/lane:1#utility-science-pack",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:25/low-density-structure",
+      "via": "inserter",
+      "entity": "inserter:25",
+      "group": "inserter:25",
+      "item": "low-density-structure",
+      "from": "machine:10",
+      "from_ports": [
+        "machine:10"
+      ],
+      "to": "machine:12",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:26/low-density-structure",
+      "via": "inserter",
+      "entity": "inserter:26",
+      "group": "inserter:26",
+      "item": "low-density-structure",
+      "from": "machine:11",
+      "from_ports": [
+        "machine:11"
+      ],
+      "to": "machine:13",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:27/utility-science-pack",
+      "via": "inserter",
+      "entity": "inserter:27",
+      "group": "inserter:27",
+      "item": "utility-science-pack",
+      "from": "machine:13",
+      "from_ports": [
+        "machine:13"
+      ],
+      "to": "belt:4/lane:1#utility-science-pack",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:28/processing-unit",
+      "via": "inserter",
+      "entity": "inserter:28",
+      "group": "inserter:28",
+      "item": "processing-unit",
+      "from": "belt:1/lane:1#processing-unit",
+      "from_ports": [
+        "belt:1/lane:1#processing-unit"
+      ],
+      "to": "machine:12",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:28/flying-robot-frame",
+      "via": "inserter",
+      "entity": "inserter:28",
+      "group": "inserter:28",
+      "item": "flying-robot-frame",
+      "from": "belt:1/lane:2#flying-robot-frame",
+      "from_ports": [
+        "belt:1/lane:2#flying-robot-frame"
+      ],
+      "to": "machine:12",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:29/processing-unit",
+      "via": "inserter",
+      "entity": "inserter:29",
+      "group": "inserter:29",
+      "item": "processing-unit",
+      "from": "belt:2/lane:2#processing-unit",
+      "from_ports": [
+        "belt:2/lane:2#processing-unit"
+      ],
+      "to": "machine:13",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:29/flying-robot-frame",
+      "via": "inserter",
+      "entity": "inserter:29",
+      "group": "inserter:29",
+      "item": "flying-robot-frame",
+      "from": "belt:2/lane:1#flying-robot-frame",
+      "from_ports": [
+        "belt:2/lane:1#flying-robot-frame"
+      ],
+      "to": "machine:13",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    }
+  ],
+  "components": [],
+  "order": [
+    "belt:1/lane:1#processing-unit",
+    "belt:1/lane:2#flying-robot-frame",
+    "belt:2/lane:1#flying-robot-frame",
+    "belt:2/lane:2#processing-unit",
+    "belt:5/lane:1#coal",
+    "machine:7",
+    "machine:3",
+    "machine:1",
+    "machine:4",
+    "machine:2",
+    "machine:5",
+    "machine:6",
+    "machine:10",
+    "machine:8",
+    "machine:11",
+    "machine:9",
+    "machine:12",
+    "belt:3/lane:1#utility-science-pack",
+    "machine:13",
+    "belt:4/lane:1#utility-science-pack",
+    "sink"
+  ],
+  "shared": {
+    "out": [
+      {
+        "at": "machine:3",
+        "item": "low-density-structure",
+        "edges": [
+          "inserter:5/low-density-structure",
+          "inserter:7/low-density-structure"
+        ]
+      },
+      {
+        "at": "machine:4",
+        "item": "low-density-structure",
+        "edges": [
+          "inserter:6/low-density-structure",
+          "inserter:8/low-density-structure"
+        ]
+      },
+      {
+        "at": "machine:7",
+        "item": "plastic-bar",
+        "edges": [
+          "inserter:10/plastic-bar",
+          "inserter:12/plastic-bar",
+          "inserter:19/plastic-bar",
+          "inserter:20/plastic-bar"
+        ]
+      },
+      {
+        "at": "machine:10",
+        "item": "low-density-structure",
+        "edges": [
+          "inserter:22/low-density-structure",
+          "inserter:25/low-density-structure"
+        ]
+      },
+      {
+        "at": "machine:11",
+        "item": "low-density-structure",
+        "edges": [
+          "inserter:23/low-density-structure",
+          "inserter:26/low-density-structure"
+        ]
+      }
+    ],
+    "in": [
+      {
+        "at": "belt:3/lane:1#utility-science-pack",
+        "item": "utility-science-pack",
+        "edges": [
+          "inserter:3/utility-science-pack",
+          "inserter:9/utility-science-pack",
+          "inserter:18/utility-science-pack",
+          "inserter:24/utility-science-pack"
+        ]
+      },
+      {
+        "at": "belt:4/lane:1#utility-science-pack",
+        "item": "utility-science-pack",
+        "edges": [
+          "inserter:4/utility-science-pack",
+          "inserter:13/utility-science-pack",
+          "inserter:21/utility-science-pack",
+          "inserter:27/utility-science-pack"
+        ]
+      }
+    ],
+    "lanes": [
+      {
+        "at": "belt:1/lane:1#processing-unit",
+        "item": "processing-unit",
+        "edges": [
+          "inserter:1/processing-unit",
+          "inserter:14/processing-unit",
+          "inserter:16/processing-unit",
+          "inserter:28/processing-unit"
+        ]
+      },
+      {
+        "at": "belt:1/lane:2#flying-robot-frame",
+        "item": "flying-robot-frame",
+        "edges": [
+          "inserter:1/flying-robot-frame",
+          "inserter:14/flying-robot-frame",
+          "inserter:16/flying-robot-frame",
+          "inserter:28/flying-robot-frame"
+        ]
+      },
+      {
+        "at": "belt:2/lane:1#flying-robot-frame",
+        "item": "flying-robot-frame",
+        "edges": [
+          "inserter:2/flying-robot-frame",
+          "inserter:15/flying-robot-frame",
+          "inserter:17/flying-robot-frame",
+          "inserter:29/flying-robot-frame"
+        ]
+      },
+      {
+        "at": "belt:2/lane:2#processing-unit",
+        "item": "processing-unit",
+        "edges": [
+          "inserter:2/processing-unit",
+          "inserter:15/processing-unit",
+          "inserter:17/processing-unit",
+          "inserter:29/processing-unit"
+        ]
+      }
+    ]
+  },
+  "terminal": [
+    "inserter:3/utility-science-pack",
+    "inserter:4/utility-science-pack",
+    "inserter:9/utility-science-pack",
+    "inserter:13/utility-science-pack",
+    "inserter:18/utility-science-pack",
+    "inserter:21/utility-science-pack",
+    "inserter:24/utility-science-pack",
+    "inserter:27/utility-science-pack"
+  ]
+}

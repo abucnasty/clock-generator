@@ -1,0 +1,219 @@
+{
+  "schema": 1,
+  "sample": "LITHIUM_PLATES",
+  "target": {
+    "item": "lithium-plate",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 40,
+      "denominator": 1
+    }
+  },
+  "nodes": [
+    {
+      "key": "belt:1/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:1/lane:1#lithium-plate"
+      ]
+    },
+    {
+      "key": "belt:1/lane:2",
+      "kind": "lane",
+      "ports": []
+    },
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:2",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:3",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "chest:1",
+      "kind": "container",
+      "ports": [
+        "chest:1#lithium"
+      ]
+    },
+    {
+      "key": "chest:2",
+      "kind": "container",
+      "ports": [
+        "chest:2#holmium-plate"
+      ]
+    },
+    {
+      "key": "sink",
+      "kind": "sink",
+      "ports": []
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/lithium-plate",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "lithium-plate",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "belt:1/lane:1#lithium-plate",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:2/lithium",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "lithium",
+      "from": "chest:1#lithium",
+      "from_ports": [
+        "chest:1#lithium"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:3/lithium",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "lithium",
+      "from": "machine:2",
+      "from_ports": [
+        "machine:2"
+      ],
+      "to": "chest:1#lithium",
+      "lands_in": "storage",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:4/lithium",
+      "via": "inserter",
+      "entity": "inserter:4",
+      "group": "inserter:4",
+      "item": "lithium",
+      "from": "chest:1#lithium",
+      "from_ports": [
+        "chest:1#lithium"
+      ],
+      "to": "machine:3",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:5/holmium-plate",
+      "via": "inserter",
+      "entity": "inserter:5",
+      "group": "inserter:5",
+      "item": "holmium-plate",
+      "from": "chest:2#holmium-plate",
+      "from_ports": [
+        "chest:2#holmium-plate"
+      ],
+      "to": "machine:2",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:6/lithium-plate",
+      "via": "inserter",
+      "entity": "inserter:6",
+      "group": "inserter:6",
+      "item": "lithium-plate",
+      "from": "machine:3",
+      "from_ports": [
+        "machine:3"
+      ],
+      "to": "belt:1/lane:1#lithium-plate",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    }
+  ],
+  "components": [],
+  "order": [
+    "chest:2#holmium-plate",
+    "machine:2",
+    "chest:1#lithium",
+    "machine:1",
+    "machine:3",
+    "belt:1/lane:1#lithium-plate",
+    "sink"
+  ],
+  "shared": {
+    "out": [
+      {
+        "at": "chest:1#lithium",
+        "item": "lithium",
+        "edges": [
+          "inserter:2/lithium",
+          "inserter:4/lithium"
+        ]
+      }
+    ],
+    "in": [
+      {
+        "at": "belt:1/lane:1#lithium-plate",
+        "item": "lithium-plate",
+        "edges": [
+          "inserter:1/lithium-plate",
+          "inserter:6/lithium-plate"
+        ]
+      }
+    ],
+    "lanes": []
+  },
+  "terminal": [
+    "inserter:1/lithium-plate",
+    "inserter:6/lithium-plate"
+  ]
+}

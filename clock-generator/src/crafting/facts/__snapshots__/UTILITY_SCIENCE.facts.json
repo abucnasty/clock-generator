@@ -1,0 +1,621 @@
+{
+  "schema": 1,
+  "target": {
+    "item": "utility-science-pack",
+    "counts": "made",
+    "items_per_second": 120,
+    "copies": 7,
+    "per_copy": {
+      "numerator": 120,
+      "denominator": 7
+    }
+  },
+  "nodes": [
+    {
+      "key": "belt:1/lane:1",
+      "kind": "lane",
+      "entity": "belt:1",
+      "lane": {
+        "key": "belt:1/lane:1",
+        "belt": "belt:1",
+        "lane": 1,
+        "listed": true,
+        "item": "low-density-structure",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:1/lane:2",
+      "kind": "lane",
+      "entity": "belt:1",
+      "lane": {
+        "key": "belt:1/lane:2",
+        "belt": "belt:1",
+        "lane": 2,
+        "listed": true,
+        "item": "flying-robot-frame",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:2/lane:1",
+      "kind": "lane",
+      "entity": "belt:2",
+      "lane": {
+        "key": "belt:2/lane:1",
+        "belt": "belt:2",
+        "lane": 1,
+        "listed": true,
+        "item": "low-density-structure",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:2/lane:2",
+      "kind": "lane",
+      "entity": "belt:2",
+      "lane": {
+        "key": "belt:2/lane:2",
+        "belt": "belt:2",
+        "lane": 2,
+        "listed": true,
+        "item": "processing-unit",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:3/lane:1",
+      "kind": "lane",
+      "entity": "belt:3",
+      "lane": {
+        "key": "belt:3/lane:1",
+        "belt": "belt:3",
+        "lane": 1,
+        "listed": true,
+        "item": "utility-science-pack",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:3/lane:2",
+      "kind": "lane",
+      "entity": "belt:3",
+      "lane": {
+        "key": "belt:3/lane:2",
+        "belt": "belt:3",
+        "lane": 2,
+        "listed": false,
+        "item": null,
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "entity": "machine:1",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "utility-science-pack",
+        "prototype": "assembling-machine-3",
+        "prototype_type": "assembling-machine",
+        "speed": 68.890625,
+        "energy_required": 21,
+        "ticks_per_craft": 18.289861646631888,
+        "crafts_per_tick": 0.054675099206349206,
+        "productivity": 100,
+        "bonus_per_craft": 1,
+        "ticks_per_bonus": 18.289861646631888,
+        "inputs": [
+          {
+            "item": "low-density-structure",
+            "per_craft": 3,
+            "per_second": 9.841517857142858,
+            "per_tick": 0.1640252976190476
+          },
+          {
+            "item": "processing-unit",
+            "per_craft": 2,
+            "per_second": 6.561011904761905,
+            "per_tick": 0.10935019841269841
+          },
+          {
+            "item": "flying-robot-frame",
+            "per_craft": 1,
+            "per_second": 3.2805059523809526,
+            "per_tick": 0.054675099206349206
+          }
+        ],
+        "insertion_duration_ticks": 15.241551372193237,
+        "crafts_per_second": {
+          "numerator": 4409,
+          "denominator": 1344
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "utility-science-pack",
+            "amount": 3,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 6,
+            "per_second": {
+              "numerator": 492075892857143,
+              "denominator": 25000000000000
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 5,
+        "limits": [
+          {
+            "item": "low-density-structure",
+            "limit": 15,
+            "kind": "ingredient"
+          },
+          {
+            "item": "processing-unit",
+            "limit": 10,
+            "kind": "ingredient"
+          },
+          {
+            "item": "flying-robot-frame",
+            "limit": 5,
+            "kind": "ingredient"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "overload",
+        "per_result": [
+          {
+            "item": "utility-science-pack",
+            "rule": "overload",
+            "ingredients_blocked_at": 15,
+            "held_limit": 15,
+            "stack": 200
+          }
+        ]
+      },
+      "recipe_selection": "fixed",
+      "placement": null,
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 375,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/flying-robot-frame",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "flying-robot-frame",
+      "from": "belt:1/lane:2",
+      "to": "machine:1",
+      "from_lanes": [
+        "belt:1/lane:2"
+      ],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "flying-robot-frame",
+          "low-density-structure"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11,
+        "pickup_to_drop": 8,
+        "per_second": {
+          "numerator": 960,
+          "denominator": 11
+        }
+      },
+      "floor": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:1/low-density-structure",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "low-density-structure",
+      "from": "belt:1/lane:1",
+      "to": "machine:1",
+      "from_lanes": [
+        "belt:1/lane:1"
+      ],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "flying-robot-frame",
+          "low-density-structure"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11,
+        "pickup_to_drop": 8,
+        "per_second": {
+          "numerator": 960,
+          "denominator": 11
+        }
+      },
+      "floor": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:2/low-density-structure",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "low-density-structure",
+      "from": "belt:2/lane:1",
+      "to": "machine:1",
+      "from_lanes": [
+        "belt:2/lane:1"
+      ],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "low-density-structure",
+          "processing-unit"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11,
+        "pickup_to_drop": 8,
+        "per_second": {
+          "numerator": 960,
+          "denominator": 11
+        }
+      },
+      "floor": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:2/processing-unit",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "processing-unit",
+      "from": "belt:2/lane:2",
+      "to": "machine:1",
+      "from_lanes": [
+        "belt:2/lane:2"
+      ],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "low-density-structure",
+          "processing-unit"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11,
+        "pickup_to_drop": 8,
+        "per_second": {
+          "numerator": 960,
+          "denominator": 11
+        }
+      },
+      "floor": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:3/utility-science-pack",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "utility-science-pack",
+      "from": "machine:1",
+      "to": "belt:3/lane:1",
+      "from_lanes": [],
+      "lands_in": "lane",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "utility-science-pack"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 5,
+        "cycle": 12,
+        "pickup_to_drop": 9,
+        "per_second": {
+          "numerator": 80,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 4,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    }
+  ],
+  "capacity_groups": [
+    {
+      "group": "inserter:1",
+      "edges": [
+        {
+          "edge": "inserter:1/flying-robot-frame",
+          "item": "flying-robot-frame",
+          "hand": 16,
+          "floor_cycle": 11
+        },
+        {
+          "edge": "inserter:1/low-density-structure",
+          "item": "low-density-structure",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    },
+    {
+      "group": "inserter:2",
+      "edges": [
+        {
+          "edge": "inserter:2/low-density-structure",
+          "item": "low-density-structure",
+          "hand": 16,
+          "floor_cycle": 11
+        },
+        {
+          "edge": "inserter:2/processing-unit",
+          "item": "processing-unit",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    },
+    {
+      "group": "inserter:3",
+      "edges": [
+        {
+          "edge": "inserter:3/utility-science-pack",
+          "item": "utility-science-pack",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    }
+  ]
+}

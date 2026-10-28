@@ -1,0 +1,1418 @@
+{
+  "schema": 1,
+  "target": {
+    "item": "grenade",
+    "counts": "made",
+    "items_per_second": 240,
+    "copies": 7,
+    "per_copy": {
+      "numerator": 240,
+      "denominator": 7
+    }
+  },
+  "nodes": [
+    {
+      "key": "belt:1/lane:1",
+      "kind": "lane",
+      "entity": "belt:1",
+      "lane": {
+        "key": "belt:1/lane:1",
+        "belt": "belt:1",
+        "lane": 1,
+        "listed": true,
+        "item": "grenade",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:1/lane:2",
+      "kind": "lane",
+      "entity": "belt:1",
+      "lane": {
+        "key": "belt:1/lane:2",
+        "belt": "belt:1",
+        "lane": 2,
+        "listed": true,
+        "item": "grenade",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "entity": "machine:1",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "grenade",
+        "prototype": "assembling-machine-3",
+        "prototype_type": "assembling-machine",
+        "speed": 70.4159375,
+        "energy_required": 8,
+        "ticks_per_craft": 6.8166386338320075,
+        "crafts_per_tick": 0.14669986979166666,
+        "productivity": 0,
+        "bonus_per_craft": 0,
+        "ticks_per_bonus": 0,
+        "inputs": [
+          {
+            "item": "iron-plate",
+            "per_craft": 5,
+            "per_second": 44.0099609375,
+            "per_tick": 0.7334993489583334
+          },
+          {
+            "item": "coal",
+            "per_craft": 10,
+            "per_second": 88.019921875,
+            "per_tick": 1.4669986979166667
+          }
+        ],
+        "insertion_duration_ticks": 81.79966360598408,
+        "crafts_per_second": {
+          "numerator": 225331,
+          "denominator": 25600
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "grenade",
+            "amount": 1,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 1,
+            "per_second": {
+              "numerator": 225331,
+              "denominator": 25600
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 12,
+        "limits": [
+          {
+            "item": "iron-plate",
+            "limit": 60,
+            "kind": "ingredient"
+          },
+          {
+            "item": "coal",
+            "limit": 120,
+            "kind": "ingredient"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "overload",
+        "per_result": [
+          {
+            "item": "grenade",
+            "rule": "overload",
+            "ingredients_blocked_at": 12,
+            "held_limit": 12,
+            "stack": 100
+          }
+        ]
+      },
+      "recipe_selection": "fixed",
+      "placement": null,
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 375,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "machine:2",
+      "kind": "machine",
+      "entity": "machine:2",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "grenade",
+        "prototype": "assembling-machine-3",
+        "prototype_type": "assembling-machine",
+        "speed": 70.4159375,
+        "energy_required": 8,
+        "ticks_per_craft": 6.8166386338320075,
+        "crafts_per_tick": 0.14669986979166666,
+        "productivity": 0,
+        "bonus_per_craft": 0,
+        "ticks_per_bonus": 0,
+        "inputs": [
+          {
+            "item": "iron-plate",
+            "per_craft": 5,
+            "per_second": 44.0099609375,
+            "per_tick": 0.7334993489583334
+          },
+          {
+            "item": "coal",
+            "per_craft": 10,
+            "per_second": 88.019921875,
+            "per_tick": 1.4669986979166667
+          }
+        ],
+        "insertion_duration_ticks": 81.79966360598408,
+        "crafts_per_second": {
+          "numerator": 225331,
+          "denominator": 25600
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "grenade",
+            "amount": 1,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 1,
+            "per_second": {
+              "numerator": 225331,
+              "denominator": 25600
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 12,
+        "limits": [
+          {
+            "item": "iron-plate",
+            "limit": 60,
+            "kind": "ingredient"
+          },
+          {
+            "item": "coal",
+            "limit": 120,
+            "kind": "ingredient"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "overload",
+        "per_result": [
+          {
+            "item": "grenade",
+            "rule": "overload",
+            "ingredients_blocked_at": 12,
+            "held_limit": 12,
+            "stack": 100
+          }
+        ]
+      },
+      "recipe_selection": "fixed",
+      "placement": null,
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 375,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "machine:3",
+      "kind": "machine",
+      "entity": "machine:3",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "casting-iron",
+        "prototype": "foundry",
+        "prototype_type": "assembling-machine",
+        "speed": 143.75,
+        "energy_required": 3.2,
+        "ticks_per_craft": 1.3356521739130436,
+        "crafts_per_tick": 0.7486979166666666,
+        "productivity": 150,
+        "bonus_per_craft": 1.5,
+        "ticks_per_bonus": 2.0034782608695654,
+        "inputs": [],
+        "insertion_duration_ticks": 14.42504347826087,
+        "crafts_per_second": {
+          "numerator": 2875,
+          "denominator": 64
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "iron-plate",
+            "amount": 2,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 5,
+            "per_second": {
+              "numerator": 14375,
+              "denominator": 64
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 54,
+        "limits": []
+      },
+      "output_block": {
+        "rule": "overload",
+        "per_result": [
+          {
+            "item": "iron-plate",
+            "rule": "overload",
+            "ingredients_blocked_at": 100,
+            "held_limit": 100,
+            "stack": 100
+          }
+        ]
+      },
+      "recipe_selection": "fixed",
+      "placement": null,
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 2500,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "machine:4",
+      "kind": "machine",
+      "entity": "machine:4",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "grenade",
+        "prototype": "assembling-machine-3",
+        "prototype_type": "assembling-machine",
+        "speed": 70.4159375,
+        "energy_required": 8,
+        "ticks_per_craft": 6.8166386338320075,
+        "crafts_per_tick": 0.14669986979166666,
+        "productivity": 0,
+        "bonus_per_craft": 0,
+        "ticks_per_bonus": 0,
+        "inputs": [
+          {
+            "item": "iron-plate",
+            "per_craft": 5,
+            "per_second": 44.0099609375,
+            "per_tick": 0.7334993489583334
+          },
+          {
+            "item": "coal",
+            "per_craft": 10,
+            "per_second": 88.019921875,
+            "per_tick": 1.4669986979166667
+          }
+        ],
+        "insertion_duration_ticks": 81.79966360598408,
+        "crafts_per_second": {
+          "numerator": 225331,
+          "denominator": 25600
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "grenade",
+            "amount": 1,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 1,
+            "per_second": {
+              "numerator": 225331,
+              "denominator": 25600
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 12,
+        "limits": [
+          {
+            "item": "iron-plate",
+            "limit": 60,
+            "kind": "ingredient"
+          },
+          {
+            "item": "coal",
+            "limit": 120,
+            "kind": "ingredient"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "overload",
+        "per_result": [
+          {
+            "item": "grenade",
+            "rule": "overload",
+            "ingredients_blocked_at": 12,
+            "held_limit": 12,
+            "stack": 100
+          }
+        ]
+      },
+      "recipe_selection": "fixed",
+      "placement": null,
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 375,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "machine:5",
+      "kind": "machine",
+      "entity": "machine:5",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "grenade",
+        "prototype": "assembling-machine-3",
+        "prototype_type": "assembling-machine",
+        "speed": 70.4159375,
+        "energy_required": 8,
+        "ticks_per_craft": 6.8166386338320075,
+        "crafts_per_tick": 0.14669986979166666,
+        "productivity": 0,
+        "bonus_per_craft": 0,
+        "ticks_per_bonus": 0,
+        "inputs": [
+          {
+            "item": "iron-plate",
+            "per_craft": 5,
+            "per_second": 44.0099609375,
+            "per_tick": 0.7334993489583334
+          },
+          {
+            "item": "coal",
+            "per_craft": 10,
+            "per_second": 88.019921875,
+            "per_tick": 1.4669986979166667
+          }
+        ],
+        "insertion_duration_ticks": 81.79966360598408,
+        "crafts_per_second": {
+          "numerator": 225331,
+          "denominator": 25600
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "grenade",
+            "amount": 1,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 1,
+            "per_second": {
+              "numerator": 225331,
+              "denominator": 25600
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 12,
+        "limits": [
+          {
+            "item": "iron-plate",
+            "limit": 60,
+            "kind": "ingredient"
+          },
+          {
+            "item": "coal",
+            "limit": 120,
+            "kind": "ingredient"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "overload",
+        "per_result": [
+          {
+            "item": "grenade",
+            "rule": "overload",
+            "ingredients_blocked_at": 12,
+            "held_limit": 12,
+            "stack": 100
+          }
+        ]
+      },
+      "recipe_selection": "fixed",
+      "placement": null,
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 375,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "drill:1",
+      "kind": "drill",
+      "entity": "drill:1",
+      "production": {
+        "kind": "resource",
+        "recipe_or_resource": "coal",
+        "prototype": "electric-mining-drill",
+        "prototype_type": "mining-drill",
+        "speed": 9.3625,
+        "energy_required": 1,
+        "ticks_per_craft": 6.408544726301735,
+        "crafts_per_tick": 0.15604166666666666,
+        "productivity": 80010.00000001132,
+        "bonus_per_craft": null,
+        "ticks_per_bonus": null,
+        "inputs": [],
+        "insertion_duration_ticks": null,
+        "crafts_per_second": {
+          "numerator": 749,
+          "denominator": 80
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "coal",
+            "amount": 1,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 801.1000000001131,
+            "per_second": {
+              "numerator": 5805230293988437,
+              "denominator": 773999874870
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "whole-items",
+        "payouts_count_as_finishes": null
+      },
+      "placement": {
+        "mechanism": "mining-drop",
+        "vector_to_place_result": [
+          0,
+          -1.85
+        ],
+        "target": "machine:1",
+        "per_result": [
+          {
+            "item": "coal",
+            "lands_in": "ingredients",
+            "into_machine_stop": 184
+          }
+        ],
+        "into_container": "room",
+        "phase": "before-mining",
+        "stops_while_stack_waits": false
+      },
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 90,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      }
+    },
+    {
+      "key": "drill:2",
+      "kind": "drill",
+      "entity": "drill:2",
+      "production": {
+        "kind": "resource",
+        "recipe_or_resource": "coal",
+        "prototype": "electric-mining-drill",
+        "prototype_type": "mining-drill",
+        "speed": 10.02875,
+        "energy_required": 1,
+        "ticks_per_craft": 5.9827994515767156,
+        "crafts_per_tick": 0.16714583333333335,
+        "productivity": 80010.00000001132,
+        "bonus_per_craft": null,
+        "ticks_per_bonus": null,
+        "inputs": [],
+        "insertion_duration_ticks": null,
+        "crafts_per_second": {
+          "numerator": 5014375000000001,
+          "denominator": 500000000000000
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "coal",
+            "amount": 1,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 801.1000000001131,
+            "per_second": {
+              "numerator": 6184569963396345,
+              "denominator": 769796566913
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "whole-items",
+        "payouts_count_as_finishes": null
+      },
+      "placement": {
+        "mechanism": "mining-drop",
+        "vector_to_place_result": [
+          0,
+          -1.85
+        ],
+        "target": "machine:2",
+        "per_result": [
+          {
+            "item": "coal",
+            "lands_in": "ingredients",
+            "into_machine_stop": 184
+          }
+        ],
+        "into_container": "room",
+        "phase": "before-mining",
+        "stops_while_stack_waits": false
+      },
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 90,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      }
+    },
+    {
+      "key": "drill:3",
+      "kind": "drill",
+      "entity": "drill:3",
+      "production": {
+        "kind": "resource",
+        "recipe_or_resource": "coal",
+        "prototype": "electric-mining-drill",
+        "prototype_type": "mining-drill",
+        "speed": 9.3625,
+        "energy_required": 1,
+        "ticks_per_craft": 6.408544726301735,
+        "crafts_per_tick": 0.15604166666666666,
+        "productivity": 80010.00000001132,
+        "bonus_per_craft": null,
+        "ticks_per_bonus": null,
+        "inputs": [],
+        "insertion_duration_ticks": null,
+        "crafts_per_second": {
+          "numerator": 749,
+          "denominator": 80
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "coal",
+            "amount": 1,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 801.1000000001131,
+            "per_second": {
+              "numerator": 5805230293988437,
+              "denominator": 773999874870
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "whole-items",
+        "payouts_count_as_finishes": null
+      },
+      "placement": {
+        "mechanism": "mining-drop",
+        "vector_to_place_result": [
+          0,
+          -1.85
+        ],
+        "target": "machine:4",
+        "per_result": [
+          {
+            "item": "coal",
+            "lands_in": "ingredients",
+            "into_machine_stop": 184
+          }
+        ],
+        "into_container": "room",
+        "phase": "before-mining",
+        "stops_while_stack_waits": false
+      },
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 90,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      }
+    },
+    {
+      "key": "drill:4",
+      "kind": "drill",
+      "entity": "drill:4",
+      "production": {
+        "kind": "resource",
+        "recipe_or_resource": "coal",
+        "prototype": "electric-mining-drill",
+        "prototype_type": "mining-drill",
+        "speed": 10.02875,
+        "energy_required": 1,
+        "ticks_per_craft": 5.9827994515767156,
+        "crafts_per_tick": 0.16714583333333335,
+        "productivity": 80010.00000001132,
+        "bonus_per_craft": null,
+        "ticks_per_bonus": null,
+        "inputs": [],
+        "insertion_duration_ticks": null,
+        "crafts_per_second": {
+          "numerator": 5014375000000001,
+          "denominator": 500000000000000
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "coal",
+            "amount": 1,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 801.1000000001131,
+            "per_second": {
+              "numerator": 6184569963396345,
+              "denominator": 769796566913
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "whole-items",
+        "payouts_count_as_finishes": null
+      },
+      "placement": {
+        "mechanism": "mining-drop",
+        "vector_to_place_result": [
+          0,
+          -1.85
+        ],
+        "target": "machine:5",
+        "per_result": [
+          {
+            "item": "coal",
+            "lands_in": "ingredients",
+            "into_machine_stop": 184
+          }
+        ],
+        "into_container": "room",
+        "phase": "before-mining",
+        "stops_while_stack_waits": false
+      },
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 90,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      }
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/grenade",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "grenade",
+      "from": "machine:1",
+      "to": "belt:1/lane:1",
+      "from_lanes": [],
+      "lands_in": "lane",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "grenade"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 5,
+        "cycle": 12,
+        "pickup_to_drop": 9,
+        "per_second": {
+          "numerator": 80,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 4,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:2/grenade",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "grenade",
+      "from": "machine:2",
+      "to": "belt:1/lane:1",
+      "from_lanes": [],
+      "lands_in": "lane",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "grenade"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 5,
+        "cycle": 12,
+        "pickup_to_drop": 9,
+        "per_second": {
+          "numerator": 80,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 4,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:3/iron-plate",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "iron-plate",
+      "from": "machine:3",
+      "to": "machine:2",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "iron-plate"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:4/iron-plate",
+      "via": "inserter",
+      "entity": "inserter:4",
+      "group": "inserter:4",
+      "item": "iron-plate",
+      "from": "machine:3",
+      "to": "machine:1",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "iron-plate"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:5/iron-plate",
+      "via": "inserter",
+      "entity": "inserter:5",
+      "group": "inserter:5",
+      "item": "iron-plate",
+      "from": "machine:3",
+      "to": "machine:5",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "iron-plate"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:6/iron-plate",
+      "via": "inserter",
+      "entity": "inserter:6",
+      "group": "inserter:6",
+      "item": "iron-plate",
+      "from": "machine:3",
+      "to": "machine:4",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "iron-plate"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:7/grenade",
+      "via": "inserter",
+      "entity": "inserter:7",
+      "group": "inserter:7",
+      "item": "grenade",
+      "from": "machine:4",
+      "to": "belt:1/lane:1",
+      "from_lanes": [],
+      "lands_in": "lane",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "grenade"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 5,
+        "cycle": 12,
+        "pickup_to_drop": 9,
+        "per_second": {
+          "numerator": 80,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 4,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:8/grenade",
+      "via": "inserter",
+      "entity": "inserter:8",
+      "group": "inserter:8",
+      "item": "grenade",
+      "from": "machine:5",
+      "to": "belt:1/lane:1",
+      "from_lanes": [],
+      "lands_in": "lane",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "grenade"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 5,
+        "cycle": 12,
+        "pickup_to_drop": 9,
+        "per_second": {
+          "numerator": 80,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 4,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "placement:drill:1/coal",
+      "via": "placement",
+      "entity": "drill:1",
+      "item": "coal",
+      "from": "drill:1",
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "into_machine_stop": 184,
+      "mechanism": "mining-drop",
+      "ceiling": null
+    },
+    {
+      "key": "placement:drill:2/coal",
+      "via": "placement",
+      "entity": "drill:2",
+      "item": "coal",
+      "from": "drill:2",
+      "to": "machine:2",
+      "lands_in": "ingredients",
+      "into_machine_stop": 184,
+      "mechanism": "mining-drop",
+      "ceiling": null
+    },
+    {
+      "key": "placement:drill:3/coal",
+      "via": "placement",
+      "entity": "drill:3",
+      "item": "coal",
+      "from": "drill:3",
+      "to": "machine:4",
+      "lands_in": "ingredients",
+      "into_machine_stop": 184,
+      "mechanism": "mining-drop",
+      "ceiling": null
+    },
+    {
+      "key": "placement:drill:4/coal",
+      "via": "placement",
+      "entity": "drill:4",
+      "item": "coal",
+      "from": "drill:4",
+      "to": "machine:5",
+      "lands_in": "ingredients",
+      "into_machine_stop": 184,
+      "mechanism": "mining-drop",
+      "ceiling": null
+    }
+  ],
+  "capacity_groups": [
+    {
+      "group": "inserter:1",
+      "edges": [
+        {
+          "edge": "inserter:1/grenade",
+          "item": "grenade",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    },
+    {
+      "group": "inserter:2",
+      "edges": [
+        {
+          "edge": "inserter:2/grenade",
+          "item": "grenade",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    },
+    {
+      "group": "inserter:3",
+      "edges": [
+        {
+          "edge": "inserter:3/iron-plate",
+          "item": "iron-plate",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:4",
+      "edges": [
+        {
+          "edge": "inserter:4/iron-plate",
+          "item": "iron-plate",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:5",
+      "edges": [
+        {
+          "edge": "inserter:5/iron-plate",
+          "item": "iron-plate",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:6",
+      "edges": [
+        {
+          "edge": "inserter:6/iron-plate",
+          "item": "iron-plate",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:7",
+      "edges": [
+        {
+          "edge": "inserter:7/grenade",
+          "item": "grenade",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    },
+    {
+      "group": "inserter:8",
+      "edges": [
+        {
+          "edge": "inserter:8/grenade",
+          "item": "grenade",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    }
+  ]
+}

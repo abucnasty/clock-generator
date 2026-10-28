@@ -1,0 +1,174 @@
+{
+  "schema": 1,
+  "sample": "REAL_ATLAN_CELL29",
+  "target": {
+    "item": "iron-gear-wheel",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 997,
+      "denominator": 100
+    }
+  },
+  "nodes": [
+    {
+      "key": "belt:1/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:1/lane:1#iron-gear-wheel"
+      ]
+    },
+    {
+      "key": "belt:1/lane:2",
+      "kind": "lane",
+      "ports": []
+    },
+    {
+      "key": "belt:2/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:2/lane:1#iron-gear-wheel"
+      ]
+    },
+    {
+      "key": "belt:2/lane:2",
+      "kind": "lane",
+      "ports": []
+    },
+    {
+      "key": "belt:3/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:3/lane:1#iron-ore"
+      ]
+    },
+    {
+      "key": "belt:3/lane:2",
+      "kind": "lane",
+      "ports": []
+    },
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:2",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "sink",
+      "kind": "sink",
+      "ports": []
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/iron-gear-wheel",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "iron-gear-wheel",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "belt:1/lane:1#iron-gear-wheel",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:2/iron-gear-wheel",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "iron-gear-wheel",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "belt:2/lane:1#iron-gear-wheel",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:3/iron-plate",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "iron-plate",
+      "from": "machine:2",
+      "from_ports": [
+        "machine:2"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:4/iron-ore",
+      "via": "inserter",
+      "entity": "inserter:4",
+      "group": "inserter:4",
+      "item": "iron-ore",
+      "from": "belt:3/lane:1#iron-ore",
+      "from_ports": [
+        "belt:3/lane:1#iron-ore"
+      ],
+      "to": "machine:2",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    }
+  ],
+  "components": [],
+  "order": [
+    "belt:3/lane:1#iron-ore",
+    "machine:2",
+    "machine:1",
+    "belt:1/lane:1#iron-gear-wheel",
+    "belt:2/lane:1#iron-gear-wheel",
+    "sink"
+  ],
+  "shared": {
+    "out": [
+      {
+        "at": "machine:1",
+        "item": "iron-gear-wheel",
+        "edges": [
+          "inserter:1/iron-gear-wheel",
+          "inserter:2/iron-gear-wheel"
+        ]
+      }
+    ],
+    "in": [],
+    "lanes": []
+  },
+  "terminal": [
+    "inserter:1/iron-gear-wheel",
+    "inserter:2/iron-gear-wheel"
+  ]
+}
