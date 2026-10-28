@@ -43,6 +43,17 @@ light entry, and each sample's facts are kept in `src/crafting/facts/__snapshots
   (`src/crafting/export-delivery.ts`): both lanes of a belt may export an item that every filler drops on one of them.
 - **Read-only.** A node's trait fields are the objects of the traits built for that call.
 
+**The planner reads the same traits** where it works a figure out of a build (`traitsOf(config)`,
+`src/entities/traits/traits-of.ts`: `buildTraits` once per config object, kept with it; a candidate's or a trial's
+config is a new object and gets its own): the output capacity of the machines that make the target (`yield` of each,
+its main product's exact rate), the machines' rates at the target (`yield`, `production`, `placement` and the takers'
+`hand`), the sinks whose terminal outputs are judged as a rate or get room for one more output swing
+(`storage.never_refuses`). The lane check reads what a
+lane carries off the Lane traits of the belt it checks, and the belt pickup slack and the room for a hand of fuel count
+a hand as the timing floor does, one belt stack a tick, each with the hand it reads (the nominal one and the hand of the
+fuel). The cycle plan (`swing-counts.ts`) reads the same figures off the entities, which build them with the trait
+functions: it runs on a registry, and the amounts a craft it divides by are exact fractions there, decimals in the traits.
+
 Two traits of the catalogue are not in the facts: the inserter order (its decider build order is the clock's, not the
 config's) and the wake-up rule of a node (read by the wake-up count only). Neither the graph nor the feasibility pass
 reads them; they come with the planner that does.
