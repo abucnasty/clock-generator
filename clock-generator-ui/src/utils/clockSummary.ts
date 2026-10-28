@@ -206,7 +206,7 @@ export function makesText(clock: Pick<SummaryClock, 'assessment'>, copies: numbe
  * The share the cold start's figure may be off the average of the start points before the table and the card name it
  * beside the average
  */
-export const COLD_START_NAMED_SHARE = 0.1;
+const COLD_START_NAMED_SHARE = 0.1;
 
 /**
  * Where a clock's wake-ups are the average of its start points: how many, and the cold start's figure where it is
