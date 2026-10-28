@@ -18,10 +18,10 @@ export class HeldStorage implements PickupPort {
 
     /** What it holds of the item, which always has its slot */
     public getCurrentQuantity(item: ItemName): number {
-        return this.inventoryState.getItemOrThrow(item).quantity;
+        return this.inventoryState.getQuantity(item);
     }
 
-    /** Whether it holds anything to place: the pickup side R9's Placement takes the held items through */
+    /** Whether it holds anything to place: the pickup side the drill's Placement takes the held items through */
     public has(item: ItemName): boolean {
         return this.getCurrentQuantity(item) >= 1;
     }

@@ -1,10 +1,8 @@
-import { EntityState, InventoryItem, LiveQuantity, MachineState, MachineStatus, WritableInventoryState } from "../../../state";
+import { InventoryItem, LiveQuantity, MachineState, MachineStatus, WritableInventoryState } from "../../../state";
 import { MachineOutput, amountIgnoredByProductivity, expectedAmount } from "../../../entities";
 import { Energy, EnergyUser } from "../../../simulation/components/energy";
-import { placeIntoMachine } from "../../place-into-machine";
 import { MachineMode } from "./machine-mode";
 import { ContainerStorage } from "../../../simulation/components/container-storage";
-import { DropBy } from "../../../simulation/components/ports";
 
 // absorbs floating point drift when summing fractional per-tick progress
 const PROGRESS_EPSILON = 1e-9;
@@ -163,33 +161,6 @@ export class MachineWorkingMode implements MachineMode, EnergyUser {
         const whole = Math.floor(total + PROGRESS_EPSILON);
         this.state.byProductCarry.set(item_name, Math.max(0, total - whole));
         return whole;
-    }
-
-    /**
-     * A machine that places its results itself, with a result target: what waits in its output goes into the
-     * container, each result as far as it has room. Done every tick before the machine crafts and again after it.
-     */
-    public placeResults(): void {
-        const target = this.result_target;
-        if (target === null) {
-            return;
-        }
-        for (const output of this.state.machine.outputs) {
-            const waiting = this.inventory_state.getQuantity(output.item_name);
-            if (waiting <= 0) {
-                continue;
-            }
-            if (EntityState.isMachine(target)) {
-                this.state.resultsPlaced += placeIntoMachine(this.inventory_state, target, output.ingredient.item);
-                continue;
-            }
-            const amount = target.accepts(output.item_name, waiting, DropBy.PLACER);
-            if (amount > 0) {
-                this.inventory_state.removeQuantity(output.item_name, amount);
-                target.insert(output.item_name, amount);
-                this.state.resultsPlaced += amount;
-            }
-        }
     }
 
     /** A machine that places its results itself: whether a stack of one of them waits in its output, which stops it */
@@ -359,9 +330,7 @@ export class MachineWorkingMode implements MachineMode, EnergyUser {
 
     /** Results a machine that places its results itself puts in its own output, where it has no result target to place them into */
     private countPlacedInOutput(amount: number): void {
-        if (this.hot.places_results && (this.result_target === null || EntityState.isMachine(this.result_target))) {
-            this.state.resultsPlaced += amount;
-        }
+        this.state.placement.countPlacedInOwnOutput(amount);
     }
 
     private consumeInputsForCraft(): void {

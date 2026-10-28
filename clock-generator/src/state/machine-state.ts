@@ -6,6 +6,8 @@ import { Logger, defaultLogger } from "../common/logger";
 import { MachineStatus } from "./entity-status";
 import { BurnerEnergy } from "../simulation/components/burner-energy";
 import { Energy } from "../simulation/components/energy";
+import { MachineOutputPort } from "../simulation/components/machine-output-port";
+import { Placement } from "../simulation/components/placement";
 
 export class MachineState implements EntityState {
 
@@ -61,12 +63,15 @@ export class MachineState implements EntityState {
     public craftsStarted: number = 0;
 
     /**
-     * Results a machine that places its results itself (rule 18) has placed so far where inserters take them: into its
-     * result target, or into its own output where it has none. A tick in which it grew woke the inserters waiting there
-     * for items (recorded on a recycler on scrap: a stack inserter waiting with a part hand was woken by every result
-     * put in, of whatever item, and by no craft that gave none). Always 0 for any other machine, whose finishes wake them.
+     * What a machine that places its results itself (rule 18) puts from its output into its result target, bound to the
+     * target when its state machine is built (simulation/components). Its `results_placed` counts what it placed where
+     * inserters take them: into its result target, or into its own output where it has none. A tick in which it grew
+     * woke the inserters waiting there for items (recorded on a recycler on scrap: a stack inserter waiting with a part
+     * hand was woken by every result put in, of whatever item, and by no craft that gave none). Always 0 for any other
+     * machine, whose finishes wake them.
      */
-    public resultsPlaced: number = 0;
+    public readonly placement: Placement = new Placement(new MachineOutputPort(this.inventoryState),
+        this.machine.outputs.map(output => output.item_name), this.machine.metadata.places_results === true);
 
     /**
      * Whether the main product was at the output block when the machine's last tick was done. Inserters are updated
@@ -207,7 +212,8 @@ function clone(machineState: MachineState): MachineState {
     cloned.pendingOutput = machineState.pendingOutput;
     cloned.productsFinished = machineState.productsFinished;
     cloned.craftsStarted = machineState.craftsStarted;
-    cloned.resultsPlaced = machineState.resultsPlaced;
+    // a snapshot's Placement keeps the count and how it counts, unbound: it never places into the live target
+    cloned.placement.copyCountFrom(machineState.placement);
     cloned.outputBlockedAfterLastTick = machineState.outputBlockedAfterLastTick;
     cloned.finishedCraftInLastTick = machineState.finishedCraftInLastTick;
     cloned.startedCraftInLastTick = machineState.startedCraftInLastTick;

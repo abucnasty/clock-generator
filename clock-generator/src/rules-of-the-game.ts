@@ -151,8 +151,8 @@ export { MiningProgress } from "./control-logic/drill/modes/mining-progress";
  * "A machine that places its results itself"): its results go into its output whatever it holds, any number of stacks, and
  * while a stack of any one of them waits there it starts no craft and takes no ingredients; with a result target (the
  * machine or container at its result spot) it puts what waits into that target each tick: into a machine by the
- * mining drill's stop (3, shared `placeIntoMachine`), into a container as far as it has room, what the
- * tick's crafts gave included. At its
+ * mining drill's stop (3, the shared `Placement` through `MachinePlacementPort`), into a container as far as it has
+ * room, what the tick's crafts gave included. At its
  * output a bulk inserter waits for a full hand, and any other swings what it holds. A result that comes by chance is made
  * at its expected amount, the fraction carried to the next craft (`expectedAmount`: the chance times the amount and its
  * extra count fraction). Cases: `crafting/places-results.test.ts`. Recorded in the game (2.1.21, a lab on the ore voider

@@ -1,5 +1,6 @@
 import { EntityId, MiningDrill } from "../entities";
 import { HeldStorage } from "../simulation/components/held-storage";
+import { Placement } from "../simulation/components/placement";
 import { EntityState } from "./entity-state";
 import { WritableInventoryState } from "./inventory-state";
 import { DrillStatus } from "./entity-status";
@@ -12,10 +13,13 @@ export class DrillState implements EntityState {
     public status: DrillStatus = DrillStatus.WORKING;
     /** What it has mined and not yet dropped */
     public readonly held: HeldStorage;
+    /** Drops what it holds into its target before it mines, bound to the target by its working mode */
+    public readonly placement: Placement;
 
     constructor(public readonly drill: MiningDrill) {
         this.entity_id = drill.entity_id;
         this.held = HeldStorage.forItem(drill.production_rate.item);
+        this.placement = new Placement(this.held, [drill.item.name], false);
     }
 
     /** What it holds, as every entity's state shows it: its held Storage's inventory */

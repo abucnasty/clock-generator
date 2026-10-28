@@ -12,7 +12,7 @@ import { InserterDropMode, InserterPickupMode } from "../../control-logic/insert
  */
 const PLAIN_FIELDS: Record<string, string[]> = {
     // the running totals are left out of its key
-    MachineState: ["craftCount", "status", "totalCrafted", "pendingOutput", "productsFinished", "craftsStarted", "resultsPlaced", "outputBlockedAfterLastTick", "finishedCraftInLastTick", "startedCraftInLastTick", "windowOpeningTakeDecider"],
+    MachineState: ["craftCount", "status", "totalCrafted", "pendingOutput", "productsFinished", "craftsStarted", "outputBlockedAfterLastTick", "finishedCraftInLastTick", "startedCraftInLastTick", "windowOpeningTakeDecider"],
     // `tick` and the counts of items are left out of its key
     inserter: ["status", "tick", "held_item", "items_picked_up", "items_dropped", "waits_for_sink", "enabled"],
     DrillState: ["status"],

@@ -118,7 +118,7 @@ export class StockRecorder {
             series.products_finished[tick] = state.productsFinished;
             series.crafts_started[tick] = state.craftsStarted;
             if (series.results_placed !== undefined) {
-                series.results_placed[tick] = state.resultsPlaced;
+                series.results_placed[tick] = state.placement.results_placed;
             }
             series.crafting_progress[tick] = barOf(state.craftingProgress.progress);
             series.bonus_progress[tick] = barOf(state.bonusProgress.progress);

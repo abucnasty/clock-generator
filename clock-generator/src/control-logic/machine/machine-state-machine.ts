@@ -9,11 +9,16 @@ import { NoFuelModeTransitionEvaluator } from "./transitions/no-fuel-mode-evalua
 import { OutputFullModeTransitionEvaluator } from "./transitions/output-full-mode-evaluator";
 import { WorkingModeTransitionEvaluator } from "./transitions/working-mode-evaluator";
 import { ContainerStorage } from "../../simulation/components/container-storage";
+import { MachinePlacementPort } from "../../simulation/components/machine-placement-port";
+import { Placement } from "../../simulation/components/placement";
 
 export class MachineStateMachine extends ModeStateMachine<MachineMode> {
 
     public static create = create;
     public static forMachineId = createFromId;
+
+    /** The machine's Placement, bound to its result target at build */
+    private readonly placement: Placement;
 
     constructor(
         public readonly machine_state: MachineState,
@@ -23,6 +28,7 @@ export class MachineStateMachine extends ModeStateMachine<MachineMode> {
         private readonly working_mode: MachineWorkingMode,
     ) {
         super(initialMode, graph, plugins);
+        this.placement = machine_state.placement;
     }
 
     /**
@@ -42,7 +48,7 @@ export class MachineStateMachine extends ModeStateMachine<MachineMode> {
 
     /** What waits in the output into the result target, where the machine places its results itself */
     public placeResults(): void {
-        this.working_mode.placeResults();
+        this.placement.place();
     }
 
     /** Products the machine holds into its output, as far as there is room */
@@ -86,7 +92,13 @@ function create(args: {
 
     const { machine_state, initial_mode_status = MachineStatus.INGREDIENT_SHORTAGE, plugins = [] } = args;
 
-    const working_mode = new MachineWorkingMode(machine_state, args.result_target_state ?? null);
+    const result_target = args.result_target_state ?? null;
+    // into a machine up to the drill's stop through its placement port; into a container through the container's own port.
+    // Results put into its own output count as placed with no target or a machine target, not with a container
+    const target_is_machine = result_target !== null && EntityState.isMachine(result_target);
+    machine_state.placement.placeInto(target_is_machine ? new MachinePlacementPort(result_target) : result_target,
+        result_target === null || target_is_machine);
+    const working_mode = new MachineWorkingMode(machine_state, result_target);
     const ingredient_shortage_mode = new MachineIngredientShortageMode();
     const output_full_mode = new MachineOutputFullMode();
     const no_fuel_mode = new MachineNoFuelMode();
