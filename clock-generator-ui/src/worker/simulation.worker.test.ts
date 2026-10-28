@@ -148,7 +148,7 @@ it('uses the real engine for typed Check/generation recovery and recomputed conv
     expect(answer).toMatchObject({ type: 'answer', answer: { kind: 'available', plan: { copies: 4, candidate: { machines: [source.machines[0]], target_output: { ...source.target_output, copies: 4 } } } } });
     const excessive = { ...source, target_output: { ...source.target_output, items_per_second: 100 } };
     const refused = await send({ type: 'query', requestId: 3, query: { kind: 'repeated-unit-conversion', config: excessive } });
-    expect(refused).toMatchObject({ type: 'answer', answer: { kind: 'unavailable', stage: 'check', repeatedGroups: 8, reason: { code: 'candidate-check-failed', message: expect.stringContaining('cannot meet the target') } } });
+    expect(refused).toMatchObject({ type: 'answer', answer: { kind: 'unavailable', stage: 'check', repeatedGroups: 8, reason: { code: 'candidate-check-failed', message: expect.stringContaining("No clock can hold this build's target") } } });
     const unsupported = structuredClone(source);
     unsupported.inserters.filter((_, i) => i % 2 === 1).forEach(ins => { ins.sink = { type: 'belt', id: 2, drop: { lane: 1, position: 0 } }; });
     expect(await send({ type: 'query', requestId: 4, query: { kind: 'repeated-unit-conversion', config: unsupported } }))
@@ -170,6 +170,11 @@ it('uses the real engine for typed Check/generation recovery and recomputed conv
         diagnostics: [{ kind: 'field', path: ['chests', 0, 'item_filter'], message: expect.stringContaining('Remove unfiltered items') }] });
     expect(await send({ type: 'validate', requestId: 8, config: { ...source, inserters: [] } })).toMatchObject({ type: 'validation-failed',
         diagnostics: expect.arrayContaining([{ kind: 'coverage', issue: expect.objectContaining({ kind: 'missing_output_inserter' }) }]) });
+    // a target no clock can hold is the target rate field's problem, in the engine's words
+    const unheld = { ...source, target_output: { ...source.target_output, items_per_second: 100, copies: 1 }, machines: [source.machines[0]], inserters: source.inserters.slice(0, 2) };
+    const noClock = expect.stringContaining("No clock can hold this build's target");
+    expect(await send({ type: 'validate', requestId: 9, config: unheld })).toMatchObject({ type: 'validation-failed', message: noClock,
+        diagnostics: [{ kind: 'field', path: ['target_output', 'items_per_second'], message: noClock }] });
 });
 
 it('replays detailed activity through the real worker query without changing the saved config', async () => {
