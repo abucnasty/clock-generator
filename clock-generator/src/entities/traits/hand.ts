@@ -27,7 +27,7 @@ export interface HandTrait {
      * (fullHandOf, which the Hand's pickup rule is bound to at build: simulation/archetypes/inserter.ts).
      */
     readonly full_hand: FullHand;
-    /** The prototype's `wait_for_full_hand` (spec default false), recorded beside `full_hand` and read by nothing yet */
+    /** The prototype's `wait_for_full_hand` (spec default false), which `full_hand` follows */
     readonly wait_for_full_hand: boolean;
     /** The prototype's `grab_less_to_match_belt_stack` (spec default false); read by nothing yet */
     readonly grab_less_to_match_belt_stack: boolean;
@@ -42,14 +42,17 @@ export interface FullHand {
 }
 
 /**
- * Whether an inserter of the prototype waits for a full hand: everywhere for a bulk one (prototype `bulk` in the game
- * data: the bulk and the stack inserter); any other swings what it holds at a machine that places its results itself
- * (recorded on a recycler on scrap, 2.1.21: a stack inserter waited at it with a part hand of holmium ore for 10.5
- * minutes, a long-handed inserter swung each low density structure on its own). Filled from `bulk` (decision D7); decision
- * 9e would fill it from `wait_for_full_hand` instead, which the bulk inserter does not set.
+ * Whether an inserter of the prototype waits for a full hand before it swings: the prototype's own `wait_for_full_hand`
+ * (spec default false), which in the game data only the stack inserter sets. The bulk inserter (hand 12) and the fast
+ * one (hand 4) swing what they hold: recorded at an assembling machine 3's output, 2.1.21, they swung each craft's 2
+ * cables on their own while the stack inserter waited. The same holds at a machine that places its results itself (a
+ * recycler on scrap, 2.1.21: a stack inserter waited there with a part hand of holmium ore for 10.5 minutes, a
+ * long-handed inserter swung each low density structure on its own). The two fields are kept apart for the sources
+ * whose rule differs; the data gives them the one value.
  */
 export function fullHandOf(prototype: string): FullHand {
-    return { at_placing_source: FactorioDataService.findInserterOrThrow(prototype).bulk === true, elsewhere: true };
+    const waits = FactorioDataService.findInserterOrThrow(prototype).wait_for_full_hand === true;
+    return { at_placing_source: waits, elsewhere: waits };
 }
 
 export function inserterHand(prototype: string, quality: string, nominal: number, hand_sizes: ReadonlyMap<string, number>): HandTrait {

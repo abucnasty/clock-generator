@@ -4,7 +4,7 @@ import { EnableControl } from "../controls/enable-control";
 import { reasonText } from "../../state/reason-table";
 import { SimulationContext } from "../../crafting/sequence/simulation-context";
 import { MiningDrill, miningDrillMaxInsertion } from "../../entities";
-import { DrillState, DrillStatus, MachineState } from "../../state";
+import { DrillState, DrillStatus, factorioDrillState, MachineState } from "../../state";
 import { ContainerStorage } from "../components/container-storage";
 import { Mining } from "../components/mining";
 import { DrillStatusCode } from "../status-codes";
@@ -175,6 +175,27 @@ describe("a drill into a machine", () => {
     });
 });
 
+describe("a drill's state", () => {
+    it("keeps the status its ticks go by, and shows disabled by its control, waiting for space at a stop and else working", () => {
+        let enabled = true;
+        const { drill, machine, stop } = machineBuild(440, { isEnabled: () => enabled });
+        const state = drill.drill_state;
+        expect([state.status, factorioDrillState(state)]).toEqual([DrillStatus.WORKING, "working"]);
+        // an item it has just mined waits for the next tick's drop: not waiting
+        for (let tick = 0; tick < 3 && state.held.getCurrentQuantity("stone") === 0; tick++) drill.executeForTick();
+        expect(state.held.getCurrentQuantity("stone")).toBe(1);
+        expect(factorioDrillState(state)).toBe("working");
+        enabled = false;
+        drill.executeForTick();
+        expect([state.status, state.status_code, factorioDrillState(state)]).toEqual([DrillStatus.DISABLED, DrillStatusCode.DISABLED_BY_CONTROL_BEHAVIOR, "disabled_by_control_behavior"]);
+        enabled = true;
+        machine.inventoryState.addQuantity("stone", stop - machine.inventoryState.getQuantity("stone"));
+        drill.executeForTick();
+        expect(state.status).toBe(DrillStatus.WORKING);
+        expect(factorioDrillState(state)).toBe("waiting_for_space_in_destination");
+    });
+});
+
 describe("a drill's control rule", () => {
     it("asks its control once a tick and tells its observers of each change, before the status is written", () => {
         const answers = [true, false, false, true, true];
@@ -220,8 +241,8 @@ describe("a drill's control rule", () => {
         enabled = false;
         drill.executeForTick();
         expect(drill.stateKey()).toBe(`[["stone",${held()}]]|${DrillStatusCode.DISABLED_BY_CONTROL_BEHAVIOR}|${bars}`);
-        // the state's own status is never written (a known quirk, kept), and no part of the key
-        expect(drill.drill_state.status).toBe(DrillStatus.WORKING);
+        // the state keeps the status, and the key reads it
+        expect(drill.drill_state.status).toBe(DrillStatus.DISABLED);
         expect(drill.stateKey()).toBe(`${drill.drill_state.held.key()}|${drill.status}|${drill.mining.key()}`);
     });
 });

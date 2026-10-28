@@ -11,12 +11,14 @@ export function craftingMachineOf(data: CraftingMachineData, prototype: string |
 }
 
 /**
- * Whether the row's machine burns nutrients, as a biochamber does, so that its energy consumption counts: the engine's
- * Energy trait for its prototype models its fuel
+ * Whether the row's machine burns nutrients, as a biochamber does, so that the editor shows its energy consumption and
+ * takes nutrients for its fuel: the engine's Energy trait for its prototype models its fuel, and its burner burns the
+ * nutrients fuel category of the game data. Other burners (the furnaces, the captive biter spawner) are fuelled by the
+ * engine too, but the editor does not show them yet.
  */
 export function burnsNutrients(row: Pick<MachineFormData, 'prototype'>, data: CraftingMachineData): boolean {
     const machine = craftingMachineOf(data, row.prototype);
-    return machine !== undefined && prototypeTraitsOf(machine).fuel_modelled;
+    return machine !== undefined && prototypeTraitsOf(machine).fuel_modelled && machine.burner_fuel_categories.includes('nutrients');
 }
 
 /**

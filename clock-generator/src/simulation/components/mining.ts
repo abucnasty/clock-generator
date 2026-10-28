@@ -1,6 +1,7 @@
 import { ItemName } from "../../data";
 import { MiningDrill } from "../../entities";
 import type { DrillState } from "../../state/drill-state";
+import type { Energy, EnergyUser } from "./energy";
 import { HeldStorage } from "./held-storage";
 import { Placement } from "./placement";
 
@@ -67,11 +68,16 @@ export function bonusBarTick(bar: number, step: number, mining_time: number): { 
  * target is not checked before mining: at a machine's stop or into a full chest it mines on until it holds an item. The
  * bars hold their values while the drill waits or is disabled; a control swap sets both to 0 (`resetForSwap`, same-tick
  * rule 12).
+ *
+ * A burner drill mines with the part of a tick's work its energy buffer pays for: its first tick of mining fills the
+ * empty buffer and moves no bar, then each tick of mining draws a tick of energy and the buffer is topped up again, also
+ * on the tick the bar wraps with the item held. A drill that waits or is disabled draws nothing and keeps a full buffer
+ * (docs/burner-fuel.md).
  */
-export class Mining {
+export class Mining implements EnergyUser {
 
     public static forDrill(state: DrillState): Mining {
-        return new Mining(state.drill, state.held, state.placement);
+        return new Mining(state.drill, state.held, state.placement, state.energy);
     }
 
     private progress = 0;
@@ -91,6 +97,8 @@ export class Mining {
         private readonly held: HeldStorage,
         /** Drops what it holds into its target, bound to the target before the first tick */
         private readonly placement: Placement,
+        /** What it runs on: the share of a tick's work its energy pays for, and the energy a tick of mining draws */
+        private readonly energy: Energy,
     ) {
         this.mining_time = drill.resource.minable.mining_time;
         // the crafting rate is a share of the mining time a tick; the game's bars move by the mining speed a tick
@@ -111,7 +119,22 @@ export class Mining {
 
     /** Both bars, which drive the drill's next ticks: for the drill's key (see simulationStateKey) and the chest drill replay's */
     public key(): string {
-        return `${this.progress};${this.bonus.bar}`;
+        const energy = this.energy.key();
+        return energy === "" ? `${this.progress};${this.bonus.bar}` : `${this.progress};${this.bonus.bar};${energy}`;
+    }
+
+    /** Whether a bar is underway (what Energy asks) */
+    public craftInProgress(): boolean {
+        return this.progress > 0;
+    }
+
+    /**
+     * Whether the drill goes on after this tick (what Energy asks): always, so the buffer is topped up in a tick of mining
+     * also when the item it mined has nowhere to go, and the drill waits with a full buffer (recorded: a burner drill on a
+     * full chest burns nothing and loses no 1/15 of a tick when it works again)
+     */
+    public keepsWorking(): boolean {
+        return true;
     }
 
     /**
@@ -132,20 +155,21 @@ export class Mining {
             // what it mined before is still in the drill: its target has no room for it, so it mines nothing
             return;
         }
-        const mined = this.mine();
+        const mined = this.mine(this.energy.poweredShare());
+        this.energy.spend(true, this);
         if (mined > 0) {
             held.insert(item, mined);
         }
     }
 
-    /** Moves both bars by one tick of mining; returns the whole items they complete */
-    public mine(): number {
+    /** Moves both bars by one tick of mining, or by the `share` of it the energy pays for; returns the whole items they complete */
+    public mine(share: number = 1): number {
         let items = 0;
-        this.progress += this.step;
+        this.progress += this.step * share;
         if (this.progress >= this.mining_time) {
             this.progress -= this.mining_time;
             items += 1;
         }
-        return items + moveBonusBar(this.bonus, this.bonus_step, this.mining_time);
+        return items + moveBonusBar(this.bonus, this.bonus_step * share, this.mining_time);
     }
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DrillStatus, InserterStatus, MachineStatus } from "../state/entity-status";
 import { FACTORIO_MACHINE_STATE, factorioDrillState } from "../state/factorio-entity-state";
 import { DrillState } from "../state/drill-state";
+import { MiningDrill } from "../entities";
 import {
     CRAFTING_STATUS_DEFINES, CraftingStatus, craftingStatusOf, DRILL_STATUS_DEFINES, DrillStatusCode, drillStatusCodeOf,
     drillStatusOf, InserterPhase, inserterPhaseOf, inserterStatusOf, machineStatusOf,
@@ -35,7 +36,10 @@ describe("status codes", () => {
         expect(new Set(statuses.map(drillStatusCodeOf)).size).toBe(Object.values(DrillStatusCode).length);
         for (const status of statuses) {
             expect(drillStatusOf(drillStatusCodeOf(status))).toBe(status);
-            expect(DRILL_STATUS_DEFINES[drillStatusCodeOf(status)]).toBe(factorioDrillState({ status } as DrillState));
+            const drill_state = DrillState.fromEntity(MiningDrill.fromConfig(
+                { id: 1, type: "big-mining-drill", mined_item_name: "iron-ore", speed_bonus: 0, productivity: 0, target: { type: "chest", id: 1 } }));
+            drill_state.status = status;
+            expect(DRILL_STATUS_DEFINES[drillStatusCodeOf(status)]).toBe(factorioDrillState(drill_state));
         }
         for (const code of Object.values(DrillStatusCode)) {
             expect(drillStatusCodeOf(drillStatusOf(code))).toBe(code);

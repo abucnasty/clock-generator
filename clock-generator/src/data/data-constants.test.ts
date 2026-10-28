@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import "./factorio-data-file";
 import { FactorioDataService } from "./factorio-data-service";
-import { NUTRIENTS_FUEL_CATEGORY } from "../entities/machine/machine-rule";
 import { BeltSpeed } from "../entities/belt/belt";
 import { fullHandOf } from "../entities/traits/hand";
 import { modelledBurnerOf } from "../entities/traits/energy";
@@ -9,6 +8,7 @@ import { modelledBurnerOf } from "../entities/traits/energy";
 /** What the engine burned before it read the burner from the data (its burner table): nutrients of 2 MJ, at 500 kW */
 const NUTRIENTS = { item_name: "nutrients", fuel_value_mj: 2 };
 const BIOCHAMBER_KW = 500;
+const NUTRIENTS_FUEL_CATEGORY = "nutrients";
 
 const SI_PREFIX: Record<string, number> = { "": 1, k: 1e3, M: 1e6, G: 1e9, T: 1e12 };
 
@@ -25,7 +25,7 @@ function energy(text: string | undefined, unit: "W" | "J"): number {
  * belt speed switch, the full-hand rule by name), so that reading them moved nothing
  */
 describe("the game data and the engine's constants", () => {
-    it("gives the biochamber the burner of the biochamber rule: 500 kW on nutrients", () => {
+    it("gives the biochamber the burner it was fuelled with first: 500 kW on nutrients", () => {
         const biochamber = FactorioDataService.findCraftingMachine("biochamber")!;
         const source = modelledBurnerOf(biochamber)!;
         expect(energy(biochamber.energy_usage, "W") / 1000).toBe(BIOCHAMBER_KW);
@@ -52,9 +52,8 @@ describe("the game data and the engine's constants", () => {
         expect(FactorioDataService.findTransportBeltOrThrow(name).speed * 480).toBe(speed);
     });
 
-    // The engine's full-hand rule follows `bulk` today (the Hand trait's fullHandOf: a bulk inserter waits for a full hand
-    // at a machine that places its results itself), not `wait_for_full_hand`, which the bulk inserter does not set
-    // (decision 9e is open); the cases below tie the data's `bulk` to that rule and record the data's full-hand fields beside it.
+    // The engine's full-hand rule follows the prototype's own `wait_for_full_hand` (the Hand trait's fullHandOf), which in the
+    // game data only the stack inserter sets; the bulk inserter has `bulk` alone. The cases below tie the data to that rule.
     it("gives the stack inserter a full hand to wait for, matched to belt stacks of up to 4, and the bulk inserter a bulk hand only", () => {
         const stack = FactorioDataService.findInserterOrThrow("stack-inserter");
         expect(stack.wait_for_full_hand).toBe(true);
@@ -65,15 +64,22 @@ describe("the game data and the engine's constants", () => {
         expect(bulk.bulk).toBe(true);
         expect(bulk.wait_for_full_hand ?? false).toBe(false);
         expect(fullHandOf(stack.name).at_placing_source).toBe(true);
-        expect(fullHandOf(bulk.name).at_placing_source).toBe(true);
+        expect(fullHandOf(bulk.name)).toEqual({ at_placing_source: false, elsewhere: false });
     });
 
-    it("makes no other inserter a bulk one", () => {
+    it("gives only the stack inserter a wait for a full hand", () => {
+        const waiting = FactorioDataService.getAllInserters().filter(inserter => fullHandOf(inserter.name).elsewhere);
+        expect(waiting.map(inserter => inserter.name)).toEqual(["stack-inserter"]);
+        expect(FactorioDataService.getAllInserters().filter(inserter => inserter.wait_for_full_hand === true).map(inserter => inserter.name)).toEqual(["stack-inserter"]);
+        expect(fullHandOf("stack-inserter")).toEqual({ at_placing_source: true, elsewhere: true });
+    });
+
+    it("makes no other inserter a bulk one, nor one that waits for a full hand", () => {
         const others = FactorioDataService.getAllInserters().filter(inserter => !["stack-inserter", "bulk-inserter"].includes(inserter.name));
         expect(others.map(inserter => inserter.name).sort()).toEqual(["burner-inserter", "fast-inserter", "inserter", "long-handed-inserter"]);
         for (const inserter of others) {
             expect(inserter.bulk ?? false, inserter.name).toBe(false);
-            expect(fullHandOf(inserter.name).at_placing_source, inserter.name).toBe(false);
+            expect(fullHandOf(inserter.name), inserter.name).toEqual({ at_placing_source: false, elsewhere: false });
         }
     });
 
