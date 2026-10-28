@@ -1,0 +1,649 @@
+{
+  "schema": 1,
+  "sample": "RECYCLING_SCRAP_SILO",
+  "target": {
+    "item": "scrap",
+    "counts": "destroyed",
+    "per_copy": {
+      "numerator": 2,
+      "denominator": 1
+    }
+  },
+  "nodes": [
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "chest:1",
+      "kind": "container",
+      "ports": [
+        "chest:1#iron-gear-wheel"
+      ]
+    },
+    {
+      "key": "chest:2",
+      "kind": "container",
+      "ports": [
+        "chest:2#solid-fuel"
+      ]
+    },
+    {
+      "key": "chest:3",
+      "kind": "container",
+      "ports": [
+        "chest:3#concrete"
+      ]
+    },
+    {
+      "key": "chest:4",
+      "kind": "container",
+      "ports": [
+        "chest:4#ice"
+      ]
+    },
+    {
+      "key": "chest:5",
+      "kind": "container",
+      "ports": [
+        "chest:5#steel-plate"
+      ]
+    },
+    {
+      "key": "chest:6",
+      "kind": "container",
+      "ports": [
+        "chest:6#battery"
+      ]
+    },
+    {
+      "key": "chest:7",
+      "kind": "container",
+      "ports": [
+        "chest:7#stone"
+      ]
+    },
+    {
+      "key": "chest:8",
+      "kind": "container",
+      "ports": [
+        "chest:8#advanced-circuit"
+      ]
+    },
+    {
+      "key": "chest:9",
+      "kind": "container",
+      "ports": [
+        "chest:9#copper-cable"
+      ]
+    },
+    {
+      "key": "chest:10",
+      "kind": "container",
+      "ports": [
+        "chest:10#processing-unit"
+      ]
+    },
+    {
+      "key": "chest:11",
+      "kind": "container",
+      "ports": [
+        "chest:11#low-density-structure"
+      ]
+    },
+    {
+      "key": "chest:12",
+      "kind": "container",
+      "ports": [
+        "chest:12#holmium-ore"
+      ]
+    },
+    {
+      "key": "chest:13",
+      "kind": "container",
+      "ports": [
+        "chest:13#scrap"
+      ]
+    },
+    {
+      "key": "chest:14",
+      "kind": "container",
+      "ports": [
+        "chest:14#advanced-circuit",
+        "chest:14#battery",
+        "chest:14#concrete",
+        "chest:14#copper-cable",
+        "chest:14#holmium-ore",
+        "chest:14#ice",
+        "chest:14#iron-gear-wheel",
+        "chest:14#low-density-structure",
+        "chest:14#processing-unit",
+        "chest:14#solid-fuel",
+        "chest:14#steel-plate",
+        "chest:14#stone"
+      ]
+    },
+    {
+      "key": "sink",
+      "kind": "sink",
+      "ports": []
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/iron-gear-wheel",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "iron-gear-wheel",
+      "from": "chest:14#iron-gear-wheel",
+      "from_ports": [
+        "chest:14#iron-gear-wheel"
+      ],
+      "to": "chest:1#iron-gear-wheel",
+      "lands_in": "storage",
+      "hand": 16,
+      "floor_cycle": 24,
+      "ceiling": {
+        "numerator": 40,
+        "denominator": 1
+      },
+      "terminal": "storage"
+    },
+    {
+      "key": "inserter:2/solid-fuel",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "solid-fuel",
+      "from": "chest:14#solid-fuel",
+      "from_ports": [
+        "chest:14#solid-fuel"
+      ],
+      "to": "chest:2#solid-fuel",
+      "lands_in": "storage",
+      "hand": 16,
+      "floor_cycle": 24,
+      "ceiling": {
+        "numerator": 40,
+        "denominator": 1
+      },
+      "terminal": "storage"
+    },
+    {
+      "key": "inserter:3/concrete",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "concrete",
+      "from": "chest:14#concrete",
+      "from_ports": [
+        "chest:14#concrete"
+      ],
+      "to": "chest:3#concrete",
+      "lands_in": "storage",
+      "hand": 16,
+      "floor_cycle": 24,
+      "ceiling": {
+        "numerator": 40,
+        "denominator": 1
+      },
+      "terminal": "storage"
+    },
+    {
+      "key": "inserter:4/ice",
+      "via": "inserter",
+      "entity": "inserter:4",
+      "group": "inserter:4",
+      "item": "ice",
+      "from": "chest:14#ice",
+      "from_ports": [
+        "chest:14#ice"
+      ],
+      "to": "chest:4#ice",
+      "lands_in": "storage",
+      "hand": 16,
+      "floor_cycle": 24,
+      "ceiling": {
+        "numerator": 40,
+        "denominator": 1
+      },
+      "terminal": "storage"
+    },
+    {
+      "key": "inserter:5/steel-plate",
+      "via": "inserter",
+      "entity": "inserter:5",
+      "group": "inserter:5",
+      "item": "steel-plate",
+      "from": "chest:14#steel-plate",
+      "from_ports": [
+        "chest:14#steel-plate"
+      ],
+      "to": "chest:5#steel-plate",
+      "lands_in": "storage",
+      "hand": 16,
+      "floor_cycle": 24,
+      "ceiling": {
+        "numerator": 40,
+        "denominator": 1
+      },
+      "terminal": "storage"
+    },
+    {
+      "key": "inserter:6/battery",
+      "via": "inserter",
+      "entity": "inserter:6",
+      "group": "inserter:6",
+      "item": "battery",
+      "from": "chest:14#battery",
+      "from_ports": [
+        "chest:14#battery"
+      ],
+      "to": "chest:6#battery",
+      "lands_in": "storage",
+      "hand": 16,
+      "floor_cycle": 24,
+      "ceiling": {
+        "numerator": 40,
+        "denominator": 1
+      },
+      "terminal": "storage"
+    },
+    {
+      "key": "inserter:7/stone",
+      "via": "inserter",
+      "entity": "inserter:7",
+      "group": "inserter:7",
+      "item": "stone",
+      "from": "chest:14#stone",
+      "from_ports": [
+        "chest:14#stone"
+      ],
+      "to": "chest:7#stone",
+      "lands_in": "storage",
+      "hand": 16,
+      "floor_cycle": 24,
+      "ceiling": {
+        "numerator": 40,
+        "denominator": 1
+      },
+      "terminal": "storage"
+    },
+    {
+      "key": "inserter:8/advanced-circuit",
+      "via": "inserter",
+      "entity": "inserter:8",
+      "group": "inserter:8",
+      "item": "advanced-circuit",
+      "from": "chest:14#advanced-circuit",
+      "from_ports": [
+        "chest:14#advanced-circuit"
+      ],
+      "to": "chest:8#advanced-circuit",
+      "lands_in": "storage",
+      "hand": 16,
+      "floor_cycle": 24,
+      "ceiling": {
+        "numerator": 40,
+        "denominator": 1
+      },
+      "terminal": "storage"
+    },
+    {
+      "key": "inserter:9/copper-cable",
+      "via": "inserter",
+      "entity": "inserter:9",
+      "group": "inserter:9",
+      "item": "copper-cable",
+      "from": "chest:14#copper-cable",
+      "from_ports": [
+        "chest:14#copper-cable"
+      ],
+      "to": "chest:9#copper-cable",
+      "lands_in": "storage",
+      "hand": 16,
+      "floor_cycle": 24,
+      "ceiling": {
+        "numerator": 40,
+        "denominator": 1
+      },
+      "terminal": "storage"
+    },
+    {
+      "key": "inserter:10/processing-unit",
+      "via": "inserter",
+      "entity": "inserter:10",
+      "group": "inserter:10",
+      "item": "processing-unit",
+      "from": "chest:14#processing-unit",
+      "from_ports": [
+        "chest:14#processing-unit"
+      ],
+      "to": "chest:10#processing-unit",
+      "lands_in": "storage",
+      "hand": 16,
+      "floor_cycle": 24,
+      "ceiling": {
+        "numerator": 40,
+        "denominator": 1
+      },
+      "terminal": "storage"
+    },
+    {
+      "key": "inserter:11/low-density-structure",
+      "via": "inserter",
+      "entity": "inserter:11",
+      "group": "inserter:11",
+      "item": "low-density-structure",
+      "from": "chest:14#low-density-structure",
+      "from_ports": [
+        "chest:14#low-density-structure"
+      ],
+      "to": "chest:11#low-density-structure",
+      "lands_in": "storage",
+      "hand": 16,
+      "floor_cycle": 24,
+      "ceiling": {
+        "numerator": 40,
+        "denominator": 1
+      },
+      "terminal": "storage"
+    },
+    {
+      "key": "inserter:12/holmium-ore",
+      "via": "inserter",
+      "entity": "inserter:12",
+      "group": "inserter:12",
+      "item": "holmium-ore",
+      "from": "chest:14#holmium-ore",
+      "from_ports": [
+        "chest:14#holmium-ore"
+      ],
+      "to": "chest:12#holmium-ore",
+      "lands_in": "storage",
+      "hand": 16,
+      "floor_cycle": 24,
+      "ceiling": {
+        "numerator": 40,
+        "denominator": 1
+      },
+      "terminal": "storage"
+    },
+    {
+      "key": "inserter:13/scrap",
+      "via": "inserter",
+      "entity": "inserter:13",
+      "group": "inserter:13",
+      "item": "scrap",
+      "from": "chest:13#scrap",
+      "from_ports": [
+        "chest:13#scrap"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 24,
+      "ceiling": {
+        "numerator": 40,
+        "denominator": 1
+      },
+      "terminal": "destroyed"
+    },
+    {
+      "key": "placement:machine:1/iron-gear-wheel",
+      "via": "placement",
+      "entity": "machine:1",
+      "group": null,
+      "item": "iron-gear-wheel",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "chest:14#iron-gear-wheel",
+      "lands_in": "storage",
+      "hand": null,
+      "floor_cycle": null,
+      "ceiling": null,
+      "terminal": null
+    },
+    {
+      "key": "placement:machine:1/solid-fuel",
+      "via": "placement",
+      "entity": "machine:1",
+      "group": null,
+      "item": "solid-fuel",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "chest:14#solid-fuel",
+      "lands_in": "storage",
+      "hand": null,
+      "floor_cycle": null,
+      "ceiling": null,
+      "terminal": null
+    },
+    {
+      "key": "placement:machine:1/concrete",
+      "via": "placement",
+      "entity": "machine:1",
+      "group": null,
+      "item": "concrete",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "chest:14#concrete",
+      "lands_in": "storage",
+      "hand": null,
+      "floor_cycle": null,
+      "ceiling": null,
+      "terminal": null
+    },
+    {
+      "key": "placement:machine:1/ice",
+      "via": "placement",
+      "entity": "machine:1",
+      "group": null,
+      "item": "ice",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "chest:14#ice",
+      "lands_in": "storage",
+      "hand": null,
+      "floor_cycle": null,
+      "ceiling": null,
+      "terminal": null
+    },
+    {
+      "key": "placement:machine:1/steel-plate",
+      "via": "placement",
+      "entity": "machine:1",
+      "group": null,
+      "item": "steel-plate",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "chest:14#steel-plate",
+      "lands_in": "storage",
+      "hand": null,
+      "floor_cycle": null,
+      "ceiling": null,
+      "terminal": null
+    },
+    {
+      "key": "placement:machine:1/battery",
+      "via": "placement",
+      "entity": "machine:1",
+      "group": null,
+      "item": "battery",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "chest:14#battery",
+      "lands_in": "storage",
+      "hand": null,
+      "floor_cycle": null,
+      "ceiling": null,
+      "terminal": null
+    },
+    {
+      "key": "placement:machine:1/stone",
+      "via": "placement",
+      "entity": "machine:1",
+      "group": null,
+      "item": "stone",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "chest:14#stone",
+      "lands_in": "storage",
+      "hand": null,
+      "floor_cycle": null,
+      "ceiling": null,
+      "terminal": null
+    },
+    {
+      "key": "placement:machine:1/advanced-circuit",
+      "via": "placement",
+      "entity": "machine:1",
+      "group": null,
+      "item": "advanced-circuit",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "chest:14#advanced-circuit",
+      "lands_in": "storage",
+      "hand": null,
+      "floor_cycle": null,
+      "ceiling": null,
+      "terminal": null
+    },
+    {
+      "key": "placement:machine:1/copper-cable",
+      "via": "placement",
+      "entity": "machine:1",
+      "group": null,
+      "item": "copper-cable",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "chest:14#copper-cable",
+      "lands_in": "storage",
+      "hand": null,
+      "floor_cycle": null,
+      "ceiling": null,
+      "terminal": null
+    },
+    {
+      "key": "placement:machine:1/processing-unit",
+      "via": "placement",
+      "entity": "machine:1",
+      "group": null,
+      "item": "processing-unit",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "chest:14#processing-unit",
+      "lands_in": "storage",
+      "hand": null,
+      "floor_cycle": null,
+      "ceiling": null,
+      "terminal": null
+    },
+    {
+      "key": "placement:machine:1/low-density-structure",
+      "via": "placement",
+      "entity": "machine:1",
+      "group": null,
+      "item": "low-density-structure",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "chest:14#low-density-structure",
+      "lands_in": "storage",
+      "hand": null,
+      "floor_cycle": null,
+      "ceiling": null,
+      "terminal": null
+    },
+    {
+      "key": "placement:machine:1/holmium-ore",
+      "via": "placement",
+      "entity": "machine:1",
+      "group": null,
+      "item": "holmium-ore",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "chest:14#holmium-ore",
+      "lands_in": "storage",
+      "hand": null,
+      "floor_cycle": null,
+      "ceiling": null,
+      "terminal": null
+    }
+  ],
+  "components": [],
+  "order": [
+    "chest:1#iron-gear-wheel",
+    "chest:2#solid-fuel",
+    "chest:3#concrete",
+    "chest:4#ice",
+    "chest:5#steel-plate",
+    "chest:6#battery",
+    "chest:7#stone",
+    "chest:8#advanced-circuit",
+    "chest:9#copper-cable",
+    "chest:10#processing-unit",
+    "chest:11#low-density-structure",
+    "chest:12#holmium-ore",
+    "chest:13#scrap",
+    "machine:1",
+    "chest:14#advanced-circuit",
+    "chest:14#battery",
+    "chest:14#concrete",
+    "chest:14#copper-cable",
+    "chest:14#holmium-ore",
+    "chest:14#ice",
+    "chest:14#iron-gear-wheel",
+    "chest:14#low-density-structure",
+    "chest:14#processing-unit",
+    "chest:14#solid-fuel",
+    "chest:14#steel-plate",
+    "chest:14#stone",
+    "sink"
+  ],
+  "shared": {
+    "out": [],
+    "in": [],
+    "lanes": []
+  },
+  "terminal": [
+    "inserter:1/iron-gear-wheel",
+    "inserter:2/solid-fuel",
+    "inserter:3/concrete",
+    "inserter:4/ice",
+    "inserter:5/steel-plate",
+    "inserter:6/battery",
+    "inserter:7/stone",
+    "inserter:8/advanced-circuit",
+    "inserter:9/copper-cable",
+    "inserter:10/processing-unit",
+    "inserter:11/low-density-structure",
+    "inserter:12/holmium-ore",
+    "inserter:13/scrap"
+  ]
+}

@@ -1,0 +1,426 @@
+{
+  "schema": 1,
+  "sample": "REAL_OWNER_PRODUCTIVITY_CHAIN",
+  "target": {
+    "item": "productivity-module",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 40,
+      "denominator": 3
+    }
+  },
+  "nodes": [
+    {
+      "key": "belt:1/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:1/lane:1#coal"
+      ]
+    },
+    {
+      "key": "belt:1/lane:2",
+      "kind": "lane",
+      "ports": []
+    },
+    {
+      "key": "belt:2/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:2/lane:1#productivity-module"
+      ]
+    },
+    {
+      "key": "belt:2/lane:2",
+      "kind": "lane",
+      "ports": []
+    },
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:2",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:3",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:4",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:5",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:6",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:7",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:8",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:9",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "chest:1",
+      "kind": "container",
+      "ports": [
+        "chest:1#copper-cable"
+      ]
+    },
+    {
+      "key": "chest:2",
+      "kind": "container",
+      "ports": [
+        "chest:2#plastic-bar"
+      ]
+    },
+    {
+      "key": "chest:3",
+      "kind": "container",
+      "ports": [
+        "chest:3#advanced-circuit"
+      ]
+    },
+    {
+      "key": "sink",
+      "kind": "sink",
+      "ports": []
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/coal",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "coal",
+      "from": "belt:1/lane:1#coal",
+      "from_ports": [
+        "belt:1/lane:1#coal"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:2/productivity-module",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "productivity-module",
+      "from": "machine:3",
+      "from_ports": [
+        "machine:3"
+      ],
+      "to": "belt:2/lane:1#productivity-module",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:3/copper-cable",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "copper-cable",
+      "from": "machine:4",
+      "from_ports": [
+        "machine:4"
+      ],
+      "to": "chest:1#copper-cable",
+      "lands_in": "storage",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:4/plastic-bar",
+      "via": "inserter",
+      "entity": "inserter:4",
+      "group": "inserter:4",
+      "item": "plastic-bar",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "chest:2#plastic-bar",
+      "lands_in": "storage",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:5/copper-cable",
+      "via": "inserter",
+      "entity": "inserter:5",
+      "group": "inserter:5",
+      "item": "copper-cable",
+      "from": "chest:1#copper-cable",
+      "from_ports": [
+        "chest:1#copper-cable"
+      ],
+      "to": "machine:2",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:6/plastic-bar",
+      "via": "inserter",
+      "entity": "inserter:6",
+      "group": "inserter:6",
+      "item": "plastic-bar",
+      "from": "chest:2#plastic-bar",
+      "from_ports": [
+        "chest:2#plastic-bar"
+      ],
+      "to": "machine:2",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:7/advanced-circuit",
+      "via": "inserter",
+      "entity": "inserter:7",
+      "group": "inserter:7",
+      "item": "advanced-circuit",
+      "from": "machine:2",
+      "from_ports": [
+        "machine:2"
+      ],
+      "to": "chest:3#advanced-circuit",
+      "lands_in": "storage",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:8/advanced-circuit",
+      "via": "inserter",
+      "entity": "inserter:8",
+      "group": "inserter:8",
+      "item": "advanced-circuit",
+      "from": "chest:3#advanced-circuit",
+      "from_ports": [
+        "chest:3#advanced-circuit"
+      ],
+      "to": "machine:3",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:9/electronic-circuit",
+      "via": "inserter",
+      "entity": "inserter:9",
+      "group": "inserter:9",
+      "item": "electronic-circuit",
+      "from": "machine:5",
+      "from_ports": [
+        "machine:5"
+      ],
+      "to": "machine:2",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:10/electronic-circuit",
+      "via": "inserter",
+      "entity": "inserter:10",
+      "group": "inserter:10",
+      "item": "electronic-circuit",
+      "from": "machine:6",
+      "from_ports": [
+        "machine:6"
+      ],
+      "to": "machine:3",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:11/iron-plate",
+      "via": "inserter",
+      "entity": "inserter:11",
+      "group": "inserter:11",
+      "item": "iron-plate",
+      "from": "machine:7",
+      "from_ports": [
+        "machine:7"
+      ],
+      "to": "machine:5",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:12/copper-cable",
+      "via": "inserter",
+      "entity": "inserter:12",
+      "group": "inserter:12",
+      "item": "copper-cable",
+      "from": "machine:8",
+      "from_ports": [
+        "machine:8"
+      ],
+      "to": "machine:5",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:13/copper-cable",
+      "via": "inserter",
+      "entity": "inserter:13",
+      "group": "inserter:13",
+      "item": "copper-cable",
+      "from": "machine:8",
+      "from_ports": [
+        "machine:8"
+      ],
+      "to": "machine:6",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:14/iron-plate",
+      "via": "inserter",
+      "entity": "inserter:14",
+      "group": "inserter:14",
+      "item": "iron-plate",
+      "from": "machine:9",
+      "from_ports": [
+        "machine:9"
+      ],
+      "to": "machine:6",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    }
+  ],
+  "components": [],
+  "order": [
+    "belt:1/lane:1#coal",
+    "machine:1",
+    "machine:4",
+    "machine:7",
+    "machine:8",
+    "machine:5",
+    "machine:9",
+    "machine:6",
+    "chest:1#copper-cable",
+    "chest:2#plastic-bar",
+    "machine:2",
+    "chest:3#advanced-circuit",
+    "machine:3",
+    "belt:2/lane:1#productivity-module",
+    "sink"
+  ],
+  "shared": {
+    "out": [
+      {
+        "at": "machine:8",
+        "item": "copper-cable",
+        "edges": [
+          "inserter:12/copper-cable",
+          "inserter:13/copper-cable"
+        ]
+      }
+    ],
+    "in": [],
+    "lanes": []
+  },
+  "terminal": [
+    "inserter:2/productivity-module"
+  ]
+}

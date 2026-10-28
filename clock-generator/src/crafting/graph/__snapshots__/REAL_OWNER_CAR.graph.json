@@ -1,0 +1,196 @@
+{
+  "schema": 1,
+  "sample": "REAL_OWNER_CAR",
+  "target": {
+    "item": "iron-plate",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 80,
+      "denominator": 1
+    }
+  },
+  "nodes": [
+    {
+      "key": "belt:1/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:1/lane:1#iron-plate"
+      ]
+    },
+    {
+      "key": "belt:1/lane:2",
+      "kind": "lane",
+      "ports": [
+        "belt:1/lane:2#iron-plate"
+      ]
+    },
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:2",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "chest:1",
+      "kind": "container",
+      "ports": [
+        "chest:1#iron-ore"
+      ]
+    },
+    {
+      "key": "chest:2",
+      "kind": "container",
+      "ports": []
+    },
+    {
+      "key": "drill:1",
+      "kind": "drill",
+      "ports": []
+    },
+    {
+      "key": "sink",
+      "kind": "sink",
+      "ports": []
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/iron-ore",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "iron-ore",
+      "from": "chest:1#iron-ore",
+      "from_ports": [
+        "chest:1#iron-ore"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:2/iron-ore",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "iron-ore",
+      "from": "chest:1#iron-ore",
+      "from_ports": [
+        "chest:1#iron-ore"
+      ],
+      "to": "machine:2",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:3/iron-plate",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "iron-plate",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "belt:1/lane:1#iron-plate",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:4/iron-plate",
+      "via": "inserter",
+      "entity": "inserter:4",
+      "group": "inserter:4",
+      "item": "iron-plate",
+      "from": "machine:2",
+      "from_ports": [
+        "machine:2"
+      ],
+      "to": "belt:1/lane:1#iron-plate",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "placement:drill:1/iron-ore",
+      "via": "placement",
+      "entity": "drill:1",
+      "group": null,
+      "item": "iron-ore",
+      "from": "drill:1",
+      "from_ports": [
+        "drill:1"
+      ],
+      "to": "chest:1#iron-ore",
+      "lands_in": "storage",
+      "hand": null,
+      "floor_cycle": null,
+      "ceiling": null,
+      "terminal": null
+    }
+  ],
+  "components": [],
+  "order": [
+    "belt:1/lane:2#iron-plate",
+    "drill:1",
+    "chest:1#iron-ore",
+    "machine:1",
+    "machine:2",
+    "belt:1/lane:1#iron-plate",
+    "sink"
+  ],
+  "shared": {
+    "out": [
+      {
+        "at": "chest:1#iron-ore",
+        "item": "iron-ore",
+        "edges": [
+          "inserter:1/iron-ore",
+          "inserter:2/iron-ore"
+        ]
+      }
+    ],
+    "in": [
+      {
+        "at": "belt:1/lane:1#iron-plate",
+        "item": "iron-plate",
+        "edges": [
+          "inserter:3/iron-plate",
+          "inserter:4/iron-plate"
+        ]
+      }
+    ],
+    "lanes": []
+  },
+  "terminal": [
+    "inserter:3/iron-plate",
+    "inserter:4/iron-plate"
+  ]
+}
