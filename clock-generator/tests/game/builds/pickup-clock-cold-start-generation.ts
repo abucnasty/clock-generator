@@ -2,7 +2,6 @@ import {describe, expect, test} from "vitest";
 import {generateClockAlternatives} from "../../../src/crafting/generate-blueprint";
 import {clockHash} from "./clock-controls";
 import {reversedDeciders} from "./reversed-deciders";
-import {RECORDED_ON_THE_MOVING_BELT_CLOCK} from "../../../src/crafting/generate-blueprint-test-helpers";
 import {beltPickupVariantOf, coldStart, configOf} from "./pickup-clock-cold-start-runs";
 import {COLD_START_GENERATED} from "./pickup-clock-cold-start-cases";
 
@@ -22,13 +21,10 @@ export function pickupClockColdStartTests() {
     // belt-pickup-clock generation test (belt-pickup-clock.generation.test.ts, belt-pickup-clock-cases.ts) generates are checked
     // there, on that generation (expectColdStartRunsOnSelection); this file generates the runs of pickup-clock-cold-start-cases.ts.
     describe("cold start runs name the clock the selection makes", () => {
-        // the runs recorded on the clock planned with the belts moving name a clock no longer made (#460)
-        const inTheGap = (run: {case: string}) => RECORDED_ON_THE_MOVING_BELT_CLOCK.has(`electromagnetic-${run.case.replace(/-l[12]$/, "")}`);
-
         test("the runs on the selection of a side pickup fixture belt-pickup-clock does not generate are the cases of pickup-clock-cold-start-cases.ts", () => {
             const others = Object.keys(coldStart.runs).filter(name => {
                 const run = coldStart.runs[name];
-                return run.rotate === 0 && beltPickupVariantOf(run) === undefined && !inTheGap(run);
+                return run.rotate === 0 && beltPickupVariantOf(run) === undefined;
             });
             for (const name of COLD_START_GENERATED.keys()) expect(others, `${name} is not a run that needs a generation`).toContain(name);
         });

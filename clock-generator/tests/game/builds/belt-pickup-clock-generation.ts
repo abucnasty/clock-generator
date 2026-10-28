@@ -3,7 +3,7 @@ import {generateClockAlternatives} from "../../../src/crafting/generate-blueprin
 import {rotateRanges, SerializableClockWindows} from "../../../src/crafting/clock";
 import {backpressureLossOf, simulateClockOnly} from "../../../src/crafting/trial";
 import {OpenRange} from "../../../src/data-types";
-import {alwaysOnReasonProblemsOf, RECORDED_ON_THE_MOVING_BELT_CLOCK} from "../../../src/crafting/generate-blueprint-test-helpers";
+import {alwaysOnReasonProblemsOf} from "../../../src/crafting/generate-blueprint-test-helpers";
 import {pickupClockConfig, pickupClockSpeedCases} from "./pickup-clock-speed-coverage";
 import {clockHash, readControls} from "./clock-controls";
 import {expectColdStartRunsOnSelection} from "./pickup-clock-cold-start-runs";
@@ -40,15 +40,6 @@ export function beltPickupClockTests() {
             const result = generateClockAlternatives(config, {logger: quiet});
             expect(alwaysOnReasonProblemsOf(config, result), "every inserter and drill a clock leaves always on says why").toEqual([]);
             const selected = result.alternatives[result.selected_index];
-            const pinned = RECORDED_ON_THE_MOVING_BELT_CLOCK.get(variant.name);
-            if (pinned !== undefined) {
-                // a clock for the backed-up belts that holds the target; the native control was recorded on the clock
-                // planned with the belts moving, which is no longer made (#460)
-                expect(clockHash(selected.result.subtick ?? selected.result), "same windows and exported clock as pinned (its identity: no text or metadata)").toBe(pinned);
-                expect({verdict: selected.verdict, holds: selected.assessment.holds, rate: selected.assessment.items_per_second, supply: selected.belt?.kind})
-                    .toEqual({verdict: "stable", holds: true, rate: config.target_output.items_per_second, supply: "backed_up"});
-                return;
-            }
             const period = selected.result.subtick?.clock.period_ticks ?? selected.result.simulation_duration.ticks;
             expect(clockHash(selected.result.subtick ?? selected.result), "same windows and exported clock as the pin (its identity: no text or metadata)")
                 .toBe(pin!.clock_sha256);
