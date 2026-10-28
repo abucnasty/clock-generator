@@ -156,7 +156,7 @@ window or had waited for its machine while the belt refilled; a hand that starts
 on backed-up belts every belt-fed window lasts at least as long as a hand takes from the lanes at rest
 (`backedUpHandTicks`, the same queue), where that is slower than a stack a tick (#456): the normal side underground
 entrance and exit and the front exit get a stable clock for backed-up belts. Until 0.23.0 they got one planned with the
-belts moving (recorded exact then); the new clocks hold in the game as well, exact in baseline and after every cut (#PRNUM).
+belts moving (recorded exact then); the new clocks hold in the game as well, exact in baseline and after every cut (#479).
 
 ### Starting on supplied belts
 

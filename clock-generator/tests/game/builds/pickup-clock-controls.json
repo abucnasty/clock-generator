@@ -72,7 +72,7 @@
       "generation": {"period":1408,"expected":176,"verdict":"stable","selection":{"id":"swings-1","holds":true,"rate":7.5,"supply":"moving"},"clock_sha256":"c325e5885291006e313b75608e843d4e97489ec1bf3fae232520d9e025b20931"}
     },
     "electromagnetic-normal-underground-entrance-backed": {
-      "recorded": {"pr":0,"commit":"TBD","frozen_head":"99fb9812","clock_sha256":"91437563c7843c8642dab36604a3b664fd1028e07e6f33aa6ea7b34252eb6a3e","clock_basis":"capture"},
+      "recorded": {"pr":479,"commit":"8b9b415e","frozen_head":"99fb9812","clock_sha256":"91437563c7843c8642dab36604a3b664fd1028e07e6f33aa6ea7b34252eb6a3e","clock_basis":"capture"},
       "native": {"generationVerdict":"stable","target":7.5,"period":1408,"expected":176,"baseline":[176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176],"recovery":[{"cut":66,"during":[48,0,96],"recovered":[176,176,176,176,176]},{"cut":84,"during":[156,0,0,0,164],"recovered":[176,176,176,176,176]},{"cut":104,"during":[0,0,96],"recovered":[176,176,176,176,176,176,176,176,176,176,176,176,176,176,176]}]},
       "generation": {"period":1408,"expected":176,"verdict":"stable","selection":{"id":"swings-1","holds":true,"rate":7.5,"supply":"backed_up"},"clock_sha256":"91437563c7843c8642dab36604a3b664fd1028e07e6f33aa6ea7b34252eb6a3e"}
     },
@@ -82,7 +82,7 @@
       "generation": {"period":1408,"expected":176,"verdict":"unstable","selection":{"id":"swings-1","holds":false,"rate":7.5,"supply":"moving"},"clock_sha256":"a5cc70edd82d18c8b7f6b3f2ba49f29879a3399c4678e1a6894d23172d1ea864","why_not_stable":"moving lane phases"}
     },
     "electromagnetic-normal-underground-exit-backed": {
-      "recorded": {"pr":0,"commit":"TBD","frozen_head":"99fb9812","clock_sha256":"91437563c7843c8642dab36604a3b664fd1028e07e6f33aa6ea7b34252eb6a3e","clock_basis":"capture"},
+      "recorded": {"pr":479,"commit":"8b9b415e","frozen_head":"99fb9812","clock_sha256":"91437563c7843c8642dab36604a3b664fd1028e07e6f33aa6ea7b34252eb6a3e","clock_basis":"capture"},
       "native": {"generationVerdict":"stable","target":7.5,"period":1408,"expected":176,"baseline":[176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176],"recovery":[{"cut":66,"during":[48,0,96],"recovered":[176,176,176,176,176]},{"cut":84,"during":[156,0,0,0,164],"recovered":[176,176,176,176,176]},{"cut":104,"during":[0,0,96],"recovered":[176,176,176,176,176,176,176,176,176,176,176,176,176,176,176]}]},
       "generation": {"period":1408,"expected":176,"verdict":"stable","selection":{"id":"swings-1","holds":true,"rate":7.5,"supply":"backed_up"},"clock_sha256":"91437563c7843c8642dab36604a3b664fd1028e07e6f33aa6ea7b34252eb6a3e"}
     },

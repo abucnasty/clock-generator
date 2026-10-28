@@ -130,7 +130,7 @@ The ordinary clocks are verified on **48 configurations** across all four speeds
 (`tests/game/builds/pickup-clock-controls.json`, each entry with the PR that recorded it): the recapture after the belt
 window-end trim (#265), with the 20 electromagnetic clocks the belt hand's resume fix changed recorded again (#266), the
 fast straight moving clock the belt-fed window rule changed recorded once more (#267), the two express moving
-underground clocks #269 changed, and the two normal backed-up underground clocks #275 changed, recorded again with the front exits on the clock #456 selects (#PRNUM).
+underground clocks #269 changed, and the two normal backed-up underground clocks #275 changed, recorded again with the front exits on the clock #456 selects (#479).
 **All 48 meet exact baseline and recovery output**, 44 of them marked stable; the turbo moving straight clock no longer
 over-produces in its early periods. The two normal moving
 underground defaults hold their baseline in these warm recordings and got back to target after every loss, but the
@@ -138,12 +138,12 @@ generator says "unstable": it finds the clock failing from cold lane phase [3,0]
 phases shows the game never settling from it or from four other phases, the exit's natural one among them, where
 it cycles at 143 a period against 176 (`tests/game/builds/lane-phase-controls.json`, #266).
 The two normal backed-up underground defaults are a stable clock for backed-up belts, every belt-fed window as long as a
-hand takes from the lanes at rest (#456, recorded in #PRNUM): 176 in every baseline period and after every disturbance, as the clock
+hand takes from the lanes at rest (#456, recorded in #479): 176 in every baseline period and after every disturbance, as the clock
 planned with the belts moving and given belt pickup slack did that #275 recorded. A backed-up belt
 at normal speed refills the pickup slower than a stack a tick, so every clock planned for backed-up supply then closed
 some windows before a hand that starts in them is full; the fractional clock selected before missed natively (128, 128,
 96 against 176), matching its holds false. Since #456 each belt-fed window of a backed-up clock lasts as long as a hand
-takes from the lanes at rest, and these fixtures select a stable clock for backed-up belts, which the game holds (#PRNUM). The
+takes from the lanes at rest, and these fixtures select a stable clock for backed-up belts, which the game holds (#479). The
 generator no longer makes the clock planned with the belts moving for a backed-up config. Their fully jammed cold-start controls alternate 144/208 items at offset 1287 as fixed-window simulator
 checks. The two express moving underground defaults are
 observed windows at 3 output swings, made for moving supply (#269): exact baseline and recovery in the game, while the
@@ -162,7 +162,7 @@ mirroring states, every clock planned for backed-up supply fails (the fractional
 missed natively, 128, 128, 96 repeating against 176, the generator's own as-built repeat), and the selection recorded
 was the clock planned with the belts moving and checked on the backed-up belts (#275), the same clock the moving config
 gets, which moves 176 in every period. Since #456 the backed-up config selects a stable clock for backed-up belts of its
-own, every belt-fed window as long as a hand takes from the lanes at rest; recorded again in #PRNUM, it moves 176 in every
+own, every belt-fed window as long as a hand takes from the lanes at rest; recorded again in #479, it moves 176 in every
 period as well and gets back after every cut. **A moving config on
 the front exit is safe on this layout:** the input stands on the exit's output tile, so the belt is backed up in the
 game whatever the config says, and the clock made for moving belts holds and recovers exactly at every tier. That
@@ -319,7 +319,7 @@ with two overlapping detailed recorder periods. Electromagnetic targets scale wi
 | Fast undergrounds | false | Stable | 176 / 704 ticks | 176 throughout | Historical shortfall resolved |
 | Normal straight | true | Stable | 176 / 1,408 ticks | 176 throughout | Historical shortfall resolved |
 | Normal straight | false | Stable | 176 / 1,408 ticks | 176 throughout | Historical shortfall resolved |
-| Normal undergrounds | false | Stable | 176 / 1,408 ticks | 176 throughout; fully jammed cold offset 1287 (fixed windows): 144/208 | Stable clock for backed-up belts, every belt-fed window as long as a hand takes from the lanes at rest (#456, #PRNUM); every clock planned for backed-up supply before it missed |
+| Normal undergrounds | false | Stable | 176 / 1,408 ticks | 176 throughout; fully jammed cold offset 1287 (fixed windows): 144/208 | Stable clock for backed-up belts, every belt-fed window as long as a hand takes from the lanes at rest (#456, #479); every clock planned for backed-up supply before it missed |
 | Normal undergrounds | true | Unstable | 176 / 1,408 ticks | Warm: 176 throughout | Historical recovery alternation resolved; rejected from cold lane phase [3,0], where the game never settles either (#266) |
 
 All 24 gear configurations hold 16 gears / 160 ticks through their baseline and recovery windows. Forty-four
