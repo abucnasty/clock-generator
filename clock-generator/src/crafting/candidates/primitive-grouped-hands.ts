@@ -3,7 +3,8 @@ import type { Config } from "../../config/schema";
 import { assertInserterCoverage } from "../../config/inserter-coverage-validator";
 import { assertMachineResultTargetsSupported, assertOutputTransferGenerationSupported } from "../../config/output-transfer-generation";
 import { fraction } from "../../data-types/fraction";
-import { Entity, isNeverBlockingSink, type ReadableEntityRegistry } from "../../entities";
+import { Entity, type ReadableEntityRegistry } from "../../entities";
+import { mainProductRateOf, neverRefuses, traitsOf } from "../../entities/traits/traits-of";
 import { TargetProductionRate } from "../target-production-rate";
 import { CraftingCyclePlan, plannedTerminalSwingCount } from "../sequence/cycle/crafting-cycle";
 import { EntityTransferCountMap, outputPathOf, type SerializableTransferPlan } from "../sequence/cycle/swing-counts";
@@ -81,7 +82,9 @@ export function constructPrimitiveGroupedHands(config: Config): PrimitiveGrouped
     if (alwaysEnabledInserters(registry).length > 0) throw new GroupedHandsNotApplicable("the build has inserters outside the plan");
     const target = TargetProductionRate.fromConfig(config.target_output);
     const output_machines = registry.getAll().filter(Entity.isMachine).filter(it => it.output.item_name === target.machine_production_rate.item);
-    const capacity = output_machines.reduce((sum, machine) => sum.add(machine.output.production_rate.amount_per_second), fraction(0)).multiply(target.copies);
+    // what each makes of the item a second, as its Yield trait gives it
+    const traits = traitsOf(config);
+    const capacity = output_machines.reduce((sum, machine) => sum.add(mainProductRateOf(traits, machine.entity_id.id)), fraction(0)).multiply(target.copies);
     assert(capacity.toDecimal() >= target.total_production_rate.amount_per_second.toDecimal(), "The current configuration cannot meet the target production rate.");
     const cycle = CraftingCyclePlan.create(target, registry, fraction(1), config.overrides);
     const output_paths = output_machines.map(machine => outputPathOf(machine, registry));
@@ -128,7 +131,7 @@ export function constructPrimitiveGroupedHands(config: Config): PrimitiveGrouped
     // a sink that never blocks
     const machine_outputs = output_paths.some(path => path.container === null
         && path.feeders.some(it => Entity.isMachine(registry.getEntityByIdOrThrow(it.source.entity_id))
-            && isNeverBlockingSink(registry.getEntityByIdOrThrow(it.sink.entity_id))));
+            && neverRefuses(traits, it.sink.entity_id.id)));
     for (const output_room of machine_outputs ? [false, true] : [false])
     for (const share_windows of [false, true]) for (const feeder_offset of [16, 1]) for (const surplus_guard of [false, true]) {
         const options: GroupedHandsOptions = { share_windows, feeder_offset, surplus_guard, ...(output_room && { output_room }) };

@@ -1,12 +1,11 @@
 import fs from "fs";
-import path from "path";
 import { describe, expect, it } from "vitest";
-import { laneCapacity } from "../../config/lane-capacity-validator";
 import { parseConfig } from "../../config/loader";
 import { Config } from "../../config/schema";
 import { BeltHandPickup } from "../../simulation/components/belt-hand-pickup";
 import { lossLimitOf } from "../../crafting/backpressure-loss";
 import { SimulationContext } from "../../crafting/sequence/simulation-context";
+import { laneItemsPerSecond, laneStackFor } from "../belt/belt";
 import { Chest } from "../chest/chest";
 import { directMachineInsertionLimit, miningDrillMaxInsertion } from "../drill/mining-drill-ext";
 import { Entity } from "../entity";
@@ -20,34 +19,13 @@ import { burnerFuelOf } from "./energy";
 import { laneKey } from "./lane";
 import { PlacementResult } from "./placement";
 import { ratioOf } from "./ratio";
-
-const ENGINE = path.resolve(__dirname, "../../..");
+import { SAMPLE_CONFIG_FILES } from "./sample-configs.fixture";
 
 /**
  * Every config the repository keeps with a target: the config samples, the game tests' configs, tests/configs and the
- * fixtures of the source (a Sidecar export has no target: it is not a config the generator runs)
+ * fixtures of the source (sample-configs.fixture.ts)
  */
-function sampleConfigs(dir: string): string[] {
-    return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
-        const file = path.join(dir, entry.name);
-        if (entry.isDirectory()) return entry.name === ".scratch" || entry.name === "node_modules" ? [] : sampleConfigs(file);
-        if (!entry.name.endsWith(".json")) return [];
-        const value: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
-        const config = typeof value === "object" && value !== null && Array.isArray((value as { machines?: unknown }).machines);
-        return config && typeof (value as { target_output?: unknown }).target_output === "object" ? [file] : [];
-    });
-}
-
-/** A legacy fixture the simulator refuses to build, as pickup-capture.test.ts expects: its pickups were not captured */
-const REFUSED = path.join(ENGINE, "src", "config", "fixtures", "legacy", "pickup-without-capture.json");
-
-const SAMPLES = [
-    ...sampleConfigs(path.join(ENGINE, "resources", "config-samples")),
-    ...sampleConfigs(path.join(ENGINE, "tests", "game")),
-    ...sampleConfigs(path.join(ENGINE, "tests", "configs")),
-    ...sampleConfigs(path.join(ENGINE, "src", "config", "fixtures")),
-    ...sampleConfigs(path.join(ENGINE, "src", "crafting", "fixtures")),
-].filter(file => file !== REFUSED);
+const SAMPLES = SAMPLE_CONFIG_FILES;
 
 /**
  * What the name and kind branches gave before the entities read these figures from their traits (R4), recorded as
@@ -259,7 +237,8 @@ function checkLanes(config: Config, registry: ReadableEntityRegistry, traits: Co
             // the speed from the data gives what the belt speed switch gave
             same(belt.belt_speed, BEFORE.belt_speed.get(belt_config.type), `${t.lane.key} entity's speed by the old switch`);
             same(t.lane.belt_speed, belt.belt_speed, `${t.lane.key} speed`);
-            same(t.lane.items_per_second_ceiling, ratioOf(laneCapacity(belt_config, lane)), `${t.lane.key} capacity`);
+            // the lane capacity check's own count before it read this trait (R21): half the belt's speed times the lane's stack
+            same(t.lane.items_per_second_ceiling, ratioOf(laneItemsPerSecond(belt.belt_speed, laneStackFor(belt_config, lane))), `${t.lane.key} capacity`);
             const listed = belt.lanes[lane - 1];
             same([t.lane.item, t.lane.listed], [listed?.ingredient_name ?? null, listed !== undefined], `${t.lane.key} item`);
             if (listed !== undefined) same(t.lane.stack, listed.stack_size, `${t.lane.key} stack`);

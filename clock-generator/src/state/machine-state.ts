@@ -195,10 +195,11 @@ function clone(machineState: MachineState): MachineState {
     cloned.crafting.copyFrom(machineState.crafting);
     // a snapshot's Placement keeps the count and how it counts, unbound: it never places into the live target
     cloned.placement.copyCountFrom(machineState.placement);
-    // the flags of the machine's last tick, and not the decider (a known quirk, kept until after the refactor: P4 D14)
+    // the flags of the machine's last tick and the decider of a window opening this tick
     cloned.wakes.outputBlockedAfterLastTick = machineState.wakes.outputBlockedAfterLastTick;
     cloned.wakes.finishedCraftInLastTick = machineState.wakes.finishedCraftInLastTick;
     cloned.wakes.startedCraftInLastTick = machineState.wakes.startedCraftInLastTick;
+    cloned.wakes.windowOpeningTakeDecider = machineState.wakes.windowOpeningTakeDecider;
     return cloned;
 }
 

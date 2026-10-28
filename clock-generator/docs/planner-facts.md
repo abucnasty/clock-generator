@@ -4,7 +4,8 @@
 plain nodes and edges, the input of the planner graph and the feasibility pass of 0.25.0. It reads the traits and the
 config's layout (which entity an inserter takes from and drops into, where it drops on a belt), never the state of an
 entity. Nothing in a generation calls it yet. The types are in `src/data-types/planner-facts.ts`, exported from the
-light entry, and each sample's facts are kept in `src/crafting/facts/__snapshots__/<KEY>.facts.json`.
+light entry. A test builds each sample's facts and checks that they are plain data, come out the same each time and hold
+together (`src/crafting/facts/to-planner-facts.test.ts`).
 
 - **Nodes**, in the entity registry's order (`src/crafting/sequence/simulation-context.ts`) with the inserters, which
   are edges, left out: the two sides of every belt, belt by belt (`belt:2/lane:1`, `belt:2/lane:2`; a belt that lists
@@ -43,9 +44,22 @@ light entry, and each sample's facts are kept in `src/crafting/facts/__snapshots
   (`src/crafting/export-delivery.ts`): both lanes of a belt may export an item that every filler drops on one of them.
 - **Read-only.** A node's trait fields are the objects of the traits built for that call.
 
+**The planner reads the same traits** where it works a figure out of a build (`traitsOf(config)`,
+`src/entities/traits/traits-of.ts`: `buildTraits` once per config object, kept with it; a candidate's or a trial's
+config is a new object and gets its own): the output capacity of the machines that make the target (`yield` of each,
+its main product's exact rate), the machines' rates at the target (`yield`, `production`, `placement` and the takers'
+`hand`), the sinks whose terminal outputs are judged as a rate or get room for one more output swing
+(`storage.never_refuses`). The lane check reads what a
+lane carries off the Lane traits of the belt it checks, and the belt pickup slack and the room for a hand of fuel count
+a hand as the timing floor does, one belt stack a tick, each with the hand it reads (the nominal one and the hand of the
+fuel). The cycle plan (`swing-counts.ts`) reads the same figures off the entities, which build them with the trait
+functions: it runs on a registry, and the amounts a craft it divides by are exact fractions there, decimals in the traits.
+
 Two traits of the catalogue are not in the facts: the inserter order (its decider build order is the clock's, not the
 config's) and the wake-up rule of a node (read by the wake-up count only). Neither the graph nor the feasibility pass
 reads them; they come with the planner that does.
 
 `machineFactsOf` (`src/entities/traits/machine-facts-of.ts`) gives a machine's facts for the UI and the insights from its
-traits, equal to `getMachineFacts` on every machine of every sample.
+traits, and nothing else makes them: a result's `machine_facts` (`machineFactsOfEntity`, each machine's traits built once from
+the configuration its entity keeps) and the UI's facts query (`computeMachineFacts`, from a machine's parameters) both project
+traits, and a test holds both to the traits `buildTraits` builds from the config, for every machine of every sample.
