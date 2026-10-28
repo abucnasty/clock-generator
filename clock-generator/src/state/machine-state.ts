@@ -15,8 +15,8 @@ import { Yield } from "../simulation/components/yield";
 import { craftingStatusOf, machineStatusOf } from "../simulation/status-codes";
 
 /**
- * A crafting machine's state: its components, which every context over the build shares, and the names outside
- * callers read and write (start stock, seeds, recorders, controls, the inserters' rules) as views of them
+ * A crafting machine's state: its components, which the build's context keeps through control swaps, and the names
+ * outside callers read and write (start stock, seeds, recorders, controls, the inserters' rules) as views of them
  */
 export class MachineState implements EntityState {
 

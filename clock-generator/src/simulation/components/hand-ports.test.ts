@@ -6,13 +6,12 @@ import { BeltStrategy } from "../../common/entity-types";
 import { loadConfigFromFile } from "../../config/loader";
 import { AlwaysEnabledControl } from "../../control-logic";
 import { MutableTickProvider } from "../../control-logic/current-tick-provider";
-import { cloneSimulationContextWithInterceptors, SimulationContext } from "../../crafting/sequence/simulation-context";
+import { SimulationContext } from "../../crafting/sequence/simulation-context";
 import { ItemName } from "../../data";
 import { Chest, EntityId, Inserter, InserterMetadata, InserterStackSize, Machine, RecipeMetadata } from "../../entities";
 import { BeltSpeed } from "../../entities/belt";
 import { InserterAnimation } from "../../entities/inserter/inserter-animation";
 import { EntityState, InserterState, InserterStatus, InventoryState, MachineState } from "../../state";
-import { InserterArchetype } from "../archetypes/inserter";
 import { TransportBelt } from "../archetypes/transport-belt";
 import { InserterPhase } from "../status-codes";
 import { runTick } from "../tick-phases";
@@ -97,10 +96,8 @@ describe("a hand's ports", () => {
     });
 
     // same-tick rule 12
-    it("start a fresh scratch record when the inserter's control is swapped mid-pickup, keeping the hand, the arm and the lane slots", async () => {
+    it("are kept when the inserter's control is swapped mid-pickup, their scratch record set back, the hand, the arm and the lane slots kept", async () => {
         const context = SimulationContext.fromConfig(await loadConfigFromFile(GameFixturePaths.DIFFERENT_ITEMS_CONFIG));
-        const pickupPort = (inserter: InserterArchetype) => inserter.hand.pickup;
-        const scratchOf = (inserter: InserterArchetype) => inserter.hand.scratch;
         const index = context.inserters.findIndex(it => EntityId.isBelt(it.inserter_state.inserter.source.entity_id));
         const inserter = context.inserters[index];
         const state = inserter.inserter_state;
@@ -111,37 +108,39 @@ describe("a hand's ports", () => {
         expect([state.status, state.held_item === null]).toEqual([InserterStatus.PICKUP, false]);
         const source = context.state_registry.getStateByEntityIdOrThrow(state.inserter.source.entity_id);
         if (!EntityState.isBelt(source)) throw new Error("not a belt-fed inserter");
-        const old_scratch = scratchOf(inserter);
+        const { pickup, drop, scratch } = inserter.hand;
         // the port's scratch is the Hand's
-        expect((pickupPort(inserter) as unknown as { scratch: HandScratch }).scratch).toBe(old_scratch);
-        // what a pickup and a drop under way would have counted, and the rules kept, so that the fresh record shows
-        Object.assign(old_scratch, { pickup_ticks: 3, window_opened: true, ticks_in_pickup: 4, belt_grab_decided: false, drop_ticks: 5,
-            saw_sink_blocked: true, window_opens: true, swing_entered_tick: 7, swing_from: InserterPhase.PICKUP });
+        expect((pickup as unknown as { scratch: HandScratch }).scratch).toBe(scratch);
+        // what a pickup and a drop under way would have counted, the rules kept and a reason, so that the reset shows
+        Object.assign(scratch, { pickup_ticks: 3, window_opened: true, ticks_in_pickup: 4, belt_grab_decided: false, drop_ticks: 5,
+            saw_sink_blocked: true, window_opens: true, swing_entered_tick: 7, swing_from: InserterPhase.PICKUP, reason: 4,
+            reason_item: "accumulator", reason_quantity: 9, spare_hand: { item_name: "accumulator", quantity: 0 } });
         const hand = state.held_item;
         const arm = state.pickup_arm;
         const pickups = source.pickupsOf(state.entity_id.id)!;
         const slots = source.lanes.map(lane => lane.pickupOf(state.entity_id.id));
         expect(arm).toBeDefined();
 
-        const swapped = cloneSimulationContextWithInterceptors(context, { inserter: () => AlwaysEnabledControl }).inserters[index];
+        context.useControls({ inserter: () => AlwaysEnabledControl });
 
-        expect(swapped).not.toBe(inserter);
-        expect(swapped.inserter_state).toBe(state);
-        const scratch = scratchOf(swapped);
-        expect(scratch).not.toBe(old_scratch);
+        expect(context.inserters[index]).toBe(inserter);
+        // the same ports and the same record, set back to what a new one holds
+        expect(inserter.hand.pickup).toBe(pickup);
+        expect(inserter.hand.drop).toBe(drop);
+        expect(inserter.hand.scratch).toBe(scratch);
         expect(scratch).toEqual(new HandScratch());
         expect([scratch.pickup_ticks, scratch.window_opened, scratch.ticks_in_pickup, scratch.belt_grab_decided, scratch.drop_ticks])
             .toEqual([0, false, 0, true, 0]);
         expect([scratch.saw_sink_blocked, scratch.window_opens, scratch.swing_entered_tick, scratch.swing_from]).toEqual([false, false, null, null]);
-        // the new inserter starts idle while the status as written is kept
-        expect(swapped.hand.phase).toBe(InserterPhase.IDLE);
+        // the inserter starts idle while the status as written is kept
+        expect(inserter.hand.phase).toBe(InserterPhase.IDLE);
         expect(state.status).toBe(InserterStatus.PICKUP);
         expect(state.held_item).toBe(hand);
         expect(state.pickup_arm).toBe(arm);
-        expect((pickupPort(swapped) as unknown as { arm?: object }).arm).toBe(arm);
+        expect((pickup as unknown as { arm?: object }).arm).toBe(arm);
         source.pickupsOf(state.entity_id.id)!.forEach((stock, lane) => expect(stock).toBe(pickups[lane]));
         source.lanes.forEach((lane, lane_index) => expect(lane.pickupOf(state.entity_id.id)).toBe(slots[lane_index]));
-        (pickupPort(swapped) as unknown as { pickups: object[] }).pickups.forEach((slot, lane_index) => expect(slot).toBe(slots[lane_index]));
+        (pickup as unknown as { pickups: object[] }).pickups.forEach((slot, lane_index) => expect(slot).toBe(slots[lane_index]));
     });
 });
 

@@ -12,8 +12,8 @@ import type { MachineWakes } from "./machine-wakes";
 
 /**
  * What an inserter's hand keeps from one tick to the next besides its phase: one flat record, written by the hand's
- * rules and its ports. Built with the ports, once per archetype, so a control swap starts a fresh one while the hand,
- * the pickup arm and the lanes are kept (same-tick rule 12).
+ * rules and its ports. Built with the ports, once per archetype; a control swap sets it back to what a new one holds
+ * (`reset`), while the hand, the pickup arm and the lanes are kept (same-tick rule 12).
  */
 export class HandScratch {
     /** Ticks of the pickup from a machine or a container that found something to take, since the pickup started */
@@ -47,6 +47,23 @@ export class HandScratch {
     public reason_quantity: number = 0;
     /** The record of the hand last emptied, which the next hand fills (`takeIntoHand`); null for none */
     public spare_hand: InserterHandContents | null = null;
+
+    /** Every field back to what a new record holds: a control swap starts the scratch afresh (same-tick rule 12) */
+    public reset(): void {
+        this.pickup_ticks = 0;
+        this.window_opened = false;
+        this.ticks_in_pickup = 0;
+        this.belt_grab_decided = true;
+        this.drop_ticks = 0;
+        this.saw_sink_blocked = false;
+        this.window_opens = false;
+        this.swing_entered_tick = null;
+        this.swing_from = null;
+        this.reason = -1;
+        this.reason_item = "";
+        this.reason_quantity = 0;
+        this.spare_hand = null;
+    }
 }
 
 /**
@@ -275,16 +292,16 @@ export interface HandBinding {
 
 /**
  * An inserter's Hand: its phase and the rules and steps of each (the phase table's inserter row, P4 2.5). What it holds
- * and has moved is the inserter's state (`InserterState`, which every context over the build shares); what it keeps
- * between ticks besides its phase is its scratch, written by its rules and its two ports.
+ * and has moved is the inserter's state (`InserterState`, which the build's context keeps through control swaps); what
+ * it keeps between ticks besides its phase is its scratch, written by its rules and its two ports.
  *
  * Its phase is a code (`InserterPhase`) and its rule and step a switch on it: each of the inserter's seven phases has a
  * rule, which gives the phase to change to (`STAY` for none) and why, and the pickup, drop and target-full phases have a
  * step through the source's pickup port or the sink's drop port. The archetype changes the phase between the two
  * (`InserterArchetype.phaseRule`): the status written first, then the observers told, then the exit and enter steps
  * (same-tick rule 17). The phase and the inserter's written status part in two places, as before: a pickup that finds
- * nothing writes the status IDLE and stays in its phase (rule 11), and a control swap starts a new Hand at IDLE while the
- * status is kept (rule 12).
+ * nothing writes the status IDLE and stays in its phase (rule 11), and a control swap sets the Hand back to IDLE while
+ * the status is kept (rule 12, `resetForSwap`).
  */
 export class Hand {
     /** The phase the hand is in: what its rule and its step do */
@@ -376,6 +393,16 @@ export class Hand {
                 break;
         }
         this.phase = to;
+    }
+
+    /**
+     * A control swap (same-tick rule 12): the phase IDLE and the scratch as a new one, as a Hand built anew over the
+     * same state had. What the hand holds, the status as written, the pickup arm and the lanes are the state's and the
+     * source's, and the ports and what the Hand is bound to read the same things as before: all are kept.
+     */
+    public resetForSwap(): void {
+        this.phase = InserterPhase.IDLE;
+        this.scratch.reset();
     }
 
     /** The number of the reason of the change the rule just gave, made only when an observer is told of it */

@@ -13,11 +13,11 @@ import { MiningDrillArchetype } from "./archetypes/mining-drill";
  * (simulation/tick-phases.ts), so that a phase's loop calls into one class only. A plain class with typed fields, not
  * a store keyed by names: what an archetype is follows from its field.
  *
- * Built once for each run of a context (`SimulationTick`), never in a tick. A context with other controls is another
- * context with new inserter and drill archetypes (`cloneSimulationContextWithInterceptors`), and gets a World of its
- * own; the states the two share stay as they are (same-tick rule 12). A World is a snapshot of the context's arrays:
- * archetypes put into a context after its SimulationTick is built are not run, so a swap builds a new context and a new
- * step.
+ * Built once for each run of a context (`SimulationTick`), never in a tick. A World is a snapshot of the context's
+ * arrays: archetypes put into a context after its SimulationTick is built are not run. A control swap
+ * (`SimulationContext.useControls`) puts no archetype in: it points each inserter's and drill's Control at its new
+ * control and sets their Hands, statuses and bars back in place (same-tick rule 12), so a World of the context runs the
+ * new controls.
  *
  * Belts and containers are filled for the phases to come and read by no step yet; filling them costs one pass over the
  * registry for each World, never one in a tick.

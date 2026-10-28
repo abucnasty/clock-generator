@@ -4,6 +4,7 @@ import type { InserterState } from "../../state/inserter-state";
 import type { LiveQuantity } from "../../state/inventory-state";
 import type { MachineState } from "../../state/machine-state";
 import { InserterPhase } from "../status-codes";
+import type { Control } from "./control";
 import { CarriedItems, HandDropPort, HandPickupPort, HandReason, HandScratch, takeIntoHand } from "./hand";
 import type { MachineOutputPort } from "./machine-output-port";
 import type { MachineWakes } from "./machine-wakes";
@@ -34,8 +35,11 @@ export class MachineHandPickup implements HandPickupPort {
         /** The sink's drop port: whether it takes an item now */
         private readonly sink: HandDropPort,
         source: MachineState,
-        /** Where the decider of the inserter's clock of the game stands in the order they are built, when known */
-        private readonly decider_build_order?: number,
+        /**
+         * The hand's Control: where the decider of the inserter's clock of the game stands in the order they are built,
+         * when known, read at the take that marks the machine (after a control swap, the new control's)
+         */
+        private readonly control?: Control,
     ) {
         this.output = source.output;
         this.wakes = source.wakes;
@@ -136,7 +140,7 @@ export class MachineHandPickup implements HandPickupPort {
         takeIntoHand(state, this.scratch, item, pickup_quantity);
         this.output.take(item, pickup_quantity);
         if (this.scratch.window_opened && this.scratch.ticks_in_pickup === 1) {
-            this.wakes.markWindowOpeningTake(this.decider_build_order ?? -1);
+            this.wakes.markWindowOpeningTake(this.control?.decider_build_order ?? -1);
         }
     }
 

@@ -5,6 +5,7 @@ import { SimulationContext } from "../../crafting/sequence/simulation-context";
 import { handSizeFor } from "../../entities";
 import { EntityState, InserterStatus, MachineState } from "../../state";
 import { InserterPhase } from "../status-codes";
+import { Control } from "./control";
 import { bindHandPorts } from "./hand-ports";
 import { MachineHandPickup } from "./machine-hand-pickup";
 
@@ -22,7 +23,7 @@ async function engineTaker(decider_build_order?: number) {
         inserterState: state, sourceState: source,
         sinkState: context.state_registry.getStateByEntityIdOrThrow(state.inserter.sink.entity_id),
         tick_provider: context.tick_provider,
-        decider_build_order,
+        control: new Control({ isEnabled: () => true, decider_build_order }),
     });
     return { state, source, pickup };
 }
@@ -66,6 +67,21 @@ describe("a take from a machine in the first tick of a window", () => {
         source.inventoryState.setQuantity(source.machine.output.item_name, 1);
         pickup.pickup();
         expect(source.wakes.windowOpeningTakeDecider).toBe(null);
+    });
+
+    // with same-tick rule 12: the port reads the order from the hand's Control, which a swap points at the new control
+    it("marks it with where the decider of the control the inserter is on stands, after a control swap too", async () => {
+        const context = SimulationContext.fromConfig(await loadConfigFromFile(ConfigPaths.CHEMICAL_SCIENCE_SHARED_FOUNDRY));
+        const taker = context.inserters.find(inserter => inserter.entity_id.number === 9)!;
+        const source = context.state_registry.getStateByEntityIdOrThrow(taker.inserter_state.inserter.source.entity_id);
+        if (!EntityState.isMachine(source)) throw new Error("expected a machine source");
+        const pickup = taker.hand.pickup;
+        context.useControls({ inserter: () => ({ isEnabled: () => true, decider_build_order: 6 }) });
+        expect(taker.hand.pickup).toBe(pickup);
+        source.inventoryState.setQuantity(source.machine.output.item_name, 16);
+        pickup.enter(InserterPhase.DISABLED);
+        pickup.pickup();
+        expect(source.wakes.windowOpeningTakeDecider).toBe(6);
     });
 });
 

@@ -5,7 +5,6 @@ import { Config } from "../config";
 import { simulateRecording } from "../verification/simulated-recording";
 import { outputPerPeriod, recipesMaking } from "../harness/recording-output";
 import { SimulationContext } from "./sequence/simulation-context";
-import { cloneSimulationContextWithInterceptors } from "./sequence/simulation-context";
 import { AlwaysEnabledControl } from "../control-logic";
 import { EntityState } from "../state";
 
@@ -34,7 +33,7 @@ describe("moving pickup affects the verdict of the old default clock", () => {
         const lane = source.pickupsOf(id)![0];
         lane.take(0, 4);
         lane.take(1, 4);
-        cloneSimulationContextWithInterceptors(context, { inserter: () => AlwaysEnabledControl });
+        context.useControls({ inserter: () => AlwaysEnabledControl });
         expect(source.pickupsOf(id)![0]).toBe(lane);
         expect(lane.take(2, 4)).toBe(0);
     });

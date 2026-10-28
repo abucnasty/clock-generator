@@ -45,12 +45,13 @@ export function placeDrillInto(state: DrillState, sink_state: EntityState): void
 }
 
 /**
- * A mining drill in a run: its held Storage and Placement (its `DrillState`, which every context over the build
- * shares), its Mining and its Control. A tick runs its steps in the phase table's order (simulation/tick-phases.ts):
- * the control rule, then, while working, Mining (drop, then mine), then the observers of the tick.
+ * A mining drill in a run: its held Storage and Placement (its `DrillState`), its Mining and its Control. A tick runs
+ * its steps in the phase table's order (simulation/tick-phases.ts): the control rule, then, while working, Mining
+ * (drop, then mine), then the observers of the tick.
  *
- * A control swap builds a new one over the same `DrillState` (`cloneSimulationContextWithInterceptors`): it starts
- * WORKING with fresh bars and the observers of the old one, while what it holds is kept (same-tick rule 12).
+ * A control swap keeps it (`useControl`, through `SimulationContext.useControls`): its Control asks the new control
+ * and it starts WORKING with both bars at 0, while what it holds, its Placement and its observers are kept (same-tick
+ * rule 12).
  *
  * Its status starts WORKING; `DrillState.status`, which the Factorio state reads, is never written (a known quirk, kept).
  */
@@ -60,24 +61,32 @@ export class MiningDrillArchetype implements ControlLogic {
         drill_state: DrillState,
         sink_state: EntityState,
         enable_control?: EnableControl,
-        observers?: DrillObserver[],
     }): MiningDrillArchetype {
-        const { drill_state, sink_state, enable_control = AlwaysEnabledControl, observers = [] } = args;
+        const { drill_state, sink_state, enable_control = AlwaysEnabledControl } = args;
         placeDrillInto(drill_state, sink_state);
-        return new MiningDrillArchetype(drill_state, Mining.forDrill(drill_state), new Control(enable_control), observers);
+        return new MiningDrillArchetype(drill_state, Mining.forDrill(drill_state), new Control(enable_control));
     }
 
     public status: DrillStatusCode = DrillStatusCode.WORKING;
+    private readonly observers: DrillObserver[] = [];
     /** The observers that do something every tick; most only watch changes of status */
-    private readonly tick_observers: DrillObserver[];
+    private readonly tick_observers: DrillObserver[] = [];
 
     private constructor(
         public readonly drill_state: DrillState,
         public readonly mining: Mining,
         public readonly control: Control,
-        private readonly observers: DrillObserver[],
-    ) {
-        this.tick_observers = observers.filter(observer => observer.executeForTick);
+    ) { }
+
+    /**
+     * A control swap (same-tick rule 12), between runs and never in a tick: the Control asks `next` from now on, and
+     * the drill is WORKING with both bars at 0, as a drill built anew over the same state was. What it holds, its
+     * Placement (bound to the same target) and its observers are kept, and nobody is told of the status.
+     */
+    public useControl(next: EnableControl): void {
+        this.control.use(next);
+        this.status = DrillStatusCode.WORKING;
+        this.mining.resetForSwap();
     }
 
     /** The control asked, once a tick: working while it enables the drill, else disabled */

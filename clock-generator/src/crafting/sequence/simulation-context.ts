@@ -22,6 +22,16 @@ import { MiningDrillArchetype } from "../../simulation/archetypes/mining-drill";
 /** Initial moving-lane phases by inserter id, in the pickup model's public 1/32-tile units. */
 export type MovingPickupPhases = ReadonlyMap<string, readonly [number, number]>;
 
+/**
+ * What a control swap puts the inserters and drills on: the planner's policy for each kind (`interceptors/`), which
+ * gives each entity its enable control from its state and the states it takes from and puts into. A kind the policy has
+ * no entry for keeps its controls.
+ */
+export interface ControlPolicy {
+    inserter?: InserterInterceptor;
+    drill?: (drill_state: DrillState, sink_state: EntityState) => EnableControl;
+}
+
 export class SimulationContext {
 
     static fromConfig = createSimulationContextFromConfig;
@@ -73,17 +83,33 @@ export class SimulationContext {
         return new InserterUpdates(this.inserters, this.state_registry, this.competing_takers_order);
     }
 
-    public clone(args: Partial<SimulationContext> = {}): SimulationContext {
-        return new SimulationContext(
-            args.tick_provider ?? this.tick_provider,
-            args.entity_registry ?? this.entity_registry,
-            args.state_registry ?? this.state_registry,
-            args.machines ?? [...this.machines],
-            args.inserters ?? [...this.inserters],
-            args.drills ?? [...this.drills],
-            args.target_production_rate ?? this.target_production_rate,
-            args.competing_takers_order ?? this.competing_takers_order,
-        );
+    /**
+     * A control swap, in place, between runs and never in a tick: every inserter and then every drill, each in the
+     * order of its list, is put on the control the policy gives it (`useControl`), where the policy has an entry for
+     * its kind. An inserter starts at IDLE with its Hand's scratch set back, while its status, its hand, the pickup arm
+     * and the belt lanes are kept; a drill starts WORKING with both bars at 0, while what it holds is kept (same-tick
+     * rule 12). Machines, ports, observers and the lists stay as they are, so a World built from this context
+     * (`SimulationTick`) runs the new controls.
+     */
+    public useControls(policy: ControlPolicy): void {
+        const states = this.state_registry;
+        const inserter_policy = policy.inserter;
+        if (inserter_policy !== undefined) {
+            for (const inserter of this.inserters) {
+                const inserter_state = inserter.inserter_state;
+                const source_state = states.getStateByEntityIdOrThrow(inserter_state.inserter.source.entity_id);
+                const sink_state = states.getStateByEntityIdOrThrow(inserter_state.inserter.sink.entity_id);
+                inserter.useControl(inserter_policy(inserter_state, source_state, sink_state));
+            }
+        }
+        const drill_policy = policy.drill;
+        if (drill_policy !== undefined) {
+            for (const drill of this.drills) {
+                const drill_state = drill.drill_state;
+                const sink_state = states.getStateByEntityIdOrThrow(drill_state.drill.sink_id);
+                drill.useControl(drill_policy(drill_state, sink_state));
+            }
+        }
     }
 
     public addDebuggerPlugins(debug_plugin_factory: DebugPluginFactory): void {
@@ -253,57 +279,4 @@ function orderInsertersDownstreamFirst(inserters: InserterState[]): InserterStat
     return orderByMachineDependencies(inserters,
         inserter => EntityId.isMachine(inserter.inserter.source.entity_id) ? inserter.inserter.source.entity_id.id : undefined,
         inserter => inserter.inserter.sink.entity_id.id);
-}
-
-export function cloneSimulationContextWithInterceptors(
-    context: SimulationContext,
-    interceptors: {
-        inserter?: InserterInterceptor,
-        drill?: (drill_state: DrillState, sink_state: EntityState) => EnableControl,
-    } = {}
-): SimulationContext {
-
-    const entity_state_registry = context.state_registry;
-
-    let new_inserters: InserterArchetype[] | null = null
-    let new_drills: MiningDrillArchetype[] | null = null
-
-    if (interceptors.inserter) {
-        new_inserters = context.inserters.map(inserter => {
-            const inserter_state = inserter.inserter_state;
-            const source_state = entity_state_registry.getStateByEntityIdOrThrow(inserter_state.inserter.source.entity_id)
-            const sink_state = entity_state_registry.getStateByEntityIdOrThrow(inserter_state.inserter.sink.entity_id)
-            const enable_control = interceptors.inserter!(inserter.inserter_state, source_state, sink_state);
-
-            // a new inserter over the same state: IDLE, a fresh scratch, the old one's observers; its status, hand, pickup
-            // arm and belt lanes kept (same-tick rule 12)
-            return InserterArchetype.create({
-                inserter_state: inserter.inserter_state,
-                source_state: source_state,
-                sink_state: sink_state,
-                enable_control: enable_control,
-                tick_provider: context.tick_provider,
-                observers: inserter.getObservers()
-            })
-        })
-    }
-
-    if (interceptors.drill) {
-        new_drills = context.drills.map(drill_state_machine => {
-            const sink_state = entity_state_registry.getStateByEntityIdOrThrow(drill_state_machine.drill_state.drill.sink_id);
-            const enable_control = interceptors.drill!(drill_state_machine.drill_state, sink_state);
-            // a new drill over the same state: WORKING, fresh bars, the old one's observers (same-tick rule 12)
-            return MiningDrillArchetype.create({
-                drill_state: drill_state_machine.drill_state,
-                enable_control: enable_control,
-                sink_state: sink_state,
-                observers: drill_state_machine.getObservers()
-            })
-        })
-    }
-
-    return context.clone({
-        inserters: new_inserters ?? context.inserters,
-        drills: new_drills ?? context.drills,
-    });
 }

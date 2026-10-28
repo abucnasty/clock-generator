@@ -57,7 +57,8 @@ export class BeltHandPickup implements HandPickupPort {
         assert(inserter.belt_supply !== undefined, "Belt pickups need a supply setting");
         assert(tick_provider !== undefined, "Belt pickups need the simulation tick provider");
 
-        // Keep this inserter's lane gaps and partial stacks when its control is replaced.
+        // The lane gaps and partial stacks are the inserter's: a second bind of it (a pickup bound alone beside its
+        // archetype) takes the slots it has. A control swap binds nothing again: it keeps the port.
         const inserter_id = state.entity_id.id;
         const belt = source.belt;
         this.lanes = source.lanes;

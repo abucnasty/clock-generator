@@ -24,15 +24,16 @@ export interface CraftingMachineObserver {
 
 /**
  * A crafting machine in a run: its state (`MachineState`: Storage, Ingress, Energy, Crafting, Yield, Placement and
- * Wakes, which every context over the build shares), the target it places its results into, and its observers. A tick
- * runs its steps in the phase table's order (simulation/tick-phases.ts): what waits in the output into the result
- * target, held products into the output, the status rule, the status's step (a working machine crafts), the target
- * again (so a tick's crafts reach it in that tick), then the Wakes and the tick's observers.
+ * Wakes, which the build's context keeps through control swaps), the target it places its results into, and its
+ * observers. A tick runs its steps in the phase table's order (simulation/tick-phases.ts): what waits in the output
+ * into the result target, held products into the output, the status rule, the status's step (a working machine
+ * crafts), the target again (so a tick's crafts reach it in that tick), then the Wakes and the tick's observers.
  *
- * Built once for a machine when its context is built; a control swap keeps it as it is (`cloneSimulationContextWithInterceptors`
- * rebuilds inserters and drills only), with its status, observers and Wakes. One archetype per MachineState: the
- * state's Wakes count the crafts seen from the archetype's build on (`MachineWakes.watchFrom`), so a second archetype
- * built over the same state and ticked would share and reset that count.
+ * Built once for a machine when its context is built; a control swap leaves it as it is
+ * (`SimulationContext.useControls` swaps the controls of inserters and drills only), with its status, observers and
+ * Wakes. One archetype per MachineState: the state's Wakes count the crafts seen from the archetype's build on
+ * (`MachineWakes.watchFrom`), so a second archetype built over the same state and ticked would share and reset that
+ * count.
  */
 export class CraftingMachineArchetype implements ControlLogic {
 

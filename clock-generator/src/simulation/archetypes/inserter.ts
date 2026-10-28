@@ -23,21 +23,16 @@ export interface InserterObserver {
     executeForTick?(): void;
 }
 
-/** The enable control where it is also a ControlLogic, to run each tick: none is (the control tick goes in R16) */
-function tickingControlOf(enable_control: EnableControl): ControlLogic | null {
-    return "executeForTick" in enable_control ? enable_control as unknown as ControlLogic : null;
-}
-
 /**
  * An inserter in a run: its Hand (phase, scratch, and the source's pickup port and the sink's drop port as it reaches
  * them), its Control and its Wakes, over its state (`InserterState`: what it holds and has moved, its status as written,
- * the pickup arm, whether it shows as enabled), which every context over the build shares. A tick runs its steps in the
- * phase table's order (simulation/tick-phases.ts): the control's own tick, the phase rule (on a change: the status
- * written, the observers told, the exit and enter steps), the phase's step, the tick's observers, then the Wakes.
+ * the pickup arm, whether it shows as enabled). A tick runs its steps in the phase table's order
+ * (simulation/tick-phases.ts): the phase rule (on a change: the status written, the observers told, the exit and enter
+ * steps), the phase's step, the tick's observers, then the Wakes.
  *
- * A control swap builds a new one over the same state (`cloneSimulationContextWithInterceptors`): it starts at IDLE with
- * a fresh scratch and the observers of the old one, while its status, its hand, the pickup arm and the belt lanes are
- * kept (same-tick rule 12).
+ * A control swap keeps it (`useControl`, through `SimulationContext.useControls`): its Control asks the new control
+ * and its Hand starts at IDLE with its scratch set back, while its status, its hand, the pickup arm, the belt lanes,
+ * its ports and its observers are kept (same-tick rule 12).
  */
 export class InserterArchetype implements ControlLogic {
 
@@ -51,18 +46,17 @@ export class InserterArchetype implements ControlLogic {
         sink_state: EntityState,
         tick_provider: TickProvider,
         enable_control: EnableControl,
-        observers?: InserterObserver[],
     }): InserterArchetype {
-        const { inserter_state, source_state, sink_state, tick_provider, enable_control, observers = [] } = args;
-        // the hand's source's pickup port and its sink's drop port, with a fresh scratch record (same-tick rule 12)
+        const { inserter_state, source_state, sink_state, tick_provider, enable_control } = args;
+        const control = new Control(enable_control);
+        // the hand's source's pickup port and its sink's drop port, with a fresh scratch record
         const ports = bindHandPorts({
             inserterState: inserter_state,
             sourceState: source_state,
             sinkState: sink_state,
             tick_provider,
-            decider_build_order: enable_control.decider_build_order,
+            control,
         });
-        const control = new Control(enable_control);
         const sink_machine = EntityState.isMachine(sink_state) ? sink_state : null;
         const hand = new Hand(inserter_state, ports.scratch, ports.items, ports.pickup, ports.drop, control, tick_provider, {
             sink_wakes: sink_machine === null ? null : sink_machine.wakes,
@@ -74,13 +68,14 @@ export class InserterArchetype implements ControlLogic {
                 && !fullHandOf(inserter_state.inserter.metadata.type).at_placing_source,
             swing_ticks: inserter_state.inserter.animation.rotation.ticks,
         });
-        return new InserterArchetype(inserter_state, sink_state, hand, control, new InserterWakes(inserter_state, control),
-            tickingControlOf(enable_control), observers);
+        const wakes = new InserterWakes(inserter_state, control);
+        return new InserterArchetype(inserter_state, sink_state, hand, control, wakes);
     }
 
     public readonly entity_id: EntityId;
+    private readonly observers: InserterObserver[] = [];
     /** The observers that do something every tick; most only watch changes of phase */
-    private readonly tick_observers: InserterObserver[];
+    private readonly tick_observers: InserterObserver[] = [];
 
     private constructor(
         public readonly inserter_state: InserterState,
@@ -89,19 +84,18 @@ export class InserterArchetype implements ControlLogic {
         public readonly hand: Hand,
         public readonly control: Control,
         public readonly wakes: InserterWakes,
-        /** The enable control when it runs each tick too: none does (the dead control tick, dropped in R16) */
-        private readonly ticking_control: ControlLogic | null,
-        private readonly observers: InserterObserver[],
     ) {
         this.entity_id = inserter_state.entity_id;
-        this.tick_observers = observers.filter(observer => observer.executeForTick);
     }
 
-    /** The enable control's own tick, where it has one */
-    public tickControl(): void {
-        if (this.ticking_control !== null) {
-            this.ticking_control.executeForTick();
-        }
+    /**
+     * A control swap (same-tick rule 12), between runs and never in a tick: the Control asks `next` from now on, and
+     * the Hand starts at IDLE with its scratch set back, as an inserter built anew over the same state did. Its status
+     * as written, its hand, the pickup arm, the belt lanes, its ports and its observers are kept, and nobody is told.
+     */
+    public useControl(next: EnableControl): void {
+        this.control.use(next);
+        this.hand.resetForSwap();
     }
 
     /**
@@ -146,7 +140,6 @@ export class InserterArchetype implements ControlLogic {
 
     /** A whole tick of the inserter, for callers that tick a context's entities by hand */
     public executeForTick(): void {
-        this.tickControl();
         this.phaseRule();
         this.phaseStep();
         this.tickObservers();

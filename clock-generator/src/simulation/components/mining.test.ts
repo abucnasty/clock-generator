@@ -224,4 +224,16 @@ describe("a drill's Mining", () => {
         expect(plain).toEqual(["progress", "mining_time", "step", "bonus_step", "item"]);
         expect((mining as unknown as { bonus: object }).bonus).toEqual({ bar: 0 });
     });
+
+    // same-tick rule 12
+    it("starts both bars at 0 again at a control swap, as a new Mining has them, and mines on from there as it would", () => {
+        const mining = miningOf(70);
+        const fresh = miningOf(70);
+        for (let tick = 0; tick < 5; tick++) mining.mine();
+        expect(mining.stateKey()).not.toBe("0;0");
+        mining.resetForSwap();
+        expect(mining).toEqual(fresh);
+        expect(mining.stateKey()).toBe("0;0");
+        expect(Array.from({ length: 9 }, () => mining.mine())).toEqual(Array.from({ length: 9 }, () => fresh.mine()));
+    });
 });

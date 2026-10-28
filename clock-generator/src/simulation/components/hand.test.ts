@@ -1,6 +1,6 @@
 import { describe, test, expect, vi } from "vitest"
 import { mock } from 'vitest-mock-extended';
-import { EntityState, InserterState, MachineState } from "../../state"
+import { EntityState, InserterState, InserterStatus, MachineState } from "../../state"
 import { InserterArchetype } from "../archetypes/inserter"
 import { TransportBelt } from "../archetypes/transport-belt"
 import { BeltStrategy } from "../../common/entity-types"
@@ -13,7 +13,7 @@ import { MutableTickProvider } from "../../control-logic/current-tick-provider";
 import { BeltSpeed, Lane } from "../../entities/belt";
 import { InserterPhase } from "../status-codes";
 import { ContainerStorage } from "./container-storage";
-import { Hand, STAY } from "./hand";
+import { Hand, HandReason, HandScratch, STAY } from "./hand";
 import { bindHandPorts } from "./hand-ports";
 
 
@@ -134,6 +134,42 @@ describe("an inserter's Hand (belt to machine)", () => {
             machineState.inventoryState.setQuantity("iron-gear-wheel", output_block_quantity);
 
             expect(hand.rule()).toBe(STAY)
+        })
+    })
+
+    // same-tick rule 12
+    describe("at a control swap", () => {
+
+        test("sets every field of its scratch record back to what a new record holds", () => {
+            const fresh = new HandScratch();
+            const scratch = new HandScratch();
+            const other = (value: unknown) => value === null ? 3 : typeof value === "number" ? value + 3
+                : typeof value === "boolean" ? !value : typeof value === "string" ? `${value}coal` : null;
+            for (const [field, value] of Object.entries(fresh)) {
+                (scratch as unknown as Record<string, unknown>)[field] = other(value);
+                expect((scratch as unknown as Record<string, unknown>)[field], field).not.toEqual(value);
+            }
+            scratch.reset();
+            expect(scratch).toEqual(fresh);
+        })
+
+        test("starts at IDLE with its scratch set back, and leaves what the hand holds, the status as written and the wait flag", () => {
+            const testContext = createTestContext();
+            const state = testContext.inserterState;
+            const hand = handOf(state, testContext.sourceState, testContext.sinkState);
+            const scratch = hand.scratch;
+            hand.phase = InserterPhase.WAITING_FOR_SINK;
+            Object.assign(scratch, { pickup_ticks: 2, belt_grab_decided: false, saw_sink_blocked: true, reason: HandReason.SINK_TAKES_NO_MORE });
+            const held = { item_name: "iron-plate", quantity: 8 };
+            Object.assign(state, { held_item: held, status: InserterStatus.WAITING_FOR_SINK, waits_for_sink: true });
+
+            hand.resetForSwap();
+
+            expect(hand.phase).toBe(InserterPhase.IDLE);
+            expect(hand.scratch).toBe(scratch);
+            expect(scratch).toEqual(new HandScratch());
+            expect([state.held_item, state.status, state.waits_for_sink]).toEqual([held, InserterStatus.WAITING_FOR_SINK, true]);
+            expect(state.held_item).toBe(held);
         })
     })
 

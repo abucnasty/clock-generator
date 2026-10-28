@@ -5,7 +5,7 @@ import { loadConfigFromFile } from "../../config/loader";
 import { MutableTickProvider } from "../../control-logic/current-tick-provider";
 import { AlwaysEnabledControl, EnableControl } from "../../control-logic/enable-control";
 import { reasonText } from "../../control-logic/mode/reason-table";
-import { cloneSimulationContextWithInterceptors, SimulationContext } from "../../crafting/sequence/simulation-context";
+import { SimulationContext } from "../../crafting/sequence/simulation-context";
 import { OpenRange, Duration } from "../../data-types";
 import { Belt, Chest, EntityId, Inserter, InserterMetadata, InserterStackSize, Machine, RecipeMetadata } from "../../entities";
 import { InserterAnimation } from "../../entities/inserter/inserter-animation";
@@ -14,6 +14,8 @@ import { factorioInserterState, FactorioInserterState } from "../../state/factor
 import { ContainerStorage } from "../components/container-storage";
 import { HandScratch } from "../components/hand";
 import { InserterPhase, inserterStatusOf } from "../status-codes";
+import { runTick } from "../tick-phases";
+import { World } from "../world";
 import { InserterArchetype, InserterObserver } from "./inserter";
 import { TransportBelt } from "./transport-belt";
 
@@ -348,21 +350,66 @@ describe("an inserter's state key", () => {
 
 describe("a control swap", () => {
     // same-tick rule 12
-    test("builds a new inserter over the same state at idle, with a fresh scratch and the old one's observers", async () => {
+    test("keeps the inserter and puts it on the new control: at idle with its scratch set back, its status and observers kept", async () => {
         const context = SimulationContext.fromConfig(await loadConfigFromFile(GameFixturePaths.DIFFERENT_ITEMS_CONFIG));
-        const observer: InserterObserver = { executeForTick: vi.fn() };
+        const observer: InserterObserver = { onStatusChange: vi.fn(), executeForTick: vi.fn() };
         context.inserters.forEach(it => it.addObserver(observer));
         const inserter = context.inserters[0];
-        inserter.hand.phase = InserterPhase.SWING;
+        const { hand, control, wakes } = inserter;
+        const scratch = hand.scratch;
+        hand.phase = InserterPhase.SWING;
         inserter.inserter_state.status = InserterStatus.SWING;
-        const swapped = cloneSimulationContextWithInterceptors(context, { inserter: () => AlwaysEnabledControl }).inserters[0];
-        expect(swapped).not.toBe(inserter);
-        expect(swapped.inserter_state).toBe(inserter.inserter_state);
-        expect(swapped.hand.phase).toBe(InserterPhase.IDLE);
-        expect(swapped.inserter_state.status).toBe(InserterStatus.SWING);
-        expect(swapped.hand.scratch).not.toBe(inserter.hand.scratch);
-        expect(swapped.getObservers()).toEqual([observer]);
-        swapped.executeForTick();
+        Object.assign(scratch, { swing_entered_tick: 7, swing_from: InserterPhase.PICKUP });
+        const next: EnableControl = { isEnabled: () => false, is_game_clock: true, decider_build_order: 4 };
+
+        context.useControls({ inserter: () => next });
+
+        expect(context.inserters[0]).toBe(inserter);
+        expect(inserter.hand).toBe(hand);
+        expect(inserter.control).toBe(control);
+        expect(inserter.wakes).toBe(wakes);
+        expect(hand.scratch).toBe(scratch);
+        expect(hand.phase).toBe(InserterPhase.IDLE);
+        expect(inserter.inserter_state.status).toBe(InserterStatus.SWING);
+        expect(scratch).toEqual(new HandScratch());
+        expect([control.enabled(), control.is_game_clock, control.looks_ahead, control.decider_build_order]).toEqual([false, true, false, 4]);
+        expect(inserter.getObservers()).toEqual([observer]);
+        expect(observer.onStatusChange).not.toHaveBeenCalled();
+        inserter.executeForTick();
+        // on the new control it goes from idle to its disabled phase, and its observers are told
+        expect(observer.onStatusChange).toHaveBeenCalledWith(InserterPhase.IDLE, InserterPhase.DISABLED, expect.any(Number));
         expect(observer.executeForTick).toHaveBeenCalledTimes(1);
+    });
+
+    test("leaves each inserter as one built anew over its state on the same control: the same phase, scratch and key", async () => {
+        const context = SimulationContext.fromConfig(await loadConfigFromFile(GameFixturePaths.DIFFERENT_ITEMS_CONFIG));
+        const world = World.of(context);
+        const anewOf = (inserter: InserterArchetype, enable_control: EnableControl) => {
+            const state = inserter.inserter_state;
+            return InserterArchetype.create({
+                inserter_state: state, tick_provider: context.tick_provider, enable_control,
+                source_state: context.state_registry.getStateByEntityIdOrThrow(state.inserter.source.entity_id),
+                sink_state: context.state_registry.getStateByEntityIdOrThrow(state.inserter.sink.entity_id),
+            });
+        };
+        const next: EnableControl = { ...AlwaysEnabledControl, is_game_clock: true, decider_build_order: 2 };
+        for (let tick = 0; tick < 300; tick++) {
+            runTick(world, null);
+        }
+        const tick = context.tick_provider.getCurrentTick();
+        // hands under way: what a swap sets back differs from a new inserter's before it
+        expect(context.inserters.some(it => it.stateKey(tick) !== anewOf(it, next).stateKey(tick))).toBe(true);
+
+        context.useControls({ inserter: () => next });
+
+        for (const inserter of context.inserters) {
+            const anew = anewOf(inserter, next);
+            expect(inserter.stateKey(tick)).toBe(anew.stateKey(tick));
+            expect(inserter.hand.phase).toBe(anew.hand.phase);
+            expect(inserter.hand.scratch).toEqual(anew.hand.scratch);
+            expect(inserter.hand.pickup.key()).toBe(anew.hand.pickup.key());
+            expect(inserter.hand.drop.key()).toBe(anew.hand.drop.key());
+            expect(inserter.control).toEqual(anew.control);
+        }
     });
 });

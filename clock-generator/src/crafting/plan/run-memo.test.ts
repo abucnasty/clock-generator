@@ -3,6 +3,7 @@ import { Config } from "../../config";
 import { ConfigPaths, ExpectedRefusals } from "../../config/config-paths";
 import { loadConfigFromFile } from "../../config/loader";
 import { DebugSettingsProvider } from "../sequence/debug/debug-settings-provider";
+import { SimulationContext } from "../sequence/simulation-context";
 import { generateClockAlternatives } from "../alternatives";
 import { generateClockForConfig } from "../generate-clock";
 import { backpressureLossKey, backpressureLossVerdictOf } from "../trial";
@@ -99,11 +100,12 @@ describe("the memo of the runs of a generation", () => {
         }, 0);
     });
 
-    it("keeps no controlled context and no plugin that feeds a history, so a kept run pins no raw history", () => {
+    it("keeps one context, the build's own on its controls, and no plugin that feeds a history, so a kept run pins no raw history", () => {
         const history_plugins = [InserterInventoryHistoryPlugin, DrillInventoryTransferPlugin, InserterStateTransitionTrackerPlugin,
             MachineStateTransitionTrackerPlugin, DrillStateTransitionTrackerPlugin];
         const run = runBuild(config, options);
-        expect(run).not.toHaveProperty("new_simulation_context");
+        // a control swap is made in place (same-tick rule 12): no second context is made, and none is kept
+        expect(Object.values(run).filter(value => value instanceof SimulationContext)).toEqual([run.simulation_context]);
         const context = run.simulation_context;
         expect(context.inserters.length).toBeGreaterThan(0);
         expect(context.machines.length).toBeGreaterThan(0);

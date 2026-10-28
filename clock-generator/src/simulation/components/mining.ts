@@ -65,7 +65,8 @@ export function bonusBarTick(bar: number, step: number, mining_time: number): { 
  * A tick of a working drill (`tick`): its Placement drops what it holds first; while it still holds anything it waits,
  * its bars still; else it mines and holds what the bars complete until the next tick's drop (same-tick rule 7). The
  * target is not checked before mining: at a machine's stop or into a full chest it mines on until it holds an item. The
- * bars hold their values while the drill waits or is disabled; a control swap builds a new Mining (same-tick rule 12).
+ * bars hold their values while the drill waits or is disabled; a control swap sets both to 0 (`resetForSwap`, same-tick
+ * rule 12).
  */
 export class Mining {
 
@@ -111,6 +112,15 @@ export class Mining {
     /** Both bars, which drive the drill's next ticks */
     public stateKey(): string {
         return `${this.progress};${this.bonus.bar}`;
+    }
+
+    /**
+     * A control swap (same-tick rule 12): both bars at 0, as a Mining built anew had; what the drill holds is its
+     * state's and is kept
+     */
+    public resetForSwap(): void {
+        this.progress = 0;
+        this.bonus.bar = 0;
     }
 
     /** A working drill's tick: drop what it holds, and only when nothing is left mine into what it holds */

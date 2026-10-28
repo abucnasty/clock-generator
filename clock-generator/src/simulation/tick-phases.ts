@@ -30,8 +30,8 @@ export const SAME_TICK_RULES = {
 export type SameTickRule = keyof typeof SAME_TICK_RULES;
 
 /**
- * Same-tick rules that no step of a tick upholds: a control swap is a new context with new inserter and drill
- * archetypes, so a new World (simulation/world.ts), between runs and never in a tick
+ * Same-tick rules that no step of a tick upholds: a control swap (`SimulationContext.useControls`) sets each inserter's
+ * Hand and each drill's status and bars back in place (the archetypes' `useControl`), between runs and never in a tick
  */
 export const RULES_OUTSIDE_THE_TICK: readonly SameTickRule[] = [12];
 
@@ -40,7 +40,7 @@ export type TickPhase = typeof TickPhase[keyof typeof TickPhase];
 
 export const TickStep = { INCREMENT: 0 } as const;
 export const DrillStep = { CONTROL_RULE: 0, MINING: 1, TICK_OBSERVERS: 2 } as const;
-export const InserterStep = { CONTROL_TICK: 0, PHASE_RULE: 1, PHASE_STEP: 2, TICK_OBSERVERS: 3, SHOWN_ENABLED: 4 } as const;
+export const InserterStep = { PHASE_RULE: 0, PHASE_STEP: 1, TICK_OBSERVERS: 2, SHOWN_ENABLED: 3 } as const;
 export const MachineStep = { PLACE_BEFORE: 0, HELD_TO_OUTPUT: 1, STATUS_RULE: 2, STATUS_STEP: 3, PLACE_AFTER: 4, END_OF_TICK: 5 } as const;
 export const AfterTickStep = { RECORDERS: 0, STOP_EARLY: 1 } as const;
 
@@ -89,7 +89,6 @@ export const TICK_PHASES: readonly TickPhaseRow[] = [
         order: "takers before feeders, the takers of one machine in the taker order (inserterUpdateOrder)",
         order_upholds: [2, 3, 4], run_by: "loop",
         steps: [
-            { step: InserterStep.CONTROL_TICK, name: "control_tick", does: "the enable control's own tick, where it has one (none has)", upholds: [] },
             { step: InserterStep.PHASE_RULE, name: "phase_rule", does: "the Hand's phase rule; on a change, the status written, then observers, then exit and enter",
                 upholds: [1, 3, 8, 9, 10, 17] },
             { step: InserterStep.PHASE_STEP, name: "phase_step", does: "the Hand's phase step: pickup through the source's pickup port, drop through the sink's drop port (the hand's ports, bound at build)",
@@ -155,8 +154,6 @@ function runDrills(drills: readonly MiningDrillArchetype[], tracer: TickTracer |
 function runInserters(inserters: readonly InserterArchetype[], tracer: TickTracer | null): void {
     for (let index = 0; index < inserters.length; index++) {
         const inserter = inserters[index];
-        if (tracer !== null) tracer.step(TickPhase.INSERTERS, index, InserterStep.CONTROL_TICK);
-        inserter.tickControl();
         if (tracer !== null) tracer.step(TickPhase.INSERTERS, index, InserterStep.PHASE_RULE);
         inserter.phaseRule();
         if (tracer !== null) tracer.step(TickPhase.INSERTERS, index, InserterStep.PHASE_STEP);

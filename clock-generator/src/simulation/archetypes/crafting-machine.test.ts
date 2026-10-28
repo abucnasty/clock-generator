@@ -5,7 +5,7 @@ import { Machine, MachineSpec, RecipeMetadata } from "../../entities";
 import { Config, ConfigSchema } from "../../config/schema";
 import { AlwaysEnabledControl } from "../../control-logic";
 import { reasonText } from "../../control-logic/mode/reason-table";
-import { cloneSimulationContextWithInterceptors, SimulationContext } from "../../crafting/sequence/simulation-context";
+import { SimulationContext } from "../../crafting/sequence/simulation-context";
 import { BurnerEnergy } from "../components/burner-energy";
 import { CraftingStatus, machineStatusOf } from "../status-codes";
 
@@ -696,18 +696,19 @@ describe("Crafting machine in a control swap", () => {
         ],
     }) as Config;
 
-    // the inserters and drills are rebuilt on their new controls (same-tick rule 12); a machine is kept as it is
-    test("keeps every machine as it is: the same archetype, its status and its observers", () => {
+    // the inserters and drills are put on their new controls in place (same-tick rule 12); a machine is left as it is
+    test("leaves every machine as it is: the same archetype, its status and its observers", () => {
         const context = SimulationContext.fromConfig(BUILD);
         const [machine] = context.machines;
         const observer: CraftingMachineObserver = { executeForTick() { } };
         machine.addObserver(observer);
         machine.machine_state.status = MachineStatus.WORKING;
-        const swapped = cloneSimulationContextWithInterceptors(context, { inserter: () => AlwaysEnabledControl });
-        expect(swapped.machines).toHaveLength(1);
-        expect(swapped.machines[0]).toBe(machine);
-        expect(swapped.machines[0].getObservers()).toEqual([observer]);
-        expect(swapped.machines[0].machine_state.status).toBe(MachineStatus.WORKING);
-        expect(swapped.inserters[0]).not.toBe(context.inserters[0]);
+        const machines = context.machines;
+        context.useControls({ inserter: () => AlwaysEnabledControl });
+        expect(context.machines).toBe(machines);
+        expect(context.machines).toHaveLength(1);
+        expect(context.machines[0]).toBe(machine);
+        expect(context.machines[0].getObservers()).toEqual([observer]);
+        expect(context.machines[0].machine_state.status).toBe(MachineStatus.WORKING);
     })
 })

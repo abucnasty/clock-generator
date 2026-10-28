@@ -34,8 +34,7 @@ const PLAIN_FIELDS: Record<string, string[]> = {
     // how the inserter reaches over the belt and its nearest lane, the same in every tick; belt position is in the
     // source state
     BeltHandPickup: ["layout", "near_lane"],
-    // the order of its decider is the build's, the same in every tick
-    MachineHandPickup: ["decider_build_order"],
+    // a machine's pickup port holds none: the order of its decider is read from the hand's Control
 };
 
 function plainFields(value: object, skip: string[] = []): string[] {
@@ -64,10 +63,10 @@ describe("simulationStateKey", () => {
             for (const machine of context.machines) {
                 add(machine.constructor.name, plainFields(machine, ["result_target"]));
             }
-            // an inserter's archetype holds references only (the dead ticking control null for none, R16 drops it), and so
-            // do its Wakes; its Hand, the scratch, the two ports and the Control pin their plain fields here
+            // an inserter's archetype holds references only, and so do its Wakes; its Hand, the scratch, the two ports
+            // and the Control pin their plain fields here
             for (const inserter of context.inserters) {
-                add(inserter.constructor.name, plainFields(inserter, ["ticking_control"]));
+                add(inserter.constructor.name, plainFields(inserter));
                 add(inserter.wakes.constructor.name, plainFields(inserter.wakes));
                 add(inserter.hand.constructor.name, plainFields(inserter.hand, ["sink_wakes", "sink_ingress"]));
                 add(inserter.hand.scratch.constructor.name, plainFields(inserter.hand.scratch));
