@@ -35,9 +35,12 @@ const SAMPLES = SAMPLE_CONFIG_FILES;
 const BEFORE = {
     /** The furnace rule (output-block.ts's switch, the furnace refusal in inserter.ts): the four furnace prototypes */
     furnace_rule: new Set(["stone-furnace", "steel-furnace", "electric-furnace", "recycler"]),
-    /** The burner table (energy-source.ts): the biochamber rule, which only the biochamber prototype had */
+    /**
+     * The burner table (energy-source.ts): the biochamber rule, which only the biochamber prototype had. Every burner is
+     * fuelled now (the furnaces, the captive biter spawner), but the samples hold no other burner machine
+     */
     burner_table: new Map<string, BurnerEnergySource>([
-        ["biochamber", { energy_usage_kw: 500, fuels: [{ item_name: "nutrients", fuel_value_mj: 2 }] }],
+        ["biochamber", { energy_usage_kw: 500, effectivity: 1, fuels: [{ item_name: "nutrients", fuel_value_mj: 2 }] }],
     ]),
     /** The belt speed switch (belt.ts) */
     belt_speed: new Map([["transport-belt", 15], ["fast-transport-belt", 30], ["express-transport-belt", 45], ["turbo-transport-belt", 60]]),

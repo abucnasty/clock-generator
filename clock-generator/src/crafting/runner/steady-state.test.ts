@@ -80,7 +80,7 @@ const FIELDS: Record<string, { keyed: readonly string[]; excluded: Readonly<Reco
     Yield: {
         keyed: ["pendingOutput"],
         excluded: {
-            productsFinished: TOTAL, places_results: BUILD, output_name: BUILD, output_amount: BUILD, output_by_chance: BUILD,
+            productsFinished: TOTAL, places_results: BUILD, discards_overflow: BUILD, output_name: BUILD, output_amount: BUILD, output_by_chance: BUILD,
             output_stack_size: BUILD, amount_per_bonus: BUILD, bonus_per_craft: BUILD, ingredients_blocked_at: BUILD, main_carry_slot: BUILD,
         },
     },

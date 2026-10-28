@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import "./factorio-data-file";
 import { FactorioDataService } from "./factorio-data-service";
-import { NUTRIENTS_FUEL_CATEGORY } from "../entities/machine/machine-rule";
 import { BeltSpeed } from "../entities/belt/belt";
 import { fullHandOf } from "../entities/traits/hand";
 import { modelledBurnerOf } from "../entities/traits/energy";
@@ -9,6 +8,7 @@ import { modelledBurnerOf } from "../entities/traits/energy";
 /** What the engine burned before it read the burner from the data (its burner table): nutrients of 2 MJ, at 500 kW */
 const NUTRIENTS = { item_name: "nutrients", fuel_value_mj: 2 };
 const BIOCHAMBER_KW = 500;
+const NUTRIENTS_FUEL_CATEGORY = "nutrients";
 
 const SI_PREFIX: Record<string, number> = { "": 1, k: 1e3, M: 1e6, G: 1e9, T: 1e12 };
 
@@ -25,7 +25,7 @@ function energy(text: string | undefined, unit: "W" | "J"): number {
  * belt speed switch, the full-hand rule by name), so that reading them moved nothing
  */
 describe("the game data and the engine's constants", () => {
-    it("gives the biochamber the burner of the biochamber rule: 500 kW on nutrients", () => {
+    it("gives the biochamber the burner it was fuelled with first: 500 kW on nutrients", () => {
         const biochamber = FactorioDataService.findCraftingMachine("biochamber")!;
         const source = modelledBurnerOf(biochamber)!;
         expect(energy(biochamber.energy_usage, "W") / 1000).toBe(BIOCHAMBER_KW);

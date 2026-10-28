@@ -97,7 +97,7 @@ export function machineTraitsOf(config: MachineConfiguration): MachineTraits {
     const crafting_rate = machineCraftingRate(recipe, config.crafting_speed);
     const main = mainProductOf(recipe, crafting_rate, config.productivity);
     const recipe_selection = recipeSelectionOf(prototype?.type ?? null);
-    // only a burner on nutrients burns fuel today (machine-rule.ts fuelModelled): a kept quirk, see energy.fuel_modelled
+    // every burner burns fuel from its energy source (energy.ts modelledBurnerOf)
     const energy = machineEnergy(prototype, config, recipe.energy_required);
     const outputs = recipe.outputs.map(output => output.name);
     const yield_trait = machineYield(recipe, crafting_rate, config.productivity);
