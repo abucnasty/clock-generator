@@ -125,7 +125,7 @@ describe("Machine State Machine", () => {
 
             const produced_stone_bricks = machine_state.inventoryState.getQuantity("stone-brick");
             expect(produced_stone_bricks).toBe(expected_output);
-            expect(machine_state.bonusProgress.progress).toBe(bonus_progress);
+            expect(machine_state.yield.bonusProgress.progress).toBe(bonus_progress);
         }
     )
 
@@ -214,18 +214,18 @@ describe("Machine State Machine holding the products of a finished craft", () =>
     test("a machine short of ingredients puts held products in its output in the tick there is room for them", () => {
         const { machine_state, state_machine } = holdingMachine()
         expect(machine_state.craftCount).toBe(1)
-        expect(machine_state.pendingOutput).toBe(2)
+        expect(machine_state.yield.pendingOutput).toBe(2)
         expect(machine_state.inventoryState.getQuantity("plastic-bar")).toBe(99)
 
         // it waits while there is no room, and has nothing to craft with
         executeControlLogicForTicks(state_machine, 3)
-        expect(machine_state.pendingOutput).toBe(2)
+        expect(machine_state.yield.pendingOutput).toBe(2)
         expect(machine_state.inventoryState.getQuantity("coal")).toBe(0)
 
         // an inserter takes 10 bars earlier in a tick: the machine's update in that same tick puts the 2 in, whatever mode it is in
         machine_state.inventoryState.setQuantity("plastic-bar", 89)
         executeControlLogicForTicks(state_machine, 1)
-        expect(machine_state.pendingOutput).toBe(0)
+        expect(machine_state.yield.pendingOutput).toBe(0)
         expect(machine_state.inventoryState.getQuantity("plastic-bar")).toBe(91)
         expect(state_machine.current_mode.status).toBe(MachineStatus.INGREDIENT_SHORTAGE)
     })

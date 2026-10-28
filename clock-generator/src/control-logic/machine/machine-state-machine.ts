@@ -53,7 +53,7 @@ export class MachineStateMachine extends ModeStateMachine<MachineMode> {
 
     /** Products the machine holds into its output, as far as there is room */
     public putHeldProductsInOutput(): void {
-        this.working_mode.putHeldProductsInOutput();
+        this.machine_state.yield.putHeldProductsInOutput(this.working_mode);
     }
 
     /** The status rule; a copy of ModeStateMachine.ruleStep, see ModeStateMachine.executeForTick */

@@ -1,4 +1,5 @@
 import { MachineState } from "../../../state";
+import { OutputFullCode } from "../../../simulation/components/yield";
 import { ModeTransition, ModeTransitionEvaluator } from "../../mode";
 import { MachineMode, MachineNoFuelMode, MachineOutputFullMode, MachineWorkingMode } from "../modes";
 
@@ -24,9 +25,9 @@ export class IngredientShortageModeTransitionEvaluator implements ModeTransition
             return ModeTransition.transition(this.working_mode, 'machine has enough inputs for craft');
         }
         // an idle machine whose output is at its block shows full output, as in the game
-        const output_full_reason = this.working_mode.outputFullReason();
-        if (output_full_reason !== null) {
-            return ModeTransition.transition(this.output_full_mode, output_full_reason);
+        const output_full = this.working_mode.outputFullCode();
+        if (output_full !== OutputFullCode.NONE) {
+            return ModeTransition.transition(this.output_full_mode, this.working_mode.outputFullText(output_full));
         }
         return ModeTransition.NONE;
     }

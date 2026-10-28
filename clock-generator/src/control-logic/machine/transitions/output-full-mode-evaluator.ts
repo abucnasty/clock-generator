@@ -1,4 +1,5 @@
 import { MachineState } from "../../../state";
+import { OutputFullCode } from "../../../simulation/components/yield";
 import { ModeTransitionEvaluator, ModeTransition } from "../../mode";
 import { MachineIngredientShortageMode, MachineMode, MachineNoFuelMode, MachineWorkingMode } from "../modes";
 
@@ -28,10 +29,10 @@ export class OutputFullModeTransitionEvaluator implements ModeTransitionEvaluato
             return ModeTransition.transition(this.working_mode, "machine has enough inputs and room for a craft");
         }
 
-        if (this.working_mode.outputFullReason() === null) {
-            const output_item = this.working_mode.output_item;
+        if (this.working_mode.outputFullCode() === OutputFullCode.NONE) {
+            const made = this.machine_state.yield;
             const output_block = this.machine_state.machine.output.outputBlock;
-            return ModeTransition.transition(this.ingredient_shortage_mode, `output "${output_item.item_name}" ${output_item.quantity} < ${output_block.ingredients_blocked_at} and not enough inputs for craft`);
+            return ModeTransition.transition(this.ingredient_shortage_mode, `output "${made.output_name}" ${made.outputQuantity()} < ${output_block.ingredients_blocked_at} and not enough inputs for craft`);
         }
         return ModeTransition.NONE;
     }

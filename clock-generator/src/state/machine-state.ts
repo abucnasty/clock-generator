@@ -8,6 +8,7 @@ import { BurnerEnergy } from "../simulation/components/burner-energy";
 import { Energy } from "../simulation/components/energy";
 import { MachineOutputPort } from "../simulation/components/machine-output-port";
 import { Placement } from "../simulation/components/placement";
+import { Yield } from "../simulation/components/yield";
 
 export class MachineState implements EntityState {
 
@@ -25,34 +26,51 @@ export class MachineState implements EntityState {
     public static print = printMachineState
     public static stateKey = stateKey
 
+    /**
+     * What the machine's crafts and productivity bar make, the products it holds, the carried fractions of results by
+     * chance and the output room a craft needs (simulation/components)
+     */
+    public readonly yield: Yield;
+
     constructor(
         public readonly entity_id: EntityId,
         public readonly machine: Machine,
         public readonly craftingProgress: ProgressState,
-        public readonly bonusProgress: ProgressState,
+        made: Yield,
         /** What the machine runs on, and for a burner the energy it holds (simulation/components) */
         public readonly energy: Energy,
-        /** Fractions of a by-product made so far that do not yet add up to a whole item */
-        public readonly byProductCarry: Map<string, number>,
         public readonly inventoryState: WritableInventoryState,
         /** The burner fuel slot, kept apart from the ingredients and output since the fuel can also be the product */
         public readonly fuelInventory: WritableInventoryState,
         public craftCount: number,
         public status: MachineStatus,
         public totalCrafted: number,
-    ) { }
+    ) {
+        this.yield = made;
+    }
 
-    /**
-     * Main product of a finished craft that did not fit under the stack size. The machine holds it, and starts no
-     * craft, until there is room for it.
-     */
-    public pendingOutput: number = 0;
+    /** The productivity bar, a view of the Yield component's for outside callers (start stock, recorders, controls) */
+    public get bonusProgress(): ProgressState {
+        return this.yield.bonusProgress;
+    }
 
-    /**
-     * Crafts finished and productivity bars paid out so far, as the game counts a machine's `products_finished`:
-     * one for each, whatever amount it makes.
-     */
-    public productsFinished: number = 0;
+    /** The main product the machine holds until there is room for it, a view of the Yield component's */
+    public get pendingOutput(): number {
+        return this.yield.pendingOutput;
+    }
+
+    public set pendingOutput(value: number) {
+        this.yield.pendingOutput = value;
+    }
+
+    /** Crafts finished and productivity bars paid out so far, a view of the Yield component's */
+    public get productsFinished(): number {
+        return this.yield.productsFinished;
+    }
+
+    public set productsFinished(value: number) {
+        this.yield.productsFinished = value;
+    }
 
     /**
      * Crafts started so far: the times the machine took the ingredients of a craft out of its inventory. The
@@ -178,9 +196,8 @@ function forMachine(machine: Machine): MachineState {
         machine.entity_id,
         machine,
         ProgressState.empty(),
-        ProgressState.empty(),
+        new Yield(machine, inventoryState),
         Energy.of(machine, fuelInventory),
-        new Map(),
         inventoryState,
         fuelInventory,
         0,
@@ -196,21 +213,19 @@ function forMachine(machine: Machine): MachineState {
 
 function clone(machineState: MachineState): MachineState {
     const fuelInventory = machineState.fuelInventory.clone();
+    const inventoryState = machineState.inventoryState.clone();
     const cloned = new MachineState(
         machineState.entity_id,
         machineState.machine,
         ProgressState.clone(machineState.craftingProgress),
-        ProgressState.clone(machineState.bonusProgress),
+        machineState.yield.clone(inventoryState),
         machineState.energy.clone(fuelInventory),
-        new Map(machineState.byProductCarry),
-        machineState.inventoryState.clone(),
+        inventoryState,
         fuelInventory,
         machineState.craftCount,
         machineState.status,
         machineState.totalCrafted,
     );
-    cloned.pendingOutput = machineState.pendingOutput;
-    cloned.productsFinished = machineState.productsFinished;
     cloned.craftsStarted = machineState.craftsStarted;
     // a snapshot's Placement keeps the count and how it counts, unbound: it never places into the live target
     cloned.placement.copyCountFrom(machineState.placement);
@@ -228,19 +243,19 @@ function clone(machineState: MachineState): MachineState {
 function stateKey(machineState: MachineState): string {
     return [
         machineState.status,
-        machineState.pendingOutput,
+        machineState.yield.pendingOutput,
         machineState.outputBlockedAfterLastTick,
         machineState.finishedCraftInLastTick,
         machineState.startedCraftInLastTick,
         JSON.stringify(machineState.selfIngredients.export()),
         machineState.craftingProgress.progress,
-        machineState.bonusProgress.progress,
+        machineState.yield.bonusProgress.progress,
         // a burner's future hangs on what is burning and what the fuel slot holds, which no other key carries: the
         // energy left in the burning item and the energy held, "0;0" for a machine that burns nothing
         machineState.energy.stateKey(),
         JSON.stringify(Object.entries(machineState.fuelInventory.export()).sort(([a], [b]) => a.localeCompare(b))),
-        // fractions of a by-product carried toward the next whole item
-        JSON.stringify(Array.from(machineState.byProductCarry).sort(([a], [b]) => a.localeCompare(b))),
+        // fractions of a result by chance carried toward the next whole item
+        machineState.yield.carryKey(),
     ].join(";");
 }
 
