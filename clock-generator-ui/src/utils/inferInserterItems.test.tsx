@@ -1,8 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import { renderToStaticMarkup } from 'react-dom/server';
+// @vitest-environment happy-dom
+import { screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import type { Config } from 'clock-generator/browser';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { FilterSlotSelector } from '../components/FilterSlotSelector';
+import { show } from '../test/fixtures';
 import { configToFormData } from './configForm/configMapping';
 import { drillItemsInto, inferInserterItems, itemsAround, sourceItemsOf } from './inferInserterItems';
 import { buildFlowGraph, flowNodeEntity } from './buildFlowGraph';
@@ -60,11 +62,12 @@ describe('automatic filters through containers', () => {
         silo.contents = [{ item: 'lithium', count: 10 }, { item: 'copper-plate', count: 10 }];
         form.inserters[0].source = { type: 'belt', id: 1 };
         form.belts[0].lanes[0].ingredient = 'processing-unit';
-        const render = (index: number) => renderToStaticMarkup(<InserterEditor value={form.inserters[index]} label={`Inserter ${index + 1}`}
+        show(<>{form.inserters.map((value, index) => <InserterEditor key={value.id} value={value} label={`Inserter ${index + 1}`}
             layout="stacked" machines={form.machines} belts={form.belts} chests={form.chests} inserters={form.inserters}
-            itemNames={['lithium', 'copper-plate', 'processing-unit']} getRecipeInfo={recipeInfo} onChange={() => {}} />);
-        expect(render(0)).toContain('value="Rocket silo 1 - processing-unit"');
-        expect(render(1)).toContain('value="Rocket silo 1 - lithium"');
+            itemNames={['lithium', 'copper-plate', 'processing-unit']} getRecipeInfo={recipeInfo} onChange={vi.fn()} />)}</>);
+        const field = (name: string) => screen.getByRole<HTMLInputElement>('combobox', { name }).value;
+        expect(field('Destination, Inserter 1')).toBe('Rocket silo 1 - processing-unit');
+        expect(field('Source, Inserter 2')).toBe('Rocket silo 1 - lithium');
     });
 
     it('never advertises blocked slots as available items or automatic filters', () => {
@@ -122,10 +125,19 @@ describe('automatic filters through containers', () => {
 });
 
 it('explains empty automatic slots without labelling explicit filters as uninferred', () => {
-    const render = (filters?: string[]) => renderToStaticMarkup(<FilterSlotSelector filters={filters} itemNames={[]}
-        onFilterChange={() => {}} onRemoveFilter={() => {}} />);
-    expect(render()).toContain('No items inferred. Choose an item to set an explicit filter.');
-    expect(render(['lithium'])).not.toContain('No items inferred');
+    const slots = (filters?: string[]) => <FilterSlotSelector filters={filters} itemNames={[]} onFilterChange={vi.fn()} onRemoveFilter={vi.fn()} />;
+    const { rerender } = show(slots());
+    expect(screen.getByText('No items inferred. Choose an item to set an explicit filter.')).toBeDefined();
+    rerender(slots(['lithium']));
+    expect(screen.queryByText(/No items inferred/)).toBeNull();
+    // nor in any name or description a screen reader announces: the group and every slot, filled or empty
+    expect(screen.getByRole('group', { name: 'Inserter filter slots' })).toBeDefined();
+    expect(screen.queryByRole('group', { name: /No items inferred/ })).toBeNull();
+    expect(screen.queryByRole('group', { description: /No items inferred/ })).toBeNull();
+    expect(screen.queryAllByRole('button', { name: /No items inferred/ })).toEqual([]);
+    expect(screen.queryAllByRole('button', { description: /No items inferred/ })).toEqual([]);
+    expect(screen.getByRole('button', { name: 'Filter 1: lithium' })).toBeDefined();
+    for (const slot of [2, 3, 4, 5]) expect(screen.getByRole('button', { name: `Add filter ${slot}` })).toBeDefined();
 });
 
 describe('a container filled by drills', () => {

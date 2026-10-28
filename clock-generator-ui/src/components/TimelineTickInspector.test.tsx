@@ -1,8 +1,11 @@
-import { expect, it } from 'vitest';
-import { renderToStaticMarkup } from 'react-dom/server';
+// @vitest-environment happy-dom
+import { screen, within } from '@testing-library/react';
+import { expect, it, vi } from 'vitest';
 import type { TimelineEntity, TimelineRecording } from 'clock-generator/browser';
-import { DEFAULT_INSPECTION } from '../utils/timelineInspection';
+import { show } from '../test/fixtures';
+import { DEFAULT_INSPECTION, type TimelineInspection } from '../utils/timelineInspection';
 import { TimelineTickInspector } from './TimelineTickInspector';
+
 const entity: TimelineEntity = { id: 'machine:1', type: 'machine', items: ['iron-plate'], signals: [
     { id: 'input:iron-ore', label: 'Ingredient', item: 'iron-ore', group: 'inventory', unit: 'items', ticks: [0], values: [2] },
     { id: 'state', label: 'Machine state', group: 'state', unit: 'state', ticks: [0], values: ['item_ingredient_shortage'] },
@@ -11,48 +14,58 @@ const entity: TimelineEntity = { id: 'machine:1', type: 'machine', items: ['iron
     { id: 'craft', label: 'Craft progress', group: 'progress', unit: '%', ticks: [0], values: [30] },
 ] };
 const recording = { end_tick: 50 } as TimelineRecording;
-it('keeps displayed facts first and advanced facts in a collapsed disclosure', () => {
-    const html = renderToStaticMarkup(<TimelineTickInspector recording={recording} entity={entity} inspection={{ ...DEFAULT_INSPECTION, view: 'activity' }} tick={10} events={[]} connected={[]} onEntityChange={() => {}} />);
-    const disclosure = html.match(/<details[^>]*data-inspector-details[^>]*>/)?.[0];
-    expect(disclosure).toBeDefined();
-    expect(disclosure).not.toMatch(/\bopen(?:=|\s|>)/);
-    const [visible, advanced] = html.split(disclosure!);
-    expect(visible).toContain('Ingredient');
-    expect(visible).toContain('Waiting for ingredients');
-    expect(visible).toContain('Total by selected tick');
-    expect(visible).not.toContain('Output buffer');
-    expect(visible).not.toContain('Craft progress');
-    expect(advanced).toContain('More machine details');
-    expect(advanced).toContain('Output buffer');
-    expect(advanced).toContain('Craft progress');
-});
-it('promotes an enabled output-buffer signal from the disclosure to the first layer', () => {
-    const html = renderToStaticMarkup(<TimelineTickInspector recording={recording} entity={entity} inspection={{ ...DEFAULT_INSPECTION, view: 'activity', signals: ['state', 'inventory', 'transfers', 'buffers'] }} tick={10} events={[]} connected={[]} onEntityChange={() => {}} />);
-    const visible = html.split(/<details[^>]*data-inspector-details[^>]*>/)[0];
-    expect(visible).toContain('Output buffer');
-});
+type Props = Parameters<typeof TimelineTickInspector>[0];
+const inspect = ({ inspection, ...overrides }: Partial<Omit<Props, 'inspection'>> & { inspection?: Partial<TimelineInspection> } = {}) =>
+    show(<TimelineTickInspector recording={recording} entity={entity} tick={10} events={[]} connected={[]} onEntityChange={() => {}} {...overrides}
+        inspection={{ ...DEFAULT_INSPECTION, view: 'activity', ...inspection }} />);
+
+/** The facts listed in `scope`, as `term: value`, in their order */
+const facts = (scope: HTMLElement) => {
+    const values = within(scope).queryAllByRole('definition');
+    return within(scope).queryAllByRole('term').map((term, index) => `${term.textContent}: ${values[index].textContent}`);
+};
+const inspector = () => screen.getByRole('complementary', { name: 'Tick inspector' });
+
+it.each([
+    { when: 'buffers folded', signals: DEFAULT_INSPECTION.signals,
+        shown: ['Ingredient · iron-ore: 2 items', 'Machine state: Waiting for ingredients', 'Total by selected tick · iron-plate: 4 items'],
+        folded: ['Output buffer: 3 items', 'Craft progress: 30 %'] },
+    { when: 'buffers enabled', signals: [...DEFAULT_INSPECTION.signals, 'buffers'],
+        shown: ['Ingredient · iron-ore: 2 items', 'Machine state: Waiting for ingredients', 'Total by selected tick · iron-plate: 4 items', 'Output buffer: 3 items'],
+        folded: ['Craft progress: 30 %'] },
+] satisfies { when: string; signals: TimelineInspection['signals']; shown: string[]; folded: string[] }[])(
+    'keeps displayed facts first and advanced facts in a collapsed disclosure, promoting an enabled output buffer ($when)', ({ signals, shown, folded }) => {
+        inspect({ inspection: { signals } });
+        const disclosure = screen.getByRole('group');
+        expect(within(disclosure).getByText('More machine details')).toBeDefined();
+        expect((disclosure as HTMLDetailsElement).open).toBe(false);
+        expect(facts(disclosure)).toEqual(folded);
+        expect(facts(inspector())).toEqual([...shown, ...folded]);
+    });
+
 it('does not extrapolate facts or events beyond the recorded span', () => {
-    const html = renderToStaticMarkup(<TimelineTickInspector recording={recording} entity={entity} inspection={{ ...DEFAULT_INSPECTION, view: 'activity' }} tick={51} events={[]} connected={[]} onEntityChange={() => {}} />);
-    expect(html).toContain('outside its recorded span');
-    expect(html).not.toContain('Total by selected tick');
-    expect(html).not.toContain('Craft progress');
+    inspect({ tick: 51, events: [{ tick: 51, entity_id: entity.id, kind: 'produce', amount: 1, item: 'iron-plate' }] });
+    expect(screen.getByText('The selected tick is outside its recorded span.')).toBeDefined();
+    expect(facts(inspector())).toEqual([]);
+    expect(screen.queryByText('Events at this tick')).toBeNull();
+    expect(screen.queryByRole('group')).toBeNull();
 });
 
-it('shows belt context and all connected inserters instead of choosing the first route', () => {
-    const belt: TimelineEntity = { id: 'belt:3', type: 'belt', items: ['advanced-circuit'], signals: [] };
-    const connected: TimelineEntity[] = [7, 8].map(id => ({ id: `inserter:${id}`, type: 'inserter', items: ['advanced-circuit'], sink: belt.id, signals: [] }));
-    const html = renderToStaticMarkup(<TimelineTickInspector recording={recording} entity={belt} inspection={{ ...DEFAULT_INSPECTION, view: 'flow', entityId: belt.id, replayFocus: true }} tick={10} events={[]} connected={connected} onEntityChange={() => {}} />);
-    expect(html).toContain('Belt 3');
-    expect(html).toContain('All connected inserter routes are highlighted');
-    expect(html).toContain('Connected inserters');
-    expect(html).toContain('Inserter 7');
-    expect(html).toContain('Inserter 8');
-});
-
-it('does not mistake an unconnected belt for its own connected inserter', () => {
-    const belt: TimelineEntity = { id: 'belt:3', type: 'belt', items: [], signals: [] };
-    const html = renderToStaticMarkup(<TimelineTickInspector recording={recording} entity={belt} inspection={{ ...DEFAULT_INSPECTION, view: 'flow', entityId: belt.id, replayFocus: true }} tick={10} events={[]} connected={[belt]} onEntityChange={() => {}} />);
-    expect(html).toContain('No recorded inserter connections for this belt.');
-    expect(html).not.toContain('All connected inserter routes are highlighted');
-    expect(html).not.toContain('Connected inserters');
-});
+const belt: TimelineEntity = { id: 'belt:3', type: 'belt', items: ['advanced-circuit'], signals: [] };
+it.each([
+    { when: 'two inserters', connected: [7, 8].map(id => ({ id: `inserter:${id}`, type: 'inserter', items: ['advanced-circuit'], sink: belt.id, signals: [] })),
+        says: 'All connected inserter routes are highlighted. Choose an inserter to inspect its activity.', follows: ['Inserter 7', 'Inserter 8'], to: ['inserter:7', 'inserter:8'] },
+    { when: 'only itself', connected: [belt],
+        says: 'No recorded inserter connections for this belt.', follows: [], to: [] },
+] satisfies { when: string; connected: TimelineEntity[]; says: string; follows: string[]; to: string[] }[])(
+    'shows belt context and all connected inserters instead of choosing the first route, never the belt itself (connected: $when)', async ({ connected, says, follows, to }) => {
+        const onEntityChange = vi.fn();
+        const { user } = inspect({ entity: belt, inspection: { view: 'flow', entityId: belt.id, replayFocus: true }, connected, onEntityChange });
+        expect(screen.getByRole('heading', { name: 'Belt 3' })).toBeDefined();
+        expect(screen.getByText(says)).toBeDefined();
+        expect(screen.queryByText('Connected inserters') !== null).toBe(follows.length > 0);
+        const routes = screen.queryAllByRole('button');
+        expect(routes.map(route => route.textContent)).toEqual(follows);
+        for (const route of routes) await user.click(route);
+        expect(onEntityChange.mock.calls).toEqual(to.map(id => [id]));
+    });

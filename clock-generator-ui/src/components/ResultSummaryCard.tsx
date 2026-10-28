@@ -19,6 +19,7 @@ import {
 } from '../utils/clockSummary';
 import { RECOMMENDED_COPY, recommendationReason, type PickRule } from '../utils/recommendedClock';
 import { Panel } from './Panel';
+import { Disclosure } from './Disclosure';
 import { RecommendedChip } from './RecommendedChip';
 import type { GenerationAssumptions } from '../worker/types';
 import { REQUIRES_FACTORIO } from '../utils/installSteps';
@@ -218,8 +219,7 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
             {selected ? <ClockFacts {...props} selected={selected} nameRef={nameRef} /> : (
                 <Typography variant="body2" color="text.secondary">{CARD_COPY.makingFirst}</Typography>
             )}
-            <Box component="details" sx={{ mt: 1.5, '& > summary': { cursor: 'pointer', width: 'fit-content', typography: 'body2', color: 'text.secondary' } }}>
-                <Box component="summary">{CARD_COPY.detailsHeading}</Box>
+            <Disclosure summary={CARD_COPY.detailsHeading} sx={{ mt: 1.5 }}>
                 <Box sx={{ display: 'grid', gap: 1, mt: 1 }}>
                     {selected && <ClockExplanation {...props} selected={selected} />}
                     {/* Keep this action mounted when its run temporarily empties the clock list. */}
@@ -228,7 +228,7 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
                     )}
                     {showBeltAction && props.beltAction}
                 </Box>
-            </Box>
+            </Disclosure>
         </Panel>
     );
 }

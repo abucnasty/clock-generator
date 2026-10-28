@@ -29,122 +29,78 @@ const conditional = (rule_set: RuleSet, latched = false): EnableControlOverride 
     ...(latched ? { latch: { release: ruleSet(condition()) } } : {}),
 });
 
-/** Every rule the cases below build */
+/** Four conditions, two of them in a nested set */
+const nested = ruleSet(condition(), condition(), ruleSet(condition(), condition()));
+
+/** Each rule with the chip and the summary it reads as */
+const DESCRIBED: [string, EnableControlOverride, string, string][] = [
+    ['names ALWAYS as Always on', { mode: EnableControlMode.ALWAYS }, 'Enable: Always on', 'Always on'],
+    ['names NEVER as Never on', { mode: EnableControlMode.NEVER }, 'Enable: Never on', 'Never on'],
+    ['prints one CLOCKED range without a period', clocked([[0, 7]]), 'Clocked 0–7', 'Clocked 0–7 ticks'],
+    ['prints one CLOCKED range with its period', clocked([[1, 2]], 168), 'Clocked 1–2 of 168', 'Clocked 1–2 of 168 ticks'],
+    ['prints two ranges with the period, as the production science sample has them', clocked([[20, 45], [74, 89]], 112),
+        'Clocked 20–45, 74–89 of 112', 'Clocked 20–45, 74–89 of 112 ticks'],
+    ['prints two ranges without a period', clocked([[20, 45], [74, 89]]), 'Clocked 20–45, 74–89', 'Clocked 20–45, 74–89 ticks'],
+    ['shortens four ranges to the first two and a count, and keeps all four in the summary', clocked([[0, 100], [150, 250], [300, 400], [450, 550]]),
+        'Clocked 0–100, 150–250 +2 more', 'Clocked 0–100, 150–250, 300–400, 450–550 ticks'],
+    ['drops the period from the chip before it drops a range', clocked([[1000, 1450], [1740, 1890]], 2240),
+        'Clocked 1000–1450, 1740–1890', 'Clocked 1000–1450, 1740–1890 of 2240 ticks'],
+    ['keeps one range and a count when two do not fit', clocked([[1000, 1450], [1740, 1890], [2000, 2100]]),
+        'Clocked 1000–1450 +2 more', 'Clocked 1000–1450, 1740–1890, 2000–2100 ticks'],
+    ['prints a range that ends before it starts as stored', clocked([[7, 0]]), 'Clocked 7–0', 'Clocked 7–0 ticks'],
+    ['reads an empty range list as no wake windows', clocked([]), 'Clocked, no wake windows', 'Clocked, no wake windows'],
+    ['prints no period of 0', clocked([[0, 7]], 0), 'Clocked 0–7', 'Clocked 0–7 ticks'],
+    ['counts the condition of a CONDITIONAL rule', conditional(ruleSet(condition())), 'Conditional: 1 condition', 'Conditional: 1 condition'],
+    ['counts the conditions of a CONDITIONAL rule, nested ones included', conditional(nested), 'Conditional: 4 conditions', 'Conditional: 4 conditions'],
+    ['adds latched to a CONDITIONAL rule with a latch, without counting its release condition', conditional(nested, true),
+        'Conditional: 4 conditions, latched', 'Conditional: 4 conditions, latched'],
+    ['leaves latched off the chip, and keeps it in the summary, when the count is too long for both',
+        conditional(ruleSet(...Array.from({ length: 1000 }, condition)), true), 'Conditional: 1000 conditions', 'Conditional: 1000 conditions, latched'],
+    ['reads a rule set with no conditions as no conditions', conditional(ruleSet(ruleSet())), 'Conditional: no conditions', 'Conditional: no conditions'],
+];
+
+/** Rules too long for the chip in any shorter form, with their whole summary */
+const CUT: [string, EnableControlOverride, string][] = [
+    ['cuts the text with an ellipsis as a last resort, and keeps the summary whole', clocked([[1234567890, 12345678901234]]),
+        'Clocked 1234567890–12345678901234 ticks'],
+    ['cuts a rule of several ranges as a last resort when even one range and its count do not fit', clocked([[1234567890, 12345678901234], [1, 2]]),
+        'Clocked 1234567890–12345678901234, 1–2 ticks'],
+];
+
+/** Every rule the cases build */
 const ALL_CASES: (EnableControlOverride | undefined)[] = [
-    undefined,
-    { mode: EnableControlMode.AUTO },
-    { mode: EnableControlMode.ALWAYS },
-    { mode: EnableControlMode.NEVER },
-    clocked([[0, 7]]),
-    clocked([[1, 2]], 168),
-    clocked([[20, 45], [74, 89]], 112),
-    clocked([[20, 45], [74, 89]]),
-    clocked([[0, 100], [150, 250], [300, 400], [450, 550]]),
-    clocked([[1000, 1450], [1740, 1890]], 2240),
-    clocked([[1234567890, 12345678901234]]),
-    clocked([[1000, 1450], [1740, 1890], [2000, 2100]]),
-    clocked([[1234567890, 12345678901234], [1, 2]]),
-    clocked([[7, 0]]),
-    clocked([]),
-    clocked([[0, 7]], 0),
-    conditional(ruleSet(condition())),
-    conditional(ruleSet(condition(), condition(), ruleSet(condition(), condition()))),
-    conditional(ruleSet(condition(), condition(), ruleSet(condition(), condition())), true),
-    conditional(ruleSet(ruleSet())),
+    undefined, { mode: EnableControlMode.AUTO }, ...DESCRIBED.map(([, override]) => override), ...CUT.map(([, override]) => override),
 ];
 
 describe('describeEnableRule', () => {
     it('reads Auto, quietly, for no override and for AUTO; every other mode is not quiet', () => {
         for (const override of [undefined, { mode: EnableControlMode.AUTO } as const]) {
-            const description = describeEnableRule(override);
-            expect(description).toEqual({ mode: EnableControlMode.AUTO, chip: 'Enable: Auto', summary: 'Auto', quiet: true });
+            expect(describeEnableRule(override)).toEqual({ mode: EnableControlMode.AUTO, chip: 'Enable: Auto', summary: 'Auto', quiet: true });
         }
         for (const override of ALL_CASES.filter((o) => o && o.mode !== EnableControlMode.AUTO)) {
             expect(describeEnableRule(override).quiet).toBe(false);
         }
     });
 
-    it('names ALWAYS and NEVER as Always on and Never on', () => {
-        expect(describeEnableRule({ mode: EnableControlMode.ALWAYS })).toMatchObject({
-            mode: EnableControlMode.ALWAYS, chip: 'Enable: Always on', summary: 'Always on',
-        });
-        expect(describeEnableRule({ mode: EnableControlMode.NEVER })).toMatchObject({
-            mode: EnableControlMode.NEVER, chip: 'Enable: Never on', summary: 'Never on',
-        });
+    it.each(DESCRIBED)('%s', (_, override, chip, summary) => {
+        expect(describeEnableRule(override)).toMatchObject({ mode: override.mode, chip, summary });
     });
 
     it('says an ALWAYS was set by Exclude from LCM in the summary only, and only for ALWAYS', () => {
         expect(describeEnableRule({ mode: EnableControlMode.ALWAYS }, { forcedAlways: true })).toMatchObject({
             chip: 'Enable: Always on', summary: 'Always on (set by Exclude from LCM)',
         });
-        const clockedRule = clocked([[0, 7]]);
-        expect(describeEnableRule(clockedRule, { forcedAlways: true })).toEqual(describeEnableRule(clockedRule));
-        expect(describeEnableRule({ mode: EnableControlMode.AUTO }, { forcedAlways: true })).toEqual(describeEnableRule({ mode: EnableControlMode.AUTO }));
-        expect(describeEnableRule(undefined, { forcedAlways: true })).toEqual(describeEnableRule(undefined));
+        for (const override of ALL_CASES.filter((o) => o?.mode !== EnableControlMode.ALWAYS)) {
+            expect(describeEnableRule(override, { forcedAlways: true })).toEqual(describeEnableRule(override));
+        }
     });
 
-    it('prints one CLOCKED range without a period', () => {
-        expect(describeEnableRule(clocked([[0, 7]]))).toMatchObject({ chip: 'Clocked 0–7', summary: 'Clocked 0–7 ticks' });
-    });
-
-    it('prints one CLOCKED range with its period', () => {
-        expect(describeEnableRule(clocked([[1, 2]], 168))).toMatchObject({ chip: 'Clocked 1–2 of 168', summary: 'Clocked 1–2 of 168 ticks' });
-    });
-
-    it('prints two ranges with the period, as the production science sample has them', () => {
-        expect(describeEnableRule(clocked([[20, 45], [74, 89]], 112))).toMatchObject({
-            mode: EnableControlMode.CLOCKED,
-            chip: 'Clocked 20–45, 74–89 of 112',
-            summary: 'Clocked 20–45, 74–89 of 112 ticks',
-        });
-    });
-
-    it('prints two ranges without a period', () => {
-        expect(describeEnableRule(clocked([[20, 45], [74, 89]]))).toMatchObject({ chip: 'Clocked 20–45, 74–89', summary: 'Clocked 20–45, 74–89 ticks' });
-    });
-
-    it('shortens four ranges to the first two and a count, and keeps all four in the summary', () => {
-        const description = describeEnableRule(clocked([[0, 100], [150, 250], [300, 400], [450, 550]]));
-        expect(description.chip).toBe('Clocked 0–100, 150–250 +2 more');
-        expect(description.summary).toBe('Clocked 0–100, 150–250, 300–400, 450–550 ticks');
-        expect(description.summary.endsWith(' ticks')).toBe(true);
-    });
-
-    it('drops the period from the chip before it drops a range', () => {
-        expect(describeEnableRule(clocked([[1000, 1450], [1740, 1890]], 2240))).toMatchObject({
-            chip: 'Clocked 1000–1450, 1740–1890',
-            summary: 'Clocked 1000–1450, 1740–1890 of 2240 ticks',
-        });
-    });
-
-    it('keeps one range and a count when two do not fit', () => {
-        const description = describeEnableRule(clocked([[1000, 1450], [1740, 1890], [2000, 2100]]));
-        expect(description.chip).toBe('Clocked 1000–1450 +2 more');
-        expect(description.summary).toBe('Clocked 1000–1450, 1740–1890, 2000–2100 ticks');
-    });
-
-    it('cuts a rule of several ranges as a last resort when even one range and its count do not fit', () => {
-        const description = describeEnableRule(clocked([[1234567890, 12345678901234], [1, 2]]));
+    it.each(CUT)('%s', (_, override, summary) => {
+        const description = describeEnableRule(override);
         expect(description.chip).toHaveLength(ENABLE_CHIP_MAX_CHARS);
         expect(description.chip.startsWith('Clocked 1234567890–')).toBe(true);
         expect(description.chip.endsWith('…')).toBe(true);
-        expect(description.summary).toBe('Clocked 1234567890–12345678901234, 1–2 ticks');
-    });
-
-    it('prints a range that ends before it starts as stored', () => {
-        expect(describeEnableRule(clocked([[7, 0]]))).toMatchObject({ chip: 'Clocked 7–0', summary: 'Clocked 7–0 ticks' });
-    });
-
-    it('cuts the text with an ellipsis as a last resort, and keeps the summary whole', () => {
-        const description = describeEnableRule(clocked([[1234567890, 12345678901234]]));
-        expect(description.chip).toHaveLength(ENABLE_CHIP_MAX_CHARS);
-        expect(description.chip.endsWith('…')).toBe(true);
-        expect(description.summary).toBe('Clocked 1234567890–12345678901234 ticks');
-    });
-
-    it('reads an empty range list as no wake windows, and prints no period of 0', () => {
-        expect(describeEnableRule(clocked([]))).toMatchObject({ chip: 'Clocked, no wake windows', summary: 'Clocked, no wake windows' });
-        expect(describeEnableRule(clocked([[0, 7]], 0))).toMatchObject({ chip: 'Clocked 0–7', summary: 'Clocked 0–7 ticks' });
+        expect(description.summary).toBe(summary);
     });
 
     it('never makes a chip longer than the limit', () => {
@@ -152,30 +108,6 @@ describe('describeEnableRule', () => {
             const limit = override?.mode === EnableControlMode.CONDITIONAL ? CONDITIONAL_CHIP_MAX_CHARS : ENABLE_CHIP_MAX_CHARS;
             expect(describeEnableRule(override).chip.length).toBeLessThanOrEqual(limit);
         }
-    });
-
-    it('counts the conditions of a CONDITIONAL rule, nested ones included', () => {
-        expect(describeEnableRule(conditional(ruleSet(condition())))).toMatchObject({ chip: 'Conditional: 1 condition', summary: 'Conditional: 1 condition' });
-        const nested = ruleSet(condition(), condition(), ruleSet(condition(), condition()));
-        expect(describeEnableRule(conditional(nested))).toMatchObject({ chip: 'Conditional: 4 conditions', summary: 'Conditional: 4 conditions' });
-    });
-
-    it('adds latched to a CONDITIONAL rule with a latch, without counting its release condition', () => {
-        const nested = ruleSet(condition(), condition(), ruleSet(condition(), condition()));
-        expect(describeEnableRule(conditional(nested, true))).toMatchObject({
-            chip: 'Conditional: 4 conditions, latched', summary: 'Conditional: 4 conditions, latched',
-        });
-    });
-
-    it('leaves latched off the chip, and keeps it in the summary, when the count is too long for both', () => {
-        const many = ruleSet(...Array.from({ length: 1000 }, condition));
-        expect(describeEnableRule(conditional(many, true))).toMatchObject({
-            chip: 'Conditional: 1000 conditions', summary: 'Conditional: 1000 conditions, latched',
-        });
-    });
-
-    it('reads a rule set with no conditions as no conditions', () => {
-        expect(describeEnableRule(conditional(ruleSet(ruleSet())))).toMatchObject({ chip: 'Conditional: no conditions' });
     });
 });
 
@@ -196,12 +128,8 @@ describe('enableChipAriaLabel and enableChipTooltip', () => {
         expect(enableChipTooltip('inserter', describeEnableRule({ mode: EnableControlMode.ALWAYS }, { forcedAlways: true }))).toBe('Always on (set by Exclude from LCM)');
     });
 
-    it('explains Auto, for an inserter and for a drill', () => {
-        expect(enableChipTooltip('inserter', describeEnableRule(undefined))).toBe(
-            "Auto: the generator decides when this inserter runs. You don't need to change it. Click to set your own rule.",
-        );
-        expect(enableChipTooltip('drill', describeEnableRule(undefined))).toBe(
-            "Auto: the generator decides when this drill runs. You don't need to change it. Click to set your own rule.",
-        );
+    it.each(['inserter', 'drill'] as const)('explains Auto for the %s', (type) => {
+        expect(enableChipTooltip(type, describeEnableRule(undefined)))
+            .toBe(`Auto: the generator decides when this ${type} runs. You don't need to change it. Click to set your own rule.`);
     });
 });

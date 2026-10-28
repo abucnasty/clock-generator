@@ -12,6 +12,7 @@ const ruleSet = { operator: 'OR', rules: [] } as unknown as RuleSet;
 const release = { operator: 'AND', rules: [] } as unknown as RuleSet;
 
 const clocked: EnableControlOverride = { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }, { start: 20, end: 30 }], period_duration_ticks: 60 };
+const clockedWindows = [{ start: '0', end: '10' }, { start: '20', end: '30' }];
 const conditional: EnableControlOverride = { mode: 'CONDITIONAL', rule_set: ruleSet, latch: { release } };
 
 describe('enableControlDraftOf', () => {
@@ -27,13 +28,13 @@ describe('enableControlDraftOf', () => {
     });
 
     it('takes the fields of a stored rule', () => {
-        expect(enableControlDraftOf(clocked)).toMatchObject({ mode: 'CLOCKED', ranges: [{ start: '0', end: '10' }, { start: '20', end: '30' }], periodDuration: '60' });
+        expect(enableControlDraftOf(clocked)).toMatchObject({ mode: 'CLOCKED', ranges: clockedWindows, periodDuration: '60' });
         expect(enableControlDraftOf(conditional)).toMatchObject({ mode: 'CONDITIONAL', ruleSet, latchEnabled: true, releaseCondition: release });
     });
 
     const planned = { ranges: [{ start: 12, end: 20 }, { start: 80, end: 95 }], periodTicks: 264 };
 
-    it('starts the Clocked fields of a rule that is not Clocked from the clock\'s windows and period', () => {
+    it('starts the Clocked fields of a rule that is not Clocked from the clock\'s windows and period, keeping a stored Clocked rule\'s own', () => {
         for (const stored of [undefined, { mode: 'ALWAYS' } as const, conditional]) {
             expect(enableControlDraftOf(stored, planned)).toMatchObject({
                 mode: stored?.mode ?? 'AUTO',
@@ -41,10 +42,7 @@ describe('enableControlDraftOf', () => {
                 periodDuration: '264',
             });
         }
-    });
-
-    it('keeps a stored Clocked rule over the clock\'s windows', () => {
-        expect(enableControlDraftOf(clocked, planned)).toMatchObject({ ranges: [{ start: '0', end: '10' }, { start: '20', end: '30' }], periodDuration: '60' });
+        expect(enableControlDraftOf(clocked, planned)).toMatchObject({ ranges: clockedWindows, periodDuration: '60' });
     });
 });
 
@@ -96,8 +94,7 @@ describe('enableControlDraftChanged', () => {
         ['CLOCKED with an inverted range', { mode: 'CLOCKED', ranges: [{ start: 10, end: 0 }, { start: 20, end: 30 }] }],
         ['CONDITIONAL', conditional],
     ])('is false for an untouched draft of %s', (_label, stored) => {
-        const initial = enableControlDraftOf(stored);
-        expect(enableControlDraftChanged(enableControlDraftOf(stored), initial)).toBe(false);
+        expect(enableControlDraftChanged(enableControlDraftOf(stored), enableControlDraftOf(stored))).toBe(false);
     });
 
     it('is true after changing the mode, a range end, the rule set or the latch', () => {

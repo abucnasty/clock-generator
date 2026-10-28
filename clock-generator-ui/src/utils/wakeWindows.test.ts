@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { AsBuiltStabilityCheck, CompactEntityStateTransitions, FuelInserterPlan } from 'clock-generator/browser';
 import type { FuelViewData } from '../worker/types';
+import type { EntityOption } from './inserterOptions';
 import {
     axisTicks,
     barsToDraw,
@@ -16,8 +17,14 @@ import {
     tickAtFraction,
     wakeUpsCounted,
     windowLengthTicks,
+    type TickSpan,
     type WakeWindowSource,
 } from './wakeWindows';
+
+type Pair = [start: number, end: number];
+
+const spans = (...pairs: Pair[]): TickSpan[] => pairs.map(([start, end]) => ({ start, end }));
+const normalize = (period: number, ...pairs: Pair[]) => normalizeWindows(spans(...pairs), period);
 
 function entity(id: string, extra: Partial<CompactEntityStateTransitions> = {}): CompactEntityStateTransitions {
     const [type, number] = id.split(':');
@@ -67,11 +74,14 @@ function fuelView(inserterId: string): FuelViewData {
     return { plan: { period_ticks: 600, merged_clock_ticks: 1200, machines: [], inserters: [inserter as FuelInserterPlan] }, run: null };
 }
 
-function source(extra: Partial<WakeWindowSource> = {}): WakeWindowSource {
+type SourceFields = Partial<WakeWindowSource> & { entities?: (string | CompactEntityStateTransitions)[] };
+
+/** A clock of 600 ticks with only what a test gives; `entities` are the run's, by id or in full */
+function source({ entities = [], ...extra }: SourceFields = {}): WakeWindowSource {
     return {
         simulationDurationTicks: 600,
         clockWindows: {},
-        stateTransitionHistory: { reasons: [], total_duration_ticks: 600, entities: [] },
+        stateTransitionHistory: { reasons: [], total_duration_ticks: 600, entities: entities.map(one => typeof one === 'string' ? entity(one) : one) },
         asBuilt: null,
         fuelView: null,
         beltPickupSlackTicks: {},
@@ -79,102 +89,62 @@ function source(extra: Partial<WakeWindowSource> = {}): WakeWindowSource {
     };
 }
 
+const rowsOf = (fields?: SourceFields, options?: EntityOption[]) => buildWakeWindowRows(source(fields), options);
+
 describe('normalizeWindows', () => {
-    it('sorts windows', () => {
-        expect(normalizeWindows([{ start: 50, end: 59 }, { start: 0, end: 9 }], 600).map(w => w.start)).toEqual([0, 50]);
-    });
+    const shape = (period: number, ...pairs: Pair[]) => normalize(period, ...pairs).map(w => [w.start, w.end, w.length, w.wraps]);
 
-    it('merges overlapping and touching windows', () => {
-        const touching = normalizeWindows([{ start: 0, end: 9 }, { start: 10, end: 19 }], 600);
-        expect(touching).toHaveLength(1);
-        expect(touching[0]).toMatchObject({ start: 0, end: 19, length: 20, wraps: false });
-        const overlapping = normalizeWindows([{ start: 0, end: 15 }, { start: 10, end: 19 }, { start: 30, end: 31 }], 600);
-        expect(overlapping.map(w => [w.start, w.end])).toEqual([[0, 19], [30, 31]]);
-    });
-
-    it('clamps a window that runs past the period', () => {
-        expect(normalizeWindows([{ start: 590, end: 640 }], 600)[0]).toMatchObject({ start: 590, end: 599, length: 10 });
-    });
-
-    it('drops an inverted window', () => {
-        expect(normalizeWindows([{ start: 20, end: 10 }, { start: 700, end: 710 }], 600)).toEqual([]);
-    });
-
-    it('leaves an empty list empty', () => {
-        expect(normalizeWindows([], 600)).toEqual([]);
+    it.each<[string, number, Pair[], [number, number, number, boolean][]]>([
+        ['sorts windows', 600, [[50, 59], [0, 9]], [[0, 9, 10, false], [50, 59, 10, false]]],
+        ['merges touching windows', 600, [[0, 9], [10, 19]], [[0, 19, 20, false]]],
+        ['merges overlapping windows', 600, [[0, 15], [10, 19], [30, 31]], [[0, 19, 20, false], [30, 31, 2, false]]],
+        ['clamps a window that runs past the period', 600, [[590, 640]], [[590, 599, 10, false]]],
+        ['drops an inverted window', 600, [[20, 10], [700, 710]], []],
+        ['leaves an empty list empty', 600, [], []],
+        ['does not wrap a lone window at tick 0', 100, [[0, 4]], [[0, 4, 5, false]]],
+        ['keeps the wrapped window last, after the others', 100, [[0, 4], [40, 49], [96, 99]], [[40, 49, 10, false], [96, 4, 9, true]]],
+    ])('%s', (_name, period, raw, windows) => {
+        expect(shape(period, ...raw)).toEqual(windows);
     });
 
     it('joins a window that wraps past the end of the period into one with two segments', () => {
-        const windows = normalizeWindows([{ start: 0, end: 4 }, { start: 96, end: 99 }], 100);
-        expect(windows).toHaveLength(1);
-        expect(windows[0]).toEqual({
-            start: 96,
-            end: 4,
-            length: 9,
-            segments: [{ start: 96, end: 99 }, { start: 0, end: 4 }],
-            wraps: true,
-            slackTicks: 0,
-        });
-    });
-
-    it('keeps the wrapped window last, after the others', () => {
-        const windows = normalizeWindows([{ start: 0, end: 4 }, { start: 40, end: 49 }, { start: 96, end: 99 }], 100);
-        expect(windows.map(w => [w.start, w.end, w.wraps])).toEqual([[40, 49, false], [96, 4, true]]);
-    });
-
-    it('does not wrap a lone window at tick 0', () => {
-        expect(normalizeWindows([{ start: 0, end: 4 }], 100)[0].wraps).toBe(false);
+        expect(normalize(100, [0, 4], [96, 99])).toEqual([{ start: 96, end: 4, length: 9, segments: spans([96, 99], [0, 4]), wraps: true, slackTicks: 0 }]);
     });
 
     it('takes the last tick of a fractional period as its whole part', () => {
-        expect(lastTickOf(550.957)).toBe(550);
-        expect(lastTickOf(600)).toBe(599);
-        const windows = normalizeWindows([{ start: 540, end: 550.957 }, { start: 0, end: 3 }], 550.957);
-        expect(windows).toHaveLength(1);
-        expect(windows[0]).toMatchObject({ start: 540, end: 3, length: 15, wraps: true });
+        expect([lastTickOf(550.957), lastTickOf(600)]).toEqual([550, 599]);
+        expect(shape(550.957, [540, 550.957], [0, 3])).toEqual([[540, 3, 15, true]]);
     });
 });
 
 describe('windowLengthTicks', () => {
     it('counts both ends of a window', () => {
-        expect(windowLengthTicks({ segments: [{ start: 212, end: 240 }] })).toBe(29);
-        expect(windowLengthTicks({ segments: [{ start: 5, end: 5 }] })).toBe(1);
-        expect(windowLengthTicks({ segments: [{ start: 96, end: 99 }, { start: 0, end: 4 }] })).toBe(9);
+        expect(windowLengthTicks({ segments: spans([212, 240]) })).toBe(29);
+        expect(windowLengthTicks({ segments: spans([5, 5]) })).toBe(1);
+        expect(windowLengthTicks({ segments: spans([96, 99], [0, 4]) })).toBe(9);
     });
 });
 
 describe('coverage', () => {
-    it('is 1 for a window over the whole period', () => {
-        expect(coverage(normalizeWindows([{ start: 0, end: 599 }], 600), 600)).toBe(1);
-    });
-
-    it('adds the windows up', () => {
-        expect(coverage(normalizeWindows([{ start: 0, end: 28 }, { start: 212, end: 240 }], 600), 600)).toBeCloseTo(58 / 600);
-    });
-
-    it('counts a wrapped window once', () => {
-        expect(coverage(normalizeWindows([{ start: 0, end: 4 }, { start: 96, end: 99 }], 100), 100)).toBeCloseTo(0.09);
-    });
-
-    it('uses the fractional period', () => {
-        const windows = normalizeWindows([{ start: 0, end: 99 }], 550.957);
-        expect(windows[0].length).toBe(100);
-        expect(coverage(windows, 550.957)).toBeCloseTo(100 / 550.957);
-        expect(coverage(normalizeWindows([{ start: 0, end: 550.957 }], 550.957), 550.957)).toBe(1);
+    it.each<[string, number, Pair[], number]>([
+        ['is 1 for a window over the whole period', 600, [[0, 599]], 1],
+        ['adds the windows up', 600, [[0, 28], [212, 240]], 58 / 600],
+        ['counts a wrapped window once', 100, [[0, 4], [96, 99]], 9 / 100],
+        ['uses the fractional period', 550.957, [[0, 99]], 100 / 550.957],
+        ['is at most 1 over a fractional period', 550.957, [[0, 550.957]], 1],
+    ])('%s', (_name, period, raw, share) => {
+        expect(coverage(normalize(period, ...raw), period)).toBe(share);
     });
 });
 
 describe('drawnSpans', () => {
     it('puts the slack at the end of a window', () => {
-        const [window] = normalizeWindows([{ start: 10, end: 19 }], 100);
-        expect(drawnSpans({ ...window, slackTicks: 4 })).toEqual([
-            { start: 10, end: 15, slack: false },
-            { start: 16, end: 19, slack: true },
-        ]);
+        const [window] = normalize(100, [10, 19]);
+        expect(drawnSpans({ ...window, slackTicks: 4 })).toEqual([{ start: 10, end: 15, slack: false }, { start: 16, end: 19, slack: true }]);
     });
 
     it('puts the slack of a wrapped window in its part from tick 0', () => {
-        const [window] = normalizeWindows([{ start: 0, end: 1 }, { start: 96, end: 99 }], 100);
+        const [window] = normalize(100, [0, 1], [96, 99]);
         expect(drawnSpans({ ...window, slackTicks: 3 })).toEqual([
             { start: 96, end: 98, slack: false },
             { start: 99, end: 99, slack: true },
@@ -185,14 +155,13 @@ describe('drawnSpans', () => {
 
 describe('barsToDraw', () => {
     it('draws each segment of a window as a bar, the slack in it', () => {
-        const windows = normalizeWindows([{ start: 0, end: 1 }, { start: 10, end: 19 }, { start: 96, end: 99 }], 100)
-            .map(window => ({ ...window, slackTicks: 2 }));
+        const windows = normalize(100, [0, 1], [10, 19], [96, 99]).map(window => ({ ...window, slackTicks: 2 }));
         expect(barsToDraw(windows, 0, null).map(bar => [bar.windowIndex, bar.start, bar.end, bar.spans.map(span => span.slack)]))
             .toEqual([[1, 0, 1, [true]], [0, 10, 19, [false, true]], [1, 96, 99, [false]]]);
     });
 
     it('merges windows under a pixel wide that lie within a pixel of each other, but never the selected one', () => {
-        const windows = normalizeWindows([{ start: 0, end: 0 }, { start: 2, end: 2 }, { start: 4, end: 4 }, { start: 50, end: 50 }], 1000);
+        const windows = normalize(1000, [0, 0], [2, 2], [4, 4], [50, 50]);
         const bars = barsToDraw(windows, 5, null);
         expect(bars.map(bar => [bar.windowIndex, bar.merged, bar.start, bar.end])).toEqual([[0, true, 0, 4], [3, false, 50, 50]]);
         expect(bars[0].spans).toEqual([{ start: 0, end: 4, slack: false }]);
@@ -203,79 +172,54 @@ describe('barsToDraw', () => {
 
 describe('buildWakeWindowRows', () => {
     it('orders inserters then drills, by number', () => {
-        const rows = buildWakeWindowRows(source({
-            stateTransitionHistory: { reasons: [],
-                total_duration_ticks: 600,
-                entities: [entity('drill:1'), entity('inserter:10'), entity('machine:1'), entity('inserter:2')],
-            },
-        }));
-        expect(rows.map(row => row.id)).toEqual(['inserter:2', 'inserter:10', 'drill:1']);
-        expect(rows.map(row => row.label)).toEqual(['Inserter 2', 'Inserter 10', 'Drill 1']);
+        const rows = rowsOf({ entities: ['drill:1', 'inserter:10', 'machine:1', 'inserter:2'] });
+        expect(rows.map(row => [row.id, row.label])).toEqual([['inserter:2', 'Inserter 2'], ['inserter:10', 'Inserter 10'], ['drill:1', 'Drill 1']]);
     });
 
     it('says what a row moves, between what, in the names every view uses', () => {
-        const [inserter, drill] = buildWakeWindowRows(source({
-            stateTransitionHistory: { reasons: [],
-                total_duration_ticks: 600,
-                entities: [
-                    entity('inserter:3', {
-                        items: ['iron-plate'],
-                        source: { entity_id: 'belt:1', entity_type: 'belt', label: 'Belt 1' },
-                        sink: { entity_id: 'machine:2', entity_type: 'machine', label: 'Machine 2 (iron-gear-wheel)' },
-                    }),
-                    entity('drill:1', {
-                        items: ['iron-ore'],
-                        sink: { entity_id: 'furnace:4', entity_type: 'furnace', label: 'Machine 4 (iron-plate)' },
-                    }),
-                ],
-            },
-        }), [
+        const [inserter, drill] = rowsOf({
+            entities: [
+                entity('inserter:3', {
+                    items: ['iron-plate'],
+                    source: { entity_id: 'belt:1', entity_type: 'belt', label: 'Belt 1' },
+                    sink: { entity_id: 'machine:2', entity_type: 'machine', label: 'Machine 2 (iron-gear-wheel)' },
+                }),
+                entity('drill:1', { items: ['iron-ore'], sink: { entity_id: 'furnace:4', entity_type: 'furnace', label: 'Machine 4 (iron-plate)' } }),
+            ],
+        }, [
             { type: 'belt', id: 1, label: 'Belt 1', icon: 'transport-belt' },
             { type: 'machine', id: 2, label: 'Machine 2', icon: 'assembling-machine-3', sublabel: 'Iron gear wheel' },
             { type: 'machine', id: 4, label: 'Machine 4', icon: 'electric-furnace', sublabel: 'Iron plate' },
         ]);
-        expect(inserter.items).toEqual(['iron-plate']);
-        expect(inserter.route).toBe('Belt\u00a01 to Machine\u00a02');
-        expect(drill.items).toEqual(['iron-ore']);
-        expect(drill.route).toBe('into Machine\u00a04');
-        expect(inserter.source?.id).toBe(1);
-        expect(inserter.sink?.sublabel).toBe('Iron gear wheel');
+        // each end's word and number stay together when the row wraps
+        expect(inserter).toMatchObject({ items: ['iron-plate'], route: 'Belt\u00a01 to Machine\u00a02', source: { id: 1 }, sink: { sublabel: 'Iron gear wheel' } });
+        expect(drill).toMatchObject({ items: ['iron-ore'], route: 'into Machine\u00a04', sink: { sublabel: 'Iron plate' } });
         expect(drill.source).toBeUndefined();
-        expect(drill.sink?.sublabel).toBe('Iron plate');
     });
 
     it('tells the modes apart', () => {
-        const rows = buildWakeWindowRows(source({
-            clockWindows: { 'inserter:1': [{ start: 0, end: 9 }], 'inserter:2': [] },
-            stateTransitionHistory: { reasons: [],
-                total_duration_ticks: 600,
-                entities: [entity('inserter:1'), entity('inserter:2'), entity('inserter:3'), entity('inserter:4'), entity('drill:1')],
-            },
+        const rows = rowsOf({
+            clockWindows: { 'inserter:1': spans([0, 9]), 'inserter:2': [] },
+            entities: ['inserter:1', 'inserter:2', 'inserter:3', 'inserter:4', 'drill:1'],
             fuelView: fuelView('inserter:4'),
-        }));
-        expect(rows.map(row => [row.id, row.mode])).toEqual([
-            ['inserter:1', 'windows'],
-            ['inserter:2', 'never'],
-            ['inserter:3', 'always-on'],
-            ['inserter:4', 'own-clock'],
-            ['drill:1', 'always-on'],
+        });
+        expect(rows.map(row => [row.id, row.mode, row.onShare])).toEqual([
+            ['inserter:1', 'windows', 10 / 600],
+            ['inserter:2', 'never', 0],
+            ['inserter:3', 'always-on', 1],
+            ['inserter:4', 'own-clock', 6 / 400],
+            ['drill:1', 'always-on', 1],
         ]);
         expect(rows[3].ownClock).toEqual({ windowTicks: 6, everyTicks: 400, perMinute: 9, item: 'coal' });
-        expect(rows[3].onShare).toBeCloseTo(6 / 400);
-        expect(rows[2].onShare).toBe(1);
-        expect(rows[1].onShare).toBe(0);
         expect(rows[0].onTicks).toBe(10);
     });
 
     it('carries the engine\'s reason on a row the clock leaves always on, and on no other', () => {
-        const rows = buildWakeWindowRows(source({
-            clockWindows: { 'inserter:1': [{ start: 0, end: 9 }] },
+        const rows = rowsOf({
+            clockWindows: { 'inserter:1': spans([0, 9]) },
             alwaysOnReasons: { 'inserter:2': { kind: 'busy', period_ticks: 24 }, 'inserter:1': { kind: 'loop' } },
-            stateTransitionHistory: { reasons: [],
-                total_duration_ticks: 600,
-                entities: [entity('inserter:1'), entity('inserter:2'), entity('inserter:3')],
-            },
-        }));
+            entities: ['inserter:1', 'inserter:2', 'inserter:3'],
+        });
         expect(rows.map(row => [row.id, row.mode, row.alwaysOnReason])).toEqual([
             ['inserter:1', 'windows', undefined],
             ['inserter:2', 'always-on', { kind: 'busy', period_ticks: 24 }],
@@ -284,97 +228,72 @@ describe('buildWakeWindowRows', () => {
     });
 
     it('keeps a fuel inserter on the period clock when it has windows', () => {
-        const rows = buildWakeWindowRows(source({ clockWindows: { 'inserter:4': [{ start: 0, end: 5 }] }, fuelView: fuelView('inserter:4') }));
-        expect(rows[0].mode).toBe('windows');
-        expect(rows[0].ownClock).toBeUndefined();
+        const [row] = rowsOf({ clockWindows: { 'inserter:4': spans([0, 5]) }, fuelView: fuelView('inserter:4') });
+        expect(row.mode).toBe('windows');
+        expect(row.ownClock).toBeUndefined();
     });
 
     it('has a row for an id only the wake-ups or only the windows know', () => {
-        const rows = buildWakeWindowRows(source({
-            clockWindows: { 'inserter:5': [{ start: 0, end: 9 }], 'drill:2': [{ start: 100, end: 120 }] },
-            asBuilt: asBuilt({ 'inserter:6': 3 }),
-        }));
+        const rows = rowsOf({ clockWindows: { 'inserter:5': spans([0, 9]), 'drill:2': spans([100, 120]) }, asBuilt: asBuilt({ 'inserter:6': 3 }) });
         expect(rows.map(row => row.id)).toEqual(['inserter:5', 'inserter:6', 'drill:2']);
-        expect(rows[0].items).toEqual([]);
-        expect(rows[0].route).toBe('');
+        expect(rows[0]).toMatchObject({ items: [], route: '' });
     });
 
     it('takes the wake-ups by id, and has none for a drill or a clock without a count', () => {
-        const clockWindows = { 'inserter:1': [{ start: 0, end: 9 }], 'inserter:2': [{ start: 20, end: 29 }], 'drill:1': [{ start: 0, end: 9 }] };
-        const counted = buildWakeWindowRows(source({ clockWindows, asBuilt: asBuilt({ 'inserter:1': 12.5, 'inserter:2': 3, 'drill:1': 99 }) }));
-        expect(counted.map(row => row.wakeUpsPerMinute)).toEqual([12.5, 3, null]);
-        const noCheck = buildWakeWindowRows(source({ clockWindows, asBuilt: null }));
-        expect(noCheck.map(row => row.wakeUpsPerMinute)).toEqual([null, null, null]);
-        const noLongRun = buildWakeWindowRows(source({ clockWindows, asBuilt: asBuilt(null) }));
-        expect(noLongRun.map(row => row.wakeUpsPerMinute)).toEqual([null, null, null]);
+        const clockWindows = { 'inserter:1': spans([0, 9]), 'inserter:2': spans([20, 29]), 'drill:1': spans([0, 9]) };
+        const wakeUps = (check: AsBuiltStabilityCheck | null) => rowsOf({ clockWindows, asBuilt: check }).map(row => row.wakeUpsPerMinute);
+        expect(wakeUps(asBuilt({ 'inserter:1': 12.5, 'inserter:2': 3, 'drill:1': 99 }))).toEqual([12.5, 3, null]);
+        expect(wakeUps(null)).toEqual([null, null, null]);
+        expect(wakeUps(asBuilt(null))).toEqual([null, null, null]);
     });
 
     it('caps the belt slack at the window, and has none in a fractional period or for an inserter without it', () => {
-        const clockWindows = { 'inserter:1': [{ start: 0, end: 9 }, { start: 100, end: 101 }], 'inserter:2': [{ start: 0, end: 9 }] };
-        const rows = buildWakeWindowRows(source({ clockWindows, beltPickupSlackTicks: { 'inserter:1': 4 } }));
-        expect(rows[0].windows.map(w => w.slackTicks)).toEqual([4, 2]);
-        expect(rows[1].windows.map(w => w.slackTicks)).toEqual([0]);
-        const fractional = buildWakeWindowRows(source({ clockWindows, beltPickupSlackTicks: { 'inserter:1': 4 }, simulationDurationTicks: 550.957 }));
-        expect(fractional[0].windows.map(w => w.slackTicks)).toEqual([0, 0]);
+        const clockWindows = { 'inserter:1': spans([0, 9], [100, 101]), 'inserter:2': spans([0, 9]) };
+        const slack = (simulationDurationTicks: number) => rowsOf({ clockWindows, beltPickupSlackTicks: { 'inserter:1': 4 }, simulationDurationTicks })
+            .map(row => row.windows.map(w => w.slackTicks));
+        expect(slack(600)).toEqual([[4, 2], [0]]);
+        expect(slack(550.957)).toEqual([[0, 0], [0]]);
     });
 });
 
 describe('sumWakeUps and wakeUpsCounted', () => {
     it('adds the rows up to the clock figure', () => {
         const check = asBuilt({ 'inserter:1': 12.25, 'inserter:2': 3.5, 'inserter:3': 0 });
-        const rows = buildWakeWindowRows(source({
-            clockWindows: { 'inserter:1': [{ start: 0, end: 9 }], 'drill:1': [{ start: 0, end: 9 }] },
-            asBuilt: check,
-        }));
+        const rows = rowsOf({ clockWindows: { 'inserter:1': spans([0, 9]), 'drill:1': spans([0, 9]) }, asBuilt: check });
         expect(sumWakeUps(rows)).toBeCloseTo(check.wake_ups!.wake_ups_per_minute);
         expect(wakeUpsCounted({ asBuilt: check })).toBe(true);
     });
 
     it('is null when an inserter has no figure', () => {
-        const rows = buildWakeWindowRows(source({
-            clockWindows: { 'inserter:1': [{ start: 0, end: 9 }], 'inserter:2': [{ start: 0, end: 9 }] },
-            asBuilt: asBuilt({ 'inserter:1': 4 }),
-        }));
+        const rows = rowsOf({ clockWindows: { 'inserter:1': spans([0, 9]), 'inserter:2': spans([0, 9]) }, asBuilt: asBuilt({ 'inserter:1': 4 }) });
         expect(sumWakeUps(rows)).toBeNull();
         expect(wakeUpsCounted({ asBuilt: asBuilt(null) })).toBe(false);
         expect(wakeUpsCounted({ asBuilt: null })).toBe(false);
     });
 
     it('finds the inserter woken most', () => {
-        const rows = buildWakeWindowRows(source({ asBuilt: asBuilt({ 'inserter:1': 2, 'inserter:2': 7, 'inserter:3': 7 }) }));
-        expect(mostWokenRowId(rows)).toBe('inserter:2');
-        expect(mostWokenRowId(buildWakeWindowRows(source({ asBuilt: asBuilt({ 'inserter:1': 0 }) })))).toBeNull();
+        expect(mostWokenRowId(rowsOf({ asBuilt: asBuilt({ 'inserter:1': 2, 'inserter:2': 7, 'inserter:3': 7 }) }))).toBe('inserter:2');
+        expect(mostWokenRowId(rowsOf({ asBuilt: asBuilt({ 'inserter:1': 0 }) }))).toBeNull();
     });
 });
 
 describe('axisTicks', () => {
-    const niceStep = (step: number) => {
-        const power = 10 ** Math.floor(Math.log10(step));
-        return [1, 2, 5].includes(Math.round(step / power));
-    };
-
-    it.each([[60, 4], [168, 4], [2240, 6], [550.957, 6], [1, 4]])('marks a period of %s with at most %s marks at a nice step', (period, maxMarks) => {
-        const marks = axisTicks(period, maxMarks);
-        expect(marks[0]).toBe(0);
-        expect(marks.length).toBeLessThanOrEqual(maxMarks);
-        expect(marks.every(mark => mark < period)).toBe(true);
-        if (marks.length > 1) {
-            const step = marks[1] - marks[0];
-            expect(niceStep(step)).toBe(true);
-            expect(marks.every((mark, index) => mark === index * step)).toBe(true);
-        }
-    });
-
-    it('picks the finest step that fits', () => {
-        expect(axisTicks(600, 10)).toEqual([0, 100, 200, 300, 400, 500]);
-        expect(axisTicks(600, 6)).toEqual([0, 100, 200, 300, 400, 500]);
-        expect(axisTicks(60, 10)).toEqual([0, 10, 20, 30, 40, 50]);
-        expect(axisTicks(1, 6)).toEqual([0]);
+    it.each([
+        [60, 4, [0, 20, 40]],
+        [168, 4, [0, 50, 100, 150]],
+        [2240, 6, [0, 500, 1000, 1500, 2000]],
+        [550.957, 6, [0, 100, 200, 300, 400, 500]],
+        [600, 6, [0, 100, 200, 300, 400, 500]],
+        [600, 10, [0, 100, 200, 300, 400, 500]],
+        [60, 10, [0, 10, 20, 30, 40, 50]],
+        [1, 6, [0]],
+    ])('marks a period of %s with at most %s marks, at the finest step of 1, 2 or 5 that fits', (period, maxMarks, marks) => {
+        expect(axisTicks(period, maxMarks)).toEqual(marks);
     });
 });
 
 describe('pointer and keys', () => {
-    const windows = normalizeWindows([{ start: 10, end: 19 }, { start: 50, end: 52 }], 100);
+    const windows = normalize(100, [10, 19], [50, 52]);
 
     it('clamps the tick under a point to the period', () => {
         expect(tickAtFraction(-0.5, 100)).toBe(0);

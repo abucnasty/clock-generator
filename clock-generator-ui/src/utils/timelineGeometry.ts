@@ -28,3 +28,18 @@ export function snapSpan(span: MarkSpan, ratio: number): { x: number; width: num
     const right = Math.round((span.x + span.width) * ratio) / ratio;
     return { x: left, width: Math.max(right - left, MIN_MARK_PX) };
 }
+
+/**
+ * Sizes `canvas` for drawing `width` × `height` CSS pixels sharply on this screen, at most `maxRatio` device pixels to
+ * one, cleared, with the context drawing in CSS pixels. Null when it cannot be drawn on yet (not measured, no context).
+ */
+export function paintableCanvas(canvas: HTMLCanvasElement | null, width: number, height: number, maxRatio = Infinity) {
+    const context = canvas?.getContext('2d');
+    if (!canvas || !context || width <= 0) return null;
+    const ratio = Math.min(maxRatio, window.devicePixelRatio || 1);
+    canvas.width = width * ratio;
+    canvas.height = height * ratio;
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    context.clearRect(0, 0, width, height);
+    return { context, ratio };
+}

@@ -26,7 +26,7 @@ export function entityLabelIn(chests: readonly { id: number; type?: ChestType }[
     return chest ? chestLabel(chest) : entityLabel(kind, id);
 }
 
-/** The accessible name of an entity's delete button, "Delete Inserter 3" */
-export function deleteButtonLabel(kind: LabelKind, id: number): string {
-    return `Delete ${entityLabel(kind, id)}`;
+/** Where a row's Entity details button goes: `EntitySettings` puts it there, next to the row's other actions */
+export function settingsSlotId(kind: LabelKind, id: number): string {
+    return `settings-actions-${kind}-${id}`;
 }

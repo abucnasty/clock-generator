@@ -6,11 +6,6 @@ import {
     Box,
     Button,
     Collapse,
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableRow,
     Typography,
 } from '@mui/material';
 import { useId, type ReactNode } from 'react';
@@ -19,7 +14,7 @@ import type { ClockInsight } from 'clock-generator/browser';
 import { useGameNames } from '../hooks/useGameNames';
 import { GameName } from './GameName';
 import { Panel } from './Panel';
-import { ScrollX } from './ScrollX';
+import { DataTable } from './DataTable';
 import { ExactTicks, SwingComparison } from './SwingComparison';
 
 /** Every string of the panel that is not the engine's */
@@ -108,26 +103,8 @@ function InsightTable({ table, title }: { table: NonNullable<ClockInsight['table
         return Object.hasOwn(names.item, cell) ? <GameName id={cell} /> : nameIdsIn(cell);
     };
     return (
-        <ScrollX label={`${title} table`} sx={{ mt: 1 }}>
-            <Table size="small">
-                <TableHead>
-                    <TableRow>
-                        {table.columns.map((column, index) => (
-                            <TableCell key={column} align={numeric[index] ? 'right' : 'left'}>{column}</TableCell>
-                        ))}
-                    </TableRow>
-                </TableHead>
-                <TableBody>
-                    {table.rows.map((row, index) => (
-                        <TableRow key={index}>
-                            {row.map((cell, column) => (
-                                <TableCell key={column} align={numeric[column] ? 'right' : 'left'}>{cellOf(cell, table.columns[column])}</TableCell>
-                            ))}
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
-        </ScrollX>
+        <DataTable label={`${title} table`} sx={{ mt: 1 }} rows={table.rows} rowKey={(_, index) => index}
+            columns={table.columns.map((column, index) => ({ header: column, align: numeric[index] ? 'right' as const : 'left' as const, cell: (row: string[]) => cellOf(row[index], column) }))} />
     );
 }
 

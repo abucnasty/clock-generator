@@ -1,7 +1,9 @@
+// @vitest-environment happy-dom
+import { screen, within } from '@testing-library/react';
 import { expect, it } from 'vitest';
-import { renderToStaticMarkup } from 'react-dom/server';
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
 import agricultureConfig from '../../../clock-generator/resources/config-samples/science/agriculture-science/agriculture-science.json?raw';
+import { show } from '../test/fixtures';
 import { DEFAULT_INSPECTION } from '../utils/timelineInspection';
 import { flowReplayIndex, flowReplaySnapshot } from '../utils/flowReplay';
 import { FlowReplay } from './FlowReplay';
@@ -14,18 +16,20 @@ it('renders replay controls using an agricultural build with recorded fuel and m
     const machine = recording.entities.find(entity => entity.recipe === 'agricultural-science-pack')!;
     const snapshot = flowReplaySnapshot(flowReplayIndex(recording), machine.id, 10);
     expect(snapshot.inventory.some(value => value.unit === 'MJ' && Number(value.value) > 0)).toBe(true);
-    const html = renderToStaticMarkup(<FlowReplay config={config} recording={recording} tick={10} inspection={{ ...DEFAULT_INSPECTION, view: 'flow' }} cycleTicks={96}
+    show(<FlowReplay config={config} recording={recording} tick={10} inspection={{ ...DEFAULT_INSPECTION, view: 'flow' }} cycleTicks={96}
         onTick={() => {}} onChange={() => {}} onInspectActivity={() => {}} />);
-    expect(html).toContain('Flow replay legend');
-    expect(html).toContain('Selected or hovered route');
-    expect(html).toContain('Transfer at this tick · item and quantity');
-    expect(html).toContain('Selected entity outline');
-    expect(html).toContain('Recent activity · no quantity');
-    expect(html).toContain('Transfer scope');
-    expect(html).not.toContain('Highlights cover ticks');
-    expect(html.indexOf('aria-label="Connection legend"')).toBeLessThan(html.indexOf('Entity states'));
-    expect(html).toContain('Previous transfer');
-    expect(html).toContain('Play one crafting cycle');
-    expect(html).toContain('not physical item positions');
-    expect(html).not.toContain('Add Entity');
+    const connections = screen.getByRole('list', { name: 'Connection legend' });
+    expect(within(connections).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Selected or hovered route',
+        'Transfer at this tick · item and quantity', 'Recent activity · no quantity', 'Selected entity outline']);
+    // the routes' legend comes before the states'
+    expect(connections.compareDocumentPosition(screen.getByText('Entity states')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole('list', { name: 'Flow replay legend' })).toBeDefined();
+    expect(screen.getByRole('combobox', { name: 'Transfer scope' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Previous transfer' })).toBeDefined();
+    expect(screen.getByRole('checkbox', { name: 'Play one crafting cycle' })).toBeDefined();
+    expect(screen.getByText(/Belts show routes, not physical item positions\.$/)).toBeDefined();
+    expect(screen.queryByText(/Highlights cover ticks/)).toBeNull();
+    // a replay, not an editor
+    expect(screen.queryByRole('button', { name: /Add Entity/i })).toBeNull();
+    expect(screen.queryByText(/Add Entity/)).toBeNull();
 });

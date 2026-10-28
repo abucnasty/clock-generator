@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { COPIES_DECIMAL_ERROR } from 'clock-generator/light';
 import { copiesProblem } from '../utils/copiesProblem';
-import { readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
+import { readConfigFile, readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
 import { ConfigSchema } from 'clock-generator/browser';
-import { readConfigFile } from '../hooks/usePersistedConfigForm';
+import { inserter } from '../test/fixtures';
 import { configToFormData, formDataToConfig } from '../utils/configForm/configMapping';
 import * as edits from '../utils/configForm/edits';
-import { createDefaultConfig } from '../utils/configForm/formData';
+import { createDefaultConfig, type ConfigFormData } from '../utils/configForm/formData';
 import { parseFormConfig } from './formConfig';
 
 /** A form whose inserter took from a machine that was then removed, set to make 0 items per second */
@@ -24,10 +24,7 @@ function formWithUnsetEnd() {
 }
 
 /** The file Export writes, read back the way Import reads it */
-function exportAndImport(form: ReturnType<typeof createDefaultConfig>) {
-    const file = JSON.stringify(formDataToConfig(form), null, 2);
-    return parseFormConfig(ConfigSchema, readConfigFile(file));
-}
+const exportAndImport = (form: ConfigFormData) => parseFormConfig(ConfigSchema, readConfigFile(JSON.stringify(formDataToConfig(form), null, 2)));
 
 describe('parseFormConfig', () => {
     it('imports the former belt setting and exports only backed_up_belts', () => {
@@ -53,8 +50,7 @@ describe('parseFormConfig', () => {
         const imported = exportAndImport(form);
         expect(imported.success).toBe(true);
         form = configToFormData(imported.data!);
-        const unchanged = edits.updateInserter(form, 0, { sink: { type: 'belt', id: 1 } });
-        expect(formDataToConfig(unchanged)).toEqual(original);
+        expect(formDataToConfig(edits.updateInserter(form, 0, { sink: { type: 'belt', id: 1 } }))).toEqual(original);
         expect(formDataToConfig(edits.updateInserter(form, 0, { sink: { type: 'belt', id: 2 } }))).toEqual(original);
         expect(edits.duplicateEntity(form, 'inserters', 0)).toBe(form);
         expect(edits.updateBelt(form, 0, { type: 'fast-transport-belt' })).toBe(form);
@@ -77,6 +73,7 @@ describe('parseFormConfig', () => {
         expect(ConfigSchema.safeParse(formDataToConfig(corrected)).success).toBe(true);
         expect(corrected.inserters.slice(0, 2).map(ins => ins.sink)).toEqual(form.inserters.map(ins => ins.sink));
     });
+
     it('imports an exported form with an unset inserter end and 0 items per second', () => {
         const form = formWithUnsetEnd();
         expect(form.inserters[0].source).toEqual({ type: 'machine', id: 0 });
@@ -110,13 +107,25 @@ describe('parseFormConfig', () => {
         expect(parseFormConfig(ConfigSchema, readConfigFile('[1, 2]')).success).toBe(false);
         expect(() => readConfigFile('{ not json')).toThrow();
     });
-});
 
+    it.each([1, 0.0001, 1 / 3])('never lets editable Copies %s bypass structural validation: rejects malformed entities alongside it', copies => {
+        const config = formDataToConfig(edits.updateTargetOutput(createDefaultConfig(), 'copies', copies));
+        const withoutMachines: Record<string, unknown> = { ...config };
+        delete withoutMachines.machines;
+        expect(parseFormConfig(ConfigSchema, withoutMachines).success).toBe(false);
+        for (const malformed of [
+            { machines: 'broken' },
+            { machines: [{ ...config.machines[0], id: 1.5 }] },
+            { inserters: [{ source: 'machine 1', sink: { type: 'belt', id: 1 } }] },
+            { inserters: [{ source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 1 }, quality: 'mythical' }] },
+        ]) expect(parseFormConfig(ConfigSchema, { ...config, ...malformed }).success).toBe(false);
+    });
+});
 
 describe('fractional Copies and metadata draft round trips', () => {
     it.each([0.0625, 0.0001, 1 / 3])('retains %s without resetting the editable build', copies => {
         const form = edits.updateTargetOutput(createDefaultConfig(), 'copies', copies);
-        form.inserters = [{ id: 1, _uuid: 'bulk', prototype: 'bulk-inserter', quality: 'normal', source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 1 } }];
+        form.inserters = [inserter(1, { prototype: 'bulk-inserter', quality: 'normal', sink: { type: 'belt', id: 1 } })];
         const saved = readSavedConfig(serializeConfig(form))!;
         expect(saved.target_output.copies).toBe(copies);
         const parsed = parseFormConfig(ConfigSchema, formDataToConfig(saved));
@@ -133,30 +142,11 @@ describe('fractional Copies and metadata draft round trips', () => {
         expect(ConfigSchema.safeParse(file.data).success).toBe(copiesProblem(copies) === null);
     });
 
-    it('does not allow other custom errors at the Copies path or the Copies message at another path', () => {
-        const config = formDataToConfig(createDefaultConfig());
-        for (const [path, message] of [
-            [['target_output', 'copies'], 'A different custom constraint'],
-            [['machines'], COPIES_DECIMAL_ERROR],
-        ] as const) {
-            const schema = ConfigSchema.superRefine((_value, ctx) => ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...path], message }));
-            expect(parseFormConfig(schema, config).success).toBe(false);
-        }
-    });
-});
-
-
-describe('editable Copies never bypasses structural validation', () => {
-    it.each([1, 0.0001, 1 / 3])('rejects malformed entities alongside Copies %s', copies => {
-        const config = formDataToConfig(edits.updateTargetOutput(createDefaultConfig(), 'copies', copies));
-        const withoutMachines: Record<string, unknown> = { ...config };
-        delete withoutMachines.machines;
-        expect(parseFormConfig(ConfigSchema, withoutMachines).success).toBe(false);
-        for (const malformed of [
-            { machines: 'broken' },
-            { machines: [{ ...config.machines[0], id: 1.5 }] },
-            { inserters: [{ source: 'machine 1', sink: { type: 'belt', id: 1 } }] },
-            { inserters: [{ source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 1 }, quality: 'mythical' }] },
-        ]) expect(parseFormConfig(ConfigSchema, { ...config, ...malformed }).success).toBe(false);
+    it.each([
+        ['other custom errors at the Copies path', ['target_output', 'copies'], 'A different custom constraint'],
+        ['the Copies message at another path', ['machines'], COPIES_DECIMAL_ERROR],
+    ])('does not allow %s', (_, path, message) => {
+        const schema = ConfigSchema.superRefine((_value, ctx) => ctx.addIssue({ code: z.ZodIssueCode.custom, path, message }));
+        expect(parseFormConfig(schema, formDataToConfig(createDefaultConfig())).success).toBe(false);
     });
 });

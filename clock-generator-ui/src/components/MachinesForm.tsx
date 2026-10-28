@@ -1,10 +1,8 @@
 import { EntityBadge } from './EntityBadge';
 import { EntitySettings } from './EntitySettings';
-import { Add, Delete } from '@mui/icons-material';
 import {
     Box,
     Button,
-    IconButton,
     ToggleButton,
     ToggleButtonGroup,
     Tooltip,
@@ -16,9 +14,7 @@ import type { BeltFormData, ChestFormData, DrillFormData, InserterFormData, Mach
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { useMachineFacts } from '../hooks/useMachineFacts';
 import { useMachineTargetRates } from '../hooks/useMachineTargetRates';
-import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
-import { themeTokens } from '../theme/runtimeTokens';
-import type { Theme } from '@mui/material/styles';
+import { useEntityRows } from '../hooks/useEntityRows';
 import { MachineSettingsFields } from './EntityFields';
 import { MachineIcon } from './MachineIcon';
 import { MachineIconPicker, RecipeNotMadeNote } from './MachineFields';
@@ -34,12 +30,12 @@ import { MachineProductionSummary } from './MachineProductionSummary';
 import { OutputTransferPanel } from './OutputTransferPanel';
 import { InputRoutesPanel } from './InputRoutesPanel';
 import { SidecarModLink } from './IntroCard';
-import { SortableItem, SortableList } from './SortableList';
-import { RowActionsMenu } from './RowActionsMenu';
-import { useAnnounce } from '../hooks/useMessages';
+import { SortableList } from './SortableList';
+import { AddButton } from './AddRow';
+import { EntityRow, EntityRowActions, EntityRowTop } from './EntityRow';
 import { useGameNames } from '../hooks/useGameNames';
 import { nameWithId } from '../utils/gameNames';
-import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
+import { entityLabel, settingsSlotId } from '../utils/entityLabel';
 import { ELEMENT_IDS, machineRecipeElementId } from '../utils/firstProblem';
 import { BUTTON_NAMES, changeMachineName, recipeName } from '../utils/a11yLabels';
 
@@ -89,7 +85,6 @@ function MachinesFormComponent({
     onFixOutput,
     onEditInserter,
 }: MachinesFormProps) {
-    const { itemLabel } = useGameNames();
     const craftingMachines = useCraftingMachines();
     const [rateView, setRateView] = useState<'max' | 'target'>('max');
     const targetRates = useMachineTargetRates(engineConfig, rateView === 'target');
@@ -100,18 +95,7 @@ function MachinesFormComponent({
         machines.every(row => burnsNutrients(row, craftingMachines) && (row.energy_consumption_bonus ?? 0) === (machines[0].energy_consumption_bonus ?? 0)) ? `energy consumption ${machines[0].energy_consumption_bonus ?? 0}%` : null,
     ].filter(Boolean);
     // the row's delete button goes with it: the keyboard moves on to a neighbour's
-    const { cardRef, remove, afterAdd } = useFocusAfterRemove(machines.length, onRemove);
-    const announce = useAnnounce();
-    const addedLabel = () => entityLabel('machine', Math.max(0, ...machines.map(row => row.id)) + 1);
-    const duplicate = (index: number) => {
-        afterAdd(() => onDuplicate(index));
-        announce(`Added ${addedLabel()}, a copy of ${entityLabel('machine', machines[index].id)}.`);
-    };
-
-    const add = () => {
-        afterAdd(onAdd);
-        announce(`Added ${addedLabel()}.`);
-    };
+    const { cardRef, add: addRow, duplicate, remove } = useEntityRows(machines, { labelOf: machine => entityLabel('machine', machine.id), onRemove, onDuplicate });
 
     return (
         <PanelSection
@@ -149,9 +133,7 @@ function MachinesFormComponent({
                     <ToggleButton value="max" sx={{ px: 1, py: 0.5 }}>Max</ToggleButton>
                     <ToggleButton value="target" sx={{ px: 1, py: 0.5 }}>At target</ToggleButton>
                 </ToggleButtonGroup>
-                <Button id={ELEMENT_IDS.addMachine} startIcon={<Add />} color="inherit" onClick={add} variant="text" size="small" data-row-add="">
-                    Add Machine
-                </Button>
+                <AddButton id={ELEMENT_IDS.addMachine} label="Add Machine" onClick={() => addRow(onAdd)} />
                 </Box>
             )}
         >
@@ -159,43 +141,29 @@ function MachinesFormComponent({
                 At-target rates unavailable: {targetRates.error}
             </Typography>}
             <SortableList itemKeys={machines.map((m) => m._uuid)} onReorder={onReorder}>
-                {machines.map((machine, index) => (
-                    <SortableItem key={machine._uuid} stableKey={machine._uuid} label={entityLabel('machine', machine.id)}
-                        displayTitle={`${machineIconText(machine, itemLabel)}. Click to change the machine.`}
-                        displayLabel={<MachineIconPicker machine={machine} onPatch={patch => onPatch(index, patch)}
-                            buttonName={changeMachineName(entityLabel('machine', machine.id))} rowName={entityLabel('machine', machine.id)}>
-                            <EntityBadge id={machine.id}>
-                                <MachineIcon machine={machine} size={28} />
-                            </EntityBadge>
-                        </MachineIconPicker>}>
-                        {(dragHandle) => (
-                            <MachineRow
-                                machine={machine}
-                                index={index}
-                                recipeNames={recipeNames}
-                                build={build}
-                                getRecipeInfo={getRecipeInfo}
-                                atTarget={rateView === 'target'}
-                                targetRate={targetRates.rates?.find(rate => rate.machine_id === machine.id)}
-                                targetUpdating={targetRates.updating}
-                                outputTransfer={outputTransfers?.find(transfer => transfer.source.type === 'machine' && transfer.source.id === machine.id) ?? null}
-                                outputGenerationIssues={outputGenerationIssues.filter(issue => issue.machine_id === machine.id)}
-                                outputTransfersLoading={outputTransfersLoading}
-                                allOutputTransfers={outputTransfers}
-                                onFixOutput={onFixOutput}
-                                onEditInserter={onEditInserter}
-                                canDelete={machines.length > 1}
-                                dragHandle={dragHandle}
-                                onUpdate={onUpdate}
-                                onPatch={onPatch}
-                                onRemove={remove}
-                                onDuplicate={() => duplicate(index)}
-                                onMoveUp={index > 0 ? () => onReorder(index, index - 1) : undefined}
-                                onMoveDown={index < machines.length - 1 ? () => onReorder(index, index + 1) : undefined}
-                            />
-                        )}
-                    </SortableItem>
-                ))}
+                {machines.map((machine, index) => <MachineRow
+                    key={machine._uuid}
+                    machine={machine}
+                    index={index}
+                    count={machines.length}
+                    recipeNames={recipeNames}
+                    build={build}
+                    getRecipeInfo={getRecipeInfo}
+                    atTarget={rateView === 'target'}
+                    targetRate={targetRates.rates?.find(rate => rate.machine_id === machine.id)}
+                    targetUpdating={targetRates.updating}
+                    outputTransfer={outputTransfers?.find(transfer => transfer.source.type === 'machine' && transfer.source.id === machine.id) ?? null}
+                    outputGenerationIssues={outputGenerationIssues.filter(issue => issue.machine_id === machine.id)}
+                    outputTransfersLoading={outputTransfersLoading}
+                    allOutputTransfers={outputTransfers}
+                    onFixOutput={onFixOutput}
+                    onEditInserter={onEditInserter}
+                    onUpdate={onUpdate}
+                    onPatch={onPatch}
+                    onRemove={remove}
+                    onDuplicate={duplicate}
+                    onReorder={onReorder}
+                />)}
             </SortableList>
         </PanelSection>
     );
@@ -216,17 +184,15 @@ interface MachineRowProps {
     recipeNames: string[];
     build: ResultTargetBuild;
     getRecipeInfo?: (name: string) => RecipeInfo | null;
-    canDelete: boolean;
-    onDuplicate: () => void;
-    onMoveUp?: () => void;
-    onMoveDown?: () => void;
-    dragHandle: React.ReactNode;
+    count: number;
+    onDuplicate: (index: number) => void;
+    onReorder: (fromIndex: number, toIndex: number) => void;
     onUpdate: (index: number, field: keyof MachineFormData, value: string | number) => void;
     onPatch: (index: number, patch: Partial<MachineFormData>) => void;
     onRemove: (index: number) => void;
 }
 
-function MachineRow({ machine, index, recipeNames, build, getRecipeInfo, atTarget, targetRate, targetUpdating, outputTransfer, outputGenerationIssues, outputTransfersLoading, allOutputTransfers, onFixOutput, onEditInserter, canDelete, dragHandle, onUpdate, onPatch, onRemove, onDuplicate, onMoveUp, onMoveDown }: MachineRowProps) {
+function MachineRow({ machine, index, recipeNames, build, getRecipeInfo, atTarget, targetRate, targetUpdating, outputTransfer, outputGenerationIssues, outputTransfersLoading, allOutputTransfers, onFixOutput, onEditInserter, count, onUpdate, onPatch, onRemove, onDuplicate, onReorder }: MachineRowProps) {
     const { itemLabel, recipeLabel } = useGameNames();
     const craftingMachines = useCraftingMachines();
     const recipes = useMachineRecipeOptions(machine.prototype, recipeNames);
@@ -242,30 +208,16 @@ function MachineRow({ machine, index, recipeNames, build, getRecipeInfo, atTarge
         : [...(getRecipeInfo?.(machine.recipe)?.ingredients ?? []), ...(machine.fuel ? [machine.fuel] : [])])];
     const missingOutputs = outputTransfer?.results.filter(result => result.coverage === 'missing').length ?? 0;
 
-    return (
-        <Box
-            id={`entity-machine-${machine.id}`}
-            role="group"
-            aria-label={entityLabel('machine', machine.id)}
-            sx={{
-                mb: 1,
-                p: 1.5,
-                minWidth: 0,
-                bgcolor: (theme: Theme) => themeTokens(theme).surface.row,
-                containerType: 'inline-size',
-                containerName: 'machine-row',
-            }}
-        >
-            <Box
-                sx={{
-                    display: 'grid',
-                    gridTemplateColumns: 'auto minmax(0, 1fr) auto',
-                    gap: 1,
-                    alignItems: 'center',
-                    mb: 1.5,
-                }}
-            >
-                {dragHandle}
+    const label = entityLabel('machine', machine.id);
+
+    return <EntityRow kind="machine" row={machine} label={label} chipTitle={`${machineIconText(machine, itemLabel)}. Click to change the machine.`}
+        chip={<MachineIconPicker machine={machine} onPatch={patch => onPatch(index, patch)} buttonName={changeMachineName(label)} rowName={label}>
+            <EntityBadge id={machine.id}><MachineIcon machine={machine} size={28} /></EntityBadge>
+        </MachineIconPicker>}>
+        {dragHandle => <>
+            {/* the recipe stays in line: it shrinks to its picture instead */}
+            <EntityRowTop dragHandle={dragHandle} actions={<EntityRowActions kind="machine" id={machine.id} label={label}
+                index={index} count={count} onReorder={onReorder} onDuplicate={onDuplicate} onDelete={onRemove} canDelete={count > 1} />}>
                 <Tooltip title={machine.recipe ? nameWithId(recipeLabel(machine.recipe), machine.recipe) : ''} describeChild>
                     <Box data-row-first="" sx={{ minWidth: 0, containerType: 'inline-size', containerName: 'machine-recipe' }}>
                         <ItemSelector
@@ -291,29 +243,16 @@ function MachineRow({ machine, index, recipeNames, build, getRecipeInfo, atTarge
                             label="Recipe"
                             placeholder="Search recipes..."
                             // the label says "Recipe" in every row: say whose it is
-                            inputAriaLabel={recipeName(entityLabel('machine', machine.id))}
+                            inputAriaLabel={recipeName(label)}
                             freeSolo
                         />
                     </Box>
                 </Tooltip>
-                <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                    <Box id={`settings-actions-machine-${machine.id}`} sx={{ display: 'flex' }} />
-                    <RowActionsMenu label={entityLabel('machine', machine.id)} onDuplicate={onDuplicate} onMoveUp={onMoveUp} onMoveDown={onMoveDown} />
-                    <IconButton
-                        onClick={() => onRemove(index)}
-                        color="error"
-                        disabled={!canDelete}
-                        aria-label={deleteButtonLabel('machine', machine.id)}
-                        data-row-delete=""
-                    >
-                        <Delete />
-                    </IconButton>
-                </Box>
-            </Box>
-            <RecipeNotMadeNote machine={machine} sx={{ mb: 1 }} />
-            {placesResults(machine, craftingMachines) && <ResultTargetField machine={machine} machineLabel={entityLabel('machine', machine.id)} build={build}
-                getRecipeInfo={getRecipeInfo} sx={{ mt: 1, mb: 1.5 }} onChange={result_target => onPatch(index, { result_target })} />}
-            <EntitySettings actionContainerId={`settings-actions-machine-${machine.id}`} label={entityLabel('machine', machine.id)} tabs={[
+            </EntityRowTop>
+            <RecipeNotMadeNote machine={machine} />
+            {placesResults(machine, craftingMachines) && <ResultTargetField machine={machine} machineLabel={label} build={build}
+                getRecipeInfo={getRecipeInfo} onChange={result_target => onPatch(index, { result_target })} />}
+            <EntitySettings actionContainerId={settingsSlotId('machine', machine.id)} label={label} tabs={[
                 { label: 'Input Routes', content: <InputRoutesPanel machineId={machine.id} build={build} getRecipeInfo={getRecipeInfo} inputs={inputs}
                     transfers={allOutputTransfers} loading={outputTransfersLoading || updating} onEditInserter={onEditInserter} /> },
                 { label: 'Output Routes', content: <OutputTransferPanel summary={outputTransfer} chests={build.chests} facts={updating ? null : facts}
@@ -345,8 +284,8 @@ function MachineRow({ machine, index, recipeNames, build, getRecipeInfo, atTarge
 
             {machine.fuel !== undefined && <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }} title={nameWithId(itemLabel(machine.fuel), machine.fuel)}>Imported fuel (read-only): {itemLabel(machine.fuel)}.</Typography>}
             </EntitySettings>
-        </Box>
-    );
+        </>}
+    </EntityRow>;
 }
 
 export const MachinesForm = memo(MachinesFormComponent);

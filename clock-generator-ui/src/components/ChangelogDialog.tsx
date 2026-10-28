@@ -1,15 +1,6 @@
 import { Fragment, type ReactNode } from 'react';
-import {
-    Box,
-    Chip,
-    Dialog,
-    DialogContent,
-    DialogTitle,
-    IconButton,
-    Link,
-    Typography,
-} from '@mui/material';
-import { Close } from '@mui/icons-material';
+import { Box, Chip, Link, Typography } from '@mui/material';
+import { AppDialog } from './AppDialog';
 
 interface ChangelogDialogProps {
     open: boolean;
@@ -70,36 +61,28 @@ const releases = parseChangelog(__CHANGELOG__);
 
 export function ChangelogDialog({ open, onClose }: ChangelogDialogProps) {
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth scroll="paper">
-            <DialogTitle sx={{ display: 'flex', alignItems: 'center' }}>
-                <Box sx={{ flexGrow: 1 }}>Changelog</Box>
-                <IconButton aria-label="Close" onClick={onClose} size="small">
-                    <Close />
-                </IconButton>
-            </DialogTitle>
-            <DialogContent dividers>
-                {releases.map((release) => (
-                    <Box key={release.version} sx={{ mb: 3 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                            <Typography variant="h6" component="h3">v{release.version}</Typography>
-                            {release.version === __APP_VERSION__ && <Chip label="current" size="small" variant="outlined" />}
-                            <Typography variant="body2" color="text.secondary">{release.date}</Typography>
-                        </Box>
-                        {release.sections.map((section, index) => (
-                            <Box key={`${section.title}-${index}`} sx={{ mb: 1.5 }}>
-                                {section.title && <Typography variant="subtitle2">{section.title}</Typography>}
-                                <Box component="ul" sx={{ mt: 0.5, mb: 0, pl: 3 }}>
-                                    {section.items.map((item, itemIndex) => (
-                                        <Typography key={itemIndex} component="li" variant="body2" sx={{ mb: 0.5 }}>
-                                            {renderInline(item)}
-                                        </Typography>
-                                    ))}
-                                </Box>
-                            </Box>
-                        ))}
+        <AppDialog open={open} onClose={onClose} maxWidth="md" scroll="paper" dividers closeButton title="Changelog">
+            {releases.map((release) => (
+                <Box key={release.version} sx={{ mb: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                        <Typography variant="h6" component="h3">v{release.version}</Typography>
+                        {release.version === __APP_VERSION__ && <Chip label="current" size="small" variant="outlined" />}
+                        <Typography variant="body2" color="text.secondary">{release.date}</Typography>
                     </Box>
-                ))}
-            </DialogContent>
-        </Dialog>
+                    {release.sections.map((section, index) => (
+                        <Box key={`${section.title}-${index}`} sx={{ mb: 1.5 }}>
+                            {section.title && <Typography variant="subtitle2">{section.title}</Typography>}
+                            <Box component="ul" sx={{ mt: 0.5, mb: 0, pl: 3 }}>
+                                {section.items.map((item, itemIndex) => (
+                                    <Typography key={itemIndex} component="li" variant="body2" sx={{ mb: 0.5 }}>
+                                        {renderInline(item)}
+                                    </Typography>
+                                ))}
+                            </Box>
+                        </Box>
+                    ))}
+                </Box>
+            ))}
+        </AppDialog>
     );
 }

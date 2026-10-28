@@ -4,6 +4,7 @@ import type { TimelineRecording } from 'clock-generator/browser';
 import { timelineStateDurations, timelineWaits, type TimelineWait } from '../utils/timelineInspection';
 import { formatNumberText } from '../utils/numberText';
 import { timelineStateLabel } from '../utils/timelinePresentation';
+import { Disclosure } from './Disclosure';
 
 export function TimelinePauses({ recording, entityId, targetMet, onExplore }: {
     recording: TimelineRecording; entityId: string; targetMet: boolean; onExplore(wait: TimelineWait): void;
@@ -17,8 +18,7 @@ export function TimelinePauses({ recording, entityId, targetMet, onExplore }: {
     const examples = waits.filter(wait => wait.state === selected?.state);
     const start = Math.min(page * 5, Math.max(0, Math.floor((examples.length - 1) / 5) * 5));
     const stateSummary = states.filter(state => state.ticks > 0).map(state => `${timelineStateLabel(state.state)} ${formatNumberText(state.share * 100, { maxDecimals: 1 })}%`).join(' · ');
-    return <Box component="details" data-timeline-pauses>
-        <Typography component="summary" variant="body2" sx={{ cursor: 'pointer' }}>Explore pauses</Typography>
+    return <Disclosure summary="Explore pauses" data-timeline-pauses="">
         <Typography variant="body2" sx={{ mt: 1 }}>
             Pauses are normal when a clock batches work or runs below maximum capacity.
             {targetMet ? ' This clock meets the assessed target despite its pauses.' : ' A pause by itself does not explain a missed target.'}
@@ -37,5 +37,5 @@ export function TimelinePauses({ recording, entityId, targetMet, onExplore }: {
         </Button>)}
         {examples.length > 5 && <Box><Button color="inherit" size="small" disabled={start === 0} onClick={() => setPage(Math.max(0, page - 1))}>Previous pauses</Button><Button color="inherit" size="small" disabled={start + 5 >= examples.length} onClick={() => setPage(page + 1)}>Next pauses</Button></Box>}
         {!groups.length && <Typography variant="body2">No ingredient, output-space or fuel pauses were recorded for this entity.</Typography>}
-    </Box>;
+    </Disclosure>;
 }
