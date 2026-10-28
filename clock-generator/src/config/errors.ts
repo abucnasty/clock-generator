@@ -637,8 +637,9 @@ export class FeasibilityError extends Error {
     }
 
     private static formatMessage(issues: FeasibilityIssue[], target: { items_per_second: number; copies: number } | null): string {
+        // copies as configured: a short decimal (copies-value.ts), never rounded the way a rate is
         const copies = target === null || target.copies === 1 ? ''
-            : ` of ${formatRate(target.items_per_second)} a second over ${formatRate(target.copies)} copies (every figure here is for one copy)`;
+            : ` of ${formatRate(target.items_per_second)} a second over ${target.copies} copies (every figure here is for one copy)`;
         return `No clock can hold this build's target${copies}: ${issues.map(describeFeasibilityIssue).join(' ')}`;
     }
 }
