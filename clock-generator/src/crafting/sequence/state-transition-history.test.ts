@@ -13,7 +13,10 @@ afterEach(() => {
     restore = undefined;
 });
 
-// a burner with fuel inserters, a loop, a recycler with chances and the largest histories: state-transition-history.generation.test.ts
+// A burner with fuel inserters, a loop, a recycler with chances and the planning run of processing units with a belt export were
+// generation tests of this comparison. Recorded here, the five generations below and the two builds show every entity type, every
+// status pair, every game state, every inserter source and sink kind and every label shape those four showed; the growth of
+// columns past many resizes is in transition-columns.test.ts.
 
 /** Every history sealed while `run` runs, beside what the object-per-transition history serialized to */
 function recordedBothWays(run: () => void): RecordedBothWays[] {
