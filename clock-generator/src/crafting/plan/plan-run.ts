@@ -47,7 +47,7 @@ import { SimulateStep } from "../runner/steps/simulate-step";
 import { RunnerStepType } from "../runner/steps/runner-step";
 import { Logger, defaultLogger } from "../../common/logger";
 import { FuelLevelRecorder, FuelLevelSeries, FuelPlan, fuelPlan } from "../fuel-view";
-import { StockRecorder, StockRecording } from "../machine-stock";
+import { StockDetail, StockRecorder, StockRecording } from "../machine-stock";
 import { TimelineRecorder, TimelineRecording, TimelineRecordingOptions } from "../timeline-recording";
 import { BackpressureLossOptions, LossOutcome, runLossTrials } from "../backpressure-loss";
 import { SerializableTransferHistory, serializeTransferHistory } from "../sequence/transfer-history-serializer";
@@ -435,6 +435,15 @@ export interface RunOptions {
     fuel_levels?: boolean;
     /** Record what every machine and inserter holds after each tick of the run (default false) */
     machine_stock?: boolean;
+    /**
+     * Whether the run records the transfers of its inserters and the transitions of its states (default true). A run
+     * whose caller reads only what the machines and inserters held (`machine_stock`) and its stability check's chests
+     * does not need them, and the histories of a long run are the largest part of what it keeps alive while it runs.
+     * Off, the run's histories, and the transfer history the stability check counts exported lanes by, are empty.
+     */
+    record_histories?: boolean;
+    /** With machine_stock: which series to record (default "full"; see `StockDetail`), for a run whose caller reads no more than that */
+    stock_detail?: StockDetail;
     /**
      * Watch the recorded run for the simulation state repeating at a bin boundary, and stop it early when it does:
      * a build on fixed clocks repeats forever from a repeated state (see runner/steady-state.ts), so the bins
@@ -979,8 +988,9 @@ function simulate(
     logger.log("Executing Simulate Step");
     inventory_transfer_history.clear();
     state_transition_history.clear();
-    inventory_transfer_history.recording = true;
-    state_transition_history.recording = true;
+    // a run whose caller reads no histories records none (the run's histories are then empty)
+    inventory_transfer_history.recording = options.record_histories !== false;
+    state_transition_history.recording = options.record_histories !== false;
     const ticks_before_run = simulation_context.tick_provider.getCurrentTick() - build.relative_tick.start;
     inventory_transfer_history.ticks_before_run = ticks_before_run;
     build.relative_tick.start = simulation_context.tick_provider.getCurrentTick();
@@ -1002,7 +1012,7 @@ function simulate(
     const may_end_early = repeat_bin !== null && repeat_bin.ticks < recorded_duration.ticks;
     const stock_recorder = options.machine_stock
         ? new StockRecorder(simulation_context.machines.map(it => it.machine_state), simulation_context.inserters.map(it => ({ state: it.inserter_state, sink: it.sink_state })),
-            may_end_early ? undefined : recorded_duration.ticks)
+            may_end_early ? undefined : recorded_duration.ticks, options.stock_detail)
         : undefined;
     const timeline_recorder = options.timeline_recording
         ? new TimelineRecorder(simulation_context, options.timeline_recording)

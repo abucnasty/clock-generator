@@ -38,9 +38,25 @@ export interface InserterHandSeries {
     factorio_state: string[];
 }
 
+/**
+ * How much of the stock a run records, by what is going to read it:
+ * - "full": every series of every machine and inserter;
+ * - "loop-windows": what the windows of a loop's inserters are read from (`loopInserterWindows`) and the levels below
+ *   read: the item in every inserter's hand, and what every machine's output held;
+ * - "wake-ups": what the wake-ups of a run (`wakeUpsOfStock`) and the verdict of a long run read: the hands of every
+ *   inserter and the state the game shows for it, the crafts and payouts of every machine;
+ * - "hands": what the verdict of a long run reads alone: the hands of every inserter.
+ * "wake-ups" and "hands" also record, for a machine that places its results where inserters take them, what its output
+ * held, which the verdict of a target that counts an item destroyed reads (`resultsTakenOf`); the other machines are
+ * left out of "hands". A series that is not recorded is empty.
+ */
+export type StockDetail = "full" | "loop-windows" | "wake-ups" | "hands";
+
 /** The stock of every machine and the hand of every inserter over a run, tick by tick, to lay against a recording */
 export interface StockRecording {
     ticks: number;
+    /** How much was recorded; "full" where it is left out */
+    detail?: StockDetail;
     machines: MachineStockSeries[];
     inserters: InserterHandSeries[];
 }
@@ -72,11 +88,29 @@ export class StockRecorder implements TickRecorder {
      * @param expected_ticks the ticks the run will record, when it cannot end sooner: the series are then made at that
      *      length and written by index, instead of grown by push. Left out for a run that may stop early at a repeat,
      *      whose request is far longer than what it records.
+     * @param detail which series to record (see `StockDetail`); a series that is not recorded is empty
      */
-    constructor(machine_states: readonly MachineState[], inserters: readonly { state: InserterState; sink: EntityState }[], expected_ticks?: number) {
+    constructor(machine_states: readonly MachineState[], inserters: readonly { state: InserterState; sink: EntityState }[], expected_ticks?: number,
+        private readonly detail: StockDetail = "full") {
         const series_of_ticks = (): number[] => canPreallocate(expected_ticks) ? new Array<number>(expected_ticks) : [];
         const strings_of_ticks = (): string[] => canPreallocate(expected_ticks) ? new Array<string>(expected_ticks) : [];
-        this.machines = machine_states.map(state => {
+        const full = detail === "full";
+        this.machines = (detail === "hands" ? machine_states.filter(state => state.machine.metadata.places_results === true) : machine_states).map(state => {
+            if (!full) {
+                const places_results = state.machine.metadata.places_results === true || detail === "loop-windows";
+                const series: MachineStockSeries = {
+                    machine_id: state.entity_id.id,
+                    recipe: state.machine.metadata.recipe.name,
+                    inputs: {},
+                    outputs: places_results ? Object.fromEntries(state.machine.outputs.map(output => [output.item_name, series_of_ticks()])) : {},
+                    status: [],
+                    products_finished: series_of_ticks(),
+                    crafts_started: series_of_ticks(),
+                    ...(state.machine.metadata.places_results === true && { results_placed: series_of_ticks() }),
+                    crafting_progress: [], bonus_progress: [],
+                };
+                return { state, series, inputs: [], outputs: Object.entries(series.outputs), fuel_item: undefined };
+            }
             const series: MachineStockSeries = {
                 machine_id: state.entity_id.id,
                 recipe: state.machine.metadata.recipe.name,
@@ -98,13 +132,21 @@ export class StockRecorder implements TickRecorder {
         });
         this.inserters = inserters.map(({ state, sink }) => ({
             state, sink,
-            series: { inserter_id: state.entity_id.id, held: series_of_ticks(), held_item: strings_of_ticks(), status: strings_of_ticks(), factorio_state: strings_of_ticks() },
+            series: {
+                inserter_id: state.entity_id.id, held: series_of_ticks(),
+                held_item: full || detail === "loop-windows" ? strings_of_ticks() : [], status: full ? strings_of_ticks() : [],
+                factorio_state: detail === "hands" ? [] : strings_of_ticks(),
+            },
         }));
     }
 
     public record(): void {
         const tick = this.ticks;
         this.ticks += 1;
+        if (this.detail !== "full") {
+            this.recordLean(tick);
+            return;
+        }
         for (const { state, series, inputs, outputs, fuel_item } of this.machines) {
             for (const [item_name, item_series] of inputs) {
                 item_series[tick] = state.ingress.ingredientQuantity(item_name);
@@ -132,9 +174,32 @@ export class StockRecorder implements TickRecorder {
         }
     }
 
+    /** The series of a recording that is not "full" */
+    private recordLean(tick: number): void {
+        for (const { state, series, outputs } of this.machines) {
+            for (const [item_name, item_series] of outputs) {
+                item_series[tick] = state.inventoryState.getQuantity(item_name);
+            }
+            series.products_finished[tick] = state.productsFinished;
+            series.crafts_started[tick] = state.craftsStarted;
+            if (series.results_placed !== undefined) {
+                series.results_placed[tick] = state.placement.results_placed;
+            }
+        }
+        for (const { state, sink, series } of this.inserters) {
+            series.held[tick] = state.held_item?.quantity ?? 0;
+            if (this.detail !== "hands") {
+                series.factorio_state[tick] = factorioInserterState(state, sink);
+            }
+            if (this.detail === "loop-windows") {
+                series.held_item[tick] = state.held_item?.item_name ?? "";
+            }
+        }
+    }
+
     public recording(): StockRecording {
         this.trimSeries();
-        return { ticks: this.ticks, machines: this.machines.map(it => it.series), inserters: this.inserters.map(it => it.series) };
+        return { ticks: this.ticks, ...(this.detail !== "full" && { detail: this.detail }), machines: this.machines.map(it => it.series), inserters: this.inserters.map(it => it.series) };
     }
 
     /** Cuts the series made for more ticks than were recorded back to the ticks recorded */

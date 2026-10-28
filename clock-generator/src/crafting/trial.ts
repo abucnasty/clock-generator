@@ -7,12 +7,12 @@ import { createEntityRegistryFromConfig, MovingPickupPhases } from "./sequence/s
 import { Duration, OpenRange } from "../data-types";
 import { Entity, EntityId, Inserter, Machine } from "../entities";
 import { Logger, defaultLogger } from "../common/logger";
-import { StockRecording } from "./machine-stock";
+import { StockDetail, StockRecording } from "./machine-stock";
 import { InserterEnds, WakeUps, wakeUpsOfStock } from "./wake-ups";
 import { judgeLongRun, judgeProvenCycle, LONG_RUN_SETTLE_SHARE, longRunPeriods } from "./long-run";
 import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, LATE_AFTER_PERIODS, LossOutcome, lossLimitOf, MAX_RECOVERY_PERIODS, reportOf, verdictOf } from "./backpressure-loss";
 import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForPeriod, withBeltPickupSlack } from "./clock";
-import { currentRunMemo } from "./plan/run-memo";
+import { canonicalKey, currentRunMemo } from "./plan/run-memo";
 import { BlueprintGenerationResult, LCM_STABILITY_TOLERANCE, MAX_SIMULATION_TICKS, RunOptions, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, planRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
 import { SimulationTick } from "./runner/simulation-tick";
 import { simulationStateKey } from "./runner/steady-state";
@@ -359,6 +359,8 @@ function longRunOfFreeRunningBuild(
     check_ticks: number = FREE_RUNNING_CHECK_TICKS,
     /** How the run starts; the cold start of the staged scaffold with the default orders by default */
     start: Pick<ClockTrialOptions, "competing_takers_order" | "decider_order" | "main_clock_shift"> = {},
+    /** What the caller reads of the stock: the stock it gets is recorded in no more detail */
+    stock_detail: StockDetail = "full",
 ): {
     keeps_up: boolean;
     output_items_per_period: number;
@@ -388,7 +390,7 @@ function longRunOfFreeRunningBuild(
         return null;
     }
     // only its stock is read, which names the state of every inserter itself
-    const run = runClockOnBuild(config, decider_windows, period, logger, { simulate_periods: periods, machine_stock: true, factorio_states: false, detect_repeat: true, ...start });
+    const run = runClockOnBuild(config, decider_windows, period, logger, { simulate_periods: periods, machine_stock: true, factorio_states: false, detect_repeat: true, ...start, stock_detail, record_histories: false });
     const stock = run.machine_stock;
     if (!stock) {
         return null;
@@ -633,7 +635,7 @@ export function startDependenceOf(
         // A start changes the shared counter's position, including computed by-product predicates on that counter.
         const order = { competing_takers_order: start.competing_takers_order, decider_order: start.decider_order,
             main_clock_shift: start.clock_shift === 0 ? 0 : period - start.clock_shift % period };
-        const long_run = longRunOfFreeRunningBuild(check_config, windows, period, expected_output_items, logger, FREE_RUNNING_CHECK_TICKS, order);
+        const long_run = longRunOfFreeRunningBuild(check_config, windows, period, expected_output_items, logger, FREE_RUNNING_CHECK_TICKS, order, "hands");
         const keeps_up = long_run !== null
             ? long_run.keeps_up
             : runClockOnBuild(check_config, windows, period, logger, { factorio_states: false, ...order }).stability_check.holds;
@@ -687,7 +689,7 @@ export function wakeUpsFromStartsOf(
     const figureAt = (place: number): number | null => {
         const standing = place === 0 ? windows
             : new Map(Array.from(windows, ([key, ranges]) => [key, rotateRanges(ranges, place, period)] as const));
-        const long_run = longRunOfFreeRunningBuild(check_config, standing, period, expected_output_items, quiet, long_run_ticks);
+        const long_run = longRunOfFreeRunningBuild(check_config, standing, period, expected_output_items, quiet, long_run_ticks, {}, "wake-ups");
         if (long_run === null) {
             return null;
         }
@@ -924,6 +926,13 @@ export function runAsBuiltCheck(
      */
     passed?: { run: AsBuiltRun; long_run_ticks: number },
     pickup_phase_cycles: boolean = false,
+    /**
+     * What the caller reads of the long run's stock, which is recorded in no more detail than that (see `StockDetail`).
+     * The windows of a loop's inserters are read from it, by default. "hands" is for a caller that reads the verdict
+     * alone: the check then has no wake-ups and no stock is returned; "wake-ups" for one that reads the check's
+     * wake-ups and not the stock.
+     */
+    stock_detail: StockDetail = "loop-windows",
 ): AsBuiltRun {
     // the drills into chests run on the windows made from their takers' in these windows, as the export gives them
     decider_windows = withChestDrillWindows(config, decider_windows, period);
@@ -987,8 +996,8 @@ export function runAsBuiltCheck(
             }
         } else {
             // no long run when none is asked for (a quick trial of a search)
-            const long_run = long_run_ticks > 0 ? longRunOfFreeRunningBuild(config, decider_windows, period, result.stability_check.expected_output_items, logger, long_run_ticks) : null;
-            stock = long_run?.stock;
+            const long_run = long_run_ticks > 0 ? longRunOfFreeRunningBuild(config, decider_windows, period, result.stability_check.expected_output_items, logger, long_run_ticks, {}, stock_detail) : null;
+            stock = stock_detail === "hands" ? undefined : long_run?.stock;
             if (long_run && stock) {
                 // judged as the long run is: the proven cycle, or what follows the start-up of a sampled run
                 check.wake_ups = wakeUpsOfStock(stock, inserterEnds(config),
@@ -1098,7 +1107,7 @@ function heldUnderOtherTakerOrders(
         let failed: { actual_output_items: number; full_output_chests?: FullOutputChest[]; export_shortfalls?: ExportShortfall[];
             repeat_periods?: number; repeat_output_items?: number } | null = run.stability_check.holds ? null : run.stability_check;
         if (failed === null && long_run_ticks > 0) {
-            const long_run = longRunOfFreeRunningBuild(config, decider_windows, period, expected_output_items, logger, long_run_ticks, { competing_takers_order: order });
+            const long_run = longRunOfFreeRunningBuild(config, decider_windows, period, expected_output_items, logger, long_run_ticks, { competing_takers_order: order }, "hands");
             if (long_run !== null && !long_run.keeps_up) {
                 failed = { actual_output_items: long_run.output_items_per_period, full_output_chests: long_run.full_output_chests, export_shortfalls: long_run.export_shortfalls };
             }
@@ -1155,7 +1164,7 @@ export function trialWithLoopWindows(
     const passesAsBefore = (check: AsBuiltStabilityCheck) => check.holds && check.failed_start_offset === undefined
         && check.start_phases_checked === run.check.start_phases_checked;
     const checkOf = (candidate: Map<string, OpenRange[]>, what: string) => runAsBuiltCheck(config, candidate, period, logger, start_phases,
-        (n, total) => report?.(`Checking the windows ${what}, clock start ${n}/${total}`), LOOP_WINDOW_CHECK_TICKS, undefined, pickup_phase_cycles);
+        (n, total) => report?.(`Checking the windows ${what}, clock start ${n}/${total}`), LOOP_WINDOW_CHECK_TICKS, undefined, pickup_phase_cycles, "wake-ups");
     let kept: (AsBuiltRun & { windows: Map<string, OpenRange[]>; item_names: Map<string, string>; in_loop_ids: string[] }) | null = null;
     const out_of_loop = loopInserterWindows(config, period, run.stock, logger);
     if (out_of_loop.size > 0) {
@@ -1221,6 +1230,22 @@ export function loopWindowsMargin(
     logger: Logger,
     pickup_phase_cycles: boolean = false,
 ): string | null {
+    // the alternatives that make the same clock more than once judge its windows once
+    const memo = currentRunMemo();
+    const key = memo === undefined ? null : canonicalKey([config, period, pickup_phase_cycles, inserter_ids,
+        Array.from(windows, ([id, ranges]) => [id, ranges.map(range => [range.start_inclusive, range.end_inclusive])])]);
+    return memo === undefined || key === null ? marginOfLoopWindows(config, windows, inserter_ids, period, logger, pickup_phase_cycles)
+        : memo.judgement(key, () => marginOfLoopWindows(config, windows, inserter_ids, period, logger, pickup_phase_cycles));
+}
+
+function marginOfLoopWindows(
+    config: Config,
+    windows: Map<string, OpenRange[]>,
+    inserter_ids: readonly string[],
+    period: number,
+    logger: Logger,
+    pickup_phase_cycles: boolean,
+): string | null {
     const span = Number.isInteger(period) ? period : Math.ceil(period);
     const groups = new Map<string, string[]>();
     for (const id of inserter_ids) {
@@ -1241,7 +1266,7 @@ export function loopWindowsMargin(
                     return last < span ? [OpenRange.from(first, last)] : [OpenRange.from(first, span - 1), OpenRange.from(0, last - span)];
                 })));
             }
-            const check = runAsBuiltCheck(config, moved, period, logger, AS_BUILT_START_PHASES, undefined, FREE_RUNNING_CHECK_TICKS, undefined, pickup_phase_cycles).check;
+            const check = runAsBuiltCheck(config, moved, period, logger, AS_BUILT_START_PHASES, undefined, FREE_RUNNING_CHECK_TICKS, undefined, pickup_phase_cycles, "hands").check;
             if (!check.holds || check.failed_start_offset !== undefined) {
                 return `the windows of ${ids.join(", ")} do not hold moved ${ticks > 0 ? "+" : ""}${ticks} tick`;
             }
@@ -1555,7 +1580,7 @@ export function withSettledOutput(
         const config = { ...planning, overrides: { ...planning.overrides, derive_clock_windows: false } };
         const windows = withChestDrillWindows(config, new Map(Object.entries(result.clock_windows).map(([entity_id, ranges]) =>
             [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const)), period);
-        const long_run = longRunOfFreeRunningBuild(config, windows, period, result.stability_check.expected_output_items, quietLogger(logger));
+        const long_run = longRunOfFreeRunningBuild(config, windows, period, result.stability_check.expected_output_items, quietLogger(logger), FREE_RUNNING_CHECK_TICKS, {}, "hands");
         return reported(long_run === null ? one_period
             : { ...as_built, actual_output_items: long_run.output_items_per_period, output_basis: "long-run mean" });
     } catch (error) {
