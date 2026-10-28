@@ -3,14 +3,15 @@ import { TickProvider } from "../../../control-logic";
 import { InserterStateMachine } from "../../../control-logic/inserter/inserter-state-machine";
 import { InserterMode } from "../../../control-logic/inserter/modes";
 import { InserterHandContentsChangePlugin } from "../../../control-logic/inserter/plugins";
-import { MachineMode } from "../../../control-logic/machine/modes";
 import { CraftEventListenerPlugin } from "../../../control-logic/machine/plugins";
 import { ModePlugin } from "../../../control-logic/mode";
+import { reasonText } from "../../../control-logic/mode/reason-table";
 import { DrillState, MachineState } from "../../../state";
 import { DebugLoggerFactory } from "./debug-logger-factory";
 import { DebugSettingsProvider } from "./debug-settings-provider";
-import { DrillMode } from "../../../control-logic/drill/modes/drill-mode";
-import { MachineStateMachine } from "../../../control-logic/machine/machine-state-machine";
+import type { CraftingMachineArchetype, CraftingMachineObserver } from "../../../simulation/archetypes/crafting-machine";
+import type { DrillObserver } from "../../../simulation/archetypes/mining-drill";
+import { drillStatusOf, machineStatusOf } from "../../../simulation/status-codes";
 import { CraftEventPluginSettings } from "./debug-settings";
 
 export class DebugPluginFactory {
@@ -56,16 +57,15 @@ export class DebugPluginFactory {
     }
 
 
-    public machineModeChangePlugin(machine_state: MachineState): ModePlugin<MachineMode> {
+    public machineModeChangePlugin(machine_state: MachineState): CraftingMachineObserver {
         const debugLog = this.log_factory.forEntity(machine_state.machine);
         const enabled = () => this.enabled();
         return {
-            onTransition(fromMode, transition) {
+            onStatusChange(from, to, reason_id) {
                 if (!enabled()) {
                     return;
                 }
-                const new_status = transition.toMode.status;
-                debugLog(chalk.yellow(`${fromMode.status} -> ${new_status} reason=${transition.reason}`));
+                debugLog(chalk.yellow(`${machineStatusOf(from)} -> ${machineStatusOf(to)} reason=${reasonText(reason_id)}`));
             }
         }
     }
@@ -93,7 +93,7 @@ export class DebugPluginFactory {
             }
 
             state.machine.inputs.forEach((input) => {
-                const input_quantity = MachineState.ingredientQuantity(state, input.ingredient.name);
+                const input_quantity = state.ingress.ingredientQuantity(input.ingredient.name);
                 message += ` \t "${input.ingredient.name}"=${input_quantity}`;
             });
 
@@ -104,22 +104,21 @@ export class DebugPluginFactory {
         })
     }
 
-    public drillModeChangePlugin(drill_state: DrillState): ModePlugin<DrillMode> {
+    public drillModeChangePlugin(drill_state: DrillState): DrillObserver {
         const debugLog = this.log_factory.forEntity(drill_state.drill);
         const enabled = () => this.enabled();
         return {
-            onTransition(fromMode, transition) {
+            onStatusChange(from, to, reason_id) {
                 if (!enabled()) {
                     return;
                 }
-                const new_status = transition.toMode.status;
-                debugLog(chalk.yellow(`${fromMode.status} -> ${new_status} reason=${transition.reason}`));
+                debugLog(chalk.yellow(`${drillStatusOf(from)} -> ${drillStatusOf(to)} reason=${reasonText(reason_id)}`));
             }
         }
     }
 
-    public forMachine(state_machine: MachineStateMachine): void {
-        state_machine.addPlugin(this.machineModeChangePlugin(state_machine.machine_state));
-        state_machine.addPlugin(this.machineCraftEventPlugin(state_machine.machine_state));
+    public forMachine(machine: CraftingMachineArchetype): void {
+        machine.addObserver(this.machineModeChangePlugin(machine.machine_state));
+        machine.addObserver(this.machineCraftEventPlugin(machine.machine_state));
     }
 }

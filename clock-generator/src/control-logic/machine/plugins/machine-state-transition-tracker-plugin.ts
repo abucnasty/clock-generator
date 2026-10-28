@@ -1,7 +1,7 @@
 import { MachineStatus } from "../../../state";
 import { TickProvider } from "../../current-tick-provider";
-import { ModePlugin, Transition } from "../../mode";
-import { MachineMode } from "../modes";
+import type { CraftingMachineObserver } from "../../../simulation/archetypes/crafting-machine";
+import { CraftingStatus, machineStatusOf } from "../../../simulation/status-codes";
 
 /** Where the transitions of a machine are recorded (a recorder of the state transition history) */
 interface MachineTransitionRecorder {
@@ -9,16 +9,16 @@ interface MachineTransitionRecorder {
 }
 
 /**
- * Plugin that tracks state transitions for a machine state machine.
- * Records each mode transition with its tick and the number of its reason.
+ * Observer that tracks the changes of status of a crafting machine.
+ * Records each change with its tick, the statuses as the histories name them, and the number of its reason.
  */
-export class MachineStateTransitionTrackerPlugin implements ModePlugin<MachineMode> {
+export class MachineStateTransitionTrackerPlugin implements CraftingMachineObserver {
     constructor(
         private readonly tick_provider: TickProvider,
         private readonly recorder: MachineTransitionRecorder,
     ) {}
 
-    onTransition(fromMode: MachineMode, transition: Transition<MachineMode>): void {
-        this.recorder.recordTransition(this.tick_provider.getCurrentTick(), fromMode.status, transition.toMode.status, transition.reason_id);
+    onStatusChange(from: CraftingStatus, to: CraftingStatus, reason_id: number): void {
+        this.recorder.recordTransition(this.tick_provider.getCurrentTick(), machineStatusOf(from), machineStatusOf(to), reason_id);
     }
 }

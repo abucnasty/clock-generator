@@ -32,7 +32,7 @@ async function factsOf(file: string): Promise<Facts.PlannerFacts> {
 
 /**
  * Of each sample, the edges whose drop spot (`sink.drop.lane`) is not the lane the trait rounds their hand to: none yet.
- * The simulator drops on the spot (belt-drop-logic dropOffToLane) with a hand rounded to the other lane (inserterHands),
+ * The simulator drops on the spot (BeltHandDrop) with a hand rounded to the other lane (inserterHands),
  * and the facts count the drop floor on the spot, so a sample that has one changes the graph and the floors: list it
  * here on purpose, as "<edge>: <rounding lane> -> <drop lane>".
  */

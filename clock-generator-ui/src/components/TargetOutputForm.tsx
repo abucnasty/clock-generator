@@ -127,7 +127,7 @@ export function TargetOutputForm({
                     ) : (
                         <NumberField
                             id={ELEMENT_IDS.targetCopyOffset}
-                            aria-label="Tiles to the next copy"
+                            inputAriaLabel="Tiles to the next copy"
                             value={shown.tiles}
                             onValueChange={(val) => onCopyOffsetChange(copyOffsetOf(val ?? null, shown.side))}
                             // no tiles is no gap, which the field shows empty: a step down to 0 would empty it, and a step up from
@@ -140,7 +140,7 @@ export function TargetOutputForm({
                     )}
                     <Typography variant="body2" component="span">tiles</Typography>
                     {shown !== 'diagonal' && (
-                        <TextField select size="small" value={shown.side} aria-label="Side of the next copy"
+                        <TextField select size="small" value={shown.side} slotProps={{ htmlInput: { 'aria-label': 'Side of the next copy' } }}
                             onChange={(event) => onCopyOffsetChange(copyOffsetOf(shown.tiles, event.target.value as Side))} sx={{ minWidth: 100 }}>
                             {SIDES.map(side => <MenuItem key={side} value={side}>{side}</MenuItem>)}
                         </TextField>

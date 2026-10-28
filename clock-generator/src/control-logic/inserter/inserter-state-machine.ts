@@ -1,7 +1,7 @@
 import assert from "../../common/assert"
 import { ControlLogic } from "../control-logic";
 import { ModePlugin, ModeStateMachine, ModeTransitionEvaluator, Transition } from "../mode";
-import { InserterDropMode, InserterIdleMode, InserterMode, InserterPickupMode, InserterSwingMode, InserterTransferLogicFactory } from "./modes";
+import { InserterDropMode, InserterIdleMode, InserterMode, InserterPickupMode, InserterSwingMode } from "./modes";
 import { InserterTargetFullMode } from "./modes/target-full-mode";
 import { InserterWaitForSinkMode } from "./modes/wait-for-sink-mode";
 import { EntityId } from "../../entities";
@@ -10,6 +10,7 @@ import { TickProvider } from "../current-tick-provider";
 import { EnableControl } from "../enable-control";
 import { InserterDisabledMode } from "./modes/disabled-mode";
 import { InserterStatusPlugin } from "./plugins";
+import { bindHandPorts } from "../../simulation/components/hand-ports";
 import { IdleModeTransitionEvaluator, InserterSwingModeTransitionEvaluator, DropModeTransitionEvaluator, PickupModeTransitionEvaluator, DisabledModeTransitionEvaluator, TargetFullModeTransitionEvaluator, WaitForSinkModeTransitionEvaluator } from "./transitions";
 
 export class InserterStateMachine extends ModeStateMachine<InserterMode> {
@@ -34,13 +35,27 @@ export class InserterStateMachine extends ModeStateMachine<InserterMode> {
     /** The enable control when it is also a ControlLogic, as FractionalSwingEnableControl is, to run each tick */
     private readonly ticking_control: ControlLogic | undefined;
 
+    /** The steps of a tick in the order of the phase table (simulation/tick-phases.ts), which runs them one by one */
     public override executeForTick(): void {
-        // If the enable control implements ControlLogic, execute it each tick
-        // This allows controls like FractionalSwingEnableControl to track state transitions
+        this.tickControl();
+        this.ruleStep();
+        this.modeStep();
+        this.tickObservers();
+        this.writeShownEnabled();
+    }
+
+    /**
+     * If the enable control implements ControlLogic, execute it each tick. This allows controls like
+     * FractionalSwingEnableControl to track state transitions
+     */
+    public tickControl(): void {
         if (this.ticking_control) {
             this.ticking_control.executeForTick();
         }
-        // a copy of ModeStateMachine.executeForTick, see there
+    }
+
+    /** The phase rule; a copy of ModeStateMachine.ruleStep, see ModeStateMachine.executeForTick */
+    public override ruleStep(): void {
         const evaluator = this.current_evaluator ?? this.modeEvaluatorForMode(this.current);
         const transition = evaluator.evaluateTransition();
         const next = transition instanceof Transition ? this.executeTransition(this.current, transition) : this.current;
@@ -48,11 +63,26 @@ export class InserterStateMachine extends ModeStateMachine<InserterMode> {
             this.current = next;
             this.current_evaluator = this.entered_evaluator ?? this.modeEvaluatorForMode(next);
         }
-        next.executeForTick();
+    }
+
+    /** The phase's step; a copy, see ModeStateMachine.executeForTick */
+    public override modeStep(): void {
+        this.current.executeForTick();
+    }
+
+    /**
+     * The plugins of the tick in the order they were added (InserterStatusPlugin writes the phase in the rule, on the
+     * transition); a copy, see ModeStateMachine.executeForTick
+     */
+    public override tickObservers(): void {
         const tick_plugins = this.tick_plugins;
         for (let index = 0; index < tick_plugins.length; index++) {
             tick_plugins[index].executeForTick!();
         }
+    }
+
+    /** Whether the game shows the inserter enabled after this tick, for its game status and the next tick's readers */
+    public writeShownEnabled(): void {
         this.inserter_state.enabled = this.shownEnabled();
     }
 
@@ -101,16 +131,17 @@ function createInserterStateMachine(args: {
     } = args;
 
     const idle_mode = new InserterIdleMode();
-    const transfer_logic = InserterTransferLogicFactory.create({
+    // the hand's source's pickup port and its sink's drop port, with a fresh scratch record (same-tick rule 12)
+    const ports = bindHandPorts({
         inserterState: inserter_state,
         sourceState: source_state,
         sinkState: sink_state,
         tick_provider,
         decider_build_order: enable_control.decider_build_order,
     });
-    const pickup_mode = new InserterPickupMode(inserter_state, transfer_logic.pickup);
+    const pickup_mode = new InserterPickupMode(inserter_state, ports.pickup);
     const swing_mode = new InserterSwingMode();
-    const drop_mode = new InserterDropMode(transfer_logic.drop);
+    const drop_mode = new InserterDropMode(ports.drop);
     const disabled_mode = new InserterDisabledMode();
     const target_full_mode = new InserterTargetFullMode(drop_mode);
     const wait_for_sink_mode = new InserterWaitForSinkMode();
@@ -119,6 +150,7 @@ function createInserterStateMachine(args: {
         inserter_state: inserter_state,
         source_state: source_state,
         sink_state: sink_state,
+        sink_port: ports.drop,
         enable_control: enable_control,
         disabled_mode: disabled_mode,
         pickup_mode: pickup_mode,
@@ -146,7 +178,7 @@ function createInserterStateMachine(args: {
 
     const pickup_mode_evaluator = new PickupModeTransitionEvaluator(
         inserter_state,
-        sink_state,
+        ports.drop,
         swing_mode,
         disabled_mode,
         idle_mode,
@@ -157,7 +189,7 @@ function createInserterStateMachine(args: {
 
     const wait_for_sink_mode_evaluator = new WaitForSinkModeTransitionEvaluator(
         inserter_state,
-        sink_state,
+        ports.drop,
         pickup_mode,
         disabled_mode,
         enable_control,

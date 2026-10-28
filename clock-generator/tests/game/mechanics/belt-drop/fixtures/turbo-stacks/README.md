@@ -110,7 +110,7 @@ BELT_DROP_CAPTURE_DIR=.scratch/belt-drop/new-run npm run test:game -- tests/game
 
 # Affected native regression and offline checks.
 npm run test:game -- tests/game/mechanics/belt-drop/turbo-stacks.game.test.ts
-npm test -- src/entities/belt/belt.test.ts src/entities/inserter/inserter-hand-size.test.ts src/control-logic/inserter/modes/drop/belt-output-stock.test.ts
+npm test -- src/entities/belt/belt.test.ts src/entities/inserter/inserter-hand-size.test.ts src/simulation/components/belt-hand-drop.test.ts
 BELT_SPEED_CAPTURE_DIR=.scratch/belt-drop/new-cutoff npm run test:game -- tests/game/mechanics/belt-drop/occupied-output.game.test.ts -t cutoff
 npm run screenshots -- --case=turbo-belt-drop-stacks
 ```

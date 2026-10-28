@@ -1,12 +1,11 @@
 import { OpenRange } from "../../../data-types";
 import { Machine, MiningDrill, miningDrillMaxInsertion } from "../../../entities";
-import { DrillStatus } from "../../../state";
 import { TickProvider } from "../../current-tick-provider";
 import { InventoryTransferHistory } from "../../../crafting/sequence/inventory-transfer-history";
-import { ModePlugin, Transition } from "../../mode";
-import { DrillMode } from "../modes/drill-mode";
+import type { DrillObserver } from "../../../simulation/archetypes/mining-drill";
+import { DrillStatusCode } from "../../../simulation/status-codes";
 
-export class DrillInventoryTransferPlugin implements ModePlugin<DrillMode> {
+export class DrillInventoryTransferPlugin implements DrillObserver {
 
     private last_enabled_tick: number | null = null;
 
@@ -17,11 +16,11 @@ export class DrillInventoryTransferPlugin implements ModePlugin<DrillMode> {
         private readonly transfer_history: InventoryTransferHistory,
     ) { }
 
-    public onTransition(fromMode: DrillMode, transition: Transition<DrillMode>): void {
-        if (fromMode.status === DrillStatus.DISABLED) {
+    public onStatusChange(from: DrillStatusCode, to: DrillStatusCode): void {
+        if (from === DrillStatusCode.DISABLED_BY_CONTROL_BEHAVIOR) {
             this.last_enabled_tick = this.tick_provider.getCurrentTick();
         }
-        if (transition.toMode.status === DrillStatus.DISABLED && this.last_enabled_tick !== null) {
+        if (to === DrillStatusCode.DISABLED_BY_CONTROL_BEHAVIOR && this.last_enabled_tick !== null) {
             this.transfer_history.recordTransfer(
                 this.drill_entity.entity_id,
                 {

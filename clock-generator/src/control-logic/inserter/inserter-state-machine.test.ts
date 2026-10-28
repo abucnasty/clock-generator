@@ -3,7 +3,8 @@ import { InserterAnimationOverrideConfig } from "../../config/schema";
 import { OpenRange, Duration } from "../../data-types";
 import { Belt, EntityId, Inserter, InserterMetadata, InserterStackSize, Machine, RecipeMetadata } from "../../entities";
 import { InserterAnimation } from "../../entities/inserter/inserter-animation";
-import { BeltState, InserterState, MachineState } from "../../state";
+import { InserterState, MachineState } from "../../state";
+import { TransportBelt } from "../../simulation/archetypes/transport-belt";
 import { factorioInserterState, FactorioInserterState } from "../../state/factorio-entity-state";
 import { MutableTickProvider } from "../current-tick-provider";
 import { AlwaysEnabledControl, EnableControl } from "../enable-control";
@@ -34,7 +35,7 @@ function run(is_game_clock: boolean) {
     const tick_provider = MutableTickProvider.create(0);
     const state_machine = InserterStateMachine.create({
         inserter_state,
-        source_state: BeltState.create(belt),
+        source_state: TransportBelt.create(belt),
         sink_state,
         tick_provider,
         enable_control: EnableControl.clocked({
@@ -102,7 +103,7 @@ function twoTakers(held: number, in_hand: number = 0) {
         };
         const inserter_state = InserterState.createIdle(inserter);
         const state_machine = InserterStateMachine.create({
-            inserter_state, source_state, sink_state: BeltState.create(belt), tick_provider, enable_control: AlwaysEnabledControl,
+            inserter_state, source_state, sink_state: TransportBelt.create(belt), tick_provider, enable_control: AlwaysEnabledControl,
         });
         return { inserter_state, state_machine };
     };

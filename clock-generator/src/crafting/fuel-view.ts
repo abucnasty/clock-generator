@@ -1,5 +1,6 @@
 import { Entity, EntityId, handSizeFor, ReadableEntityRegistry } from "../entities";
 import { MachineState } from "../state";
+import { BurnerEnergy } from "../simulation/components/burner-energy";
 import { mergedClockTicks } from "./blueprint";
 import { InserterClock, fuelOnlyInserters } from "./sequence/unplanned-inserter-clock";
 
@@ -193,28 +194,32 @@ const FUEL_EPSILON = 1e-6;
 
 /** Samples the fuel of every burner machine after each tick of a run */
 export class FuelLevelRecorder {
-    private readonly levels: Map<MachineState, number[]>;
+    private readonly levels: Map<MachineState, { energy: BurnerEnergy; levels: number[] }>;
 
     constructor(machine_states: readonly MachineState[]) {
-        this.levels = new Map(machine_states
-            .filter(state => state.machine.fuel_slot !== undefined)
-            .map(state => [state, [FuelLevelRecorder.levelOf(state)]]));
+        this.levels = new Map();
+        for (const state of machine_states) {
+            const energy = state.energy;
+            if (energy instanceof BurnerEnergy) {
+                this.levels.set(state, { energy, levels: [FuelLevelRecorder.levelOf(state, energy)] });
+            }
+        }
     }
 
-    private static levelOf(state: MachineState): number {
-        const fuel = state.machine.fuel_slot!.fuel;
-        return state.fuelInventory.getQuantity(fuel.item_name) + state.fuelProgress.energy_remaining_mj / fuel.fuel_value_mj;
+    private static levelOf(state: MachineState, energy: BurnerEnergy): number {
+        const fuel = energy.fuel_slot.fuel;
+        return state.fuelInventory.getQuantity(fuel.item_name) + energy.energy_remaining_mj / fuel.fuel_value_mj;
     }
 
     public record(): void {
-        for (const [state, levels] of this.levels) {
-            levels.push(FuelLevelRecorder.levelOf(state));
+        for (const [state, { energy, levels }] of this.levels) {
+            levels.push(FuelLevelRecorder.levelOf(state, energy));
         }
     }
 
     public series(): FuelLevelSeries[] {
-        return Array.from(this.levels, ([state, levels]) =>
-            seriesOf(state.machine.entity_id, levels, state.machine.fuel_slot!.automated_insertion_limit));
+        return Array.from(this.levels, ([state, { energy, levels }]) =>
+            seriesOf(state.machine.entity_id, levels, energy.fuel_slot.automated_insertion_limit));
     }
 }
 

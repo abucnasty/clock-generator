@@ -1,8 +1,8 @@
 import { Duration, OpenRange } from "../../../data-types";
-import { MachineState, MachineStatus } from "../../../state";
+import { MachineState } from "../../../state";
 import { TickProvider } from "../../current-tick-provider";
-import { ModePlugin, Transition } from "../../mode";
-import { MachineMode } from "../modes";
+import type { CraftingMachineObserver } from "../../../simulation/archetypes/crafting-machine";
+import { CraftingStatus } from "../../../simulation/status-codes";
 
 interface CraftEventListenerArgs {
     readonly craft_index: number,
@@ -11,7 +11,7 @@ interface CraftEventListenerArgs {
 }
 type CraftEventListener = (args: CraftEventListenerArgs) => void;
 
-export class CraftEventListenerPlugin implements ModePlugin<MachineMode> {
+export class CraftEventListenerPlugin implements CraftingMachineObserver {
     constructor(
         private readonly machine_state: MachineState,
         private readonly tick_provider: TickProvider,
@@ -26,8 +26,8 @@ export class CraftEventListenerPlugin implements ModePlugin<MachineMode> {
 
     private last_craft_tick: number = 0;
 
-    onTransition(fromMode: MachineMode, transition: Transition<MachineMode>): void {
-        if (transition.toMode.status === MachineStatus.WORKING) {
+    onStatusChange(from: CraftingStatus, to: CraftingStatus): void {
+        if (to === CraftingStatus.WORKING) {
             this.last_craft_tick = this.tick_provider.getCurrentTick();
         }
     }

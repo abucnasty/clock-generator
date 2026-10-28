@@ -172,3 +172,23 @@ it('retains transfer routes, item icons, totals, ticks and zero-duration transfe
     for (const mark of name.parentElement!.parentElement!.nextElementSibling!.children) tips.push(await tooltipOf(user, mark));
     expect(tips).toEqual(['Iron plateAmount: 3Tick 0 → 10Duration: 10 ticks', 'Copper plateAmount: 4Tick 40 → 40Duration: 0 ticks']);
 });
+
+it('reaches a transfer\'s mark with the keyboard and tells what the pointer is told', async () => {
+    const transfers: SerializableTransferHistory = { total_duration_ticks: 40, entities: [{ entity_id: 'inserter:1', entity_type: 'inserter', label: 'Transfer inserter',
+        transfers: [{ item_name: 'iron-plate', start_tick: 0, end_tick: 10, amount: 3 }, { item_name: 'copper-plate', start_tick: 40, end_tick: 40, amount: 4 }] }] };
+    const { user } = show(<TransferHistoryVisualization transferHistory={transfers} />, { names: GAME_NAMES });
+    const marks = [
+        { name: 'Iron plate: amount 3, tick 0 to 10, duration 10 ticks', tip: 'Iron plateAmount: 3Tick 0 → 10Duration: 10 ticks' },
+        { name: 'Copper plate: amount 4, tick 40 to 40, duration 0 ticks', tip: 'Copper plateAmount: 4Tick 40 → 40Duration: 0 ticks' },
+    ];
+    // the page's other stops (the chart's scroll region) come first; the marks follow in the order they are drawn
+    const focused: (string | null)[] = [];
+    for (let stops = 0; stops < 6 && focused.length < marks.length; stops++) {
+        await user.tab();
+        const active = document.activeElement!;
+        if (active.getAttribute('role') !== 'img') continue;
+        focused.push(active.getAttribute('aria-label'));
+        expect((await screen.findByRole('tooltip')).textContent).toBe(marks[focused.length - 1].tip);
+    }
+    expect(focused).toEqual(marks.map(mark => mark.name));
+});

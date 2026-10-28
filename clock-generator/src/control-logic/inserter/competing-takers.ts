@@ -59,13 +59,44 @@ function rankedMembers<T>(members: readonly T[], number_of: (member: T) => numbe
 }
 
 /**
- * The inserters of a simulation, updated in the order of the list except where several take from one machine: those are
- * updated in the order of `order` on every tick, among the places they have in the list, so the first of them takes up
- * to its hand and the next what is left (see TakerOrder). Every inserter that takes from a machine stays ahead of the
- * inserters that put into it, as the list has them (`orderInsertersDownstreamFirst`): a taker served late among its
- * competitors does not move an inserter of its own sink's feeders ahead of that sink's takers, which the rule for
- * windows that open together needs (`wokenThisTick`).
+ * The inserters of a simulation in the order a tick updates them: the order of the list except where several take from
+ * one machine: those are updated in the order of `order` on every tick, among the places they have in the list, so the
+ * first of them takes up to its hand and the next what is left (see TakerOrder). Every inserter that takes from a
+ * machine stays ahead of the inserters that put into it, as the list has them (`orderInsertersDownstreamFirst`): a taker
+ * served late among its competitors does not move an inserter of its own sink's feeders ahead of that sink's takers,
+ * which the rule for windows that open together needs (`wokenThisTick`). The phase table's inserters phase runs them
+ * in this order (simulation/tick-phases.ts).
  */
+export function inserterUpdateOrder(
+    inserters: readonly InserterStateMachine[],
+    states: ReadableEntityStateRegistry,
+    order: TakerOrder = DEFAULT_TAKER_ORDER,
+): InserterStateMachine[] {
+    const list = [...inserters];
+    const places_by_machine = new Map<string, number[]>();
+    inserters.forEach((it, place) => {
+        const source = it.inserter_state.inserter.source.entity_id;
+        if (source.type === "machine") {
+            places_by_machine.set(source.id, [...(places_by_machine.get(source.id) ?? []), place]);
+        }
+    });
+    const draw = typeof order === "object" && "seed" in order ? seeded(order.seed) : null;
+    const groups: { places: number[]; ranked: InserterStateMachine[] }[] = [];
+    for (const places of places_by_machine.values()) {
+        const machine = states.getStateByEntityId(inserters[places[0]].inserter_state.inserter.source.entity_id);
+        if (places.length < 2 || machine === null || !EntityState.isMachine(machine)) {
+            continue;
+        }
+        const members = places.map(place => inserters[place]);
+        // Draw seeded ranks before skipping: later groups must keep the same seeded order.
+        const ranked = rankedMembers(members, it => it.inserter_state.entity_id.number, order, draw);
+        if (ranked.every((member, index) => member === members[index])) continue;
+        groups.push({ places, ranked });
+    }
+    return groups.length === 0 ? list : orderWith(list, groups);
+}
+
+/** The inserters of a simulation, each tick updated in the order of `inserterUpdateOrder` */
 export class InserterUpdates implements ControlLogic {
     private readonly updates: readonly InserterStateMachine[];
 
@@ -74,28 +105,7 @@ export class InserterUpdates implements ControlLogic {
         states: ReadableEntityStateRegistry,
         order: TakerOrder = DEFAULT_TAKER_ORDER,
     ) {
-        const list = [...inserters];
-        const places_by_machine = new Map<string, number[]>();
-        inserters.forEach((it, place) => {
-            const source = it.inserter_state.inserter.source.entity_id;
-            if (source.type === "machine") {
-                places_by_machine.set(source.id, [...(places_by_machine.get(source.id) ?? []), place]);
-            }
-        });
-        const draw = typeof order === "object" && "seed" in order ? seeded(order.seed) : null;
-        const groups: { places: number[]; ranked: InserterStateMachine[] }[] = [];
-        for (const places of places_by_machine.values()) {
-            const machine = states.getStateByEntityId(inserters[places[0]].inserter_state.inserter.source.entity_id);
-            if (places.length < 2 || machine === null || !EntityState.isMachine(machine)) {
-                continue;
-            }
-            const members = places.map(place => inserters[place]);
-            // Draw seeded ranks before skipping: later groups must keep the same seeded order.
-            const ranked = rankedMembers(members, it => it.inserter_state.entity_id.number, order, draw);
-            if (ranked.every((member, index) => member === members[index])) continue;
-            groups.push({ places, ranked });
-        }
-        this.updates = groups.length === 0 ? list : orderWith(list, groups);
+        this.updates = inserterUpdateOrder(inserters, states, order);
     }
 
     public executeForTick(): void {

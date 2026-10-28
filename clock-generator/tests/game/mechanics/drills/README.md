@@ -86,7 +86,7 @@ drill is disabled, and what it takes.
 | `fill-l40000-drill-last`, `gated-l100000-drill-last` | the drill built after the chest |
 | `gated-l100000-moved` | the build at (203, -141), another chunk |
 
-The simulator's drill (`DrillChestWorkingMode`, the steel chest as a buffer chest of iron ore with its slots) is driven
+The simulator's drill (`MiningDrillArchetype` with its `Mining`, the steel chest as a buffer chest of iron ore with its slots) is driven
 by the probe: in tick k the chest has lost what the probe took in row k - 1 (it takes after the tick's entities), and
 the drill is enabled where the game's was not disabled in row k - 1. The chest's count and both bars equal the game's in
 every tick. Also asserted:

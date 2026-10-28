@@ -1,4 +1,5 @@
-import { EntityState, InserterState, MachineState } from "../../../state";
+import { InserterState } from "../../../state";
+import { HandDropPort } from "../../../simulation/components/hand";
 import { EnableControl } from "../../enable-control";
 import { ModeTransition, ModeTransitionEvaluator } from "../../mode";
 import { InserterMode, InserterPickupMode } from "../modes";
@@ -9,7 +10,8 @@ export class WaitForSinkModeTransitionEvaluator implements ModeTransitionEvaluat
 
     constructor(
         private readonly inserter_state: InserterState,
-        private readonly sink_state: EntityState,
+        /** The sink's drop port as the hand reaches it: whether the sink takes the item in the hand again */
+        private readonly sink_port: HandDropPort,
         private readonly pickup_mode: InserterPickupMode,
         private readonly disabled_mode: InserterDisabledMode,
         private readonly enable_control: EnableControl,
@@ -27,7 +29,7 @@ export class WaitForSinkModeTransitionEvaluator implements ModeTransitionEvaluat
         if (held_item === null) {
             return ModeTransition.transition(this.pickup_mode, "nothing in hand to wait with");
         }
-        if (!EntityState.isMachine(this.sink_state) || !MachineState.machineInputIsBlocked(this.sink_state, held_item.item_name)) {
+        if (this.sink_port.takes(held_item.item_name)) {
             return ModeTransition.transition(this.pickup_mode, `machine takes ${held_item.item_name} again`);
         }
         return ModeTransition.NONE;

@@ -1,33 +1,20 @@
-import { ControlLogic, MutableTickProvider } from "../../control-logic";
+import { ControlLogic } from "../../control-logic";
+import { runTick, TickTracer } from "../../simulation/tick-phases";
+import { World } from "../../simulation/world";
 import { SimulationContext } from "../sequence/simulation-context";
 
 /**
- * One tick of a simulation as a CompositeControlLogic of the tick, the drills, the inserter updates and the machines
- * runs it: the same order, with a loop of its own for each kind, so that each loop calls into one kind of state machine.
+ * One tick of a simulation: the phase table's tick, drills, inserters and machines (simulation/tick-phases.ts) over the
+ * context's World, which is built once here, for every tick this runs.
  */
 export class SimulationTick implements ControlLogic {
-    private readonly tick_provider: MutableTickProvider;
-    private readonly drills: readonly ControlLogic[];
-    private readonly inserters: ControlLogic;
-    private readonly machines: readonly ControlLogic[];
+    private readonly world: World;
 
-    constructor(context: SimulationContext) {
-        this.tick_provider = context.tick_provider;
-        this.drills = [...context.drills];
-        this.inserters = context.inserterUpdates();
-        this.machines = [...context.machines];
+    constructor(context: SimulationContext, private readonly tracer: TickTracer | null = null) {
+        this.world = World.of(context);
     }
 
     public executeForTick(): void {
-        this.tick_provider.incrementTick();
-        const drills = this.drills;
-        for (let index = 0; index < drills.length; index++) {
-            drills[index].executeForTick();
-        }
-        this.inserters.executeForTick();
-        const machines = this.machines;
-        for (let index = 0; index < machines.length; index++) {
-            machines[index].executeForTick();
-        }
+        runTick(this.world, this.tracer);
     }
 }

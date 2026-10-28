@@ -43,7 +43,7 @@ test("production curved pickup matches all 170 native hands from observed full s
         if (!EntityState.isBelt(source)) throw Error("Expected belt source");
         const lanes = clip.stock.map((stock, index) => new BackedUpPickupLane(BeltSpeed.TURBO_TRANSPORT_BELT,
             pickupLaneLength("bend-right-upstream", index + 1), 4, stock[0][0]));
-        source.pickup_lanes.set(state.entity_id.id, lanes);
+        source.seedPickups(state.entity_id.id, lanes);
         const mode = InserterPickupMode.create({inserterState: state, sourceState: source,
             sinkState: context.state_registry.getStateByEntityIdOrThrow(state.inserter.sink.entity_id), tick_provider: context.tick_provider});
         for (const frame of clip.frames) {
@@ -72,7 +72,7 @@ test("moving phase restarts preserve the short and long curved lane lengths", ()
     const state = context.inserters[0].inserter_state;
     const source = context.state_registry.getStateByEntityIdOrThrow(state.inserter.source.entity_id);
     if (!EntityState.isBelt(source)) throw Error("Expected belt source");
-    const lanes = source.pickup_lanes.get(state.entity_id.id)!;
+    const lanes = source.pickupsOf(state.entity_id.id)!;
     // The two curved paths keep their own exposed stock span when a trial resets their phases.
     expect(lanes[0].peek(0)!.position).toBe(288);
     expect(lanes[1].peek(0)!.position).toBe(64);
@@ -94,7 +94,7 @@ test("production curved pickup matches 1,039 full-moving native hands with their
         if (!EntityState.isBelt(source)) throw Error("Expected belt source");
         const lanes = clip.stock.map((stock, index) => new BeltPickupLane(BeltSpeed.TURBO_TRANSPORT_BELT,
             pickupLaneLength("bend-right-upstream", index + 1), 4, (stock[0][0] % 64) / 8));
-        source.pickup_lanes.set(state.entity_id.id, lanes);
+        source.seedPickups(state.entity_id.id, lanes);
         const mode = InserterPickupMode.create({inserterState: state, sourceState: source,
             sinkState: context.state_registry.getStateByEntityIdOrThrow(state.inserter.sink.entity_id), tick_provider: context.tick_provider});
         for (const frame of clip.frames) {

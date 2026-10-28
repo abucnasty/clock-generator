@@ -41,7 +41,8 @@ export const RECOMMENDED_COPY = {
         'The clock picked for you is the one that holds the rate and recovers with the fewest wake-ups; on a build '
             + 'with a deadlock risk, the one '
             + 'with the fewest wake-ups of the clocks that hold the rate. If clocks tie, the one with fewer wake '
-            + 'windows. If none qualifies, the one that runs nearest to the target rate.',
+            + 'windows. If none qualifies, the one that runs nearest to the target rate. On a build with a loop of machines, '
+            + 'whose wake-ups depend on where its clock is when the build starts, their average over 12 start points is compared.',
         'A clock made for a moving belt keeps each belt inserter\'s wake window open a few ticks longer (belt slack). '
             + 'A clock made without it is only picked when no clock for a moving belt holds the rate. If you say your '
             + 'input belts are backed up (Configure, Belts), every clock is made without the slack.',

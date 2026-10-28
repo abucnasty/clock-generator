@@ -2,7 +2,7 @@ import { InserterConfigSchema } from 'clock-generator/browser';
 import { describe, expect, it } from 'vitest';
 import { createDefaultRuleSet, createDefaultStatusCondition } from '../components/ruleSetUtils';
 import { effectiveInserterStackSize } from './inserterMetadata';
-import type { RuleSet } from './configForm/formData';
+import type { Condition, RuleSet } from './configForm/formData';
 import { defaultAmount, isDefaultRuleSet, replacedCount, templateRule, templatesFor, type RuleTemplateId } from './ruleTemplates';
 
 const ids = (source: 'machine' | 'belt' | 'chest', sink: 'machine' | 'belt' | 'chest') => templatesFor(source, sink).map((t) => t.id);
@@ -18,45 +18,28 @@ describe('templatesFor', () => {
 
 describe('templateRule', () => {
     const item = 'electromagnetic-science-pack';
+    /** On while all of the conditions hold, as each template's rule sets are */
+    const allOf = (...rules: Condition[]): RuleSet => ({ operator: 'AND', rules });
 
-    it('makes "Source output full"', () => {
-        expect(templateRule('source-output-full', { item, amount: 32 })).toEqual({
-            ruleSet: {
-                operator: 'AND',
-                rules: [{ left: { type: 'MACHINE_STATUS', entity: 'SOURCE', status: 'OUTPUT_FULL' }, operator: '==', right: { type: 'CONSTANT', value: 1 } }],
-            },
-        });
-    });
-
-    it('makes "Destination below its insertion limit" for the item', () => {
-        expect(templateRule('destination-below-limit', { item, amount: 32 })).toEqual({
-            ruleSet: {
-                operator: 'AND',
-                rules: [{
-                    left: { type: 'INVENTORY_ITEM', entity: 'SINK', item_name: item },
-                    operator: '<',
-                    right: { type: 'AUTOMATED_INSERTION_LIMIT', entity: 'SINK', item_name: item },
-                }],
-            },
-        });
-    });
-
-    it('makes "Latched output drain" with the amount, released on the source\'s output block', () => {
-        expect(templateRule('latched-output-drain', { item, amount: 24 })).toEqual({
-            ruleSet: {
-                operator: 'AND',
-                rules: [{ left: { type: 'INVENTORY_ITEM', entity: 'SOURCE', item_name: item }, operator: '>=', right: { type: 'CONSTANT', value: 24 } }],
-            },
-            release: {
-                operator: 'AND',
-                rules: [{ left: { type: 'INVENTORY_ITEM', entity: 'SOURCE', item_name: item }, operator: '<', right: { type: 'OUTPUT_BLOCK', entity: 'SOURCE' } }],
-            },
-        });
-    });
-
-    it.each<RuleTemplateId>(['source-output-full', 'destination-below-limit', 'latched-output-drain'])('makes a %s rule the engine reads', (id) => {
-        const { ruleSet, release } = templateRule(id, { item, amount: 32 });
-        const enable_control = { mode: 'CONDITIONAL' as const, rule_set: ruleSet, ...(release && { latch: { release } }) };
+    it.each<{ id: RuleTemplateId; why: string; amount: number; made: ReturnType<typeof templateRule> }>([
+        { id: 'source-output-full', why: 'when the source is Output full', amount: 32, made: {
+            ruleSet: allOf({ left: { type: 'MACHINE_STATUS', entity: 'SOURCE', status: 'OUTPUT_FULL' }, operator: '==', right: { type: 'CONSTANT', value: 1 } }),
+        } },
+        { id: 'destination-below-limit', why: 'for the item', amount: 32, made: {
+            ruleSet: allOf({
+                left: { type: 'INVENTORY_ITEM', entity: 'SINK', item_name: item },
+                operator: '<',
+                right: { type: 'AUTOMATED_INSERTION_LIMIT', entity: 'SINK', item_name: item },
+            }),
+        } },
+        { id: 'latched-output-drain', why: 'at the amount, until the output block', amount: 24, made: {
+            ruleSet: allOf({ left: { type: 'INVENTORY_ITEM', entity: 'SOURCE', item_name: item }, operator: '>=', right: { type: 'CONSTANT', value: 24 } }),
+            release: allOf({ left: { type: 'INVENTORY_ITEM', entity: 'SOURCE', item_name: item }, operator: '<', right: { type: 'OUTPUT_BLOCK', entity: 'SOURCE' } }),
+        } },
+    ])('makes $id $why, a rule the engine reads', ({ id, amount, made }) => {
+        const rule = templateRule(id, { item, amount });
+        expect(rule).toEqual(made);
+        const enable_control = { mode: 'CONDITIONAL' as const, rule_set: rule.ruleSet, ...(rule.release && { latch: { release: rule.release } }) };
         const inserter = { source: { type: 'machine', id: 1 }, sink: { type: 'machine', id: 2 }, stack_size: 16, overrides: { enable_control } };
         expect(InserterConfigSchema.safeParse(inserter).success).toBe(true);
     });

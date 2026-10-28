@@ -3,8 +3,9 @@ import { ChestType } from '../common/entity-types';
 import { loadConfigFromFile } from '../config/loader';
 import { ConfigPaths } from '../config/config-paths';
 import { CompositeControlLogic, TickControlLogic } from '../control-logic';
-import { EntityState, MachineStatus } from '../state';
+import { MachineStatus } from '../state';
 import { SimulationContext } from './sequence/simulation-context';
+import { ContainerStorage } from '../simulation/components/container-storage';
 
 it('fills a finite terminal chest and stops production, while an infinity chest keeps accepting output', async () => {
     const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
@@ -17,7 +18,7 @@ it('fills a finite terminal chest and stops production, while an infinity chest 
             inserters: sample.inserters.map(inserter => inserter.source.type === 'machine'
                 ? { ...inserter, sink: { type: 'chest', id: 1 } } : inserter),
         });
-        const chest = context.state_registry.getAllStates().find(EntityState.isChest)!;
+        const chest = context.state_registry.getAllStates().find(ContainerStorage.is)!;
         const output = context.inserters.find(inserter => inserter.inserter_state.inserter.sink.entity_id.id === chest.entity_id.id)!.inserter_state;
         const machine = context.machines[0].machine_state;
         const tick = new CompositeControlLogic([new TickControlLogic(context.tick_provider), ...context.machines, context.inserterUpdates()]);

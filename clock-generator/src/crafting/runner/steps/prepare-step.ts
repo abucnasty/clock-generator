@@ -1,9 +1,11 @@
-import { CompositeControlLogic, ControlLogic, EnableControl, TickControlLogic } from "../../../control-logic";
+import { ControlLogic, EnableControl } from "../../../control-logic";
+import { SimulationTick } from "../simulation-tick";
 import { assertIsChest, Entity, EntityId } from "../../../entities";
-import { EntityState, MachineState, MachineStatus } from "../../../state";
+import { EntityState, MachineStatus } from "../../../state";
 import { cloneSimulationContextWithInterceptors, SimulationContext } from "../../sequence";
 import { InserterInterceptor } from "../../sequence/interceptors/inserter-interceptor";
 import { RunnerStep, RunnerStepType } from "./runner-step";
+import { ContainerStorage } from "../../../simulation/components/container-storage";
 
 /**
  * PrepareStep simulates the crafting process until all machines are output blocked
@@ -42,7 +44,7 @@ export class PrepareStep implements RunnerStep {
         // Only check for full buffer chests that have both an input and output inserter
         const buffer_chests = context.state_registry
             .getAllStates()
-            .filter(EntityState.isFiniteChest)
+            .filter(ContainerStorage.isFinite)
             .filter(chest => context.inserters.some(inserter_state_machine => inserter_state_machine.inserter_state.inserter.source.entity_id.id === chest.entity_id.id))
             .filter(chest => context.inserters.some(inserter_state_machine => inserter_state_machine.inserter_state.inserter.sink.entity_id.id === chest.entity_id.id))
         
@@ -54,7 +56,7 @@ export class PrepareStep implements RunnerStep {
                 machines_not_output_full.forEach(it => {
                     console.error(`Machine ${it.machine_state.machine.entity_id} status: ${it.machine_state.status}`);
                     it.machine_state.machine.inputs.forEach(input => {
-                        if (MachineState.ingredientQuantity(it.machine_state, input.item_name) < 1) {
+                        if (it.machine_state.ingress.ingredientQuantity(input.item_name) < 1) {
                             console.error(`  Missing input: ${input.item_name}`);
                         }
                     })
@@ -99,7 +101,6 @@ export class PrepareStep implements RunnerStep {
 
     private build(): ControlLogic {
         const context = this.simulation_context
-        const tick_control_logic = new TickControlLogic(context.tick_provider);
         
         // Input inserters: inserters that drop into machines
         const input_inserters_only = context.inserters
@@ -149,13 +150,6 @@ export class PrepareStep implements RunnerStep {
             }
         });
 
-        return new CompositeControlLogic(
-            [
-                tick_control_logic,
-                ...cloned_context.drills,
-                cloned_context.inserterUpdates(),
-                ...cloned_context.machines,
-            ]
-        )
+        return new SimulationTick(cloned_context);
     }
 }
