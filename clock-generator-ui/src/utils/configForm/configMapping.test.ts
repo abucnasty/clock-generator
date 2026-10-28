@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { ConfigSchema, type Config } from 'clock-generator/browser';
+import { ConfigSchema, planRepeatedUnitConversion, type Config } from 'clock-generator/browser';
 import { ChestType } from 'clock-generator/light';
-import { configToFormData, formDataToConfig } from './configMapping';
-import { planRepeatedUnitConversion } from 'clock-generator/browser';
-import { applyRepeatedUnitConversion } from './repeatedUnitConversion';
-import { machineIconName } from './formData';
+import { build, inserter } from '../../test/fixtures';
 import { parseFormConfig } from '../../worker/formConfig';
+import { configToFormData, formDataToConfig } from './configMapping';
+import { machineIconName, type ConfigFormData } from './formData';
+import { applyRepeatedUnitConversion } from './repeatedUnitConversion';
 
 const imported = {
     target_output: { recipe: 'electronic-circuit', items_per_second: 10, copies: 1 },
@@ -40,6 +40,9 @@ const imported = {
     },
     overrides: { lcm: 60 },
 } as unknown as Config;
+
+/** `imported` with these fields in place of its own */
+const importedWith = (fields: Record<string, unknown>) => ({ ...imported, ...fields }) as unknown as Config;
 
 describe('canonical repeated-unit form application', () => {
     it('retains source UUIDs and forced metadata through composite extraction and refuses an inconsistent payload', () => {
@@ -99,18 +102,14 @@ describe('configToFormData', () => {
     });
 
     it('fills in an empty rule set for a conditional override without one', () => {
-        const config = {
-            ...imported,
-            inserters: [{ ...imported.inserters[0], overrides: { enable_control: { mode: 'CONDITIONAL' } } }],
-        } as unknown as Config;
+        const config = importedWith({ inserters: [{ ...imported.inserters[0], overrides: { enable_control: { mode: 'CONDITIONAL' } } }] });
         expect(configToFormData(config).inserters[0].overrides!.enable_control).toEqual({
             mode: 'CONDITIONAL', rule_set: { operator: 'AND', rules: [] }, latch: undefined,
         });
     });
 
     it('treats a chest without a type as a buffer chest', () => {
-        const config = { ...imported, chests: [{ id: 1, item_filter: 'copper-plate' }] } as unknown as Config;
-        expect(configToFormData(config).chests).toEqual([
+        expect(configToFormData(importedWith({ chests: [{ id: 1, item_filter: 'copper-plate' }] })).chests).toEqual([
             { type: ChestType.BUFFER_CHEST, id: 1, _uuid: expect.any(String), storage_size: 1, item_filter: 'copper-plate' },
         ]);
     });
@@ -136,6 +135,12 @@ describe('configToFormData', () => {
             { id: 1, type: ChestType.INFINITY_CHEST, item_filter: [], remove_unfiltered_items: false },
         ]);
     });
+
+    it('never flags an inserter, even one with an ALWAYS rule', () => {
+        const always = importedWith({ inserters: imported.inserters.map((ins) => ({ ...ins, overrides: { enable_control: { mode: 'ALWAYS' } } })) });
+        expect(configToFormData(always).inserters.some((ins) => '_forced_always' in ins)).toBe(false);
+        expect(configToFormData(imported).inserters.some((ins) => '_forced_always' in ins)).toBe(false);
+    });
 });
 
 describe('formDataToConfig', () => {
@@ -150,92 +155,54 @@ describe('formDataToConfig', () => {
     });
 
     it('leaves out the forced flag of an inserter and keeps its ALWAYS rule', () => {
-        const form = configToFormData(imported);
-        form.inserters[0] = { ...form.inserters[0], overrides: { enable_control: { mode: 'ALWAYS' } }, _forced_always: true };
-        const config = formDataToConfig(form);
+        const config = formDataToConfig(build({ inserters: [inserter(1, { overrides: { enable_control: { mode: 'ALWAYS' } }, _forced_always: true })] }));
         expect(JSON.stringify(config)).not.toContain('_forced_always');
         expect(config.inserters[0].overrides).toEqual({ enable_control: { mode: 'ALWAYS' } });
     });
 });
 
-describe('the labels a config gives its machines and chests', () => {
-    it('keeps a machine\'s prototype and qualities and a buffer chest\'s prototype through the form', () => {
-        const labelled = {
-            ...imported,
+describe('what goes through the form and back as the config gave it', () => {
+    const at = { position: { x: 2.5, y: -1.5 } };
+    const mark = { status: 'side-loaded', tiles: 3, sidecar_version: '0.13.0' };
+    // `inForm`: the form holds it as the config gave it, too
+    it.each<[what: string, fields: Record<string, unknown>, kept: (config: Config | ConfigFormData) => unknown, inForm: boolean]>([
+        ['a machine\'s prototype and qualities and a buffer chest\'s prototype', {
             machines: [{ id: 1, recipe: 'iron-plate', productivity: 0, crafting_speed: 2, prototype: 'electric-furnace', quality: 'legendary', recipe_quality: 'normal' }],
             chests: [{ type: ChestType.BUFFER_CHEST, id: 1, storage_size: 2, item_filter: 'copper-plate', prototype: 'steel-chest' }],
-        } as unknown as Config;
-        const config = formDataToConfig(configToFormData(labelled));
-        expect(config.machines).toEqual(labelled.machines);
-        expect(config.chests).toEqual(labelled.chests);
-    });
-
-    it('keeps where the inserters, drills, machines and chests stand, and the way inserters and drills face', () => {
-        const at = { position: { x: 2.5, y: -1.5 } };
-        const placed = {
-            ...imported,
+        }, c => [c.machines, c.chests], false],
+        ['where the inserters, drills, machines and chests stand, and the way inserters and drills face', {
             machines: imported.machines.map(m => ({ ...m, ...at })),
             inserters: imported.inserters.map((ins, index) => ({ id: index + 1, ...ins, ...at, direction: 8 })),
             chests: [...imported.chests!.map(c => ({ ...c, ...at })), { type: ChestType.CAR, id: 3, ...at }],
             drills: { configs: imported.drills!.configs.map(d => ({ ...d, ...at, direction: 4 })) },
-        } as unknown as Config;
-        const config = formDataToConfig(configToFormData(placed));
-        expect(config.machines.map(m => m.position)).toEqual(placed.machines.map(() => at.position));
-        expect(config.inserters.map(ins => [ins.position, ins.direction])).toEqual(placed.inserters.map(() => [at.position, 8]));
-        expect(config.chests!.map(c => (c as { position?: unknown }).position)).toEqual(placed.chests!.map(() => at.position));
-        expect(config.drills!.configs.map(d => [d.position, d.direction])).toEqual([[at.position, 4]]);
-    });
-
-    it('draws a machine by its prototype, else by its type', () => {
-        expect(machineIconName({ prototype: 'foundry' })).toBe('foundry');
-        expect(machineIconName({})).toBe('assembling-machine-3');
-        expect(machineIconName(undefined)).toBe('assembling-machine-3');
-    });
-});
-
-describe('a drop marked as side-loading onto another belt', () => {
-    const mark = { status: 'side-loaded', tiles: 3, sidecar_version: '0.13.0' } as const;
-    const marked = { ...imported, inserters: [{ id: 1, source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 1, drop_capture: mark }, stack_size: 16 }] } as unknown as Config;
-
-    it('goes through the form and back as the export gave it', () => {
-        const form = configToFormData(marked);
-        expect(form.inserters[0].sink).toEqual({ type: 'belt', id: 1, drop_capture: mark });
-        expect(formDataToConfig(form).inserters[0].sink).toEqual({ type: 'belt', id: 1, drop_capture: mark });
-    });
-});
-
-describe('the way the belt runs at a drop and the gap between copies', () => {
-    const config = {
-        ...imported,
-        target_output: { ...imported.target_output, copies: 7, copy_offset: { x: 12, y: 0 } },
-        inserters: [{ id: 1, source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 1, belt_direction: 12 }, stack_size: 16, position: { x: 1.5, y: 2.5 }, direction: 8 }],
-    } as unknown as Config;
-
-    it('go through the form and back as the export and the player gave them', () => {
-        const form = configToFormData(config);
-        expect(form.target_output.copy_offset).toEqual({ x: 12, y: 0 });
-        expect(form.inserters[0].sink).toEqual({ type: 'belt', id: 1, belt_direction: 12 });
-        const back = formDataToConfig(form);
-        expect(back.target_output.copy_offset).toEqual({ x: 12, y: 0 });
-        expect(back.inserters[0].sink).toEqual({ type: 'belt', id: 1, belt_direction: 12 });
-    });
-});
-
-describe('configToFormData and the forced flag', () => {
-    it('never flags an inserter, even one with an ALWAYS rule', () => {
-        const always = {
-            ...imported,
-            inserters: imported.inserters.map((ins) => ({ ...ins, overrides: { enable_control: { mode: 'ALWAYS' } } })),
-        } as unknown as Config;
-        expect(configToFormData(always).inserters.some((ins) => '_forced_always' in ins)).toBe(false);
-        expect(configToFormData(imported).inserters.some((ins) => '_forced_always' in ins)).toBe(false);
+        }, c => [c.machines.map(m => m.position), c.inserters.map(ins => [ins.position, ins.direction]),
+            c.chests!.map(ch => (ch as { position?: unknown }).position), c.drills!.configs.map(d => [d.position, d.direction])], false],
+        ['a drop marked as side-loading onto another belt', {
+            inserters: [{ id: 1, source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 1, drop_capture: mark }, stack_size: 16 }],
+        }, c => c.inserters[0].sink, true],
+        ['the way the belt runs at a drop and the gap between copies', {
+            target_output: { ...imported.target_output, copies: 7, copy_offset: { x: 12, y: 0 } },
+            inserters: [{ id: 1, source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 1, belt_direction: 12 }, stack_size: 16,
+                position: { x: 1.5, y: 2.5 }, direction: 8 }],
+        }, c => [c.target_output.copy_offset, c.inserters[0].sink], true],
+        ['cars, tanks, cargo wagons and rocket silos', {
+            chests: [
+                { id: 1, type: ChestType.CAR, slot_filters: [{ slot: 1, item: 'iron-plate' }], contents: [{ slot: 2, item: 'coal', count: 50 }] },
+                { id: 2, type: ChestType.TANK },
+                { id: 3, type: ChestType.CARGO_WAGON, quality: 'legendary' },
+                { id: 4, type: ChestType.ROCKET_SILO, recipe_quality: 'rare', crafting_speed: 2, contents: [{ item: 'iron-plate', count: 100 }] },
+            ],
+        }, c => c.chests, false],
+    ])('keeps %s', (_, fields, kept, inForm) => {
+        const config = importedWith(fields), expected = structuredClone(kept(config)), form = configToFormData(config);
+        if (inForm) expect(kept(form)).toEqual(expected);
+        expect(kept(formDataToConfig(form))).toEqual(expected);
     });
 });
 
 describe('imported inserter metadata', () => {
     it.each([undefined, 8, 16])('preserves normal bulk type, quality and stack override %s through file round trips', stack_size => {
-        const config: Config = { ...imported, inserters: [{ ...imported.inserters[0], prototype: 'bulk-inserter', quality: 'normal', stack_size }] };
-        const form = configToFormData(config);
+        const form = configToFormData(importedWith({ inserters: [{ ...imported.inserters[0], prototype: 'bulk-inserter', quality: 'normal', stack_size }] }));
         const file = JSON.parse(JSON.stringify(formDataToConfig(form))) as Config;
         expect(file.inserters[0]).toMatchObject({ prototype: 'bulk-inserter', quality: 'normal' });
         expect(file.inserters[0].stack_size).toBe(stack_size);
@@ -244,15 +211,8 @@ describe('imported inserter metadata', () => {
     });
 });
 
-describe('cars, tanks, cargo wagons and rocket silos', () => {
-    it('keeps them through the form as the config gives them', () => {
-        const chests = [
-            { id: 1, type: ChestType.CAR, slot_filters: [{ slot: 1, item: 'iron-plate' }], contents: [{ slot: 2, item: 'coal', count: 50 }] },
-            { id: 2, type: ChestType.TANK },
-            { id: 3, type: ChestType.CARGO_WAGON, quality: 'legendary' as const },
-            { id: 4, type: ChestType.ROCKET_SILO, recipe_quality: 'rare' as const, crafting_speed: 2, contents: [{ item: 'iron-plate', count: 100 }] },
-        ];
-        const config = { ...imported, chests } as unknown as Config;
-        expect(formDataToConfig(configToFormData(config)).chests).toEqual(chests);
+describe('machineIconName', () => {
+    it('draws a machine by its prototype, else by its type', () => {
+        expect([{ prototype: 'foundry' }, {}, undefined].map(machineIconName)).toEqual(['foundry', 'assembling-machine-3', 'assembling-machine-3']);
     });
 });
