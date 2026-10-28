@@ -12,7 +12,7 @@ import { InserterEnds, WakeUps, wakeUpsOfStock } from "./wake-ups";
 import { judgeLongRun, judgeProvenCycle, LONG_RUN_SETTLE_SHARE, longRunPeriods } from "./long-run";
 import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, LATE_AFTER_PERIODS, LossOutcome, lossLimitOf, MAX_RECOVERY_PERIODS, reportOf, verdictOf } from "./backpressure-loss";
 import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForPeriod, withBeltPickupSlack } from "./clock";
-import { currentRunMemo } from "./plan/run-memo";
+import { canonicalKey, currentRunMemo } from "./plan/run-memo";
 import { BlueprintGenerationResult, LCM_STABILITY_TOLERANCE, MAX_SIMULATION_TICKS, RunOptions, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, planRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
 import { SimulationTick } from "./runner/simulation-tick";
 import { simulationStateKey } from "./runner/steady-state";
@@ -1229,6 +1229,22 @@ export function loopWindowsMargin(
     period: number,
     logger: Logger,
     pickup_phase_cycles: boolean = false,
+): string | null {
+    // the alternatives that make the same clock more than once judge its windows once
+    const memo = currentRunMemo();
+    const key = memo === undefined ? null : canonicalKey([config, period, pickup_phase_cycles, inserter_ids,
+        Array.from(windows, ([id, ranges]) => [id, ranges.map(range => [range.start_inclusive, range.end_inclusive])])]);
+    return memo === undefined || key === null ? marginOfLoopWindows(config, windows, inserter_ids, period, logger, pickup_phase_cycles)
+        : memo.judgement(key, () => marginOfLoopWindows(config, windows, inserter_ids, period, logger, pickup_phase_cycles));
+}
+
+function marginOfLoopWindows(
+    config: Config,
+    windows: Map<string, OpenRange[]>,
+    inserter_ids: readonly string[],
+    period: number,
+    logger: Logger,
+    pickup_phase_cycles: boolean,
 ): string | null {
     const span = Number.isInteger(period) ? period : Math.ceil(period);
     const groups = new Map<string, string[]>();

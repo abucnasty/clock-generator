@@ -297,3 +297,18 @@ describe("the memo of the backpressure loss verdicts of a generation", () => {
         });
     });
 });
+
+describe("the memo of the judgements of a generation", () => {
+    it("judges once in a generation, whatever the verdict, and every time outside one", () => {
+        let judged = 0;
+        const judge = (verdict: string | null) => () => { judged++; return verdict; };
+        const memo = new RunMemo();
+        expect(memo.judgement("kept", judge(null))).toBeNull();
+        expect(memo.judgement("kept", judge("never asked"))).toBeNull();
+        expect(memo.judgement("dropped", judge("does not hold"))).toBe("does not hold");
+        expect(memo.judgement("dropped", judge(null))).toBe("does not hold");
+        expect(judged).toBe(2);
+        expect(memo.judgement_hits).toBe(2);
+        expect(new RunMemo().judgement("kept", judge("a memo of its own"))).toBe("a memo of its own");
+    });
+});

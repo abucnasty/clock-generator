@@ -118,6 +118,26 @@ export class RunMemo {
     /** Verdicts handed out again */
     loss_hits = 0;
 
+    /** What the checks of a set of windows found (see `judgement`), by what they are a function of */
+    private readonly judgements = new Map<string, string | null>();
+    /** Judgements handed out again */
+    judgement_hits = 0;
+
+    /**
+     * The judgement of a check that yields a reason or null (the reason a set of windows was dropped, null where it was
+     * kept), a function of nothing but the key: the one kept, or the one `judged` makes. Only the reason is kept, none of
+     * the runs behind it, and the alternatives that make the same clock more than once ask it once.
+     */
+    judgement(key: string, judged: () => string | null): string | null {
+        if (this.judgements.has(key)) {
+            this.judgement_hits++;
+            return this.judgements.get(key)!;
+        }
+        const judgement = judged();
+        this.judgements.set(key, judgement);
+        return judgement;
+    }
+
     /**
      * The verdict of the loss trials of a clock: the one kept, or the one `tried` makes. A clock that cannot be tried
      * is tried again, so that what is logged about it is logged by each.
