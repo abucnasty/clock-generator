@@ -1,6 +1,7 @@
 import { Entity, handSizeFor } from "../entities";
 import { EntityState, MachineState } from "../state";
 import { factorioInserterState, factorioMachineState } from "../state/factorio-entity-state";
+import { BurnerEnergy } from "../simulation/components/burner-energy";
 import type { SimulationContext } from "./sequence/simulation-context";
 import { ContainerStorage } from "../simulation/components/container-storage";
 
@@ -112,10 +113,11 @@ export class TimelineRecorder {
             const madeBeforeRecording = state.totalCrafted;
             add({ id: "produced", label: "Main product made since tick 0", group: "production", unit: "items", item: machine.output.item_name }, () => state.totalCrafted - madeBeforeRecording);
             add({ id: "pending", label: "Products awaiting output room", group: "production", unit: "items", item: machine.output.item_name }, () => state.pendingOutput);
-            if (machine.fuel_slot) {
-                const fuel = machine.fuel_slot;
+            const energy = state.energy;
+            if (energy instanceof BurnerEnergy) {
+                const fuel = energy.fuel_slot;
                 add({ id: "fuel", label: "Fuel slot", group: "fuel", unit: "items", item: fuel.fuel.item_name, limit: fuel.automated_insertion_limit }, () => state.fuelInventory.getQuantity(fuel.fuel.item_name));
-                add({ id: "burning", label: "Burning fuel remaining", group: "fuel", unit: "MJ" }, () => state.fuelProgress.energy_remaining_mj);
+                add({ id: "burning", label: "Burning fuel remaining", group: "fuel", unit: "MJ" }, () => energy.energy_remaining_mj);
             }
             this.count(() => state.craftsStarted, { entity_id: id, kind: "craft-start" });
             this.count(() => state.craftCount, { entity_id: id, kind: "craft-complete" });

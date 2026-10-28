@@ -1,9 +1,11 @@
 import { InventoryState, LiveQuantity, WritableInventoryState } from "./inventory-state";
-import { FuelProgressState, ProgressState } from "./progress-state";
+import { ProgressState } from "./progress-state";
 import { EntityId, Machine } from "../entities";
 import { EntityState } from "./entity-state";
 import { Logger, defaultLogger } from "../common/logger";
 import { MachineStatus } from "./entity-status";
+import { BurnerEnergy } from "../simulation/components/burner-energy";
+import { Energy } from "../simulation/components/energy";
 
 export class MachineState implements EntityState {
 
@@ -26,7 +28,8 @@ export class MachineState implements EntityState {
         public readonly machine: Machine,
         public readonly craftingProgress: ProgressState,
         public readonly bonusProgress: ProgressState,
-        public readonly fuelProgress: FuelProgressState,
+        /** What the machine runs on, and for a burner the energy it holds (simulation/components) */
+        public readonly energy: Energy,
         /** Fractions of a by-product made so far that do not yet add up to a whole item */
         public readonly byProductCarry: Map<string, number>,
         public readonly inventoryState: WritableInventoryState,
@@ -171,7 +174,7 @@ function forMachine(machine: Machine): MachineState {
         machine,
         ProgressState.empty(),
         ProgressState.empty(),
-        FuelProgressState.empty(),
+        Energy.of(machine, fuelInventory),
         new Map(),
         inventoryState,
         fuelInventory,
@@ -187,15 +190,16 @@ function forMachine(machine: Machine): MachineState {
 }
 
 function clone(machineState: MachineState): MachineState {
+    const fuelInventory = machineState.fuelInventory.clone();
     const cloned = new MachineState(
         machineState.entity_id,
         machineState.machine,
         ProgressState.clone(machineState.craftingProgress),
         ProgressState.clone(machineState.bonusProgress),
-        FuelProgressState.clone(machineState.fuelProgress),
+        machineState.energy.clone(fuelInventory),
         new Map(machineState.byProductCarry),
         machineState.inventoryState.clone(),
-        machineState.fuelInventory.clone(),
+        fuelInventory,
         machineState.craftCount,
         machineState.status,
         machineState.totalCrafted,
@@ -225,9 +229,9 @@ function stateKey(machineState: MachineState): string {
         JSON.stringify(machineState.selfIngredients.export()),
         machineState.craftingProgress.progress,
         machineState.bonusProgress.progress,
-        // a burner's future hangs on what is burning and what the fuel slot holds, which no other key carries
-        machineState.fuelProgress.energy_remaining_mj,
-        machineState.fuelProgress.energy_buffer_mj,
+        // a burner's future hangs on what is burning and what the fuel slot holds, which no other key carries: the
+        // energy left in the burning item and the energy held, "0;0" for a machine that burns nothing
+        machineState.energy.stateKey(),
         JSON.stringify(Object.entries(machineState.fuelInventory.export()).sort(([a], [b]) => a.localeCompare(b))),
         // fractions of a by-product carried toward the next whole item
         JSON.stringify(Array.from(machineState.byProductCarry).sort(([a], [b]) => a.localeCompare(b))),
@@ -431,8 +435,9 @@ function printMachineState(machineState: MachineState, logger: Logger = defaultL
     logger.log(`  Total Crafted: ${machineState.totalCrafted}`);
     logger.log(`  Crafting Progress: ${machineState.craftingProgress.progress}`);
     logger.log(`  Bonus Progress: ${machineState.bonusProgress.progress}`);
-    if (machineState.machine.fuel_slot) {
-        logger.log(`  Fuel Burning: ${machineState.fuelProgress.energy_remaining_mj} MJ left in the burning ${machineState.machine.fuel_slot.fuel.item_name}`);
+    const energy = machineState.energy;
+    if (energy instanceof BurnerEnergy) {
+        logger.log(`  Fuel Burning: ${energy.energy_remaining_mj} MJ left in the burning ${energy.fuel_slot.fuel.item_name}`);
     }
     logger.log(`  Inventory State:`);
     for (const inventory_item of machineState.inventoryState.getAllItems()) {

@@ -6,6 +6,7 @@ import { DebugPluginFactory, DebugSettingsProvider } from "../../crafting/sequen
 import { TickProvider } from "../current-tick-provider";
 import { CompositeControlLogic } from "../composite-control-logic";
 import { TickControlLogic } from "../tick-control-logic";
+import { BurnerEnergy } from "../../simulation/components/burner-energy";
 
 /** A machine of the recipe; its prototype (none: an assembling machine) gives what it does by its kind, through its traits */
 const createMachine = (recipeName: string, metadata: Partial<MachineSpec> = {}): Machine => {
@@ -339,7 +340,8 @@ describe("Machine State Machine at the output block", () => {
         const { machine_state, state_machine } = createRocketFuel(12, 0)
         // a burner that worked before holds the energy that is over a tick of work, enough to start on
         const machine = machine_state.machine
-        machine_state.fuelProgress.energy_buffer_mj = machine.fuel_slot!.energy_per_craft_mj * machine.crafting_rate.crafts_per_tick / 15
+        const energy = machine_state.energy as BurnerEnergy
+        energy.energy_buffer_mj = machine.fuel_slot!.energy_per_craft_mj * machine.crafting_rate.crafts_per_tick / 15
         executeControlLogicForTicks(state_machine, 2)
         expect(machine_state.status).toBe(MachineStatus.OUTPUT_FULL)
         machine_state.inventoryState.addQuantity("jelly", 30)

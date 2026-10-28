@@ -1,5 +1,6 @@
 import { EntityState, InventoryItem, LiveQuantity, MachineState, MachineStatus, WritableInventoryState } from "../../../state";
-import { ENERGY_BUFFER_TICKS, MachineOutput, amountIgnoredByProductivity, expectedAmount } from "../../../entities";
+import { MachineOutput, amountIgnoredByProductivity, expectedAmount } from "../../../entities";
+import { Energy, EnergyUser } from "../../../simulation/components/energy";
 import { placeIntoMachine } from "../../place-into-machine";
 import { MachineMode } from "./machine-mode";
 import { ContainerStorage } from "../../../simulation/components/container-storage";
@@ -7,10 +8,6 @@ import { DropBy } from "../../../simulation/components/ports";
 
 // absorbs floating point drift when summing fractional per-tick progress
 const PROGRESS_EPSILON = 1e-9;
-
-// A burner's energy buffer is topped up from its fuel after a tick of work, but not after the tick the machine stops.
-// A stopped machine is left with the 1/15 tick the buffer holds over a tick of work, which is all it has to work with
-// on the tick it starts again: that tick makes 1/15 of a tick's progress, and its top-up burns 16/15 of a tick's fuel.
 
 /**
  * Crafting follows Factorio: ingredients are removed when a craft starts and products are added when it finishes.
@@ -25,7 +22,7 @@ const PROGRESS_EPSILON = 1e-9;
  * gave included (recorded on the recycler of the ore voider: with room in its car, nothing was left in its output after
  * any of 216,000 ticks).
  */
-export class MachineWorkingMode implements MachineMode {
+export class MachineWorkingMode implements MachineMode, EnergyUser {
     public readonly status = MachineStatus.WORKING;
 
     /**
@@ -45,10 +42,7 @@ export class MachineWorkingMode implements MachineMode {
         amount_per_bonus: number;
         bonus_per_craft: number;
         by_products: readonly { output: MachineOutput; max_stack_size: number; amount_per_craft: number }[];
-        /** Energy a tick of work takes, in MJ; 0 without a fuel slot */
-        energy_per_tick: number;
         output_quantity: LiveQuantity | null;
-        fuel_quantity: LiveQuantity | null;
         /** What canStartCraft asks, in recipe order: the held quantity against a craft's need */
         craft_needs: { quantity: LiveQuantity; required: number }[] | null;
         /** What a craft takes out, in `machine.inputs` order */
@@ -56,11 +50,15 @@ export class MachineWorkingMode implements MachineMode {
         by_product_quantities: LiveQuantity[] | null;
     };
 
+    /** The machine's Energy component, bound once: electric or burner, the same class every tick */
+    private readonly energy: Energy;
+
     constructor(
         private readonly state: MachineState,
         /** The container the machine puts its results into, where it places them itself and has a result target */
         private readonly result_target: ContainerStorage | MachineState | null = null,
     ) {
+        this.energy = state.energy;
         const machine = state.machine;
         const output = machine.output.ingredient;
         const extra_count = (output as { extra_count_fraction?: number }).extra_count_fraction ?? 0;
@@ -79,10 +77,7 @@ export class MachineWorkingMode implements MachineMode {
                 max_stack_size: by_product.outputBlock.max_stack_size,
                 amount_per_craft: by_product.amount_per_craft.toDecimal(),
             })),
-            energy_per_tick: machine.fuel_slot === undefined ? 0
-                : machine.fuel_slot.energy_per_craft_mj * machine.crafting_rate.crafts_per_tick,
             output_quantity: null,
-            fuel_quantity: null,
             craft_needs: null,
             craft_takes: null,
             by_product_quantities: null,
@@ -94,7 +89,7 @@ export class MachineWorkingMode implements MachineMode {
     public onExit(toMode: MachineMode): void { }
 
     public executeForTick(): void {
-        const powered_share = this.poweredShareOfTick();
+        const powered_share = this.energy.poweredShare();
         let budget = this.hot.crafts_per_tick * powered_share;
         let worked = false;
 
@@ -102,7 +97,7 @@ export class MachineWorkingMode implements MachineMode {
         while (budget > PROGRESS_EPSILON && !this.holdsProducts()) {
             let progress = this.state.craftingProgress.progress;
             if (progress <= 0) {
-                if (!this.canStartCraft() || !this.hasFuel()) {
+                if (!this.canStartCraft() || !this.energy.hasFuel()) {
                     break;
                 }
                 this.consumeInputsForCraft();
@@ -127,7 +122,7 @@ export class MachineWorkingMode implements MachineMode {
             this.state.craftingProgress.progress = progress;
         }
 
-        this.spendEnergyForTick(worked);
+        this.energy.spend(worked, this);
     }
 
     private get inventory_state(): WritableInventoryState {
@@ -145,7 +140,17 @@ export class MachineWorkingMode implements MachineMode {
 
     /** True while a craft is underway or another one can start, a burner has fuel to progress it, and no product waits for room */
     public hasEnoughInputsForCraft(): boolean {
-        return !this.holdsProducts() && (this.isCraftInProgress() || this.canStartCraft()) && this.hasFuel();
+        return this.keepsWorking() && this.energy.hasFuel();
+    }
+
+    /** Whether the machine works on after this tick: no product waits for room, and a craft is underway or can start */
+    public keepsWorking(): boolean {
+        return !this.holdsProducts() && (this.craftInProgress() || this.canStartCraft());
+    }
+
+    /** A burner with nothing to burn and too little energy held for a tick of work (BurnerEnergy.outOfFuel) */
+    public isOutOfFuel(): boolean {
+        return this.energy.outOfFuel(this);
     }
 
     /**
@@ -264,98 +269,7 @@ export class MachineWorkingMode implements MachineMode {
         return null;
     }
 
-    private hasFuel(): boolean {
-        return this.availableFuelEnergy() > PROGRESS_EPSILON || this.state.machine.fuel_slot === undefined;
-    }
-
-    /**
-     * A burner is out of fuel when it has nothing to burn and holds less energy than a tick of work takes: the 1/15 of
-     * a tick a stopped machine keeps is not enough to count on. A craft underway spends what is left before the machine
-     * reports it, so a partly filled buffer is used up, not thrown away. The game reports this ahead of a shortage of
-     * ingredients and a full output.
-     */
-    public isOutOfFuel(): boolean {
-        if (!this.state.machine.fuel_slot) {
-            return false;
-        }
-        if (this.fuelEnergy() > PROGRESS_EPSILON) {
-            return false;
-        }
-        const buffer = this.energyBuffer();
-        if (this.isCraftInProgress() && buffer > PROGRESS_EPSILON) {
-            return false;
-        }
-        return buffer < this.hot.energy_per_tick - PROGRESS_EPSILON;
-    }
-
-    /** Energy the machine holds to work with, plus the burning item and the items waiting in the fuel slot, in MJ */
-    private availableFuelEnergy(): number {
-        if (!this.state.machine.fuel_slot) {
-            return Infinity;
-        }
-        return this.energyBuffer() + this.fuelEnergy();
-    }
-
-    /** Energy in the burning item plus the items waiting in the fuel slot, in MJ */
-    private fuelEnergy(): number {
-        const slot = this.state.machine.fuel_slot!;
-        const fuel = this.hot.fuel_quantity ??= new LiveQuantity(this.state.fuelInventory, slot.fuel.item_name);
-        return this.state.fuelProgress.energy_remaining_mj + fuel.get() * slot.fuel.fuel_value_mj;
-    }
-
-    private energyBuffer(): number {
-        return this.state.fuelProgress.energy_buffer_mj;
-    }
-
-    /** The part of a tick's work the energy the machine holds pays for: all of it, except on the tick it starts again */
-    private poweredShareOfTick(): number {
-        if (!this.state.machine.fuel_slot) {
-            return 1;
-        }
-        return Math.min(1, this.energyBuffer() / this.hot.energy_per_tick);
-    }
-
-    /**
-     * A tick of work draws a tick of energy from what the machine holds, and the fuel tops it up if the machine keeps
-     * working: a craft is underway, or the next one can start. A machine that holds no energy takes it from the fuel
-     * first, and works from the next tick.
-     */
-    private spendEnergyForTick(worked: boolean): void {
-        if (!this.state.machine.fuel_slot) {
-            return;
-        }
-        const energy_per_tick = this.hot.energy_per_tick;
-        let buffer = this.energyBuffer();
-        if (worked) {
-            buffer -= Math.min(buffer, energy_per_tick);
-        }
-        const keeps_working = !this.holdsProducts() && (this.isCraftInProgress() || this.canStartCraft());
-        if (keeps_working) {
-            buffer += this.burnFuel(ENERGY_BUFFER_TICKS * energy_per_tick - buffer);
-        }
-        this.state.fuelProgress.energy_buffer_mj = buffer;
-    }
-
-    /** Burns up to `energy` MJ of fuel, lighting the next fuel item when the burning one runs out; returns what was burned */
-    private burnFuel(energy: number): number {
-        const slot = this.state.machine.fuel_slot!;
-        const fuel_progress = this.state.fuelProgress;
-        let required = Math.min(energy, this.fuelEnergy());
-        let burned = 0;
-        while (required > PROGRESS_EPSILON) {
-            if (fuel_progress.energy_remaining_mj <= PROGRESS_EPSILON) {
-                this.state.fuelInventory.removeQuantity(slot.fuel.item_name, 1);
-                fuel_progress.energy_remaining_mj = slot.fuel.fuel_value_mj;
-            }
-            const spent = Math.min(required, fuel_progress.energy_remaining_mj);
-            fuel_progress.energy_remaining_mj -= spent;
-            required -= spent;
-            burned += spent;
-        }
-        return burned;
-    }
-
-    private isCraftInProgress(): boolean {
+    public craftInProgress(): boolean {
         return this.state.craftingProgress.progress > 0;
     }
 
