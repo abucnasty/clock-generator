@@ -11,18 +11,36 @@ export interface ShardItem {
     seconds: number;
 }
 
+/** Test files a CI shard runs at once: its runner has 4 vCPUs and vitest.config.ts runs one fewer files at once */
+export const WORKERS = 3;
+
+/** About how long a shard takes: its files run WORKERS at a time, and it is never shorter than its longest file */
+export function estimatedSeconds(shard: readonly ShardItem[], workers = WORKERS): number {
+    return Math.max(0, ...shard.map(item => item.seconds), shard.reduce((sum, item) => sum + item.seconds, 0) / workers);
+}
+
 /**
- * Splits items into `count` shards of about the same total, longest first onto the shard that has the least so far.
- * The result depends on the items only (not on their order), so every shard job computes the same split.
+ * Splits items into `count` shards, longest first onto the shard that is then estimated to finish first (ties go to the
+ * shard with the least total). The result depends on the items only (not on their order), so every shard job computes the
+ * same split.
  */
-export function assignShards(items: readonly ShardItem[], count: number): ShardItem[][] {
+export function assignShards(items: readonly ShardItem[], count: number, workers = WORKERS): ShardItem[][] {
     const shards: ShardItem[][] = Array.from({ length: count }, () => []);
-    const loads: number[] = new Array(count).fill(0);
     const ordered = [...items].sort((a, b) => b.seconds - a.seconds || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
     for (const item of ordered) {
-        const lightest = loads.indexOf(Math.min(...loads));
-        shards[lightest].push(item);
-        loads[lightest] += item.seconds;
+        let best = 0;
+        let bestCost = Infinity;
+        let bestTotal = Infinity;
+        shards.forEach((shard, index) => {
+            const cost = estimatedSeconds([...shard, item], workers);
+            const total = shard.reduce((sum, it) => sum + it.seconds, 0);
+            if (cost < bestCost - 1e-9 || (Math.abs(cost - bestCost) <= 1e-9 && total < bestTotal)) {
+                best = index;
+                bestCost = cost;
+                bestTotal = total;
+            }
+        });
+        shards[best].push(item);
     }
     return shards;
 }
@@ -36,7 +54,7 @@ export function secondsOf(keys: readonly string[], known: Readonly<Record<string
 
 /**
  * Vitest's `--shard` gives each shard files by the hash of their paths, so one shard can get the two slowest files and the
- * job's wall time is that shard's. This sequencer deals the files out by their measured duration instead (the sorting
+ * job's wall time is that shard's. This sequencer deals the files out by their measured duration (how long a shard takes: its files WORKERS at a time, at least its longest) instead (the sorting
  * inside a shard is vitest's own). Every shard job sees the same list of files, so the shards are disjoint and together
  * hold all of them: a file that is not in the durations file still runs, in the shard its estimated time puts it in.
  * Refresh the durations with scripts/ci/update-generation-durations.js.
@@ -56,8 +74,8 @@ export default class DurationSequencer extends BaseSequencer {
         }
         const mine = shards[index - 1];
         const unknown = [...byKey.keys()].filter(key => known[key] === undefined);
-        console.log(`Shard ${index} of ${count}: ${mine.length} of ${files.length} test files, about ${Math.round(mine.reduce((s, i) => s + i.seconds, 0))} s of `
-            + `${Math.round([...seconds.values()].reduce((s, v) => s + v, 0))} s in all`
+        console.log(`Shard ${index} of ${count}: ${mine.length} of ${files.length} test files, about ${Math.round(estimatedSeconds(mine))} s of tests (the slowest shard: `
+            + `${Math.round(Math.max(...shards.map(shard => estimatedSeconds(shard))))} s)`
             + (unknown.length > 0 ? `; not in ci/generation-durations.json, counted as the median: ${unknown.join(', ')}` : ''));
         return mine.map(item => byKey.get(item.key)!);
     }
