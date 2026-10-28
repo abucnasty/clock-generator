@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { createDefaultRuleSet } from '../components/ruleSetUtils';
+import { windowFieldName } from './a11yLabels';
 import type { Condition, RuleSet } from './configForm/formData';
 import { enableControlDraftOf, type EnableControlDraft } from './enableControlDraft';
-import { blockedSummaryOf, itemFieldName, PROBLEM_TEXT, ruleProblemsOf, ruleWarningsOf } from './ruleProblems';
+import { blockedSummaryOf, itemFieldName, PROBLEM_TEXT, REPEAT_LABEL, ruleProblemsOf, ruleWarningsOf } from './ruleProblems';
 import { NO_TIMING, type RuleTiming } from './ruleTiming';
 
 const known: RuleTiming = { cycleTicks: 132, periodTicks: 264, from: 'check', windows: null };
 const ctx = { entityType: 'inserter' as const, timing: known, idPrefix: 'p' };
+const { enterTick, wholeTick, endBeforeStart, endAtZero, pastPeriod } = PROBLEM_TEXT;
 
 const clockedDraft = (ranges: [string, string][], periodDuration = ''): EnableControlDraft => ({
     ...enableControlDraftOf(),
@@ -15,53 +17,40 @@ const clockedDraft = (ranges: [string, string][], periodDuration = ''): EnableCo
     periodDuration,
 });
 
-const texts = (draft: EnableControlDraft, context = ctx) => ruleProblemsOf(draft, context).map((p) => `${p.field}: ${p.text}`);
+/** Each problem as its field and its text */
+const texts = (draft: EnableControlDraft, context = ctx) => ruleProblemsOf(draft, context).map((p) => [p.field, p.text]);
+/** The start or end field of wake window n */
+const start = (n = 1) => windowFieldName('start', n);
+const end = (n = 1) => windowFieldName('end', n);
 
 describe('ruleProblemsOf, Clocked', () => {
-    it('asks for a tick in an empty field', () => {
-        expect(texts(clockedDraft([['', '20']]))).toEqual(['Start tick, wake window 1: Enter a tick.']);
+    it.each<[string, [string, string][], string, string[][]]>([
+        ['asks for a tick in an empty field', [['', '20']], '', [[start(), enterTick]]],
+        ['asks for a whole number instead of "abc"', [['0', 'abc']], '', [[end(), wholeTick]]],
+        ['asks for a whole number instead of "-1"', [['0', '-1']], '', [[end(), wholeTick]]],
+        ['asks for a whole number instead of "1.5"', [['0', '1.5']], '', [[end(), wholeTick]]],
+        ['refuses an end before the start, and names the start', [['10', '5']], '', [[end(), endBeforeStart(10)]]],
+        ['takes an end equal to the start (one tick)', [['12', '12']], '', []],
+        ["refuses a window that ends at tick 0, which the config file can't hold", [['0', '0']], '', [[end(), endAtZero]]],
+        // window 1 ends on the period's last tick, window 2 one past it
+        ['checks the ticks against the crafting cycle when there is no "Repeat every"', [['0', '131'], ['0', '132'], ['140', '150']], '',
+            [[end(2), pastPeriod(132)], [start(3), pastPeriod(132)], [end(3), pastPeriod(132)]]],
+        ['checks them against a valid "Repeat every" instead of the cycle', [['0', '263'], ['0', '264']], '264', [[end(2), pastPeriod(264)]]],
+        ['refuses a "Repeat every" of 0', [['0', '5']], '0', [[REPEAT_LABEL, PROBLEM_TEXT.repeat]]],
+        ['refuses a negative "Repeat every"', [['0', '5']], '-3', [[REPEAT_LABEL, PROBLEM_TEXT.repeat]]],
+        ['refuses a "Repeat every" of text', [['0', '5']], 'x', [[REPEAT_LABEL, PROBLEM_TEXT.repeat]]],
+    ])('%s', (_, ranges, repeat, problems) => {
+        expect(texts(clockedDraft(ranges, repeat))).toEqual(problems);
     });
 
-    it.each(['abc', '-1', '1.5'])('asks for a whole number instead of %j', (typed) => {
-        expect(texts(clockedDraft([['0', typed]]))).toEqual([`End tick, wake window 1: ${PROBLEM_TEXT.wholeTick}`]);
-    });
-
-    it('refuses an end before the start, and names the start', () => {
-        expect(texts(clockedDraft([['10', '5']]))).toEqual(['End tick, wake window 1: The end must not be before the start (10).']);
-    });
-
-    it('takes an end equal to the start (one tick)', () => {
-        expect(texts(clockedDraft([['12', '12']]))).toEqual([]);
-    });
-
-    it('refuses a window that ends at tick 0, which the config file can\'t hold', () => {
-        expect(texts(clockedDraft([['0', '0']]))).toEqual(["End tick, wake window 1: The end must be tick 1 or later: a wake window can't end at tick 0."]);
-    });
-
-    it('checks the ticks against the crafting cycle when there is no "Repeat every"', () => {
-        expect(texts(clockedDraft([['0', '131']]))).toEqual([]);
-        expect(texts(clockedDraft([['0', '132']]))).toEqual(['End tick, wake window 1: Past the end of the 132-tick period: the last tick is 131.']);
-        expect(texts(clockedDraft([['140', '150']]))).toEqual([
-            'Start tick, wake window 1: Past the end of the 132-tick period: the last tick is 131.',
-            'End tick, wake window 1: Past the end of the 132-tick period: the last tick is 131.',
-        ]);
-    });
-
-    it('checks them against a valid "Repeat every" instead of the cycle', () => {
-        expect(texts(clockedDraft([['0', '263']], '264'))).toEqual([]);
-        expect(texts(clockedDraft([['0', '264']], '264'))).toEqual(['End tick, wake window 1: Past the end of the 264-tick period: the last tick is 263.']);
+    it('names the start an end is before, and tells the last tick of the period, one before its length', () => {
+        expect(endBeforeStart(10)).toMatch(/ the start \(10\)\.$/);
+        expect(pastPeriod(132)).toMatch(/ 132-tick period: the last tick is 131\.$/);
     });
 
     it('does not check past the period when it is unknown or fractional', () => {
         expect(texts(clockedDraft([['0', '5000']]), { ...ctx, timing: NO_TIMING })).toEqual([]);
         expect(texts(clockedDraft([['0', '5000']]), { ...ctx, timing: { ...known, cycleTicks: 137.739 } })).toEqual([]);
-    });
-
-    it('takes an empty "Repeat every" and refuses 0, a negative number and text', () => {
-        expect(texts(clockedDraft([['0', '5']], ''))).toEqual([]);
-        for (const repeat of ['0', '-3', 'x']) {
-            expect(texts(clockedDraft([['0', '5']], repeat))).toEqual([`Repeat every (ticks): ${PROBLEM_TEXT.repeat}`]);
-        }
     });
 
     it('gives no problem to the fields of a mode that is not picked', () => {
@@ -82,15 +71,13 @@ describe('ruleProblemsOf, Conditional', () => {
         latchEnabled: release !== undefined,
         releaseCondition: release,
     });
+    /** The problem of the item picker left empty on this side of the condition at this path */
+    const pickItem = (path: string, side: 'left' | 'right' = 'left') => [itemFieldName(path, side), PROBLEM_TEXT.pickItem];
 
     it('asks for an item on each side of a condition, in a group and in the release', () => {
         const ruleSet: RuleSet = { operator: 'AND', rules: [empty('INVENTORY_ITEM'), { operator: 'OR', rules: [empty('AUTOMATED_INSERTION_LIMIT')] }] };
         expect(texts(conditionalDraft(ruleSet, createDefaultRuleSet()))).toEqual([
-            'Item, condition 1: Pick an item.',
-            'Second item, condition 1: Pick an item.',
-            'Item, condition 2.1: Pick an item.',
-            'Second item, condition 2.1: Pick an item.',
-            'Item, release condition 1: Pick an item.',
+            pickItem('rule.0'), pickItem('rule.0', 'right'), pickItem('rule.1.0'), pickItem('rule.1.0', 'right'), pickItem('release.0'),
         ]);
     });
 
@@ -100,7 +87,7 @@ describe('ruleProblemsOf, Conditional', () => {
     });
 
     it('leaves the release alone while the latch is off', () => {
-        expect(texts({ ...conditionalDraft(createDefaultRuleSet(), createDefaultRuleSet()), latchEnabled: false })).toEqual(['Item, condition 1: Pick an item.']);
+        expect(texts({ ...conditionalDraft(createDefaultRuleSet(), createDefaultRuleSet()), latchEnabled: false })).toEqual([pickItem('rule.0')]);
     });
 
     it('refuses a Conditional rule on a drill, first', () => {
@@ -126,11 +113,15 @@ describe('ruleProblemsOf, Conditional', () => {
     });
 });
 
-describe('itemFieldName', () => {
+describe('field names', () => {
     it('names an item picker by its side and the condition\'s place', () => {
         expect(itemFieldName('rule.1', 'left')).toBe('Item, condition 2');
         expect(itemFieldName('rule.1.0', 'right')).toBe('Second item, condition 2.1');
         expect(itemFieldName('release.0', 'left')).toBe('Item, release condition 1');
+    });
+
+    it('names a tick field by its side and its wake window', () => {
+        expect([start(), end(2)]).toEqual(['Start tick, wake window 1', 'End tick, wake window 2']);
     });
 });
 
@@ -156,7 +147,7 @@ describe('ruleWarningsOf', () => {
 describe('blockedSummaryOf', () => {
     it('counts the problems and names the first', () => {
         const problems = ruleProblemsOf(clockedDraft([['10', '5']]), ctx);
-        expect(blockedSummaryOf(problems)).toBe("Can't save yet: 1 problem. End tick, wake window 1: The end must not be before the start (10).");
+        expect(blockedSummaryOf(problems)).toBe(`Can't save yet: 1 problem. ${end()}: ${endBeforeStart(10)}`);
         expect(blockedSummaryOf([...problems, ...problems])).toMatch(/^Can't save yet: 2 problems\. /);
     });
 });

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { TargetCounts } from './targetCounts';
 import { isTargetAboveMax, machinesMaxOf, maxRateText, targetRateLineOf, totalMachineCapacity, type MachinesMax } from './targetRateLimit';
 
 /**
@@ -9,32 +10,26 @@ import { isTargetAboveMax, machinesMaxOf, maxRateText, targetRateLineOf, totalMa
 const MACHINE_1_MAX = 22.96874920527133;
 
 const one: MachinesMax = { machineIds: [1], perCopy: MACHINE_1_MAX };
-const line = (itemsPerSecond: number, copies: number, max: MachinesMax | null = one) =>
-    targetRateLineOf({ itemsPerSecond, copies, max, locale: 'en-US' });
+const two: MachinesMax = { machineIds: [1, 2], perCopy: 30 };
+const line = (itemsPerSecond: number, copies: number, max: MachinesMax | null = one, counts?: TargetCounts) =>
+    targetRateLineOf({ itemsPerSecond, copies, max, locale: 'en-US', ...(counts && { counts }) });
+/** The line under the rate, from the most on: what makes it, then what to do */
+const atMost = (most: string) => `At most ${most}. Lower the rate or raise Copies. Describe one unit in the build.`;
 const facts = (output_item: string, output_rate_per_second: number) => ({ output_item, output_rate_per_second });
+const gears = (id: number, rate: number) => ({ id, facts: facts('iron-gear-wheel', rate) });
 
 describe('machinesMaxOf', () => {
-    it('sums the machines whose output item is the target, as the engine picks them', () => {
-        expect(machinesMaxOf('iron-gear-wheel', [
-            { id: 1, facts: facts('iron-gear-wheel', 10) },
-            { id: 2, facts: facts('iron-plate', 99) },
-            { id: 3, facts: facts('iron-gear-wheel', 2.5) },
-        ])).toEqual({ machineIds: [1, 3], perCopy: 12.5 });
-    });
-
-    it('goes by the output item, not the recipe: a recipe named otherwise is made by no machine', () => {
-        expect(machinesMaxOf('advanced-oil-processing', [{ id: 1, facts: facts('heavy-oil', 10) }])).toBeNull();
-    });
-
-    it('is unknown while a machine\'s facts are, whatever it makes', () => {
-        expect(machinesMaxOf('iron-gear-wheel', [{ id: 1, facts: facts('iron-gear-wheel', 10) }, { id: 2, facts: undefined }])).toBeNull();
-    });
-
-    it('leaves out a machine whose facts could not be worked out, and is null when none makes the target', () => {
-        expect(machinesMaxOf('iron-gear-wheel', [{ id: 1, facts: facts('iron-gear-wheel', 10) }, { id: 2, facts: null }])).toEqual({ machineIds: [1], perCopy: 10 });
-        expect(machinesMaxOf('iron-gear-wheel', [{ id: 2, facts: null }])).toBeNull();
-        expect(machinesMaxOf('iron-gear-wheel', [])).toBeNull();
-        expect(machinesMaxOf('', [{ id: 1, facts: facts('iron-gear-wheel', 10) }])).toBeNull();
+    it.each([
+        ['sums the machines whose output item is the target, as the engine picks them', 'iron-gear-wheel',
+            [gears(1, 10), { id: 2, facts: facts('iron-plate', 99) }, gears(3, 2.5)], { machineIds: [1, 3], perCopy: 12.5 }],
+        ['goes by the output item, not the recipe: a recipe named otherwise is made by no machine', 'advanced-oil-processing', [{ id: 1, facts: facts('heavy-oil', 10) }], null],
+        ['is unknown while a machine\'s facts are, whatever it makes', 'iron-gear-wheel', [gears(1, 10), { id: 2, facts: undefined }], null],
+        ['leaves out a machine whose facts could not be worked out', 'iron-gear-wheel', [gears(1, 10), { id: 2, facts: null }], { machineIds: [1], perCopy: 10 }],
+        ['is null when no machine makes the target', 'iron-gear-wheel', [{ id: 2, facts: null }], null],
+        ['is null without machines', 'iron-gear-wheel', [], null],
+        ['is null without a target', '', [gears(1, 10)], null],
+    ])('%s', (_, target, machines, max) => {
+        expect(machinesMaxOf(target, machines)).toEqual(max);
     });
 });
 
@@ -47,13 +42,14 @@ const recycler = (crafts: number, exact?: { numerator: number; denominator: numb
     ...(exact && { output_rate_ratio: exact }),
     inputs: [{ item_name: 'iron-ore', consumption_rate_per_second: crafts, automated_insertion_limit: 4, amount_per_craft: 1 }],
 });
+/** The voider's recycler, with its exact output rate */
+const voider = recycler(540, { numerator: 135, denominator: 1 });
+const destroying = (...machines: Parameters<typeof machinesMaxOf>[1]) => machinesMaxOf('iron-ore', machines, 'destroyed');
 
 describe('machinesMaxOf for a target that counts the item destroyed', () => {
     it('is the crafts a second times what a craft uses less what it gives back: 540 x (1 - 1/4) = 405', () => {
-        const max = machinesMaxOf('iron-ore', [{ id: 1, facts: recycler(540, { numerator: 135, denominator: 1 }), comesBack: true }], 'destroyed')!;
-        expect(max.machineIds).toEqual([1]);
-        expect(max.perCopy).toBe(405);
-        expect(max.perCopyRatio).toEqual({ numerator: 405, denominator: 1 });
+        const max = destroying({ id: 1, facts: voider, comesBack: true })!;
+        expect(max).toEqual({ machineIds: [1], perCopy: 405, perCopyRatio: { numerator: 405, denominator: 1 } });
         expect(totalMachineCapacity(max, 1)).toBe(405);
         expect(isTargetAboveMax(400, 1, max)).toBe(false);
         expect(isTargetAboveMax(405, 1, max)).toBe(false);
@@ -61,52 +57,46 @@ describe('machinesMaxOf for a target that counts the item destroyed', () => {
     });
 
     it('is 639.2 for the overbeaconed recycler, 852.3 x 0.75', () => {
-        const max = machinesMaxOf('iron-ore', [{ id: 1, facts: recycler(852.3), comesBack: true }], 'destroyed')!;
+        const max = destroying({ id: 1, facts: recycler(852.3), comesBack: true })!;
         expect(max.perCopy).toBeCloseTo(639.225, 6);
         expect(maxRateText(max.perCopy, 'en-US')).toBe('639.22/s');
     });
 
     it('takes off nothing when what it gives back is not taken back into it', () => {
-        const max = machinesMaxOf('iron-ore', [{ id: 1, facts: recycler(540, { numerator: 135, denominator: 1 }) }], 'destroyed')!;
-        expect(max.perCopy).toBe(540);
-        expect(max.perCopyRatio).toEqual({ numerator: 540, denominator: 1 });
+        expect(destroying({ id: 1, facts: voider })).toEqual({ machineIds: [1], perCopy: 540, perCopyRatio: { numerator: 540, denominator: 1 } });
     });
 
     it('takes off nothing when the machine\'s own output is another item', () => {
         const facts = { ...recycler(10), output_item: 'copper-ore' };
-        expect(machinesMaxOf('iron-ore', [{ id: 1, facts, comesBack: true }], 'destroyed')!.perCopy).toBe(10);
+        expect(destroying({ id: 1, facts, comesBack: true })!.perCopy).toBe(10);
     });
 
     it('counts the machines that take the item in, not the ones that make it', () => {
-        const max = machinesMaxOf('iron-ore', [
+        const max = destroying(
             { id: 1, facts: recycler(540), comesBack: true },
             { id: 2, facts: { output_item: 'iron-ore', output_rate_per_second: 99, output_per_craft: 1, inputs: [] } },
             { id: 3, facts: recycler(100), comesBack: true },
-        ], 'destroyed')!;
+        )!;
         expect(max.machineIds).toEqual([1, 3]);
         expect(max.perCopy).toBe(405 + 75);
-        expect(machinesMaxOf('iron-ore', [{ id: 2, facts: { output_item: 'iron-ore', output_rate_per_second: 99 } }], 'destroyed')).toBeNull();
-        expect(machinesMaxOf('iron-ore', [{ id: 1, facts: recycler(540) }, { id: 2, facts: null }], 'destroyed')!.machineIds).toEqual([1]);
+        expect(destroying({ id: 2, facts: { output_item: 'iron-ore', output_rate_per_second: 99 } })).toBeNull();
+        expect(destroying({ id: 1, facts: recycler(540) }, { id: 2, facts: null })!.machineIds).toEqual([1]);
     });
 
     it('is unknown while a machine\'s facts are, and when the facts do not say what a craft uses', () => {
-        expect(machinesMaxOf('iron-ore', [{ id: 1, facts: recycler(540) }, { id: 2, facts: undefined }], 'destroyed')).toBeNull();
+        expect(destroying({ id: 1, facts: recycler(540) }, { id: 2, facts: undefined })).toBeNull();
         const { output_per_craft: _, ...without } = recycler(540);
         void _;
-        expect(machinesMaxOf('iron-ore', [{ id: 1, facts: without }], 'destroyed')).toBeNull();
+        expect(destroying({ id: 1, facts: without })).toBeNull();
     });
 
     it('says destroys in the line under the rate, and gives the same line as before for a target that counts the item made', () => {
-        const max = machinesMaxOf('iron-ore', [{ id: 1, facts: recycler(540, { numerator: 135, denominator: 1 }), comesBack: true }], 'destroyed')!;
-        const destroyed = (itemsPerSecond: number, copies = 1) => targetRateLineOf({ itemsPerSecond, copies, max, counts: 'destroyed', locale: 'en-US' });
-        expect(destroyed(400)).toBeNull();
-        expect(destroyed(406)).toBe('At most 405/s: Machine 1 destroys 405/s. Lower the rate or raise Copies. Describe one unit in the build.');
-        expect(destroyed(4000, 2)).toBe('At most 810/s: Machine 1 destroys 405/s, times 2 copies. Lower the rate or raise Copies. Describe one unit in the build.');
-        const two: MachinesMax = { machineIds: [1, 2], perCopy: 30 };
-        expect(targetRateLineOf({ itemsPerSecond: 400, copies: 1, max: two, counts: 'destroyed', locale: 'en-US' }))
-            .toBe('At most 30/s: Machines 1 and 2 destroy 30/s together. Lower the rate or raise Copies. Describe one unit in the build.');
-        expect(targetRateLineOf({ itemsPerSecond: 400, copies: 1, max: two, counts: 'made', locale: 'en-US' }))
-            .toBe('At most 30/s: Machines 1 and 2 make 30/s together. Lower the rate or raise Copies. Describe one unit in the build.');
+        const max = destroying({ id: 1, facts: voider, comesBack: true });
+        expect(line(400, 1, max, 'destroyed')).toBeNull();
+        expect(line(406, 1, max, 'destroyed')).toBe(atMost('405/s: Machine 1 destroys 405/s'));
+        expect(line(4000, 2, max, 'destroyed')).toBe(atMost('810/s: Machine 1 destroys 405/s, times 2 copies'));
+        expect(line(400, 1, two, 'destroyed')).toBe(atMost('30/s: Machines 1 and 2 destroy 30/s together'));
+        expect(line(400, 1, two, 'made')).toBe(atMost('30/s: Machines 1 and 2 make 30/s together'));
     });
 });
 
@@ -122,40 +112,31 @@ describe('maxRateText', () => {
 });
 
 describe('targetRateLineOf', () => {
-    it('gives the most first, then what makes it, then what to do', () => {
-        expect(line(240200, 11)).toBe('At most 252.65/s: Machine 1 makes 22.96/s, times 11 copies. Lower the rate or raise Copies. Describe one unit in the build.');
+    it.each<[string, number, number, MachinesMax | null, string | null]>([
+        ['gives the most first, then what makes it, then what to do', 240200, 11, one, atMost('252.65/s: Machine 1 makes 22.96/s, times 11 copies')],
+        ['names several machines, and what they make together', 400, 11, two, atMost('330/s: Machines 1 and 2 make 30/s together, times 11 copies')],
+        ['names three machines', 50, 1, { machineIds: [1, 2, 4], perCopy: 45.5 }, atMost('45.5/s: Machines 1, 2 and 4 make 45.5/s together')],
+        ['counts every copy: one', 240, 1, one, atMost('22.96/s: Machine 1 makes 22.96/s')],
+        ['counts every copy: a target the copies can make has no line', 240, 11, one, null],
+        ['counts every copy: ten', 240, 10, one, atMost('229.68/s: Machine 1 makes 22.96/s, times 10 copies')],
+        // without exact ratios, the legacy numeric facts pass and refuse what the engine's check does
+        ['uses the legacy numeric facts: passes what the engine passes', 252.65, 11, one, null],
+        ['uses the legacy numeric facts: passes the capacity the check names', 252.65624125798462, 11, one, null],
+        ['uses the legacy numeric facts: passes a target just under it', 252.656, 11, one, null],
+        ['uses the legacy numeric facts: refuses what the engine refuses', 252.66, 11, one, atMost('252.65/s: Machine 1 makes 22.96/s, times 11 copies')],
+        ['uses the legacy numeric facts: passes what the engine passes for one copy', 22.96, 1, one, null],
+        ['uses the legacy numeric facts: refuses what the engine refuses for one copy', 22.97, 1, one, atMost('22.96/s: Machine 1 makes 22.96/s')],
+        ['says nothing without a target', 0, 11, one, null],
+        ['says nothing while the machines\' most is not known', 240200, 11, null, null],
+    ])('%s: %s/s, %s copies', (_, itemsPerSecond, copies, max, text) => {
+        expect(line(itemsPerSecond, copies, max)).toBe(text);
     });
 
-    it('names several machines, and what they make together', () => {
-        const two: MachinesMax = { machineIds: [1, 2], perCopy: 30 };
-        expect(line(400, 11, two)).toBe('At most 330/s: Machines 1 and 2 make 30/s together, times 11 copies. Lower the rate or raise Copies. Describe one unit in the build.');
-        const three: MachinesMax = { machineIds: [1, 2, 4], perCopy: 45.5 };
-        expect(line(50, 1, three)).toBe('At most 45.5/s: Machines 1, 2 and 4 make 45.5/s together. Lower the rate or raise Copies. Describe one unit in the build.');
-    });
-
-    it('counts every copy: a target the copies can make has no line', () => {
-        expect(line(240, 1)).toBe('At most 22.96/s: Machine 1 makes 22.96/s. Lower the rate or raise Copies. Describe one unit in the build.');
-        expect(line(240, 11)).toBeNull();
-        expect(line(240, 10)).toBe('At most 229.68/s: Machine 1 makes 22.96/s, times 10 copies. Lower the rate or raise Copies. Describe one unit in the build.');
-    });
-
-    it('uses the legacy numeric facts when exact ratios are unavailable', () => {
-        expect(line(252.65, 11)).toBeNull();
-        expect(line(252.65624125798462, 11)).toBeNull();
-        expect(line(252.656, 11)).toBeNull();
-        expect(line(252.66, 11)).not.toBeNull();
-        expect(line(22.96, 1)).toBeNull();
-        expect(line(22.97, 1)).toBe('At most 22.96/s: Machine 1 makes 22.96/s. Lower the rate or raise Copies. Describe one unit in the build.');
-    });
-
-    it('says nothing without a target, or while the machines\' most is not known', () => {
-        expect(line(0, 11)).toBeNull();
-        expect(line(240200, 11, null)).toBeNull();
+    it('finds no target above the most when it is not finite, or without copies', () => {
         expect(isTargetAboveMax(Number.POSITIVE_INFINITY, 1, one)).toBe(false);
         expect(isTargetAboveMax(240200, 0, one)).toBe(false);
     });
 });
-
 
 describe('unsupported rate arithmetic remains an editable worker-validation concern', () => {
     const exact: MachinesMax = { machineIds: [1], perCopy: 2, perCopyRatio: { numerator: 2, denominator: 1 } };

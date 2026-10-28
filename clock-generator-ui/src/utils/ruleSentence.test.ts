@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Condition, EnableControlOverride, RuleSet, ValueReference } from './configForm/formData';
-import { blueprintNoteOf, periodLineOf, ruleSentenceOf } from './ruleSentence';
-import { NO_TIMING } from './ruleTiming';
+import { RULE_COPY, blueprintNoteOf, periodLineOf, ruleSentenceOf } from './ruleSentence';
+import { NO_TIMING, type RuleTiming } from './ruleTiming';
 
 const identity = (id: string) => id;
 const names: Record<string, string> = { 'electromagnetic-science-pack': 'Electromagnetic science pack', 'iron-plate': 'Iron plate' };
@@ -34,37 +34,36 @@ const ELECTROMAGNETIC: EnableControlOverride = {
 
 const conditional = (ruleSet: RuleSet): EnableControlOverride => ({ mode: 'CONDITIONAL', rule_set: ruleSet });
 const one = (condition: Condition): RuleSet => ({ operator: 'AND', rules: [condition] });
-const compare = (left: ValueReference, right: ValueReference = { type: 'CONSTANT', value: 5 }): Condition => ({ left, operator: '>', right });
+const compare = (left: ValueReference, right: ValueReference = { type: 'CONSTANT', value: 5 }, operator: Condition['operator'] = '>'): Condition =>
+    ({ left, operator, right });
+/** The sentence of a rule of this one condition */
+const said = (condition: Condition) => ruleSentenceOf(conditional(one(condition)), ctx);
+
+const range = { start: 12, end: 20 };
 
 describe('ruleSentenceOf', () => {
     it('says Auto, Always on and Never on in their own words', () => {
-        expect(ruleSentenceOf(undefined, ctx)).toBe('Auto: the generator decides when it is on.');
-        expect(ruleSentenceOf({ mode: 'AUTO' }, ctx)).toBe('Auto: the generator decides when it is on.');
-        expect(ruleSentenceOf({ mode: 'ALWAYS' }, ctx)).toBe('On all the time.');
-        expect(ruleSentenceOf({ mode: 'NEVER' }, ctx)).toBe('Never on.');
+        expect(ruleSentenceOf(undefined, ctx)).toBe(RULE_COPY.auto);
+        expect(ruleSentenceOf({ mode: 'AUTO' }, ctx)).toBe(RULE_COPY.auto);
+        expect(ruleSentenceOf({ mode: 'ALWAYS' }, ctx)).toBe(RULE_COPY.always);
+        expect(ruleSentenceOf({ mode: 'NEVER' }, ctx)).toBe(RULE_COPY.never);
     });
 
-    it('lists Clocked windows with the period', () => {
-        expect(ruleSentenceOf(clocked([{ start: 12, end: 20 }], 264), ctx)).toBe('On at ticks 12–20 of every 264 ticks.');
-        expect(ruleSentenceOf(clocked([{ start: 12, end: 20 }, { start: 80, end: 95 }, { start: 120, end: 130 }], 264), ctx))
-            .toBe('On at ticks 12–20, 80–95 and 120–130 of every 264 ticks.');
-        expect(ruleSentenceOf(clocked([{ start: 12, end: 12 }], 264), ctx)).toBe('On at tick 12 of every 264 ticks.');
-    });
-
-    it('repeats every crafting cycle without a period, with its length when known', () => {
-        expect(ruleSentenceOf(clocked([{ start: 12, end: 20 }]), ctx)).toBe('On at ticks 12–20 of every crafting cycle (132 ticks).');
-        expect(ruleSentenceOf(clocked([{ start: 12, end: 20 }]), { ...ctx, cycleTicks: null })).toBe('On at ticks 12–20 of every crafting cycle.');
-    });
-
-    it('says which windows are left out for a problem', () => {
-        expect(ruleSentenceOf(clocked([{ start: 12, end: 20 }], 264), { ...ctx, invalidWindows: [2] }))
-            .toBe('On at ticks 12–20 of every 264 ticks. Wake window 2 is left out until its problem is fixed.');
-        expect(ruleSentenceOf(clocked([], 264), { ...ctx, invalidWindows: [1, 2] }))
-            .toBe('No wake windows yet. Wake windows 1 and 2 are left out until their problems are fixed.');
-    });
-
-    it('asks for ticks when no window has anything typed in it', () => {
-        expect(ruleSentenceOf(clocked([]), ctx)).toBe('No wake windows yet: enter a start and an end tick.');
+    it.each<[string, EnableControlOverride, Partial<Parameters<typeof ruleSentenceOf>[1]>, string]>([
+        ['lists a Clocked window with the period', clocked([range], 264), {}, 'On at ticks 12–20 of every 264 ticks.'],
+        ['lists several Clocked windows with the period', clocked([range, { start: 80, end: 95 }, { start: 120, end: 130 }], 264), {},
+            'On at ticks 12–20, 80–95 and 120–130 of every 264 ticks.'],
+        ['lists a one-tick window as its tick', clocked([{ start: 12, end: 12 }], 264), {}, 'On at tick 12 of every 264 ticks.'],
+        ['repeats every crafting cycle without a period, with its length when known', clocked([range]), {}, 'On at ticks 12–20 of every crafting cycle (132 ticks).'],
+        ['repeats every crafting cycle without a period, without its length when unknown', clocked([range]), { cycleTicks: null },
+            'On at ticks 12–20 of every crafting cycle.'],
+        ['says which window is left out for a problem', clocked([range], 264), { invalidWindows: [2] },
+            'On at ticks 12–20 of every 264 ticks. Wake window 2 is left out until its problem is fixed.'],
+        ['says which windows are left out when every one has a problem', clocked([], 264), { invalidWindows: [1, 2] },
+            'No wake windows yet. Wake windows 1 and 2 are left out until their problems are fixed.'],
+        ['asks for ticks when no window has anything typed in it', clocked([]), {}, RULE_COPY.noWindowsTyped],
+    ])('%s', (_, rule, change, sentence) => {
+        expect(ruleSentenceOf(rule, { ...ctx, ...change })).toBe(sentence);
     });
 
     it('reads the electromagnetic-science sample as the acceptance sentence', () => {
@@ -99,23 +98,18 @@ describe('ruleSentenceOf', () => {
         [{ type: 'HAND_QUANTITY' }, 'items in its hand'],
         [{ type: 'HAND_QUANTITY', item_name: 'iron-plate' }, 'Iron plate in its hand'],
         [{ type: 'INSERTER_STACK_SIZE' }, 'its stack size'],
-        [{ type: 'INVENTORY_ITEM', entity: 'SOURCE', item_name: '' }, '(no item) in the source'],
+        [{ type: 'INVENTORY_ITEM', entity: 'SOURCE', item_name: '' }, `${RULE_COPY.noItem} in the source`],
     ])('names %j', (value, text) => {
-        expect(ruleSentenceOf(conditional(one(compare(value))), ctx)).toBe(`On while ${text} > 5.`);
+        expect(said(compare(value))).toBe(`On while ${text} > 5.`);
     });
 
-    it('prints every operator as a sign', () => {
-        const operators = { '>': '>', '<': '<', '>=': '≥', '<=': '≤', '==': '=', '!=': '≠' } as const;
-        for (const [operator, sign] of Object.entries(operators)) {
-            const condition: Condition = { left: { type: 'CONSTANT', value: 1 }, operator: operator as Condition['operator'], right: { type: 'CONSTANT', value: 2 } };
-            expect(ruleSentenceOf(conditional(one(condition)), ctx)).toBe(`On while 1 ${sign} 2.`);
-        }
+    it.each([['>', '>'], ['<', '<'], ['>=', '≥'], ['<=', '≤'], ['==', '='], ['!=', '≠']] as const)('prints the operator %s as the sign %s', (operator, sign) => {
+        expect(said(compare({ type: 'CONSTANT', value: 1 }, { type: 'CONSTANT', value: 2 }, operator))).toBe(`On while 1 ${sign} 2.`);
     });
 
-    it('says is and is not for a status', () => {
-        const status = (operator: '==' | '!='): Condition => ({ left: { type: 'MACHINE_STATUS', entity: 'SOURCE', status: 'OUTPUT_FULL' }, operator, right: { type: 'CONSTANT', value: 1 } });
-        expect(ruleSentenceOf(conditional(one(status('=='))), ctx)).toBe('On while the source is Output full.');
-        expect(ruleSentenceOf(conditional(one(status('!='))), ctx)).toBe('On while the source is not Output full.');
+    it.each([['==', 'is'], ['!=', 'is not']] as const)('says %s of a status as "%s"', (operator, verb) => {
+        const status = compare({ type: 'MACHINE_STATUS', entity: 'SOURCE', status: 'OUTPUT_FULL' }, { type: 'CONSTANT', value: 1 }, operator);
+        expect(said(status)).toBe(`On while the source ${verb} Output full.`);
     });
 });
 
@@ -133,20 +127,15 @@ describe('blueprintNoteOf', () => {
 });
 
 describe('periodLineOf', () => {
-    it('names the cycle, the period and where they come from', () => {
-        expect(periodLineOf({ cycleTicks: 132, periodTicks: 264, from: 'results', windows: {} }))
-            .toBe('Crafting cycle: 132 ticks. Clock period: 264 ticks (2 crafting cycles). From the clock on Results.');
-        expect(periodLineOf({ cycleTicks: 132, periodTicks: 132, from: 'check', windows: null }))
-            .toBe('Crafting cycle: 132 ticks. Clock period: 132 ticks (1 crafting cycle). From your last check.');
-    });
-
-    it('asks for a check when nothing is known', () => {
-        expect(periodLineOf(NO_TIMING))
-            .toBe('Run Check only or Generate to see the crafting cycle and the clock period. Until then the ticks can\'t be checked against them.');
-    });
-
-    it('says a fractional period can\'t be repeated by a rule', () => {
-        expect(periodLineOf({ cycleTicks: 137.739, periodTicks: 550.957, from: 'results', windows: {} }))
-            .toBe('Crafting cycle: 137.739 ticks. The clock period is 550.957 ticks, not a whole number, so a Clocked rule can\'t repeat with it. From the clock on Results.');
+    it.each<[string, RuleTiming, string]>([
+        ['names the cycle, the period and the clock on Results', { cycleTicks: 132, periodTicks: 264, from: 'results', windows: {} },
+            `Crafting cycle: 132 ticks. Clock period: 264 ticks (2 crafting cycles).${RULE_COPY.fromResults}`],
+        ['names one crafting cycle and the last check', { cycleTicks: 132, periodTicks: 132, from: 'check', windows: null },
+            `Crafting cycle: 132 ticks. Clock period: 132 ticks (1 crafting cycle).${RULE_COPY.fromCheck}`],
+        ['asks for a check when nothing is known', NO_TIMING, RULE_COPY.periodUnknown],
+        ['says a fractional period can\'t be repeated by a rule', { cycleTicks: 137.739, periodTicks: 550.957, from: 'results', windows: {} },
+            `Crafting cycle: 137.739 ticks. The clock period is 550.957 ticks, not a whole number, so a Clocked rule can't repeat with it.${RULE_COPY.fromResults}`],
+    ])('%s', (_, timing, line) => {
+        expect(periodLineOf(timing)).toBe(line);
     });
 });
