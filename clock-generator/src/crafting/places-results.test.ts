@@ -152,7 +152,7 @@ describe('a machine that places its results itself, with no result target', () =
         expect(machine.craftCount).toBeGreaterThan(crafts);
     });
 
-    it('is emptied a part hand at a time by an inserter that is no bulk one, and a full hand at a time by a bulk one', async () => {
+    it('is emptied a part hand at a time by an inserter that does not wait for a full hand, and a full hand at a time by one that does', async () => {
         // iron ore back at 1/4 of 16 crafts a second: one every 15 ticks, so a hand of 4 or 16 never waits full
         const long_handed = handsDropped(SimulationContext.fromConfig(recyclerWithTakers('iron-ore-recycling', ORE,
             [{ prototype: 'long-handed-inserter', item: ORE }])), 'inserter:2', 60 * 60);
@@ -162,6 +162,13 @@ describe('a machine that places its results itself, with no result target', () =
         const stack = handsDropped(SimulationContext.fromConfig(recyclerWithTakers('iron-ore-recycling', ORE,
             [{ prototype: 'stack-inserter', item: ORE }])), 'inserter:2', 60 * 60);
         expect([...stack.keys()]).toEqual([16]);
+        // the bulk inserter (hand 12, no wait_for_full_hand in the game data) swings what it holds, as the long-handed one does
+        for (const prototype of ['bulk-inserter', 'fast-inserter', 'inserter']) {
+            const swung = handsDropped(SimulationContext.fromConfig(recyclerWithTakers('iron-ore-recycling', ORE,
+                [{ prototype, item: ORE }])), 'inserter:2', 60 * 60);
+            expect(Math.max(...swung.keys()), prototype).toBeLessThan(4);
+            expect([...swung].reduce((sum, [size, count]) => sum + size * count, 0), prototype).toBeGreaterThan(230);
+        }
     });
 });
 

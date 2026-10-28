@@ -9,7 +9,8 @@ export interface MachineMetadata {
     recipe: RecipeMetadata;
     /**
      * The simulation rule, derived from the machine's prototype (machine-rule.ts); internal, set by no config field. A
-     * label only (facts, debug output): what the machine does by its kind it reads from its traits (machine.ts).
+     * label only (debug output; the facts give their own from the traits): what the machine does by its kind it reads from
+     * its traits (machine.ts).
      */
     type: MachineType;
     /** Total energy consumption effect in percent, e.g. 50 for +50%. Defaults to 0. Only used by a machine whose fuel is modelled. */

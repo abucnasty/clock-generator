@@ -87,6 +87,7 @@ describe("the light entry", () => {
             "entities/entity-type.ts",
             "entities/machine/machine-rule.ts",
             "entities/machine/machine-type.ts",
+            "entities/traits/prototype-traits.ts",
             "state/entity-status.ts",
             "state/factorio-state-names.ts",
             "state/reason-table.ts",

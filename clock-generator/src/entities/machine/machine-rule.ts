@@ -3,9 +3,6 @@ import { MachineType } from "./machine-type";
 /** The game's class of the prototypes that pick their recipe from what they are brought (FurnacePrototype, the recycler too) */
 export const FURNACE_CLASS = "furnace";
 
-/** The fuel category the biochamber rule burns: a burner on it crafts under that rule */
-export const NUTRIENTS_FUEL_CATEGORY = "nutrients";
-
 /** What the rule of a machine and its recipes follow from, of a crafting machine prototype of the game data */
 export interface CraftingMachineRuleFacts {
     /** "furnace" or "assembling-machine", the prototype's type in the game */
@@ -16,26 +13,17 @@ export interface CraftingMachineRuleFacts {
 
 /**
  * The simulation rule of a crafting machine prototype, from its data alone: a furnace prototype (the recycler too) the
- * furnace rule; a burner on nutrients the biochamber rule; any other the crafting rule. No machine name decides it.
+ * furnace rule; any other burner the biochamber rule (a label for a burner that is no furnace); any other the crafting
+ * rule. No machine name decides it.
  */
 export function machineRuleOfPrototype(prototype: CraftingMachineRuleFacts): MachineType {
     if (prototype.type === FURNACE_CLASS) {
         return MachineType.FURNACE;
     }
-    if (fuelModelled(prototype)) {
+    if (prototype.burner_fuel_categories.length > 0) {
         return MachineType.BIOCHAMBER;
     }
     return MachineType.MACHINE;
-}
-
-/**
- * Whether the simulator models the fuel a machine of the prototype burns (the Energy trait's `fuel_modelled`): a burner
- * on the nutrients fuel category that is no furnace, the biochamber. A kept quirk: the stone and steel furnaces (a burner
- * on chemical fuel) and the captive biter spawner (on food) run without fuel. Keyed on the data's fuel category, a data
- * key, and on the class; no machine name decides it.
- */
-export function fuelModelled(prototype: CraftingMachineRuleFacts): boolean {
-    return prototype.type !== FURNACE_CLASS && prototype.burner_fuel_categories.includes(NUTRIENTS_FUEL_CATEGORY);
 }
 
 /**

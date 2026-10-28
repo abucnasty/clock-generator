@@ -270,7 +270,7 @@ export function ClockAlternativesPanel({
                         <TableCell align="right">{alternative.assessment.items_per_second.toFixed(2)}</TableCell>
                         <TableCell align="right">
                             {alternative.asBuilt
-                                ? `${alternative.asBuilt.actual_output_items} / ${alternative.expectedOutputItems}`
+                                ? `${formatNumberText(alternative.asBuilt.actual_output_items)} / ${alternative.expectedOutputItems}`
                                 : '—'}
                         </TableCell>
                         <TableCell>

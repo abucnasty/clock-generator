@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { Machine, RecipeMetadata } from "../../entities";
+import { ConfigSchema } from "../../config";
+import { Machine, MiningDrill, RecipeMetadata } from "../../entities";
 import { ENERGY_BUFFER_TICKS } from "../../entities/machine/fuel/fuel-slot";
 import { InventoryState } from "../../state/inventory-state";
 import { BurnerEnergy } from "./burner-energy";
 import { ElectricEnergy } from "./electric-energy";
 import { Energy, EnergyUser } from "./energy";
+import { SuppliedBurnerEnergy } from "./supplied-burner-energy";
 
 // a 4 s recipe at crafting speed 2: 120 ticks a craft and 1 MJ a craft, so a tick of work takes 1/120 MJ; a nutrient is 2 MJ
 const biochamber = () => Machine.createMachine(1, {
@@ -34,6 +36,9 @@ const crafting = (answers: { in_progress?: boolean; keeps_working?: boolean } = 
     };
     return user satisfies EnergyUser;
 };
+
+const idleBuild = { target_output: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+    machines: [{ id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0 }], belts: [], inserters: [] };
 
 describe("Energy.of", () => {
     it("gives a machine with a fuel slot a burner and any other machine electric energy", () => {
@@ -181,5 +186,61 @@ describe("BurnerEnergy", () => {
         expect(fuel_copy.getQuantity("nutrients")).toBe(0);
         expect(fuel.getQuantity("nutrients")).toBe(1);
         expect(energy.energy_remaining_mj).toBeCloseTo(2 - PER_TICK * ENERGY_BUFFER_TICKS, 12);
+    });
+});
+
+describe("SuppliedBurnerEnergy (a burner drill: the buffer, with the fuel assumed supplied)", () => {
+    const PER_TICK_J = 0.0025;
+    const drill = () => new SuppliedBurnerEnergy(PER_TICK_J);
+
+    it("is given to a burner mining drill by Energy.ofDrill, with its 150 kW a tick; an electric drill gets electric energy", () => {
+        const drillOf = (type: string) => MiningDrill.fromConfig(ConfigSchema.parse({ ...idleBuild,
+            drills: { configs: [{ id: 1, type, mined_item_name: "iron-ore", speed_bonus: 0, productivity: 0, target: { type: "machine", id: 1 } }] } }).drills!.configs[0]);
+        const burner = drillOf("burner-mining-drill");
+        const energy = Energy.ofDrill(burner);
+        expect(energy).toBeInstanceOf(SuppliedBurnerEnergy);
+        // the first tick of work fills a buffer of 16/15 of the 2,500 J a tick
+        energy.spend(true, crafting());
+        expect((energy as SuppliedBurnerEnergy).energy_buffer_mj).toBeCloseTo(0.0025 * ENERGY_BUFFER_TICKS, 12);
+        expect(Energy.ofDrill(drillOf("electric-mining-drill"))).toBeInstanceOf(ElectricEnergy);
+    });
+
+    it("holds nothing at first: the first tick of work moves no bar and fills the buffer, the next works whole", () => {
+        const energy = drill();
+        expect(energy.poweredShare()).toBe(0);
+        energy.spend(true, crafting());
+        expect(energy.energy_buffer_mj).toBeCloseTo(PER_TICK_J * ENERGY_BUFFER_TICKS, 12);
+        expect(energy.poweredShare()).toBe(1);
+    });
+
+    it("draws a tick of energy in a tick of work and tops the buffer up, whatever the fuel: it never runs out", () => {
+        const energy = drill();
+        energy.spend(true, crafting());
+        for (let tick = 0; tick < 10_000; tick++) {
+            energy.spend(true, crafting());
+            expect(energy.poweredShare()).toBe(1);
+            expect(energy.outOfFuel(crafting())).toBe(false);
+            expect(energy.hasFuel()).toBe(true);
+        }
+        expect(energy.energy_buffer_mj).toBeCloseTo(PER_TICK_J * ENERGY_BUFFER_TICKS, 12);
+    });
+
+    it("keeps 1/15 of a tick when the machine stops, as a burner's", () => {
+        const energy = drill();
+        energy.spend(true, crafting());
+        energy.spend(true, crafting({ keeps_working: false }));
+        expect(energy.energy_buffer_mj).toBeCloseTo(PER_TICK_J / 15, 12);
+        expect(energy.poweredShare()).toBeCloseTo(1 / 15, 12);
+    });
+
+    it("keys the buffer, and a copy keeps it apart", () => {
+        const energy = drill();
+        const empty = energy.key();
+        energy.spend(true, crafting());
+        expect(energy.key()).not.toBe(empty);
+        const copy = energy.clone();
+        expect(copy.key()).toBe(energy.key());
+        copy.spend(true, crafting({ keeps_working: false }));
+        expect(copy.key()).not.toBe(energy.key());
     });
 });

@@ -7,6 +7,7 @@ import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { buildOutputInsertersOf, type EntityTransferCountMap } from "./sequence/cycle/swing-counts";
 import { targetItemOf } from "./sequence/cycle/target-ends";
 import { atRateFrom, branchesScaledTo, cycleAtRate, firstBinAtRate, neverBlockingBranchesOf, type BranchBins } from "./terminal-rate";
+import { traitsOf } from "../entities/traits/traits-of";
 
 /** The branches of a sample, with every terminal output planned to move one hand of 16 a period */
 async function branchesOf(path: string) {
@@ -17,7 +18,7 @@ async function branchesOf(path: string) {
         .flatMap(machine => buildOutputInsertersOf(machine, registry));
     const swing_counts = { entries: () => outputs.map(inserter => [inserter.entity_id,
         { total_transfer_count: { toDecimal: () => 1 }, stack_size: 16 }]) } as unknown as EntityTransferCountMap;
-    return neverBlockingBranchesOf(registry, swing_counts, 1, new Set(outputs.map(it => it.entity_id.id)));
+    return neverBlockingBranchesOf(registry, traitsOf(config), swing_counts, 1, new Set(outputs.map(it => it.entity_id.id)));
 }
 
 describe("the branches of the terminal outputs into sinks that never block", () => {

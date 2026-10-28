@@ -1,4 +1,5 @@
 import { EntityId, MiningDrill } from "../entities";
+import { Energy } from "../simulation/components/energy";
 import { HeldStorage } from "../simulation/components/held-storage";
 import { Placement } from "../simulation/components/placement";
 import { EntityState } from "./entity-state";
@@ -19,11 +20,14 @@ export class DrillState implements EntityState {
     public readonly held: HeldStorage;
     /** Drops what it holds into its target before it mines, bound to the target by `placeDrillInto` */
     public readonly placement: Placement;
+    /** What it runs on: electric, or the buffer of a burner drill, whose fuel is assumed supplied (simulation/components) */
+    public readonly energy: Energy;
 
     constructor(public readonly drill: MiningDrill) {
         this.entity_id = drill.entity_id;
         this.held = HeldStorage.forItem(drill.production_rate.item);
         this.placement = new Placement(this.held, [drill.item.name], false);
+        this.energy = Energy.ofDrill(drill);
     }
 
     /** The status by the name the histories record (a view of the code) */

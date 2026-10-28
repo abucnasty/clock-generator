@@ -15,7 +15,11 @@ the ore that came out. The mining productivity research is put at 0.
 
 `recordings/` keeps the logs as gzip. `recordings.test.ts` reads them without Factorio and asserts the statuses and the
 ticks they change at, then runs a drill through the simulator with the same windows, takes and chest, and compares the state
-it records (`DrillStateTracker`) with the game's row by row; simulated tick j is the recording's row j + 1.
+it records (`DrillStateTracker`) with the game's row by row. The game's first update of every drill moves no bar; the
+simulator's electric and big drill move it in their first tick, so their tick j is the recording's row j + 1, while its
+burner drill fills its empty buffer in its first tick of mining and moves no bar, as that row shows, so its tick j is row j.
+The windows, the fill and the take are given to each simulated drill in its own ticks, and every drill is compared with the
+same rows of the game.
 
 What the recordings show, and the simulator does the same:
 

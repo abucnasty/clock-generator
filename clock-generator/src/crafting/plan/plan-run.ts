@@ -24,6 +24,7 @@ import { CraftingMachineArchetype } from "../../simulation/archetypes/crafting-m
 import { EntityTransferCountMap, SerializableTransferPlan } from "../sequence/cycle/swing-counts";
 import { returnedTargetRefusal, TargetItem, targetInsertersOf, targetMachinesOf } from "../sequence/cycle/target-ends";
 import { neverBlockingBranchesOf, type TerminalBranch } from "../terminal-rate";
+import { mainProductRateOf, traitsOf } from "../../entities/traits/traits-of";
 import { CraftingMargin, RandomAmountMargin, randomAmountMargins } from "../random-margins";
 import { carriedItemsOf, RESULT_WINDOWS_CHECK_PERIODS, ResultWindowsPlan } from "../result-windows";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
@@ -51,6 +52,7 @@ import { BackpressureLossOptions, LossOutcome, runLossTrials } from "../backpres
 import { SerializableTransferHistory, serializeTransferHistory } from "../sequence/transfer-history-serializer";
 import { StateTransitionHistory } from "../sequence/state-transition-history";
 import { MachineFactsEntry } from "../insights";
+import { machineFactsOfEntity } from "../../entities/traits/machine-facts-of";
 import { CompactStateTransitionHistory } from "../sequence/compact-history";
 import { StateTransitionTracker } from "../../simulation/observers/state-transition-tracker";
 import { DrillStateTracker, FactorioStateTracker } from "../../simulation/observers/factorio-state-tracker";
@@ -545,7 +547,7 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
     const state_transition_history = build.state_transition_history.seal(build.simulation_context.entity_registry, simulated.recorded_duration.ticks);
     const final_history = finalHistoryOf(build, crafting_cycle_plan, all_output_inserters, duration, logger);
     const output = checkOutput(build, planned_cycle, transfer_plan.recipe_lcm, duration, simulated, final_history, repeat_periods, logger);
-    const terminal_branches = neverBlockingBranchesOf(build.simulation_context.entity_registry, crafting_cycle_plan.entity_transfer_map,
+    const terminal_branches = neverBlockingBranchesOf(build.simulation_context.entity_registry, traitsOf(config), crafting_cycle_plan.entity_transfer_map,
         transfer_plan.recipe_lcm, new Set(all_output_inserters.map(it => it.inserter.entity_id.id)));
     const backpressure_loss = backpressureLossOf(config, build, controlled, simulated, options, logger, terminal_branches);
     // the run is over: the contexts it hands back keep their machines' states, and no longer the observers that fed the
@@ -1248,6 +1250,14 @@ export interface TrialRun {
     state_repeat?: StateRepeat;
 }
 
+/** The facts of every machine of a context, in its order: each machine's traits are built once, from the configuration it keeps, and projected */
+function machineFactsOfContext(simulation_context: SimulationContext): MachineFactsEntry[] {
+    return simulation_context.machines.map(it => ({
+        entity_id: it.machine_state.machine.entity_id.id,
+        facts: machineFactsOfEntity(it.machine_state.machine),
+    }));
+}
+
 export function trialRunOf(run: BuildRun): TrialRun {
     return {
         timeline_recording: run.timeline_recording,
@@ -1257,10 +1267,7 @@ export function trialRunOf(run: BuildRun): TrialRun {
         transfer_history: run.final_history,
         serializable_transfer_history: serializeTransferHistory(run.final_history, run.simulation_context.entity_registry, run.recorded_duration.ticks),
         serializable_state_transition_history: run.state_transition_history,
-        machine_facts: run.simulation_context.machines.map(it => ({
-            entity_id: it.machine_state.machine.entity_id.id,
-            facts: Machine.getMachineFacts(it.machine_state.machine),
-        })),
+        machine_facts: machineFactsOfContext(run.simulation_context),
         fuel_levels: run.fuel_levels,
         machine_stock: run.machine_stock,
         backpressure_loss: run.backpressure_loss,
@@ -1518,10 +1525,7 @@ export function exportClock(
             transfer_history: final_history,
             serializable_transfer_history: serializeTransferHistory(final_history, simulation_context.entity_registry, recorded_duration.ticks),
             serializable_state_transition_history: state_transition_history,
-            machine_facts: simulation_context.machines.map(it => ({
-                entity_id: it.machine_state.machine.entity_id.id,
-                facts: Machine.getMachineFacts(it.machine_state.machine),
-            })),
+            machine_facts: machineFactsOfContext(simulation_context),
         };
     return {
         ...histories,
@@ -1728,7 +1732,7 @@ export function planCraftingCycle(config: Config, simulation_context: Simulation
 
     // validate target production rate can be met
     const total_output_capacity_per_second = output_machine_state_machines
-        .map(it => targetCapacityPerSecond(it.machine_state.machine, target, simulation_context.entity_registry))
+        .map(it => targetCapacityPerSecond(it.machine_state.machine, target, config, simulation_context.entity_registry))
         .reduce((a, b) => a.add(b), fraction(0))
         .multiply(fraction(config.target_output.copies));
     assert(total_output_capacity_per_second.toDecimal() >= target_production_rate.total_production_rate.amount_per_second.toDecimal(),
@@ -2336,12 +2340,14 @@ function computeCraftingCyclePlan(
 }
 
 /**
- * The most of the target a machine can make or destroy a second: what it makes of the item, or, for a target that
- * counts the item destroyed, its crafts a second times what a craft uses of the item less what comes back into it
+ * The most of the target a machine can make or destroy a second: what it makes of the item (its main product's rate, as
+ * its Yield trait gives it), or, for a target that counts the item destroyed, its crafts a second times what a craft uses
+ * of the item less what comes back into it. What comes back is the exact amount a craft gives of it, which the machine
+ * holds and its Yield trait only as a decimal, so that one is read off the machine.
  */
-function targetCapacityPerSecond(machine: Machine, target: TargetItem, registry: ReadableEntityRegistry): Fraction {
+function targetCapacityPerSecond(machine: Machine, target: TargetItem, config: Config, registry: ReadableEntityRegistry): Fraction {
     if (target.counts === "made") {
-        return machine.output.production_rate.amount_per_second;
+        return mainProductRateOf(traitsOf(config), machine.entity_id.id);
     }
     const used = fraction(machine.inputs.getOrThrow(target.item).ingredient.amount);
     const result_target = machine.result_target;
