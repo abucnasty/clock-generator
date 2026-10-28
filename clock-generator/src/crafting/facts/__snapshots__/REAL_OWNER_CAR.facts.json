@@ -1,0 +1,652 @@
+{
+  "schema": 1,
+  "target": {
+    "item": "iron-plate",
+    "counts": "made",
+    "items_per_second": 80,
+    "copies": 1,
+    "per_copy": {
+      "numerator": 80,
+      "denominator": 1
+    }
+  },
+  "nodes": [
+    {
+      "key": "belt:1/lane:1",
+      "kind": "lane",
+      "entity": "belt:1",
+      "lane": {
+        "key": "belt:1/lane:1",
+        "belt": "belt:1",
+        "lane": 1,
+        "listed": true,
+        "item": "iron-plate",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:1/lane:2",
+      "kind": "lane",
+      "entity": "belt:1",
+      "lane": {
+        "key": "belt:1/lane:2",
+        "belt": "belt:1",
+        "lane": 2,
+        "listed": true,
+        "item": "iron-plate",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "entity": "machine:1",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "iron-plate",
+        "prototype": "electric-furnace",
+        "prototype_type": "furnace",
+        "speed": 86.16550000000001,
+        "energy_required": 3.2,
+        "ticks_per_craft": 2.2282700152613284,
+        "crafts_per_tick": 0.4487786458333334,
+        "productivity": 50,
+        "bonus_per_craft": 0.5,
+        "ticks_per_bonus": 1.1141350076306642,
+        "inputs": [
+          {
+            "item": "iron-ore",
+            "per_craft": 1,
+            "per_second": 26.926718750000003,
+            "per_tick": 0.4487786458333334
+          }
+        ],
+        "insertion_duration_ticks": 49.02194033574922,
+        "crafts_per_second": {
+          "numerator": 8616550000000001,
+          "denominator": 320000000000000
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "iron-plate",
+            "amount": 1,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 1.5,
+            "per_second": {
+              "numerator": 43650735441415,
+              "denominator": 1080729165869
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 33,
+        "limits": [
+          {
+            "item": "iron-ore",
+            "limit": 33,
+            "kind": "ingredient"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "stack",
+        "per_result": [
+          {
+            "item": "iron-plate",
+            "rule": "stack",
+            "ingredients_blocked_at": 100,
+            "held_limit": 100,
+            "stack": 100
+          }
+        ]
+      },
+      "recipe_selection": "by-input",
+      "placement": null,
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 180,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "machine:2",
+      "kind": "machine",
+      "entity": "machine:2",
+      "production": {
+        "kind": "recipe",
+        "recipe_or_resource": "iron-plate",
+        "prototype": "electric-furnace",
+        "prototype_type": "furnace",
+        "speed": 86.16550000000001,
+        "energy_required": 3.2,
+        "ticks_per_craft": 2.2282700152613284,
+        "crafts_per_tick": 0.4487786458333334,
+        "productivity": 50,
+        "bonus_per_craft": 0.5,
+        "ticks_per_bonus": 1.1141350076306642,
+        "inputs": [
+          {
+            "item": "iron-ore",
+            "per_craft": 1,
+            "per_second": 26.926718750000003,
+            "per_tick": 0.4487786458333334
+          }
+        ],
+        "insertion_duration_ticks": 49.02194033574922,
+        "crafts_per_second": {
+          "numerator": 8616550000000001,
+          "denominator": 320000000000000
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "iron-plate",
+            "amount": 1,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 1.5,
+            "per_second": {
+              "numerator": 43650735441415,
+              "denominator": 1080729165869
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "expected-with-carry",
+        "payouts_count_as_finishes": true
+      },
+      "input_limits": {
+        "overload_multiplier": 33,
+        "limits": [
+          {
+            "item": "iron-ore",
+            "limit": 33,
+            "kind": "ingredient"
+          }
+        ]
+      },
+      "output_block": {
+        "rule": "stack",
+        "per_result": [
+          {
+            "item": "iron-plate",
+            "rule": "stack",
+            "ingredients_blocked_at": 100,
+            "held_limit": 100,
+            "stack": 100
+          }
+        ]
+      },
+      "recipe_selection": "by-input",
+      "placement": null,
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 180,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      },
+      "loop": {
+        "self_ingredients": [],
+        "looping_ingredients": [],
+        "seeded": false
+      }
+    },
+    {
+      "key": "chest:1",
+      "kind": "container",
+      "entity": "chest:1",
+      "storage": {
+        "kind": "slots",
+        "chest_type": "car",
+        "capacity_by_item": [
+          {
+            "item": "iron-ore",
+            "capacity": 4000
+          }
+        ],
+        "accepts": "any",
+        "gives": [
+          "iron-ore"
+        ],
+        "items_put_in": [
+          "iron-ore"
+        ],
+        "never_refuses": false,
+        "constant_supply": false,
+        "slots": 80,
+        "input_slots": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "chest:2",
+      "kind": "container",
+      "entity": "chest:2",
+      "storage": {
+        "kind": "constant",
+        "chest_type": "infinity-chest",
+        "capacity_by_item": [],
+        "accepts": "any",
+        "gives": [],
+        "items_put_in": [],
+        "never_refuses": true,
+        "constant_supply": true,
+        "slots": null,
+        "input_slots": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "drill:1",
+      "kind": "drill",
+      "entity": "drill:1",
+      "production": {
+        "kind": "resource",
+        "recipe_or_resource": "iron-ore",
+        "prototype": "big-mining-drill",
+        "prototype_type": "mining-drill",
+        "speed": 46.25,
+        "energy_required": 1,
+        "ticks_per_craft": 1.2972972972972974,
+        "crafts_per_tick": 0.7708333333333334,
+        "productivity": 79990,
+        "bonus_per_craft": null,
+        "ticks_per_bonus": null,
+        "inputs": [],
+        "insertion_duration_ticks": null,
+        "crafts_per_second": {
+          "numerator": 185,
+          "denominator": 4
+        }
+      },
+      "yield": {
+        "results": [
+          {
+            "item": "iron-ore",
+            "amount": 1,
+            "probability": 1,
+            "extra_count_fraction": 0,
+            "ignored_by_productivity": 0,
+            "expected_per_craft": 800.9,
+            "per_second": {
+              "numerator": 296333,
+              "denominator": 8
+            },
+            "main": true,
+            "stochastic": false
+          }
+        ],
+        "carry": "whole-items",
+        "payouts_count_as_finishes": null
+      },
+      "placement": {
+        "mechanism": "mining-drop",
+        "vector_to_place_result": [
+          0,
+          -2.85
+        ],
+        "target": "chest:1",
+        "per_result": [
+          {
+            "item": "iron-ore",
+            "lands_in": "storage",
+            "into_machine_stop": null
+          }
+        ],
+        "into_container": "room",
+        "phase": "before-mining",
+        "stops_while_stack_waits": false
+      },
+      "energy": {
+        "source": "electric",
+        "energy_usage_kw": 300,
+        "energy_bonus": 0,
+        "burner": null,
+        "fuel_modelled": false,
+        "fuel": null
+      }
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/iron-ore",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "iron-ore",
+      "from": "chest:1",
+      "to": "machine:1",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "iron-ore"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:2/iron-ore",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "iron-ore",
+      "from": "chest:1",
+      "to": "machine:2",
+      "from_lanes": [],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "iron-ore"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8,
+        "pickup_to_drop": 5,
+        "per_second": {
+          "numerator": 120,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 1,
+        "cycle": 8
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:3/iron-plate",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "iron-plate",
+      "from": "machine:1",
+      "to": "belt:1/lane:1",
+      "from_lanes": [],
+      "lands_in": "lane",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "iron-plate"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 5,
+        "cycle": 12,
+        "pickup_to_drop": 9,
+        "per_second": {
+          "numerator": 80,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 4,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:4/iron-plate",
+      "via": "inserter",
+      "entity": "inserter:4",
+      "group": "inserter:4",
+      "item": "iron-plate",
+      "from": "machine:2",
+      "to": "belt:1/lane:1",
+      "from_lanes": [],
+      "lands_in": "lane",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "iron-plate"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 5,
+        "cycle": 12,
+        "pickup_to_drop": 9,
+        "per_second": {
+          "numerator": 80,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 4,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "placement:drill:1/iron-ore",
+      "via": "placement",
+      "entity": "drill:1",
+      "item": "iron-ore",
+      "from": "drill:1",
+      "to": "chest:1",
+      "lands_in": "storage",
+      "into_machine_stop": null,
+      "mechanism": "mining-drop",
+      "ceiling": null
+    }
+  ],
+  "capacity_groups": [
+    {
+      "group": "inserter:1",
+      "edges": [
+        {
+          "edge": "inserter:1/iron-ore",
+          "item": "iron-ore",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:2",
+      "edges": [
+        {
+          "edge": "inserter:2/iron-ore",
+          "item": "iron-ore",
+          "hand": 16,
+          "floor_cycle": 8
+        }
+      ]
+    },
+    {
+      "group": "inserter:3",
+      "edges": [
+        {
+          "edge": "inserter:3/iron-plate",
+          "item": "iron-plate",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    },
+    {
+      "group": "inserter:4",
+      "edges": [
+        {
+          "edge": "inserter:4/iron-plate",
+          "item": "iron-plate",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    }
+  ]
+}

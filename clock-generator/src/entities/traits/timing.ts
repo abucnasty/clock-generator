@@ -56,7 +56,7 @@ export interface InserterTimingEnds {
 }
 
 /** Ticks to move a hand one belt stack a tick: one stack is picked up or placed a tick */
-const stacksOf = (hand: number, stack: number) => Math.ceil(hand / stack);
+export const stacksOf = (hand: number, stack: number) => Math.ceil(hand / stack);
 
 export function inserterTiming(
     hand: HandTrait,
