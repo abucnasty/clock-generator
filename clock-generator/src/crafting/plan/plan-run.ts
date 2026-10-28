@@ -263,11 +263,12 @@ export interface BlueprintGenerationResult {
     /** For observed windows (`observedWindowsClock`, and `config.overrides.derive_clock_windows`) */
     derived_clock_windows?: DerivedClockWindowsReport;
     /**
-     * Present when the exported clock has windows for the inserters that take out of a loop of machines, which the plan
-     * leaves always enabled (see `loopInserterWindows`): their ids, and how many windows they had without. These windows
-     * only reduce idle checks, so a ranking of clocks counts the inserters' windows as without them.
+     * Present when the exported clock has windows for the inserters of a loop of machines or that take out of one, which
+     * the plan leaves always enabled (see `trialWithLoopWindows`): their ids, how many windows they had without, and
+     * which of them are the loop's own inserters (`inLoopInserterWindows`), absent where none is. These windows only
+     * reduce idle checks, so a ranking of clocks counts the inserters' windows as without them.
      */
-    loop_windows?: { inserter_ids: string[]; window_count_without_loop_windows: number };
+    loop_windows?: { inserter_ids: string[]; window_count_without_loop_windows: number; in_loop_ids?: string[] };
     /**
      * Each drill that drops into a chest: the windows the clock gives it, from the windows of the inserters that take
      * from the chest (see chestDrillWindows), or why it stays always enabled. Absent when the build has none.
@@ -343,11 +344,12 @@ export interface GenerateClockOptions {
      */
     shared_windows?: boolean;
     /**
-     * False leaves the inserters that take out of a loop always enabled, as every clock did before they were given
-     * windows where the clock holds with them (see `trialWithLoopWindows`): the clock is made so again where the one with
-     * them does not get back from a loss.
+     * False leaves the inserters of a loop and those that take out of one always enabled, as every clock did before they
+     * were given windows where the clock holds with them (see `trialWithLoopWindows`); "out-of-loop" gives windows only
+     * to those that take out of it. The clock is made so again where the one with them does not get back from a loss:
+     * first without the windows of the loop's own inserters, then without any.
      */
-    loop_windows?: boolean;
+    loop_windows?: boolean | "out-of-loop";
 }
 
 /** What a machine holds when a run starts: see GenerateClockOptions.start_stock */
@@ -1672,7 +1674,8 @@ export function checkedClock(
                     ? { run: extras.verified.run, long_run_ticks: FREE_RUNNING_CHECK_TICKS } : undefined);
         let kept_run = as_built_run;
         if (as_built_run.check.holds && options.loop_windows !== false) {
-            const looped = trialWithLoopWindows(config, windows, duration.ticks, as_built_run, AS_BUILT_START_PHASES, logger, options.on_progress_detail);
+            const looped = trialWithLoopWindows(config, windows, duration.ticks, as_built_run, AS_BUILT_START_PHASES, logger, options.on_progress_detail,
+                false, options.loop_windows !== "out-of-loop");
             if (looped !== null) {
                 kept_run = looped;
                 windows = looped.windows;

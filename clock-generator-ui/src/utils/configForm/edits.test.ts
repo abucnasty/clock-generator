@@ -3,9 +3,14 @@ import type { SerializableTransferPlan } from 'clock-generator/browser';
 import { ChestType } from 'clock-generator/light';
 import { belt, bufferChest, build, inserter, machine } from '../../test/fixtures';
 import * as edits from './edits';
-import { createDefaultConfig, type ConfigFormData, type EntityKind, type EnableControlOverride, type InserterFormData } from './formData';
+import {
+    createDefaultConfig, type ConfigFormData, type EntityKind, type EnableControlOverride, type InfinityChestFormData, type InserterFormData,
+} from './formData';
 
 type End = InserterFormData['source'];
+type Edit = (config: ConfigFormData) => ConfigFormData;
+/** The rows of one kind in a form */
+type Rows = (config: ConfigFormData) => { id: number; _uuid: string }[];
 
 const ids = (items: { id: number }[]) => items.map((item) => item.id);
 
@@ -42,11 +47,13 @@ const plan = (transfers: Record<number, string[]>) => ({
 }) as unknown as SerializableTransferPlan;
 
 describe('nextId', () => {
-    it('is one past the highest id, or 1 when there is none', () => {
-        expect(edits.nextId(createDefaultConfig(), 'belts')).toBe(1);
-        expect(edits.nextId(createDefaultConfig(), 'machines')).toBe(2);
-        expect(edits.nextId(form(), 'drills')).toBe(3);
-        expect(edits.nextId(createDefaultConfig(), 'drills')).toBe(1);
+    it.each<{ why: string; config: ConfigFormData; kind: EntityKind; id: number }>([
+        { why: 'no belts', config: createDefaultConfig(), kind: 'belts', id: 1 },
+        { why: 'the one machine a new build has', config: createDefaultConfig(), kind: 'machines', id: 2 },
+        { why: 'two drills', config: form(), kind: 'drills', id: 3 },
+        { why: 'no drills entry at all', config: createDefaultConfig(), kind: 'drills', id: 1 },
+    ])('is one past the highest id, or 1 when there is none: $id with $why', ({ config, kind, id }) => {
+        expect(edits.nextId(config, kind)).toBe(id);
     });
 });
 
@@ -72,92 +79,78 @@ describe('target output', () => {
     });
 });
 
-describe('machines', () => {
-    it('adds a machine with the next id and default values, of Normal quality as every entity in the game is unless built otherwise', () => {
-        const config = edits.addMachine(createDefaultConfig());
-        expect(ids(config.machines)).toEqual([1, 2]);
-        expect(config.machines[1]).toMatchObject({ recipe: '', productivity: 0, crafting_speed: 1 });
-        expect(config.machines[1]._uuid).not.toBe(config.machines[0]._uuid);
-        expect(config.machines.map((m) => m.quality)).toEqual(['normal', 'normal']);
+describe('rows of each kind', () => {
+    it.each<{ what: string; before: ConfigFormData; add: Edit; rows: Rows; added: object }>([
+        { what: 'a machine of Normal quality', before: form(), add: edits.addMachine, rows: (c) => c.machines,
+            added: { id: 4, recipe: '', productivity: 0, crafting_speed: 1, quality: 'normal' } },
+        { what: 'an inserter from machine 1 to belt 1', before: form(), add: edits.addInserter, rows: (c) => c.inserters,
+            added: { id: 4, source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 1 }, stack_size: 16 } },
+        { what: 'a turbo belt with one empty lane', before: form(), add: edits.addBelt, rows: (c) => c.belts,
+            added: { id: 3, type: 'turbo-transport-belt', lanes: [{ ingredient: '', stack_size: 4 }] } },
+        { what: 'a buffer chest by default', before: form(), add: edits.addChest, rows: (c) => c.chests,
+            added: { id: 3, type: ChestType.BUFFER_CHEST, storage_size: 1, item_filter: '' } },
+        { what: 'an infinity chest when asked', before: form(), add: (c) => edits.addChest(c, ChestType.INFINITY_CHEST), rows: (c) => c.chests,
+            added: { id: 3, type: ChestType.INFINITY_CHEST, item_filter: [{ item_name: '', request_count: 1 }] } },
+        { what: 'the first drill, enabling drills', before: createDefaultConfig(), add: edits.addDrill, rows: (c) => c.drills?.configs ?? [],
+            added: { id: 1, type: 'electric-mining-drill', mined_item_name: '', speed_bonus: 0, productivity: 0, target: { type: 'machine', id: 1 } } },
+    ])('adds $what after the others, with the next id, a fresh uuid and its default values', ({ before, add, rows, added }) => {
+        const after = rows(add(before));
+        expect(after.slice(0, -1)).toEqual(rows(before));
+        expect(after.at(-1)).toEqual({ ...added, _uuid: expect.any(String) });
+        expect(rows(before).map((row) => row._uuid)).not.toContain(after.at(-1)!._uuid);
     });
 
-    it('updates one field of the machine at an index', () => {
-        const config = edits.updateMachine(form(), 1, 'recipe', 'copper-cable');
-        expect(config.machines.map((m) => m.recipe)).toEqual(['', 'copper-cable', '']);
+    it('starts a build with a machine of Normal quality, as every entity in the game is unless built otherwise', () => {
+        expect(createDefaultConfig().machines.map((m) => m.quality)).toEqual(['normal']);
     });
 
-    it('removes the machine at an index and renumbers the rest', () => {
-        const before = form();
-        const config = edits.removeMachine(before, 0);
-        expect(ids(config.machines)).toEqual([1, 2]);
-        expect(config.machines.map((m) => m._uuid)).toEqual([before.machines[1]._uuid, before.machines[2]._uuid]);
-        // machine 3 is now 2; the ends at machine 1 are unset
-        expect(config.inserters.map((ins) => [ins.source, ins.sink])).toEqual([
-            [{ type: 'belt', id: 2, near_lane: 1 }, { type: 'machine', id: 2 }],
-            [{ type: 'machine', id: 2 }, { type: 'chest', id: 2 }],
-            [{ type: 'machine', id: 0 }, { type: 'belt', id: 1 }],
-        ]);
-        expect(config.drills!.configs.map((d) => d.target)).toEqual([{ type: 'machine', id: 0 }, { type: 'machine', id: 2 }]);
+    it('keeps drills on with none left', () => {
+        // the stored build keeps an empty drills entry, which the generator reads as no drills
+        expect(edits.removeDrill(edits.addDrill(createDefaultConfig()), 0).drills).toEqual({ configs: [] });
     });
 
-    it('leaves the form as it is when there is no machine at the index', () => {
-        const before = form();
-        expect(edits.removeMachine(before, 3)).toBe(before);
-        expect(edits.removeMachine(before, -1)).toBe(before);
+    it.each<{ kind: string; edit: Edit; rows: Rows; expected: object[] }>([
+        { kind: 'machine', edit: (c) => edits.updateMachine(c, 1, 'recipe', 'copper-cable'), rows: (c) => c.machines,
+            expected: [{ recipe: '' }, { recipe: 'copper-cable' }, { recipe: '' }] },
+        { kind: 'inserter', edit: (c) => edits.updateInserter(c, 2, { stack_size: 4, filters: ['iron-plate'] }), rows: (c) => c.inserters,
+            expected: [{ stack_size: 16 }, { stack_size: 16 }, { id: 3, stack_size: 4, filters: ['iron-plate'], source: { type: 'machine', id: 1 } }] },
+        { kind: 'belt', edit: (c) => edits.updateBelt(c, 0, { type: 'transport-belt' }), rows: (c) => c.belts,
+            expected: [{ type: 'transport-belt' }, { type: 'turbo-transport-belt' }] },
+        { kind: 'chest', edit: (c) => edits.updateChest(c, 0, { item_filter: 'iron-plate' }), rows: (c) => c.chests,
+            expected: [{ item_filter: 'iron-plate', storage_size: 1 }, { item_filter: [{ item_name: '', request_count: 1 }] }] },
+        { kind: 'drill', edit: (c) => edits.updateDrill(c, 1, { productivity: 490 }), rows: (c) => c.drills!.configs,
+            expected: [{ productivity: 0 }, { productivity: 490 }] },
+    ])('merges an update into the $kind at an index, keeping its other fields, and leaves the others', ({ edit, rows, expected }) => {
+        expect(rows(edit(form()))).toMatchObject(expected);
     });
 
-    it('unsets the inserter ends and drill targets at a removed machine', () => {
-        const config = edits.removeMachine(form(), 2);
-        expect(config.inserters.map((ins) => [ins.source, ins.sink])).toEqual([
-            [{ type: 'belt', id: 2, near_lane: 1 }, { type: 'machine', id: 0 }],
-            [{ type: 'machine', id: 0 }, { type: 'chest', id: 2 }],
-            [{ type: 'machine', id: 1 }, { type: 'belt', id: 1 }],
-        ]);
-        expect(config.drills!.configs.map((d) => d.target)).toEqual([{ type: 'machine', id: 1 }, { type: 'machine', id: 0 }]);
-        // and they stay unset when the machines are renumbered
-        expect(edits.reorderMachines(config, 1, 0).inserters[1].source).toEqual({ type: 'machine', id: 0 });
-    });
-
-    it('renumbers the machines on reorder and follows them in inserters and drills', () => {
-        const before = form();
-        const config = edits.reorderMachines(before, 2, 0);
-        expect(config.machines.map((m) => m._uuid)).toEqual([2, 0, 1].map((i) => before.machines[i]._uuid));
-        expect(ids(config.machines)).toEqual([1, 2, 3]);
-        // machine 3 is now 1 and machine 1 is now 2
-        expect(config.inserters.map((ins) => [ins.source, ins.sink])).toEqual([
-            [{ type: 'belt', id: 2, near_lane: 1 }, { type: 'machine', id: 1 }],
-            [{ type: 'machine', id: 1 }, { type: 'chest', id: 2 }],
-            [{ type: 'machine', id: 2 }, { type: 'belt', id: 1 }],
-        ]);
-        expect(config.drills!.configs.map((d) => d.target.id)).toEqual([2, 1]);
+    it.each<{ why: string; before: ConfigFormData; edit: Edit }>([
+        { why: 'no machine past the last', before: form(), edit: (c) => edits.removeMachine(c, 3) },
+        { why: 'no machine at index -1', before: form(), edit: (c) => edits.removeMachine(c, -1) },
+        { why: 'no drills at all', before: createDefaultConfig(), edit: (c) => edits.removeDrill(c, 0) },
+    ])('leaves the form as it is when a remove finds $why', ({ before, edit }) => {
+        expect(edit(before)).toBe(before);
     });
 });
 
 describe('inserters', () => {
-    it('adds an inserter with the next id from machine 1 to belt 1', () => {
-        const config = edits.addInserter(form());
-        expect(config.inserters[3]).toMatchObject({ id: 4, source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 1 }, stack_size: 16 });
-    });
-
-    it('merges updates into the inserter at an index', () => {
-        const config = edits.updateInserter(form(), 2, { stack_size: 4, filters: ['iron-plate'] });
-        expect(config.inserters[2]).toMatchObject({ id: 3, stack_size: 4, filters: ['iron-plate'], source: { type: 'machine', id: 1 } });
-    });
-
     describe('marked as side-loading onto another belt', () => {
-        const mark = { status: 'side-loaded', tiles: 3 } as const;
-        const marked = () => form({ 2: { sink: { type: 'belt', id: 1, drop_capture: mark } } });
+        const marked = (): InserterFormData['sink'] => ({ type: 'belt', id: 1, drop_capture: { status: 'side-loaded', tiles: 3 } });
+        const updated = (update: Partial<InserterFormData>) => edits.updateInserter(form({ 2: { sink: marked() } }), 2, update).inserters[2].sink;
 
-        it('keeps the mark when the sink is picked again as it is, and when other fields change', () => {
-            expect(edits.updateInserter(marked(), 2, { stack_size: 4 }).inserters[2].sink).toEqual({ type: 'belt', id: 1, drop_capture: mark });
-            expect(edits.updateInserter(marked(), 2, { sink: { type: 'belt', id: 1, drop_capture: mark } }).inserters[2].sink)
-                .toEqual({ type: 'belt', id: 1, drop_capture: mark });
+        it.each<{ what: string; update: Partial<InserterFormData> }>([
+            { what: 'other fields change', update: { stack_size: 4 } },
+            { what: 'the sink is picked again as it is', update: { sink: marked() } },
+        ])('keeps the mark when $what', ({ update }) => {
+            expect(updated(update)).toEqual(marked());
         });
 
-        it('loses the mark when the sink is pointed at another belt, a machine or a chest', () => {
-            for (const sink of [{ type: 'belt', id: 2 }, { type: 'machine', id: 2 }, { type: 'chest', id: 1 }] as const) {
-                expect(edits.updateInserter(marked(), 2, { sink }).inserters[2].sink).toEqual(sink);
-            }
+        it.each<{ what: string; sink: InserterFormData['sink'] }>([
+            { what: 'another belt', sink: { type: 'belt', id: 2 } },
+            { what: 'a machine', sink: { type: 'machine', id: 2 } },
+            { what: 'a chest', sink: { type: 'chest', id: 1 } },
+        ])('loses the mark when the sink is pointed at $what', ({ sink }) => {
+            expect(updated({ sink })).toEqual(sink);
         });
     });
 
@@ -171,56 +164,7 @@ describe('inserters', () => {
     });
 });
 
-describe('belts', () => {
-    it('adds a turbo belt with one empty lane', () => {
-        const config = edits.addBelt(createDefaultConfig());
-        expect(config.belts).toEqual([
-            { id: 1, _uuid: expect.any(String), type: 'turbo-transport-belt', lanes: [{ ingredient: '', stack_size: 4 }] },
-        ]);
-    });
-
-    it('merges updates into the belt at an index', () => {
-        const config = edits.updateBelt(form(), 0, { type: 'transport-belt' });
-        expect(config.belts.map((b) => b.type)).toEqual(['transport-belt', 'turbo-transport-belt']);
-    });
-
-    it('removes the belt at an index and renumbers the rest, keeping the lane of the ends it moves', () => {
-        const config = edits.removeBelt(form(), 0);
-        expect(ids(config.belts)).toEqual([1]);
-        expect(config.inserters[0].source).toEqual({ type: 'belt', id: 1, near_lane: 1 });
-        expect(config.inserters[2].sink).toEqual({ type: 'belt', id: 0 });
-    });
-
-    it('unsets the inserter ends at a removed belt, with the lane they took from first', () => {
-        const config = edits.removeBelt(form(), 1);
-        expect(config.inserters.map((ins) => [ins.source, ins.sink])).toEqual([
-            [{ type: 'belt', id: 0 }, { type: 'machine', id: 3 }],
-            [{ type: 'machine', id: 3 }, { type: 'chest', id: 2 }],
-            [{ type: 'machine', id: 1 }, { type: 'belt', id: 1 }],
-        ]);
-    });
-
-    it('renumbers the belts on reorder and follows them in inserters', () => {
-        const config = edits.reorderBelts(form(), 1, 0);
-        expect(config.inserters[0].source).toEqual({ type: 'belt', id: 1, near_lane: 1 });
-        expect(config.inserters[2].sink).toEqual({ type: 'belt', id: 2 });
-    });
-});
-
 describe('chests', () => {
-    it('adds a buffer chest by default and an infinity chest when asked', () => {
-        const config = form();
-        expect(config.chests).toEqual([
-            { type: ChestType.BUFFER_CHEST, id: 1, _uuid: expect.any(String), storage_size: 1, item_filter: '' },
-            { type: ChestType.INFINITY_CHEST, id: 2, _uuid: expect.any(String), item_filter: [{ item_name: '', request_count: 1 }] },
-        ]);
-    });
-
-    it('merges updates into the chest at an index', () => {
-        const config = edits.updateChest(form(), 0, { item_filter: 'iron-plate' });
-        expect(config.chests[0]).toMatchObject({ item_filter: 'iron-plate', storage_size: 1 });
-    });
-
     it('switches the type of a chest, keeping its id and uuid', () => {
         const before = form();
         const config = edits.switchChestType(before, 1, ChestType.BUFFER_CHEST);
@@ -251,50 +195,6 @@ describe('chests', () => {
         expect(infinity).toMatchObject({ id: 7, _uuid: 'chest-7', type: ChestType.INFINITY_CHEST });
         expect(edits.switchedChest(infinity, ChestType.BUFFER_CHEST)).toEqual(edits.switchChestType(build({ chests: [infinity] }), 0, ChestType.BUFFER_CHEST).chests[0]);
     });
-
-    it('removes the chest at an index, unsetting the inserter ends at it, and renumbers the rest with their type and fields', () => {
-        const before = form();
-        expect(edits.removeChest(before, 1).inserters[1].sink).toEqual({ type: 'chest', id: 0 });
-        const removed = edits.removeChest(before, 0);
-        expect(removed.chests).toEqual([{ ...before.chests[1], id: 1 }]);
-        expect(removed.chests[0].type).toBe(ChestType.INFINITY_CHEST);
-    });
-
-    it('renumbers the chests on reorder and follows them in inserters', () => {
-        const config = edits.reorderChests(form(), 1, 0);
-        expect(config.inserters[1].sink).toEqual({ type: 'chest', id: 1 });
-    });
-});
-
-describe('drills', () => {
-    it('adds an electric drill for machine 1, enabling drills first, and keeps them on with none left', () => {
-        const config = edits.addDrill(createDefaultConfig());
-        expect(config.drills).toEqual({
-            configs: [{ id: 1, _uuid: expect.any(String), type: 'electric-mining-drill', mined_item_name: '', speed_bonus: 0, productivity: 0, target: { type: 'machine', id: 1 } }],
-        });
-        // the stored build keeps an empty drills entry, which the generator reads as no drills
-        expect(edits.removeDrill(config, 0).drills).toEqual({ configs: [] });
-    });
-
-    it('sets a drill\'s own productivity', () => {
-        const updated = edits.updateDrill(form(), 1, { productivity: 490 });
-        expect(updated.drills!.configs.map(drill => drill.productivity)).toEqual([0, 490]);
-    });
-
-    it('removes the drill at an index, renumbering the rest', () => {
-        const before = form();
-        const config = edits.removeDrill(before, 0);
-        expect(ids(config.drills!.configs)).toEqual([1]);
-        expect(config.drills!.configs[0]._uuid).toBe(before.drills!.configs[1]._uuid);
-        expect(config.drills!.configs[0].target).toEqual({ type: 'machine', id: 3 });
-        const none = createDefaultConfig();
-        expect(edits.removeDrill(none, 0)).toBe(none);
-    });
-
-    it('renumbers the drills on reorder', () => {
-        const config = edits.reorderDrills(form(), 1, 0);
-        expect(config.drills!.configs.map((d) => [d.id, d.target.id])).toEqual([[1, 3], [2, 1]]);
-    });
 });
 
 describe('renumbering', () => {
@@ -317,8 +217,11 @@ describe('renumbering', () => {
         expect(reordered.inserters.map((ins) => [ins.source.id, ins.sink.id])).toEqual([[1, 2], [3, 1]]);
     });
 
-    it('unsets a reference to an id no entity has, after a remove and after a reorder', () => {
-        const config = { ...form(), inserters: [linked(1, { type: 'machine', id: 9 }, { type: 'belt', id: 1 })] };
+    it.each<{ what: string; source: End }>([
+        { what: 'an id no machine has', source: { type: 'machine', id: 9 } },
+        { what: 'no machine yet (unset)', source: { type: 'machine', id: 0 } },
+    ])('points a machine end at no machine after a remove and after a reorder, when it named $what', ({ source }) => {
+        const config = { ...form(), inserters: [linked(1, source, { type: 'belt', id: 1 })] };
         expect(edits.removeMachine(config, 0).inserters[0].source).toEqual({ type: 'machine', id: 0 });
         expect(edits.reorderMachines(config, 0, 1).inserters[0].source).toEqual({ type: 'machine', id: 0 });
     });
@@ -346,19 +249,19 @@ describe('renumbering', () => {
     }
 
     /**
-     * Every reference still names the entity it named before the edit, with its lane, unless it named the removed entity;
-     * then it is unset, `{ type, id: 0 }` with no lane
+     * Every reference is still held, by every entity but the removed one, and still names the entity it named before the edit,
+     * with its lane and all else but its id as it was, unless it named the removed entity; then it is unset, `{ type, id: 0 }` with no lane
      */
     function expectFollowed(before: ConfigFormData, after: ConfigFormData, removed?: string) {
         const was = references(before);
+        expect([...references(after).keys()].sort()).toEqual([...was.keys()].filter((key) => !key.startsWith(`${removed} `)).sort());
         for (const [key, now] of references(after)) {
             const old = was.get(key)!;
-            expect(old, key).toBeDefined();
             if (old.target !== null && old.target === removed) {
                 expect(now.end, key).toEqual({ type: old.end.type, id: 0 });
             } else {
                 expect(now.target, key).toBe(old.target);
-                expect(now.end.near_lane, key).toBe(old.end.near_lane);
+                expect(now.end, key).toEqual({ ...old.end, id: now.end.id });
             }
         }
     }
@@ -371,17 +274,22 @@ describe('renumbering', () => {
         { name: 'drills', remove: edits.removeDrill, reorder: edits.reorderDrills, list: (c: ConfigFormData) => c.drills!.configs },
     ];
 
-    it.each(kinds)('numbers the $name 1 to n and keeps every reference on its entity after any remove or reorder', ({ remove, reorder, list }) => {
+    it.each(kinds)('puts the $name in their new order, each as it was but numbered 1 to n, and keeps every reference on its entity after any remove or reorder', ({ remove, reorder, list }) => {
         const before = form();
-        const count = list(before).length;
-        for (let i = 0; i < count; i++) {
+        const rows = list(before);
+        /** The rows in the order given, each numbered by its place and otherwise as it was */
+        const numbered = <T extends { id: number }>(order: T[]) => order.map((row, k) => ({ ...row, id: k + 1 }));
+        for (let i = 0; i < rows.length; i++) {
+            const rest = rows.filter((_, k) => k !== i);
             const removed = remove(before, i);
             expectNumbered(removed);
-            expect(list(removed).map((e) => e._uuid)).toEqual(list(before).filter((_, k) => k !== i).map((e) => e._uuid));
-            expectFollowed(before, removed, list(before)[i]._uuid);
-            for (let j = 0; j < count; j++) {
+            expect(list(removed)).toEqual(numbered(rest));
+            expectFollowed(before, removed, rows[i]._uuid);
+            for (let j = 0; j < rows.length; j++) {
                 const reordered = reorder(before, i, j);
                 expectNumbered(reordered);
+                // the row taken from i is put in at j, the rest keep their order around it
+                expect(list(reordered)).toEqual(numbered([...rest.slice(0, j), rows[i], ...rest.slice(j)]));
                 expectFollowed(before, reordered);
             }
         }
@@ -488,9 +396,15 @@ describe('overrides', () => {
 });
 
 describe('duplicateEntity', () => {
-    it.each<EntityKind>(['machines', 'inserters', 'belts', 'chests', 'drills'])('appends a deep copy of %s without changing references', kind => {
-        const before = form({ 0: { prototype: 'bulk-inserter', quality: 'epic', overrides: { enable_control: { mode: 'ALWAYS' } }, _forced_always: true, filters: ['iron-plate'] } });
-        delete before.inserters[0].stack_size;
+    /** The form with an inserter that has every optional field but a stack size, which it leaves to its prototype */
+    function full() {
+        const config = form({ 0: { prototype: 'bulk-inserter', quality: 'epic', overrides: { enable_control: { mode: 'ALWAYS' } }, _forced_always: true, filters: ['iron-plate'] } });
+        delete config.inserters[0].stack_size;
+        return config;
+    }
+
+    it.each<EntityKind>(['machines', 'inserters', 'belts', 'chests', 'drills'])('appends a copy of %s without changing references', kind => {
+        const before = full();
         const original = structuredClone(before);
         const after = edits.duplicateEntity(before, kind, 0);
         const oldRows = kind === 'drills' ? before.drills!.configs : before[kind];
@@ -499,22 +413,29 @@ describe('duplicateEntity', () => {
         expect(newRows).toHaveLength(oldRows.length + 1);
         expect(copy.id).toBe(edits.nextId(before, kind));
         expect(copy._uuid).not.toBe(oldRows[0]._uuid);
-        expect({ ...copy, id: oldRows[0].id, _uuid: oldRows[0]._uuid }).toEqual(oldRows[0]);
+        // strict: no field is added to the copy, not even an undefined one (the inserter gets no stack size)
+        expect({ ...copy, id: oldRows[0].id, _uuid: oldRows[0]._uuid }).toStrictEqual(oldRows[0]);
         expect(newRows.slice(0, -1)).toEqual(oldRows);
         expect(after.inserters.slice(0, before.inserters.length)).toEqual(before.inserters);
-        if (kind === 'belts') after.belts.at(-1)!.lanes[0].ingredient = 'changed';
-        if (kind === 'inserters') {
-            after.inserters.at(-1)!.filters!.push('changed');
-            after.inserters.at(-1)!.source.near_lane = 2;
-            expect(after.inserters.at(-1)).not.toHaveProperty('stack_size');
-        }
-        if (kind === 'chests') {
-            const infinity = edits.duplicateEntity(before, kind, 1).chests.at(-1)!;
-            if (infinity.type === ChestType.INFINITY_CHEST) infinity.item_filter[0].item_name = 'changed';
-        }
         expect(before).toEqual(original);
         expect(edits.duplicateEntity(before, kind, -1)).toBe(before);
         expect(edits.duplicateEntity(before, kind, oldRows.length)).toBe(before);
+    });
+
+    it.each<{ what: string; kind: EntityKind; index: number; change: (after: ConfigFormData) => void }>([
+        { what: 'the lane of a belt', kind: 'belts', index: 0, change: (c) => { c.belts.at(-1)!.lanes[0].ingredient = 'changed'; } },
+        { what: 'the filters and source of an inserter', kind: 'inserters', index: 0, change: (c) => {
+            c.inserters.at(-1)!.filters!.push('changed');
+            c.inserters.at(-1)!.source.near_lane = 2;
+        } },
+        { what: 'the filters of an infinity chest', kind: 'chests', index: 1, change: (c) => {
+            (c.chests.at(-1) as InfinityChestFormData).item_filter[0].item_name = 'changed';
+        } },
+    ])('makes the copy deep: changing $what on it leaves the original as it was', ({ kind, index, change }) => {
+        const before = full();
+        const original = structuredClone(before);
+        change(edits.duplicateEntity(before, kind, index));
+        expect(before).toEqual(original);
     });
 });
 
@@ -559,28 +480,25 @@ describe('a captured blacklist', () => {
     /** The form with its first inserter's filters captured as a blacklist of iron plates */
     const blacklisted = () => form({ 0: { filters: ['iron-plate'], filter_mode: 'blacklist' } });
 
-    it('loses its mode with its filters when the row goes back to automatic filters', () => {
+    it.each<{ how: string; edit: Edit; gone: (keyof InserterFormData)[] }>([
+        { how: 'cleared', edit: (c) => edits.updateInserter(c, 0, { filters: undefined }), gone: ['filter_mode'] },
+        { how: 'emptied', edit: (c) => edits.updateInserter(c, 0, { filters: [] }), gone: ['filter_mode'] },
+        { how: 'cleared in a bulk edit', edit: (c) => edits.updateInserters(c, [c.inserters[0]._uuid, c.inserters[1]._uuid], { filters: undefined }),
+            gone: ['filter_mode', 'filters'] },
+    ])('loses its mode with its filters when they are $how, back to automatic filters', ({ edit, gone }) => {
         const before = blacklisted();
-        for (const filters of [undefined, []]) {
-            const after = edits.updateInserter(before, 0, { filters });
-            expect(after.inserters[0]).not.toHaveProperty('filter_mode');
-            // filters picked by hand afterwards are the items to move, not a blacklist the engine refuses
-            expect(edits.updateInserter(after, 0, { filters: ['iron-gear-wheel'] }).inserters[0]).not.toHaveProperty('filter_mode');
-        }
+        const after = edit(before);
+        for (const key of gone) expect(after.inserters[0]).not.toHaveProperty(key);
+        // filters picked by hand afterwards are the items to move, not a blacklist the engine refuses
+        expect(edits.updateInserter(after, 0, { filters: ['iron-gear-wheel'] }).inserters[0]).not.toHaveProperty('filter_mode');
         expect(before.inserters[0].filter_mode).toBe('blacklist');
     });
 
-    it('loses its mode with its filters in a bulk edit back to automatic filters', () => {
-        const before = blacklisted();
-        const after = edits.updateInserters(before, [before.inserters[0]._uuid, before.inserters[1]._uuid], { filters: undefined });
-        expect(after.inserters[0]).not.toHaveProperty('filter_mode');
-        expect(after.inserters[0]).not.toHaveProperty('filters');
-    });
-
-    it('keeps its mode while it still names items, so it stays refused as captured', () => {
-        const before = blacklisted();
-        expect(edits.updateInserter(before, 0, { filters: ['iron-plate', 'copper-plate'] }).inserters[0].filter_mode).toBe('blacklist');
-        expect(edits.updateInserters(before, [before.inserters[0]._uuid], { filters: ['copper-plate'] }).inserters[0].filter_mode).toBe('blacklist');
-        expect(edits.updateInserter(before, 0, { stack_size: 4 }).inserters[0].filter_mode).toBe('blacklist');
+    it.each<{ how: string; edit: Edit }>([
+        { how: 'more items', edit: (c) => edits.updateInserter(c, 0, { filters: ['iron-plate', 'copper-plate'] }) },
+        { how: 'other items, in a bulk edit', edit: (c) => edits.updateInserters(c, [c.inserters[0]._uuid], { filters: ['copper-plate'] }) },
+        { how: 'its items, as another field changes', edit: (c) => edits.updateInserter(c, 0, { stack_size: 4 }) },
+    ])('keeps its mode while it still names items, so it stays refused as captured: $how', ({ edit }) => {
+        expect(edit(blacklisted()).inserters[0].filter_mode).toBe('blacklist');
     });
 });

@@ -18,8 +18,9 @@ const WAKE_UP_DEFINITION = PROVISIONAL_WAKE_UP_DEFINITION;
 
 /** What the per-row figure is */
 const WAKE_UPS_COLUMN_HELP =
-    'Wake-ups a minute of this inserter, for one copy of the build, counted by the simulator over a long run of the clock. '
-    + 'The rows add up to the clock\'s figure in the clocks table.';
+    'Wake-ups a minute of this inserter, for one copy of the build, counted by the simulator over a long run of the clock '
+    + 'from a cold start. The rows add up to the clock\'s figure in the clocks table, or, where that is an average of start '
+    + 'points, to its figure from a cold start.';
 
 // ---- Tunables the notes use -----------------------------------------------------------------------------------------
 
@@ -250,13 +251,14 @@ export function windowOrdinalText(index: number, count: number): string {
  * Clock period, rows and wake-ups of the clock: "Clock period 600 ticks (10 s) · 14 inserters and 2 drills · 372 wake-ups a minute
  * for one copy"
  */
-export function summaryText(args: { periodTicks: number; inserters: number; drills: number; wakeUps: number | null }): string {
+export function summaryText(args: { periodTicks: number; inserters: number; drills: number; wakeUps: number | null; fromColdStart?: boolean }): string {
     const counts = args.drills > 0
         ? `${plural(args.inserters, 'inserter', 'inserters')} and ${plural(args.drills, 'drill', 'drills')}`
         : plural(args.inserters, 'inserter', 'inserters');
+    // where the clock's figure is the average of its start points, these rows are of the cold start's run
     const wakeUps = args.wakeUps === null
         ? 'Wake-ups not counted'
-        : `${formatNumberText(args.wakeUps, { maxDecimals: 0 })} wake-ups a minute for one copy`;
+        : `${formatNumberText(args.wakeUps, { maxDecimals: 0 })} wake-ups a minute for one copy${args.fromColdStart ? ' from a cold start' : ''}`;
     return `Clock period ${periodText(args.periodTicks)} · ${counts} · ${wakeUps}`;
 }
 

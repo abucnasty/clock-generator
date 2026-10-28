@@ -3,7 +3,7 @@ import { act, renderHook, type RenderHookResult } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePersistedConfigForm, type BuildMutationSnapshot } from './usePersistedConfigForm';
 import { useUndo } from './useUndo';
-import { createDefaultConfig } from '../utils/configForm/formData';
+import { createDefaultConfig, type ConfigFormData } from '../utils/configForm/formData';
 import { formDataToConfig } from '../utils/configForm/configMapping';
 import type { MessageInput } from '../utils/messages';
 import { backupKey, buildKey, LIBRARY_KEY } from '../utils/buildLibrary';
@@ -16,7 +16,8 @@ function useBuild() {
     const owner = usePersistedConfigForm();
     return { ...owner, ...useUndo(owner.config, owner.setConfig, owner.isLoaded) };
 }
-let rendered: RenderHookResult<ReturnType<typeof useBuild>, unknown>;
+type Build = ReturnType<typeof useBuild>;
+let rendered: RenderHookResult<Build, unknown>;
 const mount = (options?: { reactStrictMode: boolean }) => (rendered = renderHook(useBuild, options)).result.current;
 const latest = () => rendered.result.current;
 /** A synchronous action in one React update, giving back what it returns */
@@ -41,32 +42,41 @@ function pendingCheck() {
     return { resolve: (problem: string | null) => done({ problem, form: checked }), reject };
 }
 
+/** A saved build making a gear wheel a second */
+const saved = { ...createDefaultConfig(), target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 } };
+const withCopies = (form: ConfigFormData, copies: number) => ({ ...form, target_output: { ...form.target_output, copies } });
+
 function savedBuilds() {
     const initial = mount(), snapshot = initial.captureBuildMutation(), meta = initial.library.currentMeta;
-    const first = run(() => initial.library.addBuild({ ...createDefaultConfig(), target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 } }, 'First'));
+    const first = run(() => initial.library.addBuild(saved, 'First'));
     const second = run(() => initial.library.addBuild({ ...createDefaultConfig(), target_output: { recipe: 'copper-cable', items_per_second: 2, copies: 1 } }, 'Second'));
     run(() => initial.library.restore({ meta, form: snapshot.form }));
     return { hook: latest(), first: first.id, second: second.id };
 }
 
-const changedElsewhere = (text: string) => act(() => {
-    window.dispatchEvent(new StorageEvent('storage', { storageArea: localStorage, key: buildKey(latest().library.currentId), newValue: text }));
+/** Another tab saves `form` over the open build */
+const changedElsewhere = (form: ConfigFormData) => act(() => {
+    window.dispatchEvent(new StorageEvent('storage', { storageArea: localStorage, key: buildKey(latest().library.currentId), newValue: JSON.stringify(form) }));
 });
+
+/** Starts up on the saved build, its check waiting, while another tab saves it with 4 copies, which starts loading */
+function startupOvertaken(before: () => void) {
+    localStorage.setItem(buildKey('default'), JSON.stringify(saved));
+    const initial = pendingCheck(), hook = mount();
+    changedElsewhere(withCopies(saved, 4));
+    const newer = pendingCheck();
+    return { initial, newer, loading: hook.library.loadOtherTabVersion(before) };
+}
 
 describe('async build loading ownership', () => {
     it.each(['valid', 'invalid', 'failed'] as const)('never saves the startup placeholder when a cross-tab load overtakes a %s initial answer', async outcome => {
-        const saved = { ...createDefaultConfig(), target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 } };
-        const text = JSON.stringify(saved);
-        localStorage.setItem(buildKey('default'), text);
-        const initial = pendingCheck(), hook = mount();
-        changedElsewhere(JSON.stringify({ ...saved, target_output: { ...saved.target_output, copies: 4 } }));
-        const newer = pendingCheck(), before = vi.fn(), loading = hook.library.loadOtherTabVersion(before);
+        const before = vi.fn(), { initial, newer, loading } = startupOvertaken(before);
         if (outcome === 'valid') initial.resolve(null);
         if (outcome === 'invalid') initial.resolve('Old validation problem');
         if (outcome === 'failed') initial.reject(new Error('Old worker failure'));
         await tick();
         expect(latest().isLoaded).toBe(false);
-        expect(localStorage.getItem(buildKey('default'))).toBe(text);
+        expect(localStorage.getItem(buildKey('default'))).toBe(JSON.stringify(saved));
         expect(latest().loadError).toBeNull();
         expect(latest().loadNotice).toBeNull();
         newer.resolve(null);
@@ -77,11 +87,7 @@ describe('async build loading ownership', () => {
     });
 
     it.each([true, false])('finishes startup if the newer load fails (initial answer first: %s)', async initialFirst => {
-        const saved = { ...createDefaultConfig(), target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 } };
-        localStorage.setItem(buildKey('default'), JSON.stringify(saved));
-        const initial = pendingCheck(), hook = mount();
-        changedElsewhere(JSON.stringify({ ...saved, target_output: { ...saved.target_output, copies: 4 } }));
-        const newer = pendingCheck(), loading = hook.library.loadOtherTabVersion(vi.fn());
+        const { initial, newer, loading } = startupOvertaken(vi.fn());
         if (initialFirst) { initial.resolve(null); await tick(); }
         newer.resolve('Invalid newer config');
         expect(await settle(loading)).toBe(false);
@@ -91,7 +97,6 @@ describe('async build loading ownership', () => {
     });
 
     it('keeps the replayed startup validation current after effect cleanup', async () => {
-        const saved = { ...createDefaultConfig(), target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 } };
         localStorage.setItem(buildKey('default'), JSON.stringify(saved));
         // StrictMode starts the check, cleans it up, and starts it again
         const older = pendingCheck(), newer = pendingCheck();
@@ -103,41 +108,18 @@ describe('async build loading ownership', () => {
         expect(latest().config.target_output).toEqual(saved.target_output);
     });
 
-    it('only opens the latest requested build when checks finish out of order', async () => {
+    it.each(['valid', 'invalid', 'failed'] as const)('only opens the latest requested build, never showing or backing up an older %s answer that finishes after it', async outcome => {
         const { hook, first, second } = savedBuilds();
         const older = pendingCheck(), openFirst = hook.library.openBuild(first);
         const newer = pendingCheck(), openSecond = hook.library.openBuild(second);
         newer.resolve(null);
         expect(await settle(openSecond)).toBe(true);
-        older.resolve(null);
+        if (outcome === 'valid') older.resolve(null);
+        if (outcome === 'invalid') older.resolve('Old validation problem');
+        if (outcome === 'failed') older.reject(new Error('Old worker failure'));
         expect(await settle(openFirst)).toBe(false);
         expect(latest().library.currentId).toBe(second);
         expect(latest().config.target_output.recipe).toBe('copper-cable');
-    });
-
-    it.each(['new', 'duplicate', 'edit', 'restore'] as const)('ignores an open after a synchronous %s action, before React commits', async action => {
-        const { hook, first } = savedBuilds();
-        const check = pendingCheck(), opening = hook.library.openBuild(first);
-        let expected!: BuildMutationSnapshot;
-        await act(async () => {
-            if (action === 'new') hook.library.newBuild();
-            if (action === 'duplicate') hook.library.duplicateBuild();
-            if (action === 'edit') hook.setConfig(form => ({ ...form, target_output: { ...form.target_output, copies: 5 } }));
-            if (action === 'restore') hook.library.restore({ meta: hook.library.currentMeta, form: hook.config });
-            expected = hook.captureBuildMutation();
-            check.resolve(null);
-            expect(await opening).toBe(false);
-        });
-        expect(hook.captureBuildMutation()).toEqual(expected);
-    });
-
-    it.each(['invalid', 'failed'] as const)('does not show or back up a stale %s answer', async outcome => {
-        const { hook, first, second } = savedBuilds();
-        const check = pendingCheck(), opening = hook.library.openBuild(first);
-        expect(await settle(hook.library.openBuild(second))).toBe(true);
-        if (outcome === 'invalid') check.resolve('Old validation problem');
-        else check.reject(new Error('Old worker failure'));
-        expect(await settle(opening)).toBe(false);
         expect(latest().loadNotice).toBeNull();
         expect(localStorage.getItem(backupKey(first))).toBeNull();
     });
@@ -159,7 +141,7 @@ describe('async build loading ownership', () => {
     it('rejects deletion after a same-build edit and commits a current deletion once', async () => {
         const { hook } = savedBuilds();
         const before = vi.fn(), check = pendingCheck(), deleting = hook.library.deleteBuild(before);
-        run(() => hook.setConfig(form => ({ ...form, target_output: { ...form.target_output, copies: 3 } })));
+        run(() => hook.setConfig(form => withCopies(form, 3)));
         check.resolve(null);
         expect(await settle(deleting)).toBeNull();
         expect(before).not.toHaveBeenCalled();
@@ -169,24 +151,33 @@ describe('async build loading ownership', () => {
         expect(localStorage.getItem(buildKey(hook.library.currentId))).toBeNull();
     });
 
-    it.each(['edit', 'episode', 'dismiss'] as const)('does not apply a cross-tab load after a newer %s', async action => {
-        const { hook } = savedBuilds();
-        changedElsewhere(JSON.stringify({ ...hook.config, target_output: { ...hook.config.target_output, copies: 4 } }));
-        const check = pendingCheck(), before = vi.fn(), loading = hook.library.loadOtherTabVersion(before);
+    // a change made synchronously while the check runs, before React commits, owns the build from then on
+    it.each<{ pending: 'open' | 'cross-tab load'; newer: string; change: (hook: Build) => void; thenLoads?: number }>([
+        { pending: 'open', newer: 'new build', change: hook => hook.library.newBuild() },
+        { pending: 'open', newer: 'duplicate', change: hook => hook.library.duplicateBuild() },
+        { pending: 'open', newer: 'edit', change: hook => hook.setConfig(form => withCopies(form, 5)) },
+        { pending: 'open', newer: 'restore', change: hook => hook.library.restore({ meta: hook.library.currentMeta, form: hook.config }) },
+        { pending: 'cross-tab load', newer: 'edit', change: hook => hook.setConfig(form => withCopies(form, 9)) },
+        // which a later load then loads
+        { pending: 'cross-tab load', newer: 'cross-tab save', change: hook => changedElsewhere(withCopies(hook.config, 7)), thenLoads: 7 },
+        { pending: 'cross-tab load', newer: 'dismiss', change: hook => hook.library.closeConflict() },
+    ])('drops the $pending whose check finishes after a newer $newer', async ({ pending, change, thenLoads }) => {
+        const { hook, first } = savedBuilds();
+        if (pending === 'cross-tab load') changedElsewhere(withCopies(hook.config, 4));
+        const check = pendingCheck(), before = vi.fn();
+        const answer = pending === 'open' ? hook.library.openBuild(first) : hook.library.loadOtherTabVersion(before);
         let expected!: BuildMutationSnapshot;
         await act(async () => {
-            if (action === 'edit') hook.setConfig(form => ({ ...form, target_output: { ...form.target_output, copies: 9 } }));
-            if (action === 'episode') changedElsewhere(JSON.stringify({ ...hook.config, target_output: { ...hook.config.target_output, copies: 7 } }));
-            if (action === 'dismiss') hook.library.closeConflict();
+            change(hook);
             expected = hook.captureBuildMutation();
             check.resolve(null);
-            expect(await loading).toBe(false);
+            expect(await answer).toBe(false);
         });
         expect(before).not.toHaveBeenCalled();
         expect(hook.captureBuildMutation()).toEqual(expected);
-        if (action === 'episode') {
+        if (thenLoads !== undefined) {
             expect(await settle(hook.library.loadOtherTabVersion(before))).toBe(true);
-            expect(hook.captureBuildMutation().form.target_output.copies).toBe(7);
+            expect(hook.captureBuildMutation().form.target_output.copies).toBe(thenLoads);
             expect(before).toHaveBeenCalledOnce();
         }
     });
@@ -235,18 +226,15 @@ describe('authoritative build mutation with whole-build Undo', () => {
     });
 
     it('does not accept delayed initial saved data after a build switch away and back', async () => {
-        const saved = createDefaultConfig(); saved.target_output.recipe = 'iron-gear-wheel';
-        localStorage.setItem('clock-generator-config', JSON.stringify(saved));
-        let resolve!: (value: { problem: string | null; form: unknown }) => void;
-        ask.mockReturnValueOnce(new Promise<{ problem: string | null; form: unknown }>(done => { resolve = done; }));
-        const hook = mount(), initial = hook.captureBuildMutation();
+        localStorage.setItem(buildKey('default'), JSON.stringify(saved));
+        const check = pendingCheck(), hook = mount(), initial = hook.captureBuildMutation();
         const meta = hook.library.currentMeta;
         act(() => { hook.library.newBuild(); hook.library.restore({ meta, form: initial.form }); });
         const returned = hook.captureBuildMutation();
         expect(returned.buildId).toBe(initial.buildId);
         expect(returned.form).toBe(initial.form);
         expect(returned.revision).toBeGreaterThan(initial.revision);
-        resolve({ problem: null, form: saved }); await tick();
+        check.resolve(null); await tick();
         expect(hook.captureBuildMutation().form).toBe(initial.form);
         expect(latest().isLoaded).toBe(true);
         expect(hook.commitBuildReplacement(initial, saved, vi.fn())).toBe(false);

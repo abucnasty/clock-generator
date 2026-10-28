@@ -6,122 +6,52 @@ import { formDataToConfig } from '../utils/configForm/configMapping';
 import { createDefaultConfig } from '../utils/configForm/formData';
 
 const targetOutput = { recipe: 'electromagnetic-science-pack', items_per_second: 240, copies: 5 };
+/** The native metadata of a steel chest, besides its id and position */
+const steelChest = { storage_size: 48, item_filter: 'electromagnetic-science-pack', prototype: 'steel-chest' };
+const typedChest = { type: ChestType.BUFFER_CHEST, id: 3, ...steelChest, position: { x: -598.5, y: 0 } };
 
-const metadataCases = [
-    {
-        name: 'a modern typed buffer chest',
-        chest: {
-            type: ChestType.BUFFER_CHEST,
-            id: 3,
-            storage_size: 48,
-            item_filter: 'electromagnetic-science-pack',
-            prototype: 'steel-chest',
-            position: { x: -598.5, y: 0 },
-        },
-    },
-    {
-        name: 'a legacy buffer chest without a type',
-        chest: {
-            id: 4,
-            storage_size: 48,
-            item_filter: 'electromagnetic-science-pack',
-            prototype: 'steel-chest',
-            position: { x: 0, y: -4.5 },
-        },
-    },
-] as const;
+/** A chest as it is saved, and the buffer chest config it is read as */
+const chestCases = [
+    { name: 'a modern typed buffer chest', chest: typedChest, expected: typedChest },
+    { name: 'a legacy buffer chest without a type', chest: { id: 4, ...steelChest, position: { x: 0, y: -4.5 } },
+        expected: { type: ChestType.BUFFER_CHEST, id: 4, ...steelChest, position: { x: 0, y: -4.5 } } },
+    // the default type, storage and filter, and no prototype or position
+    { name: 'a legacy buffer chest with only an id', chest: { id: 7 }, expected: { type: ChestType.BUFFER_CHEST, id: 7, storage_size: 1, item_filter: '' } },
+];
 
 function serializedConfig(chest: object): string {
     return JSON.stringify({ ...formDataToConfig(createDefaultConfig()), target_output: targetOutput, chests: [chest] });
 }
 
-describe.each(metadataCases)('$name preserves native metadata', ({ chest }) => {
-    it('keeps prototype, position, storage and filter through saved-form round trips', () => {
-        const expected = {
-            type: ChestType.BUFFER_CHEST,
-            id: chest.id,
-            storage_size: 48,
-            item_filter: 'electromagnetic-science-pack',
-            prototype: 'steel-chest',
-            position: chest.position,
-        };
+/** The one chest of the list, after checking it is the only one */
+function onlyChest<T>(chests: T[] | undefined): T {
+    expect(chests).toHaveLength(1);
+    return chests![0]!;
+}
 
-        if ('type' in chest) {
-            expect(BufferChestConfigSchema.parse(chest)).toMatchObject(expected);
-        }
+it('takes a typed buffer chest as a valid buffer chest config as it is', () => {
+    expect(BufferChestConfigSchema.parse(typedChest)).toEqual(typedChest);
+});
 
+describe.each(chestCases)('$name is read as its buffer chest config', ({ chest, expected }) => {
+    it('through saved-form round trips, with a UI-only UUID', () => {
+        const inForm = { ...expected, _uuid: expect.any(String) };
         const first = readSavedConfig(serializedConfig(chest))!;
-        expect(first.chests).toHaveLength(1);
-        const firstChest = first.chests[0]!;
-        expect(firstChest).toMatchObject(expected);
-        expect(firstChest._uuid).toEqual(expect.any(String));
-        const firstExport = formDataToConfig(first).chests!;
-        expect(firstExport).toHaveLength(1);
-        expect(BufferChestConfigSchema.parse(firstExport[0]!)).toMatchObject(expected);
+        expect(onlyChest(first.chests)).toStrictEqual(inForm);
+        expect(BufferChestConfigSchema.parse(onlyChest(formDataToConfig(first).chests))).toEqual(expected);
 
         const saved = serializeConfig(first);
         expect(JSON.parse(saved).chests[0]).not.toHaveProperty('_uuid');
         const reopened = readSavedConfig(saved)!;
-        expect(reopened.chests).toHaveLength(1);
-        const reopenedChest = reopened.chests[0]!;
-        expect(reopenedChest).toMatchObject(expected);
-        expect(reopenedChest._uuid).toEqual(expect.any(String));
+        expect(onlyChest(reopened.chests)).toStrictEqual(inForm);
 
-        const exportedChests = formDataToConfig(reopened).chests!;
-        expect(exportedChests).toHaveLength(1);
-        const exported = exportedChests[0]!;
+        const exported = onlyChest(formDataToConfig(reopened).chests);
         expect(exported).not.toHaveProperty('_uuid');
-        expect(BufferChestConfigSchema.parse(exported)).toMatchObject(expected);
+        expect(BufferChestConfigSchema.parse(exported)).toEqual(expected);
     });
 
-    it('applies the same metadata migration to imported config files', () => {
+    it('from an imported config file', () => {
         const imported = readConfigFile(serializedConfig(chest)) as { chests: unknown[] };
-        const parsed = BufferChestConfigSchema.parse(imported.chests[0]);
-        expect(parsed).toMatchObject({
-            type: ChestType.BUFFER_CHEST,
-            id: chest.id,
-            storage_size: 48,
-            item_filter: 'electromagnetic-science-pack',
-            prototype: 'steel-chest',
-            position: chest.position,
-        });
-    });
-});
-
-describe('legacy buffer chests without optional metadata', () => {
-    const legacyChest = { id: 7 };
-
-    it('keeps the existing type, storage and filter defaults and UI-only UUID behavior', () => {
-        const form = readSavedConfig(serializedConfig(legacyChest))!;
-        expect(form.chests).toHaveLength(1);
-        const formChest = form.chests[0]!;
-        expect(formChest).toMatchObject({
-            type: ChestType.BUFFER_CHEST,
-            id: 7,
-            storage_size: 1,
-            item_filter: '',
-        });
-        expect(formChest).not.toHaveProperty('prototype');
-        expect(formChest).not.toHaveProperty('position');
-        expect(formChest._uuid).toEqual(expect.any(String));
-
-        const saved = serializeConfig(form);
-        expect(JSON.parse(saved).chests[0]).not.toHaveProperty('_uuid');
-        const reopened = readSavedConfig(saved)!;
-        expect(reopened.chests).toHaveLength(1);
-        expect(reopened.chests[0]!._uuid).toEqual(expect.any(String));
-        const exported = formDataToConfig(reopened).chests!;
-        expect(exported).toHaveLength(1);
-        expect(exported[0]!).not.toHaveProperty('_uuid');
-    });
-
-    it('keeps the existing defaults on the readConfigFile path', () => {
-        const imported = readConfigFile(serializedConfig(legacyChest)) as { chests: unknown[] };
-        expect(BufferChestConfigSchema.parse(imported.chests[0])).toEqual({
-            type: ChestType.BUFFER_CHEST,
-            id: 7,
-            storage_size: 1,
-            item_filter: '',
-        });
+        expect(BufferChestConfigSchema.parse(imported.chests[0])).toEqual(expected);
     });
 });

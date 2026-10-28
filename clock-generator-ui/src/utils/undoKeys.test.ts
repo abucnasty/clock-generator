@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { entersEditingDialog, entersOtherDialog, isEscapeForSomethingElse, isInOtherDialog, isTextField, isUndoShortcut } from './undoKeys';
 
+// the selectors undoKeys.ts looks for, which it does not export
+/** A rule or entity dialog */
+const EDITING_DIALOG = '[data-edits-build]';
+/** A dialog other than the fullscreen diagram, which is a `.MuiDialog-root` too, but has `data-fullscreen-diagram` */
+const OTHER_DIALOG = '.MuiDialog-root:not([data-fullscreen-diagram])';
+
 const key = (key: string, mods: Partial<{ ctrlKey: boolean; metaKey: boolean; shiftKey: boolean; altKey: boolean }> = {}) =>
     ({ key, ctrlKey: false, metaKey: false, shiftKey: false, altKey: false, ...mods });
 
@@ -10,105 +16,80 @@ const inside = (...places: string[]) => ({
     closest: (selector: string) => (places.some((place) => selector.split(', ').some((part) => part.startsWith(place))) ? {} : null),
 });
 
-describe('isUndoShortcut', () => {
-    it('is Ctrl+Z or Cmd+Z, in either case', () => {
-        expect(isUndoShortcut(key('z', { ctrlKey: true }))).toBe(true);
-        expect(isUndoShortcut(key('z', { metaKey: true }))).toBe(true);
-        expect(isUndoShortcut(key('Z', { ctrlKey: true }))).toBe(true);
-    });
+// focus on the page, and in a dialog: `inDialog(selector)` is in the `dialog` that selector finds, as `otherInside` is
+const outside = { tagName: 'BUTTON' };
+const otherInside = { tagName: 'INPUT' };
+const dialog = { contains: (node: unknown) => node === otherInside };
+const inDialog = (selector: string) => ({ tagName: 'DIV', closest: (asked: string) => (asked === selector ? dialog : null) });
 
-    it('is not Z alone, nor with Shift (redo) or Alt, nor another key', () => {
-        expect(isUndoShortcut(key('z'))).toBe(false);
-        expect(isUndoShortcut(key('z', { ctrlKey: true, shiftKey: true }))).toBe(false);
-        expect(isUndoShortcut(key('z', { metaKey: true, altKey: true }))).toBe(false);
-        expect(isUndoShortcut(key('y', { ctrlKey: true }))).toBe(false);
+describe('isUndoShortcut', () => {
+    it.each([
+        { name: 'Ctrl+Z', event: key('z', { ctrlKey: true }), undo: true },
+        { name: 'Cmd+Z', event: key('z', { metaKey: true }), undo: true },
+        { name: 'Ctrl+Z in upper case', event: key('Z', { ctrlKey: true }), undo: true },
+        { name: 'Z alone', event: key('z'), undo: false },
+        { name: 'Ctrl+Shift+Z (redo)', event: key('z', { ctrlKey: true, shiftKey: true }), undo: false },
+        { name: 'Cmd+Alt+Z', event: key('z', { metaKey: true, altKey: true }), undo: false },
+        { name: 'Ctrl with another key', event: key('y', { ctrlKey: true }), undo: false },
+    ])('is $undo for $name', ({ event, undo }) => {
+        expect(isUndoShortcut(event)).toBe(undo);
     });
 });
 
 describe('isTextField', () => {
-    it('is a text, number or search input, an input without a type, a textarea, or editable content', () => {
-        expect(isTextField({ tagName: 'INPUT', type: 'text' })).toBe(true);
-        expect(isTextField({ tagName: 'INPUT', type: 'number' })).toBe(true);
-        expect(isTextField({ tagName: 'INPUT', type: 'search' })).toBe(true);
-        expect(isTextField({ tagName: 'INPUT' })).toBe(true);
-        expect(isTextField({ tagName: 'TEXTAREA' })).toBe(true);
-        expect(isTextField({ tagName: 'DIV', isContentEditable: true })).toBe(true);
-    });
-
-    it('is not a checkbox, a switch, a radio, a button or nothing', () => {
-        expect(isTextField({ tagName: 'INPUT', type: 'checkbox' })).toBe(false);
-        expect(isTextField({ tagName: 'INPUT', type: 'radio' })).toBe(false);
-        expect(isTextField({ tagName: 'BUTTON' })).toBe(false);
-        expect(isTextField({ tagName: 'BODY' })).toBe(false);
-        expect(isTextField(null)).toBe(false);
+    it.each([
+        { name: 'a text input', element: { tagName: 'INPUT', type: 'text' }, text: true },
+        { name: 'a number input', element: { tagName: 'INPUT', type: 'number' }, text: true },
+        { name: 'a search input', element: { tagName: 'INPUT', type: 'search' }, text: true },
+        { name: 'an input without a type', element: { tagName: 'INPUT' }, text: true },
+        { name: 'a textarea', element: { tagName: 'TEXTAREA' }, text: true },
+        { name: 'editable content', element: { tagName: 'DIV', isContentEditable: true }, text: true },
+        { name: 'a checkbox, which a switch is too', element: { tagName: 'INPUT', type: 'checkbox' }, text: false },
+        { name: 'a radio', element: { tagName: 'INPUT', type: 'radio' }, text: false },
+        { name: 'a button', element: { tagName: 'BUTTON' }, text: false },
+        { name: 'the page body', element: { tagName: 'BODY' }, text: false },
+        { name: 'nothing', element: null, text: false },
+    ])('is $text for $name', ({ element, text }) => {
+        expect(isTextField(element)).toBe(text);
     });
 });
 
 describe('isInOtherDialog', () => {
-    it('is true in a dialog, but not in the fullscreen diagram or on the page', () => {
-        expect(isInOtherDialog(inside('.MuiDialog-root:not([data-fullscreen-diagram])'))).toBe(true);
-        expect(isInOtherDialog(inside())).toBe(false);
-        expect(isInOtherDialog(null)).toBe(false);
+    it.each([
+        { where: 'in a dialog', focused: inside(OTHER_DIALOG), inOtherDialog: true },
+        { where: 'on the page', focused: inside(), inOtherDialog: false },
+        { where: 'with nothing focused', focused: null, inOtherDialog: false },
+    ])('is $inOtherDialog $where', ({ focused, inOtherDialog }) => {
+        expect(isInOtherDialog(focused)).toBe(inOtherDialog);
     });
 });
 
 describe('isEscapeForSomethingElse', () => {
-    it('is true when something handled the Escape already', () => {
-        expect(isEscapeForSomethingElse({ defaultPrevented: true }, inside())).toBe(true);
-    });
-
-    it('is true with focus in a Select\'s list, a menu, a popover or a dialog', () => {
-        expect(isEscapeForSomethingElse({ defaultPrevented: false }, inside('[role="listbox"]'))).toBe(true);
-        expect(isEscapeForSomethingElse({ defaultPrevented: false }, inside('[role="menu"]'))).toBe(true);
-        expect(isEscapeForSomethingElse({ defaultPrevented: false }, inside('.MuiPopover-root'))).toBe(true);
-        expect(isEscapeForSomethingElse({ defaultPrevented: false }, inside('.MuiDialog-root:not([data-fullscreen-diagram])'))).toBe(true);
-    });
-
-    it('is false on the page, in the message, or with nothing focused', () => {
-        expect(isEscapeForSomethingElse({ defaultPrevented: false }, inside())).toBe(false);
-        expect(isEscapeForSomethingElse({ defaultPrevented: false }, null)).toBe(false);
+    it.each([
+        { why: 'something handled the Escape already', defaultPrevented: true, focused: inside(), forSomethingElse: true },
+        { why: 'focus is in the list of a Select', defaultPrevented: false, focused: inside('[role="listbox"]'), forSomethingElse: true },
+        { why: 'focus is in a menu', defaultPrevented: false, focused: inside('[role="menu"]'), forSomethingElse: true },
+        { why: 'focus is in a popover', defaultPrevented: false, focused: inside('.MuiPopover-root'), forSomethingElse: true },
+        { why: 'focus is in a dialog', defaultPrevented: false, focused: inside(OTHER_DIALOG), forSomethingElse: true },
+        { why: 'focus is on the page or in the message', defaultPrevented: false, focused: inside(), forSomethingElse: false },
+        { why: 'nothing is focused', defaultPrevented: false, focused: null, forSomethingElse: false },
+    ])('is $forSomethingElse when $why', ({ defaultPrevented, focused, forSomethingElse }) => {
+        expect(isEscapeForSomethingElse({ defaultPrevented }, focused)).toBe(forSomethingElse);
     });
 });
 
-describe('entersEditingDialog', () => {
-    const outside = { tagName: 'BUTTON' };
-    const otherInside = { tagName: 'INPUT' };
-    const dialog = { contains: (node: unknown) => node === otherInside };
-    const inDialog = { tagName: 'DIV', closest: (selector: string) => (selector === '[data-edits-build]' ? dialog : null) };
-
-    it('is true when focus comes into a rule or entity dialog from the page, or from nowhere', () => {
-        expect(entersEditingDialog(inDialog, outside)).toBe(true);
-        expect(entersEditingDialog(inDialog, null)).toBe(true);
-    });
-
-    it('is false when focus moves inside the dialog, or lands outside any', () => {
-        expect(entersEditingDialog(inDialog, otherInside)).toBe(false);
-        expect(entersEditingDialog({ tagName: 'BUTTON', closest: () => null }, outside)).toBe(false);
-        expect(entersEditingDialog(null, outside)).toBe(false);
-    });
-});
-
-describe('entersOtherDialog', () => {
-    const outside = { tagName: 'BUTTON' };
-    const otherInside = { tagName: 'INPUT' };
-    const dialog = { contains: (node: unknown) => node === otherInside };
-    const OTHER_DIALOG = '.MuiDialog-root:not([data-fullscreen-diagram])';
-    const inDialog = { tagName: 'DIV', closest: (selector: string) => (selector === OTHER_DIALOG ? dialog : null) };
-    // the fullscreen diagram is a `.MuiDialog-root` too, but has `data-fullscreen-diagram`
-    const inFullscreenDiagram = { tagName: 'DIV', closest: () => null };
-
-    it('is true when focus comes into a dialog from the page, or from nowhere', () => {
-        expect(entersOtherDialog(inDialog, outside)).toBe(true);
-        expect(entersOtherDialog(inDialog, null)).toBe(true);
-    });
-
-    it('is false when focus moves inside the dialog', () => {
-        expect(entersOtherDialog(inDialog, otherInside)).toBe(false);
-    });
-
-    it('is false into the fullscreen diagram, outside any dialog, or with nothing focused', () => {
-        expect(entersOtherDialog(inFullscreenDiagram, outside)).toBe(false);
-        expect(entersOtherDialog({ tagName: 'BUTTON', closest: () => null }, outside)).toBe(false);
-        expect(entersOtherDialog(null, outside)).toBe(false);
+// the two differ only in the dialog they look for
+describe.each([
+    ['entersEditingDialog', entersEditingDialog, EDITING_DIALOG],
+    ['entersOtherDialog', entersOtherDialog, OTHER_DIALOG],
+] as const)('%s', (_, enters, selector) => {
+    it.each([
+        { moves: 'comes into the dialog from the page', to: inDialog(selector), from: outside, entered: true },
+        { moves: 'comes into the dialog from nowhere', to: inDialog(selector), from: null, entered: true },
+        { moves: 'moves inside the dialog', to: inDialog(selector), from: otherInside, entered: false },
+        { moves: 'lands outside any dialog', to: inside(), from: outside, entered: false },
+        { moves: 'goes nowhere', to: null, from: outside, entered: false },
+    ])('is $entered when focus $moves', ({ to, from, entered }) => {
+        expect(enters(to, from)).toBe(entered);
     });
 });
