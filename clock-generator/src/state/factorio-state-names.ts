@@ -26,5 +26,6 @@ export type FactorioMachineState = typeof FactorioMachineState[keyof typeof Fact
 export const FactorioDrillState = {
     WORKING: "working",
     DISABLED_BY_CONTROL_BEHAVIOR: "disabled_by_control_behavior",
+    WAITING_FOR_SPACE_IN_DESTINATION: "waiting_for_space_in_destination",
 } as const;
 export type FactorioDrillState = typeof FactorioDrillState[keyof typeof FactorioDrillState];

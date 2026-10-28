@@ -1,18 +1,20 @@
 import {describe, expect, test} from "vitest";
 import {ConfigSchema} from "../../../../src/config";
-import {DrillStatus, factorioDrillState, MachineState} from "../../../../src/state";
-import {SimulationContext} from "../../../../src/crafting/sequence/simulation-context";
 import {MiningDrillArchetype} from "../../../../src/simulation/archetypes/mining-drill";
+import {DrillStateTracker} from "../../../../src/simulation/observers/factorio-state-tracker";
+import {MutableTickProvider} from "../../../../src/simulation/current-tick-provider";
+import {ContainerStorage} from "../../../../src/simulation/components/container-storage";
+import {DrillStatus, MachineState} from "../../../../src/state";
+import {SimulationContext} from "../../../../src/crafting/sequence/simulation-context";
 import {EnableControl} from "../../../../src/simulation/controls/enable-control";
-import {drillStatusOf} from "../../../../src/simulation/status-codes";
 import {DRILL_RUNS} from "./cases";
-import {loadRecording, rowsOf, statusChanges, statusName} from "./recording";
+import {DrillRow, loadRecording, rowsOf, statusChanges, statusName} from "./recording";
 
 /**
  * The retained recordings of the drill status runs (drill-status.game.test.ts, probe.lua), read offline: the status the game
  * shows for a burner, an electric and a big mining drill that is disabled by a circuit condition or by script, whose chest
  * is full or fills up, or that has dropped as much as a machine takes from it; and the state the simulator records for a
- * drill today, which never leaves "working". See README.md.
+ * drill, tick by tick, in the same situations. See README.md.
  */
 const stops = loadRecording("stops");
 const machine = loadRecording("machine");
@@ -110,40 +112,174 @@ describe("the game's status of a drill", () => {
     });
 });
 
-/** A drill into a stone furnace's machine (rail) as the simulator builds it, with the windows of the circuit condition */
-function simulatedDrill(windows: number[][], at: {tick: number}) {
-    const config = ConfigSchema.parse({target_output: {recipe: "rail", items_per_second: 0.1, copies: 1}, belts: [], inserters: [],
-        machines: [{id: 1, recipe: "rail", crafting_speed: 0.5, productivity: 0}],
-        drills: {configs: [{id: 1, type: "big-mining-drill", mined_item_name: "stone", speed_bonus: 5, productivity: 0, target: {type: "machine", id: 1}}]}});
+/** The ore a steel chest holds: 48 slots of 50 */
+const CHEST_ORE = 48 * 50;
+
+/** A drill on iron ore into a steel chest as the simulator builds it; `room` is the ore the chest has room for at the start */
+function simulatedChestDrill(entity: string, room: number | null, at: {tick: number}, enabled: (tick: number) => boolean) {
+    const config = ConfigSchema.parse({target_output: {recipe: "iron-plate", items_per_second: 1, copies: 1}, belts: [], inserters: [],
+        machines: [{id: 1, recipe: "iron-plate", crafting_speed: 1, productivity: 0, type: "furnace"}],
+        drills: {configs: [{id: 1, type: entity, mined_item_name: "iron-ore", speed_bonus: 0, productivity: 0, target: {type: "chest", id: 1}}]},
+        chests: [{id: 1, type: "buffer-chest", storage_size: 48, item_filter: "iron-ore"}]});
     const context = SimulationContext.fromConfig(config);
     const drill_state = context.drills[0].drill_state;
-    const sink = context.state_registry.getStateByEntityIdOrThrow(drill_state.drill.sink_id) as MachineState;
-    const enable_control: EnableControl = {isEnabled: () => !inside(at.tick, windows)};
-    return {drill: MiningDrillArchetype.create({drill_state, sink_state: sink, enable_control}), drill_state};
+    const chest = context.state_registry.getStateByEntityIdOrThrow(drill_state.drill.sink_id) as ContainerStorage;
+    if (room !== null) chest.inventoryState.addQuantity("iron-ore", CHEST_ORE - room);
+    const enable_control: EnableControl = {isEnabled: () => enabled(at.tick)};
+    const drill = MiningDrillArchetype.create({drill_state, sink_state: chest, enable_control});
+    return {drill, drill_state, chest};
 }
 
-describe("the state the simulator records for a drill", () => {
-    test("is working in every tick, also in the ticks its mode is disabled", () => {
-        const at = {tick: 0};
-        const {drill, drill_state} = simulatedDrill(WINDOWS, at);
-        const modes = new Set<string>(), states = new Set<string>();
-        for (at.tick = 1; at.tick <= 600; at.tick++) {
-            drill.executeForTick();
-            modes.add(drillStatusOf(drill.status));
-            states.add(factorioDrillState(drill_state));
+/** The state of each tick 1 to `ticks` from the changes recorded: a tick the tracker has not recorded yet (the last) repeats the one before */
+function statesOf(changes: {tick: number; state: string}[], ticks: number): string[] {
+    const states: string[] = [];
+    let next = 0, shown = "";
+    for (let tick = 1; tick <= ticks; tick++) {
+        while (next < changes.length && changes[next].tick <= tick) shown = changes[next++].state;
+        states.push(shown);
+    }
+    return states;
+}
+
+interface Simulated {
+    /** The state recorded for each tick of the run, from the changes the tracker recorded */
+    states: string[];
+    progress: number[];
+    out: number[];
+}
+
+/**
+ * Runs the drill for `ticks` ticks. Between two ticks `between` may act, as the probe does after a tick's updates; which
+ * row of the recording a simulated tick is, is the drill's `LEAD`.
+ */
+function simulate(entity: string, room: number | null, ticks: number, enabled: (tick: number) => boolean, between: (tick: number, chest: ContainerStorage) => void = () => {}): Simulated {
+    const at = {tick: 0};
+    const {drill, drill_state, chest} = simulatedChestDrill(entity, room, at, enabled);
+    const clock = MutableTickProvider.create(0);
+    const changes: {tick: number; state: string}[] = [];
+    drill.observers.add(new DrillStateTracker(clock, drill_state, {recordFactorioState: (tick, state) => changes.push({tick, state})}));
+    const progress: number[] = [], out: number[] = [];
+    for (at.tick = 1; at.tick <= ticks; at.tick++) {
+        between(at.tick, chest);
+        // the probe reads the chest after what it does between two ticks, which the tick before has not seen
+        if (at.tick > 1) out.push(chest.getCurrentQuantity("iron-ore"));
+        clock.setCurrentTick(at.tick);
+        drill.executeForTick();
+        progress.push(drill.mining.mining_progress);
+    }
+    out.push(chest.getCurrentQuantity("iron-ore"));
+    const states = statesOf(changes, ticks);
+    return {states, progress, out};
+}
+
+/**
+ * The row before the drill's first drop of the run: the game shows waiting_for_space_in_destination there with room in the
+ * chest, once, and at no later drop. The simulator has no such state, so the row is left out of the comparison.
+ */
+const firstDropPulse = (rows: {out: number}[]) => rows.findIndex((row, index) => index > 0 && row.out > rows[index - 1].out) - 1;
+
+/**
+ * The big drill's blocked span starts one row after the item it cannot drop is mined in the game, the burner and the
+ * electric drill's in the same row: the row before it, where the game shows working, is left out of the comparison for it.
+ */
+const lateBlock = (drill: string, rows: {t: number}[], row: {t: number}, rowStatus: (row: {t: number}) => string) =>
+    drill === "big" && rowStatus(row) === "working" && rowStatus(rows[row.t + 1]) === "waiting_for_space_in_destination";
+
+const TYPE = {burner: "burner-mining-drill", electric: "electric-mining-drill", big: "big-mining-drill"};
+/**
+ * Simulated tick j is the recording's row j + LEAD. The game's first update of every drill (row 1, or row 2 behind a
+ * circuit's first tick) moves no bar. The simulator's electric and big drill move the bar in their first tick, so their
+ * tick j is row j + 1; its burner drill spends its first tick of mining filling the empty buffer and moves no bar, as that
+ * row of the game does, so its tick j is row j. The same rows of the game are compared for every drill.
+ */
+const LEAD = {burner: 0, electric: 1, big: 1};
+/** The rows compared: from the probe's row 5 (the first rows show no_power and the network's first tick), to the run's tick before last */
+const FIRST_ROW = 5;
+
+describe.each(DRILLS)("the state the simulator records for a %s mining drill", drill => {
+    test("switched off by a circuit condition it is disabled_by_control_behavior in the game's ticks, and mines as the bar of the game does", () => {
+        // the circuit's delay is the control's: the drill mines until two ticks after the probe's window starts, as the bar
+        // shows, and the network's first tick leaves it off (row 1; for the electric and big drill also row 2, the game's
+        // first update, which moves no bar and which the burner drill's simulated buffer fill is)
+        const rows = rowsOf(stops, `${drill}-circuit`);
+        const lead = LEAD[drill], ticks = 601 - lead;
+        const run = simulate(TYPE[drill], null, ticks, tick => tick >= 2 && !inside(tick + lead - 3, WINDOWS));
+        for (let tick = FIRST_ROW - lead; tick <= ticks - 2; tick++) {
+            const row = rows[tick + lead];
+            expect(run.states[tick - 1] === "disabled_by_control_behavior", `tick ${tick}`).toBe(statusName(stops, row) === "disabled_by_control_behavior");
+            expect(run.progress[tick - 1], `bar at tick ${tick}`).toBeCloseTo(row.progress, 5);
         }
-        // the drill's own disabled status was entered, and DrillState.status stayed at its default
-        expect(modes).toEqual(new Set([DrillStatus.WORKING, DrillStatus.DISABLED]));
-        expect(drill_state.status).toBe(DrillStatus.WORKING);
-        expect(states).toEqual(new Set(["working"]));
     });
 
-    test("is working when the drill holds what the machine will not take, where the game shows waiting_for_space_in_destination", () => {
-        const at = {tick: 0};
-        const {drill, drill_state} = simulatedDrill([], at);
-        // a big drill with +500% mines about 1.5 stone a tick: it passes the machine's stop within a few hundred ticks
-        for (at.tick = 1; at.tick <= 600; at.tick++) drill.executeForTick();
-        expect(drill_state.inventoryState.getQuantity("stone")).toBeGreaterThan(0);
-        expect(factorioDrillState(drill_state)).toBe("working");
+    test("a drill disabled in the same ticks shows the state the game shows for a circuit, where the game's script shows disabled_by_script", () => {
+        const rows = rowsOf(stops, `${drill}-script`);
+        const lead = LEAD[drill], ticks = 601 - lead;
+        const run = simulate(TYPE[drill], null, ticks, tick => !inside(tick + lead - 1, WINDOWS));
+        for (let tick = FIRST_ROW - lead; tick <= ticks - 2; tick++) {
+            const row = rows[tick + lead];
+            expect(run.states[tick - 1] === "disabled_by_control_behavior", `tick ${tick}`).toBe(statusName(stops, row) === "disabled_by_script");
+            expect(run.progress[tick - 1], `bar at tick ${tick}`).toBeCloseTo(row.progress, 5);
+        }
     });
+
+    test("with room for two ore it shows waiting_for_space_in_destination from the third ore, which it holds without room to drop it", () => {
+        const rows = rowsOf(stops, `${drill}-chest-room`);
+        const lead = LEAD[drill], ticks = 1501 - lead;
+        const run = simulate(TYPE[drill], 2, ticks, () => true);
+        const pulse = firstDropPulse(rows);
+        for (let tick = FIRST_ROW - lead; tick <= ticks - 2; tick++) {
+            const row = rows[tick + lead];
+            if (row.t !== pulse && !lateBlock(drill, rows, row, it => statusName(stops, it as DrillRow))) expect(run.states[tick - 1], `tick ${tick}`).toBe(statusName(stops, row));
+            expect(run.out[tick - 1], `ore at tick ${tick}`).toBe(row.out);
+        }
+        expect(new Set(run.states)).toEqual(new Set(["working", "waiting_for_space_in_destination"]));
+    });
+
+    test("into a chest that is filled and emptied of 100 ore it shows waiting from the ore it cannot drop until room is made", () => {
+        const rows = rowsOf(stops, `${drill}-chest-full`);
+        const lead = LEAD[drill], ticks = 1501 - lead;
+        // the probe fills the chest after row 300 and takes 100 ore after row 800: before the simulated ticks of rows 301 and 801
+        const run = simulate(TYPE[drill], null, ticks, () => true, (tick, chest) => {
+            if (tick + lead === 301) chest.inventoryState.addQuantity("iron-ore", CHEST_ORE - chest.getCurrentQuantity("iron-ore"));
+            if (tick + lead === 801) chest.inventoryState.removeQuantity("iron-ore", 100);
+        });
+        const pulse = firstDropPulse(rows);
+        for (let tick = FIRST_ROW - lead; tick <= ticks - 2; tick++) {
+            const row = rows[tick + lead];
+            // row 800 is read after the probe's take, so the game shows working for the tick the drill still holds the ore it can now drop
+            if (row.t === pulse || row.t === 800 || lateBlock(drill, rows, row, it => statusName(stops, it as DrillRow))) continue;
+            expect(run.states[tick - 1], `tick ${tick}`).toBe(statusName(stops, row));
+            expect(run.out[tick - 1], `ore at tick ${tick}`).toBe(row.out);
+        }
+    });
+});
+
+test("into a furnace that cannot craft a big drill stops at 114 ore and shows waiting for space from then on, tick by tick as the game does", () => {
+    const config = ConfigSchema.parse({target_output: {recipe: "iron-plate", items_per_second: 1, copies: 1}, belts: [], inserters: [],
+        machines: [{id: 1, recipe: "iron-plate", crafting_speed: 1, productivity: 0, type: "furnace"}],
+        drills: {configs: [{id: 1, type: "big-mining-drill", mined_item_name: "iron-ore", speed_bonus: 0, productivity: 0, target: {type: "machine", id: 1}}]}});
+    const context = SimulationContext.fromConfig(config);
+    const drill = context.drills[0];
+    const sink = context.state_registry.getStateByEntityIdOrThrow(drill.drill_state.drill.sink_id) as MachineState;
+    const clock = MutableTickProvider.create(0);
+    const changes: {tick: number; state: string}[] = [];
+    drill.observers.add(new DrillStateTracker(clock, drill.drill_state, {recordFactorioState: (tick, state) => changes.push({tick, state})}));
+    const rows = rowsOf(machine, "big-machine");
+    const ticks = 3000;
+    const ore: number[] = [];
+    for (let tick = 1; tick <= ticks; tick++) {
+        clock.setCurrentTick(tick);
+        drill.executeForTick();
+        ore.push(sink.inventoryState.getItemOrThrow("iron-ore").quantity);
+    }
+    const states = statesOf(changes, ticks);
+    const pulse = firstDropPulse(rows);
+    for (let tick = FIRST_ROW - LEAD.big; tick <= ticks - 2; tick++) {
+        const row = rows[tick + LEAD.big];
+        expect(ore[tick - 1], `ore at tick ${tick}`).toBe(row.out);
+        if (row.t === pulse || lateBlock("big", rows, row, it => statusName(machine, it as DrillRow))) continue;
+        expect(states[tick - 1], `tick ${tick}`).toBe(statusName(machine, row));
+    }
+    expect(sink.inventoryState.getItemOrThrow("iron-ore").quantity).toBe(114);
+    expect(drill.drill_state.status).toBe(DrillStatus.WORKING);
 });

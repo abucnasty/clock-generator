@@ -7,12 +7,14 @@ export interface Fuel {
 }
 
 /**
- * A machine energy source that burns fuel items while crafting, from the game data: the prototype's `energy_usage` and
+ * A machine energy source that burns fuel items while it works, from the game data: the prototype's `energy_usage` and
  * the items of its burner's fuel categories (entities/traits/energy.ts builds it).
  */
 export interface BurnerEnergySource {
     /** Energy usage while crafting at 100% energy consumption, in kW. */
     readonly energy_usage_kw: number;
+    /** Share of the fuel's energy the burner turns into work: 1 on every burner of 2.1.21. */
+    readonly effectivity: number;
     /** Fuels the machine accepts. The first one is the default. */
     readonly fuels: readonly Fuel[];
 }

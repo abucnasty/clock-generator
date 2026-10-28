@@ -27,6 +27,13 @@ import type { InserterPhase } from "../status-codes";
  * and its Hand starts at IDLE with its scratch set back, while its status, its hand, the pickup arm, the belt lanes,
  * its ports and its observers are kept (same-tick rule 12).
  */
+/** Whether an inserter of the prototype waits for a full hand at its source: at a machine that places its results itself, or elsewhere */
+function waitsForFullHand(prototype: string, source_state: EntityState): boolean {
+    const full_hand = fullHandOf(prototype);
+    const places_results = EntityState.isMachine(source_state) && source_state.machine.metadata.places_results === true;
+    return places_results ? full_hand.at_placing_source : full_hand.elsewhere;
+}
+
 export class InserterArchetype {
 
     /**
@@ -55,10 +62,9 @@ export class InserterArchetype {
             sink_wakes: sink_machine === null ? null : sink_machine.wakes,
             sink_ingress: sink_machine === null ? null : sink_machine.ingress,
             from_belt: EntityState.isBelt(source_state),
-            // at a machine that places its results itself, an inserter that does not wait for a full hand there (its Hand
-            // trait, from the prototype's data: no bulk one) swings what it holds (rule 18)
-            swings_part_hands: EntityState.isMachine(source_state) && source_state.machine.metadata.places_results === true
-                && !fullHandOf(inserter_state.inserter.metadata.type).at_placing_source,
+            // an inserter that does not wait for a full hand at its source (its Hand trait, from the prototype's
+            // `wait_for_full_hand`) swings what it holds (rule 18 at a machine that places its results itself)
+            swings_part_hands: !waitsForFullHand(inserter_state.inserter.metadata.type, source_state),
             swing_ticks: inserter_state.inserter.animation.rotation.ticks,
         });
         const wakes = new InserterWakes(inserter_state, control);

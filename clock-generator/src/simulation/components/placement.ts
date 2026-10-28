@@ -78,6 +78,27 @@ export class Placement {
         }
     }
 
+    /**
+     * Whether something waits at its source that its target does not take all of now (a drill that holds an item its
+     * target has no room for): the target is asked as a drop would ask it, and nothing is moved
+     */
+    public blocked(): boolean {
+        const target = this.target;
+        if (target === null) {
+            return false;
+        }
+        const source = this.source;
+        const results = this.results;
+        for (let index = 0; index < results.length; index++) {
+            const item = results[index];
+            const waiting = source.getCurrentQuantity(item);
+            if (waiting > 0 && target.accepts(item, waiting, DropBy.PLACER) < waiting) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** Results a machine put into its own output, counted where it places its results itself with no container target */
     public countPlacedInOwnOutput(amount: number): void {
         if (this.counts_own_output) {

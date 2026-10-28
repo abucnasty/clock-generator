@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest"
-import { RecipeMetadata } from "./recipe-metadata"
+import { RecipeMetadata, amountIgnoredByProductivity, expectedAmount } from "./recipe-metadata"
 import { Ingredient } from "../../../data/factorio-data-types"
 
 describe("Recipe Metadata", () => {
@@ -42,5 +42,37 @@ describe("Recipe Metadata", () => {
     test("uses default energy required if not specified", () => {
         const recipeMetadata = RecipeMetadata.fromRecipeName("iron-gear-wheel")
         expect(recipeMetadata.energy_required).toBe(0.5)
+    })
+
+    describe("amount ignored by productivity", () => {
+        const result = (extras: object): Ingredient => ({ type: "item", name: "test-item", amount: 1, ...extras } as Ingredient)
+
+        test("is 0 for a result that sets neither field", () => {
+            expect(amountIgnoredByProductivity(result({}))).toBe(0)
+        })
+
+        test("defaults to ignored_by_stats when ignored_by_productivity is missing", () => {
+            expect(amountIgnoredByProductivity(result({ amount: 3, ignored_by_stats: 2 }))).toBe(2)
+        })
+
+        test("an ignored_by_productivity that is set wins over ignored_by_stats", () => {
+            expect(amountIgnoredByProductivity(result({ amount: 3, ignored_by_stats: 2, ignored_by_productivity: 1 }))).toBe(1)
+            expect(amountIgnoredByProductivity(result({ amount: 3, ignored_by_stats: 2, ignored_by_productivity: 0 }))).toBe(0)
+        })
+
+        test("never exceeds what a craft yields on average", () => {
+            const chunk = result({ independent_probability: 0.3, ignored_by_stats: 1 })
+            expect(amountIgnoredByProductivity(chunk)).toBeCloseTo(expectedAmount(chunk))
+            expect(amountIgnoredByProductivity(chunk)).toBeCloseTo(0.3)
+        })
+
+        test("a result the recipe data gives only ignored_by_stats is not multiplied by productivity", () => {
+            const chunk = RecipeMetadata.fromRecipeName("metallic-asteroid-crushing").outputs
+                .find(it => it.name === "metallic-asteroid-chunk")
+            expect(chunk).toBeDefined()
+            expect(chunk).toMatchObject({ ignored_by_stats: 1 })
+            expect(chunk).not.toHaveProperty("ignored_by_productivity")
+            expect(amountIgnoredByProductivity(chunk!)).toBeCloseTo(expectedAmount(chunk!))
+        })
     })
 })
