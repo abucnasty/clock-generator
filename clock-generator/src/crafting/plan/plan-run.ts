@@ -53,10 +53,10 @@ import { StateTransitionHistory } from "../sequence/state-transition-history";
 import { MachineFactsEntry } from "../insights";
 import { CompactStateTransitionHistory } from "../sequence/compact-history";
 import { StateTransitionTracker } from "../../simulation/observers/state-transition-tracker";
-import { FactorioStateTracker } from "../../simulation/observers/factorio-state-tracker";
+import { DrillStateTracker, FactorioStateTracker } from "../../simulation/observers/factorio-state-tracker";
 import type { EntityObserver, Observers, TickRecorder } from "../../simulation/observers/observer";
 import { drillStatusOf, inserterStatusOf, machineStatusOf } from "../../simulation/status-codes";
-import { factorioDrillState, factorioInserterState, factorioMachineState } from "../../state/factorio-entity-state";
+import { factorioInserterState, factorioMachineState } from "../../state/factorio-entity-state";
 import type { DerivedClockWindowsReport } from "../candidates/observed-windows";
 import type { SearchReport } from "../candidates/search";
 import { ClockBelt, SerializableClockWindows, backedUpHandTicks, beltPickupSlackTicks, fuelHandRoomTicks, subtickClockForPeriod, withBeltPickupSlack, withWindowsAtLeast } from "../clock";
@@ -2433,7 +2433,7 @@ function attachHistoryObservers(
         const recorder = state_transition_history.recorderFor(it.drill_state.entity_id, "drill");
         attach(it.observers, new StateTransitionTracker(relative_tick_provider, recorder, drillStatusOf));
         if (factorio_states) {
-            attach(it.observers, new FactorioStateTracker(relative_tick_provider, () => factorioDrillState(it.drill_state), recorder));
+            attach(it.observers, new DrillStateTracker(relative_tick_provider, it.drill_state, recorder));
         }
     });
 

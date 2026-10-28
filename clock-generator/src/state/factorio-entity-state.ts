@@ -3,9 +3,10 @@ import { EntityState } from "./entity-state";
 import { InserterState } from "./inserter-state";
 import { MachineState } from "./machine-state";
 import { DrillState } from "./drill-state";
-import { DrillStatus, InserterStatus, MachineStatus } from "./entity-status";
+import { InserterStatus, MachineStatus } from "./entity-status";
 import { FactorioDrillState, FactorioInserterState, FactorioMachineState } from "./factorio-state-names";
 import { ContainerStorage } from "../simulation/components/container-storage";
+import { DrillStatusCode } from "../simulation/status-codes";
 
 export { FactorioInserterState, FactorioMachineState, FactorioDrillState } from "./factorio-state-names";
 
@@ -75,8 +76,23 @@ export function factorioMachineState(state: MachineState): FactorioMachineState 
     return FACTORIO_MACHINE_STATE[state.status];
 }
 
-export function factorioDrillState(state: DrillState): FactorioDrillState {
-    return state.status === DrillStatus.DISABLED
-        ? FactorioDrillState.DISABLED_BY_CONTROL_BEHAVIOR
+/**
+ * The state the game shows for a drill that is not disabled: waiting for space in its destination while it holds an item
+ * its destination takes no room for (a full chest, a machine at its stop), else working. An item it has just mined and
+ * will drop in the next tick is not waiting.
+ */
+export function factorioDrillStateWhileEnabled(state: DrillState): FactorioDrillState {
+    return state.placement.blocked()
+        ? FactorioDrillState.WAITING_FOR_SPACE_IN_DESTINATION
         : FactorioDrillState.WORKING;
+}
+
+/**
+ * The state of a drill as its ticks go by it: disabled by its control while its status is DISABLED, else
+ * `factorioDrillStateWhileEnabled`. The game shows a disabled drill one tick before it stops (see `DrillStateTracker`).
+ */
+export function factorioDrillState(state: DrillState): FactorioDrillState {
+    return state.status_code === DrillStatusCode.DISABLED_BY_CONTROL_BEHAVIOR
+        ? FactorioDrillState.DISABLED_BY_CONTROL_BEHAVIOR
+        : factorioDrillStateWhileEnabled(state);
 }

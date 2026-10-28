@@ -163,3 +163,21 @@ describe("Placement", () => {
     // a running total and fields fixed at build only, none of them in a key: pinned with every component's fields
     // (crafting/runner/steady-state.test.ts)
 });
+
+describe("a placement that is blocked", () => {
+    it("is blocked while the target takes less than what waits at the source, and asking it moves nothing", () => {
+        const machine = railMachine();
+        const stop = directMachineInsertionLimit(FactorioDataService.findItemOrThrow("stone"), machine.machine);
+        const source = held("stone", 5);
+        const placement = new Placement(source, ["stone"], false);
+        expect(placement.blocked()).toBe(false);
+        placement.placeInto(new MachinePlacementPort(machine, ["stone"]), true);
+        expect(placement.blocked()).toBe(false);
+        machine.inventoryState.addQuantity("stone", stop - 4);
+        expect(placement.blocked()).toBe(true);
+        expect([source.getCurrentQuantity("stone"), machine.inventoryState.getQuantity("stone")]).toEqual([5, stop - 4]);
+        machine.inventoryState.removeQuantity("stone", 1);
+        expect(placement.blocked()).toBe(false);
+        expect(new Placement(HeldStorage.forItem("stone"), ["stone"], false).blocked()).toBe(false);
+    });
+});
