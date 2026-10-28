@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import "../../data/factorio-data-file";
 import { FactorioDataService } from "../../data/factorio-data-service";
-import { machineCanMake, machineRuleOfPrototype } from "./machine-rule";
+import { fuelModelled, machineCanMake, machineRuleOfPrototype } from "./machine-rule";
 import { MachineType } from "./machine-type";
 
 // The rule of every crafting machine of 2.1.21, from its data: names are only the test's
@@ -36,6 +36,29 @@ describe("the simulation rule of a crafting machine prototype", () => {
         expect(machineRuleOfPrototype({ type: "furnace", crafting_categories: ["smelting"], burner_fuel_categories: ["nutrients"] })).toBe(MachineType.FURNACE);
         expect(machineRuleOfPrototype({ type: "assembling-machine", crafting_categories: [], burner_fuel_categories: ["chemical", "nutrients"] })).toBe(MachineType.BIOCHAMBER);
         expect(machineRuleOfPrototype({ type: "assembling-machine", crafting_categories: [], burner_fuel_categories: ["chemical"] })).toBe(MachineType.MACHINE);
+    });
+});
+
+// The rule is a label (copies, facts, an import's warning); what a machine does by its kind follows from its traits.
+// The one behaviour the rule's data test still decides is which burner's fuel is modelled (the Energy trait).
+describe("whether the fuel of a crafting machine prototype is modelled", () => {
+    const modelled = (name: string) => fuelModelled(FactorioDataService.findCraftingMachine(name)!);
+
+    it("is for the biochamber only, the burner on nutrients", () => {
+        const burning = FactorioDataService.getAllCraftingMachines().filter(machine => fuelModelled(machine));
+        expect(burning.map(machine => machine.name)).toEqual(["biochamber"]);
+    });
+
+    it("is not, a kept quirk, for the burners on chemical fuel or food", () => {
+        for (const name of ["stone-furnace", "steel-furnace", "captive-biter-spawner"]) {
+            expect(modelled(name), name).toBe(false);
+        }
+    });
+
+    it("follows the data, not the name: a burner on nutrients that is no furnace", () => {
+        expect(fuelModelled({ type: "assembling-machine", crafting_categories: [], burner_fuel_categories: ["chemical", "nutrients"] })).toBe(true);
+        expect(fuelModelled({ type: "furnace", crafting_categories: [], burner_fuel_categories: ["nutrients"] })).toBe(false);
+        expect(fuelModelled({ type: "assembling-machine", crafting_categories: [], burner_fuel_categories: [] })).toBe(false);
     });
 });
 

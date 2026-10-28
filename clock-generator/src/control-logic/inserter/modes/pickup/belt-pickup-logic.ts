@@ -9,6 +9,7 @@ import { actsInTheTickTheBlockIsLifted, wokenByItsMachinesCraftStart } from "../
 import { BeltPickupLane } from "../../../../state/belt-pickup-lane";
 import { BackedUpPickupLane } from "../../../../state/backed-up-pickup-lane";
 import { BeltPickupStock } from "../../../../state/belt-pickup-stock";
+import { beltPickupCalibrated } from "../../../../entities/inserter/metadata/inserter-spec";
 import { InserterTransferLogic } from "../transfer-logic";
 import { canPickupItemForSink, recordPickup } from "../transfer-helpers";
 
@@ -41,8 +42,9 @@ export class BeltPickupLogic implements InserterTransferLogic {
         }
         this.pickup_lanes = pickup_lanes;
         const metadata = inserterState.inserter.metadata;
-        // Other prototypes and qualities remain separate calibrations.
-        if (metadata.type === "stack-inserter" && metadata.quality === "legendary") {
+        // Only a kind of the calibration row (inserter-spec.ts BELT_PICKUP_CALIBRATED) runs the arm model; other
+        // prototypes and qualities remain separate calibrations.
+        if (beltPickupCalibrated(metadata.type, metadata.quality)) {
             assert(inserterState.inserter.pickup_layout !== undefined || pickup_length === 1, "Underground pickups need an explicit layout");
             const extension = FactorioDataService.findInserterOrThrow(metadata.type).extension_speed
                 * (1 + 0.3 * FactorioDataService.findQualityOrThrow(metadata.quality).level) * 256;

@@ -99,9 +99,10 @@
       ]
     },
     "InserterPrototype": {
-      "$comment": "Hand, Timing",
+      "$comment": "Hand, Timing; energy_source: a burner inserter is refused (it needs fuel)",
       "parent": "EntityWithOwnerPrototype",
       "properties": [
+        "energy_source",
         "stack_size_bonus",
         "bulk",
         "uses_inserter_stack_size_bonus",

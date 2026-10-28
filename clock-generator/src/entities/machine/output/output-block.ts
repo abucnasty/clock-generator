@@ -1,5 +1,4 @@
 import { EnrichedIngredient, ItemName } from "../../../data";
-import { MachineType } from "../machine-metadata";
 import { RecipeMetadata } from "../recipe";
 import { OverloadMultiplier } from "../traits/overload-multiplier";
 
@@ -21,23 +20,16 @@ export interface OutputBlock {
     readonly ingredients_blocked_at: number;
 }
 
-
-function fromRecipe(machine_type: MachineType, recipe: RecipeMetadata, overloadMultiplier: OverloadMultiplier): OutputBlock {
-    if (machine_type === MachineType.FURNACE) {
-        return forFurnace(recipe);
-    }
-
-    if (machine_type === MachineType.MACHINE || machine_type === MachineType.BIOCHAMBER) {
-        return forMachine(recipe, overloadMultiplier);
-    }
-
-    throw new Error(`Unsupported machine type: ${machine_type}`);
-}
-
+/**
+ * A machine that picks its recipe by input (a furnace prototype, the recycler too): its output blocks at a full stack.
+ * The OutputBlock trait (entities/traits/output-block.ts) picks this rule or forMachine by the machine's RecipeSelection
+ * trait, from its prototype's class.
+ */
 function forFurnace(recipe: RecipeMetadata): OutputBlock {
     return itemStackSize(recipe);
 }
 
+/** A machine set to its recipe: overload multiplier times a craft's amount, the stack for a recipe with no item ingredients */
 function forMachine(recipe: RecipeMetadata, overloadMultiplier: OverloadMultiplier): OutputBlock {
     const stack_size = recipe.output.item.stack_size
     const overload_quantity = overloadMultiplier.overload_multiplier * recipe.output.amount
@@ -75,7 +67,6 @@ function forByProduct(output: EnrichedIngredient): OutputBlock {
 }
 
 export const OutputBlock = {
-    fromRecipe: fromRecipe,
     forFurnace: forFurnace,
     forMachine: forMachine,
     forByProduct: forByProduct,

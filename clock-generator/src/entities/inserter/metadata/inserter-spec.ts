@@ -1,6 +1,7 @@
 import { Duration } from "../../../data-types";
 import { FactorioDataService } from "../../../data";
-import { InserterType } from "./inserter-type";
+import { BeltSpeed } from "../../belt/belt";
+import { DEFAULT_INSERTER_QUALITY, InserterType } from "./inserter-type";
 
 export interface InserterSpec {
     belt: {
@@ -53,9 +54,12 @@ const MACHINE_PICKUP_OR_DROP_TICKS = 1;
 const BELT_PICKUP_TICKS = 4;
 const BELT_DROP_TICKS = 4;
 
-/** Refuses the inserters the model does not run, with the reason */
+/**
+ * Refuses the inserters the model does not run, with the reason: one that burns fuel (its `energy_source` is a burner in
+ * the game data, the burner inserter's), whose fuel the model does not carry; and one the data does not hold
+ */
 function assertSupportedInserter(prototype: string): void {
-    if (prototype === "burner-inserter") {
+    if (FactorioDataService.findInserterOrThrow(prototype).energy_source.type === "burner") {
         throw new Error("The burner inserter is not supported: the burner inserter needs fuel");
     }
 }
@@ -66,7 +70,6 @@ function assertSupportedInserter(prototype: string): void {
  */
 export function assertSupportedInserterKind(prototype: string, quality: string): void {
     assertSupportedInserter(prototype);
-    FactorioDataService.findInserterOrThrow(prototype);
     FactorioDataService.findQualityOrThrow(quality);
 }
 
@@ -112,29 +115,53 @@ export function fullResearchHandSize(prototype: string): number {
     return 1 + (inserter.stack_size_bonus ?? 0) + bonus;
 }
 
-/**
- * Whether an inserter of the prototype is a bulk one (prototype `bulk`: the bulk and the stack inserter), by the game data.
- * At a machine that places its results itself, a bulk inserter waits for a full hand and any other swings what it holds
- * (recorded on a recycler on scrap, 2.1.21: a stack inserter waited at it with a part hand of holmium ore for 10.5 minutes,
- * a long-handed inserter swung each low density structure on its own).
- */
-export function isBulkInserter(prototype: string): boolean {
-    return FactorioDataService.findInserterOrThrow(prototype).bulk === true;
+/** An inserter kind whose belt pickup timing was measured in the game, and the hand and belt stack it was measured with */
+export interface BeltPickupCalibration {
+    readonly prototype: string;
+    readonly quality: string;
+    /** The hand every belt pickup was measured with (docs/belt-pickup/experiments.md) */
+    readonly hand_size: number;
+    /** The belt stack every belt pickup was measured on */
+    readonly belt_stack_size: number;
 }
 
 /**
  * The inserter kinds whose belt pickup timing (the arm model) is calibrated: one evidence row, the legendary stack
- * inserter (decision D9, follow-up F7). A kind is added here only once it is measured on belts. The traits read it
- * (timing.belt_pickup_calibrated); the arm gate (belt-pickup-logic.ts) and the scope check (config/inserter-scope.ts,
- * which pickup-calibration.ts reads) still name the kind themselves until they read this row.
+ * inserter with 16-item hands on 4-item belt stacks (decision D9, follow-up F7). A kind is added here only once it is
+ * measured on belts. Everything that asks reads this row: the traits (timing.belt_pickup_calibrated), the arm gate
+ * (belt-pickup-logic.ts), the scope check (config/inserter-scope.ts) and the warning for pickups outside the
+ * calibration (config/pickup-calibration.ts).
  */
-const BELT_PICKUP_CALIBRATED: readonly { readonly prototype: string; readonly quality: string }[] = [
-    { prototype: InserterType.STACK_INSERTER, quality: "legendary" },
+const BELT_PICKUP_CALIBRATED: readonly BeltPickupCalibration[] = [
+    { prototype: InserterType.STACK_INSERTER, quality: "legendary", hand_size: 16, belt_stack_size: 4 },
 ];
+
+/**
+ * The calibration of an inserter's belt pickup (BELT_PICKUP_CALIBRATED), null for a kind not measured on belts; a kind
+ * the config does not name is the default one (the legendary stack inserter)
+ */
+export function beltPickupCalibrationOf(kind: { prototype?: string; quality?: string }): BeltPickupCalibration | null {
+    const prototype = kind.prototype ?? InserterType.STACK_INSERTER;
+    const quality = kind.quality ?? DEFAULT_INSERTER_QUALITY;
+    return BELT_PICKUP_CALIBRATED.find(row => row.prototype === prototype && row.quality === quality) ?? null;
+}
 
 /** Whether the belt pickup arm model is calibrated for an inserter of this prototype and quality (BELT_PICKUP_CALIBRATED) */
 export function beltPickupCalibrated(prototype: string, quality: string): boolean {
-    return BELT_PICKUP_CALIBRATED.some(row => row.prototype === prototype && row.quality === quality);
+    return beltPickupCalibrationOf({ prototype, quality }) !== null;
+}
+
+/**
+ * The belt speeds the right-bend upstream pickup (pickup_layout "bend-right-upstream") is calibrated on: one evidence
+ * row beside BELT_PICKUP_CALIBRATED, turbo belts, the only belt its curved lane lengths were measured on
+ * (docs/belt-pickup/capture.md). A calibration gate, not a branch on the belt's kind: a speed is added here only once the
+ * bend is measured on it.
+ */
+const BEND_RIGHT_UPSTREAM_CALIBRATED_BELT_SPEEDS: readonly number[] = [BeltSpeed.TURBO_TRANSPORT_BELT];
+
+/** Whether the right-bend upstream pickup is calibrated on a belt of this speed (BEND_RIGHT_UPSTREAM_CALIBRATED_BELT_SPEEDS) */
+export function bendRightUpstreamCalibrated(belt_speed: number): boolean {
+    return BEND_RIGHT_UPSTREAM_CALIBRATED_BELT_SPEEDS.some(speed => speed === belt_speed);
 }
 
 /** The hand a config gives an inserter: its `stack_size` when it sets one, else the full research hand of its prototype */

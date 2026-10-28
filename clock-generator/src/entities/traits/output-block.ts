@@ -34,10 +34,20 @@ function resultOf(block: OutputBlock, rule: OutputBlockResult["rule"]): OutputBl
     };
 }
 
+/** The rule of a machine's main product, by how it comes to its recipe: a machine that picks it by input blocks at the stack */
+function ruleOf(selection: RecipeSelectionTrait): OutputBlockTrait["rule"] {
+    return selection.mode === "by-input" ? "stack" : "overload";
+}
+
+/** The output block of a machine's main product by its rule (output-block.ts); the machine (machine.ts) reads it from here */
+export function mainOutputBlock(selection: RecipeSelectionTrait, recipe: RecipeMetadata, overload_multiplier: OverloadMultiplier): OutputBlock {
+    return ruleOf(selection) === "stack" ? OutputBlock.forFurnace(recipe) : OutputBlock.forMachine(recipe, overload_multiplier);
+}
+
 /** A machine's output block, each result as output-block.ts gives it: the main product by the rule, the by-products at their stack */
 export function machineOutputBlock(selection: RecipeSelectionTrait, recipe: RecipeMetadata, overload_multiplier: OverloadMultiplier): OutputBlockTrait {
-    const rule = selection.mode === "by-input" ? "stack" : "overload";
-    const main = rule === "stack" ? OutputBlock.forFurnace(recipe) : OutputBlock.forMachine(recipe, overload_multiplier);
+    const rule = ruleOf(selection);
+    const main = mainOutputBlock(selection, recipe, overload_multiplier);
     return {
         rule,
         per_result: [

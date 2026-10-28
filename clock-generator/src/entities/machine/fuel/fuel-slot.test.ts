@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 import { BurnerEnergySource } from "./energy-source";
 import { FuelSlot } from "./fuel-slot";
 import { FuelConsumption } from "../traits/fuel-consumption";
+import { FactorioDataService } from "../../../data";
+import { modelledBurnerOf } from "../../traits/energy";
 
 describe("the fuel slot's insertion limit", () => {
     const limitAt = (energy_consumption_bonus: number): number => {
-        const source = BurnerEnergySource.forMachineType("biochamber")!;
+        // the biochamber's burner, from the data
+        const source = modelledBurnerOf(FactorioDataService.findCraftingMachine("biochamber"))!;
         const fuel = BurnerEnergySource.selectFuel(source);
         // the crafting speed and recipe time do not matter to it
         return FuelSlot.create(fuel, FuelConsumption.fromCraftingSpeed(source, fuel, 50, 1, energy_consumption_bonus)).automated_insertion_limit;

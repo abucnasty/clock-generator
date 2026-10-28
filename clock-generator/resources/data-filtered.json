@@ -41331,6 +41331,11 @@
         "mining_time": 0.1,
         "result": "inserter"
       },
+      "energy_source": {
+        "type": "electric",
+        "usage_priority": "secondary-input",
+        "drain": "0.4kW"
+      },
       "filter_count": 5
     },
     "fast-inserter": {
@@ -41349,6 +41354,11 @@
       "minable": {
         "mining_time": 0.1,
         "result": "fast-inserter"
+      },
+      "energy_source": {
+        "type": "electric",
+        "usage_priority": "secondary-input",
+        "drain": "0.5kW"
       },
       "filter_count": 5
     },
@@ -41369,6 +41379,11 @@
         "mining_time": 0.1,
         "result": "long-handed-inserter"
       },
+      "energy_source": {
+        "type": "electric",
+        "usage_priority": "secondary-input",
+        "drain": "0.4kW"
+      },
       "filter_count": 5
     },
     "burner-inserter": {
@@ -41387,6 +41402,33 @@
       "minable": {
         "mining_time": 0.1,
         "result": "burner-inserter"
+      },
+      "energy_source": {
+        "type": "burner",
+        "fuel_categories": [
+          "chemical"
+        ],
+        "initial_fuel": "wood",
+        "initial_fuel_percent": 0.25,
+        "effectivity": 1,
+        "fuel_inventory_size": 1,
+        "light_flicker": {
+          "color": [
+            0,
+            0,
+            0
+          ]
+        },
+        "smoke": [
+          {
+            "name": "smoke",
+            "deviation": [
+              0.1,
+              0.1
+            ],
+            "frequency": 9
+          }
+        ]
       },
       "filter_count": 5
     },
@@ -41408,6 +41450,11 @@
         "mining_time": 0.1,
         "result": "bulk-inserter"
       },
+      "energy_source": {
+        "type": "electric",
+        "usage_priority": "secondary-input",
+        "drain": "1kW"
+      },
       "filter_count": 5
     },
     "stack-inserter": {
@@ -41428,6 +41475,11 @@
       "minable": {
         "mining_time": 0.1,
         "result": "stack-inserter"
+      },
+      "energy_source": {
+        "type": "electric",
+        "usage_priority": "secondary-input",
+        "drain": "1kW"
       },
       "wait_for_full_hand": true,
       "grab_less_to_match_belt_stack": true,

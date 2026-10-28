@@ -1,20 +1,20 @@
 import { describe, test, expect } from "vitest"
 import { MachineStateMachine } from "./machine-state-machine";
 import { MachineState, MachineStatus } from "../../state";
-import { Machine, MachineMetadata, MachineType, RecipeMetadata } from "../../entities";
+import { Machine, MachineSpec, RecipeMetadata } from "../../entities";
 import { DebugPluginFactory, DebugSettingsProvider } from "../../crafting/sequence";
 import { TickProvider } from "../current-tick-provider";
 import { CompositeControlLogic } from "../composite-control-logic";
 import { TickControlLogic } from "../tick-control-logic";
 
-const createMachine = (recipeName: string, metadata: Partial<MachineMetadata> = {}): Machine => {
+/** A machine of the recipe; its prototype (none: an assembling machine) gives what it does by its kind, through its traits */
+const createMachine = (recipeName: string, metadata: Partial<MachineSpec> = {}): Machine => {
     const id = -1;
     return Machine.createMachine(id, {
         crafting_speed: 1,
         productivity: 0,
         recipe: RecipeMetadata.fromRecipeName(recipeName),
         ...metadata,
-        type: metadata.type ?? "machine",
     })
 }
 
@@ -111,7 +111,7 @@ describe("Machine State Machine", () => {
                 createMachine("stone-brick", {
                     crafting_speed: 91.899995803833,
                     productivity: 50,
-                    type: MachineType.FURNACE
+                    prototype: "electric-furnace"
                 })
             )
             const state_machine = MachineStateMachine.create({
@@ -133,7 +133,7 @@ describe("Machine State Machine", () => {
             createMachine("stone-brick", {
                 crafting_speed: 91.899995803833,
                 productivity: 50,
-                type: MachineType.FURNACE
+                prototype: "electric-furnace"
             })
         )
         const state_machine = MachineStateMachine.create({
@@ -157,7 +157,6 @@ describe("Machine State Machine", () => {
             createMachine("automation-science-pack", {
                 crafting_speed: 60,
                 productivity: 100,
-                type: MachineType.MACHINE
             })
         )
         const state_machine = MachineStateMachine.create({
@@ -181,7 +180,6 @@ describe("Machine State Machine", () => {
             createMachine("plastic-bar", {
                 crafting_speed: 99.194,
                 productivity: 300,
-                type: MachineType.MACHINE
             })
         )
         const state_machine = MachineStateMachine.create({
@@ -201,7 +199,7 @@ describe("Machine State Machine", () => {
 describe("Machine State Machine holding the products of a finished craft", () => {
     // 2 plastic bars a craft from 1 coal, one craft a tick, under a stack size of 100
     const holdingMachine = () => {
-        const machine_state = MachineState.forMachine(createMachine("plastic-bar", { crafting_speed: 60, productivity: 0, type: MachineType.MACHINE }))
+        const machine_state = MachineState.forMachine(createMachine("plastic-bar", { crafting_speed: 60, productivity: 0 }))
         const state_machine = MachineStateMachine.create({ machine_state, initial_mode_status: MachineStatus.WORKING })
         // the one coal makes a craft whose 2 bars do not fit next to the 99 in the output
         machine_state.inventoryState.addQuantity("coal", 1)
@@ -242,7 +240,7 @@ describe("Machine State Machine at the output block", () => {
     // 3 more from 300% productivity, output block 11 (overload multiplier 11 x 1), stack size 20
     const createRocketFuel = (rocket_fuel: number, crafts_of_ingredients: number) => {
         const machine_state = MachineState.forMachine(
-            createMachine("rocket-fuel-from-jelly", { type: MachineType.BIOCHAMBER, crafting_speed: 84.6655, productivity: 300 })
+            createMachine("rocket-fuel-from-jelly", { prototype: "biochamber", crafting_speed: 84.6655, productivity: 300 })
         )
         machine_state.fuelInventory.addQuantity("nutrients", 10)
         machine_state.inventoryState.addQuantity("rocket-fuel", rocket_fuel)
@@ -370,7 +368,7 @@ describe("Machine State Machine with a fuel slot", () => {
     // 4s recipe at crafting speed 2: 120 ticks per craft, 1 MJ per craft, so one 2 MJ nutrient pays for 2 crafts
     const createBiochamberState = (mash: number, nutrients: number) => {
         const machine_state = MachineState.forMachine(
-            createMachine("nutrients-from-yumako-mash", { type: MachineType.BIOCHAMBER, crafting_speed: 2 })
+            createMachine("nutrients-from-yumako-mash", { prototype: "biochamber", crafting_speed: 2 })
         )
         machine_state.inventoryState.addQuantity("yumako-mash", mash)
         machine_state.fuelInventory.addQuantity("nutrients", nutrients)
@@ -473,7 +471,7 @@ describe("Machine State Machine with a fuel slot", () => {
 // +1020% energy consumption: fuel slot filled up to 9 nutrients, ingredients up to 210 nutrients and 7 eggs
 describe("Machine State Machine with a pentapod egg recipe", () => {
     const createEggState = () => MachineState.forMachine(createMachine("pentapod-egg", {
-        type: MachineType.BIOCHAMBER, crafting_speed: 64.5, productivity: 150, energy_consumption_bonus: 1020,
+        prototype: "biochamber", crafting_speed: 64.5, productivity: 150, energy_consumption_bonus: 1020,
     }))
     const eggsGiven = (machine_state: MachineState) => MachineState.ingredientQuantity(machine_state, "pentapod-egg")
     const eggsMade = (machine_state: MachineState) => machine_state.inventoryState.getQuantity("pentapod-egg")
@@ -533,7 +531,7 @@ describe("Machine State Machine with several outputs", () => {
     // jellynut-processing: 1 jellynut -> 4 jelly and 1 jellynut-seed at 2%, in 1s
     const createProcessing = (productivity = 0) => {
         const machine_state = MachineState.forMachine(
-            createMachine("jellynut-processing", { type: MachineType.BIOCHAMBER, productivity })
+            createMachine("jellynut-processing", { prototype: "biochamber", productivity })
         )
         machine_state.fuelInventory.addQuantity("nutrients", 5)
         return { machine_state, state_machine: MachineStateMachine.create({ machine_state }) }

@@ -92,6 +92,7 @@ export interface MiningDrillPrototype extends EntityWithOwnerPrototype {
 
 /** type "inserter" */
 export interface InserterPrototype extends EntityWithOwnerPrototype {
+    energy_source: EnergySource;
     /** Default: 0. */
     stack_size_bonus?: number;
     /** Default: false. */
@@ -354,7 +355,7 @@ export const GENERATED_FIELDS = {
     FurnacePrototype: [],
     RocketSiloPrototype: ["rocket_parts_required", "to_be_inserted_to_rocket_inventory_size", "lift_weight"],
     MiningDrillPrototype: ["mining_speed", "resource_drain_rate_percent", "uses_force_mining_productivity_bonus", "drops_full_belt_stacks", "effect_receiver", "allowed_effects", "module_slots", "quality_affects_module_slots", "energy_source", "energy_usage", "vector_to_place_result"],
-    InserterPrototype: ["stack_size_bonus", "bulk", "uses_inserter_stack_size_bonus", "wait_for_full_hand", "grab_less_to_match_belt_stack", "max_belt_stack_size", "filter_count", "enter_drop_mode_if_held_stack_spoiled", "rotation_speed", "extension_speed", "pickup_position", "insert_position", "chases_belt_items"],
+    InserterPrototype: ["energy_source", "stack_size_bonus", "bulk", "uses_inserter_stack_size_bonus", "wait_for_full_hand", "grab_less_to_match_belt_stack", "max_belt_stack_size", "filter_count", "enter_drop_mode_if_held_stack_spoiled", "rotation_speed", "extension_speed", "pickup_position", "insert_position", "chases_belt_items"],
     TransportBeltConnectablePrototype: ["speed"],
     TransportBeltPrototype: [],
     LoaderPrototype: ["max_belt_stack_size", "wait_for_full_stack", "respect_insert_limits", "per_lane_filters", "belt_length"],

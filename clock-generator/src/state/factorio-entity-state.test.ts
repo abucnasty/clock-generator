@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { mock } from "vitest-mock-extended";
 import { InserterAnimationOverrideConfig } from "../config/schema";
-import { EntityId, Inserter, InserterMetadata, InserterStackSize, Machine, MachineType, RecipeMetadata } from "../entities";
+import { EntityId, Inserter, InserterMetadata, InserterStackSize, Machine, RecipeMetadata } from "../entities";
 import { InserterAnimation } from "../entities/inserter/inserter-animation";
 import { BeltState } from "./belt-state";
 import { EntityState } from "./entity-state";
@@ -15,7 +15,6 @@ function machineState(recipe: string): MachineState {
         crafting_speed: 1,
         productivity: 0,
         recipe: RecipeMetadata.fromRecipeName(recipe),
-        type: MachineType.MACHINE,
     }));
 }
 

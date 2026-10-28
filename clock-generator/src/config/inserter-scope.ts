@@ -1,5 +1,5 @@
-import { assertSupportedInserterKind } from "../entities/inserter/metadata/inserter-spec";
-import { InserterType } from "../entities/inserter/metadata/inserter-type";
+import { assertSupportedInserterKind, beltPickupCalibrationOf } from "../entities/inserter/metadata/inserter-spec";
+import { DEFAULT_INSERTER_QUALITY, InserterType } from "../entities/inserter/metadata/inserter-type";
 import { OUT_OF_SCOPE } from "./errors";
 import { PickupSource, pickupOutOfScopeProblem } from "./pickup-capture";
 
@@ -13,25 +13,17 @@ interface ScopedInserter {
     filter_mode?: string;
 }
 
-/** The quality of the only inserter whose belt pickup timing is calibrated, the legendary stack inserter */
-const BELT_PICKUP_QUALITY = "legendary";
-
-/** Whether an inserter is the legendary stack inserter, the only one allowed to pick up from a belt (the default) */
-export function isLegendaryStackInserter(inserter: { prototype?: string; quality?: string }): boolean {
-    return (inserter.prototype ?? InserterType.STACK_INSERTER) === InserterType.STACK_INSERTER
-        && (inserter.quality ?? BELT_PICKUP_QUALITY) === BELT_PICKUP_QUALITY;
-}
-
 /**
- * The refusal of a belt pickup by any inserter but the legendary stack inserter, null for any other inserter. Belt
- * pickup timing was calibrated on the legendary stack inserter only (follow-up F7); other kinds and qualities keep
- * working on chests and machines, where their swing comes from the game data. A prototype or quality the model does
- * not run at all is refused for that instead.
+ * The refusal of a belt pickup by an inserter whose kind is not in the calibration row (inserter-spec.ts
+ * BELT_PICKUP_CALIBRATED: the legendary stack inserter), null for any other inserter. Belt pickup timing was calibrated
+ * on the legendary stack inserter only (follow-up F7); other kinds and qualities keep working on chests and machines,
+ * where their swing comes from the game data. A prototype or quality the model does not run at all is refused for that
+ * instead.
  */
 function beltPickupKindProblem(inserter: ScopedInserter): string | null {
-    if (inserter.source.type !== "belt" || isLegendaryStackInserter(inserter)) return null;
+    if (inserter.source.type !== "belt" || beltPickupCalibrationOf(inserter) !== null) return null;
     const prototype = inserter.prototype ?? InserterType.STACK_INSERTER;
-    const quality = inserter.quality ?? BELT_PICKUP_QUALITY;
+    const quality = inserter.quality ?? DEFAULT_INSERTER_QUALITY;
     assertSupportedInserterKind(prototype, quality);
     const kind = `${quality} ${prototype}`;
     return `picking up from a belt with ${/^[aeiou]/.test(kind) ? "an" : "a"} ${kind} is not supported yet: belt pickup timing `

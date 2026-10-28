@@ -1,7 +1,6 @@
 import fs from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
-import { isLegendaryStackInserter } from "../../config/inserter-scope";
 import { laneCapacity } from "../../config/lane-capacity-validator";
 import { parseConfig } from "../../config/loader";
 import { Config } from "../../config/schema";
@@ -16,8 +15,10 @@ import { Entity } from "../entity";
 import { ReadableEntityRegistry } from "../entity-registry";
 import { fullResearchHandSize } from "../inserter/metadata/inserter-spec";
 import { BurnerEnergySource } from "../machine/fuel/energy-source";
-import { MachineType } from "../machine/machine-type";
+import { machineRecipeSelection } from "../machine/machine";
+import { OutputBlock } from "../machine/output/output-block";
 import { buildTraits, ChestTraits, ConfigTraits, DrillTraits, InserterTraits, LaneTraits, MachineTraits } from "./build-traits";
+import { burnerFuelOf } from "./energy";
 import { laneKey } from "./lane";
 import { PlacementResult } from "./placement";
 import { ratioOf } from "./ratio";
@@ -49,6 +50,26 @@ const SAMPLES = [
     ...sampleConfigs(path.join(ENGINE, "src", "config", "fixtures")),
     ...sampleConfigs(path.join(ENGINE, "src", "crafting", "fixtures")),
 ].filter(file => file !== REFUSED);
+
+/**
+ * What the name and kind branches gave before the entities read these figures from their traits (R4), recorded as
+ * literals: the traits and the entities' runtime figures are held to them, so the test proves the move kept every figure
+ * rather than comparing a function with itself.
+ */
+const BEFORE = {
+    /** The furnace rule (output-block.ts's switch, the furnace refusal in inserter.ts): the four furnace prototypes */
+    furnace_rule: new Set(["stone-furnace", "steel-furnace", "electric-furnace", "recycler"]),
+    /** The burner table (energy-source.ts): the biochamber rule, which only the biochamber prototype had */
+    burner_table: new Map<string, BurnerEnergySource>([
+        ["biochamber", { energy_usage_kw: 500, fuels: [{ item_name: "nutrients", fuel_value_mj: 2 }] }],
+    ]),
+    /** The belt speed switch (belt.ts) */
+    belt_speed: new Map([["transport-belt", 15], ["fast-transport-belt", 30], ["express-transport-belt", 45], ["turbo-transport-belt", 60]]),
+    /** isBulkInserter (inserter-spec.ts): the prototypes that waited for a full hand at a machine that places its results */
+    bulk: new Set(["bulk-inserter", "stack-inserter"]),
+    /** The arm gate (belt-pickup-logic.ts) and the scope check (inserter-scope.ts isLegendaryStackInserter) */
+    belt_arm: (prototype: string, quality: string) => prototype === "stack-inserter" && quality === "legendary",
+};
 
 /** What the equivalence was checked on, summed over the samples */
 const checked = {
@@ -97,12 +118,22 @@ function checkMachines(registry: ReadableEntityRegistry, traits: ConfigTraits): 
         same(t.output_block.per_result.map(block => [block.item, block.ingredients_blocked_at, block.held_limit, block.stack]),
             machine.outputs.map(output => [output.outputBlock.item_name, output.outputBlock.ingredients_blocked_at, output.outputBlock.held_limit, output.outputBlock.max_stack_size]),
             `${id} output blocks`);
-        // the class gives what the machine rule gives today
-        same(t.recipe_selection.mode === "by-input", machine.metadata.type === MachineType.FURNACE, `${id} recipe selection`);
-        same(t.energy.fuel_modelled, machine.fuel_slot !== undefined, `${id} fuel modelled`);
-        if (machine.fuel_slot !== undefined && machine.fuel_consumption !== undefined) {
-            // the burner from the data gives what the burner table gives today
-            same(t.energy.energy_usage_kw, BurnerEnergySource.forMachineType(machine.metadata.type)!.energy_usage_kw, `${id} energy usage`);
+        // the class gives what the furnace rule gave: the recipe selection, and the main product's block by the old switch
+        const prototype = machine.metadata.prototype ?? "";
+        const furnace_rule = BEFORE.furnace_rule.has(prototype);
+        same(t.recipe_selection.mode === "by-input", furnace_rule, `${id} recipe selection`);
+        same(machineRecipeSelection(machine), t.recipe_selection, `${id} entity's recipe selection`);
+        same(machine.output.outputBlock, furnace_rule ? OutputBlock.forFurnace(machine.metadata.recipe)
+            : OutputBlock.forMachine(machine.metadata.recipe, machine.overload_multiplier), `${id} main output block by the old rule`);
+        // the burner from the data gives what the burner table gave: which machines burn fuel, and what they burn
+        const table_source = BEFORE.burner_table.get(prototype);
+        same(t.energy.fuel_modelled, table_source !== undefined, `${id} fuel modelled`);
+        same(machine.fuel_slot !== undefined, table_source !== undefined, `${id} entity's fuel slot`);
+        if (table_source !== undefined && machine.fuel_slot !== undefined && machine.fuel_consumption !== undefined) {
+            same(t.energy.energy_usage_kw, table_source.energy_usage_kw, `${id} energy usage`);
+            const { crafting_speed, recipe, fuel, energy_consumption_bonus } = machine.metadata;
+            const [consumption, slot] = burnerFuelOf(table_source, fuel, crafting_speed, recipe.energy_required, energy_consumption_bonus);
+            same([machine.fuel_consumption, machine.fuel_slot], [consumption, slot], `${id} entity's fuel by the old table`);
             same(t.energy.fuel, {
                 item: machine.fuel_consumption.item, fuel_value_mj: machine.fuel_slot.fuel.fuel_value_mj,
                 per_craft: machine.fuel_consumption.amount_per_craft, per_second: machine.fuel_consumption.rate_per_second,
@@ -197,24 +228,28 @@ function checkInserters(context: SimulationContext, traits: ConfigTraits): void 
         same(t.hand.research, fullResearchHandSize(type), `${id} research hand`);
         same(t.hand.items, Array.from(inserter.filtered_items), `${id} items in order`);
         same(t.hand.by_item.map(hand => [hand.item, hand.hand]), Array.from(inserter.hand_sizes ?? []), `${id} hands`);
-        // the full-hand rule as pickup-mode-transition-evaluator.ts decided it, at a machine that places its results itself
+        // the full-hand rule as pickup-mode-transition-evaluator.ts decided it, at a machine that places its results
+        // itself, and as isBulkInserter gave it
         const source = registry.getEntityById(inserter.source.entity_id);
+        same(t.hand.full_hand.at_placing_source, BEFORE.bulk.has(type), `${id} full hand by the old rule`);
         if (source !== null && Entity.isMachine(source) && source.metadata.places_results === true) {
             checked.hands_at_placers += 1;
-            same(!t.hand.full_hand.at_placing_source, decided.get(id)!.swings_part_hands, `${id} full hand at a placer`);
+            same(decided.get(id)!.swings_part_hands, !BEFORE.bulk.has(type), `${id} full hand at a placer`);
+            same(!t.hand.full_hand.at_placing_source, decided.get(id)!.swings_part_hands, `${id} full hand trait at a placer`);
         }
         same(t.timing.rotation_ticks, inserter.animation.rotation.ticks, `${id} rotation`);
         same(t.timing.planned, {
             pickup: inserter.animation.pickup.ticks, drop: inserter.animation.drop.ticks,
             cycle: inserter.animation.total.ticks, pickup_to_drop: inserter.animation.pickup_to_drop.ticks,
         }, `${id} planned timing`);
-        // the calibration row gives what the arm gate (belt-pickup-logic.ts) decided and what the scope check gives today
+        // the calibration row gives what the arm gate (belt-pickup-logic.ts) and the scope check gave by name
         const belt_arm = decided.get(id)!.belt_arm;
         if (belt_arm !== null) {
             checked.belt_pickups += 1;
+            same(belt_arm, BEFORE.belt_arm(type, quality), `${id} belt pickup arm by the old gate`);
             same(t.timing.belt_pickup_calibrated, belt_arm, `${id} belt pickup calibrated`);
         }
-        same(t.timing.belt_pickup_calibrated, isLegendaryStackInserter({ prototype: type, quality }), `${id} belt pickup scope`);
+        same(t.timing.belt_pickup_calibrated, BEFORE.belt_arm(type, quality), `${id} belt pickup scope`);
         same(t.throughput.capacity_group, id, `${id} capacity group`);
         same(t.throughput.by_item.map(item => item.item), t.hand.by_item.map(item => item.item), `${id} throughput items`);
     }
@@ -226,7 +261,8 @@ function checkLanes(config: Config, registry: ReadableEntityRegistry, traits: Co
         for (const lane of [1, 2] as const) {
             const t = traits[laneKey(belt.entity_id.number, lane)] as LaneTraits;
             checked.lanes += 1;
-            // the speed from the data gives what the belt speed switch gives today
+            // the speed from the data gives what the belt speed switch gave
+            same(belt.belt_speed, BEFORE.belt_speed.get(belt_config.type), `${t.lane.key} entity's speed by the old switch`);
             same(t.lane.belt_speed, belt.belt_speed, `${t.lane.key} speed`);
             same(t.lane.items_per_second_ceiling, ratioOf(laneCapacity(belt_config, lane)), `${t.lane.key} capacity`);
             const listed = belt.lanes[lane - 1];

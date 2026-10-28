@@ -1,5 +1,5 @@
 import { FactorioDataService } from "../../data";
-import { fullResearchHandSize, isBulkInserter } from "../inserter/metadata/inserter-spec";
+import { fullResearchHandSize } from "../inserter/metadata/inserter-spec";
 
 /** What an inserter moves of an item a swing */
 export interface HandItem {
@@ -23,17 +23,33 @@ export interface HandTrait {
     /** The items it carries, in the order it takes them (its nearest lane first where it names it) */
     readonly items: readonly string[];
     /**
-     * Whether it waits for a full hand before it swings: at a machine that places its results itself, and elsewhere.
-     * Filled from the prototype's `bulk` as the simulator decides it today (pickup-mode-transition-evaluator.ts);
-     * decision 9e would fill it from `wait_for_full_hand` instead.
+     * Whether it waits for a full hand before it swings: at a machine that places its results itself, and elsewhere
+     * (fullHandOf, which the pickup transition reads: pickup-mode-transition-evaluator.ts).
      */
-    readonly full_hand: { readonly at_placing_source: boolean; readonly elsewhere: boolean };
+    readonly full_hand: FullHand;
     /** The prototype's `wait_for_full_hand` (spec default false), recorded beside `full_hand` and read by nothing yet */
     readonly wait_for_full_hand: boolean;
     /** The prototype's `grab_less_to_match_belt_stack` (spec default false); read by nothing yet */
     readonly grab_less_to_match_belt_stack: boolean;
     /** The prototype's `max_belt_stack_size` (spec default 1); read by nothing yet */
     readonly max_belt_stack_size: number;
+}
+
+/** Whether an inserter waits for a full hand before it swings, at a machine that places its results itself and elsewhere */
+export interface FullHand {
+    readonly at_placing_source: boolean;
+    readonly elsewhere: boolean;
+}
+
+/**
+ * Whether an inserter of the prototype waits for a full hand: everywhere for a bulk one (prototype `bulk` in the game
+ * data: the bulk and the stack inserter); any other swings what it holds at a machine that places its results itself
+ * (recorded on a recycler on scrap, 2.1.21: a stack inserter waited at it with a part hand of holmium ore for 10.5
+ * minutes, a long-handed inserter swung each low density structure on its own). Filled from `bulk` (decision D7); decision
+ * 9e would fill it from `wait_for_full_hand` instead, which the bulk inserter does not set.
+ */
+export function fullHandOf(prototype: string): FullHand {
+    return { at_placing_source: FactorioDataService.findInserterOrThrow(prototype).bulk === true, elsewhere: true };
 }
 
 export function inserterHand(prototype: string, quality: string, nominal: number, hand_sizes: ReadonlyMap<string, number>): HandTrait {
@@ -45,7 +61,7 @@ export function inserterHand(prototype: string, quality: string, nominal: number
         research: fullResearchHandSize(prototype),
         by_item: Array.from(hand_sizes, ([item, hand]) => ({ item, hand })),
         items: Array.from(hand_sizes.keys()),
-        full_hand: { at_placing_source: isBulkInserter(prototype), elsewhere: true },
+        full_hand: fullHandOf(prototype),
         wait_for_full_hand: data.wait_for_full_hand ?? false,
         grab_less_to_match_belt_stack: data.grab_less_to_match_belt_stack ?? false,
         max_belt_stack_size: data.max_belt_stack_size ?? 1,

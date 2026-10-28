@@ -34,6 +34,7 @@
     "MiningDrillPrototype.energy_source": "4f38af3dc5fa8566",
     "MiningDrillPrototype.energy_usage": "962a9ba73a70ef0a",
     "MiningDrillPrototype.vector_to_place_result": "95e3e3e5967cdbc8",
+    "InserterPrototype.energy_source": "4f38af3dc5fa8566",
     "InserterPrototype.stack_size_bonus": "f67e3b30789d1c5e",
     "InserterPrototype.bulk": "ed3e3ee073a923c1",
     "InserterPrototype.uses_inserter_stack_size_bonus": "0b2aadc391b5c59d",

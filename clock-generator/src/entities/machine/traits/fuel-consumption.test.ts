@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { FuelConsumption } from "./fuel-consumption";
-import { BurnerEnergySource, NUTRIENTS } from "../fuel";
-import { MachineType } from "../machine-metadata";
+import { BurnerEnergySource, Fuel } from "../fuel";
+import { FactorioDataService } from "../../../data";
+import { modelledBurnerOf } from "../../traits/energy";
 
-const biochamber = BurnerEnergySource.forMachineType(MachineType.BIOCHAMBER)!;
+/** The biochamber's burner as the engine burned it before it was read from the data: 500 kW on 2 MJ nutrients */
+const NUTRIENTS: Fuel = { item_name: "nutrients", fuel_value_mj: 2 };
+const biochamber: BurnerEnergySource = { energy_usage_kw: 500, fuels: [NUTRIENTS] };
 
 describe("FuelConsumption", () => {
     it("burns 0.25 nutrients/s at 500kW with 2MJ nutrients", () => {
@@ -44,14 +47,24 @@ describe("FuelConsumption", () => {
 });
 
 describe("BurnerEnergySource", () => {
-    it("only burner machine types have an energy source", () => {
-        expect(BurnerEnergySource.forMachineType(MachineType.MACHINE)).toBeUndefined();
-        expect(BurnerEnergySource.forMachineType(MachineType.FURNACE)).toBeUndefined();
+    const burnerOf = (name: string) => modelledBurnerOf(FactorioDataService.findCraftingMachine(name));
+
+    it("is the biochamber's from the data: 500 kW on nutrients of 2 MJ", () => {
+        expect(burnerOf("biochamber")).toEqual(biochamber);
+    });
+
+    it("is modelled for the biochamber only: electric machines have none, nor (a kept quirk) the other burners", () => {
+        for (const name of ["assembling-machine-3", "electric-furnace", "recycler", "stone-furnace", "steel-furnace", "captive-biter-spawner"]) {
+            expect(burnerOf(name), name).toBeUndefined();
+        }
+        expect(modelledBurnerOf(null)).toBeUndefined();
+        const burning = FactorioDataService.getAllCraftingMachines().filter(machine => modelledBurnerOf(machine) !== undefined);
+        expect(burning.map(machine => machine.name)).toEqual(["biochamber"]);
     });
 
     it("defaults to the first fuel and rejects fuels the source does not accept", () => {
         expect(BurnerEnergySource.selectFuel(biochamber)).toBe(NUTRIENTS);
         expect(BurnerEnergySource.selectFuel(biochamber, "nutrients")).toBe(NUTRIENTS);
-        expect(() => BurnerEnergySource.selectFuel(biochamber, "coal")).toThrow(/coal/);
+        expect(() => BurnerEnergySource.selectFuel(biochamber, "coal")).toThrow("Unsupported fuel coal; accepted fuels: nutrients");
     });
 });

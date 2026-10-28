@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import "./factorio-data-file";
 import { FactorioDataService } from "./factorio-data-service";
-import { BurnerEnergySource, NUTRIENTS } from "../entities/machine/fuel/energy-source";
-import { MachineType } from "../entities/machine/machine-type";
 import { NUTRIENTS_FUEL_CATEGORY } from "../entities/machine/machine-rule";
 import { BeltSpeed } from "../entities/belt/belt";
-import { isBulkInserter } from "../entities/inserter/metadata/inserter-spec";
+import { fullHandOf } from "../entities/traits/hand";
+import { modelledBurnerOf } from "../entities/traits/energy";
+
+/** What the engine burned before it read the burner from the data (its burner table): nutrients of 2 MJ, at 500 kW */
+const NUTRIENTS = { item_name: "nutrients", fuel_value_mj: 2 };
+const BIOCHAMBER_KW = 500;
 
 const SI_PREFIX: Record<string, number> = { "": 1, k: 1e3, M: 1e6, G: 1e9, T: 1e12 };
 
@@ -18,15 +21,15 @@ function energy(text: string | undefined, unit: "W" | "J"): number {
 }
 
 /**
- * The game data's fields the engine does not read yet hold what the engine's constants say today: when the engine reads
- * them in their place, nothing moves
+ * The game data's fields hold what the engine's constants said before it read them in their place (the burner table, the
+ * belt speed switch, the full-hand rule by name), so that reading them moved nothing
  */
 describe("the game data and the engine's constants", () => {
     it("gives the biochamber the burner of the biochamber rule: 500 kW on nutrients", () => {
         const biochamber = FactorioDataService.findCraftingMachine("biochamber")!;
-        const source = BurnerEnergySource.forMachineType(MachineType.BIOCHAMBER)!;
-        expect(energy(biochamber.energy_usage, "W") / 1000).toBe(source.energy_usage_kw);
-        expect(source.energy_usage_kw).toBe(500);
+        const source = modelledBurnerOf(biochamber)!;
+        expect(energy(biochamber.energy_usage, "W") / 1000).toBe(BIOCHAMBER_KW);
+        expect(source.energy_usage_kw).toBe(BIOCHAMBER_KW);
         expect(biochamber.energy_source.type).toBe("burner");
         expect(biochamber.energy_source.type === "burner" && biochamber.energy_source.fuel_categories).toEqual([NUTRIENTS_FUEL_CATEGORY]);
         expect(source.fuels).toEqual([NUTRIENTS]);
@@ -49,9 +52,9 @@ describe("the game data and the engine's constants", () => {
         expect(FactorioDataService.findTransportBeltOrThrow(name).speed * 480).toBe(speed);
     });
 
-    // The engine's full-hand rule follows `bulk` today (isBulkInserter: a bulk inserter waits for a full hand at a
-    // machine that places its results itself), not `wait_for_full_hand`, which the bulk inserter does not set (decision
-    // 9e is open); the cases below tie the data's `bulk` to that rule and record the data's full-hand fields beside it.
+    // The engine's full-hand rule follows `bulk` today (the Hand trait's fullHandOf: a bulk inserter waits for a full hand
+    // at a machine that places its results itself), not `wait_for_full_hand`, which the bulk inserter does not set
+    // (decision 9e is open); the cases below tie the data's `bulk` to that rule and record the data's full-hand fields beside it.
     it("gives the stack inserter a full hand to wait for, matched to belt stacks of up to 4, and the bulk inserter a bulk hand only", () => {
         const stack = FactorioDataService.findInserterOrThrow("stack-inserter");
         expect(stack.wait_for_full_hand).toBe(true);
@@ -61,8 +64,8 @@ describe("the game data and the engine's constants", () => {
         const bulk = FactorioDataService.findInserterOrThrow("bulk-inserter");
         expect(bulk.bulk).toBe(true);
         expect(bulk.wait_for_full_hand ?? false).toBe(false);
-        expect(isBulkInserter(stack.name)).toBe(true);
-        expect(isBulkInserter(bulk.name)).toBe(true);
+        expect(fullHandOf(stack.name).at_placing_source).toBe(true);
+        expect(fullHandOf(bulk.name).at_placing_source).toBe(true);
     });
 
     it("makes no other inserter a bulk one", () => {
@@ -70,7 +73,12 @@ describe("the game data and the engine's constants", () => {
         expect(others.map(inserter => inserter.name).sort()).toEqual(["burner-inserter", "fast-inserter", "inserter", "long-handed-inserter"]);
         for (const inserter of others) {
             expect(inserter.bulk ?? false, inserter.name).toBe(false);
-            expect(isBulkInserter(inserter.name), inserter.name).toBe(false);
+            expect(fullHandOf(inserter.name).at_placing_source, inserter.name).toBe(false);
         }
+    });
+
+    it("gives only the burner inserter an energy source that burns fuel, which the engine refuses", () => {
+        const burners = FactorioDataService.getAllInserters().filter(inserter => inserter.energy_source.type === "burner");
+        expect(burners.map(inserter => inserter.name)).toEqual(["burner-inserter"]);
     });
 });

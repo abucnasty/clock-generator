@@ -1,16 +1,10 @@
 import { FactorioDataService } from "../data/factorio-data-service";
-import { BurnerEnergySource } from "../entities";
-import { machineRuleOf } from "./machine-prototype";
+import { machineFuelOf } from "./machine-prototype";
 import { effectiveHandSize } from "../entities/inserter/inserter";
-import { configuredHandSize } from "../entities/inserter/metadata/inserter-spec";
+import { beltPickupCalibrationOf, configuredHandSize } from "../entities/inserter/metadata/inserter-spec";
 import type { Logger } from "../common/logger";
 import { chestAcceptsItem, filtersExclude } from "./inserter-coverage-validator";
-import { isLegendaryStackInserter } from "./inserter-scope";
 import { Config, InserterConfig } from "./schema";
-
-/** The hand and the belt stack every belt pickup was measured with in the game (docs/belt-pickup/experiments.md) */
-const CALIBRATED_HAND_SIZE = 16;
-const CALIBRATED_BELT_STACK_SIZE = 4;
 
 /**
  * A belt pickup outside what belt pickup timing was calibrated on: an item an inserter takes off a belt in stacks other
@@ -34,9 +28,8 @@ function sinkTakes(config: Config, inserter: InserterConfig, item: string): bool
     if (sink.type === "machine") {
         const machine = config.machines.find(it => it.id === sink.id);
         if (machine === undefined) return false;
-        const burner = BurnerEnergySource.forMachineType(machineRuleOf(machine));
         return FactorioDataService.findRecipeOrThrow(machine.recipe).ingredients.some(it => it.name === item)
-            || (burner !== undefined && BurnerEnergySource.selectFuel(burner, machine.fuel).item_name === item);
+            || machineFuelOf(machine) === item;
     }
     if (sink.type === "chest") {
         const chest = config.chests?.find(it => it.id === sink.id);
@@ -49,16 +42,18 @@ function sinkTakes(config: Config, inserter: InserterConfig, item: string): bool
 function uncalibratedPickupsOf(config: Config, inserter: InserterConfig, inserter_id: number): UncalibratedBeltPickup[] {
     const source = inserter.source;
     const belt = source.type === "belt" ? config.belts.find(it => it.id === source.id) : undefined;
-    if (belt === undefined || !isLegendaryStackInserter(inserter)) return [];
+    // the hand and the belt stack the calibration row was measured with (inserter-spec.ts); a kind outside it is refused
+    const calibration = beltPickupCalibrationOf(inserter);
+    if (belt === undefined || calibration === null) return [];
     const hand = configuredHandSize(inserter);
     const items = [...new Set(belt.lanes.map(lane => lane.ingredient))]
         .filter(item => !filtersExclude(inserter, item) && sinkTakes(config, inserter, item));
     return items.flatMap(item => {
         const lane_stack_sizes = [...new Set(belt.lanes.filter(lane => lane.ingredient === item).map(lane => lane.stack_size))]
-            .filter(size => size !== CALIBRATED_BELT_STACK_SIZE).sort((a, b) => a - b);
+            .filter(size => size !== calibration.belt_stack_size).sort((a, b) => a - b);
         // the simulator's own pickup hand: the item's stack size cuts it, the belt stack does not
         const item_hand = effectiveHandSize(hand, item);
-        const hand_size = item_hand === CALIBRATED_HAND_SIZE ? null : item_hand;
+        const hand_size = item_hand === calibration.hand_size ? null : item_hand;
         if (lane_stack_sizes.length === 0 && hand_size === null) return [];
         return [{ inserter_id, belt_id: belt.id, item, lane_stack_sizes, hand_size,
             item_stack_size: hand_size !== null && hand_size < hand ? hand_size : null }];

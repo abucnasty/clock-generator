@@ -1,11 +1,8 @@
 import { BeltConfig } from "../../config/schema";
 import { FactorioDataService } from "../../data";
-import { laneItemsPerSecond, lanesOf, laneStackFor } from "../belt/belt";
+import { beltSpeedOf, laneItemsPerSecond, lanesOf, laneStackFor } from "../belt/belt";
 import { EntityId } from "../entity-id";
 import { Ratio, ratioOf } from "./ratio";
-
-/** The engine's belt speed (items a second on both lanes) of a speed in tiles a tick: 60 ticks a second, 8 items a tile */
-const BELT_SPEED_PER_TILE_A_TICK = 480;
 
 /** One lane of a belt, a node of its own, keyed "belt:B/lane:L" */
 export interface LaneTrait {
@@ -22,7 +19,7 @@ export interface LaneTrait {
     readonly belt_prototype: string;
     /** The belt prototype's `speed` in the game data, in tiles a tick */
     readonly tiles_per_tick: number;
-    /** The engine's belt speed: items a second on both lanes (turbo 60) */
+    /** The engine's belt speed: items a second on both lanes (turbo 60), the prototype's speed x 480 (belt.ts beltSpeedOf) */
     readonly belt_speed: number;
     /** Items a second the lane carries: half the belt's speed times the lane's stack (turbo, stack 4: 120) */
     readonly items_per_second_ceiling: Ratio;
@@ -34,11 +31,6 @@ export interface LaneTrait {
 
 export function laneKey(belt_id: number, lane: number): string {
     return `${EntityId.forBelt(belt_id).id}/lane:${lane}`;
-}
-
-/** The engine's speed of a belt prototype, from its speed in the game data */
-export function beltSpeedOf(prototype: string): number {
-    return FactorioDataService.findTransportBeltOrThrow(prototype).speed * BELT_SPEED_PER_TILE_A_TICK;
 }
 
 /** Both lanes of a belt of the config, the second side of a belt that lists one included */

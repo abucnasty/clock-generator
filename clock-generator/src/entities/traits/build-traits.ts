@@ -1,4 +1,4 @@
-import { machinePlacesResults, machineRuleOf } from "../../config/machine-prototype";
+import { machinePlacesResults } from "../../config/machine-prototype";
 import { BeltConfig, ChestConfig, Config, InserterConfig, MachineConfiguration, MiningDrillConfig } from "../../config/schema";
 import { FactorioDataService } from "../../data";
 import { BeltSpeed, Lane, lanesOf } from "../belt/belt";
@@ -11,7 +11,6 @@ import { EntityType } from "../entity-type";
 import { carriedItems, InserterEndView, inserterEndItems, inserterHands, inserterKindOf } from "../inserter/inserter";
 import { configuredHandSize } from "../inserter/metadata/inserter-spec";
 import { machineCraftingRate, machineInputOf, mainProductOf } from "../machine/machine";
-import { MachineType } from "../machine/machine-type";
 import { RecipeMetadata } from "../machine/recipe";
 import { OverloadMultiplier } from "../machine/traits/overload-multiplier";
 import { drillEnergy, EnergyTrait, machineEnergy } from "./energy";
@@ -95,8 +94,8 @@ function machineTraitsOf(config: MachineConfiguration): MachineTraits {
     const crafting_rate = machineCraftingRate(recipe, config.crafting_speed);
     const main = mainProductOf(recipe, crafting_rate, config.productivity);
     const recipe_selection = recipeSelectionOf(prototype?.type ?? null);
-    // only the biochamber rule burns fuel today (machine-rule.ts): a kept quirk, see energy.fuel_modelled
-    const energy = machineEnergy(prototype, config, recipe.energy_required, machineRuleOf(config) === MachineType.BIOCHAMBER);
+    // only a burner on nutrients burns fuel today (machine-rule.ts fuelModelled): a kept quirk, see energy.fuel_modelled
+    const energy = machineEnergy(prototype, config, recipe.energy_required);
     const outputs = recipe.outputs.map(output => output.name);
     const yield_trait = machineYield(recipe, crafting_rate, config.productivity);
     return {
@@ -191,9 +190,18 @@ function inserterTraitsOf(
 /**
  * Every entity's traits from the config and the game data, each built once, in the order the registry builds the
  * entities (simulation-context.ts): belts, machines, chests, inserters, drills. Each figure comes from the function the
- * entity computes it with; where the entity follows a name or a kind today (the output block rule, the burner table, the
- * belt speed, the full-hand rule, the belt pickup calibration), the trait follows the prototype's class and data
- * fields, and the equivalence test holds the two equal on every sample.
+ * entity computes it with. Where a figure follows the prototype's kind (the output block rule, the fuel, the belt speed,
+ * the full-hand rule, the belt pickup calibration), the entity reads it from the trait's own function, by the
+ * prototype's class and data fields (machine.ts, belt.ts, inserter.ts, and the inserter's pickup transition and belt
+ * pickup logic), and the equivalence test holds both to the figures the name and kind branches gave before they were
+ * removed.
+ *
+ * The registry (simulation-context.ts) does not call this: it is built on every trial, from a config made for that
+ * trial, and each entity builds the few traits it reads itself, by the same functions (a crafting machine's burner is
+ * worked out once per prototype, energy.ts). This builds them all for the planner's facts and the tests. This departs
+ * from P4 2.1 rule 2 (a trait built once per generation, shared by every trial): later steps must not assume one shared
+ * trait set per generation. The cost of the rebuild, measured in R4, is about 3 µs a registry (892 registries a
+ * generation on the pink science sample); with no config-keyed cache there is nothing to go stale.
  *
  * Two traits of the catalogue (P4 v1 section 2) are left to the planner facts (R20): Order, whose `decider_build_order`
  * is the clock's, not the config's, and Wakes, the rule of which lists a node wakes (R12), a constant by node kind that

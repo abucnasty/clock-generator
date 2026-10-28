@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { InserterAnimationOverrideConfig } from "../../config/schema";
 import { OpenRange, Duration } from "../../data-types";
-import { Belt, EntityId, Inserter, InserterMetadata, InserterStackSize, Machine, MachineType, RecipeMetadata } from "../../entities";
+import { Belt, EntityId, Inserter, InserterMetadata, InserterStackSize, Machine, RecipeMetadata } from "../../entities";
 import { InserterAnimation } from "../../entities/inserter/inserter-animation";
 import { BeltState, InserterState, MachineState } from "../../state";
 import { factorioInserterState, FactorioInserterState } from "../../state/factorio-entity-state";
@@ -16,7 +16,6 @@ function run(is_game_clock: boolean) {
         crafting_speed: 1,
         productivity: 0,
         recipe: RecipeMetadata.fromRecipeName("iron-gear-wheel"),
-        type: MachineType.MACHINE,
     });
     const overrides: InserterAnimationOverrideConfig = {};
     const metadata = InserterMetadata.create("belt", "machine", InserterStackSize.SIZE_16, ["iron-plate"], overrides);
@@ -86,7 +85,6 @@ function twoTakers(held: number, in_hand: number = 0) {
         crafting_speed: 1,
         productivity: 0,
         recipe: RecipeMetadata.fromRecipeName("iron-gear-wheel"),
-        type: MachineType.MACHINE,
     });
     const source_state = MachineState.forMachine(machine);
     source_state.inventoryState.setQuantity("iron-gear-wheel", held);

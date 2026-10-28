@@ -1,5 +1,4 @@
-/** The game's class of the prototypes that pick their recipe from what they are brought (FurnacePrototype, the recycler too) */
-const FURNACE_CLASS = "furnace";
+import { FURNACE_CLASS } from "../machine/machine-rule";
 
 /**
  * How a machine comes to its recipe, by its prototype's class: "by-input" for a furnace (it switches recipe when brought

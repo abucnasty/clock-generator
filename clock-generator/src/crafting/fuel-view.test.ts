@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import type { Config } from "../config/schema";
-import { Machine, MachineType, RecipeMetadata } from "../entities";
+import { Machine, RecipeMetadata } from "../entities";
 import { MachineState } from "../state";
 import { fewestTicksToBurn, FuelLevelRecorder, fuelPlan, type FuelPlan } from "./fuel-view";
 import { generateClockForConfig, type BlueprintGenerationResult, type FuelConsumptionView } from "./generate-blueprint";
@@ -147,7 +147,7 @@ describe("FuelLevelRecorder", () => {
             crafting_speed: 2,
             productivity: 0,
             recipe: RecipeMetadata.fromRecipeName("nutrients-from-yumako-mash"),
-            type: MachineType.BIOCHAMBER,
+            prototype: "biochamber",
         }));
         state.fuelInventory.addQuantity("nutrients", nutrients);
         return state;
@@ -165,7 +165,6 @@ describe("FuelLevelRecorder", () => {
             crafting_speed: 1,
             productivity: 0,
             recipe: RecipeMetadata.fromRecipeName("iron-gear-wheel"),
-            type: "machine",
         }));
         expect(new FuelLevelRecorder([assembler]).series()).toEqual([]);
     });

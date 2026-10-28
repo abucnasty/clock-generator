@@ -1,8 +1,9 @@
 import { FactorioDataService } from "../../data";
+import { CraftingMachinePrototype } from "../../data/factorio-data-types";
 import * as Game from "../../data/generated/prototype-types";
-import { burnerFuelOf } from "../machine/machine";
 import { BurnerEnergySource } from "../machine/fuel/energy-source";
 import { FuelSlot } from "../machine/fuel/fuel-slot";
+import { fuelModelled } from "../machine/machine-rule";
 import { FuelConsumption } from "../machine/traits/fuel-consumption";
 
 const SI_PREFIX: Readonly<Record<string, number>> = { "": 1, k: 1e3, M: 1e6, G: 1e9, T: 1e12 };
@@ -45,23 +46,31 @@ export interface EnergyTrait {
     readonly energy_bonus: number;
     readonly burner: BurnerTrait | null;
     /**
-     * Whether the simulator models this burner's fuel today: only a machine under the biochamber rule (a burner on the
-     * nutrients fuel category, machine-rule.ts) burns fuel; the stone and steel furnaces, the captive biter spawner and
-     * the burner mining drill run without any (a kept quirk)
+     * Whether the simulator models this burner's fuel today: only a burner on the nutrients fuel category that is no
+     * furnace (machine-rule.ts fuelModelled, the biochamber) burns fuel; the stone and steel furnaces, the captive biter
+     * spawner and the burner mining drill run without any (a kept quirk)
      */
     readonly fuel_modelled: boolean;
     /** What it burns, where its fuel is modelled */
     readonly fuel: BurnedFuel | null;
 }
 
+/** A burner of the game data has one answer: the registry builds its machines on every trial, so it is worked out once */
+const burners = new WeakMap<Game.BurnerEnergySource, BurnerTrait>();
+
 /** A prototype's burner, with the items of the data that burn in it */
 function burnerOf(source: Game.BurnerEnergySource): BurnerTrait {
-    // the spec's defaults: a burner burns chemical fuel at full effectivity
-    const fuel_categories = source.fuel_categories ?? ["chemical"];
-    const fuels = Object.entries(FactorioDataService.getAllItemPrototypeFields())
-        .filter(([, fields]) => fields.fuel_value !== undefined && (fields.fuel_categories ?? []).some(category => fuel_categories.includes(category)))
-        .map(([item, fields]) => ({ item, fuel_value_mj: energyValue(fields.fuel_value!, "J") / 1e6 }));
-    return { fuel_categories, effectivity: source.effectivity ?? 1, fuel_inventory_size: source.fuel_inventory_size, fuels };
+    let burner = burners.get(source);
+    if (burner === undefined) {
+        // the spec's defaults: a burner burns chemical fuel at full effectivity
+        const fuel_categories = source.fuel_categories ?? ["chemical"];
+        const fuels = Object.entries(FactorioDataService.getAllItemPrototypeFields())
+            .filter(([, fields]) => fields.fuel_value !== undefined && (fields.fuel_categories ?? []).some(category => fuel_categories.includes(category)))
+            .map(([item, fields]) => ({ item, fuel_value_mj: energyValue(fields.fuel_value!, "J") / 1e6 }));
+        burner = { fuel_categories, effectivity: source.effectivity ?? 1, fuel_inventory_size: source.fuel_inventory_size, fuels };
+        burners.set(source, burner);
+    }
+    return burner;
 }
 
 /** A burner energy source from the data: the prototype's energy usage, burning the items of its fuel categories */
@@ -92,21 +101,52 @@ function energyOf(prototype: { energy_source: Game.EnergySource; energy_usage: s
     };
 }
 
+/** What a burner machine burns of its fuel (the one named, else the source's first) over a craft and a second, and its fuel slot */
+export function burnerFuelOf(
+    source: BurnerEnergySource,
+    fuel_name: string | undefined,
+    crafting_speed: number,
+    energy_required: number,
+    energy_consumption_bonus: number | undefined,
+): [FuelConsumption, FuelSlot] {
+    const fuel = BurnerEnergySource.selectFuel(source, fuel_name);
+    const consumption = FuelConsumption.fromCraftingSpeed(
+        source,
+        fuel,
+        crafting_speed,
+        energy_required,
+        energy_consumption_bonus ?? 0,
+    );
+    return [consumption, FuelSlot.create(fuel, consumption)];
+}
+
 /**
- * A machine's energy, and where its fuel is modelled (`fuel_modelled`, from today's rule) what it burns of the fuel the
- * config names, else of its first: the source from the data, the burn by the functions the machine uses (machine.ts)
+ * The burner a machine of the prototype burns its fuel from, where its fuel is modelled (`fuel_modelled`): the
+ * prototype's energy usage and the items of its burner's fuel categories, from the data; undefined for any other machine
+ * and for one whose prototype the data does not hold
+ */
+export function modelledBurnerOf(prototype: CraftingMachinePrototype | null): BurnerEnergySource | undefined {
+    if (prototype === null || !fuelModelled(prototype) || prototype.energy_source.type !== "burner") {
+        return undefined;
+    }
+    return burnerEnergySourceOf(energyValue(prototype.energy_usage, "W") / 1000, burnerOf(prototype.energy_source));
+}
+
+/**
+ * A machine's energy, and where its fuel is modelled (`fuel_modelled`, machine-rule.ts) what it burns of the fuel the
+ * config names, else of its first: the source from the data, the burn by fuel-consumption.ts and fuel-slot.ts. The
+ * machine (machine.ts) reads its fuel from here.
  */
 export function machineEnergy(
-    prototype: { energy_source: Game.EnergySource; energy_usage: string } | null,
+    prototype: CraftingMachinePrototype | null,
     config: { fuel?: string; energy_consumption_bonus?: number; crafting_speed: number },
     energy_required: number,
-    fuel_modelled: boolean,
 ): EnergyTrait {
     const energy = energyOf(prototype, config.energy_consumption_bonus ?? 0);
-    if (!fuel_modelled || energy.burner === null || energy.energy_usage_kw === null) {
+    const source = modelledBurnerOf(prototype);
+    if (source === undefined) {
         return { ...energy, fuel_modelled: false, fuel: null };
     }
-    const source = burnerEnergySourceOf(energy.energy_usage_kw, energy.burner);
     const [consumption, slot] = burnerFuelOf(source, config.fuel, config.crafting_speed, energy_required, config.energy_consumption_bonus);
     return { ...energy, fuel_modelled: true, fuel: burnedFuelOf(consumption, slot) };
 }

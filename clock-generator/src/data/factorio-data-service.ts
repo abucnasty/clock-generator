@@ -221,11 +221,17 @@ export class FactorioDataService {
 
     /** The transport belt prototype of that name; an unknown name is refused (own keys only) */
     public static findTransportBeltOrThrow(name: string): TransportBeltPrototype {
-        const belts = this.getData().transport_belt;
-        if (!Object.prototype.hasOwnProperty.call(belts, name)) {
+        const belt = this.findTransportBelt(name);
+        if (belt === null) {
             throw new Error(`${name} is not a transport belt of the game data`);
         }
-        return belts[name];
+        return belt;
+    }
+
+    /** The transport belt prototype of that name; null when the data has none (own keys only) */
+    public static findTransportBelt(name: string): TransportBeltPrototype | null {
+        const belts = this.getData().transport_belt;
+        return Object.prototype.hasOwnProperty.call(belts, name) ? belts[name] : null;
     }
 
     /** The quality of that name; an unknown name is refused */

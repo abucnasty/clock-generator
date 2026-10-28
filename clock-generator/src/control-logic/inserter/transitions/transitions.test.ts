@@ -2,7 +2,7 @@ import { describe, test, expect, vi } from "vitest"
 import { mock } from 'vitest-mock-extended';
 import { IdleModeTransitionEvaluator } from "./idle-mode-transition-evaluator"
 import { BeltState, ChestState, EntityState, InserterState, MachineState, SupplyGate } from "../../../state"
-import { EntityId, Inserter, InserterMetadata, InserterStackSize, InserterTarget, Machine, MachineMetadata, MachineType, RecipeMetadata } from "../../../entities"
+import { EntityId, Inserter, InserterMetadata, InserterStackSize, InserterTarget, Machine, MachineSpec, RecipeMetadata } from "../../../entities"
 import { ItemName } from "../../../data/factorio-data-types"
 import { InserterAnimation } from "../../../entities/inserter/inserter-animation"
 import { InserterAnimationOverrideConfig } from "../../../config/schema"
@@ -30,14 +30,13 @@ describe("transitions (belt to machine)", () => {
         sinkState: EntityState,
     }
 
-    const createMachine = (recipeName: string, metadata: Partial<MachineMetadata> = {}): Machine => {
+    const createMachine = (recipeName: string, metadata: Partial<MachineSpec> = {}): Machine => {
         const id = -1;
         return Machine.createMachine(id, {
             crafting_speed: 1,
             productivity: 0,
             recipe: RecipeMetadata.fromRecipeName(recipeName),
             ...metadata,
-            type: metadata.type ?? MachineType.MACHINE,
         })
     }
 

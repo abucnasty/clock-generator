@@ -1,5 +1,5 @@
 import { BeltConfig } from "../../config";
-import { ItemName } from "../../data";
+import { FactorioDataService, ItemName } from "../../data";
 import assert from "../../common/assert";
 import { BeltStackSize, isValidBeltStackSize } from "./belt-stack-size";
 import { EntityId } from "../entity-id";
@@ -23,6 +23,11 @@ export interface Belt extends Entity{
     readonly prototype?: string
 }
 
+/**
+ * The engine's belt speeds (items a second on both lanes) of the game's four belts, for the code that compares a speed
+ * with one of them or counts in the transport belt's (lane speeds, tiles a second). A belt's own speed comes from its
+ * prototype's `speed` in the game data (beltSpeedOf).
+ */
 export const BeltSpeed = {
     TRANSPORT_BELT: 15,
     FAST_TRANSPORT_BELT: 30,
@@ -31,6 +36,19 @@ export const BeltSpeed = {
 } as const;
 
 export type BeltSpeed = typeof BeltSpeed[keyof typeof BeltSpeed];
+
+/** The engine's belt speed (items a second on both lanes) of a speed in tiles a tick: 60 ticks a second, 8 items a tile */
+const BELT_SPEED_PER_TILE_A_TICK = 480;
+
+/** The engine's belt speed of a speed in tiles a tick, as the game data gives a belt prototype's (turbo: 0.125, 60) */
+function beltSpeedOfTilesPerTick(tiles_per_tick: number): BeltSpeed {
+    return tiles_per_tick * BELT_SPEED_PER_TILE_A_TICK as BeltSpeed;
+}
+
+/** The engine's speed of a belt prototype, from its `speed` in the game data; an unknown prototype is refused */
+export function beltSpeedOf(prototype: string): BeltSpeed {
+    return beltSpeedOfTilesPerTick(FactorioDataService.findTransportBeltOrThrow(prototype).speed);
+}
 
 
 function tilesPerSecond(belt_speed: BeltSpeed): Fraction {
@@ -207,19 +225,11 @@ export class BeltBuilder {
 function fromConfig(config: BeltConfig): Belt {
     const builder = new BeltBuilder().setId(config.id).setStrategy(config.strategy ?? BeltStrategy.NORMAL).setPrototype(config.type)
 
-    switch(config.type) {
-        case "express-transport-belt":
-            builder.setBeltSpeed(BeltSpeed.EXPRESS_TRANSPORT_BELT);
-            break;
-        case "fast-transport-belt":
-            builder.setBeltSpeed(BeltSpeed.FAST_TRANSPORT_BELT);
-            break;
-        case "turbo-transport-belt":
-            builder.setBeltSpeed(BeltSpeed.TURBO_TRANSPORT_BELT);
-            break;
-        case "transport-belt":
-            builder.setBeltSpeed(BeltSpeed.TRANSPORT_BELT);
-            break;
+    // its speed from its prototype in the game data (the Lane trait's, entities/traits/lane.ts); a belt the data does
+    // not hold has none, and is refused for that when it is built
+    const prototype = FactorioDataService.findTransportBelt(config.type);
+    if (prototype !== null) {
+        builder.setBeltSpeed(beltSpeedOfTilesPerTick(prototype.speed));
     }
 
     for (const lane of lanesOf(config)) {
