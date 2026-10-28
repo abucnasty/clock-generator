@@ -8,7 +8,6 @@ import { MiningProductivity } from "./mining-productivity";
 import { fraction } from "../../data-types/fraction";
 import { Percentage } from "../../data-types";
 import { ProductionRate } from "../machine";
-import { burnerEnergyPerTick, drillEnergy } from "../traits/energy";
 
 // Re-export for backwards compatibility
 export { MiningDrillType } from "../../common/entity-types";
@@ -23,11 +22,6 @@ interface MiningDrillOutput {
     production_rate: ProductionRate;
     crafting_rate: CraftingRate;
     sink_id: EntityId
-    /**
-     * The fuel energy a burner drill draws in a tick of mining, in MJ (its prototype's usage over its effectivity); null
-     * for a drill on any other energy source
-     */
-    burner_energy_per_tick: number | null
 }
 
 export interface MiningDrill extends Entity, MiningProductivity, MiningDrillOutput {
@@ -41,8 +35,7 @@ function create(args: {
     resource: Resource,
     crafting_rate: CraftingRate,
     production_rate: ProductionRate,
-    sink_id: EntityId,
-    burner_energy_per_tick: number | null
+    sink_id: EntityId
 }): MiningDrill {
     return {
         productivity: args.productivity,
@@ -54,8 +47,7 @@ function create(args: {
         item: FactorioDataService.findItemOrThrow(args.resource.minable.result),
         crafting_rate: args.crafting_rate,
         production_rate: args.production_rate,
-        sink_id: args.sink_id,
-        burner_energy_per_tick: args.burner_energy_per_tick
+        sink_id: args.sink_id
     }
 }
 
@@ -107,8 +99,7 @@ function createFromConfig(config: MiningDrillConfig): MiningDrill {
         resource: resource,
         crafting_rate: crafting_rate,
         production_rate: production_rate,
-        sink_id: config.target.type === "chest" ? EntityId.forChest(config.target.id) : EntityId.forMachine(config.target.id),
-        burner_energy_per_tick: burnerEnergyPerTick(drillEnergy(spec))
+        sink_id: config.target.type === "chest" ? EntityId.forChest(config.target.id) : EntityId.forMachine(config.target.id)
     })
 }
 

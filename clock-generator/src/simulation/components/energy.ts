@@ -1,4 +1,6 @@
+import { FactorioDataService } from "../../data";
 import type { MiningDrill } from "../../entities/drill/mining-drill";
+import { burnerEnergyPerTick, drillEnergy } from "../../entities/traits/energy";
 import type { Machine } from "../../entities/machine/machine";
 import type { WritableInventoryState } from "../../state/inventory-state";
 import { BurnerEnergy } from "./burner-energy";
@@ -33,7 +35,8 @@ function of(machine: Machine, fuel_inventory: WritableInventoryState): Energy {
 
 /** The energy of a drill: a burner drill holds a buffer and has its fuel supplied (SuppliedBurnerEnergy), any other none */
 function ofDrill(drill: MiningDrill): Energy {
-    return drill.burner_energy_per_tick === null ? new ElectricEnergy() : new SuppliedBurnerEnergy(drill.burner_energy_per_tick);
+    const per_tick = burnerEnergyPerTick(drillEnergy(FactorioDataService.getMiningDrillSpec(drill.meta.type)));
+    return per_tick === null ? new ElectricEnergy() : new SuppliedBurnerEnergy(per_tick);
 }
 
 export const Energy = {

@@ -197,11 +197,12 @@ describe("SuppliedBurnerEnergy (a burner drill: the buffer, with the fuel assume
         const drillOf = (type: string) => MiningDrill.fromConfig(ConfigSchema.parse({ ...idleBuild,
             drills: { configs: [{ id: 1, type, mined_item_name: "iron-ore", speed_bonus: 0, productivity: 0, target: { type: "machine", id: 1 } }] } }).drills!.configs[0]);
         const burner = drillOf("burner-mining-drill");
-        expect(burner.burner_energy_per_tick).toBeCloseTo(0.0025, 12);
-        expect(Energy.ofDrill(burner)).toBeInstanceOf(SuppliedBurnerEnergy);
-        const electric = drillOf("electric-mining-drill");
-        expect(electric.burner_energy_per_tick).toBeNull();
-        expect(Energy.ofDrill(electric)).toBeInstanceOf(ElectricEnergy);
+        const energy = Energy.ofDrill(burner);
+        expect(energy).toBeInstanceOf(SuppliedBurnerEnergy);
+        // the first tick of work fills a buffer of 16/15 of the 2,500 J a tick
+        energy.spend(true, crafting());
+        expect((energy as SuppliedBurnerEnergy).energy_buffer_mj).toBeCloseTo(0.0025 * ENERGY_BUFFER_TICKS, 12);
+        expect(Energy.ofDrill(drillOf("electric-mining-drill"))).toBeInstanceOf(ElectricEnergy);
     });
 
     it("holds nothing at first: the first tick of work moves no bar and fills the buffer, the next works whole", () => {
