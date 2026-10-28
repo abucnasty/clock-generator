@@ -60,6 +60,12 @@ export function yieldOf(result: Ingredient): { amount: number; chance: number; e
     return { amount: result.amount, chance: chanceOf(extras), extra: extras.extra_count_fraction ?? 0 };
 }
 
+/** Whether what a craft yields of a result varies: it comes by chance, or one more comes at its extra count fraction */
+export function isStochastic(result: Ingredient): boolean {
+    const yield_ = yieldOf(result);
+    return yield_.chance < 1 || yield_.extra > 0;
+}
+
 /**
  * The variance of what one craft yields of a result, before productivity: 0 for a result that always comes in the same
  * amount. A craft yields the amount, and one more at `extra_count_fraction`, all with the result's chance, each roll on

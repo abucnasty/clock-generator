@@ -222,11 +222,34 @@ function fromConfig(config: BeltConfig): Belt {
             break;
     }
 
-    for (const lane of config.lanes) {
-        assert(isValidBeltStackSize(lane.stack_size), `Invalid stack size: ${lane.stack_size}`);
-        builder.addLane(lane.ingredient, lane.stack_size as BeltStackSize, "consumption_per_second" in lane ? lane.consumption_per_second : undefined);
+    for (const lane of lanesOf(config)) {
+        builder.addLane(lane.ingredient_name, lane.stack_size, lane.consumption_per_second);
     }
     return builder.build();
+}
+
+/** Items a second a lane carries: half the belt's speed times the lane's stack size (turbo, stack 4: 120) */
+export function laneItemsPerSecond(belt_speed: number, stack_size: number): Fraction {
+    return fraction(belt_speed).divide(2).multiply(stack_size);
+}
+
+/**
+ * The stack size of a lane of a belt of the config, 1 or 2: a belt that lists one lane has the second at the same stack
+ * size, for the drops that land on it
+ */
+export function laneStackFor(config: BeltConfig, lane: number): number {
+    return config.lanes[Math.min(lane, config.lanes.length) - 1].stack_size;
+}
+
+/** The lanes of a belt of the config, each with its item, belt stack size and, on an export belt, what is taken off it */
+export function lanesOf(config: BeltConfig): Lane[] {
+    return config.lanes.map(lane => {
+        assert(isValidBeltStackSize(lane.stack_size), `Invalid stack size: ${lane.stack_size}`);
+        const consumption_per_second = "consumption_per_second" in lane ? lane.consumption_per_second : undefined;
+        return consumption_per_second === undefined
+            ? { ingredient_name: lane.ingredient, stack_size: lane.stack_size as BeltStackSize }
+            : { ingredient_name: lane.ingredient, stack_size: lane.stack_size as BeltStackSize, consumption_per_second };
+    });
 }
 
 function createSingleLaneBelt(beltSpeed: BeltSpeed, ingredient: ItemName, stackSize: BeltStackSize): BeltBuilder {

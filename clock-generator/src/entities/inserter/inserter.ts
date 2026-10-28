@@ -100,10 +100,8 @@ export class InserterFactory {
         const sink = config.sink
         assertPickupCaptureSupported(id, source);
 
-        // the inserter is the legendary stack inserter unless the config names another; its hand is the one that all the
-        // research gives its prototype unless the config sets the stack size
-        const prototype = config.prototype ?? InserterType.STACK_INSERTER
-        const quality = config.quality ?? "legendary"
+        // its hand is the one that all the research gives its prototype unless the config sets the stack size
+        const { prototype, quality } = inserterKindOf(config)
         assertSupportedInserterKind(prototype, quality)
         assertInserterInScope(id, config)
         const stack_size = configuredHandSize(config)
@@ -112,56 +110,21 @@ export class InserterFactory {
             throw new Error("Source and sink cannot both be a belt ya silly goose")
         }
 
-        const source_provided_items: Set<ItemName> = new Set()
-        const sink_consumed_items: Set<ItemName> = new Set()
-
         if (source.type === EntityType.BELT) {
             const belt = this.entity_registry.getEntityByIdOrThrow(EntityId.forBelt(source.id));
             assertIsBelt(belt)
             assert(source.pickup_layout !== "bend-right-upstream" || belt.belt_speed === BeltSpeed.TURBO_TRANSPORT_BELT,
                 "Right-bend upstream pickup timing is calibrated for turbo belts only.");
-            belt.lanes.forEach(lane => {
-                source_provided_items.add(lane.ingredient_name)
-            })
         }
 
-        if (source.type === EntityType.MACHINE) {
-            const machine = this.entity_registry.getEntityByIdOrThrow(EntityId.forMachine(source.id))
-            assertIsMachine(machine)
-            machine.outputs.forEach(output => source_provided_items.add(output.item_name))
-        }
-
-        if (source.type === EntityType.CHEST) {
-            const chest = this.entity_registry.getEntityByIdOrThrow(EntityId.forChest(source.id))
-            assertIsChest(chest)
-            chest.getItemFilters().forEach(item => source_provided_items.add(item))
-        }
-
-        if (sink.type === EntityType.BELT) {
-            source_provided_items.forEach(it => sink_consumed_items.add(it))
-        }
-
-        if (sink.type === EntityType.MACHINE) {
-            const machine = this.entity_registry.getEntityByIdOrThrow(EntityId.forMachine(sink.id))
-            assertIsMachine(machine)
-            machine.inputs.forEach((input) => {
-                sink_consumed_items.add(input.ingredient.name)
-            })
-            if (machine.fuel_slot) {
-                sink_consumed_items.add(machine.fuel_slot.fuel.item_name)
-            }
-        }
+        const { source_items: source_provided_items, sink_items: sink_consumed_items } = inserterEndItems(source, sink, this.end_view);
 
         if (sink.type === EntityType.CHEST) {
             const chest = this.entity_registry.getEntityByIdOrThrow(EntityId.forChest(sink.id))
             assertIsChest(chest)
             assert(!Chest.isInfinityChest(chest) || chest.item_filters.length > 0 || chest.remove_unfiltered_items,
                 `Chest ${sink.id}: enable Remove unfiltered items to use an empty infinity chest as an output, or configure a filter.`);
-            source_provided_items.forEach(item => { if (chest.acceptsItem(item)) sink_consumed_items.add(item); })
         }
-
-
-        let filtered_items = new Set(Array.from(sink_consumed_items).filter(it => source_provided_items.has(it)))
 
         if(config.filters && config.filters.length > 0) {
             // a machine takes only its ingredients and fuel; a belt or a chest takes any item the filter names, such as
@@ -188,18 +151,15 @@ export class InserterFactory {
                 if (Chest.isInfinityChest(chest)) config.filters.forEach(item =>
                     assert(chest.acceptsItem(item), `Chest ${sink.id} does not accept ${item}. Enable Remove unfiltered items or configure that item in the chest.`));
             }
-            filtered_items = new Set(config.filters);
         }
 
-        if (source.type === EntityType.BELT && source.near_lane !== undefined) {
-            const belt = this.entity_registry.getEntityByIdOrThrow(EntityId.forBelt(source.id));
-            assertIsBelt(belt);
-            filtered_items = nearestLaneFirst(filtered_items, belt.lanes, source.near_lane);
-        }
+        const filtered_items = carriedItems(source_provided_items, sink_consumed_items, config.filters,
+            source.type === EntityType.BELT && source.near_lane !== undefined
+                ? { lanes: this.end_view.beltLanes(source.id), near_lane: source.near_lane } : undefined);
 
         // Calculate belt drop metadata if sink is a belt
         let beltDropMetadata: BeltDropMetadata | undefined;
-        const hand_sizes = new Map<ItemName, number>();
+        let hand_sizes: Map<ItemName, number>;
         let drop_spot: BeltDropSpot | undefined;
         if (sink.type === EntityType.BELT) {
             const belt = this.entity_registry.getEntityByIdOrThrow(EntityId.forBelt(sink.id));
@@ -208,19 +168,15 @@ export class InserterFactory {
             if (drop_spot !== undefined) {
                 assert(drop_spot.lane <= belt.lanes.length, `Inserter ${id} drops on lane ${drop_spot.lane} of belt ${sink.id}, which has ${belt.lanes.length}`);
             }
-            const selectedLane = this.selectLaneForDrop(belt.lanes, filtered_items);
-            filtered_items.forEach(item_name => {
-                const lane = belt.lanes.find(it => it.ingredient_name === item_name) ?? selectedLane;
-                hand_sizes.set(item_name, effectiveHandSize(stack_size, item_name, lane.stack_size));
-            });
+            const hands = inserterHands(stack_size, filtered_items, belt.lanes);
+            hand_sizes = hands.hand_sizes;
             beltDropMetadata = {
                 belt_speed: belt.belt_speed,
-                belt_stack_size: selectedLane.stack_size as BeltStackSize,
-                inserter_stack_size: hand_sizes.get(selectedLane.ingredient_name)
-                    ?? Math.min(stack_size, ...Array.from(hand_sizes.values()))
+                belt_stack_size: hands.belt_drop!.belt_stack_size,
+                inserter_stack_size: hands.belt_drop!.inserter_stack_size,
             };
         } else {
-            filtered_items.forEach(item_name => hand_sizes.set(item_name, effectiveHandSize(stack_size, item_name)));
+            hand_sizes = inserterHands(stack_size, filtered_items).hand_sizes;
         }
 
         const metadata = InserterMetadata.create(
@@ -267,22 +223,162 @@ export class InserterFactory {
         return inserter;
     }
 
-    /**
-     * Select the lane to use for dropping items.
-     * Prefers the lane matching a filtered item if found,
-     * otherwise returns the lane with the maximum stack_size.
-     */
-    private selectLaneForDrop(lanes: readonly Lane[], filteredItems: Set<ItemName>): Lane {
-        // Try to find a lane matching any of the filtered items
-        for (const lane of lanes) {
-            if (filteredItems.has(lane.ingredient_name)) {
-                return lane;
-            }
-        }
+    /** The ends of an inserter as the entities of the registry give them */
+    private readonly end_view: InserterEndView = {
+        beltLanes: id => {
+            const belt = this.entity_registry.getEntityByIdOrThrow(EntityId.forBelt(id));
+            assertIsBelt(belt);
+            return belt.lanes;
+        },
+        machineOutputs: id => {
+            const machine = this.entity_registry.getEntityByIdOrThrow(EntityId.forMachine(id));
+            assertIsMachine(machine);
+            return machine.outputs.map(output => output.item_name);
+        },
+        machineInputs: id => {
+            const machine = this.entity_registry.getEntityByIdOrThrow(EntityId.forMachine(id));
+            assertIsMachine(machine);
+            const items = Array.from(machine.inputs.values(), input => input.ingredient.name);
+            return machine.fuel_slot ? [...items, machine.fuel_slot.fuel.item_name] : items;
+        },
+        chestGives: id => {
+            const chest = this.entity_registry.getEntityByIdOrThrow(EntityId.forChest(id));
+            assertIsChest(chest);
+            return chest.getItemFilters();
+        },
+        chestAccepts: (id, item) => {
+            const chest = this.entity_registry.getEntityByIdOrThrow(EntityId.forChest(id));
+            assertIsChest(chest);
+            return chest.acceptsItem(item);
+        },
+    };
+}
 
-        // Fallback: return the lane with the maximum stack size
-        return lanes.reduce((maxLane, lane) => 
-            lane.stack_size > maxLane.stack_size ? lane : maxLane
-        );
+/** The prototype and quality of an inserter of the config: the legendary stack inserter unless the config names another */
+export function inserterKindOf(config: Pick<InserterConfig, "prototype" | "quality">): { prototype: InserterType; quality: NonNullable<InserterConfig["quality"]> } {
+    return { prototype: config.prototype ?? InserterType.STACK_INSERTER, quality: config.quality ?? "legendary" };
+}
+
+/**
+ * What an inserter's ends give and take, by the id of each in the config: the factory reads them off the entities of the
+ * registry, the traits (entities/traits) off theirs, and inserterEndItems works out the items from them for both
+ */
+export interface InserterEndView {
+    beltLanes(id: number): readonly Lane[];
+    /** The items a machine makes, its main product first */
+    machineOutputs(id: number): readonly ItemName[];
+    /** The items a machine takes: its ingredients, then the fuel it burns */
+    machineInputs(id: number): readonly ItemName[];
+    chestGives(id: number): readonly ItemName[];
+    chestAccepts(id: number, item: ItemName): boolean;
+}
+
+/**
+ * The items an inserter's source gives (a belt's lanes, a machine's products, a chest's items), and those of them its
+ * sink takes: all of them onto a belt, a machine's ingredients and fuel (whatever the source gives), what a chest accepts
+ */
+export function inserterEndItems(
+    source: Pick<InserterConfig["source"], "type" | "id">,
+    sink: Pick<InserterConfig["sink"], "type" | "id">,
+    view: InserterEndView,
+): { source_items: Set<ItemName>; sink_items: Set<ItemName> } {
+    const source_items: Set<ItemName> = new Set()
+    const sink_items: Set<ItemName> = new Set()
+
+    if (source.type === EntityType.BELT) {
+        view.beltLanes(source.id).forEach(lane => source_items.add(lane.ingredient_name))
     }
+    if (source.type === EntityType.MACHINE) {
+        view.machineOutputs(source.id).forEach(item => source_items.add(item))
+    }
+    if (source.type === EntityType.CHEST) {
+        view.chestGives(source.id).forEach(item => source_items.add(item))
+    }
+
+    if (sink.type === EntityType.BELT) {
+        source_items.forEach(it => sink_items.add(it))
+    }
+    if (sink.type === EntityType.MACHINE) {
+        view.machineInputs(sink.id).forEach(item => sink_items.add(item))
+    }
+    if (sink.type === EntityType.CHEST) {
+        source_items.forEach(item => { if (view.chestAccepts(sink.id, item)) sink_items.add(item); })
+    }
+    return { source_items, sink_items };
+}
+
+/**
+ * The items an inserter carries: those its sink takes of what its source gives, or its filters where it has any, in
+ * the order it takes them off a belt when it names the lane nearest to it (nearestLaneFirst)
+ */
+export function carriedItems(
+    source_items: ReadonlySet<ItemName>,
+    sink_items: ReadonlySet<ItemName>,
+    filters: readonly ItemName[] | undefined,
+    near?: { lanes: readonly Lane[]; near_lane: 1 | 2 },
+): Set<ItemName> {
+    let filtered_items = new Set(Array.from(sink_items).filter(it => source_items.has(it)))
+    if (filters && filters.length > 0) {
+        filtered_items = new Set(filters);
+    }
+    if (near !== undefined) {
+        filtered_items = nearestLaneFirst(filtered_items, near.lanes, near.near_lane);
+    }
+    return filtered_items;
+}
+
+/**
+ * An inserter's hand for each item it carries (effectiveHandSize), and when it drops on a belt the lane its drop is
+ * timed on with the hand it drops there, and the lane each item's hand is rounded to: the lane that carries the item,
+ * else that one
+ */
+export function inserterHands(
+    stack_size: number,
+    filtered_items: ReadonlySet<ItemName>,
+    sink_lanes?: readonly Lane[],
+): {
+    hand_sizes: Map<ItemName, number>;
+    belt_drop?: { lane: Lane; belt_stack_size: BeltStackSize; inserter_stack_size: number; lane_of: Map<ItemName, Lane> };
+} {
+    const hand_sizes = new Map<ItemName, number>();
+    if (sink_lanes === undefined) {
+        filtered_items.forEach(item_name => hand_sizes.set(item_name, effectiveHandSize(stack_size, item_name)));
+        return { hand_sizes };
+    }
+    const selectedLane = selectLaneForDrop(sink_lanes, filtered_items);
+    const lane_of = new Map<ItemName, Lane>();
+    filtered_items.forEach(item_name => {
+        const lane = sink_lanes.find(it => it.ingredient_name === item_name) ?? selectedLane;
+        lane_of.set(item_name, lane);
+        hand_sizes.set(item_name, effectiveHandSize(stack_size, item_name, lane.stack_size));
+    });
+    return {
+        hand_sizes,
+        belt_drop: {
+            lane: selectedLane,
+            lane_of,
+            belt_stack_size: selectedLane.stack_size as BeltStackSize,
+            inserter_stack_size: hand_sizes.get(selectedLane.ingredient_name)
+                ?? Math.min(stack_size, ...Array.from(hand_sizes.values())),
+        },
+    };
+}
+
+/**
+ * Select the lane to use for dropping items.
+ * Prefers the lane matching a filtered item if found,
+ * otherwise returns the lane with the maximum stack_size.
+ */
+function selectLaneForDrop(lanes: readonly Lane[], filteredItems: ReadonlySet<ItemName>): Lane {
+    // Try to find a lane matching any of the filtered items
+    for (const lane of lanes) {
+        if (filteredItems.has(lane.ingredient_name)) {
+            return lane;
+        }
+    }
+
+    // Fallback: return the lane with the maximum stack size
+    return lanes.reduce((maxLane, lane) => 
+        lane.stack_size > maxLane.stack_size ? lane : maxLane
+    );
 }

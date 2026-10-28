@@ -76,5 +76,7 @@ function forByProduct(output: EnrichedIngredient): OutputBlock {
 
 export const OutputBlock = {
     fromRecipe: fromRecipe,
+    forFurnace: forFurnace,
+    forMachine: forMachine,
     forByProduct: forByProduct,
 };

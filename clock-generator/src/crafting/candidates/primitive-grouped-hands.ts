@@ -3,7 +3,7 @@ import type { Config } from "../../config/schema";
 import { assertInserterCoverage } from "../../config/inserter-coverage-validator";
 import { assertMachineResultTargetsSupported, assertOutputTransferGenerationSupported } from "../../config/output-transfer-generation";
 import { fraction } from "../../data-types/fraction";
-import { Entity, type ReadableEntityRegistry } from "../../entities";
+import { Entity, isNeverBlockingSink, type ReadableEntityRegistry } from "../../entities";
 import { TargetProductionRate } from "../target-production-rate";
 import { CraftingCyclePlan, plannedTerminalSwingCount } from "../sequence/cycle/crafting-cycle";
 import { EntityTransferCountMap, outputPathOf, type SerializableTransferPlan } from "../sequence/cycle/swing-counts";
@@ -12,7 +12,6 @@ import { alwaysEnabledInserters, unplannedInserterClocks } from "../sequence/unp
 import { canonicalVerificationJson } from "../verification-signature";
 import { MAX_SIMULATION_TICKS } from "../plan/plan-run";
 import { ClockPeriodLimitError } from "../plan/clock-period-limit";
-import { isNeverBlockingSink } from "../terminal-rate";
 import { groupedHandsCycles, groupedHandsPlan, GroupedHandsNotApplicable, type GroupedHandsComposition, type GroupedHandsOptions } from "./grouped-hands";
 
 type Windows = Record<string, { start: number; end: number }[]>;

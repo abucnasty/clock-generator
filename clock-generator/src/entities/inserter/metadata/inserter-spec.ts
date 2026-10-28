@@ -122,6 +122,21 @@ export function isBulkInserter(prototype: string): boolean {
     return FactorioDataService.findInserterOrThrow(prototype).bulk === true;
 }
 
+/**
+ * The inserter kinds whose belt pickup timing (the arm model) is calibrated: one evidence row, the legendary stack
+ * inserter (decision D9, follow-up F7). A kind is added here only once it is measured on belts. The traits read it
+ * (timing.belt_pickup_calibrated); the arm gate (belt-pickup-logic.ts) and the scope check (config/inserter-scope.ts,
+ * which pickup-calibration.ts reads) still name the kind themselves until they read this row.
+ */
+const BELT_PICKUP_CALIBRATED: readonly { readonly prototype: string; readonly quality: string }[] = [
+    { prototype: InserterType.STACK_INSERTER, quality: "legendary" },
+];
+
+/** Whether the belt pickup arm model is calibrated for an inserter of this prototype and quality (BELT_PICKUP_CALIBRATED) */
+export function beltPickupCalibrated(prototype: string, quality: string): boolean {
+    return BELT_PICKUP_CALIBRATED.some(row => row.prototype === prototype && row.quality === quality);
+}
+
 /** The hand a config gives an inserter: its `stack_size` when it sets one, else the full research hand of its prototype */
 export function configuredHandSize(inserter: { prototype?: string, stack_size?: number }): number {
     return inserter.stack_size ?? fullResearchHandSize(inserter.prototype ?? InserterType.STACK_INSERTER);

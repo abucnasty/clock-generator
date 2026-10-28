@@ -1,4 +1,4 @@
-import { Chest, Entity, type ReadableEntityRegistry } from "../entities";
+import { Entity, isNeverBlockingSink, type ReadableEntityRegistry } from "../entities";
 import type { EntityTransferCountMap } from "./sequence/cycle/swing-counts";
 
 // ============================================================================
@@ -39,11 +39,6 @@ export interface BranchBins {
     hand: number;
     /** Its sink takes what it carries over its share; without that it may run no further ahead than its hand */
     takes_surplus: boolean;
-}
-
-/** Whether an inserter's sink never refuses a hand: an infinity chest (a chest with room for the whole run is not told apart yet) */
-export function isNeverBlockingSink(sink: Entity): boolean {
-    return Entity.isChest(sink) && Chest.isInfinityChest(sink);
 }
 
 /**

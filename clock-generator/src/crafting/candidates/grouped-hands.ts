@@ -1,5 +1,5 @@
 import { OpenRange } from "../../data-types";
-import { Entity, EntityId, handSizeFor, Inserter, Machine, MiningDrill, miningDrillMaxInsertion, ReadableEntityRegistry } from "../../entities";
+import { Entity, EntityId, handSizeFor, Inserter, isNeverBlockingSink, Machine, MiningDrill, miningDrillMaxInsertion, ReadableEntityRegistry } from "../../entities";
 import { DRILL_ITEMS_PER_SWING, EntityTransferCountMap, type OutputPath } from "../sequence/cycle/swing-counts";
 import { SwingDistribution } from "../sequence/cycle/swing-distribution";
 import { BlueprintGenerationResult, GenerateClockOptions, PlanRun, checkedClock, clockOfPlan, planRun } from "../plan/plan-run";
@@ -12,7 +12,6 @@ import type { AlwaysOnReason } from "../always-on-reasons";
 import { sharedItemDeadlockRisks } from "../deadlock-risk";
 import { rankingWindowCount } from "../rank";
 import { outputAtWindow } from "./taker-turns";
-import { isNeverBlockingSink } from "../terminal-rate";
 
 /** Ticks added to the shortest window that starts the last hand: one for the tick a combinator takes, one of margin */
 const WINDOW_MARGIN_TICKS = 2;

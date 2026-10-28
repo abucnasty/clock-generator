@@ -1,5 +1,6 @@
 import Fraction, { fraction } from '../data-types/fraction';
 import { Belt, Entity, handSizeFor } from '../entities';
+import { laneItemsPerSecond, laneStackFor } from '../entities/belt/belt';
 import type { Logger } from '../common/logger';
 import { CraftingCyclePlan } from '../crafting/sequence/cycle/crafting-cycle';
 import { createEntityRegistryFromConfig } from '../crafting/sequence/simulation-context';
@@ -51,7 +52,7 @@ export interface LaneLoad {
  * lane has the second at the same stack size, for the drops that land on it.
  */
 export function laneCapacity(belt: Config['belts'][number], lane: number): Fraction {
-    return fraction(Belt.fromConfig(belt).belt_speed).divide(2).multiply(belt.lanes[Math.min(lane, belt.lanes.length) - 1].stack_size);
+    return laneItemsPerSecond(Belt.fromConfig(belt).belt_speed, laneStackFor(belt, lane));
 }
 
 const above = (a: Fraction, b: Fraction): boolean => a.subtract(b).getNumerator > 0;

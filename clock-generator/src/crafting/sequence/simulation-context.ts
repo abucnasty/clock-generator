@@ -7,7 +7,6 @@ import { MachineStateMachine } from "../../control-logic/machine/machine-state-m
 import { DEFAULT_TAKER_ORDER, InserterUpdates, TakerOrder } from "../../control-logic/inserter/competing-takers";
 import { ControlLogic } from "../../control-logic";
 import { Belt, Chest, Entity, EntityId, EntityRegistry, InserterFactory, Machine, WritableEntityRegistry } from "../../entities";
-import { FactorioDataService } from "../../data";
 import { MiningDrill } from "../../entities/drill/mining-drill";
 import { DrillState, DrillStatus, EntityState, EntityStateFactory, EntityStateRegistry, InserterState, WritableEntityStateRegistry } from "../../state";
 import { TargetProductionRate } from "../target-production-rate";
@@ -17,6 +16,7 @@ import { InserterTrace, InserterTraceOptions } from "../../state/inserter-trace"
 import assert from "../../common/assert";
 import { BeltPickupLane } from "../../state/belt-pickup-lane";
 import { pickupLaneLength } from "../../common/belt-pickup-layout";
+import { itemsPutInto, PutIntoView } from "../../entities/chest/items-put-into";
 
 /** Initial moving-lane phases by inserter id, in the pickup model's public 1/32-tile units. */
 export type MovingPickupPhases = ReadonlyMap<string, readonly [number, number]>;
@@ -122,7 +122,7 @@ export function createEntityRegistryFromConfig(config: Config): EntityRegistry {
 
     if (chests) {
         chests.forEach(chestConfig => {
-            entity_registry.add(Chest.fromConfig(chestConfig, itemsPutInto(config, chestConfig.id, entity_registry)))
+            entity_registry.add(Chest.fromConfig(chestConfig, itemsPutInto(config, chestConfig.id, registryPutIntoView(entity_registry))))
         })
     }
 
@@ -154,46 +154,18 @@ export function createEntityRegistryFromConfig(config: Config): EntityRegistry {
     return entity_registry;
 }
 
-/**
- * The items the build's inserters put into a chest: an inserter's filters, else what its source gives (a machine's
- * products, a belt's lanes, a chest's configured items). A chest of mixed items can give these on.
- */
-function itemsPutInto(config: Config, chest_id: number, entity_registry: EntityRegistry): string[] {
-    const items = new Set<string>();
-    for (const inserter of config.inserters) {
-        if (inserter.sink.type !== "chest" || inserter.sink.id !== chest_id) continue;
-        if (inserter.filters && inserter.filters.length > 0) {
-            inserter.filters.forEach(item => items.add(item));
-            continue;
-        }
-        const source = inserter.source;
-        if (source.type === "machine") {
-            const machine = entity_registry.getEntityById(EntityId.forMachine(source.id));
-            if (machine !== null && Entity.isMachine(machine)) machine.outputs.forEach(output => items.add(output.item_name));
-        } else if (source.type === "belt") {
-            const belt = entity_registry.getEntityById(EntityId.forBelt(source.id));
-            if (belt !== null && Entity.isBelt(belt)) belt.lanes.forEach(lane => items.add(lane.ingredient_name));
-        } else if (source.type === "chest") {
-            const chest = config.chests?.find(it => it.id === source.id);
-            if (chest?.type === "buffer-chest") items.add(chest.item_filter);
-            else if (chest?.type === "infinity-chest") chest.item_filter.forEach(filter => items.add(filter.item_name));
-            else if (chest !== undefined) (chest.contents ?? []).forEach(content => items.add(content.item));
-        }
-    }
-    // a machine that places its results into the chest puts in every result of its recipe
-    for (const machine of config.machines) {
-        if (machine.result_target?.type === "chest" && machine.result_target.id === chest_id) {
-            const placing = entity_registry.getEntityById(EntityId.forMachine(machine.id));
-            if (placing !== null && Entity.isMachine(placing)) placing.outputs.forEach(output => items.add(output.item_name));
-        }
-    }
-    // a drill that drops into the chest puts in what it mines
-    for (const drill of config.drills?.configs ?? []) {
-        if (drill.target.type === "chest" && drill.target.id === chest_id) {
-            items.add(FactorioDataService.getResourceOrThrow(drill.mined_item_name).minable.result);
-        }
-    }
-    return Array.from(items);
+/** The machines' products and the belts' lanes as the entities of the registry give them */
+function registryPutIntoView(entity_registry: EntityRegistry): PutIntoView {
+    return {
+        machineOutputs: id => {
+            const machine = entity_registry.getEntityById(EntityId.forMachine(id));
+            return machine !== null && Entity.isMachine(machine) ? machine.outputs.map(output => output.item_name) : [];
+        },
+        beltItems: id => {
+            const belt = entity_registry.getEntityById(EntityId.forBelt(id));
+            return belt !== null && Entity.isBelt(belt) ? belt.lanes.map(lane => lane.ingredient_name) : [];
+        },
+    };
 }
 
 function createSimulationContextFromConfig(

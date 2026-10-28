@@ -30,6 +30,7 @@ import { EntityState, InserterState } from "../state";
 import { simulationStateKey } from "./runner/steady-state";
 import { SimulationContext } from "./sequence/simulation-context";
 import { ExportShortfall, ExportedItem, exportShortfallOfBins } from "./export-delivery";
+import { SPOIL_LIMIT_SHARE } from "../common/rule-constants";
 
 export type BackpressureLoss =
     /** Nothing is cut: the run as it is, counted as the runs with a loss are */
@@ -89,11 +90,6 @@ export function lossTrialsPartOfTheWay(
 
 /** A loss ends at the latest after this many periods, whether the build has stopped or not */
 export const MAX_LOSS_PERIODS = 200;
-/**
- * A build whose items spoil is tried only with losses shorter than this share of the shortest spoil time of its items
- * (see lossLimitOf).
- */
-export const SPOIL_LIMIT_SHARE = 3 / 4;
 
 /** The losses a build whose items spoil is tried with: shorter than `ticks`, which `item`, its first to spoil, sets */
 export interface LossLimit {

@@ -210,6 +210,11 @@ export class FactorioDataService {
         return this.getData().item_prototype[itemName] ?? {};
     }
 
+    /** The manifest's other fields of every item that has any (a fuel, an item that spoils into another), in the data's order */
+    public static getAllItemPrototypeFields(): Record<ItemName, ItemPrototypeFields> {
+        return this.getData().item_prototype;
+    }
+
     public static getAllInserters(): InserterPrototype[] {
         return Object.values(this.getData().inserter);
     }

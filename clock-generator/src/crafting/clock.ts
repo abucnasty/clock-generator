@@ -4,12 +4,8 @@ import { Entity, handSizeFor, ReadableEntityRegistry } from "../entities";
 import { SubtickClock } from "./blueprint";
 import { pickupLaneLength } from "../common/belt-pickup-layout";
 import { backedUpHandGrabTicks } from "../state/backed-up-pickup-lane";
+import { CIRCUIT_LATENCY_TICKS } from "../common/rule-constants";
 
-/**
- * Ticks between the clock reaching a value and an inserter acting on its decider (combinator output, then the
- * inserter reading it). An inserter acts in every tick of its window this much later, the first one included.
- */
-export const CIRCUIT_LATENCY_TICKS = 2;
 
 
 export type SerializableClockWindows = Record<string, { start: number; end: number }[]>;
