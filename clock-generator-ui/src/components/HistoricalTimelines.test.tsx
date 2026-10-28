@@ -51,7 +51,8 @@ async function tooltipOf(user: UserEvent, element: Element) {
 /** Each row's "Transitions: shown/total", from the tooltip on its name */
 async function transitions(user: UserEvent, rows = ROWS) {
     const counts = [];
-    for (const row of rows) counts.push((await tooltipOf(user, screen.getByText(row))).match(/Transitions: (\d+\/\d+)/)?.[1]);
+    // waits for the row to be the only element with its name: a view switch can briefly leave the old one in the page
+    for (const row of rows) counts.push((await tooltipOf(user, await waitFor(() => screen.getByText(row)))).match(/Transitions: (\d+\/\d+)/)?.[1]);
     return counts;
 }
 type Menu = BoundFunctions<typeof queries>;
