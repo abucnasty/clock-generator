@@ -69,6 +69,16 @@ describe("judging the long run of a clock", () => {
         expect(verdict.output_items_per_period).toBeLessThan(EXPECTED);
     });
 
+    it("tells the rate of a short period by the items it moved, not by whole items a period", () => {
+        // a hand of 2 every 8 ticks is 15 a second; one drop in four is lost, so the clock moves 1.5 items a period
+        // (11.25 a second), and rounded to whole items it would read 2 a period (15 a second): the target, overstated
+        const period = 8;
+        const verdict = judgeLongRun([heldSeries(period, 120, [3], 2, k => k % 4 === 0)], period * 120, period, null, 2, 2);
+        expect(verdict.keeps_up).toBe(false);
+        expect(verdict.output_items_per_period).toBeCloseTo(1.5, 9);
+        expect(verdict.output_items_per_period * 60 / period).toBeCloseTo(11.25, 9);
+    });
+
     it("does not hold a clock that drifts a single hand over the judged span", () => {
         const one_short = [heldSeries(PERIOD, 120, DROPS, 16, (period, position) => period === 70 && position === 0),
             ...Array.from({ length: 3 }, () => heldSeries(PERIOD, 120, DROPS, 16))];
@@ -159,7 +169,7 @@ describe("judging the long run of a clock", () => {
             expect(five_short.total).toBe(30 * EXPECTED - 5 * 16);
             expect(five_short.span_off).toBe(true);
             expect(five_short.keeps_up).toBe(false);
-            expect(five_short.output_items_per_period).toBe(Math.round((30 * EXPECTED - 80) / 30));
+            expect(five_short.output_items_per_period).toBeCloseTo((30 * EXPECTED - 80) / 30, 9);
         });
 
         it("does not hold a span that loses a hand of every inserter in one period out of five", () => {
