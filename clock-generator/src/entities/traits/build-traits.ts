@@ -85,8 +85,11 @@ export type NodeTraits = MachineTraits | DrillTraits | InserterTraits | LaneTrai
  */
 export type ConfigTraits = Readonly<Record<string, NodeTraits>>;
 
-/** A machine's traits, with what its placement, its chests and its inserters read of it */
-function machineTraitsOf(config: MachineConfiguration): MachineTraits {
+/**
+ * A machine's traits, with what its placement, its chests and its inserters read of it. The machine's facts read them too
+ * (machine-facts-of.ts), built from the fields of the configuration the machine keeps.
+ */
+export function machineTraitsOf(config: MachineConfiguration): MachineTraits {
     const prototype = config.prototype === undefined ? null : FactorioDataService.findCraftingMachine(config.prototype);
     const recipe = RecipeMetadata.fromRecipeName(config.recipe);
     const overload_multiplier = OverloadMultiplier.fromCraftingSpeed(config.crafting_speed, recipe.energy_required);

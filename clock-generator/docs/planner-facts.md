@@ -59,4 +59,6 @@ config's) and the wake-up rule of a node (read by the wake-up count only). Neith
 reads them; they come with the planner that does.
 
 `machineFactsOf` (`src/entities/traits/machine-facts-of.ts`) gives a machine's facts for the UI and the insights from its
-traits, equal to `getMachineFacts` on every machine of every sample.
+traits, and nothing else makes them: a result's `machine_facts` (`machineFactsOfEntity`, each machine's traits built once from
+the configuration its entity keeps) and the UI's facts query (`computeMachineFacts`, from a machine's parameters) both project
+traits, and a test holds both to the traits `buildTraits` builds from the config, for every machine of every sample.

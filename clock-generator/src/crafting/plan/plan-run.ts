@@ -52,6 +52,7 @@ import { BackpressureLossOptions, LossOutcome, runLossTrials } from "../backpres
 import { SerializableTransferHistory, serializeTransferHistory } from "../sequence/transfer-history-serializer";
 import { StateTransitionHistory } from "../sequence/state-transition-history";
 import { MachineFactsEntry } from "../insights";
+import { machineFactsOfEntity } from "../../entities/traits/machine-facts-of";
 import { CompactStateTransitionHistory } from "../sequence/compact-history";
 import { StateTransitionTracker } from "../../simulation/observers/state-transition-tracker";
 import { FactorioStateTracker } from "../../simulation/observers/factorio-state-tracker";
@@ -1249,6 +1250,14 @@ export interface TrialRun {
     state_repeat?: StateRepeat;
 }
 
+/** The facts of every machine of a context, in its order: each machine's traits are built once, from the configuration it keeps, and projected */
+function machineFactsOfContext(simulation_context: SimulationContext): MachineFactsEntry[] {
+    return simulation_context.machines.map(it => ({
+        entity_id: it.machine_state.machine.entity_id.id,
+        facts: machineFactsOfEntity(it.machine_state.machine),
+    }));
+}
+
 export function trialRunOf(run: BuildRun): TrialRun {
     return {
         timeline_recording: run.timeline_recording,
@@ -1258,10 +1267,7 @@ export function trialRunOf(run: BuildRun): TrialRun {
         transfer_history: run.final_history,
         serializable_transfer_history: serializeTransferHistory(run.final_history, run.simulation_context.entity_registry, run.recorded_duration.ticks),
         serializable_state_transition_history: run.state_transition_history,
-        machine_facts: run.simulation_context.machines.map(it => ({
-            entity_id: it.machine_state.machine.entity_id.id,
-            facts: Machine.getMachineFacts(it.machine_state.machine),
-        })),
+        machine_facts: machineFactsOfContext(run.simulation_context),
         fuel_levels: run.fuel_levels,
         machine_stock: run.machine_stock,
         backpressure_loss: run.backpressure_loss,
@@ -1519,10 +1525,7 @@ export function exportClock(
             transfer_history: final_history,
             serializable_transfer_history: serializeTransferHistory(final_history, simulation_context.entity_registry, recorded_duration.ticks),
             serializable_state_transition_history: state_transition_history,
-            machine_facts: simulation_context.machines.map(it => ({
-                entity_id: it.machine_state.machine.entity_id.id,
-                facts: Machine.getMachineFacts(it.machine_state.machine),
-            })),
+            machine_facts: machineFactsOfContext(simulation_context),
         };
     return {
         ...histories,
