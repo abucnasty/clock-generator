@@ -4,7 +4,8 @@
 plain nodes and edges, the input of the planner graph and the feasibility pass of 0.25.0. It reads the traits and the
 config's layout (which entity an inserter takes from and drops into, where it drops on a belt), never the state of an
 entity. Nothing in a generation calls it yet. The types are in `src/data-types/planner-facts.ts`, exported from the
-light entry, and each sample's facts are kept in `src/crafting/facts/__snapshots__/<KEY>.facts.json`.
+light entry. A test builds each sample's facts and checks that they are plain data, come out the same each time and hold
+together (`src/crafting/facts/to-planner-facts.test.ts`).
 
 - **Nodes**, in the entity registry's order (`src/crafting/sequence/simulation-context.ts`) with the inserters, which
   are edges, left out: the two sides of every belt, belt by belt (`belt:2/lane:1`, `belt:2/lane:2`; a belt that lists
