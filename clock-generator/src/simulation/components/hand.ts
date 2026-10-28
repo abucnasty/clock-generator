@@ -1,6 +1,6 @@
 import assert, { AssertionError } from "../../common/assert";
-import type { TickProvider } from "../../control-logic/current-tick-provider";
-import { reasonId } from "../../control-logic/mode/reason-table";
+import type { TickProvider } from "../current-tick-provider";
+import { reasonId } from "../../state/reason-table";
 import { ItemName } from "../../data";
 import { handSizeFor, Inserter } from "../../entities/inserter/inserter";
 import type { InserterHandContents, InserterState } from "../../state/inserter-state";

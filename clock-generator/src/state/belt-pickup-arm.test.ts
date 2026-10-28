@@ -58,15 +58,11 @@ for (const clip of fixture.clips) test(`production pickup and stock match the no
     expect(waits.map(event => event.tick)).toEqual(clip.release_delay < 4 ? [clip.first_grab + 2] : []);
 });
 
-test("one tick advances extension once, even across control pauses; clones retain independent physical state", () => {
+test("one tick advances extension once, even across control pauses", () => {
     const arm = new BeltPickupArm(64);
     expect(arm.tryCollect(0, 196, true)).toBe(true);
     expect(arm.tryCollect(100, 334, false)).toBe(false);
     expect(arm.tryCollect(100, 334, false)).toBe(false);
-    const copy = arm.clone();
-    expect(copy.stateKey(100)).toBe(arm.stateKey(100));
-    expect(copy.tryCollect(101, 334, false)).toBe(true);
-    expect(copy.stateKey(101)).not.toBe(arm.stateKey(101));
     expect(arm.tryCollect(101, 334, false)).toBe(true);
     const shifted = new BeltPickupArm(64);
     shifted.tryCollect(999, 334, true);
@@ -79,7 +75,8 @@ test("repeat detection retains partial-hand reach but ignores the discarded reac
     const state = inserter.inserter_state;
     const near = new BeltPickupArm(64);
     near.tryCollect(10, 196, true);
-    const far = near.clone();
+    const far = new BeltPickupArm(64);
+    far.tryCollect(10, 196, true);
     far.tryCollect(10, 316, true);
     // the inserter's key (its Hand's part holds the reach) with one reach or the other
     const keyWith = (arm: BeltPickupArm) => {

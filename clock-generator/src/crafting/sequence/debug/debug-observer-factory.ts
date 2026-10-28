@@ -1,6 +1,6 @@
 import chalk from "chalk";
-import { TickProvider } from "../../../control-logic";
-import { reasonText } from "../../../control-logic/mode/reason-table";
+import { TickProvider } from "../../../simulation/current-tick-provider";
+import { reasonText } from "../../../state/reason-table";
 import { DrillState, MachineState } from "../../../state";
 import { DebugLoggerFactory } from "./debug-logger-factory";
 import { DebugSettingsProvider } from "./debug-settings-provider";

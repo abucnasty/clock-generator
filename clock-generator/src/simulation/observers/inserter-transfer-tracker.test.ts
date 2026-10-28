@@ -3,7 +3,7 @@ import { InventoryTransferHistory } from "../../crafting/sequence/inventory-tran
 import { EntityId } from "../../entities";
 import { InserterState } from "../../state";
 import { InserterPhase } from "../status-codes";
-import { MutableTickProvider } from "../../control-logic/current-tick-provider";
+import { MutableTickProvider } from "../current-tick-provider";
 import { InserterTransferTracker } from "./inserter-transfer-tracker";
 
 /** An inserter that takes `item` in its pickup, swings and drops, driven through the changes of phase its Hand makes */

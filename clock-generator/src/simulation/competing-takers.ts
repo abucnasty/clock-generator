@@ -1,6 +1,5 @@
-import { ControlLogic } from "../control-logic";
-import { EntityState, ReadableEntityStateRegistry } from "../../state";
-import type { InserterArchetype } from "../../simulation/archetypes/inserter";
+import { EntityState, ReadableEntityStateRegistry } from "../state";
+import type { InserterArchetype } from "./archetypes/inserter";
 
 /**
  * In what order the inserters that take one product from one machine are served in a tick. The game serves them in one
@@ -94,26 +93,6 @@ export function inserterUpdateOrder(
         groups.push({ places, ranked });
     }
     return groups.length === 0 ? list : orderWith(list, groups);
-}
-
-/** The inserters of a simulation, each tick updated in the order of `inserterUpdateOrder` */
-export class InserterUpdates implements ControlLogic {
-    private readonly updates: readonly InserterArchetype[];
-
-    constructor(
-        inserters: readonly InserterArchetype[],
-        states: ReadableEntityStateRegistry,
-        order: TakerOrder = DEFAULT_TAKER_ORDER,
-    ) {
-        this.updates = inserterUpdateOrder(inserters, states, order);
-    }
-
-    public executeForTick(): void {
-        const updates = this.updates;
-        for (let index = 0; index < updates.length; index++) {
-            updates[index].executeForTick();
-        }
-    }
 }
 
 /**

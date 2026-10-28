@@ -1,4 +1,3 @@
-import type { ControlLogic } from "../../control-logic/control-logic";
 import { EntityState } from "../../state/entity-state";
 import type { MachineState } from "../../state/machine-state";
 import type { ContainerStorage } from "../components/container-storage";
@@ -28,7 +27,7 @@ import { CraftingStatus } from "../status-codes";
  * (`MachineWakes.watchFrom`), so a second archetype built over the same state and ticked would share and reset that
  * count.
  */
-export class CraftingMachineArchetype implements ControlLogic, StatusChangeReason<CraftingStatus> {
+export class CraftingMachineArchetype implements StatusChangeReason<CraftingStatus> {
 
     /**
      * The machine with its Placement bound to its result target, if it has one: into a machine up to the drill's stop

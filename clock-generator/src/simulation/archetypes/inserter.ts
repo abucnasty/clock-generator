@@ -1,6 +1,5 @@
-import type { ControlLogic } from "../../control-logic/control-logic";
-import type { TickProvider } from "../../control-logic/current-tick-provider";
-import type { EnableControl } from "../../control-logic/enable-control";
+import type { TickProvider } from "../current-tick-provider";
+import type { EnableControl } from "../controls/enable-control";
 import type { EntityId } from "../../entities";
 import { fullHandOf } from "../../entities/traits/hand";
 import { EntityState } from "../../state/entity-state";
@@ -28,7 +27,7 @@ import type { InserterPhase } from "../status-codes";
  * and its Hand starts at IDLE with its scratch set back, while its status, its hand, the pickup arm, the belt lanes,
  * its ports and its observers are kept (same-tick rule 12).
  */
-export class InserterArchetype implements ControlLogic {
+export class InserterArchetype {
 
     /**
      * The inserter with its hand bound to its source's pickup port and its sink's drop port, and to what it reads of its

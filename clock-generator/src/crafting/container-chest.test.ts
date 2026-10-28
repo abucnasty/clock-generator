@@ -2,10 +2,10 @@ import { expect, it } from 'vitest';
 import { loadConfigFromFile } from '../config/loader';
 import { ConfigPaths } from '../config/config-paths';
 import { ConfigSchema } from '../config/schema';
-import { CompositeControlLogic, TickControlLogic } from '../control-logic';
 import { InserterStatus, MachineStatus } from '../state';
 import { SimulationContext } from './sequence/simulation-context';
 import { ContainerStorage } from '../simulation/components/container-storage';
+import { TickByHand } from './runner/tick-by-hand.fixture';
 
 const item = 'automation-science-pack';
 
@@ -21,7 +21,7 @@ it('fills a cargo wagon at the end of the line to its last free slot, then holds
     expect(wagon.chest.slot_count).toBe(40);
     const output = context.inserters.find(inserter => inserter.inserter_state.inserter.sink.entity_id.id === wagon.entity_id.id)!.inserter_state;
     const machine = context.machines[0].machine_state;
-    const tick = new CompositeControlLogic([new TickControlLogic(context.tick_provider), ...context.machines, context.inserterUpdates()]);
+    const tick = new TickByHand(context);
     for (let i = 0; i < 40_000; i++) tick.executeForTick();
     expect(wagon.getCurrentQuantity(item)).toBe(200);
     expect(wagon.isFull(item)).toBe(true);
@@ -56,7 +56,7 @@ it('gives a mixed car the item of its last slot first, across stacks, and waits 
     }));
     const car = context.state_registry.getAllStates().find(ContainerStorage.isSlots)!;
     const taker = context.inserters.find(inserter => inserter.inserter_state.inserter.source.entity_id.id === car.entity_id.id)!.inserter_state;
-    const tick = new CompositeControlLogic([new TickControlLogic(context.tick_provider), context.inserterUpdates()]);
+    const tick = new TickByHand(context, { machines: false });
     const hands: string[] = [];
     let last = '';
     for (let i = 0; i < 400; i++) {

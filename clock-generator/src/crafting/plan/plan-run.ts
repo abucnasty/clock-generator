@@ -18,7 +18,8 @@ import { EntityState, InserterState, MachineState } from "../../state";
 import Fraction, { fraction } from "../../data-types/fraction";
 import { ClockSchedule, createSignalPerInserterBlueprint, mergedClockTicks, SignalPerInserterBlueprint, SubtickClock } from "../blueprint";
 import { FactorioBlueprint } from "../../blueprints/blueprint";
-import { RelativeTickProvider, ResettableRegistry, TickProvider } from "../../control-logic";
+import { RelativeTickProvider, TickProvider } from "../../simulation/current-tick-provider";
+import { ResettableRegistry } from "../../simulation/controls/resettable-registry";
 import { CraftingMachineArchetype } from "../../simulation/archetypes/crafting-machine";
 import { EntityTransferCountMap, SerializableTransferPlan } from "../sequence/cycle/swing-counts";
 import { returnedTargetRefusal, TargetItem, targetInsertersOf, targetMachinesOf } from "../sequence/cycle/target-ends";
@@ -34,7 +35,7 @@ import { ConfigurableEnableControlFactory, EntityEnableControlOverrideMap } from
 import { CraftingCyclePlan, plannedTerminalSwingCount } from "../sequence/cycle/crafting-cycle";
 import { PrepareStep } from "../runner/steps/prepare-step";
 import { DEFAULT_LOOP_SEED_ITEMS, seedLoopingRecipes } from "../runner/cold-start";
-import { DEFAULT_TAKER_ORDER, TakerOrder } from "../../control-logic/inserter/competing-takers";
+import { DEFAULT_TAKER_ORDER, TakerOrder } from "../../simulation/competing-takers";
 import { DeciderOrder } from "../decider-order";
 import { WarmupStep } from "../runner/steps/warmup-step";
 import { FullOutputChest, fullOutputChestsOf } from "../full-output-chests";

@@ -1,7 +1,6 @@
 import assert from "../../common/assert";
-import type { ControlLogic } from "../../control-logic/control-logic";
-import { AlwaysEnabledControl, EnableControl } from "../../control-logic/enable-control";
-import { reasonId } from "../../control-logic/mode/reason-table";
+import { AlwaysEnabledControl, EnableControl } from "../controls/enable-control";
+import { reasonId } from "../../state/reason-table";
 import type { DrillState } from "../../state/drill-state";
 import { assertIsMachineState, EntityState } from "../../state/entity-state";
 import { ContainerStorage } from "../components/container-storage";
@@ -48,7 +47,7 @@ export function placeDrillInto(state: DrillState, sink_state: EntityState): void
  *
  * Its status starts WORKING; `DrillState.status`, which the Factorio state reads, is never written (a known quirk, kept).
  */
-export class MiningDrillArchetype implements ControlLogic, StatusChangeReason<DrillStatusCode> {
+export class MiningDrillArchetype implements StatusChangeReason<DrillStatusCode> {
 
     public static create(args: {
         drill_state: DrillState,

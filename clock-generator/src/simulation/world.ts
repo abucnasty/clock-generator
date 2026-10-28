@@ -1,5 +1,5 @@
-import { MutableTickProvider } from "../control-logic";
-import { inserterUpdateOrder } from "../control-logic/inserter/competing-takers";
+import { MutableTickProvider } from "./current-tick-provider";
+import { inserterUpdateOrder } from "./competing-takers";
 import { CraftingMachineArchetype } from "./archetypes/crafting-machine";
 import { InserterArchetype } from "./archetypes/inserter";
 import { SimulationContext } from "../crafting/sequence/simulation-context";

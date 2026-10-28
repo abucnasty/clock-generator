@@ -8,14 +8,14 @@ import { EntityId, Inserter, InserterMetadata, InserterStackSize, InserterTarget
 import { ItemName } from "../../data/factorio-data-types"
 import { InserterAnimation } from "../../entities/inserter/inserter-animation"
 import { InserterAnimationOverrideConfig } from "../../config/schema"
-import { AlwaysEnabledControl, EnableControl } from "../../control-logic/enable-control";
-import { MutableTickProvider } from "../../control-logic/current-tick-provider";
+import { AlwaysEnabledControl, EnableControl } from "../controls/enable-control";
+import { MutableTickProvider } from "../current-tick-provider";
 import { BeltSpeed, Lane } from "../../entities/belt";
 import { InserterPhase } from "../status-codes";
 import { ContainerStorage } from "./container-storage";
 import { Hand, HandReason, HandScratch, STAY } from "./hand";
 import { bindHandPorts } from "./hand-ports";
-import { reasonText } from "../../control-logic/mode/reason-table";
+import { reasonText } from "../../state/reason-table";
 
 
 /** A turbo belt built by hand for a test, with the gate every belt has: nothing withheld, nothing refused */
@@ -231,13 +231,13 @@ describe("an inserter's Hand (belt to machine)", () => {
                 /** The machine ends a tick with its output at the block */
                 endTickAtTheBlock: (finished_craft: boolean) => {
                     sink.inventoryState.setQuantity(block.item_name, block.ingredients_blocked_at);
-                    sink.outputBlockedAfterLastTick = true;
-                    sink.finishedCraftInLastTick = finished_craft;
+                    sink.wakes.outputBlockedAfterLastTick = true;
+                    sink.wakes.finishedCraftInLastTick = finished_craft;
                 },
                 /** An output inserter, which is updated first, takes the products in the tick the inserter looks next */
                 takeProducts: () => sink.inventoryState.setQuantity(block.item_name, 0),
                 /** The machine ends a tick with its output under the block */
-                endTickUnderTheBlock: () => { sink.outputBlockedAfterLastTick = false; sink.finishedCraftInLastTick = false; },
+                endTickUnderTheBlock: () => { sink.wakes.outputBlockedAfterLastTick = false; sink.wakes.finishedCraftInLastTick = false; },
             };
         };
         const machineWithGears = (): MachineState => {
@@ -316,7 +316,7 @@ describe("an inserter's Hand (belt to machine)", () => {
             endTickAtTheBlock(false);
             expect(look()).toBe(InserterPhase.DISABLED);
             takeProducts();
-            sink.windowOpeningTakeDecider = 2;
+            sink.wakes.windowOpeningTakeDecider = 2;
             expect(look()).toBe(InserterPhase.PICKUP);
         })
 
@@ -325,7 +325,7 @@ describe("an inserter's Hand (belt to machine)", () => {
             endTickAtTheBlock(false);
             expect(look()).toBe(InserterPhase.DISABLED);
             takeProducts();
-            sink.windowOpeningTakeDecider = 0;
+            sink.wakes.windowOpeningTakeDecider = 0;
             expect(look()).toBe(STAY);
             endTickUnderTheBlock();
             expect(look()).toBe(InserterPhase.PICKUP);
@@ -337,7 +337,7 @@ describe("an inserter's Hand (belt to machine)", () => {
                 endTickAtTheBlock(false);
                 expect(look()).toBe(InserterPhase.DISABLED);
                 takeProducts();
-                sink.windowOpeningTakeDecider = taker;
+                sink.wakes.windowOpeningTakeDecider = taker;
                 expect(look()).toBe(STAY);
             }
         })
@@ -394,7 +394,7 @@ describe("an inserter's Hand (belt to machine)", () => {
             endTickAtTheBlock(false);
             expect(look()).toBe(InserterPhase.DISABLED);
             takeProducts();
-            sink.windowOpeningTakeDecider = 1;
+            sink.wakes.windowOpeningTakeDecider = 1;
             expect(look()).toBe(InserterPhase.PICKUP);
         })
 
@@ -404,7 +404,7 @@ describe("an inserter's Hand (belt to machine)", () => {
             endTickAtTheBlock(false);
             expect(look()).toBe(InserterPhase.DISABLED);
             takeProducts();
-            sink.windowOpeningTakeDecider = 0;
+            sink.wakes.windowOpeningTakeDecider = 0;
             expect(look()).toBe(STAY);
             endTickUnderTheBlock();
             expect(look()).toBe(InserterPhase.PICKUP);
@@ -527,8 +527,8 @@ describe("an inserter's Hand (belt to machine)", () => {
             ticks.incrementTick();
             pickup.pickup();
             expect(inserterState.held_item?.quantity).toBe(8);
-            mockSink.outputBlockedAfterLastTick = true;
-            mockSink.finishedCraftInLastTick = true;
+            mockSink.wakes.outputBlockedAfterLastTick = true;
+            mockSink.wakes.finishedCraftInLastTick = true;
             mockSink.inventoryState.removeQuantity(block.item_name, 1);
             pickup.enter(InserterPhase.WAITING_FOR_SINK);
             ticks.incrementTick();

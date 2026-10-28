@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ConfigSchema } from "../../config";
-import { EnableControl } from "../../control-logic/enable-control";
-import { reasonText } from "../../control-logic/mode/reason-table";
+import { EnableControl } from "../controls/enable-control";
+import { reasonText } from "../../state/reason-table";
 import { SimulationContext } from "../../crafting/sequence/simulation-context";
 import { MiningDrill, miningDrillMaxInsertion } from "../../entities";
 import { DrillState, DrillStatus, MachineState } from "../../state";

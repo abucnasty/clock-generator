@@ -6,8 +6,8 @@
 import { MapExtended } from "../../data-types";
 import { Entity, EntityId, ReadableEntityRegistry } from "../../entities";
 import { chestName } from "../../common/entity-types";
-import { TickProvider } from "../../control-logic/current-tick-provider";
-import { reasonText } from "../../control-logic/mode/reason-table";
+import { TickProvider } from "../../simulation/current-tick-provider";
+import { reasonText } from "../../state/reason-table";
 import { FactorioStateTracker } from "../../simulation/observers/factorio-state-tracker";
 import type { StatusChangeReason } from "../../simulation/observers/observer";
 import { StateTransitionTracker } from "../../simulation/observers/state-transition-tracker";

@@ -1,4 +1,4 @@
-import type { TickProvider } from "../../control-logic/current-tick-provider";
+import type { TickProvider } from "../current-tick-provider";
 import type { EntityObserver } from "./observer";
 
 /** Where the states of an entity are recorded (a recorder of the state transition history) */

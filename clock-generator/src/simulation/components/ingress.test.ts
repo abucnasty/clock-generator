@@ -27,10 +27,8 @@ describe("a machine's Ingress", () => {
     it("takes the ingredients of its recipe and its fuel, and binds a slot for each", () => {
         const ingress = rocketFuel().ingress;
         for (const item of ["jelly", "bioflux", "nutrients"]) {
-            expect(ingress.takes(item)).toBe(true);
             expect(ingress.slotOf(item)).toBeGreaterThanOrEqual(0);
         }
-        expect(ingress.takes("coal")).toBe(false);
         expect(ingress.slotOf("coal")).toBe(-1);
         expect(ingress.blockedAt(-1)).toBe(true);
         expect(ingress.blocked("coal")).toBe(true);

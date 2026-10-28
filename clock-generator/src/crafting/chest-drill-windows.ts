@@ -1,7 +1,7 @@
 import { Config } from "../config";
 import { EnableControlMode } from "../common/enable-control-types";
 import { ChestType, chestName } from "../common/entity-types";
-import { clockPosition } from "../control-logic/enable-control";
+import { clockPosition } from "../simulation/controls/enable-control";
 import { OpenRange } from "../data-types";
 import Fraction, { fraction } from "../data-types/fraction";
 import { Chest, Entity, EntityId, handSizeFor, MiningDrill, ReadableEntityRegistry } from "../entities";

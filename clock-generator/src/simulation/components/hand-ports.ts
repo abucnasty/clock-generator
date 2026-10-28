@@ -1,5 +1,5 @@
 import assert from "../../common/assert";
-import type { TickProvider } from "../../control-logic/current-tick-provider";
+import type { TickProvider } from "../current-tick-provider";
 import { EntityState } from "../../state/entity-state";
 import type { InserterState } from "../../state/inserter-state";
 import { BeltHandDrop } from "./belt-hand-drop";

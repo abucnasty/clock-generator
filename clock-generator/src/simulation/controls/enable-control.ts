@@ -1,5 +1,5 @@
-import { Duration, OpenRange } from "../data-types";
-import { TickProvider } from "./current-tick-provider";
+import { Duration, OpenRange } from "../../data-types";
+import { TickProvider } from "../current-tick-provider";
 import { Resettable } from "./resettable";
 
 export interface EnableControl {
@@ -227,10 +227,6 @@ class ClockedEnableControl implements EnableControl, Resettable {
         return this.windows.ask(tick);
     }
 
-    public getOffset(): number {
-        return this.offset
-    }
-
     /**
      * Starts the clock's count again from this tick. Where the reset puts the clock on the build (`starts_clock`), its
      * first `start_latency_ticks` stay dark: a clock of the game counts from 1 at its start and a window decider is open
@@ -242,26 +238,6 @@ class ClockedEnableControl implements EnableControl, Resettable {
     public reset(starts_clock: boolean = false): void {
         this.offset = this.tickProvider.getCurrentTick() * -1;
         this.dark_until = starts_clock ? this.start_latency_ticks : 0;
-    }
-}
-
-class PeriodicEnableControl implements EnableControl {
-    private readonly windows: ClockWindows;
-
-    constructor(
-        public readonly periodDuration: Duration,
-        public readonly enabledRanges: ReadonlyArray<OpenRange>,
-        public readonly tickProvider: TickProvider
-    ) {
-        this.windows = new ClockWindows(periodDuration.ticks, enabledRanges);
-    }
-
-    public isEnabled(): boolean {
-        return this.isEnabledIn(0);
-    }
-
-    public isEnabledIn(ticks: number): boolean {
-        return this.windows.ask(this.tickProvider.getCurrentTick() + ticks);
     }
 }
 
@@ -343,36 +319,12 @@ class AnyEnableControl implements EnableControl {
     }
 }
 
-/**
- * Creates an EnableControl that enables for a specified duration within a repeating period, with an optional offset.
- */
-function createPeriodicEnableControl(args: {
-    /**
-     * The total period in ticks for the enable/disable cycle.
-     */
-    periodDuration: Duration,
-    /**
-     * The duration in ticks for which the control is enabled within each period.
-     */
-    enabledRanges: ReadonlyArray<OpenRange>,
-    tickProvider: TickProvider
-}): PeriodicEnableControl {
-    const { periodDuration, enabledRanges, tickProvider } = args;
-
-    return new PeriodicEnableControl(
-        periodDuration,
-        enabledRanges,
-        tickProvider
-    );
-}
-
 function createLambdaEnableControl(enabledFn: () => boolean): EnableControl {
     return new EnableControlLambda(enabledFn);
 }
 
 export const EnableControl = {
     lambda: createLambdaEnableControl,
-    periodic: createPeriodicEnableControl,
     clocked: ClockedEnableControl.create,
     all: AllEnableControl.create,
     any: AnyEnableControl.create,

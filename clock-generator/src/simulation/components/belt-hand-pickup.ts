@@ -1,6 +1,6 @@
 import assert from "../../common/assert";
 import { BeltPickupLayout, pickupLaneLength, pickupTargetRadius } from "../../common/belt-pickup-layout";
-import type { TickProvider } from "../../control-logic/current-tick-provider";
+import type { TickProvider } from "../current-tick-provider";
 import { FactorioDataService, ItemName } from "../../data";
 import { beltPickupCalibrated } from "../../entities/inserter/metadata/inserter-spec";
 import { BackedUpPickupLane } from "../../state/backed-up-pickup-lane";

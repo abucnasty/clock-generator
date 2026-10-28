@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { Config, ConfigSchema } from '../config/schema';
-import { CompositeControlLogic, TickControlLogic } from '../control-logic';
 import { SimulationContext } from './sequence/simulation-context';
 import { generateClockAlternatives } from './alternatives';
 import { ContainerStorage } from '../simulation/components/container-storage';
+import { TickByHand } from './runner/tick-by-hand.fixture';
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 
@@ -26,7 +26,7 @@ function build(chests: object[], inserters: object[] = []): Config {
 
 function run(config: Config, ticks: number) {
     const context = SimulationContext.fromConfig(config);
-    const tick = new CompositeControlLogic([new TickControlLogic(context.tick_provider), ...context.machines, context.inserterUpdates(), ...context.drills]);
+    const tick = new TickByHand(context, { drills: true });
     for (let i = 0; i < ticks; i++) tick.executeForTick();
     return context;
 }

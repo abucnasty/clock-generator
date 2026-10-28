@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { InserterInterceptor } from "./inserter-interceptor";
-import { AlwaysEnabledControl } from "../../../control-logic";
+import { AlwaysEnabledControl } from "../../../simulation/controls/enable-control";
 import { 
     InserterState, 
     MachineState,

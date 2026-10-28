@@ -3,7 +3,9 @@ import { Entity, EntityId, handSizeFor, Inserter, Machine, MiningDrill, miningDr
 import { EntityTransferCountMap, outputPathOf } from "../cycle/swing-counts";
 import { targetInsertersOf, targetMachinesOf } from "../cycle/target-ends";
 import { resultWindowRanges, takesResultOf } from "../../result-windows";
-import { AlwaysEnabledControl, EnableControl, ResettableRegistry, TickProvider } from "../../../control-logic";
+import { AlwaysEnabledControl, EnableControl } from "../../../simulation/controls/enable-control";
+import { ResettableRegistry } from "../../../simulation/controls/resettable-registry";
+import { TickProvider } from "../../../simulation/current-tick-provider";
 import { assertIsInserterState, assertIsMachineState, EntityState, InserterState, MachineState, ReadableEntityStateRegistry } from "../../../state";
 import { TransportBelt } from "../../../simulation/archetypes/transport-belt";
 import { ItemName } from "../../../data";

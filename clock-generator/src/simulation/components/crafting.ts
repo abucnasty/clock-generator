@@ -1,6 +1,6 @@
 import type { EntityId } from "../../entities/entity-id";
 import type { Machine } from "../../entities/machine/machine";
-import { reasonId } from "../../control-logic/mode/reason-table";
+import { reasonId } from "../../state/reason-table";
 import { LiveQuantity, WritableInventoryState } from "../../state/inventory-state";
 import { ProgressState } from "../../state/progress-state";
 import { CraftingStatus } from "../status-codes";

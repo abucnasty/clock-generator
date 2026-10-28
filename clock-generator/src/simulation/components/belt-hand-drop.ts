@@ -1,5 +1,5 @@
 import { AssertionError } from "../../common/assert";
-import type { TickProvider } from "../../control-logic/current-tick-provider";
+import type { TickProvider } from "../current-tick-provider";
 import { ItemName } from "../../data";
 import { Belt } from "../../entities/belt";
 import type { BeltDropSpot } from "../../entities/inserter/inserter";

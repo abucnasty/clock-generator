@@ -52,7 +52,7 @@ const FIELDS: Record<string, { keyed: readonly string[]; excluded: Readonly<Reco
     // shows enabled
     inserter: {
         keyed: ["status", "held_item", "waits_for_sink", "enabled"],
-        excluded: { tick: "never written: 0 in every tick", items_picked_up: TOTAL, items_dropped: TOTAL },
+        excluded: { items_picked_up: TOTAL, items_dropped: TOTAL },
     },
     Hand: { keyed: ["phase"], excluded: { swings_part_hands: BUILD, from_belt: BUILD, swing_ticks: BUILD }, references: ["sink_wakes", "sink_ingress"] },
     // the idle rule's two flags and the swing's start in the Hand's key; the pickup ticks of a machine or a container,

@@ -12,7 +12,7 @@ import type { MachineWakes } from "./machine-wakes";
 /**
  * A crafting machine's pickup port, its output, as one hand reaches it: any of its results the hand carries,
  * by-products too, a partly filled hand only more of its own item, up to the hand. The takers of one machine are updated
- * in one fixed order (InserterUpdates): the first takes up to its hand, and what is left is there for the next in the
+ * in one fixed order (`inserterUpdateOrder`): the first takes up to its hand, and what is left is there for the next in the
  * same tick. A pickup that finds nothing to take sets the inserter idle itself, with no event (same-tick rule 11); a
  * take in the first tick of a window marks the machine's Wakes (rule 3). The idle rule starts a pickup where the output
  * holds any of the hand's items, a partly filled hand's own item only.

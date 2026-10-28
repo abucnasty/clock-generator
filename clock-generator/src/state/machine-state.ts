@@ -16,7 +16,8 @@ import { craftingStatusOf, machineStatusOf } from "../simulation/status-codes";
 
 /**
  * A crafting machine's state: its components, which the build's context keeps through control swaps, and the names
- * outside callers read and write (start stock, seeds, recorders, controls, the inserters' rules) as views of them
+ * outside callers read and write (start stock, seeds, recorders, controls) as views of them. What the inserters read of
+ * its last tick they read from its `wakes`, not from a view.
  */
 export class MachineState implements EntityState {
 
@@ -143,42 +144,6 @@ export class MachineState implements EntityState {
     public readonly placement: Placement = new Placement(this.output,
         this.machine.outputs.map(output => output.item_name), this.machine.metadata.places_results === true);
 
-    /** Whether the main product was at the output block after the machine's last tick, a view of its Wakes' */
-    public get outputBlockedAfterLastTick(): boolean {
-        return this.wakes.outputBlockedAfterLastTick;
-    }
-
-    public set outputBlockedAfterLastTick(value: boolean) {
-        this.wakes.outputBlockedAfterLastTick = value;
-    }
-
-    /** Whether the machine finished a craft in its last tick, a view of its Wakes' */
-    public get finishedCraftInLastTick(): boolean {
-        return this.wakes.finishedCraftInLastTick;
-    }
-
-    public set finishedCraftInLastTick(value: boolean) {
-        this.wakes.finishedCraftInLastTick = value;
-    }
-
-    /** Whether the machine started a craft in its last tick, a view of its Wakes' */
-    public get startedCraftInLastTick(): boolean {
-        return this.wakes.startedCraftInLastTick;
-    }
-
-    public set startedCraftInLastTick(value: boolean) {
-        this.wakes.startedCraftInLastTick = value;
-    }
-
-    /** The decider of the takers that took the products in the first tick of their window, a view of its Wakes' */
-    public get windowOpeningTakeDecider(): number | null {
-        return this.wakes.windowOpeningTakeDecider;
-    }
-
-    public set windowOpeningTakeDecider(value: number | null) {
-        this.wakes.windowOpeningTakeDecider = value;
-    }
-
     /**
      * What the machine's Storage holds, for the machine's key (see CraftingMachineArchetype.stateKey): its ingredients
      * and output by item, the ingredients it keeps apart from its products, and its fuel slot by item
@@ -231,9 +196,9 @@ function clone(machineState: MachineState): MachineState {
     // a snapshot's Placement keeps the count and how it counts, unbound: it never places into the live target
     cloned.placement.copyCountFrom(machineState.placement);
     // the flags of the machine's last tick, and not the decider (a known quirk, kept until after the refactor: P4 D14)
-    cloned.outputBlockedAfterLastTick = machineState.outputBlockedAfterLastTick;
-    cloned.finishedCraftInLastTick = machineState.finishedCraftInLastTick;
-    cloned.startedCraftInLastTick = machineState.startedCraftInLastTick;
+    cloned.wakes.outputBlockedAfterLastTick = machineState.wakes.outputBlockedAfterLastTick;
+    cloned.wakes.finishedCraftInLastTick = machineState.wakes.finishedCraftInLastTick;
+    cloned.wakes.startedCraftInLastTick = machineState.wakes.startedCraftInLastTick;
     return cloned;
 }
 

@@ -103,10 +103,6 @@ export class InventoryState implements WritableInventoryState {
         return new InventoryState(inventoryState.export());
     }
 
-    public static fromRecord(items: Record<string, number>): InventoryState {
-        return new InventoryState(items);
-    }
-
     public static fromMap(items: Map<string, number>): InventoryState {
         return new InventoryState(Object.fromEntries(items));
     }

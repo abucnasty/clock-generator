@@ -2,7 +2,7 @@ import {ConfigSchema} from "../../../../src/config/schema";
 import {SimulationContext} from "../../../../src/crafting/sequence/simulation-context";
 import {SimulationTick} from "../../../../src/crafting/runner/simulation-tick";
 import {EntityState} from "../../../../src/state";
-import {EnableControl} from "../../../../src/control-logic/enable-control";
+import {EnableControl} from "../../../../src/simulation/controls/enable-control";
 import {LaneTraffic} from "../../../../src/state/lane-traffic";
 import {ContainerStorage} from "../../../../src/simulation/components/container-storage";
 

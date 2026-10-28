@@ -468,10 +468,10 @@ export function runLossTrials(
         : watched.items.reduce((sum, item) => sum + watched_container.getCurrentQuantity(item), 0);
 
     // a tick as the simulate step runs it
-    const control_logic = new SimulationTick(context);
+    const simulation_tick = new SimulationTick(context);
     const now = () => context.tick_provider.getCurrentTick();
     const start_tick = now();
-    const step = () => control_logic.executeForTick();
+    const step = () => simulation_tick.executeForTick();
     const runUntilPhase = (phase: number) => {
         const wanted = ((phase % bin.ticks) + bin.ticks) % bin.ticks;
         while ((now() - start_tick) % bin.ticks !== wanted) {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { Duration, OpenRange } from "../data-types";
-import { TickProvider } from "./current-tick-provider";
+import { Duration, OpenRange } from "../../data-types";
+import { TickProvider } from "../current-tick-provider";
 import { EnableControl } from "./enable-control";
 
 describe("a clock of the game", () => {

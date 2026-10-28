@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { MutableTickProvider } from "../../control-logic/current-tick-provider";
-import { reasonId, reasonText } from "../../control-logic/mode/reason-table";
+import { MutableTickProvider } from "../current-tick-provider";
+import { reasonId, reasonText } from "../../state/reason-table";
 import { StateTransitionHistory } from "../../crafting/sequence/state-transition-history";
 import { expandStateTransitionHistory } from "../../crafting/sequence/compact-history";
 import { EntityRegistry, Machine, RecipeMetadata } from "../../entities";

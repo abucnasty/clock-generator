@@ -1,4 +1,4 @@
-import { AlwaysEnabledControl, EnableControl } from "../../../control-logic";
+import { AlwaysEnabledControl, EnableControl } from "../../../simulation/controls/enable-control";
 import { InserterState, EntityState, MachineStatus } from "../../../state";
 import { ContainerStorage } from "../../../simulation/components/container-storage";
 

@@ -1,4 +1,4 @@
-import type { TickProvider } from "../../control-logic/current-tick-provider";
+import type { TickProvider } from "../current-tick-provider";
 import { OpenRange } from "../../data-types";
 import { MachineState } from "../../state";
 import { CraftingStatus } from "../status-codes";

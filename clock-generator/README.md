@@ -550,10 +550,9 @@ src/
 │   ├── candidates/   # The clocks made from another clock, and their search
 │   ├── runner/       # Step-based execution framework
 │   └── sequence/     # Simulation logic and interceptors
-├── control-logic/    # Enable controls, the tick provider, the takers' order and the reason table
-├── simulation/       # The tick: archetypes, their components, the phase table and the observers that record histories
+├── simulation/       # The tick: archetypes, components, phase table, takers' order, enable controls, tick provider, and the observers that record histories
 ├── entities/         # Machine, inserter, belt, chest and drill models
-├── state/            # Entity states and status categories
+├── state/            # Entity states, status categories and the reason table of recorded histories
 ├── blueprints/       # Blueprint encoding/decoding
 ├── harness/          # Running a build in a headless Factorio (record, test:game)
 └── verification/     # Comparing a recording with the simulator (verify)

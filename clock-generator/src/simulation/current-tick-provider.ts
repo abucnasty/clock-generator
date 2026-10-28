@@ -27,43 +27,13 @@ export class MutableTickProvider implements TickProvider {
     }
 }
 
-export class OffsetTickProvider implements TickProvider {
-    static create(args: {
-        base: TickProvider,
-        offset: () => number,
-    }): OffsetTickProvider {
-        return new OffsetTickProvider(
-            args.base,
-            args.offset,
-        );
-    }
-    constructor(
-        private readonly base: TickProvider,
-        private readonly offset: () => number,
-    ) {}
-
-    public getCurrentTick(): number {
-        const offset = this.offset();
-        return this.base.getCurrentTick() + offset;
-    }
-}
-
-function create(tickProvider: () => number): TickProvider {
-    return {
-        getCurrentTick(): number {
-            return tickProvider();
-        }
-    }
-}
-
 export const TickProvider = {
-    create: create,
     mutable: MutableTickProvider.create,
-    offset: OffsetTickProvider.create,
 };
+
 /**
  * Counts ticks from a start that can be moved, as an offset of -1 * start from the base does: the ticks of a recorded
- * run count from where it starts. Read every tick by every entity, so without the closures of OffsetTickProvider.
+ * run count from where it starts. Read every tick by every entity, so without a closure per read.
  */
 export class RelativeTickProvider implements TickProvider {
     public start = 0;

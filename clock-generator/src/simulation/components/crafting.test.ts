@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { EntityId, Machine, MachineSpec, RecipeMetadata } from "../../entities";
-import { reasonText } from "../../control-logic/mode/reason-table";
+import { reasonText } from "../../state/reason-table";
 import { MachineStatus } from "../../state/entity-status";
 import { MachineState } from "../../state/machine-state";
 import { CraftingStatus } from "../status-codes";
@@ -155,9 +155,9 @@ describe("MachineWakes", () => {
 });
 
 describe("Crafting and Wakes: what the machine's state keeps of them", () => {
-    it("shows their fields to outside callers through the machine's state, the status by the name the histories record", () => {
+    it("shows the fields of Crafting to outside callers through the machine's state, the status by the name the histories record", () => {
         const state = stateOf("iron-gear-wheel");
-        const { crafting, wakes } = state;
+        const { crafting } = state;
         expect(state.status).toBe(MachineStatus.INGREDIENT_SHORTAGE);
         state.status = MachineStatus.OUTPUT_FULL;
         expect(crafting.status).toBe(CraftingStatus.FULL_OUTPUT);
@@ -168,12 +168,6 @@ describe("Crafting and Wakes: what the machine's state keeps of them", () => {
         state.craftsStarted = 3;
         state.totalCrafted = 4;
         expect([crafting.craftCount, crafting.craftsStarted, crafting.totalCrafted]).toEqual([2, 3, 4]);
-        state.outputBlockedAfterLastTick = true;
-        state.finishedCraftInLastTick = true;
-        state.startedCraftInLastTick = true;
-        state.windowOpeningTakeDecider = 5;
-        expect(wakes).toMatchObject({ outputBlockedAfterLastTick: true, finishedCraftInLastTick: true, startedCraftInLastTick: true,
-            windowOpeningTakeDecider: 5 });
     });
 
     it("is copied whole onto a snapshot, but the decider (a known quirk, kept)", () => {

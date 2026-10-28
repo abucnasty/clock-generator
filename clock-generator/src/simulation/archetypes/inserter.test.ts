@@ -2,9 +2,9 @@ import { describe, expect, test, vi } from "vitest";
 import { GameFixturePaths } from "../../../tests/game/helpers/fixture-paths";
 import { InserterAnimationOverrideConfig } from "../../config/schema";
 import { loadConfigFromFile } from "../../config/loader";
-import { MutableTickProvider } from "../../control-logic/current-tick-provider";
-import { AlwaysEnabledControl, EnableControl } from "../../control-logic/enable-control";
-import { reasonText } from "../../control-logic/mode/reason-table";
+import { MutableTickProvider } from "../current-tick-provider";
+import { AlwaysEnabledControl, EnableControl } from "../controls/enable-control";
+import { reasonText } from "../../state/reason-table";
 import { SimulationContext } from "../../crafting/sequence/simulation-context";
 import { OpenRange, Duration } from "../../data-types";
 import { Belt, Chest, EntityId, Inserter, InserterMetadata, InserterStackSize, Machine, RecipeMetadata } from "../../entities";
@@ -137,7 +137,7 @@ describe("an inserter on a clock", () => {
 /**
  * Two stack inserters (hand 16) waiting at a gear assembler that holds `held` gears, each dropping onto a belt of its own,
  * with `in_hand` gears already in the hand of the first. Updated in the order of the list, first then second, as the
- * game serves the takers of one machine in one fixed order (InserterUpdates).
+ * game serves the takers of one machine in one fixed order (`inserterUpdateOrder`).
  */
 function twoTakers(held: number, in_hand: number = 0) {
     const machine = gearMachine();

@@ -1,4 +1,4 @@
-import type { TickProvider } from "../../control-logic/current-tick-provider";
+import type { TickProvider } from "../current-tick-provider";
 import type { InventoryTransferHistory } from "../../crafting/sequence/inventory-transfer-history";
 import { OpenRange } from "../../data-types";
 import { Machine, MiningDrill, miningDrillMaxInsertion } from "../../entities";

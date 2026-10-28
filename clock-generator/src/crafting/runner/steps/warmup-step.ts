@@ -1,4 +1,3 @@
-import { ControlLogic } from "../../../control-logic";
 import { SimulationTick } from "../simulation-tick";
 import { Duration } from "../../../data-types";
 import { SimulationContext } from "../../sequence";
@@ -7,7 +6,7 @@ import { RunnerStep, RunnerStepType } from "./runner-step";
 export class WarmupStep implements RunnerStep {
     public readonly type: RunnerStepType = RunnerStepType.WARM_UP
     
-    private readonly control_logic: ControlLogic;
+    private readonly simulation_tick: SimulationTick;
 
     constructor(
         private readonly simulation_context: SimulationContext,
@@ -15,7 +14,7 @@ export class WarmupStep implements RunnerStep {
         /** Stops early once the state at a period boundary repeats an earlier boundary's: the run is periodic from there */
         private readonly steady_state?: { period_ticks: number; key: () => string },
     ) {
-        this.control_logic = this.build()
+        this.simulation_tick = this.build()
     }
 
     /** Ticks actually simulated by the last execute() */
@@ -26,7 +25,7 @@ export class WarmupStep implements RunnerStep {
 
     public execute(): void {
         const context = this.simulation_context
-        const control_logic = this.control_logic;
+        const simulation_tick = this.simulation_tick;
 
         const start_tick = context.tick_provider.getCurrentTick();
         const end_tick = start_tick + this.duration.ticks;
@@ -52,12 +51,12 @@ export class WarmupStep implements RunnerStep {
                 }
                 boundary_by_key.set(key, boundary);
             }
-            control_logic.executeForTick();
+            simulation_tick.executeForTick();
         }
         this.ticks_run = context.tick_provider.getCurrentTick() - start_tick;
     }
 
-    private build(): ControlLogic {
+    private build(): SimulationTick {
         return new SimulationTick(this.simulation_context);
     }
 }

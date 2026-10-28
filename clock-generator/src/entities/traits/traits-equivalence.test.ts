@@ -196,7 +196,7 @@ function checkDrills(registry: ReadableEntityRegistry, traits: ConfigTraits): vo
  * pickup rule, bound in simulation/archetypes/inserter.ts) and whether its belt pickup runs the calibrated arm
  * (belt-hand-pickup.ts)
  */
-function controlLogicOf(context: SimulationContext): Map<string, { swings_part_hands: boolean; belt_arm: boolean | null }> {
+function traitsOf(context: SimulationContext): Map<string, { swings_part_hands: boolean; belt_arm: boolean | null }> {
     const decided = new Map<string, { swings_part_hands: boolean; belt_arm: boolean | null }>();
     for (const inserter of context.inserters) {
         const pickup = inserter.hand.pickup;
@@ -210,7 +210,7 @@ function controlLogicOf(context: SimulationContext): Map<string, { swings_part_h
 
 function checkInserters(context: SimulationContext, traits: ConfigTraits): void {
     const registry = context.entity_registry;
-    const decided = controlLogicOf(context);
+    const decided = traitsOf(context);
     for (const inserter of registry.getAll().filter(Entity.isInserter)) {
         const id = inserter.entity_id.id;
         const t = traits[id] as InserterTraits;

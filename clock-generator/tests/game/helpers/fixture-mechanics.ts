@@ -4,13 +4,13 @@ import {expect} from "vitest";
 import {Config} from "../../../src/config";
 import {loadConfigFromFile} from "../../../src/config/loader";
 import {SimulationContext} from "../../../src/crafting/sequence/simulation-context";
-import {CompositeControlLogic, TickControlLogic} from "../../../src/control-logic";
 import {bindHandPorts} from "../../../src/simulation/components/hand-ports";
 import {BeltPickupLane} from "../../../src/state/belt-pickup-lane";
 import {EntityState} from "../../../src/state";
 import {GameFixturePaths} from "./fixture-paths";
 import {configAtSpeed, FixtureBeltSpeed} from "./belt-speed-fixtures";
 import {ContainerStorage} from "../../../src/simulation/components/container-storage";
+import { TickByHand } from "../../../src/crafting/runner/tick-by-hand.fixture";
 
 /**
  * Helpers for the unit tests of the fixture families: the documented mechanic of a family, run in the simulator on the
@@ -103,7 +103,7 @@ export function unclockedContainerStock(config: Config, items: string[], ticks =
     const context = SimulationContext.fromConfig(config);
     const container = context.state_registry.getAllStates().find(ContainerStorage.isSlots);
     if (!container) throw new Error("expected a slot container");
-    const tick = new CompositeControlLogic([new TickControlLogic(context.tick_provider), ...context.machines, context.inserterUpdates()]);
+    const tick = new TickByHand(context);
     const peak = Object.fromEntries(items.map(item => [item, 0]));
     for (let i = 0; i < ticks; i++) {
         tick.executeForTick();

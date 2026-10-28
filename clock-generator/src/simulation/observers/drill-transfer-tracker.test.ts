@@ -4,7 +4,7 @@ import { createEntityRegistryFromConfig } from '../../crafting/sequence/simulati
 import { InventoryTransferHistory } from '../../crafting/sequence/inventory-transfer-history';
 import { EntityId, Machine, MiningDrill } from '../../entities';
 import { DrillStatusCode } from '../status-codes';
-import { MutableTickProvider } from '../../control-logic/current-tick-provider';
+import { MutableTickProvider } from '../current-tick-provider';
 import { DrillTransferTracker } from './drill-transfer-tracker';
 
 /** A drill into a machine, as the stone brick samples have it, with the tracker that records its enabled runs */

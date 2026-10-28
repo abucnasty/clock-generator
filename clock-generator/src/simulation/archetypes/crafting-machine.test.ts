@@ -4,8 +4,8 @@ import { CraftingMachineArchetype } from "./crafting-machine";
 import { MachineState, MachineStatus } from "../../state";
 import { Machine, MachineSpec, RecipeMetadata } from "../../entities";
 import { Config, ConfigSchema } from "../../config/schema";
-import { AlwaysEnabledControl } from "../../control-logic";
-import { reasonText } from "../../control-logic/mode/reason-table";
+import { AlwaysEnabledControl } from "../controls/enable-control";
+import { reasonText } from "../../state/reason-table";
 import { SimulationContext } from "../../crafting/sequence/simulation-context";
 import { BurnerEnergy } from "../components/burner-energy";
 import { CraftingStatus, machineStatusOf } from "../status-codes";
@@ -237,24 +237,24 @@ describe("Crafting machine at the output block", () => {
     test("a machine tells the inserters that wait on it whether it finished a craft in its last tick, and whether its output was at the block then", () => {
         const { machine_state, machine } = createRocketFuel(11, 2)
         executeForTicks(machine, 1)
-        expect(machine_state.outputBlockedAfterLastTick).toBe(true)
-        expect(machine_state.finishedCraftInLastTick).toBe(false)
+        expect(machine_state.wakes.outputBlockedAfterLastTick).toBe(true)
+        expect(machine_state.wakes.finishedCraftInLastTick).toBe(false)
         // 7.09 ticks a craft: only the tick the first craft finishes in says so
         let ticks = 1
         while (machine_state.craftCount === 0 && ticks < 20) {
-            expect(machine_state.finishedCraftInLastTick).toBe(false)
+            expect(machine_state.wakes.finishedCraftInLastTick).toBe(false)
             executeForTicks(machine, 1)
             ticks += 1
         }
         expect(machine_state.craftCount).toBe(1)
-        expect(machine_state.finishedCraftInLastTick).toBe(true)
+        expect(machine_state.wakes.finishedCraftInLastTick).toBe(true)
         executeForTicks(machine, 1)
-        expect(machine_state.finishedCraftInLastTick).toBe(false)
+        expect(machine_state.wakes.finishedCraftInLastTick).toBe(false)
         // an output inserter takes the products: the machine says so once its own tick is done
         machine_state.inventoryState.setQuantity("rocket-fuel", 0)
-        expect(machine_state.outputBlockedAfterLastTick).toBe(true)
+        expect(machine_state.wakes.outputBlockedAfterLastTick).toBe(true)
         executeForTicks(machine, 1)
-        expect(machine_state.outputBlockedAfterLastTick).toBe(false)
+        expect(machine_state.wakes.outputBlockedAfterLastTick).toBe(false)
     })
 
     // the lowest output the game showed full output at and the highest it showed ingredient shortage at, per recording
@@ -419,11 +419,11 @@ describe("Crafting machine with a fuel slot", () => {
 
     test("accepts fuel up to its insertion limit, even while the output is full", () => {
         const { machine_state } = createBiochamberState(0, 0)
-        expect(machine_state.ingress.takes("nutrients")).toBe(true)
+        expect(machine_state.ingress.slotOf("nutrients")).toBeGreaterThanOrEqual(0)
         expect(machine_state.ingress.blocked("nutrients")).toBe(false)
         machine_state.fuelInventory.addQuantity("nutrients", machine_state.machine.fuel_slot!.automated_insertion_limit)
         expect(machine_state.ingress.blocked("nutrients")).toBe(true)
-        expect(machine_state.ingress.takes("coal")).toBe(false)
+        expect(machine_state.ingress.slotOf("coal")).toBe(-1)
     })
 
     // a burner tops its buffer up only after a tick it keeps working, so a stopped one keeps the 1/15 of a tick its buffer
@@ -584,7 +584,7 @@ describe("Crafting machine: its steps and observers", () => {
                     status_then: machine_state.status, started_then: machine_state.craftsStarted })
             },
             onTick() {
-                ticks.push({ finished: machine_state.finishedCraftInLastTick, decider: machine_state.windowOpeningTakeDecider })
+                ticks.push({ finished: machine_state.wakes.finishedCraftInLastTick, decider: machine_state.wakes.windowOpeningTakeDecider })
             },
         }
         return { observer, changes, ticks }
@@ -636,12 +636,12 @@ describe("Crafting machine: its steps and observers", () => {
         const { observer, ticks } = watching(machine_state)
         machine.observers.add(observer)
         executeForTicks(machine, 1)
-        machine_state.windowOpeningTakeDecider = 3
+        machine_state.wakes.windowOpeningTakeDecider = 3
         executeForTicks(machine, 1)
         // the craft finished in the second tick: the observers see the flags of that tick, and the decider gone
         expect(ticks).toEqual([{ finished: false, decider: null }, { finished: true, decider: null }])
-        expect(machine_state.finishedCraftInLastTick).toBe(true)
-        expect(machine_state.windowOpeningTakeDecider).toBe(null)
+        expect(machine_state.wakes.finishedCraftInLastTick).toBe(true)
+        expect(machine_state.wakes.windowOpeningTakeDecider).toBe(null)
     })
 
     test("counts the crafts its Wakes report from its build on", () => {
@@ -650,8 +650,8 @@ describe("Crafting machine: its steps and observers", () => {
         machine_state.craftsStarted = 5
         const machine = CraftingMachineArchetype.create({ machine_state })
         executeForTicks(machine, 1)
-        expect(machine_state.finishedCraftInLastTick).toBe(false)
-        expect(machine_state.startedCraftInLastTick).toBe(false)
+        expect(machine_state.wakes.finishedCraftInLastTick).toBe(false)
+        expect(machine_state.wakes.startedCraftInLastTick).toBe(false)
     })
 
     test("tells observers taken off nothing more, and keeps the others", () => {

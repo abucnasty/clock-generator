@@ -1,4 +1,4 @@
-import { ControlLogic, EnableControl } from "../../../control-logic";
+import { EnableControl } from "../../../simulation/controls/enable-control";
 import { SimulationTick } from "../simulation-tick";
 import { assertIsChest, Entity, EntityId } from "../../../entities";
 import { EntityState, MachineStatus } from "../../../state";
@@ -15,12 +15,12 @@ import { ContainerStorage } from "../../../simulation/components/container-stora
  */
 export class PrepareStep implements RunnerStep {
     public readonly type: RunnerStepType = RunnerStepType.PREPARE
-    private readonly control_logic: ControlLogic;
+    private readonly simulation_tick: SimulationTick;
 
     constructor(
         private readonly simulation_context: SimulationContext,
     ) {
-        this.control_logic = this.build()
+        this.simulation_tick = this.build()
     }
 
     /**
@@ -40,7 +40,7 @@ export class PrepareStep implements RunnerStep {
     }
 
     public execute(): void {
-        const control_logic = this.control_logic;
+        const simulation_tick = this.simulation_tick;
         const context = this.simulation_context;
         // Only check for full buffer chests that have both an input and output inserter
         const buffer_chests = context.state_registry
@@ -51,7 +51,7 @@ export class PrepareStep implements RunnerStep {
         
         while (true) {
             this.kickStartLoopingRecipes();
-            control_logic.executeForTick();
+            simulation_tick.executeForTick();
             if (context.tick_provider.getCurrentTick() > 1_000_000) {
                 const machines_not_output_full = context.machines.filter(it => it.machine_state.status !== MachineStatus.OUTPUT_FULL)
                 machines_not_output_full.forEach(it => {
@@ -100,7 +100,7 @@ export class PrepareStep implements RunnerStep {
         }
     }
 
-    private build(): ControlLogic {
+    private build(): SimulationTick {
         const context = this.simulation_context
         
         // Input inserters: inserters that drop into machines

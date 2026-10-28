@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Config, ConfigSchema } from "../config/schema";
-import { TakerOrder } from "../control-logic/inserter/competing-takers";
+import { TakerOrder } from "./competing-takers";
 import { SimulateStep } from "../crafting/runner/steps/simulate-step";
 import { SimulationContext } from "../crafting/sequence/simulation-context";
 import { Duration } from "../data-types/duration";

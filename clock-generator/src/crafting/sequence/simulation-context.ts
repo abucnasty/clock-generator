@@ -1,10 +1,10 @@
 import { Config } from "../../config";
 import { orderByMachineDependencies } from "../../common/order-by-machine-dependencies";
-import { AlwaysEnabledControl, EnableControl, MutableTickProvider } from "../../control-logic";
+import { AlwaysEnabledControl, EnableControl } from "../../simulation/controls/enable-control";
+import { MutableTickProvider } from "../../simulation/current-tick-provider";
 import { CraftingMachineArchetype } from "../../simulation/archetypes/crafting-machine";
 import { InserterArchetype } from "../../simulation/archetypes/inserter";
-import { DEFAULT_TAKER_ORDER, InserterUpdates, TakerOrder } from "../../control-logic/inserter/competing-takers";
-import { ControlLogic } from "../../control-logic";
+import { DEFAULT_TAKER_ORDER, TakerOrder } from "../../simulation/competing-takers";
 import { Belt, Chest, Entity, EntityId, EntityRegistry, InserterFactory, Machine, WritableEntityRegistry } from "../../entities";
 import { MiningDrill } from "../../entities/drill/mining-drill";
 import { DrillState, EntityState, EntityStateFactory, EntityStateRegistry, InserterState, WritableEntityStateRegistry } from "../../state";
@@ -77,11 +77,6 @@ export class SimulationContext {
         }
     }
 
-    /** The update of every inserter in a tick, in the order of the list and of `competing_takers_order` */
-    public inserterUpdates(): ControlLogic {
-        return new InserterUpdates(this.inserters, this.state_registry, this.competing_takers_order);
-    }
-
     /**
      * A control swap, in place, between runs and never in a tick: every inserter and then every drill, each in the
      * order of its list, is put on the control the policy gives it (`useControl`), where the policy has an entry for
@@ -111,9 +106,6 @@ export class SimulationContext {
         }
     }
 }
-
-type MachineInterceptor = (entity_state: EntityState) => CraftingMachineArchetype | null
-type InserterArchetypeInterceptor = (entity_state: EntityState) => InserterArchetype | null
 
 /** The entities of a config: belts, machines, chests, inserters and drills, without any state */
 export function createEntityRegistryFromConfig(config: Config): EntityRegistry {
@@ -180,13 +172,7 @@ function registryPutIntoView(entity_registry: EntityRegistry): PutIntoView {
     };
 }
 
-function createSimulationContextFromConfig(
-    config: Config,
-    interceptors: {
-        machine_interceptor?: MachineInterceptor,
-        inserter_interceptor?: InserterArchetypeInterceptor,
-    } = {}
-): SimulationContext {
+function createSimulationContextFromConfig(config: Config): SimulationContext {
     const entity_registry = createEntityRegistryFromConfig(config);
 
     const state_factory = new EntityStateFactory(entity_registry);
@@ -200,10 +186,6 @@ function createSimulationContextFromConfig(
         .getAllStates()
         .filter(EntityState.isMachine)
         .map(machine_state => {
-            const possible_state_machine = interceptors.machine_interceptor && interceptors.machine_interceptor(machine_state);
-            if (possible_state_machine) {
-                return possible_state_machine;
-            }
             const result_target = machine_state.machine.result_target;
             const result_target_state = result_target === undefined ? undefined : entity_state_registry.getStateByEntityIdOrThrow(result_target);
             assert(result_target_state === undefined || ContainerStorage.is(result_target_state) || EntityState.isMachine(result_target_state),
@@ -218,10 +200,6 @@ function createSimulationContextFromConfig(
         entity_state_registry.getAllStates().filter(EntityState.isInserter)
     )
         .map(inserter_state => {
-            const possible_archetype = interceptors.inserter_interceptor && interceptors.inserter_interceptor(inserter_state);
-            if (possible_archetype) {
-                return possible_archetype;
-            }
             return InserterArchetype.create({
                 inserter_state: inserter_state,
                 source_state: entity_state_registry.getStateByEntityIdOrThrow(inserter_state.inserter.source.entity_id),
