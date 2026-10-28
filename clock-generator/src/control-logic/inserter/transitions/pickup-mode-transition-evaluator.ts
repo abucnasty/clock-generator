@@ -1,6 +1,6 @@
 import { handSizeFor } from "../../../entities";
 import { fullHandOf } from "../../../entities/traits/hand";
-import { EntityState, InserterState, MachineState } from "../../../state";
+import { EntityState, InserterState } from "../../../state";
 import { EnableControl } from "../../enable-control";
 import { ModeTransition, ModeTransitionEvaluator } from "../../mode";
 import { InserterIdleMode, InserterMode } from "../modes";
@@ -49,7 +49,7 @@ export class PickupModeTransitionEvaluator implements ModeTransitionEvaluator<In
 
         // a partly filled hand from a belt waits while the machine takes no more of its item
         if (held_item !== null && this.wait_for_sink_mode && this.source_state && EntityState.isBelt(this.source_state)
-            && EntityState.isMachine(this.sinkEntityState) && MachineState.machineInputIsBlocked(this.sinkEntityState, held_item.item_name)) {
+            && EntityState.isMachine(this.sinkEntityState) && this.sinkEntityState.ingress.blocked(held_item.item_name)) {
             return ModeTransition.transition(this.wait_for_sink_mode, `machine takes no more ${held_item.item_name} for now, ${held_item.quantity} in hand`);
         }
 

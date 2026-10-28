@@ -2,6 +2,7 @@ import assert from "../../../../common/assert";
 import { MachineState, InserterState } from "../../../../state";
 import { InserterTransferLogic } from "../transfer-logic";
 import { removeFromHand } from "../transfer-helpers";
+import { DropBy } from "../../../../simulation/components/ports";
 
 export class MachineDropLogic implements InserterTransferLogic {
     private current_tick = 0;
@@ -31,7 +32,9 @@ export class MachineDropLogic implements InserterTransferLogic {
             held_item !== null,
             `${inserter_state.entity_id} Held item should not be null when dropping off to machine`
         );
-        MachineState.insertItem(sink, held_item.item_name, held_item.quantity);
-        removeFromHand(inserter_state, held_item.quantity);
+        // the whole hand, with no limit check (a known quirk, kept): the Ingress takes from a hand all it holds
+        const amount = sink.ingress.accepts(held_item.item_name, held_item.quantity, DropBy.HAND);
+        sink.ingress.insert(held_item.item_name, amount);
+        removeFromHand(inserter_state, amount);
     }
 }

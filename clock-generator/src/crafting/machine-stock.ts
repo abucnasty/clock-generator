@@ -106,7 +106,7 @@ export class StockRecorder {
         this.ticks += 1;
         for (const { state, series, inputs, outputs, fuel_item } of this.machines) {
             for (const [item_name, item_series] of inputs) {
-                item_series[tick] = MachineState.ingredientQuantity(state, item_name);
+                item_series[tick] = state.ingress.ingredientQuantity(item_name);
             }
             for (const [item_name, item_series] of outputs) {
                 item_series[tick] = state.inventoryState.getQuantity(item_name);

@@ -52,11 +52,13 @@ describe('optional timeline observer', () => {
     it('clips whole ticks, preserves the baseline and never changes simulation state', () => {
         const context = SimulationContext.fromConfig(config);
         const state = context.machines[0].machine_state;
-        const before = JSON.stringify(state);
+        // the Ingress's views and "until written" memos mirror the inventories: caches, which an ask may fill
+        const simulationState = () => JSON.stringify(state, (key, value) => key === 'ingress' ? undefined : value);
+        const before = simulationState();
         const recorder = new TimelineRecorder(context, { period_ticks: 20, max_ticks: 2 });
         for (let tick = 0; tick < 5; tick++) recorder.record();
         expect(recorder.recording('clock', 20, 0, 1)).toMatchObject({ end_tick: 2, truncated: true });
-        expect(JSON.stringify(state)).toBe(before);
+        expect(simulationState()).toBe(before);
         const bounded = new TimelineRecorder(context, { period_ticks: 20, max_points: 1 });
         bounded.record();
         expect(bounded.recording('clock', 20, 0, 1)).toMatchObject({ end_tick: 0, truncated: true });

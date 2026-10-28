@@ -3,7 +3,7 @@ import {ConfigSchema, type Config} from '../config/schema';
 import {assertInserterCoverage, validateInserterCoverage} from '../config/inserter-coverage-validator';
 import {CompositeControlLogic, TickControlLogic} from '../control-logic';
 import {directMachineInsertionLimit} from '../entities/drill/mining-drill-ext';
-import {MachineState, MachineStatus} from '../state';
+import {MachineStatus} from '../state';
 import {SimulationContext} from './sequence/simulation-context';
 import {CraftingCyclePlan} from './sequence/cycle/crafting-cycle';
 import {TargetProductionRate} from './target-production-rate';
@@ -47,7 +47,7 @@ describe('a recycler placing results into a machine', () => {
         const tick = new CompositeControlLogic([new TickControlLogic(context.tick_provider), ...context.machines, context.inserterUpdates()]);
         const run = (ticks: number) => { for (let i = 0; i < ticks; i++) tick.executeForTick(); };
         run(10_000);
-        expect(MachineState.ingredientQuantity(target, item.name)).toBe(limit);
+        expect(target.ingress.ingredientQuantity(item.name)).toBe(limit);
         expect(limit).toBeGreaterThan(target.machine.inputs.getOrThrow(item.name).automated_insertion_limit.quantity);
         expect(target.inventoryState.getQuantity('advanced-circuit')).toBe(0);
         expect(source.inventoryState.getQuantity('advanced-circuit')).toBeGreaterThan(0);
@@ -55,7 +55,7 @@ describe('a recycler placing results into a machine', () => {
         const crafts = source.craftCount; run(100); expect(source.craftCount).toBe(crafts);
         target.inventoryState.removeQuantity(item.name, 20); run(120);
         expect(source.craftCount).toBeGreaterThan(crafts);
-        expect(MachineState.ingredientQuantity(target, item.name)).toBe(limit);
+        expect(target.ingress.ingredientQuantity(item.name)).toBe(limit);
     });
     it('plans the recycler feed and target rate from the circuits its target needs', () => {
         const config = cell(), context = SimulationContext.fromConfig(config);

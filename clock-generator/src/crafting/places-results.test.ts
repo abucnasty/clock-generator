@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { loadConfigFromFile, parseConfig } from '../config/loader';
 import { ConfigSchema, type Config } from '../config/schema';
 import { CompositeControlLogic, TickControlLogic } from '../control-logic';
-import { EntityState, MachineState, MachineStatus } from '../state';
+import { EntityState, MachineStatus } from '../state';
 import { SlotStorage } from '../simulation/components/slot-storage';
 import { SimulationContext, createEntityRegistryFromConfig } from './sequence/simulation-context';
 import { CraftingCyclePlan } from './sequence/cycle/crafting-cycle';
@@ -139,7 +139,7 @@ describe('a machine that places its results itself, with no result target', () =
         run(context, 30 * 60);
         expect(machine.inventoryState.getQuantity('iron-plate')).toBe(100);
         expect(machine.status).toBe(MachineStatus.OUTPUT_FULL);
-        expect(MachineState.machineIsOutputBlocked(machine)).toBe(true);
+        expect(machine.ingress.outputBlocked()).toBe(true);
         // emptied of circuits, it is given none while the plates wait
         machine.inventoryState.removeQuantity('electronic-circuit', machine.inventoryState.getQuantity('electronic-circuit'));
         const crafts = machine.craftCount;

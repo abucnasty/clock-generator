@@ -267,12 +267,12 @@ describe("Machine State Machine at the output block", () => {
         expect(machine_state.machine.output.outputBlock).toEqual({ item_name: "plastic-bar", held_limit: 100, max_stack_size: 100, ingredients_blocked_at: 146 })
         machine_state.inventoryState.setQuantity("plastic-bar", 100)
         machine_state.inventoryState.setQuantity("coal", 69)
-        expect(MachineState.machineIsOutputBlocked(machine_state)).toBe(false)
-        expect(MachineState.machineInputIsBlocked(machine_state, "coal")).toBe(false)
-        expect(MachineState.takesNothing(machine_state)).toBe(false)
+        expect(machine_state.ingress.outputBlocked()).toBe(false)
+        expect(machine_state.ingress.blocked("coal")).toBe(false)
+        expect(machine_state.ingress.takesNothing()).toBe(false)
         machine_state.inventoryState.setQuantity("coal", 73)
-        expect(MachineState.machineInputIsBlocked(machine_state, "coal")).toBe(true)
-        expect(MachineState.takesNothing(machine_state)).toBe(true)
+        expect(machine_state.ingress.blocked("coal")).toBe(true)
+        expect(machine_state.ingress.takesNothing()).toBe(true)
     })
 
     test("a machine tells the inserters that wait on it whether it finished a craft in its last tick, and whether its output was at the block then", () => {
@@ -353,9 +353,9 @@ describe("Machine State Machine at the output block", () => {
 
     test("its inserters only fetch ingredients while the output is under the block", () => {
         const { machine_state } = createRocketFuel(11, 0)
-        expect(MachineState.machineInputIsBlocked(machine_state, "jelly")).toBe(true)
+        expect(machine_state.ingress.blocked("jelly")).toBe(true)
         machine_state.inventoryState.setQuantity("rocket-fuel", 10)
-        expect(MachineState.machineInputIsBlocked(machine_state, "jelly")).toBe(false)
+        expect(machine_state.ingress.blocked("jelly")).toBe(false)
     })
 
     test("an idle machine started with its output at the block shows full output", () => {
@@ -412,7 +412,7 @@ describe("Machine State Machine with a fuel slot", () => {
         const { machine_state, state_machine } = createBiochamberState(8, 0)
         executeControlLogicForTicks(state_machine, 1)
         expect(machine_state.status).toBe(MachineStatus.NO_FUEL)
-        MachineState.insertItem(machine_state, "nutrients", 1)
+        machine_state.ingress.insert("nutrients", 1)
         executeControlLogicForTicks(state_machine, 1)
         expect(machine_state.status).toBe(MachineStatus.WORKING)
         // a craft started once the machine had fuel to burn
@@ -433,7 +433,7 @@ describe("Machine State Machine with a fuel slot", () => {
         executeControlLogicForTicks(state_machine, 1)
         expect(machine_state.status).toBe(MachineStatus.NO_FUEL)
         // with fuel, the full output is what stops it
-        MachineState.insertItem(machine_state, "nutrients", 1)
+        machine_state.ingress.insert("nutrients", 1)
         executeControlLogicForTicks(state_machine, 1)
         expect(machine_state.status).toBe(MachineStatus.OUTPUT_FULL)
     })
@@ -460,11 +460,11 @@ describe("Machine State Machine with a fuel slot", () => {
 
     test("accepts fuel up to its insertion limit, even while the output is full", () => {
         const { machine_state } = createBiochamberState(0, 0)
-        expect(MachineState.machineAcceptsItem(machine_state, "nutrients")).toBe(true)
-        expect(MachineState.machineInputIsBlocked(machine_state, "nutrients")).toBe(false)
+        expect(machine_state.ingress.takes("nutrients")).toBe(true)
+        expect(machine_state.ingress.blocked("nutrients")).toBe(false)
         machine_state.fuelInventory.addQuantity("nutrients", machine_state.machine.fuel_slot!.automated_insertion_limit)
-        expect(MachineState.machineInputIsBlocked(machine_state, "nutrients")).toBe(true)
-        expect(MachineState.machineAcceptsItem(machine_state, "coal")).toBe(false)
+        expect(machine_state.ingress.blocked("nutrients")).toBe(true)
+        expect(machine_state.ingress.takes("coal")).toBe(false)
     })
 
 })
@@ -475,18 +475,18 @@ describe("Machine State Machine with a pentapod egg recipe", () => {
     const createEggState = () => MachineState.forMachine(createMachine("pentapod-egg", {
         prototype: "biochamber", crafting_speed: 64.5, productivity: 150, energy_consumption_bonus: 1020,
     }))
-    const eggsGiven = (machine_state: MachineState) => MachineState.ingredientQuantity(machine_state, "pentapod-egg")
+    const eggsGiven = (machine_state: MachineState) => machine_state.ingress.ingredientQuantity("pentapod-egg")
     const eggsMade = (machine_state: MachineState) => machine_state.inventoryState.getQuantity("pentapod-egg")
-    const nutrientsToCraft = (machine_state: MachineState) => MachineState.ingredientQuantity(machine_state, "nutrients")
+    const nutrientsToCraft = (machine_state: MachineState) => machine_state.ingress.ingredientQuantity("nutrients")
     const nutrientsToBurn = (machine_state: MachineState) => machine_state.fuelInventory.getQuantity("nutrients")
 
     test("a hand of nutrients goes whole to the fuel slot while that is below its limit, and to the ingredients otherwise", () => {
         const machine_state = createEggState()
         expect(machine_state.machine.fuel_slot!.automated_insertion_limit).toBe(9)
         machine_state.fuelInventory.addQuantity("nutrients", 8)
-        MachineState.insertItem(machine_state, "nutrients", 16)
+        machine_state.ingress.insert("nutrients", 16)
         expect([nutrientsToBurn(machine_state), nutrientsToCraft(machine_state)]).toEqual([24, 0])
-        MachineState.insertItem(machine_state, "nutrients", 16)
+        machine_state.ingress.insert("nutrients", 16)
         expect([nutrientsToBurn(machine_state), nutrientsToCraft(machine_state)]).toEqual([24, 16])
     })
 
@@ -494,19 +494,19 @@ describe("Machine State Machine with a pentapod egg recipe", () => {
         const machine_state = createEggState()
         machine_state.fuelInventory.addQuantity("nutrients", 9)
         machine_state.inventoryState.addQuantity("nutrients", 209)
-        expect(MachineState.machineInputIsBlocked(machine_state, "nutrients")).toBe(false)
+        expect(machine_state.ingress.blocked("nutrients")).toBe(false)
         machine_state.inventoryState.addQuantity("nutrients", 1)
-        expect(MachineState.machineInputIsBlocked(machine_state, "nutrients")).toBe(true)
+        expect(machine_state.ingress.blocked("nutrients")).toBe(true)
         machine_state.fuelInventory.removeQuantity("nutrients", 1)
-        expect(MachineState.machineInputIsBlocked(machine_state, "nutrients")).toBe(false)
+        expect(machine_state.ingress.blocked("nutrients")).toBe(false)
     })
 
     test("starts with the eggs it is filled up to, since the recipe cannot start without one, and then takes no more", () => {
         const machine_state = createEggState()
         expect(eggsGiven(machine_state)).toBe(7)
-        expect(MachineState.machineInputIsBlocked(machine_state, "pentapod-egg")).toBe(true)
+        expect(machine_state.ingress.blocked("pentapod-egg")).toBe(true)
         machine_state.selfIngredients.removeQuantity("pentapod-egg", 1)
-        expect(MachineState.machineInputIsBlocked(machine_state, "pentapod-egg")).toBe(false)
+        expect(machine_state.ingress.blocked("pentapod-egg")).toBe(false)
     })
 
     test("a craft makes 2 eggs and a full productivity bar 1, and the eggs it makes are not the eggs it crafts from", () => {

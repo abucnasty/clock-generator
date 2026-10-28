@@ -38,30 +38,30 @@ function fillToLimit(state: MachineState, item: string): void {
     state.inventoryState.addQuantity(item, limit - state.inventoryState.getQuantity(item));
 }
 
-describe("MachineState.takesNothing", () => {
+describe("Ingress.takesNothing", () => {
     test("a machine below an insertion limit takes something", () => {
-        expect(MachineState.takesNothing(machineState("iron-gear-wheel"))).toBe(false);
+        expect(machineState("iron-gear-wheel").ingress.takesNothing()).toBe(false);
     });
 
     test("with every ingredient at its insertion limit it takes nothing", () => {
         const state = machineState("iron-gear-wheel");
         fillToLimit(state, "iron-plate");
-        expect(MachineState.takesNothing(state)).toBe(true);
+        expect(state.ingress.takesNothing()).toBe(true);
     });
 
     test("with one of two ingredients at its limit it still takes the other", () => {
         const state = machineState("electronic-circuit");
         fillToLimit(state, "iron-plate");
-        expect(MachineState.takesNothing(state)).toBe(false);
+        expect(state.ingress.takesNothing()).toBe(false);
         fillToLimit(state, "copper-cable");
-        expect(MachineState.takesNothing(state)).toBe(true);
+        expect(state.ingress.takesNothing()).toBe(true);
     });
 
     test("with its output at the block it takes nothing, whatever its ingredients hold", () => {
         const state = machineState("iron-gear-wheel");
         const block = state.machine.output.outputBlock;
         state.inventoryState.addQuantity(block.item_name, block.ingredients_blocked_at);
-        expect(MachineState.takesNothing(state)).toBe(true);
+        expect(state.ingress.takesNothing()).toBe(true);
     });
 });
 

@@ -1,7 +1,7 @@
 import { ControlLogic, EnableControl } from "../../../control-logic";
 import { SimulationTick } from "../simulation-tick";
 import { assertIsChest, Entity, EntityId } from "../../../entities";
-import { EntityState, MachineState, MachineStatus } from "../../../state";
+import { EntityState, MachineStatus } from "../../../state";
 import { cloneSimulationContextWithInterceptors, SimulationContext } from "../../sequence";
 import { InserterInterceptor } from "../../sequence/interceptors/inserter-interceptor";
 import { RunnerStep, RunnerStepType } from "./runner-step";
@@ -56,7 +56,7 @@ export class PrepareStep implements RunnerStep {
                 machines_not_output_full.forEach(it => {
                     console.error(`Machine ${it.machine_state.machine.entity_id} status: ${it.machine_state.status}`);
                     it.machine_state.machine.inputs.forEach(input => {
-                        if (MachineState.ingredientQuantity(it.machine_state, input.item_name) < 1) {
+                        if (it.machine_state.ingress.ingredientQuantity(input.item_name) < 1) {
                             console.error(`  Missing input: ${input.item_name}`);
                         }
                     })

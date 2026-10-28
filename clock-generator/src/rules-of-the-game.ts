@@ -16,8 +16,8 @@ export { OutputBlock } from "./entities/machine/output/output-block";
 
 /**
  * 2. Automated insertion limit (GOALS.md "Crafting Constraints"): the amount a craft takes times the overload
- * multiplier, rounded up; an input at or above it is not topped up. The machine state answers for one item
- * (`MachineState.machineInputIsBlocked`) and for all of them (`MachineState.takesNothing`). Cases:
+ * multiplier, rounded up; an input at or above it is not topped up. The machine's Ingress answers for one item
+ * (`Ingress.blocked`) and for all of them (`Ingress.takesNothing`). Cases:
  * `rules-of-the-game.test.ts`.
  */
 export { AutomatedInsertionLimit } from "./entities/machine/input/automated-insertion-limit";
@@ -34,7 +34,7 @@ export { miningDrillMaxInsertion } from "./entities/drill/mining-drill-ext";
 /**
  * 4. Fuel limit (GOALS.md "Constraint Exceptions"): a fuel slot is topped up to the fuel that holds 180 energy
  * buffers, at least 5 items. Cases: `entities/machine/fuel/fuel-slot.test.ts` (eleven biochambers from +495% to
- * +1427% energy consumption). The fuel slot is not locked out by the output block: `MachineState.machineInputIsBlocked`.
+ * +1427% energy consumption). The fuel slot is not locked out by the output block: `Ingress.blocked`.
  */
 export { FuelSlot } from "./entities/machine/fuel/fuel-slot";
 

@@ -1,4 +1,4 @@
-import { EntityState, InserterState, MachineState } from "../../../state";
+import { EntityState, InserterState } from "../../../state";
 import { EnableControl } from "../../enable-control";
 import { ModeTransition, ModeTransitionEvaluator } from "../../mode";
 import { InserterMode, InserterPickupMode } from "../modes";
@@ -27,7 +27,7 @@ export class WaitForSinkModeTransitionEvaluator implements ModeTransitionEvaluat
         if (held_item === null) {
             return ModeTransition.transition(this.pickup_mode, "nothing in hand to wait with");
         }
-        if (!EntityState.isMachine(this.sink_state) || !MachineState.machineInputIsBlocked(this.sink_state, held_item.item_name)) {
+        if (!EntityState.isMachine(this.sink_state) || !this.sink_state.ingress.blocked(held_item.item_name)) {
             return ModeTransition.transition(this.pickup_mode, `machine takes ${held_item.item_name} again`);
         }
         return ModeTransition.NONE;

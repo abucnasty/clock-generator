@@ -710,7 +710,7 @@ function setUpTheStart(
                 continue;
             }
             for (const [item_name, quantity] of Object.entries(start.items)) {
-                MachineState.ingredientInventory(machine_state, item_name).setQuantity(item_name, quantity);
+                machine_state.ingress.ingredientInventory(item_name).setQuantity(item_name, quantity);
             }
             machine_state.craftingProgress.progress = start.crafting_progress ?? machine_state.craftingProgress.progress;
             machine_state.bonusProgress.progress = start.bonus_progress ?? machine_state.bonusProgress.progress;

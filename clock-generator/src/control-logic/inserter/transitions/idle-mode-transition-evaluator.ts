@@ -34,7 +34,12 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
         private readonly pickup_mode: InserterPickupMode,
         private readonly disabled_mode: InserterDisabledMode,
         private readonly enable_control: EnableControl,
-    ) {}
+    ) {
+        // a machine sink's slot of each filtered item, bound once (the states never change identity)
+        this.sink_slots = EntityState.isMachine(sink_state)
+            ? Array.from(inserter_state.inserter.filtered_items, item_name => sink_state.ingress.slotOf(item_name))
+            : [];
+    }
 
     public onEnter(fromMode: InserterMode): void {}
 
@@ -46,14 +51,16 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
     /** Whether a window of a clock of the game opens in this tick: the inserter was disabled the tick before */
     private window_opens: boolean = false;
 
+    /** Per filtered item, its slot in a machine sink's Ingress (`Ingress.blockedAt`); empty for any other sink */
+    private readonly sink_slots: readonly number[];
+
     /**
-     * What the per-tick questions use, set up on first ask (the states never change identity): per filtered item, the
-     * blocked-ask on a machine sink and, for a machine source, the live stock.
+     * The pickup views, set up on the first pickup ask (the states never change identity): per filtered item, for a
+     * machine source, the live stock. The sink's slots are bound in the constructor (`sink_slots`).
      */
     private readonly hot: {
-        sink_blocked_asks: (() => boolean)[] | null;
         pickup_views: Map<string, { item_name: string; stock: LiveQuantity }> | null;
-    } = { sink_blocked_asks: null, pickup_views: null };
+    } = { pickup_views: null };
 
     public stateKey(): string {
         return `${this.saw_sink_blocked},${this.window_opens}`;
@@ -127,7 +134,7 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
         if (!EntityState.isMachine(sink)) {
             return false;
         }
-        const lifted = sink.outputBlockedAfterLastTick && !MachineState.machineIsOutputBlocked(sink);
+        const lifted = sink.outputBlockedAfterLastTick && !sink.ingress.outputBlocked();
         if (window_opens) {
             return lifted && !this.updatedAfterTheTake(sink);
         }
@@ -159,11 +166,10 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
         }
 
         if (EntityState.isMachine(this.sink_state)) {
-            const sink = this.sink_state;
-            const asks = this.hot.sink_blocked_asks ??= Array.from(this.inserter_state.inserter.filtered_items,
-                item_name => MachineState.inputBlockedAskOf(sink, item_name));
-            for (let index = 0; index < asks.length; index++) {
-                if (!asks[index]()) {
+            const ingress = this.sink_state.ingress;
+            const slots = this.sink_slots;
+            for (let index = 0; index < slots.length; index++) {
+                if (!ingress.blockedAt(slots[index])) {
                     return true;
                 }
             }

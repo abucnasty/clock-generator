@@ -252,7 +252,7 @@ export class EnableControlFactory {
                 let hands_dropped_before_refill = 0;
                 return EnableControl.lambda(() => {
                     countDroppedHands();
-                    const sink_quantity = MachineState.insertableQuantity(sink_state, source_item_name);
+                    const sink_quantity = sink_state.ingress.quantityPutIn(source_item_name);
                     const dropped = hands_dropped.get(source_item_name) ?? 0;
                     if (refilling) {
                         if (sink_quantity >= automated_insertion_limit || dropped - hands_dropped_before_refill >= planned_swings) {
@@ -413,13 +413,13 @@ export class EnableControlFactory {
         return EnableControl.latched({
             base: EnableControl.lambda(() => {
                 // Enable when sink needs items (below buffer threshold) AND chest has items
-                const sink_quantity = MachineState.insertableQuantity(sink_state, item_name);
+                const sink_quantity = sink_state.ingress.quantityPutIn(item_name);
                 const chest_has_items = source_state.getCurrentQuantity(item_name) > 0;
                 return chest_has_items && sink_quantity < minimum_required * buffer_multiplier;
             }),
             release: EnableControl.lambda(() => {
                 // Release when sink is at insertion limit OR chest is empty (for buffer chests)
-                const sink_quantity = MachineState.insertableQuantity(sink_state, item_name);
+                const sink_quantity = sink_state.ingress.quantityPutIn(item_name);
                 const chest_is_empty = source_state.isEmpty();
                 return sink_quantity >= automated_insertion_limit || chest_is_empty;
             })
@@ -527,13 +527,13 @@ export class EnableControlFactory {
                 base: EnableControl.any([
                     ensure_at_least_once_per_cycle,
                     EnableControl.lambda(() => {
-                        const sink_quantity = MachineState.insertableQuantity(sink_state, source_item_name);
+                        const sink_quantity = sink_state.ingress.quantityPutIn(source_item_name);
                         const sink_quantity_after_transfer = sink_quantity - Math.ceil(sink_consumption_per_tick * time_to_transfer_minimum_amount);
                         return sink_quantity_after_transfer < minimum_required * 4
                     })
                 ]),
                 release: EnableControl.lambda(() => {
-                    const sink_quantity = MachineState.insertableQuantity(sink_state, source_item_name);
+                    const sink_quantity = sink_state.ingress.quantityPutIn(source_item_name);
                     return sink_quantity >= max_insertion_amount
                 })
             })
@@ -1222,11 +1222,11 @@ export class EnableControlFactory {
         const automated_insertion_limit = sink_input.automated_insertion_limit.quantity;
         return EnableControl.latched({
             base: EnableControl.lambda(() => {
-                const sink_quantity = MachineState.insertableQuantity(sink, sink_input_item_name);
+                const sink_quantity = sink.ingress.quantityPutIn(sink_input_item_name);
                 return sink_quantity <= minimum_required * buffer_multiplier
             }),
             release: EnableControl.lambda(() => {
-                const sink_quantity = MachineState.insertableQuantity(sink, sink_input_item_name);
+                const sink_quantity = sink.ingress.quantityPutIn(sink_input_item_name);
                 return sink_quantity >= automated_insertion_limit
             })
         })

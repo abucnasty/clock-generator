@@ -124,7 +124,7 @@ export class MachineWorkingMode implements MachineMode, EnergyUser, YieldUser {
 
     private canStartCraft(): boolean {
         const needs = this.hot.craft_needs ??= this.state.machine.metadata.recipe.raw.ingredients.map(ingredient => ({
-            quantity: new LiveQuantity(MachineState.ingredientInventory(this.state, ingredient.name), ingredient.name),
+            quantity: new LiveQuantity(this.state.ingress.ingredientInventory(ingredient.name), ingredient.name),
             required: this.state.machine.metadata.recipe.inputsPerCraft.get(ingredient.name)!.amount,
         }));
         for (let index = 0; index < needs.length; index++) {
@@ -148,7 +148,7 @@ export class MachineWorkingMode implements MachineMode, EnergyUser, YieldUser {
     private consumeInputsForCraft(): void {
         this.state.craftsStarted += 1;
         const takes = this.hot.craft_takes ??= Array.from(this.state.machine.inputs.values(), input => ({
-            inventory: MachineState.ingredientInventory(this.state, input.ingredient.name),
+            inventory: this.state.ingress.ingredientInventory(input.ingredient.name),
             item_name: input.ingredient.name,
             amount_per_craft: input.consumption_rate.amount_per_craft,
         }));

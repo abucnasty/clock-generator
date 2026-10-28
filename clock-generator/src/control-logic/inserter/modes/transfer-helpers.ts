@@ -1,6 +1,6 @@
 import assert from "../../../common/assert";
 import { ItemName } from "../../../data";
-import { EntityState, InserterState, MachineState } from "../../../state";
+import { EntityState, InserterState } from "../../../state";
 
 export function canPickupItem(state: InserterState, item_name: ItemName): boolean {
     const filters = state.inserter.filtered_items;
@@ -8,7 +8,7 @@ export function canPickupItem(state: InserterState, item_name: ItemName): boolea
 }
 
 export function canPickupItemForSink(sink: EntityState, item_name: ItemName): boolean {
-    return !EntityState.isMachine(sink) || !MachineState.machineInputIsBlocked(sink, item_name);
+    return !EntityState.isMachine(sink) || !sink.ingress.blocked(item_name);
 }
 
 export function recordPickup(state: InserterState, item_name: ItemName, quantity: number): void {

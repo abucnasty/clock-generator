@@ -20,19 +20,19 @@ describe("the cryogenic plant that makes plastic with a full stack of 100 plasti
     it("takes no coal at overload multiplier 50, where the block of 100 is the stack", () => {
         const state = plasticPlant(42);
         expect(state.machine.output.outputBlock.ingredients_blocked_at).toBe(100);
-        expect(MachineState.machineIsOutputBlocked(state)).toBe(true);
-        expect(MachineState.machineInputIsBlocked(state, "coal")).toBe(true);
+        expect(state.ingress.outputBlocked()).toBe(true);
+        expect(state.ingress.blocked("coal")).toBe(true);
     });
 
     // ceil(1.166 / (1 / 42.5)) + 1 = 51
     it("takes coal up to its insertion limit at overload multiplier 51, where the block of 102 is never reached", () => {
         const state = plasticPlant(42.5);
         expect(state.machine.output.outputBlock.ingredients_blocked_at).toBe(102);
-        expect(MachineState.machineIsOutputBlocked(state)).toBe(false);
-        expect(MachineState.machineInputIsBlocked(state, "coal")).toBe(false);
+        expect(state.ingress.outputBlocked()).toBe(false);
+        expect(state.ingress.blocked("coal")).toBe(false);
         const limit = state.machine.inputs.getOrThrow("coal").automated_insertion_limit.quantity;
         state.inventoryState.setQuantity("coal", limit);
-        expect(MachineState.machineInputIsBlocked(state, "coal")).toBe(true);
+        expect(state.ingress.blocked("coal")).toBe(true);
     });
 });
 

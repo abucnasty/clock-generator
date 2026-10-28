@@ -1,5 +1,5 @@
 import { Entity, handSizeFor } from "../entities";
-import { EntityState, MachineState } from "../state";
+import { EntityState } from "../state";
 import { factorioInserterState, factorioMachineState } from "../state/factorio-entity-state";
 import { BurnerEnergy } from "../simulation/components/burner-energy";
 import type { SimulationContext } from "./sequence/simulation-context";
@@ -105,7 +105,7 @@ export class TimelineRecorder {
             const machine = state.machine;
             entity.recipe = machine.metadata.recipe.name;
             entity.items = machine.outputs.map(output => output.item_name);
-            for (const input of machine.inputs.values()) add({ id: `input:${input.item_name}`, label: "Ingredient", group: "inventory", unit: "items", item: input.item_name, limit: input.automated_insertion_limit.quantity }, () => MachineState.ingredientQuantity(state, input.item_name));
+            for (const input of machine.inputs.values()) add({ id: `input:${input.item_name}`, label: "Ingredient", group: "inventory", unit: "items", item: input.item_name, limit: input.automated_insertion_limit.quantity }, () => state.ingress.ingredientQuantity(input.item_name));
             for (const output of machine.outputs) add({ id: `output:${output.item_name}`, label: "Output", group: "inventory", unit: "items", item: output.item_name, limit: output.outputBlock.ingredients_blocked_at }, () => state.inventoryState.getQuantity(output.item_name));
             add({ id: "state", label: "Machine state", group: "state", unit: "state" }, () => factorioMachineState(state));
             add({ id: "craft", label: "Craft progress", group: "progress", unit: "%", limit: 100 }, () => state.craftingProgress.progress * 100);
