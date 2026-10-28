@@ -128,6 +128,12 @@ export class MachineState implements EntityState {
     }
 
     /**
+     * The pickup port of the machine's output (simulation/components): what its Placement and the inserters' hands that
+     * take from the machine take its results from
+     */
+    public readonly output: MachineOutputPort = new MachineOutputPort(this.inventoryState);
+
+    /**
      * What a machine that places its results itself (rule 18) puts from its output into its result target, bound to the
      * target when its archetype is built (simulation/components). Its `results_placed` counts what it placed where
      * inserters take them: into its result target, or into its own output where it has none. A tick in which it grew
@@ -135,7 +141,7 @@ export class MachineState implements EntityState {
      * hand was woken by every result put in, of whatever item, and by no craft that gave none). Always 0 for any other
      * machine, whose finishes wake them.
      */
-    public readonly placement: Placement = new Placement(new MachineOutputPort(this.inventoryState),
+    public readonly placement: Placement = new Placement(this.output,
         this.machine.outputs.map(output => output.item_name), this.machine.metadata.places_results === true);
 
     /** Whether the main product was at the output block after the machine's last tick, a view of its Wakes' */

@@ -31,6 +31,16 @@ interface OutputView {
 }
 
 /**
+ * A placer's binding of one ingredient (`placerInputOf`): its quantity where the machine keeps it, the drill's stop a
+ * placer fills it to, and the inventory a placer puts it into
+ */
+export interface PlacerInput {
+    readonly quantity: LiveQuantity;
+    readonly stop: number;
+    readonly inventory: WritableInventoryState;
+}
+
+/**
  * An item the machine takes, bound once: how it takes it, its ingredient view (null for fuel only), and the answer to
  * whether it is blocked, standing until one of the machine's inventories is written (-1: never taken)
  */
@@ -269,6 +279,21 @@ export class Ingress implements DropPort {
         inventory.addQuantity(item, amount);
     }
 
+    /**
+     * `insert` by the item's slot (`slotOf`), which a hand binds once: the same routing read off the slot's kind; an
+     * item the machine does not take (slot -1, the quirk's) goes the way `insert` sends it, into the ingredients
+     */
+    public insertAt(slot_index: number, item: ItemName, amount: number): void {
+        if (slot_index < 0) {
+            this.insert(item, amount);
+            return;
+        }
+        const slot = this.slots[slot_index];
+        const to_fuel = slot.kind === SlotKind.FUEL || (slot.kind === SlotKind.FUEL_AND_INGREDIENT && this.fuelIsBelowLimit());
+        const inventory = to_fuel ? this.fuel_inventory : slot.input!.self ? this.self_inventory : this.inventory;
+        inventory.addQuantity(item, amount);
+    }
+
     /** A placer's put into the machine: an ingredient, never as fuel (accepts, by a placer, allowed it) */
     public place(item: ItemName, amount: number): void {
         this.ingredientInventory(item).addQuantity(item, amount);
@@ -278,6 +303,22 @@ export class Ingress implements DropPort {
     public bindPlacerStops(): void {
         this.placer_stops ??= new Map(this.inputs.map(input => [input.item_name,
             directMachineStop(FactorioDataService.findItemOrThrow(input.item_name).stack_size, input.limit)]));
+    }
+
+    /**
+     * What a placer binds once for an item it places (after `bindPlacerStops`): the answers of `accepts` by a placer and
+     * `place` without a lookup in a tick; null for an item the machine does not craft with, which it takes none of
+     */
+    public placerInputOf(item: ItemName): PlacerInput | null {
+        const input = this.input_of.get(item);
+        if (input === undefined) {
+            return null;
+        }
+        return {
+            quantity: input.quantity,
+            stop: this.placer_stops!.get(item)!,
+            inventory: input.self ? this.self_inventory : this.inventory,
+        };
     }
 
     /** Where the machine keeps an ingredient: with its output, or apart from it when the recipe also makes that item */

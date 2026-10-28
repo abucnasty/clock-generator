@@ -1,29 +1,35 @@
-import { GameFixturePaths } from "../../../../../tests/game/helpers/fixture-paths";
+import { GameFixturePaths } from "../../../tests/game/helpers/fixture-paths";
 import path from "path";
 import { beforeAll, describe, expect, it } from "vitest";
-import { Config } from "../../../../config";
-import { loadConfigFromFile } from "../../../../config/loader";
-import { SimulationContext } from "../../../../crafting/sequence/simulation-context";
-import { EntityState } from "../../../../state";
-import { InserterPickupMode } from "./pickup-mode";
+import { Config } from "../../config";
+import { loadConfigFromFile } from "../../config/loader";
+import { SimulationContext } from "../../crafting/sequence/simulation-context";
+import { EntityState } from "../../state";
+import { BeltHandPickup } from "./belt-hand-pickup";
+import { bindHandPorts } from "./hand-ports";
 
 let sample: Config;
 beforeAll(async () => { sample = await loadConfigFromFile(GameFixturePaths.SAME_ITEM_CONFIG); });
 
+/**
+ * The belt's pickup port as the hand of inserter 2 reaches it, bound as its state machine binds it (to the lane slots
+ * the context's build gave the hand), and a take of one tick through it
+ */
 function pickup(config: Config) {
     const context = SimulationContext.fromConfig(config);
     const state = context.inserters.find(inserter => inserter.entity_id.number === 2)!.inserter_state;
     const source = context.state_registry.getStateByEntityIdOrThrow(state.inserter.source.entity_id);
     if (!EntityState.isBelt(source)) throw new Error("expected a belt source");
-    const mode = InserterPickupMode.create({
+    const port = bindHandPorts({
         inserterState: state, sourceState: source,
         sinkState: context.state_registry.getStateByEntityIdOrThrow(state.inserter.sink.entity_id),
         tick_provider: context.tick_provider,
-    });
+    }).pickup;
+    expect(port).toBeInstanceOf(BeltHandPickup);
     return { state, source, lanes: source.pickupsOf(state.entity_id.id)!, take(tick: number) {
         context.tick_provider.setCurrentTick(tick);
         const before = state.held_item?.quantity ?? 0;
-        mode.executeForTick();
+        port.pickup();
         return (state.held_item?.quantity ?? 0) - before;
     } };
 }

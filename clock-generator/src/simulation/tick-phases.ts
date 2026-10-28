@@ -92,7 +92,7 @@ export const TICK_PHASES: readonly TickPhaseRow[] = [
             { step: InserterStep.CONTROL_TICK, name: "control_tick", does: "the enable control's own tick, where it has one", upholds: [] },
             { step: InserterStep.PHASE_RULE, name: "phase_rule", does: "the phase's rule; on a change, observers (the phase written first), then exit and enter",
                 upholds: [1, 3, 8, 9, 10, 17] },
-            { step: InserterStep.PHASE_STEP, name: "phase_step", does: "the phase's step: pickup from the source, drop into the sink",
+            { step: InserterStep.PHASE_STEP, name: "phase_step", does: "the phase's step: pickup through the source's pickup port, drop through the sink's drop port (the hand's ports, bound at build)",
                 upholds: [3, 11, 16] },
             { step: InserterStep.TICK_OBSERVERS, name: "tick_observers", does: "tick plugins in the order added", upholds: [] },
             { step: InserterStep.SHOWN_ENABLED, name: "shown_enabled", does: "whether the game shows it enabled after the tick", upholds: [] },

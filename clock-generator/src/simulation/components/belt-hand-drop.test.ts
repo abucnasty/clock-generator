@@ -1,8 +1,8 @@
 import fs from "fs";
 import path from "path";
 import {expect, test} from "vitest";
-import {GameFixturePaths} from "../../../../../tests/game/helpers/fixture-paths";
-import {compareOutputStock, OutputClip} from "../../../../../tests/game/mechanics/belt-drop/output-stock-comparison";
+import {GameFixturePaths} from "../../../tests/game/helpers/fixture-paths";
+import {compareOutputStock, OutputClip} from "../../../tests/game/mechanics/belt-drop/output-stock-comparison";
 
 const fixture = JSON.parse(fs.readFileSync(path.join(GameFixturePaths.TURBO_BELT_DROP, "output-clips.json"), "utf8")) as {clips: OutputClip[]};
 

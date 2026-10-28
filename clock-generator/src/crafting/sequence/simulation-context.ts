@@ -62,7 +62,7 @@ export class SimulationContext {
             assert(lane_phases.every(phase => Number.isInteger(phase) && phase >= 0 && phase < 8),
                 "Pickup phases must be integers from 0 through 7 (1/32-tile units)");
             assert(source.pickupsOf(id) !== undefined, `Pickup lanes have not been initialized for ${id}`);
-            // Transfer logic already holds the lanes' slots: the seed replaces the stock in them.
+            // The hand's belt pickup port already holds the lanes' slots: the seed replaces the stock in them.
             source.seedPickups(id, source.belt.lanes.map((lane, index) => new BeltPickupLane(
                 source.belt.belt_speed, pickupLaneLength(inserter.pickup_layout ?? "side-straight", index + 1, length), lane.stack_size, lane_phases[index])));
         }

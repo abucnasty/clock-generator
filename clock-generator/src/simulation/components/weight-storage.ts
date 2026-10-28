@@ -77,6 +77,19 @@ export class WeightStorage implements MixedStorage {
         this.inventoryState.addQuantity(item, amount);
     }
 
+    /** Room for the item in the hand; with an empty hand, for any item the hand carries */
+    public acceptsHand(held: ItemName | null, carried: readonly ItemName[]): boolean {
+        if (held !== null) {
+            return !this.isFull(held);
+        }
+        for (let index = 0; index < carried.length; index++) {
+            if (!this.isFull(carried[index])) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public has(item: ItemName): boolean {
         return this.getCurrentQuantity(item) >= 1;
     }

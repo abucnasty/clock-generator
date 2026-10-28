@@ -55,6 +55,34 @@ describe("a machine's placement port", () => {
         expect(machine.inventoryState.getQuantity("pentapod-egg")).toBe(0);
     });
 
+    it("answers the items a placer binds at build as the Ingress answers a placer, and puts them where the Ingress does", () => {
+        for (const [build, items] of [[railMachine, ["stone", "iron-stick", "iron-ore"]], [() => MachineState.forMachine(Machine.createMachine(1, {
+            crafting_speed: 2,
+            productivity: 0,
+            recipe: RecipeMetadata.fromRecipeName("pentapod-egg"),
+            prototype: "biochamber",
+        })), ["pentapod-egg", "nutrients", "coal"]]] as const) {
+            const bound = build();
+            const unbound = build();
+            const port = new MachinePlacementPort(bound, items);
+            const reference = new MachinePlacementPort(unbound);
+            for (let step = 0; step < 60; step++) {
+                const item = items[step % items.length];
+                const held = 1 + (step * 7) % 40;
+                const amount = port.accepts(item, held, DropBy.PLACER);
+                expect(amount).toBe(reference.accepts(item, held, DropBy.PLACER));
+                expect(amount).toBe(unbound.ingress.accepts(item, held, DropBy.PLACER));
+                if (amount > 0) {
+                    port.insert(item, amount);
+                    reference.insert(item, amount);
+                }
+                expect(bound.inventoryState.export()).toEqual(unbound.inventoryState.export());
+                expect(bound.selfIngredients.export()).toEqual(unbound.selfIngredients.export());
+                expect(bound.fuelInventory.export()).toEqual(unbound.fuelInventory.export());
+            }
+        }
+    });
+
     it("answers a placer only: a hand drops into a machine by its own logic", () => {
         expect(() => new MachinePlacementPort(railMachine()).accepts("stone", 1, DropBy.HAND)).toThrow();
     });

@@ -103,7 +103,7 @@ export { wakeUps, wakeUpsOfStock } from "./crafting/wake-ups";
  * slots in slot order; a slot filtered to another item never takes it (`SlotInventoryState.addQuantity`).
  * 14. What an inserter takes from one (the same section): the item of the last slot that holds one it may take, from
  * that slot backwards, a hand that holds some only more of its item (`SlotInventoryState.lastItemAmong`,
- * `ChestPickupLogic`). Cases of both: `state/slot-inventory.test.ts`, `crafting/container-chest.test.ts`; against the
+ * `MixedContainerHandPickup`). Cases of both: `state/slot-inventory.test.ts`, `crafting/container-chest.test.ts`; against the
  * game, `tests/game/mechanics/containers` (339 of 339 hands, 120 of 120 slots, at two places and in both build orders).
  *
  * Known limit, a stand-in: which of two inserters acting on one container in the same tick goes first. The game serves

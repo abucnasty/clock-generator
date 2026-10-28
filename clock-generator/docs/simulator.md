@@ -66,7 +66,7 @@ Older `non_moving_belts` config settings migrate to `backed_up_belts` on import.
 physical approach cannot be recovered from half-tile reach alone. Belt slack remains extra margin for late starts and supply gaps.
 
 The [lane model](../src/state/belt-pickup-lane.ts) stores only holes and partial stacks in an otherwise evenly spaced
-supply. [Belt pickup logic](../src/control-logic/inserter/modes/pickup/belt-pickup-logic.ts) chooses the physical lane. No whole-belt
+supply. The [belt's pickup port](../src/simulation/components/belt-hand-pickup.ts) chooses the physical lane. No whole-belt
 simulation or extra search dimension is involved.
 
 Calibration: Factorio 2.1.21, legendary stack inserters, four-item belt stacks, all four belt speeds (#245), and pickups
@@ -315,7 +315,7 @@ A check of a clock has the order the clock's blueprint builds its deciders in: o
 
 The entry for this rule in the shared mechanics docs (factorio-benchmarks, docs/mechanics) is pending.
 
-A hand that an inserter takes from a machine stops filling while the machine it puts into takes nothing of its item, as a hand from a belt does: it keeps what it holds, also through a closed window, and goes on once the machine is under its block. Recorded: such a hand did not grow in 20,701 samples of 20,701 with products to take where the machine it puts into was at its output block, and grew in 11,561 of 11,561 where it was not. It is in the machine pickup logic (`clock-generator/src/control-logic/inserter/modes/pickup/machine-pickup-logic.ts`).
+A hand that an inserter takes from a machine stops filling while the machine it puts into takes nothing of its item, as a hand from a belt does: it keeps what it holds, also through a closed window, and goes on once the machine is under its block. Recorded: such a hand did not grow in 20,701 samples of 20,701 with products to take where the machine it puts into was at its output block, and grew in 11,561 of 11,561 where it was not. It is in the machine's pickup port as a hand reaches it (`clock-generator/src/simulation/components/machine-hand-pickup.ts`).
 
 Without these two rules the clock version 0.9.0 selected for the accumulator build of issue 152 (640 a second over 18 copies, `resources/config-samples/intermediates/accumulator/accumulator-640.json`) made 512 to 544 of its 576 a period in the game, in a cycle of seven periods, where the simulator had 576 in every one. The iron and battery inserters of the accumulator plants opened their windows in the tick their output inserter, on its way back from the belt, took the products, and took their hands a tick later than the simulator had them; the battery inserters held 13 of 16 batteries through their closed window where the simulator filled the hand in its last tick. With the two rules the simulator has that clock at 512, and the clock it selects instead made 576 in each of 58 periods in the game, after 3 at 544 while it settled from the scaffold's start.
 

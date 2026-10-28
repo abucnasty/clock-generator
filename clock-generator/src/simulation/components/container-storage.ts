@@ -30,6 +30,12 @@ export interface ContainerStorage extends EntityState, DropPort, PickupPort {
     isFull(itemName?: ItemName): boolean;
     isEmpty(): boolean;
     getItemFilters(): ItemName[];
+    /**
+     * The idle rule's ask of a hand that puts into it: whether it has room for anything the hand brings, given the item
+     * in the hand (null for none) and the items the hand carries. A container of one item, or of endless room, answers
+     * by its room alone; one of mixed items by its room for the item in the hand, else for any item the hand carries.
+     */
+    acceptsHand(held: ItemName | null, carried: readonly ItemName[]): boolean;
 }
 
 /** The Storage of a container of mixed items, whose slots decide what an inserter takes next (slots and weight) */

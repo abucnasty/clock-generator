@@ -49,8 +49,9 @@ export class CraftingMachineArchetype implements ControlLogic {
         const { machine_state } = args;
         const result_target = args.result_target_state ?? null;
         const target_is_machine = result_target !== null && EntityState.isMachine(result_target);
-        machine_state.placement.placeInto(target_is_machine ? new MachinePlacementPort(result_target) : result_target,
-            result_target === null || target_is_machine);
+        machine_state.placement.placeInto(target_is_machine
+            ? new MachinePlacementPort(result_target, machine_state.machine.outputs.map(output => output.item_name))
+            : result_target, result_target === null || target_is_machine);
         return new CraftingMachineArchetype(machine_state, result_target);
     }
 

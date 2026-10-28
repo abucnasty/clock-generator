@@ -116,7 +116,7 @@ from observed full stock at tick 64 and supply only the native first-arrival bou
 later held items/quantities and exposed stock through the shared ordinary-pickup comparator.
 
 ```bash
-npm test -- src/control-logic/inserter/modes/pickup/over-hood-exit.test.ts
+npm test -- src/simulation/components/belt-hand-pickup-over-hood.test.ts
 ```
 
 Fresh capture validation additionally checks Sidecar model format 2 and its explicit layout; replaying older

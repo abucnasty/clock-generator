@@ -1,6 +1,7 @@
 import { handSizeFor } from "../../../entities";
 import { fullHandOf } from "../../../entities/traits/hand";
 import { EntityState, InserterState } from "../../../state";
+import { HandDropPort } from "../../../simulation/components/hand";
 import { EnableControl } from "../../enable-control";
 import { ModeTransition, ModeTransitionEvaluator } from "../../mode";
 import { InserterIdleMode, InserterMode } from "../modes";
@@ -12,7 +13,8 @@ export class PickupModeTransitionEvaluator implements ModeTransitionEvaluator<In
 
     constructor(
         private readonly inserterState: InserterState,
-        private readonly sinkEntityState: EntityState,
+        /** The sink's drop port as the hand reaches it: whether the sink takes the item in the hand now */
+        private readonly sink_port: HandDropPort,
         private readonly swing_mode: InserterSwingMode,
         private readonly disabled_mode: InserterDisabledMode,
         private readonly idle_mode: InserterIdleMode,
@@ -47,9 +49,9 @@ export class PickupModeTransitionEvaluator implements ModeTransitionEvaluator<In
             return ModeTransition.transition(this.disabled_mode, `Inserter disabled while picking up ${this.heldItemName()} (${this.heldItemQuantity()})`);
         }
 
-        // a partly filled hand from a belt waits while the machine takes no more of its item
+        // a partly filled hand from a belt waits while the machine takes no more of its item (only a machine refuses)
         if (held_item !== null && this.wait_for_sink_mode && this.source_state && EntityState.isBelt(this.source_state)
-            && EntityState.isMachine(this.sinkEntityState) && this.sinkEntityState.ingress.blocked(held_item.item_name)) {
+            && !this.sink_port.takes(held_item.item_name)) {
             return ModeTransition.transition(this.wait_for_sink_mode, `machine takes no more ${held_item.item_name} for now, ${held_item.quantity} in hand`);
         }
 

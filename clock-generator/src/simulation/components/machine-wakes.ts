@@ -38,6 +38,15 @@ export class MachineWakes {
     private starts_seen: number = 0;
 
     /**
+     * A taker took the machine's products in the first tick of its window of a clock of the game: the last built of
+     * the deciders whose inserters took so stays (`order` -1 where the taker's decider is not known). In the inserter
+     * phase, by the taker's pickup (MachineHandPickup); cleared at the machine's end of tick (same-tick rule 3).
+     */
+    public markWindowOpeningTake(order: number): void {
+        this.windowOpeningTakeDecider = Math.max(this.windowOpeningTakeDecider ?? -1, order);
+    }
+
+    /**
      * Counts the crafts finished and started from those the crafting has now: when the machine's archetype is built,
      * once per state (one archetype per MachineState)
      */

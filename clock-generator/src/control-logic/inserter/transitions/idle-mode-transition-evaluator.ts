@@ -1,3 +1,4 @@
+import { ItemName } from "../../../data";
 import { EntityState, InserterState, LiveQuantity, MachineState } from "../../../state";
 import { ModeTransition, ModeTransitionEvaluator } from "../../mode";
 import { InserterMode } from "../modes/inserter-mode";
@@ -6,6 +7,7 @@ import { EnableControl } from "../../enable-control";
 import { InserterDisabledMode } from "../modes/disabled-mode";
 import { actsInTheTickTheBlockIsLifted } from "../waiting-inserter";
 import { ContainerStorage } from "../../../simulation/components/container-storage";
+import { HandDropPort } from "../../../simulation/components/hand";
 
 export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<InserterMode> {
 
@@ -13,6 +15,8 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
         inserter_state: InserterState,
         source_state: EntityState,
         sink_state: EntityState,
+        /** The sink's drop port as the hand reaches it: whether the sink takes anything the hand brings */
+        sink_port: HandDropPort,
         pickup_mode: InserterPickupMode,
         disabled_mode: InserterDisabledMode,
         enable_control: EnableControl,
@@ -21,6 +25,7 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
             args.inserter_state,
             args.source_state,
             args.sink_state,
+            args.sink_port,
             args.pickup_mode,
             args.disabled_mode,
             args.enable_control,
@@ -31,13 +36,16 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
         private readonly inserter_state: InserterState,
         private readonly source_state: EntityState,
         private readonly sink_state: EntityState,
+        private readonly sink_port: HandDropPort,
         private readonly pickup_mode: InserterPickupMode,
         private readonly disabled_mode: InserterDisabledMode,
         private readonly enable_control: EnableControl,
     ) {
-        // a machine sink's slot of each filtered item, bound once (the states never change identity)
-        this.sink_slots = EntityState.isMachine(sink_state)
-            ? Array.from(inserter_state.inserter.filtered_items, item_name => sink_state.ingress.slotOf(item_name))
+        // the items it carries in its order, and a machine source's live stock of each, bound once (the states never
+        // change identity)
+        this.items = Array.from(inserter_state.inserter.filtered_items);
+        this.pickup_stock = EntityState.isMachine(source_state)
+            ? this.items.map(item_name => source_state.output.quantityOf(item_name))
             : [];
     }
 
@@ -51,16 +59,11 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
     /** Whether a window of a clock of the game opens in this tick: the inserter was disabled the tick before */
     private window_opens: boolean = false;
 
-    /** Per filtered item, its slot in a machine sink's Ingress (`Ingress.blockedAt`); empty for any other sink */
-    private readonly sink_slots: readonly number[];
+    /** The items the inserter carries, in its order */
+    private readonly items: readonly ItemName[];
 
-    /**
-     * The pickup views, set up on the first pickup ask (the states never change identity): per filtered item, for a
-     * machine source, the live stock. The sink's slots are bound in the constructor (`sink_slots`).
-     */
-    private readonly hot: {
-        pickup_views: Map<string, { item_name: string; stock: LiveQuantity }> | null;
-    } = { pickup_views: null };
+    /** Per carried item, what a machine source's output holds of it; empty for any other source */
+    private readonly pickup_stock: readonly LiveQuantity[];
 
     public stateKey(): string {
         return `${this.saw_sink_blocked},${this.window_opens}`;
@@ -90,7 +93,7 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
         }
 
         if (EntityState.isMachine(this.source_state)) {
-            return this.machinePickupTransition(this.inserter_state, this.source_state);
+            return this.machinePickupTransition(this.source_state);
         }
 
         if (EntityState.isBelt(this.source_state)) {
@@ -98,7 +101,7 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
         }
 
         if (ContainerStorage.is(this.source_state)) {
-            return this.chestPickupTransition(this.inserter_state, this.source_state);
+            return this.chestPickupTransition(this.source_state);
         }
         
         return null;
@@ -108,9 +111,9 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
      * True when another inserter took the sink's products down below the output block in this tick and that is what
      * wakes this one: it then takes its first items a tick later (see `actsInTheTickTheBlockIsLifted`, the rule of the
      * game with its recorded cases). An inserter that takes from a belt and waited for the machine lands its first
-     * stack a tick later in both cases, which the pickup mode has (belt_grab_decided); so for a belt source only the
-     * window that opens on the output-blocked machine counts here, which starts from the disabled mode and has no
-     * such tick of its own.
+     * stack a tick later in both cases, which the belt's pickup port has (`HandScratch.belt_grab_decided`, set by
+     * `BeltHandPickup.enter`); so for a belt source only the window that opens on the output-blocked machine counts
+     * here, which starts from the disabled mode and has no such tick of its own.
      *
      * Inserters are updated before machines, and those that take from a machine before those that put into it. So
      * a machine that was at its block when its last tick was done, and is not now, has had its products taken in
@@ -160,72 +163,46 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
         return control.is_game_clock === true && control.isEnabledIn !== undefined && control.isEnabledIn(1);
     }
 
+    /**
+     * Whether the sink takes anything the inserter brings now: its drop port's answer (a belt takes all; a machine an
+     * item it carries that is not blocked; a container by its room, for one of mixed items for the item in the hand or
+     * one the inserter carries)
+     */
     private sinkAcceptsItems(): boolean {
-        if (EntityState.isBelt(this.sink_state)) {
-            return true;
-        }
-
-        if (EntityState.isMachine(this.sink_state)) {
-            const ingress = this.sink_state.ingress;
-            const slots = this.sink_slots;
-            for (let index = 0; index < slots.length; index++) {
-                if (!ingress.blockedAt(slots[index])) {
-                    return true;
-                }
-            }
-        }
-
-        if (ContainerStorage.is(this.sink_state)) {
-            // Chest accepts items if it has available space: for a chest of mixed items, for the item in the hand or one
-            // the inserter moves
-            const sink = this.sink_state;
-            if (!ContainerStorage.isMixed(sink)) {
-                return !sink.isFull();
-            }
-            const held = this.inserter_state.held_item;
-            if (held !== null) {
-                return !sink.isFull(held.item_name);
-            }
-            for (const item of this.inserter_state.inserter.filtered_items) {
-                if (!sink.isFull(item)) return true;
-            }
-            return false;
-        }
-
-        return false;
+        return this.sink_port.acceptsHand();
     }
 
-    private machinePickupTransition(state: InserterState, source: MachineState): ModeTransition<InserterMode> {
+    private machinePickupTransition(source: MachineState): ModeTransition<InserterMode> {
         const pickup_amount_condition = 1;
-
-        const views = this.hot.pickup_views ??= new Map(Array.from(state.inserter.filtered_items, item_name =>
-            [item_name, { item_name, stock: new LiveQuantity(source.inventoryState, item_name) }]));
-        const held = state.held_item;
-        let items: Iterable<{ item_name: string; stock: LiveQuantity }> = views.values();
+        const held = this.inserter_state.held_item;
 
         if (held !== null) {
-            const view = views.get(held.item_name)
-                ?? { item_name: held.item_name, stock: new LiveQuantity(source.inventoryState, held.item_name) };
-            items = [view];
+            const index = this.items.indexOf(held.item_name);
+            const quantity = index >= 0 ? this.pickup_stock[index].get() : source.output.getCurrentQuantity(held.item_name);
+            return quantity >= pickup_amount_condition
+                ? ModeTransition.transition(this.pickup_mode, `machine has ${quantity} of ${held.item_name} to pickup`)
+                : ModeTransition.NONE;
         }
 
-        for (const view of items) {
-            const quantity = view.stock.get();
+        const items = this.items;
+        for (let index = 0; index < items.length; index++) {
+            const quantity = this.pickup_stock[index].get();
             if (quantity >= pickup_amount_condition) {
-                return ModeTransition.transition(this.pickup_mode, `machine has ${quantity} of ${view.item_name} to pickup`);
+                return ModeTransition.transition(this.pickup_mode, `machine has ${quantity} of ${items[index]} to pickup`);
             }
         }
         return ModeTransition.NONE;
     }
 
-    private chestPickupTransition(state: InserterState, source: ContainerStorage): ModeTransition<InserterMode> {
+    private chestPickupTransition(source: ContainerStorage): ModeTransition<InserterMode> {
         const pickup_amount_condition = 1;
-        
+
         // Check all item types in the chest
-        for (const item_name of state.inserter.filtered_items) {
-            const quantity = source.getCurrentQuantity(item_name);
+        const items = this.items;
+        for (let index = 0; index < items.length; index++) {
+            const quantity = source.getCurrentQuantity(items[index]);
             if (quantity >= pickup_amount_condition) {
-                return ModeTransition.transition(this.pickup_mode, `chest has ${quantity} of ${item_name} to pickup`);
+                return ModeTransition.transition(this.pickup_mode, `chest has ${quantity} of ${items[index]} to pickup`);
             }
         }
         return ModeTransition.NONE;

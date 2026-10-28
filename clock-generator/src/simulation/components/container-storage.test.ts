@@ -45,6 +45,33 @@ describe("the Storage of a container, by its class", () => {
         expect(car.has("iron-plate")).toBe(false);
     });
 
+    // the idle rule of a hand that puts into it (P4 2.7: the mixed case is the container's own answer)
+    it("answers a hand by its room alone for one item or endless room, by the hand's item or any it carries when mixed", () => {
+        const chest = ContainerStorage.forChest(Chest.fromConfig({ type: "buffer-chest", id: 5, storage_size: 1, item_filter: "iron-plate" }));
+        expect(chest.acceptsHand(null, ["iron-plate"])).toBe(true);
+        chest.insert("iron-plate", 100);
+        // full: whatever the hand holds or carries
+        expect(chest.acceptsHand(null, ["iron-plate"])).toBe(false);
+        expect(chest.acceptsHand("copper-plate", ["copper-plate"])).toBe(false);
+
+        const endless = ContainerStorage.forChest(Chest.fromConfig({ type: "infinity-chest", id: 6, item_filter: [{ item_name: "coal", request_count: 50 }] }));
+        expect(endless.acceptsHand(null, [])).toBe(true);
+        endless.supply.refused.add("coal");
+        expect(endless.acceptsHand("coal", ["coal"])).toBe(false);
+
+        // a car of one slot (cars hold 80): full of iron plates, with no room for more of them nor for copper
+        const wagon = ContainerStorage.forChest(Chest.fromConfig({ type: "car", id: 7, slot_filters: Array.from({ length: 79 }, (_, index) => ({ slot: index + 2, blocked: true as const })) }, ["iron-plate", "copper-plate"]));
+        expect(wagon.acceptsHand(null, [])).toBe(false);
+        expect(wagon.acceptsHand(null, ["iron-plate", "copper-plate"])).toBe(true);
+        wagon.insert("iron-plate", 100);
+        expect(wagon.acceptsHand("iron-plate", ["iron-plate", "copper-plate"])).toBe(false);
+        expect(wagon.acceptsHand(null, ["iron-plate", "copper-plate"])).toBe(false);
+        wagon.take("iron-plate", 1);
+        expect(wagon.acceptsHand("iron-plate", ["iron-plate"])).toBe(true);
+        expect(wagon.acceptsHand("copper-plate", ["copper-plate"])).toBe(false);
+        expect(wagon.acceptsHand(null, ["copper-plate", "iron-plate"])).toBe(true);
+    });
+
     it("takes anything and gives without end when constant, but for an item its supply gate withholds or refuses", () => {
         expect(infinity.accepts("coal", 1000, DropBy.PLACER)).toBe(1000);
         infinity.take("coal", 50);

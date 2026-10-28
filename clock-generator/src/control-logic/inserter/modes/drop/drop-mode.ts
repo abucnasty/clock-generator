@@ -1,23 +1,26 @@
 import { InserterStatus } from "../../../../state";
+import { HandDropPort } from "../../../../simulation/components/hand";
 import { InserterMode } from "../inserter-mode";
-import { InserterTransferLogic } from "../transfer-logic";
 
 export class InserterDropMode implements InserterMode {
     public readonly status = InserterStatus.DROP_OFF;
 
-    constructor(public readonly logic: InserterTransferLogic) {}
+    constructor(
+        /** The sink's drop port as the hand reaches it */
+        public readonly port: HandDropPort,
+    ) {}
 
     public onEnter(fromMode: InserterMode): void {
-        this.logic.onEnter(fromMode.status);
+        this.port.enter();
     }
 
     public onExit(toMode: InserterMode): void {}
 
     public stateKey(): string {
-        return this.logic.stateKey();
+        return this.port.key();
     }
 
     public executeForTick(): void {
-        this.logic.executeForTick();
+        this.port.drop();
     }
 }

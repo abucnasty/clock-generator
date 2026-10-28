@@ -123,6 +123,34 @@ describe("a machine's Ingress", () => {
         expect(state.inventoryState.getQuantity("pentapod-egg")).toBe(0);
     });
 
+    it("puts a hand in by its item's slot as by its name, the fuel slot's level deciding between fuel and ingredient", () => {
+        // a fixed pseudo-random walk of hands and writes on two machines alike, one put in by name, one by slot
+        let seed = 11;
+        const next = (n: number) => (seed = (seed * 1103515245 + 12345) % 2147483648) % n;
+        for (const build of [eggs, rocketFuel]) {
+            const by_name = build();
+            const by_slot = build();
+            const items = [...by_name.machine.inputs.keys(), by_name.machine.fuel_slot!.fuel.item_name, "coal"];
+            const slots = items.map(item => by_slot.ingress.slotOf(item));
+            const fuel = by_name.machine.fuel_slot!.fuel.item_name;
+            for (let step = 0; step < 500; step++) {
+                if (next(4) === 0) {
+                    const level = next(30);
+                    by_name.fuelInventory.setQuantity(fuel, level);
+                    by_slot.fuelInventory.setQuantity(fuel, level);
+                    continue;
+                }
+                const index = next(items.length);
+                const amount = 1 + next(16);
+                by_name.ingress.insert(items[index], amount);
+                by_slot.ingress.insertAt(slots[index], items[index], amount);
+                for (const inventory of ["inventoryState", "fuelInventory", "selfIngredients"] as const) {
+                    expect(by_slot[inventory].export()).toEqual(by_name[inventory].export());
+                }
+            }
+        }
+    });
+
     it("takes an ingredient from a placer up to the drill's stop, never as fuel", () => {
         const state = eggs();
         state.ingress.bindPlacerStops();

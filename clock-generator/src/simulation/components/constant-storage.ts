@@ -70,6 +70,11 @@ export class ConstantStorage implements ContainerStorage {
         this.inventoryState.addQuantity(item, amount);
     }
 
+    /** A hand finds room while it is not full, whatever the hand brings */
+    public acceptsHand(held: ItemName | null, carried: readonly ItemName[]): boolean {
+        return !this.isFull();
+    }
+
     public has(item: ItemName): boolean {
         return this.getCurrentQuantity(item) >= 1;
     }

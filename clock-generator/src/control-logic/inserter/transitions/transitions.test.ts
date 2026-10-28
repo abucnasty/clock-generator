@@ -15,11 +15,17 @@ import { AlwaysEnabledControl } from "../../enable-control";
 import { MutableTickProvider } from "../../current-tick-provider";
 import { BeltSpeed, Lane } from "../../../entities/belt";
 import { ContainerStorage } from "../../../simulation/components/container-storage";
+import { bindHandPorts } from "../../../simulation/components/hand-ports";
 
 
 /** A turbo belt built by hand for a test, with the gate every belt has: nothing withheld, nothing refused */
 function beltOf(lanes: Lane[] = [{ ingredient_name: "iron-plate", stack_size: 4 }]): TransportBelt {
     return TransportBelt.create({ entity_id: EntityId.forBelt(-1), belt_speed: BeltSpeed.TURBO_TRANSPORT_BELT, strategy: BeltStrategy.NORMAL, lanes });
+}
+
+/** The sink's drop port as the inserter's hand reaches it, bound as its state machine binds it */
+function sinkPortOf(inserter_state: InserterState, source_state: EntityState, sink_state: EntityState) {
+    return bindHandPorts({ inserterState: inserter_state, sourceState: source_state, sinkState: sink_state, tick_provider: new MutableTickProvider() }).drop;
 }
 
 describe("transitions (belt to machine)", () => {
@@ -111,6 +117,7 @@ describe("transitions (belt to machine)", () => {
                 inserter_state: testContext.inserterState,
                 source_state: testContext.sourceState,
                 sink_state: testContext.sinkState,
+                sink_port: sinkPortOf(testContext.inserterState, testContext.sourceState, testContext.sinkState),
                 pickup_mode: pickup_mode,
                 disabled_mode: mock(),
                 enable_control: AlwaysEnabledControl,
@@ -130,6 +137,7 @@ describe("transitions (belt to machine)", () => {
                 inserter_state: testContext.inserterState,
                 source_state: testContext.sourceState,
                 sink_state: testContext.sinkState,
+                sink_port: sinkPortOf(testContext.inserterState, testContext.sourceState, testContext.sinkState),
                 pickup_mode: pickup_mode,
                 disabled_mode: mock(),
                 enable_control: AlwaysEnabledControl,
@@ -152,6 +160,7 @@ describe("transitions (belt to machine)", () => {
                 inserter_state: testContext.inserterState,
                 source_state: testContext.sourceState,
                 sink_state: testContext.sinkState,
+                sink_port: sinkPortOf(testContext.inserterState, testContext.sourceState, testContext.sinkState),
                 pickup_mode: pickup_mode,
                 disabled_mode: mock(),
                 enable_control: AlwaysEnabledControl
@@ -195,7 +204,7 @@ describe("transitions (belt to machine)", () => {
                 isEnabledIn: (ticks: number) => tick + ticks >= window_opens_at,
             };
             const evaluator = IdleModeTransitionEvaluator.create({
-                inserter_state, source_state, sink_state: sink, pickup_mode,
+                inserter_state, source_state, sink_state: sink, sink_port: sinkPortOf(inserter_state, source_state, sink), pickup_mode,
                 disabled_mode,
                 enable_control: window_control,
             });

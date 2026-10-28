@@ -1,11 +1,11 @@
 import fs from "fs";
 import path from "path";
 import {beforeAll, expect, test} from "vitest";
-import {Config} from "../../../../config";
-import {loadConfigFromFile} from "../../../../config/loader";
-import {BELT_SPEEDS, configAtSpeed} from "../../../../../tests/game/helpers/belt-speed-fixtures";
-import {GameFixturePaths} from "../../../../../tests/game/helpers/fixture-paths";
-import {compareContinuousSimulator} from "../../../../../tests/game/mechanics/belt-pickup/ordinary-pickup-comparison";
+import {Config} from "../../config";
+import {loadConfigFromFile} from "../../config/loader";
+import {BELT_SPEEDS, configAtSpeed} from "../../../tests/game/helpers/belt-speed-fixtures";
+import {GameFixturePaths} from "../../../tests/game/helpers/fixture-paths";
+import {compareContinuousSimulator} from "../../../tests/game/mechanics/belt-pickup/ordinary-pickup-comparison";
 
 interface Clip {
     name: string; belt_speed: number; near_lane: 1 | 2; backed: boolean; recipe: string; crafting_speed: number;

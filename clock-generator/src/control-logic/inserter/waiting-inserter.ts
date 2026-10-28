@@ -12,12 +12,13 @@
  * in the same tick in 3,756 of 3,756 where one was. A hand from a belt that stopped part way at the output block goes
  * by the same rule: 248 hands of 248 went on in that tick, and 843 of 843 a tick later where no craft was finished the
  * tick before. A hand from a belt that had not started lands its first stack a tick after the products are taken
- * either way, which the pickup mode has (`belt_grab_decided`). A hand from a belt whose window opens on a machine at
- * its output block is the exception: it comes from the disabled mode, has no such tick, and waits like the hand from
- * a machine does (2 ticks from the enable to the first stack). Where the window of the inserter that takes the
- * products opens in that tick too, either kind goes in the tick of the take only when that inserter's decider was
- * built after its own, as the game updates the last built first (`wokenThisTick`). A hand from a belt that waited for
- * the machine's own craft start has no such tick either (`wokenByItsMachinesCraftStart`).
+ * either way, which the belt's pickup port has (`HandScratch.belt_grab_decided`, set by `BeltHandPickup.enter`). A
+ * hand from a belt whose window opens on a machine at its output block is the exception: it comes from the disabled
+ * mode, has no such tick, and waits like the hand from a machine does (2 ticks from the enable to the first stack).
+ * Where the window of the inserter that takes the products opens in that tick too, either kind goes in the tick of the
+ * take only when that inserter's decider was built after its own, as the game updates the last built first
+ * (`wokenThisTick`). A hand from a belt that waited for the machine's own craft start has no such tick either
+ * (`wokenByItsMachinesCraftStart`).
  *
  * `sink` is the machine as its last tick left it: its Wakes record after every tick of a machine whether
  * it was at its output block and whether it finished a craft, and the inserters read them in the next tick. Inserters

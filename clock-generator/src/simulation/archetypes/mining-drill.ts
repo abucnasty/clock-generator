@@ -41,7 +41,7 @@ export function placeDrillInto(state: DrillState, sink_state: EntityState): void
         return;
     }
     assertIsMachineState(sink_state);
-    state.placement.placeInto(new MachinePlacementPort(sink_state), true);
+    state.placement.placeInto(new MachinePlacementPort(sink_state, [state.drill.item.name]), true);
 }
 
 /**
