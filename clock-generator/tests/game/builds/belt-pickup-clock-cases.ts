@@ -12,7 +12,7 @@ export const BELT_PICKUP_GENERATED: ReadonlyMap<string, string> = new Map([
     ["electromagnetic-fast-underground-entrance-moving", "fractional swing count on a moving underground pickup"],
     ["electromagnetic-express-underground-entrance-moving", "no clock recovers from every lane phase: a cautious verdict (recovery phases)"],
     ["electromagnetic-normal-underground-entrance-moving", "a moving normal-tier underground fails lane phases: the verdict names them"],
-    ["electromagnetic-normal-underground-entrance-backed", "the backed-up clock found where the moving-planned one was recorded (#460)"],
+    ["electromagnetic-normal-underground-entrance-backed", "a backed-up belt at the normal tier refills slower than a stack a tick: the clock whose belt-fed windows last as long as a hand takes from the lanes at rest (#456)"],
     ["same-item-turbo-straight-belt-moving", "the same-item fixture on its straight-belt config (both lanes carry the item)"],
     ["same-item-normal-underground-entrance-backed", "the same-item fixture on its underground config, normal tier, backed up"],
 ]);

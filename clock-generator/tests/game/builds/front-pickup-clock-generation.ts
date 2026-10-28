@@ -2,7 +2,7 @@ import {createHash} from "crypto";
 import {expect, test} from "vitest";
 import {generateClockAlternatives} from "../../../src/crafting/generate-blueprint";
 import {clockIdentity} from "../../../src/crafting/clock-identity";
-import {alwaysOnReasonProblemsOf, RECORDED_ON_THE_MOVING_BELT_CLOCK} from "../../../src/crafting/generate-blueprint-test-helpers";
+import {alwaysOnReasonProblemsOf} from "../../../src/crafting/generate-blueprint-test-helpers";
 import {FRONT_GENERATED} from "./front-clock-cases";
 import {frontClockConfig, frontEntranceClockCases, frontExitClockCases} from "./front-clock-fixtures";
 import {clockHash, readControls} from "./clock-controls";
@@ -23,15 +23,6 @@ export function frontPickupClockTests() {
             const generated = generateClockAlternatives(config, {logger: quiet});
             expect(alwaysOnReasonProblemsOf(config, generated), "every inserter and drill a clock leaves always on says why").toEqual([]);
             const selected = generated.alternatives[generated.selected_index];
-            const pinned = RECORDED_ON_THE_MOVING_BELT_CLOCK.get(variant.name);
-            if (pinned !== undefined) {
-                // a clock for the backed-up belts that holds the target; the native control was recorded on the clock
-                // planned with the belts moving, which is no longer made (#460)
-                expect(clockHash(selected.result.subtick ?? selected.result), "same windows and exported clock as pinned (its identity: no text or metadata)").toBe(pinned);
-                expect({verdict: selected.verdict, holds: selected.assessment.holds, rate: selected.assessment.items_per_second, supply: selected.belt?.kind})
-                    .toEqual({verdict: "stable", holds: true, rate: config.target_output.items_per_second, supply: "backed_up"});
-                return;
-            }
             const result = selected.result;
             const period = result.subtick?.clock.period_ticks ?? result.simulation_duration.ticks;
             const exported = result.subtick ?? result;

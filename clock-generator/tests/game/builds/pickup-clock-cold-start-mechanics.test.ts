@@ -3,7 +3,6 @@ import {describe, expect, test} from "vitest";
 import {clockFromWindows, runClockOnBuild} from "../../../src/crafting/trial";
 import {OpenRange} from "../../../src/data-types";
 import {clockHash, readControls} from "./clock-controls";
-import {RECORDED_ON_THE_MOVING_BELT_CLOCK} from "../../../src/crafting/generate-blueprint-test-helpers";
 import {reversedDeciders} from "./reversed-deciders";
 import {coldStart as controls, configOf} from "./pickup-clock-cold-start-runs";
 
@@ -134,16 +133,12 @@ describe("the cold-start controls state themselves", () => {
     });
 
     // A run started at the period's beginning (rotate 0) on a clock built in the game's order is on the selection of its
-    // config, which pickup-clock-controls.json pins for the near lane 1 fixture and the generation test checks. The
-    // backed-up underground runs of the normal tier were recorded on the clock planned with the belts moving (#275), which
-    // is no longer made, so their pin is another clock.
+    // config, which pickup-clock-controls.json pins for the near lane 1 fixture and the generation test checks.
     const onTheSelection = sideRuns.filter(name => controls.runs[name].rotate === 0 && controls.runs[name].decider_order === "built");
     test.each(onTheSelection)("%s: the clock is the pinned selection of its fixture", name => {
         const run = controls.runs[name];
         const fixture = `electromagnetic-${run.case.replace(/-l[12]$/, "")}`;
         const pin = pins[fixture]?.generation;
-        const recordedOnTheMovingBelts = run.case.startsWith("normal-underground-") && run.case.includes("-backed-");
-        if (recordedOnTheMovingBelts) expect(RECORDED_ON_THE_MOVING_BELT_CLOCK.has(fixture)).toBe(true);
-        else expect(controls.clocks[run.clock].clock_sha256).toBe(pin!.clock_sha256);
+        expect(controls.clocks[run.clock].clock_sha256).toBe(pin!.clock_sha256);
     });
 });

@@ -4,7 +4,6 @@ import {GameFixturePaths} from "../helpers/fixture-paths";
 import {
     expectControlIsConsistent, firstHandPatterns, PICKUP_GEOMETRIES, PICKUP_INGREDIENTS, PickupGeometry, readFixtureFigures, sidePickupConfig,
 } from "../helpers/fixture-mechanics";
-import {RECORDED_ON_THE_MOVING_BELT_CLOCK} from "../../../src/crafting/generate-blueprint-test-helpers";
 import {BELT_PICKUP_GENERATED} from "./belt-pickup-clock-cases";
 import {readControls} from "./clock-controls";
 import {pickupClockConfig, pickupClockSpeedCases} from "./pickup-clock-speed-coverage";
@@ -112,11 +111,6 @@ describe("the recorded clock controls of the belt pickup fixtures", () => {
                 expect(generation!.verdict, name).toBe("stable");
             }
         }
-    });
-
-    test("the cases the generation test pins to a backed-up clock are the normal-tier undergrounds", () => {
-        expect([...RECORDED_ON_THE_MOVING_BELT_CLOCK.keys()].filter(name => name.startsWith("electromagnetic-")).sort())
-            .toEqual(["electromagnetic-normal-underground-entrance-backed", "electromagnetic-normal-underground-exit-backed"]);
     });
 
     test("the generated cases are fixtures of the family, and the path each takes is stated", () => {

@@ -1,7 +1,6 @@
 import {describe, expect, test} from "vitest";
 import {BELT_SPEEDS} from "../helpers/belt-speed-fixtures";
 import {expectControlIsConsistent, firstHandPatterns} from "../helpers/fixture-mechanics";
-import {RECORDED_ON_THE_MOVING_BELT_CLOCK} from "../../../src/crafting/generate-blueprint-test-helpers";
 import {FRONT_GENERATED} from "./front-clock-cases";
 import {frontClockConfig, FrontClockCase, frontEntranceClockCases, frontExitClockCases} from "./front-clock-fixtures";
 import {readControls} from "./clock-controls";
@@ -140,14 +139,6 @@ describe("the recorded clock controls of the front fixtures", () => {
         expect(notStable.map(name => controls[name].generation!.verdict)).toEqual(["no recovery", "no recovery", "unstable", "unstable"]);
         // both verdicts come from moving lane-phase starts the exit cannot have
         for (const name of notStable) expect(controls[name].generation!.why_not_stable, name).toBe("moving lane phases");
-    });
-
-    test("the cases pinned to the clock recorded on the moving belt are the normal-tier backed-up exits", () => {
-        expect([...RECORDED_ON_THE_MOVING_BELT_CLOCK.keys()].filter(name => name.startsWith("front-")).sort())
-            .toEqual(["front-exit-normal-mirrored-backed-different-items", "front-exit-normal-unmirrored-backed-different-items"]);
-        for (const name of RECORDED_ON_THE_MOVING_BELT_CLOCK.keys()) {
-            if (name.startsWith("front-")) expect(controls[name].generation!.selection.id, name).toBe("planned-moving-belt");
-        }
     });
 
     test("the generated cases are fixtures of the family, and the path each takes is stated", () => {
