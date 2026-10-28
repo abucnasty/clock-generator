@@ -1,9 +1,8 @@
-import { EntityBadge } from './EntityBadge';
 import { useCraftingMachines } from '../hooks/useCraftingMachines';
 import { InserterIcon } from './InserterIcon';
 import { EntitySettings } from './EntitySettings';
 import { effectiveInserterStackSize, inserterTimingLabels } from '../utils/inserterMetadata';
-import { Add, ArrowDownward, ArrowUpward, Delete } from '@mui/icons-material';
+import { ArrowDownward, ArrowUpward } from '@mui/icons-material';
 import {
     Box,
     Button,
@@ -12,9 +11,9 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import { useMemo, useState, useCallback, useEffect, useLayoutEffect, useRef, memo, type MouseEvent } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef, memo, type MouseEvent } from 'react';
 import type { BeltFormData, ChestFormData, DrillFormData, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
-import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
+import { useEntityRows } from '../hooks/useEntityRows';
 import { themeTokens } from '../theme/runtimeTokens';
 import type { Theme } from '@mui/material/styles';
 import { PanelSection } from './Panel';
@@ -22,14 +21,14 @@ import { EnableControlFormContent, type CopyFromOption } from './EnableControlMo
 import { enableControlOverrideChanged } from '../utils/enableControlDraft';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { useGameNames } from '../hooks/useGameNames';
-import { SortableItem, SortableList } from './SortableList';
-import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
+import { SortableList } from './SortableList';
+import { AddButton } from './AddRow';
+import { EntityRow, EntityRowActions } from './EntityRow';
+import { entityLabel, settingsSlotId } from '../utils/entityLabel';
 import { inferInserterItems, itemsAround } from '../utils/inferInserterItems';
 import { InserterEditor, type InserterEditorProps } from './InserterEditor';
 import { entityOptionsOf } from '../utils/inserterOptions';
-import { RowActionsMenu } from './RowActionsMenu';
 import { BulkEditBar } from './BulkEditBar';
-import { useAnnounce } from '../hooks/useMessages';
 import { itemsUnion, pruneSelection, rangeSelect } from '../utils/bulkEdit';
 import { sourceItemsOf } from '../utils/inferInserterItems';
 import { selectRowName } from '../utils/a11yLabels';
@@ -37,19 +36,6 @@ import { describeBulkEdit, type BulkEditKind } from '../utils/undoSnapshot';
 import { usesAutomaticFilters } from '../utils/inserterFilters';
 import { describeEnableRule } from '../utils/enableRuleLabel';
 
-const LIST_GRID_SX = {
-    display: 'grid',
-    rowGap: 2,
-    '& > *': { minWidth: 0 },
-};
-const ROW_GRID_SX = {
-    minWidth: 0,
-    containerType: 'inline-size',
-    containerName: 'inserter-row',
-    p: 2,
-    pt: 2.5,
-    bgcolor: (theme: Theme) => themeTokens(theme).surface.row,
-};
 interface InsertersFormProps {
     focusRequest?: { id: number; filters: boolean; pickup?: boolean } | null;
     onFocusHandled?: () => void;
@@ -71,13 +57,13 @@ interface InsertersFormProps {
 
 type RuleCopySource = CopyFromOption & { uuid: string };
 
-const InserterRow = memo(function InserterRow({ fullMetadata, focusRequest, value, index, onUpdate, onRemove, ruleCopySources, onDuplicate, onReorder, canMoveDown, selecting, checked, onSelect, ...editor }: Omit<InserterEditorProps, 'layout' | 'label' | 'onChange' | 'rowActions'> & {
+const InserterRow = memo(function InserterRow({ fullMetadata, focusRequest, value, index, onUpdate, onRemove, ruleCopySources, count, onDuplicate, onReorder, selecting, checked, onSelect, ...editor }: Omit<InserterEditorProps, 'layout' | 'label' | 'onChange' | 'rowActions'> & {
     focusRequest?: InsertersFormProps['focusRequest'];
     fullMetadata: string;
     index: number;
-    onDuplicate: (index: number, label: string) => void;
+    count: number;
+    onDuplicate: (index: number) => void;
     onReorder: InsertersFormProps['onReorder'];
-    canMoveDown: boolean;
     selecting: boolean;
     checked: boolean;
     onSelect: (uuid: string, event: MouseEvent<HTMLButtonElement>) => void;
@@ -92,15 +78,13 @@ const InserterRow = memo(function InserterRow({ fullMetadata, focusRequest, valu
     const craftingMachines = useCraftingMachines();
     const detailsRequest = useMemo(() => focusRequest?.pickup ? { tab: 'General' } : undefined, [focusRequest]);
     const selectedRow = selecting && checked;
-    const selectionStyle = {
-        bgcolor: (theme: Theme) => selectedRow ? themeTokens(theme).hover.row : themeTokens(theme).surface.row,
-        boxShadow: (theme: Theme) => selectedRow ? `inset 0 0 0 1px ${themeTokens(theme).control.border}, inset 4px 0 0 ${themeTokens(theme).text.secondary}` : undefined,
-    };
     const filterItems = usesAutomaticFilters(value.filters) ? inferInserterItems(value, editor.machines, editor.belts, editor.chests, editor.getRecipeInfo, editor.inserters, craftingMachines, editor.drills) : value.filters?.filter(Boolean) ?? [];
-    return <SortableItem stableKey={value._uuid} label={label} displayLabel={<EntityBadge id={value.id}><InserterIcon value={value} size={28} /></EntityBadge>}>
-        {dragHandle => <Box id={`entity-inserter-${value.id}`} role="group" aria-label={label} data-selected={selectedRow ? 'true' : undefined} sx={{
-            ...ROW_GRID_SX, p: 1.5, pt: 1.5, ...selectionStyle,
-        }}>
+    return <EntityRow kind="inserter" row={value} label={label} icon={<InserterIcon value={value} size={28} />} data-selected={selectedRow ? 'true' : undefined}
+        sx={selectedRow ? {
+            bgcolor: (theme: Theme) => themeTokens(theme).hover.row,
+            boxShadow: (theme: Theme) => `inset 0 0 0 1px ${themeTokens(theme).control.border}, inset 4px 0 0 ${themeTokens(theme).text.secondary}`,
+        } : undefined}>
+        {dragHandle =>
             <InserterEditor {...editor} value={value} label={label} layout="workbench" onChange={onChange}
                 routeSummary={<Typography variant="caption">
                     Stack {Number.isFinite(effectiveInserterStackSize(value)) ? effectiveInserterStackSize(value) : 'unavailable'} · {value._forced_always ? 'Always on (forced)' : describeEnableRule(value.overrides?.enable_control).chip}
@@ -111,15 +95,11 @@ const InserterRow = memo(function InserterRow({ fullMetadata, focusRequest, valu
                     {dragHandle}
                     <Box sx={{ display: 'flex', flexDirection: 'column', ml: 0.25 }}>
                         <Tooltip title="Move up"><span><IconButton size="small" disabled={index === 0} aria-label={`Move ${label} up`} onClick={() => onReorder(index, index - 1)} sx={{ p: 0.375 }}><ArrowUpward sx={{ fontSize: 18 }} /></IconButton></span></Tooltip>
-                        <Tooltip title="Move down"><span><IconButton size="small" disabled={!canMoveDown} aria-label={`Move ${label} down`} onClick={() => onReorder(index, index + 1)} sx={{ p: 0.375 }}><ArrowDownward sx={{ fontSize: 18 }} /></IconButton></span></Tooltip>
+                        <Tooltip title="Move down"><span><IconButton size="small" disabled={index === count - 1} aria-label={`Move ${label} down`} onClick={() => onReorder(index, index + 1)} sx={{ p: 0.375 }}><ArrowDownward sx={{ fontSize: 18 }} /></IconButton></span></Tooltip>
                     </Box>
                 </>}
-                routeActions={<>
-                    <Box id={`settings-actions-inserter-${value.id}`} sx={{ display: 'flex' }} />
-                    <RowActionsMenu label={label} onDuplicate={() => onDuplicate(index, label)} showReorder={false} />
-                    <IconButton onClick={() => onRemove(index)} color="error" aria-label={deleteButtonLabel('inserter', value.id)} data-row-delete=""><Delete /></IconButton>
-                </>}
-                rowSettings={fields => <EntitySettings actionContainerId={`settings-actions-inserter-${value.id}`} label={label} request={detailsRequest}
+                routeActions={<EntityRowActions kind="inserter" id={value.id} label={label} index={index} count={count} onDuplicate={onDuplicate} onDelete={onRemove} />}
+                rowSettings={fields => <EntitySettings actionContainerId={settingsSlotId('inserter', value.id)} label={label} request={detailsRequest}
                 tabs={[{ label: 'Enable control', content:
                     <EnableControlFormContent key={ruleRevision + JSON.stringify(value.overrides?.enable_control)} entityType="inserter" entityId={value.id}
                         currentOverride={value.overrides?.enable_control} sourceType={value.source.type} sinkType={value.sink.type}
@@ -134,9 +114,8 @@ const InserterRow = memo(function InserterRow({ fullMetadata, focusRequest, valu
                 summary={null}>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, overflowWrap: 'anywhere' }}>{fullMetadata}</Typography>
                 {fields}
-            </EntitySettings>} />
-        </Box>}
-    </SortableItem>;
+            </EntitySettings>} />}
+    </EntityRow>;
 });
 
 function InsertersFormComponent({
@@ -170,9 +149,11 @@ function InsertersFormComponent({
 
     const options = useMemo(() => entityOptionsOf(machines, belts, chests, { item: itemLabel, recipe: recipeLabel }, { inserters, getRecipeInfo, drills }), [machines, belts, chests, itemLabel, recipeLabel, inserters, getRecipeInfo, drills]);
 
-
-    const { cardRef, remove, afterAdd } = useFocusAfterRemove(inserters.length, onRemove);
-    const announce = useAnnounce();
+    const { cardRef, add: addRow, duplicate, remove } = useEntityRows(inserters, {
+        labelOf: row => entityLabel('inserter', row.id), onRemove, onDuplicate,
+        duplicateRefusal: (row, label) => row.sink.drop === undefined ? null
+            : `${label} cannot be duplicated: its imported drop position belongs to one inserter. Edit and reopen the build file to supply another position.`,
+    });
     const [selecting, setSelecting] = useState(false);
     const [selection, setSelection] = useState<ReadonlySet<string>>(new Set());
     const selected = pruneSelection(selection, inserters.map(row => row._uuid));
@@ -216,25 +197,11 @@ function InsertersFormComponent({
             : kind === 'rule' ? describeEnableRule(updates.overrides?.enable_control).chip.replace(/^Enable: /, '') : undefined;
         onBulkUpdate(selectedRows.map(row => row._uuid), updates, describeBulkEdit(kind, selectedRows.map(row => row.id), detail));
     };
-    const addedLabel = () => entityLabel('inserter', Math.max(0, ...inserters.map(row => row.id)) + 1);
-    const add = () => { afterAdd(onAdd); announce(`Added ${addedLabel()}.`); };
+    const add = () => addRow(onAdd);
     // Appending a route must not replace every row's action props or copy-from options.
     const ruleCopyKey = JSON.stringify(inserters.filter(row => row.overrides?.enable_control && row.overrides.enable_control.mode !== 'AUTO')
         .map(row => ({ uuid: row._uuid, label: entityLabel('inserter', row.id), override: row.overrides!.enable_control! })));
     const ruleCopySources = useMemo(() => JSON.parse(ruleCopyKey) as RuleCopySource[], [ruleCopyKey]);
-    const actionsRef = useRef({ inserters, remove, afterAdd, onDuplicate, announce });
-    useLayoutEffect(() => { actionsRef.current = { inserters, remove, afterAdd, onDuplicate, announce }; }, [inserters, remove, afterAdd, onDuplicate, announce]);
-    const removeRow = useCallback((index: number) => actionsRef.current.remove(index), []);
-    const duplicate = useCallback((index: number, label: string) => {
-        const actions = actionsRef.current;
-        if (actions.inserters[index]?.sink.drop !== undefined) {
-            actions.announce(`${label} cannot be duplicated: its imported drop position belongs to one inserter. Edit and reopen the build file to supply another position.`);
-            return;
-        }
-        const addedId = Math.max(0, ...actions.inserters.map(row => row.id)) + 1;
-        actions.afterAdd(() => actions.onDuplicate(index));
-        actions.announce(`Added ${entityLabel('inserter', addedId)}, a copy of ${label}.`);
-    }, []);
 
     return (
         <PanelSection
@@ -261,24 +228,22 @@ function InsertersFormComponent({
                 <>
                     <Button ref={selectRef} aria-pressed={selecting} color="inherit" variant={selecting ? 'outlined' : 'text'} size="small" sx={{ bgcolor: selecting ? 'action.selected' : undefined }}
                         onClick={() => { if (selecting) finishBulkEdit(); else setSelecting(true); }}>Bulk edit</Button>
-                    <Button id="add-inserter" startIcon={<Add />} color="inherit" onClick={add} variant="text" size="small" data-row-add="">Add Inserter</Button>
+                    <AddButton id="add-inserter" label="Add Inserter" onClick={add} />
                 </>
             )}
         >
 
             {selecting && <BulkEditBar selected={selectedRows} total={inserters.length} priorityIds={priorityIds} availableItems={bulkItems} itemNames={itemNames}
                 onSelectAll={() => setSelection(new Set(inserters.map(row => row._uuid)))} onClear={clearSelection} onDone={finishBulkEdit} onReturnFocus={returnSelectionFocus} onApply={apply} />}
-            <Box sx={{ ...LIST_GRID_SX, rowGap: 1 }}>
             <SortableList itemKeys={itemKeys} onReorder={onReorder}>
             {inserters.map((inserter, index) => (
-                <InserterRow key={inserter._uuid} focusRequest={focusRequest?.id === inserter.id ? focusRequest : null} fullMetadata={`${typeText(inserter)} · ${qualityText(inserter)}`} value={inserter} index={index} inserters={inserters} machines={machines} belts={belts} chests={chests} drills={drills} itemNames={itemNames} getRecipeInfo={getRecipeInfo} options={options} onUpdate={onUpdate} onRemove={removeRow} ruleCopySources={ruleCopySources}
-                    onDuplicate={duplicate} onReorder={onReorder} canMoveDown={index < inserters.length - 1}
+                <InserterRow key={inserter._uuid} focusRequest={focusRequest?.id === inserter.id ? focusRequest : null} fullMetadata={`${typeText(inserter)} · ${qualityText(inserter)}`} value={inserter} index={index} inserters={inserters} machines={machines} belts={belts} chests={chests} drills={drills} itemNames={itemNames} getRecipeInfo={getRecipeInfo} options={options} onUpdate={onUpdate} onRemove={remove} ruleCopySources={ruleCopySources}
+                    count={inserters.length} onDuplicate={duplicate} onReorder={onReorder}
                     selecting={selecting} checked={selected.has(inserter._uuid)} onSelect={selectRow} />
             ))}
             </SortableList>
-            </Box>
 
-            {inserters.length > 0 && <Button startIcon={<Add />} fullWidth color="inherit" onClick={add} size="small" sx={{ mt: 1 }} data-row-add="">Add Inserter</Button>}
+            {inserters.length > 0 && <AddButton label="Add Inserter" fullWidth onClick={add} />}
 
             {inserters.length === 0 && (
                 <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>

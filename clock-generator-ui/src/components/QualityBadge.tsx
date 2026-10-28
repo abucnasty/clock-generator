@@ -1,6 +1,9 @@
-import { Box } from '@mui/material';
+import { Box, type SxProps, type Theme } from '@mui/material';
+import { MACHINE_QUALITIES, qualityLabel } from '../utils/machinePrototype';
+import { SelectField } from './SelectField';
 
-const QUALITIES = new Set(['normal', 'uncommon', 'rare', 'epic', 'legendary']);
+type Quality = typeof MACHINE_QUALITIES[number];
+const QUALITIES = new Set<string>(MACHINE_QUALITIES);
 
 const pipSrc = (quality: string) => `/images/inserter-preview/badge-${quality}.png`;
 
@@ -18,6 +21,16 @@ export function QualityBadge({ quality, size }: { quality: string | undefined; s
     if (quality === undefined || !QUALITIES.has(quality)) return null;
     return <Box component="img" src={pipSrc(quality)} alt=""
         sx={{ position: 'absolute', bottom: -1, left: -1, width: Math.round(size * 0.42), height: Math.round(size * 0.42), imageRendering: 'pixelated', filter: 'drop-shadow(0 1px 1px #000)' }} />;
+}
+
+/** A quality dropdown, each quality with the game's pip before its name */
+export function QualityField({ label = 'Quality', value, onChange, inputAriaLabel, sx }: {
+    label?: string; value: Quality | undefined; onChange: (quality: Quality) => void; inputAriaLabel: string; sx?: SxProps<Theme>;
+}) {
+    return <SelectField label={label} shrink value={value ?? 'normal'} options={MACHINE_QUALITIES} onChange={onChange} inputAriaLabel={inputAriaLabel} sx={sx}
+        render={quality => <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <QualityPip quality={quality} size={16} />{qualityLabel(quality)}
+        </Box>} />;
 }
 
 /** An icon with its quality pip, the size of the icon */

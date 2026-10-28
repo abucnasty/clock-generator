@@ -66,7 +66,7 @@ export function prototypeSourceText(source: PrototypeSource | undefined): string
     }
 }
 
-/** The qualities a machine can have, in the game's order */
+/** The game's qualities, lowest first: a machine's, a cargo wagon's, a rocket silo's recipe's */
 export const MACHINE_QUALITIES = ['normal', 'uncommon', 'rare', 'epic', 'legendary'] as const;
 type MachineQuality = typeof MACHINE_QUALITIES[number];
 

@@ -1,4 +1,5 @@
-import { Box, Button, FormControl, InputLabel, MenuItem, Select, TextField, Typography } from '@mui/material';
+import { Box, Button, TextField, Typography } from '@mui/material';
+import { OptionWithNote, SelectField } from './SelectField';
 import type { TargetType } from 'clock-generator/light';
 import { useEffect, useRef, useState } from 'react';
 import type { RuleSet } from '../hooks/useConfigForm';
@@ -126,34 +127,9 @@ export function QuickTemplateSelect({
 
     return (
         <Box sx={{ mb: 2 }}>
-            <FormControl size="small" fullWidth>
-                <InputLabel shrink>Quick templates</InputLabel>
-                <Select
-                    inputRef={selectRef}
-                    inputProps={{ 'aria-label': SELECT_NAMES.quickTemplates }}
-                    value=""
-                    label="Quick templates"
-                    onChange={(e) => choose(e.target.value)}
-                    displayEmpty
-                    notched
-                    renderValue={() => (
-                        <Typography variant="body2" color="text.secondary">
-                            Select a template to apply...
-                        </Typography>
-                    )}
-                >
-                    {templates.map((template) => (
-                        <MenuItem key={template.id} value={template.id}>
-                            <Box sx={{ whiteSpace: 'normal' }}>
-                                <Typography variant="body2">{template.name}</Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                    {template.description}
-                                </Typography>
-                            </Box>
-                        </MenuItem>
-                    ))}
-                </Select>
-            </FormControl>
+            <SelectField label="Quick templates" inputAriaLabel={SELECT_NAMES.quickTemplates} inputRef={selectRef} fullWidth
+                placeholder="Select a template to apply..." options={templates.map(template => template.id)} onChange={choose}
+                renderOption={id => { const template = templates.find(t => t.id === id)!; return <OptionWithNote label={template.name} note={template.description} />; }} />
 
             {chosen && (
                 <Box

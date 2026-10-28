@@ -41,33 +41,14 @@ export function Panel({ title, level = 2, id, focusableTitleId, help, actions, c
             sx={[{ mb: 2 }, ...(Array.isArray(sx) ? sx : [sx])]}
             {...data}
         >
-            <Box
-                component="header"
-                sx={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    alignItems: 'center',
-                    columnGap: 1,
+            <TitleBar component="header" title={title} titleId={titleId} level={level} focusable={Boolean(focusableTitleId)} help={help} actions={actions}
+                variant={level === 2 ? 'h6' : level === 3 ? 'subtitle1' : 'subtitle2'} titleSx={{ fontWeight: 600 }} sx={{
                     minHeight: 40,
                     px: 2,
                     py: 0.5,
                     bgcolor: (theme: Theme) => themeTokens(theme).surface.titleBar,
                     borderBottom: (theme: Theme) => `1px solid ${themeTokens(theme).surface.inset}`,
-                }}
-            >
-                {/* the level is set: the theme makes a subtitle a paragraph */}
-                <Typography
-                    id={titleId}
-                    tabIndex={focusableTitleId ? -1 : undefined}
-                    component={`h${level}`}
-                    variant={level === 2 ? 'h6' : level === 3 ? 'subtitle1' : 'subtitle2'}
-                    sx={{ fontWeight: 600 }}
-                >
-                    {title}
-                </Typography>
-                {help && <HelpButton label={help.label}>{help.content}</HelpButton>}
-                {actions && <Box sx={{ ml: 'auto', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>{actions}</Box>}
-            </Box>
+                }} />
             <Box sx={{ p: 2 }}>{children}</Box>
         </Paper>
     );
@@ -109,30 +90,29 @@ export function PanelSection({ title, level, help, actions, children, sx, ref, o
             onBlur={onBlur}
             {...data}
         >
-            <Box
-                sx={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    alignItems: 'center',
-                    columnGap: 1,
+            <TitleBar title={title} titleId={titleId} level={level} help={help} actions={actions} variant={part ? 'subtitle2' : 'subtitle1'}
+                titleSx={part ? { fontWeight: 600, color: 'text.secondary' } : { fontWeight: 700, fontSize: '1.0625rem' }} sx={{
                     minHeight: part ? 32 : 40,
                     mb: part ? 1 : 1.5,
                     borderBottom: part ? 'none' : (theme: Theme) => `1px solid ${themeTokens(theme).control.edge}`,
-                }}
-            >
-                {/* the level is set: the theme makes a subtitle a paragraph */}
-                <Typography
-                    id={titleId}
-                    component={`h${level}`}
-                    variant={part ? 'subtitle2' : 'subtitle1'}
-                    sx={part ? { fontWeight: 600, color: 'text.secondary' } : { fontWeight: 700, fontSize: '1.0625rem' }}
-                >
-                    {title}
-                </Typography>
-                {help && <HelpButton label={help.label}>{help.content}</HelpButton>}
-                {actions && <Box sx={{ ml: 'auto', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>{actions}</Box>}
-            </Box>
+                }} />
             {children}
         </Box>
     );
+}
+
+/** A card's or a section's heading, its help after it and its actions at the right, wrapping under it when they do not fit */
+function TitleBar({ component = 'div', title, titleId, level, focusable = false, variant, titleSx, help, actions, sx }: {
+    component?: 'header' | 'div'; title: string; titleId: string; level: 2 | 3 | 4; focusable?: boolean;
+    variant: 'h6' | 'subtitle1' | 'subtitle2'; titleSx: SxProps<Theme>;
+    help?: { label: string; content: ReactNode }; actions?: ReactNode; sx: SxProps<Theme>;
+}) {
+    return <Box component={component} sx={[{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 1 }, ...(Array.isArray(sx) ? sx : [sx])]}>
+        {/* the level is set: the theme makes a subtitle a paragraph */}
+        <Typography id={titleId} tabIndex={focusable ? -1 : undefined} component={`h${level}`} variant={variant} sx={titleSx}>
+            {title}
+        </Typography>
+        {help && <HelpButton label={help.label}>{help.content}</HelpButton>}
+        {actions && <Box sx={{ ml: 'auto', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>{actions}</Box>}
+    </Box>;
 }

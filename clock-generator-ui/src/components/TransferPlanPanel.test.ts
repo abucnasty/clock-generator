@@ -1,52 +1,46 @@
+// @vitest-environment happy-dom
+import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { createElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { isValidElement, type ReactNode } from 'react';
-import { Chip } from '@mui/material';
 import type { SerializableTransferPlan } from 'clock-generator/browser';
 import { TransferPlanPanel } from './TransferPlanPanel';
 
-vi.mock('react', async importOriginal => ({ ...await importOriginal<typeof import('react')>(), memo: (component: unknown) => component, useId: () => 'plan-test', useRef: () => ({ current: null }) }));
-vi.mock('../hooks/useBuildViewContext', () => ({ useBuildSection: () => [true, () => {}] }));
-vi.mock('../hooks/useGameNames', () => ({ useGameNames: () => ({ itemLabel: (id: string) => id }) }));
-
-// Inspect actual element props from the component without mounting a DOM. Browser evidence owns focus/AT behavior.
-function chips(node: ReactNode): Record<string, unknown>[] {
-    if (Array.isArray(node)) return node.flatMap(chips);
-    if (!isValidElement<{ children?: ReactNode }>(node)) return [];
-    return [...(node.type === Chip ? [node.props as Record<string, unknown>] : []), ...chips(node.props.children)];
-}
+// createElement rather than JSX: the .tsx name is taken by the swing plan of a real build
 const transferPlan = { computed_lcm: 2, entities: [{ entity_id: 'inserter-one', entity_type: 'inserter', entity_number: 1,
     item_transfers: [{ item_name: 'iron-plate', numerator: 3, denominator: 2 }] }] } as SerializableTransferPlan;
-function render(interaction: 'editable' | 'checking' | 'read-only', excludedIngredients: string[] = []) {
+function show(interaction: 'editable' | 'checking' | 'read-only', excludedIngredients: string[] = []) {
     const onExcludeChange = vi.fn();
-    const view = TransferPlanPanel({ transferPlan, usedLcm: 2, excludedIngredients, onExcludeChange, interaction });
-    const action = chips(view).find(chip => String(chip['aria-label']).includes(' LCM:'))!;
-    return { action, onExcludeChange };
+    render(createElement(TransferPlanPanel, { transferPlan, usedLcm: 2, excludedIngredients, onExcludeChange, interaction }));
+    return { action: screen.getByLabelText(/ LCM: iron-plate$/), onExcludeChange };
 }
 
 describe('Swing Plan mutation boundary', () => {
-    it('editable actions add and remove the actual item once', () => {
-        const included = render('editable'); (included.action.onClick as () => void)();
-        expect(included.onExcludeChange).toHaveBeenCalledExactlyOnceWith(['iron-plate']);
-        const excluded = render('editable', ['iron-plate']); (excluded.action.onClick as () => void)();
-        expect(excluded.onExcludeChange).toHaveBeenCalledExactlyOnceWith([]);
+    it.each([{ excluded: [], next: ['iron-plate'] }, { excluded: ['iron-plate'], next: [] }])('editable actions add and remove the actual item once (%j)', async ({ excluded, next }) => {
+        const { action, onExcludeChange } = show('editable', excluded);
+        await userEvent.setup().click(action);
+        expect(onExcludeChange).toHaveBeenCalledExactlyOnceWith(next);
     });
-    it.each([{ excluded: [] }, { excluded: ['iron-plate'] }])('checking retains the chip handler but guards every exclusion mutation (%j)', ({ excluded }) => {
-        const { action, onExcludeChange } = render('checking', excluded);
-        expect(action['aria-disabled']).toBe(true); expect(action.onClick).toBeTypeOf('function');
-        (action.onClick as () => void)();
+    it.each([{ excluded: [] }, { excluded: ['iron-plate'] }])('checking keeps the chip a focusable button but guards every exclusion mutation (%j)', async ({ excluded }) => {
+        const user = userEvent.setup();
+        const { action, onExcludeChange } = show('checking', excluded);
+        expect(action.getAttribute('aria-disabled')).toBe('true');
+        expect(action).toBe(screen.getByRole('button', { name: /LCM: iron-plate$/ }));
+        await user.click(action);
+        expect(document.activeElement).toBe(action);
         for (const key of ['Enter', ' ']) {
-            const preventDefault = vi.fn();
-            (action.onKeyDown as (event: unknown) => void)({ key, preventDefault });
-            expect(preventDefault).toHaveBeenCalledOnce();
-            (action.onClick as () => void)();
+            expect(fireEvent.keyDown(action, { key })).toBe(false);
+            await user.keyboard(key === ' ' ? '[Space]' : '[Enter]');
         }
         expect(onExcludeChange).not.toHaveBeenCalled();
     });
-    it.each([{ excluded: [] }, { excluded: ['iron-plate'] }])('read-only exposes state without an action or disabled-data subtree (%j)', ({ excluded }) => {
-        const { action, onExcludeChange } = render('read-only', excluded);
-        expect(action.onClick).toBeUndefined(); expect(action.tabIndex).toBeUndefined();
-        expect(action['aria-disabled']).toBeUndefined();
-        expect(action.label).toBe(excluded.length ? 'Excluded' : 'Included');
+    it.each([{ excluded: [] }, { excluded: ['iron-plate'] }])('read-only exposes state without an action or disabled-data subtree (%j)', async ({ excluded }) => {
+        const { action, onExcludeChange } = show('read-only', excluded);
+        expect(screen.queryByRole('button', { name: /LCM: iron-plate$/ })).toBeNull();
+        expect(action.hasAttribute('tabindex')).toBe(false);
+        expect(action.hasAttribute('aria-disabled')).toBe(false);
+        expect(action.textContent).toBe(excluded.length ? 'Excluded' : 'Included');
+        await userEvent.setup().click(action);
         expect(onExcludeChange).not.toHaveBeenCalled();
     });
 });
