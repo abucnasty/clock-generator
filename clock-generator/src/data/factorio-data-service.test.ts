@@ -99,8 +99,12 @@ describe("a result's chance in the 2.1 data", () => {
     });
 
     it("has the rocket silo fixed to its rocket part recipe, and every item's weight as the game holds it", () => {
+        // the fields the engine reads, then the manifest's others
         expect(FactorioDataService.findRocketSiloOrThrow("rocket-silo")).toEqual({
             name: "rocket-silo", fixed_recipe: "rocket-part", crafting_speed: 1, module_slots: 4, lift_weight: 1_000_000,
+            type: "rocket-silo", minable: { mining_time: 1, result: "rocket-silo" }, crafting_categories: ["rocket-building"],
+            allowed_effects: ["consumption", "speed", "productivity", "pollution"],
+            energy_source: { type: "electric", usage_priority: "primary-input" }, energy_usage: "250kW", rocket_parts_required: 50,
         });
         expect(FactorioDataService.findRecipeOrThrow("rocket-part").ingredients.map(it => [it.name, it.amount]))
             .toEqual([["processing-unit", 1], ["low-density-structure", 1], ["rocket-fuel", 1]]);

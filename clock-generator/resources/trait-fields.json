@@ -1,6 +1,9 @@
 {
   "$comment": [
-    "What the engine reads from the game's prototypes: the one hand-written list. Keys are the prototype API's own names",
+    "What the engine reads from the game's prototypes: the one hand-written list. resources/filter-raw.js keeps these",
+    "properties (a class's own and its ancestors') in resources/data-filtered.json for each section built from a listed",
+    "class, beside the fields it derives; recipes and resources are kept whole; a class with properties that no section is built from",
+    "must be named in its UNSECTIONED_CLASSES with why (the chests, the loader). Keys are the prototype API's own names",
     "(prototypes as the spec names them, with their Prototype suffix: CraftingMachinePrototype, ResourceEntityPrototype;",
     "the two roots PrototypeBase and Prototype have none), so each looks up in the spec as written.",
     "prototypes: each class with its spec parent (null for the root) and the properties it OWNS in the spec that the",
@@ -16,8 +19,9 @@
     "quality multipliers it hard-codes (inserter_speed_multiplier); InputLimits, Timing and the rest read them from here.",
     "Not here, hand-written in resources/filter-raw.js: what it derives rather than reads off one class, namely",
     "TechnologyPrototype effects (the inserter research totals), UtilityConstants default_rocket_lift_weight (the silo's",
-    "lift_weight when unset), and which raw sections hold items (ItemPrototype's subclasses: module, tool, ammo, capsule;",
-    "the manifest names no typename, the generated file gives each class's in a comment).",
+    "lift_weight when unset), and which raw section each of its sections is read from with which class (items from",
+    "ItemPrototype's subclasses too: module, tool, ammo, capsule; the manifest names no typename, the generated file gives",
+    "each class's in a comment).",
     "$comment entries name the traits that read the class (P4 composition design, 2.4). After an edit, rerun",
     "scripts/prototype-types/generate.mjs (its header says how)."
   ],
