@@ -1,10 +1,10 @@
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
 import { describe, expect, it } from 'vitest';
-import { computeMachineFacts, ConfigSchema, FactorioDataService, FeasibilityError, validateConfig, type Config } from 'clock-generator/browser';
+import { computeMachineFacts, ConfigSchema, FactorioDataService, FeasibilityError, targetRateMaxOf, validateConfig, type Config } from 'clock-generator/browser';
 import oreVoiderExact from '../../../clock-generator/resources/config-samples/real/owner/ore-voider/ore-voider-exact-speed.json';
 import oreVoiderOverbeaconed from '../../../clock-generator/resources/config-samples/real/owner/ore-voider/ore-voider-overbeaconed.json';
 import { configToFormData } from './configForm/configMapping';
-import { isTargetAboveMax, machinesMaxOf, resultComesBack, totalMachineCapacity } from './targetRateLimit';
+import { isTargetAboveMax, machinesMaxOf, rateMaxOf, resultComesBack, targetRateLineOf, totalMachineCapacity } from './targetRateLimit';
 
 FactorioDataService.initialize(JSON.parse(factorioData));
 
@@ -111,6 +111,9 @@ describe('target capacity agrees with actual engine validation', () => {
     });
 });
 
+const withRate = (config: Config, items_per_second: number) =>
+    ConfigSchema.parse({ ...config, target_output: { ...config.target_output, items_per_second } });
+
 describe('the most a recycler destroys agrees with the engine\'s check of the ore voider samples', () => {
     const maxOf = (sample: unknown) => {
         const config = ConfigSchema.parse(sample);
@@ -119,8 +122,6 @@ describe('the most a recycler destroys agrees with the engine\'s check of the or
         const comesBack = resultComesBack(form.machines[0], form.inserters, 'iron-ore');
         return { config, max: machinesMaxOf('iron-ore', [{ id: 1, facts, comesBack }], 'destroyed')! };
     };
-    const withRate = (config: ReturnType<typeof maxOf>['config'], items_per_second: number) =>
-        ConfigSchema.parse({ ...config, target_output: { ...config.target_output, items_per_second } });
 
     it('is 405 a second for the exact-speed recycler: 400 passes, and the engine refuses just above it', () => {
         const { config, max } = maxOf(oreVoiderExact);
@@ -132,20 +133,41 @@ describe('the most a recycler destroys agrees with the engine\'s check of the or
         expectNoClockCanHold(refusalOf(withRate(config, 405.01)));
     });
 
-    it('is 639.2 a second for the overbeaconed recycler, above what its inserters let the engine accept', () => {
-        const { config, max } = maxOf(oreVoiderOverbeaconed);
-        expect(totalMachineCapacity(max, 1)).toBeCloseTo(639.225, 2);
+    it('is 480 a second for the overbeaconed recycler: its inserters 3 to 6 bring in 480 of the 639.2 its machine could destroy', () => {
+        const { config, max: machines } = maxOf(oreVoiderOverbeaconed);
+        expect(totalMachineCapacity(machines, 1)).toBeCloseTo(639.225, 2);
+        const feasible = { max: targetRateMaxOf(config), current: true };
+        const max = rateMaxOf(machines, feasible)!;
+        expect(totalMachineCapacity(max, 1)).toBe(480);
         expect(isTargetAboveMax(400, 1, max)).toBe(false);
         expect(() => validateConfig(withRate(config, 400))).not.toThrow();
-        // the UI's maximum counts the machines only (isTargetAboveMax), not the inserters: 3 to 6 bring in at most 480 a second
-        for (const rate of [639, 639.22]) {
-            expect(isTargetAboveMax(rate, 1, max)).toBe(false);
+        // the engine's check and the page's maximum agree on both sides of 480
+        expect(isTargetAboveMax(480, 1, max)).toBe(false);
+        expect(() => validateConfig(withRate(config, 480))).not.toThrow();
+        for (const rate of [480.01, 639, 639.3]) {
+            expect(isTargetAboveMax(rate, 1, max)).toBe(true);
             const refusal = refusalOf(withRate(config, rate));
             expectNoClockCanHold(refusal);
             expect((refusal as Error).message).toContain('Inserters 3, 4, 5 and 6 can bring at most 480 a second of iron ore into the build');
         }
-        expect(isTargetAboveMax(639.3, 1, max)).toBe(true);
-        expectNoClockCanHold(refusalOf(withRate(config, 639.3)));
+    });
+
+    it('says what stops a target above 480 a second in the engine\'s words', () => {
+        const { config, max: machines } = maxOf(oreVoiderOverbeaconed);
+        const above = withRate(config, 500);
+        const max = rateMaxOf(machines, { max: targetRateMaxOf(above), current: true })!;
+        expect(targetRateLineOf({ itemsPerSecond: 500, copies: 1, max, counts: 'destroyed' })).toBe(
+            'At most 480/s: Inserters 3, 4, 5 and 6 can bring at most 480 a second of iron ore into the build (4 hands of 16 every 8 ticks), and the target is 500 a second. '
+            + 'Lower the target, or give the machines more inserters or bigger hands.');
+        // another rate of the same build: the maximum stands, the words wait for the engine
+        const waiting = rateMaxOf(machines, { max: targetRateMaxOf(above), current: false })!;
+        expect(targetRateLineOf({ itemsPerSecond: 600, copies: 1, max: waiting, counts: 'destroyed' }))
+            .toBe('At most 480/s. Lower the rate or raise Copies. Describe one unit in the build.');
+    });
+
+    it('is the machines\' where they are what stops the target', () => {
+        const { config, max: machines } = maxOf(oreVoiderExact);
+        expect(rateMaxOf(machines, { max: targetRateMaxOf(config), current: true })).toBe(machines);
     });
 });
 
@@ -159,5 +181,46 @@ describe('what comes back into a recycler', () => {
         expect(resultComesBack(form.machines[0], unfiltered, 'iron-ore')).toBe(true);
         // the inserters that bring the ore in from the infinity chest do not count
         expect(resultComesBack(form.machines[0], form.inserters.filter(inserter => inserter.source.id !== 1), 'iron-ore')).toBe(false);
+    });
+});
+
+describe('over the samples, a target the field allows is never refused by a feasibility check, and one above it always is', () => {
+    const files = import.meta.glob('../../../clock-generator/resources/config-samples/**/*.json', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
+    const builds = Object.entries(files).flatMap(([file, text]) => {
+        const parsed = ConfigSchema.safeParse(JSON.parse(text));
+        return parsed.success ? [{ file, config: parsed.data }] : [];
+    });
+    const refusedByFeasibility = (config: Config): boolean => {
+        try { validateConfig(config); return false; } catch (error) { return error instanceof FeasibilityError; }
+    };
+
+    let checked = 0;
+    it.each(builds.map(build => [build.file.replace(/^.*config-samples\//, ''), build.config] as const))('%s', (_file, config) => {
+        // a sample that is refused for another reason is not the one the field speaks for
+        if (refusalOf(config) !== undefined) return;
+        const form = configToFormData(config);
+        const counts = config.target_output.counts ?? 'made';
+        const machines = config.machines.map((machine, index) => ({
+            id: machine.id,
+            facts: computeMachineFacts(machine),
+            comesBack: resultComesBack(form.machines[index], form.inserters, config.target_output.recipe),
+        }));
+        const machinesMax = machinesMaxOf(config.target_output.recipe, machines, counts);
+        const max = rateMaxOf(machinesMax, { max: targetRateMaxOf(config), current: true });
+        if (max === null) return;
+        checked++;
+        const copies = config.target_output.copies;
+        const capacity = totalMachineCapacity(max, copies)!;
+        // the field allows what it prints, rounded down
+        const allowed = Math.floor(capacity * 1000) / 1000;
+        expect(isTargetAboveMax(allowed, copies, max)).toBe(false);
+        expect(refusedByFeasibility(withRate(config, allowed))).toBe(false);
+        const above = Math.ceil(capacity * 1.01 * 1000) / 1000;
+        expect(isTargetAboveMax(above, copies, max)).toBe(true);
+        expect(refusedByFeasibility(withRate(config, above))).toBe(true);
+    });
+
+    it('checks most of the samples', () => {
+        expect(checked).toBeGreaterThan(40);
     });
 });

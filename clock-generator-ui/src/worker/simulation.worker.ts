@@ -398,6 +398,8 @@ function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
         }
         case 'machine-target-rates':
             return clockGenerator.computeMachineTargetRates(query.config);
+        case 'target-rate-max':
+            return clockGenerator.targetRateMaxOf(query.config);
         case 'output-transfers':
             return {
                 transfers: clockGenerator.deriveOutputTransfers(query.config),

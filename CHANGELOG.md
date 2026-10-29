@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.26.0] - Unreleased
+
+### Fixed
+- The most the Items per Second field allows now counts the inserters, belts and hands as well as the machines' speed, so it no longer accepts a rate that Check then refuses.
+
 ## [0.25.0] - 2026-10-28
 
 ### Changed

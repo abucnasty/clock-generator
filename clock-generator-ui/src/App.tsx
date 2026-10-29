@@ -31,9 +31,10 @@ import { BuildSectionsContext, useBuildViewContext, type BuildContextReady } fro
 import { serializeConfig } from './hooks/usePersistedConfigForm';
 import { selectBuildEntity } from './utils/buildViewContext';
 import { useMachinesMax } from './hooks/useMachineFacts';
+import { useTargetRateMax } from './hooks/useTargetRateMax';
 import { TargetOutputForm } from './components/TargetOutputForm';
 import { countsOf } from './utils/targetCounts';
-import { resultComesBack } from './utils/targetRateLimit';
+import { rateMaxOf, resultComesBack } from './utils/targetRateLimit';
 import { MachinesForm } from './components/MachinesForm';
 import { InsertersForm } from './components/InsertersForm';
 import { BeltsForm } from './components/BeltsForm';
@@ -524,7 +525,10 @@ function App() {
     const targetCounts = countsOf(config.target_output);
     const machinesWithReturn = useMemo(() => config.machines.map(machine => ({ ...machine,
         comesBack: resultComesBack(machine, config.inserters, config.target_output.recipe) })), [config.machines, config.inserters, config.target_output.recipe]);
-    const machinesMax = useMachinesMax(config.target_output.recipe, machinesWithReturn, targetCounts);
+    const machinesOnlyMax = useMachinesMax(config.target_output.recipe, machinesWithReturn, targetCounts);
+    // the engine's own limit, which counts the inserters and belts too, as the check that refuses a target above it does
+    const feasibleMax = useTargetRateMax(engineConfig, isInitialized);
+    const machinesMax = useMemo(() => rateMaxOf(machinesOnlyMax, feasibleMax), [machinesOnlyMax, feasibleMax]);
     // what a target that counts an item destroyed is chosen from: the items the build's machines take in
     const destroyedItemNames = useMemo(() => Array.from(new Set(config.machines.flatMap(machine =>
         machine.recipe ? getRecipeInfo(machine.recipe)?.ingredients ?? [] : []))).sort(), [config.machines, getRecipeInfo]);

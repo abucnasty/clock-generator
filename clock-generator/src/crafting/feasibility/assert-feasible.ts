@@ -68,7 +68,7 @@ const checked = new WeakMap<Config, { issues: readonly FeasibilityIssue[]; targe
  * error is caught, an invariant's too, so such a config is not checked here; the facts and graph throw no error class
  * of their own to catch alone
  */
-function graphOf(config: Config): { facts: PlannerFacts; graph: PlannerGraph } | null {
+export function graphOf(config: Config): { facts: PlannerFacts; graph: PlannerGraph } | null {
     try {
         const facts = toPlannerFacts(config);
         return { facts, graph: plannerGraphOf(facts) };
