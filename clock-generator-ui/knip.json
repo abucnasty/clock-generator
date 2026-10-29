@@ -1,5 +1,5 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "entry": ["src/globals.d.ts", "scripts/check-icons.mjs", "scripts/copy-factorio-data.mjs", "scripts/generate-in-browser.mjs"],
+  "entry": ["src/globals.d.ts", "scripts/check-icons.mjs", "scripts/generate-in-browser.mjs"],
   "ignoreDependencies": ["clock-generator"]
 }
