@@ -1,4 +1,4 @@
-// node scripts/record-clock.js <recordings dir> <build> <on|off> [alternative id]
+// node scripts/record-clock.js <recordings dir> <build or sample key or config path> <on|off> [alternative id]
 // Records a potential clock of a scaffolded build in Factorio (the selected one unless an id is given) and checks it
 // as the game tests do: what it moved in every period, the wake-ups against the simulator's, and the simulator laid
 // against the game entity by entity. <on|off> is "Backed-up belts". A recording that is already in the directory is
@@ -7,6 +7,13 @@
 // To record windows of your own, such as a clock tightened by hand: WINDOWS=<json file> holding
 // {"period": 528, "output_swings": 2, "windows": {"inserter:1": [{"start": 1, "end": 6}, ...], ...}}. They are built as
 // they are; output_swings is the output swings per cycle of the plan whose period they are of.
+//
+// <build> is one of the named builds below, or any config: a sample key of ConfigPaths (ADVANCED_CIRCUIT) or the path of a
+// config JSON. The scaffold of a config is the <config name>-scaffold.txt beside it (SCAFFOLD= names another), and the
+// warm-up and settle ticks are those of its entry in tests/game/builds/scaffold-recordings.game.test.ts (WARMUP_TICKS= and
+// SETTLE_TICKS= set them, 3600 and 2400 otherwise). A build that is seeded there (eggs, bacteria) needs SEED=<json>, such as
+// [{"target": {"recipe": "pentapod-egg"}, "item": "pentapod-egg", "count": 200}]. The alternative may be any id of the
+// generator (the UI and export-clock.js name them), or `selected`.
 //
 // To try a variant without touching the samples: SCAFFOLD=<blueprint file> records on that scaffold, CONFIG=<config
 // json> generates for that config, and TAG=<word> goes into the name of the recording so that it is kept apart.
@@ -19,6 +26,7 @@ const out_dir = path.resolve(out_arg);
 const scaffold_arg = process.env.SCAFFOLD && path.resolve(process.env.SCAFFOLD);
 const given_windows = process.env.WINDOWS && path.resolve(process.env.WINDOWS);
 const { ROOT, dist, quiet, loadSample } = require("./lib");
+const { ConfigPaths } = dist("config/config-paths.js");
 const { generateClockAlternatives, clockBeltLabel, clockFromWindows } = dist("crafting/generate-blueprint.js");
 const { encodeBlueprintFile } = dist("blueprints/serde.js");
 const { recordInFactorio } = dist("harness/factorio-harness.js");
@@ -46,12 +54,37 @@ const BUILDS = {
 // TICKS=<n> in the environment records that many instead (at most 72,000)
 const RECORDED_TICKS = Number(process.env.TICKS ?? 36000);
 
-(async () => {
-    const build = BUILDS[name];
-    if (build === undefined || (belts !== "on" && belts !== "off")) {
-        throw new Error(`usage: record-clock.js <recordings dir> <${Object.keys(BUILDS).join("|")}> <on|off> [alternative id]`);
+const TESTS = path.join(ROOT, "tests", "game", "builds", "scaffold-recordings.game.test.ts");
+
+/**
+ * What a build that is not in the table above needs, from its entry in the game test: the ticks it warms up and settles
+ * for, and whether it is seeded (which this cannot read; SEED= gives it)
+ */
+function buildOfConfig(arg) {
+    const config_path = ConfigPaths[arg] ?? path.resolve(arg);
+    const key = Object.keys(ConfigPaths).find(it => ConfigPaths[it] === config_path);
+    const block = fs.existsSync(TESTS) && key ? fs.readFileSync(TESTS, "utf-8").split(/^    \},?$/m).find(it => it.includes(`config: ConfigPaths.${key},`)) : undefined;
+    const ticks = field => Number(new RegExp(`${field}: ([\\d_]+)`).exec(block ?? "")?.[1].replace(/_/g, ""));
+    const scaffold = scaffold_arg ?? config_path.replace(/\.json$/, "-scaffold.txt");
+    if (!fs.existsSync(scaffold)) {
+        throw new Error(`No scaffold at ${scaffold}: SCAFFOLD=<blueprint file> names one`);
     }
-    const scaffold = scaffold_arg || path.join(SAMPLES, build.scaffold);
+    if (block !== undefined && /seed: \[\s*\{/.test(block) && !process.env.SEED) {
+        throw new Error(`${arg} is seeded in ${path.relative(ROOT, TESTS)}: SEED=<json> gives the same seed`);
+    }
+    return {
+        scaffold, config: arg, seed: process.env.SEED ? JSON.parse(process.env.SEED) : [],
+        warmup_ticks: Number(process.env.WARMUP_TICKS ?? (ticks("warmup_ticks") || 3600)),
+        settle_ticks: Number(process.env.SETTLE_TICKS ?? (ticks("settle_ticks") || 2400)),
+    };
+}
+
+(async () => {
+    if (name === undefined || (belts !== "on" && belts !== "off")) {
+        throw new Error(`usage: record-clock.js <recordings dir> <${Object.keys(BUILDS).join("|")}|sample key|config path> <on|off> [alternative id]`);
+    }
+    const build = BUILDS[name] ? { ...BUILDS[name], scaffold: path.join(SAMPLES, BUILDS[name].scaffold) } : buildOfConfig(name);
+    const scaffold = scaffold_arg || build.scaffold;
     const config = await loadSample(process.env.CONFIG ?? build.config, belts === "on");
     let selected;
     if (given_windows) {
@@ -63,7 +96,7 @@ const RECORDED_TICKS = Number(process.env.TICKS ?? 36000);
         selected = { id: process.env.TAG || "given-windows", label: `the windows of ${path.basename(given_windows)}`, belt: made.belt, verdict: made.stability_check.holds ? "stable" : "unstable", result: made };
     } else {
         const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
-        selected = alternative_id ? alternatives.find(a => a.id === alternative_id) : alternatives[selected_index];
+        selected = alternative_id && alternative_id !== "selected" ? alternatives.find(a => a.id === alternative_id) : alternatives[selected_index];
         if (selected === undefined) {
             throw new Error(`No potential clock ${alternative_id}. There are: ${alternatives.map(a => a.id).join(", ")}`);
         }
@@ -76,7 +109,7 @@ const RECORDED_TICKS = Number(process.env.TICKS ?? 36000);
         + `${selected.verdict} in the simulator, period ${period}, clock counts ${clock_ticks}`);
 
     const tag = process.env.TAG ? `-${process.env.TAG}` : "";
-    const file = path.join(out_dir, `${name}${tag}-${selected.id}-${belts}.json`);
+    const file = path.join(out_dir, `${path.basename(name, ".json")}${tag}-${selected.id}-${belts}.json`);
     let recording;
     if (fs.existsSync(file)) {
         recording = parseRecording(JSON.parse(fs.readFileSync(file, "utf-8")));
