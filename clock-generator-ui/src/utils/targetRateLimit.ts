@@ -13,6 +13,38 @@ export interface MachinesMax {
     perCopy: number;
     /** Present when every machine supplied its exact capacity. */
     perCopyRatio?: { numerator: number; denominator: number };
+    /**
+     * Set when something other than the machines' speed stops the target (a hand, an inserter, a belt): the engine's
+     * words for it, empty while they are not yet known for the rate typed in. The most is then the engine's.
+     */
+    otherLimit?: string;
+}
+
+/** What the engine's feasibility pass says of the build (`targetRateMaxOf`), as the page needs it */
+interface FeasibleMax {
+    max: { per_copy: { numerator: number; denominator: number }; per_copy_per_second: number; limit: string | null } | null;
+    /** Whether `max.limit` is for the rate typed in */
+    current: boolean;
+}
+
+/**
+ * The most the target can be: the engine's feasibility pass's, which counts the machines' speed with the inserters, belts
+ * and hands, the same pass that refuses a target above it. Where that is not known (the pass cannot be run on the build,
+ * or has not answered yet) it is the machines' alone. Where the machines are what stops the target, the machines'
+ * clause stays; otherwise `otherLimit` says what does.
+ */
+export function rateMaxOf(machines: MachinesMax | null, feasible: FeasibleMax): MachinesMax | null {
+    const found = feasible.max;
+    if (found === null) return machines;
+    // the same to within the float noise of the facts' yields, which the pass leaves unrefused too (a billionth)
+    const same = machines !== null && Math.abs(machines.perCopy - found.per_copy_per_second) <= 1e-9 * found.per_copy_per_second;
+    if (same) return machines;
+    return {
+        machineIds: machines?.machineIds ?? [],
+        perCopy: found.per_copy_per_second,
+        perCopyRatio: found.per_copy,
+        otherLimit: feasible.current && found.limit ? found.limit : '',
+    };
 }
 
 /** What a machine's facts say of its output; null when they could not be worked out, undefined until they are */
@@ -183,6 +215,11 @@ export function targetRateLineOf(
     }
     const capacity = totalMachineCapacity(max, copies);
     if (capacity === null) return null;
+    if (max.otherLimit !== undefined) {
+        const total = maxRateText(capacity, locale);
+        if (max.otherLimit === '') return `At most ${total}. Lower the rate or raise Copies. Describe one unit in the build.`;
+        return copies !== 1 ? `At most ${total}. For one copy: ${max.otherLimit}` : `At most ${total}: ${max.otherLimit}`;
+    }
     const one = max.machineIds.length === 1;
     const verb = counts === 'destroyed' ? (one ? 'destroys' : 'destroy') : (one ? 'makes' : 'make');
     const machines = `${machinesText(max.machineIds)} ${verb} ${maxRateText(max.perCopy, locale)}${one ? '' : ' together'}`;
