@@ -33,7 +33,7 @@ export function ExamplesDialog({ onPick, onClose }: ExamplesDialogProps) {
                 }
                 const list = readExampleManifest(text);
                 if (list.length === 0) {
-                    console.warn(`No example builds at ${EXAMPLE_MANIFEST_URL}: run \`node scripts/copy-factorio-data.mjs\` in clock-generator-ui.`);
+                    console.warn(`No example builds at ${EXAMPLE_MANIFEST_URL}: restart the dev server, which copies them into public/.`);
                 }
                 setExamples(list);
             });

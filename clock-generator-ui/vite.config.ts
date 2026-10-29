@@ -2,13 +2,14 @@
 import { readFileSync } from 'node:fs'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { gameDataPlugin } from './scripts/game-data-plugin.ts'
 
 const packageJson = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'))
 const changelog = readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8')
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), gameDataPlugin()],
   define: {
     __APP_VERSION__: JSON.stringify(packageJson.version),
     __CHANGELOG__: JSON.stringify(changelog),

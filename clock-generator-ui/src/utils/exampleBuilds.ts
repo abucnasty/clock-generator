@@ -1,7 +1,7 @@
 import { isShortDecimalCopies } from 'clock-generator/light';
 import { formatNumberText } from './numberText';
 
-/** Where the examples dialog finds the list, which `scripts/copy-factorio-data.mjs` writes into `public/` */
+/** Where the examples dialog finds the list, which `scripts/game-data-plugin.ts` writes into `public/` when Vite starts */
 export const EXAMPLE_MANIFEST_URL = '/examples/index.json';
 
 /** One row of the list of example builds: the build file and what it holds */
