@@ -20,9 +20,10 @@ export {
 
 export { EntityType } from "./entities/entity-type";
 
-export { MachineType } from "./entities/machine/machine-type";
-export { machineRuleOfPrototype, machineCanMake, machineForRecipe, machineForRule, placesResultsItself } from "./entities/machine/machine-rule";
+export { machineCanMake, machineForRecipe, machineForRule } from "./entities/machine/machine-rule";
 export type { CraftingMachineRuleFacts, NamedCraftingMachine } from "./entities/machine/machine-rule";
+export { prototypeTraitsOf } from "./entities/traits/prototype-traits";
+export type { CraftingMachineTraitFacts, PrototypeTraits } from "./entities/traits/prototype-traits";
 
 export { InserterStatus, MachineStatus, DrillStatus } from "./state/entity-status";
 
@@ -49,3 +50,48 @@ export { migrateMiningProductivityLevel, PRODUCTIVITY_PER_MINING_LEVEL } from ".
 
 export { BELT_PICKUP_LAYOUTS, BELT_PICKUP_LAYOUT_LABELS, pickupLengthForLayout } from "./common/belt-pickup-layout";
 export type { BeltPickupLayout } from "./common/belt-pickup-layout";
+
+export type {
+    CapacityGroup,
+    ContainerNode,
+    DrillNode,
+    EdgeFloorFacts,
+    EdgeFloorStanding,
+    EdgeHandFacts,
+    EdgePlannedFacts,
+    EnergyFacts,
+    FactsRatio,
+    FactsStanding,
+    InputLimitsFacts,
+    InserterEdge,
+    InserterLandsIn,
+    LaneFacts,
+    LaneNode,
+    LoopFacts,
+    MachineNode,
+    NodeProductionFacts,
+    OutputBlockFacts,
+    PlacementEdge,
+    PlacementFacts,
+    PlacementLandsIn,
+    PlannerEdge,
+    PlannerFacts,
+    PlannerNode,
+    PlannerTarget,
+    ProductionFacts,
+    SpoilageFacts,
+    StorageFacts,
+    YieldFacts,
+} from "./data-types/planner-facts";
+
+export type {
+    GraphComponent,
+    GraphEdge,
+    GraphEdgeVia,
+    GraphNode,
+    GraphNodeKind,
+    GraphShared,
+    PlannerGraph,
+    SharedVertex,
+    TerminalKind,
+} from "./data-types/planner-graph";

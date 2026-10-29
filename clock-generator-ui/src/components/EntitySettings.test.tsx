@@ -1,126 +1,83 @@
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { isValidElement, type ReactNode } from 'react';
-import { IconButton, Tab, Tabs } from '@mui/material';
+// @vitest-environment happy-dom
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { afterEach, expect, it, vi } from 'vitest';
 import { EntitySettings } from './EntitySettings';
 
-const hooks = vi.hoisted(() => {
-    let states: unknown[] = [], stateIndex = 0, idIndex = 0;
-    const effects: (() => void)[] = [];
-    return {
-        effects,
-        reset() { states = []; effects.length = 0; },
-        begin() { stateIndex = idIndex = 0; effects.length = 0; },
-        react: {
-            useState(initial: unknown) {
-                const index = stateIndex++;
-                if (!(index in states)) states[index] = typeof initial === 'function' ? (initial as () => unknown)() : initial;
-                return [states[index], (value: unknown) => { states[index] = typeof value === 'function' ? (value as (old: unknown) => unknown)(states[index]) : value; }];
-            },
-            useId() { return `settings-test-${idIndex++}`; },
-            useEffect(effect: () => void) { effects.push(effect); },
-        },
-    };
-});
-
-vi.mock('react', async original => ({ ...await original<typeof import('react')>(), ...hooks.react }));
-
-type PropsView = Record<string, unknown> & { children?: ReactNode };
-type ElementView = { type: unknown; props: PropsView };
-function elements(node: ReactNode): ElementView[] {
-    if (Array.isArray(node)) return node.flatMap(elements);
-    if (!isValidElement<PropsView>(node)) return [];
-    return [{ type: node.type, props: node.props }, ...elements(node.props.children)];
-}
-
-const actionContainerId = 'machine-actions';
-let summaryOpenTab: ((label: string) => void) | undefined;
-const content = (name: string) => <span>{name}</span>;
-const props = {
-    label: 'Machine 1', actionContainerId, children: content('general-content'),
-    summary: (openTab: (label: string) => void) => { summaryOpenTab = openTab; return content('machine-summary'); },
-    tabs: [{ label: 'Input Routes', content: content('input-content') }, { label: 'Output Routes', content: content('output-content') }, { label: 'Machine Facts', content: content('facts-content') }],
+type Props = Parameters<typeof EntitySettings>[0];
+const props: Props = {
+    label: 'Machine 1', actionContainerId: 'machine-actions', children: 'general-content',
+    summary: openTab => <button onClick={() => openTab('Output Routes')}>machine-summary</button>,
+    tabs: [{ label: 'Input Routes', content: 'input-content' }, { label: 'Output Routes', content: 'output-content' }, { label: 'Machine Facts', content: 'facts-content' }],
 };
-const Render = (overrides: Partial<Parameters<typeof EntitySettings>[0]> = {}) => { hooks.begin(); return elements(EntitySettings({ ...props, ...overrides })); };
-const detailsButton = () => Render().find(element => element.type === IconButton && element.props['aria-label'] === 'Entity details for Machine 1')!;
-const panels = () => Render().filter(element => element.props.role === 'tabpanel');
+// the details toggle is portalled into the row's action container
+const settings = (overrides: Partial<Props>) => <><div id="machine-actions" /><EntitySettings {...props} {...overrides} /></>;
+function Render(overrides: Partial<Props> = {}) {
+    const view = render(settings(overrides));
+    return { user: userEvent.setup(), rerender: (next: Partial<Props>) => view.rerender(settings(next)) };
+}
+const details = () => screen.getByRole('button', { name: 'Entity details for Machine 1' });
+const tab = (name: string) => screen.getByRole('tab', { name, hidden: true });
+const hiddenPanels = () => screen.getAllByRole('tabpanel', { hidden: true }).map(panel => panel.hidden);
 
-beforeEach(() => { hooks.reset(); summaryOpenTab = undefined; });
-afterEach(() => { vi.unstubAllGlobals(); });
+afterEach(() => { vi.restoreAllMocks(); });
 
-it('labels the details toggle accessibly and starts closed with route tabs lazy until visited', () => {
-    const view = Render();
-    const button = view.find(element => element.type === IconButton && element.props['aria-label'] === 'Entity details for Machine 1')!;
-    expect(button.props['aria-expanded']).toBe(false);
-    expect(button.props['aria-controls']).toBe('settings-test-0-settings');
-    expect(view.some(element => element.type === Tabs)).toBe(false);
-    expect(view.some(element => element.props.role === 'tabpanel')).toBe(false);
+it('labels the details toggle accessibly and starts closed with route tabs lazy until visited', async () => {
+    const { user } = Render();
+    expect(details().getAttribute('aria-expanded')).toBe('false');
+    expect(document.getElementById(details().getAttribute('aria-controls')!)?.hidden).toBe(true);
+    expect(screen.queryByRole('tablist', { hidden: true })).toBeNull();
+    expect(screen.queryAllByRole('tabpanel', { hidden: true })).toHaveLength(0);
 
-    (button.props.onClick as () => void)();
-    const open = Render();
-    expect(open.some(element => element.type === Tabs && element.props['aria-label'] === 'Machine 1 entity details')).toBe(true);
-    expect(open.filter(element => element.type === Tab).map(element => element.props.label)).toEqual(['General', 'Input Routes', 'Output Routes', 'Machine Facts']);
-    expect(panels().map(panel => panel.props.hidden)).toEqual([false, true, true, true]);
-    expect(open.some(element => element.props.children === 'input-content')).toBe(false);
-    expect(open.some(element => element.props.children === 'output-content')).toBe(false);
-    expect(open.some(element => element.props.children === 'facts-content')).toBe(false);
+    await user.click(details());
+    expect(screen.getByRole('tablist', { name: 'Machine 1 entity details' })).toBeDefined();
+    expect(screen.getAllByRole('tab').map(element => element.textContent)).toEqual(['General', 'Input Routes', 'Output Routes', 'Machine Facts']);
+    expect(hiddenPanels()).toEqual([false, true, true, true]);
+    expect(screen.queryByText('input-content')).toBeNull();
+    expect(screen.queryByText('output-content')).toBeNull();
+    expect(screen.queryByText('facts-content')).toBeNull();
 });
 
 it('provides a visible focus target for Add and Duplicate when marked first', () => {
-    const view = Render({ first: true });
-    const first = view.filter(element => element.props['data-row-first'] !== undefined);
+    Render({ first: true });
+    const first = document.querySelectorAll('[data-row-first]');
     expect(first).toHaveLength(1);
-    expect(first[0].type).toBe(IconButton);
-    expect(first[0].props['aria-label']).toBe('Entity details for Machine 1');
-    expect(first[0].props['aria-expanded']).toBe(false);
+    expect(first[0]).toBe(details());
+    expect(details().getAttribute('aria-expanded')).toBe('false');
 });
 
-it('keeps the panel mounted but hidden when toggled closed and visits input and output tabs on selection', () => {
-    const button = detailsButton();
-    (button.props.onClick as () => void)();
-    const tabs = Render().find(element => element.type === Tabs)!;
-    (tabs.props.onChange as (_event: unknown, value: number) => void)({}, 1);
-    let view = Render();
-    expect(view.filter(element => element.props.role === 'tabpanel').map(panel => panel.props.hidden)).toEqual([true, false, true, true]);
-    expect(view.some(element => element.props.children === 'input-content')).toBe(true);
+it('keeps the panel mounted but hidden when toggled closed and visits input and output tabs on selection', async () => {
+    const { user } = Render();
+    await user.click(details());
+    await user.click(tab('Input Routes'));
+    expect(hiddenPanels()).toEqual([true, false, true, true]);
+    expect(screen.getByText('input-content')).toBeDefined();
 
-    const outputTabs = view.find(element => element.type === Tabs)!;
-    (outputTabs.props.onChange as (_event: unknown, value: number) => void)({}, 2);
-    view = Render();
-    expect(view.filter(element => element.props.role === 'tabpanel').map(panel => panel.props.hidden)).toEqual([true, true, false, true]);
-    expect(view.some(element => element.props.children === 'output-content')).toBe(true);
+    await user.click(tab('Output Routes'));
+    expect(hiddenPanels()).toEqual([true, true, false, true]);
+    expect(screen.getByText('output-content')).toBeDefined();
 
-    const close = view.find(element => element.type === IconButton)!;
-    (close.props.onClick as () => void)();
-    view = Render();
-    const panel = view.find(element => element.props.id === 'settings-test-0-settings')!;
-    expect(panel.props.hidden).toBe(true);
-    expect(view.some(element => element.type === Tabs)).toBe(true);
+    await user.click(details());
+    expect(document.getElementById(details().getAttribute('aria-controls')!)?.hidden).toBe(true);
+    expect(screen.getByRole('tablist', { hidden: true })).toBeDefined();
 });
 
-it('opens the requested summary tab and requests focus for that tab', () => {
-    Render();
-    expect(summaryOpenTab).toBeDefined();
-    summaryOpenTab!('Output Routes');
-    const view = Render();
-    expect(view.filter(element => element.props.role === 'tabpanel').map(panel => panel.props.hidden)).toEqual([true, true, false, true]);
-    const focus = vi.fn();
-    const scrollIntoView = vi.fn();
-    const getElementById = vi.fn(() => ({ focus, scrollIntoView }));
-    vi.stubGlobal('document', { getElementById });
-    hooks.effects.forEach(effect => effect());
-    expect(getElementById).toHaveBeenCalledWith('settings-test-0-tab-2');
-    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+it('opens the requested summary tab and requests focus for that tab', async () => {
+    const focus = vi.spyOn(HTMLElement.prototype, 'focus');
+    const { user } = Render();
+    await user.click(screen.getByRole('button', { name: 'machine-summary' }));
+    expect(hiddenPanels()).toEqual([true, true, false, true]);
+    expect(document.activeElement).toBe(tab('Output Routes'));
+    expect(focus.mock.contexts.at(-1)).toBe(tab('Output Routes'));
+    expect(focus).toHaveBeenLastCalledWith({ preventScroll: true });
 });
 
-it('reveals General for a new field navigation request, including after another tab was visited', () => {
-    (detailsButton().props.onClick as () => void)();
-    const tabs = Render().find(element => element.type === Tabs)!;
-    (tabs.props.onChange as (_event: unknown, value: number) => void)({}, 2);
-    const general = { tab: 'General' };
-    // A render-time request adjustment is committed by React's immediate retry.
-    Render({ request: general });
-    const view = Render({ request: general });
-    expect(view.filter(element => element.props.role === 'tabpanel').map(panel => panel.props.hidden)).toEqual([false, true, true, true]);
-    expect(view.some(element => element.props.children === 'general-content')).toBe(true);
-    expect(view.find(element => element.type === IconButton)?.props['aria-expanded']).toBe(true);
+it('reveals General for a new field navigation request, including after another tab was visited', async () => {
+    const { user, rerender } = Render();
+    await user.click(details());
+    await user.click(tab('Output Routes'));
+    rerender({ request: { tab: 'General' } });
+    expect(hiddenPanels()).toEqual([false, true, true, true]);
+    expect(screen.getByText('general-content')).toBeDefined();
+    expect(details().getAttribute('aria-expanded')).toBe('true');
 });

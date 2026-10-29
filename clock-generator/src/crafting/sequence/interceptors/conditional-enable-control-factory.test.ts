@@ -16,9 +16,9 @@ import {
     MachineState,
     MachineStatus,
     InserterState,
-    InfinityChestState,
     EntityStateRegistry,
 } from "../../../state";
+import { ConstantStorage } from "../../../simulation/components/constant-storage";
 import { Inserter } from "../../../entities/inserter/inserter";
 import { QualityIdType } from "../../../blueprints/components";
 import { InserterAnimation } from "../../../entities/inserter/inserter-animation";
@@ -832,7 +832,7 @@ describe("ConditionalEnableControlFactory", () => {
 
     describe("integration with infinity chest", () => {
         let infinityChest: InfinityChest;
-        let infinityChestState: InfinityChestState;
+        let infinityChestStorage: ConstantStorage;
         let chestToMachineInserter: Inserter;
         let chestInserterState: InserterState;
 
@@ -842,8 +842,8 @@ describe("ConditionalEnableControlFactory", () => {
                 [{ item_name: "iron-plate", request_count: 128 }]
             );
             entityRegistry.add(infinityChest);
-            infinityChestState = InfinityChestState.forChest(infinityChest);
-            stateRegistry.addState(infinityChestState);
+            infinityChestStorage = ConstantStorage.forChest(infinityChest);
+            stateRegistry.addState(infinityChestStorage);
 
             chestToMachineInserter = createTestInserter(
                 10,

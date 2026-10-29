@@ -1,6 +1,6 @@
 import { Warning } from '@mui/icons-material';
-import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
-import { useId } from 'react';
+import { Button } from '@mui/material';
+import { AppDialog } from './AppDialog';
 import { useGameNames } from '../hooks/useGameNames';
 import { staleCopyMessage, type GeneratedFor } from '../utils/resultsStaleness';
 
@@ -20,25 +20,6 @@ interface StaleCopyDialogProps {
  */
 export function StaleCopyDialog({ open, generatedFor, changes, onCancel, onConfirm }: StaleCopyDialogProps) {
     const { recipeLabel } = useGameNames();
-    const titleId = useId();
-    const textId = useId();
-    return (
-        <Dialog
-            open={open}
-            onClose={onCancel}
-            aria-labelledby={titleId}
-            aria-describedby={textId}
-        >
-            <DialogTitle id={titleId}>Copy the old clock?</DialogTitle>
-            <DialogContent>
-                <DialogContentText id={textId}>
-                    {staleCopyMessage(generatedFor, changes, { recipeLabel })}
-                </DialogContentText>
-            </DialogContent>
-            <DialogActions>
-                <Button onClick={onCancel} color="inherit" autoFocus>Cancel</Button>
-                <Button onClick={onConfirm} variant="outlined" color="warning" startIcon={<Warning />}>Copy old clock</Button>
-            </DialogActions>
-        </Dialog>
-    );
+    return <AppDialog open={open} onClose={onCancel} maxWidth="xs" title="Copy the old clock?" description={staleCopyMessage(generatedFor, changes, { recipeLabel })}
+        cancel="Cancel" focusCancel actions={<Button onClick={onConfirm} variant="outlined" color="warning" startIcon={<Warning />}>Copy old clock</Button>} />;
 }

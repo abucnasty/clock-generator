@@ -4,8 +4,8 @@
 // process.env in the engine, and every Generate on the dev server failed with "process is not defined" while every
 // check passed. The production build replaces `process.env` with `{}`, so only the dev server shows that one; the
 // production build is what is deployed.
-// Needs the engine built and the game data and examples copied, which `npm run build` does (with npm's ignore-scripts
-// on, run `node scripts/copy-factorio-data.mjs` before it), and, once, `npx playwright install --only-shell chromium`.
+// Needs the engine built and the game data and examples copied, which `npm run build` does, and, once,
+// `npx playwright install --only-shell chromium`.
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -19,7 +19,7 @@ const TIMEOUT_MS = 60_000;
 const root = fileURLToPath(new URL('..', import.meta.url));
 for (const file of ['public/data-filtered.json', 'public/examples/index.json', 'dist/index.html']) {
     if (!existsSync(new URL(`../${file}`, import.meta.url))) {
-        console.error(`${file} is missing: run \`npm run build\` first (with npm's ignore-scripts on, \`node scripts/copy-factorio-data.mjs\` before it)`);
+        console.error(`${file} is missing: run \`npm run build\` first`);
         process.exit(1);
     }
 }

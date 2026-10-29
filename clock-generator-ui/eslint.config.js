@@ -26,6 +26,11 @@ export default defineConfig([
     },
   },
   {
+    // tests and their helpers are never hot-reloaded
+    files: ['src/test/**', 'src/**/*.test.{ts,tsx}'],
+    rules: { 'react-refresh/only-export-components': 'off' },
+  },
+  {
     // The engine is bundled once, in the simulation worker: the main thread takes only types from it, and its
     // values from the small 'clock-generator/light' entry. The tests run in Node and can use the engine directly.
     files: ['src/**/*.{ts,tsx}'],

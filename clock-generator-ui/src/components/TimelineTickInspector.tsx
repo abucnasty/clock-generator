@@ -6,6 +6,7 @@ import { timelineSignalVisible, timelineStateLabel } from '../utils/timelinePres
 import { formatNumberText } from '../utils/numberText';
 import { useGameNames } from '../hooks/useGameNames';
 import { FactorioIcon } from './FactorioIcon';
+import { Disclosure } from './Disclosure';
 
 const number = (value: number) => formatNumberText(value, { maxDecimals: 2 });
 
@@ -47,11 +48,10 @@ export function TimelineTickInspector({ recording, entity, inspection, tick, eve
         {outside ? <Typography variant="body2" sx={{ mt: 1 }}>The selected tick is outside its recorded span.</Typography> : <>
             {fields(visible)}
             {shownEvents.length > 0 && <Box sx={{ my: 1 }}><Typography variant="caption" color="text.secondary">Events at this tick</Typography>{eventList(shownEvents)}</Box>}
-            {(details.length > 0 || detailedEvents.length > 0) && <Box component="details" data-inspector-details sx={{ my: 1 }}>
-                <Typography component="summary" variant="body2" sx={{ cursor: 'pointer' }}>{entity.type === 'machine' ? 'More machine details' : 'More entity details'}</Typography>
+            {(details.length > 0 || detailedEvents.length > 0) && <Disclosure summary={entity.type === 'machine' ? 'More machine details' : 'More entity details'} data-inspector-details="" sx={{ my: 1 }}>
                 {fields(details)}
                 {detailedEvents.length > 0 && <Box sx={{ my: 1 }}><Typography variant="caption" color="text.secondary">Additional events at this tick</Typography>{eventList(detailedEvents)}</Box>}
-            </Box>}
+            </Disclosure>}
         </>}
         {connections.length > 0 && <Typography variant="caption" color="text.secondary">{entity.type === 'belt' ? 'Connected inserters' : 'Follow a connection'}</Typography>}
         {connections.map(other => <Button key={other.id} color="inherit" size="small" onClick={() => onEntityChange(other.id)} sx={{ display: 'flex', justifyContent: 'flex-start', textAlign: 'left' }}>

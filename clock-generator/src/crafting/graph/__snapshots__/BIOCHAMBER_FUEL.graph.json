@@ -1,0 +1,138 @@
+{
+  "schema": 1,
+  "sample": "BIOCHAMBER_FUEL",
+  "target": {
+    "item": "nutrients",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 3,
+      "denominator": 1
+    }
+  },
+  "nodes": [
+    {
+      "key": "belt:1/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:1/lane:1#yumako-mash"
+      ]
+    },
+    {
+      "key": "belt:1/lane:2",
+      "kind": "lane",
+      "ports": []
+    },
+    {
+      "key": "belt:2/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:2/lane:1#nutrients"
+      ]
+    },
+    {
+      "key": "belt:2/lane:2",
+      "kind": "lane",
+      "ports": []
+    },
+    {
+      "key": "belt:3/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:3/lane:1#nutrients"
+      ]
+    },
+    {
+      "key": "belt:3/lane:2",
+      "kind": "lane",
+      "ports": []
+    },
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "sink",
+      "kind": "sink",
+      "ports": []
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/yumako-mash",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "yumako-mash",
+      "from": "belt:1/lane:1#yumako-mash",
+      "from_ports": [
+        "belt:1/lane:1#yumako-mash"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:2/nutrients",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "nutrients",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "belt:2/lane:1#nutrients",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:3/nutrients",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "nutrients",
+      "from": "belt:3/lane:1#nutrients",
+      "from_ports": [
+        "belt:3/lane:1#nutrients"
+      ],
+      "to": "machine:1",
+      "lands_in": "fuel",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    }
+  ],
+  "components": [],
+  "order": [
+    "belt:1/lane:1#yumako-mash",
+    "belt:3/lane:1#nutrients",
+    "machine:1",
+    "belt:2/lane:1#nutrients",
+    "sink"
+  ],
+  "shared": {
+    "out": [],
+    "in": [],
+    "lanes": []
+  },
+  "terminal": [
+    "inserter:2/nutrients"
+  ]
+}

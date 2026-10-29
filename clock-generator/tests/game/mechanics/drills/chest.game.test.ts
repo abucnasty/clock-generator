@@ -5,12 +5,11 @@ import {expect, test} from "vitest";
 import {Config, ConfigSchema} from "../../../../src/config";
 import {FactorioBlueprintFile} from "../../../../src/blueprints/blueprint";
 import {encodeBlueprintFile} from "../../../../src/blueprints/serde";
-import {DrillStateMachine} from "../../../../src/control-logic/drill/drill-state-machine";
-import {DrillChestWorkingMode} from "../../../../src/control-logic/drill/modes/chest-working-mode";
 import {SimulationContext} from "../../../../src/crafting/sequence/simulation-context";
 import {recordInFactorio} from "../../../../src/harness/factorio-harness";
-import {ChestState} from "../../../../src/state";
 import {composeProbeSource} from "../../helpers/probe-source";
+import {ContainerStorage} from "../../../../src/simulation/components/container-storage";
+import {MiningDrillArchetype} from "../../../../src/simulation/archetypes/mining-drill";
 
 /**
  * A big mining drill into a legendary steel chest, one build a research level, from 0.425 to 25,000 items a tick, against
@@ -78,12 +77,11 @@ interface Tick {n: number; p: number; b: number; hold: number; enabled: boolean;
 export function replayChest(config: Config, log: Row[], room: number): Tick[] {
     const context = SimulationContext.fromConfig(config);
     const drill_state = context.drills[0].drill_state;
-    const chest = context.state_registry.getStateByEntityIdOrThrow(drill_state.drill.sink_id) as ChestState;
+    const chest = context.state_registry.getStateByEntityIdOrThrow(drill_state.drill.sink_id) as ContainerStorage;
     if (log[0].n > 0) chest.inventoryState.addQuantity("iron-ore", log[0].n);
     let enabled = true;
-    const drill = DrillStateMachine.create({drill_state, sink_state: chest, enable_control: {isEnabled: () => enabled}});
-    const mode = Array.from(drill.modes).find(it => it instanceof DrillChestWorkingMode) as DrillChestWorkingMode;
-    const hold = () => drill_state.inventoryState.getQuantity("iron-ore");
+    const drill = MiningDrillArchetype.create({drill_state, sink_state: chest, enable_control: {isEnabled: () => enabled}});
+    const hold = () => drill_state.held.getCurrentQuantity("iron-ore");
     const ticks: Tick[] = [{n: log[0].n, p: 0, b: 0, hold: 0, enabled: true, room_before: room - log[0].n, hold_before: 0}];
     for (let k = 1; k < log.length; k++) {
         if ((log[k - 1].r ?? 0) > 0) chest.inventoryState.removeQuantity("iron-ore", log[k - 1].r!);
@@ -91,7 +89,7 @@ export function replayChest(config: Config, log: Row[], room: number): Tick[] {
         const room_before = room - chest.getCurrentQuantity("iron-ore");
         const hold_before = hold();
         drill.executeForTick();
-        ticks.push({n: chest.getCurrentQuantity("iron-ore"), p: mode.progress.mining_progress, b: mode.progress.bonus_progress,
+        ticks.push({n: chest.getCurrentQuantity("iron-ore"), p: drill.mining.mining_progress, b: drill.mining.bonus_progress,
             hold: hold(), enabled, room_before, hold_before});
     }
     return ticks;

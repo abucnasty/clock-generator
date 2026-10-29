@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ClockAlternativeView } from '../worker/types';
 import { copyBlueprintLabelOf, isBelowTarget, rateWarningOf } from './rateWarning';
+import { STALE_COPY_LABEL } from './resultsStaleness';
 
 type Clock = Pick<ClockAlternativeView, 'verdict' | 'assessment' | 'ranking' | 'deadlockRisk'>;
 
@@ -13,61 +14,47 @@ const clock = (itemsPerSecond: number, offTarget: number, meetsTarget = offTarge
 });
 
 describe('copyBlueprintLabelOf', () => {
-    it('names the rate of a clock short of the target', () => {
-        expect(copyBlueprintLabelOf(clock(192, -48), false)).toBe('Copy blueprint (192/s, below target)');
-    });
-
-    it('prints the rate as the warning sentence does', () => {
-        expect(copyBlueprintLabelOf(clock(12.5, -2), false)).toBe('Copy blueprint (12.5/s, below target)');
-        expect(copyBlueprintLabelOf(clock(0.333333, -0.1), false)).toBe('Copy blueprint (0.33/s, below target)');
-        expect(copyBlueprintLabelOf(clock(240, -10), false)).toBe('Copy blueprint (240/s, below target)');
-    });
-
-    it('says the clock is old ahead of anything else', () => {
-        expect(copyBlueprintLabelOf(clock(192, -48), true)).toBe('Copy old clock…');
-        expect(copyBlueprintLabelOf(undefined, true)).toBe('Copy old clock…');
-    });
-
-    it('says "Copy current best" while a generation is still making clocks', () => {
-        expect(copyBlueprintLabelOf(clock(240, 0, true), false, true)).toBe('Copy current best');
-        expect(copyBlueprintLabelOf(undefined, false, true)).toBe('Copy current best');
-    });
-
-    it('names the rate of a best-so-far clock short of the target', () => {
-        expect(copyBlueprintLabelOf(clock(192, -48), false, true)).toBe('Copy current best (192/s, below target)');
-    });
-
-    it('says the clock is old ahead of the running label', () => {
-        expect(copyBlueprintLabelOf(clock(192, -48), true, true)).toBe('Copy old clock…');
-    });
-
-    it('is plain for no clock, and for a clock that is not short of the target', () => {
-        expect(copyBlueprintLabelOf(undefined, false)).toBe('Copy blueprint');
-        expect(copyBlueprintLabelOf(clock(240, 0, true), false)).toBe('Copy blueprint');
-        // above the target
-        expect(copyBlueprintLabelOf(clock(252, 12, false), false)).toBe('Copy blueprint');
-        // unstable at the target rate
-        expect(copyBlueprintLabelOf(clock(240, 0, false), false)).toBe('Copy blueprint');
-    });
-
-    it('leaves out a shortfall too small to print', () => {
-        expect(copyBlueprintLabelOf(clock(239.996, -0.004), false)).toBe('Copy blueprint');
-        expect(copyBlueprintLabelOf(clock(239.99, -0.01), false)).toBe('Copy blueprint (239.99/s, below target)');
-        expect(isBelowTarget(clock(239.996, -0.004))).toBe(false);
-        expect(isBelowTarget(clock(239.99, -0.01))).toBe(true);
-        expect(isBelowTarget(undefined)).toBe(false);
+    // a row that leaves out stale or running has it false
+    it.each<{ why: string; clock: Clock | undefined; stale?: boolean; running?: boolean; label: string }>([
+        { why: 'a clock short of the target', clock: clock(192, -48), label: 'Copy blueprint (192/s, below target)' },
+        // the rate as the warning sentence prints it
+        { why: 'a rate of 12.5/s', clock: clock(12.5, -2), label: 'Copy blueprint (12.5/s, below target)' },
+        { why: 'a rate of 0.333333/s', clock: clock(0.333333, -0.1), label: 'Copy blueprint (0.33/s, below target)' },
+        { why: 'a rate of 240/s, its zero kept', clock: clock(240, -10), label: 'Copy blueprint (240/s, below target)' },
+        { why: 'the smallest shortfall it prints', clock: clock(239.99, -0.01), label: 'Copy blueprint (239.99/s, below target)' },
+        { why: 'a shortfall too small to print', clock: clock(239.996, -0.004), label: 'Copy blueprint' },
+        { why: 'no clock', clock: undefined, label: 'Copy blueprint' },
+        { why: 'a clock at the target', clock: clock(240, 0, true), label: 'Copy blueprint' },
+        { why: 'a clock above the target', clock: clock(252, 12, false), label: 'Copy blueprint' },
+        { why: 'a clock unstable at the target rate', clock: clock(240, 0, false), label: 'Copy blueprint' },
+        // while a generation is still making clocks
+        { why: 'the best so far, at the target', clock: clock(240, 0, true), running: true, label: 'Copy current best' },
+        { why: 'no clock yet', clock: undefined, running: true, label: 'Copy current best' },
+        { why: 'the best so far, short of the target', clock: clock(192, -48), running: true, label: 'Copy current best (192/s, below target)' },
+        // the clocks are for an earlier build, which is said ahead of anything else
+        { why: 'an old clock short of the target', clock: clock(192, -48), stale: true, label: STALE_COPY_LABEL },
+        { why: 'old clocks, none selected', clock: undefined, stale: true, label: STALE_COPY_LABEL },
+        { why: 'an old best so far', clock: clock(192, -48), stale: true, running: true, label: STALE_COPY_LABEL },
+    ])('labels $why', ({ clock, stale = false, running, label }) => {
+        expect(copyBlueprintLabelOf(clock, stale, running)).toBe(label);
     });
 
     it('agrees with the warning said when the blueprint is copied', () => {
-        const short = clock(192, -48);
+        const short = clock(192, -48), atTarget = clock(240, 0, true);
         expect(rateWarningOf(short)).not.toBeNull();
-        expect(copyBlueprintLabelOf(short, false)).toContain('below target');
-        const holds = clock(240, 0, true);
-        expect(rateWarningOf(holds)).toBeNull();
-        expect(copyBlueprintLabelOf(holds, false)).toBe('Copy blueprint');
+        expect(copyBlueprintLabelOf(short, false)).toBe('Copy blueprint (192/s, below target)');
+        expect(rateWarningOf(atTarget)).toBeNull();
+        expect(copyBlueprintLabelOf(atTarget, false)).toBe('Copy blueprint');
     });
 });
 
+describe('isBelowTarget', () => {
+    it('counts a shortfall from the smallest the label prints', () => {
+        expect(isBelowTarget(clock(239.99, -0.01))).toBe(true);
+        expect(isBelowTarget(clock(239.996, -0.004))).toBe(false);
+        expect(isBelowTarget(undefined)).toBe(false);
+    });
+});
 
 describe('numerical output and actual hold checks', () => {
     it('does not turn the observed above-target numerical mismatch into a failed hold check', () => {

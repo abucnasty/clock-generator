@@ -89,7 +89,9 @@ describe("the note under the gap between copies", () => {
 
     it("counts only the hands of the drops it checks: at 480 a second the belt moves 7 tiles, and 14 hands do not fit while the 7 that are not side-loaded do", async () => {
         const mark = (...ids: number[]) => (config: Config) => {
+            // the machines twice as fast, so that the build can make 480 a second: the at-target rates refuse a rate it cannot
             config.target_output.items_per_second = 480;
+            config.machines.forEach(machine => { machine.crafting_speed = machine.crafting_speed! * 2; });
             config.inserters.forEach((inserter, index) => {
                 if (ids.includes(inserter.id ?? index + 1) && inserter.sink.type === "belt") inserter.sink.drop_capture = { status: "side-loaded", tiles: 3 };
             });

@@ -1,0 +1,405 @@
+{
+  "schema": 1,
+  "sample": "LOGISTIC_SCIENCE_INSERTER_CRAFTING",
+  "target": {
+    "item": "inserter",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 80,
+      "denominator": 1
+    }
+  },
+  "nodes": [
+    {
+      "key": "belt:1/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:1/lane:1#iron-ore"
+      ]
+    },
+    {
+      "key": "belt:1/lane:2",
+      "kind": "lane",
+      "ports": [
+        "belt:1/lane:2#iron-ore"
+      ]
+    },
+    {
+      "key": "belt:2/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:2/lane:1#electronic-circuit"
+      ]
+    },
+    {
+      "key": "belt:2/lane:2",
+      "kind": "lane",
+      "ports": [
+        "belt:2/lane:2#electronic-circuit"
+      ]
+    },
+    {
+      "key": "belt:3/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:3/lane:1#inserter"
+      ]
+    },
+    {
+      "key": "belt:3/lane:2",
+      "kind": "lane",
+      "ports": []
+    },
+    {
+      "key": "belt:4/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:4/lane:1#iron-ore"
+      ]
+    },
+    {
+      "key": "belt:4/lane:2",
+      "kind": "lane",
+      "ports": [
+        "belt:4/lane:2#iron-ore"
+      ]
+    },
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:2",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:3",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:4",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:5",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:6",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "sink",
+      "kind": "sink",
+      "ports": []
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/iron-ore",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "iron-ore",
+      "from": "belt:1/lane:2#iron-ore",
+      "from_ports": [
+        "belt:1/lane:1#iron-ore",
+        "belt:1/lane:2#iron-ore"
+      ],
+      "to": "machine:2",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:2/iron-ore",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "iron-ore",
+      "from": "belt:1/lane:2#iron-ore",
+      "from_ports": [
+        "belt:1/lane:1#iron-ore",
+        "belt:1/lane:2#iron-ore"
+      ],
+      "to": "machine:3",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:3/iron-ore",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "iron-ore",
+      "from": "belt:4/lane:1#iron-ore",
+      "from_ports": [
+        "belt:4/lane:1#iron-ore",
+        "belt:4/lane:2#iron-ore"
+      ],
+      "to": "machine:5",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:4/iron-ore",
+      "via": "inserter",
+      "entity": "inserter:4",
+      "group": "inserter:4",
+      "item": "iron-ore",
+      "from": "belt:4/lane:1#iron-ore",
+      "from_ports": [
+        "belt:4/lane:1#iron-ore",
+        "belt:4/lane:2#iron-ore"
+      ],
+      "to": "machine:6",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:5/iron-gear-wheel",
+      "via": "inserter",
+      "entity": "inserter:5",
+      "group": "inserter:5",
+      "item": "iron-gear-wheel",
+      "from": "machine:4",
+      "from_ports": [
+        "machine:4"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:6/iron-plate",
+      "via": "inserter",
+      "entity": "inserter:6",
+      "group": "inserter:6",
+      "item": "iron-plate",
+      "from": "machine:2",
+      "from_ports": [
+        "machine:2"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:7/iron-plate",
+      "via": "inserter",
+      "entity": "inserter:7",
+      "group": "inserter:7",
+      "item": "iron-plate",
+      "from": "machine:3",
+      "from_ports": [
+        "machine:3"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:8/electronic-circuit",
+      "via": "inserter",
+      "entity": "inserter:8",
+      "group": "inserter:8",
+      "item": "electronic-circuit",
+      "from": "belt:2/lane:1#electronic-circuit",
+      "from_ports": [
+        "belt:2/lane:1#electronic-circuit",
+        "belt:2/lane:2#electronic-circuit"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:9/inserter",
+      "via": "inserter",
+      "entity": "inserter:9",
+      "group": "inserter:9",
+      "item": "inserter",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "belt:3/lane:1#inserter",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:10/iron-plate",
+      "via": "inserter",
+      "entity": "inserter:10",
+      "group": "inserter:10",
+      "item": "iron-plate",
+      "from": "machine:5",
+      "from_ports": [
+        "machine:5"
+      ],
+      "to": "machine:4",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:11/iron-plate",
+      "via": "inserter",
+      "entity": "inserter:11",
+      "group": "inserter:11",
+      "item": "iron-plate",
+      "from": "machine:6",
+      "from_ports": [
+        "machine:6"
+      ],
+      "to": "machine:4",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    }
+  ],
+  "components": [],
+  "order": [
+    "belt:1/lane:1#iron-ore",
+    "belt:1/lane:2#iron-ore",
+    "belt:2/lane:1#electronic-circuit",
+    "belt:2/lane:2#electronic-circuit",
+    "belt:4/lane:1#iron-ore",
+    "belt:4/lane:2#iron-ore",
+    "machine:2",
+    "machine:3",
+    "machine:5",
+    "machine:6",
+    "machine:4",
+    "machine:1",
+    "belt:3/lane:1#inserter",
+    "sink"
+  ],
+  "shared": {
+    "out": [],
+    "in": [
+      {
+        "at": "machine:1",
+        "item": "iron-plate",
+        "edges": [
+          "inserter:6/iron-plate",
+          "inserter:7/iron-plate"
+        ]
+      },
+      {
+        "at": "machine:4",
+        "item": "iron-plate",
+        "edges": [
+          "inserter:10/iron-plate",
+          "inserter:11/iron-plate"
+        ]
+      }
+    ],
+    "lanes": [
+      {
+        "at": "belt:1/lane:1#iron-ore",
+        "item": "iron-ore",
+        "edges": [
+          "inserter:1/iron-ore",
+          "inserter:2/iron-ore"
+        ]
+      },
+      {
+        "at": "belt:1/lane:2#iron-ore",
+        "item": "iron-ore",
+        "edges": [
+          "inserter:1/iron-ore",
+          "inserter:2/iron-ore"
+        ]
+      },
+      {
+        "at": "belt:4/lane:1#iron-ore",
+        "item": "iron-ore",
+        "edges": [
+          "inserter:3/iron-ore",
+          "inserter:4/iron-ore"
+        ]
+      },
+      {
+        "at": "belt:4/lane:2#iron-ore",
+        "item": "iron-ore",
+        "edges": [
+          "inserter:3/iron-ore",
+          "inserter:4/iron-ore"
+        ]
+      }
+    ]
+  },
+  "terminal": [
+    "inserter:9/inserter"
+  ]
+}

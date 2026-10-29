@@ -245,7 +245,7 @@ fourth grab, consistent with the finite-refill controls.
 
 Independent moving-stock replays agree with all **216 moving first hands**; the production backed-up queue
 agrees with all **42 backed-up first hands**, conditioned on native arrival; from placement, with no arrival given,
-the whole simulation reproduces all 42 and all 216 moving ones as well ([startup](#startup-from-placement)). Production pickup-mode comparisons
+the whole simulation reproduces all 42 and all 216 moving ones as well ([startup](#startup-from-placement)). Production pickup-port comparisons
 also match held items, quantities and exposed stock for all 258 controls. Sidecar captures the explicit
 over-the-hood layout. First-hand agreement does not establish generated-clock parity: the operating-clock
 controls below exposed a recovery failure when the lanes acquire different phases (#254), fixed by #255, #269 and #272.

@@ -29,6 +29,7 @@ import {
     WakeWindowsChart,
 } from './WakeWindowsChart';
 import { WakeWindowsTable } from './WakeWindowsTable';
+import { Disclosure } from './Disclosure';
 import { BeltChartFrame, ChartSwatch } from './BeltChart';
 import { BELT_CHART } from '../theme/beltCharts';
 import type { Config } from 'clock-generator/browser';
@@ -149,6 +150,7 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
         inserters: rows.filter(row => row.kind === 'inserter').length,
         drills: rows.filter(row => row.kind === 'drill').length,
         wakeUps: counted ? alternative.asBuilt?.wake_ups?.wake_ups_per_minute ?? sumWakeUps(rows) : null,
+        fromColdStart: alternative.assessment?.wake_ups_from_starts !== undefined,
     });
 
     return (
@@ -228,8 +230,7 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
                     </>
                 )}
             </Box>
-            <Box component="details" sx={{ mt: 1.5 }}>
-                <Typography component="summary" variant="body2" color="text.secondary" sx={{ cursor: 'pointer' }}>Reading this chart</Typography>
+            <Disclosure summary="Reading this chart" sx={{ mt: 1.5 }}>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{cycleView ? 'The selected crafting cycle is one segment of the clock period. Wake windows are clipped to this segment; row percentages and wake-ups/min describe the whole clock period.' : VIEW_INTRO}</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{KEYBOARD_HINT}</Typography>
             <Box
@@ -245,7 +246,7 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
             </Box>
 
 
-            </Box>
+            </Disclosure>
         </BeltChartFrame>
     );
 }

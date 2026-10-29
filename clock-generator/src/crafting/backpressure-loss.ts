@@ -30,6 +30,8 @@ import { EntityState, InserterState } from "../state";
 import { simulationStateKey } from "./runner/steady-state";
 import { SimulationContext } from "./sequence/simulation-context";
 import { ExportShortfall, ExportedItem, exportShortfallOfBins } from "./export-delivery";
+import { SPOIL_LIMIT_SHARE } from "../common/rule-constants";
+import { ContainerStorage } from "../simulation/components/container-storage";
 
 export type BackpressureLoss =
     /** Nothing is cut: the run as it is, counted as the runs with a loss are */
@@ -89,11 +91,6 @@ export function lossTrialsPartOfTheWay(
 
 /** A loss ends at the latest after this many periods, whether the build has stopped or not */
 export const MAX_LOSS_PERIODS = 200;
-/**
- * A build whose items spoil is tried only with losses shorter than this share of the shortest spoil time of its items
- * (see lossLimitOf).
- */
-export const SPOIL_LIMIT_SHARE = 3 / 4;
 
 /** The losses a build whose items spoil is tried with: shorter than `ticks`, which `item`, its first to spoil, sets */
 export interface LossLimit {
@@ -339,8 +336,8 @@ function switchOf(context: SimulationContext, loss: BackpressureLoss): { cut(): 
     for (const state of context.state_registry.getAllStates()) {
         if (EntityState.isBelt(state)) {
             sets.push(loss.kind === "supply" ? state.supply.withheld : state.supply.refused);
-        } else if (EntityState.isInfinityChest(state) || EntityState.isFiniteChest(state)) {
-            if (loss.kind === "supply" && EntityState.isInfinityChest(state)) {
+        } else if (ContainerStorage.isConstant(state) || ContainerStorage.isFinite(state)) {
+            if (loss.kind === "supply" && ContainerStorage.isConstant(state)) {
                 sets.push(state.supply.withheld);
             }
             // a chest that refuses an item has no room for anything, so only the chests the item ends in are closed
@@ -466,15 +463,15 @@ export function runLossTrials(
     // the container whose count of some items is watched
     const watched = options.watched_backlog;
     const watched_container = watched === undefined ? undefined
-        : context.state_registry.getAllStates().filter(EntityState.isChest).find(state => state.entity_id.id === watched.container_id);
+        : context.state_registry.getAllStates().filter(ContainerStorage.is).find(state => state.entity_id.id === watched.container_id);
     const backlogNow = () => watched_container === undefined || watched === undefined ? 0
         : watched.items.reduce((sum, item) => sum + watched_container.getCurrentQuantity(item), 0);
 
     // a tick as the simulate step runs it
-    const control_logic = new SimulationTick(context);
+    const simulation_tick = new SimulationTick(context);
     const now = () => context.tick_provider.getCurrentTick();
     const start_tick = now();
-    const step = () => control_logic.executeForTick();
+    const step = () => simulation_tick.executeForTick();
     const runUntilPhase = (phase: number) => {
         const wanted = ((phase % bin.ticks) + bin.ticks) % bin.ticks;
         while ((now() - start_tick) % bin.ticks !== wanted) {
@@ -491,7 +488,7 @@ export function runLossTrials(
     const watch_stock = context.drills.length > 0;
     const chest_drills = context.drills.flatMap(it => {
         const sink = context.state_registry.getStateByEntityId(it.drill_state.drill.sink_id);
-        return sink !== null && EntityState.isChest(sink) ? [{ drill: it.drill_state, chest: sink }] : [];
+        return sink !== null && ContainerStorage.is(sink) ? [{ drill: it.drill_state, chest: sink }] : [];
     });
     // asked every tick of a loss: the two buffers are swapped instead of built anew
     const slots = inserter_states.length * 2 + machine_states.length * (watch_stock ? 4 : 3) + chest_drills.length * 2;

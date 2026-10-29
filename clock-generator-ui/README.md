@@ -21,9 +21,9 @@ Install with `npm install`. The dev server needs the engine built first (`npm ru
 - `npm run test:browser` generates a clock for the logistic science example in headless Chromium, on the dev server
   and on the built `dist/`, and fails on any error the page or a worker reports. It needs `npm run build` first and,
   once, `npx playwright install --only-shell chromium`.
-- `node scripts/copy-factorio-data.mjs` copies the game data and the example builds ("Try an example") from
-  `../clock-generator/resources` into `public/`. It runs before `dev` and `build`; run it by hand when npm's
-  `ignore-scripts` is on.
+- Vite copies the game data and the example builds ("Try an example") from `../clock-generator/resources` into
+  `public/` whenever it starts, for `dev` and `build` alike (`scripts/game-data-plugin.ts`), and the dev server copies
+  them again and reloads the page when they change.
 
 ## Words in the UI
 

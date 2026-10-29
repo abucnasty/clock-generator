@@ -1,51 +1,58 @@
-import { expect, it } from 'vitest';
-import { renderToStaticMarkup } from 'react-dom/server';
+// @vitest-environment happy-dom
+import { screen, within } from '@testing-library/react';
+import { expect, it, vi } from 'vitest';
 import { ChestType } from 'clock-generator/light';
-import { GameNamesContext } from '../hooks/useGameNames';
+import { bufferChest, containerChest, infinityChest, inserter, names, show } from '../test/fixtures';
+import { validationIssueElementId } from '../utils/buildValidation';
+import type { ChestFormData, InserterFormData } from '../utils/configForm/formData';
 import { OutputChestAlert } from './OutputChestAlert';
-import type { ChestFormData, InserterFormData } from '../hooks/useConfigForm';
 
-it('explains the output blockage and names the exact chest in its repair action', () => {
-    const chest: ChestFormData = { id: 7, _uuid: 'chest-7', type: ChestType.BUFFER_CHEST, storage_size: 1, item_filter: 'iron-plate' };
-    const inserter: InserterFormData = { id: 1, _uuid: 'inserter-1', stack_size: 16, source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 7 } };
-    const render = (chests: ChestFormData[], inserters: InserterFormData[]) => renderToStaticMarkup(<GameNamesContext.Provider value={{ item: { 'iron-plate': 'Iron plate' }, recipe: {} }}><OutputChestAlert chests={chests} inserters={inserters} onSwitchType={() => {}} onEnableRemoval={() => {}} /></GameNamesContext.Provider>);
-    const html = render([chest], [inserter]);
-    expect(html).toContain('aria-label="Build validation"');
-    expect(html).not.toContain('role="alert"');
-    expect(html).toContain('No inserter takes iron plate out of this buffer chest.');
-    expect(html).toContain('Chest 7 can fill up and block output');
-    expect(html).toContain('Use infinity chest for Chest 7');
-    expect(html).toContain('model output being taken away continuously');
-    expect(render([chest], [])).toBe('');
-});
+const into = inserter(1, { sink: { type: 'chest', id: 7 } });
+const out = inserter(2, { source: { type: 'chest', id: 7 }, sink: { type: 'machine', id: 2 } });
+const alert = (chest: ChestFormData, inserters: InserterFormData[], { onSwitchType = vi.fn(), onEnableRemoval = vi.fn() } = {}) =>
+    <OutputChestAlert chests={[chest]} inserters={inserters} onSwitchType={onSwitchType} onEnableRemoval={onEnableRemoval} />;
+const ironPlate = names({ 'iron-plate': 'Iron plate' });
+const pictures = (scope: HTMLElement) => within(scope).getAllByRole('presentation', { hidden: true }).map(picture => picture.getAttribute('src'));
 
-it('offers an enable-removal fix on the existing infinity chest with its own icon', () => {
-    const chest: ChestFormData = { id: 7, _uuid: 'chest-7', type: ChestType.INFINITY_CHEST, item_filter: [] };
-    const inserter: InserterFormData = { id: 1, _uuid: 'inserter-1', stack_size: 16, source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 7 } };
-    const render = (current = chest) => renderToStaticMarkup(<OutputChestAlert chests={[current]} inserters={[inserter]} onSwitchType={() => {}} onEnableRemoval={() => {}} />);
-    expect(render()).toContain('Chest 7 needs output removal enabled');
-    expect(render()).toContain('An inserter already delivers to this infinity chest');
-    expect(render()).toContain('Enable Remove unfiltered items for Chest 7');
-    expect(render()).toContain('id="validation-issue-chest:7:removal-disabled"');
-    expect(render()).toContain('infinity-chest');
-    expect(render({ ...chest, remove_unfiltered_items: true })).toBe('');
-});
+it.each([
+    { chest: bufferChest(7, { storage_size: 1, item_filter: 'iron-plate' }), name: 'Chest 7', text: 'No inserter takes iron plate out of this buffer chest.', icon: 'steel-chest' },
+    { chest: containerChest(7, ChestType.CAR), name: 'Car 7', text: 'out of this car.', icon: 'car' },
+    { chest: containerChest(7, ChestType.TANK), name: 'Tank 7', text: 'out of this tank.', icon: 'tank' },
+    { chest: containerChest(7, ChestType.CARGO_WAGON), name: 'Cargo wagon 7', text: 'or swap it at a station', icon: 'cargo-wagon' },
+    { chest: containerChest(7, ChestType.ROCKET_SILO), name: 'Rocket silo 7', text: 'launches rockets, which the simulator does not model yet', icon: 'rocket-silo' },
+])('warns that $name at the end of a line can fill up, with its own icon, and switches it to an infinity chest', async ({ chest, name, text, icon }) => {
+    const onSwitchType = vi.fn();
+    const { user, container, rerender } = show(alert(chest, [into], { onSwitchType }), { names: ironPlate });
+    expect(screen.getByRole('region', { name: 'Build validation' })).toBeDefined();
+    // advice in the page, not an interruption
+    expect(screen.queryByRole('alert')).toBeNull();
+    // named by what it is
+    const issue = screen.getByRole('group', { name: `${name} can fill up and block output` });
+    expect(within(issue).getByText(content => content.includes(text))).toBe(within(issue).getByText(/model output being taken away continuously\.$/));
+    expect(pictures(issue)).toEqual([`/icons/${icon}.png`]);
+    await user.click(within(issue).getByRole('button', { name: `Use infinity chest for ${name}` }));
+    expect(onSwitchType).toHaveBeenCalledExactlyOnceWith(0, ChestType.INFINITY_CHEST, true);
 
-it('warns of a car, a tank, a cargo wagon or a rocket silo at the end of a line, each with its own icon', () => {
-    const into: InserterFormData = { id: 1, _uuid: 'inserter-1', stack_size: 16, source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 7 } };
-    const out: InserterFormData = { id: 2, _uuid: 'inserter-2', stack_size: 16, source: { type: 'chest', id: 7 }, sink: { type: 'machine', id: 2 } };
-    const render = (chest: ChestFormData, inserters = [into]) => renderToStaticMarkup(
-        <OutputChestAlert chests={[chest]} inserters={inserters} onSwitchType={() => {}} onEnableRemoval={() => {}} />);
-    for (const [type, text, name] of [[ChestType.CAR, 'out of this car.', 'Car 7'], [ChestType.TANK, 'out of this tank.', 'Tank 7'],
-        [ChestType.CARGO_WAGON, 'or swap it at a station', 'Cargo wagon 7'], [ChestType.ROCKET_SILO, 'launches rockets, which the simulator does not model yet', 'Rocket silo 7']] as const) {
-        const chest = { id: 7, _uuid: 'chest-7', type } as ChestFormData;
-        const html = render(chest);
-        // named by what it is
-        expect(html).toContain(`${name} can fill up and block output`);
-        expect(html).toContain(text);
-        expect(html).toContain(`/icons/${type}.png`);
-        expect(html).toContain(`Use infinity chest for ${name}`);
-        // a container between two inserters holds the line: no warning
-        expect(render(chest, [into, out])).toBe('');
+    // nothing delivers to it, or it is between two inserters and holds the line: no warning
+    for (const inserters of [[], [into, out]]) {
+        rerender(alert(chest, inserters));
+        expect(container.firstChild).toBeNull();
     }
+});
+
+it('offers an enable-removal fix on the existing infinity chest with its own icon', async () => {
+    // left out, as in an imported build that lacks it
+    const chest = infinityChest(7, { remove_unfiltered_items: undefined });
+    const onEnableRemoval = vi.fn();
+    const { user, container, rerender } = show(alert(chest, [into], { onEnableRemoval }));
+    const issue = screen.getByRole('group', { name: 'Chest 7 needs output removal enabled' });
+    // the target a link to the issue moves the focus to
+    expect(document.getElementById(validationIssueElementId('chest:7:removal-disabled'))).toBe(issue);
+    expect(within(issue).getByText(/^An inserter already delivers to this infinity chest/)).toBeDefined();
+    expect(pictures(issue)).toEqual(['/icons/infinity-chest.png']);
+    await user.click(within(issue).getByRole('button', { name: 'Enable Remove unfiltered items for Chest 7' }));
+    expect(onEnableRemoval).toHaveBeenCalledExactlyOnceWith(0);
+
+    rerender(alert({ ...chest, remove_unfiltered_items: true }, [into]));
+    expect(container.firstChild).toBeNull();
 });

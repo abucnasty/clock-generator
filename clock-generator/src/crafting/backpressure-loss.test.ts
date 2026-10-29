@@ -2,8 +2,9 @@ import { beforeAll, describe, expect, it } from "vitest";
 import {
     backpressureLossesOf, judgeRecovery, LATE_AFTER_PERIODS, LOSS_PLACES, LOSS_SHARES, lossId, lossLabel, lossLimitOf, lossTrialsPartOfTheWay,
     lossTrialsUntilStopped, LossOutcome, MAX_LOSS_PERIODS, MAX_RECOVERY_PERIODS, MAX_RUN_ON_PERIODS, reportOf, RUN_ON_EXACT_PERIODS,
-    runsOn, SPOIL_LIMIT_SHARE, verdictOf,
+    runsOn, verdictOf,
 } from "./backpressure-loss";
+import { SPOIL_LIMIT_SHARE } from "../common/rule-constants";
 import { notTriedSentence } from "./why-not-stable";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { loadConfigFromFile } from "../config/loader";

@@ -1,4 +1,4 @@
-import { machineCanMake, machineForRecipe, machineRuleOfPrototype, MachineType, placesResultsItself } from 'clock-generator/light';
+import { machineCanMake, machineForRecipe, prototypeTraitsOf } from 'clock-generator/light';
 import type { CraftingMachineData, CraftingMachineInfo } from '../worker/types';
 import type { MachineFormData } from './configForm/formData';
 
@@ -10,19 +10,25 @@ export function craftingMachineOf(data: CraftingMachineData, prototype: string |
     return prototype === undefined ? undefined : data.machines.find(machine => machine.name === prototype);
 }
 
-/** Whether the row's machine burns nutrients, as a biochamber does, so that its energy consumption counts (the engine's rule) */
+/**
+ * Whether the row's machine burns nutrients, as a biochamber does, so that the editor shows its energy consumption and
+ * takes nutrients for its fuel: the engine's Energy trait for its prototype models its fuel, and its burner burns the
+ * nutrients fuel category of the game data. Other burners (the furnaces, the captive biter spawner) are fuelled by the
+ * engine too, but the editor does not show them yet.
+ */
 export function burnsNutrients(row: Pick<MachineFormData, 'prototype'>, data: CraftingMachineData): boolean {
     const machine = craftingMachineOf(data, row.prototype);
-    return machine !== undefined && machineRuleOfPrototype(machine) === MachineType.BIOCHAMBER;
+    return machine !== undefined && prototypeTraitsOf(machine).fuel_modelled && machine.burner_fuel_categories.includes('nutrients');
 }
 
 /**
- * Whether the row's machine places its results itself, into the container in front of its output side (the recycler), as
- * its game data says by `vector_to_place_result`; no name decides it. Only such a machine has a result target.
+ * Whether the row's machine places its results itself, into the container in front of its output side (the recycler): the
+ * engine's Placement trait for its prototype, which its game data gives by `vector_to_place_result`; no name decides it.
+ * Only such a machine has a result target.
  */
 export function placesResults(row: Pick<MachineFormData, 'prototype'>, data: CraftingMachineData): boolean {
     const machine = craftingMachineOf(data, row.prototype);
-    return machine !== undefined && placesResultsItself(machine);
+    return machine !== undefined && prototypeTraitsOf(machine).places_results;
 }
 
 /**
@@ -66,7 +72,7 @@ export function prototypeSourceText(source: PrototypeSource | undefined): string
     }
 }
 
-/** The qualities a machine can have, in the game's order */
+/** The game's qualities, lowest first: a machine's, a cargo wagon's, a rocket silo's recipe's */
 export const MACHINE_QUALITIES = ['normal', 'uncommon', 'rare', 'epic', 'legendary'] as const;
 type MachineQuality = typeof MACHINE_QUALITIES[number];
 

@@ -1,15 +1,12 @@
 import {
     Box,
-    FormControl,
-    InputLabel,
-    MenuItem,
-    Select,
     TextField,
     ToggleButton,
     ToggleButtonGroup,
 } from '@mui/material';
 import { ValueReferenceType, EntityReference, TargetType } from 'clock-generator/light';
 import type { ValueReference } from '../hooks/useConfigForm';
+import { SelectField } from './SelectField';
 import { GROUP_NAMES, SELECT_NAMES } from '../utils/a11yLabels';
 import { useFullscreen } from './FullscreenContext';
 import { ItemSelector } from './ItemSelector';
@@ -136,21 +133,8 @@ export function ValueReferenceSelector({
 
     return (
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-            <FormControl size="small" sx={{ minWidth: typeSelectWidth }}>
-                <InputLabel>Type</InputLabel>
-                <Select
-                    inputProps={{ 'aria-label': SELECT_NAMES.valueType }}
-                    value={value.type}
-                    label="Type"
-                    onChange={(e) => handleTypeChange(e.target.value as ValueReference['type'])}
-                >
-                    {filteredTypes.map((vt) => (
-                        <MenuItem key={vt.value} value={vt.value}>
-                            {vt.label}
-                        </MenuItem>
-                    ))}
-                </Select>
-            </FormControl>
+            <SelectField label="Type" inputAriaLabel={SELECT_NAMES.valueType} value={value.type} sx={{ minWidth: typeSelectWidth }}
+                options={filteredTypes.map(vt => vt.value)} render={type => VALUE_TYPES.find(vt => vt.value === type)?.label ?? type} onChange={handleTypeChange} />
 
             {needsEntity(value.type) && 'entity' in value && (
                 <ToggleButtonGroup

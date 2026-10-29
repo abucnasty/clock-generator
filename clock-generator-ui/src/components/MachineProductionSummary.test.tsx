@@ -1,7 +1,8 @@
+// @vitest-environment happy-dom
+import { screen, within } from '@testing-library/react';
 import { expect, it } from 'vitest';
-import { renderToStaticMarkup } from 'react-dom/server';
 import type { MachineTargetRate, SerializableMachineFacts } from 'clock-generator/browser';
-import { GameNamesContext } from '../hooks/useGameNames';
+import { names, show } from '../test/fixtures';
 import { MachineProductionSummary } from './MachineProductionSummary';
 
 const facts: SerializableMachineFacts = {
@@ -15,28 +16,19 @@ const facts: SerializableMachineFacts = {
 const rates: MachineTargetRate = { machine_id: 7, output_rate_per_second: 0.4, crafting_share: 0.8, outputs: [
     { item_name: 'electronic-circuit', rate_per_second: 0.4 }, { item_name: 'advanced-circuit', rate_per_second: 0.2 },
 ] };
-const names = { item: { 'electronic-circuit': 'Electronic circuit', 'advanced-circuit': 'Advanced circuit' }, recipe: {} };
+const itemNames = names({ 'electronic-circuit': 'Electronic circuit', 'advanced-circuit': 'Advanced circuit' });
 
-it('shows every result inline, including expected coproduct rates, and uses the per-result at-target vector', () => {
-    const render = (targetRate?: MachineTargetRate) => renderToStaticMarkup(<GameNamesContext.Provider value={names}>
-        <MachineProductionSummary facts={facts} targetRate={targetRate} atTarget={targetRate !== undefined} />
-    </GameNamesContext.Provider>);
-    const maximum = render();
-    expect(maximum).toContain('Electronic circuit');
-    expect(maximum).toContain('Advanced circuit');
-    expect(maximum).toContain('0.5/s');
-    expect(maximum).toContain('0.25/s');
-    expect(maximum).toContain('Expected');
-    const atTarget = render(rates);
-    expect(atTarget).toContain('0.4/s');
-    expect(atTarget).toContain('0.2/s');
-});
-
-it('falls back to capacity instead of a zero or stale rate when at-target data is unavailable', () => {
-    const html = renderToStaticMarkup(<GameNamesContext.Provider value={names}>
-        <MachineProductionSummary facts={facts} atTarget />
-    </GameNamesContext.Provider>);
-    expect(html).toContain('Capacity');
-    expect(html).toContain('At-target rate unavailable');
-    expect(html).toContain('0.25/s');
+it.each([
+    { rate: 'its maximum', atTarget: false, targetRate: undefined, production: 'Maximum',
+        results: ['Electronic circuit: 0.5/s', 'Advanced circuit: 0.25/s expected'], notes: ['Expected'] },
+    { rate: 'its own at-target rate', atTarget: true, targetRate: rates, production: 'At-target',
+        results: ['Electronic circuit: 0.4/s', 'Advanced circuit: 0.2/s expected'], notes: ['Expected'] },
+    // not a zero, nor a rate from an earlier target
+    { rate: 'capacity without at-target data', atTarget: true, targetRate: undefined, production: 'Maximum',
+        results: ['Electronic circuit: 0.5/s', 'Advanced circuit: 0.25/s expected'], notes: ['Capacity', 'Expected', 'Capacity', 'At-target rate unavailable'] },
+])('shows every result inline, a coproduct as expected, at $rate', ({ atTarget, targetRate, production, results, notes }) => {
+    show(<MachineProductionSummary facts={facts} targetRate={targetRate} atTarget={atTarget} />, { names: itemNames });
+    const summary = within(screen.getByRole('group', { name: `${production} production per machine` }));
+    expect(summary.getAllByRole('img')).toEqual(results.map(name => summary.getByRole('img', { name })));
+    expect(screen.getAllByText(/^(Expected|Capacity|At-target rate unavailable)$/).map(note => note.textContent)).toEqual(notes);
 });

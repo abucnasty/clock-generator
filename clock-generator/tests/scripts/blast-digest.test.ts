@@ -1,6 +1,6 @@
 // The results digest of a blast job (scripts/blast/blast.digest.ts): the canonical walk, and the lazy expansion of a sealed history.
 import { describe, expect, it } from 'vitest';
-import { reasonId } from '../../src/control-logic/mode/reason-table';
+import { reasonId } from '../../src/state/reason-table';
 import { factorioStateCode, statusCode } from '../../src/state/status-codes';
 import { type CompactStateTransitionHistory, expandStateTransitionHistory } from '../../src/crafting/sequence/compact-history';
 import { EntityTransitionColumns } from '../../src/crafting/sequence/transition-columns';
@@ -92,6 +92,15 @@ describe('the digest of an alternative and of a job', () => {
         const differ = (other: typeof base) => Object.keys(base.results).filter(name => base.results[name] !== other.results[name]);
         expect(differ(states)).toEqual(['state_transition_history']);
         expect(differ(clock_only)).toEqual(['clock_only_run']);
+    });
+
+    it('hashes the fuel view\'s history as the serializable form writes it, whatever the reason numbers', () => {
+        const view = (state_transition_history: unknown) => ({ periods: 2, fuel_levels: [], state_transition_history });
+        const sealed = digestAlternative(alternative({}, { fuel_consumption_view: view(history) }), expandStateTransitionHistory);
+        const written = digestAlternative(alternative({}, { fuel_consumption_view: view(expandStateTransitionHistory(history)) }), expandStateTransitionHistory);
+        expect(sealed.results.fuel_consumption_view).toBe(written.results.fuel_consumption_view);
+        expect(digestAlternative(alternative({}, { fuel_consumption_view: undefined }), expandStateTransitionHistory).results.fuel_consumption_view)
+            .not.toBe(sealed.results.fuel_consumption_view);
     });
 
     it('digests why_not_stable, the selected index and the ids for the job', () => {

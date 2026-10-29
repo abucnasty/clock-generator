@@ -67,6 +67,9 @@ export {
     ConfigValidationIssue,
     CopiesError,
     CopiesUnit,
+    FeasibilityError,
+    FeasibilityIssue,
+    FeasibilityRule,
     InserterCoverageError,
     InserterCoverageIssue,
     InserterCoverageIssueKind,
@@ -309,10 +312,9 @@ export {
     SerializableMachineInput,
 } from './data-types';
 
-export {
-    Machine,
-    ComputeMachineFactsParams,
-} from './entities/machine';
+export { Machine } from './entities/machine';
+export { computeMachineFacts } from './entities/traits/machine-facts-of';
+export type { ComputeMachineFactsParams } from './entities/traits/machine-facts-of';
 export { computeMachineTargetRates } from './crafting/machine-target-rates';
 export type { MachineTargetRate } from './crafting/machine-target-rates';
 export type { ClockInsight, MachineFactsEntry, SwingComparison } from './crafting/insights';

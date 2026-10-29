@@ -1,5 +1,4 @@
 import { ItemName } from "../../../data";
-import { MachineType } from "../machine-metadata";
 
 export interface Fuel {
     readonly item_name: ItemName;
@@ -7,26 +6,17 @@ export interface Fuel {
     readonly fuel_value_mj: number;
 }
 
-/** A machine energy source that burns fuel items while crafting. */
+/**
+ * A machine energy source that burns fuel items while it works, from the game data: the prototype's `energy_usage` and
+ * the items of its burner's fuel categories (entities/traits/energy.ts builds it).
+ */
 export interface BurnerEnergySource {
     /** Energy usage while crafting at 100% energy consumption, in kW. */
     readonly energy_usage_kw: number;
+    /** Share of the fuel's energy the burner turns into work: 1 on every burner of 2.1.21. */
+    readonly effectivity: number;
     /** Fuels the machine accepts. The first one is the default. */
     readonly fuels: readonly Fuel[];
-}
-
-export const NUTRIENTS: Fuel = { item_name: "nutrients", fuel_value_mj: 2 };
-
-/** Machine types that burn fuel, and what they burn. */
-const BURNER_ENERGY_SOURCES: Partial<Record<MachineType, BurnerEnergySource>> = {
-    [MachineType.BIOCHAMBER]: {
-        energy_usage_kw: 500,
-        fuels: [NUTRIENTS],
-    },
-};
-
-function forMachineType(type: MachineType): BurnerEnergySource | undefined {
-    return BURNER_ENERGY_SOURCES[type];
 }
 
 /** The fuel to burn: the requested one if the source accepts it, else the source's default. */
@@ -43,6 +33,5 @@ function selectFuel(source: BurnerEnergySource, item_name?: ItemName): Fuel {
 }
 
 export const BurnerEnergySource = {
-    forMachineType,
     selectFuel,
 };

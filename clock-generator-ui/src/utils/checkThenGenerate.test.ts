@@ -28,81 +28,58 @@ function form(): ConfigFormData {
     return edits.addInserter(edits.addInserter(config));
 }
 
-const configOf = (edit: (config: ConfigFormData) => ConfigFormData = (c) => c): Config => formDataToConfig(edit(form()));
+type Edit = (config: ConfigFormData) => ConfigFormData;
+type Overrides = NonNullable<ConfigFormData['overrides']>;
+
+const configOf = (edit: Edit = (c) => c): Config => formDataToConfig(edit(form()));
+const keyOf = (edit?: Edit) => checkKeyOf(configOf(edit));
+
+/** An edit setting these overrides, in this order */
+const withOverrides = (overrides: Overrides): Edit => (config) =>
+    Object.entries(overrides).reduce((c, [field, value]) => edits.updateOverrides(c, field as keyof Overrides, value), config);
 
 const problems = (...texts: string[]): Problem[] => texts.map((text) => ({ text, target: { kind: 'target-recipe' } }));
 
-describe('decideGenerate', () => {
-    const idle = { initialized: true, generating: false, checkStatus: 'none' as CheckStatus, problems: [] as Problem[] };
+const idle = { initialized: true, generating: false, checkStatus: 'none' as CheckStatus, problems: [] as Problem[] };
 
-    it('waits while the page starts, a generation runs or a check runs, even with problems', () => {
-        expect(decideGenerate({ ...idle, initialized: false, problems: problems('a') })).toEqual({ kind: 'wait' });
-        expect(decideGenerate({ ...idle, generating: true, problems: problems('a') })).toEqual({ kind: 'wait' });
-        expect(decideGenerate({ ...idle, checkStatus: 'running', problems: problems('a') })).toEqual({ kind: 'wait' });
-    });
-
-    it('goes to the first problem whatever the check says, a passed check included', () => {
-        const [first, second] = problems('first', 'second');
-        for (const checkStatus of ['none', 'valid', 'invalid', 'out-of-date'] as const) {
-            expect(decideGenerate({ ...idle, checkStatus, problems: [first, second] })).toEqual({ kind: 'go-to-problem', problem: first });
+describe('decideGenerate and decideCheckOnly', () => {
+    it.each([
+        ['the page starts', { initialized: false }],
+        ['a generation runs', { generating: true }],
+        ['a check runs', { checkStatus: 'running' }],
+    ] as const)('both wait while %s, even with problems', (_, running) => {
+        for (const listed of [[], problems('a')]) {
+            expect(decideGenerate({ ...idle, ...running, problems: listed })).toEqual({ kind: 'wait' });
+            expect(decideCheckOnly({ ...idle, ...running, problems: listed })).toEqual({ kind: 'wait' });
         }
     });
 
-    it('goes to the reason of a failed check without checking again', () => {
-        expect(decideGenerate({ ...idle, checkStatus: 'invalid' })).toEqual({ kind: 'go-to-check-error' });
-    });
-
-    it('checks again after a check whose worker crashed, instead of going to its error', () => {
-        expect(decideGenerate({ ...idle, checkStatus: 'invalid', lastCheckCrashed: true })).toEqual({ kind: 'check-first' });
-        expect(decideGenerate({ ...idle, checkStatus: 'invalid', lastCheckCrashed: false })).toEqual({ kind: 'go-to-check-error' });
-        // Check only is the same either way
-        expect(decideCheckOnly({ ...idle, checkStatus: 'invalid', lastCheckCrashed: true })).toEqual({ kind: 'check' });
-        expect(decideCheckOnly({ ...idle, checkStatus: 'invalid' })).toEqual({ kind: 'check' });
-    });
-
-    it('generates at once after a passed check for this build', () => {
-        expect(decideGenerate({ ...idle, checkStatus: 'valid' })).toEqual({ kind: 'generate' });
-    });
-
-    it('goes to Items per Second for a target more than the machines can make, and never checks', () => {
-        const problem: Problem = { text: PROBLEM_TEXT.rateAboveMax(252.656), target: { kind: 'target-rate' } };
+    const rateAboveMax: Problem = { text: PROBLEM_TEXT.rateAboveMax(252.656), target: { kind: 'target-rate' } };
+    it.each([
+        ['the first problem', problems('first', 'second')],
+        ['Items per Second for a target more than the machines can make', [rateAboveMax]],
+    ])('Generate goes to %s and Check only shows the problems, never checking, whatever the check says, a passed check included', (_, listed) => {
         for (const checkStatus of ['none', 'valid', 'invalid', 'out-of-date'] as const) {
-            expect(decideGenerate({ ...idle, checkStatus, problems: [problem] })).toEqual({ kind: 'go-to-problem', problem });
-            expect(decideCheckOnly({ ...idle, checkStatus, problems: [problem] })).toEqual({ kind: 'show-problems' });
+            expect(decideGenerate({ ...idle, checkStatus, problems: listed })).toEqual({ kind: 'go-to-problem', problem: listed[0] });
+            expect(decideCheckOnly({ ...idle, checkStatus, problems: listed })).toEqual({ kind: 'show-problems' });
         }
     });
 
-    it('checks first when there is no check for this build', () => {
-        expect(decideGenerate({ ...idle, checkStatus: 'none' })).toEqual({ kind: 'check-first' });
-        expect(decideGenerate({ ...idle, checkStatus: 'out-of-date' })).toEqual({ kind: 'check-first' });
-    });
-});
-
-describe('decideCheckOnly', () => {
-    const idle = { initialized: true, generating: false, checkStatus: 'none' as CheckStatus, problems: [] as Problem[] };
-
-    it('waits while anything runs', () => {
-        expect(decideCheckOnly({ ...idle, initialized: false })).toEqual({ kind: 'wait' });
-        expect(decideCheckOnly({ ...idle, generating: true })).toEqual({ kind: 'wait' });
-        expect(decideCheckOnly({ ...idle, checkStatus: 'running' })).toEqual({ kind: 'wait' });
-    });
-
-    it('shows the problems instead of checking, whatever the check says', () => {
-        for (const checkStatus of ['none', 'valid', 'invalid', 'out-of-date'] as const) {
-            expect(decideCheckOnly({ ...idle, checkStatus, problems: problems('a') })).toEqual({ kind: 'show-problems' });
-        }
-    });
-
-    it('checks for every other status, again after a passed check too', () => {
-        for (const checkStatus of ['none', 'valid', 'invalid', 'out-of-date'] as const) {
-            expect(decideCheckOnly({ ...idle, checkStatus })).toEqual({ kind: 'check' });
-        }
+    // with no problems; Check only checks again whatever the last check said, a passed one or a crash included
+    it.each([
+        ['no check for this build', { checkStatus: 'none' }, 'check-first'],
+        ['an out-of-date check', { checkStatus: 'out-of-date' }, 'check-first'],
+        ['a passed check for this build', { checkStatus: 'valid' }, 'generate'],
+        ['a failed check', { checkStatus: 'invalid' }, 'go-to-check-error'],
+        ['a failed check whose worker did not crash', { checkStatus: 'invalid', lastCheckCrashed: false }, 'go-to-check-error'],
+        ['a check whose worker crashed', { checkStatus: 'invalid', lastCheckCrashed: true }, 'check-first'],
+    ] as const)('after %s, Generate does %s', (_, check, kind) => {
+        expect(decideGenerate({ ...idle, ...check })).toEqual({ kind });
+        expect(decideCheckOnly({ ...idle, ...check })).toEqual({ kind: 'check' });
     });
 });
 
 describe('startsRun', () => {
-    const idle = { initialized: true, generating: false, checkStatus: 'none' as CheckStatus, problems: [] as Problem[] };
-
     // every kind of both decisions, made the way a press makes it; a new kind that `startsRun` does not classify fails
     // the build (its table is typed by both decisions' kinds), and belongs in this list
     it.each([
@@ -127,36 +104,35 @@ describe('afterCheck', () => {
 });
 
 describe('checkKeyOf', () => {
+    const base = keyOf();
+
     it('ignores the switches only the clock search reads', () => {
-        const base = checkKeyOf(configOf());
-        expect(checkKeyOf(configOf((c) => edits.updateOverrides(c, 'search_for_fewer_wake_ups', true)))).toBe(base);
-        expect(checkKeyOf(configOf((c) => edits.updateOverrides(c, 'backed_up_belts', true)))).toBe(base);
-        const both = configOf((c) => edits.updateOverrides(edits.updateOverrides(c, 'backed_up_belts', true), 'search_for_fewer_wake_ups', true));
+        expect(keyOf(withOverrides({ search_for_fewer_wake_ups: true }))).toBe(base);
+        expect(keyOf(withOverrides({ backed_up_belts: true }))).toBe(base);
+        const both = configOf(withOverrides({ backed_up_belts: true, search_for_fewer_wake_ups: true }));
         expect(both.overrides).toBeDefined();
         expect(checkKeyOf(both)).toBe(base);
         expect(configOf().overrides).toBeUndefined();
     });
 
     it('keeps the other overrides next to those switches', () => {
-        const lcm = checkKeyOf(configOf((c) => edits.updateOverrides(c, 'lcm', 2)));
-        const lcmAndSwitch = checkKeyOf(configOf((c) => edits.updateOverrides(edits.updateOverrides(c, 'search_for_fewer_wake_ups', true), 'lcm', 2)));
-        expect(lcmAndSwitch).toBe(lcm);
+        expect(keyOf(withOverrides({ search_for_fewer_wake_ups: true, lcm: 2 }))).toBe(keyOf(withOverrides({ lcm: 2 })));
     });
 
-    it.each<[string, (config: ConfigFormData) => ConfigFormData]>([
-        ['the LCM override', (c) => edits.updateOverrides(c, 'lcm', 2)],
-        ['the forced output swings', (c) => edits.updateOverrides(c, 'terminal_swing_count', 3)],
-        ['fractional swings', (c) => edits.updateOverrides(c, 'use_fractional_swings', true)],
-        ['the ingredients left out of the LCM', (c) => edits.updateOverrides(c, 'ignored_lcm_ingredients', ['iron-plate'])],
+    it.each<[string, Edit]>([
+        ['the LCM override', withOverrides({ lcm: 2 })],
+        ['the forced output swings', withOverrides({ terminal_swing_count: 3 })],
+        ['fractional swings', withOverrides({ use_fractional_swings: true })],
+        ['the ingredients left out of the LCM', withOverrides({ ignored_lcm_ingredients: ['iron-plate'] })],
         ['a machine recipe', (c) => edits.updateMachine(c, 0, 'recipe', 'automation-science-pack')],
         ['the target rate', (c) => edits.updateTargetOutput(c, 'items_per_second', 200)],
         ['an inserter enable rule', (c) => edits.updateInserter(c, 0, { overrides: { enable_control: { mode: 'ALWAYS' } } })],
     ])('changes with %s', (_, edit) => {
-        expect(checkKeyOf(configOf(edit))).not.toBe(checkKeyOf(configOf()));
+        expect(keyOf(edit)).not.toBe(base);
     });
 
     it('does not change the config it is given', () => {
-        const config = configOf((c) => edits.updateOverrides(edits.updateOverrides(c, 'lcm', 2), 'backed_up_belts', true));
+        const config = configOf(withOverrides({ lcm: 2, backed_up_belts: true }));
         const before = structuredClone(config);
         checkKeyOf(config);
         expect(config).toEqual(before);
@@ -167,45 +143,47 @@ describe('checkStatusOf', () => {
     const config = configOf();
     const key = checkKeyOf(config);
     const valid: ValidationState = { status: 'valid', config, validation: {} as ConfigValidation };
+    const invalid: ValidationState = { status: 'invalid', config, message: 'no' };
 
     it('passes none and running through, and says valid or invalid for the same build', () => {
         expect(checkStatusOf({ status: 'none' }, key)).toBe('none');
         expect(checkStatusOf({ status: 'running', config }, key)).toBe('running');
         expect(checkStatusOf(valid, key)).toBe('valid');
-        expect(checkStatusOf({ status: 'invalid', config, message: 'no' }, key)).toBe('invalid');
+        expect(checkStatusOf(invalid, key)).toBe('invalid');
     });
 
     it('is out of date once the build changed', () => {
-        const edited = checkKeyOf(configOf((c) => edits.updateTargetOutput(c, 'items_per_second', 200)));
+        const edited = keyOf((c) => edits.updateTargetOutput(c, 'items_per_second', 200));
         expect(checkStatusOf(valid, edited)).toBe('out-of-date');
-        expect(checkStatusOf({ status: 'invalid', config, message: 'no' }, edited)).toBe('out-of-date');
+        expect(checkStatusOf(invalid, edited)).toBe('out-of-date');
     });
 
     it('stays valid after a generation-only switch', () => {
-        const switched = checkKeyOf(configOf((c) => edits.updateOverrides(c, 'search_for_fewer_wake_ups', true)));
-        expect(checkStatusOf(valid, switched)).toBe('valid');
+        expect(checkStatusOf(valid, keyOf(withOverrides({ search_for_fewer_wake_ups: true })))).toBe('valid');
     });
 });
 
 describe('checkChipOf', () => {
     it('shows a failed check, and a passed one only while no clocks for this build are on screen', () => {
-        expect(checkChipOf({ checkStatus: 'invalid', clocksAreForThisBuild: false })).toEqual({ label: 'Check failed', color: 'error' });
-        expect(checkChipOf({ checkStatus: 'valid', clocksAreForThisBuild: false })).toEqual({ label: 'Check passed', color: 'success' });
+        expect(checkChipOf({ checkStatus: 'invalid', clocksAreForThisBuild: false })).toEqual({ label: CHECK_TEXT.chipFailed, color: 'error' });
+        expect(checkChipOf({ checkStatus: 'valid', clocksAreForThisBuild: false })).toEqual({ label: CHECK_TEXT.chipPassed, color: 'success' });
         expect(checkChipOf({ checkStatus: 'valid', clocksAreForThisBuild: true })).toBeNull();
         for (const checkStatus of ['none', 'running', 'out-of-date'] as const) {
             expect(checkChipOf({ checkStatus, clocksAreForThisBuild: false })).toBeNull();
         }
     });
-
 });
 
 describe('PendingChecks', () => {
     const passed: CheckOutcome = { kind: 'valid', validation: {} as ConfigValidation };
+    const dropped: CheckOutcome = { kind: 'dropped' };
 
-    it('resolves a check with its outcome', async () => {
+    it('resolves a check with its outcome, and ignores an unknown or already settled id', async () => {
         const pending = new PendingChecks();
+        expect(() => pending.settle(7, passed)).not.toThrow();
         const check = pending.begin(1);
         pending.settle(1, passed);
+        expect(() => pending.settle(1, { kind: 'invalid', message: 'again' })).not.toThrow();
         await expect(check).resolves.toEqual(passed);
     });
 
@@ -215,17 +193,8 @@ describe('PendingChecks', () => {
         const second = pending.begin(2);
         pending.settle(1, { kind: 'invalid', message: 'late' });
         pending.settle(2, passed);
-        await expect(first).resolves.toEqual({ kind: 'dropped' });
+        await expect(first).resolves.toEqual(dropped);
         await expect(second).resolves.toEqual(passed);
-    });
-
-    it('ignores an unknown or already settled id', async () => {
-        const pending = new PendingChecks();
-        expect(() => pending.settle(7, passed)).not.toThrow();
-        const check = pending.begin(1);
-        pending.settle(1, passed);
-        expect(() => pending.settle(1, { kind: 'invalid', message: 'again' })).not.toThrow();
-        await expect(check).resolves.toEqual(passed);
     });
 
     it('keeps the current check pending when an unrelated answer arrives', async () => {
@@ -244,21 +213,20 @@ describe('PendingChecks', () => {
         const check = pending.begin(1);
         pending.dropAll();
         pending.settle(1, passed);
-        await expect(check).resolves.toEqual({ kind: 'dropped' });
+        await expect(check).resolves.toEqual(dropped);
         expect(afterCheck(await check)).toBe('stop');
     });
 
     it('resolves cancelled and failed checks without rejecting', async () => {
         const pending = new PendingChecks();
+        const crashed: CheckOutcome = { kind: 'invalid', message: CHECK_TEXT.crashText };
         const first = pending.begin(1);
         pending.dropAll();
         const second = pending.begin(2);
-        pending.settle(2, { kind: 'invalid', message: 'The check stopped unexpectedly' });
+        pending.settle(2, crashed);
         const third = pending.begin(3);
         pending.dropAll();
-        const settled = await Promise.allSettled([first, second, third]);
-        expect(settled.map((it) => it.status)).toEqual(['fulfilled', 'fulfilled', 'fulfilled']);
-        expect(settled.map((it) => it.status === 'fulfilled' && it.value.kind)).toEqual(['dropped', 'invalid', 'dropped']);
+        expect(await Promise.allSettled([first, second, third])).toEqual([dropped, crashed, dropped].map((value) => ({ status: 'fulfilled', value })));
     });
 });
 

@@ -1,13 +1,11 @@
 {
   "name": "clock-generator-ui",
   "private": true,
-  "version": "0.24.0",
+  "version": "0.25.0",
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "predev": "node scripts/copy-factorio-data.mjs",
     "dev": "vite",
-    "prebuild": "node scripts/copy-factorio-data.mjs",
     "build": "npm run build:deps && tsc -b && vite build",
     "build:deps": "cd ../clock-generator && npm ci && npm run build",
     "lint": "eslint .",
@@ -39,6 +37,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.1",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
@@ -48,6 +49,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "happy-dom": "20.14.6",
     "knip": "5.88.1",
     "playwright": "1.64.1",
     "typescript": "~5.9.3",

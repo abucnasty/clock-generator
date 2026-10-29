@@ -3,7 +3,7 @@ import { OpenRange } from "../../data-types";
 import { EntityId, EntityType } from "../../entities";
 import { InserterStatus, MachineStatus } from "../../state";
 import { Logger } from "../../common/logger";
-import { CIRCUIT_LATENCY_TICKS } from "../clock";
+import { CIRCUIT_LATENCY_TICKS } from "../../common/rule-constants";
 import { AsBuiltRun } from "../trial";
 import { BlueprintGenerationResult, GenerateClockOptions, TrialRun, checkedClock, clockOfPlan, planRun } from "../plan/plan-run";
 import { Confirmed, QuickTrial, SearchRangeEdge, SearchReport, confirm, quickTrial, search } from "./search";

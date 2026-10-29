@@ -98,7 +98,10 @@ describe("an inserter that names its prototype and quality", () => {
     });
 
     it("generates a clock for the sample with a normal fast output inserter, whatever its verdict", async () => {
-        const config = await sampleWith({ prototype: "fast-inserter", quality: "normal", stack_size: undefined }, OUTPUT);
+        // a hand of 4 every 24 ticks takes at most 10 packs a second out: the target is set to that, as the feasibility
+        // pass refuses the sample's 26.67 a copy before any clock is tried
+        const sample = await sampleWith({ prototype: "fast-inserter", quality: "normal", stack_size: undefined }, OUTPUT);
+        const config = { ...sample, target_output: { ...sample.target_output, items_per_second: 10 * sample.target_output.copies } };
         const result = generateClockForConfig(config);
         expect(result).toBeDefined();
         const hands = new Map(result.serializable_transfer_plan.entities.map(planned => [planned.entity_number, planned.stack_size]));

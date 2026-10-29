@@ -1,8 +1,7 @@
 import type { ChestConfig, Config, InserterConfig } from './schema';
 import { FactorioDataService } from '../data/factorio-data-service';
-import { BurnerEnergySource } from '../entities/machine/fuel';
 import { expectedAmount } from '../entities/machine/recipe/recipe-metadata';
-import { machinePlacesResults, machineRuleOf } from './machine-prototype';
+import { machineFuelOf, machinePlacesResults } from './machine-prototype';
 
 export interface OutputTransferTarget { type: 'machine' | 'belt' | 'chest'; id: number }
 export interface OutputTransferResult {
@@ -61,8 +60,7 @@ function targetAcceptsItem(target: OutputTransferTarget, item: string, config: T
     try {
         if (FactorioDataService.findRecipeOrThrow(machine.recipe).ingredients.some(input => input.name === item)) return true;
         if (direct) return false;
-        const burner = BurnerEnergySource.forMachineType(machineRuleOf(machine));
-        return burner !== undefined && burner !== null && BurnerEnergySource.selectFuel(burner, machine.fuel).item_name === item;
+        return machineFuelOf(machine) === item;
     } catch { return undefined; }
 }
 

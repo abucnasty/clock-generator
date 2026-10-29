@@ -147,7 +147,7 @@ From `clock-generator/`, with `.env` configured:
 ```bash
 npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-exit.game.test.ts -t 'swapped lanes'
 npm run test:game -- tests/game/mechanics/belt-pickup/front-underground-exit.game.test.ts -t 'same-item'
-npm test -- src/control-logic/inserter/modes/pickup/belt-lane-fallback.test.ts -t 'front underground exit'
+npm test -- src/simulation/components/belt-hand-pickup.test.ts -t 'front underground exit'
 ```
 
 The first command runs the mirrored and flipped cases with swapped ingredients, checks Sidecar capture, and

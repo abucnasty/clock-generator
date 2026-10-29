@@ -5,8 +5,7 @@ import { Config } from "../config";
 import { simulateRecording } from "../verification/simulated-recording";
 import { outputPerPeriod, recipesMaking } from "../harness/recording-output";
 import { SimulationContext } from "./sequence/simulation-context";
-import { cloneSimulationContextWithInterceptors } from "./sequence/simulation-context";
-import { AlwaysEnabledControl } from "../control-logic";
+import { AlwaysEnabledControl } from "../simulation/controls/enable-control";
 import { EntityState } from "../state";
 
 const SAMPLE = GameFixturePaths.DIFFERENT_ITEMS_CONFIG;
@@ -27,14 +26,15 @@ function outputCounts(config: Config): Set<number> {
 describe("moving pickup affects the verdict of the old default clock", () => {
     it("keeps pickup holes when the runner replaces inserter controls", () => {
         const context = SimulationContext.fromConfig(config);
-        const source = context.state_registry.getAllStates().find(state => EntityState.isBelt(state) && state.pickup_lanes.size > 0)!;
+        const source = context.state_registry.getAllStates().find(state => EntityState.isBelt(state) && [...state.lanes[0].pickupIds()].length > 0)!;
         expect(EntityState.isBelt(source)).toBe(true);
         if (!EntityState.isBelt(source)) throw new Error("no input lane");
-        const lane = [...source.pickup_lanes.values()][0][0];
+        const id = [...source.lanes[0].pickupIds()][0];
+        const lane = source.pickupsOf(id)![0];
         lane.take(0, 4);
         lane.take(1, 4);
-        cloneSimulationContextWithInterceptors(context, { inserter: () => AlwaysEnabledControl });
-        expect([...source.pickup_lanes.values()][0][0]).toBe(lane);
+        context.useControls({ inserter: () => AlwaysEnabledControl });
+        expect(source.pickupsOf(id)![0]).toBe(lane);
         expect(lane.take(2, 4)).toBe(0);
     });
 

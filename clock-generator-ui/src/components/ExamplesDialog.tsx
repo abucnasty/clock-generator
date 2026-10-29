@@ -1,10 +1,10 @@
-import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, List, ListItemButton, ListItemIcon, ListItemText, Typography } from '@mui/material';
+import { Box, CircularProgress, List, ListItemButton, ListItemIcon, ListItemText, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { EXAMPLE_MANIFEST_URL, exampleSummary, exampleTitle, readExampleManifest, type ExampleBuild } from '../utils/exampleBuilds';
+import { AppDialog } from './AppDialog';
 import { FactorioIcon } from './FactorioIcon';
 import { useGameNames } from '../hooks/useGameNames';
 
-const TITLE_ID = 'examples-dialog-title';
 const INTRO = 'Pick a sample build to see how the tool works. It replaces your current build; Undo brings it back.';
 const UNAVAILABLE = 'Examples are not available right now.';
 
@@ -33,7 +33,7 @@ export function ExamplesDialog({ onPick, onClose }: ExamplesDialogProps) {
                 }
                 const list = readExampleManifest(text);
                 if (list.length === 0) {
-                    console.warn(`No example builds at ${EXAMPLE_MANIFEST_URL}: run \`node scripts/copy-factorio-data.mjs\` in clock-generator-ui.`);
+                    console.warn(`No example builds at ${EXAMPLE_MANIFEST_URL}: restart the dev server, which copies them into public/.`);
                 }
                 setExamples(list);
             });
@@ -43,38 +43,32 @@ export function ExamplesDialog({ onPick, onClose }: ExamplesDialogProps) {
     }, []);
 
     return (
-        <Dialog open onClose={onClose} maxWidth="sm" fullWidth aria-labelledby={TITLE_ID}>
-            <DialogTitle id={TITLE_ID}>Try an example</DialogTitle>
-            <DialogContent>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                    {INTRO}
+        <AppDialog onClose={onClose} title="Try an example" cancel="Cancel">
+            <Typography variant="body2" sx={{ mb: 1 }}>
+                {INTRO}
+            </Typography>
+            {examples === null ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+                    <CircularProgress aria-label="Loading the examples" />
+                </Box>
+            ) : examples.length === 0 ? (
+                <Typography variant="body2" sx={{ py: 2 }}>
+                    {UNAVAILABLE}
                 </Typography>
-                {examples === null ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-                        <CircularProgress aria-label="Loading the examples" />
-                    </Box>
-                ) : examples.length === 0 ? (
-                    <Typography variant="body2" sx={{ py: 2 }}>
-                        {UNAVAILABLE}
-                    </Typography>
-                ) : (
-                    <List dense disablePadding>
-                        {examples.map((example, index) => (
-                            // the focus starts on the first build once the list is there
-                            <ListItemButton key={example.id} autoFocus={index === 0} onClick={() => onPick(example)}>
-                                <ListItemIcon sx={{ minWidth: 40 }}>
-                                    <FactorioIcon name={example.recipe} size={28} alt="" />
-                                </ListItemIcon>
-                                {/* the space keeps the title and the summary two words apart in the row's text, as in its name */}
-                                <ListItemText primary={`${exampleTitle(example, recipeLabel)} `} secondary={exampleSummary(example)} />
-                            </ListItemButton>
-                        ))}
-                    </List>
-                )}
-            </DialogContent>
-            <DialogActions>
-                <Button onClick={onClose} color="inherit">Cancel</Button>
-            </DialogActions>
-        </Dialog>
+            ) : (
+                <List dense disablePadding>
+                    {examples.map((example, index) => (
+                        // the focus starts on the first build once the list is there
+                        <ListItemButton key={example.id} autoFocus={index === 0} onClick={() => onPick(example)}>
+                            <ListItemIcon sx={{ minWidth: 40 }}>
+                                <FactorioIcon name={example.recipe} size={28} alt="" />
+                            </ListItemIcon>
+                            {/* the space keeps the title and the summary two words apart in the row's text, as in its name */}
+                            <ListItemText primary={`${exampleTitle(example, recipeLabel)} `} secondary={exampleSummary(example)} />
+                        </ListItemButton>
+                    ))}
+                </List>
+            )}
+        </AppDialog>
     );
 }

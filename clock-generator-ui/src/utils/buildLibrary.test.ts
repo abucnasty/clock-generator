@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { build } from '../test/fixtures';
 import {
     backupKey,
     buildFileName,
@@ -19,6 +20,7 @@ import {
     setBuildRecipe,
     TAB_BUILD_KEY,
     touchBuild,
+    UNTITLED_BUILD,
     upsertBuild,
     type BuildMeta,
     type ConflictState,
@@ -49,50 +51,39 @@ function fakeStorage(entries: Record<string, string> = {}, { full = false } = {}
     return { storage, map, writes };
 }
 
-const savedForm = (recipe: string) => JSON.stringify({
-    target_output: { recipe, items_per_second: 1, copies: 1 },
-    machines: [{ id: 1, recipe, productivity: 0, crafting_speed: 1 }],
-    inserters: [],
-    belts: [],
-    chests: [],
-});
+const savedForm = (recipe: string) => JSON.stringify(build({ target_output: { recipe, items_per_second: 1, copies: 1 } }));
 
 const meta = (id: string, more: Partial<BuildMeta> = {}): BuildMeta => ({ id, name: null, recipe: '', createdAt: 1, openedAt: 1, ...more });
 const indexOf = (...builds: BuildMeta[]): LibraryIndex => ({ version: 1, builds });
+const idsOf = (index: LibraryIndex) => index.builds.map((build) => build.id);
 
 describe('openLibrary: migration', () => {
-    it('gives one default build on empty storage, and writes only the index', () => {
-        const { storage, map, writes } = fakeStorage();
+    // the first time, with no index: whatever was saved under the old key is the default build, as it is
+    it.each<[string, string | undefined, string]>([
+        ['on empty storage', undefined, ''],
+        ['from the single saved build, with its recipe', savedForm('logistic-science-pack'), 'logistic-science-pack'],
+        ['when the saved text cannot be read, with no recipe', '{broken', ''],
+    ])('gives one default build %s, writes only the index and leaves the saved text as it was', (_, text, recipe) => {
+        const { storage, map, writes } = fakeStorage(text === undefined ? {} : { [LEGACY_BUILD_KEY]: text });
         const library = openLibrary(storage, null, 100);
         expect(library.activeId).toBe('default');
-        expect(library.index.builds).toEqual([{ id: 'default', name: null, recipe: '', createdAt: 100, openedAt: 100 }]);
+        expect(library.index.builds).toEqual([meta('default', { recipe, createdAt: 100, openedAt: 100 })]);
         expect(writes).toEqual([LIBRARY_KEY]);
         expect(JSON.parse(map.get(LIBRARY_KEY)!)).toEqual(library.index);
-    });
-
-    it('makes the single saved build the default one with its recipe, and leaves its text as it was', () => {
-        const text = savedForm('logistic-science-pack');
-        const { storage, map, writes } = fakeStorage({ [LEGACY_BUILD_KEY]: text });
-        const library = openLibrary(storage, null, 100);
-        expect(library.index.builds).toEqual([{ id: 'default', name: null, recipe: 'logistic-science-pack', createdAt: 100, openedAt: 100 }]);
         expect(map.get(LEGACY_BUILD_KEY)).toBe(text);
-        expect(writes).toEqual([LIBRARY_KEY]);
-        expect([...map.keys()].some((key) => key.startsWith('clock-generator-build:'))).toBe(false);
     });
 
-    it('still gives the default build when the saved text cannot be read, with no recipe', () => {
-        const { storage, map } = fakeStorage({ [LEGACY_BUILD_KEY]: '{broken' });
-        const library = openLibrary(storage, null, 100);
-        expect(library.index.builds).toEqual([meta('default', { createdAt: 100, openedAt: 100 })]);
-        expect(map.get(LEGACY_BUILD_KEY)).toBe('{broken');
-    });
-
-    it('rebuilds a removed index from the builds, so none is hidden', () => {
-        const { storage, writes } = fakeStorage({
-            [LEGACY_BUILD_KEY]: savedForm('iron-gear-wheel'),
-            'clock-generator-build:abc': savedForm('electronic-circuit'),
-        });
-        expect(openLibrary(storage, null, 100).index.builds.map((build) => build.id)).toEqual(['default', 'abc']);
+    it.each<[string, Record<string, string>, string[]]>([
+        // with no index, the build under the old key looks like the first time, yet others were made since
+        ['a removed index', { [LEGACY_BUILD_KEY]: savedForm('iron-gear-wheel') }, ['default', 'abc']],
+        ['an index that is a list', { [LIBRARY_KEY]: '[]' }, ['abc']],
+        ['an index with no builds', { [LIBRARY_KEY]: '{"version": 1}' }, ['abc']],
+        ['an index whose version is text', { [LIBRARY_KEY]: '{"version": "1", "builds": []}' }, ['abc']],
+        ['an index of null', { [LIBRARY_KEY]: 'null' }, ['abc']],
+        ['an index of version 0', { [LIBRARY_KEY]: '{"version": 0, "builds": []}' }, ['abc']],
+    ])('rebuilds %s from the builds, so none is hidden', (_, stored, ids) => {
+        const { storage, writes } = fakeStorage({ ...stored, 'clock-generator-build:abc': savedForm('electronic-circuit') });
+        expect(idsOf(openLibrary(storage, null, 100).index)).toEqual(ids);
         expect(writes).toEqual([LIBRARY_KEY]);
     });
 
@@ -124,13 +115,6 @@ describe('openLibrary: migration', () => {
         expect(map.size).toBe(6);
     });
 
-    it('rebuilds an index of the wrong shape as well', () => {
-        for (const text of ['[]', '{"version": 1}', '{"version": "1", "builds": []}', 'null', '{"version": 0, "builds": []}']) {
-            const { storage } = fakeStorage({ [LIBRARY_KEY]: text, 'clock-generator-build:abc': savedForm('iron-gear-wheel') });
-            expect(openLibrary(storage, null, 100).index.builds.map((build) => build.id)).toEqual(['abc']);
-        }
-    });
-
     it('reads an index of a newer version for what it knows, and never writes it', () => {
         const text = JSON.stringify({ version: 2, builds: [{ ...meta('abc', { recipe: 'iron-gear-wheel' }), colour: 'red' }], folders: [] });
         const { storage, writes } = fakeStorage({ [LIBRARY_KEY]: text });
@@ -143,8 +127,7 @@ describe('openLibrary: migration', () => {
     it('keeps the library in memory when the index cannot be written, and loses nothing', () => {
         const text = savedForm('iron-gear-wheel');
         const { storage, map } = fakeStorage({ [LEGACY_BUILD_KEY]: text }, { full: true });
-        const library = openLibrary(storage, null, 100);
-        expect(library.index.builds.map((build) => build.id)).toEqual(['default']);
+        expect(idsOf(openLibrary(storage, null, 100).index)).toEqual(['default']);
         expect(map.get(LEGACY_BUILD_KEY)).toBe(text);
         expect(map.has(LIBRARY_KEY)).toBe(false);
     });
@@ -156,22 +139,15 @@ describe('openLibrary: migration', () => {
 });
 
 describe('openLibrary: which build a tab opens', () => {
-    const index = indexOf(meta('default', { openedAt: 1 }), meta('abc', { openedAt: 9 }), meta('def', { openedAt: 5 }));
-    const stored = { [LIBRARY_KEY]: JSON.stringify(index) };
+    const stored = { [LIBRARY_KEY]: JSON.stringify(indexOf(meta('default', { openedAt: 1 }), meta('abc', { openedAt: 9 }), meta('def', { openedAt: 5 }))) };
 
-    it("opens the tab's own build while the index still has it", () => {
-        const { storage: session } = fakeStorage({ [TAB_BUILD_KEY]: 'def' });
-        expect(openLibrary(fakeStorage(stored).storage, session, 100).activeId).toBe('def');
-    });
-
-    it('opens the most recently opened build in a new tab', () => {
-        expect(openLibrary(fakeStorage(stored).storage, fakeStorage().storage, 100).activeId).toBe('abc');
-        expect(openLibrary(fakeStorage(stored).storage, null, 100).activeId).toBe('abc');
-    });
-
-    it('falls back to the most recent when the tab build is gone', () => {
-        const { storage: session } = fakeStorage({ [TAB_BUILD_KEY]: 'gone' });
-        expect(openLibrary(fakeStorage(stored).storage, session, 100).activeId).toBe('abc');
+    it.each<[string, Record<string, string> | null, string]>([
+        ["the tab's own build while the index still has it", { [TAB_BUILD_KEY]: 'def' }, 'def'],
+        ['the most recently opened build in a new tab', {}, 'abc'],
+        ['the most recently opened build without session storage', null, 'abc'],
+        ['the most recent when the tab build is gone', { [TAB_BUILD_KEY]: 'gone' }, 'abc'],
+    ])('opens %s', (_, session, activeId) => {
+        expect(openLibrary(fakeStorage(stored).storage, session && fakeStorage(session).storage, 100).activeId).toBe(activeId);
     });
 });
 
@@ -188,9 +164,9 @@ describe('edits of the index', () => {
     const index = indexOf(meta('a', { openedAt: 3 }), meta('b', { name: 'Gears', openedAt: 7 }));
 
     it('gives a new index for a change', () => {
-        expect(upsertBuild(index, meta('c')).builds.map((build) => build.id)).toEqual(['a', 'b', 'c']);
+        expect(idsOf(upsertBuild(index, meta('c')))).toEqual(['a', 'b', 'c']);
         expect(upsertBuild(index, meta('a', { name: 'Renamed', openedAt: 3 })).builds[0].name).toBe('Renamed');
-        expect(removeBuild(index, 'a').builds.map((build) => build.id)).toEqual(['b']);
+        expect(idsOf(removeBuild(index, 'a'))).toEqual(['b']);
         expect(renameBuild(index, 'b', null).builds[1].name).toBeNull();
         expect(touchBuild(index, 'a', 50).builds[0].openedAt).toBe(50);
         expect(setBuildRecipe(index, 'a', 'iron-gear-wheel').builds[0].recipe).toBe('iron-gear-wheel');
@@ -234,12 +210,8 @@ describe('cleanName', () => {
 
 describe('buildTitles', () => {
     it('names a build after its recipe in sentence case, or its own name, or Untitled build', () => {
-        const titles = buildTitles([
-            meta('a', { recipe: 'logistic-science-pack' }),
-            meta('b', { name: 'Gear test', recipe: 'iron-gear-wheel' }),
-            meta('c'),
-        ]);
-        expect([...titles.values()]).toEqual(['Logistic science pack', 'Gear test', 'Untitled build']);
+        const titles = buildTitles([meta('a', { recipe: 'logistic-science-pack' }), meta('b', { name: 'Gear test', recipe: 'iron-gear-wheel' }), meta('c')]);
+        expect([...titles.values()]).toEqual(['Logistic science pack', 'Gear test', UNTITLED_BUILD]);
     });
 
     it("uses the game's names when given", () => {
@@ -255,9 +227,9 @@ describe('buildTitles', () => {
             meta('gear', { recipe: 'iron-gear-wheel', createdAt: 5 }),
             meta('named', { name: 'Iron gear wheel', createdAt: 6 }),
         ]);
-        expect(titles.get('first')).toBe('Untitled build');
-        expect(titles.get('middle')).toBe('Untitled build (2)');
-        expect(titles.get('later')).toBe('Untitled build (3)');
+        expect(titles.get('first')).toBe(UNTITLED_BUILD);
+        expect(titles.get('middle')).toBe(`${UNTITLED_BUILD} (2)`);
+        expect(titles.get('later')).toBe(`${UNTITLED_BUILD} (3)`);
         expect(titles.get('gear')).toBe('Iron gear wheel');
         expect(titles.get('named')).toBe('Iron gear wheel (2)');
     });
@@ -273,48 +245,35 @@ describe('buildFileName', () => {
     });
 
     it('cuts it at 60 characters', () => {
-        const name = buildFileName(`${'a'.repeat(59)} b`);
-        expect(name).toBe(`${'a'.repeat(59)}.json`);
+        expect(buildFileName(`${'a'.repeat(59)} b`)).toBe(`${'a'.repeat(59)}.json`);
         expect(buildFileName('c'.repeat(100))).toBe(`${'c'.repeat(60)}.json`);
     });
 });
 
 describe('classifyStorageEvent', () => {
-    const index = indexOf(meta('abc'), meta('def'));
-    const context = { activeId: 'abc', lastText: 'mine', index };
+    const context = { activeId: 'abc', lastText: 'mine', index: indexOf(meta('abc'), meta('def')) };
     const ownKey = 'clock-generator-build:abc';
+    const indexText = (...builds: BuildMeta[]) => JSON.stringify(indexOf(...builds));
 
-    it("sees this tab's build saved elsewhere, unless it is the text this tab wrote", () => {
-        expect(classifyStorageEvent({ key: ownKey, newValue: 'theirs' }, context)).toBe('changed-elsewhere');
-        expect(classifyStorageEvent({ key: ownKey, newValue: 'mine' }, context)).toBe('ignore');
-    });
-
-    it("sees this tab's build deleted elsewhere", () => {
-        expect(classifyStorageEvent({ key: ownKey, newValue: null }, context)).toBe('deleted-elsewhere');
-        expect(classifyStorageEvent({ key: LIBRARY_KEY, newValue: JSON.stringify(indexOf(meta('def'))) }, context)).toBe('deleted-elsewhere');
-    });
-
-    it('sees any other index as a change to the list', () => {
-        expect(classifyStorageEvent({ key: LIBRARY_KEY, newValue: JSON.stringify(indexOf(meta('abc', { name: 'X' }))) }, context)).toBe('index');
-        expect(classifyStorageEvent({ key: LIBRARY_KEY, newValue: '{broken' }, context)).toBe('index');
-    });
-
-    it('ignores other builds, backups and the tab key', () => {
-        expect(classifyStorageEvent({ key: 'clock-generator-build:def', newValue: 'x' }, context)).toBe('ignore');
-        expect(classifyStorageEvent({ key: `${ownKey}.backup`, newValue: 'x' }, context)).toBe('ignore');
-        expect(classifyStorageEvent({ key: TAB_BUILD_KEY, newValue: 'def' }, context)).toBe('ignore');
-        expect(classifyStorageEvent({ key: 'clock-generator-intro-dismissed', newValue: 'true' }, context)).toBe('ignore');
-    });
-
-    it('reads a cleared storage from the index as saved now', () => {
-        expect(classifyStorageEvent({ key: null, newValue: null }, context)).toBe('index');
-        expect(classifyStorageEvent({ key: null, newValue: null }, { ...context, index: indexOf() })).toBe('deleted-elsewhere');
-    });
-
-    it('watches the old key for the default build', () => {
-        const legacy = { ...context, activeId: 'default' };
-        expect(classifyStorageEvent({ key: LEGACY_BUILD_KEY, newValue: 'theirs' }, legacy)).toBe('changed-elsewhere');
-        expect(classifyStorageEvent({ key: ownKey, newValue: 'theirs' }, legacy)).toBe('ignore');
+    it.each<[string, ReturnType<typeof classifyStorageEvent>, string | null, string | null, Partial<typeof context>?]>([
+        ["this tab's build saved elsewhere", 'changed-elsewhere', ownKey, 'theirs'],
+        ["this tab's build saved with the text this tab wrote", 'ignore', ownKey, 'mine'],
+        ["this tab's build deleted elsewhere", 'deleted-elsewhere', ownKey, null],
+        ['an index without this build', 'deleted-elsewhere', LIBRARY_KEY, indexText(meta('def'))],
+        ['any other index', 'index', LIBRARY_KEY, indexText(meta('abc', { name: 'X' }))],
+        ['an index that cannot be read', 'index', LIBRARY_KEY, '{broken'],
+        ['another build', 'ignore', 'clock-generator-build:def', 'x'],
+        ["this tab's backup", 'ignore', `${ownKey}.backup`, 'x'],
+        ['the tab key', 'ignore', TAB_BUILD_KEY, 'def'],
+        ['a key that is no build', 'ignore', 'clock-generator-intro-dismissed', 'true'],
+        // a cleared storage is read from the index as saved now
+        ['storage cleared, the index with this build', 'index', null, null],
+        ['storage cleared, the index without it', 'deleted-elsewhere', null, null, { index: indexOf() }],
+        // the default build is watched under the old key
+        ['the old key, for the default build', 'changed-elsewhere', LEGACY_BUILD_KEY, 'theirs', { activeId: 'default' }],
+        ["another build's key, for the default build", 'ignore', ownKey, 'theirs', { activeId: 'default' }],
+    ])('%s: %s', (_, change, key, newValue, more = {}) => {
+        expect(classifyStorageEvent({ key, newValue }, { ...context, ...more })).toBe(change);
     });
 });
 

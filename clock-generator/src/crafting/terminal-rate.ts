@@ -1,4 +1,6 @@
-import { Chest, Entity, type ReadableEntityRegistry } from "../entities";
+import { Entity, type ReadableEntityRegistry } from "../entities";
+import type { ConfigTraits } from "../entities/traits/build-traits";
+import { neverRefuses } from "../entities/traits/traits-of";
 import type { EntityTransferCountMap } from "./sequence/cycle/swing-counts";
 
 // ============================================================================
@@ -41,19 +43,16 @@ export interface BranchBins {
     takes_surplus: boolean;
 }
 
-/** Whether an inserter's sink never refuses a hand: an infinity chest (a chest with room for the whole run is not told apart yet) */
-export function isNeverBlockingSink(sink: Entity): boolean {
-    return Entity.isChest(sink) && Chest.isInfinityChest(sink);
-}
-
 /**
  * The branches of the terminal outputs `output_inserter_ids`, each with its planned share of a period (the plan's hands
  * of its inserters, `total_transfer_count` x hand, over `recipe_lcm` cycles), in the order of their sources' ids. Only
- * where every one of them drops into a sink that never blocks (an infinity chest) and has a planned share: otherwise
- * none, and the output is judged exactly in every period.
+ * where every one of them drops into a sink that never blocks and has a planned share: otherwise none, and the output is
+ * judged exactly in every period. The sink is the container node the inserter drops into, by its Storage trait
+ * (`never_refuses`: an infinity chest); a belt, a machine or a chest with room is not one.
  */
 export function neverBlockingBranchesOf(
     registry: Pick<ReadableEntityRegistry, "getAll">,
+    traits: ConfigTraits,
     swing_counts: EntityTransferCountMap,
     recipe_lcm: number,
     output_inserter_ids: ReadonlySet<string>,
@@ -66,8 +65,7 @@ export function neverBlockingBranchesOf(
     }
     const outputs = registry.getAll().filter(Entity.isInserter).filter(inserter => output_inserter_ids.has(inserter.entity_id.id));
     const never_blocks = outputs.length > 0 && outputs.every(inserter => {
-        const sink = registry.getAll().find(entity => entity.entity_id.id === inserter.sink.entity_id.id);
-        return sink !== undefined && isNeverBlockingSink(sink) && planned.has(inserter.entity_id.id);
+        return neverRefuses(traits, inserter.sink.entity_id.id) && planned.has(inserter.entity_id.id);
     });
     if (!never_blocks) return [];
     const branches = new Map<string, TerminalBranch>();

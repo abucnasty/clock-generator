@@ -3,17 +3,19 @@ import { EntityState } from "./entity-state";
 import { InserterState } from "./inserter-state";
 import { MachineState } from "./machine-state";
 import { DrillState } from "./drill-state";
-import { DrillStatus, InserterStatus, MachineStatus } from "./entity-status";
+import { InserterStatus, MachineStatus } from "./entity-status";
 import { FactorioDrillState, FactorioInserterState, FactorioMachineState } from "./factorio-state-names";
+import { ContainerStorage } from "../simulation/components/container-storage";
+import { DrillStatusCode } from "../simulation/status-codes";
 
 export { FactorioInserterState, FactorioMachineState, FactorioDrillState } from "./factorio-state-names";
 
 /** True while the sink of an inserter takes nothing from anyone: a machine that takes no item, or a full chest */
 function sinkTakesNothing(sink: EntityState): boolean {
     if (EntityState.isMachine(sink)) {
-        return MachineState.takesNothing(sink);
+        return sink.ingress.takesNothing();
     }
-    if (EntityState.isChest(sink)) {
+    if (ContainerStorage.is(sink)) {
         return sink.isFull();
     }
     return false;
@@ -27,7 +29,7 @@ function sinkTakesNothing(sink: EntityState): boolean {
  * - Switched off by its circuit condition, it shows as disabled from that tick on, also while it finishes the swing
  *   and the drop it had begun: a window of 4 ticks shows as 4 ticks that are not disabled.
  * - With an empty hand, it waits for space in the destination while the sink takes nothing from anyone (see
- *   MachineState.takesNothing), also while the arm is still on its way back from the drop. While the sink takes
+ *   Ingress.takesNothing), also while the arm is still on its way back from the drop. While the sink takes
  *   anything, it is working on its way back and waits for source items once it is there with nothing to take, also
  *   when the sink takes nothing of what this inserter brings.
  * - With a hand it is filling, it is working while it grabs, waits for more items between grabs, and waits for
@@ -74,8 +76,23 @@ export function factorioMachineState(state: MachineState): FactorioMachineState 
     return FACTORIO_MACHINE_STATE[state.status];
 }
 
-export function factorioDrillState(state: DrillState): FactorioDrillState {
-    return state.status === DrillStatus.DISABLED
-        ? FactorioDrillState.DISABLED_BY_CONTROL_BEHAVIOR
+/**
+ * The state the game shows for a drill that is not disabled: waiting for space in its destination while it holds an item
+ * its destination takes no room for (a full chest, a machine at its stop), else working. An item it has just mined and
+ * will drop in the next tick is not waiting.
+ */
+export function factorioDrillStateWhileEnabled(state: DrillState): FactorioDrillState {
+    return state.placement.blocked()
+        ? FactorioDrillState.WAITING_FOR_SPACE_IN_DESTINATION
         : FactorioDrillState.WORKING;
+}
+
+/**
+ * The state of a drill as its ticks go by it: disabled by its control while its status is DISABLED, else
+ * `factorioDrillStateWhileEnabled`. The game shows a disabled drill one tick before it stops (see `DrillStateTracker`).
+ */
+export function factorioDrillState(state: DrillState): FactorioDrillState {
+    return state.status_code === DrillStatusCode.DISABLED_BY_CONTROL_BEHAVIOR
+        ? FactorioDrillState.DISABLED_BY_CONTROL_BEHAVIOR
+        : factorioDrillStateWhileEnabled(state);
 }

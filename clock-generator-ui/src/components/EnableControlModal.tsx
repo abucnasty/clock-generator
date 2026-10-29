@@ -9,15 +9,13 @@ import {
     FormControlLabel,
     FormLabel,
     IconButton,
-    InputLabel,
-    MenuItem,
     Radio,
     RadioGroup,
-    Select,
     TextField,
     Tooltip,
     Typography,
 } from '@mui/material';
+import { OptionWithNote, SelectField } from './SelectField';
 import { EnableControlMode, TargetType } from 'clock-generator/light';
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { EnableControlOverride, RuleSet } from '../hooks/useConfigForm';
@@ -370,39 +368,11 @@ export function EnableControlFormContent({
                 {/* Copy From dropdown */}
                 {copyFromOptions.length > 0 && (
                     <Box sx={{ mb: 3 }}>
-                        <FormControl size="small" sx={{ minWidth: 250, maxWidth: '100%' }}>
-                            <InputLabel shrink>Copy from another {entityType}</InputLabel>
-                            <Select
-                                inputRef={copySelectRef}
-                                inputProps={{ 'aria-label': `Copy from another ${entityType}` }}
-                                value=""
-                                label={`Copy from another ${entityType}`}
-                                onChange={(e) => {
-                                    const option = copyFromOptions.find((_, i) => i.toString() === e.target.value);
-                                    if (option) handleCopyFrom(option);
-                                }}
-                                displayEmpty
-                                notched
-                                startAdornment={<ContentCopy sx={{ mr: 1, color: 'action.active' }} fontSize="small" />}
-                                renderValue={() => (
-                                    <Typography variant="body2" color="text.secondary">
-                                        Select a rule to copy...
-                                    </Typography>
-                                )}
-                            >
-                                {copyFromOptions.map((option, index) => (
-                                    <MenuItem key={index} value={index.toString()}>
-                                        <Box>
-                                            <Typography variant="body2">{option.label}</Typography>
-                                            <Typography variant="caption" color="text.secondary">
-                                                {ENABLE_MODE_LABELS[option.override.mode]}
-                                                {option.override.mode === EnableControlMode.CONDITIONAL && option.override.latch && ' (latched)'}
-                                            </Typography>
-                                        </Box>
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
+                        <SelectField label={`Copy from another ${entityType}`} inputRef={copySelectRef} placeholder="Select a rule to copy..."
+                            startAdornment={<ContentCopy sx={{ mr: 1, color: 'action.active' }} fontSize="small" />} sx={{ minWidth: 250, maxWidth: '100%' }}
+                            options={copyFromOptions.map((_, index) => `${index}`)} onChange={index => handleCopyFrom(copyFromOptions[Number(index)])}
+                            renderOption={index => { const option = copyFromOptions[Number(index)]; return <OptionWithNote label={option.label}
+                                note={<>{ENABLE_MODE_LABELS[option.override.mode]}{option.override.mode === EnableControlMode.CONDITIONAL && option.override.latch && ' (latched)'}</>} />; }} />
                         {copyCandidate && (
                             <Box
                                 role="group"

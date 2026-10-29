@@ -1,23 +1,12 @@
+// @vitest-environment happy-dom
+import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Config } from 'clock-generator/browser';
 import type { LiveCoverage } from '../worker/types';
+import { useInserterValidation } from './useInserterValidation';
 
-const stub = vi.hoisted(() => ({
-    askEngine: vi.fn(),
-    effects: [] as (() => (() => void) | void)[],
-    state: null as unknown,
-    setState: vi.fn(),
-}));
-vi.mock('../worker/engineClient', () => ({ askEngine: stub.askEngine }));
-// One render at a time: the state is what the test sets, the effects run when the test runs them.
-vi.mock('react', () => ({
-    useEffect: (effect: () => (() => void) | void) => { stub.effects.push(effect); },
-    useState: () => [stub.state, stub.setState],
-    useMemo: (create: () => unknown) => create(),
-    useRef: (current: unknown) => ({ current }),
-}));
-
-let hooks: typeof import('./useInserterValidation');
+const askEngine = vi.hoisted(() => vi.fn());
+vi.mock('../worker/engineClient', () => ({ askEngine }));
 
 /** A gear build whose output inserter's filters are a blacklist of iron plates, as Sidecar captures one */
 const blacklisting = (fields: object = {}): Config => ({
@@ -31,103 +20,58 @@ const blacklisting = (fields: object = {}): Config => ({
     chests: [{ id: 1, type: 'infinity-chest', item_filter: [], remove_unfiltered_items: true }],
 } as Config);
 const refused: LiveCoverage = { issues: [], refusal: 'Inserter 2: `filter_mode` "blacklist" is refused', pickupNotTested: null, laneSharedByCopies: null, sideLoadedDrop: null, lanesExactlyFull: null, copyGapNeeded: null, dropRoom: null, machinePrototypes: [] };
+const targeting = { ...blacklisting(), machines: [{ ...blacklisting().machines[0], result_target: { type: 'machine', id: 8 } as const }] } as Config;
+const wagon = { ...blacklisting(), chests: [{ id: 1, type: 'cargo-wagon', quality: 'normal' }] } as unknown as Config;
+const retarget = (target: Config['machines'][number]['result_target']) => (config: Config) => ({ ...config, machines: [{ ...config.machines[0], result_target: target }] });
 
-/** Renders the hook, runs its effects and lets the debounced engine question go out */
+/** Renders the hook and lets its debounced engine question go out */
 function render(config: Config) {
-    stub.effects = [];
-    const result = hooks.useInserterValidation(config, true);
-    stub.effects.forEach(effect => effect());
-    vi.advanceTimersByTime(200);
-    return result;
+    const view = renderHook(({ config }) => useInserterValidation(config, true), { initialProps: { config } });
+    act(() => { vi.advanceTimersByTime(200); });
+    return view;
 }
 
-beforeEach(async () => {
-    vi.useFakeTimers();
-    vi.resetModules();
-    stub.askEngine.mockReset();
-    stub.setState.mockReset();
-    stub.state = null;
-    hooks = await import('./useInserterValidation');
-});
+beforeEach(() => { vi.useFakeTimers(); askEngine.mockReset(); });
 afterEach(() => { vi.useRealTimers(); });
 
 describe('the live connection check', () => {
     it('hands on the refusal of an inserter that is out of scope with its coverage', async () => {
-        stub.askEngine.mockResolvedValue(refused);
-        expect(render(blacklisting())).toBeNull();
-        expect(stub.askEngine).toHaveBeenCalledExactlyOnceWith({ kind: 'inserter-coverage', config: blacklisting() });
-        await vi.runAllTimersAsync();
-        const update = stub.setState.mock.calls[0][0] as (previous: unknown) => unknown;
-        stub.state = update(null);
-        expect(render(blacklisting())).toEqual(refused);
+        askEngine.mockResolvedValue(refused);
+        const { result, rerender } = render(blacklisting());
+        expect(result.current).toBeNull();
+        expect(askEngine).toHaveBeenCalledExactlyOnceWith({ kind: 'inserter-coverage', config: blacklisting() });
+        await act(() => vi.runAllTimersAsync());
+        rerender({ config: blacklisting() });
+        expect(result.current).toEqual(refused);
     });
 
     it.each([
-        { change: 'the filter mode', fields: { filter_mode: undefined } },
-        { change: 'the inserter kind', fields: { prototype: 'fast-inserter' } },
-        { change: 'the quality', fields: { quality: 'rare' } },
-        { change: 'the hand', fields: { stack_size: 8 } },
-    ])('shows no result checked before $change changed', async ({ fields }) => {
-        stub.askEngine.mockResolvedValue(refused);
-        render(blacklisting());
-        await vi.runAllTimersAsync();
-        stub.state = (stub.setState.mock.calls[0][0] as (previous: unknown) => unknown)(null);
-        stub.askEngine.mockResolvedValue({ issues: [], refusal: null });
-        expect(render(blacklisting(fields))).toBeNull();
-        expect(stub.askEngine).toHaveBeenLastCalledWith({ kind: 'inserter-coverage', config: blacklisting(fields) });
-    });
+        { change: 'the filter mode', from: blacklisting(), edit: () => blacklisting({ filter_mode: undefined }) },
+        { change: 'the inserter kind', from: blacklisting(), edit: () => blacklisting({ prototype: 'fast-inserter' }) },
+        { change: 'the quality', from: blacklisting(), edit: () => blacklisting({ quality: 'rare' }) },
+        { change: 'the hand', from: blacklisting(), edit: () => blacklisting({ stack_size: 8 }) },
+        { change: 'a lane stack size', from: blacklisting(), edit: (config: Config) => ({ ...config, belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 2 }] }] }) },
+        { change: 'a direct target being selected', from: blacklisting(), edit: retarget({ type: 'machine', id: 8 }) },
+        { change: 'a direct target being cleared', from: targeting, edit: retarget(undefined) },
+        { change: 'the direct target kind and ID', from: targeting, edit: retarget({ type: 'chest', id: 9 }) },
+        { change: 'a cargo wagon quality', from: wagon, edit: (config: Config) => ({ ...config, chests: [{ ...config.chests![0], quality: 'legendary' }] }) },
+        // and so what a lane is asked for against what it carries
+        { change: 'the belt type', from: blacklisting(), edit: (config: Config) => ({ ...config, belts: [{ ...config.belts[0], type: 'transport-belt' }] }) },
+        { change: 'the target rate', from: blacklisting(), edit: (config: Config) => ({ ...config, target_output: { ...config.target_output, items_per_second: 2 } }) },
+        { change: 'the copies', from: blacklisting(), edit: (config: Config) => ({ ...config, target_output: { ...config.target_output, copies: 3 } }) },
+        { change: 'the productivity', from: blacklisting(), edit: (config: Config) => ({ ...config, machines: [{ ...config.machines[0], productivity: 50 }] }) },
+    ])('shows no result checked before $change changed, and checks again', async ({ from, edit }) => {
+        askEngine.mockResolvedValue(refused);
+        const { result, rerender } = render(from);
+        await act(() => vi.runAllTimersAsync());
+        expect(result.current).toEqual(refused);
 
-    it('shows no result checked before a lane stack size changed', async () => {
-        stub.askEngine.mockResolvedValue(refused);
-        render(blacklisting());
-        await vi.runAllTimersAsync();
-        stub.state = (stub.setState.mock.calls[0][0] as (previous: unknown) => unknown)(null);
-        const restacked = { ...blacklisting(), belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 2 }] }] } as Config;
-        expect(render(restacked)).toBeNull();
-        expect(stub.askEngine).toHaveBeenLastCalledWith({ kind: 'inserter-coverage', config: restacked });
-    });
-
-    it.each([
-        { change: 'a direct target being selected', from: blacklisting(), target: { type: 'machine', id: 8 } as const },
-        { change: 'a direct target being cleared', from: { ...blacklisting(), machines: [{ ...blacklisting().machines[0], result_target: { type: 'machine', id: 8 } as const }] } as Config, target: undefined },
-        { change: 'the direct target kind and ID', from: { ...blacklisting(), machines: [{ ...blacklisting().machines[0], result_target: { type: 'machine', id: 8 } as const }] } as Config, target: { type: 'chest', id: 9 } as const },
-    ])('rechecks coverage when $change changes', async ({ from, target }) => {
-        stub.askEngine.mockResolvedValue(refused);
-        render(from);
-        await vi.runAllTimersAsync();
-        stub.state = (stub.setState.mock.calls[0][0] as (previous: unknown) => unknown)(null);
-        stub.setState.mockClear();
-
-        const edited = { ...from, machines: [{ ...from.machines[0], result_target: target }] } as Config;
-        expect(render(edited)).toBeNull();
-        expect(stub.askEngine).toHaveBeenLastCalledWith({ kind: 'inserter-coverage', config: edited });
-    });
-
-    it('rechecks coverage when a cargo wagon quality changes', async () => {
-        const from = { ...blacklisting(), chests: [{ id: 1, type: 'cargo-wagon', quality: 'normal' }] } as unknown as Config;
-        stub.askEngine.mockResolvedValue(refused);
-        render(from);
-        await vi.runAllTimersAsync();
-        stub.state = (stub.setState.mock.calls[0][0] as (previous: unknown) => unknown)(null);
-        stub.setState.mockClear();
-
-        const edited = { ...from, chests: [{ ...from.chests![0], quality: 'legendary' }] } as Config;
-        expect(render(edited)).toBeNull();
-        expect(stub.askEngine).toHaveBeenLastCalledWith({ kind: 'inserter-coverage', config: edited });
-    });
-
-    it.each([
-        { change: 'the belt type', edit: (config: Config) => ({ ...config, belts: [{ ...config.belts[0], type: 'transport-belt' }] }) },
-        { change: 'the target rate', edit: (config: Config) => ({ ...config, target_output: { ...config.target_output, items_per_second: 2 } }) },
-        { change: 'the copies', edit: (config: Config) => ({ ...config, target_output: { ...config.target_output, copies: 3 } }) },
-        { change: 'the productivity', edit: (config: Config) => ({ ...config, machines: [{ ...config.machines[0], productivity: 50 }] }) },
-    ])('shows no lane warning checked before $change changed', async ({ edit }) => {
-        stub.askEngine.mockResolvedValue(refused);
-        render(blacklisting());
-        await vi.runAllTimersAsync();
-        stub.state = (stub.setState.mock.calls[0][0] as (previous: unknown) => unknown)(null);
-        const edited = edit(blacklisting()) as Config;
-        expect(render(edited)).toBeNull();
-        expect(stub.askEngine).toHaveBeenLastCalledWith({ kind: 'inserter-coverage', config: edited });
+        // the new answer never comes: what is shown meanwhile is under test
+        askEngine.mockReturnValue(new Promise(() => {}));
+        const edited = edit(from) as Config;
+        rerender({ config: edited });
+        expect(result.current).toBeNull();
+        act(() => { vi.advanceTimersByTime(200); });
+        expect(askEngine).toHaveBeenLastCalledWith({ kind: 'inserter-coverage', config: edited });
     });
 });

@@ -1,6 +1,7 @@
 import { Box, Tooltip, Typography } from '@mui/material';
 import { memo, useMemo } from 'react';
 import type { SerializableEntityTransferHistory, SerializableTransferEntry, SerializableTransferHistory } from 'clock-generator/browser';
+import { useGameNames } from '../hooks/useGameNames';
 import { SCROLL_REGION_NAMES } from '../utils/a11yLabels';
 import { FactorioIcon } from './FactorioIcon';
 import { GameName } from './GameName';
@@ -26,6 +27,7 @@ function TransferBar({ transfer, totalDuration, rowHeight, colorMap }: TransferB
     const startPercent = (transfer.start_tick / totalDuration) * 100;
     const widthPercent = ((transfer.end_tick - transfer.start_tick) / totalDuration) * 100;
     const style = colorMap.get(transfer.item_name) ?? { color: '#ffffff', pattern: 'solid' as const }; // unreachable: the map is built from these same transfers
+    const { itemLabel } = useGameNames();
 
     return (
         <Tooltip
@@ -50,6 +52,10 @@ function TransferBar({ transfer, totalDuration, rowHeight, colorMap }: TransferB
             placement="top"
         >
             <Box
+                // a mark is reached by keyboard and says what the tooltip says; the tooltip opens on its focus
+                tabIndex={0}
+                role="img"
+                aria-label={`${itemLabel(transfer.item_name)}: amount ${transfer.amount}, tick ${transfer.start_tick} to ${transfer.end_tick}, duration ${transfer.end_tick - transfer.start_tick} ticks`}
                 sx={{
                     position: 'absolute',
                     left: `min(${startPercent}%, calc(100% - ${MIN_MARK_PX}px))`,
@@ -60,7 +66,7 @@ function TransferBar({ transfer, totalDuration, rowHeight, colorMap }: TransferB
                     borderRadius: 0,
                     cursor: 'pointer',
                     transition: 'transform 0.1s',
-                    '&:hover': {
+                    '&:hover, &:focus-visible': {
                         transform: 'scaleY(1.1)',
                         zIndex: 1,
                     },

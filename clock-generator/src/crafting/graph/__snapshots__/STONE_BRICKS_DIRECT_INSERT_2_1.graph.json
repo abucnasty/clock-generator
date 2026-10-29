@@ -1,0 +1,98 @@
+{
+  "schema": 1,
+  "sample": "STONE_BRICKS_DIRECT_INSERT_2_1",
+  "target": {
+    "item": "stone-brick",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 40,
+      "denominator": 1
+    }
+  },
+  "nodes": [
+    {
+      "key": "belt:1/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:1/lane:1#stone-brick"
+      ]
+    },
+    {
+      "key": "belt:1/lane:2",
+      "kind": "lane",
+      "ports": [
+        "belt:1/lane:2#stone-brick"
+      ]
+    },
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "drill:1",
+      "kind": "drill",
+      "ports": []
+    },
+    {
+      "key": "sink",
+      "kind": "sink",
+      "ports": []
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/stone-brick",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "stone-brick",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "belt:1/lane:1#stone-brick",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "placement:drill:1/stone",
+      "via": "placement",
+      "entity": "drill:1",
+      "group": null,
+      "item": "stone",
+      "from": "drill:1",
+      "from_ports": [
+        "drill:1"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": null,
+      "floor_cycle": null,
+      "ceiling": null,
+      "terminal": null
+    }
+  ],
+  "components": [],
+  "order": [
+    "belt:1/lane:2#stone-brick",
+    "drill:1",
+    "machine:1",
+    "belt:1/lane:1#stone-brick",
+    "sink"
+  ],
+  "shared": {
+    "out": [],
+    "in": [],
+    "lanes": []
+  },
+  "terminal": [
+    "inserter:1/stone-brick"
+  ]
+}

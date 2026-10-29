@@ -4,12 +4,9 @@ import { Entity, handSizeFor, ReadableEntityRegistry } from "../entities";
 import { SubtickClock } from "./blueprint";
 import { pickupLaneLength } from "../common/belt-pickup-layout";
 import { backedUpHandGrabTicks } from "../state/backed-up-pickup-lane";
+import { CIRCUIT_LATENCY_TICKS } from "../common/rule-constants";
+import { stacksOf } from "../entities/traits/timing";
 
-/**
- * Ticks between the clock reaching a value and an inserter acting on its decider (combinator output, then the
- * inserter reading it). An inserter acts in every tick of its window this much later, the first one included.
- */
-export const CIRCUIT_LATENCY_TICKS = 2;
 
 
 export type SerializableClockWindows = Record<string, { start: number; end: number }[]>;
@@ -80,7 +77,8 @@ export function fuelHandRoomTicks(entity_registry: ReadableEntityRegistry): Map<
         if (fuel_item === undefined || lane === undefined || !entity.filtered_items.has(fuel_item) || sink.isFuelOnly(entity.filtered_items)) {
             continue;
         }
-        room.set(entity.entity_id.id, Math.ceil(handSizeFor(entity, fuel_item) / lane.stack_size));
+        // the timing floor's count (one belt stack a tick) of its hand of the fuel, on the first lane that carries it
+        room.set(entity.entity_id.id, stacksOf(handSizeFor(entity, fuel_item), lane.stack_size));
     }
     return room;
 }
@@ -105,7 +103,8 @@ export function beltPickupSlackTicks(entity_registry: ReadableEntityRegistry): M
         }
         const lanes = source.lanes.filter(lane => entity.filtered_items.has(lane.ingredient_name));
         const lane_stack_size = Math.min(...(lanes.length > 0 ? lanes : source.lanes).map(lane => lane.stack_size));
-        const ticks = Math.ceil(entity.metadata.stack_size / lane_stack_size);
+        // the timing floor's count (one belt stack a tick) of its nominal hand (P3 2.3: each count keeps the hand it reads)
+        const ticks = stacksOf(entity.metadata.stack_size, lane_stack_size);
         slack.set(entity.entity_id.id, Math.min(ticks, MAX_BELT_PICKUP_SLACK_TICKS));
     }
     return slack;

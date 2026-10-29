@@ -63,7 +63,9 @@ export interface RepeatedUnits {
 
 const nodeKey = (kind: NodeKind, id: number): string => `${kind}:${id}`;
 
-// two machines of the same rule simulate alike, whichever prototype they are
+// The rule is a stand-in for what the prototype decides (recipe selection, the modelled burner's energy usage and fuel):
+// it holds while one prototype has each rule's burner (the biochamber alone burns nutrients). The recycler's places-results
+// is not in the key either. Keying on the traits waits until after the R4 replay, as it may change which units match.
 function machineSpec(machine: Config['machines'][number]): string {
     return `machine|${machine.recipe}|${machine.crafting_speed}|${machine.productivity}|${machineRuleOf(machine)}|${machine.fuel ?? ''}|${machine.energy_consumption_bonus ?? ''}`;
 }

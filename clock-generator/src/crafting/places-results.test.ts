@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { loadConfigFromFile, parseConfig } from '../config/loader';
 import { ConfigSchema, type Config } from '../config/schema';
-import { CompositeControlLogic, TickControlLogic } from '../control-logic';
-import { EntityState, MachineState, MachineStatus, SlotContainerState } from '../state';
+import { EntityState, MachineStatus } from '../state';
+import { SlotStorage } from '../simulation/components/slot-storage';
 import { SimulationContext, createEntityRegistryFromConfig } from './sequence/simulation-context';
 import { CraftingCyclePlan } from './sequence/cycle/crafting-cycle';
 import { TargetProductionRate } from './target-production-rate';
 import { fraction } from '../data-types/fraction';
 import { ConfigPaths } from '../config/config-paths';
+import { ContainerStorage } from '../simulation/components/container-storage';
+import { TickByHand } from './runner/tick-by-hand.fixture';
 
 // The exact-speed recycler cell of the ore voider benchmark (save F): a recycler at crafting speed 16.875 voids iron ore,
 // fed by four stack inserters from the ore supply, and places what it gives back into a car, which two stack inserters
@@ -17,12 +19,12 @@ const FIXTURE = ConfigPaths.REAL_OWNER_ORE_VOIDER_EXACT_SPEED;
 const ORE = 'iron-ore';
 
 function run(context: SimulationContext, ticks: number): void {
-    const tick = new CompositeControlLogic([new TickControlLogic(context.tick_provider), ...context.machines, context.inserterUpdates()]);
+    const tick = new TickByHand(context);
     for (let i = 0; i < ticks; i++) tick.executeForTick();
 }
 
-function carOf(context: SimulationContext): SlotContainerState {
-    return context.state_registry.getAllStates().find(EntityState.isSlotContainer)!;
+function carOf(context: SimulationContext): SlotStorage {
+    return context.state_registry.getAllStates().find(ContainerStorage.isSlots)!;
 }
 
 describe('a machine that places its results itself', () => {
@@ -115,7 +117,7 @@ function recyclerWithTakers(recipe: string, ingredient: string, takers: { protot
 
 /** The hands an inserter drops in a run, by their size */
 function handsDropped(context: SimulationContext, inserter_id: string, ticks: number): Map<number, number> {
-    const tick = new CompositeControlLogic([new TickControlLogic(context.tick_provider), ...context.machines, context.inserterUpdates()]);
+    const tick = new TickByHand(context);
     const state = context.state_registry.getAllStates().filter(EntityState.isInserter).find(it => it.entity_id.id === inserter_id)!;
     const hands = new Map<number, number>();
     for (let i = 0; i < ticks; i++) {
@@ -137,7 +139,7 @@ describe('a machine that places its results itself, with no result target', () =
         run(context, 30 * 60);
         expect(machine.inventoryState.getQuantity('iron-plate')).toBe(100);
         expect(machine.status).toBe(MachineStatus.OUTPUT_FULL);
-        expect(MachineState.machineIsOutputBlocked(machine)).toBe(true);
+        expect(machine.ingress.outputBlocked()).toBe(true);
         // emptied of circuits, it is given none while the plates wait
         machine.inventoryState.removeQuantity('electronic-circuit', machine.inventoryState.getQuantity('electronic-circuit'));
         const crafts = machine.craftCount;
@@ -150,7 +152,7 @@ describe('a machine that places its results itself, with no result target', () =
         expect(machine.craftCount).toBeGreaterThan(crafts);
     });
 
-    it('is emptied a part hand at a time by an inserter that is no bulk one, and a full hand at a time by a bulk one', async () => {
+    it('is emptied a part hand at a time by an inserter that does not wait for a full hand, and a full hand at a time by one that does', async () => {
         // iron ore back at 1/4 of 16 crafts a second: one every 15 ticks, so a hand of 4 or 16 never waits full
         const long_handed = handsDropped(SimulationContext.fromConfig(recyclerWithTakers('iron-ore-recycling', ORE,
             [{ prototype: 'long-handed-inserter', item: ORE }])), 'inserter:2', 60 * 60);
@@ -160,6 +162,13 @@ describe('a machine that places its results itself, with no result target', () =
         const stack = handsDropped(SimulationContext.fromConfig(recyclerWithTakers('iron-ore-recycling', ORE,
             [{ prototype: 'stack-inserter', item: ORE }])), 'inserter:2', 60 * 60);
         expect([...stack.keys()]).toEqual([16]);
+        // the bulk inserter (hand 12, no wait_for_full_hand in the game data) swings what it holds, as the long-handed one does
+        for (const prototype of ['bulk-inserter', 'fast-inserter', 'inserter']) {
+            const swung = handsDropped(SimulationContext.fromConfig(recyclerWithTakers('iron-ore-recycling', ORE,
+                [{ prototype, item: ORE }])), 'inserter:2', 60 * 60);
+            expect(Math.max(...swung.keys()), prototype).toBeLessThan(4);
+            expect([...swung].reduce((sum, [size, count]) => sum + size * count, 0), prototype).toBeGreaterThan(230);
+        }
     });
 });
 

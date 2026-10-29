@@ -2,13 +2,13 @@ import data from '../../../clock-generator/resources/data-filtered.json?raw';
 import { describe, expect, it } from 'vitest';
 import { FactorioDataService } from 'clock-generator/browser';
 import { containerSlotCount, paintSlotFilters, shownSlotFilter, slotCounts, slotCountsText, slotRange } from './containerSlotFilters';
-import { QUALITIES } from './configForm/formData';
+import { MACHINE_QUALITIES } from './machinePrototype';
 
 FactorioDataService.initialize(JSON.parse(data));
 
 describe('inventory filter editing', () => {
     it.each(['car', 'tank', 'cargo-wagon'] as const)('sizes the %s grid from the supported game inventories at every quality', type => {
-        for (const { value: quality } of QUALITIES) {
+        for (const quality of MACHINE_QUALITIES) {
             expect(containerSlotCount({ type, quality })).toBe(FactorioDataService.containerSlots(type, quality));
         }
     });

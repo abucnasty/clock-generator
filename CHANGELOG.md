@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.25.0] - 2026-10-28
+
+### Changed
+- The inserters that pass items between the machines of a loop, such as the egg inserters between the egg biochambers of agricultural science and the bacteria inserters of iron bacteria cultivation, get wake windows where the clock still holds and recovers with them, so these builds need fewer wake-ups.
+- On a build with a loop of machines, whose wake-ups depend on where its clock is when the build starts, clocks are compared by their average wake-ups over 12 start points, and the list says so.
+- A build that cannot reach its target rate is refused at once, before any clock is tried, naming the machines, inserters or belts that limit it.
+- When one inserter takes several of a recycler's results out of a chest, the refusal names the items and the chest as the game does.
+
+### Fixed
+- Screen readers name the copy spacing and side fields, and the transfer history's marks can be reached by keyboard.
+- A clock's items a second are no longer overstated on short clock periods, so the closest clock shown when none holds can change.
+- Productivity no longer applies to recipe results the game excludes from it, such as the chunks returned by asteroid crushing and barrel filling and emptying.
+- Only inserters that wait for a full hand in the game, such as the stack inserter, wait for one in the simulation.
+- Stone and steel furnaces, burner mining drills and captive biter spawners now use up fuel in the simulation, as in the game.
+- A mining drill's state shows when it is switched off by its circuit condition or waits to drop, as in the game.
+- A refused build lists each problem on its own, without internal field names, and Generate waits until the build is changed.
+
 ## [0.24.0] - 2026-10-27
 
 ### Changed

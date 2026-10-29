@@ -1,4 +1,5 @@
 import assert from "../common/assert";
+import { sharedHandText } from "../config/errors";
 import { Chest, Entity, EntityId, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from "../entities";
 import { FactorioDataService, ItemName } from "../data";
 import type { Ingredient } from "../data";
@@ -265,10 +266,8 @@ export function sharedHandRefusal(machine: Machine, registry: Pick<ReadableEntit
     for (const inserter of registry.getAll().filter(Entity.isInserter).filter(it => it.source.entity_id.id === target.id)) {
         const taken = results.filter(item => inserter.filtered_items.has(item));
         if (taken.length > 1) {
-            return `Inserter ${inserter.entity_id.number} takes ${taken.slice(0, -1).join(", ")} and ${taken[taken.length - 1]} out of ${target}. `
-                + "An inserter that holds part of a hand of one of them takes only more of that one, so the others pile up in "
-                + `${target}, and once it is full the one it waits for cannot come in: the build stops for good. Give each result an `
-                + "inserter of its own. An inserter whose filters the clock sets by signal would not wait; such a clock is not planned yet.";
+            return sharedHandText(inserter.entity_id.number, taken.map(item => FactorioDataService.itemNameInSentence(item)),
+                { type: target.type === "machine" ? "machine" : "chest", number: target.number });
         }
     }
     return null;

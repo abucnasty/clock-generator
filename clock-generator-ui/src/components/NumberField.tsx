@@ -36,6 +36,8 @@ interface NumberFieldProps extends BaseNumberField.Root.Props {
     displayDecimals?: number;
     /** Keep an invalid value legible while blurred, without changing the stored number. */
     preserveInputOnBlur?: boolean;
+    /** The input's name, for a field with no label of its own to show; `aria-label` would land on the wrapper */
+    inputAriaLabel?: string;
 }
 
 export function NumberField({
@@ -53,6 +55,7 @@ export function NumberField({
     format,
     displayDecimals = FIELD_DECIMALS,
     preserveInputOnBlur = false,
+    inputAriaLabel,
     ...other
 }: NumberFieldProps) {
     let id = React.useId();
@@ -178,6 +181,7 @@ export function NumberField({
                                     // the input slot's props are spread over the value above, so it is set again here
                                     value: shown,
                                     title: shown !== state.inputValue ? state.inputValue : undefined,
+                                    'aria-label': inputAriaLabel,
                                     'aria-describedby': describedBy,
                                     // the input slot's props come from the number field, which does not say it is invalid
                                     'aria-invalid': hasError || undefined,

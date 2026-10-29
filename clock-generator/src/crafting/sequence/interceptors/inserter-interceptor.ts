@@ -1,5 +1,6 @@
-import { AlwaysEnabledControl, EnableControl } from "../../../control-logic";
+import { AlwaysEnabledControl, EnableControl } from "../../../simulation/controls/enable-control";
 import { InserterState, EntityState, MachineStatus } from "../../../state";
+import { ContainerStorage } from "../../../simulation/components/container-storage";
 
 export type InserterInterceptor = (inserter_state: InserterState, source_state: EntityState, sink_state: EntityState) => EnableControl
 
@@ -17,18 +18,18 @@ const WaitUntilSourceIsOutputBlockedInterceptor: InserterInterceptor = (inserter
         })
     }
 
-    if (EntityState.isChest(source_state) && EntityState.isMachine(sink_state)) {
+    if (ContainerStorage.is(source_state) && EntityState.isMachine(sink_state)) {
         // Infinity chests are always ready (they never run out of items)
-        if (EntityState.isInfinityChest(source_state)) {
+        if (ContainerStorage.isConstant(source_state)) {
             return AlwaysEnabledControl;
         }
         // A chest of mixed items that nothing fills gives what it starts with
-        if ((EntityState.isSlotContainer(source_state) || EntityState.isRocketSilo(source_state)) && source_state.chest.items_put_in.length === 0) {
+        if (ContainerStorage.isMixed(source_state) && source_state.chest.items_put_in.length === 0) {
             return AlwaysEnabledControl;
         }
         // A chest of mixed items: wait until it is full of each item this inserter takes, not of every item it holds. A
         // container used as a hub is filled with some of its items only by machines that need the others first.
-        if (EntityState.isSlotContainer(source_state) || EntityState.isRocketSilo(source_state)) {
+        if (ContainerStorage.isMixed(source_state)) {
             const filters = Array.from(inserter_state.inserter.filtered_items);
             const taken = filters.length > 0 ? filters
                 : source_state.getItemFilters().filter(item => sink_state.machine.inputs.has(item));
@@ -47,7 +48,7 @@ const WaitUntilSourceIsOutputBlockedInterceptor: InserterInterceptor = (inserter
     }
 
     // For machine source going to chest: wait until machine is output full
-    if (EntityState.isMachine(source_state) && EntityState.isChest(sink_state)) {
+    if (EntityState.isMachine(source_state) && ContainerStorage.is(sink_state)) {
         return EnableControl.latched({
             base: EnableControl.lambda(() => {
                 return source_state.status === MachineStatus.OUTPUT_FULL

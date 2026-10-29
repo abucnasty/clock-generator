@@ -1,30 +1,20 @@
-import { EntityBadge } from './EntityBadge';
 import { FactorioIcon } from './FactorioIcon';
-import { Add, Delete } from '@mui/icons-material';
-import {
-    Box,
-    Button,
-    IconButton,
-    Menu,
-    MenuItem,
-    Typography,
-} from '@mui/material';
-import { memo, useId, useState } from 'react';
+import { Box, Typography } from '@mui/material';
+import { memo } from 'react';
 import { ChestType } from 'clock-generator/light';
 import type { ChestFormData } from '../hooks/useConfigForm';
 import { CHEST_TYPE_LABELS, CONTAINER_CHEST_TYPES, chestTypeIcon, isContainerChest } from '../utils/configForm/formData';
-import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
+import { useEntityRows } from '../hooks/useEntityRows';
 import { themeTokens } from '../theme/runtimeTokens';
 import type { Theme } from '@mui/material/styles';
-import { AddRow } from './AddRow';
+import { AddButton, AddMenuButton, AddRow } from './AddRow';
+import { EntityRow, EntityRowActions, EntityRowTop } from './EntityRow';
 import { ChestFields } from './EntityFields';
 import { ContainerChestFields, ContainerChestSummary } from './ContainerChestFields';
 import { EntitySettings } from './EntitySettings';
 import { PanelSection } from './Panel';
-import { SortableItem, SortableList } from './SortableList';
-import { RowActionsMenu } from './RowActionsMenu';
-import { useAnnounce } from '../hooks/useMessages';
-import { chestLabel } from '../utils/entityLabel';
+import { SortableList } from './SortableList';
+import { chestLabel, settingsSlotId } from '../utils/entityLabel';
 
 interface ChestsFormProps {
     chests: ChestFormData[];
@@ -48,18 +38,8 @@ function ChestsFormComponent({
     onDuplicate,
 }: ChestsFormProps) {
     // the row's delete button goes with it: the keyboard moves on to a neighbour's
-    const { cardRef, remove, afterAdd } = useFocusAfterRemove(chests.length, onRemove);
-    const announce = useAnnounce();
-    const addedLabel = (type: ChestType | undefined) => chestLabel({ id: Math.max(0, ...chests.map(row => row.id)) + 1, type });
-    const duplicate = (index: number) => {
-        afterAdd(() => onDuplicate(index));
-        announce(`Added ${addedLabel(chests[index].type)}, a copy of ${chestLabel(chests[index])}.`);
-    };
-
-    const add = (type: ChestType) => {
-        afterAdd(() => onAdd(type));
-        announce(`Added ${addedLabel(type)}.`);
-    };
+    const { cardRef, add: addRow, duplicate, remove } = useEntityRows(chests, { labelOf: chestLabel, onRemove, onDuplicate });
+    const add = (type: ChestType) => addRow(() => onAdd(type), { type } as ChestFormData);
 
     return (
         // the same element in both shapes, so that the focus finds the Add row in it once the last chest goes
@@ -107,82 +87,38 @@ function ChestsFormComponent({
                     }}
                     actions={(
                         <>
-                            <Button startIcon={<Add />} color="inherit" onClick={() => add(ChestType.BUFFER_CHEST)} variant="text" size="small" data-row-add="">
-                                Buffer chest
-                            </Button>
-                            <Button startIcon={<Add />} color="inherit" onClick={() => add(ChestType.INFINITY_CHEST)} variant="text" size="small">
-                                Infinity chest
-                            </Button>
-                            <AddContainerMenu onAdd={add} />
+                            <AddButton label="Buffer chest" onClick={() => add(ChestType.BUFFER_CHEST)} />
+                            <AddButton label="Infinity chest" focusTarget={false} onClick={() => add(ChestType.INFINITY_CHEST)} />
+                            <AddMenuButton label="Vehicle or silo" focusTarget={false} items={CONTAINER_CHEST_TYPES.map(type => ({
+                                label: CHEST_TYPE_LABELS[type], icon: <FactorioIcon name={chestTypeIcon(type)} size={20} alt="" />, onSelect: () => add(type),
+                            }))} />
                         </>
                     )}
                 >
                     <SortableList itemKeys={chests.map((c) => c._uuid)} onReorder={onReorder}>
-                    {chests.map((chest, index) => (
-                        <SortableItem key={chest._uuid} stableKey={chest._uuid} label={chestLabel(chest)} displayLabel={<EntityBadge id={chest.id}><FactorioIcon name={chestTypeIcon(chest.type)} size={28} alt="" /></EntityBadge>}>
-                            {(dragHandle) => (
-                        <Box
-                            id={`entity-chest-${chest.id}`}
-                            role="group"
-                            aria-label={chestLabel(chest)}
-                            sx={{
-                                mb: 2,
-                                p: 2,
-                                minWidth: 0,
-                                containerType: 'inline-size',
-                                containerName: 'chest-row',
-                                bgcolor: (theme: Theme) => themeTokens(theme).surface.row,
-                            }}
-                        >
-                            <Box sx={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr) auto', gap: 1.5, alignItems: 'center', '@container chest-row (max-width: 600px)': { gridTemplateColumns: 'minmax(0, 1fr) auto' } }}>
-                                <Box sx={{ gridColumn: 1, gridRow: 1 }}>{dragHandle}</Box>
-                            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap', minWidth: 0, gridColumn: 2, gridRow: 1, '@container chest-row (max-width: 600px)': { gridColumn: '1 / -1', gridRow: 2 } }}>
-                                <ChestFields chest={chest} itemNames={itemNames} storageHelp={STORAGE_SIZE_HELP} containerDetails={false}
-                                    onChange={updates => onUpdate(index, updates)} onSwitchType={type => onSwitchType(index, type)} />
-                            </Box>
-                                <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0, gridColumn: 3, gridRow: 1, '@container chest-row (max-width: 600px)': { gridColumn: 2 } }}>
-                                    {isContainerChest(chest) && <Box id={`settings-actions-chest-${chest.id}`} sx={{ display: 'flex' }} />}
-                                    <RowActionsMenu label={chestLabel(chest)} onDuplicate={() => duplicate(index)}
-                                        onMoveUp={index > 0 ? () => onReorder(index, index - 1) : undefined}
-                                        onMoveDown={index < chests.length - 1 ? () => onReorder(index, index + 1) : undefined} />
-                                    <IconButton onClick={() => remove(index)} color="error" aria-label={`Delete ${chestLabel(chest)}`} data-row-delete="">
-                                        <Delete />
-                                    </IconButton>
-                                </Box>
-                            </Box>
-                            {isContainerChest(chest) && <Box sx={{ mt: 1 }}>
-                                <EntitySettings actionContainerId={`settings-actions-chest-${chest.id}`} label={chestLabel(chest)}
+                    {chests.map((chest, index) => {
+                        const label = chestLabel(chest);
+                        return <EntityRow key={chest._uuid} kind="chest" row={chest} label={label} icon={<FactorioIcon name={chestTypeIcon(chest.type)} size={28} alt="" />}>
+                            {dragHandle => <>
+                                <EntityRowTop dragHandle={dragHandle} stackBelow={600} actions={<EntityRowActions kind="chest" id={chest.id} label={label}
+                                    details={isContainerChest(chest)} index={index} count={chests.length} onReorder={onReorder} onDuplicate={duplicate} onDelete={remove} />}>
+                                    <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
+                                        <ChestFields chest={chest} itemNames={itemNames} storageHelp={STORAGE_SIZE_HELP} containerDetails={false}
+                                            onChange={updates => onUpdate(index, updates)} onSwitchType={type => onSwitchType(index, type)} />
+                                    </Box>
+                                </EntityRowTop>
+                                {isContainerChest(chest) && <EntitySettings actionContainerId={settingsSlotId('chest', chest.id)} label={label}
                                     summary={<ContainerChestSummary chest={chest} />}>
                                     <ContainerChestFields chest={chest} itemNames={itemNames} dialog onChange={updates => onUpdate(index, updates)} />
-                                </EntitySettings>
-                            </Box>}
-                        </Box>
-                            )}
-                        </SortableItem>
-                    ))}
+                                </EntitySettings>}
+                            </>}
+                        </EntityRow>;
+                    })}
                     </SortableList>
                 </PanelSection>
             )}
         </Box>
     );
-}
-
-/** The button that adds a car, a tank, a cargo wagon or a rocket silo, from a menu */
-function AddContainerMenu({ onAdd }: { onAdd: (type: ChestType) => void }) {
-    const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
-    const menuId = useId();
-    const label = 'Vehicle or silo';
-    return <>
-        <Button startIcon={<Add />} color="inherit" variant="text" size="small" aria-haspopup="menu" aria-expanded={anchor !== null}
-            aria-controls={anchor ? menuId : undefined} onClick={event => setAnchor(event.currentTarget)}>
-            {label}
-        </Button>
-        <Menu id={menuId} anchorEl={anchor} open={anchor !== null} onClose={() => setAnchor(null)} slotProps={{ list: { 'aria-label': label } }}>
-            {CONTAINER_CHEST_TYPES.map(type => <MenuItem key={type} onClick={() => { setAnchor(null); onAdd(type); }}>
-                <FactorioIcon name={chestTypeIcon(type)} size={20} alt="" /><Box component="span" sx={{ ml: 1 }}>{CHEST_TYPE_LABELS[type]}</Box>
-            </MenuItem>)}
-        </Menu>
-    </>;
 }
 
 /** What Storage Size is, and where to find it in the game */

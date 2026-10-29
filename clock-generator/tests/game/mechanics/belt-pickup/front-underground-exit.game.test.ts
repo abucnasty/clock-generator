@@ -4,7 +4,7 @@ import { BELT_SPEEDS, blueprintAtSpeed, configAtSpeed, speedCapture } from "../.
 import { compactFrontUndergroundRouting } from "./front-speed-fixtures";
 import { expect, test } from "vitest";
 import { loadConfigFromFile } from "../../../../src/config/loader";
-import { InserterPickupMode } from "../../../../src/control-logic/inserter/modes/pickup/pickup-mode";
+import { bindHandPorts } from "../../../../src/simulation/components/hand-ports";
 import { SimulationContext } from "../../../../src/crafting/sequence/simulation-context";
 import { recordInFactorio } from "../../../../src/harness/factorio-harness";
 import { GameFixturePaths } from "../../helpers/fixture-paths";
@@ -121,15 +121,15 @@ for (const speed of BELT_SPEEDS) for (const { label, swapped, sameItem, mirrored
             expect(input.inserter.near_lane).toBe(preferred);
             expect(input.inserter.pickup_length).toBe(0.5);
             expect(input.inserter.belt_supply).toBe("backed_up");
-            const mode = InserterPickupMode.create({
+            const pickup = bindHandPorts({
                 inserterState: input, sourceState: simulation.state_registry.getStateByEntityIdOrThrow(input.inserter.source.entity_id),
                 sinkState: simulation.state_registry.getStateByEntityIdOrThrow(input.inserter.sink.entity_id),
                 tick_provider: simulation.tick_provider,
-            });
+            }).pickup;
             const predicted: number[] = [];
             for (let tick = 0; tick <= offsets[offsets.length - 1]; tick++) {
                 simulation.tick_provider.setCurrentTick(tick);
-                if ((input.held_item?.quantity ?? 0) < 16) mode.executeForTick();
+                if ((input.held_item?.quantity ?? 0) < 16) pickup.pickup();
                 predicted.push(input.held_item?.quantity ?? 0);
             }
             const measured = hand.filter(sample => sample.tick >= grabs[0].tick).map(sample => sample.held);

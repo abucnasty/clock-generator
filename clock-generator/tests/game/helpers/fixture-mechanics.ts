@@ -4,12 +4,13 @@ import {expect} from "vitest";
 import {Config} from "../../../src/config";
 import {loadConfigFromFile} from "../../../src/config/loader";
 import {SimulationContext} from "../../../src/crafting/sequence/simulation-context";
-import {CompositeControlLogic, TickControlLogic} from "../../../src/control-logic";
-import {InserterPickupMode} from "../../../src/control-logic/inserter/modes/pickup/pickup-mode";
+import {bindHandPorts} from "../../../src/simulation/components/hand-ports";
 import {BeltPickupLane} from "../../../src/state/belt-pickup-lane";
 import {EntityState} from "../../../src/state";
 import {GameFixturePaths} from "./fixture-paths";
 import {configAtSpeed, FixtureBeltSpeed} from "./belt-speed-fixtures";
+import {ContainerStorage} from "../../../src/simulation/components/container-storage";
+import { TickByHand } from "../../../src/crafting/runner/tick-by-hand.fixture";
 
 /**
  * Helpers for the unit tests of the fixture families: the documented mechanic of a family, run in the simulator on the
@@ -59,15 +60,15 @@ export function firstHandPatterns(config: Config, handSize = 16): Set<string> {
         const input = context.inserters.find(inserter => inserter.inserter_state.inserter.source.entity_id.type === "belt")!.inserter_state;
         const source = context.state_registry.getStateByEntityIdOrThrow(input.inserter.source.entity_id);
         if (!EntityState.isBelt(source)) throw new Error("expected a belt input");
-        if (!backed) source.pickup_lanes.set(input.entity_id.id, source.belt.lanes.map(lane =>
+        if (!backed) source.seedPickups(input.entity_id.id, source.belt.lanes.map(lane =>
             new BeltPickupLane(source.belt.belt_speed, input.inserter.pickup_length!, lane.stack_size, phase)));
-        const mode = InserterPickupMode.create({inserterState: input, sourceState: source, tick_provider: context.tick_provider,
-            sinkState: context.state_registry.getStateByEntityIdOrThrow(input.inserter.sink.entity_id)});
+        const pickup = bindHandPorts({inserterState: input, sourceState: source, tick_provider: context.tick_provider,
+            sinkState: context.state_registry.getStateByEntityIdOrThrow(input.inserter.sink.entity_id)}).pickup;
         const grabs: number[] = [];
         for (let tick = 0; tick < 100 && (input.held_item?.quantity ?? 0) < handSize; tick++) {
             context.tick_provider.setCurrentTick(tick);
             const before = input.held_item?.quantity ?? 0;
-            mode.executeForTick();
+            pickup.pickup();
             if ((input.held_item?.quantity ?? 0) > before) grabs.push(tick);
         }
         expect(input.held_item?.quantity, "the hand fills").toBe(handSize);
@@ -100,9 +101,9 @@ export function unclockedContainerStock(config: Config, items: string[], ticks =
     slots: number; peak: Record<string, number>; capacity: Record<string, number>;
 } {
     const context = SimulationContext.fromConfig(config);
-    const container = context.state_registry.getAllStates().find(EntityState.isSlotContainer);
+    const container = context.state_registry.getAllStates().find(ContainerStorage.isSlots);
     if (!container) throw new Error("expected a slot container");
-    const tick = new CompositeControlLogic([new TickControlLogic(context.tick_provider), ...context.machines, context.inserterUpdates()]);
+    const tick = new TickByHand(context);
     const peak = Object.fromEntries(items.map(item => [item, 0]));
     for (let i = 0; i < ticks; i++) {
         tick.executeForTick();

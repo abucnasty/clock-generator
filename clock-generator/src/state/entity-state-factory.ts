@@ -1,13 +1,10 @@
-import { Chest, Entity, EntityId, ReadableEntityRegistry } from "../entities";
-import { BeltState } from "./belt-state";
-import { BufferChestState } from "./buffer-chest-state";
+import { Entity, EntityId, ReadableEntityRegistry } from "../entities";
+import { ContainerStorage } from "../simulation/components/container-storage";
+import { TransportBelt } from "../simulation/archetypes/transport-belt";
 import { DrillState } from "./drill-state";
 import { EntityState } from "./entity-state";
-import { InfinityChestState } from "./infinity-chest-state";
 import { InserterState } from "./inserter-state";
 import { MachineState } from "./machine-state";
-import { RocketSiloState } from "./rocket-silo-state";
-import { SlotContainerState } from "./slot-container-state";
 
 export class EntityStateFactory {
 
@@ -20,7 +17,7 @@ export class EntityStateFactory {
         const entity = this.entityRegistry.getEntityByIdOrThrow(entityId);
 
         if(Entity.isBelt(entity)) {
-            return BeltState.create(entity)
+            return TransportBelt.create(entity)
         }
 
         if(Entity.isMachine(entity)) {
@@ -36,19 +33,7 @@ export class EntityStateFactory {
         }
 
         if (Entity.isChest(entity)) {
-            if (Chest.isInfinityChest(entity)) {
-                return InfinityChestState.forChest(entity);
-            }
-            if (Chest.isBufferChest(entity)) {
-                return BufferChestState.forChest(entity);
-            }
-            if (Chest.isSlotContainer(entity)) {
-                return SlotContainerState.forChest(entity);
-            }
-            if (Chest.isRocketSilo(entity)) {
-                return RocketSiloState.forChest(entity);
-            }
-            throw new Error(`Unsupported chest type: ${entity.chest_type}`);
+            return ContainerStorage.forChest(entity);
         }
 
         throw new Error(`Cannot create state for unsupported entity type: ${entity.entity_id.type}`);

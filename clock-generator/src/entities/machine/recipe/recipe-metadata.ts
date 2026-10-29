@@ -35,6 +35,7 @@ type ResultExtras = {
     independent_probability?: number,
     shared_probability?: { min: number, max: number },
     extra_count_fraction?: number,
+    ignored_by_stats?: number,
     ignored_by_productivity?: number,
 };
 
@@ -60,6 +61,12 @@ export function yieldOf(result: Ingredient): { amount: number; chance: number; e
     return { amount: result.amount, chance: chanceOf(extras), extra: extras.extra_count_fraction ?? 0 };
 }
 
+/** Whether what a craft yields of a result varies: it comes by chance, or one more comes at its extra count fraction */
+export function isStochastic(result: Ingredient): boolean {
+    const yield_ = yieldOf(result);
+    return yield_.chance < 1 || yield_.extra > 0;
+}
+
 /**
  * The variance of what one craft yields of a result, before productivity: 0 for a result that always comes in the same
  * amount. A craft yields the amount, and one more at `extra_count_fraction`, all with the result's chance, each roll on
@@ -76,9 +83,15 @@ export function amountVariance(result: Ingredient): number {
     return Math.max(0, mean_square - mean * mean);
 }
 
-/** How much of the amount productivity does not multiply */
+/**
+ * How much of the amount productivity does not multiply: the result's `ignored_by_productivity`, which the game
+ * defaults to its `ignored_by_stats` (the chunks asteroid crushing returns, the barrel a filled barrel comes back as),
+ * and 0 when neither is set. It is deducted from what a craft yields, so it never exceeds the expected amount ("any
+ * excess is ignored": a chunk returned at 0.3 with 1 ignored leaves 0.3, none of it multiplied).
+ */
 export function amountIgnoredByProductivity(result: Ingredient): number {
-    return (result as Ingredient & ResultExtras).ignored_by_productivity ?? 0;
+    const extras = result as Ingredient & ResultExtras;
+    return Math.min(extras.ignored_by_productivity ?? extras.ignored_by_stats ?? 0, expectedAmount(result));
 }
 
 function toOutput(result: EnrichedIngredient): EnrichedIngredient {

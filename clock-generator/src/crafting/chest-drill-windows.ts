@@ -1,15 +1,17 @@
 import { Config } from "../config";
 import { EnableControlMode } from "../common/enable-control-types";
 import { ChestType, chestName } from "../common/entity-types";
-import { clockPosition } from "../control-logic/enable-control";
-import { DrillChestWorkingMode } from "../control-logic/drill/modes/chest-working-mode";
+import { clockPosition } from "../simulation/controls/enable-control";
 import { OpenRange } from "../data-types";
 import Fraction, { fraction } from "../data-types/fraction";
 import { Chest, Entity, EntityId, handSizeFor, MiningDrill, ReadableEntityRegistry } from "../entities";
-import { ChestState, DrillState, EntityStateFactory } from "../state";
+import { DrillState, EntityStateFactory } from "../state";
 import { CraftingCyclePlan } from "./sequence/cycle/crafting-cycle";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { TargetProductionRate } from "./target-production-rate";
+import { ContainerStorage } from "../simulation/components/container-storage";
+import { placeDrillInto } from "../simulation/archetypes/mining-drill";
+import { Mining } from "../simulation/components/mining";
 
 /** Why nothing times a drill into a chest, so that it stays always enabled */
 export type ChestDrillWhy =
@@ -246,7 +248,7 @@ const REPLAY_MAX_TICKS = 200_000;
 
 /**
  * Runs the drill on `drill_windows` against its chest, tick by tick as the engine's own drill does
- * (`DrillChestWorkingMode`: drop what it holds as far as the chest has room, then mine while it holds nothing), and
+ * (its Placement into the chest and its `Mining`: drop what it holds as far as the chest has room, then mine while it holds nothing), and
  * the takers as the hardest case: each window takes all the hands planned for it in its first tick, before the drill
  * in that tick (inserters act first). It starts with the chest and the drill's hold empty, so the first period's takes
  * may come up short; every take after it has to find its hands. With nothing in the chest to start from, a drill that
@@ -257,11 +259,12 @@ const REPLAY_MAX_TICKS = 200_000;
  */
 function replay(plan: ChestDrillPlan, takers: readonly Taker[], drill_windows: readonly OpenRange[], period: number, min_periods: number, fill_periods: number): ReplayOutcome {
     const registry = createEntityRegistryForReplay(plan);
-    const chest_state = new EntityStateFactory(registry).createStateForEntity(plan.chest.entity_id) as ChestState;
+    const chest_state = new EntityStateFactory(registry).createStateForEntity(plan.chest.entity_id) as ContainerStorage;
     const drill_state = DrillState.fromEntity(plan.drill);
-    const mode = new DrillChestWorkingMode(drill_state, chest_state);
+    placeDrillInto(drill_state, chest_state);
+    const mining = Mining.forDrill(drill_state);
     const item = plan.item;
-    const hold = () => drill_state.inventoryState.getQuantity(item);
+    const hold = () => drill_state.held.getCurrentQuantity(item);
     const stock = () => chest_state.getCurrentQuantity(item);
 
     const periods = Math.max(min_periods, Math.min(fill_periods, Math.floor(REPLAY_MAX_TICKS / period)));
@@ -276,7 +279,7 @@ function replay(plan: ChestDrillPlan, takers: readonly Taker[], drill_windows: r
             period_index = index;
             // the first period's takes may come up short, so a cycle that holds is one of the periods after it
             if (index >= 1) {
-                const key = `${position};${stock()};${hold()};${mode.stateKey()}`;
+                const key = `${position};${stock()};${hold()};${mining.key()}`;
                 if (seen.has(key)) {
                     return { passes: true, proven: true };
                 }
@@ -289,7 +292,7 @@ function replay(plan: ChestDrillPlan, takers: readonly Taker[], drill_windows: r
             if (now_in && !was_in[t]) {
                 const got = Math.min(window.items, stock());
                 if (got > 0) {
-                    chest_state.inventoryState.removeQuantity(item, got);
+                    chest_state.take(item, got);
                 }
                 if (got < window.items && tick >= period) {
                     return { passes: false, proven: false };
@@ -298,7 +301,7 @@ function replay(plan: ChestDrillPlan, takers: readonly Taker[], drill_windows: r
             was_in[t] = now_in;
         }
         if (inWindows(drill_windows, position)) {
-            mode.executeForTick();
+            mining.tick();
         }
     }
     return { passes: true, proven: false };
@@ -389,7 +392,7 @@ function drillWindowsSetup(plan: ChestDrillPlan, windows: ReadonlyMap<string, Op
         }
     }
     const demand = starts.reduce((sum, it) => sum + it.items, 0);
-    const room = new EntityStateFactory(createEntityRegistryForReplay(plan)).createStateForEntity(plan.chest.entity_id) as ChestState;
+    const room = new EntityStateFactory(createEntityRegistryForReplay(plan)).createStateForEntity(plan.chest.entity_id) as ContainerStorage;
     const capacity = room.getAvailableSpace(plan.item);
     if (capacity <= 0) {
         return { because: { kind: "no-room", item: plan.item } };

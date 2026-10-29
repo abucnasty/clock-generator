@@ -1,6 +1,6 @@
 import { pickupCaptureWarningMessage, sideLoadedDropMessage } from "../utils/sidecarExport";
 import { Check, Download, Upload, ContentPaste, MoreVert, RestartAlt, Science, MenuBook, Link, DarkModeOutlined, LightModeOutlined, BrightnessAutoOutlined } from '@mui/icons-material';
-import { Box, Button, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider, TextField, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Button, Alert, Tooltip, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider, TextField, useMediaQuery, useTheme } from '@mui/material';
 import { useRef, useState, useCallback, useImperativeHandle, type ReactNode, type Ref } from 'react';
 import type { Config, SuggestedTarget } from 'clock-generator/browser';
 import { Option } from 'clock-generator/light';
@@ -19,6 +19,7 @@ import { focusTargetOutputHeading } from '../utils/introCard';
 import type { ConfigFormData } from '../utils/configForm/formData';
 import { applyPaste, pastePreview, type ImportSelections, type PasteReferenceWarning } from '../utils/pastePreview';
 import { InserterDetails } from './InserterDetails';
+import { Disclosure } from './Disclosure';
 import { chestTypesText } from '../utils/pasteText';
 import { pickupGeometryOf } from '../utils/pickupGeometry';
 import { entityLabel } from '../utils/entityLabel';
@@ -37,6 +38,7 @@ import {
 } from '../utils/shareLink';
 import { askEngine } from '../worker/engineClient';
 import type { PastedEntities } from '../worker/types';
+import { AppDialog } from './AppDialog';
 import { PasteFromFactorioDialog } from './PasteFromFactorioDialog';
 import { ExamplesDialog } from './ExamplesDialog';
 import { ImportSimplification } from './ImportSimplification';
@@ -681,160 +683,146 @@ export function ConfigImportExport({
             />
 
             {/* Import Confirmation Dialog */}
-            <Dialog
-                open={pendingImport !== null}
-                onClose={handleCancelImport}
-                maxWidth="sm"
-                fullWidth
-                disableRestoreFocus
-                slotProps={{ transition: { onExited: handleConfirmExited } }}
-            >
-                <DialogTitle>Confirm Import from Factorio</DialogTitle>
-                <DialogContent>
-                    <Typography variant="body2" sx={{ mb: 2 }}>
-                        Choose what to import. Selected parts replace those in your current build; unselected parts stay as they are.
-                    </Typography>
-                    
-                    {pendingImport?.guidance && Option.match(pendingImport.guidance, {
-                        none: () => null,
-                        some: (message) => <Alert severity="warning" sx={{ mb: 2 }}>{message}</Alert>,
-                    })}
+            <AppDialog open={pendingImport !== null} onClose={handleCancelImport} title="Confirm Import from Factorio" disableRestoreFocus onExited={handleConfirmExited}
+                cancel="Cancel" actions={<Button
+                    id="confirm-factorio-import"
+                    onClick={handleConfirmImport}
+                    variant={forceFullImport ? 'outlined' : 'contained'}
+                    color={forceFullImport ? 'inherit' : 'secondary'}
+                    disabled={!canImport}
+                >
+                    {pendingImport?.reduction ? 'Import simpler build' : forceFullImport ? 'Force import full pasted build' : 'Import Selected'}
+                </Button>}>
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                    Choose what to import. Selected parts replace those in your current build; unselected parts stay as they are.
+                </Typography>
+                
+                {pendingImport?.guidance && Option.match(pendingImport.guidance, {
+                    none: () => null,
+                    some: (message) => <Alert severity="warning" sx={{ mb: 2 }}>{message}</Alert>,
+                })}
 
-                    {pendingImport && <ImportSimplification config={simplificationConfig} applied={pendingImport.reduction}
-                        onRepeated={sourceKey => {
-                            if (simplificationConfig && sourceKey === JSON.stringify(simplificationConfig) && pendingImport.repeatedSourceKey !== sourceKey)
-                                setPendingImport(current => current === pendingImport ? { ...current, repeatedSourceKey: sourceKey } : current);
-                        }}
-                        onRestore={() => {
-                            if (pendingImport.original) setPendingImport(pendingImport.original);
-                            if (pendingImport.originalSelections) setImportSelections(pendingImport.originalSelections);
-                        }}
-                        onSimplify={plan => {
-                            if (!simplificationConfig || plan.sourceConfigKey !== JSON.stringify(simplificationConfig)) return;
-                            const candidate = plan.candidate;
-                            setPendingImport({
-                                ...pendingImport,
-                                original: pendingImport,
-                                originalSelections: importSelections,
-                                reduction: importReduction(simplificationConfig, candidate),
-                                machines: candidate.machines,
-                                inserters: candidate.inserters,
-                                belts: candidate.belts,
-                                chests: candidate.chests ?? [],
-                                drills: candidate.drills?.configs ?? [],
-                                fill: { values: candidate.target_output, source: pendingImport.fill!.source },
-                            });
-                            // The explicit simplify action also accepts its displayed Copies change.
-                            setImportSelections(current => ({ ...current, target: true }));
-                        }} />}
-                    {pendingImport && !pendingImport.reduction && (
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                            <PickupGeometrySummary build={{ inserters: prospectiveInserters, overrides: currentForm.overrides }} />
-                            {importSelections.inserters && pendingImport.pickupWarnings?.map(warning => <Typography key={warning.inserter_id} variant="body2" color="text.secondary">
-                                Captured Inserter {warning.inserter_id}: {pickupCaptureWarningMessage(warning.reason)}
-                            </Typography>)}
-                            {importSelections.inserters && pendingImport.inserters.flatMap((inserter, i) => inserter.sink.type === 'belt' && inserter.sink.drop_capture
-                                ? [<Typography key={`side-loaded-${i}`} variant="body2" color="text.secondary">
-                                    Captured Inserter {inserter.id ?? i + 1}: {sideLoadedDropMessage(inserter.sink.drop_capture.tiles)}
-                                </Typography>] : [])}
-                            {preview?.geometryProblem && <Alert severity="error">{preview.geometryProblem}</Alert>}
-                            {pendingImport.fill ? (
-                                <Box>
-                                    <FormControlLabel
-                                        control={
-                                            <Checkbox
-                                                checked={importSelections.target}
-                                                onChange={() => handleSelectionChange('target')}
-                                                slotProps={{ input: { 'aria-describedby': maximumTargetNote(pendingImport.fill.source) ? `${TARGET_CAPTION_ID} ${TARGET_MAXIMUM_ID}` : TARGET_CAPTION_ID } }}
-                                            />
-                                        }
-                                        label={targetRowLabel(pendingImport.fill.values, recipeLabel)}
-                                    />
-                                    <Typography id={TARGET_CAPTION_ID} variant="body2" color="text.secondary" sx={{ ml: 4 }}>
-                                        {targetRowCaption(pendingImport.fill.source)}
-                                        {currentTarget.recipe !== '' && ` ${replacesTargetNote(currentTarget, recipeLabel)}`}
-                                    </Typography>
-                                    {maximumTargetNote(pendingImport.fill.source) && <Typography id={TARGET_MAXIMUM_ID} variant="body2" color="text.secondary" sx={{ ml: 4 }}>
-                                        {maximumTargetNote(pendingImport.fill.source)}
-                                    </Typography>}
-                                </Box>
-                            ) : (
-                                currentTarget.recipe === '' && (
-                                    <Typography variant="body2" color="text.secondary">
-                                        {NO_TARGET_NOTE}
-                                    </Typography>
-                                )
-                            )}
-                            {preview?.counts.map(row => {
-                                const title = row.category[0].toUpperCase() + row.category.slice(1);
-                                const counted = row.replacing
-                                    ? `${row.current} in your build → ${row.incoming} after import.`
-                                    : row.incoming === 0 ? row.current === 0 ? 'None in this export.' : `None in this export. Your ${row.current} stay unchanged.`
-                                        : `Not selected. Keep the ${row.current} in your build.`;
-                                // the chests are named by what they are: a car and an infinity chest are both "chests" here
-                                const consequence = row.category === 'chests' && row.incoming > 0 ? `${chestTypesText(pendingImport.chests)}. ${counted}` : counted;
-                                return (
-                                    <Box key={row.category} data-paste-category={row.category}>
-                                        <FormControlLabel
-                                            control={<Checkbox checked={importSelections[row.category]}
-                                                onChange={() => handleSelectionChange(row.category)} disabled={row.incoming === 0}
-                                                slotProps={{ input: { 'aria-describedby': `paste-${row.category}-counts` } }} />}
-                                            label={`${title} (${row.incoming})`}
+                {pendingImport && <ImportSimplification config={simplificationConfig} applied={pendingImport.reduction}
+                    onRepeated={sourceKey => {
+                        if (simplificationConfig && sourceKey === JSON.stringify(simplificationConfig) && pendingImport.repeatedSourceKey !== sourceKey)
+                            setPendingImport(current => current === pendingImport ? { ...current, repeatedSourceKey: sourceKey } : current);
+                    }}
+                    onRestore={() => {
+                        if (pendingImport.original) setPendingImport(pendingImport.original);
+                        if (pendingImport.originalSelections) setImportSelections(pendingImport.originalSelections);
+                    }}
+                    onSimplify={plan => {
+                        if (!simplificationConfig || plan.sourceConfigKey !== JSON.stringify(simplificationConfig)) return;
+                        const candidate = plan.candidate;
+                        setPendingImport({
+                            ...pendingImport,
+                            original: pendingImport,
+                            originalSelections: importSelections,
+                            reduction: importReduction(simplificationConfig, candidate),
+                            machines: candidate.machines,
+                            inserters: candidate.inserters,
+                            belts: candidate.belts,
+                            chests: candidate.chests ?? [],
+                            drills: candidate.drills?.configs ?? [],
+                            fill: { values: candidate.target_output, source: pendingImport.fill!.source },
+                        });
+                        // The explicit simplify action also accepts its displayed Copies change.
+                        setImportSelections(current => ({ ...current, target: true }));
+                    }} />}
+                {pendingImport && !pendingImport.reduction && (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        <PickupGeometrySummary build={{ inserters: prospectiveInserters, overrides: currentForm.overrides }} />
+                        {importSelections.inserters && pendingImport.pickupWarnings?.map(warning => <Typography key={warning.inserter_id} variant="body2" color="text.secondary">
+                            Captured Inserter {warning.inserter_id}: {pickupCaptureWarningMessage(warning.reason)}
+                        </Typography>)}
+                        {importSelections.inserters && pendingImport.inserters.flatMap((inserter, i) => inserter.sink.type === 'belt' && inserter.sink.drop_capture
+                            ? [<Typography key={`side-loaded-${i}`} variant="body2" color="text.secondary">
+                                Captured Inserter {inserter.id ?? i + 1}: {sideLoadedDropMessage(inserter.sink.drop_capture.tiles)}
+                            </Typography>] : [])}
+                        {preview?.geometryProblem && <Alert severity="error">{preview.geometryProblem}</Alert>}
+                        {pendingImport.fill ? (
+                            <Box>
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox
+                                            checked={importSelections.target}
+                                            onChange={() => handleSelectionChange('target')}
+                                            slotProps={{ input: { 'aria-describedby': maximumTargetNote(pendingImport.fill.source) ? `${TARGET_CAPTION_ID} ${TARGET_MAXIMUM_ID}` : TARGET_CAPTION_ID } }}
                                         />
-                                        <Typography id={`paste-${row.category}-counts`} variant="body2" color="text.secondary" sx={{ ml: 4 }}>
-                                            {consequence}
-                                        </Typography>
-                                    </Box>
-                                );
-                            })}
-                            {!!preview?.crossings.length && (
-                                <>
-                                    <Alert severity="warning" role="region" aria-label="Cross-category references">
-                                        <Typography variant="body2">These parts will be combined using their entity numbers. A matching number can refer to a different entity.</Typography>
-                                        <Box component="ul" sx={{ pl: 2.5, mb: 0 }}>
-                                            {preview.crossings.map(warning => (
-                                                <li key={`${warning.ownerType}-${warning.ownerId}-${warning.slot}`}>
-                                                    {crossingText(warning)}
-                                                </li>
-                                            ))}
-                                        </Box>
-                                    </Alert>
-                                    <FormControlLabel
-                                        control={<Checkbox checked={acknowledgedCurrent} onChange={(_, checked) => setAcknowledged(checked ? {
-                                            incoming: pendingImport, current: currentForm, selections: importSelections,
-                                        } : null)} />}
-                                        label="I understand these parts will be combined using their entity numbers."
-                                    />
-                                </>
-                            )}
-                            <Box component="details" data-import-assumptions sx={{ mt: 1 }}>
-                                <Typography component="summary" variant="body2" sx={{ cursor: 'pointer', fontWeight: 600 }}>Import details</Typography>
-                                {pickupGeometryOf({ inserters: prospectiveInserters, overrides: currentForm.overrides }).total > 0
-                                    && <Typography variant="body2">Your input belt setting (moving or backed up) stays as it is.</Typography>}
-                                <Box sx={{ mt: 1 }}>
-                                    <InserterDetails inserters={prospectiveInserters} />
-                                    {prospectiveInserters.flatMap((inserter, i) => inserter.sink.type === 'belt' && inserter.sink.drop
-                                        ? [<Typography key={`drop-${i}`} variant="body2">Inserter {inserter.id ?? i + 1}: imported drop on Belt {inserter.sink.id}, lane {inserter.sink.drop.lane}, position {inserter.sink.drop.position} (read-only).</Typography>] : [])}
-                                    {prospectiveMachines.flatMap(machine => machine.fuel === undefined ? [] : [<Typography key={`fuel-${machine.id}`} variant="body2" title={nameWithId(itemLabel(machine.fuel), machine.fuel)}>Machine {machine.id}: imported fuel {itemLabel(machine.fuel)} (read-only).</Typography>])}
-                                    {currentForm.overrides && <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>Retained run overrides: {JSON.stringify(currentForm.overrides)}.</Typography>}
-                                </Box>
+                                    }
+                                    label={targetRowLabel(pendingImport.fill.values, recipeLabel)}
+                                />
+                                <Typography id={TARGET_CAPTION_ID} variant="body2" color="text.secondary" sx={{ ml: 4 }}>
+                                    {targetRowCaption(pendingImport.fill.source)}
+                                    {currentTarget.recipe !== '' && ` ${replacesTargetNote(currentTarget, recipeLabel)}`}
+                                </Typography>
+                                {maximumTargetNote(pendingImport.fill.source) && <Typography id={TARGET_MAXIMUM_ID} variant="body2" color="text.secondary" sx={{ ml: 4 }}>
+                                    {maximumTargetNote(pendingImport.fill.source)}
+                                </Typography>}
                             </Box>
-                        </Box>
-                    )}
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleCancelImport} color="inherit">Cancel</Button>
-                    <Button
-                        id="confirm-factorio-import"
-                        onClick={handleConfirmImport}
-                        variant={forceFullImport ? 'outlined' : 'contained'}
-                        color={forceFullImport ? 'inherit' : 'secondary'}
-                        disabled={!canImport}
-                    >
-                        {pendingImport?.reduction ? 'Import simpler build' : forceFullImport ? 'Force import full pasted build' : 'Import Selected'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                        ) : (
+                            currentTarget.recipe === '' && (
+                                <Typography variant="body2" color="text.secondary">
+                                    {NO_TARGET_NOTE}
+                                </Typography>
+                            )
+                        )}
+                        {preview?.counts.map(row => {
+                            const title = row.category[0].toUpperCase() + row.category.slice(1);
+                            const counted = row.replacing
+                                ? `${row.current} in your build → ${row.incoming} after import.`
+                                : row.incoming === 0 ? row.current === 0 ? 'None in this export.' : `None in this export. Your ${row.current} stay unchanged.`
+                                    : `Not selected. Keep the ${row.current} in your build.`;
+                            // the chests are named by what they are: a car and an infinity chest are both "chests" here
+                            const consequence = row.category === 'chests' && row.incoming > 0 ? `${chestTypesText(pendingImport.chests)}. ${counted}` : counted;
+                            return (
+                                <Box key={row.category} data-paste-category={row.category}>
+                                    <FormControlLabel
+                                        control={<Checkbox checked={importSelections[row.category]}
+                                            onChange={() => handleSelectionChange(row.category)} disabled={row.incoming === 0}
+                                            slotProps={{ input: { 'aria-describedby': `paste-${row.category}-counts` } }} />}
+                                        label={`${title} (${row.incoming})`}
+                                    />
+                                    <Typography id={`paste-${row.category}-counts`} variant="body2" color="text.secondary" sx={{ ml: 4 }}>
+                                        {consequence}
+                                    </Typography>
+                                </Box>
+                            );
+                        })}
+                        {!!preview?.crossings.length && (
+                            <>
+                                <Alert severity="warning" role="region" aria-label="Cross-category references">
+                                    <Typography variant="body2">These parts will be combined using their entity numbers. A matching number can refer to a different entity.</Typography>
+                                    <Box component="ul" sx={{ pl: 2.5, mb: 0 }}>
+                                        {preview.crossings.map(warning => (
+                                            <li key={`${warning.ownerType}-${warning.ownerId}-${warning.slot}`}>
+                                                {crossingText(warning)}
+                                            </li>
+                                        ))}
+                                    </Box>
+                                </Alert>
+                                <FormControlLabel
+                                    control={<Checkbox checked={acknowledgedCurrent} onChange={(_, checked) => setAcknowledged(checked ? {
+                                        incoming: pendingImport, current: currentForm, selections: importSelections,
+                                    } : null)} />}
+                                    label="I understand these parts will be combined using their entity numbers."
+                                />
+                            </>
+                        )}
+                        <Disclosure summary="Import details" data-import-assumptions="" sx={{ mt: 1 }}>
+                            {pickupGeometryOf({ inserters: prospectiveInserters, overrides: currentForm.overrides }).total > 0
+                                && <Typography variant="body2">Your input belt setting (moving or backed up) stays as it is.</Typography>}
+                            <Box sx={{ mt: 1 }}>
+                                <InserterDetails inserters={prospectiveInserters} />
+                                {prospectiveInserters.flatMap((inserter, i) => inserter.sink.type === 'belt' && inserter.sink.drop
+                                    ? [<Typography key={`drop-${i}`} variant="body2">Inserter {inserter.id ?? i + 1}: imported drop on Belt {inserter.sink.id}, lane {inserter.sink.drop.lane}, position {inserter.sink.drop.position} (read-only).</Typography>] : [])}
+                                {prospectiveMachines.flatMap(machine => machine.fuel === undefined ? [] : [<Typography key={`fuel-${machine.id}`} variant="body2" title={nameWithId(itemLabel(machine.fuel), machine.fuel)}>Machine {machine.id}: imported fuel {itemLabel(machine.fuel)} (read-only).</Typography>])}
+                                {currentForm.overrides && <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>Retained run overrides: {JSON.stringify(currentForm.overrides)}.</Typography>}
+                            </Box>
+                        </Disclosure>
+                    </Box>
+                )}
+            </AppDialog>
 
             {pasteDialog && (
                 <PasteFromFactorioDialog
@@ -848,25 +836,19 @@ export function ConfigImportExport({
             {examplesOpen && <ExamplesDialog onPick={handlePickExample} onClose={handleCloseExamples} />}
 
             {/* the browser did not let the page copy: the link to copy by hand */}
-            <Dialog open={fallbackLink !== null} onClose={() => setFallbackLink(null)} maxWidth="sm" fullWidth aria-describedby="share-link-fallback-text">
-                <DialogTitle>Share link</DialogTitle>
-                <DialogContent>
-                    <Typography id="share-link-fallback-text" variant="body2" sx={{ mb: 1 }}>
-                        {SHARE_FALLBACK_TEXT}
-                    </Typography>
-                    <TextField
-                        value={fallbackLink ?? ''}
-                        label="Share link"
-                        fullWidth
-                        autoFocus
-                        onFocus={(event) => event.target.select()}
-                        slotProps={{ htmlInput: { readOnly: true } }}
-                    />
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setFallbackLink(null)} color="inherit">Close</Button>
-                </DialogActions>
-            </Dialog>
+            <AppDialog open={fallbackLink !== null} onClose={() => setFallbackLink(null)} title="Share link" describedBy="share-link-fallback-text" cancel="Close">
+                <Typography id="share-link-fallback-text" variant="body2" sx={{ mb: 1 }}>
+                    {SHARE_FALLBACK_TEXT}
+                </Typography>
+                <TextField
+                    value={fallbackLink ?? ''}
+                    label="Share link"
+                    fullWidth
+                    autoFocus
+                    onFocus={(event) => event.target.select()}
+                    slotProps={{ htmlInput: { readOnly: true } }}
+                />
+            </AppDialog>
         </>
     );
 }

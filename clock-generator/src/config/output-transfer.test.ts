@@ -11,7 +11,8 @@ import { TargetProductionRate } from '../crafting/target-production-rate';
 import { computeMachineTargetRates } from '../crafting/machine-target-rates';
 import { validateConfig } from '../crafting/plan/validate-config';
 import { planRun, runBuild } from '../crafting/plan/plan-run';
-import { Entity, Machine } from '../entities';
+import { Entity } from '../entities';
+import { computeMachineFacts } from '../entities/traits/machine-facts-of';
 import { fraction } from '../data-types/fraction';
 
 function cell(recipe = 'supercapacitor'): Config {
@@ -150,7 +151,7 @@ describe('physical representation and generation support', () => {
 
 describe('machine result facts', () => {
     it('keeps scalar aliases and exposes effective expected yield for every result', () => {
-        const facts = Machine.computeMachineFacts({ ...cell().machines[0], productivity: 50 });
+        const facts = computeMachineFacts({ ...cell().machines[0], productivity: 50 });
         expect(facts.outputs).toMatchObject([
             { item_name: 'electronic-circuit', amount_per_craft: 7.5, stochastic: false },
             { item_name: 'advanced-circuit', amount_per_craft: 0.75, stochastic: true },
@@ -160,7 +161,7 @@ describe('machine result facts', () => {
         expect(facts.outputs![1].rate_per_second / facts.outputs![0].rate_per_second).toBeCloseTo(0.1);
     });
     it('marks shared-probability yields as expected without claiming independent rolls', () => {
-        const facts = Machine.computeMachineFacts({ ...cell().machines[0], recipe: 'scrap-recycling' });
+        const facts = computeMachineFacts({ ...cell().machines[0], recipe: 'scrap-recycling' });
         expect(facts.outputs).toHaveLength(12);
         expect(facts.outputs!.every(output => output.stochastic)).toBe(true);
     });

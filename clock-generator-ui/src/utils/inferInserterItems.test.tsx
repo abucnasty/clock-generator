@@ -1,9 +1,12 @@
-import { describe, expect, it } from 'vitest';
-import { renderToStaticMarkup } from 'react-dom/server';
+// @vitest-environment happy-dom
+import { screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import type { Config } from 'clock-generator/browser';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { FilterSlotSelector } from '../components/FilterSlotSelector';
+import { containerChest, show } from '../test/fixtures';
 import { configToFormData } from './configForm/configMapping';
+import type { ContainerChestFormData, InserterFormData } from './configForm/formData';
 import { drillItemsInto, inferInserterItems, itemsAround, sourceItemsOf } from './inferInserterItems';
 import { buildFlowGraph, flowNodeEntity } from './buildFlowGraph';
 import { entityOptionsOf, findOption } from './inserterOptions';
@@ -16,6 +19,7 @@ const recipes: Record<string, RecipeInfo> = {
 };
 const recipeInfo = (name: string) => recipes[name] ?? null;
 
+/** Inserter 1 puts machine 1's lithium into container 1, and inserter 2 takes it to machine 2's lithium plates; belt 1 carries copper plates */
 function build(type: 'car' | 'tank' | 'cargo-wagon' | 'rocket-silo' = 'rocket-silo') {
     return configToFormData({
         target_output: { recipe: 'lithium-plate', items_per_second: 1, copies: 1 },
@@ -33,8 +37,9 @@ function build(type: 'car' | 'tank' | 'cargo-wagon' | 'rocket-silo' = 'rocket-si
 }
 
 describe('automatic filters through containers', () => {
-    it.each(['car', 'tank', 'cargo-wagon', 'rocket-silo'] as const)('shows incoming supply on the %s selector even without configured contents or filters', type => {
+    it.each(['car', 'tank', 'cargo-wagon', 'rocket-silo'] as const)('follows incoming supply through an empty %s and shows it on its selector, without configured contents or filters', type => {
         const form = build(type);
+        expect(inferInserterItems(form.inserters[1], form.machines, form.belts, form.chests, recipeInfo, form.inserters)).toEqual(['lithium']);
         const options = entityOptionsOf(form.machines, form.belts, form.chests, { item: id => id.toUpperCase(), recipe: id => id },
             { inserters: form.inserters, getRecipeInfo: recipeInfo });
         expect(findOption(options, 'chest', 1)).toMatchObject({ icon: type, sublabel: 'LITHIUM', ingredientIcons: ['lithium'] });
@@ -60,72 +65,60 @@ describe('automatic filters through containers', () => {
         silo.contents = [{ item: 'lithium', count: 10 }, { item: 'copper-plate', count: 10 }];
         form.inserters[0].source = { type: 'belt', id: 1 };
         form.belts[0].lanes[0].ingredient = 'processing-unit';
-        const render = (index: number) => renderToStaticMarkup(<InserterEditor value={form.inserters[index]} label={`Inserter ${index + 1}`}
+        show(<>{form.inserters.map((value, index) => <InserterEditor key={value.id} value={value} label={`Inserter ${index + 1}`}
             layout="stacked" machines={form.machines} belts={form.belts} chests={form.chests} inserters={form.inserters}
-            itemNames={['lithium', 'copper-plate', 'processing-unit']} getRecipeInfo={recipeInfo} onChange={() => {}} />);
-        expect(render(0)).toContain('value="Rocket silo 1 - processing-unit"');
-        expect(render(1)).toContain('value="Rocket silo 1 - lithium"');
+            itemNames={['lithium', 'copper-plate', 'processing-unit']} getRecipeInfo={recipeInfo} onChange={vi.fn()} />)}</>);
+        const field = (name: string) => screen.getByRole<HTMLInputElement>('combobox', { name }).value;
+        expect(field('Destination, Inserter 1')).toBe('Rocket silo 1 - processing-unit');
+        expect(field('Source, Inserter 2')).toBe('Rocket silo 1 - lithium');
     });
 
-    it('never advertises blocked slots as available items or automatic filters', () => {
-        const form = build('car');
-        const chest = form.chests[0];
-        if (chest.type !== 'car') throw new Error('not a car');
-        chest.slot_filters = [{ slot: 1, blocked: true, _marker: 'deconstruction-planner' }, { slot: 2, blocked: true }];
-        expect(sourceItemsOf(form.inserters[1].source, form.machines, form.belts, form.chests, recipeInfo)).toEqual([]);
-        expect(sourceItemsOf(form.inserters[1].source, form.machines, form.belts, form.chests, recipeInfo, form.inserters)).toEqual(['lithium']);
-    });
-    it.each(['car', 'tank', 'cargo-wagon', 'rocket-silo'] as const)('follows incoming supply through an empty %s', type => {
-        const form = build(type);
-        expect(inferInserterItems(form.inserters[1], form.machines, form.belts, form.chests, recipeInfo, form.inserters)).toEqual(['lithium']);
-    });
+    const silo = containerChest(1, 'rocket-silo');
+    const blockedCar = containerChest(1, 'car', { slot_filters: [{ slot: 1, blocked: true, _marker: 'deconstruction-planner' }, { slot: 2, blocked: true }] });
+    const stockedCar = containerChest(1, 'car', { slot_filters: [{ slot: 1, item: 'lithium' }], contents: [{ slot: 2, item: 'copper-plate', count: 10 }] });
+    const rocketPartFilters = { filters: ['lithium', 'processing-unit'] };
 
-    it('does not invent supply from the destination when the source has no contents or incoming route', () => {
+    // Each row puts in its own container 1 and changes inserter 1 as given; `routes` says whether the inserters (the incoming
+    // routes) are known. `supply` is what the container offers inserter 2, `inferred` what inserter 2 takes for machine 2.
+    it.each<{ why: string; chest: ContainerChestFormData; incoming?: Partial<InserterFormData>; routes: boolean; supply: string[]; inferred: string[] }>([
+        { why: 'never advertises blocked slots as available items', chest: blockedCar, routes: false, supply: [], inferred: [] },
+        { why: 'never advertises blocked slots as automatic filters, following the incoming route alone', chest: blockedCar, routes: true, supply: ['lithium'], inferred: ['lithium'] },
+        { why: 'does not invent supply from the destination when the container has no contents or incoming route', chest: silo, routes: false, supply: [], inferred: [] },
+        { why: 'follows an incoming route from a belt', chest: silo, incoming: { source: { type: 'belt', id: 1 } }, routes: true, supply: ['copper-plate'], inferred: [] },
+        { why: 'follows the filters of the incoming inserter', chest: silo, incoming: { source: { type: 'belt', id: 1 }, filters: ['lithium'] }, routes: true,
+            supply: ['lithium'], inferred: ['lithium'] },
+        { why: 'keeps rocket-part ingredients in the input inventory at normal recipe quality', chest: silo, incoming: rocketPartFilters, routes: true,
+            supply: ['lithium'], inferred: ['lithium'] },
+        { why: 'offers rocket-part ingredients at a higher recipe quality', chest: containerChest(1, 'rocket-silo', { recipe_quality: 'rare' }), incoming: rocketPartFilters,
+            routes: true, supply: ['lithium', 'processing-unit'], inferred: ['lithium'] },
+        { why: 'includes slot filters and starting contents, restricted to the destination recipe', chest: stockedCar, routes: false,
+            supply: ['copper-plate', 'lithium'], inferred: ['lithium'] },
+        { why: 'handles a container feeding itself without recursing or inventing stock', chest: silo, incoming: { source: { type: 'chest', id: 1 } }, routes: true,
+            supply: [], inferred: [] },
+    ])('$why', ({ chest, incoming, routes, supply, inferred }) => {
         const form = build();
-        expect(inferInserterItems(form.inserters[1], form.machines, form.belts, form.chests, recipeInfo, form.inserters.slice(1))).toEqual([]);
-    });
-
-    it('updates the inferred items when the incoming source or filters change', () => {
-        const form = build();
-        form.inserters[0].source = { type: 'belt', id: 1 };
-        const supply = () => sourceItemsOf(form.inserters[1].source, form.machines, form.belts, form.chests, recipeInfo, form.inserters);
-        expect(supply()).toEqual(['copper-plate']);
-        form.inserters[0].filters = ['lithium'];
-        expect(supply()).toEqual(['lithium']);
-    });
-
-    it('keeps rocket-part ingredients in the input inventory at normal recipe quality', () => {
-        const form = build();
-        form.inserters[0].filters = ['lithium', 'processing-unit'];
-        const supply = () => sourceItemsOf(form.inserters[1].source, form.machines, form.belts, form.chests, recipeInfo, form.inserters);
-        expect(supply()).toEqual(['lithium']);
-        const chest = form.chests[0];
-        if (chest.type !== 'rocket-silo') throw new Error('not a silo');
-        chest.recipe_quality = 'rare';
-        expect(supply()).toEqual(['lithium', 'processing-unit']);
-    });
-
-    it('includes slot filters and starting contents, restricted to the destination recipe', () => {
-        const form = build('car');
-        const chest = form.chests[0];
-        if (chest.type !== 'car') throw new Error('not a car');
-        form.chests[0] = { ...chest, slot_filters: [{ slot: 1, item: 'lithium' }], contents: [{ slot: 2, item: 'copper-plate', count: 10 }] };
-        expect(sourceItemsOf(form.inserters[1].source, form.machines, form.belts, form.chests, recipeInfo)).toEqual(['copper-plate', 'lithium']);
-        expect(inferInserterItems(form.inserters[1], form.machines, form.belts, form.chests, recipeInfo)).toEqual(['lithium']);
-    });
-
-    it('handles a container feeding itself without recursing or inventing stock', () => {
-        const form = build();
-        form.inserters[0].source = { type: 'chest', id: 1 };
-        expect(sourceItemsOf(form.inserters[1].source, form.machines, form.belts, form.chests, recipeInfo, form.inserters)).toEqual([]);
+        form.chests[0] = chest;
+        Object.assign(form.inserters[0], incoming);
+        const inserters = routes ? form.inserters : undefined;
+        expect(sourceItemsOf(form.inserters[1].source, form.machines, form.belts, form.chests, recipeInfo, inserters)).toEqual(supply);
+        expect(inferInserterItems(form.inserters[1], form.machines, form.belts, form.chests, recipeInfo, inserters)).toEqual(inferred);
     });
 });
 
 it('explains empty automatic slots without labelling explicit filters as uninferred', () => {
-    const render = (filters?: string[]) => renderToStaticMarkup(<FilterSlotSelector filters={filters} itemNames={[]}
-        onFilterChange={() => {}} onRemoveFilter={() => {}} />);
-    expect(render()).toContain('No items inferred. Choose an item to set an explicit filter.');
-    expect(render(['lithium'])).not.toContain('No items inferred');
+    const slots = (filters?: string[]) => <FilterSlotSelector filters={filters} itemNames={[]} onFilterChange={vi.fn()} onRemoveFilter={vi.fn()} />;
+    const { rerender } = show(slots());
+    expect(screen.getByText('No items inferred. Choose an item to set an explicit filter.')).toBeDefined();
+    rerender(slots(['lithium']));
+    expect(screen.queryByText(/No items inferred/)).toBeNull();
+    // nor in any name or description a screen reader announces: the group and every slot, filled or empty
+    expect(screen.getByRole('group', { name: 'Inserter filter slots' })).toBeDefined();
+    expect(screen.queryByRole('group', { name: /No items inferred/ })).toBeNull();
+    expect(screen.queryByRole('group', { description: /No items inferred/ })).toBeNull();
+    expect(screen.queryAllByRole('button', { name: /No items inferred/ })).toEqual([]);
+    expect(screen.queryAllByRole('button', { description: /No items inferred/ })).toEqual([]);
+    expect(screen.getByRole('button', { name: 'Filter 1: lithium' })).toBeDefined();
+    for (const slot of [2, 3, 4, 5]) expect(screen.getByRole('button', { name: `Add filter ${slot}` })).toBeDefined();
 });
 
 describe('a container filled by drills', () => {

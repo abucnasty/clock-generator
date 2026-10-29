@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { generateClockAlternatives } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
+import { FeasibilityError } from "../config/errors";
 import { alwaysOnReasonProblemsOf, quiet } from "./generate-blueprint-test-helpers";
 import { pickupClockConfig, pickupClockSpeedCases } from "../../tests/game/builds/pickup-clock-speed-coverage";
 
@@ -32,19 +33,14 @@ describe("why the selected clock does not meet goal 1, as a generation says it",
         });
     });
 
-    it("is nothing holds where the inserters' hands are too small for the target, with the clocks that could not be made", async () => {
+    // a hand of 2 every 8 ticks takes at most 15 packs a second out of a copy (the simulator's inserter, free-running, moves
+    // exactly that), under the 21.82 a copy of the target: the feasibility pass refuses it before any clock is tried
+    it("is not reached where the inserters' hands are too small for the target: the build is refused before any clock", async () => {
         const sample = await loadConfigFromFile(ConfigPaths.SAMPLE_CONFIG);
         const config = { ...sample, inserters: sample.inserters.map(inserter => ({ ...inserter, stack_size: 2 })) };
-        const generated = generateClockAlternatives(config, { logger: quiet });
-        expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
-        expect(generated.not_made.map(it => it.id)).toEqual(["even-hands", "uneven-output", "shifted-swings", "primitive-grouped"]);
-        expect(generated.why_not_stable).toEqual({
-            cause: "nothing holds",
-            message: "No clock holds the target rate of 240 a second. The closest, 2 output swings per cycle, moves 180 a second, 60 "
-                + "under the target. Not made: Even hands (only made where every inserter takes from a machine or a "
-                + "chest; inserter 1 takes from a belt); Uneven output swings (no moved output swing passes the clock-only check); Shifted "
-                + "swings (no shifted round of swings passes the clock-only check); Small batches (the chain of machines loops).",
-        });
+        expect(() => generateClockAlternatives(config, { logger: quiet })).toThrow(FeasibilityError);
+        expect(() => generateClockAlternatives(config, { logger: quiet })).toThrow("Inserter 2 can take at most 15 a second of logistic science "
+            + "pack out of the build (1 hand of 2 every 8 ticks), and the target is 21.82 a second.");
     });
 
     it("is the output chest filling up on issue #100's config, whose buffer chest nothing empties", async () => {

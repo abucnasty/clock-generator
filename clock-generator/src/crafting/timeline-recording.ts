@@ -1,7 +1,10 @@
 import { Entity, handSizeFor } from "../entities";
-import { EntityState, MachineState } from "../state";
+import { EntityState } from "../state";
 import { factorioInserterState, factorioMachineState } from "../state/factorio-entity-state";
+import { BurnerEnergy } from "../simulation/components/burner-energy";
 import type { SimulationContext } from "./sequence/simulation-context";
+import { ContainerStorage } from "../simulation/components/container-storage";
+import type { TickRecorder } from "../simulation/observers/observer";
 
 export type TimelineValue = number | string;
 /** Step changes, including the initial value at tick 0. Values hold until the next change. */
@@ -64,8 +67,11 @@ export interface TimelineRecordingOptions {
 type ReadSignal = { signal: TimelineSeries; read: () => TimelineValue };
 type WatchCounter = { read: () => number; before: number; event: Omit<TimelineEvent, "tick" | "amount">; item?: () => string | undefined };
 
-/** Optional observer only: no changes to inventory, controls, counters or simulation order. */
-export class TimelineRecorder {
+/**
+ * Samples every entity's signals and counts its events after each tick of a run: a recorder of the after-tick phase,
+ * which only reads (no change to inventories, controls, counters or the order of the simulation).
+ */
+export class TimelineRecorder implements TickRecorder {
     private readonly reads: ReadSignal[] = [];
     private readonly counters: WatchCounter[] = [];
     private readonly entities: TimelineEntity[] = [];
@@ -103,7 +109,7 @@ export class TimelineRecorder {
             const machine = state.machine;
             entity.recipe = machine.metadata.recipe.name;
             entity.items = machine.outputs.map(output => output.item_name);
-            for (const input of machine.inputs.values()) add({ id: `input:${input.item_name}`, label: "Ingredient", group: "inventory", unit: "items", item: input.item_name, limit: input.automated_insertion_limit.quantity }, () => MachineState.ingredientQuantity(state, input.item_name));
+            for (const input of machine.inputs.values()) add({ id: `input:${input.item_name}`, label: "Ingredient", group: "inventory", unit: "items", item: input.item_name, limit: input.automated_insertion_limit.quantity }, () => state.ingress.ingredientQuantity(input.item_name));
             for (const output of machine.outputs) add({ id: `output:${output.item_name}`, label: "Output", group: "inventory", unit: "items", item: output.item_name, limit: output.outputBlock.ingredients_blocked_at }, () => state.inventoryState.getQuantity(output.item_name));
             add({ id: "state", label: "Machine state", group: "state", unit: "state" }, () => factorioMachineState(state));
             add({ id: "craft", label: "Craft progress", group: "progress", unit: "%", limit: 100 }, () => state.craftingProgress.progress * 100);
@@ -111,10 +117,11 @@ export class TimelineRecorder {
             const madeBeforeRecording = state.totalCrafted;
             add({ id: "produced", label: "Main product made since tick 0", group: "production", unit: "items", item: machine.output.item_name }, () => state.totalCrafted - madeBeforeRecording);
             add({ id: "pending", label: "Products awaiting output room", group: "production", unit: "items", item: machine.output.item_name }, () => state.pendingOutput);
-            if (machine.fuel_slot) {
-                const fuel = machine.fuel_slot;
+            const energy = state.energy;
+            if (energy instanceof BurnerEnergy) {
+                const fuel = energy.fuel_slot;
                 add({ id: "fuel", label: "Fuel slot", group: "fuel", unit: "items", item: fuel.fuel.item_name, limit: fuel.automated_insertion_limit }, () => state.fuelInventory.getQuantity(fuel.fuel.item_name));
-                add({ id: "burning", label: "Burning fuel remaining", group: "fuel", unit: "MJ" }, () => state.fuelProgress.energy_remaining_mj);
+                add({ id: "burning", label: "Burning fuel remaining", group: "fuel", unit: "MJ" }, () => energy.energy_remaining_mj);
             }
             this.count(() => state.craftsStarted, { entity_id: id, kind: "craft-start" });
             this.count(() => state.craftCount, { entity_id: id, kind: "craft-complete" });
@@ -138,11 +145,11 @@ export class TimelineRecorder {
             add({ id: "state", label: "Drill state", group: "state", unit: "state" }, () => state.status);
             add({ id: "buffer", label: "Mined items in buffer", group: "inventory", unit: "items", item: state.drill.item.name }, () => state.inventoryState.getQuantity(state.drill.item.name));
             entity.note = "The drill model does not simulate a mining-progress bar. Inspect its target inventory and enable windows.";
-        } else if (EntityState.isChest(state)) {
+        } else if (ContainerStorage.is(state)) {
             entity.items = state.chest.getItemFilters();
-            const constant = EntityState.isInfinityChest(state);
+            const constant = ContainerStorage.isConstant(state);
             for (const item of entity.items) add({ id: `stock:${item}`, label: constant ? "Configured supply" : "Contents", group: "inventory", unit: "items", item, ...(constant ? {} : { limit: state.getCapacity(item) }) }, () => state.getCurrentQuantity(item));
-            if (EntityState.isInfinityChest(state)) entity.note = state.chest.remove_unfiltered_items
+            if (ContainerStorage.isConstant(state)) entity.note = state.chest.remove_unfiltered_items
                 ? (entity.items.length ? "Configured items are a constant supply. Unfiltered incoming items are removed." : "All incoming items are removed. This chest supplies no items.")
                 : "Infinity chest contents are a configured supply, not a finite inventory.";
         } else if (Entity.isBelt(model)) {

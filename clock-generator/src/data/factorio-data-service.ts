@@ -1,4 +1,4 @@
-import { ContainerPrototype, CraftingMachinePrototype, FactorioData, Ingredient, InserterPrototype, InserterResearch, Item, ItemName, MiningDrillSpec, QualityName, QualitySpec, Recipe, Resource, ResourceName, RocketSiloPrototype } from "./factorio-data-types";
+import { ContainerPrototype, CraftingMachinePrototype, FactorioData, Ingredient, InserterPrototype, InserterResearch, Item, ItemName, ItemPrototypeFields, MiningDrillSpec, QualityName, QualitySpec, Recipe, Resource, ResourceName, RocketSiloPrototype, TransportBeltPrototype } from "./factorio-data-types";
 import { MiningDrillType } from "../entities/drill/mining-drill";
 import assert from "../common/assert";
 
@@ -201,6 +201,37 @@ export class FactorioDataService {
             throw new Error(`${name} is not an inserter of the game data`);
         }
         return inserters[name];
+    }
+
+    /** Every inserter prototype of the data, in its order */
+    /** The manifest's other fields of an item (its fuel value and categories, what it spoils into); none for most items */
+    public static itemPrototypeFields(itemName: ItemName): ItemPrototypeFields {
+        this.findItemOrThrow(itemName);
+        return this.getData().item_prototype[itemName] ?? {};
+    }
+
+    /** The manifest's other fields of every item that has any (a fuel, an item that spoils into another), in the data's order */
+    public static getAllItemPrototypeFields(): Record<ItemName, ItemPrototypeFields> {
+        return this.getData().item_prototype;
+    }
+
+    public static getAllInserters(): InserterPrototype[] {
+        return Object.values(this.getData().inserter);
+    }
+
+    /** The transport belt prototype of that name; an unknown name is refused (own keys only) */
+    public static findTransportBeltOrThrow(name: string): TransportBeltPrototype {
+        const belt = this.findTransportBelt(name);
+        if (belt === null) {
+            throw new Error(`${name} is not a transport belt of the game data`);
+        }
+        return belt;
+    }
+
+    /** The transport belt prototype of that name; null when the data has none (own keys only) */
+    public static findTransportBelt(name: string): TransportBeltPrototype | null {
+        const belts = this.getData().transport_belt;
+        return Object.prototype.hasOwnProperty.call(belts, name) ? belts[name] : null;
     }
 
     /** The quality of that name; an unknown name is refused */

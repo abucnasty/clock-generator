@@ -54,4 +54,53 @@ describe("the stock recorder", () => {
             expect(Object.keys(series)).toHaveLength(stock.ticks);
         }
     });
+
+    it("records less of a run for a caller that reads less, and the series it keeps equal those of the full recording", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+        const context = SimulationContext.fromConfig(config);
+        const machines = context.machines.map(it => it.machine_state);
+        const inserters = context.inserters.map(it => ({ state: it.inserter_state, sink: it.sink_state }));
+        const recorded = (detail: "full" | "loop-windows" | "wake-ups" | "hands", expected_ticks?: number) => {
+            const recorder = new StockRecorder(machines, inserters, expected_ticks, detail);
+            for (let tick = 0; tick < 20; tick++) {
+                recorder.record();
+            }
+            return recorder.recording();
+        };
+        const full = recorded("full");
+        expect(full.detail).toBeUndefined();
+        for (const expected_ticks of [undefined, 20]) {
+            const loop_windows = recorded("loop-windows", expected_ticks);
+            const wake_ups = recorded("wake-ups", expected_ticks);
+            const hands = recorded("hands", expected_ticks);
+            expect([loop_windows.detail, wake_ups.detail, hands.detail]).toEqual(["loop-windows", "wake-ups", "hands"]);
+            for (const lean of [loop_windows, wake_ups, hands]) {
+                expect(lean.ticks).toBe(20);
+                expect(lean.inserters.map(it => it.inserter_id)).toEqual(full.inserters.map(it => it.inserter_id));
+                lean.inserters.forEach((series, index) => {
+                    expect(series.held).toEqual(full.inserters[index].held);
+                    expect(series.status).toEqual([]);
+                });
+            }
+            for (const lean of [loop_windows, wake_ups]) {
+                expect(lean.machines.map(it => it.machine_id)).toEqual(full.machines.map(it => it.machine_id));
+                lean.machines.forEach((series, index) => {
+                    for (const column of ["products_finished", "crafts_started", "results_placed"] as const) {
+                        expect(series[column]).toEqual(full.machines[index][column]);
+                    }
+                    expect(series.inputs).toEqual({});
+                    expect(series.status).toEqual([]);
+                });
+                lean.inserters.forEach((series, index) => expect(series.factorio_state).toEqual(full.inserters[index].factorio_state));
+            }
+            loop_windows.machines.forEach((series, index) => expect(series.outputs).toEqual(full.machines[index].outputs));
+            loop_windows.inserters.forEach((series, index) => expect(series.held_item).toEqual(full.inserters[index].held_item));
+            // the hands alone leave out the machines, bar the ones that place their results where inserters take them
+            expect(hands.machines.map(it => it.machine_id)).toEqual(full.machines.filter(it => it.results_placed !== undefined).map(it => it.machine_id));
+            hands.inserters.forEach(series => expect(series.factorio_state).toEqual([]));
+            for (const series of seriesOf(wake_ups)) {
+                expect(Object.keys(series)).toHaveLength(series.length);
+            }
+        }
+    });
 });

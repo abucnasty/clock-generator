@@ -14,6 +14,7 @@ import {
     type KeyboardEvent,
     type MouseEvent,
 } from 'react';
+import { useElementWidth } from '../hooks/useElementWidth';
 import { useGameNames } from '../hooks/useGameNames';
 import {
     axisTicks,
@@ -62,21 +63,6 @@ const WIDE_PX = 760;
 const LABEL_COLUMN_PX = 206;
 const NUMBERS_COLUMN_PX = 120;
 const COLUMN_GAP_PX = 14;
-
-/** Width of an element, kept up to date */
-function useWidth(): [(element: HTMLElement | null) => (() => void) | undefined, number] {
-    const [width, setWidth] = useState(0);
-    const ref = useCallback((element: HTMLElement | null) => {
-        if (!element) {
-            return undefined;
-        }
-        setWidth(element.getBoundingClientRect().width);
-        const observer = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width));
-        observer.observe(element);
-        return () => observer.disconnect();
-    }, []);
-    return [ref, width];
-}
 
 const percent = (ticks: number, period: number) => `${(ticks / period) * 100}%`;
 
@@ -387,7 +373,8 @@ export function WakeWindowsChart(props: WakeWindowsChartProps) {
     const { rows, periodTicks, selected, onSelect } = props;
     const range = props.range ?? { start: 0, end: periodTicks };
     const span = range.end - range.start;
-    const [rootRef, width] = useWidth();
+    const rootRef = useRef<HTMLDivElement>(null);
+    const width = useElementWidth(rootRef);
     const [activeRowId, setActiveRowId] = useState<string | null>(null);
     const rowElements = useRef(new Map<string, HTMLElement>());
 

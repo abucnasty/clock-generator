@@ -100,7 +100,7 @@ describe("windows for results that come by small chances, by arithmetic", () => 
         const grouped = withRareResultsOnOneInserter(config);
         const { registry } = machineOf(grouped);
         expect(() => CraftingCyclePlan.create(TargetProductionRate.fromConfig(grouped.target_output), registry, fraction(1), grouped.overrides ?? {}))
-            .toThrow("Inserter 10 takes processing-unit, low-density-structure and holmium-ore out of chest:14. An inserter that holds part of a hand "
+            .toThrow("Inserter 10 takes processing unit, low density structure and holmium ore out of chest 14. An inserter that holds part of a hand "
                 + "of one of them takes only more of that one");
     });
 

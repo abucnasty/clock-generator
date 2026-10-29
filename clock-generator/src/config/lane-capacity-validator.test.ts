@@ -1,10 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { assertLaneCapacity, laneCapacity, laneCapacityIssues, lanesExactlyFull, lanesExactlyFullWarning, lanesSharedByCopies, laneSharedByCopiesWarning, warnLanesSharedByCopies } from './lane-capacity-validator';
-import { LaneCapacityError } from './errors';
+import { assertLaneCapacity, laneCapacityIssues, laneLoads, lanesExactlyFull, lanesExactlyFullWarning, lanesSharedByCopies, laneSharedByCopiesWarning, warnLanesSharedByCopies } from './lane-capacity-validator';
+import { FeasibilityError, LaneCapacityError } from './errors';
 import { Config } from './schema';
 import { validateConfig } from '../crafting/plan/validate-config';
 import { ConfigPaths } from './config-paths';
 import { loadConfigFromFile } from './loader';
+import { toPlannerFacts } from '../crafting/facts/to-planner-facts';
+import { plannerGraphOf } from '../crafting/graph/build-graph';
+import { feasibilityOf } from '../crafting/feasibility/assert-feasible';
 
 type Belt = Config['belts'][number];
 type Inserter = Config['inserters'][number];
@@ -43,13 +46,23 @@ const gears = (parts: { items_per_second: number; copies?: number; machines?: nu
     };
 };
 
+const feasibilityIssuesOf = (config: Config) => {
+    const facts = toPlannerFacts(config);
+    return feasibilityOf(facts, plannerGraphOf(facts)).issues;
+};
+
 const issuesOf = (config: Config) => laneCapacityIssues(config).map(({ kind, belt_id, lanes, inserter_ids, items_per_second, capacity_per_second }) =>
     ({ kind, belt_id, lanes, inserter_ids, items_per_second, capacity_per_second }));
 
-describe('laneCapacity', () => {
+describe('what a lane carries', () => {
     it.each(BELTS.flatMap(([type, speed]) => STACKS.map(stack => [type, speed, stack] as const)))(
         '%s at stack %i carries half its %i items a second times the stack on a lane', (type, speed, stack) => {
-            expect(laneCapacity(belt(1, ['iron-plate'], type, stack), 1).toDecimal()).toBe(speed / 2 * stack);
+            // the take off lane 1 of the input belt, and both sides of the one-lane output belt the gears drop onto
+            const loads = laneLoads(gears({ items_per_second: 1, input: belt(1, ['iron-plate'], type, stack), output: belt(2, ['iron-gear-wheel'], type, stack) }));
+            expect(loads.map(load => [load.belt_id, load.kind, load.lanes, load.capacity_per_second.toDecimal()])).toEqual([
+                [1, 'take', [1], speed / 2 * stack],
+                [2, 'drop', [1, 2], speed * stack],
+            ]);
         });
 });
 
@@ -212,15 +225,36 @@ describe('lanes exactly full', () => {
 });
 
 describe('where it runs', () => {
-    it('Check refuses a lane over capacity in one unit', () => {
-        expect(() => validateConfig(gears({ items_per_second: 61 }))).toThrow(LaneCapacityError);
-        expect(() => validateConfig(gears({ items_per_second: 60 }))).not.toThrow();
+    // the one inserter brings at most 87.27 iron plates a second (a hand of 16 every 11 ticks), less than the lane's 120:
+    // the feasibility pass refuses 61 gears a second (122 plates) for the inserter before the lane check sees the lane
+    it('Check refuses a lane over capacity in one unit: the feasibility pass first, the lane check behind it', () => {
+        expect(() => validateConfig(gears({ items_per_second: 61 }))).toThrow(FeasibilityError);
+        expect(issuesOf(gears({ items_per_second: 61 }))).toEqual([
+            { kind: 'take', belt_id: 1, lanes: [1], inserter_ids: [1], items_per_second: 122, capacity_per_second: 120 },
+        ]);
+        expect(() => validateConfig(gears({ items_per_second: 43 }))).not.toThrow();
     });
 
-    it('lets the planner refuse a target the machines cannot make first', () => {
+    // four machines drop 130 gears a second onto lane 1 of belt 2, which lists gears on both lanes: the feasibility pass
+    // holds a drop to the belt's two sides, 240 a second, and passes it (4 hands of 16 every 11 ticks bring 349.09 plates of the 260 and take 349.09
+    // gears out); the lane check counts the drops on the lane they name, 130 of its 120, and refuses it. The machines
+    // differ in speed, so that the copies check does not take them for four copies of one
+    it('Check refuses drops over a lane\'s capacity that the feasibility pass lets through: the lane check behind it', () => {
+        const dropping = (items_per_second: number) => {
+            const config = gears({ items_per_second, machines: 4, input: 'chest', drop_lane: 1, output: belt(2, ['iron-gear-wheel', 'iron-gear-wheel']) });
+            config.machines = config.machines.map(machine => ({ ...machine, crafting_speed: 1000 + machine.id }));
+            return config;
+        };
+        expect(feasibilityIssuesOf(dropping(130))).toEqual([]);
+        expect(() => validateConfig(dropping(130))).toThrow(LaneCapacityError);
+        expect(() => validateConfig(dropping(130))).toThrow('Inserters 2, 4, 6 and 8 drop 130 a second onto lane 1 of belt 2, which carries 120.');
+        expect(() => validateConfig(dropping(120))).not.toThrow();
+    });
+
+    it('lets the feasibility pass refuse a target the machines cannot make before the lane check', () => {
         const slow = gears({ items_per_second: 1000 });
         slow.machines = slow.machines.map(machine => ({ ...machine, crafting_speed: 1 }));
-        expect(() => validateConfig(slow)).toThrow('The current configuration cannot meet the target production rate.');
+        expect(() => validateConfig(slow)).toThrow('Machine 1 (iron gear wheel) crafts at most 2 a second. The target needs 1000 crafts a second of it');
     });
 
     it('refuses no sample with a lane over capacity in one unit', async () => {

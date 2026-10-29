@@ -32,6 +32,9 @@ export const SUMMARY_COPY = {
     wakeUps: (perMinute: number) => `${perMinute} a minute`,
     wakeUpsNotCounted: 'Not counted',
     oneCopy: 'one copy',
+    // on a build with a loop of machines, whose wake-ups depend on where its clock is when the build starts, a clock's figure is their average
+    wakeUpsAverage: (starts: number) => `average of ${starts} start points`,
+    wakeUpsColdStart: (perMinute: number) => `${perMinute} from a cold start`,
     recoversYes: 'Yes',
     recoversNo: 'No',
     recoversNotTested: 'Not tested',
@@ -199,12 +202,40 @@ export function makesText(clock: Pick<SummaryClock, 'assessment'>, copies: numbe
     };
 }
 
-/** The wake-ups of one copy, rounded as the table rounds them: "18 a minute", "one copy"; or "Not counted" */
+/**
+ * The share the cold start's figure may be off the average of the start points before the table and the card name it
+ * beside the average
+ */
+const COLD_START_NAMED_SHARE = 0.1;
+
+/**
+ * Where a clock's wake-ups are the average of its start points: how many, and the cold start's figure where it is
+ * more than COLD_START_NAMED_SHARE off the average; null where the figure is the cold start's own
+ */
+export function wakeUpsAverageOf(clock: Pick<SummaryClock, 'assessment'>): { starts: number; coldStart: number | null } | null {
+    const fromStarts = clock.assessment.wake_ups_from_starts;
+    if (fromStarts === undefined) {
+        return null;
+    }
+    const cold = fromStarts.wake_ups_per_minute[0];
+    const named = Math.abs(cold - fromStarts.mean) > COLD_START_NAMED_SHARE * Math.max(Math.abs(fromStarts.mean), Math.abs(cold));
+    return { starts: fromStarts.wake_ups_per_minute.length, coldStart: named ? cold : null };
+}
+
+/**
+ * The wake-ups of one copy, rounded as the table rounds them: "18 a minute", "one copy"; "one copy, average of 12 start
+ * points" where they are an average (with the cold start's figure where it is far off it); or "Not counted"
+ */
 export function wakeUpsText(clock: Pick<SummaryClock, 'assessment'>): { value: string; sub: string } {
     const perMinute = clock.assessment.wake_ups_per_minute;
-    return perMinute === null
-        ? { value: SUMMARY_COPY.wakeUpsNotCounted, sub: '' }
-        : { value: SUMMARY_COPY.wakeUps(Math.round(perMinute)), sub: SUMMARY_COPY.oneCopy };
+    if (perMinute === null) {
+        return { value: SUMMARY_COPY.wakeUpsNotCounted, sub: '' };
+    }
+    const average = wakeUpsAverageOf(clock);
+    const sub = average === null ? SUMMARY_COPY.oneCopy
+        : `${SUMMARY_COPY.oneCopy}, ${SUMMARY_COPY.wakeUpsAverage(average.starts)}`
+            + (average.coldStart === null ? '' : `; ${SUMMARY_COPY.wakeUpsColdStart(Math.round(average.coldStart))}`);
+    return { value: SUMMARY_COPY.wakeUps(Math.round(perMinute)), sub };
 }
 
 type BeltKind = 'moving' | 'backed_up' | 'none';

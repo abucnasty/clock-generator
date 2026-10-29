@@ -231,9 +231,12 @@ function handleValidate(requestId: number, config: Config): void {
                 ? error.issues.map(issue => ({ kind: 'coverage' as const, issue }))
                 : error instanceof clockGenerator.ConfigValidationError
                     ? error.zodError.issues.map(issue => ({ kind: 'field' as const, path: issue.path as (string | number)[], message: issue.message }))
-                    : error instanceof Error && error.message.startsWith('The current configuration cannot meet the target production rate.')
-                        ? [{ kind: 'field', path: ['target_output', 'items_per_second'], message: error.message }]
-                        : undefined,
+                    // a build no clock can hold: its opening once, and each problem the engine found on its own
+                    : error instanceof clockGenerator.FeasibilityError
+                        ? [{ kind: 'refusal' as const, opening: error.opening, problems: error.problems }]
+                        : error instanceof Error && error.message.startsWith('The current configuration cannot meet the target production rate.')
+                            ? [{ kind: 'refusal' as const, problems: [error.message] }]
+                            : undefined,
         });
     }
 }
@@ -253,11 +256,13 @@ function checkRepeatedUnitConversion(config: Config): CheckedRepeatedUnitConvers
         requireValidConfig(plan.candidate);
         return { kind: 'available', plan, validation: clockGenerator.validateConfig(plan.candidate) };
     } catch (error) {
-        // Planning's existing assertion type includes target-capacity/period refusals. Untyped errors
-        // and native programmer failures must remain query-failed, never a structural diagnosis.
+        // Planning's existing assertion type includes target-capacity/period refusals, and the feasibility pass refuses
+        // a target no clock could carry. Untyped errors and native programmer failures must remain query-failed, never a
+        // structural diagnosis.
         if (!(error instanceof clockGenerator.ConfigValidationError)
             && !(error instanceof clockGenerator.InserterCoverageError)
             && !(error instanceof clockGenerator.CopiesError)
+            && !(error instanceof clockGenerator.FeasibilityError)
             && !(error instanceof clockGenerator.AssertionError)) throw error;
         return { kind: 'unavailable', stage: 'check', reason: { code: 'candidate-check-failed',
             message: error instanceof Error ? error.message : 'The candidate Check failed.' }, repeatedGroups: repeatedGroups() };
@@ -374,7 +379,7 @@ function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
             return lookups();
         case 'machine-facts':
             try {
-                return clockGenerator.Machine.computeMachineFacts(query.params);
+                return clockGenerator.computeMachineFacts(query.params);
             } catch {
                 return null;
             }

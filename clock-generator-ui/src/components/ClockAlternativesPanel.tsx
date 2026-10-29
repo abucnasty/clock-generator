@@ -26,7 +26,7 @@ import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import { CLOCK_TABLE_NAME, CLOCK_TABLE_REGION, clockHelpName, termsHelpName } from '../utils/a11yLabels';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import { BELT_COPY } from '../utils/beltQuestion';
-import { SUMMARY_COPY, beltCellText, clockTechnicalName, foldedMakes, isStartDependent, plainClockName, recoversOf, worksOf } from '../utils/clockSummary';
+import { SUMMARY_COPY, beltCellText, clockTechnicalName, foldedMakes, isStartDependent, plainClockName, recoversOf, wakeUpsAverageOf, worksOf } from '../utils/clockSummary';
 import { PROVISIONAL_WAKE_UP_DEFINITION, TERMS_FOCUS, type GlossaryId } from '../utils/glossary';
 import { HelpButton } from './HelpButton';
 import { ScrollX } from './ScrollX';
@@ -65,7 +65,8 @@ const COMPARE_COPY = {
     windowsHelp: 'How many wake windows the clock has in all: stretches of ticks during which it switches an inserter on.',
     wakeUpsHelp: PROVISIONAL_WAKE_UP_DEFINITION + ' Counted per minute, summed over the inserters of one copy of the build '
         + 'in a long run of this clock. Shown for clocks that were run long enough to count them. It is the count from '
-        + 'one start point; a clock can settle into another steady state from another start point, with another count.',
+        + 'one start point, but on a build with a loop of machines: a clock there settles into another steady state from '
+        + 'another start point, with another count, so its figure is the average over 12 start points, and the cell says so.',
     noneRecover: 'No clock qualifies as stable across its completed checks. Compare its modeled rate, recovery and sampled starts separately.',
     noneHold: 'None of the clocks tried holds the target rate, so they are all listed.',
     deadlock: 'The tests that starve and jam the build do not see this, so on this build they do not decide which clock '
@@ -269,7 +270,7 @@ export function ClockAlternativesPanel({
                         <TableCell align="right">{alternative.assessment.items_per_second.toFixed(2)}</TableCell>
                         <TableCell align="right">
                             {alternative.asBuilt
-                                ? `${alternative.asBuilt.actual_output_items} / ${alternative.expectedOutputItems}`
+                                ? `${formatNumberText(alternative.asBuilt.actual_output_items)} / ${alternative.expectedOutputItems}`
                                 : '—'}
                         </TableCell>
                         <TableCell>
@@ -453,8 +454,25 @@ export function ClockAlternativesPanel({
     );
 }
 
-/** The wake-ups of one copy, rounded; a dash when they were not counted */
-function wakeUpsCell(alternative: ClockAlternativeView): string {
+/**
+ * The wake-ups of one copy, rounded; under them, where they are the average of the start points, how many, and the
+ * cold start's figure where it is far off it; a dash when they were not counted
+ */
+function wakeUpsCell(alternative: ClockAlternativeView): ReactNode {
     const perMinute = alternative.assessment.wake_ups_per_minute;
-    return perMinute !== null ? `${Math.round(perMinute)}` : '—';
+    if (perMinute === null) {
+        return '—';
+    }
+    const average = wakeUpsAverageOf(alternative);
+    return (
+        <>
+            {`${Math.round(perMinute)}`}
+            {average !== null && (
+                <Typography variant="caption" component="div" color="text.secondary" sx={{ whiteSpace: 'normal', minWidth: '12ch' }} data-wake-ups-average="">
+                    {SUMMARY_COPY.wakeUpsAverage(average.starts)}
+                    {average.coldStart !== null && <><br />{SUMMARY_COPY.wakeUpsColdStart(Math.round(average.coldStart))}</>}
+                </Typography>
+            )}
+        </>
+    );
 }

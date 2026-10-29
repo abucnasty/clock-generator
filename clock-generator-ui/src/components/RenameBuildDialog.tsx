@@ -1,4 +1,5 @@
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from '@mui/material';
+import { Button, TextField } from '@mui/material';
+import { AppDialog } from './AppDialog';
 import { useState } from 'react';
 
 interface RenameBuildDialogProps {
@@ -17,39 +18,19 @@ export function RenameBuildDialog({ open, initialName, onSave, onClose, onExited
     // a new dialog per opening (the caller mounts it while open), so the field starts from the name each time
     const [name, setName] = useState(initialName);
     return (
-        <Dialog
-            open={open}
-            onClose={onClose}
-            maxWidth="xs"
-            fullWidth
-            disableRestoreFocus
-            slotProps={{ transition: { onExited } }}
-        >
-            <form
-                onSubmit={(event) => {
-                    event.preventDefault();
-                    onSave(name);
-                }}
-            >
-                <DialogTitle>Rename build</DialogTitle>
-                <DialogContent>
-                    <TextField
-                        label="Name"
-                        value={name}
-                        onChange={(event) => setName(event.target.value)}
-                        autoFocus
-                        onFocus={(event) => event.target.select()}
-                        fullWidth
-                        margin="dense"
-                        helperText="Leave it empty to name the build after its target recipe."
-                        slotProps={{ htmlInput: { maxLength: 200 } }}
-                    />
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={onClose} color="inherit">Cancel</Button>
-                    <Button type="submit" variant="contained" color="secondary">Save</Button>
-                </DialogActions>
-            </form>
-        </Dialog>
+        <AppDialog open={open} onClose={onClose} maxWidth="xs" title="Rename build" disableRestoreFocus onExited={onExited} onSubmit={() => onSave(name)}
+            cancel="Cancel" actions={<Button type="submit" variant="contained" color="secondary">Save</Button>}>
+            <TextField
+                label="Name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                autoFocus
+                onFocus={(event) => event.target.select()}
+                fullWidth
+                margin="dense"
+                helperText="Leave it empty to name the build after its target recipe."
+                slotProps={{ htmlInput: { maxLength: 200 } }}
+            />
+        </AppDialog>
     );
 }

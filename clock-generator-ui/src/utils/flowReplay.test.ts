@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TimelineRecording } from 'clock-generator/browser';
-import { adjacentTransfer, flowEventSummary, flowReplayEvents, flowReplayFrame, flowTransferTicks, flowTransferAmounts, flowReplayIndex, flowReplaySnapshot } from './flowReplay';
+import { adjacentTransfer, flowEventSummary, flowReplayCycles, flowReplayEvents, flowReplayFrame, flowReplayIndex, flowReplaySnapshot, flowTransferAmounts, flowTransferTicks } from './flowReplay';
 import { validInspection } from './timelineInspection';
 
 const recording = { entities: [{ id: 'inserter:1', type: 'inserter', source: 'belt:1', sink: 'machine:1', items: ['iron-plate'], signals: [
@@ -17,10 +17,10 @@ const recording = { entities: [{ id: 'inserter:1', type: 'inserter', source: 'be
     { tick: 5, kind: 'produce', entity_id: 'machine:1', amount: 2, item: 'gear' },
     { tick: 5, kind: 'craft-complete', entity_id: 'machine:1', amount: 1 },
 ] } as TimelineRecording;
+const index = flowReplayIndex(recording);
 
 describe('flow replay', () => {
     it('supports exact backward seeking, partial deliveries and baseline inventory/fuel without mutating the recording', () => {
-        const index = flowReplayIndex(recording);
         expect(flowReplaySnapshot(index, 'inserter:1', 8)).toMatchObject({ hand: 0, handItem: '', enabled: false });
         expect(flowReplaySnapshot(index, 'inserter:1', 5)).toMatchObject({ hand: 10, handItem: 'iron-plate', enabled: true });
         expect(flowReplaySnapshot(index, 'inserter:1', 0).hand).toBe(0);
@@ -31,7 +31,6 @@ describe('flow replay', () => {
         expect(recording.events[0].tick).toBe(8);
     });
     it('steps strictly between transfer ticks and respects the selected crafting-cycle bounds', () => {
-        const index = flowReplayIndex(recording);
         expect(adjacentTransfer(index, 3, 1)).toBe(5);
         expect(adjacentTransfer(index, 5, -1)).toBe(3);
         expect(adjacentTransfer(index, 5, -1, 4, 8)).toBeNull();
@@ -39,7 +38,6 @@ describe('flow replay', () => {
         expect(adjacentTransfer(index, 8, 1)).toBeNull();
     });
     it('groups only visual effects, keeping production distinct from transferred quantities', () => {
-        const index = flowReplayIndex(recording);
         expect(flowReplayEvents(index, 5, 5)).toHaveLength(2);
         const effects = flowReplayEvents(index, 3, 8);
         expect(flowEventSummary(effects, 'inserter:1')).toEqual([
@@ -48,21 +46,18 @@ describe('flow replay', () => {
         expect(flowEventSummary(effects, 'machine:1')).toEqual([{ kind: 'produce', item: 'gear', amount: 2 }]);
     });
     it('preserves valid replay context and rejects unsafe saved viewport values', () => {
-        expect(validInspection({ view: 'flow', replaySpeed: 4, replayCycleOnly: true, replayTransferScope: 'selection', replayViewport: { x: 20, y: -30, zoom: 0.8 } })).toMatchObject({ view: 'flow', replaySpeed: 4, replayCycleOnly: true, replayTransferScope: 'selection', replayViewport: { x: 20, y: -30, zoom: 0.8 } });
+        const context = { view: 'flow', replaySpeed: 4, replayCycleOnly: true, replayTransferScope: 'selection', replayViewport: { x: 20, y: -30, zoom: 0.8 } } as const;
+        expect(validInspection(context)).toMatchObject(context);
         const invalid = validInspection({ replayTransferScope: 'broken', replaySpeed: 1000, replayViewport: { x: NaN, y: 0, zoom: -1 } });
-        expect(invalid).not.toHaveProperty('replaySpeed');
-        expect(invalid).not.toHaveProperty('replayTransferScope');
+        for (const key of ['replaySpeed', 'replayTransferScope', 'replayViewport']) expect(invalid).not.toHaveProperty(key);
         expect(validInspection({ replayTransferScope: 'all' }).replayTransferScope).toBe('all');
-        expect(invalid).not.toHaveProperty('replayViewport');
     });
 });
 
-it('uses the exact clock period for fractional crafting cycles, including truncated excerpts', async () => {
-    const { flowReplayCycles } = await import('./flowReplay');
+it('uses the exact clock period for fractional crafting cycles, including truncated excerpts', () => {
     expect(flowReplayCycles(50.087, { period_ticks: 50.087 * 11, end_tick: 551 })?.count).toBe(11);
     expect(flowReplayCycles(50.087, { period_ticks: 50.087 * 11, end_tick: 120 })?.count).toBe(3);
 });
-
 
 describe('route-aware transfers', () => {
     const routes = {
@@ -83,28 +78,26 @@ describe('route-aware transfers', () => {
             { tick: 9, kind: 'produce', entity_id: 'machine:1', amount: 4 },
         ],
     } as TimelineRecording;
+    const routeIndex = flowReplayIndex(routes);
     it('includes both halves of every connected route for belts and machines, excluding unrelated transfers and production', () => {
-        const index = flowReplayIndex(routes);
-        expect(flowTransferTicks(index, 'belt:1')).toEqual([3, 4, 5, 6, 8]);
-        expect(flowTransferTicks(index, 'machine:1')).toEqual([3, 5, 7, 8]);
-        expect(flowTransferTicks(index, 'inserter:1')).toEqual([3, 5, 8]);
-        expect(flowTransferTicks(index, 'drill:1')).toEqual([]);
-        expect(flowTransferTicks(index, null)).toEqual([2, 3, 4, 5, 6, 7, 8]);
+        expect(flowTransferTicks(routeIndex, 'belt:1')).toEqual([3, 4, 5, 6, 8]);
+        expect(flowTransferTicks(routeIndex, 'machine:1')).toEqual([3, 5, 7, 8]);
+        expect(flowTransferTicks(routeIndex, 'inserter:1')).toEqual([3, 5, 8]);
+        expect(flowTransferTicks(routeIndex, 'drill:1')).toEqual([]);
+        expect(flowTransferTicks(routeIndex, null)).toEqual([2, 3, 4, 5, 6, 7, 8]);
     });
     it('steps forward and backward within the chosen scope and cycle bounds', () => {
-        const index = flowReplayIndex(routes);
-        const scoped = { transferTicks: flowTransferTicks(index, 'machine:1') };
+        const scoped = { transferTicks: flowTransferTicks(routeIndex, 'machine:1') };
         expect(adjacentTransfer(scoped, 5, 1)).toBe(7);
         expect(adjacentTransfer(scoped, 5, -1)).toBe(3);
         expect(adjacentTransfer(scoped, 5, 1, 0, 6)).toBeNull();
         expect(adjacentTransfer(scoped, 5, -1, 4, 8)).toBeNull();
-        expect(adjacentTransfer(index, 5, 1)).toBe(6);
+        expect(adjacentTransfer(routeIndex, 5, 1)).toBe(6);
     });
 });
 
 describe('exact-tick quantities', () => {
     it('separates quantities from an unnumbered fixed recent trail and excludes future events', () => {
-        const index = flowReplayIndex(recording);
         const frame = flowReplayFrame(index, 5);
         expect(frame.events.map(event => [event.kind, event.amount])).toEqual([['drop', 6], ['produce', 2]]);
         expect(frame.recentTransfers.map(event => event.tick)).toEqual([3]);

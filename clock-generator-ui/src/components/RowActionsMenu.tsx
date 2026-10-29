@@ -1,6 +1,6 @@
 import { MoreVert } from '@mui/icons-material';
 import { IconButton, Menu, MenuItem } from '@mui/material';
-import { useId, useState } from 'react';
+import { useMenuAnchor } from '../hooks/useMenuAnchor';
 import { rowActionsName } from '../utils/a11yLabels';
 
 interface RowActionsMenuProps {
@@ -13,24 +13,16 @@ interface RowActionsMenuProps {
 
 /** The keyboard and single-pointer alternative to dragging a row. */
 export function RowActionsMenu({ label, onDuplicate, onMoveUp, onMoveDown, showReorder = true }: RowActionsMenuProps) {
-    const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
-    const menuId = useId();
-    const open = anchor !== null;
-    const close = () => {
-        setAnchor(null);
-    };
-    const choose = (action: () => void) => { close(); action(); };
+    const menu = useMenuAnchor();
     return <>
-        <IconButton size="small" onClick={event => setAnchor(event.currentTarget)} aria-label={rowActionsName(label)}
-            aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined}
+        <IconButton size="small" {...menu.button} aria-label={rowActionsName(label)}
             sx={{ width: 30, height: 30, color: 'text.secondary', alignSelf: 'start', mt: '4px' }}>
             <MoreVert fontSize="small" />
         </IconButton>
-        <Menu id={menuId} anchorEl={anchor} open={open} onClose={close}
-            slotProps={{ paper: { role: 'region', 'aria-label': rowActionsName(label) }, list: { 'aria-label': rowActionsName(label) } }}>
-            <MenuItem onClick={() => choose(onDuplicate)}>Duplicate</MenuItem>
-            {showReorder && <MenuItem disabled={!onMoveUp} onClick={() => { if (onMoveUp) choose(onMoveUp); }}>Move up</MenuItem>}
-            {showReorder && <MenuItem disabled={!onMoveDown} onClick={() => { if (onMoveDown) choose(onMoveDown); }}>Move down</MenuItem>}
+        <Menu {...menu.menu} slotProps={{ paper: { role: 'region', 'aria-label': rowActionsName(label) }, list: { 'aria-label': rowActionsName(label) } }}>
+            <MenuItem onClick={menu.choose(onDuplicate)}>Duplicate</MenuItem>
+            {showReorder && <MenuItem disabled={!onMoveUp} onClick={onMoveUp && menu.choose(onMoveUp)}>Move up</MenuItem>}
+            {showReorder && <MenuItem disabled={!onMoveDown} onClick={onMoveDown && menu.choose(onMoveDown)}>Move down</MenuItem>}
         </Menu>
     </>;
 }

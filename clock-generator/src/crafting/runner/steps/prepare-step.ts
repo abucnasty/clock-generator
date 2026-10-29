@@ -1,23 +1,26 @@
-import { CompositeControlLogic, ControlLogic, EnableControl, TickControlLogic } from "../../../control-logic";
+import { EnableControl } from "../../../simulation/controls/enable-control";
+import { SimulationTick } from "../simulation-tick";
 import { assertIsChest, Entity, EntityId } from "../../../entities";
-import { EntityState, MachineState, MachineStatus } from "../../../state";
-import { cloneSimulationContextWithInterceptors, SimulationContext } from "../../sequence";
+import { EntityState, MachineStatus } from "../../../state";
+import { SimulationContext } from "../../sequence";
 import { InserterInterceptor } from "../../sequence/interceptors/inserter-interceptor";
 import { RunnerStep, RunnerStepType } from "./runner-step";
+import { ContainerStorage } from "../../../simulation/components/container-storage";
 
 /**
  * PrepareStep simulates the crafting process until all machines are output blocked
  * and all buffer chests are full. This ensures that the system is in a steady state
- * before further simulation steps.
+ * before further simulation steps. It puts the context's inserters on controls of its own
+ * when it is built (`SimulationContext.useControls`), which they keep until the next swap.
  */
 export class PrepareStep implements RunnerStep {
     public readonly type: RunnerStepType = RunnerStepType.PREPARE
-    private readonly control_logic: ControlLogic;
+    private readonly simulation_tick: SimulationTick;
 
     constructor(
         private readonly simulation_context: SimulationContext,
     ) {
-        this.control_logic = this.build()
+        this.simulation_tick = this.build()
     }
 
     /**
@@ -37,24 +40,24 @@ export class PrepareStep implements RunnerStep {
     }
 
     public execute(): void {
-        const control_logic = this.control_logic;
+        const simulation_tick = this.simulation_tick;
         const context = this.simulation_context;
         // Only check for full buffer chests that have both an input and output inserter
         const buffer_chests = context.state_registry
             .getAllStates()
-            .filter(EntityState.isFiniteChest)
+            .filter(ContainerStorage.isFinite)
             .filter(chest => context.inserters.some(inserter_state_machine => inserter_state_machine.inserter_state.inserter.source.entity_id.id === chest.entity_id.id))
             .filter(chest => context.inserters.some(inserter_state_machine => inserter_state_machine.inserter_state.inserter.sink.entity_id.id === chest.entity_id.id))
         
         while (true) {
             this.kickStartLoopingRecipes();
-            control_logic.executeForTick();
+            simulation_tick.executeForTick();
             if (context.tick_provider.getCurrentTick() > 1_000_000) {
                 const machines_not_output_full = context.machines.filter(it => it.machine_state.status !== MachineStatus.OUTPUT_FULL)
                 machines_not_output_full.forEach(it => {
                     console.error(`Machine ${it.machine_state.machine.entity_id} status: ${it.machine_state.status}`);
                     it.machine_state.machine.inputs.forEach(input => {
-                        if (MachineState.ingredientQuantity(it.machine_state, input.item_name) < 1) {
+                        if (it.machine_state.ingress.ingredientQuantity(input.item_name) < 1) {
                             console.error(`  Missing input: ${input.item_name}`);
                         }
                     })
@@ -97,9 +100,8 @@ export class PrepareStep implements RunnerStep {
         }
     }
 
-    private build(): ControlLogic {
+    private build(): SimulationTick {
         const context = this.simulation_context
-        const tick_control_logic = new TickControlLogic(context.tick_provider);
         
         // Input inserters: inserters that drop into machines
         const input_inserters_only = context.inserters
@@ -125,7 +127,8 @@ export class PrepareStep implements RunnerStep {
             buffer_chest_sink_inserters.map(it => it.inserter_state.inserter.entity_id.id)
         )
 
-        const cloned_context = cloneSimulationContextWithInterceptors(context, {
+        // the inserters on the preparation's controls, in place (same-tick rule 12); the drills keep theirs
+        context.useControls({
             inserter: (inserter_state, source_state, sink_state) => {
                 // Input inserters: wait until source machine is output blocked
                 if (input_inserter_ids.has(inserter_state.inserter.entity_id.id)) {
@@ -149,13 +152,6 @@ export class PrepareStep implements RunnerStep {
             }
         });
 
-        return new CompositeControlLogic(
-            [
-                tick_control_logic,
-                ...cloned_context.drills,
-                cloned_context.inserterUpdates(),
-                ...cloned_context.machines,
-            ]
-        )
+        return new SimulationTick(context);
     }
 }
