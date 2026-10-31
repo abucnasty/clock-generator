@@ -110,10 +110,15 @@ describe('generatedForOf and the belt answer', () => {
     });
 });
 
+/** A cost in step with the wake-ups, 100 ns a tick for each a minute, as the engine's ranking carries one; null for none counted */
+const costOfWakeUps = (wakeUps: number | null): ClockRanking['cost'] => wakeUps === null ? null
+    : { ns_per_tick: wakeUps * 100, input_wake_ups: wakeUps * 100, output_wake_ups: 0, belt_waits: 0, windows: 0, wires: 0, deciders: 0 };
+
 describe('backedUpBeltsHint', () => {
     /** A clock at the target rate made for a moving belt, with 4 windows, unless told otherwise */
     const clock = (wake_ups_per_minute: number | null, ranking: Partial<ClockRanking> = {}) => ({
-        ranking: { meets_target_rate: true, rate_off_target: 0, holds_expected_output: true, matches_belt_choice: true, wake_ups_per_minute, window_count: 4, ...ranking },
+        ranking: { meets_target_rate: true, rate_off_target: 0, holds_expected_output: true, matches_belt_choice: true, wake_ups_per_minute,
+            cost: costOfWakeUps(wake_ups_per_minute), window_count: 4, ...ranking },
     });
     const backedUp = (wakeUps: number | null, ranking: Partial<ClockRanking> = {}) => clock(wakeUps, { matches_belt_choice: false, ...ranking });
     const clocks = [clock(177), backedUp(0)];
