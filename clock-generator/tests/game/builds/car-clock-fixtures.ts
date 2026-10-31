@@ -18,9 +18,10 @@ import {PickupClockScenario} from "./pickup-clock-capture";
  * empties into a disposal chest. The harness puts the ore under the drill. At the harness's research the drill makes far
  * more than the furnaces take, so the car is full whenever the drill runs.
  *
- * The selected clock (2 output swings, 144 ticks) is recorded in two build orders; the clock with 3 output swings (72 ticks),
- * which was selected before the generator counted a wake-up only while the inserter's arm is at home, is recorded in both
- * as well, and the generation test finds it made. The game serves inserters that act on one entity
+ * The selected clock (the observed-windows clock, 288 ticks) is recorded in two build orders;
+ * the clock with 2 output swings (144 ticks), which was selected before the observed windows were searched past a stable clock,
+ * and the clock with 3 output swings (72 ticks), which was selected before the generator counted a wake-up only while the
+ * inserter's arm is at home, are recorded in both as well, and the generation test finds them made. The game serves inserters that act on one entity
  * in the same tick in the order of their unit numbers, the last built first (docs/simulator.md): as the build's blueprint
  * has them, the two inserters that take from the car are built before the output inserters; `takers-last` builds them
  * after. The clock with 1 output swing is a further check.
@@ -28,14 +29,16 @@ import {PickupClockScenario} from "./pickup-clock-capture";
 export interface CarCase {
     name: string;
     /** The alternative recorded */
-    alternative: "swings-2" | "swings-3" | "swings-1";
+    alternative: "derived" | "swings-2" | "swings-3" | "swings-1";
     /** The clock's period in ticks: the cuts are sized by it */
-    period: 72 | 144;
+    period: 72 | 144 | 288;
     order: "as-built" | "takers-last";
 }
 
 export function carCases(): CarCase[] {
     return [
+        {name: "car-derived", alternative: "derived", period: 288, order: "as-built"},
+        {name: "car-derived-takers-last", alternative: "derived", period: 288, order: "takers-last"},
         {name: "car-swings-2", alternative: "swings-2", period: 144, order: "as-built"},
         {name: "car-swings-2-takers-last", alternative: "swings-2", period: 144, order: "takers-last"},
         {name: "car-swings-3", alternative: "swings-3", period: 72, order: "as-built"},

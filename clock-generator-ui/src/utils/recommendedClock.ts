@@ -51,7 +51,7 @@ export const RECOMMENDED_COPY = {
     runMovingBelts: 'This run assumed moving belts.',
     runBackedUpBelts: 'This run assumed backed-up belts.',
     runSearched: 'The slower searches for fewer wake-ups were run.',
-    runSearchedWhenNeeded: 'The slower searches were only run if no other clock held the rate and recovered.',
+    runSearchedWhenNeeded: 'The slower searches were only run if no other clock held the rate and recovered, apart from the two that can still find fewer wake-ups on a short clock.',
     provisional: 'More clocks are still being made, so this may change. ',
     stopped: 'You stopped this run early, so a better clock may not have been made yet. ',
     beltBackedUp: ' with backed-up belts',

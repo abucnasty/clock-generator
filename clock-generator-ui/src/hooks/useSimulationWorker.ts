@@ -1,7 +1,7 @@
 import type { ValidationDiagnostic } from '../utils/buildValidation';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { Config, ConfigValidation, DebugSteps, LogMessage, SerializableClockWindows, SerializableTransferHistory, PortableStateTransitionHistory, SwingBackoffReport, GenerationProgress } from 'clock-generator/browser';
-import { combineClockAlternativeRuns, searchesAreNeeded } from 'clock-generator/light';
+import { combineClockAlternativeRuns, searchesAreNeeded, searchesToRun } from 'clock-generator/light';
 import type { ClockAlternativeContext, ClockAlternativeTask, NotMadeClock } from 'clock-generator/browser';
 import type { ClockAlternativeRunView, ClockAlternativeView, CraftingMachineData, FuelViewData, RecipeInfo, ShiftOptionsView, WorkerRequest, WorkerResponse } from '../worker/types';
 import { askEngine, createSimulationWorker, loadFactorioData } from '../worker/engineClient';
@@ -443,16 +443,17 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
 
     const dispatchTasks = useCallback((generation: Generation) => {
         while (generation.waiting.length > 0 && generation.queue.length === 0 && generation.running.size === 0 && !generation.primaryPending) {
-            // every clock made before them is in: the searches run when none of them can be selected as stable, and
-            // after them the fallbacks (a clock for another belt than the config's), when still none can
+            // every clock made before them is in: the searches run when none of them can be selected as stable, or
+            // those that can still improve on the stable one (searchesToRun), and after them the fallbacks (a clock for
+            // another belt than the config's), when still none can
             const searches = generation.waiting.filter(task => !task.fallback);
             const stage = searches.length > 0 ? searches : generation.waiting;
             generation.waiting = generation.waiting.filter(task => !stage.includes(task));
-            if (searchesAreNeeded(generation.runs, it => it.ranking)) {
-                generation.queue = orderAlternativeTasks(stage);
-            } else {
-                generation.skipped = [...generation.skipped, ...stage];
-            }
+            const run = searches.length > 0
+                ? searchesToRun(generation.runs, it => it.ranking, stage, generation.context!.period_ticks)
+                : searchesAreNeeded(generation.runs, it => it.ranking) ? stage : [];
+            generation.queue = orderAlternativeTasks(run);
+            generation.skipped = [...generation.skipped, ...stage.filter(task => !run.includes(task))];
             publishAlternatives(generation);
         }
         while (generation.idle.length > 0 && generation.queue.length > 0) {

@@ -12,7 +12,7 @@ export const FRONT_GENERATED: ReadonlyMap<string, string> = new Map([
     ["front-entrance-normal-mirrored-moving-different-items", "a moving config at the normal tier whose selected clock is made for backed-up belts"],
     ["front-entrance-turbo-mirrored-moving-different-items", "ordinary clock for a moving belt (planned-belt-slack) on the compact entrance scaffold"],
     ["front-entrance-turbo-mirrored-backed-different-items", "ordinary clock for a backed-up belt (planned-belt-slack) on the compact entrance scaffold"],
-    ["front-entrance-normal-unmirrored-moving-same-item", "the same-item entrance on a moving belt (both lanes carry the item), normal tier"],
+    ["front-entrance-normal-unmirrored-moving-same-item", "the same-item entrance on a moving belt (both lanes carry the item), normal tier: the observed-windows clock, with the batched clock still made"],
     ["front-entrance-normal-unmirrored-backed-same-item", "the same-item entrance on a backed-up belt, normal tier"],
     ["front-exit-turbo-unmirrored-backed-different-items", "the front exit config (electromagnetic plant), ordinary clock for backed-up belts"],
     ["front-exit-normal-mirrored-backed-different-items", "the normal-tier backed-up exit: the clock whose belt-fed windows last as long as a hand takes from the lanes at rest (#456)"],
