@@ -32,6 +32,7 @@ import { SimulationContext } from "./sequence/simulation-context";
 import { ExportShortfall, ExportedItem, exportShortfallOfBins } from "./export-delivery";
 import { SPOIL_LIMIT_SHARE } from "../common/rule-constants";
 import { ContainerStorage } from "../simulation/components/container-storage";
+import { DropBy } from "../simulation/components/ports";
 
 export type BackpressureLoss =
     /** Nothing is cut: the run as it is, counted as the runs with a loss are */
@@ -39,10 +40,35 @@ export type BackpressureLoss =
     /** The item stops arriving: no belt and no infinity chest has it */
     | { kind: "supply"; item: ItemName }
     /** The item is not taken away: the belts are full of it, and so are the chests the build puts it into */
-    | { kind: "output"; item: ItemName };
+    | { kind: "output"; item: ItemName }
+    /** Results that come by chance come over their mean: their machines place more of them at once (see ExcessLoss) */
+    | ExcessLoss;
+
+/**
+ * More of the results that come by chance than their expected amount, as the game's rolls give them in a run of periods
+ * over the mean (the simulator gives every result at its expected amount). Each machine of `at` places `count` more of
+ * its item at once into its result target, or into its own output where it has none, at each place in the period. The
+ * build has to hold its expected output through it, every period: an excess the clock takes up costs it nothing, and
+ * one it does not costs it a hand of its output, which it does not get back (on the recycler that voids iron ore, the
+ * inserters that bring the ore in wait while what came back fills the recycler to its insertion limit). The excess is
+ * the backlog the random margins say the container takes up (`CraftingMargin.backlog`, excessLossOf in
+ * random-margins.ts).
+ */
+export interface ExcessLoss {
+    kind: "excess";
+    at: readonly { machine_id: string; item: ItemName; count: number }[];
+}
+
+/** The items of an excess, each once, in the order of its machines */
+function excessItems(loss: ExcessLoss): ItemName[] {
+    return [...new Set(loss.at.map(it => it.item))];
+}
 
 /** "supply:coal", "output:advanced-circuit", "none" */
 export function lossId(loss: BackpressureLoss): string {
+    if (loss.kind === "excess") {
+        return `excess:${excessItems(loss).join("+")}`;
+    }
     return loss.kind === "none" ? loss.kind : `${loss.kind}:${loss.item}`;
 }
 
@@ -50,6 +76,10 @@ export function lossId(loss: BackpressureLoss): string {
 export function lossLabel(loss: BackpressureLoss): string {
     if (loss.kind === "none") {
         return "nothing is cut";
+    }
+    if (loss.kind === "excess") {
+        const items = excessItems(loss).map(item => FactorioDataService.itemNameInSentence(item));
+        return items.length === 1 ? `${items[0]} comes over its mean` : `${items.join(" and ")} come over their mean`;
     }
     const item = FactorioDataService.itemNameInSentence(loss.item);
     return loss.kind === "output" ? `${item} is not taken away` : `${item} stops arriving`;
@@ -327,7 +357,7 @@ export function itemsCarried(entity_registry: Pick<ReadableEntityRegistry, "getE
 
 /** What a loss switches off, and on again when it is over */
 function switchOf(context: SimulationContext, loss: BackpressureLoss): { cut(): void; restore(): void } {
-    if (loss.kind === "none") {
+    if (loss.kind === "none" || loss.kind === "excess") {
         return { cut: () => { }, restore: () => { } };
     }
     // on every belt and chest that gives the item, or that the build puts it into
@@ -404,6 +434,30 @@ export function judgedWithExports(
 }
 
 /**
+ * Puts the excess of a loss where its machines place the result: into the container that is a machine's result target,
+ * as far as it has room, else into the machine's own output
+ */
+function placeExcess(context: SimulationContext, loss: ExcessLoss): void {
+    for (const { machine_id, item, count } of loss.at) {
+        const machine_state = context.machines.find(it => it.machine_state.machine.entity_id.id === machine_id)?.machine_state;
+        if (machine_state === undefined || count <= 0) {
+            continue;
+        }
+        const target_id = machine_state.machine.result_target;
+        const target = target_id === undefined ? null : context.state_registry.getStateByEntityId(target_id);
+        if (target !== null && ContainerStorage.is(target)) {
+            const room = target.accepts(item, count, DropBy.PLACER);
+            if (room > 0) {
+                target.insert(item, room);
+            }
+        } else {
+            const inventory = machine_state.inventoryState;
+            inventory.setQuantity(item, inventory.getQuantity(item) + count);
+        }
+    }
+}
+
+/**
  * Runs the trials of one loss on a build that is running on its clock, and leaves it wherever the last one ends. The
  * trials stop at the first that does not get back to the expected output: the loss is one the clock does not recover
  * from, and the trials after it would say nothing more.
@@ -456,10 +510,12 @@ export function runLossTrials(
     const shares = options.shares ?? LOSS_SHARES;
     const fixed = loss.kind !== "none" ? options.fixed_loss_ticks : undefined;
     const plans: LossTrialPlan[] = loss.kind === "none" ? [{ cut_at: 0, loss_ticks: 0 }]
+        // an excess is placed at once, at each place: it lasts no ticks
+        : loss.kind === "excess" ? places.map(place => ({ cut_at: Math.floor(place * bin.ticks), loss_ticks: 0 }))
         : fixed !== undefined ? places.map(place => ({ cut_at: Math.floor(place * bin.ticks), loss_ticks: fixed }))
         : shares.includes(1) ? lossTrialsUntilStopped(bin.ticks, places) : [{ cut_at: 0, restore_at: 0 }];
     // the trials that end part of the way are planned once it is known how long the build takes to stop
-    let part_of_the_way_planned = loss.kind === "none" || fixed !== undefined;
+    let part_of_the_way_planned = loss.kind === "none" || loss.kind === "excess" || fixed !== undefined;
     // the container whose count of some items is watched
     const watched = options.watched_backlog;
     const watched_container = watched === undefined ? undefined
@@ -540,7 +596,10 @@ export function runLossTrials(
         let output_during_loss = 0;
         let stopped_after_ticks: number | null = null;
         let ended_at_limit = false;
-        if (loss.kind !== "none") {
+        if (loss.kind === "excess") {
+            runUntilPhase(plan.cut_at);
+            placeExcess(context, loss);
+        } else if (loss.kind !== "none") {
             runUntilPhase(plan.cut_at);
             supply.cut();
             const cut_tick = now();
@@ -624,6 +683,10 @@ export function runLossTrials(
             judged = judgeRecovery(output_per_bin, expected_per_bin, repeats_from, run_on_bins, branch_bins);
         }
         const ran_on_bins = output_per_bin.length - window_bins;
+        // an excess has to cost the build nothing: it is at its expected output from the first period on
+        if (loss.kind === "excess" && judged.recovers && judged.recovered_after_bins !== 0) {
+            judged = { ...judged, recovers: false, recovered_after_bins: null };
+        }
         // the backlog the loss left has to be gone by the end, where it is watched
         if (watched !== undefined && watched_container !== undefined && judged.recovers && backlog_per_bin[backlog_per_bin.length - 1] > watched.limit) {
             judged = { ...judged, recovers: false, recovered_after_bins: null };
