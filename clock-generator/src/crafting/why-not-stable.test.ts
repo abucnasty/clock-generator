@@ -194,6 +194,18 @@ describe("why the selected clock does not meet goal 1", () => {
         expect(whyNotStable([noRecovery(["coal stops arriving"], [], { assessment: { holds: true, items_per_second: 8,
             backpressure_loss: { survives: false, broken_by: ["coal stops arriving"], broken_at_other_lane_phases: [] } } })], 0, moving)?.cause).toBe("nothing holds");
     });
+
+    // Thaeln's cell 07: the stable observed windows clock over the target is selected before an unstable one under it
+    it("is nothing holds for a stable clock over the target, selected before nearer ones, with how far over it runs", () => {
+        const over = clock({ label: "Observed windows: 6 output swings per cycle", meets_target_rate: false, stable_above_target: true,
+            assessment: { holds: true, items_per_second: 82.286, backpressure_loss: { survives: true, broken_by: [], broken_at_other_lane_phases: [] } } });
+        expect(whyNotStable([over], 0, { target_items_per_second: 80.41875, backed_up_belts: false, not_made: [] })).toEqual({
+            cause: "nothing holds",
+            message: "No clock holds the target rate of 80.42 a second. The selected one, Observed windows: 6 output swings per cycle, is "
+                + "stable and moves 82.29 a second, 1.87 (2.32%) over the target: a stable clock over the target is picked before a clock "
+                + "nearer to it that is unstable or runs under it.",
+        });
+    });
 });
 
 const chest1: FullOutputChest = { chest_id: 1, chest_type: ChestType.BUFFER_CHEST, name: "Chest 1", item: "electromagnetic-science-pack",
