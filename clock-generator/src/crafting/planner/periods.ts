@@ -156,20 +156,20 @@ export function plannedPeriodsOf(
     if (target.counts === "destroyed") {
         assert(result_windows !== null, "a destroyed target is planned with the decision of its results' windows");
         // planned by arithmetic: one count, no backoff, no other count offered (even hands moves the same hands)
-        const main = planned(CraftingCyclePlan.create(target, registry, fraction(1), overrides, result_windows), "main");
+        const main = planned(CraftingCyclePlan.create(target, registry, config, fraction(1), overrides, result_windows), "main");
         return { per_group: groups.map((_, at) => [choiceOf(main, at)]), tried: [main], main, can_back_off: false, listed_from: null };
     }
 
     assert(input.max_swings !== null, "a target that counts an item made is planned on the swings its prepare step found");
     const max_swings = input.max_swings;
-    const atCount = (count: number, listed_as: PeriodListing) => planned(CraftingCyclePlan.create(target, registry, fraction(count),
+    const atCount = (count: number, listed_as: PeriodListing) => planned(CraftingCyclePlan.create(target, registry, config, fraction(count),
         { ...overrides, terminal_swing_count: count }), listed_as);
     const under = (count: PlannedCount) => count.measure.main_period.toDecimal() < MAX_SIMULATION_TICKS;
 
     // the planning run's count, then today's swing backoff while the period is over the limit; the main clock's count
     // is the first under it, or the planned one where there is none
     const can_back_off = !forced && !fractional;
-    const first = planned(CraftingCyclePlan.create(target, registry, max_swings(fractional), overrides), "planned", fractional, max_swings(fractional));
+    const first = planned(CraftingCyclePlan.create(target, registry, config, max_swings(fractional), overrides), "planned", fractional, max_swings(fractional));
     const tried: PlannedCount[] = [first];
     if (!under(first) && can_back_off) {
         for (let count = first.swings - 1; count >= 1 && !under(tried[tried.length - 1]); count--) {
@@ -196,7 +196,7 @@ export function plannedPeriodsOf(
     const { lower, higher } = swingCountsListed(listed_from, planned_from, forced, main.measure.main_period.toDecimal());
     const toggled = alternative(null, "fractional", !fractional, () => {
         const exact = max_swings(!fractional);
-        return planned(CraftingCyclePlan.create(target, registry, exact, { ...overrides, use_fractional_swings: !fractional }),
+        return planned(CraftingCyclePlan.create(target, registry, config, exact, { ...overrides, use_fractional_swings: !fractional }),
             "fractional", !fractional, exact);
     });
     const counts: ListedCount[] = [

@@ -26,6 +26,10 @@
  * named check `LOOP_USES_ALL`). Fuel is rounded up to the fractions of a hand the ingredients come in (fuelRoundedUp),
  * so the system is solved with the fuel and without it.
  *
+ * Synchronous dataflow models a producer's `held_limit` and a consumer's insertion limit as bounded buffers: back edges
+ * with that many initial tokens. A back edge's row is its forward edge's with the sign turned, so it changes no solution
+ * of `Γq = 0` and is no row here; the limits bound which periods can run (P-limit, P-stock), not the hands of one.
+ *
  * The transfers are listed from the target's edges back to the inputs: the target's edges, the fillers of the export
  * belts, then each machine's loaders from the output back, every filler after the edge it fills for.
  */

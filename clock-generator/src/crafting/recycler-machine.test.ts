@@ -59,7 +59,7 @@ describe('a recycler placing results into a machine', () => {
     });
     it('plans the recycler feed and target rate from the circuits its target needs', () => {
         const config = cell(), context = SimulationContext.fromConfig(config);
-        const cycle = CraftingCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), context.entity_registry, fraction(1));
+        const cycle = CraftingCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), context.entity_registry, config, fraction(1));
         const feed = [...cycle.entity_transfer_map.values()].find(entry => entry.entity.entity_id.number === 1)!;
         const output = [...cycle.entity_transfer_map.values()].find(entry => entry.entity.entity_id.number === 4)!;
         expect(feed.total_transfer_count.toDecimal() / output.total_transfer_count.toDecimal()).toBeCloseTo(4 / 5 / 1.5);

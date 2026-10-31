@@ -7,10 +7,12 @@
  */
 import assert from "../../common/assert";
 import type { ConfigOverrides } from "../../config";
+import type { Config } from "../../config/schema";
 import type { ResultWindowsDecision, ResultWindowsTerms } from "../../data-types/build-plan";
 import Fraction, { fraction } from "../../data-types/fraction";
 import { Entity, handSizeFor, Machine, ReadableEntityRegistry } from "../../entities";
 import { RESULT_WINDOWS_LONGEST_PERIOD_TICKS, resultsFitContainer, resultWindowsFeasible, resultWindowsPlan, sharedHandRefusal } from "../result-windows";
+import { destroyedTargetBalance, transfersOfBalance } from "../sequence/cycle/cycle-transfers";
 import { destroyedTargetCrafts, EntityTransferCountMap } from "../sequence/cycle/swing-counts";
 import { targetInsertersOf, targetMachinesOf } from "../sequence/cycle/target-ends";
 import type { TargetProductionRate } from "../target-production-rate";
@@ -61,6 +63,7 @@ export function destroyedTargetBasisOf(
 export function resultWindowsDecisionOf(
     target_production_rate: TargetProductionRate,
     entity_registry: ReadableEntityRegistry,
+    config: Config,
     config_overrides: Partial<ConfigOverrides>,
     basis: DestroyedTargetBasis = destroyedTargetBasisOf(target_production_rate, entity_registry, config_overrides),
 ): ResultWindowsDecision {
@@ -73,7 +76,8 @@ export function resultWindowsDecisionOf(
     }
     const craftsOf = (machine: Machine, hands: number) => destroyedTargetCrafts(machine, entity_registry, item, fraction(hands * hand)).toDecimal();
     const whole_hands = forced ?? base_hands;
-    const whole_transfers = EntityTransferCountMap.createForDestroyedTarget([...machines], entity_registry, item, fraction(whole_hands));
+    const whole_transfers = transfersOfBalance(destroyedTargetBalance([...machines], entity_registry, config, item, fraction(whole_hands),
+        (machine, brought) => destroyedTargetCrafts(machine, entity_registry, item, brought)), entity_registry);
     const cycle_ticks = ticks_per_hand.multiply(base_hands).toDecimal();
     const crafts_per_cycle = (machine: Machine) => craftsOf(machine, base_hands);
     const whole_fits = wholeHandsFit(whole_transfers, ticks_per_hand.multiply(whole_hands).toDecimal(), machines, entity_registry,

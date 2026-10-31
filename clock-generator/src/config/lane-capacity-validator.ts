@@ -54,7 +54,7 @@ const above = (a: Fraction, b: Fraction): boolean => a.subtract(b).getNumerator 
 /** The flows of one unit at the target, from the planner's transfer plan */
 function laneFlowsOf(config: Config): LaneFlow[] {
     const registry = createEntityRegistryFromConfig(config);
-    const cycle = CraftingCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), registry, fraction(1));
+    const cycle = CraftingCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), registry, config, fraction(1));
     const seconds = cycle.total_duration_ticks.divide(60);
     const flows: LaneFlow[] = [];
     for (const transfer of cycle.entity_transfer_map.values()) {

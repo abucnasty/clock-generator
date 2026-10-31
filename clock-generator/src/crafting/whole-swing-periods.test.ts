@@ -228,7 +228,7 @@ describe('strict period limits and existing arithmetic policies', () => {
         const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
         config.overrides = { ignored_lcm_ingredients: ['nutrients'] };
         const registry = createEntityRegistryFromConfig(config), target = TargetProductionRate.fromConfig(config.target_output);
-        const at = (count: number) => CraftingCyclePlan.create(target, registry, fraction(count));
+        const at = (count: number) => CraftingCyclePlan.create(target, registry, config, fraction(count));
         const seven = at(7), six = at(6);
         const fuelAt = (plan: typeof seven) => [...plan.entity_transfer_map.values()].find(row => row.entity.entity_id.number === 11)!
             .item_transfers.find(item => item.item_name === 'nutrients')!.transfer_count;

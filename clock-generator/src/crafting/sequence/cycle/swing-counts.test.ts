@@ -1,20 +1,19 @@
 import { describe, it, expect } from "vitest";
-import { fraction } from "../../../data-types/fraction";
+import Fraction, { fraction } from "../../../data-types/fraction";
 import { parseConfigFromObject } from "../../../config/config-browser";
-import { Belt, Entity, EntityId, EntityRegistry, InserterFactory, Machine } from "../../../entities";
+import type { Config } from "../../../config/schema";
+import { Entity, EntityId, Machine } from "../../../entities";
 import { EntityTransferCountMap, outputInsertersOf } from "./swing-counts";
+import { madeTargetBalance, transfersOfBalance } from "./cycle-transfers";
 import { loadConfigFromFile } from "../../../config/loader";
 import { ConfigPaths } from "../../../config/config-paths";
-import { SimulationContext } from "../simulation-context";
+import { createEntityRegistryFromConfig } from "../simulation-context";
 
-function registryFor(config: unknown): EntityRegistry {
-    const parsed = parseConfigFromObject(config);
-    const registry = new EntityRegistry();
-    const inserters = new InserterFactory(registry);
-    parsed.belts.forEach(belt => registry.add(Belt.fromConfig(belt)));
-    parsed.machines.forEach(machine => registry.add(Machine.fromConfig(machine)));
-    parsed.inserters.forEach((inserter, index) => registry.add(inserters.fromConfig(inserter.id ?? index + 1, inserter)));
-    return registry;
+/** The transfers of a cycle of `swings` output hands of 16 of each machine making `item` */
+function transfersOf(config: Config, item: string, swings: Fraction, cycle_ticks?: number): EntityTransferCountMap {
+    const registry = createEntityRegistryFromConfig(config);
+    const machines = registry.getAll().filter(Entity.isMachine).filter(it => it.output.item_name === item);
+    return transfersOfBalance(madeTargetBalance(machines, registry, config, swings, 16, cycle_ticks), registry);
 }
 
 function swingsFor(map: EntityTransferCountMap, inserter_id: number): number {
@@ -22,7 +21,7 @@ function swingsFor(map: EntityTransferCountMap, inserter_id: number): number {
     return Array.from(map.values()).find(it => it.entity.entity_id.id === id)!.total_transfer_count.toDecimal();
 }
 
-describe("EntityTransferCountMap.create", () => {
+describe("the transfers of a cycle", () => {
     // belt -> [1] cable machine -> [2], [3] -> circuit machine -> [5] belt; belt -> [4] circuit machine
     const config = {
         target_output: { recipe: "electronic-circuit", items_per_second: 10, copies: 1 },
@@ -44,10 +43,7 @@ describe("EntityTransferCountMap.create", () => {
     };
 
     it("feeds a machine for every inserter path that pulls from it", () => {
-        const registry = registryFor(config);
-        const circuit_machine = registry.getAll().filter(Entity.isMachine).find(it => it.output.item_name === "electronic-circuit")!;
-
-        const swings = EntityTransferCountMap.create([circuit_machine], registry, fraction(1), 16);
+        const swings = transfersOf(parseConfigFromObject(config), "electronic-circuit", fraction(1));
 
         // 16 circuits need 48 cable, split over two inserters, made from 24 copper plates
         expect(swingsFor(swings, 5)).toBe(1);
@@ -58,7 +54,7 @@ describe("EntityTransferCountMap.create", () => {
     });
 });
 
-describe("EntityTransferCountMap.create through belts", () => {
+describe("the transfers of a cycle through belts", () => {
     // belt 1 -> [1] cable machine -> [2] belt 2 -> [3] circuit machine -> [5] belt 3; belt 1 -> [4] circuit machine
     const configWithCableBelt = (cable_belt: object) => ({
         target_output: { recipe: "electronic-circuit", items_per_second: 10, copies: 1 },
@@ -80,11 +76,8 @@ describe("EntityTransferCountMap.create through belts", () => {
         ],
     });
 
-    const swingsForConfig = (config: unknown, cycle_ticks?: number) => {
-        const registry = registryFor(config);
-        const circuit_machine = registry.getAll().filter(Entity.isMachine).find(it => it.output.item_name === "electronic-circuit")!;
-        return EntityTransferCountMap.create([circuit_machine], registry, fraction(1), 16, cycle_ticks);
-    };
+    const swingsForConfig = (config: unknown, cycle_ticks?: number) =>
+        transfersOf(parseConfigFromObject(config), "electronic-circuit", fraction(1), cycle_ticks);
 
     it("plans the inserters filling a belt for what is taken off it", () => {
         const swings = swingsForConfig(configWithCableBelt({}), 64);
@@ -112,10 +105,8 @@ describe("EntityTransferCountMap.create through belts", () => {
 // biochambers give each other the egg a craft starts from (inserters 5 and 8) and send the rest to the science
 // biochamber [5] (inserters 9 and 10). Nothing fills a fuel slot alone: nutrients come with the ingredients.
 describe("a build where two machines feed each other", async () => {
-    const registry = SimulationContext.fromConfig(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE)).entity_registry;
-    const science_machine = registry.getAll().filter(Entity.isMachine).find(it => it.output.item_name === "agricultural-science-pack")!;
     // 7 hands of science a cycle: 112 packs from 44.8 crafts at +150% productivity
-    const swings = EntityTransferCountMap.create([science_machine], registry, fraction(7), 16);
+    const swings = transfersOf(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE), "agricultural-science-pack", fraction(7));
     const transfers = (inserter_id: number) => Object.fromEntries(
         Array.from(swings.values()).find(it => it.entity.entity_id.id === EntityId.forInserter(inserter_id).id)!
             .item_transfers.map(it => [it.item_name, it.transfer_count.toString()]));
@@ -150,9 +141,8 @@ describe("an item needed at two levels of a chain", () => {
     it("is planned for each machine by what that machine uses", async () => {
         // the inserter machine takes 1 plate an inserter from two furnaces; the gear machine takes its own plates from two others
         const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_INSERTER_CRAFTING);
-        const registry = SimulationContext.fromConfig(config).entity_registry;
-        const inserter_machine = registry.getAll().filter(Entity.isMachine).find(it => it.output.item_name === "inserter")!;
-        const swings = EntityTransferCountMap.create([inserter_machine], registry, fraction(5), 16);
+        const inserter_machine = createEntityRegistryFromConfig(config).getAll().filter(Entity.isMachine).find(it => it.output.item_name === "inserter")!;
+        const swings = transfersOf(config, "inserter", fraction(5));
         const plates_into_inserter_machine = Array.from(swings.values())
             .filter(it => Entity.isInserter(it.entity) && it.entity.sink.entity_id.id === inserter_machine.entity_id.id)
             .filter(it => it.item_transfers.some(transfer => transfer.item_name === "iron-plate"))
@@ -165,11 +155,12 @@ describe("an item needed at two levels of a chain", () => {
 // Two iron bacteria cultivation biochambers [1], [2]. Each has two inserters to a chest (1 and 3, 4 and 6) and one
 // to the other biochamber (8 and 7), which brings the bacteria its crafts start from.
 describe("output machines with several inserters taking from them", async () => {
-    const registry = SimulationContext.fromConfig(await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_CULTIVATION)).entity_registry;
+    const config = await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_CULTIVATION);
+    const registry = createEntityRegistryFromConfig(config);
     const machines = registry.getAll().filter(Entity.isMachine);
     const ids = (machine: Machine) => outputInsertersOf(machine, registry).map(it => it.entity_id.number).sort((a, b) => a - b);
     // 3 hands of bacteria a machine a cycle
-    const swings = EntityTransferCountMap.create(machines, registry, fraction(3), 16);
+    const swings = transfersOfBalance(madeTargetBalance(machines, registry, config, fraction(3), 16), registry);
     const transfers = (inserter_id: number) => Object.fromEntries(
         Array.from(swings.values()).find(it => it.entity.entity_id.id === EntityId.forInserter(inserter_id).id)!
             .item_transfers.map(it => [it.item_name, it.transfer_count.toString()]));
@@ -200,7 +191,7 @@ describe("EntityTransferCountMap.divide", () => {
             belts: [{ id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "copper-cable", stack_size: 4 }, { ingredient: "iron-plate", stack_size: 4 }] }],
             inserters: [{ id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: 16 }],
         };
-        const inserter = Array.from(registryFor(config).getAll()).find(Entity.isInserter)!;
+        const inserter = Array.from(createEntityRegistryFromConfig(parseConfigFromObject(config)).getAll()).find(Entity.isInserter)!;
         const map = EntityTransferCountMap.fromEntries([[inserter.entity_id, {
             entity: inserter,
             item_transfers: [{ item_name: "iron-plate", transfer_count: fraction(8, 3) }],

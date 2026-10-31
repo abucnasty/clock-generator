@@ -201,7 +201,7 @@ describe("pure primitive grouped construction", () => {
 
     it("preserves consecutive-hand room refusal and cannot exclude a planned loader as an unplanned clock", () => {
         const registry = createEntityRegistryFromConfig(config), target = TargetProductionRate.fromConfig(config.target_output);
-        const cycle = CraftingCyclePlan.create(target, registry, fraction(1));
+        const cycle = CraftingCyclePlan.create(target, registry, config, fraction(1));
         const paths = registry.getAll().filter(Entity.isMachine).filter(machine => machine.output.item_name === target.machine_production_rate.item).map(machine => outputPathOf(machine, registry));
         const clocks = unplannedInserterClocks(registry, 40);
         const composition: GroupedHandsComposition = { retained_clocks: clocks, output_paths: paths, direct_sources: new Map([["machine:3", ["machine:4"]]]) };
@@ -225,7 +225,7 @@ describe("pure primitive grouped construction", () => {
         const ordinary = await loadConfigFromFile(ConfigPaths.REAL_THAELN_CELL09);
         const auto = { ...ordinary, overrides: undefined, inserters: ordinary.inserters.map(inserter => ({ ...inserter, overrides: undefined })) };
         const registry = createEntityRegistryFromConfig(auto), target = TargetProductionRate.fromConfig(auto.target_output);
-        const cycle = CraftingCyclePlan.create(target, registry, fraction(1));
+        const cycle = CraftingCyclePlan.create(target, registry, auto, fraction(1));
         const artifact = constructPrimitiveGroupedHands(auto);
         for (const attempt of artifact.attempts) if (attempt.result.kind === "constructed") {
             const old = groupedHandsPlan(registry, cycle.entity_transfer_map, artifact.grouped_cycles, artifact.period_ticks, true, attempt.options);

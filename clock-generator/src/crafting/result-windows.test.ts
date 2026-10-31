@@ -38,7 +38,7 @@ function withRareResultsOnOneInserter(of: Config): Config {
 describe("windows for results that come by small chances, by arithmetic", () => {
     it("are planned where no period the silo holds makes the takers' hands whole", () => {
         const { registry } = machineOf(config);
-        const plan = CraftingCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), registry, fraction(1), config.overrides ?? {});
+        const plan = CraftingCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), registry, config, fraction(1), config.overrides ?? {});
         expect(plan.result_windows).toHaveLength(1);
         // the cycle is the whole period: 12 hands of scrap, 5760 ticks
         expect(plan.total_duration_ticks.toDecimal()).toBe(5760);
@@ -99,7 +99,7 @@ describe("windows for results that come by small chances, by arithmetic", () => 
     it("are refused where one inserter takes several results: holding part of a hand of one, it waits while the others fill the silo", () => {
         const grouped = withRareResultsOnOneInserter(config);
         const { registry } = machineOf(grouped);
-        expect(() => CraftingCyclePlan.create(TargetProductionRate.fromConfig(grouped.target_output), registry, fraction(1), grouped.overrides ?? {}))
+        expect(() => CraftingCyclePlan.create(TargetProductionRate.fromConfig(grouped.target_output), registry, grouped, fraction(1), grouped.overrides ?? {}))
             .toThrow("Inserter 10 takes processing unit, low density structure and holmium ore out of chest 14. An inserter that holds part of a hand "
                 + "of one of them takes only more of that one");
     });
@@ -123,14 +123,14 @@ describe("a destroyed target whose takers' hands come out whole in a period its 
     it("keeps the plan that simulates its period at a rate whose feed hands last no whole ticks (the overbeaconed ore voider at 639.22)", async () => {
         const voider = await loadConfigFromFile(ConfigPaths.REAL_OWNER_ORE_VOIDER_OVERBEACONED);
         const odd: Config = { ...voider, target_output: { ...voider.target_output, items_per_second: 639.22 } };
-        const plan = CraftingCyclePlan.create(TargetProductionRate.fromConfig(odd.target_output), createEntityRegistryFromConfig(odd), fraction(1), {});
+        const plan = CraftingCyclePlan.create(TargetProductionRate.fromConfig(odd.target_output), createEntityRegistryFromConfig(odd), odd, fraction(1), {});
         expect(plan.result_windows).toBeUndefined();
     });
 
     it("keeps the plan that simulates its period (the ore voider)", async () => {
         const voider = await loadConfigFromFile(ConfigPaths.REAL_OWNER_ORE_VOIDER_EXACT_SPEED);
         const registry = createEntityRegistryFromConfig(voider);
-        const plan = CraftingCyclePlan.create(TargetProductionRate.fromConfig(voider.target_output), registry, fraction(1), voider.overrides ?? {});
+        const plan = CraftingCyclePlan.create(TargetProductionRate.fromConfig(voider.target_output), registry, voider, fraction(1), voider.overrides ?? {});
         expect(plan.result_windows).toBeUndefined();
         expect(plan.total_duration_ticks.toDecimal()).toBe(12);
     });

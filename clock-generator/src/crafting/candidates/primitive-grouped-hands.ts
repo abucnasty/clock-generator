@@ -86,7 +86,7 @@ export function constructPrimitiveGroupedHands(config: Config): PrimitiveGrouped
     const traits = traitsOf(config);
     const capacity = output_machines.reduce((sum, machine) => sum.add(mainProductRateOf(traits, machine.entity_id.id)), fraction(0)).multiply(target.copies);
     assert(capacity.toDecimal() >= target.total_production_rate.amount_per_second.toDecimal(), "The current configuration cannot meet the target production rate.");
-    const cycle = CraftingCyclePlan.create(target, registry, fraction(1), config.overrides);
+    const cycle = CraftingCyclePlan.create(target, registry, config, fraction(1), config.overrides);
     const output_paths = output_machines.map(machine => outputPathOf(machine, registry));
     const direct_sources = new Map<string, string[]>();
     const direct_dependencies: PrimitiveGroupedConstruction["direct_dependencies"] = [];

@@ -10,18 +10,22 @@ import type { MachineNode } from "../../data-types/planner-facts";
 import { Entity, handSizeFor } from "../../entities";
 import { demandOf } from "../feasibility/demand";
 import { destroyedTargetBalance, madeTargetBalance, transfersOfBalance } from "../sequence/cycle/cycle-transfers";
-import { buildOutputInsertersOf, destroyedTargetCrafts, EntityTransferCountMap } from "../sequence/cycle/swing-counts";
+import { buildOutputInsertersOf, destroyedTargetCrafts, type EntityTransferCountMap } from "../sequence/cycle/swing-counts";
 import { createEntityRegistryFromConfig } from "../sequence/simulation-context";
 import { TargetProductionRate } from "../target-production-rate";
-import { Balance, balanceBuildOf, DRILL_ITEMS_PER_SWING } from "./balance";
+import { Balance, balanceBuildOf, DRILL_ITEMS_PER_SWING, periodCyclesOf } from "./balance";
 import { destroyedTargetBasisOf } from "./result-windows";
 
+/**
+ * The oracle of the balance equations: every sample's transfers at several counts, recorded from the demand walk they
+ * replaced (equal entry for entry, in its order, when both were there) and held to that record
+ */
 const SNAPSHOTS = path.join(__dirname, "__snapshots__");
 
 /** Output swings a cycle the balance is checked at: whole, and fractions as fractional swings plan them */
 const MADE_SWINGS = [fraction(1), fraction(2), fraction(3), fraction(7, 3), fraction(5, 2)];
 
-/** A transfer map as lines, in its order: what the oracle compares and records */
+/** A transfer map as lines, in its order: what the records hold */
 function linesOf(map: EntityTransferCountMap): string[] {
     return map.entries_array().map(([id, it]) => [
         id.id,
@@ -41,12 +45,11 @@ function outcomeOf(run: () => EntityTransferCountMap): string[] {
     }
 }
 
-/** A count of a sample the balance is checked at: its exact ticks, the balance, and the demand walk's transfers */
+/** A count of a sample the balance is checked at: its exact ticks and the balance */
 interface Case {
     readonly label: string;
     readonly ticks: Fraction;
     readonly balance: () => Balance;
-    readonly old: () => EntityTransferCountMap;
 }
 
 /** The counts of a sample: output swings a cycle, or hands of a destroyed target brought into each machine */
@@ -62,7 +65,6 @@ function casesOf(config: Config): Case[] {
             label: `hands ${hands}`,
             ticks: basis.ticks_per_hand.multiply(hands),
             balance: () => destroyedTargetBalance(machines, registry, config, item, fraction(hands), craftsOf),
-            old: () => EntityTransferCountMap.createForDestroyedTarget(machines, registry, item, fraction(hands)),
         }));
     }
     const machines = registry.getAll().filter(Entity.isMachine).filter(it => it.output.item_name === item);
@@ -75,7 +77,6 @@ function casesOf(config: Config): Case[] {
             label: `swings ${swings}`,
             ticks,
             balance: () => madeTargetBalance(machines, registry, config, swings, stack, cycle_ticks),
-            old: () => EntityTransferCountMap.create(machines, registry, swings, stack, cycle_ticks),
         };
     });
 }
@@ -94,14 +95,15 @@ const KNOWN_SHORT: Record<string, readonly string[]> = {
 
 describe("the balance equations of a cycle", () => {
     describe.each(samples)("of %s", (key, file) => {
-        it("give every transfer the demand walk gives, in its order, and are recorded", async () => {
+        it("give every transfer the demand walk gave, in its order, and every hand of a period is whole", async () => {
             const config = await loadConfigFromFile(file) as Config;
             const registry = createEntityRegistryFromConfig(config);
             const recorded: Record<string, string[]> = {};
             for (const run of casesOf(config)) {
-                const balanced = outcomeOf(() => transfersOfBalance(run.balance(), registry));
-                expect(balanced, run.label).toEqual(outcomeOf(run.old));
-                recorded[run.label] = balanced;
+                recorded[run.label] = outcomeOf(() => transfersOfBalance(run.balance(), registry));
+                const transfers = run.balance().transfers;
+                const cycles = periodCyclesOf(transfers);
+                expect(transfers.flatMap(it => it.items).every(it => it.hands.multiply(cycles).getDenominator === 1), run.label).toBe(true);
             }
             await expect(`${JSON.stringify({ sample: key, ...recorded }, null, 2)}\n`)
                 .toMatchFileSnapshot(path.join(SNAPSHOTS, `${key}.balance.json`));

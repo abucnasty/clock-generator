@@ -3,9 +3,11 @@ import assert from "../../../common/assert";
 import Fraction, { fraction } from "../../../data-types/fraction";
 import { Duration } from "../../../data-types/duration";
 import { TargetProductionRate } from "../../target-production-rate";
-import { buildOutputInsertersOf, EntityTransferCountMap } from "./swing-counts";
+import { buildOutputInsertersOf, destroyedTargetCrafts, EntityTransferCountMap } from "./swing-counts";
 import { Entity, handSizeFor, ReadableEntityRegistry } from "../../../entities";
 import { ConfigOverrides } from "../../../config";
+import type { Config } from "../../../config/schema";
+import { destroyedTargetBalance, madeTargetBalance, transfersOfBalance } from "./cycle-transfers";
 import { SwingDistribution, SwingDistributionMap } from "./swing-distribution";
 import { returnedTargetRefusal } from "./target-ends";
 import type { ResultWindowsPlan } from "../../result-windows";
@@ -84,7 +86,7 @@ function ticksOfCycles(plan: Pick<CraftingCyclePlan, "total_duration_ticks">, cy
 }
 
 /**
- * The plan of a target that counts an item destroyed, by plain arithmetic (computeDestroyedTargetTransfers): a cycle is
+ * The plan of a target that counts an item destroyed, by plain arithmetic (destroyedTargetBalance): a cycle is
  * the fewest hands of the item brought into each machine that last a whole number of ticks at the target rate (an
  * overridden output swing count sets them instead), and the transfers of every inserter follow from them. Whether the
  * results get windows of their own is the decision `resultWindowsDecisionOf` makes (planner/result-windows.ts): the one
@@ -93,6 +95,7 @@ function ticksOfCycles(plan: Pick<CraftingCyclePlan, "total_duration_ticks">, cy
 function createDestroyedPlan(
     target_production_rate: TargetProductionRate,
     entity_registry: ReadableEntityRegistry,
+    config: Config,
     config_overrides: Partial<ConfigOverrides>,
     decided: ResultWindowsDecision | undefined,
 ): CraftingCyclePlan {
@@ -103,32 +106,35 @@ function createDestroyedPlan(
         return {
             total_duration: Duration.ofTicks(period_ticks.toDecimal()),
             total_duration_ticks: period_ticks,
-            entity_transfer_map: EntityTransferCountMap.createForDestroyedTarget([...machines], entity_registry, item, fraction(hands)),
+            entity_transfer_map: transfersOfBalance(destroyedTargetBalance([...machines], entity_registry, config, item, fraction(hands),
+                (machine, brought) => destroyedTargetCrafts(machine, entity_registry, item, brought)), entity_registry),
             production_rate: target_production_rate,
             fractional_swings_enabled: false,
             terminal_swing_count_overridden: forced !== undefined,
             ...(result_windows !== undefined && { result_windows }),
         };
     };
-    const decision = decided ?? resultWindowsDecisionOf(target_production_rate, entity_registry, config_overrides, basis);
+    const decision = decided ?? resultWindowsDecisionOf(target_production_rate, entity_registry, config, config_overrides, basis);
     return decision.kind === "result-windows" ? planOf(decision.hands, decision.plans) : planOf(decision.hands);
 }
 
 /**
  * The crafting cycle of a build: for a target that counts an item made, `max_possible_swings` output swings a cycle (whole
  * where fractional swings are off, as the config's overrides say); for one that counts an item destroyed, the hands its
- * arithmetic gives, and `result_windows` is the decision of its results' windows where the build plan has made it.
+ * arithmetic gives, and `result_windows` is the decision of its results' windows where the build plan has made it. The
+ * transfers are the balance of the config's planner graph (cycle-transfers.ts); the registry is the one made from it.
  */
 function createPlan(
     target_production_rate: TargetProductionRate,
     entity_registry: ReadableEntityRegistry,
+    config: Config,
     max_possible_swings: Fraction,
     config_overrides: Partial<ConfigOverrides> = {},
     result_windows?: ResultWindowsDecision,
 ): CraftingCyclePlan {
     assertMachineResultTargetsSupported(entity_registry);
     if (target_production_rate.counts === "destroyed") {
-        return createDestroyedPlan(target_production_rate, entity_registry, config_overrides, result_windows);
+        return createDestroyedPlan(target_production_rate, entity_registry, config, config_overrides, result_windows);
     }
     const returned = returnedTargetRefusal({ item: target_production_rate.machine_production_rate.item, counts: "made" },
         target_production_rate.total_production_rate.amount_per_second.toDecimal(), entity_registry);
@@ -217,13 +223,14 @@ function createPlan(
 
     // Compute swing counts for all output machines
     // Each output machine handles the same swing count per machine
-    const swing_counts = EntityTransferCountMap.create(
+    const swing_counts = transfersOfBalance(madeTargetBalance(
         output_machines,
         entity_registry,
+        config,
         swings_per_cycle,
         output_stack_size,
         final_period_duration.ticks
-    )
+    ), entity_registry)
 
     // Compute swing distributions if fractional swings are enabled
     if (use_fractional_swings) {

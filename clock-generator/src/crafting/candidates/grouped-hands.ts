@@ -1,6 +1,7 @@
 import { OpenRange } from "../../data-types";
 import { Entity, EntityId, handSizeFor, Inserter, isNeverBlockingSink, Machine, MiningDrill, miningDrillMaxInsertion, ReadableEntityRegistry } from "../../entities";
-import { DRILL_ITEMS_PER_SWING, EntityTransferCountMap, type OutputPath } from "../sequence/cycle/swing-counts";
+import { DRILL_ITEMS_PER_SWING } from "../planner/balance";
+import { EntityTransferCountMap, type OutputPath } from "../sequence/cycle/swing-counts";
 import { SwingDistribution } from "../sequence/cycle/swing-distribution";
 import { BlueprintGenerationResult, GenerateClockOptions, PlanRun, checkedClock, clockOfPlan, planRun } from "../plan/plan-run";
 import { alwaysEnabledInserters, isByProductOnlyInserter, unplannedInserterClocks, type InserterClock } from "../sequence/unplanned-inserter-clock";

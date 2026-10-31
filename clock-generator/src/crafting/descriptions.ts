@@ -10,7 +10,7 @@ import { MAX_PLAYER_DESCRIPTION_BYTES, SignalId } from "../blueprints/components
 import { GENERATOR, GENERATOR_SITE_TEXT } from "../generator";
 import { ChestType } from "../common/entity-types";
 import { Chest, Entity, EntityId, EntityType, ReadableEntityRegistry } from "../entities";
-import { DRILL_ITEMS_PER_SWING } from "./sequence/cycle/swing-counts";
+import { DRILL_ITEMS_PER_SWING } from "./planner/balance";
 import { InserterClock } from "./sequence/unplanned-inserter-clock";
 
 /** The first words of every combinator that is part of the clock itself */
