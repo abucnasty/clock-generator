@@ -7,8 +7,7 @@ import { warnLanesSharedByCopies } from "../config/lane-capacity-validator";
 import { warnSideLoadedDrops } from "../config/side-loaded-drop";
 import { warnMachinePrototypes } from "../config/machine-prototype";
 import { Entity, EntityId } from "../entities";
-import { FactorioBlueprint } from "../blueprints/blueprint";
-import { withNetwork } from "./inserter-counters";
+import { windowDeciderCount, withNetwork } from "./inserter-counters";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { decimalOf } from "../entities/traits/ratio";
 import { machinesInOrder, traitsOf } from "../entities/traits/traits-of";
@@ -73,8 +72,9 @@ export interface ClockAlternative {
 export interface ClockAlternativesResult {
     alternatives: ClockAlternative[];
     /**
-     * The best alternative by its ranking: the one with the fewest wake-ups among those that meet the target rate,
-     * or the one nearest to the target rate when none meets it
+     * The best alternative by its ranking: the one of the lowest cost among those that meet the target rate (costs
+     * closer than the floor tied, the one that recovers sooner first), or the one nearest to the target rate when none
+     * meets it
      */
     selected_index: number;
     /**
@@ -216,13 +216,6 @@ function quietOptions(options: GenerateClockOptions, logger: Logger, report?: (d
  */
 function holds(result: BlueprintGenerationResult): boolean {
     return result.stability_check.as_built?.holds ?? result.stability_check.holds;
-}
-
-/** The decider combinators of a clock's blueprint that switch inserters and drills on and off */
-export function windowDeciderCount(blueprint: FactorioBlueprint): number {
-    return blueprint.entities.filter(entity => entity.name === "decider-combinator"
-        && ((entity.tags as { clock_generator?: { inserters?: unknown; drills?: unknown } } | undefined)?.clock_generator?.inserters !== undefined
-            || (entity.tags as { clock_generator?: { drills?: unknown } } | undefined)?.clock_generator?.drills !== undefined)).length;
 }
 
 /** What a clock with shared windows says about itself, after how its alternative is made */
@@ -905,7 +898,7 @@ function runAlternativeOf(
         const clock = { id: row.id, label: row.label, description, result: row.result, ...(row.rounded && { rounded: row.rounded }),
             inserter_window_count, deciders: windowDeciderCount(row.result.blueprint), ranking_window_count, assessment, verdict: clockVerdictOf(assessment), deadlock_risks, belt, insights };
         const ranking = rankingOf(clock, config);
-        // where its wake-ups decide the selection, a clock of a build with a loop, whose wake-ups depend on how it starts, is ranked by their mean
+        // where its cost decides the selection, a clock of a build with a loop, whose wake-ups depend on how it starts, is ranked by their mean
         // over the starts; the clock of a trial that is neither the exact one nor the rounded one tried meets no target
         const is_exact = tried_as === exact_trial;
         const from_starts = ranking.meets_target_rate && assessment.wake_ups_per_minute !== null && (is_exact || tried_as === rounded_trial)

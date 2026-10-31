@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act, renderHook, type RenderHookResult } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ClockAlternativeContext, ClockAlternativeTask, ConfigValidation, DebugSteps } from 'clock-generator/browser';
+import type { ClockAlternativeContext, ClockAlternativeTask, ClockRanking, ConfigValidation, DebugSteps } from 'clock-generator/browser';
 import type {
     ClockAlternativeRunView, ClockAlternativeView, RepeatedUnitsRecovery, TaskCompletedResponse, WorkerRequest, WorkerResponse,
 } from '../worker/types';
@@ -106,9 +106,13 @@ function finishGeneration(planner: WorkerTransport) {
     expect(latest().error).toBeNull();
 }
 
+/** A cost in step with the wake-ups, 100 ns a tick for each a minute, as the engine's ranking carries one; null for none counted */
+const costOfWakeUps = (wakeUps: number | null): ClockRanking['cost'] => wakeUps === null ? null
+    : { ns_per_tick: wakeUps * 100, input_wake_ups: wakeUps * 100, output_wake_ups: 0, belt_waits: 0, windows: 0, wires: 0, deciders: 0 };
+
 function selectionClock(id: string, wakeUps: number): ClockAlternativeView {
     return { id, label: id, verdict: 'stable', ranking: { meets_target_rate: true, rate_off_target: 0,
-        holds_expected_output: true, matches_belt_choice: true, wake_ups_per_minute: wakeUps, window_count: 1 },
+        holds_expected_output: true, matches_belt_choice: true, wake_ups_per_minute: wakeUps, cost: costOfWakeUps(wakeUps), window_count: 1 },
         assessment: { holds: true, items_per_second: 1, wake_ups_per_minute: wakeUps,
             backpressure_loss: { survives: true, broken_by: [], recovered_after_periods: 1 }, start_dependence: null },
         deadlockRisk: null, beltLabel: '', assumptions: { loopSeeds: [], outputDrops: [], machineFuel: [], overrides: undefined },
