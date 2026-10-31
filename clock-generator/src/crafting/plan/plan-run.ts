@@ -8,6 +8,7 @@ import { assertInserterCoverage } from "../../config/inserter-coverage-validator
 import { validateCopies } from "../../config/copies-validator";
 import { assertFeasible } from "../feasibility/assert-feasible";
 import { ignoredLcmItemsOf } from "../planner/composition";
+import { buildPlanOfConfig } from "../planner/plan-build";
 import { assertLaneCapacity } from "../../config/lane-capacity-validator";
 import { DebugObserverFactory } from "../sequence/debug/debug-observer-factory";
 import { DebugSettingsProvider, MutableDebugSettingsProvider } from "../sequence/debug/debug-settings-provider";
@@ -2347,7 +2348,8 @@ function maxSwingsPossibleOf(
 
 /**
  * Helper function to compute the crafting cycle plan: for a target that counts an item made, on the output swings a
- * cycle the output machines can make (maxSwingsPossibleOf); for one that counts an item destroyed, by arithmetic.
+ * cycle the output machines can make (maxSwingsPossibleOf); for one that counts an item destroyed, by arithmetic, with
+ * the decision of its results' windows that the build plan records.
  *
  * For multiple output machines, the max swings possible is computed as the minimum across all machines
  * to ensure all machines can complete the required swings.
@@ -2365,8 +2367,10 @@ function computeCraftingCyclePlan(
         "At least one output machine is required"
     );
     if (target_production_rate.counts === "destroyed") {
-        // planned by arithmetic: no prepare run counts its hands (see CraftingCyclePlan.create)
-        return CraftingCyclePlan.create(target_production_rate, entity_registry, fraction(1), config.overrides ?? {});
+        // planned by arithmetic: no prepare run counts its hands (see CraftingCyclePlan.create); whether its results get
+        // windows of their own is the build plan's decision
+        const result_windows = buildPlanOfConfig(config, entity_registry)?.result_windows ?? undefined;
+        return CraftingCyclePlan.create(target_production_rate, entity_registry, fraction(1), config.overrides ?? {}, result_windows);
     }
     const max_swings_possible = maxSwingsPossibleOf(output_machine_states, output_inserters, config, logger);
     return CraftingCyclePlan.create(target_production_rate, entity_registry, max_swings_possible, config.overrides ?? {});

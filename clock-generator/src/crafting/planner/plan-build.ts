@@ -4,13 +4,16 @@
  * main-period choices kept or pruned, the duty of the machine groups in it, the composition into the main period, and,
  * for a target that counts an item destroyed, whether its results get windows of their own.
  *
- * Nothing reads it yet: it is recorded for the tests and for the planner steps to come.
+ * Only that last decision is read by a generation (`buildPlanOfConfig`, made once per config object); the rest is
+ * recorded for the tests and for the planner steps to come.
  */
+import type { Config } from "../../config";
 import type { BuildPlan, PlanDuty, PlanGroup, ResultWindowsDecision } from "../../data-types/build-plan";
 import type Fraction from "../../data-types/fraction";
 import type { PlannerFacts } from "../../data-types/planner-facts";
 import type { PlannerGraph } from "../../data-types/planner-graph";
-import type { Feasibility } from "../feasibility/assert-feasible";
+import type { ReadableEntityRegistry } from "../../entities";
+import { feasibilityOf, graphOf, type Feasibility } from "../feasibility/assert-feasible";
 import { TargetProductionRate } from "../target-production-rate";
 import { compositionOf, transferKeyOf } from "./composition";
 import { GroupShape, groupsOf } from "./groups";
@@ -65,4 +68,23 @@ export function planBuild(facts: PlannerFacts, graph: PlannerGraph, feasibility:
         composition: periods === null ? null : compositionOf(periods, groups),
         result_windows,
     };
+}
+
+const planned = new WeakMap<Config, BuildPlan | null>();
+
+/**
+ * The plan of a config whose target counts an item destroyed, as a generation reads it: once per config object, on the
+ * registry of its run. Null where the config's facts or graph cannot be built (it is refused elsewhere, as today) or
+ * its target counts an item made: a made target's plan needs its prepare step's swings, and nothing reads it yet.
+ */
+export function buildPlanOfConfig(config: Config, registry: ReadableEntityRegistry): BuildPlan | null {
+    if (config.target_output.counts !== "destroyed") return null;
+    let plan = planned.get(config);
+    if (plan === undefined) {
+        const built = graphOf(config);
+        plan = built === null ? null
+            : planBuild(built.facts, built.graph, feasibilityOf(built.facts, built.graph), { config, registry, max_swings: null });
+        planned.set(config, plan);
+    }
+    return plan;
 }
