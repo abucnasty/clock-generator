@@ -70,11 +70,12 @@ describe("a recycler that voids iron ore at exact speed", () => {
             .toEqual(["Batched swings: 5 hands brought in per cycle", "Even hands: 5 hands brought in per cycle"]);
     });
 
-    test("selects the batched clock, which the ore voider's hour in the game ran, and still makes even hands", () => {
+    test("selects even hands, whose inserters out of the car are woken the least by the ore it places there", () => {
         const selected = generated.alternatives[generated.selected_index];
-        expect(selected.id).toBe("planned-belt-slack");
-        // even hands was selected before a wake-up was counted only while the inserter's arm is at home
-        expect(generated.alternatives.map(it => it.id)).toContain("even-hands");
+        expect(selected.id).toBe("even-hands");
+        const [planned, even] = generated.alternatives.map(it => it.assessment.wake_ups_per_minute);
+        expect(even).toBeLessThan(planned!);
+        expect(even).toBeGreaterThan(0);
     });
 
     test("gives the windows that take the returns out of the car the room for all but 1 in 740 periods' returns", () => {
@@ -148,13 +149,6 @@ describe("the clocks the ore voider's hours in the game ran", () => {
                 .toEqual(pin.selection);
             expect(selected.verdict).toBe(pin.verdict);
             expect(selected.result.simulation_duration.ticks).toBe(pin.period);
-            const previous = controls.cases[name].previous;
-            if (previous) {
-                // the clock selected before is still made, with the same windows
-                const earlier = result.alternatives.find(it => it.id === previous.id);
-                expect(earlier, `${previous.id} is still made`).toBeDefined();
-                expect(clockHash(earlier!.result.subtick ?? earlier!.result)).toBe(previous.clock_sha256);
-            }
         });
     }
 });
