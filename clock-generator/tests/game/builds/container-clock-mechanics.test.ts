@@ -104,10 +104,15 @@ describe("the periods the game took to run dry under each cut", () => {
             }
             // the output block: the disposal chest is full, nothing is dropped for the 4 periods (the fifth is the release)
             expect(block.during.slice(0, 4)).toEqual([0, 0, 0, 0]);
-            // a second cut of the same input finds a container the recovery has not refilled: the gears' output stops
-            // within 5 periods; the circuits' cut of copper cable finds that stock full and takes the cable's own periods
+            // a second cut of the same input finds the stock the clock refilled between the cuts: a clock that brings only
+            // the target's share (even hands) refills none, and the gears' output stops within 5 periods; one that brings
+            // more (planned-belt-slack: 48 plates a period against the 32 taken) refills it, and the output holds as long
+            // as the simulator says when it runs the same protocol on the pinned clock (47, 47 and 33 periods; within one).
+            // The circuits' cut of copper cable finds that stock full and takes the cable's own periods
             const second = held(secondCut.during);
-            if (cut2 === cut1) expect(second, "the stock is not refilled between the cuts").toBeLessThanOrEqual(5);
+            const refilled = controls[variant.name].second_cut_held_simulated;
+            if (cut2 === cut1 && refilled === undefined) expect(second, "the stock is not refilled between the cuts").toBeLessThanOrEqual(5);
+            else if (cut2 === cut1) expect(Math.abs(second - refilled!), "periods the refilled stock lasted, as the simulator holds them").toBeLessThanOrEqual(1);
             else expect(second - expected.stock[cut2].periods, "periods the cable lasted").toBeGreaterThanOrEqual(-1);
             if (cut2 !== cut1) expect(second - expected.stock[cut2].periods, "periods the cable lasted").toBeLessThanOrEqual(1);
         });
