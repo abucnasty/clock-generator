@@ -97,9 +97,9 @@ describe('recommendedIndexOf', () => {
         ['picks a clock not made for the belt when no such clock holds the rate', [wrongBelt, short('near', 1)], 'slackless'],
         ['picks the nearest to the target rate when none holds it', [short('far', -3), short('near', 0.4), short('above', 2)], 'near'],
         ['ties costs closer than the engine\'s floor and picks the one that recovers sooner, whatever its wake-ups',
-            [clock('cheaper', { costNs: 1000, recovery_periods: 30, wake_ups_per_minute: 4 }), clock('sooner', { costNs: 1030, recovery_periods: 3, wake_ups_per_minute: 40 })], 'sooner'],
+            [clock('cheaper', { costNs: 1000, recovery_periods: 30, wake_ups_per_minute: 4 }), clock('sooner', { costNs: 1004, recovery_periods: 3, wake_ups_per_minute: 40 })], 'sooner'],
         ['picks the cheaper of two costs the floor parts, whatever their recovery',
-            [clock('cheaper', { costNs: 1000, recovery_periods: 30 }), clock('sooner', { costNs: 1040, recovery_periods: 3 })], 'cheaper'],
+            [clock('cheaper', { costNs: 1000, recovery_periods: 30 }), clock('sooner', { costNs: 1006, recovery_periods: 3 })], 'cheaper'],
         ['breaks a tie on cost with the fewest windows', [clock('a', { window_count: 6 }), clock('b', { window_count: 3 })], 'b'],
         ['breaks a tie on windows too with the first listed', [clock('first'), clock('second')], 'first'],
     ])('%s', (_, clocks, id) => {
@@ -203,7 +203,7 @@ describe('recommendationReason', () => {
 
     it('says the pick recovers sooner when its cost is level with a cheaper clock\'s', () => {
         const cheaper = clock('cheaper', { costNs: 1000, recovery_periods: 30 });
-        const pick = clock('sooner', { costNs: 1030, recovery_periods: 3 });
+        const pick = clock('sooner', { costNs: 1004, recovery_periods: 3 });
         sentences(reason([cheaper, pick]), 'Lowest estimated UPS cost of the clocks that keep making 240/s and recover on a moving belt.'
             + RECOMMENDED_COPY.tieOnRecovery(1, RECOMMENDED_COPY.tieKindMoving));
     });

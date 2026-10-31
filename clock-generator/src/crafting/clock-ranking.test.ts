@@ -354,9 +354,10 @@ describe("searchesToRun", () => {
 
     it("runs none past a stable clock whose wake-ups cost less than the floor, or on a longer period", () => {
         expect(toRun([clock("stable", { cost: c(0) })], 144)).toEqual([]);
-        expect(toRun([clock("stable", { cost: c(0.004) })], 144)).toEqual([]);
-        // 197.5 input wake-ups a minute are 4.7 ns a tick: fewer could not beat it by the floor
-        expect(toRun([clock("stable", { cost: c(500, 197.5 * 85 / 3600) })], 144)).toEqual([]);
+        // 4 ns a tick of wake-ups on a clock of 1,000: fewer could not beat it by the floor (5)
+        expect(toRun([clock("stable", { cost: c(1000, 4) })], 144)).toEqual([]);
+        // 197.5 input wake-ups a minute are 4.7 ns a tick, above the floor of a clock of 500 (2.5)
+        expect(toRun([clock("stable", { cost: c(500, 197.5 * 85 / 3600) })], 144)).toEqual(["derived", "shifted-swings"]);
         expect(toRun([clock("stable", { cost: c(500, costTieFloor(500)) })], 144)).toEqual(["derived", "shifted-swings"]);
         expect(toRun([clock("stable", { cost: c(1975) })], 481)).toEqual([]);
     });
@@ -378,7 +379,7 @@ describe("the ranking rule", () => {
 
     it("ties two costs closer than the floor, and selects of them the one that recovers in fewer periods", () => {
         const floor = costTieFloor(1000);
-        expect(floor).toBe(39);
+        expect(floor).toBe(5);
         expect(selectedOf([
             clock("cheaper", { cost: c(1000), recovery_periods: 30 }),
             clock("sooner", { cost: c(1000 + floor - 1), recovery_periods: 4 }),
@@ -392,12 +393,13 @@ describe("the ranking rule", () => {
     it("ties against the cheapest clock: a third clock within the floor of the second but not the first does not tie", () => {
         expect(selectedOf([
             clock("cheapest", { cost: c(1000), recovery_periods: 30 }),
-            clock("tied", { cost: c(1030), recovery_periods: 20 }),
-            clock("beyond", { cost: c(1060), recovery_periods: 1 }),
+            clock("tied", { cost: c(1004), recovery_periods: 20 }),
+            clock("beyond", { cost: c(1008), recovery_periods: 1 }),
         ])).toBe("tied");
     });
 
-    it("takes the floor as 0.5% of the cheaper cost where that is above 39 ns", () => {
+    it("takes the floor as 0.5% of the cheaper cost, with no absolute term", () => {
+        expect(costTieFloor(100)).toBe(0.5);
         expect(costTieFloor(20_000)).toBe(100);
         expect(selectedOf([
             clock("cheaper", { cost: c(20_000), recovery_periods: 9 }),

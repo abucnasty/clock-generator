@@ -291,22 +291,18 @@ export function clockCost(counters: InserterCounters | undefined, wake_ups_per_m
 }
 
 /**
- * The floor under which two clocks' costs tie (decided 2026-10-31): the series' materiality floor for a timed pair,
- * max(3u, 0.5% of the clocked build's whole update), for one copy, as `clockCost` counts it. The engine
- * knows neither figure of a build, so each is the smallest honest stand-in:
- * - 3u: u is 13 ns a copy, the series' figure for cells (the cell02 experiment),
- *   so 39 ns for one copy;
- * - 0.5% of the whole update: of which the engine knows only the part it prices, the cost of the cheaper clock, a
- *   lower bound of the whole.
+ * The floor under which two clocks' costs tie (decided 2026-10-31): 0.5% of the cheaper clock's cost, as `clockCost`
+ * counts it. The series' materiality floor for a timed pair is max(3u, 0.5% of the whole update); the engine knows
+ * neither figure of a build, and an absolute 3u (39 ns a copy for cells) is 10% to 50% of most clocks' priced cost, so
+ * it would tie nearly every pair. Outside the floor the cheaper clock wins.
  */
 export const COST_TIE_FLOOR = {
-    ns_per_copy: 39,
     share_of_cost: 0.005,
 } as const;
 
 /** The floor of `COST_TIE_FLOOR` beside a clock of this cost, ns a tick for one copy */
 export function costTieFloor(cheaper_ns_per_tick: number): number {
-    return Math.max(COST_TIE_FLOOR.ns_per_copy, COST_TIE_FLOOR.share_of_cost * cheaper_ns_per_tick);
+    return COST_TIE_FLOOR.share_of_cost * cheaper_ns_per_tick;
 }
 
 /** A ranking's cost as the selection compares it, ns a tick: Infinity where it was not counted */
@@ -333,7 +329,7 @@ export function costPlace(cost: number, cheapest: number): number {
  */
 export function wakeSideAboveFloor(ranking: Pick<ClockRanking, "cost">): boolean {
     const cost = ranking.cost;
-    return cost === undefined || cost === null || wakeSideOf(cost) >= costTieFloor(cost.ns_per_tick);
+    return cost === undefined || cost === null || (wakeSideOf(cost) > 0 && wakeSideOf(cost) >= costTieFloor(cost.ns_per_tick));
 }
 
 /**
