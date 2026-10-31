@@ -19,7 +19,6 @@ import { chestDrillFallbackConfig, ChestDrillClock, hasPlannedChestDrill } from 
 import { chestDrillReasons } from "./always-on-reasons";
 import { ClockBelt, clockBeltLabel, fuelHandRoomTicks } from "./clock";
 import { evenHandsClock } from "./candidates/even-hands";
-import { sharedResultWindowClock } from "./candidates/result-windows-clock";
 import { fullHandClock } from "./candidates/full-hand";
 import { observedWindowsClock } from "./candidates/observed-windows";
 import { shiftedSwingsClock } from "./candidates/shifted-swings";
@@ -238,9 +237,6 @@ const RESULTS_IN_TURN_DESCRIPTION = "For results that come by small chances. The
     + "the machine fills open once a period, in turn, each for as many hands as its results give in all but 1 period in 740, "
     + "with room for the part hand it may still hold. The period is the longest whose results the container holds at the "
     + "worst moment, just before an opening.";
-const ALL_RESULTS_AT_ONCE_DESCRIPTION = "For results that come by small chances. Every inserter that takes a result out of the "
-    + "container the machine fills opens at the start of the period, for as long as the busiest one needs. The period is "
-    + "the longest in which the container holds a whole period of every result, in all but 1 period in 740.";
 
 const BATCHED_SWINGS_DESCRIPTION = "The swing schedule the generator plans for the target rate. The build is simulated with each "
     + "inserter waiting on its machine's inventory, and each inserter's windows are the ticks it moved items. Swings are "
@@ -453,13 +449,8 @@ function alternativeDefinitionsFor(
     // a target that counts an item destroyed is planned by arithmetic: its period and every inserter's hands are worked
     // out, not tried, so no other count or search is offered; even hands moves the same hands
     if (config.target_output.counts === "destroyed" && context.result_windows === true) {
-        // results that come by small chances: the windows are worked out, and the other way to open them is offered
-        return [{
-            id: "all-results-at-once",
-            label: "All results at once",
-            description: ALL_RESULTS_AT_ONCE_DESCRIPTION,
-            run: () => generateClockWithSwingBackoff(base_config, quiet, sharedResultWindowClock),
-        }];
+        // results that come by small chances: the windows are worked out, and the primary clock opens them in turn
+        return [];
     }
     if (config.target_output.counts === "destroyed") {
         return [{
