@@ -8,7 +8,8 @@ import { Duration, OpenRange } from "../data-types";
 import { Entity, EntityId, Inserter, Machine } from "../entities";
 import { Logger, defaultLogger } from "../common/logger";
 import { StockDetail, StockRecording } from "./machine-stock";
-import { InserterEnds, returnTicksOf, WakeUps, wakeUpsOfStock } from "./wake-ups";
+import { WakeUps, wakeUpsOfStock } from "./wake-ups";
+import { InserterCounters, inserterEnds, wakeUpsAndCountersOfStock } from "./inserter-counters";
 import { judgeLongRun, judgeProvenCycle, LONG_RUN_SETTLE_SHARE, longRunPeriods } from "./long-run";
 import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, ExcessLoss, LATE_AFTER_PERIODS, LossOutcome, lossLimitOf, MAX_RECOVERY_PERIODS, reportOf, verdictOf } from "./backpressure-loss";
 import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForPeriod, withBeltPickupSlack } from "./clock";
@@ -174,6 +175,12 @@ export interface AsBuiltStabilityCheck {
      * made no long run: the clock already failed its one-period check, or its period is too long for one.
      */
     wake_ups?: WakeUps;
+    /**
+     * What each inserter did in the same ticks, beside the wake-ups: its wake-ups by the list that woke it, its grabs and
+     * swings, the states it waited in, the edges of its clock and the crafts that joined a grab (inserter-counters.ts).
+     * Nothing selects, ranks or judges a clock by them yet. Set with `wake_ups`.
+     */
+    counters?: InserterCounters;
     /** The chests the output goes into that nothing empties and that were full where the failing run ended */
     full_output_chests?: FullOutputChest[];
     /**
@@ -597,23 +604,6 @@ export function backpressureLossOf(
     return reportOf(period_ticks, expected_output_items, judged, outcomes, loss_limit, losses.slice(outcomes.length));
 }
 
-/** The machines at the ends of every inserter of the config */
-function inserterEnds(config: Config): InserterEnds[] {
-    const machineId = (entity_id: EntityId) => EntityId.isMachine(entity_id) ? entity_id.id : null;
-    const registry = createEntityRegistryFromConfig(config);
-    // a chest a machine places its results into is watched through that machine
-    const placers = new Map(registry.getAll().filter(Entity.isMachine).flatMap(machine =>
-        machine.result_target === undefined ? [] : [[machine.result_target.id, machine.entity_id.id] as const]));
-    return registry.getAll().filter(Entity.isInserter).map(inserter => ({
-        inserter_id: inserter.entity_id.id,
-        source_machine_id: machineId(inserter.source.entity_id),
-        sink_machine_id: machineId(inserter.sink.entity_id),
-        ...(placers.has(inserter.source.entity_id.id) && { source_placer_id: placers.get(inserter.source.entity_id.id)! }),
-        return_ticks: returnTicksOf(inserter.animation.rotation.ticks),
-    }));
-}
-
-
 /**
  * Where a clock gets to from the starts of CLOCK_STARTS: each is run as the long run of the clock is, from that start,
  * and judged on what follows its first third. Every start is judged on the same checks (`startsReachingTarget`): the
@@ -994,6 +984,7 @@ export function runAsBuiltCheck(
             stock = passed.run.stock;
             if (stock) {
                 check.wake_ups = passed.run.check.wake_ups;
+                check.counters = passed.run.check.counters;
                 check.long_run_proven = passed.run.check.long_run_proven;
                 check.first_judged_tick = passed.run.check.first_judged_tick;
                 check.long_run_cycle_periods = passed.run.check.long_run_cycle_periods;
@@ -1004,8 +995,10 @@ export function runAsBuiltCheck(
             stock = stock_detail === "hands" ? undefined : long_run?.stock;
             if (long_run && stock) {
                 // judged as the long run is: the proven cycle, or what follows the start-up of a sampled run
-                check.wake_ups = wakeUpsOfStock(stock, inserterEnds(config),
+                const counted = wakeUpsAndCountersOfStock(stock, config,
                     long_run.proven ? long_run.first_judged_tick : Math.floor(stock.ticks / LONG_RUN_SETTLE_SHARE));
+                check.wake_ups = counted.wake_ups;
+                check.counters = counted.counters;
                 check.long_run_proven = long_run.proven;
                 check.first_judged_tick = long_run.first_judged_tick;
                 if (long_run.results_taken !== undefined) {

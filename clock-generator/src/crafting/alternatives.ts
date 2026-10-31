@@ -8,6 +8,7 @@ import { warnSideLoadedDrops } from "../config/side-loaded-drop";
 import { warnMachinePrototypes } from "../config/machine-prototype";
 import { Entity, EntityId } from "../entities";
 import { FactorioBlueprint } from "../blueprints/blueprint";
+import { withNetwork } from "./inserter-counters";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { decimalOf } from "../entities/traits/ratio";
 import { machinesInOrder, traitsOf } from "../entities/traits/traits-of";
@@ -881,7 +882,10 @@ function runAlternativeOf(
     const alternativeOf = (trial: Trial, row: { id: string; label: string; description_suffix: string; result: BlueprintGenerationResult; rounded?: RoundedClock }): ClockAlternative => {
         const tried_as = trial;
         // a clock that fails its first check is listed by the mean of its long run, not the one period measured
-        const settled = (settle_unstable ?? !held) ? settledStability(trial) : trial.result.stability_check;
+        const settled_check = (settle_unstable ?? !held) ? settledStability(trial) : trial.result.stability_check;
+        // the counters of its inserters learn which decider switches each from the blueprint it is listed with
+        const settled = settled_check.as_built?.counters === undefined ? settled_check : { ...settled_check,
+            as_built: { ...settled_check.as_built, counters: withNetwork(settled_check.as_built.counters, row.result.blueprint, windowDeciderCount(row.result.blueprint)) } };
         trial = { ...trial, result: { ...trial.result, stability_check: settled } };
         row = { ...row, result: { ...row.result, stability_check: settled } };
         const { as_built } = trial.result.stability_check;
