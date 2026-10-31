@@ -17,7 +17,7 @@ export function frontPickupClockTests() {
         ...frontExitClockCases(true), ...frontExitClockCases(false)].filter(variant => FRONT_GENERATED.has(variant.name));
     for (const variant of cases) {
         test(`front pickup default: ${variant.name}`, async () => {
-            const {generation, native} = controls.cases[variant.name];
+            const {generation, native, previous} = controls.cases[variant.name];
             const expected = generation!;
             const config = await frontClockConfig(variant);
             const generated = generateClockAlternatives(config, {logger: quiet});
@@ -40,6 +40,13 @@ export function frontPickupClockTests() {
             const recorded_supply = variant.endpoint === "exit" || variant.backed ? "backed_up" : "moving";
             if (recorded_supply === expected.selection.supply && native.baseline.some(items => items !== native.expected)) {
                 expect(selected.assessment.holds, "the native baseline misses the expected output: the generator has to see that itself").toBe(false);
+            }
+            if (previous) {
+                // the clock selected before the observed windows were searched past a stable clock is still made, with the same windows
+                const earlier = generated.alternatives.find(alternative => alternative.id === previous.id);
+                expect(earlier, `${previous.id} is still made`).toBeDefined();
+                const earlier_exported = earlier!.result.subtick ?? earlier!.result;
+                expect(createHash("sha256").update(JSON.stringify(clockIdentity(earlier_exported))).digest("hex")).toBe(previous.clock_sha256);
             }
             if (selected.verdict === "stable") {
                 expect(native.baseline.every(items => items === native.expected)).toBe(true);
