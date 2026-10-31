@@ -91,9 +91,11 @@ describe("a clock with more than one steady state", () => {
         const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE);
         const figures = simulatedWakeUpsByStart(config, windows, 672, 24).map(figure => figure.toFixed(1));
         // from the staged start; the prepared build gave 10.7 here
-        expect(figures[0]).toBe("26.8");
+        // (26.8 counting every waiting state; since 0.26.0 an arm swinging back from its drop is on no list: 16.1)
+        expect(figures[0]).toBe("16.1");
         // of the starts tried, 32.1 is no longer reached from the staged start; the prepared build reached 10.7, 26.8 and 32.1
-        expect(Array.from(new Set(figures)).sort()).toEqual(["10.7", "26.8"]);
+        // (counting every waiting state)
+        expect(Array.from(new Set(figures)).sort()).toEqual(["10.7", "16.1"]);
     });
 
     it("has none for a period that is not a whole number of ticks", async () => {
