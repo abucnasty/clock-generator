@@ -30,7 +30,8 @@ describe("a clock for the productivity module chain from the hands and the order
         expect(selected.verdict).toBe("stable");
         expect(selected.result.simulation_duration.ticks).toBe(72);
         expect(selected.assessment.items_per_second).toBeCloseTo(80, 6);
-        expect(selected.assessment.wake_ups_per_minute).toBeCloseTo(575.625, 2);
+        // 575.625 counting every waiting state; since 0.26.0 an arm swinging back from its drop is on no list
+        expect(selected.assessment.wake_ups_per_minute).toBeCloseTo(508.125, 2);
         expect(selected.assessment.backpressure_loss?.survives).toBe(true);
         expect(selected.assessment.backpressure_loss?.recovered_after_periods).toBe(7);
         expect(result.skipped_searches.length).toBeGreaterThan(0);

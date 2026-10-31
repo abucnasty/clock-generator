@@ -18,29 +18,33 @@ import {PickupClockScenario} from "./pickup-clock-capture";
  * empties into a disposal chest. The harness puts the ore under the drill. At the harness's research the drill makes far
  * more than the furnaces take, so the car is full whenever the drill runs.
  *
- * The selected clock (3 output swings) is recorded in two build orders. The game serves inserters that act on one entity
+ * The selected clock (2 output swings, 144 ticks) is recorded in two build orders; the clock with 3 output swings (72 ticks),
+ * which was selected before the generator counted a wake-up only while the inserter's arm is at home, is recorded in both
+ * as well, and the generation test finds it made. The game serves inserters that act on one entity
  * in the same tick in the order of their unit numbers, the last built first (docs/simulator.md): as the build's blueprint
  * has them, the two inserters that take from the car are built before the output inserters; `takers-last` builds them
- * after. The clock with 1 output swing is a second check.
+ * after. The clock with 1 output swing is a further check.
  */
 export interface CarCase {
     name: string;
     /** The alternative recorded */
-    alternative: "swings-3" | "swings-1";
+    alternative: "swings-2" | "swings-3" | "swings-1";
+    /** The clock's period in ticks: the cuts are sized by it */
+    period: 72 | 144;
     order: "as-built" | "takers-last";
 }
 
 export function carCases(): CarCase[] {
     return [
-        {name: "car-swings-3", alternative: "swings-3", order: "as-built"},
-        {name: "car-swings-3-takers-last", alternative: "swings-3", order: "takers-last"},
-        {name: "car-swings-1", alternative: "swings-1", order: "as-built"},
+        {name: "car-swings-2", alternative: "swings-2", period: 144, order: "as-built"},
+        {name: "car-swings-2-takers-last", alternative: "swings-2", period: 144, order: "takers-last"},
+        {name: "car-swings-3", alternative: "swings-3", period: 72, order: "as-built"},
+        {name: "car-swings-3-takers-last", alternative: "swings-3", period: 72, order: "takers-last"},
+        {name: "car-swings-1", alternative: "swings-1", period: 72, order: "as-built"},
     ];
 }
 
 const SCAFFOLD = path.join(path.dirname(ConfigPaths.REAL_OWNER_CAR), "car-scaffold.txt");
-/** The period of the clocks recorded, in ticks (both are 72): the cuts are sized by it */
-const PERIOD_TICKS = 72;
 
 interface Placed {entity_number: number; name: string; position: {x: number; y: number}; direction?: number}
 
@@ -71,10 +75,10 @@ export function carScaffold(order: CarCase["order"]): string {
  * The periods until the car has run dry with the drill stopped: its 80 stacks of ore over what the furnaces take a
  * period at the target (a plate takes 1 / (1 + productivity) ore), plus 8 periods for what the furnaces and hands hold
  */
-export function carDrainPeriods(config: Config): number {
+export function carDrainPeriods(config: Config, period_ticks: number): number {
     const ore = FactorioDataService.containerSlots("car", "normal") * FactorioDataService.findItemOrThrow("iron-ore").stack_size;
     const productivity = config.machines[0].productivity / 100;
-    const per_period = config.target_output.items_per_second * PERIOD_TICKS / 60 / (1 + productivity);
+    const per_period = config.target_output.items_per_second * period_ticks / 60 / (1 + productivity);
     return Math.ceil(ore / per_period) + 8;
 }
 
@@ -83,8 +87,8 @@ export function carDrainPeriods(config: Config): number {
  * is dry, the output blocked for 4 periods, the drill stopped again, each followed for 40 periods (the first 6 after a
  * release not judged). A drill is no supply that stops in the generator's checks; here it is stopped as a supply cut.
  */
-export function carInterventions(config: Config): [number, number, number][] {
-    const cut = carDrainPeriods(config);
+export function carInterventions(config: Config, period_ticks: number): [number, number, number][] {
+    const cut = carDrainPeriods(config, period_ticks);
     const release1 = 66 + cut, block = release1 + 40, unblock = block + 4, again = unblock + 40, release2 = again + cut;
     return [[66, release1, block], [block, unblock, again], [again, release2, release2 + 40]];
 }
@@ -109,7 +113,7 @@ export async function carScenario(variant: CarCase): Promise<PickupClockScenario
         config: () => config,
         scaffold: () => carScaffold(variant.order),
         alternative: variant.alternative,
-        interventions: carInterventions(config),
+        interventions: carInterventions(config, variant.period),
         probeFile: path.join(__dirname, "car-clock-probe.lua"),
         probe: {family: "car"},
         controls: path.join(__dirname, "car-clock-controls.json"),

@@ -65,9 +65,11 @@ describe("a clock built from windows that are given", () => {
     // from 7 of 12 starts and 395.5 from the other 5, the generator's own among them. The game shows 354.6: it was in
     // the first, and a run of the simulator from the state the game was recorded in holds what the game held for all
     // 36,400 ticks. From the staged start (empty machines) the generator's own start settles on a third value, 368.2. On the
-    // clock version 0.5.0 made the simulator counts 757 where the game shows 464, mostly on the output inserters.
+    // clock version 0.5.0 made the simulator counts 757 where the game shows 464, mostly on the output inserters. Those
+    // figures count every waiting state; since 0.26.0 an arm swinging back from its drop is on no list, and the staged
+    // start's 368.2 counts 354.5.
     it("counts the wake-ups of the clock", () => {
-        expect(result.stability_check.as_built!.wake_ups!.wake_ups_per_minute).toBeCloseTo(368.2, 1); // from the staged start; 395.5 from the prepared build
+        expect(result.stability_check.as_built!.wake_ups!.wake_ups_per_minute).toBeCloseTo(354.5, 1); // from the staged start, the arm at home
     });
 
     it("refuses windows of another period than the config is planned on", () => {

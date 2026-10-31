@@ -28,6 +28,15 @@ interface RecordedHand {start: number; offsets: number[]; amounts: number[]}
 const drops = readFixtureFigures<RecordedHand[]>(GameFixturePaths.TURBO_BELT_DROP, "speed-expectations.json");
 const firstHandOf = (variant: BlockedOutputClockCase) => drops[`${variant.speed.name}/${variant.stackSize}`][0];
 
+/**
+ * The clock the generator selects: a hand of 15 is shifted-swings; a hand of 16 is even-hands, or planned-belt-slack where
+ * both have no wake-ups (an arm that swings back from a drop that emptied its hand is not counted) and it wins the tie
+ */
+const PLANNED_SELECTED = new Set(["express-stack-2", "express-stack-4", "fast-stack-4", "normal-stack-1", "normal-stack-4", "turbo-stack-2", "turbo-stack-4"]
+    .map(name => `blocked-output-${name}`));
+const selectedClockOf = (variant: BlockedOutputClockCase) =>
+    variant.stackSize === 3 ? "shifted-swings" : PLANNED_SELECTED.has(variant.name) ? "planned-belt-slack" : "even-hands";
+
 /** The hand the output inserter drops: 16 items, 15 at stack size 3 (docs/belt-pickup/experiments.md) */
 const handOf = (variant: BlockedOutputClockCase) => variant.stackSize === 3 ? 15 : 16;
 /** Gears a clock period makes: one hand of 16 a period (192 ticks), or 120 gears a period of 1,440 where the hand is 15 */
@@ -98,7 +107,7 @@ describe("the recorded controls of the blocked-output fixtures", () => {
         expect(native.target).toBe(BLOCKED_OUTPUT_TARGET);
         // five gears a second over the period: 16 in 192 ticks, or 120 in 1,440 where the hand of 15 rules out 192
         expect({period: native.period, expected: native.expected}).toEqual({period: periodOf(variant).ticks, expected: periodOf(variant).expected});
-        expect(generation!.selection).toEqual({id: variant.stackSize === 3 ? "shifted-swings" : "even-hands", holds: true, rate: BLOCKED_OUTPUT_TARGET, supply: null});
+        expect(generation!.selection).toEqual({id: selectedClockOf(variant), holds: true, rate: BLOCKED_OUTPUT_TARGET, supply: null});
         expect(generation!.verdict).toBe("stable");
         expect(native.generationVerdict).toBe("stable");
     });
@@ -118,7 +127,9 @@ describe("the recorded controls of the blocked-output fixtures", () => {
         expect(stopped, "output stops").toBeGreaterThanOrEqual(1);
         expect(stopped).toBeLessThanOrEqual(10);
         expect(during.slice(stopped, -2).every(items => items === 0), "and stays stopped until the release").toBe(true);
-        expect(during.at(-1)!, "the release period delivers at least the expected output").toBeGreaterThanOrEqual(native.expected);
+        // a hand dropped across the boundary of the periods is counted in both (planned-belt-slack on the normal belt at stack
+        // size 1 delivers 1 and 15), so the output waiting behind the block comes out over the last two periods
+        expect(during.at(-2)! + during.at(-1)!, "the periods of the release deliver at least the expected output").toBeGreaterThanOrEqual(native.expected);
         expect(recovered).toHaveLength(33);
         expect(recovered.every(items => items === native.expected)).toBe(true);
     });
@@ -129,7 +140,7 @@ describe("the recorded controls of the blocked-output fixtures", () => {
             expect(path.length, name).toBeGreaterThan(10);
         }
         // one case per path: the two selections the pins record
-        expect(new Set([...BLOCKED_OUTPUT_GENERATED.keys()].map(name => controls[name].generation!.selection.id))).toEqual(new Set(["even-hands", "shifted-swings"]));
+        expect(new Set([...BLOCKED_OUTPUT_GENERATED.keys()].map(name => controls[name].generation!.selection.id))).toEqual(new Set(["planned-belt-slack", "shifted-swings"]));
     });
 });
 

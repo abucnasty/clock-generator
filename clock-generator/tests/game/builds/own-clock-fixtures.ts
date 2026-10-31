@@ -48,8 +48,8 @@ export function ownerClockHash(): string {
 /** The copies of the unit the blueprint holds */
 export const COPIES = 3;
 
-/** The period of the generator's clock for the config (`swings-2`, 2 output swings): the selected one */
-export const GENERATED_ALTERNATIVE = "swings-2";
+/** The generator's clock for the config (`swings-6`, 6 output swings): the selected one */
+export const GENERATED_ALTERNATIVE = "swings-6";
 
 /**
  * The copies are not alike, as they were built, and the config is the third (the eastern copy, with no overrides): the
