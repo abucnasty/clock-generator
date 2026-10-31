@@ -19,7 +19,6 @@ import { chestDrillFallbackConfig, ChestDrillClock, hasPlannedChestDrill } from 
 import { chestDrillReasons } from "./always-on-reasons";
 import { ClockBelt, clockBeltLabel, fuelHandRoomTicks } from "./clock";
 import { evenHandsClock } from "./candidates/even-hands";
-import { sharedResultWindowClock } from "./candidates/result-windows-clock";
 import { fullHandClock } from "./candidates/full-hand";
 import { observedWindowsClock } from "./candidates/observed-windows";
 import { shiftedSwingsClock } from "./candidates/shifted-swings";
@@ -180,6 +179,12 @@ interface AlternativeDefinition {
      */
     shared_windows?: () => AlternativeDefinition | undefined;
     /**
+     * Made without the shared-windows variant (`shared_windows`): the other output swing counts and fractional swings,
+     * whose shared clocks were never selected on a sample or fixture, where the batched swings' own shared clock covers
+     * what shared windows give
+     */
+    no_shared_windows?: true;
+    /**
      * The same alternative with the inserters of a loop and those that take out of it always enabled (`loop_windows` of
      * GenerateClockOptions false): made when its clock has windows for them (`loop_windows` of the result) and does not
      * hold, or does not get back from a loss, with them, or with only those out of the loop.
@@ -238,9 +243,6 @@ const RESULTS_IN_TURN_DESCRIPTION = "For results that come by small chances. The
     + "the machine fills open once a period, in turn, each for as many hands as its results give in all but 1 period in 740, "
     + "with room for the part hand it may still hold. The period is the longest whose results the container holds at the "
     + "worst moment, just before an opening.";
-const ALL_RESULTS_AT_ONCE_DESCRIPTION = "For results that come by small chances. Every inserter that takes a result out of the "
-    + "container the machine fills opens at the start of the period, for as long as the busiest one needs. The period is "
-    + "the longest in which the container holds a whole period of every result, in all but 1 period in 740.";
 
 const BATCHED_SWINGS_DESCRIPTION = "The swing schedule the generator plans for the target rate. The build is simulated with each "
     + "inserter waiting on its machine's inventory, and each inserter's windows are the ticks it moved items. Swings are "
@@ -355,15 +357,16 @@ function alternativeDefinitions(
 ): AlternativeDefinition[] {
     const definitions = withChestDrillFallbacks(alternativeDefinitionsWithFuelHandRoom(config, context, quiet, known_stable), config,
         with_chest_drill_fallbacks, fallback_config => alternativeDefinitions(fallback_config, context, quiet, known_stable, false));
-    // the same alternatives made with shared windows, made when one of them is a clock of the grouped hands rule, and
-    // with the inserters that take out of a loop always enabled, made when a clock with windows for them does not meet goal 1
+    // the same alternatives made with shared windows, made when one of them is a clock of the grouped hands rule (except
+    // where a definition goes without, see no_shared_windows), and with the inserters that take out of a loop always
+    // enabled, made when a clock with windows for them does not meet goal 1
     let shared: AlternativeDefinition[] | undefined;
     let without_loop: AlternativeDefinition[] | undefined;
     let without_in_loop: AlternativeDefinition[] | undefined;
-    return definitions.map(definition => ({ ...definition, shared_windows: () => {
+    return definitions.map(definition => ({ ...definition, ...(definition.no_shared_windows !== true && { shared_windows: () => {
         shared ??= alternativeDefinitionsWithFuelHandRoom(config, context, { ...quiet, shared_windows: true }, known_stable);
         return shared.find(it => it.id === definition.id);
-    }, without_loop_windows: () => {
+    } }), without_loop_windows: () => {
         without_loop ??= alternativeDefinitionsWithFuelHandRoom(config, context, { ...quiet, loop_windows: false }, known_stable);
         return without_loop.find(it => it.id === definition.id);
     }, without_in_loop_windows: () => {
@@ -453,13 +456,8 @@ function alternativeDefinitionsFor(
     // a target that counts an item destroyed is planned by arithmetic: its period and every inserter's hands are worked
     // out, not tried, so no other count or search is offered; even hands moves the same hands
     if (config.target_output.counts === "destroyed" && context.result_windows === true) {
-        // results that come by small chances: the windows are worked out, and the other way to open them is offered
-        return [{
-            id: "all-results-at-once",
-            label: "All results at once",
-            description: ALL_RESULTS_AT_ONCE_DESCRIPTION,
-            run: () => generateClockWithSwingBackoff(base_config, quiet, sharedResultWindowClock),
-        }];
+        // results that come by small chances: the windows are worked out, and the primary clock opens them in turn
+        return [];
     }
     if (config.target_output.counts === "destroyed") {
         return [{
@@ -481,6 +479,7 @@ function alternativeDefinitionsFor(
                 quiet
             ),
             planned_on: { ...config, overrides: { ...config.overrides, use_fractional_swings: !fractional } },
+            no_shared_windows: true,
         },
         {
             id: "even-hands",
@@ -542,6 +541,7 @@ function alternativeDefinitionsFor(
             description: `${BATCHED_SWINGS_LABEL} with a longer crafting cycle: the output inserter takes ${higher} hands per cycle instead of `
                 + `${swings} while the machine keeps crafting between swings. Batches more swings into fewer, longer windows.`,
             run: () => withSwings(higher, quiet),
+            no_shared_windows: true as const,
         })),
         ...lower_counts.map(lower => ({
             id: `swings-${lower}`,
@@ -550,6 +550,7 @@ function alternativeDefinitionsFor(
                 + `instead of ${swings}. The output machine buffers more between swings; useful when the higher swing count `
                 + "is unstable.",
             run: () => withSwings(lower, quiet),
+            no_shared_windows: true as const,
         })),
         {
             id: "full-hand",
@@ -874,6 +875,8 @@ function runAlternativeOf(
         }
         return from_starts_of.get(trial)!;
     };
+    /** The trial of a clock rounded down to whole ticks on its own period, where one is made (below) */
+    let rounded_trial: Trial | null = null;
     /** The alternative for a trial of the clock: its notes, insights, assessment and ranking */
     const alternativeOf = (trial: Trial, row: { id: string; label: string; description_suffix: string; result: BlueprintGenerationResult; rounded?: RoundedClock }): ClockAlternative => {
         const tried_as = trial;
@@ -927,9 +930,23 @@ function runAlternativeOf(
     if (Number.isInteger(period)) {
         return { signature, alternatives: [exact] };
     }
-    // the blueprint of a period that is not a whole number of ticks counts it rounded down (blueprint.ts), unless it
-    // has a subtick clock: listed as that clock, at the rate it runs the build at, it is judged by its own rate. One
-    // whose rate may meet goal 1 (at most 0.1% fast, within the machines) is tried on its own period
+    // a period that is not a whole number of ticks is exported with its subtick clock where it has one: listed as that
+    // clock, it runs the build at exactly the target rate
+    if (result.subtick) {
+        const { period_ticks, scale } = result.subtick.clock;
+        return { signature, alternatives: [alternativeOf(exact_trial, {
+            id: `${id}-subtick`,
+            label: `${label}, subtick clock`,
+            description_suffix: ` Exported with a subtick clock: the ${period.toFixed(3)}-tick period is `
+                + `${period_ticks}/${scale} ticks, so a ${period_ticks}-tick clock is multiplied by ${scale} and taken modulo `
+                + `${period_ticks} by two extra arithmetic combinators, giving the position in the period in 1/${scale} ticks. `
+                + "Window starts can move by a tick between periods but never drift, so the build runs at exactly the target rate.",
+            result: { ...result, blueprint: result.subtick.blueprint, schedule: result.subtick.schedule },
+        })] };
+    }
+    // with no subtick clock its blueprint counts the period rounded down (blueprint.ts): listed as that clock, it is
+    // judged by its own rate. One whose rate may meet goal 1 (at most 0.1% fast, within the machines) is tried on its
+    // own period
     const rounded_ticks = Math.floor(period);
     const rounded_rate = itemsPerSecondOverCopies(expected_output_items, rounded_ticks, copies);
     const target = config.target_output.items_per_second;
@@ -937,7 +954,7 @@ function runAlternativeOf(
     const within_machines = rounded_rate <= outputCapacityPerSecond(config) * (1 + 1e-9);
     const may_meet = roundedRateAllowed({ runs_fast, within_machines });
     let not_tried_on_its_period: string | null = null;
-    const rounded_trial: Trial | null = may_meet ? (() => {
+    rounded_trial = may_meet ? (() => {
         try {
             const tried = roundedClockTrial(used.planned_on ?? config, result, rounded_ticks, logger, report);
             return { result: tried.result, held: tried.holds, loss: tried.loss, start_dependence: tried.start_dependence, clock_period: rounded_ticks };
@@ -950,11 +967,14 @@ function runAlternativeOf(
     })() : null;
     const rounded: RoundedClock = { period_ticks: rounded_ticks, runs_fast, within_machines, tried_on_its_period: rounded_trial !== null };
     const fast = `${fastPercent(runs_fast)} fast`;
-    const roundedAlternative = (why: string) => alternativeOf(rounded_trial ?? { ...exact_trial, clock_period: rounded_ticks }, {
+    if (rounded_trial !== null) {
+        logger.log(`Clock alternative "${label}" rounded to ${rounded_ticks} ticks (runs ${fast}): holds=${rounded_trial.held} survives=${rounded_trial.loss.backpressure_loss?.survives ?? "not tried"}`);
+    }
+    return { signature, alternatives: [alternativeOf(rounded_trial ?? { ...exact_trial, clock_period: rounded_ticks }, {
         id,
         label: `${label} (clock rounded to ${rounded_ticks} ticks, runs ${fast})`,
-        description_suffix: ` The period is not a whole number of ticks (${period.toFixed(3)})${why}, so this clock runs it `
-            + `rounded down to ${rounded_ticks} ticks, ${fastPercent(runs_fast)} faster than the target`
+        description_suffix: ` The period is not a whole number of ticks (${period.toFixed(3)}) and has no subtick clock of a small `
+            + `enough scale, so this clock runs it rounded down to ${rounded_ticks} ticks, ${fastPercent(runs_fast)} faster than the target`
             + (rounded_trial !== null
                 ? `: within the ${fastPercent(ROUNDED_CLOCK_MAX_FAST)} a rounded clock may run and what the machines make, so it is checked on its own ${rounded_ticks}-tick period.`
                 : not_tried_on_its_period !== null
@@ -963,30 +983,7 @@ function runAlternativeOf(
                     + "the clock-only check models the exact period."),
         result: rounded_trial?.result ?? result,
         rounded,
-    });
-    if (rounded_trial !== null) {
-        logger.log(`Clock alternative "${label}" rounded to ${rounded_ticks} ticks (runs ${fast}): holds=${rounded_trial.held} survives=${rounded_trial.loss.backpressure_loss?.survives ?? "not tried"}`);
-    }
-    if (!result.subtick) {
-        return { signature, alternatives: [roundedAlternative(" and has no subtick clock of a small enough scale")] };
-    }
-    const { period_ticks, scale } = result.subtick.clock;
-    return {
-        signature,
-        alternatives: [
-            // listed first so it wins ties with the rounded clock for the default selection
-            alternativeOf(exact_trial, {
-                id: `${id}-subtick`,
-                label: `${label}, subtick clock`,
-                description_suffix: ` Exported with a subtick clock: the ${period.toFixed(3)}-tick period is `
-                    + `${period_ticks}/${scale} ticks, so a ${period_ticks}-tick clock is multiplied by ${scale} and taken modulo `
-                    + `${period_ticks} by two extra arithmetic combinators, giving the position in the period in 1/${scale} ticks. `
-                    + "Window starts can move by a tick between periods but never drift, so the build runs at exactly the target rate.",
-                result: { ...result, blueprint: result.subtick.blueprint, schedule: result.subtick.schedule },
-            }),
-            roundedAlternative(""),
-        ],
-    };
+    })] };
 }
 
 /** A share as a percentage the labels print: "0.02%", "1.14%", "under 0.01%" */
