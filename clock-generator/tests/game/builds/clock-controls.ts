@@ -60,6 +60,23 @@ export interface ClockControl {
     recorded: Recorded;
     native: NativeClockSummary;
     generation?: GenerationPin;
+    /**
+     * The alternative the generator selected before the entry's pin, and the sha256 of its exported clock: a generation
+     * test finds it still made, so the clock the earlier recording was on stays one the generator offers
+     */
+    previous?: PreviousClock;
+    /**
+     * Of a container fixture whose two cuts take the same input: the periods the simulator holds the target through the
+     * second cut when it runs the probe's protocol on the pinned clock. A clock that brings more than the target's share
+     * refills the container between the cuts, and the game holds the target as long as that stock lasts
+     */
+    second_cut_held_simulated?: number;
+}
+
+/** An alternative that is no longer selected and is still made: its id and the sha256 of its exported clock */
+export interface PreviousClock {
+    id: string;
+    clock_sha256: string;
 }
 
 /** A family's controls file: one current entry per configuration */

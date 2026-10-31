@@ -4,7 +4,9 @@ import { loadConfigFromFile } from "../config/loader";
 import type { Config } from "../config/schema";
 import { generateClockAlternatives, simulateClockOnly, type BlueprintGenerationResult } from "../crafting/generate-blueprint";
 import type { StockRecording } from "../crafting/machine-stock";
-import { wakeUpsOfStock } from "../crafting/wake-ups";
+import { returnTicksOf, wakeUpsOfStock } from "../crafting/wake-ups";
+import { createEntityRegistryFromConfig } from "../crafting/sequence/simulation-context";
+import { Entity } from "../entities";
 import { buildDifferences, compareRecordings, formatRecordingComparison } from "./compare-recordings";
 import { expandChangeList, type Recording } from "./recording";
 import { wakeUpsOfRecording } from "./recording-wake-ups";
@@ -107,17 +109,23 @@ describe("a simulated run in the format of the recorder", () => {
 
     it("counts the wake-ups the run counted, by the function that counts those of a recording of the game", () => {
         const from = Math.floor(stock.ticks / 3);
+        // with the arm away while it swings back from a drop, by the turn of the config's inserters
+        const turns = new Map(createEntityRegistryFromConfig(structuredClone(config)).getAll().filter(Entity.isInserter)
+            .map(inserter => [inserter.entity_id.id, returnTicksOf(inserter.animation.rotation.ticks)]));
         const of_stock = wakeUpsOfStock(stock, [
-            { inserter_id: "inserter:1", source_machine_id: null, sink_machine_id: "machine:1" },
-            { inserter_id: "inserter:2", source_machine_id: "machine:1", sink_machine_id: null },
+            { inserter_id: "inserter:1", source_machine_id: null, sink_machine_id: "machine:1", return_ticks: turns.get("inserter:1") },
+            { inserter_id: "inserter:2", source_machine_id: "machine:1", sink_machine_id: null, return_ticks: turns.get("inserter:2") },
         ], from);
         // the simulated recording carries the simulator's own true starts, so the two counts are the same count
-        const { machine_standings, ...of_recording } = wakeUpsOfRecording(simulated, matchOfSimulatedRecording(simulated), from);
+        const { machine_standings, ...of_recording } = wakeUpsOfRecording(simulated, matchOfSimulatedRecording(simulated), from,
+            simulated.sample_count, config);
         expect(machine_standings).toEqual([{ machine_id: "machine:1", standing: "simulator" }]);
         const by_id = (a: { inserter_id: string }, b: { inserter_id: string }) => a.inserter_id.localeCompare(b.inserter_id);
         expect({ ...of_recording, inserters: [...of_recording.inserters].sort(by_id) }).toEqual({ ...of_stock, inserters: [...of_stock.inserters].sort(by_id) });
-        // the trimmed input window wakes the build in a 4-period cycle of 50/100/0/100 a minute: 62.5 on average
-        expect(of_recording.wake_ups_per_minute).toBeCloseTo(62.5, 1);
+        // the trimmed input window alarms the build 62.5 times a minute on average while it shows a wait (a 4-period cycle
+        // of 50/100/0/100); 25 of them find the arm swinging back from its drop, not on the list
+        expect(of_recording.wake_ups_per_minute).toBeCloseTo(37.5, 1);
+        expect(of_recording.uncounted_per_minute["arm away"]).toBeCloseTo(25, 1);
     });
 
     it("is what simulateRecording returns for a number of ticks", () => {
