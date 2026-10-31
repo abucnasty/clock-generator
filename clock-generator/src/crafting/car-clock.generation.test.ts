@@ -4,6 +4,7 @@ import {beforeAll, describe, expect, test} from "vitest";
 import {ClockAlternativesResult, generateClockAlternatives} from "./generate-blueprint";
 import {clockIdentity} from "./clock-identity";
 import {backpressureLossVerdictOf} from "./trial";
+import {outputCapacityPerSecond} from "./alternatives";
 import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config/schema";
@@ -90,12 +91,16 @@ describe("the car paste at 80.78/s", () => {
         expect(paste.alternatives[paste.selected_index].id).not.toBe("swings-5");
     });
 
-    // 285 ticks of 285.19: 0.08% fast, but above the furnaces' 80.78015625/s, so not tried on its own period either
-    test("does not let a rounded clock run above what the furnaces make", () => {
-        const rounded = paste.alternatives.find(alternative => alternative.id === "planned-belt-slack")!;
-        expect(rounded.rounded).toMatchObject({period_ticks: 285, within_machines: false, tried_on_its_period: false});
-        expect(rounded.rounded!.runs_fast).toBeLessThan(0.001);
-        expect(rounded.ranking.meets_target_rate).toBe(false);
+    // the batched clock's 285.19 ticks have a subtick clock, so it is listed as that alone: rounded down to 285 ticks it
+    // would run 0.08% fast, but above the furnaces' 80.78015625/s, which a rounded clock may not
+    test("lists the batched clock as its subtick clock alone, whose rounding would run above what the furnaces make", () => {
+        expect(paste.alternatives.find(alternative => alternative.id === "planned-belt-slack")).toBeUndefined();
+        const subtick = paste.alternatives.find(alternative => alternative.id === "planned-belt-slack-subtick")!;
+        expect(subtick.rounded).toBeUndefined();
+        expect(Math.floor(subtick.result.simulation_duration.ticks)).toBe(285);
+        const rounded_rate = subtick.result.stability_check.expected_output_items * 60 / 285 * (paste_config.target_output.copies ?? 1);
+        expect(rounded_rate / paste_config.target_output.items_per_second - 1).toBeLessThan(0.001);
+        expect(rounded_rate).toBeGreaterThan(outputCapacityPerSecond(paste_config));
     });
 
     test("says why the recovery of a clock of 356.524 ticks cannot be tried, and the selected clock meets the target rate", () => {

@@ -865,6 +865,8 @@ function runAlternativeOf(
         }
         return from_starts_of.get(trial)!;
     };
+    /** The trial of a clock rounded down to whole ticks on its own period, where one is made (below) */
+    let rounded_trial: Trial | null = null;
     /** The alternative for a trial of the clock: its notes, insights, assessment and ranking */
     const alternativeOf = (trial: Trial, row: { id: string; label: string; description_suffix: string; result: BlueprintGenerationResult; rounded?: RoundedClock }): ClockAlternative => {
         const tried_as = trial;
@@ -918,9 +920,23 @@ function runAlternativeOf(
     if (Number.isInteger(period)) {
         return { signature, alternatives: [exact] };
     }
-    // the blueprint of a period that is not a whole number of ticks counts it rounded down (blueprint.ts), unless it
-    // has a subtick clock: listed as that clock, at the rate it runs the build at, it is judged by its own rate. One
-    // whose rate may meet goal 1 (at most 0.1% fast, within the machines) is tried on its own period
+    // a period that is not a whole number of ticks is exported with its subtick clock where it has one: listed as that
+    // clock, it runs the build at exactly the target rate
+    if (result.subtick) {
+        const { period_ticks, scale } = result.subtick.clock;
+        return { signature, alternatives: [alternativeOf(exact_trial, {
+            id: `${id}-subtick`,
+            label: `${label}, subtick clock`,
+            description_suffix: ` Exported with a subtick clock: the ${period.toFixed(3)}-tick period is `
+                + `${period_ticks}/${scale} ticks, so a ${period_ticks}-tick clock is multiplied by ${scale} and taken modulo `
+                + `${period_ticks} by two extra arithmetic combinators, giving the position in the period in 1/${scale} ticks. `
+                + "Window starts can move by a tick between periods but never drift, so the build runs at exactly the target rate.",
+            result: { ...result, blueprint: result.subtick.blueprint, schedule: result.subtick.schedule },
+        })] };
+    }
+    // with no subtick clock its blueprint counts the period rounded down (blueprint.ts): listed as that clock, it is
+    // judged by its own rate. One whose rate may meet goal 1 (at most 0.1% fast, within the machines) is tried on its
+    // own period
     const rounded_ticks = Math.floor(period);
     const rounded_rate = itemsPerSecondOverCopies(expected_output_items, rounded_ticks, copies);
     const target = config.target_output.items_per_second;
@@ -928,7 +944,7 @@ function runAlternativeOf(
     const within_machines = rounded_rate <= outputCapacityPerSecond(config) * (1 + 1e-9);
     const may_meet = roundedRateAllowed({ runs_fast, within_machines });
     let not_tried_on_its_period: string | null = null;
-    const rounded_trial: Trial | null = may_meet ? (() => {
+    rounded_trial = may_meet ? (() => {
         try {
             const tried = roundedClockTrial(used.planned_on ?? config, result, rounded_ticks, logger, report);
             return { result: tried.result, held: tried.holds, loss: tried.loss, start_dependence: tried.start_dependence, clock_period: rounded_ticks };
@@ -941,11 +957,14 @@ function runAlternativeOf(
     })() : null;
     const rounded: RoundedClock = { period_ticks: rounded_ticks, runs_fast, within_machines, tried_on_its_period: rounded_trial !== null };
     const fast = `${fastPercent(runs_fast)} fast`;
-    const roundedAlternative = (why: string) => alternativeOf(rounded_trial ?? { ...exact_trial, clock_period: rounded_ticks }, {
+    if (rounded_trial !== null) {
+        logger.log(`Clock alternative "${label}" rounded to ${rounded_ticks} ticks (runs ${fast}): holds=${rounded_trial.held} survives=${rounded_trial.loss.backpressure_loss?.survives ?? "not tried"}`);
+    }
+    return { signature, alternatives: [alternativeOf(rounded_trial ?? { ...exact_trial, clock_period: rounded_ticks }, {
         id,
         label: `${label} (clock rounded to ${rounded_ticks} ticks, runs ${fast})`,
-        description_suffix: ` The period is not a whole number of ticks (${period.toFixed(3)})${why}, so this clock runs it `
-            + `rounded down to ${rounded_ticks} ticks, ${fastPercent(runs_fast)} faster than the target`
+        description_suffix: ` The period is not a whole number of ticks (${period.toFixed(3)}) and has no subtick clock of a small `
+            + `enough scale, so this clock runs it rounded down to ${rounded_ticks} ticks, ${fastPercent(runs_fast)} faster than the target`
             + (rounded_trial !== null
                 ? `: within the ${fastPercent(ROUNDED_CLOCK_MAX_FAST)} a rounded clock may run and what the machines make, so it is checked on its own ${rounded_ticks}-tick period.`
                 : not_tried_on_its_period !== null
@@ -954,30 +973,7 @@ function runAlternativeOf(
                     + "the clock-only check models the exact period."),
         result: rounded_trial?.result ?? result,
         rounded,
-    });
-    if (rounded_trial !== null) {
-        logger.log(`Clock alternative "${label}" rounded to ${rounded_ticks} ticks (runs ${fast}): holds=${rounded_trial.held} survives=${rounded_trial.loss.backpressure_loss?.survives ?? "not tried"}`);
-    }
-    if (!result.subtick) {
-        return { signature, alternatives: [roundedAlternative(" and has no subtick clock of a small enough scale")] };
-    }
-    const { period_ticks, scale } = result.subtick.clock;
-    return {
-        signature,
-        alternatives: [
-            // listed first so it wins ties with the rounded clock for the default selection
-            alternativeOf(exact_trial, {
-                id: `${id}-subtick`,
-                label: `${label}, subtick clock`,
-                description_suffix: ` Exported with a subtick clock: the ${period.toFixed(3)}-tick period is `
-                    + `${period_ticks}/${scale} ticks, so a ${period_ticks}-tick clock is multiplied by ${scale} and taken modulo `
-                    + `${period_ticks} by two extra arithmetic combinators, giving the position in the period in 1/${scale} ticks. `
-                    + "Window starts can move by a tick between periods but never drift, so the build runs at exactly the target rate.",
-                result: { ...result, blueprint: result.subtick.blueprint, schedule: result.subtick.schedule },
-            }),
-            roundedAlternative(""),
-        ],
-    };
+    })] };
 }
 
 /** A share as a percentage the labels print: "0.02%", "1.14%", "under 0.01%" */
