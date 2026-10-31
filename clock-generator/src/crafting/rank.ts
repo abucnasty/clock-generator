@@ -3,10 +3,20 @@ import { ClockAlternative, ClockAlternativeRun } from "./alternatives";
 import type { ClockAssessment } from "./trial";
 import { SerializableClockWindows } from "./clock";
 import { BlueprintGenerationResult } from "./plan/plan-run";
+import type { InserterCounters } from "./inserter-counters";
 
 /**
  * What the selection compares between two alternatives, in this order (see `combineClockAlternativeRuns`), worked out
- * from a clock's assessment, its belt, and the build's deadlock risks by `rankingOf`.
+ * from a clock's assessment, its belt, its counters and the build's deadlock risks by `rankingOf`.
+ *
+ * The rule (decided 2026-10-31, from the timed strategy pairs of the inserter cost series): robustness is a gate, the cost ranks those
+ * that pass it. A clock that holds the target rate and gets back from every loss (goal 1) is ranked among the clocks
+ * that do, and only those; among them the priced cost (`clockCost`) decides, two costs closer than the floor
+ * (`COST_TIE_FLOOR`) being a tie; of tied clocks the one that gets back from a loss in fewer periods comes first. The
+ * wake-ups are reported beside the cost and decide nothing. Every alternative ranked is a whole clock of the build,
+ * every group's windows with every other group's: a group's way of being clocked is judged in the cell it is part of,
+ * never swapped into another clock alone, since what one group's windows cost depends on the others' (the machines
+ * they share wake them).
  */
 export interface ClockRanking {
     /**
@@ -58,14 +68,23 @@ export interface ClockRanking {
      * and for a clock with a period that is not a whole number of ticks, which never gets the slack.
      */
     matches_belt_choice: boolean;
-    /** Null when they were not counted, which ranks after any count */
+    /**
+     * Wake-ups a minute of one copy (`ClockAssessment.wake_ups_per_minute`); null when they were not counted. Reported,
+     * not ranked: the cost, which prices them, decides (decided 2026-10-31).
+     */
     wake_ups_per_minute: number | null;
+    /**
+     * What the clock is estimated to cost the game, priced from its counters (`clockCost`); null where its wake-ups were
+     * not counted, which ranks after any cost. Absent from a ranking kept from before 0.26.0, which reads as null.
+     */
+    cost?: ClockCost | null;
     /**
      * The most periods the clock took to be back at its expected output over its backpressure loss trials
      * (`BackpressureLossVerdict.recovered_after_periods`); null where it was not tried or does not get back, and absent
-     * from a ranking kept from before 0.26.0. Of clocks equal on wake-ups the one that recovers sooner comes first
-     * (decided 2026-10-31: on the container wagons, even hands recovered from the second cut of an input within 5
-     * periods in the game where another clock of 0 wake-ups too took 33 to 48).
+     * from a ranking kept from before 0.26.0. Of clocks tied on cost (`costsTie`) the one that recovers sooner comes
+     * first (decided 2026-10-31: on the container wagons, even hands recovered from the second cut of an input within 5
+     * periods in the game where another clock of 0 wake-ups too took 33 to 48; made the tie-break of the cost the same
+     * day).
      */
     recovery_periods?: number | null;
     window_count: number;
@@ -128,6 +147,7 @@ export function rankingOf(clock: Omit<ClockAlternative, "ranking">, config: Conf
         // with backed-up belts every clock goes without the slack, which is the choice
         matches_belt_choice: config.overrides?.backed_up_belts === true || !clock.result.belt_pickup_slack_left_out,
         wake_ups_per_minute: clock.assessment.wake_ups_per_minute,
+        cost: clockCost(clock.result.stability_check.as_built?.counters, clock.assessment.wake_ups_per_minute),
         recovery_periods: clock.assessment.backpressure_loss?.recovered_after_periods ?? null,
         window_count: clock.ranking_window_count,
     };
@@ -164,17 +184,156 @@ export function searchesAreNeeded<T>(
 }
 
 /**
- * What the selection minimises among clocks of the same rank: wake-ups a minute (goal 2). Null where they were not
- * counted. The one place the selection and the targeted searches read a clock's cost from.
+ * The prices `clockCost` puts on what a clock's inserters do, in ns of the game's update a tick: the inserter cost
+ * series' price estimate with its output wake-up patch (decided 2026-10-31; measured on one desktop machine, Factorio
+ * 2.1.21: relative figures, not times for another machine). Each is a price the engine can put on its own counters
+ * without asking which machine or item an inserter serves.
  */
-export function clockCost(ranking: Pick<ClockRanking, "wake_ups_per_minute">): number | null {
-    return ranking.wake_ups_per_minute;
+export const CLOCK_PRICES_NS = {
+    /** A wake-up from the list of the machine an inserter puts into: the 85 ns unit (series 02's belt cell) */
+    input_wake_up: 85,
+    /**
+     * A wake-up from the list of the machine it takes from: the assembler's price (session B p192), for every machine.
+     * The estimate prices the electromagnetic plant's at 242, the foundry's at 300 and the cryogenic plant's at 140, by
+     * the machine's name, which the engine never branches on: those are left out.
+     */
+    output_wake_up: 308,
+    /** An output wake-up of a machine that starts more than `busy_craft_starts_per_tick` crafts a tick: the busy price (Session H, 1.75 starts a tick) */
+    busy_output_wake_up: 152.3,
+    busy_craft_starts_per_tick: 1,
+    /** A tick an enabled inserter that picks up from a belt waits for items there, whatever its hand holds: the waiting tick (PRICES.md row 10) */
+    belt_wait_tick: 135.8,
+    /** A switch-on: its two edges and the switch-on at rest (session D, series 04) */
+    window: 146.9,
+    /** A wired inserter a tick that puts into a machine (series 01) */
+    wire_into_machine: 3.08,
+    /** A wired inserter a tick that puts anywhere else (series 01) */
+    wire_other: 2.29,
+    /** A window decider combinator a tick (series 07) */
+    decider: 31,
+} as const;
+
+/** A clock's priced cost, ns of the game's update a tick for one copy of the build, by what it is paid for */
+export interface ClockCost {
+    /** The whole: the sum of the rest */
+    ns_per_tick: number;
+    /** Wake-ups from the lists of the machines the inserters put into */
+    input_wake_ups: number;
+    /** Wake-ups from the lists of the machines they take from */
+    output_wake_ups: number;
+    /** Ticks the inserters that pick up from a belt wait there, enabled */
+    belt_waits: number;
+    /** Switch-ons of the clock's windows */
+    windows: number;
+    /** The wired inserters */
+    wires: number;
+    /** The window deciders of the blueprint */
+    deciders: number;
 }
 
-/** A cost as the selection compares it: to a thousandth, less than that being the rounding of a division */
-function costKey(ranking: Pick<ClockRanking, "wake_ups_per_minute">): number {
-    const cost = clockCost(ranking);
-    return cost === null ? Infinity : Math.round(cost * 1000);
+/** The part of a cost only fewer wake-ups and shorter waits can lower: what the inserters do while enabled */
+export function wakeSideOf(cost: ClockCost): number {
+    return cost.input_wake_ups + cost.output_wake_ups + cost.belt_waits;
+}
+
+const TICKS_PER_MINUTE = 3600;
+
+/**
+ * What the selection minimises among clocks of the same rank (goal 2): the series' estimate of what the clock costs the
+ * game, from the counters of one copy over its long run (`as_built.counters`), at the prices of CLOCK_PRICES_NS:
+ *
+ *   input wake-ups x 85 + output wake-ups x 308 (152.3 out of a machine starting more than one craft a tick)
+ *   + belt pickup waiting ticks x 135.8 + switch-ons x 146.9 (each a minute, / 3600)
+ *   + wired inserters x 3.08 (into a machine) or 2.29 (elsewhere) + window deciders x 31
+ *
+ * Where the wake-ups that rank the clock are their mean over the starts (`wake_ups_from_starts`), the counters' own,
+ * of the cold start, are scaled to that mean (priced at 85 where the cold start counted none). Left out: what the estimate prices
+ * by the machine's name (output wake-ups of electromagnetic plants, foundries and cryogenic plants); wake-ups of an
+ * inserter waiting at a belt or a chest, which the simulator does not count; the hands (extra grabs and held-open
+ * hands); and the machines' and belts' own update. Null where the wake-ups were not counted. The one place the
+ * selection and the targeted searches read a clock's cost from.
+ */
+export function clockCost(counters: InserterCounters | undefined, wake_ups_per_minute: number | null): ClockCost | null {
+    if (counters === undefined || wake_ups_per_minute === null) {
+        return null;
+    }
+    const prices = CLOCK_PRICES_NS;
+    let input = 0;
+    let output = 0;
+    let counted = 0;
+    let belt_waits = 0;
+    let windows = 0;
+    let wires = 0;
+    for (const inserter of counters.inserters) {
+        const busy = (inserter.source_craft_starts_per_tick ?? 0) > prices.busy_craft_starts_per_tick;
+        input += inserter.input_wake_ups_per_minute * prices.input_wake_up;
+        output += inserter.output_wake_ups_per_minute * (busy ? prices.busy_output_wake_up : prices.output_wake_up);
+        counted += inserter.input_wake_ups_per_minute + inserter.output_wake_ups_per_minute;
+        if (inserter.pickup_kind === "belt") {
+            belt_waits += inserter.waiting_for_items.ticks_per_minute * prices.belt_wait_tick;
+        }
+        windows += inserter.switch_ons_per_minute * prices.window;
+        // an inserter its clock switches; null until the blueprint is known, which only a wired one is
+        if (inserter.network_width !== 0) {
+            wires += inserter.drop_kind === "machine" ? prices.wire_into_machine : prices.wire_other;
+        }
+    }
+    const scale = counted > 0 ? wake_ups_per_minute / counted : 0;
+    const cost = {
+        input_wake_ups: (counted > 0 ? input * scale : wake_ups_per_minute * prices.input_wake_up) / TICKS_PER_MINUTE,
+        output_wake_ups: output * scale / TICKS_PER_MINUTE,
+        belt_waits: belt_waits / TICKS_PER_MINUTE,
+        windows: windows / TICKS_PER_MINUTE,
+        wires,
+        deciders: (counters.deciders ?? 0) * prices.decider,
+    };
+    return { ns_per_tick: cost.input_wake_ups + cost.output_wake_ups + cost.belt_waits + cost.windows + cost.wires + cost.deciders, ...cost };
+}
+
+/**
+ * The floor under which two clocks' costs tie (decided 2026-10-31): the series' materiality floor for a timed pair,
+ * max(3u, 0.5% of the clocked build's whole update), for one copy, as `clockCost` counts it. The engine
+ * knows neither figure of a build, so each is the smallest honest stand-in:
+ * - 3u: u is 13 ns a copy, the series' figure for cells (the cell02 experiment),
+ *   so 39 ns for one copy;
+ * - 0.5% of the whole update: of which the engine knows only the part it prices, the cost of the cheaper clock, a
+ *   lower bound of the whole.
+ */
+export const COST_TIE_FLOOR = {
+    ns_per_copy: 39,
+    share_of_cost: 0.005,
+} as const;
+
+/** The floor of `COST_TIE_FLOOR` beside a clock of this cost, ns a tick for one copy */
+export function costTieFloor(cheaper_ns_per_tick: number): number {
+    return Math.max(COST_TIE_FLOOR.ns_per_copy, COST_TIE_FLOOR.share_of_cost * cheaper_ns_per_tick);
+}
+
+/** A ranking's cost as the selection compares it, ns a tick: Infinity where it was not counted */
+export function costOf(ranking: Pick<ClockRanking, "cost">): number {
+    return ranking.cost?.ns_per_tick ?? Infinity;
+}
+
+/** Whether a clock of cost `cost` ties with the cheapest of the clocks it is ranked with: it is above it by less than the floor */
+export function costsTie(cost: number, cheapest: number): boolean {
+    return cost === cheapest || cost - cheapest < costTieFloor(cheapest);
+}
+
+/**
+ * The position a cost takes in an order of clocks whose cheapest costs `cheapest`: 0 for a clock tied with it, which
+ * leaves the order to what follows the cost (the recovery, the windows), else the cost itself
+ */
+export function costPlace(cost: number, cheapest: number): number {
+    return costsTie(cost, cheapest) ? 0 : cost;
+}
+
+/**
+ * Whether a clock cheaper than this one by more than the floor could be one with fewer wake-ups: the part of its cost
+ * that fewer wake-ups and shorter waits lower is at least the floor. True where the cost was not counted.
+ */
+export function wakeSideAboveFloor(ranking: Pick<ClockRanking, "cost">): boolean {
+    const cost = ranking.cost;
+    return cost === undefined || cost === null || wakeSideOf(cost) >= costTieFloor(cost.ns_per_tick);
 }
 
 /**
@@ -195,9 +354,10 @@ export const IMPROVING_SEARCH_MAX_PERIOD_TICKS = 480;
 
 /**
  * The searches to run once the clocks made without one are in: every one where none of them can be selected as stable
- * (`searchesAreNeeded`); else those of SEARCHES_THAT_CAN_IMPROVE, where the clock the selection ends on so far has a cost
- * above 0 (none can beat a clock of no wake-ups) and the primary period is at most IMPROVING_SEARCH_MAX_PERIOD_TICKS;
- * else none.
+ * (`searchesAreNeeded`); else those of SEARCHES_THAT_CAN_IMPROVE, where the clock the selection ends on so far pays at
+ * least the floor for its wake-ups and waits (`wakeSideAboveFloor`: a clock with fewer could not beat it by more, and one
+ * that only ties it is no improvement the cost can see) and the primary period is at most
+ * IMPROVING_SEARCH_MAX_PERIOD_TICKS; else none.
  */
 export function searchesToRun<T, S extends { id: string }>(
     runs: (ClockAlternativeRun<T> | null)[],
@@ -210,14 +370,14 @@ export function searchesToRun<T, S extends { id: string }>(
     }
     const { alternatives, selected_index } = combineClockAlternativeRuns(runs, rankingOf);
     const selected = alternatives[selected_index];
-    if (selected === undefined || costKey(rankingOf(selected)) <= 0 || primary_period_ticks > IMPROVING_SEARCH_MAX_PERIOD_TICKS) {
+    if (selected === undefined || !wakeSideAboveFloor(rankingOf(selected)) || primary_period_ticks > IMPROVING_SEARCH_MAX_PERIOD_TICKS) {
         return [];
     }
     return searches.filter(search => SEARCHES_THAT_CAN_IMPROVE.includes(search.id));
 }
 
 /**
- * The windows an alternative is ranked by, between clocks with the same wake-ups: those it has without the windows of
+ * The windows an alternative is ranked by, between clocks tied on cost and recovery: those it has without the windows of
  * the inserters of a loop, which only reduce idle checks and must never count against a clock, so its windows rank as
  * they would with those inserters always enabled.
  */
@@ -237,9 +397,10 @@ export function rankingWindowCount(
  * Lists runs in order, skipping duplicates, and selects one. The alternatives that meet the target rate (goal 1) come
  * first: those at exactly the target rate and tried, then those rounded down to whole ticks that run at most 0.1% fast
  * and were tried, then those whose recovery could not be tried; among them those made for the belt the
- * config asks for, so that the count of wake-ups never drops belt pickup slack on its own; then the fewest wake-ups a
- * minute (goal 2); then the fewest periods to get back from a loss; then the fewest windows. Of equals the first listed
- * is selected.
+ * config asks for, so that the cost never drops belt pickup slack on its own; then the lowest cost (goal 2, `clockCost`),
+ * every clock whose cost is above the cheapest of those it is ranked with by less than the floor (`costsTie`) tied with
+ * it; then, of tied clocks, the fewest periods to get back from a loss; then the fewest windows. Of equals the first
+ * listed is selected. The wake-ups decide nothing: they are in the cost, priced.
  *
  * Where none meets the target rate, those stable above it come first (`stable_above_target`), the nearest to it
  * first: the build then runs at least at what was asked, on a clock that holds and recovers. Where none is either, the
@@ -263,34 +424,44 @@ export function combineClockAlternativeRuns<T>(
         }
     };
     runs.forEach(list);
-    const rank = (alternative: T): number[] => {
+    // what comes before the cost: the gate of goal 1, the rate, the output held and the belt
+    const before_cost = (ranking: ClockRanking): number[] => [
+        // a rounded clock meets goal 1 a little fast, after the exact ones; a clock whose recovery could not be tried is
+        // not known to meet it, after those that are; then the stable clocks over the target, before the rest
+        ranking.meets_target_rate ? (ranking.recovery_untried ? 2 : ranking.runs_fast !== undefined ? 1 : 0)
+            : ranking.stable_above_target === true ? 3 : 4,
+        // to a thousandth of an item a second: less than that is the rounding of a division, not a difference between two clocks
+        ranking.meets_target_rate ? 0 : Math.round(Math.abs(ranking.rate_off_target) * 1000),
+        ranking.meets_target_rate || ranking.holds_expected_output ? 0 : 1,
+        ranking.matches_belt_choice ? 0 : 1,
+    ];
+    const ranked = alternatives.map(alternative => {
         const ranking = rankingOf(alternative);
-        return [
-            // a rounded clock meets goal 1 a little fast, after the exact ones; a clock whose recovery could not be tried is
-            // not known to meet it, after those that are; then the stable clocks over the target, before the rest
-            ranking.meets_target_rate ? (ranking.recovery_untried ? 2 : ranking.runs_fast !== undefined ? 1 : 0)
-                : ranking.stable_above_target === true ? 3 : 4,
-            // to a thousandth of an item a second, as the wake-ups below
-            ranking.meets_target_rate ? 0 : Math.round(Math.abs(ranking.rate_off_target) * 1000),
-            ranking.meets_target_rate || ranking.holds_expected_output ? 0 : 1,
-            ranking.matches_belt_choice ? 0 : 1,
-            // to a thousandth: less than that is the rounding of a division, not a difference between two clocks
-            costKey(ranking),
-            // of equals on cost, the one that gets back from a loss sooner
-            ranking.recovery_periods ?? Infinity,
-            ranking.window_count,
-        ];
-    };
-    const beats = (a: T, b: T): boolean => {
-        const [ra, rb] = [rank(a), rank(b)];
+        return { ranking, before: before_cost(ranking), cost: costOf(ranking) };
+    });
+    // a cost ties with the cheapest of the clocks equal to it on everything before the cost
+    const cheapest = new Map<string, number>();
+    for (const { before, cost } of ranked) {
+        const key = before.join(",");
+        cheapest.set(key, Math.min(cheapest.get(key) ?? Infinity, cost));
+    }
+    const ranks = ranked.map(({ ranking, before, cost }) => [
+        ...before,
+        costPlace(cost, cheapest.get(before.join(","))!),
+        // of clocks tied on cost, the one that gets back from a loss sooner
+        ranking.recovery_periods ?? Infinity,
+        ranking.window_count,
+    ]);
+    const beats = (a: number, b: number): boolean => {
+        const [ra, rb] = [ranks[a], ranks[b]];
         for (let i = 0; i < ra.length; i++) {
             if (ra[i] !== rb[i]) return ra[i] < rb[i];
         }
         return false;
     };
     let selected_index = 0;
-    alternatives.forEach((alternative, index) => {
-        if (beats(alternative, alternatives[selected_index])) {
+    alternatives.forEach((_, index) => {
+        if (beats(index, selected_index)) {
             selected_index = index;
         }
     });
