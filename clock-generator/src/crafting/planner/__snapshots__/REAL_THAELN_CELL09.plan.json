@@ -1,0 +1,206 @@
+{
+  "schema": 1,
+  "sample": "REAL_THAELN_CELL09",
+  "target": {
+    "item": "utility-science-pack",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 960,
+      "denominator": 7
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "belt:1/lane:1#processing-unit",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:1/lane:2#flying-robot-frame",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:2/lane:1#flying-robot-frame",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:2/lane:2#processing-unit",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:5/lane:1#coal",
+      "kind": "nothing-drops-on"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:7",
+        "machine:3",
+        "machine:1",
+        "machine:4",
+        "machine:2",
+        "machine:5",
+        "machine:6",
+        "machine:10",
+        "machine:8",
+        "machine:11",
+        "machine:9",
+        "machine:12",
+        "belt:3/lane:1#utility-science-pack",
+        "machine:13",
+        "belt:4/lane:1#utility-science-pack"
+      ],
+      "edges": [
+        "inserter:1/processing-unit",
+        "inserter:1/flying-robot-frame",
+        "inserter:2/processing-unit",
+        "inserter:2/flying-robot-frame",
+        "inserter:3/utility-science-pack",
+        "inserter:4/utility-science-pack",
+        "inserter:5/low-density-structure",
+        "inserter:6/low-density-structure",
+        "inserter:7/low-density-structure",
+        "inserter:8/low-density-structure",
+        "inserter:9/utility-science-pack",
+        "inserter:10/plastic-bar",
+        "inserter:11/coal",
+        "inserter:12/plastic-bar",
+        "inserter:13/utility-science-pack",
+        "inserter:14/processing-unit",
+        "inserter:14/flying-robot-frame",
+        "inserter:15/processing-unit",
+        "inserter:15/flying-robot-frame",
+        "inserter:16/processing-unit",
+        "inserter:16/flying-robot-frame",
+        "inserter:17/processing-unit",
+        "inserter:17/flying-robot-frame",
+        "inserter:18/utility-science-pack",
+        "inserter:19/plastic-bar",
+        "inserter:20/plastic-bar",
+        "inserter:21/utility-science-pack",
+        "inserter:22/low-density-structure",
+        "inserter:23/low-density-structure",
+        "inserter:24/utility-science-pack",
+        "inserter:25/low-density-structure",
+        "inserter:26/low-density-structure",
+        "inserter:27/utility-science-pack",
+        "inserter:28/processing-unit",
+        "inserter:28/flying-robot-frame",
+        "inserter:29/processing-unit",
+        "inserter:29/flying-robot-frame"
+      ],
+      "periods": [
+        {"swings":3,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":168,"denominator":1},"cycles":8,"period_ticks":1344,"kept":true},
+        {"swings":4,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":224,"denominator":1},"cycles":6,"period_ticks":1344,"kept":true},
+        {"swings":5,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":280,"denominator":1},"cycles":24,"period_ticks":6720,"kept":true},
+        {"swings":6,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":336,"denominator":1},"cycles":4,"period_ticks":1344,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":112,"denominator":1},"cycles":12,"period_ticks":1344,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":56,"denominator":1},"cycles":24,"period_ticks":1344,"kept":true},
+        {"swings":3,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":168,"denominator":1},"cycles":8,"period_ticks":1344,"kept":true}
+      ],
+      "duty": [
+        {
+          "producer": "machine:utility-science-pack",
+          "members": [
+            "machine:1",
+            "machine:2",
+            "machine:5",
+            "machine:6",
+            "machine:8",
+            "machine:9",
+            "machine:12",
+            "machine:13"
+          ],
+          "crafts_needed": {
+            "numerator": 160,
+            "denominator": 7
+          },
+          "crafts_capacity": {
+            "numerator": 2100260433333333,
+            "denominator": 87500000000000
+          },
+          "duty": {
+            "numerator": 2000000000000000,
+            "denominator": 2100260433333333
+          }
+        },
+        {
+          "producer": "machine:casting-low-density-structure",
+          "members": [
+            "machine:3",
+            "machine:4",
+            "machine:10",
+            "machine:11"
+          ],
+          "crafts_needed": {
+            "numerator": 120,
+            "denominator": 7
+          },
+          "crafts_capacity": {
+            "numerator": 799,
+            "denominator": 15
+          },
+          "duty": {
+            "numerator": 1800,
+            "denominator": 5593
+          }
+        },
+        {
+          "producer": "machine:plastic-bar",
+          "members": [
+            "machine:7"
+          ],
+          "crafts_needed": {
+            "numerator": 75,
+            "denominator": 7
+          },
+          "crafts_capacity": {
+            "numerator": 235,
+            "denominator": 2
+          },
+          "duty": {
+            "numerator": 30,
+            "denominator": 329
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 3,
+    "fractional": false,
+    "listed_from": {
+      "swings": 3,
+      "planned": 3,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 1344,
+      "exact": {
+        "numerator": 1344,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 168,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 8
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 8,
+      "override_lcm": null,
+      "effective_lcm": 8
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

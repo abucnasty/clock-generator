@@ -1,0 +1,199 @@
+{
+  "schema": 1,
+  "sample": "CHEMICAL_SCIENCE_SHARED_FOUNDRY",
+  "target": {
+    "item": "chemical-science-pack",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 480,
+      "denominator": 11
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "belt:1/lane:1#advanced-circuit",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:1/lane:2#sulfur",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:2/lane:1#sulfur",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:2/lane:2#advanced-circuit",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:3/lane:1#steel-plate",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:3/lane:2#iron-gear-wheel",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:4/lane:1#iron-gear-wheel",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:4/lane:2#steel-plate",
+      "kind": "nothing-drops-on"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:9",
+        "machine:5",
+        "machine:1",
+        "machine:6",
+        "machine:2",
+        "belt:5/lane:1#chemical-science-pack",
+        "machine:7",
+        "machine:3",
+        "machine:8",
+        "machine:4",
+        "belt:6/lane:1#chemical-science-pack"
+      ],
+      "edges": [
+        "inserter:1/chemical-science-pack",
+        "inserter:2/chemical-science-pack",
+        "inserter:3/chemical-science-pack",
+        "inserter:4/chemical-science-pack",
+        "inserter:5/advanced-circuit",
+        "inserter:5/sulfur",
+        "inserter:6/advanced-circuit",
+        "inserter:6/sulfur",
+        "inserter:7/advanced-circuit",
+        "inserter:7/sulfur",
+        "inserter:8/advanced-circuit",
+        "inserter:8/sulfur",
+        "inserter:9/engine-unit",
+        "inserter:10/engine-unit",
+        "inserter:11/engine-unit",
+        "inserter:12/engine-unit",
+        "inserter:13/steel-plate",
+        "inserter:13/iron-gear-wheel",
+        "inserter:14/steel-plate",
+        "inserter:14/iron-gear-wheel",
+        "inserter:15/steel-plate",
+        "inserter:15/iron-gear-wheel",
+        "inserter:16/steel-plate",
+        "inserter:16/iron-gear-wheel",
+        "inserter:17/pipe",
+        "inserter:18/pipe",
+        "inserter:19/pipe",
+        "inserter:20/pipe"
+      ],
+      "periods": [
+        {"swings":2,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":176,"denominator":1},"cycles":2,"period_ticks":352,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":264,"denominator":1},"cycles":4,"period_ticks":1056,"kept":true},
+        {"swings":4,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":352,"denominator":1},"cycles":1,"period_ticks":352,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":88,"denominator":1},"cycles":4,"period_ticks":352,"kept":true},
+        {"swings":2,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":176,"denominator":1},"cycles":2,"period_ticks":352,"kept":true}
+      ],
+      "duty": [
+        {
+          "producer": "machine:chemical-science-pack",
+          "members": [
+            "machine:1",
+            "machine:2",
+            "machine:3",
+            "machine:4"
+          ],
+          "crafts_needed": {
+            "numerator": 120,
+            "denominator": 11
+          },
+          "crafts_capacity": {
+            "numerator": 70427,
+            "denominator": 6400
+          },
+          "duty": {
+            "numerator": 768000,
+            "denominator": 774697
+          }
+        },
+        {
+          "producer": "machine:engine-unit",
+          "members": [
+            "machine:5",
+            "machine:6",
+            "machine:7",
+            "machine:8"
+          ],
+          "crafts_needed": {
+            "numerator": 120,
+            "denominator": 11
+          },
+          "crafts_capacity": {
+            "numerator": 6283,
+            "denominator": 320
+          },
+          "duty": {
+            "numerator": 38400,
+            "denominator": 69113
+          }
+        },
+        {
+          "producer": "machine:casting-pipe",
+          "members": [
+            "machine:9"
+          ],
+          "crafts_needed": {
+            "numerator": 160,
+            "denominator": 11
+          },
+          "crafts_capacity": {
+            "numerator": 947,
+            "denominator": 4
+          },
+          "duty": {
+            "numerator": 640,
+            "denominator": 10417
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 2,
+    "fractional": false,
+    "listed_from": {
+      "swings": 2,
+      "planned": 2,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 352,
+      "exact": {
+        "numerator": 352,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 176,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 2
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 2,
+      "override_lcm": null,
+      "effective_lcm": 2
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

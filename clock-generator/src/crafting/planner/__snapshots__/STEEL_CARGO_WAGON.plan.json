@@ -1,0 +1,168 @@
+{
+  "schema": 1,
+  "sample": "STEEL_CARGO_WAGON",
+  "target": {
+    "item": "steel-plate",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 26,
+      "denominator": 1
+    }
+  },
+  "unbounded_sources": [],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "drill:1",
+        "chest:2#iron-ore",
+        "machine:2",
+        "chest:2#iron-plate",
+        "machine:1",
+        "chest:2#steel-plate",
+        "belt:1/lane:1#steel-plate"
+      ],
+      "edges": [
+        "inserter:1/iron-plate",
+        "inserter:2/steel-plate",
+        "inserter:3/steel-plate",
+        "inserter:4/iron-plate",
+        "inserter:5/iron-ore",
+        "placement:drill:1/iron-ore"
+      ],
+      "periods": [
+        {"swings":38,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":18240,"denominator":13},"cycles":12,"period_ticks":16836.923076923078,"kept":true},
+        {"swings":37,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":17760,"denominator":13},"cycles":24,"period_ticks":32787.692307692305,"kept":true},
+        {"swings":36,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":17280,"denominator":13},"cycles":2,"period_ticks":2658.4615384615386,"kept":true},
+        {"swings":35,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":16800,"denominator":13},"cycles":24,"period_ticks":31015.384615384617,"kept":true},
+        {"swings":34,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":16320,"denominator":13},"cycles":12,"period_ticks":15064.615384615385,"kept":true},
+        {"swings":33,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":15840,"denominator":13},"cycles":8,"period_ticks":9747.692307692309,"kept":true},
+        {"swings":32,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":15360,"denominator":13},"cycles":3,"period_ticks":3544.6153846153848,"kept":true},
+        {"swings":31,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":14880,"denominator":13},"cycles":24,"period_ticks":27470.76923076923,"kept":true},
+        {"swings":30,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":14400,"denominator":13},"cycles":4,"period_ticks":4430.7692307692305,"kept":true},
+        {"swings":29,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":13920,"denominator":13},"cycles":24,"period_ticks":25698.46153846154,"kept":true},
+        {"swings":28,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":13440,"denominator":13},"cycles":6,"period_ticks":6203.076923076923,"kept":true},
+        {"swings":27,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":12960,"denominator":13},"cycles":8,"period_ticks":7975.384615384615,"kept":true},
+        {"swings":26,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":960,"denominator":1},"cycles":12,"period_ticks":11520,"kept":true},
+        {"swings":25,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":12000,"denominator":13},"cycles":24,"period_ticks":22153.846153846152,"kept":true},
+        {"swings":24,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":11520,"denominator":13},"cycles":1,"period_ticks":886.1538461538462,"kept":true},
+        {"swings":23,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":11040,"denominator":13},"cycles":24,"period_ticks":20381.53846153846,"kept":true},
+        {"swings":22,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":10560,"denominator":13},"cycles":12,"period_ticks":9747.692307692309,"kept":true},
+        {"swings":21,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":10080,"denominator":13},"cycles":8,"period_ticks":6203.076923076923,"kept":true},
+        {"swings":20,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":9600,"denominator":13},"cycles":6,"period_ticks":4430.7692307692305,"kept":true},
+        {"swings":19,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":9120,"denominator":13},"cycles":24,"period_ticks":16836.923076923078,"kept":true},
+        {"swings":18,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":8640,"denominator":13},"cycles":4,"period_ticks":2658.4615384615386,"kept":true},
+        {"swings":17,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":8160,"denominator":13},"cycles":24,"period_ticks":15064.615384615385,"kept":true},
+        {"swings":16,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":7680,"denominator":13},"cycles":3,"period_ticks":1772.3076923076924,"kept":true},
+        {"swings":15,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":7200,"denominator":13},"cycles":8,"period_ticks":4430.7692307692305,"kept":true},
+        {"swings":14,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":6720,"denominator":13},"cycles":12,"period_ticks":6203.076923076923,"kept":true},
+        {"swings":13,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":480,"denominator":1},"cycles":24,"period_ticks":11520,"kept":true},
+        {"swings":12,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":5760,"denominator":13},"cycles":2,"period_ticks":886.1538461538462,"kept":true},
+        {"swings":11,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":5280,"denominator":13},"cycles":24,"period_ticks":9747.692307692309,"kept":true},
+        {"swings":10,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":4800,"denominator":13},"cycles":12,"period_ticks":4430.7692307692305,"kept":true},
+        {"swings":9,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":4320,"denominator":13},"cycles":8,"period_ticks":2658.4615384615386,"kept":true},
+        {"swings":8,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":3840,"denominator":13},"cycles":3,"period_ticks":886.1538461538462,"kept":true},
+        {"swings":7,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":3360,"denominator":13},"cycles":24,"period_ticks":6203.076923076923,"kept":true},
+        {"swings":6,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":2880,"denominator":13},"cycles":4,"period_ticks":886.1538461538462,"kept":true},
+        {"swings":5,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":2400,"denominator":13},"cycles":24,"period_ticks":4430.7692307692305,"kept":true},
+        {"swings":4,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":1920,"denominator":13},"cycles":6,"period_ticks":886.1538461538462,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":1440,"denominator":13},"cycles":8,"period_ticks":886.1538461538462,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":960,"denominator":13},"cycles":12,"period_ticks":886.1538461538462,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":480,"denominator":13},"cycles":24,"period_ticks":886.1538461538462,"kept":true},
+        {"swings":null,"fractional":true,"listed_as":"fractional","pruned":{"rule":"cycle-refused","terms":{"reason":"Cannot satisfy fractional swing constraint: sub-cycle 0 requires 47 swings, but maximum allowed is 4 due to insertion limits. Total swings: 1530, cycle multiplier: 32."}}}
+      ],
+      "duty": [
+        {
+          "producer": "machine:steel-plate",
+          "members": [
+            "machine:1"
+          ],
+          "crafts_needed": {
+            "numerator": 13,
+            "denominator": 2
+          },
+          "crafts_capacity": {
+            "numerator": 847,
+            "denominator": 128
+          },
+          "duty": {
+            "numerator": 832,
+            "denominator": 847
+          }
+        },
+        {
+          "producer": "machine:iron-plate",
+          "members": [
+            "machine:2"
+          ],
+          "crafts_needed": {
+            "numerator": 65,
+            "denominator": 3
+          },
+          "crafts_capacity": {
+            "numerator": 6403,
+            "denominator": 256
+          },
+          "duty": {
+            "numerator": 16640,
+            "denominator": 19209
+          }
+        },
+        {
+          "producer": "drill:iron-ore",
+          "members": [
+            "drill:1"
+          ],
+          "crafts_needed": {
+            "numerator": 650,
+            "denominator": 24027
+          },
+          "crafts_capacity": {
+            "numerator": 42061,
+            "denominator": 1000
+          },
+          "duty": {
+            "numerator": 650000,
+            "denominator": 1010599647
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 38,
+    "fractional": false,
+    "listed_from": {
+      "swings": 38,
+      "planned": 38,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 16836.923076923078,
+      "exact": {
+        "numerator": 218880,
+        "denominator": 13
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 18240,
+        "denominator": 13
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 12
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 12,
+      "override_lcm": null,
+      "effective_lcm": 12
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

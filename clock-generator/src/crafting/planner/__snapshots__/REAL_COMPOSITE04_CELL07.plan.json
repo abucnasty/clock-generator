@@ -1,0 +1,157 @@
+{
+  "schema": 1,
+  "sample": "REAL_COMPOSITE04_CELL07",
+  "target": {
+    "item": "advanced-circuit",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 90,
+      "denominator": 1
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "belt:1/lane:1#coal",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:1/lane:2#coal",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "chest:2#electronic-circuit",
+      "kind": "infinity-supply"
+    },
+    {
+      "vertex": "chest:3#electronic-circuit",
+      "kind": "infinity-supply"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:2",
+        "machine:3",
+        "machine:4",
+        "machine:1",
+        "machine:5"
+      ],
+      "edges": [
+        "inserter:1/advanced-circuit",
+        "inserter:2/electronic-circuit",
+        "inserter:3/plastic-bar",
+        "inserter:4/copper-cable",
+        "inserter:5/coal",
+        "inserter:6/coal",
+        "inserter:7/copper-cable",
+        "inserter:8/plastic-bar",
+        "inserter:9/electronic-circuit",
+        "inserter:10/advanced-circuit"
+      ],
+      "periods": [
+        {"swings":4,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":256,"denominator":3},"cycles":11,"period_ticks":938.6666666666666,"kept":true},
+        {"swings":5,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":320,"denominator":3},"cycles":11,"period_ticks":1173.3333333333333,"kept":true},
+        {"swings":6,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":128,"denominator":1},"cycles":11,"period_ticks":1408,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":64,"denominator":1},"cycles":11,"period_ticks":704,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":128,"denominator":3},"cycles":11,"period_ticks":469.3333333333333,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":64,"denominator":3},"cycles":11,"period_ticks":234.66666666666666,"kept":true},
+        {"swings":4.125,"swings_exact":{"numerator":33,"denominator":8},"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":88,"denominator":1},"cycles":8,"period_ticks":704,"kept":true}
+      ],
+      "duty": [
+        {
+          "producer": "machine:advanced-circuit",
+          "members": [
+            "machine:1",
+            "machine:5"
+          ],
+          "crafts_needed": {
+            "numerator": 360,
+            "denominator": 11
+          },
+          "crafts_capacity": {
+            "numerator": 1601,
+            "denominator": 48
+          },
+          "duty": {
+            "numerator": 17280,
+            "denominator": 17611
+          }
+        },
+        {
+          "producer": "machine:plastic-bar",
+          "members": [
+            "machine:2",
+            "machine:4"
+          ],
+          "crafts_needed": {
+            "numerator": 90,
+            "denominator": 11
+          },
+          "crafts_capacity": {
+            "numerator": 9734,
+            "denominator": 125
+          },
+          "duty": {
+            "numerator": 5625,
+            "denominator": 53537
+          }
+        },
+        {
+          "producer": "machine:casting-copper-cable",
+          "members": [
+            "machine:3"
+          ],
+          "crafts_needed": {
+            "numerator": 288,
+            "denominator": 11
+          },
+          "crafts_capacity": {
+            "numerator": 6283,
+            "denominator": 40
+          },
+          "duty": {
+            "numerator": 11520,
+            "denominator": 69113
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 4,
+    "fractional": false,
+    "listed_from": {
+      "swings": 4,
+      "planned": 4,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 938.6666666666666,
+      "exact": {
+        "numerator": 2816,
+        "denominator": 3
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 256,
+        "denominator": 3
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 11
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 11,
+      "override_lcm": null,
+      "effective_lcm": 11
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

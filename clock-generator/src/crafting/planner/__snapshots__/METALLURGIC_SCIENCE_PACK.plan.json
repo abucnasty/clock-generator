@@ -1,0 +1,170 @@
+{
+  "schema": 1,
+  "sample": "METALLURGIC_SCIENCE_PACK",
+  "target": {
+    "item": "metallurgic-science-pack",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 45,
+      "denominator": 1
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "belt:1/lane:1#tungsten-ore",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:1/lane:2#tungsten-ore",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:2/lane:1#coal",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:2/lane:2#coal",
+      "kind": "nothing-drops-on"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:1",
+        "machine:2",
+        "machine:4",
+        "machine:3"
+      ],
+      "edges": [
+        "inserter:1/carbon",
+        "inserter:2/tungsten-carbide",
+        "inserter:3/metallurgic-science-pack",
+        "inserter:4/tungsten-ore",
+        "inserter:5/tungsten-ore",
+        "inserter:6/coal",
+        "inserter:7/tungsten-ore",
+        "inserter:8/tungsten-plate"
+      ],
+      "periods": [
+        {"swings":4,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":256,"denominator":3},"cycles":5,"period_ticks":426.6666666666667,"kept":true},
+        {"swings":5,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":320,"denominator":3},"cycles":5,"period_ticks":533.3333333333334,"kept":true},
+        {"swings":6,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":128,"denominator":1},"cycles":5,"period_ticks":640,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":64,"denominator":1},"cycles":5,"period_ticks":320,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":128,"denominator":3},"cycles":5,"period_ticks":213.33333333333334,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":64,"denominator":3},"cycles":5,"period_ticks":106.66666666666667,"kept":true},
+        {"swings":4.0625,"swings_exact":{"numerator":65,"denominator":16},"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":260,"denominator":3},"cycles":5,"period_ticks":433.3333333333333,"kept":true}
+      ],
+      "duty": [
+        {
+          "producer": "machine:carbon",
+          "members": [
+            "machine:1"
+          ],
+          "crafts_needed": {
+            "numerator": 9,
+            "denominator": 1
+          },
+          "crafts_capacity": {
+            "numerator": 551,
+            "denominator": 8
+          },
+          "duty": {
+            "numerator": 72,
+            "denominator": 551
+          }
+        },
+        {
+          "producer": "machine:tungsten-carbide",
+          "members": [
+            "machine:2"
+          ],
+          "crafts_needed": {
+            "numerator": 27,
+            "denominator": 1
+          },
+          "crafts_capacity": {
+            "numerator": 645,
+            "denominator": 16
+          },
+          "duty": {
+            "numerator": 144,
+            "denominator": 215
+          }
+        },
+        {
+          "producer": "machine:metallurgic-science-pack",
+          "members": [
+            "machine:3"
+          ],
+          "crafts_needed": {
+            "numerator": 18,
+            "denominator": 1
+          },
+          "crafts_capacity": {
+            "numerator": 723,
+            "denominator": 40
+          },
+          "duty": {
+            "numerator": 240,
+            "denominator": 241
+          }
+        },
+        {
+          "producer": "machine:tungsten-plate",
+          "members": [
+            "machine:4"
+          ],
+          "crafts_needed": {
+            "numerator": 72,
+            "denominator": 5
+          },
+          "crafts_capacity": {
+            "numerator": 191481,
+            "denominator": 10000
+          },
+          "duty": {
+            "numerator": 48000,
+            "denominator": 63827
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 4,
+    "fractional": false,
+    "listed_from": {
+      "swings": 4,
+      "planned": 4,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 426.6666666666667,
+      "exact": {
+        "numerator": 1280,
+        "denominator": 3
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 256,
+        "denominator": 3
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 25
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 25,
+      "override_lcm": 5,
+      "effective_lcm": 5
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

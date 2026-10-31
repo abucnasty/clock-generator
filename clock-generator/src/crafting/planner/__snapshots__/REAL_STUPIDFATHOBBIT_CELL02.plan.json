@@ -1,0 +1,208 @@
+{
+  "schema": 1,
+  "sample": "REAL_STUPIDFATHOBBIT_CELL02",
+  "target": {
+    "item": "processing-unit",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 80,
+      "denominator": 1
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "belt:1/lane:1#plastic-bar",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:1/lane:2#plastic-bar",
+      "kind": "nothing-drops-on"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:1",
+        "machine:8",
+        "machine:5",
+        "machine:4",
+        "machine:2",
+        "belt:3/lane:1#processing-unit",
+        "machine:9",
+        "machine:6",
+        "belt:2/lane:1#electronic-circuit",
+        "machine:7",
+        "machine:3",
+        "belt:4/lane:1#processing-unit"
+      ],
+      "edges": [
+        "inserter:1/plastic-bar",
+        "inserter:2/advanced-circuit",
+        "inserter:3/electronic-circuit",
+        "inserter:4/electronic-circuit",
+        "inserter:5/iron-plate",
+        "inserter:6/iron-plate",
+        "inserter:7/electronic-circuit",
+        "inserter:8/electronic-circuit",
+        "inserter:9/advanced-circuit",
+        "inserter:10/plastic-bar",
+        "inserter:11/copper-cable",
+        "inserter:12/electronic-circuit",
+        "inserter:13/copper-cable",
+        "inserter:14/copper-cable",
+        "inserter:15/copper-cable",
+        "inserter:16/electronic-circuit",
+        "inserter:17/electronic-circuit",
+        "inserter:18/copper-cable",
+        "inserter:19/copper-cable",
+        "inserter:20/copper-cable",
+        "inserter:21/electronic-circuit",
+        "inserter:22/copper-cable",
+        "inserter:23/processing-unit",
+        "inserter:24/processing-unit"
+      ],
+      "periods": [
+        {"swings":4,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":96,"denominator":1},"cycles":11,"period_ticks":1056,"kept":true},
+        {"swings":5,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":120,"denominator":1},"cycles":22,"period_ticks":2640,"kept":true},
+        {"swings":6,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":144,"denominator":1},"cycles":11,"period_ticks":1584,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":72,"denominator":1},"cycles":22,"period_ticks":1584,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":48,"denominator":1},"cycles":11,"period_ticks":528,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":24,"denominator":1},"cycles":22,"period_ticks":528,"kept":true},
+        {"swings":4.75,"swings_exact":{"numerator":19,"denominator":4},"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":114,"denominator":1},"cycles":88,"period_ticks":10032,"kept":true}
+      ],
+      "duty": [
+        {
+          "producer": "machine:casting-iron",
+          "members": [
+            "machine:1"
+          ],
+          "crafts_needed": {
+            "numerator": 448,
+            "denominator": 11
+          },
+          "crafts_capacity": {
+            "numerator": 2875,
+            "denominator": 64
+          },
+          "duty": {
+            "numerator": 28672,
+            "denominator": 31625
+          }
+        },
+        {
+          "producer": "machine:processing-unit",
+          "members": [
+            "machine:2",
+            "machine:3"
+          ],
+          "crafts_needed": {
+            "numerator": 20,
+            "denominator": 1
+          },
+          "crafts_capacity": {
+            "numerator": 9023,
+            "denominator": 400
+          },
+          "duty": {
+            "numerator": 8000,
+            "denominator": 9023
+          }
+        },
+        {
+          "producer": "machine:advanced-circuit",
+          "members": [
+            "machine:4",
+            "machine:7"
+          ],
+          "crafts_needed": {
+            "numerator": 160,
+            "denominator": 11
+          },
+          "crafts_capacity": {
+            "numerator": 5537200000000001,
+            "denominator": 300000000000000
+          },
+          "duty": {
+            "numerator": 472727271619,
+            "denominator": 599863331927
+          }
+        },
+        {
+          "producer": "machine:electronic-circuit",
+          "members": [
+            "machine:5",
+            "machine:6"
+          ],
+          "crafts_needed": {
+            "numerator": 2240,
+            "denominator": 11
+          },
+          "crafts_capacity": {
+            "numerator": 26222,
+            "denominator": 125
+          },
+          "duty": {
+            "numerator": 20000,
+            "denominator": 20603
+          }
+        },
+        {
+          "producer": "machine:casting-copper-cable",
+          "members": [
+            "machine:8",
+            "machine:9"
+          ],
+          "crafts_needed": {
+            "numerator": 1472,
+            "denominator": 11
+          },
+          "crafts_capacity": {
+            "numerator": 258,
+            "denominator": 1
+          },
+          "duty": {
+            "numerator": 736,
+            "denominator": 1419
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 4,
+    "fractional": false,
+    "listed_from": {
+      "swings": 4,
+      "planned": 4,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 1056,
+      "exact": {
+        "numerator": 1056,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 96,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 11
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 11,
+      "override_lcm": null,
+      "effective_lcm": 11
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

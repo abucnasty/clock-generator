@@ -3,12 +3,14 @@ import assert from "../../../common/assert";
 import Fraction, { fraction } from "../../../data-types/fraction";
 import { Duration } from "../../../data-types/duration";
 import { TargetProductionRate } from "../../target-production-rate";
-import { buildOutputInsertersOf, destroyedTargetCrafts, EntityTransferCountMap } from "./swing-counts";
-import { Entity, handSizeFor, Machine, ReadableEntityRegistry } from "../../../entities";
+import { buildOutputInsertersOf, EntityTransferCountMap } from "./swing-counts";
+import { Entity, handSizeFor, ReadableEntityRegistry } from "../../../entities";
 import { ConfigOverrides } from "../../../config";
 import { SwingDistribution, SwingDistributionMap } from "./swing-distribution";
-import { returnedTargetRefusal, targetInsertersOf, targetMachinesOf } from "./target-ends";
-import { RESULT_WINDOWS_LONGEST_PERIOD_TICKS, ResultWindowsPlan, resultsFitContainer, resultWindowsFeasible, resultWindowsPlan, sharedHandRefusal } from "../../result-windows";
+import { returnedTargetRefusal } from "./target-ends";
+import type { ResultWindowsPlan } from "../../result-windows";
+import type { ResultWindowsDecision } from "../../../data-types/build-plan";
+import { destroyedTargetBasisOf, resultWindowsDecisionOf } from "../../planner/result-windows";
 
 export interface CraftingCyclePlan {
     /** Duration of a single base cycle (before LCM multiplication) */
@@ -81,103 +83,52 @@ function ticksOfCycles(plan: Pick<CraftingCyclePlan, "total_duration_ticks">, cy
     return plan.total_duration_ticks.multiply(cycles).toDecimal();
 }
 
-/** Hands of the target item a target machine is brought in a cycle can be this many at most, for a cycle of whole ticks */
-const MAX_DESTROYED_CYCLE_HANDS = 1000;
-
 /**
  * The plan of a target that counts an item destroyed, by plain arithmetic (computeDestroyedTargetTransfers): a cycle is
  * the fewest hands of the item brought into each machine that last a whole number of ticks at the target rate (an
- * overridden output swing count sets them instead), and the transfers of every inserter follow from them.
+ * overridden output swing count sets them instead), and the transfers of every inserter follow from them. Whether the
+ * results get windows of their own is the decision `resultWindowsDecisionOf` makes (planner/result-windows.ts): the one
+ * given, as the build plan records it, or made here.
  */
 function createDestroyedPlan(
     target_production_rate: TargetProductionRate,
     entity_registry: ReadableEntityRegistry,
     config_overrides: Partial<ConfigOverrides>,
+    decided: ResultWindowsDecision | undefined,
 ): CraftingCyclePlan {
-    const item = target_production_rate.machine_production_rate.item;
-    const target = { item, counts: target_production_rate.counts };
-    const machines = targetMachinesOf(target, entity_registry);
-    assert(machines.length > 0, `No machine takes ${item} in from outside the build to destroy it`);
-    const hand = handSizeFor(targetInsertersOf(machines[0], target, entity_registry)[0], item);
-    const per_machine_rate = target_production_rate.machine_production_rate.amount_per_tick.divide(machines.length);
-    const ticks_per_hand = fraction(hand).divide(per_machine_rate);
-    let base_hands = 1;
-    while (base_hands < MAX_DESTROYED_CYCLE_HANDS && ticks_per_hand.multiply(base_hands).getDenominator !== 1) {
-        base_hands++;
-    }
-    const forced = config_overrides.terminal_swing_count;
+    const basis = destroyedTargetBasisOf(target_production_rate, entity_registry, config_overrides);
+    const { item, machines, ticks_per_hand, forced } = basis;
     const planOf = (hands: number, result_windows?: readonly ResultWindowsPlan[]): CraftingCyclePlan => {
         const period_ticks = ticks_per_hand.multiply(hands);
         return {
             total_duration: Duration.ofTicks(period_ticks.toDecimal()),
             total_duration_ticks: period_ticks,
-            entity_transfer_map: EntityTransferCountMap.createForDestroyedTarget(machines, entity_registry, item, fraction(hands)),
+            entity_transfer_map: EntityTransferCountMap.createForDestroyedTarget([...machines], entity_registry, item, fraction(hands)),
             production_rate: target_production_rate,
             fractional_swings_enabled: false,
             terminal_swing_count_overridden: forced !== undefined,
             ...(result_windows !== undefined && { result_windows }),
         };
     };
-    // an inserter that takes several results out of where a machine places them can stop the build for good
-    for (const machine of machines) {
-        const shared = sharedHandRefusal(machine, entity_registry);
-        if (shared !== null) {
-            throw new Error(shared);
-        }
-    }
-    const craftsOf = (machine: Machine, hands: number) => destroyedTargetCrafts(machine, entity_registry, item, fraction(hands * hand)).toDecimal();
-    const whole = planOf(forced ?? base_hands);
-    const cycle_ticks = ticks_per_hand.multiply(base_hands).toDecimal();
-    const crafts_per_cycle = (machine: Machine) => craftsOf(machine, base_hands);
-    if (wholeHandsFit(whole, machines, entity_registry, machine => craftsOf(machine, forced ?? base_hands))
-        || !machines.every(machine => resultWindowsFeasible(machine, entity_registry, cycle_ticks, crafts_per_cycle(machine)))) {
-        return whole;
-    }
-    // the results come too rarely: one window a period for each, on the longest period the containers hold
-    assert(forced === undefined || forced % base_hands === 0,
-        `${forced} hands of ${item} a cycle do not last whole ticks: the windows of results that come this rarely need a multiple of ${base_hands}`);
-    const cycles = forced !== undefined ? forced / base_hands : Math.min(...machines.map(machine =>
-        resultWindowsPlan({ machine, registry: entity_registry, cycle_ticks, crafts_per_cycle: crafts_per_cycle(machine), kind: "staggered" }).cycles));
-    return planOf(base_hands * cycles, machines.map(machine =>
-        resultWindowsPlan({ machine, registry: entity_registry, cycle_ticks, crafts_per_cycle: crafts_per_cycle(machine), kind: "staggered", cycles })));
+    const decision = decided ?? resultWindowsDecisionOf(target_production_rate, entity_registry, config_overrides, basis);
+    return decision.kind === "result-windows" ? planOf(decision.hands, decision.plans) : planOf(decision.hands);
 }
 
 /**
- * Whether the takers' hands of a destroyed target's plan come out whole in a period the windows of results can be
- * planned on, and each machine's container holds what that period gives in all but 1 in 740 periods (every result
- * counted over the whole period): then the period is simulated as any other. Where not, the results get one window a
- * period each (result-windows.ts).
+ * The crafting cycle of a build: for a target that counts an item made, `max_possible_swings` output swings a cycle (whole
+ * where fractional swings are off, as the config's overrides say); for one that counts an item destroyed, the hands its
+ * arithmetic gives, and `result_windows` is the decision of its results' windows where the build plan has made it.
  */
-function wholeHandsFit(plan: CraftingCyclePlan, machines: Machine[], entity_registry: ReadableEntityRegistry, craftsOf: (machine: Machine) => number): boolean {
-    const cycle_ticks = plan.total_duration_ticks.toDecimal();
-    return machines.every(machine => {
-        const results = new Set(machine.outputs.map(output => output.item_name));
-        let cycles = 1;
-        for (const planned of plan.entity_transfer_map.values()) {
-            if (Entity.isInserter(planned.entity) && planned.entity.source.entity_id.id === machine.result_target?.id
-                && planned.item_transfers.some(transfer => results.has(transfer.item_name))) {
-                const denominator = planned.total_transfer_count.getDenominator;
-                cycles = cycles / gcd(cycles, denominator) * denominator;
-            }
-        }
-        return cycles * cycle_ticks <= RESULT_WINDOWS_LONGEST_PERIOD_TICKS
-            && resultsFitContainer(machine, entity_registry, cycle_ticks, craftsOf(machine), cycles);
-    });
-}
-
-function gcd(a: number, b: number): number {
-    return b === 0 ? a : gcd(b, a % b);
-}
-
 function createPlan(
     target_production_rate: TargetProductionRate,
     entity_registry: ReadableEntityRegistry,
     max_possible_swings: Fraction,
-    config_overrides: Partial<ConfigOverrides> = {}
+    config_overrides: Partial<ConfigOverrides> = {},
+    result_windows?: ResultWindowsDecision,
 ): CraftingCyclePlan {
     assertMachineResultTargetsSupported(entity_registry);
     if (target_production_rate.counts === "destroyed") {
-        return createDestroyedPlan(target_production_rate, entity_registry, config_overrides);
+        return createDestroyedPlan(target_production_rate, entity_registry, config_overrides, result_windows);
     }
     const returned = returnedTargetRefusal({ item: target_production_rate.machine_production_rate.item, counts: "made" },
         target_production_rate.total_production_rate.amount_per_second.toDecimal(), entity_registry);

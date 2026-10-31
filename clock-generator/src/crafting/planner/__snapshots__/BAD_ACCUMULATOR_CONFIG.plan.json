@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "sample": "BAD_ACCUMULATOR_CONFIG",
+  "target": {
+    "item": "accumulator",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 5,
+      "denominator": 1
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "belt:1/lane:1#battery",
+      "kind": "nothing-drops-on"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:1"
+      ],
+      "edges": [
+        "inserter:1/battery"
+      ],
+      "periods": [],
+      "duty": []
+    }
+  ],
+  "composition": null,
+  "result_windows": null
+}

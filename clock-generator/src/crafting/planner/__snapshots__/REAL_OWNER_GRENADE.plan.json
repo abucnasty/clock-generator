@@ -1,0 +1,148 @@
+{
+  "schema": 1,
+  "sample": "REAL_OWNER_GRENADE",
+  "target": {
+    "item": "grenade",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 240,
+      "denominator": 7
+    }
+  },
+  "unbounded_sources": [],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:3",
+        "drill:1",
+        "machine:1",
+        "drill:2",
+        "machine:2",
+        "drill:3",
+        "machine:4",
+        "drill:4",
+        "machine:5",
+        "belt:1/lane:1#grenade"
+      ],
+      "edges": [
+        "inserter:1/grenade",
+        "inserter:2/grenade",
+        "inserter:3/iron-plate",
+        "inserter:4/iron-plate",
+        "inserter:5/iron-plate",
+        "inserter:6/iron-plate",
+        "inserter:7/grenade",
+        "inserter:8/grenade",
+        "placement:drill:1/coal",
+        "placement:drill:2/coal",
+        "placement:drill:3/coal",
+        "placement:drill:4/coal"
+      ],
+      "periods": [
+        {"swings":1,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":112,"denominator":1},"cycles":1,"period_ticks":112,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":224,"denominator":1},"cycles":1,"period_ticks":224,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":336,"denominator":1},"cycles":1,"period_ticks":336,"kept":true},
+        {"swings":1,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":112,"denominator":1},"cycles":1,"period_ticks":112,"kept":true}
+      ],
+      "duty": [
+        {
+          "producer": "machine:grenade",
+          "members": [
+            "machine:1",
+            "machine:2",
+            "machine:4",
+            "machine:5"
+          ],
+          "crafts_needed": {
+            "numerator": 240,
+            "denominator": 7
+          },
+          "crafts_capacity": {
+            "numerator": 225331,
+            "denominator": 6400
+          },
+          "duty": {
+            "numerator": 1536000,
+            "denominator": 1577317
+          }
+        },
+        {
+          "producer": "machine:casting-iron",
+          "members": [
+            "machine:3"
+          ],
+          "crafts_needed": {
+            "numerator": 240,
+            "denominator": 7
+          },
+          "crafts_capacity": {
+            "numerator": 2875,
+            "denominator": 64
+          },
+          "duty": {
+            "numerator": 3072,
+            "denominator": 4025
+          }
+        },
+        {
+          "producer": "drill:coal",
+          "members": [
+            "drill:1",
+            "drill:2",
+            "drill:3",
+            "drill:4"
+          ],
+          "crafts_needed": {
+            "numerator": 394214980427,
+            "denominator": 921099727392
+          },
+          "crafts_capacity": {
+            "numerator": 24239062500892,
+            "denominator": 625000000023
+          },
+          "duty": {
+            "numerator": 4395939712,
+            "denominator": 398346548803
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 1,
+    "fractional": false,
+    "listed_from": {
+      "swings": 1,
+      "planned": 1,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 112,
+      "exact": {
+        "numerator": 112,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 112,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 1
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 1,
+      "override_lcm": null,
+      "effective_lcm": 1
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

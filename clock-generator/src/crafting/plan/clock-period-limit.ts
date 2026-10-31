@@ -1,3 +1,9 @@
+/**
+ * The most ticks one simulated run goes on for. A guard, not a limit on test time: a config that passes validation
+ * but deadlocks something in the simulator, or that it cannot simulate at all, must not keep it running for ever.
+ */
+export const MAX_SIMULATION_TICKS = 500_000;
+
 /** Arithmetic only: no inventories, controls, registry or other live simulation state. */
 export interface WholeSwingArithmeticSnapshot {
     readonly config_json: string;

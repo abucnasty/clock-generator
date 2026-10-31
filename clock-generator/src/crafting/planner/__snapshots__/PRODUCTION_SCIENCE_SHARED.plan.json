@@ -1,0 +1,178 @@
+{
+  "schema": 1,
+  "sample": "PRODUCTION_SCIENCE_SHARED",
+  "target": {
+    "item": "production-science-pack",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 120,
+      "denominator": 7
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "belt:1/lane:1#productivity-module",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:1/lane:2#electric-furnace",
+      "kind": "nothing-drops-on"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:3",
+        "machine:4",
+        "drill:1",
+        "machine:2",
+        "machine:1",
+        "belt:1/lane:1#production-science-pack"
+      ],
+      "edges": [
+        "inserter:1/production-science-pack",
+        "inserter:2/productivity-module",
+        "inserter:2/electric-furnace",
+        "inserter:3/rail",
+        "inserter:4/steel-plate",
+        "inserter:5/iron-stick",
+        "placement:drill:1/stone"
+      ],
+      "periods": [
+        {"swings":1,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":56,"denominator":1},"cycles":6,"period_ticks":336,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":112,"denominator":1},"cycles":3,"period_ticks":336,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":168,"denominator":1},"cycles":2,"period_ticks":336,"kept":true},
+        {"swings":1.5,"swings_exact":{"numerator":3,"denominator":2},"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":84,"denominator":1},"cycles":4,"period_ticks":336,"kept":true}
+      ],
+      "duty": [
+        {
+          "producer": "machine:production-science-pack",
+          "members": [
+            "machine:1"
+          ],
+          "crafts_needed": {
+            "numerator": 20,
+            "denominator": 7
+          },
+          "crafts_capacity": {
+            "numerator": 3,
+            "denominator": 1
+          },
+          "duty": {
+            "numerator": 20,
+            "denominator": 21
+          }
+        },
+        {
+          "producer": "machine:rail",
+          "members": [
+            "machine:2"
+          ],
+          "crafts_needed": {
+            "numerator": 300,
+            "denominator": 7
+          },
+          "crafts_capacity": {
+            "numerator": 371,
+            "denominator": 4
+          },
+          "duty": {
+            "numerator": 1200,
+            "denominator": 2597
+          }
+        },
+        {
+          "producer": "machine:casting-steel",
+          "members": [
+            "machine:3"
+          ],
+          "crafts_needed": {
+            "numerator": 75,
+            "denominator": 7
+          },
+          "crafts_capacity": {
+            "numerator": 1225,
+            "denominator": 32
+          },
+          "duty": {
+            "numerator": 96,
+            "denominator": 343
+          }
+        },
+        {
+          "producer": "machine:casting-iron-stick",
+          "members": [
+            "machine:4"
+          ],
+          "crafts_needed": {
+            "numerator": 30,
+            "denominator": 7
+          },
+          "crafts_capacity": {
+            "numerator": 133,
+            "denominator": 2
+          },
+          "duty": {
+            "numerator": 60,
+            "denominator": 931
+          }
+        },
+        {
+          "producer": "drill:stone",
+          "members": [
+            "drill:1"
+          ],
+          "crafts_needed": {
+            "numerator": 100,
+            "denominator": 1869
+          },
+          "crafts_capacity": {
+            "numerator": 123,
+            "denominator": 25
+          },
+          "duty": {
+            "numerator": 2500,
+            "denominator": 229887
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 1,
+    "fractional": false,
+    "listed_from": {
+      "swings": 1,
+      "planned": 1,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 336,
+      "exact": {
+        "numerator": 336,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 56,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 6
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 6,
+      "override_lcm": null,
+      "effective_lcm": 6
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

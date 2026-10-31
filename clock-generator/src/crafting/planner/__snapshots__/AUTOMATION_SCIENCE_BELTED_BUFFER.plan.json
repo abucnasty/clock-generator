@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "sample": "AUTOMATION_SCIENCE_BELTED_BUFFER",
+  "target": {
+    "item": "automation-science-pack",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 40,
+      "denominator": 3
+    }
+  },
+  "unbounded_sources": [],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:1",
+        "belt:1/lane:1#iron-gear-wheel",
+        "machine:2",
+        "belt:1/lane:2#copper-plate",
+        "machine:3",
+        "belt:2/lane:1#automation-science-pack"
+      ],
+      "edges": [
+        "inserter:1/iron-gear-wheel",
+        "inserter:2/copper-plate",
+        "inserter:3/iron-gear-wheel",
+        "inserter:3/copper-plate",
+        "inserter:4/automation-science-pack"
+      ],
+      "periods": [
+        {"swings":2,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":144,"denominator":1},"cycles":1,"period_ticks":144,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":216,"denominator":1},"cycles":2,"period_ticks":432,"kept":true},
+        {"swings":4,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":288,"denominator":1},"cycles":1,"period_ticks":288,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":72,"denominator":1},"cycles":2,"period_ticks":144,"kept":true},
+        {"swings":2,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":144,"denominator":1},"cycles":1,"period_ticks":144,"kept":true}
+      ],
+      "duty": [
+        {
+          "producer": "machine:automation-science-pack",
+          "members": [
+            "machine:3"
+          ],
+          "crafts_needed": {
+            "numerator": 20,
+            "denominator": 3
+          },
+          "crafts_capacity": {
+            "numerator": 129,
+            "denominator": 16
+          },
+          "duty": {
+            "numerator": 320,
+            "denominator": 387
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 2,
+    "fractional": false,
+    "listed_from": {
+      "swings": 2,
+      "planned": 2,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 144,
+      "exact": {
+        "numerator": 144,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 144,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 1
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 1,
+      "override_lcm": null,
+      "effective_lcm": 1
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

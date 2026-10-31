@@ -1,0 +1,148 @@
+{
+  "schema": 1,
+  "sample": "REAL_OWNER_LITHIUM_SILO",
+  "target": {
+    "item": "lithium-plate",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 80,
+      "denominator": 1
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "chest:1#holmium-plate",
+      "kind": "infinity-supply"
+    },
+    {
+      "vertex": "chest:2#holmium-plate",
+      "kind": "infinity-supply"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:1",
+        "machine:2",
+        "chest:3#lithium",
+        "machine:3",
+        "machine:4",
+        "machine:5",
+        "machine:6",
+        "machine:7",
+        "machine:8",
+        "belt:1/lane:1#lithium-plate"
+      ],
+      "edges": [
+        "inserter:1/holmium-plate",
+        "inserter:2/holmium-plate",
+        "inserter:3/lithium-plate",
+        "inserter:4/lithium",
+        "inserter:5/lithium",
+        "inserter:6/lithium-plate",
+        "inserter:7/lithium",
+        "inserter:8/lithium",
+        "inserter:9/lithium",
+        "inserter:10/lithium",
+        "inserter:11/lithium-plate",
+        "inserter:12/lithium-plate",
+        "inserter:13/lithium",
+        "inserter:14/lithium",
+        "inserter:15/lithium-plate",
+        "inserter:16/lithium-plate"
+      ],
+      "periods": [
+        {"swings":6,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":432,"denominator":1},"cycles":5,"period_ticks":2160,"kept":true},
+        {"swings":7,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":504,"denominator":1},"cycles":15,"period_ticks":7560,"kept":true},
+        {"swings":8,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":576,"denominator":1},"cycles":15,"period_ticks":8640,"kept":true},
+        {"swings":5,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":360,"denominator":1},"cycles":3,"period_ticks":1080,"kept":true},
+        {"swings":4,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":288,"denominator":1},"cycles":15,"period_ticks":4320,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":216,"denominator":1},"cycles":5,"period_ticks":1080,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":144,"denominator":1},"cycles":15,"period_ticks":2160,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":72,"denominator":1},"cycles":15,"period_ticks":1080,"kept":true},
+        {"swings":null,"fractional":true,"listed_as":"fractional","pruned":{"rule":"cycle-refused","terms":{"reason":"Cannot satisfy fractional swing constraint: sub-cycle 0 requires 4 swings, but maximum allowed is 2 due to insertion limits. Total swings: 170, cycle multiplier: 40."}}}
+      ],
+      "duty": [
+        {
+          "producer": "machine:lithium",
+          "members": [
+            "machine:1",
+            "machine:2"
+          ],
+          "crafts_needed": {
+            "numerator": 32,
+            "denominator": 9
+          },
+          "crafts_capacity": {
+            "numerator": 5312200000000001,
+            "denominator": 1000000000000000
+          },
+          "duty": {
+            "numerator": 244444442061,
+            "denominator": 365213746439
+          }
+        },
+        {
+          "producer": "machine:lithium-plate",
+          "members": [
+            "machine:3",
+            "machine:4",
+            "machine:5",
+            "machine:6",
+            "machine:7",
+            "machine:8"
+          ],
+          "crafts_needed": {
+            "numerator": 160,
+            "denominator": 3
+          },
+          "crafts_capacity": {
+            "numerator": 495,
+            "denominator": 8
+          },
+          "duty": {
+            "numerator": 256,
+            "denominator": 297
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 6,
+    "fractional": false,
+    "listed_from": {
+      "swings": 6,
+      "planned": 6,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 2160,
+      "exact": {
+        "numerator": 2160,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 432,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 5
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 5,
+      "override_lcm": null,
+      "effective_lcm": 5
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

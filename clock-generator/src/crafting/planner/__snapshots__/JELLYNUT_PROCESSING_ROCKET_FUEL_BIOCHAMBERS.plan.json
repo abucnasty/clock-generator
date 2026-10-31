@@ -1,0 +1,134 @@
+{
+  "schema": 1,
+  "sample": "JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS",
+  "target": {
+    "item": "rocket-fuel",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 60,
+      "denominator": 1
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "belt:1/lane:1#bioflux",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:1/lane:2#jellynut",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:3/lane:1#nutrients",
+      "kind": "nothing-drops-on"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:2",
+        "belt:4/lane:2#jellynut-seed",
+        "machine:1",
+        "machine:3",
+        "belt:2/lane:1#rocket-fuel"
+      ],
+      "edges": [
+        "inserter:1/bioflux",
+        "inserter:2/rocket-fuel",
+        "inserter:3/jellynut",
+        "inserter:4/rocket-fuel",
+        "inserter:5/bioflux",
+        "inserter:6/jelly",
+        "inserter:7/jelly",
+        "inserter:8/jelly",
+        "inserter:9/jelly",
+        "inserter:10/nutrients",
+        "inserter:11/jellynut-seed",
+        "inserter:12/nutrients",
+        "inserter:13/nutrients"
+      ],
+      "periods": [
+        {"swings":1,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":32,"denominator":1},"cycles":4,"period_ticks":128,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":64,"denominator":1},"cycles":2,"period_ticks":128,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":96,"denominator":1},"cycles":4,"period_ticks":384,"kept":true},
+        {"swings":1,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":32,"denominator":1},"cycles":4,"period_ticks":128,"kept":true}
+      ],
+      "duty": [
+        {
+          "producer": "machine:rocket-fuel-from-jelly",
+          "members": [
+            "machine:1",
+            "machine:3"
+          ],
+          "crafts_needed": {
+            "numerator": 15,
+            "denominator": 1
+          },
+          "crafts_capacity": {
+            "numerator": 169331,
+            "denominator": 10000
+          },
+          "duty": {
+            "numerator": 150000,
+            "denominator": 169331
+          }
+        },
+        {
+          "producer": "machine:jellynut-processing",
+          "members": [
+            "machine:2"
+          ],
+          "crafts_needed": {
+            "numerator": 45,
+            "denominator": 1
+          },
+          "crafts_capacity": {
+            "numerator": 5612200000000001,
+            "denominator": 100000000000000
+          },
+          "duty": {
+            "numerator": 4500000000000000,
+            "denominator": 5612200000000001
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 1,
+    "fractional": false,
+    "listed_from": {
+      "swings": 1,
+      "planned": 1,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 128,
+      "exact": {
+        "numerator": 128,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 32,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 4
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 4,
+      "override_lcm": null,
+      "effective_lcm": 4
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}
