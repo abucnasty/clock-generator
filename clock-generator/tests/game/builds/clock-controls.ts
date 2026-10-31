@@ -60,6 +60,17 @@ export interface ClockControl {
     recorded: Recorded;
     native: NativeClockSummary;
     generation?: GenerationPin;
+    /**
+     * The alternative the generator selected before the entry's pin, and the sha256 of its exported clock: a generation
+     * test finds it still made, so the clock the earlier recording was on stays one the generator offers
+     */
+    previous?: PreviousClock;
+}
+
+/** An alternative that is no longer selected and is still made: its id and the sha256 of its exported clock */
+export interface PreviousClock {
+    id: string;
+    clock_sha256: string;
 }
 
 /** A family's controls file: one current entry per configuration */
