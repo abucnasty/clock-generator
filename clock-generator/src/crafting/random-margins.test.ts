@@ -14,7 +14,7 @@ const FIXTURE = ConfigPaths.REAL_OWNER_ORE_VOIDER_EXACT_SPEED;
 async function marginsOf(windows: Map<string, OpenRange[]>) {
     const config = await loadConfigFromFile(FIXTURE);
     const registry = createEntityRegistryFromConfig(config);
-    const plan = CraftingCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), registry, fraction(1));
+    const plan = CraftingCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), registry, config, fraction(1));
     // 12 cycles of 12 ticks
     return randomAmountMargins(plan, registry, windows, 144, 12);
 }

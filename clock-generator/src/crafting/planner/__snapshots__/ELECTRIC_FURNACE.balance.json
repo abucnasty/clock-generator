@@ -1,0 +1,58 @@
+{
+  "sample": "ELECTRIC_FURNACE",
+  "swings 1": [
+    "inserter:6 | electric-furnace 1 | total 1 | hand 16",
+    "inserter:1 | advanced-circuit 5 | total 5 | needed 5 | hand 16",
+    "inserter:2 | steel-plate 10 | total 10 | needed 10 | hand 16",
+    "inserter:3 | stone-brick 10/3 | total 10/3 | needed 10/3 | hand 16",
+    "inserter:4 | stone-brick 10/3 | total 10/3 | needed 10/3 | hand 16",
+    "inserter:5 | stone-brick 10/3 | total 10/3 | needed 10/3 | hand 16",
+    "drill:1 | stone 40/9 | total 40/9 | needed 40/9 | hand 16",
+    "drill:2 | stone 40/9 | total 40/9 | needed 40/9 | hand 16",
+    "drill:3 | stone 40/9 | total 40/9 | needed 40/9 | hand 16"
+  ],
+  "swings 2": [
+    "inserter:6 | electric-furnace 2 | total 2 | hand 16",
+    "inserter:1 | advanced-circuit 10 | total 10 | needed 10 | hand 16",
+    "inserter:2 | steel-plate 20 | total 20 | needed 20 | hand 16",
+    "inserter:3 | stone-brick 20/3 | total 20/3 | needed 20/3 | hand 16",
+    "inserter:4 | stone-brick 20/3 | total 20/3 | needed 20/3 | hand 16",
+    "inserter:5 | stone-brick 20/3 | total 20/3 | needed 20/3 | hand 16",
+    "drill:1 | stone 80/9 | total 80/9 | needed 80/9 | hand 16",
+    "drill:2 | stone 80/9 | total 80/9 | needed 80/9 | hand 16",
+    "drill:3 | stone 80/9 | total 80/9 | needed 80/9 | hand 16"
+  ],
+  "swings 3": [
+    "inserter:6 | electric-furnace 3 | total 3 | hand 16",
+    "inserter:1 | advanced-circuit 15 | total 15 | needed 15 | hand 16",
+    "inserter:2 | steel-plate 30 | total 30 | needed 30 | hand 16",
+    "inserter:3 | stone-brick 10 | total 10 | needed 10 | hand 16",
+    "inserter:4 | stone-brick 10 | total 10 | needed 10 | hand 16",
+    "inserter:5 | stone-brick 10 | total 10 | needed 10 | hand 16",
+    "drill:1 | stone 40/3 | total 40/3 | needed 40/3 | hand 16",
+    "drill:2 | stone 40/3 | total 40/3 | needed 40/3 | hand 16",
+    "drill:3 | stone 40/3 | total 40/3 | needed 40/3 | hand 16"
+  ],
+  "swings 7/3": [
+    "inserter:6 | electric-furnace 7/3 | total 7/3 | hand 16",
+    "inserter:1 | advanced-circuit 35/3 | total 35/3 | needed 35/3 | hand 16",
+    "inserter:2 | steel-plate 70/3 | total 70/3 | needed 70/3 | hand 16",
+    "inserter:3 | stone-brick 70/9 | total 70/9 | needed 70/9 | hand 16",
+    "inserter:4 | stone-brick 70/9 | total 70/9 | needed 70/9 | hand 16",
+    "inserter:5 | stone-brick 70/9 | total 70/9 | needed 70/9 | hand 16",
+    "drill:1 | stone 280/27 | total 280/27 | needed 280/27 | hand 16",
+    "drill:2 | stone 280/27 | total 280/27 | needed 280/27 | hand 16",
+    "drill:3 | stone 280/27 | total 280/27 | needed 280/27 | hand 16"
+  ],
+  "swings 5/2": [
+    "inserter:6 | electric-furnace 5/2 | total 5/2 | hand 16",
+    "inserter:1 | advanced-circuit 25/2 | total 25/2 | needed 25/2 | hand 16",
+    "inserter:2 | steel-plate 25 | total 25 | needed 25 | hand 16",
+    "inserter:3 | stone-brick 25/3 | total 25/3 | needed 25/3 | hand 16",
+    "inserter:4 | stone-brick 25/3 | total 25/3 | needed 25/3 | hand 16",
+    "inserter:5 | stone-brick 25/3 | total 25/3 | needed 25/3 | hand 16",
+    "drill:1 | stone 100/9 | total 100/9 | needed 100/9 | hand 16",
+    "drill:2 | stone 100/9 | total 100/9 | needed 100/9 | hand 16",
+    "drill:3 | stone 100/9 | total 100/9 | needed 100/9 | hand 16"
+  ]
+}

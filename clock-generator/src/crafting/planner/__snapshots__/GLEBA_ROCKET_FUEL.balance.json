@@ -1,0 +1,58 @@
+{
+  "sample": "GLEBA_ROCKET_FUEL",
+  "swings 1": [
+    "inserter:2 | rocket-fuel 1 | total 1 | hand 16",
+    "inserter:4 | rocket-fuel 1 | total 1 | hand 16",
+    "inserter:1 | bioflux 1/2 | total 1/2 | needed 1/2 | hand 16",
+    "inserter:6 | jelly 15/4 | total 15/4 | needed 15/4 | hand 16",
+    "inserter:7 | jelly 15/4 | total 15/4 | needed 15/4 | hand 16",
+    "inserter:3 | jellynut 3/2 | total 3/2 | needed 3/2 | hand 16",
+    "inserter:5 | bioflux 1/2 | total 1/2 | needed 1/2 | hand 16",
+    "inserter:8 | jelly 15/4 | total 15/4 | needed 15/4 | hand 16",
+    "inserter:9 | jelly 15/4 | total 15/4 | needed 15/4 | hand 16"
+  ],
+  "swings 2": [
+    "inserter:2 | rocket-fuel 2 | total 2 | hand 16",
+    "inserter:4 | rocket-fuel 2 | total 2 | hand 16",
+    "inserter:1 | bioflux 1 | total 1 | needed 1 | hand 16",
+    "inserter:6 | jelly 15/2 | total 15/2 | needed 15/2 | hand 16",
+    "inserter:7 | jelly 15/2 | total 15/2 | needed 15/2 | hand 16",
+    "inserter:3 | jellynut 3 | total 3 | needed 3 | hand 16",
+    "inserter:5 | bioflux 1 | total 1 | needed 1 | hand 16",
+    "inserter:8 | jelly 15/2 | total 15/2 | needed 15/2 | hand 16",
+    "inserter:9 | jelly 15/2 | total 15/2 | needed 15/2 | hand 16"
+  ],
+  "swings 3": [
+    "inserter:2 | rocket-fuel 3 | total 3 | hand 16",
+    "inserter:4 | rocket-fuel 3 | total 3 | hand 16",
+    "inserter:1 | bioflux 3/2 | total 3/2 | needed 3/2 | hand 16",
+    "inserter:6 | jelly 45/4 | total 45/4 | needed 45/4 | hand 16",
+    "inserter:7 | jelly 45/4 | total 45/4 | needed 45/4 | hand 16",
+    "inserter:3 | jellynut 9/2 | total 9/2 | needed 9/2 | hand 16",
+    "inserter:5 | bioflux 3/2 | total 3/2 | needed 3/2 | hand 16",
+    "inserter:8 | jelly 45/4 | total 45/4 | needed 45/4 | hand 16",
+    "inserter:9 | jelly 45/4 | total 45/4 | needed 45/4 | hand 16"
+  ],
+  "swings 7/3": [
+    "inserter:2 | rocket-fuel 7/3 | total 7/3 | hand 16",
+    "inserter:4 | rocket-fuel 7/3 | total 7/3 | hand 16",
+    "inserter:1 | bioflux 7/6 | total 7/6 | needed 7/6 | hand 16",
+    "inserter:6 | jelly 35/4 | total 35/4 | needed 35/4 | hand 16",
+    "inserter:7 | jelly 35/4 | total 35/4 | needed 35/4 | hand 16",
+    "inserter:3 | jellynut 7/2 | total 7/2 | needed 7/2 | hand 16",
+    "inserter:5 | bioflux 7/6 | total 7/6 | needed 7/6 | hand 16",
+    "inserter:8 | jelly 35/4 | total 35/4 | needed 35/4 | hand 16",
+    "inserter:9 | jelly 35/4 | total 35/4 | needed 35/4 | hand 16"
+  ],
+  "swings 5/2": [
+    "inserter:2 | rocket-fuel 5/2 | total 5/2 | hand 16",
+    "inserter:4 | rocket-fuel 5/2 | total 5/2 | hand 16",
+    "inserter:1 | bioflux 5/4 | total 5/4 | needed 5/4 | hand 16",
+    "inserter:6 | jelly 75/8 | total 75/8 | needed 75/8 | hand 16",
+    "inserter:7 | jelly 75/8 | total 75/8 | needed 75/8 | hand 16",
+    "inserter:3 | jellynut 15/4 | total 15/4 | needed 15/4 | hand 16",
+    "inserter:5 | bioflux 5/4 | total 5/4 | needed 5/4 | hand 16",
+    "inserter:8 | jelly 75/8 | total 75/8 | needed 75/8 | hand 16",
+    "inserter:9 | jelly 75/8 | total 75/8 | needed 75/8 | hand 16"
+  ]
+}

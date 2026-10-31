@@ -103,6 +103,7 @@ export const TRAIT_BASIS: Readonly<Record<TraitFieldPath, Basis>> = {
     "yield.results.extra_count_fraction": { standing: "game-data", rule: "R18" },
     "yield.results.ignored_by_productivity": { standing: "game-data", note: "1 of the 2 pentapod eggs a craft" },
     "yield.results.expected_per_craft": { standing: "derived", rule: "R18", audit: "A25", doc: "mechanics/machines.md section 7" },
+    "yield.results.per_craft": { standing: "derived", rule: "R18", audit: "A25", doc: "mechanics/machines.md section 7" },
     "yield.results.per_second": { standing: "derived", note: "the ceiling at full speed" },
     "yield.results.main": { standing: "derived", note: "the result with the largest expected amount a craft (recipe-metadata.ts)" },
     "yield.results.stochastic": { standing: "derived", rule: "R18" },

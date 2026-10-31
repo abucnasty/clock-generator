@@ -1,0 +1,27 @@
+{
+  "sample": "REAL_OWNER_ORE_VOIDER_OVERBEACONED",
+  "hands 5": [
+    "inserter:3 | iron-ore 5/4 | total 5/4 | hand 16",
+    "inserter:4 | iron-ore 5/4 | total 5/4 | hand 16",
+    "inserter:5 | iron-ore 5/4 | total 5/4 | hand 16",
+    "inserter:6 | iron-ore 5/4 | total 5/4 | hand 16",
+    "inserter:1 | iron-ore 5/6 | total 5/6 | hand 16",
+    "inserter:2 | iron-ore 5/6 | total 5/6 | hand 16"
+  ],
+  "hands 1": [
+    "inserter:3 | iron-ore 1/4 | total 1/4 | hand 16",
+    "inserter:4 | iron-ore 1/4 | total 1/4 | hand 16",
+    "inserter:5 | iron-ore 1/4 | total 1/4 | hand 16",
+    "inserter:6 | iron-ore 1/4 | total 1/4 | hand 16",
+    "inserter:1 | iron-ore 1/6 | total 1/6 | hand 16",
+    "inserter:2 | iron-ore 1/6 | total 1/6 | hand 16"
+  ],
+  "hands 10": [
+    "inserter:3 | iron-ore 5/2 | total 5/2 | hand 16",
+    "inserter:4 | iron-ore 5/2 | total 5/2 | hand 16",
+    "inserter:5 | iron-ore 5/2 | total 5/2 | hand 16",
+    "inserter:6 | iron-ore 5/2 | total 5/2 | hand 16",
+    "inserter:1 | iron-ore 5/3 | total 5/3 | hand 16",
+    "inserter:2 | iron-ore 5/3 | total 5/3 | hand 16"
+  ]
+}

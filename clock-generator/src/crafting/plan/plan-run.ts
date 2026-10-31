@@ -2370,10 +2370,10 @@ function computeCraftingCyclePlan(
         // planned by arithmetic: no prepare run counts its hands (see CraftingCyclePlan.create); whether its results get
         // windows of their own is the build plan's decision
         const result_windows = buildPlanOfConfig(config, entity_registry)?.result_windows ?? undefined;
-        return CraftingCyclePlan.create(target_production_rate, entity_registry, fraction(1), config.overrides ?? {}, result_windows);
+        return CraftingCyclePlan.create(target_production_rate, entity_registry, config, fraction(1), config.overrides ?? {}, result_windows);
     }
     const max_swings_possible = maxSwingsPossibleOf(output_machine_states, output_inserters, config, logger);
-    return CraftingCyclePlan.create(target_production_rate, entity_registry, max_swings_possible, config.overrides ?? {});
+    return CraftingCyclePlan.create(target_production_rate, entity_registry, config, max_swings_possible, config.overrides ?? {});
 }
 
 /**

@@ -1,0 +1,38 @@
+{
+  "sample": "STEEL_CARGO_WAGON",
+  "swings 1": [
+    "inserter:3 | steel-plate 1 | total 1 | hand 16",
+    "inserter:2 | steel-plate 1 | total 1 | hand 16",
+    "inserter:1 | iron-plate 5/4 | total 5/4 | needed 5/4 | hand 16",
+    "inserter:4 | iron-plate 5/8 | total 5/8 | needed 5/8 | hand 16",
+    "inserter:5 | iron-ore 5/12 | total 5/12 | needed 5/12 | hand 16"
+  ],
+  "swings 2": [
+    "inserter:3 | steel-plate 2 | total 2 | hand 16",
+    "inserter:2 | steel-plate 2 | total 2 | hand 16",
+    "inserter:1 | iron-plate 5/2 | total 5/2 | needed 5/2 | hand 16",
+    "inserter:4 | iron-plate 5/4 | total 5/4 | needed 5/4 | hand 16",
+    "inserter:5 | iron-ore 5/6 | total 5/6 | needed 5/6 | hand 16"
+  ],
+  "swings 3": [
+    "inserter:3 | steel-plate 3 | total 3 | hand 16",
+    "inserter:2 | steel-plate 3 | total 3 | hand 16",
+    "inserter:1 | iron-plate 15/4 | total 15/4 | needed 15/4 | hand 16",
+    "inserter:4 | iron-plate 15/8 | total 15/8 | needed 15/8 | hand 16",
+    "inserter:5 | iron-ore 5/4 | total 5/4 | needed 5/4 | hand 16"
+  ],
+  "swings 7/3": [
+    "inserter:3 | steel-plate 7/3 | total 7/3 | hand 16",
+    "inserter:2 | steel-plate 7/3 | total 7/3 | hand 16",
+    "inserter:1 | iron-plate 35/12 | total 35/12 | needed 35/12 | hand 16",
+    "inserter:4 | iron-plate 35/24 | total 35/24 | needed 35/24 | hand 16",
+    "inserter:5 | iron-ore 35/36 | total 35/36 | needed 35/36 | hand 16"
+  ],
+  "swings 5/2": [
+    "inserter:3 | steel-plate 5/2 | total 5/2 | hand 16",
+    "inserter:2 | steel-plate 5/2 | total 5/2 | hand 16",
+    "inserter:1 | iron-plate 25/8 | total 25/8 | needed 25/8 | hand 16",
+    "inserter:4 | iron-plate 25/16 | total 25/16 | needed 25/16 | hand 16",
+    "inserter:5 | iron-ore 25/24 | total 25/24 | needed 25/24 | hand 16"
+  ]
+}

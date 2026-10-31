@@ -270,6 +270,10 @@
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
             "expected_per_craft": 1,
+            "per_craft": {
+              "numerator": 1,
+              "denominator": 1
+            },
             "per_second": {
               "numerator": 4735,
               "denominator": 32
@@ -372,6 +376,10 @@
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
             "expected_per_craft": 1.5,
+            "per_craft": {
+              "numerator": 3,
+              "denominator": 2
+            },
             "per_second": {
               "numerator": 516993,
               "denominator": 12800
@@ -464,6 +472,10 @@
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
             "expected_per_craft": 1.5,
+            "per_craft": {
+              "numerator": 3,
+              "denominator": 2
+            },
             "per_second": {
               "numerator": 516993,
               "denominator": 12800
@@ -556,6 +568,10 @@
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
             "expected_per_craft": 2,
+            "per_craft": {
+              "numerator": 2,
+              "denominator": 1
+            },
             "per_second": {
               "numerator": 645,
               "denominator": 4
@@ -648,6 +664,10 @@
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
             "expected_per_craft": 1.5,
+            "per_craft": {
+              "numerator": 3,
+              "denominator": 2
+            },
             "per_second": {
               "numerator": 516993,
               "denominator": 12800
@@ -740,6 +760,10 @@
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
             "expected_per_craft": 1.5,
+            "per_craft": {
+              "numerator": 3,
+              "denominator": 2
+            },
             "per_second": {
               "numerator": 11025,
               "denominator": 256

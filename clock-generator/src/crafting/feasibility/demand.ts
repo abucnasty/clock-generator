@@ -13,7 +13,7 @@
  * - **Crafts.** A demand whose roots are one producer group and bounded lanes is charged to that group, less what the
  *   lanes can bring; any other demand is charged to nobody (the split is the planner's, and the sums are checked on their
  *   own). The groups are walked in the reverse of the graph's order, so a group's consumers are charged before it; the
- *   groups of a loop are solved together as one exact linear system (as `solveItemsMadePerCycle`, swing-counts.ts).
+ *   groups of a loop are solved together as one exact linear system (as a loop of machines is in planner/balance.ts).
  *   Where the system is an M-matrix its solution is the least crafts the loop can run at; where it is not, and a
  *   certificate shows the loop cannot make what is asked of it, the loop is a trap (S3).
  */

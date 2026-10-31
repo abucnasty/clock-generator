@@ -41,7 +41,7 @@ export function computeMachineTargetRates(config: Config): MachineTargetRate[] {
     assertFeasible(config);
     const registry = createEntityRegistryFromConfig(config);
     const target = TargetProductionRate.fromConfig(config.target_output);
-    const cycle = CraftingCyclePlan.create(target, registry, fraction(1));
+    const cycle = CraftingCyclePlan.create(target, registry, config, fraction(1));
     const seconds = cycle.total_duration_ticks.divide(60);
     const traits = traitsOf(config);
     // the machines in the registry's order, each with its traits

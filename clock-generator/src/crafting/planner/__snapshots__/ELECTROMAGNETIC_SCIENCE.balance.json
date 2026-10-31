@@ -1,0 +1,28 @@
+{
+  "sample": "ELECTROMAGNETIC_SCIENCE",
+  "swings 1": [
+    "inserter:2 | electromagnetic-science-pack 1/2 | total 1/2 | hand 16",
+    "inserter:3 | electromagnetic-science-pack 1/2 | total 1/2 | hand 16",
+    "inserter:1 | supercapacitor 4/11, accumulator 4/11 | total 8/11 | needed 8/11 | hand 16"
+  ],
+  "swings 2": [
+    "inserter:2 | electromagnetic-science-pack 1 | total 1 | hand 16",
+    "inserter:3 | electromagnetic-science-pack 1 | total 1 | hand 16",
+    "inserter:1 | supercapacitor 8/11, accumulator 8/11 | total 16/11 | needed 16/11 | hand 16"
+  ],
+  "swings 3": [
+    "inserter:2 | electromagnetic-science-pack 3/2 | total 3/2 | hand 16",
+    "inserter:3 | electromagnetic-science-pack 3/2 | total 3/2 | hand 16",
+    "inserter:1 | supercapacitor 12/11, accumulator 12/11 | total 24/11 | needed 24/11 | hand 16"
+  ],
+  "swings 7/3": [
+    "inserter:2 | electromagnetic-science-pack 7/6 | total 7/6 | hand 16",
+    "inserter:3 | electromagnetic-science-pack 7/6 | total 7/6 | hand 16",
+    "inserter:1 | supercapacitor 28/33, accumulator 28/33 | total 56/33 | needed 56/33 | hand 16"
+  ],
+  "swings 5/2": [
+    "inserter:2 | electromagnetic-science-pack 5/4 | total 5/4 | hand 16",
+    "inserter:3 | electromagnetic-science-pack 5/4 | total 5/4 | hand 16",
+    "inserter:1 | supercapacitor 10/11, accumulator 10/11 | total 20/11 | needed 20/11 | hand 16"
+  ]
+}

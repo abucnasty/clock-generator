@@ -1,0 +1,33 @@
+{
+  "sample": "AUTOMATION_SCIENCE_BELTED_BUFFER",
+  "swings 1": [
+    "inserter:4 | automation-science-pack 1 | total 1 | hand 16",
+    "inserter:3 | iron-gear-wheel 1/2, copper-plate 1/2 | total 1 | needed 1 | hand 16",
+    "inserter:1 | iron-gear-wheel 1/2 | total 1/2 | needed 1/2 | hand 16",
+    "inserter:2 | copper-plate 1/2 | total 1/2 | needed 1/2 | hand 16"
+  ],
+  "swings 2": [
+    "inserter:4 | automation-science-pack 2 | total 2 | hand 16",
+    "inserter:3 | iron-gear-wheel 1, copper-plate 1 | total 2 | needed 2 | hand 16",
+    "inserter:1 | iron-gear-wheel 1 | total 1 | needed 1 | hand 16",
+    "inserter:2 | copper-plate 1 | total 1 | needed 1 | hand 16"
+  ],
+  "swings 3": [
+    "inserter:4 | automation-science-pack 3 | total 3 | hand 16",
+    "inserter:3 | iron-gear-wheel 3/2, copper-plate 3/2 | total 3 | needed 3 | hand 16",
+    "inserter:1 | iron-gear-wheel 3/2 | total 3/2 | needed 3/2 | hand 16",
+    "inserter:2 | copper-plate 3/2 | total 3/2 | needed 3/2 | hand 16"
+  ],
+  "swings 7/3": [
+    "inserter:4 | automation-science-pack 7/3 | total 7/3 | hand 16",
+    "inserter:3 | iron-gear-wheel 7/6, copper-plate 7/6 | total 7/3 | needed 7/3 | hand 16",
+    "inserter:1 | iron-gear-wheel 7/6 | total 7/6 | needed 7/6 | hand 16",
+    "inserter:2 | copper-plate 7/6 | total 7/6 | needed 7/6 | hand 16"
+  ],
+  "swings 5/2": [
+    "inserter:4 | automation-science-pack 5/2 | total 5/2 | hand 16",
+    "inserter:3 | iron-gear-wheel 5/4, copper-plate 5/4 | total 5/2 | needed 5/2 | hand 16",
+    "inserter:1 | iron-gear-wheel 5/4 | total 5/4 | needed 5/4 | hand 16",
+    "inserter:2 | copper-plate 5/4 | total 5/4 | needed 5/4 | hand 16"
+  ]
+}

@@ -43,7 +43,7 @@ function machine(id: number, inputs: readonly string[], results: readonly string
         },
         yield: {
             results: results.map((item, at) => ({
-                item, amount: 1, probability: 1, extra_count_fraction: 0, ignored_by_productivity: 0, expected_per_craft: 1,
+                item, amount: 1, probability: 1, extra_count_fraction: 0, ignored_by_productivity: 0, expected_per_craft: 1, per_craft: { numerator: 1, denominator: 1 },
                 per_second: { numerator: 1, denominator: 1 }, main: at === 0, stochastic: false,
             })),
             carry: "expected-with-carry",
