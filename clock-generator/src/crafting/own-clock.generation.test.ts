@@ -30,7 +30,7 @@ test("own clock: the selected clock is the one recorded on the three copies", ()
 
 for (const variant of ownClockCases()) {
     test(`own clock: ${variant.name}`, () => {
-        const {generation, native} = controls.cases[variant.name];
+        const {generation, native, previous} = controls.cases[variant.name];
         // the hand-made clock is not generated: its control is the game's numbers, 80 a second a copy in every period
         expect(native.baseline).toHaveLength(63);
         expect(native.baseline.every(items => items === native.expected)).toBe(true);
@@ -51,5 +51,12 @@ for (const variant of ownClockCases()) {
         expect({id: chosen.id, holds: chosen.assessment.holds, rate: chosen.assessment.items_per_second,
             supply: chosen.belt?.kind ?? null}).toEqual(generation!.selection);
         expect(native.expected).toBe(generation!.expected);
+        if (previous) {
+            // the clock selected before the wake-ups were counted with the arm at home is still made, with the same windows
+            const earlier = generated.alternatives.find(alternative => alternative.id === previous.id);
+            expect(earlier, `${previous.id} is still made`).toBeDefined();
+            const earlier_exported = earlier!.result.subtick ?? earlier!.result;
+            expect(createHash("sha256").update(JSON.stringify(clockIdentity(earlier_exported))).digest("hex")).toBe(previous.clock_sha256);
+        }
     });
 }
