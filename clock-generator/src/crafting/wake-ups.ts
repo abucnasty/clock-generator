@@ -17,7 +17,7 @@ import { StockRecording } from "./machine-stock";
  */
 
 /** The end of an inserter whose machine wakes it */
-type WatchedEnd = "source" | "sink";
+export type WatchedEnd = "source" | "sink";
 
 /**
  * The list an inserter sleeps on, by the state the game shows for it while it waits: on the machine it takes from
@@ -27,7 +27,7 @@ type WatchedEnd = "source" | "sink";
  * lists an inserter is on ("Wakeup list count" in the debug tooltip, 0 for a disabled one); the count of a waiting
  * one has not been read yet. One list is assumed until it is.
  */
-const WATCHED_END: Readonly<Record<string, WatchedEnd | undefined>> = {
+export const WATCHED_END: Readonly<Record<string, WatchedEnd | undefined>> = {
     [FactorioInserterState.WAITING_FOR_SOURCE_ITEMS]: "source",
     [FactorioInserterState.WAITING_FOR_MORE_ITEMS]: "source",
     [FactorioInserterState.WAITING_FOR_SPACE_IN_DESTINATION]: "sink",
@@ -84,8 +84,12 @@ export type UncountedWake = "arm away";
 
 export interface InserterWakeUps {
     inserter_id: string;
-    /** Times a machine it slept on woke it, a minute */
+    /** Times a machine it slept on woke it, a minute: `input_wake_ups_per_minute` and `output_wake_ups_per_minute` */
     wake_ups_per_minute: number;
+    /** The wake-ups from the list of the machine it puts into (it was woken as an input of that machine), a minute */
+    input_wake_ups_per_minute: number;
+    /** The wake-ups from the list of the machine it takes from, or of the machine that places into the chest it takes from, a minute */
+    output_wake_ups_per_minute: number;
     /** Alarms in ticks it showed a waiting state that are not counted as wake-ups, a minute, by why (see UncountedWake) */
     uncounted_per_minute: Record<UncountedWake, number>;
     /** Times the machines at its ends woke their lists, a minute: the most it could be woken */
@@ -125,7 +129,7 @@ export function returnTicksOf(rotation_ticks: number): number {
  * Whether the arm is away after `tick`: within `return_ticks` of the latest tick at or before it in which the hand fell
  * to empty. A hand that falls but stays above empty (a part hand dropped) waits where it is, and is not away.
  */
-function armAwayOf(held: readonly number[] | undefined, return_ticks: number | undefined): (tick: number) => boolean {
+export function armAwayOf(held: readonly number[] | undefined, return_ticks: number | undefined): (tick: number) => boolean {
     if (held === undefined || held.length === 0 || return_ticks === undefined || return_ticks <= 0) {
         return () => false;
     }
@@ -141,6 +145,9 @@ function armAwayOf(held: readonly number[] | undefined, return_ticks: number | u
         return tick - emptied < return_ticks;
     };
 }
+
+/** Called once for each wake-up counted, with the tick it happens in and the end whose machine woke the inserter */
+export type WakeListener = (inserter_id: string, tick: number, end: WatchedEnd) => void;
 
 /**
  * Wake-ups of every inserter over the ticks `from_tick` (inclusive) to `to_tick` (exclusive) of a run.
@@ -163,6 +170,7 @@ export function wakeUps(
     machines: readonly WatchedMachine[],
     from_tick: number,
     to_tick: number,
+    on_wake?: WakeListener,
 ): WakeUps {
     const first = Math.max(1, from_tick);
     const ticks = Math.max(0, to_tick - first);
@@ -202,7 +210,8 @@ export function wakeUps(
         };
         const alarmedIn = (end: WatchedEnd, tick: number) => lists[end]?.(tick) ?? 0;
         const armAway = armAwayOf(inserter.held, inserter.return_ticks);
-        let woken = 0;
+        let woken_at_sink = 0;
+        let woken_at_source = 0;
         let away = 0;
         let alarms = 0;
         let enabled = 0;
@@ -215,8 +224,13 @@ export function wakeUps(
                 const alarm = alarmedIn(asleep_on, tick);
                 if (alarm > 0 && armAway(tick - 1)) {
                     away += alarm;
-                } else {
-                    woken += alarm;
+                } else if (alarm > 0) {
+                    if (asleep_on === "sink") {
+                        woken_at_sink += alarm;
+                    } else {
+                        woken_at_source += alarm;
+                    }
+                    on_wake?.(inserter.inserter_id, tick, asleep_on);
                 }
             }
             const state = inserter.states[tick];
@@ -227,7 +241,7 @@ export function wakeUps(
                 }
             }
         }
-        return { inserter_id: inserter.inserter_id, woken, away, alarms, enabled, waiting };
+        return { inserter_id: inserter.inserter_id, woken_at_sink, woken_at_source, woken: woken_at_sink + woken_at_source, away, alarms, enabled, waiting };
     });
 
     return {
@@ -237,6 +251,8 @@ export function wakeUps(
         inserters: counted.map(it => ({
             inserter_id: it.inserter_id,
             wake_ups_per_minute: per_minute(it.woken),
+            input_wake_ups_per_minute: per_minute(it.woken_at_sink),
+            output_wake_ups_per_minute: per_minute(it.woken_at_source),
             uncounted_per_minute: { "arm away": per_minute(it.away) },
             alarms_per_minute: per_minute(it.alarms),
             enabled_share: share(it.enabled),
@@ -258,7 +274,7 @@ export interface InserterEnds {
 }
 
 /** Wake-ups of a simulated run, from the tick `from_tick` to its end */
-export function wakeUpsOfStock(stock: StockRecording, ends: readonly InserterEnds[], from_tick: number): WakeUps {
+export function wakeUpsOfStock(stock: StockRecording, ends: readonly InserterEnds[], from_tick: number, on_wake?: WakeListener): WakeUps {
     const recorded = new Map(stock.inserters.map(series => [series.inserter_id, series]));
     const inserters = ends.flatMap(end => {
         const series = recorded.get(end.inserter_id);
@@ -270,5 +286,5 @@ export function wakeUpsOfStock(stock: StockRecording, ends: readonly InserterEnd
         true_starts: machine.crafts_started.map((started, tick) => tick > 0 && started > machine.crafts_started[tick - 1]),
         ...(machine.results_placed !== undefined && { results_placed: machine.results_placed }),
     }));
-    return wakeUps(inserters, machines, from_tick, stock.ticks);
+    return wakeUps(inserters, machines, from_tick, stock.ticks, on_wake);
 }
