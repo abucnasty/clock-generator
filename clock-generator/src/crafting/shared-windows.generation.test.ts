@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test } from "vitest";
 import { ClockAlternativesResult, generateClockAlternatives } from "./generate-blueprint";
-import { windowDeciderCount } from "./alternatives";
+import { windowDeciderCount } from "./inserter-counters";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 

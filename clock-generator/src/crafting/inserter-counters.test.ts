@@ -120,6 +120,13 @@ describe("inserter counters", () => {
         expect(wakes.input_wake_ups_per_minute + wakes.output_wake_ups_per_minute).toBe(wakes.wake_ups_per_minute);
         expect(counters.inserters[0].input_wake_ups_per_minute).toBe(wakes.input_wake_ups_per_minute);
         expect(counters.inserters[0].output_wake_ups_per_minute).toBe(wakes.output_wake_ups_per_minute);
+        // machine 1, whose list wakes it at its source, started crafts in ticks 1, 3 and 5 of the five counted
+        expect(counters.inserters[0].source_craft_starts_per_tick).toBe(3 / 5);
+    });
+
+    it("gives no craft starts for an inserter no machine wakes at its source", () => {
+        const { counters } = of(stockOf([WORKING, WORKING], [0, 0]), { pickup_kind: "belt", source_machine_id: null });
+        expect(counters.inserters[0].source_craft_starts_per_tick).toBeUndefined();
     });
 });
 
