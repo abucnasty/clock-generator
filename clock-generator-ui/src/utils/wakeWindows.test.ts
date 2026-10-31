@@ -48,6 +48,8 @@ function asBuilt(wakeUps: Record<string, number> | null): AsBuiltStabilityCheck 
         enabled_share: 0.5,
         waiting_share: 0.1,
         uncounted_per_minute: { 'arm away': 0 },
+        input_wake_ups_per_minute: 0,
+        output_wake_ups_per_minute: wake_ups_per_minute,
     }));
     return {
         holds: true,
