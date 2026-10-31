@@ -62,9 +62,15 @@ describe("the belt a clock is made for", () => {
         // out. Since the rules of issue 152 (GOALS.md, "When a waiting inserter acts") its nutrients trials dip a hand only
         // late in their 40 periods, and since such a trial runs on until 40 periods at its rate follow (docs/stability.md)
         // it gets back from every loss and is selected again.
-        it("selects it: the build gets back to its rate under it from every loss", () => {
-            expect(batched.assessment.backpressure_loss).toMatchObject({ survives: true, broken_by: [] });
-            expect(selected.id).toBe("planned-belt-slack");
+        it("selects the cheaper observed clock and still offers the batched clock that gets back from every loss", () => {
+            // Pricing allows the observed-window search past a stable clock; its backed-up-belt clock costs less.
+            // The previous batched clock is still made and still gets back from every loss.
+            const previous = batched;
+            expect(previous.verdict).toBe("stable");
+            expect(previous.assessment.backpressure_loss).toMatchObject({ survives: true, broken_by: [] });
+            expect(selected.id).toBe("derived");
+            expect(selected.verdict).toBe("stable");
+            expect(selected.ranking.cost!.ns_per_tick).toBeLessThan(previous.ranking.cost!.ns_per_tick);
             expect(selected.ranking.meets_target_rate).toBe(true);
             expect(selected.belt).toEqual({ kind: "backed_up" });
         });

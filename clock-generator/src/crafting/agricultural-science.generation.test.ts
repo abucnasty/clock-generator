@@ -77,14 +77,22 @@ describe("generateClockForConfig", () => {
         // The inserters that take from one egg biochamber are served in one fixed order now (docs/simulator.md, "Two
         // inserters that take from one machine"), and a clock is checked under each order of them: the 1-swing clock no
         // longer gets back after the bioflux stops (no recovery, below) and the 2-swing clock makes nothing in the as-built
-        // check (0 of 800), so the 5-swing clock is the only one that gets back from every loss (blast of 2026-10-26).
+        // check (0 of 800), so batched 5-swing was the only clock that got back from every loss (blast of 2026-10-26).
         // The 2-swing clock's 0 is the simulator's, not the game's: on the scaffold the game moved 800 in every period from
         // the 11th to the 37th (2026-10-26), where the takers that both held part of a hand were not served in one order
         // (docs/simulator.md, "Two inserters that take from one machine", open).
-        it("selects the 5-swing clock, the only one that gets back from every loss", () => {
+        it("selects the cheaper shifted 5-swing clock, and still offers the stable batched one", () => {
+            // Cost ranking runs the shifted search even though batched swings is already stable. Both hold and recover;
+            // the shifted clock is cheaper, while the previous batched clock is still made.
             const stable = alternatives.filter(a => a.verdict === "stable");
-            expect(stable.map(a => a.label).sort()).toEqual(["Batched swings: 5 output swings per cycle"]);
-            expect(alternatives[selected_index].label).toBe("Batched swings: 5 output swings per cycle");
+            expect(stable.map(a => a.label).sort()).toEqual([
+                "Batched swings: 5 output swings per cycle", "Shifted swings: 5 output swings per cycle",
+            ]);
+            const previous = alternatives.find(a => a.id === "planned-belt-slack")!;
+            const selected = alternatives[selected_index];
+            expect(previous.verdict).toBe("stable");
+            expect(selected.id).toBe("shifted-swings");
+            expect(selected.ranking.cost!.ns_per_tick).toBeLessThan(previous.ranking.cost!.ns_per_tick);
         });
 
         // The values the scaffold recordings expect of this build (no dip and no open issue after its staged start) were seen on
