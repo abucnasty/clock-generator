@@ -182,6 +182,11 @@ describe("the losses a build can have", () => {
         expect(lossLabel({ kind: "output", item: "military-science-pack" })).toBe("military science pack is not taken away");
         expect(lossLabel({ kind: "none" })).toBe("nothing is cut");
         expect(lossId({ kind: "output", item: "military-science-pack" })).toBe("output:military-science-pack");
+        const excess = { kind: "excess", at: [{ machine_id: "machine:1", item: "iron-ore", count: 67 }] } as const;
+        expect(lossLabel(excess)).toBe("iron ore comes over its mean");
+        expect(lossId(excess)).toBe("excess:iron-ore");
+        const two = { kind: "excess", at: [{ machine_id: "machine:1", item: "iron-ore", count: 3 }, { machine_id: "machine:1", item: "stone", count: 2 }] } as const;
+        expect(lossLabel(two)).toBe("iron ore and stone come over their mean");
     });
 });
 

@@ -1,4 +1,5 @@
-import { amountVariance, Inserter, Machine, ReadableEntityRegistry, yieldOf } from "../entities";
+import { amountVariance, EntityId, Inserter, Machine, ReadableEntityRegistry, yieldOf } from "../entities";
+import type { ExcessLoss } from "./backpressure-loss";
 import type { Ingredient } from "../data";
 import { OpenRange } from "../data-types";
 import { fraction } from "../data-types/fraction";
@@ -188,6 +189,42 @@ export interface CraftingMargin {
      * container it places into takes up the rest. Null where it has no spare crafts, or needs more than MAX_COVER_TICKS.
      */
     ticks_to_cover: number | null;
+    /**
+     * What waits of what comes back, by item, in all but 1 in 740 periods (RANDOM_MARGIN_LEVEL): the backlog the
+     * container it places into takes up while the spare crafts work it off (backlogAtLevel), shared out by the items'
+     * expected amounts. Empty where nothing comes back by chance, or where it has no spare crafts to work it off.
+     * The excess trial of the clock places it at once (excessLossOf).
+     */
+    backlog: { item: string; items: number }[];
+}
+
+/**
+ * What waits of what comes back into a machine in all but the share 1 - `level` of the periods. While some waits, the
+ * machine crafts at its capacity, and each period the backlog moves by what comes back over the mean less the spare
+ * crafts it has, of which what they give back comes again: a random walk that drifts down by `spare_crafts` x (1 -
+ * `back_per_craft`) a period and spreads by `sigma_crafts` a period, held at 0 from below. Such a walk is over `a` in a
+ * share exp(-2 x drift x a / sigma^2) of the periods (the Brownian approximation of a queue in heavy traffic), so the
+ * backlog at `level` is sigma^2 x ln(1 / (1 - level)) / (2 x drift), in whole items. Recorded on the recycler that
+ * voids iron ore at exact speed (16 spare crafts, a quarter given back, sigma 15.5): 67 ore, where the game lost a hand
+ * of its input in 5 of 1,900 periods on a clock whose input it pushes over its insertion limit from 56 ore up. Null
+ * where the machine has no spare crafts, or gives back all of them.
+ */
+export function backlogAtLevel(sigma_crafts: number, spare_crafts: number, back_per_craft: number, level: number = RANDOM_MARGIN_LEVEL): number | null {
+    const drift = spare_crafts * (1 - back_per_craft);
+    if (drift <= 0) {
+        return null;
+    }
+    return Math.ceil(sigma_crafts ** 2 * Math.log(1 / (1 - level)) / (2 * drift) - 1e-9);
+}
+
+/**
+ * The excess trial of a clock (an ExcessLoss of backpressure-loss.ts): every machine's backlog of what comes back, placed
+ * at once; null where no machine has one
+ */
+export function excessLossOf(crafting: readonly Pick<CraftingMargin, "machine_id" | "backlog">[]): ExcessLoss | null {
+    const at = crafting.flatMap(margin => margin.backlog.filter(it => it.items > 0)
+        .map(it => ({ machine_id: EntityId.forMachine(margin.machine_id).id, item: it.item, count: it.items })));
+    return at.length === 0 ? null : { kind: "excess", at };
 }
 
 /** The longest span ticks_to_cover is looked for over: an hour */
@@ -273,18 +310,21 @@ export function randomAmountMargins(
         const rolls = crafts * rollsPerCraft(machine);
         let variance_back = 0;
         const back: Ingredient[] = [];
+        // what comes back a craft on average, by item
+        const back_per_craft = new Map<string, number>();
         for (const output of machine.outputs) {
             const variance = amountVariance(output.ingredient) * rolls;
             const takers = resultTakersOf(machine, output.item_name, registry);
             if (variance <= 0 || takers.length === 0) {
                 continue;
             }
+            const expected = output.amount_per_craft.toDecimal() * crafts;
             if (takers.some(taker => taker.sink.entity_id.id === machine.entity_id.id)) {
                 variance_back += variance;
                 back.push(output.ingredient);
+                back_per_craft.set(output.item_name, (back_per_craft.get(output.item_name) ?? 0) + output.amount_per_craft.toDecimal());
             }
             const sigma = Math.sqrt(variance);
-            const expected = output.amount_per_craft.toDecimal() * crafts;
             const needed = excessAtLevel(output.ingredient, rolls, level);
             const before = roomOf(takers, output.item_name, windows, plan, cycles);
             let added = 0;
@@ -308,10 +348,13 @@ export function randomAmountMargins(
         const capacity = machine.crafting_rate.crafts_per_tick * period;
         const sigma_crafts = Math.sqrt(variance_back);
         const spare_per_tick = (capacity - crafts) / period;
+        const back_total = [...back_per_craft.values()].reduce((sum, it) => sum + it, 0);
+        const waiting = sigma_crafts > 0 ? backlogAtLevel(sigma_crafts, capacity - crafts, back_total, level) : null;
         crafting.push({
             machine_id: machine.entity_id.number, crafts, capacity, sigma_crafts,
             sigmas: sigma_crafts > 0 ? (capacity - crafts) / sigma_crafts : Infinity,
             ticks_to_cover: ticksToCover(back, rolls / period, spare_per_tick, level),
+            backlog: waiting === null ? [] : [...back_per_craft].map(([item, per_craft]) => ({ item, items: Math.ceil(waiting * per_craft / back_total - 1e-9) })),
         });
     }
     return { margins, crafting, windows: lengthened };
