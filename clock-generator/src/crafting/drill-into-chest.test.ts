@@ -161,7 +161,7 @@ describe('a clock for a drill into a car between two furnaces', () => {
         expect(selected.result.blueprint.label).toBe('[item=iron-plate] Iron plate clock');
         expect(decider?.player_description?.split('\n')).toEqual([
             '[entity=big-mining-drill] [item=iron-ore] → [entity=car] (drill 1)',
-            `Tops the [entity=car] up just in time, 1 window per 144-tick period: open ${window.start + 1}`,
+            `Tops the [entity=car] up just in time, 1 window per 288-tick period: open ${window.start + 1}`,
             'Not counted as swings: opens just before the inserters take from the [entity=car]',
         ]);
         // a window of one tick is one condition, the clock equal to it
