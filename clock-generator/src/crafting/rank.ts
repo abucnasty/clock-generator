@@ -155,6 +155,59 @@ export function searchesAreNeeded<T>(
 }
 
 /**
+ * What the selection minimises among clocks of the same rank: wake-ups a minute (goal 2). Null where they were not
+ * counted. The one place the selection and the targeted searches read a clock's cost from.
+ */
+export function clockCost(ranking: Pick<ClockRanking, "wake_ups_per_minute">): number | null {
+    return ranking.wake_ups_per_minute;
+}
+
+/** A cost as the selection compares it: to a thousandth, less than that being the rounding of a division */
+function costKey(ranking: Pick<ClockRanking, "wake_ups_per_minute">): number {
+    const cost = clockCost(ranking);
+    return cost === null ? Infinity : Math.round(cost * 1000);
+}
+
+/**
+ * The searches run where a clock made without one can already be selected as stable, in the order listed: the two that
+ * found a clock with fewer wake-ups on a sample (measured on every sample as built and with backed-up belts, the four
+ * searches run on every one: observed windows on 8 of 106 jobs, shifted swings on 3; uneven output swings and full-hand
+ * output on none, while costing 61% of the searches' builds). The others run only where no clock made without a search
+ * can be selected as stable, or where the config asks for every search (`overrides.search_for_fewer_wake_ups`).
+ */
+export const SEARCHES_THAT_CAN_IMPROVE: readonly string[] = ["derived", "shifted-swings"];
+
+/**
+ * The longest period of the primary clock on which those searches still run past a stable clock: every improvement
+ * measured was on a period of at most 432 ticks, and a search's builds grow with the period (the periods of 672 to 1,728
+ * ticks held most of their cost), as the 2,400-tick limit of observed windows also bounds it
+ */
+export const IMPROVING_SEARCH_MAX_PERIOD_TICKS = 480;
+
+/**
+ * The searches to run once the clocks made without one are in: every one where none of them can be selected as stable
+ * (`searchesAreNeeded`); else those of SEARCHES_THAT_CAN_IMPROVE, where the clock the selection ends on so far has a cost
+ * above 0 (none can beat a clock of no wake-ups) and the primary period is at most IMPROVING_SEARCH_MAX_PERIOD_TICKS;
+ * else none.
+ */
+export function searchesToRun<T, S extends { id: string }>(
+    runs: (ClockAlternativeRun<T> | null)[],
+    rankingOf: (alternative: T) => ClockRanking,
+    searches: readonly S[],
+    primary_period_ticks: number,
+): S[] {
+    if (searchesAreNeeded(runs, rankingOf)) {
+        return [...searches];
+    }
+    const { alternatives, selected_index } = combineClockAlternativeRuns(runs, rankingOf);
+    const selected = alternatives[selected_index];
+    if (selected === undefined || costKey(rankingOf(selected)) <= 0 || primary_period_ticks > IMPROVING_SEARCH_MAX_PERIOD_TICKS) {
+        return [];
+    }
+    return searches.filter(search => SEARCHES_THAT_CAN_IMPROVE.includes(search.id));
+}
+
+/**
  * The windows an alternative is ranked by, between clocks with the same wake-ups: those it has without the windows of
  * the inserters of a loop, which only reduce idle checks and must never count against a clock, so its windows rank as
  * they would with those inserters always enabled.
@@ -212,7 +265,7 @@ export function combineClockAlternativeRuns<T>(
             ranking.meets_target_rate || ranking.holds_expected_output ? 0 : 1,
             ranking.matches_belt_choice ? 0 : 1,
             // to a thousandth: less than that is the rounding of a division, not a difference between two clocks
-            ranking.wake_ups_per_minute === null ? Infinity : Math.round(ranking.wake_ups_per_minute * 1000),
+            costKey(ranking),
             ranking.window_count,
         ];
     };

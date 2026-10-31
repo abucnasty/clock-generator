@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { combineClockAlternativeRuns, rankingOf, searchesAreNeeded, type ClockAlternative, type ClockAlternativeRun, type ClockRanking } from "./generate-blueprint";
 import { clockVerdictOf, windowsRoundedTo, type ClockAssessment } from "./trial";
-import type { RoundedClock } from "./rank";
+import { searchesToRun, type RoundedClock } from "./rank";
 import type { Config } from "../config";
 
 type Ranked = ClockRanking & { id: string };
@@ -313,5 +313,30 @@ describe("searchesAreNeeded", () => {
         const separate = clock("separate", { meets_target_rate: false });
         expect(searchesAreNeeded([{ signature: "one", alternatives: [separate] }], it => it)).toBe(true);
         expect(searchesAreNeeded([{ signature: "one", alternatives: [separate], also: [{ signature: "one-shared", alternatives: [clock("shared")] }] }], it => it)).toBe(false);
+    });
+});
+
+describe("searchesToRun", () => {
+    const SEARCHES = [{ id: "derived" }, { id: "uneven-output" }, { id: "shifted-swings" }, { id: "full-hand" }];
+    const toRun = (clocks: Ranked[], period: number) =>
+        searchesToRun(clocks.map(it => ({ signature: it.id, alternatives: [it] })), it => it, SEARCHES, period).map(it => it.id);
+
+    it("runs every search where no clock made without one can be selected as stable", () => {
+        expect(toRun([clock("unstable", { meets_target_rate: false })], 5000)).toEqual(["derived", "uneven-output", "shifted-swings", "full-hand"]);
+    });
+
+    it("runs the two that can improve on a stable clock with wake-ups, on a period of at most 480 ticks", () => {
+        expect(toRun([clock("stable", { wake_ups_per_minute: 197.5 })], 144)).toEqual(["derived", "shifted-swings"]);
+        expect(toRun([clock("stable", { wake_ups_per_minute: 197.5 })], 480)).toEqual(["derived", "shifted-swings"]);
+    });
+
+    it("runs none past a stable clock of no wake-ups, or on a longer period", () => {
+        expect(toRun([clock("stable", { wake_ups_per_minute: 0 })], 144)).toEqual([]);
+        expect(toRun([clock("stable", { wake_ups_per_minute: 0.0004 })], 144)).toEqual([]);
+        expect(toRun([clock("stable", { wake_ups_per_minute: 197.5 })], 481)).toEqual([]);
+    });
+
+    it("judges the clock the selection ends on so far, not another stable one", () => {
+        expect(toRun([clock("more", { wake_ups_per_minute: 30 }), clock("none", { wake_ups_per_minute: 0 })], 144)).toEqual([]);
     });
 });

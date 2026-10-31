@@ -36,7 +36,7 @@ export type {
 
 export { StatusCategory, statusToCategory } from "./state/status-category";
 
-export { combineClockAlternativeRuns, searchesAreNeeded } from "./crafting/rank";
+export { combineClockAlternativeRuns, searchesAreNeeded, searchesToRun } from "./crafting/rank";
 
 export { whyNotStable, whyNotStableClockOf } from "./crafting/why-not-stable";
 
