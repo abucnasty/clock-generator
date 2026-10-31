@@ -15,12 +15,13 @@ type Belt = Config["belts"][number];
 type Inserter = Config["inserters"][number];
 type Chest = NonNullable<Config["chests"]>[number];
 
-/** The feasibility of facts: every cut, the issues and their texts, and one cut by its name */
+/** The feasibility of facts: every cut, the issues, the duties and the issues' texts, and one cut by its name */
 export function feasibilityOfFacts(facts: PlannerFacts) {
-    const { cuts, issues } = feasibilityOf(facts, plannerGraphOf(facts));
+    const { cuts, issues, duties } = feasibilityOf(facts, plannerGraphOf(facts));
     return {
         cuts,
         issues,
+        duties,
         rules: issues.map(issue => issue.rule),
         texts: issues.map(describeFeasibilityIssue),
         cut: (name: string): Cut => {
