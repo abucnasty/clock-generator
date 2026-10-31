@@ -1,4 +1,5 @@
 import { EntityState, InserterState, MachineState } from "../state";
+import { InserterStatus } from "../state/entity-status";
 import { factorioInserterState } from "../state/factorio-entity-state";
 import type { TickRecorder } from "../simulation/observers/observer";
 
@@ -36,6 +37,12 @@ export interface InserterHandSeries {
     status: string[];
     /** The state the game would show for it, per tick, as the recorder writes it */
     factorio_state: string[];
+    /**
+     * Per tick, whether its phase after the tick is the pickup (status PICKUP): it has taken what it found at its source
+     * and has not begun the swing. What the crafts that join a grab are read from (inserter-counters.ts). Not recorded
+     * in "hands"; empty there, and absent from a stock made by hand.
+     */
+    at_pickup?: boolean[];
 }
 
 /**
@@ -43,8 +50,9 @@ export interface InserterHandSeries {
  * - "full": every series of every machine and inserter;
  * - "loop-windows": what the windows of a loop's inserters are read from (`loopInserterWindows`) and the levels below
  *   read: the item in every inserter's hand, and what every machine's output held;
- * - "wake-ups": what the wake-ups of a run (`wakeUpsOfStock`) and the verdict of a long run read: the hands of every
- *   inserter and the state the game shows for it, the crafts and payouts of every machine;
+ * - "wake-ups": what the wake-ups of a run (`wakeUpsOfStock`), the counters beside them (`countersOfStock`) and the verdict
+ *   of a long run read: the hands of every inserter, the state the game shows for it and whether it is at its pickup,
+ *   the crafts and payouts of every machine;
  * - "hands": what the verdict of a long run reads alone: the hands of every inserter.
  * "wake-ups" and "hands" also record, for a machine that places its results where inserters take them, what its output
  * held, which the verdict of a target that counts an item destroyed reads (`resultsTakenOf`); the other machines are
@@ -94,6 +102,7 @@ export class StockRecorder implements TickRecorder {
         private readonly detail: StockDetail = "full") {
         const series_of_ticks = (): number[] => canPreallocate(expected_ticks) ? new Array<number>(expected_ticks) : [];
         const strings_of_ticks = (): string[] => canPreallocate(expected_ticks) ? new Array<string>(expected_ticks) : [];
+        const booleans_of_ticks = (): boolean[] => canPreallocate(expected_ticks) ? new Array<boolean>(expected_ticks) : [];
         const full = detail === "full";
         this.machines = (detail === "hands" ? machine_states.filter(state => state.machine.metadata.places_results === true) : machine_states).map(state => {
             if (!full) {
@@ -136,6 +145,7 @@ export class StockRecorder implements TickRecorder {
                 inserter_id: state.entity_id.id, held: series_of_ticks(),
                 held_item: full || detail === "loop-windows" ? strings_of_ticks() : [], status: full ? strings_of_ticks() : [],
                 factorio_state: detail === "hands" ? [] : strings_of_ticks(),
+                at_pickup: detail === "hands" ? [] : booleans_of_ticks(),
             },
         }));
     }
@@ -171,6 +181,7 @@ export class StockRecorder implements TickRecorder {
             series.held_item[tick] = state.held_item?.item_name ?? "";
             series.status[tick] = state.status;
             series.factorio_state[tick] = factorioInserterState(state, sink);
+            series.at_pickup![tick] = state.status === InserterStatus.PICKUP;
         }
     }
 
@@ -190,6 +201,7 @@ export class StockRecorder implements TickRecorder {
             series.held[tick] = state.held_item?.quantity ?? 0;
             if (this.detail !== "hands") {
                 series.factorio_state[tick] = factorioInserterState(state, sink);
+                series.at_pickup![tick] = state.status === InserterStatus.PICKUP;
             }
             if (this.detail === "loop-windows") {
                 series.held_item[tick] = state.held_item?.item_name ?? "";
@@ -218,7 +230,7 @@ export class StockRecorder implements TickRecorder {
             }
         }
         for (const { series } of this.inserters) {
-            for (const column of [series.held, series.held_item, series.status, series.factorio_state]) {
+            for (const column of [series.held, series.held_item, series.status, series.factorio_state, series.at_pickup]) {
                 cut(column);
             }
         }
