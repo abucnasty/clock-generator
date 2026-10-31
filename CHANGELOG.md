@@ -11,8 +11,9 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 ## [0.26.0] - Unreleased
 
 ### Changed
-- Where a stable clock still has wake-ups, observed wake windows and shifted swings now look for one with fewer, on clock periods up to 480 ticks.
-- When clocks tie on wake-ups, the one that recovers sooner after inputs stop or outputs back up is picked.
+- Clocks are now picked by their estimated UPS cost, which prices their wake-ups, the ticks belt inserters wait, their wake windows, wires and decider combinators, instead of by wake-ups alone; clocks whose estimates are too close to tell apart count as level.
+- Where a stable clock's wake-ups still cost more than the estimate can tell apart, observed wake windows and shifted swings now look for one with fewer, on clock periods up to 480 ticks.
+- When clocks are level on estimated UPS cost, the one that recovers sooner after inputs stop or outputs back up is picked.
 - Wake-ups are no longer counted for an inserter whose arm is still swinging back from its drop, which the game does not wake, so some builds get another clock.
 - When no clock holds the target rate, a stable clock that runs over it is picked before an unstable one nearer to it, and the page says how far over it runs.
 
