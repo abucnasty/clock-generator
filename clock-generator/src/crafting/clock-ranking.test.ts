@@ -129,6 +129,23 @@ describe("combineClockAlternativeRuns", () => {
         ])).toBe("under");
     });
 
+    // Thaeln's cell 07: no clock holds 80.42 a second; the stable observed windows clock runs 2.3% over it, an unstable
+    // clock of 6 output swings 0.2% under it
+    it("selects a stable clock over the target rate before an unstable one nearer to it, the nearest of them first", () => {
+        expect(selectedOf([
+            clock("unstable-near", { meets_target_rate: false, rate_off_target: -0.18, holds_expected_output: false, wake_ups_per_minute: 49 }),
+            clock("stable-far-over", { meets_target_rate: false, stable_above_target: true, rate_off_target: 4, wake_ups_per_minute: 100 }),
+            clock("stable-over", { meets_target_rate: false, stable_above_target: true, rate_off_target: 1.87, wake_ups_per_minute: 420 }),
+        ])).toBe("stable-over");
+    });
+
+    it("selects a clock that meets the target rate before one stable over it", () => {
+        expect(selectedOf([
+            clock("stable-over", { meets_target_rate: false, stable_above_target: true, rate_off_target: 0.5, wake_ups_per_minute: 1 }),
+            clock("untried", { recovery_untried: true, wake_ups_per_minute: 900 }),
+        ])).toBe("untried");
+    });
+
     it("does not look at how near a clock is to the target rate while one meets it", () => {
         expect(selectedOf([
             clock("meets", { wake_ups_per_minute: 500 }),
@@ -195,6 +212,15 @@ describe("a clock whose recovery could not be tried", () => {
         expect(ranked({ backpressure_loss_not_tried: NOT_TRIED, items_per_second: 81.7 })).toMatchObject({ meets_target_rate: false, recovery_untried: false });
         expect(ranked({ backpressure_loss_not_tried: NOT_TRIED }, true)).toMatchObject({ meets_target_rate: true, recovery_untried: false });
     });
+
+    it("is not stable above the target rate, which needs its recovery tried and passed, or on a build with a deadlock risk its output held", () => {
+        const recovers = { survives: true, broken_by: [], recovered_after_periods: 3 };
+        expect(ranked({ backpressure_loss: recovers, items_per_second: 81.7 }).stable_above_target).toBe(true);
+        expect(ranked({ backpressure_loss_not_tried: NOT_TRIED, items_per_second: 81.7 }).stable_above_target).toBeUndefined();
+        expect(ranked({ backpressure_loss: { ...recovers, survives: false, broken_by: ["coal stops arriving"] }, items_per_second: 81.7 }).stable_above_target).toBeUndefined();
+        expect(ranked({ holds: false, items_per_second: 81.7 }).stable_above_target).toBeUndefined();
+        expect(ranked({ backpressure_loss_not_tried: NOT_TRIED, items_per_second: 81.7 }, true).stable_above_target).toBe(true);
+    });
 });
 
 // Atlan cell 29: the 2,888-tick clock of a 2,888.666-tick period runs 0.02% fast, and held and recovered in the game (#332)
@@ -238,6 +264,13 @@ describe("a clock rounded down to whole ticks", () => {
         expect(ranked(fast, undefined).runs_fast).toBeUndefined();
         expect(ranked(9.97, undefined)).toMatchObject({ meets_target_rate: true });
         expect(ranked(9.97, undefined).runs_fast).toBeUndefined();
+    });
+
+    it("is stable above the target rate only as a clock of its exact period, never rounded", () => {
+        expect(ranked(9.97 * 1.02, undefined)).toMatchObject({ meets_target_rate: false, stable_above_target: true });
+        expect(ranked(9.97 * 1.0011, {}).stable_above_target).toBeUndefined();
+        expect(ranked(9.97, undefined).stable_above_target).toBeUndefined();
+        expect(ranked(9.97 * 0.98, undefined).stable_above_target).toBeUndefined();
     });
 
     it("runs on its windows rounded as its blueprint counts them", () => {
