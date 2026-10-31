@@ -152,7 +152,8 @@ describe("the recorded clock controls of the container fixtures", () => {
             expect(new Set(family.map(control => control.generation!.selection.id)).size, recipe).toBe(1);
             expect(new Set(family.map(control => control.generation!.period)).size, recipe).toBe(1);
         }
-        expect(variants.filter(variant => variant.recipe === "iron-gear-wheel").map(variant => controls[variant.name].generation!.selection.id)[0]).toBe("planned-belt-slack");
+        // The three gear wagons are re-recorded together when cost selects the cheaper even-hands clock.
+        expect(variants.filter(variant => variant.recipe === "iron-gear-wheel").map(variant => controls[variant.name].generation!.selection.id)[0]).toBe("even-hands");
         expect(variants.filter(variant => variant.recipe === "electronic-circuit").map(variant => controls[variant.name].generation!.selection.id)[0]).toBe("planned-belt-slack");
     });
 

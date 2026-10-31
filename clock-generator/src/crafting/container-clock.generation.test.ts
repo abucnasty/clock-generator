@@ -32,7 +32,7 @@ for (const variant of containerClockCases().filter(it => CONTAINER_GENERATED.has
             supply: selected.belt?.kind ?? null}).toEqual(expected.selection);
         expect(native.expected).toBe(expected.expected);
         if (previous) {
-            // the clock selected before the wake-ups were counted with the arm at home is still made, with the same windows
+            // The prior pinned clock is still made with the same windows; cost-ranked repins have fresh native controls.
             const earlier = generated.alternatives.find(alternative => alternative.id === previous.id);
             expect(earlier, `${previous.id} is still made`).toBeDefined();
             const earlier_exported = earlier!.result.subtick ?? earlier!.result;

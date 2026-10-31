@@ -99,7 +99,8 @@ describe("generateClockForConfig", () => {
         // one clock. The build is generated here, from the same config, and not again for that test
         // (scaffold-recordings-clock.generation.test.ts).
         it("selects the clock the values of the scaffold recordings of this build were seen on", () => {
-            expectPinnedScaffoldClock("agricultural science", { config: ConfigPaths.AGRICULTURAL_SCIENCE, backed_up_belts: false }, alternatives[selected_index]);
+            // The cheaper shifted clock passed fresh scaffold and recovery checks; the prior native clock stays offered.
+            expectPinnedScaffoldClock("agricultural science", { config: ConfigPaths.AGRICULTURAL_SCIENCE, backed_up_belts: false }, alternatives[selected_index], alternatives);
         });
 
         // Recorded in the game with 400 in every period; in the simulator the 1-swing clock holds the rate under both orders of

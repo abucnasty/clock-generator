@@ -24,8 +24,18 @@ test("lithium silo: every inserter and drill a clock leaves always on says why",
     expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
 });
 
-test("lithium silo: the clock with 3 output swings is selected", () => {
-    expect(generated.alternatives[generated.selected_index].id).toBe("swings-3");
+test("lithium silo: batched swings is selected and the previous three-swing clock is still made", () => {
+    // Their costs are level within the floor; batched swings recovers in 1 period rather than 2. The new clock
+    // passed native baseline and recovery checks, and its pin retains the previous clock's exact identity.
+    const selected = generated.alternatives[generated.selected_index];
+    expect(selected.id).toBe("planned-belt-slack");
+    expect(selected.ranking.recovery_periods).toBe(1);
+    const previous = controls.cases["lithium-silo-planned-belt-slack"].previous!;
+    const earlier = generated.alternatives.find(alternative => alternative.id === previous.id)!;
+    expect(earlier.verdict).toBe("stable");
+    expect(earlier.ranking.recovery_periods).toBe(2);
+    expect(createHash("sha256").update(JSON.stringify(clockIdentity(earlier.result.subtick ?? earlier.result))).digest("hex"))
+        .toBe(previous.clock_sha256);
 });
 
 for (const variant of lithiumSiloCases()) {

@@ -17,7 +17,7 @@ import {PickupClockScenario, pickupClockInterventions} from "./pickup-clock-capt
  * put plates onto a belt that a loader empties into a disposal chest. The silo holds at most 250 lithium (by weight), so
  * the standard cuts of 2 periods (of 7,560 or 1,080 ticks) empty it many times over.
  *
- * The selected clock (3 output swings) is recorded in two build orders. The game serves inserters that act on one entity
+ * The clock with 3 output swings is recorded in two build orders. The game serves inserters that act on one entity
  * in the same tick in the order of their unit numbers, the last built first (docs/simulator.md): as the build's blueprint
  * has them, the two inserters that fill the silo are built before the six that empty it; `fill-last` builds them after.
  * The clock with 1 output swing is a second check. The clock with 7 output swings is the known limit of a drop onto a
@@ -27,7 +27,7 @@ import {PickupClockScenario, pickupClockInterventions} from "./pickup-clock-capt
 export interface LithiumSiloCase {
     name: string;
     /** The alternative recorded */
-    alternative: "swings-3" | "swings-7" | "swings-1";
+    alternative: "swings-3" | "swings-7" | "swings-1" | "planned-belt-slack";
     /** Set where the game does not hold this clock though the simulator does: the limit of the drops the config marks */
     known_limit?: "side-loaded-drop";
     order: "as-built" | "fill-last";
@@ -35,6 +35,8 @@ export interface LithiumSiloCase {
 
 export function lithiumSiloCases(): LithiumSiloCase[] {
     return [
+        // Cost-level clocks are parted by recovery; the selected batched clock was checked natively on #530.
+        {name: "lithium-silo-planned-belt-slack", alternative: "planned-belt-slack", order: "as-built"},
         {name: "lithium-silo-swings-3", alternative: "swings-3", order: "as-built"},
         {name: "lithium-silo-swings-3-fill-last", alternative: "swings-3", order: "fill-last"},
         {name: "lithium-silo-swings-1", alternative: "swings-1", order: "as-built"},
