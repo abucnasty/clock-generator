@@ -354,3 +354,106 @@ describe('belt grouping after global eligibility', () => {
         expect(rows.hiddenCount).toBe(1);
     });
 });
+
+describe('the slower-recovery cost disclaimer', () => {
+    const disclaimer = 'This one was picked for its lower estimated UPS cost.';
+    const selected = (options: ClockOptions = {}) => clock('pick', { recovery_periods: 24, ...options });
+    const faster = (options: ClockOptions = {}) => clock('faster', { costNs: 1010, recovery_periods: 2, ...options });
+    // An explicit pick index isolates the display condition, including defensive edges, from which clock ranking picks.
+    const text = (clocks: Clock[], rule: PickRule = MOVING, index = 0) => recommendationReason(clocks, index, rule, true);
+
+    it.each<[string, string, PickRule, number, string]>([
+        ['singular', '', MOVING, 1, 'One other clock recovers in fewer clock periods after inputs stop or outputs back up. This one was picked for its lower estimated UPS cost.'],
+        ['plural', '', MOVING, 2, '2 other clocks recover in fewer clock periods after inputs stop or outputs back up. This one was picked for its lower estimated UPS cost.'],
+        ['moving singular', 'moving (+4 ticks)', MOVING, 1, 'One other clock for a moving belt recovers in fewer clock periods after inputs stop or outputs back up. This one was picked for its lower estimated UPS cost.'],
+        ['moving plural', 'moving (+4 ticks)', MOVING, 2, '2 other clocks for a moving belt recover in fewer clock periods after inputs stop or outputs back up. This one was picked for its lower estimated UPS cost.'],
+        ['backed-up belts omit the moving qualification', 'moving (+4 ticks)', BACKED_UP, 1, 'One other clock recovers in fewer clock periods after inputs stop or outputs back up. This one was picked for its lower estimated UPS cost.'],
+    ])('uses the approved %s sentence', (_, beltLabel, rule, count, expected) => {
+        const clocks = [selected({ beltLabel }), ...Array.from({ length: count }, (_, i) => ({ ...faster({ costNs: 1010 + i }), id: `faster-${i}` }))];
+        expect(text(clocks, rule).endsWith(` ${expected}`)).toBe(true);
+    });
+
+    it.each<[string, number, number, boolean]>([
+        ['just inside the 0.5% band', 1004.999, 2, false],
+        ['equal to the 0.5% floor', 1005, 2, true],
+        ['above the floor', 1005.001, 2, true],
+        ['equal cost', 1000, 2, false],
+        ['equal recovery', 1010, 24, false],
+        ['slower recovery', 1010, 25, false],
+        ['any positive recovery difference', 1010, 23.99999, true],
+        ['zero measured recovery', 1010, 0, true],
+    ])('handles %s without rounding', (_, costNs, recovery_periods, shown) => {
+        expect(text([selected(), faster({ costNs, recovery_periods })]).includes(disclaimer)).toBe(shown);
+    });
+
+    it('uses the class minimum for the band and keeps the existing recovery tie explanation', () => {
+        const clocks = [clock('cheapest', { costNs: 1000, recovery_periods: 30 }),
+            selected({ costNs: 1004 }), faster({ costNs: 1005 })];
+        expect(recommendedIndexOf(clocks)).toBe(1);
+        const explanation = text(clocks, MOVING, 1);
+        expect(explanation).toContain(RECOMMENDED_COPY.tieOnRecovery(1, ' for a moving belt'));
+        expect(explanation.endsWith(' One other clock for a moving belt recovers in fewer clock periods after inputs stop or outputs back up. ' + disclaimer)).toBe(true);
+    });
+
+    it('has no absolute cost floor, including when the minimum is zero', () => {
+        expect(text([selected({ costNs: 0 }), faster({ costNs: 0.00001 })])).toContain(disclaimer);
+    });
+
+    it('does not claim lower cost when the faster clock costs less than the pick', () => {
+        const clocks = [selected({ costNs: 1010 }), faster({ costNs: 1005 }), clock('minimum', { recovery_periods: 30 })];
+        expect(text(clocks)).not.toContain(disclaimer);
+    });
+
+    it.each<ClockOptions>([
+        { recovery_periods: undefined }, { recovery_periods: null }, { recovery_periods: NaN }, { recovery_periods: Infinity },
+        { costNs: null }, { costNs: NaN }, { costNs: Infinity }, { recovery_untried: true },
+        { verdict: 'no recovery' }, { verdict: 'unstable' }, { deadlock: true }, { meets_target_rate: false },
+    ])('omits it for an ineligible pick %o', options => {
+        expect(text([selected(options), faster()])).not.toContain(disclaimer);
+    });
+
+    it.each<ClockOptions>([
+        { recovery_periods: undefined }, { recovery_periods: null }, { recovery_periods: NaN }, { recovery_periods: Infinity },
+        { costNs: null }, { costNs: NaN }, { costNs: Infinity }, { recovery_untried: true },
+        { verdict: 'no recovery' }, { verdict: 'unstable' }, { meets_target_rate: false },
+        { runs_fast: 0.0002 }, { matches_belt_choice: false },
+    ])('does not count an ineligible or differently classed alternative %o', options => {
+        expect(text([selected(), faster(options)])).not.toContain(disclaimer);
+    });
+
+    it('compares rounded target clocks within their own class', () => {
+        expect(text([selected({ runs_fast: 0.0002 }), faster({ runs_fast: 0.0003 })])).toContain(disclaimer);
+        expect(text([selected({ runs_fast: 0.0002 }), faster()])).not.toContain(disclaimer);
+    });
+
+    it('compares the same fallback belt class without offering a different belt choice', () => {
+        expect(text([selected({ beltLabel: 'backed-up', matches_belt_choice: false }),
+            faster({ beltLabel: 'backed-up', matches_belt_choice: false })])).toContain(disclaimer);
+    });
+
+    it('does not use a clock with missing recovery as the cheapest anchor', () => {
+        const clocks = [selected(), faster({ costNs: 1004 }), clock('unknown', { costNs: 1, recovery_periods: null })];
+        expect(text(clocks)).not.toContain(disclaimer);
+    });
+
+    it('omits a missing cost and a failed or unavailable recovery result', () => {
+        const missingCost = selected();
+        delete missingCost.ranking.cost;
+        expect(text([missingCost, faster()])).not.toContain(disclaimer);
+        const unavailable = { ...selected(), assessment: { items_per_second: TARGET, backpressure_loss: null } };
+        expect(recommendationReason([unavailable, faster()], 0, MOVING, true)).not.toContain(disclaimer);
+        const unknownAlternative = { ...faster(), assessment: { items_per_second: TARGET, backpressure_loss: null } };
+        expect(recommendationReason([selected(), unknownAlternative], 0, MOVING, true)).not.toContain(disclaimer);
+        const failed = { ...faster(), assessment: { items_per_second: TARGET,
+            backpressure_loss: { survives: false, broken_by: ['inputs stop'], recovered_after_periods: null } } };
+        expect(recommendationReason([selected(), failed], 0, MOVING, true)).not.toContain(disclaimer);
+        expect(recommendationReason([{ ...selected(), assessment: failed.assessment }, faster()], 0, MOVING, true)).not.toContain(disclaimer);
+    });
+
+    it('counts each distinct alternative once', () => {
+        const other = faster();
+        const explanation = text([selected(), other, other, { ...other }]);
+        expect(explanation).toContain('One other clock for a moving belt recovers');
+        expect(explanation).not.toContain('2 other clocks');
+    });
+});

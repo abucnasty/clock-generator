@@ -79,6 +79,9 @@ export const RECOMMENDED_COPY = {
         ` ${othersText(others, kind)} on estimated UPS cost, so the one that recovers sooner after inputs stop or outputs back up was picked.`,
     tieOnWindows: (others: number, kind: string) =>
         ` ${othersText(others, kind)} on estimated UPS cost and wake windows, so the first one in the list is shown.`,
+    slowerRecovery: (others: number, kind: string) =>
+        ` ${others === 1 ? `One other clock${kind} recovers` : `${others} other clocks${kind} recover`} in fewer clock periods `
+        + 'after inputs stop or outputs back up. This one was picked for its lower estimated UPS cost.',
     tieKindMoving: ' for a moving belt',
     recoveryDoesNotDecide: ' The recovery trials do not decide on this build.',
     noneForMovingBelt: (rate: string, deadlock: boolean) => deadlock
@@ -148,7 +151,7 @@ export function recommendationReason(
     if (!pick) {
         return '';
     }
-    const reason = reasonOf(alternatives, pick, rule);
+    const reason = reasonOf(alternatives, pick, rule) + slowerRecoveryOf(alternatives, pick, rule);
     if (final) {
         return reason;
     }
@@ -173,6 +176,28 @@ export function fewestDecidersReason(
     const rate = figure(clock.assessment.items_per_second - clock.ranking.rate_off_target);
     const contenders = RECOMMENDED_COPY.contenders(rate, clock.deadlockRisk !== null, clock.counts);
     return RECOMMENDED_COPY.fewestDeciders(contenders, beltWordsOf(clock, rule));
+}
+
+/** A cost-first pick can recover more slowly than a dearer stable clock in the same class before cost. */
+function slowerRecoveryOf(alternatives: PickableClock[], pick: PickableClock, rule: PickRule | null): string {
+    const measured = (clock: PickableClock) => clock.verdict === 'stable' && clock.ranking.meets_target_rate
+        && !clock.ranking.recovery_untried && clock.assessment.backpressure_loss !== null
+        && clock.assessment.backpressure_loss?.survives !== false
+        && Number.isFinite(clock.ranking.recovery_periods) && Number.isFinite(costOf(clock.ranking));
+    if (pick.deadlockRisk !== null || !measured(pick)) {
+        return '';
+    }
+    // Target-rate clocks have two tried classes before cost: exact and rounded. Belt choice is the next class.
+    const contenders = alternatives.filter(other => measured(other)
+        && (other.ranking.runs_fast !== undefined) === (pick.ranking.runs_fast !== undefined)
+        && other.ranking.matches_belt_choice === pick.ranking.matches_belt_choice);
+    const cheapest = Math.min(...contenders.map(other => costOf(other.ranking)));
+    const pickedCost = costOf(pick.ranking);
+    const faster = new Set(contenders.filter(other => other.id !== pick.id
+        && other.ranking.recovery_periods! < pick.ranking.recovery_periods!
+        && pickedCost < costOf(other.ranking) && !costsTie(costOf(other.ranking), cheapest)).map(other => other.id));
+    return faster.size === 0 ? '' : RECOMMENDED_COPY.slowerRecovery(faster.size,
+        isOnMovingBelt(pick, rule) ? RECOMMENDED_COPY.tieKindMoving : '');
 }
 
 function reasonOf(alternatives: PickableClock[], pick: PickableClock, rule: PickRule | null): string {
