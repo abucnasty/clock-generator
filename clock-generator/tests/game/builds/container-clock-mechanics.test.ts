@@ -104,10 +104,15 @@ describe("the periods the game took to run dry under each cut", () => {
             }
             // the output block: the disposal chest is full, nothing is dropped for the 4 periods (the fifth is the release)
             expect(block.during.slice(0, 4)).toEqual([0, 0, 0, 0]);
-            // a second cut of the same input finds a container the recovery has not refilled: the gears' output stops
-            // within 5 periods; the circuits' cut of copper cable finds that stock full and takes the cable's own periods
+            // a second cut of the same input finds a container the recovery has not refilled to the full; the circuits' cut
+            // of copper cable finds that stock full and takes the cable's own periods
             const second = held(secondCut.during);
-            if (cut2 === cut1) expect(second, "the stock is not refilled between the cuts").toBeLessThanOrEqual(5);
+            // how much of the stock the supplies put back in between depends on the clock: after the even-hands clock the second cut
+            // found it nearly empty (0 to 5 periods), after planned-belt-slack it found 33 to 48 periods of it, never more than the first
+            if (cut2 === cut1) {
+                expect(second, "the stock is not refilled past the first cut's").toBeLessThanOrEqual(first);
+                if (controls[variant.name].generation!.selection.id === "even-hands") expect(second, "the stock is not refilled between the cuts").toBeLessThanOrEqual(5);
+            }
             else expect(second - expected.stock[cut2].periods, "periods the cable lasted").toBeGreaterThanOrEqual(-1);
             if (cut2 !== cut1) expect(second - expected.stock[cut2].periods, "periods the cable lasted").toBeLessThanOrEqual(1);
         });
@@ -147,7 +152,7 @@ describe("the recorded clock controls of the container fixtures", () => {
             expect(new Set(family.map(control => control.generation!.selection.id)).size, recipe).toBe(1);
             expect(new Set(family.map(control => control.generation!.period)).size, recipe).toBe(1);
         }
-        expect(variants.filter(variant => variant.recipe === "iron-gear-wheel").map(variant => controls[variant.name].generation!.selection.id)[0]).toBe("even-hands");
+        expect(variants.filter(variant => variant.recipe === "iron-gear-wheel").map(variant => controls[variant.name].generation!.selection.id)[0]).toBe("planned-belt-slack");
         expect(variants.filter(variant => variant.recipe === "electronic-circuit").map(variant => controls[variant.name].generation!.selection.id)[0]).toBe("planned-belt-slack");
     });
 
