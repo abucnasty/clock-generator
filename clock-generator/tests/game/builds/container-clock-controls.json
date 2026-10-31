@@ -1249,7 +1249,8 @@
       "previous": {
         "id": "even-hands",
         "clock_sha256": "043fabae947152aa1078ccf8f508bdf01a46f9ce171ebd89c336fb070a77a349"
-      }
+      },
+      "second_cut_held_simulated": 33
     },
     "container-wagon-legendary": {
       "recorded": {
@@ -2133,7 +2134,8 @@
       "previous": {
         "id": "even-hands",
         "clock_sha256": "043fabae947152aa1078ccf8f508bdf01a46f9ce171ebd89c336fb070a77a349"
-      }
+      },
+      "second_cut_held_simulated": 47
     },
     "container-wagon-legendary-mixed": {
       "recorded": {
@@ -3158,7 +3160,8 @@
       "previous": {
         "id": "even-hands",
         "clock_sha256": "043fabae947152aa1078ccf8f508bdf01a46f9ce171ebd89c336fb070a77a349"
-      }
+      },
+      "second_cut_held_simulated": 47
     }
   }
 }
