@@ -179,6 +179,12 @@ interface AlternativeDefinition {
      */
     shared_windows?: () => AlternativeDefinition | undefined;
     /**
+     * Made without the shared-windows variant (`shared_windows`): the other output swing counts and fractional swings,
+     * whose shared clocks were never selected on a sample or fixture, where the batched swings' own shared clock covers
+     * what shared windows give
+     */
+    no_shared_windows?: true;
+    /**
      * The same alternative with the inserters of a loop and those that take out of it always enabled (`loop_windows` of
      * GenerateClockOptions false): made when its clock has windows for them (`loop_windows` of the result) and does not
      * hold, or does not get back from a loss, with them, or with only those out of the loop.
@@ -351,15 +357,16 @@ function alternativeDefinitions(
 ): AlternativeDefinition[] {
     const definitions = withChestDrillFallbacks(alternativeDefinitionsWithFuelHandRoom(config, context, quiet, known_stable), config,
         with_chest_drill_fallbacks, fallback_config => alternativeDefinitions(fallback_config, context, quiet, known_stable, false));
-    // the same alternatives made with shared windows, made when one of them is a clock of the grouped hands rule, and
-    // with the inserters that take out of a loop always enabled, made when a clock with windows for them does not meet goal 1
+    // the same alternatives made with shared windows, made when one of them is a clock of the grouped hands rule (except
+    // where a definition goes without, see no_shared_windows), and with the inserters that take out of a loop always
+    // enabled, made when a clock with windows for them does not meet goal 1
     let shared: AlternativeDefinition[] | undefined;
     let without_loop: AlternativeDefinition[] | undefined;
     let without_in_loop: AlternativeDefinition[] | undefined;
-    return definitions.map(definition => ({ ...definition, shared_windows: () => {
+    return definitions.map(definition => ({ ...definition, ...(definition.no_shared_windows !== true && { shared_windows: () => {
         shared ??= alternativeDefinitionsWithFuelHandRoom(config, context, { ...quiet, shared_windows: true }, known_stable);
         return shared.find(it => it.id === definition.id);
-    }, without_loop_windows: () => {
+    } }), without_loop_windows: () => {
         without_loop ??= alternativeDefinitionsWithFuelHandRoom(config, context, { ...quiet, loop_windows: false }, known_stable);
         return without_loop.find(it => it.id === definition.id);
     }, without_in_loop_windows: () => {
@@ -472,6 +479,7 @@ function alternativeDefinitionsFor(
                 quiet
             ),
             planned_on: { ...config, overrides: { ...config.overrides, use_fractional_swings: !fractional } },
+            no_shared_windows: true,
         },
         {
             id: "even-hands",
@@ -533,6 +541,7 @@ function alternativeDefinitionsFor(
             description: `${BATCHED_SWINGS_LABEL} with a longer crafting cycle: the output inserter takes ${higher} hands per cycle instead of `
                 + `${swings} while the machine keeps crafting between swings. Batches more swings into fewer, longer windows.`,
             run: () => withSwings(higher, quiet),
+            no_shared_windows: true as const,
         })),
         ...lower_counts.map(lower => ({
             id: `swings-${lower}`,
@@ -541,6 +550,7 @@ function alternativeDefinitionsFor(
                 + `instead of ${swings}. The output machine buffers more between swings; useful when the higher swing count `
                 + "is unstable.",
             run: () => withSwings(lower, quiet),
+            no_shared_windows: true as const,
         })),
         {
             id: "full-hand",
