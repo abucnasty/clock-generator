@@ -26,6 +26,13 @@
  * named check `LOOP_USES_ALL`). Fuel is rounded up to the fractions of a hand the ingredients come in (fuelRoundedUp),
  * so the system is solved with the fuel and without it.
  *
+ * The demand walk this replaced eliminated every machine row at once. In exact fractions both give the same solution, and
+ * on every sample and blast job they give the same fractions. They part, deliberately, where the walk's elimination grew
+ * past what a fraction holds and was rounded: cell 02 with its machines listed in the other order, at 97/13 output swings,
+ * gave 184996821348687/9740259739640 hands of iron plate a cycle, where the rows solved loop by loop give 2716/143. Where
+ * the exact figure itself does not fit a fraction (a denominator past 2^53, as an export's hands from a cycle of decimal
+ * ticks can make), both are rounded, within a double's step of it.
+ *
  * Synchronous dataflow models a producer's `held_limit` and a consumer's insertion limit as bounded buffers: back edges
  * with that many initial tokens. A back edge's row is its forward edge's with the sign turned, so it changes no solution
  * of `Γq = 0` and is no row here; the limits bound which periods can run (P-limit, P-stock), not the hands of one.
@@ -74,15 +81,31 @@ export function balanceBuildOf(config: Config): BalanceBuild {
 /** Fuel burned per craft is counted in parts of an item this small, rounded up, to keep its fraction simple */
 const FUEL_PARTS_PER_ITEM = 1000;
 
+/** An inserter of the target and the hand it moves of the target item */
+export interface SeedInserter {
+    readonly entity: string;
+    readonly hand: number;
+}
+
+/**
+ * What the graph does not hold and the rows read: the inserters that carry nothing (their source gives none of what
+ * their sink takes, and no filter names an item), which have no edge. Each still counts among the inserters that drop
+ * into a container, which share what is taken from it evenly, by the container's node key.
+ */
+interface SeedBase {
+    readonly idle_fillers: ReadonlyMap<string, number>;
+}
+
 /** What the target's edges move a cycle, for a target that counts an item made */
-export interface MadeSeed {
+export interface MadeSeed extends SeedBase {
     readonly counts: "made";
     readonly item: string;
     /**
      * Each machine that makes the target, with the inserters that take it out of the build (`takers`), and where it puts
-     * the target into one container that they take it from, the inserters that put it there (`feeders`, else empty)
+     * the target into one container that they take it from, the inserters that put it there (`feeders`, else empty).
+     * An inserter with no filter that takes the target out counts too, though it carries nothing: its hand is its own.
      */
-    readonly outputs: readonly { readonly machine: string; readonly takers: readonly string[]; readonly feeders: readonly string[] }[];
+    readonly outputs: readonly { readonly machine: string; readonly takers: readonly SeedInserter[]; readonly feeders: readonly SeedInserter[] }[];
     /** Output swings a cycle of each machine, split among its takers */
     readonly swings: Fraction;
     /** The hand the output swings are counted in */
@@ -92,7 +115,7 @@ export interface MadeSeed {
 }
 
 /** What the target's edges move a cycle, for a target that counts an item destroyed */
-export interface DestroyedSeed {
+export interface DestroyedSeed extends SeedBase {
     readonly counts: "destroyed";
     readonly item: string;
     /** Hands of the item brought into each machine a cycle */
@@ -154,6 +177,8 @@ interface BalanceView {
     readonly edges_of: ReadonlyMap<string, readonly GraphEdge[]>;
     /** Inserter and placement edges by the node they drop into (a lane's belt for a lane), in edge order */
     readonly into: ReadonlyMap<string, readonly GraphEdge[]>;
+    /** Inserters with no edge, by the container they drop into */
+    readonly idle_fillers: ReadonlyMap<string, number>;
 }
 
 const pushTo = <K, V>(map: Map<K, V[]>, key: K, value: V) => {
@@ -168,14 +193,14 @@ function sinkOf(view: Pick<BalanceView, "node">, edge: GraphEdge): string {
     return node.kind === "lane" ? node.entity : node.key;
 }
 
-function viewOf(facts: PlannerFacts, graph: PlannerGraph): BalanceView {
+function viewOf(facts: PlannerFacts, graph: PlannerGraph, idle_fillers: ReadonlyMap<string, number>): BalanceView {
     const node = new Map(facts.nodes.map(it => [it.key, it]));
     const edges_of = new Map<string, GraphEdge[]>();
     const into = new Map<string, GraphEdge[]>();
     for (const edge of graph.edges) {
         pushTo(edges_of, edge.entity, edge);
     }
-    const view = { node, machines: facts.nodes.filter((it): it is MachineNode => it.kind === "machine"), edges_of, into };
+    const view = { node, machines: facts.nodes.filter((it): it is MachineNode => it.kind === "machine"), edges_of, into, idle_fillers };
     for (const edge of graph.edges) {
         pushTo(into, sinkOf(view, edge), edge);
     }
@@ -356,13 +381,14 @@ function containerFillersOf(
     asked: Asked,
 ): void {
     const fillers = entitiesOf((view.into.get(container) ?? []).filter(edge => edge.via === "inserter"));
+    const sharing = fillers.length + (view.idle_fillers.get(container) ?? 0);
     for (const filler of fillers) {
         const items: BalancedItem[] = [];
         let total = fraction(0);
         for (const take of taken) {
             if (!carries(view, filler, take.item)) continue;
             // the ratio of the hands as a number, as the plan has always counted it
-            const hands = take.hands.divide(fillers.length).multiply(downstream_hand(take.item) / handOf(view, filler, take.item));
+            const hands = take.hands.divide(sharing).multiply(downstream_hand(take.item) / handOf(view, filler, take.item));
             items.push({ item: take.item, hands });
             total = total.add(hands);
         }
@@ -559,14 +585,14 @@ function balanceMade(view: BalanceView, seed: MadeSeed): Balance {
     for (const output of seed.outputs) {
         const per_taker = seed.swings.divide(output.takers.length);
         for (const taker of output.takers) {
-            listing.add({ entity: taker, items: [{ item: seed.item, hands: per_taker }], total: per_taker, hand: handOf(view, taker, seed.item) });
+            listing.add({ entity: taker.entity, items: [{ item: seed.item, hands: per_taker }], total: per_taker, hand: taker.hand });
         }
         // through a container: the feeders put into it what the takers take out, at their own hands
         if (output.feeders.length > 0) {
             const items_per_feeder = seed.swings.multiply(seed.hand).divide(output.feeders.length);
             for (const feeder of output.feeders) {
-                const hands = items_per_feeder.divide(handOf(view, feeder, seed.item));
-                listing.add({ entity: feeder, items: [{ item: seed.item, hands }], total: hands, hand: handOf(view, feeder, seed.item) });
+                const hands = items_per_feeder.divide(feeder.hand);
+                listing.add({ entity: feeder.entity, items: [{ item: seed.item, hands }], total: hands, hand: feeder.hand });
             }
         }
         ask(direct, output.machine, seed.swings.multiply(seed.hand));
@@ -623,7 +649,7 @@ function balanceDestroyed(view: BalanceView, seed: DestroyedSeed): Balance {
 
 /** The balance of a cycle: what every edge moves and every machine makes for what the target's edges move */
 export function balanceOf(facts: PlannerFacts, graph: PlannerGraph, seed: BalanceSeed): Balance {
-    const view = viewOf(facts, graph);
+    const view = viewOf(facts, graph, seed.idle_fillers);
     return seed.counts === "made" ? balanceMade(view, seed) : balanceDestroyed(view, seed);
 }
 

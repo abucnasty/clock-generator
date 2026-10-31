@@ -30,6 +30,15 @@ export function transfersOfBalance(balance: Balance, registry: ReadableEntityReg
     }));
 }
 
+/** The inserters that carry nothing, which the graph has no edge of, counted by the entity they drop into */
+function idleFillersOf(registry: ReadableEntityRegistry): Map<string, number> {
+    const idle = new Map<string, number>();
+    for (const inserter of registry.getAll().filter(Entity.isInserter).filter(it => it.filtered_items.size === 0)) {
+        idle.set(inserter.sink.entity_id.id, (idle.get(inserter.sink.entity_id.id) ?? 0) + 1);
+    }
+    return idle;
+}
+
 /**
  * The balance of a cycle of a target that counts an item made: `swings` output swings of each output machine a cycle,
  * in hands of `output_stack_size`, split among the inserters that take the target out of the build; with `cycle_ticks`,
@@ -57,15 +66,17 @@ export function madeTargetBalance(
                 `All output inserters from machine ${machine.entity_id.id} must have the same stack size. `
                 + `Found ${hand_size} but expected ${first_stack_size}.`);
         }
+        const seedOf = (inserter: Inserter) => ({ entity: inserter.entity_id.id, hand: handSizeFor(inserter, machine.output.item_name) });
         return {
             machine: machine.entity_id.id,
-            takers: takers.map(it => it.entity_id.id),
-            feeders: path.container === null ? [] : path.feeders.map(it => it.entity_id.id),
+            takers: takers.map(seedOf),
+            feeders: path.container === null ? [] : path.feeders.map(seedOf),
         };
     });
     const { facts, graph } = balanceBuildOf(config);
     return balanceOf(facts, graph, {
         counts: "made", item: output_machines[0].output.item_name, outputs, swings, hand: output_stack_size, cycle_ticks,
+        idle_fillers: idleFillersOf(entity_registry),
     });
 }
 
@@ -112,5 +123,6 @@ export function destroyedTargetBalance(
         return { machine: machine.entity_id.id, bringing: bringing.map(it => it.entity_id.id), crafts, results };
     });
     const { facts, graph } = balanceBuildOf(config);
-    return balanceOf(facts, graph, { counts: "destroyed", item, hands: hands_per_machine, machines: seeds });
+    return balanceOf(facts, graph, { counts: "destroyed", item, hands: hands_per_machine, machines: seeds,
+        idle_fillers: idleFillersOf(entity_registry) });
 }
