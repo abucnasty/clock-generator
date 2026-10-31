@@ -60,6 +60,14 @@ export interface ClockRanking {
     matches_belt_choice: boolean;
     /** Null when they were not counted, which ranks after any count */
     wake_ups_per_minute: number | null;
+    /**
+     * The most periods the clock took to be back at its expected output over its backpressure loss trials
+     * (`BackpressureLossVerdict.recovered_after_periods`); null where it was not tried or does not get back, and absent
+     * from a ranking kept from before 0.26.0. Of clocks equal on wake-ups the one that recovers sooner comes first
+     * (decided 2026-10-31: on the container wagons, even hands recovered from the second cut of an input within 5
+     * periods in the game where another clock of 0 wake-ups too took 33 to 48).
+     */
+    recovery_periods?: number | null;
     window_count: number;
 }
 
@@ -120,6 +128,7 @@ export function rankingOf(clock: Omit<ClockAlternative, "ranking">, config: Conf
         // with backed-up belts every clock goes without the slack, which is the choice
         matches_belt_choice: config.overrides?.backed_up_belts === true || !clock.result.belt_pickup_slack_left_out,
         wake_ups_per_minute: clock.assessment.wake_ups_per_minute,
+        recovery_periods: clock.assessment.backpressure_loss?.recovered_after_periods ?? null,
         window_count: clock.ranking_window_count,
     };
 }
@@ -229,7 +238,8 @@ export function rankingWindowCount(
  * first: those at exactly the target rate and tried, then those rounded down to whole ticks that run at most 0.1% fast
  * and were tried, then those whose recovery could not be tried; among them those made for the belt the
  * config asks for, so that the count of wake-ups never drops belt pickup slack on its own; then the fewest wake-ups a
- * minute (goal 2); then the fewest windows. Of equals the first listed is selected.
+ * minute (goal 2); then the fewest periods to get back from a loss; then the fewest windows. Of equals the first listed
+ * is selected.
  *
  * Where none meets the target rate, those stable above it come first (`stable_above_target`), the nearest to it
  * first: the build then runs at least at what was asked, on a clock that holds and recovers. Where none is either, the
@@ -266,6 +276,8 @@ export function combineClockAlternativeRuns<T>(
             ranking.matches_belt_choice ? 0 : 1,
             // to a thousandth: less than that is the rounding of a division, not a difference between two clocks
             costKey(ranking),
+            // of equals on cost, the one that gets back from a loss sooner
+            ranking.recovery_periods ?? Infinity,
             ranking.window_count,
         ];
     };
