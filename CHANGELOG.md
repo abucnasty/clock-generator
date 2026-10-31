@@ -10,6 +10,11 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 
 ## [0.26.0] - Unreleased
 
+### Removed
+- All results at once is no longer offered for a recycler's rare results: Results in turn, with fewer wake-ups, stays.
+- A clock with a subtick clock is no longer also listed rounded down to whole ticks.
+- The other output swing counts and fractional swings are no longer also listed with shared windows; batched swings keeps its shared-windows clock.
+
 ### Fixed
 - The most the Items per Second field allows now counts the inserters, belts and hands as well as the machines' speed, so it no longer accepts a rate that Check then refuses.
 
