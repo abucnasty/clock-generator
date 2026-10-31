@@ -1,0 +1,28 @@
+{
+  "sample": "FLYING_ROBOT_FRAME",
+  "swings 1": [
+    "inserter:1 | flying-robot-frame 1 | total 1 | hand 16",
+    "inserter:2 | steel-plate 1/2, electric-engine-unit 1/2 | total 1 | needed 1 | hand 16",
+    "inserter:3 | electronic-circuit 3/2, battery 1 | total 5/2 | needed 5/2 | hand 16"
+  ],
+  "swings 2": [
+    "inserter:1 | flying-robot-frame 2 | total 2 | hand 16",
+    "inserter:2 | steel-plate 1, electric-engine-unit 1 | total 2 | needed 2 | hand 16",
+    "inserter:3 | electronic-circuit 3, battery 2 | total 5 | needed 5 | hand 16"
+  ],
+  "swings 3": [
+    "inserter:1 | flying-robot-frame 3 | total 3 | hand 16",
+    "inserter:2 | steel-plate 3/2, electric-engine-unit 3/2 | total 3 | needed 3 | hand 16",
+    "inserter:3 | electronic-circuit 9/2, battery 3 | total 15/2 | needed 15/2 | hand 16"
+  ],
+  "swings 7/3": [
+    "inserter:1 | flying-robot-frame 7/3 | total 7/3 | hand 16",
+    "inserter:2 | steel-plate 7/6, electric-engine-unit 7/6 | total 7/3 | needed 7/3 | hand 16",
+    "inserter:3 | electronic-circuit 7/2, battery 7/3 | total 35/6 | needed 35/6 | hand 16"
+  ],
+  "swings 5/2": [
+    "inserter:1 | flying-robot-frame 5/2 | total 5/2 | hand 16",
+    "inserter:2 | steel-plate 5/4, electric-engine-unit 5/4 | total 5/2 | needed 5/2 | hand 16",
+    "inserter:3 | electronic-circuit 15/4, battery 5/2 | total 25/4 | needed 25/4 | hand 16"
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "sample": "RECYCLING_SCRAP_SILO",
+  "hands 1": [
+    "inserter:13 | scrap 1 | total 1 | hand 16",
+    "inserter:1 | iron-gear-wheel 4/5 | total 4/5 | hand 16",
+    "inserter:2 | solid-fuel 7/25 | total 7/25 | hand 16",
+    "inserter:3 | concrete 6/25 | total 6/25 | hand 16",
+    "inserter:4 | ice 1/5 | total 1/5 | hand 16",
+    "inserter:5 | steel-plate 1000000000000001/6250000000000000 | total 1000000000000001/6250000000000000 | hand 16",
+    "inserter:6 | battery 1000000000000001/6250000000000000 | total 1000000000000001/6250000000000000 | hand 16",
+    "inserter:7 | stone 4/25 | total 4/25 | hand 16",
+    "inserter:8 | advanced-circuit 3/25 | total 3/25 | hand 16",
+    "inserter:9 | copper-cable 3/25 | total 3/25 | hand 16",
+    "inserter:10 | processing-unit 624999999999997/7812500000000000 | total 624999999999997/7812500000000000 | hand 16",
+    "inserter:11 | low-density-structure 1/25 | total 1/25 | hand 16",
+    "inserter:12 | holmium-ore 1/25 | total 1/25 | hand 16"
+  ],
+  "hands 2": [
+    "inserter:13 | scrap 2 | total 2 | hand 16",
+    "inserter:1 | iron-gear-wheel 8/5 | total 8/5 | hand 16",
+    "inserter:2 | solid-fuel 14/25 | total 14/25 | hand 16",
+    "inserter:3 | concrete 12/25 | total 12/25 | hand 16",
+    "inserter:4 | ice 2/5 | total 2/5 | hand 16",
+    "inserter:5 | steel-plate 1000000000000001/3125000000000000 | total 1000000000000001/3125000000000000 | hand 16",
+    "inserter:6 | battery 1000000000000001/3125000000000000 | total 1000000000000001/3125000000000000 | hand 16",
+    "inserter:7 | stone 8/25 | total 8/25 | hand 16",
+    "inserter:8 | advanced-circuit 6/25 | total 6/25 | hand 16",
+    "inserter:9 | copper-cable 6/25 | total 6/25 | hand 16",
+    "inserter:10 | processing-unit 624999999999997/3906250000000000 | total 624999999999997/3906250000000000 | hand 16",
+    "inserter:11 | low-density-structure 2/25 | total 2/25 | hand 16",
+    "inserter:12 | holmium-ore 2/25 | total 2/25 | hand 16"
+  ]
+}

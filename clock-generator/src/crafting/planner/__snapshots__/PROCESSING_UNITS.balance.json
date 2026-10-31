@@ -1,0 +1,23 @@
+{
+  "sample": "PROCESSING_UNITS",
+  "swings 1": [
+    "inserter:2 | processing-unit 1 | total 1 | hand 16",
+    "inserter:1 | electronic-circuit 5, advanced-circuit 1/2 | total 11/2 | needed 11/2 | hand 16"
+  ],
+  "swings 2": [
+    "inserter:2 | processing-unit 2 | total 2 | hand 16",
+    "inserter:1 | electronic-circuit 10, advanced-circuit 1 | total 11 | needed 11 | hand 16"
+  ],
+  "swings 3": [
+    "inserter:2 | processing-unit 3 | total 3 | hand 16",
+    "inserter:1 | electronic-circuit 15, advanced-circuit 3/2 | total 33/2 | needed 33/2 | hand 16"
+  ],
+  "swings 7/3": [
+    "inserter:2 | processing-unit 7/3 | total 7/3 | hand 16",
+    "inserter:1 | electronic-circuit 35/3, advanced-circuit 7/6 | total 77/6 | needed 77/6 | hand 16"
+  ],
+  "swings 5/2": [
+    "inserter:2 | processing-unit 5/2 | total 5/2 | hand 16",
+    "inserter:1 | electronic-circuit 25/2, advanced-circuit 5/4 | total 55/4 | needed 55/4 | hand 16"
+  ]
+}

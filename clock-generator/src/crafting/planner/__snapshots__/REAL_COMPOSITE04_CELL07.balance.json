@@ -1,0 +1,63 @@
+{
+  "sample": "REAL_COMPOSITE04_CELL07",
+  "swings 1": [
+    "inserter:1 | advanced-circuit 1 | total 1 | hand 16",
+    "inserter:10 | advanced-circuit 1 | total 1 | hand 16",
+    "inserter:2 | electronic-circuit 8/11 | total 8/11 | needed 8/11 | hand 16",
+    "inserter:3 | plastic-bar 8/11 | total 8/11 | needed 8/11 | hand 16",
+    "inserter:4 | copper-cable 16/11 | total 16/11 | needed 16/11 | hand 16",
+    "inserter:5 | coal 1/11 | total 1/11 | needed 1/11 | hand 16",
+    "inserter:7 | copper-cable 16/11 | total 16/11 | needed 16/11 | hand 16",
+    "inserter:8 | plastic-bar 8/11 | total 8/11 | needed 8/11 | hand 16",
+    "inserter:9 | electronic-circuit 8/11 | total 8/11 | needed 8/11 | hand 16",
+    "inserter:6 | coal 1/11 | total 1/11 | needed 1/11 | hand 16"
+  ],
+  "swings 2": [
+    "inserter:1 | advanced-circuit 2 | total 2 | hand 16",
+    "inserter:10 | advanced-circuit 2 | total 2 | hand 16",
+    "inserter:2 | electronic-circuit 16/11 | total 16/11 | needed 16/11 | hand 16",
+    "inserter:3 | plastic-bar 16/11 | total 16/11 | needed 16/11 | hand 16",
+    "inserter:4 | copper-cable 32/11 | total 32/11 | needed 32/11 | hand 16",
+    "inserter:5 | coal 2/11 | total 2/11 | needed 2/11 | hand 16",
+    "inserter:7 | copper-cable 32/11 | total 32/11 | needed 32/11 | hand 16",
+    "inserter:8 | plastic-bar 16/11 | total 16/11 | needed 16/11 | hand 16",
+    "inserter:9 | electronic-circuit 16/11 | total 16/11 | needed 16/11 | hand 16",
+    "inserter:6 | coal 2/11 | total 2/11 | needed 2/11 | hand 16"
+  ],
+  "swings 3": [
+    "inserter:1 | advanced-circuit 3 | total 3 | hand 16",
+    "inserter:10 | advanced-circuit 3 | total 3 | hand 16",
+    "inserter:2 | electronic-circuit 24/11 | total 24/11 | needed 24/11 | hand 16",
+    "inserter:3 | plastic-bar 24/11 | total 24/11 | needed 24/11 | hand 16",
+    "inserter:4 | copper-cable 48/11 | total 48/11 | needed 48/11 | hand 16",
+    "inserter:5 | coal 3/11 | total 3/11 | needed 3/11 | hand 16",
+    "inserter:7 | copper-cable 48/11 | total 48/11 | needed 48/11 | hand 16",
+    "inserter:8 | plastic-bar 24/11 | total 24/11 | needed 24/11 | hand 16",
+    "inserter:9 | electronic-circuit 24/11 | total 24/11 | needed 24/11 | hand 16",
+    "inserter:6 | coal 3/11 | total 3/11 | needed 3/11 | hand 16"
+  ],
+  "swings 7/3": [
+    "inserter:1 | advanced-circuit 7/3 | total 7/3 | hand 16",
+    "inserter:10 | advanced-circuit 7/3 | total 7/3 | hand 16",
+    "inserter:2 | electronic-circuit 56/33 | total 56/33 | needed 56/33 | hand 16",
+    "inserter:3 | plastic-bar 56/33 | total 56/33 | needed 56/33 | hand 16",
+    "inserter:4 | copper-cable 112/33 | total 112/33 | needed 112/33 | hand 16",
+    "inserter:5 | coal 7/33 | total 7/33 | needed 7/33 | hand 16",
+    "inserter:7 | copper-cable 112/33 | total 112/33 | needed 112/33 | hand 16",
+    "inserter:8 | plastic-bar 56/33 | total 56/33 | needed 56/33 | hand 16",
+    "inserter:9 | electronic-circuit 56/33 | total 56/33 | needed 56/33 | hand 16",
+    "inserter:6 | coal 7/33 | total 7/33 | needed 7/33 | hand 16"
+  ],
+  "swings 5/2": [
+    "inserter:1 | advanced-circuit 5/2 | total 5/2 | hand 16",
+    "inserter:10 | advanced-circuit 5/2 | total 5/2 | hand 16",
+    "inserter:2 | electronic-circuit 20/11 | total 20/11 | needed 20/11 | hand 16",
+    "inserter:3 | plastic-bar 20/11 | total 20/11 | needed 20/11 | hand 16",
+    "inserter:4 | copper-cable 40/11 | total 40/11 | needed 40/11 | hand 16",
+    "inserter:5 | coal 5/22 | total 5/22 | needed 5/22 | hand 16",
+    "inserter:7 | copper-cable 40/11 | total 40/11 | needed 40/11 | hand 16",
+    "inserter:8 | plastic-bar 20/11 | total 20/11 | needed 20/11 | hand 16",
+    "inserter:9 | electronic-circuit 20/11 | total 20/11 | needed 20/11 | hand 16",
+    "inserter:6 | coal 5/22 | total 5/22 | needed 5/22 | hand 16"
+  ]
+}

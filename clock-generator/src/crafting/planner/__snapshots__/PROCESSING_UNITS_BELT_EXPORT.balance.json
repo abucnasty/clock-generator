@@ -1,0 +1,73 @@
+{
+  "sample": "PROCESSING_UNITS_BELT_EXPORT",
+  "swings 1": [
+    "inserter:1 | processing-unit 1 | total 1 | hand 16",
+    "inserter:12 | electronic-circuit 11/8 | total 11/8 | hand 16",
+    "inserter:2 | advanced-circuit 1/2 | total 1/2 | needed 1/2 | hand 16",
+    "inserter:3 | electronic-circuit 5/2 | total 5/2 | needed 5/2 | hand 16",
+    "inserter:4 | electronic-circuit 5/2 | total 5/2 | needed 5/2 | hand 16",
+    "inserter:6 | electronic-circuit 4/11, plastic-bar 4/11 | total 8/11 | needed 8/11 | hand 16",
+    "inserter:7 | copper-cable 8/11 | total 8/11 | needed 8/11 | hand 16",
+    "inserter:11 | copper-plate 1843/1210 | total 1843/1210 | needed 1843/1210 | hand 16",
+    "inserter:5 | iron-plate 51/20 | total 51/20 | needed 51/20 | hand 16",
+    "inserter:8 | copper-cable 51/20 | total 51/20 | needed 51/20 | hand 16",
+    "inserter:9 | copper-cable 51/20 | total 51/20 | needed 51/20 | hand 16",
+    "inserter:10 | copper-cable 51/20 | total 51/20 | needed 51/20 | hand 16"
+  ],
+  "swings 2": [
+    "inserter:1 | processing-unit 2 | total 2 | hand 16",
+    "inserter:12 | electronic-circuit 11/4 | total 11/4 | hand 16",
+    "inserter:2 | advanced-circuit 1 | total 1 | needed 1 | hand 16",
+    "inserter:3 | electronic-circuit 5 | total 5 | needed 5 | hand 16",
+    "inserter:4 | electronic-circuit 5 | total 5 | needed 5 | hand 16",
+    "inserter:6 | electronic-circuit 8/11, plastic-bar 8/11 | total 16/11 | needed 16/11 | hand 16",
+    "inserter:7 | copper-cable 16/11 | total 16/11 | needed 16/11 | hand 16",
+    "inserter:11 | copper-plate 1843/605 | total 1843/605 | needed 1843/605 | hand 16",
+    "inserter:5 | iron-plate 51/10 | total 51/10 | needed 51/10 | hand 16",
+    "inserter:8 | copper-cable 51/10 | total 51/10 | needed 51/10 | hand 16",
+    "inserter:9 | copper-cable 51/10 | total 51/10 | needed 51/10 | hand 16",
+    "inserter:10 | copper-cable 51/10 | total 51/10 | needed 51/10 | hand 16"
+  ],
+  "swings 3": [
+    "inserter:1 | processing-unit 3 | total 3 | hand 16",
+    "inserter:12 | electronic-circuit 33/8 | total 33/8 | hand 16",
+    "inserter:2 | advanced-circuit 3/2 | total 3/2 | needed 3/2 | hand 16",
+    "inserter:3 | electronic-circuit 15/2 | total 15/2 | needed 15/2 | hand 16",
+    "inserter:4 | electronic-circuit 15/2 | total 15/2 | needed 15/2 | hand 16",
+    "inserter:6 | electronic-circuit 12/11, plastic-bar 12/11 | total 24/11 | needed 24/11 | hand 16",
+    "inserter:7 | copper-cable 24/11 | total 24/11 | needed 24/11 | hand 16",
+    "inserter:11 | copper-plate 5529/1210 | total 5529/1210 | needed 5529/1210 | hand 16",
+    "inserter:5 | iron-plate 153/20 | total 153/20 | needed 153/20 | hand 16",
+    "inserter:8 | copper-cable 153/20 | total 153/20 | needed 153/20 | hand 16",
+    "inserter:9 | copper-cable 153/20 | total 153/20 | needed 153/20 | hand 16",
+    "inserter:10 | copper-cable 153/20 | total 153/20 | needed 153/20 | hand 16"
+  ],
+  "swings 7/3": [
+    "inserter:1 | processing-unit 7/3 | total 7/3 | hand 16",
+    "inserter:12 | electronic-circuit 77/24 | total 77/24 | hand 16",
+    "inserter:2 | advanced-circuit 7/6 | total 7/6 | needed 7/6 | hand 16",
+    "inserter:3 | electronic-circuit 35/6 | total 35/6 | needed 35/6 | hand 16",
+    "inserter:4 | electronic-circuit 35/6 | total 35/6 | needed 35/6 | hand 16",
+    "inserter:6 | electronic-circuit 28/33, plastic-bar 28/33 | total 56/33 | needed 56/33 | hand 16",
+    "inserter:7 | copper-cable 56/33 | total 56/33 | needed 56/33 | hand 16",
+    "inserter:11 | copper-plate 12901/3630 | total 12901/3630 | needed 12901/3630 | hand 16",
+    "inserter:5 | iron-plate 119/20 | total 119/20 | needed 119/20 | hand 16",
+    "inserter:8 | copper-cable 119/20 | total 119/20 | needed 119/20 | hand 16",
+    "inserter:9 | copper-cable 119/20 | total 119/20 | needed 119/20 | hand 16",
+    "inserter:10 | copper-cable 119/20 | total 119/20 | needed 119/20 | hand 16"
+  ],
+  "swings 5/2": [
+    "inserter:1 | processing-unit 5/2 | total 5/2 | hand 16",
+    "inserter:12 | electronic-circuit 55/16 | total 55/16 | hand 16",
+    "inserter:2 | advanced-circuit 5/4 | total 5/4 | needed 5/4 | hand 16",
+    "inserter:3 | electronic-circuit 25/4 | total 25/4 | needed 25/4 | hand 16",
+    "inserter:4 | electronic-circuit 25/4 | total 25/4 | needed 25/4 | hand 16",
+    "inserter:6 | electronic-circuit 10/11, plastic-bar 10/11 | total 20/11 | needed 20/11 | hand 16",
+    "inserter:7 | copper-cable 20/11 | total 20/11 | needed 20/11 | hand 16",
+    "inserter:11 | copper-plate 1843/484 | total 1843/484 | needed 1843/484 | hand 16",
+    "inserter:5 | iron-plate 51/8 | total 51/8 | needed 51/8 | hand 16",
+    "inserter:8 | copper-cable 51/8 | total 51/8 | needed 51/8 | hand 16",
+    "inserter:9 | copper-cable 51/8 | total 51/8 | needed 51/8 | hand 16",
+    "inserter:10 | copper-cable 51/8 | total 51/8 | needed 51/8 | hand 16"
+  ]
+}

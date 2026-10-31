@@ -1,0 +1,68 @@
+{
+  "sample": "LOGISTIC_SCIENCE_INSERTER_CRAFTING",
+  "swings 1": [
+    "inserter:9 | inserter 1 | total 1 | hand 16",
+    "inserter:5 | iron-gear-wheel 1 | total 1 | needed 1 | hand 16",
+    "inserter:6 | iron-plate 1/2 | total 1/2 | needed 1/2 | hand 16",
+    "inserter:7 | iron-plate 1/2 | total 1/2 | needed 1/2 | hand 16",
+    "inserter:8 | electronic-circuit 1 | total 1 | needed 1 | hand 16",
+    "inserter:10 | iron-plate 1/2 | total 1/2 | needed 1/2 | hand 16",
+    "inserter:11 | iron-plate 1/2 | total 1/2 | needed 1/2 | hand 16",
+    "inserter:3 | iron-ore 1/3 | total 1/3 | needed 1/3 | hand 16",
+    "inserter:4 | iron-ore 1/3 | total 1/3 | needed 1/3 | hand 16",
+    "inserter:1 | iron-ore 1/3 | total 1/3 | needed 1/3 | hand 16",
+    "inserter:2 | iron-ore 1/3 | total 1/3 | needed 1/3 | hand 16"
+  ],
+  "swings 2": [
+    "inserter:9 | inserter 2 | total 2 | hand 16",
+    "inserter:5 | iron-gear-wheel 2 | total 2 | needed 2 | hand 16",
+    "inserter:6 | iron-plate 1 | total 1 | needed 1 | hand 16",
+    "inserter:7 | iron-plate 1 | total 1 | needed 1 | hand 16",
+    "inserter:8 | electronic-circuit 2 | total 2 | needed 2 | hand 16",
+    "inserter:10 | iron-plate 1 | total 1 | needed 1 | hand 16",
+    "inserter:11 | iron-plate 1 | total 1 | needed 1 | hand 16",
+    "inserter:3 | iron-ore 2/3 | total 2/3 | needed 2/3 | hand 16",
+    "inserter:4 | iron-ore 2/3 | total 2/3 | needed 2/3 | hand 16",
+    "inserter:1 | iron-ore 2/3 | total 2/3 | needed 2/3 | hand 16",
+    "inserter:2 | iron-ore 2/3 | total 2/3 | needed 2/3 | hand 16"
+  ],
+  "swings 3": [
+    "inserter:9 | inserter 3 | total 3 | hand 16",
+    "inserter:5 | iron-gear-wheel 3 | total 3 | needed 3 | hand 16",
+    "inserter:6 | iron-plate 3/2 | total 3/2 | needed 3/2 | hand 16",
+    "inserter:7 | iron-plate 3/2 | total 3/2 | needed 3/2 | hand 16",
+    "inserter:8 | electronic-circuit 3 | total 3 | needed 3 | hand 16",
+    "inserter:10 | iron-plate 3/2 | total 3/2 | needed 3/2 | hand 16",
+    "inserter:11 | iron-plate 3/2 | total 3/2 | needed 3/2 | hand 16",
+    "inserter:3 | iron-ore 1 | total 1 | needed 1 | hand 16",
+    "inserter:4 | iron-ore 1 | total 1 | needed 1 | hand 16",
+    "inserter:1 | iron-ore 1 | total 1 | needed 1 | hand 16",
+    "inserter:2 | iron-ore 1 | total 1 | needed 1 | hand 16"
+  ],
+  "swings 7/3": [
+    "inserter:9 | inserter 7/3 | total 7/3 | hand 16",
+    "inserter:5 | iron-gear-wheel 7/3 | total 7/3 | needed 7/3 | hand 16",
+    "inserter:6 | iron-plate 7/6 | total 7/6 | needed 7/6 | hand 16",
+    "inserter:7 | iron-plate 7/6 | total 7/6 | needed 7/6 | hand 16",
+    "inserter:8 | electronic-circuit 7/3 | total 7/3 | needed 7/3 | hand 16",
+    "inserter:10 | iron-plate 7/6 | total 7/6 | needed 7/6 | hand 16",
+    "inserter:11 | iron-plate 7/6 | total 7/6 | needed 7/6 | hand 16",
+    "inserter:3 | iron-ore 7/9 | total 7/9 | needed 7/9 | hand 16",
+    "inserter:4 | iron-ore 7/9 | total 7/9 | needed 7/9 | hand 16",
+    "inserter:1 | iron-ore 7/9 | total 7/9 | needed 7/9 | hand 16",
+    "inserter:2 | iron-ore 7/9 | total 7/9 | needed 7/9 | hand 16"
+  ],
+  "swings 5/2": [
+    "inserter:9 | inserter 5/2 | total 5/2 | hand 16",
+    "inserter:5 | iron-gear-wheel 5/2 | total 5/2 | needed 5/2 | hand 16",
+    "inserter:6 | iron-plate 5/4 | total 5/4 | needed 5/4 | hand 16",
+    "inserter:7 | iron-plate 5/4 | total 5/4 | needed 5/4 | hand 16",
+    "inserter:8 | electronic-circuit 5/2 | total 5/2 | needed 5/2 | hand 16",
+    "inserter:10 | iron-plate 5/4 | total 5/4 | needed 5/4 | hand 16",
+    "inserter:11 | iron-plate 5/4 | total 5/4 | needed 5/4 | hand 16",
+    "inserter:3 | iron-ore 5/6 | total 5/6 | needed 5/6 | hand 16",
+    "inserter:4 | iron-ore 5/6 | total 5/6 | needed 5/6 | hand 16",
+    "inserter:1 | iron-ore 5/6 | total 5/6 | needed 5/6 | hand 16",
+    "inserter:2 | iron-ore 5/6 | total 5/6 | needed 5/6 | hand 16"
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "sample": "MILITARY_SCIENCE",
+  "swings 1": [
+    "inserter:1 | military-science-pack 1 | total 1 | hand 16",
+    "inserter:2 | grenade 1/4 | total 1/4 | needed 1/4 | hand 16",
+    "inserter:3 | piercing-rounds-magazine 1/4, stone-wall 1/2 | total 3/4 | needed 3/4 | hand 16",
+    "inserter:4 | coal 5/4 | total 5/4 | needed 5/4 | hand 16",
+    "inserter:5 | iron-plate 5/4 | total 5/4 | needed 5/4 | hand 16",
+    "inserter:6 | coal 5/4 | total 5/4 | needed 5/4 | hand 16"
+  ],
+  "swings 2": [
+    "inserter:1 | military-science-pack 2 | total 2 | hand 16",
+    "inserter:2 | grenade 1/2 | total 1/2 | needed 1/2 | hand 16",
+    "inserter:3 | piercing-rounds-magazine 1/2, stone-wall 1 | total 3/2 | needed 3/2 | hand 16",
+    "inserter:4 | coal 5/2 | total 5/2 | needed 5/2 | hand 16",
+    "inserter:5 | iron-plate 5/2 | total 5/2 | needed 5/2 | hand 16",
+    "inserter:6 | coal 5/2 | total 5/2 | needed 5/2 | hand 16"
+  ],
+  "swings 3": [
+    "inserter:1 | military-science-pack 3 | total 3 | hand 16",
+    "inserter:2 | grenade 3/4 | total 3/4 | needed 3/4 | hand 16",
+    "inserter:3 | piercing-rounds-magazine 3/4, stone-wall 3/2 | total 9/4 | needed 9/4 | hand 16",
+    "inserter:4 | coal 15/4 | total 15/4 | needed 15/4 | hand 16",
+    "inserter:5 | iron-plate 15/4 | total 15/4 | needed 15/4 | hand 16",
+    "inserter:6 | coal 15/4 | total 15/4 | needed 15/4 | hand 16"
+  ],
+  "swings 7/3": [
+    "inserter:1 | military-science-pack 7/3 | total 7/3 | hand 16",
+    "inserter:2 | grenade 7/12 | total 7/12 | needed 7/12 | hand 16",
+    "inserter:3 | piercing-rounds-magazine 7/12, stone-wall 7/6 | total 7/4 | needed 7/4 | hand 16",
+    "inserter:4 | coal 35/12 | total 35/12 | needed 35/12 | hand 16",
+    "inserter:5 | iron-plate 35/12 | total 35/12 | needed 35/12 | hand 16",
+    "inserter:6 | coal 35/12 | total 35/12 | needed 35/12 | hand 16"
+  ],
+  "swings 5/2": [
+    "inserter:1 | military-science-pack 5/2 | total 5/2 | hand 16",
+    "inserter:2 | grenade 5/8 | total 5/8 | needed 5/8 | hand 16",
+    "inserter:3 | piercing-rounds-magazine 5/8, stone-wall 5/4 | total 15/8 | needed 15/8 | hand 16",
+    "inserter:4 | coal 25/8 | total 25/8 | needed 25/8 | hand 16",
+    "inserter:5 | iron-plate 25/8 | total 25/8 | needed 25/8 | hand 16",
+    "inserter:6 | coal 25/8 | total 25/8 | needed 25/8 | hand 16"
+  ]
+}

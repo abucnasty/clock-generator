@@ -1,0 +1,73 @@
+{
+  "sample": "AGRICULTURAL_SCIENCE",
+  "swings 1": [
+    "inserter:12 | agricultural-science-pack 1 | total 1 | hand 16",
+    "inserter:9 | pentapod-egg 1/5 | total 1/5 | needed 1/5 | hand 16",
+    "inserter:10 | pentapod-egg 1/5 | total 1/5 | needed 1/5 | hand 16",
+    "inserter:11 | bioflux 2/5, nutrients 1/5 | total 3/5 | needed 289/625 | hand 16",
+    "inserter:3 | nutrients 7/5 | total 7/5 | needed 7663/6250 | hand 16",
+    "inserter:4 | nutrients 7/5 | total 7/5 | needed 7663/6250 | hand 16",
+    "inserter:5 | pentapod-egg 2/25 | total 2/25 | needed 2/25 | hand 16",
+    "inserter:1 | nutrients 1/25, bioflux 4/25 | total 1/5 | needed 1256732/9765625 | hand 16",
+    "inserter:6 | nutrients 7/5 | total 7/5 | needed 7663/6250 | hand 16",
+    "inserter:7 | nutrients 7/5 | total 7/5 | needed 7663/6250 | hand 16",
+    "inserter:8 | pentapod-egg 2/25 | total 2/25 | needed 2/25 | hand 16",
+    "inserter:2 | nutrients 1/25, bioflux 4/25 | total 1/5 | needed 1256732/9765625 | hand 16"
+  ],
+  "swings 2": [
+    "inserter:12 | agricultural-science-pack 2 | total 2 | hand 16",
+    "inserter:9 | pentapod-egg 2/5 | total 2/5 | needed 2/5 | hand 16",
+    "inserter:10 | pentapod-egg 2/5 | total 2/5 | needed 2/5 | hand 16",
+    "inserter:11 | bioflux 4/5, nutrients 1/5 | total 1 | needed 578/625 | hand 16",
+    "inserter:3 | nutrients 13/5 | total 13/5 | needed 7663/3125 | hand 16",
+    "inserter:4 | nutrients 13/5 | total 13/5 | needed 7663/3125 | hand 16",
+    "inserter:5 | pentapod-egg 4/25 | total 4/25 | needed 4/25 | hand 16",
+    "inserter:1 | nutrients 1/25, bioflux 7/25 | total 8/25 | needed 2513464/9765625 | hand 16",
+    "inserter:6 | nutrients 13/5 | total 13/5 | needed 7663/3125 | hand 16",
+    "inserter:7 | nutrients 13/5 | total 13/5 | needed 7663/3125 | hand 16",
+    "inserter:8 | pentapod-egg 4/25 | total 4/25 | needed 4/25 | hand 16",
+    "inserter:2 | nutrients 1/25, bioflux 7/25 | total 8/25 | needed 2513464/9765625 | hand 16"
+  ],
+  "swings 3": [
+    "inserter:12 | agricultural-science-pack 3 | total 3 | hand 16",
+    "inserter:9 | pentapod-egg 3/5 | total 3/5 | needed 3/5 | hand 16",
+    "inserter:10 | pentapod-egg 3/5 | total 3/5 | needed 3/5 | hand 16",
+    "inserter:11 | bioflux 6/5, nutrients 1/5 | total 7/5 | needed 867/625 | hand 16",
+    "inserter:3 | nutrients 19/5 | total 19/5 | needed 22989/6250 | hand 16",
+    "inserter:4 | nutrients 19/5 | total 19/5 | needed 22989/6250 | hand 16",
+    "inserter:5 | pentapod-egg 6/25 | total 6/25 | needed 6/25 | hand 16",
+    "inserter:1 | nutrients 1/25, bioflux 2/5 | total 11/25 | needed 3770196/9765625 | hand 16",
+    "inserter:6 | nutrients 19/5 | total 19/5 | needed 22989/6250 | hand 16",
+    "inserter:7 | nutrients 19/5 | total 19/5 | needed 22989/6250 | hand 16",
+    "inserter:8 | pentapod-egg 6/25 | total 6/25 | needed 6/25 | hand 16",
+    "inserter:2 | nutrients 1/25, bioflux 2/5 | total 11/25 | needed 3770196/9765625 | hand 16"
+  ],
+  "swings 7/3": [
+    "inserter:12 | agricultural-science-pack 7/3 | total 7/3 | hand 16",
+    "inserter:9 | pentapod-egg 7/15 | total 7/15 | needed 7/15 | hand 16",
+    "inserter:10 | pentapod-egg 7/15 | total 7/15 | needed 7/15 | hand 16",
+    "inserter:11 | bioflux 14/15, nutrients 1/5 | total 17/15 | needed 2023/1875 | hand 16",
+    "inserter:3 | nutrients 3 | total 3 | needed 53641/18750 | hand 16",
+    "inserter:4 | nutrients 3 | total 3 | needed 53641/18750 | hand 16",
+    "inserter:5 | pentapod-egg 14/75 | total 14/75 | needed 14/75 | hand 16",
+    "inserter:1 | nutrients 1/25, bioflux 8/25 | total 9/25 | needed 8797124/29296875 | hand 16",
+    "inserter:6 | nutrients 3 | total 3 | needed 53641/18750 | hand 16",
+    "inserter:7 | nutrients 3 | total 3 | needed 53641/18750 | hand 16",
+    "inserter:8 | pentapod-egg 14/75 | total 14/75 | needed 14/75 | hand 16",
+    "inserter:2 | nutrients 1/25, bioflux 8/25 | total 9/25 | needed 8797124/29296875 | hand 16"
+  ],
+  "swings 5/2": [
+    "inserter:12 | agricultural-science-pack 5/2 | total 5/2 | hand 16",
+    "inserter:9 | pentapod-egg 1/2 | total 1/2 | needed 1/2 | hand 16",
+    "inserter:10 | pentapod-egg 1/2 | total 1/2 | needed 1/2 | hand 16",
+    "inserter:11 | bioflux 1, nutrients 1 | total 2 | needed 289/250 | hand 16",
+    "inserter:3 | nutrients 4 | total 4 | needed 7663/2500 | hand 16",
+    "inserter:4 | nutrients 4 | total 4 | needed 7663/2500 | hand 16",
+    "inserter:5 | pentapod-egg 1/5 | total 1/5 | needed 1/5 | hand 16",
+    "inserter:1 | nutrients 1/10, bioflux 2/5 | total 1/2 | needed 628366/1953125 | hand 16",
+    "inserter:6 | nutrients 4 | total 4 | needed 7663/2500 | hand 16",
+    "inserter:7 | nutrients 4 | total 4 | needed 7663/2500 | hand 16",
+    "inserter:8 | pentapod-egg 1/5 | total 1/5 | needed 1/5 | hand 16",
+    "inserter:2 | nutrients 1/10, bioflux 2/5 | total 1/2 | needed 628366/1953125 | hand 16"
+  ]
+}
