@@ -3,11 +3,11 @@
   "cases": {
     "ore-voider-exact-speed": {
       "recorded": {
-        "pr": 0,
-        "commit": "b3ec2520",
-        "frozen_head": "b3ec2520",
-        "note": "recorded on the engine of b3ec2520 with this probe before it was committed (the same figures as a run on 4305137e); pr is set when the PR is opened",
-        "clock_sha256": "719cfc482830f08461177b8cd086e39d44271fdf480c4767780adfc0a7d90d61",
+        "pr": 524,
+        "commit": "0d3507f4",
+        "frozen_head": "0d3507f4",
+        "note": "the game was short once in the hour's backlog phase, the same in three runs: period 27 after the backlog drained brought in 896 of 960 ore, so 385 of 386 periods were at the target",
+        "clock_sha256": "4a66351f641352564c08e703842ac447f91447e055997427b51f86b975b8c5e2",
         "clock_basis": "capture"
       },
       "native": {
@@ -16,35 +16,35 @@
         "period": 144,
         "expected": 960,
         "clock": {
-          "id": "even-hands",
+          "id": "planned-belt-slack",
           "period": 144,
           "expected": 960,
           "verdict": "stable",
-          "wake_ups_per_minute": 402.7972027972028,
-          "taker_wake_ups_per_minute": 402.7972027972028
+          "wake_ups_per_minute": 306.3058157393509,
+          "taker_wake_ups_per_minute": 409.2807424593968
         },
         "baseline": {
           "periods": 1500,
-          "fresh_mean": 960,
-          "destroyed_mean": 960.022,
+          "fresh_mean": 959.8293333333334,
+          "destroyed_mean": 959.8426666666667,
           "range": 1.2000000000000002,
-          "destroyed_per_second": 400.00916666666666,
-          "crafts": 1920021,
-          "placed": 479988,
-          "returned_share": 0.24999101572326551,
-          "returned_range": 0.0009374948730889318,
-          "car_max": 74,
+          "destroyed_per_second": 399.93444444444447,
+          "crafts": 1919680,
+          "placed": 479916,
+          "returned_share": 0.24999791631938656,
+          "returned_range": 0.0009375781347669816,
+          "car_max": 44,
           "car_capacity": 4000,
           "full_ticks": 0,
           "recycler_status": {
-            "working": 210702,
-            "item_ingredient_shortage": 447,
-            "no_ingredients": 4851
+            "working": 210857,
+            "item_ingredient_shortage": 1741,
+            "no_ingredients": 3402
           },
           "result_after_tick": {
             "0": 216000
           },
-          "taker_wake_ups_per_minute": 355.48333333333335
+          "taker_wake_ups_per_minute": 192.38333333333333
         },
         "cut": {
           "during": [
@@ -74,70 +74,38 @@
             960
           ],
           "first_back": 0,
-          "car_after": 30
+          "car_after": 16
         },
         "backlog": {
           "inserted": 2000,
-          "periods_to_drain": 46,
+          "periods_to_drain": 14,
           "fresh_while_draining": [
-            960,
-            896,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960
+            832,
+            832,
+            832,
+            832,
+            832,
+            832,
+            832,
+            832,
+            832,
+            832,
+            832,
+            832,
+            832,
+            832
           ],
           "after": {
-            "periods": 354,
-            "at_target": 354
+            "periods": 386,
+            "at_target": 385
           }
         },
         "blocked_input": {
-          "started": 336001,
-          "filled": 3974,
-          "stopped": 336031,
+          "started": 335997,
+          "filled": 3966,
+          "stopped": 336023,
           "result_waiting": 50,
-          "source_before": 30,
+          "source_before": 60,
           "source_max": 0,
           "fresh_after": 0,
           "status": "waiting_for_space_in_destination",
@@ -149,11 +117,15 @@
         "expected": 960,
         "verdict": "stable",
         "selection": {
-          "id": "even-hands",
+          "id": "planned-belt-slack",
           "holds": true,
           "rate": 400,
           "supply": null
         },
+        "clock_sha256": "4a66351f641352564c08e703842ac447f91447e055997427b51f86b975b8c5e2"
+      },
+      "previous": {
+        "id": "even-hands",
         "clock_sha256": "719cfc482830f08461177b8cd086e39d44271fdf480c4767780adfc0a7d90d61"
       }
     },
