@@ -10,6 +10,9 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 
 ## [0.26.0] - Unreleased
 
+### Changed
+- When no clock holds the target rate, a stable clock that runs over it is picked before an unstable one nearer to it, and the page says how far over it runs.
+
 ### Removed
 - All results at once is no longer offered for a recycler's rare results: Results in turn, with fewer wake-ups, stays.
 - A clock with a subtick clock is no longer also listed rounded down to whole ticks.

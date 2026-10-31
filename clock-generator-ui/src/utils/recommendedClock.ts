@@ -41,7 +41,8 @@ export const RECOMMENDED_COPY = {
         'The clock picked for you is the one that holds the rate and recovers with the fewest wake-ups; on a build '
             + 'with a deadlock risk, the one '
             + 'with the fewest wake-ups of the clocks that hold the rate. If clocks tie, the one with fewer wake '
-            + 'windows. If none qualifies, the one that runs nearest to the target rate. On a build with a loop of machines, '
+            + 'windows. If none qualifies, the stable clock that runs nearest over the target rate; if there is none, the one '
+            + 'that runs nearest to the target rate. On a build with a loop of machines, '
             + 'whose wake-ups depend on where its clock is when the build starts, their average over 12 start points is compared.',
         'A clock made for a moving belt keeps each belt inserter\'s wake window open a few ticks longer (belt slack). '
             + 'A clock made without it is only picked when no clock for a moving belt holds the rate. If you say your '
@@ -91,6 +92,8 @@ export const RECOMMENDED_COPY = {
     nearest: ' This one runs nearest to it.',
     nearestAt: (itsRate: string) => ` This one runs nearest to it, at ${itsRate}/s.`,
     nearestHolds: ' Of the equally near clocks, it is the one that holds its output from the modeled cold start.',
+    stableOver: (itsRate: string, percent: string) => ` This one is stable and runs over it, at ${itsRate}/s (${percent} over): `
+        + 'a stable clock over the target is picked before a clock nearer to it that is unstable or runs under it.',
 };
 
 /** "1 other clock for a moving belt ties" / "2 other clocks tie" */
@@ -100,6 +103,9 @@ function othersText(others: number, kind: string): string {
 
 /** As the rate warning prints a rate: 240, 12.5, 0.33 */
 const figure = (rate: number) => Number(rate.toFixed(2)).toString();
+
+/** A share as a percentage, as the engine's labels print it: "2.32%", "under 0.01%" */
+const percentOf = (share: number) => share * 100 < 0.005 ? 'under 0.01%' : `${Number((share * 100).toFixed(2))}%`;
 
 /** Wake-ups as the selection compares them: to a thousandth */
 const wakeUpsKey = (wakeUps: number | null) => wakeUps === null ? null : Math.round(wakeUps * 1000);
@@ -232,6 +238,10 @@ function nearestReason(alternatives: PickableClock[], pick: PickableClock, rate:
         return `No clock qualifies under the engine's selection rule. This one is assessed at ${figure(pick.assessment.items_per_second)}/s and reaches the target from only some sampled starts. See Model and tested starts.`;
     }
     const lead = RECOMMENDED_COPY.noneHolds(rate, deadlock);
+    if (ranking.stable_above_target === true) {
+        const target = pick.assessment.items_per_second - ranking.rate_off_target;
+        return lead + RECOMMENDED_COPY.stableOver(figure(pick.assessment.items_per_second), percentOf(ranking.rate_off_target / target));
+    }
     const counted = ranking.wake_ups_per_minute !== null;
     const near = offTargetKey(ranking.rate_off_target);
     if (near === 0) {

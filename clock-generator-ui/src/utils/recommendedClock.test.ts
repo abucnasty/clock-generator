@@ -204,6 +204,9 @@ describe('recommendationReason', () => {
             ['does not print the same rate twice when the pick is off by less than the printed figure', [short('close', 0.002)], none + nearest],
             ['says no clock holds the rate on a build with a deadlock risk', [short('near', -0.5, false, { deadlock: true })],
                 'No clock holds 240/s.' + nearestAt('239.5')],
+            ['says a stable clock over the target is picked before an unstable one nearer to it, and how far over',
+                [short('near', -0.5, false), short('over', 6, true, { verdict: 'stable', stable_above_target: true })],
+                none + RECOMMENDED_COPY.stableOver('246', '2.5%')],
         ])('%s', says);
     });
 

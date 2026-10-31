@@ -56,6 +56,14 @@ describe('isBelowTarget', () => {
     });
 });
 
+describe('a stable clock over the target, picked where none meets it', () => {
+    it('says how far over the target it runs', () => {
+        const result = clock(82.286, 1.86725, false);
+        result.ranking.stable_above_target = true;
+        expect(rateWarningOf(result)).toBe('This clock runs over the target: 82.29/s for the 80.42/s requested, 2.32% over, in the simulator.');
+    });
+});
+
 describe('numerical output and actual hold checks', () => {
     it('does not turn the observed above-target numerical mismatch into a failed hold check', () => {
         const result = clock(216.061381, 0.061381, false);

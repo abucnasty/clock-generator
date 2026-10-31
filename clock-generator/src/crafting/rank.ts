@@ -33,8 +33,16 @@ export interface ClockRanking {
      */
     runs_fast?: number;
     /**
+     * Set when the clock does not meet the target rate and is stable above it: it holds its expected output, gets back
+     * from every backpressure loss (on a build with a deadlock risk: holds it) and runs over the target, at its exact
+     * period. Where no clock meets the target rate, these come first, the nearest to it first: a stable clock over the
+     * target is selected before an unstable one nearer to it, and never one under it (decided 2026-10-28, Thaeln's
+     * cell 07: a stable clock 2.3% over before an unstable one 0.2% under).
+     */
+    stable_above_target?: boolean;
+    /**
      * Items per second the clock is above the target rate; negative when it is short of it. Where no clock meets
-     * the target rate, the one nearest to it is selected.
+     * the target rate and none is stable above it, the one nearest to it is selected.
      */
     rate_off_target: number;
     /**
@@ -98,10 +106,15 @@ export function rankingOf(clock: Omit<ClockAlternative, "ranking">, config: Conf
         && roundedRateAllowed({ runs_fast: rate_off_target / target, within_machines: clock.rounded.within_machines })
         ? rate_off_target / target : undefined;
     const meets_target_rate = counts_as_holding && (exact || runs_fast !== undefined);
+    // a clock rounded down that runs further over than a rounded clock may keeps the verdict of the exact period, which
+    // is not of the clock it is; a clock whose recovery could not be tried is not known to be stable
+    const stable_above_target = !meets_target_rate && counts_as_holding && rate_off_target > TARGET_RATE_TOLERANCE
+        && clock.rounded === undefined && (clock.deadlock_risks.length > 0 || !recoveryUntried(clock.assessment));
     return {
         meets_target_rate,
         recovery_untried: meets_target_rate && clock.deadlock_risks.length === 0 && recoveryUntried(clock.assessment),
         ...(meets_target_rate && runs_fast !== undefined && { runs_fast }),
+        ...(stable_above_target && { stable_above_target }),
         rate_off_target,
         holds_expected_output: clock.verdict !== "unstable",
         // with backed-up belts every clock goes without the slack, which is the choice
@@ -165,10 +178,12 @@ export function rankingWindowCount(
  * config asks for, so that the count of wake-ups never drops belt pickup slack on its own; then the fewest wake-ups a
  * minute (goal 2); then the fewest windows. Of equals the first listed is selected.
  *
- * Where none meets the target rate, the one whose rate is nearest to it comes first, above or below, whatever belt
- * it is made for: the build then runs as near to what was asked as any clock on offer gets it. Of two equally near,
- * the one that holds its expected output from the generator's start comes before one that does not. The rest of the
- * order only parts clocks at the same rate.
+ * Where none meets the target rate, those stable above it come first (`stable_above_target`), the nearest to it
+ * first: the build then runs at least at what was asked, on a clock that holds and recovers. Where none is either, the
+ * one whose rate is nearest to the target comes first, above or below, whatever belt it is made for: the build then
+ * runs as near to what was asked as any clock on offer gets it. Of two equally near, the one that holds its expected
+ * output from the generator's start comes before one that does not. The rest of the order only parts clocks at the
+ * same rate.
  */
 export function combineClockAlternativeRuns<T>(
     runs: (ClockAlternativeRun<T> | null)[],
@@ -189,8 +204,9 @@ export function combineClockAlternativeRuns<T>(
         const ranking = rankingOf(alternative);
         return [
             // a rounded clock meets goal 1 a little fast, after the exact ones; a clock whose recovery could not be tried is
-            // not known to meet it, after those that are and before the rest
-            ranking.meets_target_rate ? (ranking.recovery_untried ? 2 : ranking.runs_fast !== undefined ? 1 : 0) : 3,
+            // not known to meet it, after those that are; then the stable clocks over the target, before the rest
+            ranking.meets_target_rate ? (ranking.recovery_untried ? 2 : ranking.runs_fast !== undefined ? 1 : 0)
+                : ranking.stable_above_target === true ? 3 : 4,
             // to a thousandth of an item a second, as the wake-ups below
             ranking.meets_target_rate ? 0 : Math.round(Math.abs(ranking.rate_off_target) * 1000),
             ranking.meets_target_rate || ranking.holds_expected_output ? 0 : 1,
