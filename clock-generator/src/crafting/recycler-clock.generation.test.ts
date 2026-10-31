@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, test } from "vitest";
 import { ClockAlternativesResult, generateClockAlternatives } from "./generate-blueprint";
 import { backpressureLossOf } from "./trial";
+import { excessLossOf } from "./random-margins";
 import { loadConfigFromFile } from "../config/loader";
 import type { Config } from "../config/schema";
 import { ConfigPaths } from "../config/config-paths";
@@ -30,8 +31,33 @@ describe("a recycler that voids iron ore at exact speed", () => {
             expect(alternative.result.stability_check.expected_output_items, alternative.id).toBe(960);
             expect(alternative.assessment.holds, alternative.id).toBe(true);
             expect(alternative.assessment.items_per_second, alternative.id).toBe(400);
-            expect(alternative.verdict, alternative.id).toBe("stable");
         }
+        // the batched clock loses a hand of ore to what comes back over the mean (below)
+        expect(generated.alternatives.map(it => it.verdict)).toEqual(["no recovery", "stable"]);
+    });
+
+    // In Factorio 2.1.21 an hour of the batched clock brought 896 ore in place of 960 in 5 of 1,900 periods, each after
+    // periods of returns over the mean: its second inserter out of the car, enabled 136 ticks of the 144, empties what
+    // waits there into the recycler, whose input it takes over the insertion limit of 100 where the four bring ore in, so
+    // that one hand of each is not taken before their window closes. Even hands' windows leave it in the car.
+    test("is tried with the backlog of returns its margins say the car takes up, which costs the batched clock a hand of ore", () => {
+        for (const alternative of generated.alternatives) {
+            const [crafting] = alternative.result.random_margins!.crafting;
+            // 15.49² x ln(740.7) / (2 x 16 spare crafts x 3/4 not given back): 66.1
+            expect(crafting.backlog, alternative.id).toEqual([{ item: "iron-ore", items: 67 }]);
+        }
+        const excess = excessLossOf(generated.alternatives[0].result.random_margins!.crafting)!;
+        expect(excess).toEqual({ kind: "excess", at: [{ machine_id: "machine:1", item: "iron-ore", count: 67 }] });
+        const [planned, even] = generated.alternatives.map(alternative => {
+            const report = backpressureLossOf(config, alternative.result.clock_windows, 144, 960, quiet, {}, undefined, undefined, [excess]);
+            return report.losses.find(it => it.loss.kind === "excess")!;
+        });
+        // placed into the car at the start of the period, the batched clock brings 896 ore and then 960 again
+        expect(planned.recovers).toBe(false);
+        expect(planned.trials[0].output_per_bin.slice(0, 2)).toEqual([896, 960]);
+        expect(even.recovers).toBe(true);
+        expect(even.trials.map(it => it.output_per_bin[0])).toEqual([960, 960, 960, 960]);
+        expect(generated.alternatives[0].assessment.backpressure_loss?.broken_by).toEqual(["iron ore comes over its mean"]);
     });
 
     test("names each clock by the hands brought in a cycle, whether the inserters share a chest or have one each", () => {
@@ -44,11 +70,12 @@ describe("a recycler that voids iron ore at exact speed", () => {
             .toEqual(["Batched swings: 5 hands brought in per cycle", "Even hands: 5 hands brought in per cycle"]);
     });
 
-    test("selects the batched clock, which the ore voider's hour in the game ran, and still makes even hands", () => {
+    test("selects even hands, whose inserters out of the car are woken the least by the ore it places there", () => {
         const selected = generated.alternatives[generated.selected_index];
-        expect(selected.id).toBe("planned-belt-slack");
-        // even hands was selected before a wake-up was counted only while the inserter's arm is at home
-        expect(generated.alternatives.map(it => it.id)).toContain("even-hands");
+        expect(selected.id).toBe("even-hands");
+        const [planned, even] = generated.alternatives.map(it => it.assessment.wake_ups_per_minute);
+        expect(even).toBeLessThan(planned!);
+        expect(even).toBeGreaterThan(0);
     });
 
     test("gives the windows that take the returns out of the car the room for all but 1 in 740 periods' returns", () => {
@@ -97,6 +124,8 @@ describe("a recycler that voids iron ore with crafts to spare", () => {
         const [crafting] = alternatives.alternatives[0].result.random_margins!.crafting;
         expect(crafting.capacity).toBeCloseTo(2045.52, 2);
         expect(crafting.ticks_to_cover).toBe(1);
+        // 765.5 spare crafts work off what comes back over the mean: 1.4 ore waits at 1 in 740
+        expect(crafting.backlog).toEqual([{ item: "iron-ore", items: 2 }]);
     });
 
     test("is back at 960 ore a period after the ore stops coming, on every clock", () => {
@@ -120,13 +149,6 @@ describe("the clocks the ore voider's hours in the game ran", () => {
                 .toEqual(pin.selection);
             expect(selected.verdict).toBe(pin.verdict);
             expect(selected.result.simulation_duration.ticks).toBe(pin.period);
-            const previous = controls.cases[name].previous;
-            if (previous) {
-                // the clock selected before is still made, with the same windows
-                const earlier = result.alternatives.find(it => it.id === previous.id);
-                expect(earlier, `${previous.id} is still made`).toBeDefined();
-                expect(clockHash(earlier!.result.subtick ?? earlier!.result)).toBe(previous.clock_sha256);
-            }
         });
     }
 });

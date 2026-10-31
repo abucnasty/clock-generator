@@ -11,7 +11,7 @@ import { StockDetail, StockRecording } from "./machine-stock";
 import { WakeUps, wakeUpsOfStock } from "./wake-ups";
 import { InserterCounters, inserterEnds, wakeUpsAndCountersOfStock } from "./inserter-counters";
 import { judgeLongRun, judgeProvenCycle, LONG_RUN_SETTLE_SHARE, longRunPeriods } from "./long-run";
-import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, LATE_AFTER_PERIODS, LossOutcome, lossLimitOf, MAX_RECOVERY_PERIODS, reportOf, verdictOf } from "./backpressure-loss";
+import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, ExcessLoss, LATE_AFTER_PERIODS, LossOutcome, lossLimitOf, MAX_RECOVERY_PERIODS, reportOf, verdictOf } from "./backpressure-loss";
 import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForPeriod, withBeltPickupSlack } from "./clock";
 import { canonicalKey, currentRunMemo } from "./plan/run-memo";
 import { BlueprintGenerationResult, LCM_STABILITY_TOLERANCE, MAX_SIMULATION_TICKS, RunOptions, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, planRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
@@ -27,6 +27,7 @@ import type { FullOutputChest } from "./full-output-chests";
 import { ExportShortfall, exportShortfallOfBins, exportShortfallsOfRun, exportedItemsOf } from "./export-delivery";
 import { ResultsTaken, resultsTakenOf } from "./results-taken";
 import { ResultWindowsPlan, resultLossTrialOf } from "./result-windows";
+import { excessLossOf } from "./random-margins";
 import { TakerOrder, takerOrderName, takerOrdersToCheck } from "../simulation/competing-takers";
 import { verificationPlanningConfigOf, verificationTerminalCountOf } from "./primitive-grouped-policy";
 import { CIRCUIT_LATENCY_TICKS } from "../common/rule-constants";
@@ -525,6 +526,8 @@ export function backpressureLossOf(
     on_loss?: (loss: BackpressureLoss, index: number, total: number) => void,
     /** Options of one loss over `options`, where a loss is tried in a way of its own (see resultLossOptionsOf) */
     options_for?: (loss: BackpressureLoss) => Partial<BackpressureLossOptions>,
+    /** The excesses of results that come by chance the clock is tried with too, after the losses (randomExcessLossesOf) */
+    excesses: readonly ExcessLoss[] = [],
 ): BackpressureLossReport {
     const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
@@ -538,7 +541,7 @@ export function backpressureLossOf(
     }).backpressure_loss!;
     const phase_starts = [...movingPickupPhaseStarts(config)];
     const registry = createEntityRegistryFromConfig(config);
-    const losses = backpressureLossesOf(registry, config.target_output.recipe);
+    const losses: BackpressureLoss[] = [...backpressureLossesOf(registry, config.target_output.recipe), ...excesses];
     // a build whose items spoil is tried with losses shorter than its loss limit only
     const loss_limit = lossLimitOf(registry);
     const tried = (loss: BackpressureLoss, index: number): LossOutcome => {
@@ -1462,10 +1465,12 @@ function triedBackpressureLoss(
     // the config the clock was planned on has its output swings per cycle
     const config = verificationPlanningConfigOf(planned_on, result);
     const quiet: Logger = { log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } };
+    // a build with results that come by chance is tried with the backlog of them its margins say it takes up, too
+    const excess = result.random_margins === undefined ? null : excessLossOf(result.random_margins.crafting);
     try {
         return { backpressure_loss: verdictOf(backpressureLossOf(config, result.clock_windows, result.simulation_duration.ticks,
             result.stability_check.expected_output_items, quiet, {}, (_loss, index, total) => report?.(`Trying backpressure loss ${index + 1}/${total}`),
-            result.result_windows === undefined ? undefined : resultLossOptionsOf(result.result_windows.plans))) };
+            result.result_windows === undefined ? undefined : resultLossOptionsOf(result.result_windows.plans), excess === null ? [] : [excess])) };
     } catch (error) {
         if (errors === "throw") throw error;
         const reason = error instanceof Error ? error.message : String(error);
@@ -1630,5 +1635,8 @@ export function backpressureLossKey(planned_on: Config, result: BlueprintGenerat
     const cycles_set_nothing = Number.isInteger(period)
         && unplannedInserterClocks(createEntityRegistryFromConfig(verification_config), period, new Map(), new Map(), alwaysEnabledByConfig(verification_config)).size === 0;
     const config = cycles_set_nothing ? { ...verification_config, overrides: { ...verification_config.overrides, lcm: undefined } } : verification_config;
-    return canonicalVerificationJson({ config, period, windows: result.clock_windows, expected_output: result.stability_check.expected_output_items });
+    // the excess trial is of the margins: two clocks of the same windows are tried alike only with the same one
+    const excess = result.random_margins === undefined ? null : excessLossOf(result.random_margins.crafting);
+    return canonicalVerificationJson({ config, period, windows: result.clock_windows, expected_output: result.stability_check.expected_output_items,
+        ...(excess !== null && { excess }) });
 }
