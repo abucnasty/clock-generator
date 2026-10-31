@@ -1,6 +1,8 @@
-import { WakeUps, wakeUps, WatchedMachine, WatchingInserter } from "../crafting/wake-ups";
+import type { Config } from "../config";
+import { returnTicksOf, WakeUps, wakeUps, WatchedMachine, WatchingInserter } from "../crafting/wake-ups";
 import { TrueStartStanding, trueStartStandingOf } from "../crafting/true-start-standing";
-import { EntityId } from "../entities";
+import { Entity, EntityId } from "../entities";
+import { createEntityRegistryFromConfig } from "../crafting/sequence/simulation-context";
 import { EntityMatch } from "./entity-matching";
 import { expandChangeList, Recording } from "./recording";
 import { trueStartsOfRecordedMachine } from "./recording-true-starts";
@@ -15,6 +17,9 @@ import { trueStartsOfRecordedMachine } from "./recording-true-starts";
  * and from the series' method in a recording of the game (recording-true-starts.ts); `machine_standings` says which,
  * and how far the method is checked on that machine (true-start-standing.ts). A machine whose starts cannot be read
  * alarms its sink list with its finishes and payouts, as every machine did before 0.13.0.
+ *
+ * With the config and a match, an inserter is not on a list while its arm swings back from a drop that emptied its hand
+ * (`returnTicksOf` of the config's inserter, read off the recorded hand), as in the simulator's own count.
  */
 export interface RecordingWakeUps extends WakeUps {
     /** For each machine counted: "simulator", the method's standing, or "finishes" where no true starts could be read */
@@ -26,7 +31,11 @@ export function wakeUpsOfRecording(
     match?: EntityMatch,
     from_sample: number = 0,
     to_sample: number = recording.sample_count,
+    config?: Config,
 ): RecordingWakeUps {
+    const return_ticks = match === undefined || config === undefined ? new Map<string, number>()
+        : new Map(createEntityRegistryFromConfig(structuredClone(config)).getAll().filter(Entity.isInserter)
+            .map(inserter => [inserter.entity_id.id, returnTicksOf(inserter.animation.rotation.ticks)] as const));
     const machineId = (recorded_id: number): string | null => {
         const id = match ? match.machines.get(recorded_id) : recorded_id;
         return id === undefined ? null : EntityId.forMachine(id).id;
@@ -54,6 +63,7 @@ export function wakeUpsOfRecording(
             source_machine_id: inserter.source.type === "machine" ? machineId(inserter.source.id) : null,
             sink_machine_id: inserter.sink.type === "machine" ? machineId(inserter.sink.id) : null,
             states: expandChangeList(inserter.samples.status, recording.sample_count, ""),
+            ...(return_ticks.has(EntityId.forInserter(id).id) && { held: inserter.samples.held_count, return_ticks: return_ticks.get(EntityId.forInserter(id).id) }),
         }];
     });
     return { ...wakeUps(inserters, machines, from_sample, Math.min(to_sample, recording.sample_count)), machine_standings };

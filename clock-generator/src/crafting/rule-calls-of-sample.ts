@@ -10,7 +10,7 @@ import { ruleCount, RuleCountRun } from "./rule-count";
 import { ruleCountInputOfStock } from "./rule-count-stock";
 import { FREE_RUNNING_CHECK_TICKS, longRunPeriodsOf, LOOP_WINDOW_CHECK_TICKS, runClockOnBuild } from "./trial";
 import { LONG_RUN_SETTLE_SHARE } from "./long-run";
-import { wakeUpsOfStock } from "./wake-ups";
+import { returnTicksOf, wakeUpsOfStock } from "./wake-ups";
 import { Entity, EntityId } from "../entities";
 import { OpenRange } from "../data-types";
 
@@ -131,6 +131,7 @@ export function ruleCallsOfClock(config: Config, selected: ClockAlternative, log
         inserter_id: inserter.entity_id.id,
         source_machine_id: EntityId.isMachine(inserter.source.entity_id) ? inserter.source.entity_id.id : null,
         sink_machine_id: EntityId.isMachine(inserter.sink.entity_id) ? inserter.sink.entity_id.id : null,
+        return_ticks: returnTicksOf(inserter.animation.rotation.ticks),
     }));
     return {
         clock: { id: selected.id, label: selected.label, verdict: selected.verdict, period_ticks: period },

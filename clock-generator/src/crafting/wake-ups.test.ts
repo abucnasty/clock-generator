@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { wakeUps, WatchedMachine, WatchingInserter } from "./wake-ups";
+import { returnTicksOf, wakeUps, WatchedMachine, WatchingInserter } from "./wake-ups";
 
 const WORKING = "working";
 const SOURCE = "waiting_for_source_items";
@@ -108,6 +108,54 @@ describe("wakeUps", () => {
             const result = wakeUps([inserter(states)], [machine("machine:1", 6, [2, 4], [4])], 0, 6);
             expect(result.inserters[0].wake_ups_per_minute).toBe(2 * 3600 / 5);
         });
+    });
+});
+
+// cell 02's takers in the game (CELL02-MISS): grab, hold 4 ticks, drop, back 4 ticks later, "waiting for space" on the
+// 2nd to 4th tick of the return; a machine at their sink that starts a craft on almost every tick
+describe("the arm at home, since 0.26.0", () => {
+    const into = (states: string[], held: number[]) =>
+        inserter(states, { source_machine_id: null, sink_machine_id: "machine:2", held, return_ticks: returnTicksOf(3) });
+    const every_tick = (ticks: number) => Array.from({ length: ticks }, (_, tick) => tick);
+
+    it("is away for the drop tick and the turn back: the turn's ticks and one, 4 for the legendary stack inserter", () => {
+        expect(returnTicksOf(3)).toBe(4);
+    });
+
+    it("counts no wake-up on an arm swinging back from a drop that emptied its hand, whatever state the game shows", () => {
+        // the hand falls to empty in tick 4 and the arm turns back in 5 to 7; from 8 on it waits at home for space
+        const held = [16, 16, 16, 16, 0, 0, 0, 0, 0, 0, 0];
+        const states = [WORKING, WORKING, WORKING, WORKING, WORKING, SPACE, SPACE, SPACE, SPACE, SPACE, SPACE];
+        const result = wakeUps([into(states, held)], [machine("machine:2", 11, every_tick(11), every_tick(11))], 0, 11);
+        // shown waiting after ticks 5 to 9, so alarmed in 6 to 10: after 5 to 7 the arm is away, after 8 and 9 at home
+        expect(result.inserters[0].wake_ups_per_minute).toBe(2 * 3600 / 10);
+        expect(result.inserters[0].uncounted_per_minute).toEqual({ "arm away": 3 * 3600 / 10 });
+        expect(result.uncounted_per_minute).toEqual({ "arm away": 3 * 3600 / 10 });
+    });
+
+    it("counts the wake-up that makes a full hand drop: the arm waits at the machine before it", () => {
+        // waiting for space with a full hand after tick 2; the start in tick 3 lets it drop
+        const held = [16, 16, 16, 0, 0];
+        const states = [WORKING, WORKING, SPACE, WORKING, WORKING];
+        const result = wakeUps([into(states, held)], [machine("machine:2", 5, [3], [3])], 0, 5);
+        expect(result.inserters[0].wake_ups_per_minute).toBe(1 * 3600 / 4);
+        expect(result.inserters[0].uncounted_per_minute).toEqual({ "arm away": 0 });
+    });
+
+    it("counts a part hand dropped: the arm waits where it is", () => {
+        const held = [16, 16, 8, 8, 8, 8];
+        const states = [WORKING, WORKING, SPACE, SPACE, SPACE, SPACE];
+        const result = wakeUps([into(states, held)], [machine("machine:2", 6, every_tick(6), every_tick(6))], 0, 6);
+        expect(result.inserters[0].wake_ups_per_minute).toBe(3 * 3600 / 5);
+        expect(result.inserters[0].uncounted_per_minute).toEqual({ "arm away": 0 });
+    });
+
+    it("counts every waiting state as before without the hand or the turn", () => {
+        const held = [16, 16, 16, 16, 0, 0, 0, 0, 0, 0, 0];
+        const states = [WORKING, WORKING, WORKING, WORKING, WORKING, SPACE, SPACE, SPACE, SPACE, SPACE, SPACE];
+        const machines = [machine("machine:2", 11, every_tick(11), every_tick(11))];
+        const without = inserter(states, { source_machine_id: null, sink_machine_id: "machine:2", held });
+        expect(wakeUps([without], machines, 0, 11).inserters[0].wake_ups_per_minute).toBe(5 * 3600 / 10);
     });
 });
 

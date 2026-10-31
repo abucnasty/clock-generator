@@ -8,7 +8,7 @@ import { Duration, OpenRange } from "../data-types";
 import { Entity, EntityId, Inserter, Machine } from "../entities";
 import { Logger, defaultLogger } from "../common/logger";
 import { StockDetail, StockRecording } from "./machine-stock";
-import { InserterEnds, WakeUps, wakeUpsOfStock } from "./wake-ups";
+import { InserterEnds, returnTicksOf, WakeUps, wakeUpsOfStock } from "./wake-ups";
 import { judgeLongRun, judgeProvenCycle, LONG_RUN_SETTLE_SHARE, longRunPeriods } from "./long-run";
 import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, LATE_AFTER_PERIODS, LossOutcome, lossLimitOf, MAX_RECOVERY_PERIODS, reportOf, verdictOf } from "./backpressure-loss";
 import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForPeriod, withBeltPickupSlack } from "./clock";
@@ -606,6 +606,7 @@ function inserterEnds(config: Config): InserterEnds[] {
         source_machine_id: machineId(inserter.source.entity_id),
         sink_machine_id: machineId(inserter.sink.entity_id),
         ...(placers.has(inserter.source.entity_id.id) && { source_placer_id: placers.get(inserter.source.entity_id.id)! }),
+        return_ticks: returnTicksOf(inserter.animation.rotation.ticks),
     }));
 }
 
