@@ -26,6 +26,7 @@ import { shiftedSwingsClock } from "./candidates/shifted-swings";
 import { generateClockForConfig, generateClockWithSwingBackoff, terminalCountForAlternativePlanning } from "./generate-clock";
 import { primitiveGroupedOptionsSupported, verifiedPrimitiveGroupedClock } from "./candidates/verified-primitive-grouped";
 import { primitiveGroupedConfigSupported } from "./candidates/primitive-grouped-hands";
+import { MAX_OBSERVED_WINDOWS_PERIOD_TICKS, swingCountsListed } from "./planner/periods";
 import { SecondaryPlanningInvariantError, secondaryPlanningCountOf, withSecondaryPlanningProvenance, type SecondaryPlanningCount } from "./primitive-grouped-policy";
 import { BlueprintGenerationResult, GenerateClockOptions, SimulationStabilityCheck } from "./plan/plan-run";
 import { withRunMemo } from "./plan/run-memo";
@@ -102,12 +103,6 @@ export interface ClockAlternativeRun<T = ClockAlternative> {
     /** Runs of the same clock made with shared windows (see `SHARED_WINDOWS_NOTE`), listed after this run when it is */
     also?: ClockAlternativeRun<T>[];
 }
-
-/** Observed windows re-simulate the build hundreds of times; above this period (a high LCM) that takes minutes */
-const MAX_OBSERVED_WINDOWS_PERIOD_TICKS = 2400;
-
-/** Output swing counts above the planned one offered as alternatives, also when the plan backed off to a lower count */
-const EXTENDED_SWING_COUNTS = 3;
 
 /** What the remaining alternatives need from the first (batched swings) run */
 export interface ClockAlternativeContext {
@@ -446,14 +441,8 @@ function alternativeDefinitionsFor(
         { ...base_config, overrides: { ...base_config.overrides, terminal_swing_count: count } }, extra);
     // a forced count applies to every alternative
     const swings_forced = config.overrides?.terminal_swing_count !== undefined;
-    const lower_counts = swings_forced ? [] : Array.from({ length: Math.max(0, swings - 1) }, (_, i) => swings - 1 - i);
-    // the planned count only covers what a machine crafts before its output blocks; it keeps crafting while the
-    // output inserter takes hands, so longer cycles can work too, but the machine holds the planned count when a cycle's
-    // swings start: the farthest count is only tried as a multiple of it (the planned cycle repeated)
-    const planned = context.planned_swings ?? swings;
-    const higher_counts = swings_forced || context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? []
-        : Array.from({ length: planned + EXTENDED_SWING_COUNTS - swings }, (_, i) => swings + 1 + i)
-            .filter(count => count < planned + EXTENDED_SWING_COUNTS || (planned > 1 && count % planned === 0));
+    // the counts the build plan lists its main-period choices for (planner/periods.ts)
+    const { lower: lower_counts, higher: higher_counts } = swingCountsListed(swings, context.planned_swings ?? swings, swings_forced, context.period_ticks);
     // a target that counts an item destroyed is planned by arithmetic: its period and every inserter's hands are worked
     // out, not tried, so no other count or search is offered; even hands moves the same hands
     if (config.target_output.counts === "destroyed" && context.result_windows === true) {

@@ -1,0 +1,111 @@
+{
+  "schema": 1,
+  "sample": "UTILITY_SCIENCE",
+  "target": {
+    "item": "utility-science-pack",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 120,
+      "denominator": 7
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "belt:1/lane:1#low-density-structure",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:1/lane:2#flying-robot-frame",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:2/lane:1#low-density-structure",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:2/lane:2#processing-unit",
+      "kind": "nothing-drops-on"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:1",
+        "belt:3/lane:1#utility-science-pack"
+      ],
+      "edges": [
+        "inserter:1/flying-robot-frame",
+        "inserter:1/low-density-structure",
+        "inserter:2/low-density-structure",
+        "inserter:2/processing-unit",
+        "inserter:3/utility-science-pack"
+      ],
+      "periods": [
+        {"swings":3,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":168,"denominator":1},"cycles":4,"period_ticks":672,"kept":true},
+        {"swings":4,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":224,"denominator":1},"cycles":3,"period_ticks":672,"kept":true},
+        {"swings":5,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":280,"denominator":1},"cycles":12,"period_ticks":3360,"kept":true},
+        {"swings":6,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":336,"denominator":1},"cycles":2,"period_ticks":672,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":112,"denominator":1},"cycles":6,"period_ticks":672,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":56,"denominator":1},"cycles":12,"period_ticks":672,"kept":true},
+        {"swings":3,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":168,"denominator":1},"cycles":4,"period_ticks":672,"kept":true}
+      ],
+      "duty": [
+        {
+          "producer": "machine:utility-science-pack",
+          "members": [
+            "machine:1"
+          ],
+          "crafts_needed": {
+            "numerator": 20,
+            "denominator": 7
+          },
+          "crafts_capacity": {
+            "numerator": 4409,
+            "denominator": 1344
+          },
+          "duty": {
+            "numerator": 3840,
+            "denominator": 4409
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 3,
+    "fractional": false,
+    "listed_from": {
+      "swings": 3,
+      "planned": 3,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 672,
+      "exact": {
+        "numerator": 672,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 168,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 4
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 4,
+      "override_lcm": null,
+      "effective_lcm": 4
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

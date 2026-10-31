@@ -1,0 +1,148 @@
+{
+  "schema": 1,
+  "sample": "UTILITY_SCIENCE_DIRECT_INSERT_LDS_CHAIN_ALWAYS_ON",
+  "target": {
+    "item": "utility-science-pack",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 30,
+      "denominator": 1
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "belt:1/lane:1#processing-unit",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:1/lane:2#flying-robot-frame",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:2/lane:1#coal",
+      "kind": "nothing-drops-on"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:4",
+        "machine:3",
+        "machine:1",
+        "machine:2"
+      ],
+      "edges": [
+        "inserter:1/flying-robot-frame",
+        "inserter:1/processing-unit",
+        "inserter:2/utility-science-pack",
+        "inserter:3/utility-science-pack",
+        "inserter:4/flying-robot-frame",
+        "inserter:4/processing-unit",
+        "inserter:5/plastic-bar",
+        "inserter:6/low-density-structure",
+        "inserter:7/low-density-structure",
+        "inserter:8/coal"
+      ],
+      "periods": [
+        {"swings":3,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":192,"denominator":1},"cycles":2,"period_ticks":384,"kept":true},
+        {"swings":3,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":192,"denominator":1},"cycles":2,"period_ticks":384,"kept":true}
+      ],
+      "duty": [
+        {
+          "producer": "machine:utility-science-pack",
+          "members": [
+            "machine:1",
+            "machine:2"
+          ],
+          "crafts_needed": {
+            "numerator": 5,
+            "denominator": 1
+          },
+          "crafts_capacity": {
+            "numerator": 169331,
+            "denominator": 33600
+          },
+          "duty": {
+            "numerator": 168000,
+            "denominator": 169331
+          }
+        },
+        {
+          "producer": "machine:casting-low-density-structure",
+          "members": [
+            "machine:3"
+          ],
+          "crafts_needed": {
+            "numerator": 15,
+            "denominator": 4
+          },
+          "crafts_capacity": {
+            "numerator": 5633275000000001,
+            "denominator": 375000000000000
+          },
+          "duty": {
+            "numerator": 1406250000000000,
+            "denominator": 5633275000000001
+          }
+        },
+        {
+          "producer": "machine:plastic-bar",
+          "members": [
+            "machine:4"
+          ],
+          "crafts_needed": {
+            "numerator": 75,
+            "denominator": 32
+          },
+          "crafts_capacity": {
+            "numerator": 4959699999999999,
+            "denominator": 50000000000000
+          },
+          "duty": {
+            "numerator": 39062500000000,
+            "denominator": 1653233333333333
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 3,
+    "fractional": false,
+    "listed_from": {
+      "swings": 3,
+      "planned": 3,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 384,
+      "exact": {
+        "numerator": 384,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 192,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 2
+        }
+      ],
+      "ignored_items": [
+        "coal"
+      ],
+      "computed_lcm": 2,
+      "override_lcm": null,
+      "effective_lcm": 2
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

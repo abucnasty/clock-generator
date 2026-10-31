@@ -1,0 +1,112 @@
+{
+  "schema": 1,
+  "sample": "STONE_BRICKS_DIRECT_INSERT_2_1",
+  "target": {
+    "item": "stone-brick",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 40,
+      "denominator": 1
+    }
+  },
+  "unbounded_sources": [],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "drill:1",
+        "machine:1",
+        "belt:1/lane:1#stone-brick"
+      ],
+      "edges": [
+        "inserter:1/stone-brick",
+        "placement:drill:1/stone"
+      ],
+      "periods": [
+        {"swings":6,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":144,"denominator":1},"cycles":1,"period_ticks":144,"kept":true},
+        {"swings":7,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":168,"denominator":1},"cycles":3,"period_ticks":504,"kept":true},
+        {"swings":8,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":192,"denominator":1},"cycles":3,"period_ticks":576,"kept":true},
+        {"swings":5,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":120,"denominator":1},"cycles":3,"period_ticks":360,"kept":true},
+        {"swings":4,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":96,"denominator":1},"cycles":3,"period_ticks":288,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":72,"denominator":1},"cycles":1,"period_ticks":72,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":48,"denominator":1},"cycles":3,"period_ticks":144,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":24,"denominator":1},"cycles":3,"period_ticks":72,"kept":true},
+        {"swings":6.375,"swings_exact":{"numerator":51,"denominator":8},"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":153,"denominator":1},"cycles":8,"period_ticks":1224,"kept":true}
+      ],
+      "duty": [
+        {
+          "producer": "machine:stone-brick",
+          "members": [
+            "machine:1"
+          ],
+          "crafts_needed": {
+            "numerator": 80,
+            "denominator": 3
+          },
+          "crafts_capacity": {
+            "numerator": 3675,
+            "denominator": 128
+          },
+          "duty": {
+            "numerator": 2048,
+            "denominator": 2205
+          }
+        },
+        {
+          "producer": "drill:stone",
+          "members": [
+            "drill:1"
+          ],
+          "crafts_needed": {
+            "numerator": 160,
+            "denominator": 2403
+          },
+          "crafts_capacity": {
+            "numerator": 5014375000000001,
+            "denominator": 500000000000000
+          },
+          "duty": {
+            "numerator": 7282560788,
+            "denominator": 1096894128443
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 6,
+    "fractional": false,
+    "listed_from": {
+      "swings": 6,
+      "planned": 6,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 144,
+      "exact": {
+        "numerator": 144,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 144,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 1
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 1,
+      "override_lcm": null,
+      "effective_lcm": 1
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

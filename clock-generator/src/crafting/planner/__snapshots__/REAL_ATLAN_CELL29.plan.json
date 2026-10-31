@@ -1,0 +1,120 @@
+{
+  "schema": 1,
+  "sample": "REAL_ATLAN_CELL29",
+  "target": {
+    "item": "iron-gear-wheel",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 997,
+      "denominator": 100
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "belt:3/lane:1#iron-ore",
+      "kind": "nothing-drops-on"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:2",
+        "machine:1",
+        "belt:1/lane:1#iron-gear-wheel",
+        "belt:2/lane:1#iron-gear-wheel"
+      ],
+      "edges": [
+        "inserter:1/iron-gear-wheel",
+        "inserter:2/iron-gear-wheel",
+        "inserter:3/iron-plate",
+        "inserter:4/iron-ore"
+      ],
+      "periods": [
+        {"swings":6,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":576000,"denominator":997},"cycles":1,"period_ticks":577.7331995987964,"kept":true},
+        {"swings":7,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":672000,"denominator":997},"cycles":6,"period_ticks":4044.132397191575,"kept":true},
+        {"swings":8,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":768000,"denominator":997},"cycles":3,"period_ticks":2310.9327983951857,"kept":true},
+        {"swings":5,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":480000,"denominator":997},"cycles":6,"period_ticks":2888.665997993982,"kept":true},
+        {"swings":4,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":384000,"denominator":997},"cycles":3,"period_ticks":1155.4663991975929,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":288000,"denominator":997},"cycles":2,"period_ticks":577.7331995987964,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":192000,"denominator":997},"cycles":3,"period_ticks":577.7331995987964,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":96000,"denominator":997},"cycles":6,"period_ticks":577.7331995987964,"kept":true},
+        {"swings":6,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":576000,"denominator":997},"cycles":1,"period_ticks":577.7331995987964,"kept":true}
+      ],
+      "duty": [
+        {
+          "producer": "machine:iron-gear-wheel",
+          "members": [
+            "machine:1"
+          ],
+          "crafts_needed": {
+            "numerator": 997,
+            "denominator": 200
+          },
+          "crafts_capacity": {
+            "numerator": 23097,
+            "denominator": 400
+          },
+          "duty": {
+            "numerator": 1994,
+            "denominator": 23097
+          }
+        },
+        {
+          "producer": "machine:iron-plate",
+          "members": [
+            "machine:2"
+          ],
+          "crafts_needed": {
+            "numerator": 997,
+            "denominator": 150
+          },
+          "crafts_capacity": {
+            "numerator": 6403,
+            "denominator": 256
+          },
+          "duty": {
+            "numerator": 127616,
+            "denominator": 480225
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 6,
+    "fractional": false,
+    "listed_from": {
+      "swings": 6,
+      "planned": 6,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 577.7331995987964,
+      "exact": {
+        "numerator": 576000,
+        "denominator": 997
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 576000,
+        "denominator": 997
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 1
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 1,
+      "override_lcm": null,
+      "effective_lcm": 1
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

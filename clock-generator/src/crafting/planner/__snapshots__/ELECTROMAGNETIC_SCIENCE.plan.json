@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "sample": "ELECTROMAGNETIC_SCIENCE",
+  "target": {
+    "item": "electromagnetic-science-pack",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 30,
+      "denominator": 1
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "belt:1/lane:1#accumulator",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:1/lane:2#supercapacitor",
+      "kind": "nothing-drops-on"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:1"
+      ],
+      "edges": [
+        "inserter:1/supercapacitor",
+        "inserter:1/accumulator",
+        "inserter:2/electromagnetic-science-pack",
+        "inserter:3/electromagnetic-science-pack"
+      ],
+      "periods": [
+        {"swings":2,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":64,"denominator":1},"cycles":11,"period_ticks":704,"kept":true},
+        {"swings":2,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":64,"denominator":1},"cycles":11,"period_ticks":704,"kept":true}
+      ],
+      "duty": [
+        {
+          "producer": "machine:electromagnetic-science-pack",
+          "members": [
+            "machine:1"
+          ],
+          "crafts_needed": {
+            "numerator": 120,
+            "denominator": 11
+          },
+          "crafts_capacity": {
+            "numerator": 4379,
+            "denominator": 400
+          },
+          "duty": {
+            "numerator": 48000,
+            "denominator": 48169
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 2,
+    "fractional": false,
+    "listed_from": {
+      "swings": 2,
+      "planned": 2,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 704,
+      "exact": {
+        "numerator": 704,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 64,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 11
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 11,
+      "override_lcm": 11,
+      "effective_lcm": 11
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

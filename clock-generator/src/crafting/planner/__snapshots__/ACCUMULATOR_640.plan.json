@@ -1,0 +1,158 @@
+{
+  "schema": 1,
+  "sample": "ACCUMULATOR_640",
+  "target": {
+    "item": "accumulator",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 320,
+      "denominator": 9
+    }
+  },
+  "unbounded_sources": [],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:3",
+        "machine:6",
+        "machine:4",
+        "machine:1",
+        "machine:5",
+        "machine:2",
+        "belt:1/lane:1#accumulator"
+      ],
+      "edges": [
+        "inserter:1/accumulator",
+        "inserter:2/accumulator",
+        "inserter:3/iron-plate",
+        "inserter:4/iron-plate",
+        "inserter:5/iron-plate",
+        "inserter:6/battery",
+        "inserter:7/iron-plate",
+        "inserter:8/battery",
+        "inserter:9/copper-plate",
+        "inserter:10/copper-plate"
+      ],
+      "periods": [
+        {"swings":2,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":108,"denominator":1},"cycles":9,"period_ticks":972,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":162,"denominator":1},"cycles":3,"period_ticks":486,"kept":true},
+        {"swings":4,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":216,"denominator":1},"cycles":9,"period_ticks":1944,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":54,"denominator":1},"cycles":9,"period_ticks":486,"kept":true},
+        {"swings":2.0625,"swings_exact":{"numerator":33,"denominator":16},"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":891,"denominator":8},"cycles":48,"period_ticks":5346,"kept":true}
+      ],
+      "duty": [
+        {
+          "producer": "machine:accumulator",
+          "members": [
+            "machine:1",
+            "machine:2"
+          ],
+          "crafts_needed": {
+            "numerator": 640,
+            "denominator": 27
+          },
+          "crafts_capacity": {
+            "numerator": 997,
+            "denominator": 40
+          },
+          "duty": {
+            "numerator": 25600,
+            "denominator": 26919
+          }
+        },
+        {
+          "producer": "machine:casting-iron",
+          "members": [
+            "machine:3"
+          ],
+          "crafts_needed": {
+            "numerator": 1408,
+            "denominator": 81
+          },
+          "crafts_capacity": {
+            "numerator": 665,
+            "denominator": 32
+          },
+          "duty": {
+            "numerator": 45056,
+            "denominator": 53865
+          }
+        },
+        {
+          "producer": "machine:battery",
+          "members": [
+            "machine:4",
+            "machine:5"
+          ],
+          "crafts_needed": {
+            "numerator": 3200,
+            "denominator": 81
+          },
+          "crafts_capacity": {
+            "numerator": 699,
+            "denominator": 16
+          },
+          "duty": {
+            "numerator": 51200,
+            "denominator": 56619
+          }
+        },
+        {
+          "producer": "machine:casting-copper",
+          "members": [
+            "machine:6"
+          ],
+          "crafts_needed": {
+            "numerator": 640,
+            "denominator": 81
+          },
+          "crafts_capacity": {
+            "numerator": 5612200000000001,
+            "denominator": 160000000000000
+          },
+          "duty": {
+            "numerator": 195061733781,
+            "denominator": 865944945785
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 2,
+    "fractional": false,
+    "listed_from": {
+      "swings": 2,
+      "planned": 2,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 972,
+      "exact": {
+        "numerator": 972,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 108,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 9
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 9,
+      "override_lcm": null,
+      "effective_lcm": 9
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

@@ -1,4 +1,4 @@
-import { ClockPeriodLimitError, type SwingPeriodPruning } from "./clock-period-limit";
+import { ClockPeriodLimitError, MAX_SIMULATION_TICKS, type SwingPeriodPruning } from "./clock-period-limit";
 import { assertOutputTransferGenerationSupported } from "../../config/output-transfer-generation";
 import assert from "../../common/assert";
 import type { NotMadeClock } from "../why-not-stable";
@@ -7,6 +7,7 @@ import { EnableControlOverrideConfig } from "../../config/schema";
 import { assertInserterCoverage } from "../../config/inserter-coverage-validator";
 import { validateCopies } from "../../config/copies-validator";
 import { assertFeasible } from "../feasibility/assert-feasible";
+import { ignoredLcmItemsOf } from "../planner/composition";
 import { assertLaneCapacity } from "../../config/lane-capacity-validator";
 import { DebugObserverFactory } from "../sequence/debug/debug-observer-factory";
 import { DebugSettingsProvider, MutableDebugSettingsProvider } from "../sequence/debug/debug-settings-provider";
@@ -27,7 +28,7 @@ import { returnedTargetRefusal, TargetItem, targetInsertersOf, targetMachinesOf 
 import { neverBlockingBranchesOf, type TerminalBranch } from "../terminal-rate";
 import { mainProductRateOf, traitsOf } from "../../entities/traits/traits-of";
 import { CraftingMargin, RandomAmountMargin, randomAmountMargins } from "../random-margins";
-import { carriedItemsOf, RESULT_WINDOWS_CHECK_PERIODS, ResultWindowsPlan } from "../result-windows";
+import { RESULT_WINDOWS_CHECK_PERIODS, ResultWindowsPlan } from "../result-windows";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
 import { InventoryTransfer } from "../sequence/inventory-transfer";
 import { InserterTransferTracker } from "../../simulation/observers/inserter-transfer-tracker";
@@ -69,11 +70,7 @@ import { AlwaysOnReason, AlwaysOnReasons, alwaysOnReasons } from "../always-on-r
 import { RunMemo, currentRunMemo } from "./run-memo";
 import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, beltPickupSlackTrial, runAsBuiltCheck, runClockOnBuild, trialWithLoopWindows } from "../trial";
 
-/**
- * The most ticks one simulated run goes on for. A guard, not a limit on test time: a config that passes validation
- * but deadlocks something in the simulator, or that it cannot simulate at all, must not keep it running for ever.
- */
-export const MAX_SIMULATION_TICKS = 500_000;
+export { MAX_SIMULATION_TICKS };
 
 /**
  * Maximum allowed deviation (in items) between actual and expected output transfers
@@ -1726,6 +1723,31 @@ interface PlannedCraftingCycle {
  * Throws when the build cannot reach the target rate or an output machine has no inserter taking from it.
  */
 export function planCraftingCycle(config: Config, simulation_context: SimulationContext, logger: Logger): PlannedCraftingCycle {
+    const outputs = outputsOfPreparedBuild(config, simulation_context);
+    const crafting_cycle_plan = computeCraftingCyclePlan(
+        outputs.target_production_rate,
+        outputs.output_machine_state_machines.map(it => it.machine_state),
+        simulation_context.entity_registry,
+        outputs.output_inserters.map(it => it.inserter),
+        config,
+        logger
+    );
+    return { ...outputs, crafting_cycle_plan };
+}
+
+/**
+ * The output swings a cycle the output machines of a prepared build can make before they block, before the cycle plan
+ * makes them whole (maxSwingsPossibleOf), as the planning run finds them; for a target that counts an item made
+ */
+export function maxSwingsOfPreparedBuild(config: Config, simulation_context: SimulationContext, logger: Logger): Fraction {
+    assert(config.target_output.counts !== "destroyed", "a target that counts an item destroyed is planned with no prepare step");
+    const outputs = outputsOfPreparedBuild(config, simulation_context);
+    return maxSwingsPossibleOf(outputs.output_machine_state_machines.map(it => it.machine_state), outputs.output_inserters.map(it => it.inserter),
+        config, logger);
+}
+
+/** The machines that make (or destroy) the target and the inserters that take it out, once the target is checked */
+function outputsOfPreparedBuild(config: Config, simulation_context: SimulationContext): Omit<PlannedCraftingCycle, "crafting_cycle_plan"> {
     assertOutputTransferGenerationSupported(config);
     const target_production_rate = TargetProductionRate.fromConfig(config.target_output);
 
@@ -1772,16 +1794,7 @@ export function planCraftingCycle(config: Config, simulation_context: Simulation
         return inserter;
     });
 
-    const crafting_cycle_plan = computeCraftingCyclePlan(
-        target_production_rate,
-        output_machine_state_machines.map(it => it.machine_state),
-        simulation_context.entity_registry,
-        output_inserters.map(it => it.inserter),
-        config,
-        logger
-    );
-
-    return { target_production_rate, output_machine_state_machines, output_inserters, all_output_inserters, crafting_cycle_plan };
+    return { target_production_rate, output_machine_state_machines, output_inserters, all_output_inserters };
 }
 
 /** The cycles the clock needs to make every hand whole, and the plan of the hands */
@@ -1798,9 +1811,7 @@ export function transferPlanOf(config: Config, crafting_cycle_plan: CraftingCycl
     const swing_counts = crafting_cycle_plan.entity_transfer_map;
     assertBeltFillersPlanned(simulation_context.entity_registry, swing_counts);
 
-    // the results whose hands their windows carry from one period to the next are whole in no period (result-windows.ts)
-    const carried = crafting_cycle_plan.result_windows === undefined ? [] : carriedItemsOf(crafting_cycle_plan.result_windows);
-    const ignored = [...(config.overrides?.ignored_lcm_ingredients ?? []), ...carried];
+    const ignored = ignoredLcmItemsOf(config, crafting_cycle_plan);
     const ignored_ingredients = ignored.length > 0 ? ignored : undefined;
     const computed_lcm = EntityTransferCountMap.lcm(swing_counts, ignored_ingredients);
     return {
@@ -2289,29 +2300,17 @@ function craftsWithBeltsBackedUp(config: Config): Map<string, number> | null {
 }
 
 /**
- * Helper function to compute the crafting cycle plan.
- * This function assumes all machines have finished crafting while not having any items pulled out of their inventories.
- * Where the belts move, whole swings are counted with them backed up (see craftsWithBeltsBackedUp).
- * 
- * For multiple output machines, the max swings possible is computed as the minimum across all machines
- * to ensure all machines can complete the required swings.
+ * The output swings a cycle each output machine can make before its output blocks, the fewest of them: what the prepare
+ * step crafted over the output inserter's hand. This function assumes all machines have finished crafting while not
+ * having any items pulled out of their inventories. Where the belts move, whole swings are counted with them backed up
+ * (see craftsWithBeltsBackedUp). A count the config forces is the count.
  */
-function computeCraftingCyclePlan(
-    target_production_rate: TargetProductionRate,
+function maxSwingsPossibleOf(
     output_machine_states: MachineState[],
-    entity_registry: ReadableEntityRegistry,
     output_inserters: Inserter[],
     config: Config,
     logger: Logger
-): CraftingCyclePlan {
-    assert(
-        output_machine_states.length > 0,
-        "At least one output machine is required"
-    );
-    if (target_production_rate.counts === "destroyed") {
-        // planned by arithmetic: no prepare run counts its hands (see CraftingCyclePlan.create)
-        return CraftingCyclePlan.create(target_production_rate, entity_registry, fraction(1), config.overrides ?? {});
-    }
+): Fraction {
     assert(
         output_machine_states.length === output_inserters.length,
         `Mismatch between output machines (${output_machine_states.length}) and output inserters (${output_inserters.length})`
@@ -2343,13 +2342,34 @@ function computeCraftingCyclePlan(
         max_swings_possible = fraction(config.overrides.terminal_swing_count);
         logger.log(`Overriding max swings possible to ${max_swings_possible} due to config override`);
     }
+    return max_swings_possible!;
+}
 
-    return CraftingCyclePlan.create(
-        target_production_rate,
-        entity_registry,
-        max_swings_possible!,
-        config.overrides ?? {}
+/**
+ * Helper function to compute the crafting cycle plan: for a target that counts an item made, on the output swings a
+ * cycle the output machines can make (maxSwingsPossibleOf); for one that counts an item destroyed, by arithmetic.
+ *
+ * For multiple output machines, the max swings possible is computed as the minimum across all machines
+ * to ensure all machines can complete the required swings.
+ */
+function computeCraftingCyclePlan(
+    target_production_rate: TargetProductionRate,
+    output_machine_states: MachineState[],
+    entity_registry: ReadableEntityRegistry,
+    output_inserters: Inserter[],
+    config: Config,
+    logger: Logger
+): CraftingCyclePlan {
+    assert(
+        output_machine_states.length > 0,
+        "At least one output machine is required"
     );
+    if (target_production_rate.counts === "destroyed") {
+        // planned by arithmetic: no prepare run counts its hands (see CraftingCyclePlan.create)
+        return CraftingCyclePlan.create(target_production_rate, entity_registry, fraction(1), config.overrides ?? {});
+    }
+    const max_swings_possible = maxSwingsPossibleOf(output_machine_states, output_inserters, config, logger);
+    return CraftingCyclePlan.create(target_production_rate, entity_registry, max_swings_possible, config.overrides ?? {});
 }
 
 /**

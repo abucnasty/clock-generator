@@ -1,0 +1,108 @@
+{
+  "schema": 1,
+  "sample": "FLYING_ROBOT_FRAME",
+  "target": {
+    "item": "flying-robot-frame",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 20,
+      "denominator": 3
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "belt:2/lane:1#steel-plate",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:2/lane:2#electric-engine-unit",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:5/lane:1#electronic-circuit",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:5/lane:2#battery",
+      "kind": "nothing-drops-on"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:1",
+        "belt:1/lane:2#flying-robot-frame"
+      ],
+      "edges": [
+        "inserter:1/flying-robot-frame",
+        "inserter:2/steel-plate",
+        "inserter:2/electric-engine-unit",
+        "inserter:3/electronic-circuit",
+        "inserter:3/battery"
+      ],
+      "periods": [
+        {"swings":1,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":144,"denominator":1},"cycles":2,"period_ticks":288,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":288,"denominator":1},"cycles":1,"period_ticks":288,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":432,"denominator":1},"cycles":2,"period_ticks":864,"kept":true},
+        {"swings":null,"fractional":true,"listed_as":"fractional","pruned":{"rule":"cycle-refused","terms":{"reason":"Cannot satisfy fractional swing constraint: sub-cycle 0 requires 3 swings, but maximum allowed is 2 due to insertion limits. Total swings: 25, cycle multiplier: 8."}}}
+      ],
+      "duty": [
+        {
+          "producer": "machine:flying-robot-frame",
+          "members": [
+            "machine:1"
+          ],
+          "crafts_needed": {
+            "numerator": 10,
+            "denominator": 3
+          },
+          "crafts_capacity": {
+            "numerator": 4409,
+            "denominator": 1280
+          },
+          "duty": {
+            "numerator": 12800,
+            "denominator": 13227
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 1,
+    "fractional": false,
+    "listed_from": {
+      "swings": 1,
+      "planned": 1,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 288,
+      "exact": {
+        "numerator": 288,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 144,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 2
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 2,
+      "override_lcm": null,
+      "effective_lcm": 2
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

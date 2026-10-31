@@ -1,0 +1,118 @@
+{
+  "schema": 1,
+  "sample": "REAL_OWNER_CAR",
+  "target": {
+    "item": "iron-plate",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 80,
+      "denominator": 1
+    }
+  },
+  "unbounded_sources": [],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "drill:1",
+        "chest:1#iron-ore",
+        "machine:1",
+        "machine:2",
+        "belt:1/lane:1#iron-plate"
+      ],
+      "edges": [
+        "inserter:1/iron-ore",
+        "inserter:2/iron-ore",
+        "inserter:3/iron-plate",
+        "inserter:4/iron-plate",
+        "placement:drill:1/iron-ore"
+      ],
+      "periods": [
+        {"swings":6,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":144,"denominator":1},"cycles":1,"period_ticks":144,"kept":true},
+        {"swings":7,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":168,"denominator":1},"cycles":3,"period_ticks":504,"kept":true},
+        {"swings":8,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":192,"denominator":1},"cycles":3,"period_ticks":576,"kept":true},
+        {"swings":5,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":120,"denominator":1},"cycles":3,"period_ticks":360,"kept":true},
+        {"swings":4,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":96,"denominator":1},"cycles":3,"period_ticks":288,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":72,"denominator":1},"cycles":1,"period_ticks":72,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":48,"denominator":1},"cycles":3,"period_ticks":144,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":24,"denominator":1},"cycles":3,"period_ticks":72,"kept":true},
+        {"swings":null,"fractional":true,"listed_as":"fractional","pruned":{"rule":"cycle-refused","terms":{"reason":"Cannot satisfy fractional swing constraint: sub-cycle 0 requires 4 swings, but maximum allowed is 3 due to insertion limits. Total swings: 34, cycle multiplier: 8."}}}
+      ],
+      "duty": [
+        {
+          "producer": "machine:iron-plate",
+          "members": [
+            "machine:1",
+            "machine:2"
+          ],
+          "crafts_needed": {
+            "numerator": 160,
+            "denominator": 3
+          },
+          "crafts_capacity": {
+            "numerator": 8616550000000001,
+            "denominator": 160000000000000
+          },
+          "duty": {
+            "numerator": 750000004435,
+            "denominator": 757313969322
+          }
+        },
+        {
+          "producer": "drill:iron-ore",
+          "members": [
+            "drill:1"
+          ],
+          "crafts_needed": {
+            "numerator": 1600,
+            "denominator": 24027
+          },
+          "crafts_capacity": {
+            "numerator": 185,
+            "denominator": 4
+          },
+          "duty": {
+            "numerator": 1280,
+            "denominator": 888999
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 6,
+    "fractional": false,
+    "listed_from": {
+      "swings": 6,
+      "planned": 6,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 144,
+      "exact": {
+        "numerator": 144,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 144,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 1
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 1,
+      "override_lcm": null,
+      "effective_lcm": 1
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

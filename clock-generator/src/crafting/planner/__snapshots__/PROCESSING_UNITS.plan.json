@@ -1,0 +1,98 @@
+{
+  "schema": 1,
+  "sample": "PROCESSING_UNITS",
+  "target": {
+    "item": "processing-unit",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 15,
+      "denominator": 1
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "chest:1#advanced-circuit",
+      "kind": "infinity-supply"
+    },
+    {
+      "vertex": "chest:1#electronic-circuit",
+      "kind": "infinity-supply"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:1"
+      ],
+      "edges": [
+        "inserter:1/electronic-circuit",
+        "inserter:1/advanced-circuit",
+        "inserter:2/processing-unit"
+      ],
+      "periods": [
+        {"swings":2,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":128,"denominator":1},"cycles":1,"period_ticks":128,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":192,"denominator":1},"cycles":2,"period_ticks":384,"kept":true},
+        {"swings":4,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":256,"denominator":1},"cycles":1,"period_ticks":256,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":64,"denominator":1},"cycles":2,"period_ticks":128,"kept":true},
+        {"swings":2,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":128,"denominator":1},"cycles":1,"period_ticks":128,"kept":true}
+      ],
+      "duty": [
+        {
+          "producer": "machine:processing-unit",
+          "members": [
+            "machine:1"
+          ],
+          "crafts_needed": {
+            "numerator": 15,
+            "denominator": 4
+          },
+          "crafts_capacity": {
+            "numerator": 903499984741211,
+            "denominator": 100000000000000
+          },
+          "duty": {
+            "numerator": 375000000000000,
+            "denominator": 903499984741211
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 2,
+    "fractional": false,
+    "listed_from": {
+      "swings": 2,
+      "planned": 2,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 128,
+      "exact": {
+        "numerator": 128,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 128,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 1
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 1,
+      "override_lcm": null,
+      "effective_lcm": 1
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

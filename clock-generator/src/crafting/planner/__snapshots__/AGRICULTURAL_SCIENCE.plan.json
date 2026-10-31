@@ -1,0 +1,154 @@
+{
+  "schema": 1,
+  "sample": "AGRICULTURAL_SCIENCE",
+  "target": {
+    "item": "agricultural-science-pack",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 50,
+      "denominator": 1
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "belt:1/lane:1#bioflux",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:1/lane:2#nutrients",
+      "kind": "nothing-drops-on"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:1",
+        "machine:2",
+        "loop:1",
+        "machine:5"
+      ],
+      "edges": [
+        "inserter:1/nutrients",
+        "inserter:1/bioflux",
+        "inserter:2/nutrients",
+        "inserter:2/bioflux",
+        "inserter:3/nutrients",
+        "inserter:4/nutrients",
+        "inserter:5/pentapod-egg",
+        "inserter:6/nutrients",
+        "inserter:7/nutrients",
+        "inserter:8/pentapod-egg",
+        "inserter:9/pentapod-egg",
+        "inserter:10/pentapod-egg",
+        "inserter:11/bioflux",
+        "inserter:11/nutrients",
+        "inserter:12/agricultural-science-pack"
+      ],
+      "periods": [
+        {"swings":5,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":96,"denominator":1},"cycles":5,"period_ticks":480,"kept":true},
+        {"swings":6,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":576,"denominator":5},"cycles":25,"period_ticks":2880,"kept":true},
+        {"swings":7,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":672,"denominator":5},"cycles":25,"period_ticks":3360,"kept":true},
+        {"swings":4,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":384,"denominator":5},"cycles":25,"period_ticks":1920,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":288,"denominator":5},"cycles":25,"period_ticks":1440,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":192,"denominator":5},"cycles":25,"period_ticks":960,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":96,"denominator":5},"cycles":25,"period_ticks":480,"kept":true},
+        {"swings":5,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":96,"denominator":1},"cycles":5,"period_ticks":480,"kept":true}
+      ],
+      "duty": [
+        {
+          "producer": "machine:nutrients-from-bioflux",
+          "members": [
+            "machine:1",
+            "machine:2"
+          ],
+          "crafts_needed": {
+            "numerator": 2636,
+            "denominator": 1075
+          },
+          "crafts_capacity": {
+            "numerator": 23097,
+            "denominator": 1250
+          },
+          "duty": {
+            "numerator": 131800,
+            "denominator": 993171
+          }
+        },
+        {
+          "producer": "machine:pentapod-egg",
+          "members": [
+            "machine:3",
+            "machine:4"
+          ],
+          "crafts_needed": {
+            "numerator": 8,
+            "denominator": 1
+          },
+          "crafts_capacity": {
+            "numerator": 43,
+            "denominator": 5
+          },
+          "duty": {
+            "numerator": 40,
+            "denominator": 43
+          }
+        },
+        {
+          "producer": "machine:agricultural-science-pack",
+          "members": [
+            "machine:5"
+          ],
+          "crafts_needed": {
+            "numerator": 20,
+            "denominator": 1
+          },
+          "crafts_capacity": {
+            "numerator": 723,
+            "denominator": 32
+          },
+          "duty": {
+            "numerator": 640,
+            "denominator": 723
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 5,
+    "fractional": false,
+    "listed_from": {
+      "swings": 5,
+      "planned": 5,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 480,
+      "exact": {
+        "numerator": 480,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 96,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 5
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 5,
+      "override_lcm": null,
+      "effective_lcm": 5
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}
