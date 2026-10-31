@@ -62,3 +62,8 @@ reads them; they come with the planner that does.
 traits, and nothing else makes them: a result's `machine_facts` (`machineFactsOfEntity`, each machine's traits built once from
 the configuration its entity keeps) and the UI's facts query (`computeMachineFacts`, from a machine's parameters) both project
 traits, and a test holds both to the traits `buildTraits` builds from the config, for every machine of every sample.
+
+**The duty of a machine group** is recorded with the feasibility result (`Feasibility.duties`, `src/crafting/feasibility/duty.ts`):
+the crafts a second the group must make (the pass's own demand figure) over the crafts a second its machines make at their
+crafting speed, as an exact fraction, for each group that must craft. It is recorded only: it skips no check, refuses nothing and
+changes no clock, and a duty of 1 can still clock (the biochamber fuel sample's one machine is asked exactly what it makes).
