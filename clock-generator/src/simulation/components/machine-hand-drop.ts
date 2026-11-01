@@ -31,6 +31,10 @@ export class MachineHandDrop implements HandDropPort {
         this.scratch.drop_ticks = 0;
     }
 
+    public requiresReadinessPolling(): boolean {
+        return this.slots.some(slot => !this.ingress.hasReadinessNotificationsAt(slot));
+    }
+
     public key(): string {
         return String(this.scratch.drop_ticks);
     }

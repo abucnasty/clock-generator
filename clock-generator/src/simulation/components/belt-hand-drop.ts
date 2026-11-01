@@ -16,6 +16,8 @@ import { dropFromHand, HandDropPort, HandScratch } from "./hand";
  * drop spot, else the hand's own local tile of each lane. A belt takes whatever a hand brings.
  */
 export class BeltHandDrop implements HandDropPort {
+    /** Transport-line wakeability is not represented by this port's production notifications. */
+    public requiresReadinessPolling(): boolean { return true; }
     /** The lane of the inserter's drop spot, or each lane of its own local tile when it has none */
     private readonly lanes: readonly BeltLane[];
     /** Where the hand puts its stacks down, by lane: the lane's shared traffic, or its own local tile */

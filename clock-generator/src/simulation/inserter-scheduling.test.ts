@@ -81,3 +81,30 @@ test("hydration retains open-phase eligibility and independently binds the clone
     expect(copied.key()).not.toBe(schedule.key());
     expect(() => new InserterScheduling(partialCells(), [], () => {}, state)).toThrow("unknown inserter");
 });
+
+test.each([false, true])("known control build order sets simultaneous attachment order (reversed=%s)", reversed => {
+    const context = partialCells();
+    context.machines.forEach(machine => machine.machine_state.inventoryState.addQuantity("copper-cable", 2));
+    context.useControls({inserter: state => ({
+        is_game_clock: true,
+        decider_build_order: reversed ? 3 - state.entity_id.number : state.entity_id.number - 1,
+        isEnabled: () => context.tick_provider.getCurrentTick() >= 3,
+        isEnabledIn: offset => context.tick_provider.getCurrentTick() + offset >= 3,
+    })});
+    const updates: string[] = [];
+    const schedule = new InserterScheduling(context, context.inserters, event => {
+        if (event.event === "Update" && context.tick_provider.getCurrentTick() === 3) updates.push(event.entity);
+    });
+    for (let tick = 1; tick <= 3; tick++) {
+        context.tick_provider.setCurrentTick(tick);
+        schedule.beginUpdates();
+        for (let hand = schedule.nextUpdate(); hand !== null; hand = schedule.nextUpdate()) {
+            hand.executeForTick();
+            schedule.completeUpdate(hand);
+        }
+        schedule.finishControls();
+        schedule.endUpdates();
+    }
+    expect(updates).toEqual(reversed ? ["inserter:1", "inserter:2", "inserter:3"] : ["inserter:3", "inserter:2", "inserter:1"]);
+    expect(context.inserters.map(hand => hand.inserter_state.held_item?.quantity)).toEqual([2, 2, 2]);
+});

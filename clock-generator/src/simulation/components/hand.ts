@@ -121,6 +121,8 @@ export interface HandPickupPort {
      * reason of the start goes into the scratch (`HandReason`, with what the source has of which item).
      */
     startsPickup(): boolean;
+    /** Explicit scheduler eligibility replaces the polling-only wake delay, without changing arm travel. */
+    useNotificationScheduling?(): void;
     /** A source with inventory notifications can let an empty/partial waiting hand deactivate. */
     waitsForItems?(): boolean;
 }
@@ -131,6 +133,8 @@ export interface HandPickupPort {
  * asks what kind of entity the sink is.
  */
 export interface HandDropPort {
+    /** Keep polling when mutations that change this port's readiness have no production notification hook. */
+    requiresReadinessPolling?(): boolean;
     /** The drop phase's enter step */
     enter(): void;
     /** The drop phase's step (the target-full phase's too): what the hand puts into the sink in this tick */
@@ -317,6 +321,8 @@ export class Hand {
     private readonly sink_ingress: Ingress | null;
     private readonly from_belt: boolean;
     private readonly swing_ticks: number;
+    /** Bound once by the run scheduler, independent of circuit enable and physical hand phase. */
+    private notification_scheduling = false;
 
     constructor(
         private readonly state: InserterState,
@@ -336,6 +342,11 @@ export class Hand {
         this.from_belt = binding.from_belt;
         this.swings_part_hands = binding.swings_part_hands;
         this.swing_ticks = binding.swing_ticks;
+    }
+
+    public useNotificationScheduling(): void {
+        this.notification_scheduling = true;
+        this.pickup.useNotificationScheduling?.();
     }
 
     /** The phase's rule: the phase to change to, its reason in the scratch, or STAY */
@@ -614,6 +625,7 @@ export class Hand {
      * later.
      */
     private wokenThisTick(window_opens: boolean): boolean {
+        if (this.notification_scheduling) return false;
         const wakes = this.sink_wakes;
         const ingress = this.sink_ingress;
         if (wakes === null || ingress === null) {
