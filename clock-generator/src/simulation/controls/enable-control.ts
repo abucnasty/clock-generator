@@ -228,7 +228,8 @@ class ClockedEnableControl implements EnableControl, Resettable {
     }
 
     /**
-     * Starts the clock's count again from this tick. Where the reset puts the clock on the build (`starts_clock`), its
+     * Starts a new clock's count from this tick. A running game clock retains its origin when a later recording step
+     * starts; planning schedules restart for that step. Where the reset puts the clock on the build (`starts_clock`), its
      * first `start_latency_ticks` stay dark: a clock of the game counts from 1 at its start and a window decider is open
      * for the values of its window only, so no window from before the start has reached an inserter in the ticks the
      * latency takes, the part of a window that the latency carries over the end of the period included (recorded in
@@ -236,6 +237,7 @@ class ClockedEnableControl implements EnableControl, Resettable {
      * leaves nothing dark, since the clock has run all along.
      */
     public reset(starts_clock: boolean = false): void {
+        if (this.is_game_clock && !starts_clock) return;
         this.offset = this.tickProvider.getCurrentTick() * -1;
         this.dark_until = starts_clock ? this.start_latency_ticks : 0;
     }

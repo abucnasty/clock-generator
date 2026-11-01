@@ -93,9 +93,9 @@ describe("the fuel plan", () => {
                     const swings = view.transfer_history.entities.find(entity => entity.entity_id === inserter.inserter_id)!.transfers;
                     expect(swings.length).toBeGreaterThanOrEqual(3);
                     // the view runs the exported fuel clock: every swing starts inside one of its windows. The recorded
-                    // transfers are two ticks behind the clock.
+                    // transfers are two ticks behind the clock; recording starts after a measured warm-up.
                     for (const swing of swings) {
-                        const clock_tick = (swing.start_tick + 2) % inserter.modulus;
+                        const clock_tick = (view.clock_tick_at_start + swing.start_tick + 2) % inserter.modulus;
                         expect(clock_tick).toBeGreaterThanOrEqual(inserter.window.start);
                         expect(clock_tick).toBeLessThanOrEqual(inserter.window.end);
                     }

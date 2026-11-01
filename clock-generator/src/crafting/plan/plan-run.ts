@@ -112,6 +112,8 @@ export interface FuelConsumptionView {
     /** Periods of the clock the view covers; the clock itself stays one period */
     periods: number;
     duration_ticks: number;
+    /** Tick of the running game clocks used by the first recorded sample, after the actual warm-up. */
+    clock_tick_at_start: number;
     /** The inserters that fill a fuel slot */
     fuel_inserter_ids: string[];
     /** The fuel inserters' transfers into the fuel slots over the view; false when none swung even over its longest tried length */
@@ -461,6 +463,8 @@ export interface RunOptions {
 
 /** Everything one run of a build yields, for the planning run to read its windows off and for a trial to judge */
 export interface BuildRun extends PlannedCraftingCycle, TransferPlan {
+    /** Actual elapsed ticks since the game clocks were started, at the recording boundary. */
+    clock_tick_at_start: number;
     /**
      * The context the run ticked, still on the enable controls it ran with (a kept run keeps them and what they close
      * over: the plan, its factories and the tick provider), without the observers that fed the histories
@@ -548,7 +552,8 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
             ? { config_json: JSON.stringify(config), terminal_swing_count } : undefined);
     });
 
-    const repeat_periods = warmUp(config, build, controlled, duration, warmup_period, debug, debug_steps, logger);
+    const warmup = warmUp(config, build, controlled, duration, warmup_period, debug, debug_steps, logger);
+    const repeat_periods = warmup.repeat_periods;
     const repeat_bin = options.detect_repeat === true && (options.simulate_periods ?? 1) > 1 ? provenRepeatBin(config, duration.ticks) : null;
     const simulated = simulate(build, controlled, all_output_inserters, duration, options, debug, debug_steps, logger, repeat_bin);
     // the recorded run is over: what it recorded is sealed once, and the run, the memo and every result share that copy
@@ -564,6 +569,7 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
     detachHistoryObservers(build, ...new Set([simulation_context, build.simulation_context]));
 
     return {
+        clock_tick_at_start: warmup.ticks_run,
         simulation_context: build.simulation_context,
         target_production_rate: planned_cycle.target_production_rate,
         output_machine_state_machines: planned_cycle.output_machine_state_machines,
@@ -804,7 +810,8 @@ function withEnableControls(
         relative_tick_provider,
         crafting_cycle_plan,
         resettable_registry,
-        simulation_context.state_registry
+        simulation_context.state_registry,
+        simulation_context.tick_provider,
     );
 
     // Fuel is not part of the plan, so the fuel inserters swing on clocks of their own that repeat within the period
@@ -828,6 +835,7 @@ function withEnableControls(
         resettable_registry,
         logger,
         inserter_clocks,
+        simulation_context.tick_provider,
     );
 
     // Swap the controls of the build's context, in place
@@ -894,7 +902,7 @@ function warmUp(
     debug: MutableDebugSettingsProvider,
     debug_steps: DebugSteps,
     logger: Logger,
-): number | undefined {
+): { repeat_periods: number | undefined; ticks_run: number } {
     const { simulation_context } = build;
     const { resettable_registry } = controlled;
     logger.log("Warming up simulation...");
@@ -910,7 +918,7 @@ function warmUp(
         if (warmup_step.ticks_run < warmup_period.ticks) {
             logger.log(`Warm up reached a repeating state after ${warmup_step.ticks_run} ticks`);
         }
-        return warmup_step.repeat_periods;
+        return { repeat_periods: warmup_step.repeat_periods, ticks_run: warmup_step.ticks_run };
     });
 }
 
@@ -1240,6 +1248,8 @@ function backpressureLossOf(
  * what was recorded of it. It plans nothing of its own and exports nothing.
  */
 export interface TrialRun {
+    /** Actual elapsed game-clock ticks before the first recorded sample. */
+    clock_tick_at_start: number;
     /** On-demand timeline detail; absent from normal generation runs. */
     timeline_recording?: TimelineRecording;
     /** What the run moved against what the plan expects */
@@ -1271,6 +1281,7 @@ function machineFactsOfContext(simulation_context: SimulationContext): MachineFa
 
 export function trialRunOf(run: BuildRun): TrialRun {
     return {
+        clock_tick_at_start: run.clock_tick_at_start,
         timeline_recording: run.timeline_recording,
         state_repeat: run.state_repeat,
         stability_check: run.stability_check,
@@ -2143,6 +2154,7 @@ function fuelConsumptionView(
             return {
                 periods,
                 duration_ticks: periods * period,
+                clock_tick_at_start: run.clock_tick_at_start,
                 fuel_inserter_ids,
                 fuel_swings_recorded: swung,
                 fuel_levels: run.fuel_levels ?? [],

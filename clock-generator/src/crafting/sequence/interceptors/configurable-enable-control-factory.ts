@@ -32,6 +32,7 @@ export class ConfigurableEnableControlFactory {
         private readonly crafting_cycle_plan: CraftingCyclePlan,
         private readonly resettable_registry: ResettableRegistry,
         entity_state_registry: ReadableEntityStateRegistry,
+        private readonly game_tick_provider: TickProvider = tick_provider,
     ) {
         this.conditional_factory = new ConditionalEnableControlFactory(entity_state_registry);
     }
@@ -110,7 +111,7 @@ export class ConfigurableEnableControlFactory {
         const clocked_control = EnableControl.clocked({
             periodDuration: period_duration,
             enabledRanges: enabled_ranges,
-            tickProvider: this.tick_provider,
+            tickProvider: this.game_tick_provider,
             is_game_clock: true,
             decider_build_order: override.decider_build_order,
             start_latency_ticks: override.latency_ticks,
