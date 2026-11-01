@@ -28,7 +28,7 @@ import { ExportShortfall, exportShortfallOfBins, exportShortfallsOfRun, exported
 import { ResultsTaken, resultsTakenOf } from "./results-taken";
 import { ResultWindowsPlan, resultLossTrialOf } from "./result-windows";
 import { excessLossOf } from "./random-margins";
-import { TakerOrder, takerOrderName, takerOrdersToCheck } from "../simulation/competing-takers";
+import { TakerOrder, takerOrderName, independentTakerOrdersToCheck } from "../simulation/competing-takers";
 import { verificationPlanningConfigOf, verificationTerminalCountOf } from "./primitive-grouped-policy";
 import { CIRCUIT_LATENCY_TICKS } from "../common/rule-constants";
 import { WakeUpsFromStarts, hasStockTheClockDoesNotSet, wakeUpsFromStarts } from "./wake-ups-from-starts";
@@ -257,15 +257,17 @@ export function otherTakerOrdersOf(config: Config, windows: Map<string, OpenRang
         }
         enabled_at.set(id, on);
     });
-    let together = 0;
-    let group_size = 0;
+    const contested_sources = new Map<string, {size: number; contested: number}>();
     for (const group of competingTakerGroups(registry)) {
         const most = mostContested(group, enabled_at, ticks);
-        together = Math.max(together, most);
-        if (most >= 3) group_size = Math.max(group_size, group.inserters.length);
+        if (most < 2) continue;
+        const id = group.machine.entity_id.id;
+        const previous = contested_sources.get(id);
+        contested_sources.set(id, {size: Math.max(previous?.size ?? 0, group.inserters.length),
+            contested: Math.max(previous?.contested ?? 0, most)});
     }
-    // more than two enabled together: each taker of such a group has to come first once, whichever of them meet
-    return takerOrdersToCheck(together >= 3 ? group_size : together).slice(1);
+    // Sources choose independently: rotating every group together misses native mixed allocations.
+    return independentTakerOrdersToCheck(Array.from(contested_sources, ([id, group]) => ({id, ...group}))).slice(1);
 }
 
 /** The takers of one product of one machine */

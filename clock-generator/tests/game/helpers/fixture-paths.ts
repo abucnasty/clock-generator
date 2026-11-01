@@ -7,6 +7,7 @@ const PICKUP = path.join(ENGINE_ROOT, "tests/game/mechanics/belt-pickup/fixtures
 
 /** Mechanic fixtures are deliberately separate from ConfigPaths and ordinary sample sweeps. */
 export const GameFixturePaths = {
+    INDEPENDENT_SOURCE_ALLOCATIONS: path.join(ENGINE_ROOT, "tests/game/mechanics/source-order/fixtures/independent-source-allocations.json"),
     SAME_ITEM: path.join(PICKUP, "same-item"),
     SAME_ITEM_CONFIG: path.join(PICKUP, "same-item/config.json"),
     SAME_ITEM_STRAIGHT_CONFIG: path.join(PICKUP, "same-item/straight-belt.json"),
