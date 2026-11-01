@@ -5,6 +5,9 @@ targeted commands and screenshot regeneration. Screenshots are layout references
 
 - [Belt pickup](belt-pickup/README.md): exposed reach, moving lane fallback, backed-up supply and front exit mirroring.
 - [Belt lanes](belt-lanes/README.md): physical lanes in recordings and opposite-lane ingredient layouts.
+- [Source pickup](source-search/README.md): destination refusal, source inventory shapes and real pickup quantities.
+- [Circuit evaluation](circuit-evaluation/README.md): fixed/changing condition checks and a carried full hand.
+- [Busy inputs](busy-input/README.md): bounded target-full and pickup-check observations with explicit observation exclusions.
 - [Activation order](activation-order/README.md): bounded observed alarms, wakes, sleeps and updates in an offline scheduler replay.
 - [Source order](source-order/README.md): compact native shared-source allocations replayed without Factorio.
 - [Staged start](staged-start/README.md): saturated belts and fresh cell inserters built in a controlled order.

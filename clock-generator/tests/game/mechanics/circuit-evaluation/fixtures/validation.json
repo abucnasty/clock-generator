@@ -1,0 +1,163 @@
+{
+  "schema": "observed-game-behavior-1",
+  "pass": true,
+  "ticks": 20,
+  "visible_rows": 24,
+  "global_order_equal": false,
+  "per_role_order_equal": true,
+  "comparison": {
+    "visible_reference_equal_after_declared_origin": true,
+    "per_role_events_equal": true,
+    "global_events_equal": false
+  },
+  "controls": [
+    {
+      "role": "hand",
+      "prototype": "stack-inserter",
+      "conditions": 0,
+      "updates": 20,
+      "condition_checks": 0,
+      "output_computations": 0
+    },
+    {
+      "role": "fixed_generator",
+      "prototype": "arithmetic-combinator",
+      "conditions": 0,
+      "updates": 20,
+      "condition_checks": 0,
+      "output_computations": 0
+    },
+    {
+      "role": "counter",
+      "prototype": "decider-combinator",
+      "conditions": 1,
+      "updates": 20,
+      "condition_checks": 20,
+      "output_computations": 0
+    },
+    {
+      "role": "positive_generator",
+      "prototype": "arithmetic-combinator",
+      "conditions": 0,
+      "updates": 20,
+      "condition_checks": 0,
+      "output_computations": 20
+    },
+    {
+      "role": "fixed_arithmetic_zero",
+      "prototype": "arithmetic-combinator",
+      "conditions": 0,
+      "updates": 20,
+      "condition_checks": 0,
+      "output_computations": 0
+    },
+    {
+      "role": "fixed_simple_true",
+      "prototype": "decider-combinator",
+      "conditions": 1,
+      "updates": 20,
+      "condition_checks": 0,
+      "output_computations": 0
+    },
+    {
+      "role": "fixed_and_true",
+      "prototype": "decider-combinator",
+      "conditions": 3,
+      "updates": 20,
+      "condition_checks": 0,
+      "output_computations": 0
+    },
+    {
+      "role": "fixed_and_false_first",
+      "prototype": "decider-combinator",
+      "conditions": 3,
+      "updates": 20,
+      "condition_checks": 0,
+      "output_computations": 0
+    },
+    {
+      "role": "fixed_and_false_last",
+      "prototype": "decider-combinator",
+      "conditions": 3,
+      "updates": 20,
+      "condition_checks": 0,
+      "output_computations": 0
+    },
+    {
+      "role": "fixed_or_true_first",
+      "prototype": "decider-combinator",
+      "conditions": 3,
+      "updates": 20,
+      "condition_checks": 0,
+      "output_computations": 0
+    },
+    {
+      "role": "fixed_or_true_last",
+      "prototype": "decider-combinator",
+      "conditions": 3,
+      "updates": 20,
+      "condition_checks": 0,
+      "output_computations": 0
+    },
+    {
+      "role": "changing_arithmetic_zero",
+      "prototype": "arithmetic-combinator",
+      "conditions": 0,
+      "updates": 20,
+      "condition_checks": 0,
+      "output_computations": 20
+    },
+    {
+      "role": "changing_simple_true",
+      "prototype": "decider-combinator",
+      "conditions": 1,
+      "updates": 20,
+      "condition_checks": 20,
+      "output_computations": 0
+    },
+    {
+      "role": "changing_and_true",
+      "prototype": "decider-combinator",
+      "conditions": 3,
+      "updates": 20,
+      "condition_checks": 60,
+      "output_computations": 0
+    },
+    {
+      "role": "changing_and_false_first",
+      "prototype": "decider-combinator",
+      "conditions": 3,
+      "updates": 20,
+      "condition_checks": 20,
+      "output_computations": 0
+    },
+    {
+      "role": "changing_and_false_last",
+      "prototype": "decider-combinator",
+      "conditions": 3,
+      "updates": 20,
+      "condition_checks": 60,
+      "output_computations": 0
+    },
+    {
+      "role": "changing_or_true_first",
+      "prototype": "decider-combinator",
+      "conditions": 3,
+      "updates": 20,
+      "condition_checks": 20,
+      "output_computations": 0
+    },
+    {
+      "role": "changing_or_true_last",
+      "prototype": "decider-combinator",
+      "conditions": 3,
+      "updates": 20,
+      "condition_checks": 60,
+      "output_computations": 0
+    }
+  ],
+  "enabled_condition_checks": {
+    "game": 20,
+    "observation_excluded": 19
+  }
+}
