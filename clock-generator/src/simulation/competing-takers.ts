@@ -10,25 +10,44 @@ import type { InserterArchetype } from "./archetypes/inserter";
  * the descending order turned round by `rotation` places in each machine's group, or an order drawn from a seed. The
  * same for the whole run. The default is "descending".
  */
-export type TakerOrder = "descending" | "ascending" | { rotation: number } | { seed: number };
+type SingleTakerOrder = "descending" | "ascending" | { rotation: number } | { seed: number };
+export type TakerOrder = SingleTakerOrder | { source_orders: Readonly<Record<string, SingleTakerOrder>> };
 
-export const DEFAULT_TAKER_ORDER: TakerOrder = "descending";
+export const DEFAULT_TAKER_ORDER: SingleTakerOrder = "descending";
 
 /**
  * The orders a clock is checked under where `takers` inserters at most take one product from one machine: the default
  * alone where no machine has two, both ways round where the most is two, and where it is more, the descending order
  * and each of its rotations, so that every taker of a group is served first once and last once (two orders would leave
- * the middle ones never first nor last). The groups of one build are turned together; their combinations are not tried.
+ * the middle ones never first nor last). For multiple contested sources, independentTakerOrdersToCheck adds one-source-at-a-time checks.
  */
-export function takerOrdersToCheck(takers: number): TakerOrder[] {
+export function takerOrdersToCheck(takers: number): SingleTakerOrder[] {
     if (takers < 2) return [DEFAULT_TAKER_ORDER];
     if (takers === 2) return ["descending", "ascending"];
     return [DEFAULT_TAKER_ORDER, ...Array.from({ length: takers - 1 }, (_, index) => ({ rotation: index + 1 }))];
 }
 
+/**
+ * The existing global orders plus changing one contested source at a time. This adds independent mixed orders without
+ * multiplying every source's choices: a real cell02 build has up to 512 combinations before its windows are considered.
+ * Joint changes of several sources are not exhausted; this is a strict extension of the existing sampled-order gate.
+ */
+export function independentTakerOrdersToCheck(sources: readonly { id: string; size: number; contested: number }[]): TakerOrder[] {
+    const groups = sources.filter(it => it.contested > 1);
+    if (groups.length === 0) return [DEFAULT_TAKER_ORDER];
+    const together = Math.max(...groups.map(it => it.contested));
+    const size = Math.max(...groups.filter(it => it.contested >= 3).map(it => it.size), 0);
+    const global = takerOrdersToCheck(together >= 3 ? size : together);
+    if (groups.length === 1) return global;
+    const local = groups.flatMap(source => takerOrdersToCheck(source.contested >= 3 ? source.size : 2).slice(1)
+        .map(order => ({source_orders: {[source.id]: order}})));
+    return [...global, ...local];
+}
+
 /** How an order is named in a line of the generator: "descending", "ascending", "rotated by 2", "drawn from seed 1" */
 export function takerOrderName(order: TakerOrder): string {
     if (typeof order === "string") return order;
+    if ("source_orders" in order) return `source orders ${JSON.stringify(order.source_orders)}`;
     return "rotation" in order ? `rotated by ${order.rotation}` : `drawn from seed ${order.seed}`;
 }
 
@@ -45,7 +64,7 @@ function seeded(seed: number): () => number {
 }
 
 /** The members of a group in the order given, by their config ids (see TakerOrder) */
-function rankedMembers<T>(members: readonly T[], number_of: (member: T) => number, order: TakerOrder, draw: (() => number) | null): T[] {
+function rankedMembers<T>(members: readonly T[], number_of: (member: T) => number, order: SingleTakerOrder, draw: (() => number) | null): T[] {
     const key = new Map(members.map(it => [it, draw === null ? number_of(it) : draw()] as const));
     // the descending order and its rotations put the highest id first; the ascending and the drawn the lowest key
     const sign = order === "descending" || (typeof order === "object" && "rotation" in order) ? -1 : 1;
@@ -88,7 +107,9 @@ export function inserterUpdateOrder(
         }
         const members = places.map(place => inserters[place]);
         // Draw seeded ranks before skipping: later groups must keep the same seeded order.
-        const ranked = rankedMembers(members, it => it.inserter_state.entity_id.number, order, draw);
+        const local_order = typeof order === "object" && "source_orders" in order
+            ? order.source_orders[machine.entity_id.id] ?? DEFAULT_TAKER_ORDER : order;
+        const ranked = rankedMembers(members, it => it.inserter_state.entity_id.number, local_order, draw);
         if (ranked.every((member, index) => member === members[index])) continue;
         groups.push({ places, ranked });
     }
