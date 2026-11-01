@@ -1,7 +1,7 @@
 import fs from "fs";
 import {describe, expect, test} from "vitest";
 import {ConfigPaths} from "../../../src/config/config-paths";
-import {ClockControl, pinMismatches, readControls} from "./clock-controls";
+import {ClockControl, ClockHistory, coldClockReferenceMismatches, historicalPinMismatches, pinMismatches, readControls} from "./clock-controls";
 import {ownerClockHash as grenadeClockHash} from "./grenade-clock-fixtures";
 import {ownerClockHash} from "./own-clock-fixtures";
 
@@ -105,16 +105,14 @@ describe("pinMismatches for a hand-made clock", () => {
 });
 
 describe("cold starts", () => {
-    const start = readControls<{cold_start: {clocks: Record<string, {clock_sha256: string; recorded_clock_sha256: string}>; runs: Record<string, {clock: string}>}}>("pickup-clock-start-controls.json").cold_start;
+    const start = readControls<{cold_start: {clocks: Record<string, {clock_sha256: string; recorded_clock_sha256: string}>; runs: Record<string, {clock: string}>; historical_runs?: Record<string, {clock: string}>}}>("pickup-clock-start-controls.json").cold_start;
     test("every clock the runs were recorded on is the one the selection and the pinned windows make", () => {
         const found = Object.entries(start.clocks).filter(([, clock]) => clock.recorded_clock_sha256 !== clock.clock_sha256 || !hash.test(clock.clock_sha256))
             .map(([key, clock]) => `${key}: pinned ${clock.clock_sha256}, recorded on ${clock.recorded_clock_sha256}`);
         expect(found).toEqual([]);
     });
     test("every run names a clock, and every clock has a run", () => {
-        const used = new Set(Object.values(start.runs).map(run => run.clock));
-        expect([...used].filter(key => !start.clocks[key])).toEqual([]);
-        expect(Object.keys(start.clocks).filter(key => !used.has(key))).toEqual([]);
+        expect(coldClockReferenceMismatches(start.clocks, start.runs, start.historical_runs)).toEqual([]);
     });
 });
 
@@ -129,10 +127,46 @@ describe("scaffold recordings", () => {
     });
 });
 
-test("the history files keep the recordings of clocks no pin names", () => {
-    // a superseded recording belongs to no current pin: it has no hash to keep in step
+test("known historical captures retain their own identity, separate from the active pin", () => {
     for (const file of fs.readdirSync(__dirname).filter(file => file.endsWith("history-controls.json"))) {
-        const history = readControls<{cases: Record<string, {recorded: {clock_sha256?: string}}[]>}>(file);
-        for (const entries of Object.values(history.cases)) for (const it of entries) expect(it.recorded.clock_sha256).toBeUndefined();
+        const history = readControls<ClockHistory>(file);
+        if (!Object.values(history.cases).some(entries => entries.some(it => it.recorded.clock_sha256 !== undefined))) continue;
+        const current = readControls(file.replace("-history-controls.json", "-controls.json"));
+        expect(historicalPinMismatches(history.cases, current.cases), file).toEqual([]);
     }
+});
+
+test("cold reference checks include history without accepting missing or orphaned clocks", () => {
+    const clocks = {active: {}, old: {}};
+    const runs = {now: {clock: "active"}}, history = {before: {clock: "old"}};
+    expect(coldClockReferenceMismatches(clocks, runs, history)).toEqual([]);
+    expect(coldClockReferenceMismatches(clocks, runs)).toEqual(["old: clock has no current or historical run"]);
+    expect(coldClockReferenceMismatches({active: {}}, runs, history)).toEqual(["old: run names a missing clock"]);
+});
+
+describe("historical identity validation", () => {
+    const entry: ClockControl = {
+        recorded: {pr: 1, commit: "c0ffee", frozen_head: null, clock_sha256: "a".repeat(64), clock_basis: "capture"},
+        native: {generationVerdict: "stable", target: 1, period: 10, expected: 5, baseline: [5], recovery: []},
+        generation: {period: 10, expected: 5, verdict: "stable", selection: {id: "x", holds: true, rate: 1, supply: null}, clock_sha256: "a".repeat(64)},
+    };
+    const current = {...entry, generation: {...entry.generation!, clock_sha256: "b".repeat(64)}};
+    test("keeps a known old hash and its complete control", () => {
+        expect(historicalPinMismatches({one: [entry]}, {one: current})).toEqual([]);
+    });
+    test("rejects active identity, malformed identity, absent old pin and inconsistent quantities", () => {
+        expect(historicalPinMismatches({one: [entry]}, {one: entry})[0]).toContain("still names the active pin");
+        expect(historicalPinMismatches({one: [{...entry, recorded: {...entry.recorded, clock_sha256: "bad"}}]}, {one: current})[0]).toContain("recorded.clock_sha256 is missing");
+        expect(historicalPinMismatches({one: [{...entry, generation: undefined}]}, {one: current})[0]).toContain("no generation pin");
+        expect(historicalPinMismatches({one: [{...entry, native: {...entry.native, expected: 6}}]}, {one: current})[0]).toContain("different clocks");
+    });
+    test("a capture records actual source heads without invented pin publication metadata", () => {
+        const captured = {...entry, recorded: {frozen_head: null, clock_sha256: "a".repeat(64), clock_basis: "capture" as const,
+            capture: {validation_pr: 551, control_head: "c".repeat(40), harness_head: "d".repeat(40), game_version: "2.1.21"}}};
+        expect(pinMismatches({one: captured})).toEqual([]);
+        const invalid = {...captured, recorded: {...captured.recorded, capture: {...captured.recorded.capture, control_head: "short"}}};
+        expect(pinMismatches({one: invalid})[0]).toContain("full control and harness commit identities");
+        expect(pinMismatches({one: {...captured, recorded: {...captured.recorded, pr: 1, commit: "made-up"} as unknown as ClockControl["recorded"]}})[0]).toContain("must not claim pin publication identifiers");
+        expect(pinMismatches({one: {...captured, recorded: {...captured.recorded, clock_basis: "history"}}})[0]).toContain("requires the capture clock basis");
+    });
 });

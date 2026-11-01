@@ -4,7 +4,7 @@ import {clockFromWindows, runClockOnBuild} from "../../../src/crafting/trial";
 import {OpenRange} from "../../../src/data-types";
 import {clockHash, readControls} from "./clock-controls";
 import {reversedDeciders} from "./reversed-deciders";
-import {coldStart as controls, configOf} from "./pickup-clock-cold-start-runs";
+import {coldStart as controls, configOf, physicalColdClockOf, type ColdStartClock} from "./pickup-clock-cold-start-runs";
 
 /**
  * The clocked cold starts (`pickup-clock-start-controls.json`, `cold_start`: 57 runs recorded in Factorio 2.1.21, README
@@ -17,6 +17,10 @@ import {coldStart as controls, configOf} from "./pickup-clock-cold-start-runs";
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 const sha = (series: number[]) => createHash("sha256").update(JSON.stringify(series)).digest("hex");
 const names = Object.keys(controls.runs);
+const recordedCases = [
+    ...names.map(name => ({name, run: controls.runs[name]})),
+    ...Object.entries(controls.historical_runs ?? {}).map(([name, run]) => ({name: `historical ${name}`, run})),
+];
 
 /**
  * Runs the simulator does not follow tick for tick, with the reason; their output is held all the same. The one: a hand
@@ -47,13 +51,14 @@ function perPeriod(held: number[], period: number, periods: number) {
 // or phase but the lane phase at placement is given to it. Several start where a window the circuit latency carries over
 // the end of the period would enable the input in the first two ticks, which no window reaches yet in the game.
 describe("clocked cold starts from placement", () => {
-    test.each(names)("%s", async name => {
-        const run = controls.runs[name];
+    test.each(recordedCases)("$name", async ({name, run}) => {
         const clock = controls.clocks[run.clock];
         const config = await configOf(run.case);
         const windows = new Map(Object.entries(clock.clock_windows).map(([id, ranges]) =>
             [id, ranges.map(range => OpenRange.from(range.start, range.end))]));
-        const result = runClockOnBuild({...config, overrides: {...config.overrides, terminal_swing_count: clock.terminal_swings}},
+        const physical = physicalColdClockOf(clock, run);
+        const runConfig = physical ? config : {...config, overrides: {...config.overrides, terminal_swing_count: clock.terminal_swings}};
+        const result = runClockOnBuild(runConfig,
             windows, clock.period, quiet, {
                 cold_start: true, warmup_periods: 0, simulate_periods: controls.periods, machine_stock: true, factorio_states: false,
                 decider_order: run.decider_order,
@@ -80,27 +85,46 @@ describe("clocked cold starts from placement", () => {
 const FRACTIONAL_CLOCK = "1c25f7fb528f";
 
 describe("the stored windows build the clock each run was recorded on", () => {
-    async function builtFromWindows(name: string) {
-        const run = controls.runs[name];
+    async function builtFromWindows(record: typeof recordedCases[number]) {
+        const {run} = record;
         const clock = controls.clocks[run.clock];
         const config = await configOf(run.case);
+        if (clock.kind === "physical") throw new Error("Physical controls are checked by their exact encoding, not guessed planning metadata");
         const built = () => clockFromWindows(
             {...config, overrides: {...config.overrides, terminal_swing_count: clock.terminal_swings}}, clock.clock_windows, clock.period, quiet);
         return {run, clock, built};
     }
 
-    test.each(names.filter(name => controls.runs[name].clock !== FRACTIONAL_CLOCK))("%s", async name => {
-        const {run, clock, built} = await builtFromWindows(name);
+    test.each(recordedCases.filter(({run}) => run.clock !== FRACTIONAL_CLOCK && controls.clocks[run.clock].kind !== "physical"))("$name", async record => {
+        const {run, clock, built} = await builtFromWindows(record);
         let exported: {blueprint: any; schedule: any} = built();
         exported = (exported as any).subtick ?? exported;
         if (run.decider_order === "reversed") exported = reversedDeciders(exported.blueprint, exported.schedule);
         expect(clockHash(exported), "the windows no longer build the clock these runs were recorded on").toBe(clock.clock_sha256);
     });
 
-    test.each(names.filter(name => controls.runs[name].clock === FRACTIONAL_CLOCK))("%s: a fractional clock the windows cannot rebuild", async name => {
-        const {clock, built} = await builtFromWindows(name);
+    test.each(recordedCases.filter(({run}) => run.clock === FRACTIONAL_CLOCK))("$name: a fractional clock the windows cannot rebuild", async record => {
+        const {clock, built} = await builtFromWindows(record);
         expect(clock.period).toBe(704);
         expect(built).toThrow("The windows are of a clock of 704 ticks, and the config is planned on one of 2112");
+    });
+});
+
+describe("native physical cold controls", () => {
+    const physical = Object.values(controls.clocks).find(clock => clock.kind === "physical")!;
+    const built = {rotate: 0, decider_order: "built"};
+    test("physical control encoding, windows and period must agree, without invented planner metadata", () => {
+        const wrongWindows = structuredClone(physical);
+        wrongWindows.clock_windows["inserter:2"][0].end++;
+        expect(() => physicalColdClockOf(wrongWindows, built)).toThrow();
+        expect(() => physicalColdClockOf({...physical, period: physical.period + 1}, built)).toThrow();
+        expect(() => physicalColdClockOf({...physical, terminal_swings: 1} as unknown as ColdStartClock, built)).toThrow("must not invent");
+        expect(() => physicalColdClockOf(physical, {...built, rotate: 1})).toThrow("nonrotated and built-order only");
+        expect(() => physicalColdClockOf(physical, {...built, decider_order: "reversed"})).toThrow("nonrotated and built-order only");
+        expect(() => physicalColdClockOf({period: 10} as ColdStartClock, built)).toThrow("require actual terminal metadata");
+    });
+    test.each(recordedCases.filter(({run}) => controls.clocks[run.clock].kind === "physical"))("$name", ({run}) => {
+        expect(physicalColdClockOf(controls.clocks[run.clock], run)).not.toBeNull();
     });
 });
 
@@ -125,7 +149,7 @@ describe("the cold-start controls state themselves", () => {
     });
 
     test("every clock of the controls is the clock of some run, and was recorded as it is pinned", () => {
-        const used = new Set(names.map(name => controls.runs[name].clock));
+        const used = new Set(recordedCases.map(({run}) => run.clock));
         for (const [id, clock] of Object.entries(controls.clocks)) {
             expect(used.has(id), `${id} is the clock of no run`).toBe(true);
             expect(clock.recorded_clock_sha256, id).toBe(clock.clock_sha256);
