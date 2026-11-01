@@ -389,5 +389,51 @@
     "png_bytes": 1493565,
     "jpeg_bytes": 256331,
     "jpeg_quality": 82
+  },
+  "activation-order/partial-hand": {
+    "blueprint": "activation-order/fixtures/partial-hand/scaffold.txt",
+    "image": "activation-order/fixtures/partial-hand/scaffold.jpg",
+    "source_sha256": "899903adee0ba383503c0830ee8b9ce8c187362cbd4b915a13b5f0a82db0ff75",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 399.5,
+      "y": 0.57421875
+    },
+    "resolution": {
+      "x": 1460,
+      "y": 411
+    },
+    "zoom": 1.5,
+    "width": 1460,
+    "height": 411,
+    "png_bytes": 743580,
+    "jpeg_bytes": 103066,
+    "jpeg_quality": 82
+  },
+  "activation-order/condition-writes": {
+    "blueprint": "activation-order/fixtures/condition-writes/scaffold.txt",
+    "image": "activation-order/fixtures/condition-writes/scaffold.jpg",
+    "source_sha256": "a776eda948728991e95a86f95d3ac57c138f059c1f7c1bdc12c6b0b408fd4cc9",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 417.5,
+      "y": 0.57421875
+    },
+    "resolution": {
+      "x": 1920,
+      "y": 248
+    },
+    "zoom": 0.9036357218496294,
+    "width": 1920,
+    "height": 248,
+    "png_bytes": 733662,
+    "jpeg_bytes": 89554,
+    "jpeg_quality": 82
   }
 }

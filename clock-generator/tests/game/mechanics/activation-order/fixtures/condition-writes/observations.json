@@ -1,0 +1,5738 @@
+{
+  "schema": "observed-game-behavior-1",
+  "case": "condition-writes",
+  "game_version": "2.1.21",
+  "initial": [
+    {
+      "cell": 1,
+      "hand": 67,
+      "source": 65,
+      "sink": 66,
+      "stock": 8,
+      "position": {
+        "y": 1.5,
+        "x": 387.5
+      },
+      "source_position": {
+        "y": -0.5,
+        "x": 387.5
+      },
+      "sink_position": {
+        "y": 2.5,
+        "x": 387.5
+      },
+      "stack_override": 16,
+      "quality": "legendary",
+      "source_recipe": "copper-cable",
+      "sink_type": "container",
+      "sink_slots": 48
+    },
+    {
+      "cell": 2,
+      "hand": 70,
+      "source": 68,
+      "sink": 69,
+      "stock": 8,
+      "position": {
+        "y": 1.5,
+        "x": 399.5
+      },
+      "source_position": {
+        "y": -0.5,
+        "x": 399.5
+      },
+      "sink_position": {
+        "y": 2.5,
+        "x": 399.5
+      },
+      "stack_override": 16,
+      "quality": "legendary",
+      "source_recipe": "copper-cable",
+      "sink_type": "container",
+      "sink_slots": 48
+    },
+    {
+      "cell": 3,
+      "hand": 73,
+      "source": 71,
+      "sink": 72,
+      "stock": 8,
+      "position": {
+        "y": 1.5,
+        "x": 411.5
+      },
+      "source_position": {
+        "y": -0.5,
+        "x": 411.5
+      },
+      "sink_position": {
+        "y": 2.5,
+        "x": 411.5
+      },
+      "stack_override": 16,
+      "quality": "legendary",
+      "source_recipe": "copper-cable",
+      "sink_type": "container",
+      "sink_slots": 48
+    },
+    {
+      "cell": 4,
+      "hand": 76,
+      "source": 74,
+      "sink": 75,
+      "stock": 16,
+      "position": {
+        "y": 1.5,
+        "x": 423.5
+      },
+      "source_position": {
+        "y": -0.5,
+        "x": 423.5
+      },
+      "sink_position": {
+        "y": 2.5,
+        "x": 423.5
+      },
+      "stack_override": 16,
+      "quality": "legendary",
+      "source_recipe": "copper-cable",
+      "sink_type": "container",
+      "sink_slots": 48
+    },
+    {
+      "cell": 5,
+      "hand": 79,
+      "source": 77,
+      "sink": 78,
+      "stock": 16,
+      "position": {
+        "y": 1.5,
+        "x": 435.5
+      },
+      "source_position": {
+        "y": -0.5,
+        "x": 435.5
+      },
+      "sink_position": {
+        "y": 2.5,
+        "x": 435.5
+      },
+      "stack_override": 16,
+      "quality": "legendary",
+      "source_recipe": "copper-cable",
+      "sink_type": "container",
+      "sink_slots": 48
+    },
+    {
+      "cell": 6,
+      "hand": 82,
+      "source": 80,
+      "sink": 81,
+      "stock": 16,
+      "position": {
+        "y": 1.5,
+        "x": 447.5
+      },
+      "source_position": {
+        "y": -0.5,
+        "x": 447.5
+      },
+      "sink_position": {
+        "y": 2.5,
+        "x": 447.5
+      },
+      "stack_override": 16,
+      "quality": "legendary",
+      "source_recipe": "copper-cable",
+      "sink_type": "container",
+      "sink_slots": 48
+    }
+  ],
+  "initial_active_order": [
+    "hand_3",
+    "hand_2",
+    "hand_1",
+    "hand_6",
+    "hand_5",
+    "hand_4"
+  ],
+  "initial_state_basis": "observed awake/asleep state before the first selected update",
+  "window": {
+    "first_tick": 1,
+    "last_tick": 20
+  },
+  "tick_conversion": "Actual tick k transfers appear in visible row k+1; interventions after visible k may precede the tick k update.",
+  "events": [
+    {
+      "event": "update",
+      "probe_tick": 1,
+      "order": 0,
+      "end_order": 5,
+      "role": "hand_3",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "sleep",
+      "probe_tick": 1,
+      "order": 2,
+      "end_order": 3,
+      "role": "hand_3",
+      "cause": "sleep-after-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 1,
+      "order": 6,
+      "end_order": 11,
+      "role": "hand_2",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "sleep",
+      "probe_tick": 1,
+      "order": 8,
+      "end_order": 9,
+      "role": "hand_2",
+      "cause": "sleep-after-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 1,
+      "order": 12,
+      "end_order": 17,
+      "role": "hand_1",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "sleep",
+      "probe_tick": 1,
+      "order": 14,
+      "end_order": 15,
+      "role": "hand_1",
+      "cause": "sleep-after-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 1,
+      "order": 18,
+      "end_order": 19,
+      "role": "hand_6",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 1,
+      "order": 20,
+      "end_order": 21,
+      "role": "hand_5",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 1,
+      "order": 22,
+      "end_order": 23,
+      "role": "hand_4",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 2,
+      "order": 24,
+      "end_order": 25,
+      "role": "hand_6",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 2,
+      "order": 26,
+      "end_order": 27,
+      "role": "hand_5",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 2,
+      "order": 28,
+      "end_order": 29,
+      "role": "hand_4",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 3,
+      "order": 30,
+      "end_order": 31,
+      "role": "hand_6",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 3,
+      "order": 32,
+      "end_order": 33,
+      "role": "hand_5",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 3,
+      "order": 34,
+      "end_order": 35,
+      "role": "hand_4",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 4,
+      "order": 36,
+      "end_order": 39,
+      "role": "hand_6",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 4,
+      "order": 37,
+      "end_order": 38,
+      "role": "hand_6",
+      "cause": "source-output-change",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 4,
+      "order": 40,
+      "end_order": 43,
+      "role": "hand_5",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 4,
+      "order": 41,
+      "end_order": 42,
+      "role": "hand_5",
+      "cause": "source-output-change",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 4,
+      "order": 44,
+      "end_order": 47,
+      "role": "hand_4",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 4,
+      "order": 45,
+      "end_order": 46,
+      "role": "hand_4",
+      "cause": "source-output-change",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 5,
+      "order": 48,
+      "end_order": 51,
+      "role": "hand_1",
+      "cause": "condition-assignment",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "wake",
+      "probe_tick": 5,
+      "order": 50,
+      "end_order": 52,
+      "role": "hand_1",
+      "cause": "condition-assignment",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 5,
+      "order": 53,
+      "end_order": 54,
+      "role": "hand_4",
+      "cause": "condition-assignment",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 5,
+      "order": 55,
+      "end_order": 58,
+      "role": "hand_2",
+      "cause": "condition-assignment",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "wake",
+      "probe_tick": 5,
+      "order": 57,
+      "end_order": 59,
+      "role": "hand_2",
+      "cause": "condition-assignment",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 5,
+      "order": 60,
+      "end_order": 61,
+      "role": "hand_5",
+      "cause": "condition-assignment",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 5,
+      "order": 62,
+      "end_order": 67,
+      "role": "hand_2",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "sleep",
+      "probe_tick": 5,
+      "order": 64,
+      "end_order": 65,
+      "role": "hand_2",
+      "cause": "sleep-after-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 5,
+      "order": 68,
+      "end_order": 73,
+      "role": "hand_1",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "sleep",
+      "probe_tick": 5,
+      "order": 70,
+      "end_order": 71,
+      "role": "hand_1",
+      "cause": "sleep-after-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 5,
+      "order": 74,
+      "end_order": 75,
+      "role": "hand_6",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 5,
+      "order": 76,
+      "end_order": 77,
+      "role": "hand_5",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 5,
+      "order": 78,
+      "end_order": 79,
+      "role": "hand_4",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 6,
+      "order": 80,
+      "end_order": 81,
+      "role": "hand_6",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 6,
+      "order": 82,
+      "end_order": 83,
+      "role": "hand_5",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 6,
+      "order": 84,
+      "end_order": 85,
+      "role": "hand_4",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 7,
+      "order": 104,
+      "end_order": 105,
+      "role": "hand_6",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 7,
+      "order": 106,
+      "end_order": 107,
+      "role": "hand_5",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 7,
+      "order": 108,
+      "end_order": 109,
+      "role": "hand_4",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 7,
+      "order": 120,
+      "end_order": 123,
+      "role": "hand_3",
+      "cause": "source-output-change",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "wake",
+      "probe_tick": 7,
+      "order": 122,
+      "end_order": 124,
+      "role": "hand_3",
+      "cause": "source-output-change",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 7,
+      "order": 128,
+      "end_order": 131,
+      "role": "hand_2",
+      "cause": "source-output-change",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "wake",
+      "probe_tick": 7,
+      "order": 130,
+      "end_order": 132,
+      "role": "hand_2",
+      "cause": "source-output-change",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 7,
+      "order": 136,
+      "end_order": 139,
+      "role": "hand_1",
+      "cause": "source-output-change",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "wake",
+      "probe_tick": 7,
+      "order": 138,
+      "end_order": 140,
+      "role": "hand_1",
+      "cause": "source-output-change",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 8,
+      "order": 143,
+      "end_order": 146,
+      "role": "hand_1",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "sleep",
+      "probe_tick": 8,
+      "order": 144,
+      "end_order": 145,
+      "role": "hand_1",
+      "cause": "inserter-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 8,
+      "order": 147,
+      "end_order": 157,
+      "role": "hand_2",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 8,
+      "order": 150,
+      "end_order": 151,
+      "role": "hand_2",
+      "cause": "source-output-change",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "sleep",
+      "probe_tick": 8,
+      "order": 154,
+      "end_order": 155,
+      "role": "hand_2",
+      "cause": "sleep-after-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 8,
+      "order": 158,
+      "end_order": 168,
+      "role": "hand_3",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 8,
+      "order": 161,
+      "end_order": 162,
+      "role": "hand_3",
+      "cause": "source-output-change",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "sleep",
+      "probe_tick": 8,
+      "order": 165,
+      "end_order": 166,
+      "role": "hand_3",
+      "cause": "sleep-after-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 8,
+      "order": 169,
+      "end_order": 179,
+      "role": "hand_6",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 8,
+      "order": 173,
+      "end_order": 174,
+      "role": "hand_6",
+      "cause": "source-output-change",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "sleep",
+      "probe_tick": 8,
+      "order": 176,
+      "end_order": 177,
+      "role": "hand_6",
+      "cause": "sleep-after-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 8,
+      "order": 180,
+      "end_order": 190,
+      "role": "hand_5",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 8,
+      "order": 184,
+      "end_order": 185,
+      "role": "hand_5",
+      "cause": "source-output-change",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "sleep",
+      "probe_tick": 8,
+      "order": 187,
+      "end_order": 188,
+      "role": "hand_5",
+      "cause": "sleep-after-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 8,
+      "order": 191,
+      "end_order": 194,
+      "role": "hand_4",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "sleep",
+      "probe_tick": 8,
+      "order": 192,
+      "end_order": 193,
+      "role": "hand_4",
+      "cause": "inserter-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 9,
+      "order": 195,
+      "end_order": 198,
+      "role": "hand_1",
+      "cause": "condition-assignment",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "wake",
+      "probe_tick": 9,
+      "order": 197,
+      "end_order": 199,
+      "role": "hand_1",
+      "cause": "condition-assignment",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 9,
+      "order": 200,
+      "end_order": 203,
+      "role": "hand_4",
+      "cause": "condition-assignment",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "wake",
+      "probe_tick": 9,
+      "order": 202,
+      "end_order": 204,
+      "role": "hand_4",
+      "cause": "condition-assignment",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 9,
+      "order": 205,
+      "end_order": 208,
+      "role": "hand_4",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "sleep",
+      "probe_tick": 9,
+      "order": 206,
+      "end_order": 207,
+      "role": "hand_4",
+      "cause": "inserter-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 9,
+      "order": 209,
+      "end_order": 212,
+      "role": "hand_1",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "sleep",
+      "probe_tick": 9,
+      "order": 210,
+      "end_order": 211,
+      "role": "hand_1",
+      "cause": "inserter-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 9,
+      "order": 213,
+      "end_order": 216,
+      "role": "hand_1",
+      "cause": "control-change-delivery",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "wake",
+      "probe_tick": 9,
+      "order": 215,
+      "end_order": 217,
+      "role": "hand_1",
+      "cause": "control-change-delivery",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 9,
+      "order": 218,
+      "end_order": 221,
+      "role": "hand_4",
+      "cause": "control-change-delivery",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "wake",
+      "probe_tick": 9,
+      "order": 220,
+      "end_order": 222,
+      "role": "hand_4",
+      "cause": "control-change-delivery",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 10,
+      "order": 223,
+      "end_order": 233,
+      "role": "hand_4",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 10,
+      "order": 227,
+      "end_order": 228,
+      "role": "hand_4",
+      "cause": "source-output-change",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "sleep",
+      "probe_tick": 10,
+      "order": 230,
+      "end_order": 231,
+      "role": "hand_4",
+      "cause": "sleep-after-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 10,
+      "order": 234,
+      "end_order": 244,
+      "role": "hand_1",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 10,
+      "order": 237,
+      "end_order": 238,
+      "role": "hand_1",
+      "cause": "source-output-change",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "sleep",
+      "probe_tick": 10,
+      "order": 241,
+      "end_order": 242,
+      "role": "hand_1",
+      "cause": "sleep-after-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 12,
+      "order": 245,
+      "end_order": 248,
+      "role": "hand_1",
+      "cause": "condition-assignment",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "wake",
+      "probe_tick": 12,
+      "order": 247,
+      "end_order": 249,
+      "role": "hand_1",
+      "cause": "condition-assignment",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 12,
+      "order": 250,
+      "end_order": 253,
+      "role": "hand_4",
+      "cause": "condition-assignment",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "wake",
+      "probe_tick": 12,
+      "order": 252,
+      "end_order": 254,
+      "role": "hand_4",
+      "cause": "condition-assignment",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 12,
+      "order": 255,
+      "end_order": 260,
+      "role": "hand_4",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "sleep",
+      "probe_tick": 12,
+      "order": 257,
+      "end_order": 258,
+      "role": "hand_4",
+      "cause": "sleep-after-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 12,
+      "order": 261,
+      "end_order": 266,
+      "role": "hand_1",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "sleep",
+      "probe_tick": 12,
+      "order": 263,
+      "end_order": 264,
+      "role": "hand_1",
+      "cause": "sleep-after-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 14,
+      "order": 267,
+      "end_order": 270,
+      "role": "hand_1",
+      "cause": "condition-assignment",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "wake",
+      "probe_tick": 14,
+      "order": 269,
+      "end_order": 271,
+      "role": "hand_1",
+      "cause": "condition-assignment",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 14,
+      "order": 272,
+      "end_order": 275,
+      "role": "hand_4",
+      "cause": "condition-assignment",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "wake",
+      "probe_tick": 14,
+      "order": 274,
+      "end_order": 276,
+      "role": "hand_4",
+      "cause": "condition-assignment",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 14,
+      "order": 277,
+      "end_order": 280,
+      "role": "hand_4",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "sleep",
+      "probe_tick": 14,
+      "order": 278,
+      "end_order": 279,
+      "role": "hand_4",
+      "cause": "inserter-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 14,
+      "order": 281,
+      "end_order": 284,
+      "role": "hand_1",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "sleep",
+      "probe_tick": 14,
+      "order": 282,
+      "end_order": 283,
+      "role": "hand_1",
+      "cause": "inserter-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 14,
+      "order": 285,
+      "end_order": 288,
+      "role": "hand_1",
+      "cause": "control-change-delivery",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "wake",
+      "probe_tick": 14,
+      "order": 287,
+      "end_order": 289,
+      "role": "hand_1",
+      "cause": "control-change-delivery",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 14,
+      "order": 290,
+      "end_order": 293,
+      "role": "hand_4",
+      "cause": "control-change-delivery",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "wake",
+      "probe_tick": 14,
+      "order": 292,
+      "end_order": 294,
+      "role": "hand_4",
+      "cause": "control-change-delivery",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 15,
+      "order": 295,
+      "end_order": 300,
+      "role": "hand_4",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "sleep",
+      "probe_tick": 15,
+      "order": 297,
+      "end_order": 298,
+      "role": "hand_4",
+      "cause": "sleep-after-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 15,
+      "order": 301,
+      "end_order": 306,
+      "role": "hand_1",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "sleep",
+      "probe_tick": 15,
+      "order": 303,
+      "end_order": 304,
+      "role": "hand_1",
+      "cause": "sleep-after-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    }
+  ],
+  "visible": {
+    "initial": [
+      {
+        "cell": 1,
+        "hand": 67,
+        "source": 65,
+        "sink": 66,
+        "stock": 8,
+        "position": {
+          "y": 1.5,
+          "x": 387.5
+        },
+        "source_position": {
+          "y": -0.5,
+          "x": 387.5
+        },
+        "sink_position": {
+          "y": 2.5,
+          "x": 387.5
+        },
+        "stack_override": 16,
+        "quality": "legendary",
+        "source_recipe": "copper-cable",
+        "sink_type": "container",
+        "sink_slots": 48
+      },
+      {
+        "cell": 2,
+        "hand": 70,
+        "source": 68,
+        "sink": 69,
+        "stock": 8,
+        "position": {
+          "y": 1.5,
+          "x": 399.5
+        },
+        "source_position": {
+          "y": -0.5,
+          "x": 399.5
+        },
+        "sink_position": {
+          "y": 2.5,
+          "x": 399.5
+        },
+        "stack_override": 16,
+        "quality": "legendary",
+        "source_recipe": "copper-cable",
+        "sink_type": "container",
+        "sink_slots": 48
+      },
+      {
+        "cell": 3,
+        "hand": 73,
+        "source": 71,
+        "sink": 72,
+        "stock": 8,
+        "position": {
+          "y": 1.5,
+          "x": 411.5
+        },
+        "source_position": {
+          "y": -0.5,
+          "x": 411.5
+        },
+        "sink_position": {
+          "y": 2.5,
+          "x": 411.5
+        },
+        "stack_override": 16,
+        "quality": "legendary",
+        "source_recipe": "copper-cable",
+        "sink_type": "container",
+        "sink_slots": 48
+      },
+      {
+        "cell": 4,
+        "hand": 76,
+        "source": 74,
+        "sink": 75,
+        "stock": 16,
+        "position": {
+          "y": 1.5,
+          "x": 423.5
+        },
+        "source_position": {
+          "y": -0.5,
+          "x": 423.5
+        },
+        "sink_position": {
+          "y": 2.5,
+          "x": 423.5
+        },
+        "stack_override": 16,
+        "quality": "legendary",
+        "source_recipe": "copper-cable",
+        "sink_type": "container",
+        "sink_slots": 48
+      },
+      {
+        "cell": 5,
+        "hand": 79,
+        "source": 77,
+        "sink": 78,
+        "stock": 16,
+        "position": {
+          "y": 1.5,
+          "x": 435.5
+        },
+        "source_position": {
+          "y": -0.5,
+          "x": 435.5
+        },
+        "sink_position": {
+          "y": 2.5,
+          "x": 435.5
+        },
+        "stack_override": 16,
+        "quality": "legendary",
+        "source_recipe": "copper-cable",
+        "sink_type": "container",
+        "sink_slots": 48
+      },
+      {
+        "cell": 6,
+        "hand": 82,
+        "source": 80,
+        "sink": 81,
+        "stock": 16,
+        "position": {
+          "y": 1.5,
+          "x": 447.5
+        },
+        "source_position": {
+          "y": -0.5,
+          "x": 447.5
+        },
+        "sink_position": {
+          "y": 2.5,
+          "x": 447.5
+        },
+        "stack_override": 16,
+        "quality": "legendary",
+        "source_recipe": "copper-cable",
+        "sink_type": "container",
+        "sink_slots": 48
+      }
+    ],
+    "interventions": [
+      {
+        "tick": 5,
+        "game_tick": 47402,
+        "name": "A_condition_false_B_equivalent_true",
+        "hands_before": [
+          {
+            "unit": 67,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            }
+          },
+          {
+            "unit": 70,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            }
+          },
+          {
+            "unit": 73,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            }
+          },
+          {
+            "unit": 76,
+            "held": 0,
+            "hand": {
+              "y": 2.69921875,
+              "x": 423.5
+            }
+          },
+          {
+            "unit": 79,
+            "held": 0,
+            "hand": {
+              "y": 2.69921875,
+              "x": 435.5
+            }
+          },
+          {
+            "unit": 82,
+            "held": 0,
+            "hand": {
+              "y": 2.69921875,
+              "x": 447.5
+            }
+          }
+        ]
+      },
+      {
+        "tick": 7,
+        "game_tick": 47404,
+        "name": "one_real_craft_from_099",
+        "hands_before": [
+          {
+            "unit": 67,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            }
+          },
+          {
+            "unit": 70,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            }
+          },
+          {
+            "unit": 73,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            }
+          },
+          {
+            "unit": 76,
+            "held": 0,
+            "hand": {
+              "y": 1.41015625,
+              "x": 424.44921875
+            }
+          },
+          {
+            "unit": 79,
+            "held": 0,
+            "hand": {
+              "y": 1.41015625,
+              "x": 436.44921875
+            }
+          },
+          {
+            "unit": 82,
+            "held": 0,
+            "hand": {
+              "y": 1.41015625,
+              "x": 448.44921875
+            }
+          }
+        ]
+      },
+      {
+        "tick": 9,
+        "game_tick": 47406,
+        "name": "A_condition_true",
+        "hands_before": [
+          {
+            "unit": 67,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            }
+          },
+          {
+            "unit": 70,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            }
+          },
+          {
+            "unit": 73,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            }
+          },
+          {
+            "unit": 76,
+            "held": 0,
+            "hand": {
+              "y": 0.5,
+              "x": 423.5
+            }
+          },
+          {
+            "unit": 79,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 435.5
+            }
+          },
+          {
+            "unit": 82,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 447.5
+            }
+          }
+        ]
+      },
+      {
+        "tick": 12,
+        "game_tick": 47409,
+        "name": "A_condition_false_B_equivalent_true",
+        "hands_before": [
+          {
+            "unit": 67,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            }
+          },
+          {
+            "unit": 70,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            }
+          },
+          {
+            "unit": 73,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            }
+          },
+          {
+            "unit": 76,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 423.5
+            }
+          },
+          {
+            "unit": 79,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 435.5
+            }
+          },
+          {
+            "unit": 82,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 447.5
+            }
+          }
+        ]
+      },
+      {
+        "tick": 14,
+        "game_tick": 47411,
+        "name": "A_condition_true",
+        "hands_before": [
+          {
+            "unit": 67,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            }
+          },
+          {
+            "unit": 70,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            }
+          },
+          {
+            "unit": 73,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            }
+          },
+          {
+            "unit": 76,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 423.5
+            }
+          },
+          {
+            "unit": 79,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 435.5
+            }
+          },
+          {
+            "unit": 82,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 447.5
+            }
+          }
+        ]
+      }
+    ],
+    "rows": [
+      {
+        "tick": 1,
+        "cells": [
+          {
+            "cell": 1,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 2,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 3,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 4,
+            "held": 16,
+            "hand": {
+              "y": 0.5,
+              "x": 423.5
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 5,
+            "held": 16,
+            "hand": {
+              "y": 0.5,
+              "x": 435.5
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 6,
+            "held": 16,
+            "hand": {
+              "y": 0.5,
+              "x": 447.5
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          }
+        ]
+      },
+      {
+        "tick": 2,
+        "cells": [
+          {
+            "cell": 1,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 2,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 3,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 4,
+            "held": 16,
+            "hand": {
+              "y": 0.234375,
+              "x": 424.203125
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 5,
+            "held": 16,
+            "hand": {
+              "y": 0.234375,
+              "x": 436.203125
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 6,
+            "held": 16,
+            "hand": {
+              "y": 0.234375,
+              "x": 448.203125
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          }
+        ]
+      },
+      {
+        "tick": 3,
+        "cells": [
+          {
+            "cell": 1,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 2,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 3,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 4,
+            "held": 16,
+            "hand": {
+              "y": 0.734375,
+              "x": 424.640625
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 5,
+            "held": 16,
+            "hand": {
+              "y": 0.734375,
+              "x": 436.640625
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 6,
+            "held": 16,
+            "hand": {
+              "y": 0.734375,
+              "x": 448.640625
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          }
+        ]
+      },
+      {
+        "tick": 4,
+        "cells": [
+          {
+            "cell": 1,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 2,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 3,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 4,
+            "held": 16,
+            "hand": {
+              "y": 1.5703125,
+              "x": 424.640625
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 5,
+            "held": 16,
+            "hand": {
+              "y": 1.5703125,
+              "x": 436.640625
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 6,
+            "held": 16,
+            "hand": {
+              "y": 1.5703125,
+              "x": 448.640625
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          }
+        ]
+      },
+      {
+        "tick": 5,
+        "cells": [
+          {
+            "cell": 1,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 2,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 3,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 4,
+            "held": 0,
+            "hand": {
+              "y": 2.69921875,
+              "x": 423.5
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 5,
+            "held": 0,
+            "hand": {
+              "y": 2.69921875,
+              "x": 435.5
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 6,
+            "held": 0,
+            "hand": {
+              "y": 2.69921875,
+              "x": 447.5
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {
+              "copper-cable": 16
+            }
+          }
+        ]
+      },
+      {
+        "tick": 6,
+        "cells": [
+          {
+            "cell": 1,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            },
+            "status": "disabled_by_control_behavior",
+            "disabled": true,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "<",
+              "fulfilled": false
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 2,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 3,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 4,
+            "held": 0,
+            "hand": {
+              "y": 2.01171875,
+              "x": 424.0859375
+            },
+            "status": "disabled_by_control_behavior",
+            "disabled": true,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "<",
+              "fulfilled": false
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 5,
+            "held": 0,
+            "hand": {
+              "y": 2.01171875,
+              "x": 436.0859375
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 6,
+            "held": 0,
+            "hand": {
+              "y": 2.01171875,
+              "x": 448.0859375
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {
+              "copper-cable": 16
+            }
+          }
+        ]
+      },
+      {
+        "tick": 7,
+        "cells": [
+          {
+            "cell": 1,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            },
+            "status": "disabled_by_control_behavior",
+            "disabled": true,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "<",
+              "fulfilled": false
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 2,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 3,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {}
+          },
+          {
+            "cell": 4,
+            "held": 0,
+            "hand": {
+              "y": 1.41015625,
+              "x": 424.44921875
+            },
+            "status": "disabled_by_control_behavior",
+            "disabled": true,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "<",
+              "fulfilled": false
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 5,
+            "held": 0,
+            "hand": {
+              "y": 1.41015625,
+              "x": 436.44921875
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 6,
+            "held": 0,
+            "hand": {
+              "y": 1.41015625,
+              "x": 448.44921875
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 0,
+            "sink": {
+              "copper-cable": 16
+            }
+          }
+        ]
+      },
+      {
+        "tick": 8,
+        "cells": [
+          {
+            "cell": 1,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            },
+            "status": "disabled_by_control_behavior",
+            "disabled": true,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "<",
+              "fulfilled": false
+            },
+            "green_network": false,
+            "source_output": {
+              "copper-cable": 2
+            },
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 2,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {
+              "copper-cable": 2
+            },
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 3,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {
+              "copper-cable": 2
+            },
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 4,
+            "held": 0,
+            "hand": {
+              "y": 0.89453125,
+              "x": 424.44921875
+            },
+            "status": "disabled_by_control_behavior",
+            "disabled": true,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "<",
+              "fulfilled": false
+            },
+            "green_network": false,
+            "source_output": {
+              "copper-cable": 2
+            },
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 5,
+            "held": 0,
+            "hand": {
+              "y": 0.89453125,
+              "x": 436.44921875
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {
+              "copper-cable": 2
+            },
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 6,
+            "held": 0,
+            "hand": {
+              "y": 0.89453125,
+              "x": 448.44921875
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {
+              "copper-cable": 2
+            },
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          }
+        ]
+      },
+      {
+        "tick": 9,
+        "cells": [
+          {
+            "cell": 1,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            },
+            "status": "disabled_by_control_behavior",
+            "disabled": true,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "<",
+              "fulfilled": false
+            },
+            "green_network": false,
+            "source_output": {
+              "copper-cable": 2
+            },
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 2,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 3,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 4,
+            "held": 0,
+            "hand": {
+              "y": 0.5,
+              "x": 423.5
+            },
+            "status": "disabled_by_control_behavior",
+            "disabled": true,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "<",
+              "fulfilled": false
+            },
+            "green_network": false,
+            "source_output": {
+              "copper-cable": 2
+            },
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 5,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 435.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 6,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 447.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          }
+        ]
+      },
+      {
+        "tick": 10,
+        "cells": [
+          {
+            "cell": 1,
+            "held": 8,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {
+              "copper-cable": 2
+            },
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 2,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 3,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 4,
+            "held": 0,
+            "hand": {
+              "y": 0.5,
+              "x": 423.5
+            },
+            "status": "waiting_for_source_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {
+              "copper-cable": 2
+            },
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 5,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 435.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 6,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 447.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          }
+        ]
+      },
+      {
+        "tick": 11,
+        "cells": [
+          {
+            "cell": 1,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 2,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 3,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 4,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 423.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 5,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 435.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 6,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 447.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          }
+        ]
+      },
+      {
+        "tick": 12,
+        "cells": [
+          {
+            "cell": 1,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 2,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 3,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 4,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 423.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 5,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 435.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 6,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 447.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          }
+        ]
+      },
+      {
+        "tick": 13,
+        "cells": [
+          {
+            "cell": 1,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            },
+            "status": "disabled_by_control_behavior",
+            "disabled": true,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "<",
+              "fulfilled": false
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 2,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 3,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 4,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 423.5
+            },
+            "status": "disabled_by_control_behavior",
+            "disabled": true,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "<",
+              "fulfilled": false
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 5,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 435.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 6,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 447.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          }
+        ]
+      },
+      {
+        "tick": 14,
+        "cells": [
+          {
+            "cell": 1,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            },
+            "status": "disabled_by_control_behavior",
+            "disabled": true,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "<",
+              "fulfilled": false
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 2,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 3,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 4,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 423.5
+            },
+            "status": "disabled_by_control_behavior",
+            "disabled": true,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "<",
+              "fulfilled": false
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 5,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 435.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 6,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 447.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          }
+        ]
+      },
+      {
+        "tick": 15,
+        "cells": [
+          {
+            "cell": 1,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 2,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 3,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 4,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 423.5
+            },
+            "status": "working",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 5,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 435.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 6,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 447.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          }
+        ]
+      },
+      {
+        "tick": 16,
+        "cells": [
+          {
+            "cell": 1,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 2,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 3,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 4,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 423.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 5,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 435.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 6,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 447.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          }
+        ]
+      },
+      {
+        "tick": 17,
+        "cells": [
+          {
+            "cell": 1,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 2,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 3,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 4,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 423.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 5,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 435.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 6,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 447.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          }
+        ]
+      },
+      {
+        "tick": 18,
+        "cells": [
+          {
+            "cell": 1,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 2,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 3,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 4,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 423.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 5,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 435.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 6,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 447.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          }
+        ]
+      },
+      {
+        "tick": 19,
+        "cells": [
+          {
+            "cell": 1,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 2,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 3,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 4,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 423.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 5,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 435.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 6,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 447.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          }
+        ]
+      },
+      {
+        "tick": 20,
+        "cells": [
+          {
+            "cell": 1,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 2,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 3,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 4,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 423.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 5,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 435.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 6,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 447.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          }
+        ]
+      },
+      {
+        "tick": 21,
+        "cells": [
+          {
+            "cell": 1,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 2,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 3,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 4,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 423.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 5,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 435.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 6,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 447.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          }
+        ]
+      },
+      {
+        "tick": 22,
+        "cells": [
+          {
+            "cell": 1,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 2,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 3,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 4,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 423.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 5,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 435.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 6,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 447.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          }
+        ]
+      },
+      {
+        "tick": 23,
+        "cells": [
+          {
+            "cell": 1,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 2,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 3,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 4,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 423.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 5,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 435.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 6,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 447.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          }
+        ]
+      },
+      {
+        "tick": 24,
+        "cells": [
+          {
+            "cell": 1,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 387.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 2,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 399.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 3,
+            "held": 10,
+            "hand": {
+              "y": 0.5,
+              "x": 411.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {}
+          },
+          {
+            "cell": 4,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 423.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 5,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 435.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Y"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          },
+          {
+            "cell": 6,
+            "held": 2,
+            "hand": {
+              "y": 0.5,
+              "x": 447.5
+            },
+            "status": "waiting_for_more_items",
+            "disabled": false,
+            "condition": {
+              "first_signal": {
+                "type": "virtual",
+                "name": "signal-Z"
+              },
+              "constant": 0,
+              "comparator": "≥",
+              "fulfilled": true
+            },
+            "green_network": false,
+            "source_output": {},
+            "source_finished": 1,
+            "sink": {
+              "copper-cable": 16
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "comparison": {
+    "visible_reference_equal": true,
+    "repeat_relative_visible_equal": true,
+    "repeat_events_equal": true,
+    "repeat_game_origin_difference_ticks": 0,
+    "repeat_absolute_visible_equal": true
+  },
+  "limits": [
+    "Notifications and observed wake/sleep outcomes are supplied to this replay, not derived from hand physics.",
+    "Condition assignment is not control replacement. Earlier delivered full hands do not establish full-carry behavior across disable.",
+    "Per-source role sequences do not establish one universal order for unrelated sources."
+  ]
+}
