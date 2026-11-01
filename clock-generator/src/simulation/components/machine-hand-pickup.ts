@@ -1,3 +1,4 @@
+import { HandNotifications } from "./hand-notifications";
 import { ItemName } from "../../data";
 import { InserterStatus } from "../../state/entity-status";
 import type { InserterState } from "../../state/inserter-state";
@@ -40,6 +41,7 @@ export class MachineHandPickup implements HandPickupPort {
          * when known, read at the take that marks the machine (after a control swap, the new control's)
          */
         private readonly control?: Control,
+        private readonly notifications: HandNotifications = new HandNotifications(),
     ) {
         this.output = source.output;
         this.wakes = source.wakes;
@@ -84,6 +86,10 @@ export class MachineHandPickup implements HandPickupPort {
         scratch.reason_item = item;
         scratch.reason_quantity = quantity;
         return true;
+    }
+
+    public waitsForItems(): boolean {
+        return !this.offersAnything();
     }
 
     public pickup(): void {
@@ -137,7 +143,7 @@ export class MachineHandPickup implements HandPickupPort {
             return;
         }
 
-        takeIntoHand(state, this.scratch, item, pickup_quantity);
+        takeIntoHand(state, this.scratch, item, pickup_quantity, this.notifications);
         this.output.take(item, pickup_quantity);
         if (this.scratch.window_opened && this.scratch.ticks_in_pickup === 1) {
             this.wakes.markWindowOpeningTake(this.control?.decider_build_order ?? -1);

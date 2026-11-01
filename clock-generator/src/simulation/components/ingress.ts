@@ -157,6 +157,11 @@ export class Ingress implements DropPort {
         return this.slot_of.get(item) ?? -1;
     }
 
+    /** Ingredient consumption/output removal notify; lighting the next fuel item is not hooked yet. */
+    public hasReadinessNotificationsAt(slot: number): boolean {
+        return slot >= 0 && this.slots[slot].kind === SlotKind.INGREDIENT;
+    }
+
     /** Whether the machine takes no more of the item now (see blockedAt) */
     public blocked(item: ItemName): boolean {
         return this.blockedAt(this.slotOf(item));

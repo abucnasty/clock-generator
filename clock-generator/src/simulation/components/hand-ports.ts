@@ -1,3 +1,4 @@
+import { HandNotifications } from "./hand-notifications";
 import assert from "../../common/assert";
 import type { TickProvider } from "../current-tick-provider";
 import { EntityState } from "../../state/entity-state";
@@ -34,6 +35,7 @@ export interface HandPorts {
     scratch: HandScratch;
     /** The items the hand carries, bound once */
     items: CarriedItems;
+    notifications: HandNotifications;
 }
 
 /**
@@ -56,30 +58,31 @@ export function bindHandPorts(args: HandPortArgs): HandPorts {
     }
     const scratch = new HandScratch();
     const items = new CarriedItems(state.inserter);
-    const drop = bindDrop(state, scratch, items, sink, tick_provider);
+    const notifications = new HandNotifications();
+    const drop = bindDrop(state, scratch, items, sink, notifications, tick_provider);
     let pickup: HandPickupPort;
     if (EntityState.isBelt(source)) {
-        pickup = new BeltHandPickup(state, scratch, items, drop, source, EntityState.isMachine(sink) ? sink.wakes : null, tick_provider);
+        pickup = new BeltHandPickup(state, scratch, items, drop, source, EntityState.isMachine(sink) ? sink.wakes : null, tick_provider, notifications);
     } else if (EntityState.isMachine(source)) {
-        pickup = new MachineHandPickup(state, scratch, items, drop, source, control);
+        pickup = new MachineHandPickup(state, scratch, items, drop, source, control, notifications);
     } else if (ContainerStorage.isMixed(source)) {
-        pickup = new MixedContainerHandPickup(state, scratch, items, drop, source);
+        pickup = new MixedContainerHandPickup(state, scratch, items, drop, source, notifications);
     } else {
-        pickup = new ContainerHandPickup(state, scratch, items, drop, source);
+        pickup = new ContainerHandPickup(state, scratch, items, drop, source, notifications);
     }
-    return { pickup, drop, scratch, items };
+    return { pickup, drop, scratch, items, notifications };
 }
 
-function bindDrop(state: InserterState, scratch: HandScratch, items: CarriedItems, sink: EntityState, tick_provider?: TickProvider): HandDropPort {
+function bindDrop(state: InserterState, scratch: HandScratch, items: CarriedItems, sink: EntityState, notifications: HandNotifications, tick_provider?: TickProvider): HandDropPort {
     if (EntityState.isBelt(sink)) {
         assert(tick_provider !== undefined, "Belt drops need the simulation tick provider");
-        return new BeltHandDrop(state, scratch, sink, tick_provider);
+        return new BeltHandDrop(state, scratch, sink, tick_provider, notifications);
     }
     if (EntityState.isMachine(sink)) {
-        return new MachineHandDrop(state, scratch, items, sink.ingress);
+        return new MachineHandDrop(state, scratch, items, sink.ingress, notifications);
     }
     if (ContainerStorage.is(sink)) {
-        return new ContainerHandDrop(state, scratch, items, sink);
+        return new ContainerHandDrop(state, scratch, items, sink, notifications);
     }
     throw new Error(`Unsupported inserter drop sink: ${sink.entity_id.type}`);
 }
