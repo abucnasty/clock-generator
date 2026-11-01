@@ -1,0 +1,3906 @@
+{
+  "scope": "Exact first2ticks of real8tick repeated capture and all2ticks of control repeated capture; unmatched layouts and bounded phase.",
+  "cases": {
+    "real": {
+      "capture": "real-8tick-02",
+      "save_sha256": "2b39a0e1f4aa945f95ea1eee7a48e876326577ac859212119fe21c91e1a6fe5f",
+      "selected_inputs": [
+        205,
+        204,
+        206,
+        211,
+        210,
+        212,
+        232,
+        235
+      ],
+      "selected_targets": [
+        220,
+        222
+      ],
+      "stats": {
+        "input_hands": 8,
+        "ticks": 2,
+        "input_calls": {
+          "Inserter::update": 16,
+          "Inserter::tryToGetToSleep": 8,
+          "UpdatableEntity::deactivate": 8,
+          "Inserter::alarm": 8,
+          "Inserter::alarm:before-attach": 8,
+          "UpdatableEntity::attachInternal": 8
+        },
+        "owned_checks": {
+          "Inserter::update": 16,
+          "AssemblingMachine::isFullForInserters": 8,
+          "Inserter::tryToGetToSleep": 8,
+          "UpdatableEntity::deactivate": 8
+        },
+        "actual_activations": 8,
+        "actual_deactivations": 8,
+        "fullness_results": {
+          "True": 8
+        },
+        "can_insert_results": {},
+        "probe_fullness_excluded": 12
+      },
+      "events": [
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 235,
+          "update_owner": 235,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 222,
+          "update_owner": 235,
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 222,
+          "bool_result": true,
+          "update_owner": 235
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 235,
+          "update_owner": 235,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ],
+          "bool_args": [
+            1,
+            0
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 235,
+          "update_owner": 235,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::tryToGetToSleep(bool, bool)",
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 235,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 235
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 235,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 235
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 235,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 235
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 210,
+          "update_owner": 210,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 222,
+          "update_owner": 210,
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 222,
+          "bool_result": true,
+          "update_owner": 210
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 210,
+          "update_owner": 210,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ],
+          "bool_args": [
+            1,
+            0
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 210,
+          "update_owner": 210,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::tryToGetToSleep(bool, bool)",
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 210,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 210
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 210,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 210
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 210,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 210
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 212,
+          "update_owner": 212,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 222,
+          "update_owner": 212,
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 222,
+          "bool_result": true,
+          "update_owner": 212
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 212,
+          "update_owner": 212,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ],
+          "bool_args": [
+            1,
+            0
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 212,
+          "update_owner": 212,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::tryToGetToSleep(bool, bool)",
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 212,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 212
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 212,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 212
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 212,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 212
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 211,
+          "update_owner": 211,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 222,
+          "update_owner": 211,
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 222,
+          "bool_result": true,
+          "update_owner": 211
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 211,
+          "update_owner": 211,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ],
+          "bool_args": [
+            1,
+            0
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 211,
+          "update_owner": 211,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::tryToGetToSleep(bool, bool)",
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 211,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 211
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 211,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 211
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 211,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 211
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 206,
+          "update_owner": 206,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 206,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 206
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 205,
+          "update_owner": 205,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 205,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 205
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 204,
+          "update_owner": 204,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 204,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 204
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 232,
+          "update_owner": 232,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 232,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 232
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::alarm",
+          "unit": 211,
+          "update_owner": null,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::remove(unsigned int, FlowStatistics<IDWithQuality<ID<ItemPrototype, unsigned short> >, unsigned long, void>*, unsigned int, bool)",
+            "CraftingMachine::consumeIngredients(RecipePrototype const&, InventoryBuffer&)"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::alarm:before-attach",
+          "unit": 211,
+          "update_owner": null,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::remove(unsigned int, FlowStatistics<IDWithQuality<ID<ItemPrototype, unsigned short> >, unsigned long, void>*, unsigned int, bool)",
+            "CraftingMachine::consumeIngredients(RecipePrototype const&, InventoryBuffer&)"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 211,
+          "update_owner": null,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::remove(unsigned int, FlowStatistics<IDWithQuality<ID<ItemPrototype, unsigned short> >, unsigned long, void>*, unsigned int, bool)",
+            "CraftingMachine::consumeIngredients(RecipePrototype const&, InventoryBuffer&)"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 211,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": null
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::alarm",
+          "unit": 212,
+          "update_owner": null,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::remove(unsigned int, FlowStatistics<IDWithQuality<ID<ItemPrototype, unsigned short> >, unsigned long, void>*, unsigned int, bool)",
+            "CraftingMachine::consumeIngredients(RecipePrototype const&, InventoryBuffer&)"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::alarm:before-attach",
+          "unit": 212,
+          "update_owner": null,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::remove(unsigned int, FlowStatistics<IDWithQuality<ID<ItemPrototype, unsigned short> >, unsigned long, void>*, unsigned int, bool)",
+            "CraftingMachine::consumeIngredients(RecipePrototype const&, InventoryBuffer&)"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 212,
+          "update_owner": null,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::remove(unsigned int, FlowStatistics<IDWithQuality<ID<ItemPrototype, unsigned short> >, unsigned long, void>*, unsigned int, bool)",
+            "CraftingMachine::consumeIngredients(RecipePrototype const&, InventoryBuffer&)"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 212,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": null
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::alarm",
+          "unit": 210,
+          "update_owner": null,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::remove(unsigned int, FlowStatistics<IDWithQuality<ID<ItemPrototype, unsigned short> >, unsigned long, void>*, unsigned int, bool)",
+            "CraftingMachine::consumeIngredients(RecipePrototype const&, InventoryBuffer&)"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::alarm:before-attach",
+          "unit": 210,
+          "update_owner": null,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::remove(unsigned int, FlowStatistics<IDWithQuality<ID<ItemPrototype, unsigned short> >, unsigned long, void>*, unsigned int, bool)",
+            "CraftingMachine::consumeIngredients(RecipePrototype const&, InventoryBuffer&)"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 210,
+          "update_owner": null,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::remove(unsigned int, FlowStatistics<IDWithQuality<ID<ItemPrototype, unsigned short> >, unsigned long, void>*, unsigned int, bool)",
+            "CraftingMachine::consumeIngredients(RecipePrototype const&, InventoryBuffer&)"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 210,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": null
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::alarm",
+          "unit": 235,
+          "update_owner": null,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::remove(unsigned int, FlowStatistics<IDWithQuality<ID<ItemPrototype, unsigned short> >, unsigned long, void>*, unsigned int, bool)",
+            "CraftingMachine::consumeIngredients(RecipePrototype const&, InventoryBuffer&)"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::alarm:before-attach",
+          "unit": 235,
+          "update_owner": null,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::remove(unsigned int, FlowStatistics<IDWithQuality<ID<ItemPrototype, unsigned short> >, unsigned long, void>*, unsigned int, bool)",
+            "CraftingMachine::consumeIngredients(RecipePrototype const&, InventoryBuffer&)"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 235,
+          "update_owner": null,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::remove(unsigned int, FlowStatistics<IDWithQuality<ID<ItemPrototype, unsigned short> >, unsigned long, void>*, unsigned int, bool)",
+            "CraftingMachine::consumeIngredients(RecipePrototype const&, InventoryBuffer&)"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 235,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": null
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 235,
+          "update_owner": 235,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 222,
+          "update_owner": 235,
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 222,
+          "bool_result": true,
+          "update_owner": 235
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 235,
+          "update_owner": 235,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ],
+          "bool_args": [
+            1,
+            0
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 235,
+          "update_owner": 235,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::tryToGetToSleep(bool, bool)",
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 235,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 235
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 235,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 235
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 235,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 235
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 210,
+          "update_owner": 210,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 222,
+          "update_owner": 210,
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 222,
+          "bool_result": true,
+          "update_owner": 210
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 210,
+          "update_owner": 210,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ],
+          "bool_args": [
+            1,
+            0
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 210,
+          "update_owner": 210,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::tryToGetToSleep(bool, bool)",
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 210,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 210
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 210,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 210
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 210,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 210
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 212,
+          "update_owner": 212,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 222,
+          "update_owner": 212,
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 222,
+          "bool_result": true,
+          "update_owner": 212
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 212,
+          "update_owner": 212,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ],
+          "bool_args": [
+            1,
+            0
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 212,
+          "update_owner": 212,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::tryToGetToSleep(bool, bool)",
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 212,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 212
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 212,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 212
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 212,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 212
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 211,
+          "update_owner": 211,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 222,
+          "update_owner": 211,
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 222,
+          "bool_result": true,
+          "update_owner": 211
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 211,
+          "update_owner": 211,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ],
+          "bool_args": [
+            1,
+            0
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 211,
+          "update_owner": 211,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::tryToGetToSleep(bool, bool)",
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 211,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 211
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 211,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 211
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 211,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 211
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 206,
+          "update_owner": 206,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 206,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 206
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 205,
+          "update_owner": 205,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 205,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 205
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 204,
+          "update_owner": 204,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 204,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 204
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 232,
+          "update_owner": 232,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 232,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 232
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::alarm",
+          "unit": 211,
+          "update_owner": null,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::remove(unsigned int, FlowStatistics<IDWithQuality<ID<ItemPrototype, unsigned short> >, unsigned long, void>*, unsigned int, bool)",
+            "CraftingMachine::consumeIngredients(RecipePrototype const&, InventoryBuffer&)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::alarm:before-attach",
+          "unit": 211,
+          "update_owner": null,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::remove(unsigned int, FlowStatistics<IDWithQuality<ID<ItemPrototype, unsigned short> >, unsigned long, void>*, unsigned int, bool)",
+            "CraftingMachine::consumeIngredients(RecipePrototype const&, InventoryBuffer&)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 211,
+          "update_owner": null,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::remove(unsigned int, FlowStatistics<IDWithQuality<ID<ItemPrototype, unsigned short> >, unsigned long, void>*, unsigned int, bool)",
+            "CraftingMachine::consumeIngredients(RecipePrototype const&, InventoryBuffer&)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 211,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": null
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::alarm",
+          "unit": 212,
+          "update_owner": null,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::remove(unsigned int, FlowStatistics<IDWithQuality<ID<ItemPrototype, unsigned short> >, unsigned long, void>*, unsigned int, bool)",
+            "CraftingMachine::consumeIngredients(RecipePrototype const&, InventoryBuffer&)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::alarm:before-attach",
+          "unit": 212,
+          "update_owner": null,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::remove(unsigned int, FlowStatistics<IDWithQuality<ID<ItemPrototype, unsigned short> >, unsigned long, void>*, unsigned int, bool)",
+            "CraftingMachine::consumeIngredients(RecipePrototype const&, InventoryBuffer&)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 212,
+          "update_owner": null,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::remove(unsigned int, FlowStatistics<IDWithQuality<ID<ItemPrototype, unsigned short> >, unsigned long, void>*, unsigned int, bool)",
+            "CraftingMachine::consumeIngredients(RecipePrototype const&, InventoryBuffer&)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 212,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": null
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::alarm",
+          "unit": 210,
+          "update_owner": null,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::remove(unsigned int, FlowStatistics<IDWithQuality<ID<ItemPrototype, unsigned short> >, unsigned long, void>*, unsigned int, bool)",
+            "CraftingMachine::consumeIngredients(RecipePrototype const&, InventoryBuffer&)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::alarm:before-attach",
+          "unit": 210,
+          "update_owner": null,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::remove(unsigned int, FlowStatistics<IDWithQuality<ID<ItemPrototype, unsigned short> >, unsigned long, void>*, unsigned int, bool)",
+            "CraftingMachine::consumeIngredients(RecipePrototype const&, InventoryBuffer&)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 210,
+          "update_owner": null,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::remove(unsigned int, FlowStatistics<IDWithQuality<ID<ItemPrototype, unsigned short> >, unsigned long, void>*, unsigned int, bool)",
+            "CraftingMachine::consumeIngredients(RecipePrototype const&, InventoryBuffer&)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 210,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": null
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::alarm",
+          "unit": 235,
+          "update_owner": null,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::remove(unsigned int, FlowStatistics<IDWithQuality<ID<ItemPrototype, unsigned short> >, unsigned long, void>*, unsigned int, bool)",
+            "CraftingMachine::consumeIngredients(RecipePrototype const&, InventoryBuffer&)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::alarm:before-attach",
+          "unit": 235,
+          "update_owner": null,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::remove(unsigned int, FlowStatistics<IDWithQuality<ID<ItemPrototype, unsigned short> >, unsigned long, void>*, unsigned int, bool)",
+            "CraftingMachine::consumeIngredients(RecipePrototype const&, InventoryBuffer&)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 235,
+          "update_owner": null,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::remove(unsigned int, FlowStatistics<IDWithQuality<ID<ItemPrototype, unsigned short> >, unsigned long, void>*, unsigned int, bool)",
+            "CraftingMachine::consumeIngredients(RecipePrototype const&, InventoryBuffer&)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 235,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": null
+        }
+      ]
+    },
+    "control": {
+      "capture": "control-2tick-02",
+      "save_sha256": "465d6c4287b6ca2ffc68c61808cdc7f640dee3e67be28c3b8a96b758b080bdd8",
+      "selected_inputs": [
+        5650,
+        5649,
+        5652,
+        5651,
+        5675,
+        5677,
+        5676,
+        5678,
+        5655,
+        5656,
+        5682,
+        5681
+      ],
+      "selected_targets": [
+        5653,
+        5679
+      ],
+      "stats": {
+        "input_hands": 12,
+        "ticks": 2,
+        "input_calls": {
+          "Inserter::update": 24,
+          "Inserter::matchesFilter": 8,
+          "Inserter::tryToGetToSleep": 8,
+          "UpdatableEntity::deactivate": 8,
+          "Inserter::alarm": 16,
+          "Inserter::alarm:before-attach": 8,
+          "UpdatableEntity::attachInternal": 8
+        },
+        "owned_checks": {
+          "Inserter::update": 24,
+          "AssemblingMachine::isFullForInserters": 8,
+          "Inserter::matchesFilter": 8,
+          "AssemblingMachine::canInsert": 8,
+          "Inserter::tryToGetToSleep": 8,
+          "UpdatableEntity::deactivate": 8,
+          "CraftingMachine::postTransferHook": 8,
+          "Inserter::alarm": 8
+        },
+        "actual_activations": 8,
+        "actual_deactivations": 8,
+        "fullness_results": {
+          "False": 8
+        },
+        "can_insert_results": {
+          "False": 8
+        },
+        "probe_fullness_excluded": 12
+      },
+      "events": [
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 5655,
+          "update_owner": 5655,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 5653,
+          "update_owner": 5655,
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 5653,
+          "bool_result": false,
+          "update_owner": 5655
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::matchesFilter",
+          "unit": 5655,
+          "update_owner": 5655,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "AssemblingMachine::canInsert",
+          "unit": 5653,
+          "update_owner": 5655,
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "AssemblingMachine::canInsert",
+          "unit": 5653,
+          "bool_result": false,
+          "update_owner": 5655
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 5655,
+          "update_owner": 5655,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ],
+          "bool_args": [
+            1,
+            1
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 5655,
+          "update_owner": 5655,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::tryToGetToSleep(bool, bool)",
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 5655,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 5655
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 5655,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 5655
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 5655,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 5655
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 5656,
+          "update_owner": 5656,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 5653,
+          "update_owner": 5656,
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 5653,
+          "bool_result": false,
+          "update_owner": 5656
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::matchesFilter",
+          "unit": 5656,
+          "update_owner": 5656,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "AssemblingMachine::canInsert",
+          "unit": 5653,
+          "update_owner": 5656,
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "AssemblingMachine::canInsert",
+          "unit": 5653,
+          "bool_result": false,
+          "update_owner": 5656
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 5656,
+          "update_owner": 5656,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ],
+          "bool_args": [
+            1,
+            1
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 5656,
+          "update_owner": 5656,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::tryToGetToSleep(bool, bool)",
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 5656,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 5656
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 5656,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 5656
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 5656,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 5656
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::alarm",
+          "unit": 5656,
+          "update_owner": 5664,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "Inserter::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::alarm:before-attach",
+          "unit": 5656,
+          "update_owner": 5664,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "Inserter::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 5656,
+          "update_owner": 5664,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "Inserter::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 5656,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 5664
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::alarm",
+          "unit": 5655,
+          "update_owner": 5664,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "Inserter::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::alarm:before-attach",
+          "unit": 5655,
+          "update_owner": 5664,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "Inserter::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 5655,
+          "update_owner": 5664,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "Inserter::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 5655,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 5664
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 5681,
+          "update_owner": 5681,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 5679,
+          "update_owner": 5681,
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 5679,
+          "bool_result": false,
+          "update_owner": 5681
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::matchesFilter",
+          "unit": 5681,
+          "update_owner": 5681,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "AssemblingMachine::canInsert",
+          "unit": 5679,
+          "update_owner": 5681,
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "AssemblingMachine::canInsert",
+          "unit": 5679,
+          "bool_result": false,
+          "update_owner": 5681
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 5681,
+          "update_owner": 5681,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ],
+          "bool_args": [
+            1,
+            1
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 5681,
+          "update_owner": 5681,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::tryToGetToSleep(bool, bool)",
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 5681,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 5681
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 5681,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 5681
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 5681,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 5681
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 5682,
+          "update_owner": 5682,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 5679,
+          "update_owner": 5682,
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 5679,
+          "bool_result": false,
+          "update_owner": 5682
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::matchesFilter",
+          "unit": 5682,
+          "update_owner": 5682,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "AssemblingMachine::canInsert",
+          "unit": 5679,
+          "update_owner": 5682,
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "AssemblingMachine::canInsert",
+          "unit": 5679,
+          "bool_result": false,
+          "update_owner": 5682
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 5682,
+          "update_owner": 5682,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ],
+          "bool_args": [
+            1,
+            1
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 5682,
+          "update_owner": 5682,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::tryToGetToSleep(bool, bool)",
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 5682,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 5682
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 5682,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 5682
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 5682,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 5682
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::alarm",
+          "unit": 5682,
+          "update_owner": 5690,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "Inserter::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::alarm:before-attach",
+          "unit": 5682,
+          "update_owner": 5690,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "Inserter::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 5682,
+          "update_owner": 5690,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "Inserter::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 5682,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 5690
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::alarm",
+          "unit": 5681,
+          "update_owner": 5690,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "Inserter::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::alarm:before-attach",
+          "unit": 5681,
+          "update_owner": 5690,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "Inserter::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 5681,
+          "update_owner": 5690,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "Inserter::update()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 5681,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 5690
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 5677,
+          "update_owner": 5677,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 5677,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 5677
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 5678,
+          "update_owner": 5678,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 5678,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 5678
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 5676,
+          "update_owner": 5676,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 5676,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 5676
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 5675,
+          "update_owner": 5675,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 5675,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 5675
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 5651,
+          "update_owner": 5651,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 5651,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 5651
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 5652,
+          "update_owner": 5652,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 5652,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 5652
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 5650,
+          "update_owner": 5650,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 5650,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 5650
+        },
+        {
+          "tick": 0,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 5649,
+          "update_owner": 5649,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 0,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 5649,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 5649
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 5681,
+          "update_owner": 5681,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 5679,
+          "update_owner": 5681,
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 5679,
+          "bool_result": false,
+          "update_owner": 5681
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::matchesFilter",
+          "unit": 5681,
+          "update_owner": 5681,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "AssemblingMachine::canInsert",
+          "unit": 5679,
+          "update_owner": 5681,
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "AssemblingMachine::canInsert",
+          "unit": 5679,
+          "bool_result": false,
+          "update_owner": 5681
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 5681,
+          "update_owner": 5681,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ],
+          "bool_args": [
+            1,
+            1
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 5681,
+          "update_owner": 5681,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::tryToGetToSleep(bool, bool)",
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 5681,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 5681
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 5681,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 5681
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 5681,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 5681
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 5682,
+          "update_owner": 5682,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 5679,
+          "update_owner": 5682,
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 5679,
+          "bool_result": false,
+          "update_owner": 5682
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::matchesFilter",
+          "unit": 5682,
+          "update_owner": 5682,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "AssemblingMachine::canInsert",
+          "unit": 5679,
+          "update_owner": 5682,
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "AssemblingMachine::canInsert",
+          "unit": 5679,
+          "bool_result": false,
+          "update_owner": 5682
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 5682,
+          "update_owner": 5682,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ],
+          "bool_args": [
+            1,
+            1
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 5682,
+          "update_owner": 5682,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::tryToGetToSleep(bool, bool)",
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 5682,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 5682
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 5682,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 5682
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 5682,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 5682
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 5655,
+          "update_owner": 5655,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 5653,
+          "update_owner": 5655,
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 5653,
+          "bool_result": false,
+          "update_owner": 5655
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::matchesFilter",
+          "unit": 5655,
+          "update_owner": 5655,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "AssemblingMachine::canInsert",
+          "unit": 5653,
+          "update_owner": 5655,
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "AssemblingMachine::canInsert",
+          "unit": 5653,
+          "bool_result": false,
+          "update_owner": 5655
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 5655,
+          "update_owner": 5655,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ],
+          "bool_args": [
+            1,
+            1
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 5655,
+          "update_owner": 5655,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::tryToGetToSleep(bool, bool)",
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 5655,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 5655
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 5655,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 5655
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 5655,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 5655
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 5656,
+          "update_owner": 5656,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 5653,
+          "update_owner": 5656,
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "AssemblingMachine::isFullForInserters",
+          "unit": 5653,
+          "bool_result": false,
+          "update_owner": 5656
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::matchesFilter",
+          "unit": 5656,
+          "update_owner": 5656,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "AssemblingMachine::canInsert",
+          "unit": 5653,
+          "update_owner": 5656,
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "AssemblingMachine::canInsert",
+          "unit": 5653,
+          "bool_result": false,
+          "update_owner": 5656
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 5656,
+          "update_owner": 5656,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()"
+          ],
+          "bool_args": [
+            1,
+            1
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 5656,
+          "update_owner": 5656,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::tryToGetToSleep(bool, bool)",
+            "Inserter::update()",
+            "EntityOrderList::update [full mangled in raw]"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "UpdatableEntity::deactivate",
+          "unit": 5656,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 5656
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::tryToGetToSleep",
+          "unit": 5656,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 5656
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 5656,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "update_owner": 5656
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 5677,
+          "update_owner": 5677,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "CraftingMachine::postTransferHook",
+          "unit": 5679,
+          "update_owner": 5677,
+          "callers": [
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "AssemblingMachine::transferToRecipeSource(ItemStack&)",
+            "AssemblingMachine::transfer(TransferData)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::alarm",
+          "unit": 5677,
+          "update_owner": 5677,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "AssemblingMachine::transferToRecipeSource(ItemStack&)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 5677,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 5677
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 5678,
+          "update_owner": 5678,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "CraftingMachine::postTransferHook",
+          "unit": 5679,
+          "update_owner": 5678,
+          "callers": [
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "AssemblingMachine::transferToRecipeSource(ItemStack&)",
+            "AssemblingMachine::transfer(TransferData)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::alarm",
+          "unit": 5678,
+          "update_owner": 5678,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "AssemblingMachine::transferToRecipeSource(ItemStack&)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 5678,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 5678
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 5676,
+          "update_owner": 5676,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "CraftingMachine::postTransferHook",
+          "unit": 5679,
+          "update_owner": 5676,
+          "callers": [
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "AssemblingMachine::transferToRecipeSource(ItemStack&)",
+            "AssemblingMachine::transfer(TransferData)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::alarm",
+          "unit": 5676,
+          "update_owner": 5676,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "AssemblingMachine::transferToRecipeSource(ItemStack&)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 5676,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 5676
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 5675,
+          "update_owner": 5675,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "CraftingMachine::postTransferHook",
+          "unit": 5679,
+          "update_owner": 5675,
+          "callers": [
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "AssemblingMachine::transferToRecipeSource(ItemStack&)",
+            "AssemblingMachine::transfer(TransferData)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::alarm",
+          "unit": 5675,
+          "update_owner": 5675,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "AssemblingMachine::transferToRecipeSource(ItemStack&)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 5675,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 5675
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 5651,
+          "update_owner": 5651,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "CraftingMachine::postTransferHook",
+          "unit": 5653,
+          "update_owner": 5651,
+          "callers": [
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "AssemblingMachine::transferToRecipeSource(ItemStack&)",
+            "AssemblingMachine::transfer(TransferData)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::alarm",
+          "unit": 5651,
+          "update_owner": 5651,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "AssemblingMachine::transferToRecipeSource(ItemStack&)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 5651,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 5651
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 5652,
+          "update_owner": 5652,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "CraftingMachine::postTransferHook",
+          "unit": 5653,
+          "update_owner": 5652,
+          "callers": [
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "AssemblingMachine::transferToRecipeSource(ItemStack&)",
+            "AssemblingMachine::transfer(TransferData)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::alarm",
+          "unit": 5652,
+          "update_owner": 5652,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "AssemblingMachine::transferToRecipeSource(ItemStack&)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 5652,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 5652
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 5650,
+          "update_owner": 5650,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "CraftingMachine::postTransferHook",
+          "unit": 5653,
+          "update_owner": 5650,
+          "callers": [
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "AssemblingMachine::transferToRecipeSource(ItemStack&)",
+            "AssemblingMachine::transfer(TransferData)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::alarm",
+          "unit": 5650,
+          "update_owner": 5650,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "AssemblingMachine::transferToRecipeSource(ItemStack&)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 5650,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 5650
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::update",
+          "unit": 5649,
+          "update_owner": 5649,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "EntityOrderList::update [full mangled in raw]",
+            "Surface::update()",
+            "Map::updateEntities()"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "CraftingMachine::postTransferHook",
+          "unit": 5653,
+          "update_owner": 5649,
+          "callers": [
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "AssemblingMachine::transferToRecipeSource(ItemStack&)",
+            "AssemblingMachine::transfer(TransferData)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::alarm",
+          "unit": 5649,
+          "update_owner": 5649,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "callers": [
+            "Inserter::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "AssemblingMachine::transferToRecipeSource(ItemStack&)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "Inserter::update",
+          "unit": 5649,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": 5649
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::alarm",
+          "unit": 5682,
+          "update_owner": null,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "ProductionHelper::giveProducts(CraftingMachine&, RecipePrototype const&, GiveProductsParameters const&, NamedBool<FromProductivityTag>, bool)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::alarm:before-attach",
+          "unit": 5682,
+          "update_owner": null,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "ProductionHelper::giveProducts(CraftingMachine&, RecipePrototype const&, GiveProductsParameters const&, NamedBool<FromProductivityTag>, bool)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 5682,
+          "update_owner": null,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "ProductionHelper::giveProducts(CraftingMachine&, RecipePrototype const&, GiveProductsParameters const&, NamedBool<FromProductivityTag>, bool)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 5682,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": null
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::alarm",
+          "unit": 5681,
+          "update_owner": null,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "ProductionHelper::giveProducts(CraftingMachine&, RecipePrototype const&, GiveProductsParameters const&, NamedBool<FromProductivityTag>, bool)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::alarm:before-attach",
+          "unit": 5681,
+          "update_owner": null,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "ProductionHelper::giveProducts(CraftingMachine&, RecipePrototype const&, GiveProductsParameters const&, NamedBool<FromProductivityTag>, bool)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 5681,
+          "update_owner": null,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "ProductionHelper::giveProducts(CraftingMachine&, RecipePrototype const&, GiveProductsParameters const&, NamedBool<FromProductivityTag>, bool)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 5681,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": null
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::alarm",
+          "unit": 5656,
+          "update_owner": null,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "ProductionHelper::giveProducts(CraftingMachine&, RecipePrototype const&, GiveProductsParameters const&, NamedBool<FromProductivityTag>, bool)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::alarm:before-attach",
+          "unit": 5656,
+          "update_owner": null,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "ProductionHelper::giveProducts(CraftingMachine&, RecipePrototype const&, GiveProductsParameters const&, NamedBool<FromProductivityTag>, bool)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 5656,
+          "update_owner": null,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "ProductionHelper::giveProducts(CraftingMachine&, RecipePrototype const&, GiveProductsParameters const&, NamedBool<FromProductivityTag>, bool)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 5656,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": null
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::alarm",
+          "unit": 5655,
+          "update_owner": null,
+          "membership": {
+            "byte": 0,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "ProductionHelper::giveProducts(CraftingMachine&, RecipePrototype const&, GiveProductsParameters const&, NamedBool<FromProductivityTag>, bool)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "Inserter::alarm:before-attach",
+          "unit": 5655,
+          "update_owner": null,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "ProductionHelper::giveProducts(CraftingMachine&, RecipePrototype const&, GiveProductsParameters const&, NamedBool<FromProductivityTag>, bool)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "call",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 5655,
+          "update_owner": null,
+          "membership": {
+            "byte": 1,
+            "self_linked": true
+          },
+          "callers": [
+            "CraftingMachine::postTransferHook(NotificationData const&)",
+            "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+            "ProductionHelper::giveProducts(CraftingMachine&, RecipePrototype const&, GiveProductsParameters const&, NamedBool<FromProductivityTag>, bool)"
+          ]
+        },
+        {
+          "tick": 1,
+          "kind": "return",
+          "function": "UpdatableEntity::attachInternal",
+          "unit": 5655,
+          "membership": {
+            "byte": 1,
+            "self_linked": false
+          },
+          "update_owner": null
+        }
+      ]
+    }
+  },
+  "source_hashes": {
+    ".scratch/real-8tick-02/calls.jsonl": "7b5a14d1460cf18082ff17e5f0cab260f5f2700599ac1b5652c927aeabc366c0",
+    ".scratch/real-8tick-02/SHA256.json": "3b072682c40deca1f8b7ec39161bcf2d6c50a618642bda55680d342c2f9cb744",
+    ".scratch/real-8tick-02/reference-equality.json": "0dd1c1b22a08cde212266d623a15174922f8ae2b507a94b69e801210d055877c",
+    ".scratch/control-2tick-02/calls.jsonl": "0ae400d740f1a760f8ff1f04f501e5d907f2c742d236a6ea7c29a1ae99e07791",
+    ".scratch/control-2tick-02/SHA256.json": "a5b58bc5dd7f1413b7ccd71083a0d6d9127e549ef8f582302177b812956bc944",
+    ".scratch/control-2tick-02/reference-equality.json": "305b0aef649678f2245b04934b2d03b76ea77529d721775802c43e3dd04e4adf"
+  },
+  "source_compact_sha256": "00782dda5729b80fe905308bf9be4bcd8c658c4ab711b7d864b13fabb791e0c0",
+  "version": "2.1.21",
+  "binary_sha256": "64a4dbc1a6de1e2556efd627f543d6072eaca6e69ee8b0c26df358bbd559adf7",
+  "limits": [
+    "Two common ticks only; real and control layouts differ. No full-period rate or price inference.",
+    "Observer fullness calls are excluded; status is not scheduler membership. Alarm return was not intercepted.",
+    "Zero filter/canInsert calls apply only to selected intercepted paths, not all possible inlined source work."
+  ]
+}

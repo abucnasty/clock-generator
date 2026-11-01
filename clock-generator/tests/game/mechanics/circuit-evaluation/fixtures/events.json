@@ -1,0 +1,2394 @@
+{
+  "selection": "All clock-hand/control events across20ticks plus first-native-tick representative event paths for each circuit role. Full normalized sequence retained in ignored capture04/normalized-events.json.",
+  "events": [
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Decider::update",
+      "role": "changing_or_true_last",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "changing_or_true_last"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "ArithmeticThunk::update",
+      "role": "fixed_generator",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "fixed_generator"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Decider::update",
+      "role": "fixed_or_true_first",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "fixed_or_true_first"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Decider::condition-loop",
+      "role": "changing_or_true_last",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "changing_or_true_last"
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "ArithmeticThunk::update",
+      "role": "fixed_generator",
+      "update_owner": "fixed_generator"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Condition::isFulfilled",
+      "role": "changing_or_true_last",
+      "condition_index": 1,
+      "callers": [
+        "DeciderCombinatorControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "changing_or_true_last"
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "Decider::update",
+      "role": "fixed_or_true_first",
+      "update_owner": "fixed_or_true_first"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Decider::update",
+      "role": "fixed_or_true_last",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "fixed_or_true_last"
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "Condition::isFulfilled",
+      "role": "changing_or_true_last",
+      "bool_result": false,
+      "update_owner": "changing_or_true_last",
+      "condition_index": 1
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "Decider::update",
+      "role": "fixed_or_true_last",
+      "update_owner": "fixed_or_true_last"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Condition::isFulfilled",
+      "role": "changing_or_true_last",
+      "condition_index": 2,
+      "callers": [
+        "DeciderCombinatorControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "changing_or_true_last"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Decider::update",
+      "role": "counter",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "counter"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "ArithmeticThunk::update",
+      "role": "changing_arithmetic_zero",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "changing_arithmetic_zero"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Decider::condition-loop",
+      "role": "counter",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "counter"
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "Condition::isFulfilled",
+      "role": "changing_or_true_last",
+      "bool_result": false,
+      "update_owner": "changing_or_true_last",
+      "condition_index": 2
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Arithmetic::computeOutput",
+      "role": "changing_arithmetic_zero",
+      "callers": [
+        "non-virtual thunk to ArithmeticCombinatorControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "changing_arithmetic_zero"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Condition::isFulfilled",
+      "role": "changing_or_true_last",
+      "condition_index": 3,
+      "callers": [
+        "DeciderCombinatorControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "changing_or_true_last"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Condition::isFulfilled",
+      "role": "counter",
+      "condition_index": 1,
+      "callers": [
+        "DeciderCombinatorControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "counter"
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "ArithmeticThunk::update",
+      "role": "changing_arithmetic_zero",
+      "update_owner": "changing_arithmetic_zero"
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "Condition::isFulfilled",
+      "role": "changing_or_true_last",
+      "bool_result": true,
+      "update_owner": "changing_or_true_last",
+      "condition_index": 3
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "Condition::isFulfilled",
+      "role": "counter",
+      "bool_result": true,
+      "update_owner": "counter",
+      "condition_index": 1
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "Decider::update",
+      "role": "changing_or_true_last",
+      "update_owner": "changing_or_true_last"
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "Decider::update",
+      "role": "counter",
+      "update_owner": "counter"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Decider::update",
+      "role": "changing_simple_true",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "changing_simple_true"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "ArithmeticThunk::update",
+      "role": "positive_generator",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "positive_generator"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Decider::condition-loop",
+      "role": "changing_simple_true",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "changing_simple_true"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Arithmetic::computeOutput",
+      "role": "positive_generator",
+      "callers": [
+        "non-virtual thunk to ArithmeticCombinatorControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "positive_generator"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "GenericOnOff::computeOnOffState",
+      "role": "hand",
+      "callers": [
+        "InserterControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Condition::isFulfilled",
+      "role": "changing_simple_true",
+      "condition_index": 1,
+      "callers": [
+        "DeciderCombinatorControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "changing_simple_true"
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "ArithmeticThunk::update",
+      "role": "positive_generator",
+      "update_owner": "positive_generator"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "GenericOnOffControlBehavior::computeOnOffState(MapTick)",
+        "vtable for InserterControlBehavior",
+        null
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "Condition::isFulfilled",
+      "role": "changing_simple_true",
+      "bool_result": true,
+      "update_owner": "changing_simple_true",
+      "condition_index": 1
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "ArithmeticThunk::update",
+      "role": "fixed_arithmetic_zero",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "fixed_arithmetic_zero"
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "Decider::update",
+      "role": "changing_simple_true",
+      "update_owner": "changing_simple_true"
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": false,
+      "update_owner": "hand"
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "update_owner": "hand"
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "ArithmeticThunk::update",
+      "role": "fixed_arithmetic_zero",
+      "update_owner": "fixed_arithmetic_zero"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Decider::update",
+      "role": "changing_and_true",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "changing_and_true"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Decider::update",
+      "role": "fixed_simple_true",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "fixed_simple_true"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Decider::condition-loop",
+      "role": "changing_and_true",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "changing_and_true"
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "Decider::update",
+      "role": "fixed_simple_true",
+      "update_owner": "fixed_simple_true"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Condition::isFulfilled",
+      "role": "changing_and_true",
+      "condition_index": 1,
+      "callers": [
+        "DeciderCombinatorControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "changing_and_true"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Decider::update",
+      "role": "fixed_and_true",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "fixed_and_true"
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "Condition::isFulfilled",
+      "role": "changing_and_true",
+      "bool_result": true,
+      "update_owner": "changing_and_true",
+      "condition_index": 1
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "Decider::update",
+      "role": "fixed_and_true",
+      "update_owner": "fixed_and_true"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Condition::isFulfilled",
+      "role": "changing_and_true",
+      "condition_index": 2,
+      "callers": [
+        "DeciderCombinatorControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "changing_and_true"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Decider::update",
+      "role": "fixed_and_false_first",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "fixed_and_false_first"
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "Condition::isFulfilled",
+      "role": "changing_and_true",
+      "bool_result": true,
+      "update_owner": "changing_and_true",
+      "condition_index": 2
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Condition::isFulfilled",
+      "role": "changing_and_true",
+      "condition_index": 3,
+      "callers": [
+        "DeciderCombinatorControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "changing_and_true"
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "Decider::update",
+      "role": "fixed_and_false_first",
+      "update_owner": "fixed_and_false_first"
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "Condition::isFulfilled",
+      "role": "changing_and_true",
+      "bool_result": true,
+      "update_owner": "changing_and_true",
+      "condition_index": 3
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "Decider::update",
+      "role": "changing_and_true",
+      "update_owner": "changing_and_true"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Decider::update",
+      "role": "fixed_and_false_last",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "fixed_and_false_last"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Decider::update",
+      "role": "changing_and_false_first",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "changing_and_false_first"
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "Decider::update",
+      "role": "fixed_and_false_last",
+      "update_owner": "fixed_and_false_last"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Decider::condition-loop",
+      "role": "changing_and_false_first",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "changing_and_false_first"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Condition::isFulfilled",
+      "role": "changing_and_false_first",
+      "condition_index": 1,
+      "callers": [
+        "DeciderCombinatorControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "changing_and_false_first"
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "Condition::isFulfilled",
+      "role": "changing_and_false_first",
+      "bool_result": false,
+      "update_owner": "changing_and_false_first",
+      "condition_index": 1
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "Decider::update",
+      "role": "changing_and_false_first",
+      "update_owner": "changing_and_false_first"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Decider::update",
+      "role": "changing_and_false_last",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "changing_and_false_last"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Decider::condition-loop",
+      "role": "changing_and_false_last",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "changing_and_false_last"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Condition::isFulfilled",
+      "role": "changing_and_false_last",
+      "condition_index": 1,
+      "callers": [
+        "DeciderCombinatorControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "changing_and_false_last"
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "Condition::isFulfilled",
+      "role": "changing_and_false_last",
+      "bool_result": true,
+      "update_owner": "changing_and_false_last",
+      "condition_index": 1
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Condition::isFulfilled",
+      "role": "changing_and_false_last",
+      "condition_index": 2,
+      "callers": [
+        "DeciderCombinatorControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "changing_and_false_last"
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "Condition::isFulfilled",
+      "role": "changing_and_false_last",
+      "bool_result": true,
+      "update_owner": "changing_and_false_last",
+      "condition_index": 2
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Condition::isFulfilled",
+      "role": "changing_and_false_last",
+      "condition_index": 3,
+      "callers": [
+        "DeciderCombinatorControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "changing_and_false_last"
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "Condition::isFulfilled",
+      "role": "changing_and_false_last",
+      "bool_result": false,
+      "update_owner": "changing_and_false_last",
+      "condition_index": 3
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "Decider::update",
+      "role": "changing_and_false_last",
+      "update_owner": "changing_and_false_last"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Decider::update",
+      "role": "changing_or_true_first",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "changing_or_true_first"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Decider::condition-loop",
+      "role": "changing_or_true_first",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "changing_or_true_first"
+    },
+    {
+      "tick": 5,
+      "kind": "call",
+      "event": "Condition::isFulfilled",
+      "role": "changing_or_true_first",
+      "condition_index": 1,
+      "callers": [
+        "DeciderCombinatorControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "changing_or_true_first"
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "Condition::isFulfilled",
+      "role": "changing_or_true_first",
+      "bool_result": true,
+      "update_owner": "changing_or_true_first",
+      "condition_index": 1
+    },
+    {
+      "tick": 5,
+      "kind": "return",
+      "event": "Decider::update",
+      "role": "changing_or_true_first",
+      "update_owner": "changing_or_true_first"
+    },
+    {
+      "tick": 6,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "LuaGenericOnOffControlBehavior::luaReadCircuitCondition(lua_State*)",
+        "int LuaBindableObject::luaIndex<LuaBinder<LuaInserterControlBehavior> >(lua_State*)",
+        "LuaBinder<LuaInserterControlBehavior>::callWrapperOnObject(lua_State*, LuaInserterControlBehavior*, int)"
+      ],
+      "update_owner": null
+    },
+    {
+      "tick": 6,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": false,
+      "update_owner": null
+    },
+    {
+      "tick": 6,
+      "kind": "call",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 6,
+      "kind": "call",
+      "event": "GenericOnOff::computeOnOffState",
+      "role": "hand",
+      "callers": [
+        "InserterControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 6,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "GenericOnOffControlBehavior::computeOnOffState(MapTick)",
+        "vtable for InserterControlBehavior",
+        null
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 6,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": false,
+      "update_owner": "hand"
+    },
+    {
+      "tick": 6,
+      "kind": "return",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "update_owner": "hand"
+    },
+    {
+      "tick": 7,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "LuaGenericOnOffControlBehavior::luaReadCircuitCondition(lua_State*)",
+        "int LuaBindableObject::luaIndex<LuaBinder<LuaInserterControlBehavior> >(lua_State*)",
+        "LuaBinder<LuaInserterControlBehavior>::callWrapperOnObject(lua_State*, LuaInserterControlBehavior*, int)"
+      ],
+      "update_owner": null
+    },
+    {
+      "tick": 7,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": false,
+      "update_owner": null
+    },
+    {
+      "tick": 7,
+      "kind": "call",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 7,
+      "kind": "call",
+      "event": "GenericOnOff::computeOnOffState",
+      "role": "hand",
+      "callers": [
+        "InserterControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 7,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "GenericOnOffControlBehavior::computeOnOffState(MapTick)",
+        "vtable for InserterControlBehavior",
+        null
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 7,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": false,
+      "update_owner": "hand"
+    },
+    {
+      "tick": 7,
+      "kind": "return",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "update_owner": "hand"
+    },
+    {
+      "tick": 8,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "LuaGenericOnOffControlBehavior::luaReadCircuitCondition(lua_State*)",
+        "int LuaBindableObject::luaIndex<LuaBinder<LuaInserterControlBehavior> >(lua_State*)",
+        "LuaBinder<LuaInserterControlBehavior>::callWrapperOnObject(lua_State*, LuaInserterControlBehavior*, int)"
+      ],
+      "update_owner": null
+    },
+    {
+      "tick": 8,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": true,
+      "update_owner": null
+    },
+    {
+      "tick": 8,
+      "kind": "call",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 8,
+      "kind": "call",
+      "event": "GenericOnOff::computeOnOffState",
+      "role": "hand",
+      "callers": [
+        "InserterControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 8,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "GenericOnOffControlBehavior::computeOnOffState(MapTick)",
+        "vtable for InserterControlBehavior",
+        null
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 8,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": true,
+      "update_owner": "hand"
+    },
+    {
+      "tick": 8,
+      "kind": "return",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "update_owner": "hand"
+    },
+    {
+      "tick": 8,
+      "kind": "call",
+      "event": "Inserter::alarm",
+      "role": "hand",
+      "callers": [
+        "MultithreadingOutput::dispatchActions(std::span<MultithreadingOutput, 18446744073709551615ul>)",
+        "ControlBehaviorManager::finish()",
+        "std::_Function_handler<void (std::initializer_list<MultithreadedUpdatable*>), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0>::_M_invoke(std::_Any_data [full in raw]"
+      ],
+      "update_owner": null,
+      "membership": {
+        "byte": 0,
+        "self_linked": true
+      }
+    },
+    {
+      "tick": 8,
+      "kind": "call",
+      "event": "UpdatableEntity::attachInternal",
+      "role": "hand",
+      "callers": [
+        "MultithreadingOutput::dispatchActions(std::span<MultithreadingOutput, 18446744073709551615ul>)",
+        "ControlBehaviorManager::finish()",
+        "std::_Function_handler<void (std::initializer_list<MultithreadedUpdatable*>), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0>::_M_invoke(std::_Any_data [full in raw]"
+      ],
+      "update_owner": null,
+      "membership": {
+        "byte": 1,
+        "self_linked": true
+      }
+    },
+    {
+      "tick": 8,
+      "kind": "return",
+      "event": "Inserter::alarm",
+      "role": "hand",
+      "membership": {
+        "byte": 1,
+        "self_linked": false
+      },
+      "update_owner": null
+    },
+    {
+      "tick": 8,
+      "kind": "return",
+      "event": "UpdatableEntity::attachInternal",
+      "role": "hand",
+      "membership": {
+        "byte": 1,
+        "self_linked": false
+      },
+      "update_owner": null
+    },
+    {
+      "tick": 9,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "LuaGenericOnOffControlBehavior::luaReadCircuitCondition(lua_State*)",
+        "int LuaBindableObject::luaIndex<LuaBinder<LuaInserterControlBehavior> >(lua_State*)",
+        "LuaBinder<LuaInserterControlBehavior>::callWrapperOnObject(lua_State*, LuaInserterControlBehavior*, int)"
+      ],
+      "update_owner": null
+    },
+    {
+      "tick": 9,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": true,
+      "update_owner": null
+    },
+    {
+      "tick": 9,
+      "kind": "call",
+      "event": "Inserter::update",
+      "role": "hand",
+      "callers": [
+        "EntityOrderList::update [full mangled in raw]",
+        "Surface::update()",
+        "Map::updateEntities()"
+      ],
+      "update_owner": "hand",
+      "membership": {
+        "byte": 1,
+        "self_linked": false
+      }
+    },
+    {
+      "tick": 9,
+      "kind": "call",
+      "event": "UpdatableEntity::deactivate",
+      "role": "hand",
+      "callers": [
+        "Inserter::dropHeldItem(Vector const&)",
+        "Inserter::update()",
+        "EntityOrderList::update [full mangled in raw]"
+      ],
+      "update_owner": "hand",
+      "membership": {
+        "byte": 1,
+        "self_linked": false
+      }
+    },
+    {
+      "tick": 9,
+      "kind": "return",
+      "event": "UpdatableEntity::deactivate",
+      "role": "hand",
+      "membership": {
+        "byte": 0,
+        "self_linked": true
+      },
+      "update_owner": "hand"
+    },
+    {
+      "tick": 9,
+      "kind": "return",
+      "event": "Inserter::update",
+      "role": "hand",
+      "membership": {
+        "byte": 0,
+        "self_linked": true
+      },
+      "update_owner": "hand"
+    },
+    {
+      "tick": 9,
+      "kind": "call",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 9,
+      "kind": "call",
+      "event": "GenericOnOff::computeOnOffState",
+      "role": "hand",
+      "callers": [
+        "InserterControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 9,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "GenericOnOffControlBehavior::computeOnOffState(MapTick)",
+        "vtable for InserterControlBehavior",
+        null
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 9,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": true,
+      "update_owner": "hand"
+    },
+    {
+      "tick": 9,
+      "kind": "return",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "update_owner": "hand"
+    },
+    {
+      "tick": 10,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "LuaGenericOnOffControlBehavior::luaReadCircuitCondition(lua_State*)",
+        "int LuaBindableObject::luaIndex<LuaBinder<LuaInserterControlBehavior> >(lua_State*)",
+        "LuaBinder<LuaInserterControlBehavior>::callWrapperOnObject(lua_State*, LuaInserterControlBehavior*, int)"
+      ],
+      "update_owner": null
+    },
+    {
+      "tick": 10,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": true,
+      "update_owner": null
+    },
+    {
+      "tick": 10,
+      "kind": "call",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 10,
+      "kind": "call",
+      "event": "GenericOnOff::computeOnOffState",
+      "role": "hand",
+      "callers": [
+        "InserterControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 10,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "GenericOnOffControlBehavior::computeOnOffState(MapTick)",
+        "vtable for InserterControlBehavior",
+        null
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 10,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": true,
+      "update_owner": "hand"
+    },
+    {
+      "tick": 10,
+      "kind": "return",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "update_owner": "hand"
+    },
+    {
+      "tick": 11,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "LuaGenericOnOffControlBehavior::luaReadCircuitCondition(lua_State*)",
+        "int LuaBindableObject::luaIndex<LuaBinder<LuaInserterControlBehavior> >(lua_State*)",
+        "LuaBinder<LuaInserterControlBehavior>::callWrapperOnObject(lua_State*, LuaInserterControlBehavior*, int)"
+      ],
+      "update_owner": null
+    },
+    {
+      "tick": 11,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": true,
+      "update_owner": null
+    },
+    {
+      "tick": 11,
+      "kind": "call",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 11,
+      "kind": "call",
+      "event": "GenericOnOff::computeOnOffState",
+      "role": "hand",
+      "callers": [
+        "InserterControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 11,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "GenericOnOffControlBehavior::computeOnOffState(MapTick)",
+        "vtable for InserterControlBehavior",
+        null
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 11,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": true,
+      "update_owner": "hand"
+    },
+    {
+      "tick": 11,
+      "kind": "return",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "update_owner": "hand"
+    },
+    {
+      "tick": 12,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "LuaGenericOnOffControlBehavior::luaReadCircuitCondition(lua_State*)",
+        "int LuaBindableObject::luaIndex<LuaBinder<LuaInserterControlBehavior> >(lua_State*)",
+        "LuaBinder<LuaInserterControlBehavior>::callWrapperOnObject(lua_State*, LuaInserterControlBehavior*, int)"
+      ],
+      "update_owner": null
+    },
+    {
+      "tick": 12,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": false,
+      "update_owner": null
+    },
+    {
+      "tick": 12,
+      "kind": "call",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 12,
+      "kind": "call",
+      "event": "GenericOnOff::computeOnOffState",
+      "role": "hand",
+      "callers": [
+        "InserterControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 12,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "GenericOnOffControlBehavior::computeOnOffState(MapTick)",
+        "vtable for InserterControlBehavior",
+        null
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 12,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": false,
+      "update_owner": "hand"
+    },
+    {
+      "tick": 12,
+      "kind": "return",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "update_owner": "hand"
+    },
+    {
+      "tick": 13,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "LuaGenericOnOffControlBehavior::luaReadCircuitCondition(lua_State*)",
+        "int LuaBindableObject::luaIndex<LuaBinder<LuaInserterControlBehavior> >(lua_State*)",
+        "LuaBinder<LuaInserterControlBehavior>::callWrapperOnObject(lua_State*, LuaInserterControlBehavior*, int)"
+      ],
+      "update_owner": null
+    },
+    {
+      "tick": 13,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": false,
+      "update_owner": null
+    },
+    {
+      "tick": 13,
+      "kind": "call",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 13,
+      "kind": "call",
+      "event": "GenericOnOff::computeOnOffState",
+      "role": "hand",
+      "callers": [
+        "InserterControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 13,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "GenericOnOffControlBehavior::computeOnOffState(MapTick)",
+        "vtable for InserterControlBehavior",
+        null
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 13,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": false,
+      "update_owner": "hand"
+    },
+    {
+      "tick": 13,
+      "kind": "return",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "update_owner": "hand"
+    },
+    {
+      "tick": 14,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "LuaGenericOnOffControlBehavior::luaReadCircuitCondition(lua_State*)",
+        "int LuaBindableObject::luaIndex<LuaBinder<LuaInserterControlBehavior> >(lua_State*)",
+        "LuaBinder<LuaInserterControlBehavior>::callWrapperOnObject(lua_State*, LuaInserterControlBehavior*, int)"
+      ],
+      "update_owner": null
+    },
+    {
+      "tick": 14,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": false,
+      "update_owner": null
+    },
+    {
+      "tick": 14,
+      "kind": "call",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 14,
+      "kind": "call",
+      "event": "GenericOnOff::computeOnOffState",
+      "role": "hand",
+      "callers": [
+        "InserterControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 14,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "GenericOnOffControlBehavior::computeOnOffState(MapTick)",
+        "vtable for InserterControlBehavior",
+        null
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 14,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": false,
+      "update_owner": "hand"
+    },
+    {
+      "tick": 14,
+      "kind": "return",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "update_owner": "hand"
+    },
+    {
+      "tick": 15,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "LuaGenericOnOffControlBehavior::luaReadCircuitCondition(lua_State*)",
+        "int LuaBindableObject::luaIndex<LuaBinder<LuaInserterControlBehavior> >(lua_State*)",
+        "LuaBinder<LuaInserterControlBehavior>::callWrapperOnObject(lua_State*, LuaInserterControlBehavior*, int)"
+      ],
+      "update_owner": null
+    },
+    {
+      "tick": 15,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": false,
+      "update_owner": null
+    },
+    {
+      "tick": 15,
+      "kind": "call",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 15,
+      "kind": "call",
+      "event": "GenericOnOff::computeOnOffState",
+      "role": "hand",
+      "callers": [
+        "InserterControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 15,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "GenericOnOffControlBehavior::computeOnOffState(MapTick)",
+        "vtable for InserterControlBehavior",
+        null
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 15,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": false,
+      "update_owner": "hand"
+    },
+    {
+      "tick": 15,
+      "kind": "return",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "update_owner": "hand"
+    },
+    {
+      "tick": 16,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "LuaGenericOnOffControlBehavior::luaReadCircuitCondition(lua_State*)",
+        "int LuaBindableObject::luaIndex<LuaBinder<LuaInserterControlBehavior> >(lua_State*)",
+        "LuaBinder<LuaInserterControlBehavior>::callWrapperOnObject(lua_State*, LuaInserterControlBehavior*, int)"
+      ],
+      "update_owner": null
+    },
+    {
+      "tick": 16,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": true,
+      "update_owner": null
+    },
+    {
+      "tick": 16,
+      "kind": "call",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 16,
+      "kind": "call",
+      "event": "GenericOnOff::computeOnOffState",
+      "role": "hand",
+      "callers": [
+        "InserterControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 16,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "GenericOnOffControlBehavior::computeOnOffState(MapTick)",
+        "vtable for InserterControlBehavior",
+        null
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 16,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": true,
+      "update_owner": "hand"
+    },
+    {
+      "tick": 16,
+      "kind": "return",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "update_owner": "hand"
+    },
+    {
+      "tick": 16,
+      "kind": "call",
+      "event": "Inserter::alarm",
+      "role": "hand",
+      "callers": [
+        "MultithreadingOutput::dispatchActions(std::span<MultithreadingOutput, 18446744073709551615ul>)",
+        "ControlBehaviorManager::finish()",
+        "std::_Function_handler<void (std::initializer_list<MultithreadedUpdatable*>), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0>::_M_invoke(std::_Any_data [full in raw]"
+      ],
+      "update_owner": null,
+      "membership": {
+        "byte": 0,
+        "self_linked": true
+      }
+    },
+    {
+      "tick": 16,
+      "kind": "call",
+      "event": "UpdatableEntity::attachInternal",
+      "role": "hand",
+      "callers": [
+        "MultithreadingOutput::dispatchActions(std::span<MultithreadingOutput, 18446744073709551615ul>)",
+        "ControlBehaviorManager::finish()",
+        "std::_Function_handler<void (std::initializer_list<MultithreadedUpdatable*>), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0>::_M_invoke(std::_Any_data [full in raw]"
+      ],
+      "update_owner": null,
+      "membership": {
+        "byte": 1,
+        "self_linked": true
+      }
+    },
+    {
+      "tick": 16,
+      "kind": "return",
+      "event": "Inserter::alarm",
+      "role": "hand",
+      "membership": {
+        "byte": 1,
+        "self_linked": false
+      },
+      "update_owner": null
+    },
+    {
+      "tick": 16,
+      "kind": "return",
+      "event": "UpdatableEntity::attachInternal",
+      "role": "hand",
+      "membership": {
+        "byte": 1,
+        "self_linked": false
+      },
+      "update_owner": null
+    },
+    {
+      "tick": 17,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "LuaGenericOnOffControlBehavior::luaReadCircuitCondition(lua_State*)",
+        "int LuaBindableObject::luaIndex<LuaBinder<LuaInserterControlBehavior> >(lua_State*)",
+        "LuaBinder<LuaInserterControlBehavior>::callWrapperOnObject(lua_State*, LuaInserterControlBehavior*, int)"
+      ],
+      "update_owner": null
+    },
+    {
+      "tick": 17,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": true,
+      "update_owner": null
+    },
+    {
+      "tick": 17,
+      "kind": "call",
+      "event": "Inserter::update",
+      "role": "hand",
+      "callers": [
+        "EntityOrderList::update [full mangled in raw]",
+        "Surface::update()",
+        "Map::updateEntities()"
+      ],
+      "update_owner": "hand",
+      "membership": {
+        "byte": 1,
+        "self_linked": false
+      }
+    },
+    {
+      "tick": 17,
+      "kind": "call",
+      "event": "UpdatableEntity::deactivate",
+      "role": "hand",
+      "callers": [
+        "Inserter::dropHeldItem(Vector const&)",
+        "Inserter::update()",
+        "EntityOrderList::update [full mangled in raw]"
+      ],
+      "update_owner": "hand",
+      "membership": {
+        "byte": 1,
+        "self_linked": false
+      }
+    },
+    {
+      "tick": 17,
+      "kind": "return",
+      "event": "UpdatableEntity::deactivate",
+      "role": "hand",
+      "membership": {
+        "byte": 0,
+        "self_linked": true
+      },
+      "update_owner": "hand"
+    },
+    {
+      "tick": 17,
+      "kind": "return",
+      "event": "Inserter::update",
+      "role": "hand",
+      "membership": {
+        "byte": 0,
+        "self_linked": true
+      },
+      "update_owner": "hand"
+    },
+    {
+      "tick": 17,
+      "kind": "call",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 17,
+      "kind": "call",
+      "event": "GenericOnOff::computeOnOffState",
+      "role": "hand",
+      "callers": [
+        "InserterControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 17,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "GenericOnOffControlBehavior::computeOnOffState(MapTick)",
+        "vtable for InserterControlBehavior",
+        null
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 17,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": true,
+      "update_owner": "hand"
+    },
+    {
+      "tick": 17,
+      "kind": "return",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "update_owner": "hand"
+    },
+    {
+      "tick": 18,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "LuaGenericOnOffControlBehavior::luaReadCircuitCondition(lua_State*)",
+        "int LuaBindableObject::luaIndex<LuaBinder<LuaInserterControlBehavior> >(lua_State*)",
+        "LuaBinder<LuaInserterControlBehavior>::callWrapperOnObject(lua_State*, LuaInserterControlBehavior*, int)"
+      ],
+      "update_owner": null
+    },
+    {
+      "tick": 18,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": true,
+      "update_owner": null
+    },
+    {
+      "tick": 18,
+      "kind": "call",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 18,
+      "kind": "call",
+      "event": "GenericOnOff::computeOnOffState",
+      "role": "hand",
+      "callers": [
+        "InserterControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 18,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "GenericOnOffControlBehavior::computeOnOffState(MapTick)",
+        "vtable for InserterControlBehavior",
+        null
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 18,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": true,
+      "update_owner": "hand"
+    },
+    {
+      "tick": 18,
+      "kind": "return",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "update_owner": "hand"
+    },
+    {
+      "tick": 19,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "LuaGenericOnOffControlBehavior::luaReadCircuitCondition(lua_State*)",
+        "int LuaBindableObject::luaIndex<LuaBinder<LuaInserterControlBehavior> >(lua_State*)",
+        "LuaBinder<LuaInserterControlBehavior>::callWrapperOnObject(lua_State*, LuaInserterControlBehavior*, int)"
+      ],
+      "update_owner": null
+    },
+    {
+      "tick": 19,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": true,
+      "update_owner": null
+    },
+    {
+      "tick": 19,
+      "kind": "call",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 19,
+      "kind": "call",
+      "event": "GenericOnOff::computeOnOffState",
+      "role": "hand",
+      "callers": [
+        "InserterControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 19,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "GenericOnOffControlBehavior::computeOnOffState(MapTick)",
+        "vtable for InserterControlBehavior",
+        null
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 19,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": true,
+      "update_owner": "hand"
+    },
+    {
+      "tick": 19,
+      "kind": "return",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "update_owner": "hand"
+    },
+    {
+      "tick": 20,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "LuaGenericOnOffControlBehavior::luaReadCircuitCondition(lua_State*)",
+        "int LuaBindableObject::luaIndex<LuaBinder<LuaInserterControlBehavior> >(lua_State*)",
+        "LuaBinder<LuaInserterControlBehavior>::callWrapperOnObject(lua_State*, LuaInserterControlBehavior*, int)"
+      ],
+      "update_owner": null
+    },
+    {
+      "tick": 20,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": false,
+      "update_owner": null
+    },
+    {
+      "tick": 20,
+      "kind": "call",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 20,
+      "kind": "call",
+      "event": "GenericOnOff::computeOnOffState",
+      "role": "hand",
+      "callers": [
+        "InserterControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 20,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "GenericOnOffControlBehavior::computeOnOffState(MapTick)",
+        "vtable for InserterControlBehavior",
+        null
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 20,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": false,
+      "update_owner": "hand"
+    },
+    {
+      "tick": 20,
+      "kind": "return",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "update_owner": "hand"
+    },
+    {
+      "tick": 21,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "LuaGenericOnOffControlBehavior::luaReadCircuitCondition(lua_State*)",
+        "int LuaBindableObject::luaIndex<LuaBinder<LuaInserterControlBehavior> >(lua_State*)",
+        "LuaBinder<LuaInserterControlBehavior>::callWrapperOnObject(lua_State*, LuaInserterControlBehavior*, int)"
+      ],
+      "update_owner": null
+    },
+    {
+      "tick": 21,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": false,
+      "update_owner": null
+    },
+    {
+      "tick": 21,
+      "kind": "call",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 21,
+      "kind": "call",
+      "event": "GenericOnOff::computeOnOffState",
+      "role": "hand",
+      "callers": [
+        "InserterControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 21,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "GenericOnOffControlBehavior::computeOnOffState(MapTick)",
+        "vtable for InserterControlBehavior",
+        null
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 21,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": false,
+      "update_owner": "hand"
+    },
+    {
+      "tick": 21,
+      "kind": "return",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "update_owner": "hand"
+    },
+    {
+      "tick": 22,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "LuaGenericOnOffControlBehavior::luaReadCircuitCondition(lua_State*)",
+        "int LuaBindableObject::luaIndex<LuaBinder<LuaInserterControlBehavior> >(lua_State*)",
+        "LuaBinder<LuaInserterControlBehavior>::callWrapperOnObject(lua_State*, LuaInserterControlBehavior*, int)"
+      ],
+      "update_owner": null
+    },
+    {
+      "tick": 22,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": false,
+      "update_owner": null
+    },
+    {
+      "tick": 22,
+      "kind": "call",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 22,
+      "kind": "call",
+      "event": "GenericOnOff::computeOnOffState",
+      "role": "hand",
+      "callers": [
+        "InserterControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 22,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "GenericOnOffControlBehavior::computeOnOffState(MapTick)",
+        "vtable for InserterControlBehavior",
+        null
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 22,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": false,
+      "update_owner": "hand"
+    },
+    {
+      "tick": 22,
+      "kind": "return",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "update_owner": "hand"
+    },
+    {
+      "tick": 23,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "LuaGenericOnOffControlBehavior::luaReadCircuitCondition(lua_State*)",
+        "int LuaBindableObject::luaIndex<LuaBinder<LuaInserterControlBehavior> >(lua_State*)",
+        "LuaBinder<LuaInserterControlBehavior>::callWrapperOnObject(lua_State*, LuaInserterControlBehavior*, int)"
+      ],
+      "update_owner": null
+    },
+    {
+      "tick": 23,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": false,
+      "update_owner": null
+    },
+    {
+      "tick": 23,
+      "kind": "call",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 23,
+      "kind": "call",
+      "event": "GenericOnOff::computeOnOffState",
+      "role": "hand",
+      "callers": [
+        "InserterControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 23,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "GenericOnOffControlBehavior::computeOnOffState(MapTick)",
+        "vtable for InserterControlBehavior",
+        null
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 23,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": false,
+      "update_owner": "hand"
+    },
+    {
+      "tick": 23,
+      "kind": "return",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "update_owner": "hand"
+    },
+    {
+      "tick": 24,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "LuaGenericOnOffControlBehavior::luaReadCircuitCondition(lua_State*)",
+        "int LuaBindableObject::luaIndex<LuaBinder<LuaInserterControlBehavior> >(lua_State*)",
+        "LuaBinder<LuaInserterControlBehavior>::callWrapperOnObject(lua_State*, LuaInserterControlBehavior*, int)"
+      ],
+      "update_owner": null
+    },
+    {
+      "tick": 24,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": true,
+      "update_owner": null
+    },
+    {
+      "tick": 24,
+      "kind": "call",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "callers": [
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]",
+        "WorkerThread::loop()"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 24,
+      "kind": "call",
+      "event": "GenericOnOff::computeOnOffState",
+      "role": "hand",
+      "callers": [
+        "InserterControlBehavior::update(MapTick, MultithreadingOutput&)",
+        "ControlBehaviorManager::update(unsigned int)",
+        "std::_Function_handler<void (), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0::operator()(std::initializer_list<MultithreadedUpdatable*>) const::{lamb [full in raw]"
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 24,
+      "kind": "call",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "callers": [
+        "GenericOnOffControlBehavior::computeOnOffState(MapTick)",
+        "vtable for InserterControlBehavior",
+        null
+      ],
+      "update_owner": "hand"
+    },
+    {
+      "tick": 24,
+      "kind": "return",
+      "event": "CircuitCondition::fulfilled",
+      "role": "hand",
+      "bool_result": true,
+      "update_owner": "hand"
+    },
+    {
+      "tick": 24,
+      "kind": "return",
+      "event": "InserterControl::update",
+      "role": "hand",
+      "update_owner": "hand"
+    },
+    {
+      "tick": 24,
+      "kind": "call",
+      "event": "Inserter::alarm",
+      "role": "hand",
+      "callers": [
+        "MultithreadingOutput::dispatchActions(std::span<MultithreadingOutput, 18446744073709551615ul>)",
+        "ControlBehaviorManager::finish()",
+        "std::_Function_handler<void (std::initializer_list<MultithreadedUpdatable*>), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0>::_M_invoke(std::_Any_data [full in raw]"
+      ],
+      "update_owner": null,
+      "membership": {
+        "byte": 0,
+        "self_linked": true
+      }
+    },
+    {
+      "tick": 24,
+      "kind": "call",
+      "event": "UpdatableEntity::attachInternal",
+      "role": "hand",
+      "callers": [
+        "MultithreadingOutput::dispatchActions(std::span<MultithreadingOutput, 18446744073709551615ul>)",
+        "ControlBehaviorManager::finish()",
+        "std::_Function_handler<void (std::initializer_list<MultithreadedUpdatable*>), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0>::_M_invoke(std::_Any_data [full in raw]"
+      ],
+      "update_owner": null,
+      "membership": {
+        "byte": 1,
+        "self_linked": true
+      }
+    },
+    {
+      "tick": 24,
+      "kind": "return",
+      "event": "Inserter::alarm",
+      "role": "hand",
+      "membership": {
+        "byte": 1,
+        "self_linked": false
+      },
+      "update_owner": null
+    },
+    {
+      "tick": 24,
+      "kind": "return",
+      "event": "UpdatableEntity::attachInternal",
+      "role": "hand",
+      "membership": {
+        "byte": 1,
+        "self_linked": false
+      },
+      "update_owner": null
+    }
+  ],
+  "global_order_equal": false,
+  "per_role_order_equal": true
+}

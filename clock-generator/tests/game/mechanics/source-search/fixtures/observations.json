@@ -1,0 +1,3326 @@
+{
+  "schema": 1,
+  "contract": "Mechanics: actual selected Update-owned destination/source paths",
+  "version": "2.1.21",
+  "binary_sha256": "64a4dbc1a6de1e2556efd627f543d6072eaca6e69ee8b0c26df358bbd559adf7",
+  "native_roles": {
+    "hand_1": 67,
+    "source_1": 65,
+    "sink_1": 66,
+    "hand_2": 70,
+    "source_2": 68,
+    "sink_2": 69,
+    "hand_3": 73,
+    "source_3": 71,
+    "sink_3": 72,
+    "hand_4": 76,
+    "source_4": 74,
+    "sink_4": 75,
+    "hand_5": 79,
+    "source_5": 77,
+    "sink_5": 78,
+    "hand_6": 82,
+    "source_6": 80,
+    "sink_6": 81
+  },
+  "scaffold_entity_numbers": "separate prepared namespace; see scaffold.txt",
+  "recording_ids": "not used by this projection",
+  "absolute_started": 47397,
+  "tick_conversion": "game_tick=started+probe_tick; native Updatek is visible rowk+1",
+  "reference_raw_equal": true,
+  "repeat_raw_equal": true,
+  "projected_repeat_equal": true,
+  "source_positive_checks_each": 6,
+  "observer_isFull_calls_excluded_each": 106,
+  "initial": [
+    {
+      "cell": 1,
+      "state": "output-overloaded",
+      "many": false,
+      "source": 65,
+      "sink": 66,
+      "hand": 67,
+      "source_slots": 48,
+      "source_stock": {},
+      "destination_input": {},
+      "destination_output": [
+        {
+          "slot": 1,
+          "name": "engine-unit",
+          "count": 50,
+          "quality": "normal"
+        }
+      ],
+      "requested_gears": 0,
+      "fitted_gears": 0,
+      "filled_output": 50,
+      "stack_override": 16,
+      "quality": "legendary",
+      "position": {
+        "y": -0.5,
+        "x": 387.5
+      },
+      "source_position": {
+        "y": -1.5,
+        "x": 387.5
+      },
+      "sink_position": {
+        "y": 1.5,
+        "x": 387.5
+      },
+      "force_stack_bonus": 3
+    },
+    {
+      "cell": 2,
+      "state": "output-overloaded",
+      "many": true,
+      "source": 68,
+      "sink": 69,
+      "hand": 70,
+      "source_slots": 48,
+      "source_stock": {},
+      "destination_input": {},
+      "destination_output": [
+        {
+          "slot": 1,
+          "name": "engine-unit",
+          "count": 50,
+          "quality": "normal"
+        }
+      ],
+      "requested_gears": 0,
+      "fitted_gears": 0,
+      "filled_output": 50,
+      "stack_override": 16,
+      "quality": "legendary",
+      "position": {
+        "y": -0.5,
+        "x": 399.5
+      },
+      "source_position": {
+        "y": -1.5,
+        "x": 399.5
+      },
+      "sink_position": {
+        "y": 1.5,
+        "x": 399.5
+      },
+      "force_stack_bonus": 3
+    },
+    {
+      "cell": 3,
+      "state": "ingredient-refused",
+      "many": false,
+      "source": 71,
+      "sink": 72,
+      "hand": 73,
+      "source_slots": 48,
+      "source_stock": {},
+      "destination_input": [
+        {
+          "slot": 2,
+          "name": "iron-gear-wheel",
+          "count": 128,
+          "quality": "normal"
+        }
+      ],
+      "destination_output": {},
+      "requested_gears": 128,
+      "fitted_gears": 128,
+      "filled_output": 0,
+      "stack_override": 16,
+      "quality": "legendary",
+      "position": {
+        "y": -0.5,
+        "x": 411.5
+      },
+      "source_position": {
+        "y": -1.5,
+        "x": 411.5
+      },
+      "sink_position": {
+        "y": 1.5,
+        "x": 411.5
+      },
+      "force_stack_bonus": 3
+    },
+    {
+      "cell": 4,
+      "state": "ingredient-refused",
+      "many": true,
+      "source": 74,
+      "sink": 75,
+      "hand": 76,
+      "source_slots": 48,
+      "source_stock": {},
+      "destination_input": [
+        {
+          "slot": 2,
+          "name": "iron-gear-wheel",
+          "count": 128,
+          "quality": "normal"
+        }
+      ],
+      "destination_output": {},
+      "requested_gears": 128,
+      "fitted_gears": 128,
+      "filled_output": 0,
+      "stack_override": 16,
+      "quality": "legendary",
+      "position": {
+        "y": -0.5,
+        "x": 423.5
+      },
+      "source_position": {
+        "y": -1.5,
+        "x": 423.5
+      },
+      "sink_position": {
+        "y": 1.5,
+        "x": 423.5
+      },
+      "force_stack_bonus": 3
+    },
+    {
+      "cell": 5,
+      "state": "accepting",
+      "many": false,
+      "source": 77,
+      "sink": 78,
+      "hand": 79,
+      "source_slots": 48,
+      "source_stock": {},
+      "destination_input": {},
+      "destination_output": {},
+      "requested_gears": 0,
+      "fitted_gears": 0,
+      "filled_output": 0,
+      "stack_override": 16,
+      "quality": "legendary",
+      "position": {
+        "y": -0.5,
+        "x": 435.5
+      },
+      "source_position": {
+        "y": -1.5,
+        "x": 435.5
+      },
+      "sink_position": {
+        "y": 1.5,
+        "x": 435.5
+      },
+      "force_stack_bonus": 3
+    },
+    {
+      "cell": 6,
+      "state": "accepting",
+      "many": true,
+      "source": 80,
+      "sink": 81,
+      "hand": 82,
+      "source_slots": 48,
+      "source_stock": {},
+      "destination_input": {},
+      "destination_output": {},
+      "requested_gears": 0,
+      "fitted_gears": 0,
+      "filled_output": 0,
+      "stack_override": 16,
+      "quality": "legendary",
+      "position": {
+        "y": -0.5,
+        "x": 447.5
+      },
+      "source_position": {
+        "y": -1.5,
+        "x": 447.5
+      },
+      "sink_position": {
+        "y": 1.5,
+        "x": 447.5
+      },
+      "force_stack_bonus": 3
+    }
+  ],
+  "interventions": [
+    {
+      "tick": 2,
+      "game_tick": 47399,
+      "name": "source_stock48_after_disabled_observation",
+      "stocks": [
+        {
+          "cell": 1,
+          "source": 65,
+          "slots": [
+            {
+              "slot": 1,
+              "name": "iron-gear-wheel",
+              "count": 48,
+              "quality": "normal"
+            }
+          ]
+        },
+        {
+          "cell": 2,
+          "source": 68,
+          "slots": [
+            {
+              "slot": 1,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 2,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 3,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 4,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 5,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 6,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 7,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 8,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 9,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 10,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 11,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 12,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 13,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 14,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 15,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 16,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 17,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 18,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 19,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 20,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 21,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 22,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 23,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 24,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 25,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 26,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 27,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 28,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 29,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 30,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 31,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 32,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 33,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 34,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 35,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 36,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 37,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 38,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 39,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 40,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 41,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 42,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 43,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 44,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 45,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 46,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 47,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 48,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            }
+          ]
+        },
+        {
+          "cell": 3,
+          "source": 71,
+          "slots": [
+            {
+              "slot": 1,
+              "name": "iron-gear-wheel",
+              "count": 48,
+              "quality": "normal"
+            }
+          ]
+        },
+        {
+          "cell": 4,
+          "source": 74,
+          "slots": [
+            {
+              "slot": 1,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 2,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 3,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 4,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 5,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 6,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 7,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 8,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 9,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 10,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 11,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 12,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 13,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 14,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 15,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 16,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 17,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 18,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 19,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 20,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 21,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 22,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 23,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 24,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 25,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 26,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 27,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 28,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 29,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 30,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 31,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 32,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 33,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 34,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 35,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 36,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 37,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 38,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 39,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 40,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 41,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 42,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 43,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 44,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 45,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 46,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 47,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 48,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            }
+          ]
+        },
+        {
+          "cell": 5,
+          "source": 77,
+          "slots": [
+            {
+              "slot": 1,
+              "name": "iron-gear-wheel",
+              "count": 48,
+              "quality": "normal"
+            }
+          ]
+        },
+        {
+          "cell": 6,
+          "source": 80,
+          "slots": [
+            {
+              "slot": 1,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 2,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 3,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 4,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 5,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 6,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 7,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 8,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 9,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 10,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 11,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 12,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 13,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 14,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 15,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 16,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 17,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 18,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 19,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 20,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 21,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 22,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 23,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 24,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 25,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 26,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 27,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 28,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 29,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 30,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 31,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 32,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 33,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 34,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 35,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 36,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 37,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 38,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 39,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 40,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 41,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 42,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 43,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 44,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 45,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 46,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 47,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 48,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "tick": 3,
+      "game_tick": 47400,
+      "name": "all_conditions_true"
+    }
+  ],
+  "counts": [
+    {
+      "tick": 2,
+      "role": "hand_3",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 2,
+      "role": "hand_4",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 2,
+      "role": "hand_5",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 2,
+      "role": "hand_6",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 3,
+      "role": "hand_1",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 3,
+      "role": "hand_2",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 3,
+      "role": "hand_3",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 3,
+      "role": "hand_4",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 3,
+      "role": "hand_5",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 3,
+      "role": "hand_6",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 4,
+      "role": "hand_1",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 4,
+      "role": "hand_2",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 4,
+      "role": "hand_3",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 4,
+      "role": "hand_3",
+      "event": "source_inventory",
+      "count": 1
+    },
+    {
+      "tick": 4,
+      "role": "hand_3",
+      "event": "source_slot",
+      "count": 1
+    },
+    {
+      "tick": 4,
+      "role": "hand_4",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 4,
+      "role": "hand_4",
+      "event": "source_inventory",
+      "count": 1
+    },
+    {
+      "tick": 4,
+      "role": "hand_4",
+      "event": "source_slot",
+      "count": 48
+    },
+    {
+      "tick": 4,
+      "role": "hand_5",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 4,
+      "role": "hand_5",
+      "event": "source_inventory",
+      "count": 1
+    },
+    {
+      "tick": 4,
+      "role": "hand_5",
+      "event": "source_slot",
+      "count": 1
+    },
+    {
+      "tick": 4,
+      "role": "hand_6",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 4,
+      "role": "hand_6",
+      "event": "source_inventory",
+      "count": 1
+    },
+    {
+      "tick": 4,
+      "role": "hand_6",
+      "event": "source_slot",
+      "count": 16
+    },
+    {
+      "tick": 4,
+      "role": "sink_1",
+      "event": "AssemblingMachine::isFullForInserters",
+      "count": 1
+    },
+    {
+      "tick": 4,
+      "role": "sink_2",
+      "event": "AssemblingMachine::isFullForInserters",
+      "count": 1
+    },
+    {
+      "tick": 4,
+      "role": "sink_3",
+      "event": "AssemblingMachine::canInsert",
+      "count": 1
+    },
+    {
+      "tick": 4,
+      "role": "sink_3",
+      "event": "AssemblingMachine::isFullForInserters",
+      "count": 1
+    },
+    {
+      "tick": 4,
+      "role": "sink_4",
+      "event": "AssemblingMachine::canInsert",
+      "count": 1
+    },
+    {
+      "tick": 4,
+      "role": "sink_4",
+      "event": "AssemblingMachine::isFullForInserters",
+      "count": 1
+    },
+    {
+      "tick": 4,
+      "role": "sink_5",
+      "event": "AssemblingMachine::canInsert",
+      "count": 1
+    },
+    {
+      "tick": 4,
+      "role": "sink_5",
+      "event": "AssemblingMachine::isFullForInserters",
+      "count": 1
+    },
+    {
+      "tick": 4,
+      "role": "sink_6",
+      "event": "AssemblingMachine::canInsert",
+      "count": 16
+    },
+    {
+      "tick": 4,
+      "role": "sink_6",
+      "event": "AssemblingMachine::isFullForInserters",
+      "count": 1
+    },
+    {
+      "tick": 5,
+      "role": "hand_5",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 5,
+      "role": "hand_6",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 6,
+      "role": "hand_5",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 6,
+      "role": "hand_6",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 7,
+      "role": "hand_5",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 7,
+      "role": "hand_6",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 8,
+      "role": "hand_5",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 8,
+      "role": "hand_6",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 9,
+      "role": "hand_5",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 9,
+      "role": "hand_6",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 10,
+      "role": "hand_5",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 10,
+      "role": "hand_6",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 11,
+      "role": "hand_5",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 11,
+      "role": "hand_6",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 12,
+      "role": "hand_5",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 12,
+      "role": "hand_5",
+      "event": "source_inventory",
+      "count": 1
+    },
+    {
+      "tick": 12,
+      "role": "hand_5",
+      "event": "source_slot",
+      "count": 1
+    },
+    {
+      "tick": 12,
+      "role": "hand_6",
+      "event": "Inserter::update",
+      "count": 1
+    },
+    {
+      "tick": 12,
+      "role": "hand_6",
+      "event": "source_inventory",
+      "count": 1
+    },
+    {
+      "tick": 12,
+      "role": "hand_6",
+      "event": "source_slot",
+      "count": 32
+    },
+    {
+      "tick": 12,
+      "role": "sink_5",
+      "event": "AssemblingMachine::canInsert",
+      "count": 1
+    },
+    {
+      "tick": 12,
+      "role": "sink_5",
+      "event": "AssemblingMachine::isFullForInserters",
+      "count": 1
+    },
+    {
+      "tick": 12,
+      "role": "sink_6",
+      "event": "AssemblingMachine::canInsert",
+      "count": 1
+    },
+    {
+      "tick": 12,
+      "role": "sink_6",
+      "event": "AssemblingMachine::isFullForInserters",
+      "count": 1
+    }
+  ],
+  "events": [
+    {
+      "seq": 54,
+      "return_seq": 57,
+      "probe_tick": 2,
+      "event": "Inserter::update",
+      "role": "hand_6",
+      "native_unit": 82,
+      "owner": "hand_6"
+    },
+    {
+      "seq": 58,
+      "return_seq": 61,
+      "probe_tick": 2,
+      "event": "Inserter::update",
+      "role": "hand_5",
+      "native_unit": 79,
+      "owner": "hand_5"
+    },
+    {
+      "seq": 62,
+      "return_seq": 65,
+      "probe_tick": 2,
+      "event": "Inserter::update",
+      "role": "hand_4",
+      "native_unit": 76,
+      "owner": "hand_4"
+    },
+    {
+      "seq": 66,
+      "return_seq": 69,
+      "probe_tick": 2,
+      "event": "Inserter::update",
+      "role": "hand_3",
+      "native_unit": 73,
+      "owner": "hand_3"
+    },
+    {
+      "seq": 112,
+      "return_seq": 115,
+      "probe_tick": 3,
+      "event": "Inserter::update",
+      "role": "hand_6",
+      "native_unit": 82,
+      "owner": "hand_6"
+    },
+    {
+      "seq": 116,
+      "return_seq": 119,
+      "probe_tick": 3,
+      "event": "Inserter::update",
+      "role": "hand_5",
+      "native_unit": 79,
+      "owner": "hand_5"
+    },
+    {
+      "seq": 120,
+      "return_seq": 123,
+      "probe_tick": 3,
+      "event": "Inserter::update",
+      "role": "hand_4",
+      "native_unit": 76,
+      "owner": "hand_4"
+    },
+    {
+      "seq": 124,
+      "return_seq": 127,
+      "probe_tick": 3,
+      "event": "Inserter::update",
+      "role": "hand_3",
+      "native_unit": 73,
+      "owner": "hand_3"
+    },
+    {
+      "seq": 128,
+      "return_seq": 131,
+      "probe_tick": 3,
+      "event": "Inserter::update",
+      "role": "hand_2",
+      "native_unit": 70,
+      "owner": "hand_2"
+    },
+    {
+      "seq": 132,
+      "return_seq": 135,
+      "probe_tick": 3,
+      "event": "Inserter::update",
+      "role": "hand_1",
+      "native_unit": 67,
+      "owner": "hand_1"
+    },
+    {
+      "seq": 178,
+      "return_seq": 294,
+      "probe_tick": 4,
+      "event": "Inserter::update",
+      "role": "hand_6",
+      "native_unit": 82,
+      "owner": "hand_6"
+    },
+    {
+      "seq": 179,
+      "return_seq": 180,
+      "probe_tick": 4,
+      "event": "AssemblingMachine::isFullForInserters",
+      "role": "sink_6",
+      "native_unit": 81,
+      "owner": "hand_6",
+      "returned_bool": false
+    },
+    {
+      "seq": 181,
+      "probe_tick": 4,
+      "event": "source_inventory",
+      "role": "hand_6",
+      "native_unit": 82,
+      "source_role": "source_6",
+      "internal_span": 48,
+      "api_capacity": 48,
+      "nonempty_slots": 48,
+      "total_items": 48
+    },
+    {
+      "seq": 182,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 48,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 184,
+      "return_seq": 185,
+      "probe_tick": 4,
+      "event": "AssemblingMachine::canInsert",
+      "role": "sink_6",
+      "native_unit": 81,
+      "owner": "hand_6",
+      "returned_bool": true,
+      "source_slot": 48,
+      "item_native_id": 161
+    },
+    {
+      "seq": 189,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 47,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 191,
+      "return_seq": 192,
+      "probe_tick": 4,
+      "event": "AssemblingMachine::canInsert",
+      "role": "sink_6",
+      "native_unit": 81,
+      "owner": "hand_6",
+      "returned_bool": true,
+      "source_slot": 47,
+      "item_native_id": 161
+    },
+    {
+      "seq": 196,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 46,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 198,
+      "return_seq": 199,
+      "probe_tick": 4,
+      "event": "AssemblingMachine::canInsert",
+      "role": "sink_6",
+      "native_unit": 81,
+      "owner": "hand_6",
+      "returned_bool": true,
+      "source_slot": 46,
+      "item_native_id": 161
+    },
+    {
+      "seq": 203,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 45,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 205,
+      "return_seq": 206,
+      "probe_tick": 4,
+      "event": "AssemblingMachine::canInsert",
+      "role": "sink_6",
+      "native_unit": 81,
+      "owner": "hand_6",
+      "returned_bool": true,
+      "source_slot": 45,
+      "item_native_id": 161
+    },
+    {
+      "seq": 210,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 44,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 212,
+      "return_seq": 213,
+      "probe_tick": 4,
+      "event": "AssemblingMachine::canInsert",
+      "role": "sink_6",
+      "native_unit": 81,
+      "owner": "hand_6",
+      "returned_bool": true,
+      "source_slot": 44,
+      "item_native_id": 161
+    },
+    {
+      "seq": 217,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 43,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 219,
+      "return_seq": 220,
+      "probe_tick": 4,
+      "event": "AssemblingMachine::canInsert",
+      "role": "sink_6",
+      "native_unit": 81,
+      "owner": "hand_6",
+      "returned_bool": true,
+      "source_slot": 43,
+      "item_native_id": 161
+    },
+    {
+      "seq": 224,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 42,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 226,
+      "return_seq": 227,
+      "probe_tick": 4,
+      "event": "AssemblingMachine::canInsert",
+      "role": "sink_6",
+      "native_unit": 81,
+      "owner": "hand_6",
+      "returned_bool": true,
+      "source_slot": 42,
+      "item_native_id": 161
+    },
+    {
+      "seq": 231,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 41,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 233,
+      "return_seq": 234,
+      "probe_tick": 4,
+      "event": "AssemblingMachine::canInsert",
+      "role": "sink_6",
+      "native_unit": 81,
+      "owner": "hand_6",
+      "returned_bool": true,
+      "source_slot": 41,
+      "item_native_id": 161
+    },
+    {
+      "seq": 238,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 40,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 240,
+      "return_seq": 241,
+      "probe_tick": 4,
+      "event": "AssemblingMachine::canInsert",
+      "role": "sink_6",
+      "native_unit": 81,
+      "owner": "hand_6",
+      "returned_bool": true,
+      "source_slot": 40,
+      "item_native_id": 161
+    },
+    {
+      "seq": 245,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 39,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 247,
+      "return_seq": 248,
+      "probe_tick": 4,
+      "event": "AssemblingMachine::canInsert",
+      "role": "sink_6",
+      "native_unit": 81,
+      "owner": "hand_6",
+      "returned_bool": true,
+      "source_slot": 39,
+      "item_native_id": 161
+    },
+    {
+      "seq": 252,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 38,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 254,
+      "return_seq": 255,
+      "probe_tick": 4,
+      "event": "AssemblingMachine::canInsert",
+      "role": "sink_6",
+      "native_unit": 81,
+      "owner": "hand_6",
+      "returned_bool": true,
+      "source_slot": 38,
+      "item_native_id": 161
+    },
+    {
+      "seq": 259,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 37,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 261,
+      "return_seq": 262,
+      "probe_tick": 4,
+      "event": "AssemblingMachine::canInsert",
+      "role": "sink_6",
+      "native_unit": 81,
+      "owner": "hand_6",
+      "returned_bool": true,
+      "source_slot": 37,
+      "item_native_id": 161
+    },
+    {
+      "seq": 266,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 36,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 268,
+      "return_seq": 269,
+      "probe_tick": 4,
+      "event": "AssemblingMachine::canInsert",
+      "role": "sink_6",
+      "native_unit": 81,
+      "owner": "hand_6",
+      "returned_bool": true,
+      "source_slot": 36,
+      "item_native_id": 161
+    },
+    {
+      "seq": 273,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 35,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 275,
+      "return_seq": 276,
+      "probe_tick": 4,
+      "event": "AssemblingMachine::canInsert",
+      "role": "sink_6",
+      "native_unit": 81,
+      "owner": "hand_6",
+      "returned_bool": true,
+      "source_slot": 35,
+      "item_native_id": 161
+    },
+    {
+      "seq": 280,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 34,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 282,
+      "return_seq": 283,
+      "probe_tick": 4,
+      "event": "AssemblingMachine::canInsert",
+      "role": "sink_6",
+      "native_unit": 81,
+      "owner": "hand_6",
+      "returned_bool": true,
+      "source_slot": 34,
+      "item_native_id": 161
+    },
+    {
+      "seq": 287,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 33,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 289,
+      "return_seq": 290,
+      "probe_tick": 4,
+      "event": "AssemblingMachine::canInsert",
+      "role": "sink_6",
+      "native_unit": 81,
+      "owner": "hand_6",
+      "returned_bool": true,
+      "source_slot": 33,
+      "item_native_id": 161
+    },
+    {
+      "seq": 295,
+      "return_seq": 306,
+      "probe_tick": 4,
+      "event": "Inserter::update",
+      "role": "hand_5",
+      "native_unit": 79,
+      "owner": "hand_5"
+    },
+    {
+      "seq": 296,
+      "return_seq": 297,
+      "probe_tick": 4,
+      "event": "AssemblingMachine::isFullForInserters",
+      "role": "sink_5",
+      "native_unit": 78,
+      "owner": "hand_5",
+      "returned_bool": false
+    },
+    {
+      "seq": 298,
+      "probe_tick": 4,
+      "event": "source_inventory",
+      "role": "hand_5",
+      "native_unit": 79,
+      "source_role": "source_5",
+      "internal_span": 1,
+      "api_capacity": 48,
+      "nonempty_slots": 1,
+      "total_items": 48
+    },
+    {
+      "seq": 299,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_5",
+      "native_unit": 79,
+      "slot": 1,
+      "quantity": 48,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 301,
+      "return_seq": 302,
+      "probe_tick": 4,
+      "event": "AssemblingMachine::canInsert",
+      "role": "sink_5",
+      "native_unit": 78,
+      "owner": "hand_5",
+      "returned_bool": true,
+      "source_slot": 1,
+      "item_native_id": 161
+    },
+    {
+      "seq": 307,
+      "return_seq": 366,
+      "probe_tick": 4,
+      "event": "Inserter::update",
+      "role": "hand_4",
+      "native_unit": 76,
+      "owner": "hand_4"
+    },
+    {
+      "seq": 308,
+      "return_seq": 309,
+      "probe_tick": 4,
+      "event": "AssemblingMachine::isFullForInserters",
+      "role": "sink_4",
+      "native_unit": 75,
+      "owner": "hand_4",
+      "returned_bool": false
+    },
+    {
+      "seq": 310,
+      "probe_tick": 4,
+      "event": "source_inventory",
+      "role": "hand_4",
+      "native_unit": 76,
+      "source_role": "source_4",
+      "internal_span": 48,
+      "api_capacity": 48,
+      "nonempty_slots": 48,
+      "total_items": 48
+    },
+    {
+      "seq": 311,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 48,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 313,
+      "return_seq": 314,
+      "probe_tick": 4,
+      "event": "AssemblingMachine::canInsert",
+      "role": "sink_4",
+      "native_unit": 75,
+      "owner": "hand_4",
+      "returned_bool": false,
+      "source_slot": 48,
+      "item_native_id": 161
+    },
+    {
+      "seq": 315,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 47,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 316,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 46,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 317,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 45,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 318,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 44,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 319,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 43,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 320,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 42,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 321,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 41,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 322,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 40,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 323,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 39,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 324,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 38,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 325,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 37,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 326,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 36,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 327,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 35,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 328,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 34,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 329,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 33,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 330,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 32,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 331,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 31,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 332,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 30,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 333,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 29,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 334,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 28,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 335,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 27,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 336,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 26,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 337,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 25,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 338,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 24,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 339,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 23,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 340,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 22,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 341,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 21,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 342,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 20,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 343,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 19,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 344,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 18,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 345,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 17,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 346,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 16,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 347,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 15,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 348,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 14,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 349,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 13,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 350,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 12,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 351,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 11,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 352,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 10,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 353,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 9,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 354,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 8,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 355,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 7,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 356,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 6,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 357,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 5,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 358,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 4,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 359,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 3,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 360,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 2,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 361,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_4",
+      "native_unit": 76,
+      "slot": 1,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 367,
+      "return_seq": 379,
+      "probe_tick": 4,
+      "event": "Inserter::update",
+      "role": "hand_3",
+      "native_unit": 73,
+      "owner": "hand_3"
+    },
+    {
+      "seq": 368,
+      "return_seq": 369,
+      "probe_tick": 4,
+      "event": "AssemblingMachine::isFullForInserters",
+      "role": "sink_3",
+      "native_unit": 72,
+      "owner": "hand_3",
+      "returned_bool": false
+    },
+    {
+      "seq": 370,
+      "probe_tick": 4,
+      "event": "source_inventory",
+      "role": "hand_3",
+      "native_unit": 73,
+      "source_role": "source_3",
+      "internal_span": 1,
+      "api_capacity": 48,
+      "nonempty_slots": 1,
+      "total_items": 48
+    },
+    {
+      "seq": 371,
+      "probe_tick": 4,
+      "event": "source_slot",
+      "role": "hand_3",
+      "native_unit": 73,
+      "slot": 1,
+      "quantity": 48,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 373,
+      "return_seq": 374,
+      "probe_tick": 4,
+      "event": "AssemblingMachine::canInsert",
+      "role": "sink_3",
+      "native_unit": 72,
+      "owner": "hand_3",
+      "returned_bool": false,
+      "source_slot": 1,
+      "item_native_id": 161
+    },
+    {
+      "seq": 380,
+      "return_seq": 387,
+      "probe_tick": 4,
+      "event": "Inserter::update",
+      "role": "hand_2",
+      "native_unit": 70,
+      "owner": "hand_2"
+    },
+    {
+      "seq": 381,
+      "return_seq": 382,
+      "probe_tick": 4,
+      "event": "AssemblingMachine::isFullForInserters",
+      "role": "sink_2",
+      "native_unit": 69,
+      "owner": "hand_2",
+      "returned_bool": true
+    },
+    {
+      "seq": 388,
+      "return_seq": 395,
+      "probe_tick": 4,
+      "event": "Inserter::update",
+      "role": "hand_1",
+      "native_unit": 67,
+      "owner": "hand_1"
+    },
+    {
+      "seq": 389,
+      "return_seq": 390,
+      "probe_tick": 4,
+      "event": "AssemblingMachine::isFullForInserters",
+      "role": "sink_1",
+      "native_unit": 66,
+      "owner": "hand_1",
+      "returned_bool": true
+    },
+    {
+      "seq": 404,
+      "return_seq": 405,
+      "probe_tick": 5,
+      "event": "Inserter::update",
+      "role": "hand_6",
+      "native_unit": 82,
+      "owner": "hand_6"
+    },
+    {
+      "seq": 406,
+      "return_seq": 407,
+      "probe_tick": 5,
+      "event": "Inserter::update",
+      "role": "hand_5",
+      "native_unit": 79,
+      "owner": "hand_5"
+    },
+    {
+      "seq": 416,
+      "return_seq": 417,
+      "probe_tick": 6,
+      "event": "Inserter::update",
+      "role": "hand_6",
+      "native_unit": 82,
+      "owner": "hand_6"
+    },
+    {
+      "seq": 418,
+      "return_seq": 419,
+      "probe_tick": 6,
+      "event": "Inserter::update",
+      "role": "hand_5",
+      "native_unit": 79,
+      "owner": "hand_5"
+    },
+    {
+      "seq": 428,
+      "return_seq": 429,
+      "probe_tick": 7,
+      "event": "Inserter::update",
+      "role": "hand_6",
+      "native_unit": 82,
+      "owner": "hand_6"
+    },
+    {
+      "seq": 430,
+      "return_seq": 431,
+      "probe_tick": 7,
+      "event": "Inserter::update",
+      "role": "hand_5",
+      "native_unit": 79,
+      "owner": "hand_5"
+    },
+    {
+      "seq": 440,
+      "return_seq": 446,
+      "probe_tick": 8,
+      "event": "Inserter::update",
+      "role": "hand_6",
+      "native_unit": 82,
+      "owner": "hand_6"
+    },
+    {
+      "seq": 447,
+      "return_seq": 453,
+      "probe_tick": 8,
+      "event": "Inserter::update",
+      "role": "hand_5",
+      "native_unit": 79,
+      "owner": "hand_5"
+    },
+    {
+      "seq": 470,
+      "return_seq": 471,
+      "probe_tick": 9,
+      "event": "Inserter::update",
+      "role": "hand_6",
+      "native_unit": 82,
+      "owner": "hand_6"
+    },
+    {
+      "seq": 472,
+      "return_seq": 473,
+      "probe_tick": 9,
+      "event": "Inserter::update",
+      "role": "hand_5",
+      "native_unit": 79,
+      "owner": "hand_5"
+    },
+    {
+      "seq": 486,
+      "return_seq": 487,
+      "probe_tick": 10,
+      "event": "Inserter::update",
+      "role": "hand_6",
+      "native_unit": 82,
+      "owner": "hand_6"
+    },
+    {
+      "seq": 488,
+      "return_seq": 489,
+      "probe_tick": 10,
+      "event": "Inserter::update",
+      "role": "hand_5",
+      "native_unit": 79,
+      "owner": "hand_5"
+    },
+    {
+      "seq": 502,
+      "return_seq": 503,
+      "probe_tick": 11,
+      "event": "Inserter::update",
+      "role": "hand_6",
+      "native_unit": 82,
+      "owner": "hand_6"
+    },
+    {
+      "seq": 504,
+      "return_seq": 505,
+      "probe_tick": 11,
+      "event": "Inserter::update",
+      "role": "hand_5",
+      "native_unit": 79,
+      "owner": "hand_5"
+    },
+    {
+      "seq": 518,
+      "return_seq": 561,
+      "probe_tick": 12,
+      "event": "Inserter::update",
+      "role": "hand_6",
+      "native_unit": 82,
+      "owner": "hand_6"
+    },
+    {
+      "seq": 519,
+      "return_seq": 520,
+      "probe_tick": 12,
+      "event": "AssemblingMachine::isFullForInserters",
+      "role": "sink_6",
+      "native_unit": 81,
+      "owner": "hand_6",
+      "returned_bool": false
+    },
+    {
+      "seq": 521,
+      "probe_tick": 12,
+      "event": "source_inventory",
+      "role": "hand_6",
+      "native_unit": 82,
+      "source_role": "source_6",
+      "internal_span": 32,
+      "api_capacity": 48,
+      "nonempty_slots": 32,
+      "total_items": 32
+    },
+    {
+      "seq": 522,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 32,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 524,
+      "return_seq": 525,
+      "probe_tick": 12,
+      "event": "AssemblingMachine::canInsert",
+      "role": "sink_6",
+      "native_unit": 81,
+      "owner": "hand_6",
+      "returned_bool": false,
+      "source_slot": 32,
+      "item_native_id": 161
+    },
+    {
+      "seq": 526,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 31,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 527,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 30,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 528,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 29,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 529,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 28,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 530,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 27,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 531,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 26,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 532,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 25,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 533,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 24,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 534,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 23,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 535,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 22,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 536,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 21,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 537,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 20,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 538,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 19,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 539,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 18,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 540,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 17,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 541,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 16,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 542,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 15,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 543,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 14,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 544,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 13,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 545,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 12,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 546,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 11,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 547,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 10,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 548,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 9,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 549,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 8,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 550,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 7,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 551,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 6,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 552,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 5,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 553,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 4,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 554,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 3,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 555,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 2,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 556,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_6",
+      "native_unit": 82,
+      "slot": 1,
+      "quantity": 1,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 562,
+      "return_seq": 574,
+      "probe_tick": 12,
+      "event": "Inserter::update",
+      "role": "hand_5",
+      "native_unit": 79,
+      "owner": "hand_5"
+    },
+    {
+      "seq": 563,
+      "return_seq": 564,
+      "probe_tick": 12,
+      "event": "AssemblingMachine::isFullForInserters",
+      "role": "sink_5",
+      "native_unit": 78,
+      "owner": "hand_5",
+      "returned_bool": false
+    },
+    {
+      "seq": 565,
+      "probe_tick": 12,
+      "event": "source_inventory",
+      "role": "hand_5",
+      "native_unit": 79,
+      "source_role": "source_5",
+      "internal_span": 1,
+      "api_capacity": 48,
+      "nonempty_slots": 1,
+      "total_items": 32
+    },
+    {
+      "seq": 566,
+      "probe_tick": 12,
+      "event": "source_slot",
+      "role": "hand_5",
+      "native_unit": 79,
+      "slot": 1,
+      "quantity": 32,
+      "item_native_id": 161,
+      "site": "source-slot-plain"
+    },
+    {
+      "seq": 568,
+      "return_seq": 569,
+      "probe_tick": 12,
+      "event": "AssemblingMachine::canInsert",
+      "role": "sink_5",
+      "native_unit": 78,
+      "owner": "hand_5",
+      "returned_bool": false,
+      "source_slot": 1,
+      "item_native_id": 161
+    }
+  ],
+  "limits": [
+    "Plain same-item normal gear source branch only; no spoil branch or arbitrary inventory-hole policy.",
+    "Internal traversed span is distinct from API48slot capacity.",
+    "Counts exclude status-query calls outside verified selected hand Updates.",
+    "No timing/pricing, simulator mismatch/fix, ranking or throughput proof."
+  ],
+  "provenance": {
+    ".scratch/reference02/visible.json": "6a61cd3c1e21a7fb353f9b140090d1420cf4a3c98d6896c6ebd3ae0799510cc9",
+    ".scratch/reference02/scaffold.txt": "16840b10afb9384547e48f240a5b11ed4093a313858bd9921733d569d8bdca93",
+    ".scratch/reference02/probe.lua": "306b4f763a055451a2abd78b6206086d0cd47a6abfdf7776af1a9e8d0ccc5e79",
+    ".scratch/capture02/calls.jsonl": "57b446d027837454dc8f08adc47aa4d3fd82ca4f4de23fc9a9cbe147a58f213c",
+    ".scratch/capture03/calls.jsonl": "99db463e63896ea7bb8353ee7003a04f100d5692a299d7d1cee8686de6bbd076",
+    ".scratch/capture02/SHA256.json": "7fe2ef9c792a655909549fa79b26b6ec65debcf711c2f00b4d00f64b9dff941d",
+    ".scratch/capture03/SHA256.json": "a84f44edaa65cb21b4fe1fbf24faae7a235093fda971df4defb20e87d4c90649",
+    "scripts/analyze.py": "341d63867b1dc2ff97966d5e5b90d6e85c27a4b76d23c035dc0d23b79b4baf37"
+  }
+}

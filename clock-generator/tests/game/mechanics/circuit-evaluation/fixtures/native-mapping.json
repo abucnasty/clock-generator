@@ -1,0 +1,164 @@
+{
+  "controls": [
+    {
+      "unit": 75,
+      "role": "hand",
+      "type": 3,
+      "conditions": 0,
+      "vtable_offset": "0x3d7f908",
+      "typed_getter_and_native_type_verified": true
+    },
+    {
+      "unit": 76,
+      "role": "fixed_generator",
+      "type": 10,
+      "conditions": 0,
+      "vtable_offset": "0x3d7de68",
+      "typed_getter_and_native_type_verified": true
+    },
+    {
+      "unit": 77,
+      "role": "counter",
+      "type": 9,
+      "conditions": 1,
+      "vtable_offset": "0x3d7f290",
+      "typed_getter_and_native_type_verified": true
+    },
+    {
+      "unit": 78,
+      "role": "positive_generator",
+      "type": 10,
+      "conditions": 0,
+      "vtable_offset": "0x3d7de68",
+      "typed_getter_and_native_type_verified": true
+    },
+    {
+      "unit": 79,
+      "role": "fixed_arithmetic_zero",
+      "type": 10,
+      "conditions": 0,
+      "vtable_offset": "0x3d7de68",
+      "typed_getter_and_native_type_verified": true
+    },
+    {
+      "unit": 80,
+      "role": "fixed_simple_true",
+      "type": 9,
+      "conditions": 1,
+      "vtable_offset": "0x3d7f290",
+      "typed_getter_and_native_type_verified": true
+    },
+    {
+      "unit": 81,
+      "role": "fixed_and_true",
+      "type": 9,
+      "conditions": 3,
+      "vtable_offset": "0x3d7f290",
+      "typed_getter_and_native_type_verified": true
+    },
+    {
+      "unit": 82,
+      "role": "fixed_and_false_first",
+      "type": 9,
+      "conditions": 3,
+      "vtable_offset": "0x3d7f290",
+      "typed_getter_and_native_type_verified": true
+    },
+    {
+      "unit": 83,
+      "role": "fixed_and_false_last",
+      "type": 9,
+      "conditions": 3,
+      "vtable_offset": "0x3d7f290",
+      "typed_getter_and_native_type_verified": true
+    },
+    {
+      "unit": 84,
+      "role": "fixed_or_true_first",
+      "type": 9,
+      "conditions": 3,
+      "vtable_offset": "0x3d7f290",
+      "typed_getter_and_native_type_verified": true
+    },
+    {
+      "unit": 85,
+      "role": "fixed_or_true_last",
+      "type": 9,
+      "conditions": 3,
+      "vtable_offset": "0x3d7f290",
+      "typed_getter_and_native_type_verified": true
+    },
+    {
+      "unit": 86,
+      "role": "changing_arithmetic_zero",
+      "type": 10,
+      "conditions": 0,
+      "vtable_offset": "0x3d7de68",
+      "typed_getter_and_native_type_verified": true
+    },
+    {
+      "unit": 87,
+      "role": "changing_simple_true",
+      "type": 9,
+      "conditions": 1,
+      "vtable_offset": "0x3d7f290",
+      "typed_getter_and_native_type_verified": true
+    },
+    {
+      "unit": 88,
+      "role": "changing_and_true",
+      "type": 9,
+      "conditions": 3,
+      "vtable_offset": "0x3d7f290",
+      "typed_getter_and_native_type_verified": true
+    },
+    {
+      "unit": 89,
+      "role": "changing_and_false_first",
+      "type": 9,
+      "conditions": 3,
+      "vtable_offset": "0x3d7f290",
+      "typed_getter_and_native_type_verified": true
+    },
+    {
+      "unit": 90,
+      "role": "changing_and_false_last",
+      "type": 9,
+      "conditions": 3,
+      "vtable_offset": "0x3d7f290",
+      "typed_getter_and_native_type_verified": true
+    },
+    {
+      "unit": 91,
+      "role": "changing_or_true_first",
+      "type": 9,
+      "conditions": 3,
+      "vtable_offset": "0x3d7f290",
+      "typed_getter_and_native_type_verified": true
+    },
+    {
+      "unit": 92,
+      "role": "changing_or_true_last",
+      "type": 9,
+      "conditions": 3,
+      "vtable_offset": "0x3d7f290",
+      "typed_getter_and_native_type_verified": true
+    }
+  ],
+  "entity_count": 22,
+  "arithmetic_update": {
+    "entry": "0x34a10c0",
+    "receiver_adjustment": 24,
+    "parent_entry": "0x34a0e70",
+    "note": "Positively observed compiler-duplicated non-virtual thunk; unused parent entry is not a zero-update count."
+  },
+  "decider_conditions": {
+    "stride": 32,
+    "begin_offset": "0x2f0",
+    "end_offset": "0x2f8"
+  },
+  "generic_condition": {
+    "typed_control_field_offset": "0x1bc",
+    "probe_calls_excluded": 19
+  }
+}

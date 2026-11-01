@@ -1,0 +1,16 @@
+{
+  "source": "04-source-search",
+  "compact_sha256": "94504d82f177aecedd3687db1c882d0023d407065d26ee716ea87db68b268f4f",
+  "source_probe_sha256": "1b80383502e201d19ccbbd520950100fdcb281506d491e963f6224357fee325b",
+  "probe_change": "Debugger pause is opt-in options.pause_at_gate; scenario observations/interventions unchanged.",
+  "raw_hashes": {
+    ".scratch/reference02/visible.json": "6a61cd3c1e21a7fb353f9b140090d1420cf4a3c98d6896c6ebd3ae0799510cc9",
+    ".scratch/reference02/scaffold.txt": "16840b10afb9384547e48f240a5b11ed4093a313858bd9921733d569d8bdca93",
+    ".scratch/reference02/probe.lua": "306b4f763a055451a2abd78b6206086d0cd47a6abfdf7776af1a9e8d0ccc5e79",
+    ".scratch/capture02/calls.jsonl": "57b446d027837454dc8f08adc47aa4d3fd82ca4f4de23fc9a9cbe147a58f213c",
+    ".scratch/capture03/calls.jsonl": "99db463e63896ea7bb8353ee7003a04f100d5692a299d7d1cee8686de6bbd076",
+    ".scratch/capture02/SHA256.json": "7fe2ef9c792a655909549fa79b26b6ec65debcf711c2f00b4d00f64b9dff941d",
+    ".scratch/capture03/SHA256.json": "a84f44edaa65cb21b4fe1fbf24faae7a235093fda971df4defb20e87d4c90649",
+    "scripts/analyze.py": "341d63867b1dc2ff97966d5e5b90d6e85c27a4b76d23c035dc0d23b79b4baf37"
+  }
+}

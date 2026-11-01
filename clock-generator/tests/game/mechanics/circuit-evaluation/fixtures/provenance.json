@@ -1,0 +1,27 @@
+{
+  "source": "06-circuit-evaluation",
+  "compact_source_hashes": {
+    "06-circuit-evaluation/evidence/validation.json": "729c24561bdee3a4dead6d867d63549177de56ad8f75474adfcff474181d3ef9",
+    "06-circuit-evaluation/evidence/events.json": "ee173a32fbba1b375e3b6346999d1be1fd53f793abcf31f24955d4eb98992282",
+    "06-circuit-evaluation/evidence/visible-window.json": "a882875067f42595cd5aa4e1ace3323b45ac8ca9a40e889e0ef8d7248210d4cf"
+  },
+  "raw_hashes": {
+    ".scratch/capture04/visible.json": "212401e10031dc08ee8f5150f96de735f9bfaafb820c388f0cf8bd979b403895",
+    ".scratch/capture04/calls.jsonl": "80c2bd6be3aab842e6238ed0a990b97c70641d60d235224cc75b84cff57625b4",
+    ".scratch/capture04/SHA256.json": "e88692bacc68a895d46236d2ef827a0dd26047c26ad2b3ad6a999e043db01952",
+    ".scratch/capture04/config.json": "f7ef0f1cb53ec4e0bd4a52cae86c776dd8792db84f669b1321a3fd0a15f13f6a",
+    ".scratch/capture05/visible.json": "212401e10031dc08ee8f5150f96de735f9bfaafb820c388f0cf8bd979b403895",
+    ".scratch/capture05/calls.jsonl": "d249fcc393ef1a5d5c7649e06d932f9cbde8f8f86d3984d7ae89c588a94c5e14",
+    ".scratch/capture05/SHA256.json": "0b2cc764add6c253ab4b4b9689d9594e9097465260455be71590f859bd991f7b",
+    ".scratch/capture05/config.json": "c986a9058ce9d5c49de425b23bcaf3d74276ef16fe043f72e2ba97a8d773a8bd",
+    ".scratch/reference02/visible.json": "b7c23298c7ad642c8c3d0a1dcbec6713445dd5480ca5df26522f56461d87cef3",
+    ".scratch/reference02/SHA256.json": "9eac05e4e1c03ea22947ba18760c426de7276a61eb8c0db74a00fc296e02537a"
+  },
+  "scaffold_sha256": "15b3348ce535a0e55d186ea39c87973d93c66316135959d4cf66329fb360f87a",
+  "source_probe_sha256": "7df446e2a19b8c099db45abed4e31d0320a1b9aa290d41e4eb2651fe38bee514",
+  "code_sites_sha256": "526e29eaabbd5442e9587d3a3694d2f8aebcb6443f0e653679bd6289edaf5a16",
+  "observer_sha256": "34c318434f5616589cee17276fca08cc422e1f468576454e05e1f3c7573fda96",
+  "probe_change": "Debugger pause is opt-in options.pause_at_gate; scenario observations/interventions unchanged.",
+  "tick_origin": "All24whole-visible rows equal after subtracting only each constant started origin from started/sample.game_tick; all other fields exact.",
+  "repeat_scope": "Per-role exact ordered kind/event/local tick/meaningful condition bool and index/membership/caller names/update owner. Global interleaving across independent worker threads is recorded separately, never forced into an active-list policy. Pointer bytes, PIE, debugger seq/thread IDs excluded."
+}

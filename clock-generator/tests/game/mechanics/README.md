@@ -6,6 +6,9 @@ targeted commands and screenshot regeneration. Screenshots are layout references
 - [Belt pickup](belt-pickup/README.md): exposed reach, moving lane fallback, backed-up supply and front exit mirroring.
 - [Belt lanes](belt-lanes/README.md): physical lanes in recordings and opposite-lane ingredient layouts.
 - [Activation order](activation-order/README.md): observed Alarm/membership/Update sequences projected into an offline scheduler primitive.
+- [Busy input](busy-input/README.md): bounded native destination/refusal paths and separate notification denominators.
+- [Source search](source-search/README.md): controlled broad/item-specific refusal and source slot traversal.
+- [Circuit evaluation](circuit-evaluation/README.md): actual cached/short-circuit calls and real full carry across clock edges.
 - [Source order](source-order/README.md): compact native shared-source allocations replayed without Factorio.
 - [Staged start](staged-start/README.md): saturated belts and fresh cell inserters built in a controlled order.
 - [Clock wiring](clock-wiring/README.md): replacing inserter conditions inherited from a real build.
@@ -17,7 +20,7 @@ targeted commands and screenshot regeneration. Screenshots are layout references
 - [Belt drop lane](belt-drop-lane/README.md): the lane an inserter drops on, from each side and each end of a belt running in each direction, against the simulator's two lane choices.
 - [Drop spacing](drop-spacing/README.md): the hands of several copies on one belt lane, why a pitch and an offset make them fit or collide.
 
-The [screenshot catalog](screenshots.json) references 14 local fixture blueprints and 3 shared sample
+The [screenshot catalog](screenshots.json) references local fixture blueprints and shared sample
 blueprints. Their [generated provenance](screenshots.generated.json) records source hashes, Factorio version,
 framing and compressed image sizes. Run `npm run screenshots -- --all` from `clock-generator/` to backfill missing
 or stale images, or `--case=<id>` to capture one.

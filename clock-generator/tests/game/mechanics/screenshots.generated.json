@@ -435,5 +435,51 @@
     "png_bytes": 733662,
     "jpeg_bytes": 89554,
     "jpeg_quality": 82
+  },
+  "source-search": {
+    "blueprint": "source-search/fixtures/scaffold.txt",
+    "image": "source-search/fixtures/scaffold.jpg",
+    "source_sha256": "16840b10afb9384547e48f240a5b11ed4093a313858bd9921733d569d8bdca93",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 417.5,
+      "y": 0.42578125
+    },
+    "resolution": {
+      "x": 1920,
+      "y": 248
+    },
+    "zoom": 0.9036357218496294,
+    "width": 1920,
+    "height": 248,
+    "png_bytes": 742633,
+    "jpeg_bytes": 88609,
+    "jpeg_quality": 82
+  },
+  "circuit-evaluation": {
+    "blueprint": "circuit-evaluation/fixtures/scaffold.txt",
+    "image": "circuit-evaluation/fixtures/scaffold.jpg",
+    "source_sha256": "15b3348ce535a0e55d186ea39c87973d93c66316135959d4cf66329fb360f87a",
+    "factorio_version": "2.1.21",
+    "capture_recipe": 2,
+    "warmup_ticks": 600,
+    "unclocked": true,
+    "position": {
+      "x": 401.525390625,
+      "y": 0.474609375
+    },
+    "resolution": {
+      "x": 1341,
+      "y": 1440
+    },
+    "zoom": 1.2951096121416525,
+    "width": 1341,
+    "height": 1440,
+    "png_bytes": 3232154,
+    "jpeg_bytes": 317324,
+    "jpeg_quality": 82
   }
 }
