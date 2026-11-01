@@ -1,0 +1,279 @@
+{
+  "format": "native-source-allocation-1",
+  "factorio_version": "2.1.21",
+  "source_config": "REAL_THAELN_CELL09",
+  "source_recording": "thaeln-output-cut-drops.json",
+  "source_recording_sha256": "55c93a0df2ed58977df87072f67db2e3577ddf07aa8406f8178714f8d0490bcc",
+  "priority_derivation_sha256": "cd42b7a98e10d4bab92ef84aa38cd0b652d52ce5ed0ef2006fb5ef3b7887250a",
+  "observed_tick": 4206,
+  "game_tick": 147865,
+  "period": 168,
+  "observed_source_allocations": [
+    {
+      "tick": 4206,
+      "source": 3,
+      "item": "low-density-structure",
+      "stock_before": 17,
+      "takes": {
+        "5": 1,
+        "7": 16
+      },
+      "full_before_partial": [
+        [
+          7,
+          5
+        ]
+      ]
+    },
+    {
+      "tick": 4206,
+      "source": 4,
+      "item": "low-density-structure",
+      "stock_before": 17,
+      "takes": {
+        "6": 16,
+        "8": 1
+      },
+      "full_before_partial": [
+        [
+          6,
+          8
+        ]
+      ]
+    },
+    {
+      "tick": 4206,
+      "source": 11,
+      "item": "low-density-structure",
+      "stock_before": 17,
+      "takes": {
+        "23": 1,
+        "26": 16
+      },
+      "full_before_partial": [
+        [
+          26,
+          23
+        ]
+      ]
+    }
+  ],
+  "machines_before": [
+    {
+      "id": 1,
+      "input": {
+        "processing-unit": 14,
+        "flying-robot-frame": 15,
+        "low-density-structure": 13
+      },
+      "output": {
+        "utility-science-pack": 8
+      },
+      "progress": 0.10001240079365081,
+      "bonus": 0.10001240079365081
+    },
+    {
+      "id": 2,
+      "input": {
+        "processing-unit": 14,
+        "flying-robot-frame": 15,
+        "low-density-structure": 13
+      },
+      "output": {
+        "utility-science-pack": 8
+      },
+      "progress": 0.10001240079365081,
+      "bonus": 0.10001240079365081
+    },
+    {
+      "id": 3,
+      "input": {
+        "plastic-bar": 10
+      },
+      "output": {
+        "low-density-structure": 17
+      },
+      "progress": 0.6658333333333334,
+      "bonus": 0.9975000000020586
+    },
+    {
+      "id": 4,
+      "input": {
+        "plastic-bar": 10
+      },
+      "output": {
+        "low-density-structure": 17
+      },
+      "progress": 0.6658333333333334,
+      "bonus": 0.9975000000020582
+    },
+    {
+      "id": 5,
+      "input": {
+        "processing-unit": 14,
+        "flying-robot-frame": 15,
+        "low-density-structure": 13
+      },
+      "output": {},
+      "progress": 0.20002480158730163,
+      "bonus": 0.20002480158730163
+    },
+    {
+      "id": 6,
+      "input": {
+        "processing-unit": 14,
+        "flying-robot-frame": 15,
+        "low-density-structure": 13
+      },
+      "output": {},
+      "progress": 0.20002480158730163,
+      "bonus": 0.20002480158730163
+    },
+    {
+      "id": 7,
+      "input": {
+        "coal": 107
+      },
+      "output": {
+        "plastic-bar": 100
+      },
+      "progress": 0.833333333333333,
+      "bonus": 1
+    },
+    {
+      "id": 8,
+      "input": {
+        "processing-unit": 20,
+        "flying-robot-frame": 10,
+        "low-density-structure": 14
+      },
+      "output": {},
+      "progress": 0.20002480158730163,
+      "bonus": 0.20002480158730163
+    },
+    {
+      "id": 9,
+      "input": {
+        "processing-unit": 14,
+        "flying-robot-frame": 15,
+        "low-density-structure": 13
+      },
+      "output": {},
+      "progress": 0.20002480158730163,
+      "bonus": 0.20002480158730163
+    },
+    {
+      "id": 10,
+      "input": {
+        "plastic-bar": 10
+      },
+      "output": {
+        "low-density-structure": 17
+      },
+      "progress": 0.6658333333333334,
+      "bonus": 0.9975000000020324
+    },
+    {
+      "id": 11,
+      "input": {
+        "plastic-bar": 10
+      },
+      "output": {
+        "low-density-structure": 17
+      },
+      "progress": 0.6658333333333334,
+      "bonus": 0.9975000000020329
+    },
+    {
+      "id": 12,
+      "input": {
+        "processing-unit": 12,
+        "flying-robot-frame": 6,
+        "low-density-structure": 18
+      },
+      "output": {
+        "utility-science-pack": 6
+      },
+      "progress": 0.00012400793650805633,
+      "bonus": 0.00012400793650805633
+    },
+    {
+      "id": 13,
+      "input": {
+        "processing-unit": 14,
+        "flying-robot-frame": 15,
+        "low-density-structure": 13
+      },
+      "output": {
+        "utility-science-pack": 8
+      },
+      "progress": 0.10001240079365081,
+      "bonus": 0.10001240079365081
+    }
+  ],
+  "hands_before": [
+    {
+      "id": 5,
+      "held": 0,
+      "status": 1
+    },
+    {
+      "id": 6,
+      "held": 0,
+      "status": 1
+    },
+    {
+      "id": 7,
+      "held": 0,
+      "status": 1
+    },
+    {
+      "id": 8,
+      "held": 0,
+      "status": 1
+    },
+    {
+      "id": 23,
+      "held": 0,
+      "status": 1
+    },
+    {
+      "id": 26,
+      "held": 0,
+      "status": 1
+    }
+  ],
+  "hands_after": [
+    {
+      "id": 5,
+      "held": 1,
+      "status": 59
+    },
+    {
+      "id": 6,
+      "held": 16,
+      "status": 59
+    },
+    {
+      "id": 7,
+      "held": 16,
+      "status": 59
+    },
+    {
+      "id": 8,
+      "held": 1,
+      "status": 59
+    },
+    {
+      "id": 23,
+      "held": 1,
+      "status": 59
+    },
+    {
+      "id": 26,
+      "held": 16,
+      "status": 59
+    }
+  ],
+  "scope": "Observed: all selected hands empty before, sources3/4/11 each hold17, then exhaust in opposite local orders in one native tick. Regression: replay the local pickup ports from measured inventories and check that the sampled robustness orders include this allocation. No full machine-tick, tunnel, upstream supply or later deficit cure is asserted."
+}
