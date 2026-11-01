@@ -62,6 +62,8 @@ export interface TimelineRecordingOptions {
      * then shows a settled period (the long run of the clock judges the build from one), not the first after warm-up.
      */
     settle_periods?: number;
+    /** Exact elapsed clock ticks from the cold start; takes precedence over period-based settling. */
+    settle_ticks?: number;
 }
 
 type ReadSignal = { signal: TimelineSeries; read: () => TimelineValue };

@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { clockFromWindows, simulateClockOnly, type MachineStartStock, type SerializableClockWindows } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
@@ -139,10 +139,21 @@ describe("the advanced circuit build under evenly spaced windows of one hand", (
     // passes this clock: it falls short from some of its start phases, as the game's plant fell to 608 and 624.
     // Before that start (the build filled with ingredients, the plants emptied of advanced circuits) both plants
     // held 352 and the check passed it.
-    it("falls short of 704 a period from some of the start phases the generator checks a clock from", () => {
-        const made = clockFromWindows(config, evenly_spaced, PERIOD, quiet);
-        expect(made.stability_check.as_built!.holds).toBe(false);
-        expect(made.stability_check.as_built!.actual_output_items).toBe(544);
-        expect(made.stability_check.as_built!.failed_start_offset).toBe(88);
+    it.each([false, true])("does not replay the successful unshifted recording for a failed phase (exhaustive=%s)", exhaustive => {
+        vi.stubEnv("CLOCK_PROOF_PHASES", exhaustive ? "1" : "0");
+        try {
+            const check = clockFromWindows(config, evenly_spaced, PERIOD, quiet).stability_check.as_built!;
+            expect(check.holds).toBe(false);
+            expect(check.actual_output_items).toBeLessThan(704);
+            expect(check.failed_start_offset).toBeGreaterThan(0);
+            if (!exhaustive) {
+                expect(check.actual_output_items).toBe(544);
+                expect(check.failed_start_offset).toBe(88);
+            }
+            expect(check.first_judged_tick).toBeUndefined();
+            expect(check.clock_tick_at_first_judged).toBeUndefined();
+            expect(check.long_run_proven).toBeUndefined();
+            expect(check.long_run_cycle_periods).toBeUndefined();
+        } finally { vi.unstubAllEnvs(); }
     });
 });
