@@ -1,3 +1,6 @@
+import assert from "node:assert/strict";
+import zlib from "node:zlib";
+import type {GeneratedClock} from "../../../src/harness/factorio-harness";
 import {expect} from "vitest";
 import {ClockAlternative} from "../../../src/crafting/generate-blueprint";
 import {SerializableClockWindows} from "../../../src/crafting/clock";
@@ -8,15 +11,50 @@ import {BELT_PICKUP_GENERATED} from "./belt-pickup-clock-cases";
 import {pickupClockConfig, pickupClockSpeedCases} from "./pickup-clock-speed-coverage";
 import {overHoodClockCases, overHoodClockConfig} from "./over-hood-clock-fixtures";
 
-export interface ColdStartClock {
+interface ColdStartClockCommon {
     period: number;
-    terminal_swings: number;
     clock_windows: SerializableClockWindows;
     /** sha256 of the exported clock's identity (`clockIdentity`: no text or metadata), as the blast and the other pins hash it */
     clock_sha256: string;
     /** The same hash of the clock the runs were recorded on (the game test refuses another); a unit test requires the two equal */
     recorded_clock_sha256: string;
 }
+/** A physical native control records its encoding, without pretending to know the planner's count. */
+export type ColdStartClock = ColdStartClockCommon & (
+    {kind?: "planned"; terminal_swings: number; physical_clock?: never}
+    | {kind: "physical"; physical_clock: GeneratedClock; terminal_swings?: never}
+);
+
+/** Validates the exact physical control and the windows used by the unplanned model. */
+export function physicalColdClockOf(clock: ColdStartClock, run: {rotate: number; decider_order: string}) {
+    if (clock.kind !== "physical") {
+        assert(Number.isFinite(clock.terminal_swings) && clock.terminal_swings > 0, "planned cold controls require actual terminal metadata");
+        return null;
+    }
+    assert(run.rotate === 0 && run.decider_order === "built", "physical cold controls are nonrotated and built-order only");
+    assert(clock.terminal_swings === undefined, "physical control must not invent planner metadata");
+    const blueprint = JSON.parse(zlib.inflateSync(Buffer.from(clock.physical_clock.blueprint.slice(1), "base64")).toString()).blueprint;
+    expect(clock.physical_clock.schedule.counted_ticks).toBe(clock.period);
+    const used = new Set<string>();
+    for (const scheduled of clock.physical_clock.schedule.inserter_combinators) {
+        expect(scheduled.inserter_ids).toHaveLength(1);
+        const id = `inserter:${scheduled.inserter_ids[0]}`;
+        used.add(id);
+        const entity = blueprint.entities.find((it: {entity_number: number}) => it.entity_number === scheduled.entity_number);
+        expect(entity.name).toBe("decider-combinator");
+        const expected = clock.clock_windows[id].flatMap(range => [
+            {first_signal: {name: "signal-clock", type: "virtual"}, comparator: "≥", constant: range.start + 1},
+            {first_signal: {name: "signal-clock", type: "virtual"}, comparator: "≤", compare_type: "and", constant: range.end + 1},
+        ]);
+        expect(entity.control_behavior.decider_conditions.conditions, id).toEqual(expected);
+    }
+    expect([...used].sort()).toEqual(Object.keys(clock.clock_windows).sort());
+    const exported = {blueprint, schedule: clock.physical_clock.schedule};
+    expect(clockHash(exported)).toBe(clock.clock_sha256);
+    expect(clock.recorded_clock_sha256).toBe(clock.clock_sha256);
+    return exported;
+}
+
 export interface ColdStartRun {
     /** The fixture: `<tier>-<geometry>-<supply>-l<near lane>` for a side pickup, an over-hood clock case's name */
     case: string;
@@ -43,6 +81,8 @@ interface ColdStartControls {
     periods: number;
     clocks: Record<string, ColdStartClock>;
     runs: Record<string, ColdStartRun>;
+    /** Old controls stay mechanically checked after their selection moves. */
+    historical_runs?: Record<string, ColdStartRun>;
 }
 
 export const coldStart = readControls<{cold_start: ColdStartControls}>("pickup-clock-start-controls.json").cold_start;
