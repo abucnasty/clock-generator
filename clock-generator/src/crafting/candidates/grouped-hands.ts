@@ -11,7 +11,8 @@ import { DropTieBreak, dropTieBreak } from "../../config/drop-spacing";
 import { TurnGroup } from "../turn-groups";
 import type { AlwaysOnReason } from "../always-on-reasons";
 import { sharedItemDeadlockRisks } from "../deadlock-risk";
-import { rankingWindowCount } from "../rank";
+import { clockCost, costOf, costPlace, rankingWindowCount } from "../rank";
+import { windowDeciderCount, withNetwork } from "../inserter-counters";
 import { outputAtWindow } from "./taker-turns";
 
 /** Ticks added to the shortest window that starts the last hand: one for the tick a combinator takes, one of margin */
@@ -675,24 +676,32 @@ interface HoldingWay {
 
 /**
  * Of the clocks of the ways that hold, the one the selection ranks first (`combineClockAlternativeRuns`): one that gets
- * back from every backpressure loss, then one whose losses could not be tried, then the others; among those the fewest
- * wake-ups a minute, then the fewest windows, then the first tried. The losses are tried in that order, and only until
- * one gets back. On a build with a deadlock risk they do not decide (`rankingOf`) and are not tried. Shared windows are
- * kept only where they get back or could not be tried: null where none is.
+ * back from every backpressure loss, then one whose losses could not be tried, then the others; among those the lowest
+ * cost (`clockCost`; each way's clock is a whole clock of the build), a cost above the cheapest by less than the floor
+ * tied with it, then the fewest windows, then the first tried. The periods to recover do not part tied clocks here: the
+ * losses are tried in that order, and only until one gets back. On a build with a deadlock risk they do not decide
+ * (`rankingOf`) and are not tried. Shared windows are kept only where they get back or could not be tried: null where
+ * none is.
  */
-export function groupedClockRank(entity_registry: Pick<ReadableEntityRegistry, "getAll">, clock: BlueprintGenerationResult): [number, number] {
-    const wake_ups = clock.stability_check.as_built?.wake_ups?.wake_ups_per_minute;
+export function groupedClockRank(entity_registry: Pick<ReadableEntityRegistry, "getAll">, clock: BlueprintGenerationResult): { cost: number; windows: number } {
+    const as_built = clock.stability_check.as_built;
+    const counters = as_built?.counters === undefined ? undefined : withNetwork(as_built.counters, clock.blueprint, windowDeciderCount(clock.blueprint));
     const windows = entity_registry.getAll().filter(Entity.isInserter)
         .reduce((sum, inserter) => sum + (clock.clock_windows[inserter.entity_id.id]?.length ?? 0), 0);
-    // to a thousandth, as the selection counts them
-    return [wake_ups === undefined ? Number.MAX_SAFE_INTEGER : Math.round(wake_ups * 1000), rankingWindowCount(windows, clock.clock_windows, clock.loop_windows)];
+    return { cost: costOf({ cost: clockCost(counters, as_built?.wake_ups?.wake_ups_per_minute ?? null) }), windows: rankingWindowCount(windows, clock.clock_windows, clock.loop_windows) };
+}
+
+/** Clocks in the order `groupedClockRank` gives them: the lowest cost, ties within the floor, then the fewest windows, then the first */
+export function inCostOrder<T>(clocks: readonly T[], rankOf: (clock: T) => { cost: number; windows: number }): T[] {
+    const ranked = clocks.map((clock, index) => ({ clock, index, rank: rankOf(clock) }));
+    const cheapest = Math.min(...ranked.map(it => it.rank.cost));
+    const place = (it: (typeof ranked)[number]) => costPlace(it.rank.cost, cheapest);
+    return ranked.sort((a, b) => place(a) - place(b) || a.rank.windows - b.rank.windows || a.index - b.index).map(it => it.clock);
 }
 
 function bestHolding(made: PlanRun, holding: HoldingWay[], shared: boolean): HoldingWay | null {
     const entity_registry = made.run.simulation_context.entity_registry;
-    const ranked = holding.map((held, index) => ({ held, index, rank: groupedClockRank(entity_registry, held.clock) }))
-        .sort((a, b) => a.rank[0] - b.rank[0] || a.rank[1] - b.rank[1] || a.index - b.index)
-        .map(it => it.held);
+    const ranked = inCostOrder(holding, held => groupedClockRank(entity_registry, held.clock));
     if (!shared && sharedItemDeadlockRisks(entity_registry).length > 0) return ranked[0] ?? null;
     let untried: HoldingWay | null = null;
     for (const held of ranked) {

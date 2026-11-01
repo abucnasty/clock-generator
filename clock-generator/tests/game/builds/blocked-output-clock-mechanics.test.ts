@@ -29,12 +29,13 @@ const drops = readFixtureFigures<RecordedHand[]>(GameFixturePaths.TURBO_BELT_DRO
 const firstHandOf = (variant: BlockedOutputClockCase) => drops[`${variant.speed.name}/${variant.stackSize}`][0];
 
 /**
- * The clock the generator selects: a hand of 15 is shifted-swings; a hand of 16 is even-hands, or planned-belt-slack where
- * both have no wake-ups (an arm that swings back from a drop that emptied its hand is not counted) and it wins the tie
+ * The clock each retained control recorded: a hand of 15 uses shifted-swings. Several 16-item controls retain the
+ * planned clock selected by the earlier recovery tie-break; turbo stack 4 was recorded again on the cheaper even-hands
+ * clock under cost ranking. These native controls deliberately come from different engine revisions.
  */
-const PLANNED_SELECTED = new Set(["express-stack-2", "express-stack-4", "fast-stack-4", "normal-stack-1", "normal-stack-4", "turbo-stack-2", "turbo-stack-4"]
+const PLANNED_SELECTED = new Set(["express-stack-2", "express-stack-4", "fast-stack-4", "normal-stack-1", "normal-stack-4", "turbo-stack-2"]
     .map(name => `blocked-output-${name}`));
-const selectedClockOf = (variant: BlockedOutputClockCase) =>
+const recordedClockOf = (variant: BlockedOutputClockCase) =>
     variant.stackSize === 3 ? "shifted-swings" : PLANNED_SELECTED.has(variant.name) ? "planned-belt-slack" : "even-hands";
 
 /** The hand the output inserter drops: 16 items, 15 at stack size 3 (docs/belt-pickup/experiments.md) */
@@ -107,7 +108,7 @@ describe("the recorded controls of the blocked-output fixtures", () => {
         expect(native.target).toBe(BLOCKED_OUTPUT_TARGET);
         // five gears a second over the period: 16 in 192 ticks, or 120 in 1,440 where the hand of 15 rules out 192
         expect({period: native.period, expected: native.expected}).toEqual({period: periodOf(variant).ticks, expected: periodOf(variant).expected});
-        expect(generation!.selection).toEqual({id: selectedClockOf(variant), holds: true, rate: BLOCKED_OUTPUT_TARGET, supply: null});
+        expect(generation!.selection).toEqual({id: recordedClockOf(variant), holds: true, rate: BLOCKED_OUTPUT_TARGET, supply: null});
         expect(generation!.verdict).toBe("stable");
         expect(native.generationVerdict).toBe("stable");
     });
@@ -139,8 +140,8 @@ describe("the recorded controls of the blocked-output fixtures", () => {
             expect(cases.map(variant => variant.name), name).toContain(name);
             expect(path.length, name).toBeGreaterThan(10);
         }
-        // one case per path: the two selections the pins record
-        expect(new Set([...BLOCKED_OUTPUT_GENERATED.keys()].map(name => controls[name].generation!.selection.id))).toEqual(new Set(["planned-belt-slack", "shifted-swings"]));
+        // One case per recorded path; the cost-ranked turbo stack 4 adds the even-hands selection.
+        expect(new Set([...BLOCKED_OUTPUT_GENERATED.keys()].map(name => controls[name].generation!.selection.id))).toEqual(new Set(["planned-belt-slack", "shifted-swings", "even-hands"]));
     });
 });
 

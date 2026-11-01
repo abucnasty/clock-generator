@@ -420,7 +420,7 @@ export function deadlockRiskInsight(risks: readonly SharedItemDeadlockRisk[]): C
         explanation: "The build then stops for good, whatever the clock does afterwards, and has to be cleared by hand. Whether it "
             + "happens depends on the timing of the two inserters against each other. The trials for backpressure loss do not see "
             + "it, so on this build they do not decide which clock is selected: the clocks that hold the target rate are ranked "
-            + "by their wake-ups. A build is free of the risk when each item is brought to a machine by one inserter only, or "
+            + "by their estimated UPS cost. A build is free of the risk when each item is brought to a machine by one inserter only, or "
             + "when an inserter that shares an item brings nothing else.",
     };
 }

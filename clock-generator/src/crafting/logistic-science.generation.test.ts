@@ -3,7 +3,7 @@ import {loadConfigFromFile} from "../config/loader";
 import {ConfigPaths} from "../config/config-paths";
 import type {Config} from "../config/schema";
 import {generateClockAlternatives, type ClockAlternative, type ClockAlternativesResult} from "./generate-blueprint";
-import {alwaysOnReasonProblemsOf, quiet, withSearches, SEARCH_IDS, SEARCH_LABELS, alternativeIdsOf as idsOf, selectedAlternativeOf as selectedOf} from "./generate-blueprint-test-helpers";
+import {alwaysOnReasonProblemsOf, quiet, withSearches, SEARCH_IDS, alternativeIdsOf as idsOf, selectedAlternativeOf as selectedOf} from "./generate-blueprint-test-helpers";
 
 let config: Config;
 let by_default: ClockAlternativesResult;
@@ -62,7 +62,9 @@ describe("the searches only run when they are needed", () => {
         });
 
         it("runs the searches when the config asks for them, and keeps the planned clock that beats them", () => {
-            expect(by_default.skipped_searches).toEqual(SEARCH_LABELS);
+            // Cost ranking can improve the wake-up and belt-wait terms even past a stable short clock, so observed
+            // and shifted windows now run by default; the other two searches still need the explicit request.
+            expect(by_default.skipped_searches).toEqual(["Uneven output swings", "Full-hand output swings"]);
             expect(selectedOf(by_default).id).toBe("swings-2");
             expect(searched.skipped_searches).toEqual([]);
             // the other three searches find no clock for this build

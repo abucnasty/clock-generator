@@ -18,7 +18,7 @@ import {PickupClockScenario} from "./pickup-clock-capture";
 const FOLDER = path.dirname(ConfigPaths.REAL_STUPIDFATHOBBIT_CELL02);
 
 /** The id of the alternative the generated clock is: the 24-tick one, which the rule for hands in groups makes stable */
-export const GENERATED_ALTERNATIVE = "planned-belt-slack";
+export const GENERATED_ALTERNATIVE = "planned-belt-slack-shared";
 
 /** The scaffold has four throttle inserters (belt to infinity chest) and four chest inserters for the plastic, which the config does not have */
 const SCAFFOLD_INSERTERS = 8;

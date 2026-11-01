@@ -3,12 +3,12 @@
  "cases": {
   "generated-as-is": {
    "recorded": {
-    "pr": 0,
-    "commit": "8d491a98",
-    "frozen_head": "8d491a98",
-    "note": "re-recorded when inserters with the same windows came to share a decider: the native summary is the same as before; pr is set when the PR is opened",
-    "clock_sha256": "52b9b1596a8238aace79bfcca6c4d2de988b0fb6a48d773ce6e4578295a32329",
-    "clock_basis": "capture"
+    "pr": 530,
+    "commit": "92b590f7",
+    "frozen_head": "92b590f7",
+    "clock_sha256": "fc05834ad88e3f5ab8cad4a45ba80420a3125c6893b3c0ddc892782e8d8262e1",
+    "clock_basis": "capture",
+    "note": "The cost-ranked selection was recorded again: native baseline and every period after the measured simulator recovery bound hold the target."
    },
    "native": {
     "generationVerdict": "stable",
@@ -93,10 +93,10 @@
        32,
        32,
        32,
-       16,
-       16,
-       16,
-       16,
+       0,
+       0,
+       0,
+       0,
        0,
        0,
        0,
@@ -188,7 +188,6 @@
       ],
       "recovered": [
        0,
-       0,
        16,
        32,
        32,
@@ -198,6 +197,7 @@
        32,
        32,
        32,
+       16,
        32,
        32,
        32,
@@ -502,22 +502,26 @@
     "expected": 32,
     "verdict": "stable",
     "selection": {
-     "id": "planned-belt-slack",
+     "id": "planned-belt-slack-shared",
      "holds": true,
      "rate": 80,
      "supply": "moving"
     },
+    "clock_sha256": "fc05834ad88e3f5ab8cad4a45ba80420a3125c6893b3c0ddc892782e8d8262e1"
+   },
+   "previous": {
+    "id": "planned-belt-slack",
     "clock_sha256": "52b9b1596a8238aace79bfcca6c4d2de988b0fb6a48d773ce6e4578295a32329"
    }
   },
   "generated-backed-up": {
    "recorded": {
-    "pr": 0,
-    "commit": "8d491a98",
-    "frozen_head": "8d491a98",
-    "note": "re-recorded when inserters with the same windows came to share a decider: the native summary is the same as before; pr is set when the PR is opened",
-    "clock_sha256": "430a8c6f199c3affacda6a26dc8c21ddee0eb3b30b436fc82b4b0891924d823f",
-    "clock_basis": "capture"
+    "pr": 530,
+    "commit": "92b590f7",
+    "frozen_head": "92b590f7",
+    "clock_sha256": "0e3ac5b21cb7f45a379387a2fc28002290945e30108b30136998be7dbcddc845",
+    "clock_basis": "capture",
+    "note": "The cost-ranked selection was recorded again: native baseline and every period after the measured simulator recovery bound hold the target."
    },
    "native": {
     "generationVerdict": "stable",
@@ -600,8 +604,8 @@
        32,
        32,
        32,
-       32,
-       32,
+       16,
+       16,
        16,
        16,
        16,
@@ -696,12 +700,12 @@
        0
       ],
       "recovered": [
+       32,
        16,
+       32,
        16,
        32,
        32,
-       32,
-       16,
        16,
        32,
        32,
@@ -1003,11 +1007,15 @@
     "expected": 32,
     "verdict": "stable",
     "selection": {
-     "id": "planned-belt-slack",
+     "id": "planned-belt-slack-shared",
      "holds": true,
      "rate": 80,
      "supply": "backed_up"
     },
+    "clock_sha256": "0e3ac5b21cb7f45a379387a2fc28002290945e30108b30136998be7dbcddc845"
+   },
+   "previous": {
+    "id": "planned-belt-slack",
     "clock_sha256": "430a8c6f199c3affacda6a26dc8c21ddee0eb3b30b436fc82b4b0891924d823f"
    }
   }

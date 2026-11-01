@@ -26,12 +26,17 @@ describe("a clock for the productivity module chain from the hands and the order
 
     it("selects a stable clock of one cycle at the target rate, and runs no search", () => {
         const selected = result.alternatives[result.selected_index];
+        // Cost ranking selects shared windows. The original feeder cut (periods 66–106) is unchanged:
+        // after using the measured local coal availability following the 105-tick conveyor refill,
+        // all 65 aligned output periods match the native recording, including the recovery dips.
+        // The old exact clock ceased being offered after the inner grouped-hands choice changed;
+        // a previous-hash still-made assertion would therefore be false.
         expect(selected.id).toBe(GENERATED_ALTERNATIVE);
         expect(selected.verdict).toBe("stable");
         expect(selected.result.simulation_duration.ticks).toBe(72);
         expect(selected.assessment.items_per_second).toBeCloseTo(80, 6);
-        // 575.625 counting every waiting state; since 0.26.0 an arm swinging back from its drop is on no list
-        expect(selected.assessment.wake_ups_per_minute).toBeCloseTo(508.125, 2);
+        // Shared windows stay open longer than the former 508.125-wake batched clock, but cost less.
+        expect(selected.assessment.wake_ups_per_minute).toBeCloseTo(928.75, 2);
         expect(selected.assessment.backpressure_loss?.survives).toBe(true);
         expect(selected.assessment.backpressure_loss?.recovered_after_periods).toBe(7);
         expect(result.skipped_searches.length).toBeGreaterThan(0);
@@ -48,7 +53,9 @@ describe("a clock for the productivity module chain from the hands and the order
         expect({ id: selected.id, holds: selected.assessment.holds, rate: selected.assessment.items_per_second, supply: selected.belt?.kind ?? null })
             .toEqual(generation!.selection);
         expect(native.expected).toBe(generation!.expected);
-        // the game holds the target in every baseline period and is back at it after each loss
+        // The native baseline holds; each loss eventually recovers. Its physical feeder protocol
+        // uses the measured local availability boundary above, rather than the ranking's local loss.
+        // In that comparison all 65 periods agree; the native recovery array truthfully keeps its dips.
         expect(native.baseline.length).toBeGreaterThanOrEqual(60);
         expect(native.baseline.every(items => items === native.expected)).toBe(true);
         for (const loss of native.recovery) {

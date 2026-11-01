@@ -15,6 +15,8 @@ export function cell02SelectionTests(which: (variant: StupidfathobbitCell02Clock
         const config = backed ? {...loaded, overrides: {...loaded.overrides, backed_up_belts: true}} : loaded;
         const generated = generateClockAlternatives(config, {logger: quiet});
         const selected = generated.alternatives[generated.selected_index];
+        // Shared windows cost less despite more wake-ups; both supply choices passed fresh native baseline/recovery
+        // checks, and the previous separate clock is retained with its exact identity below.
         expect(selected.id).toBe(GENERATED_ALTERNATIVE);
         expect(selected.verdict).toBe("stable");
         expect(selected.assessment.holds).toBe(true);
@@ -29,7 +31,12 @@ export function cell02SelectionTests(which: (variant: StupidfathobbitCell02Clock
         expect(selected.result.always_on_reasons).toEqual(Object.fromEntries([3, 4, 5, 6, 7, 8, 13, 14, 15, 18, 19, 20]
             .map(number => [`inserter:${number}`, {kind: "busy", period_ticks: 24}])));
         const exported = selected.result.subtick ?? selected.result;
-        const pin = readControls("stupidfathobbit-cell02-clock-controls.json").cases[name].generation!;
+        const control = readControls("stupidfathobbit-cell02-clock-controls.json").cases[name];
+        const pin = control.generation!;
+        const previous = generated.alternatives.find(alternative => alternative.id === control.previous!.id)!;
+        expect(previous.verdict).toBe("stable");
+        expect(createHash("sha256").update(JSON.stringify(clockIdentity(previous.result.subtick ?? previous.result))).digest("hex"))
+            .toBe(control.previous!.clock_sha256);
         expect(createHash("sha256").update(JSON.stringify(clockIdentity(exported))).digest("hex"),
             "same windows and exported clock as the native control (its identity: no text or metadata)").toBe(pin.clock_sha256);
         expect({id: selected.id, holds: selected.assessment.holds, rate: selected.assessment.items_per_second, supply: selected.belt?.kind ?? null}).toEqual(pin.selection);

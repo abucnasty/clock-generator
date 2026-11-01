@@ -70,7 +70,7 @@ const COMPARE_COPY = {
     noneRecover: 'No clock qualifies as stable across its completed checks. Compare its modeled rate, recovery and sampled starts separately.',
     noneHold: 'None of the clocks tried holds the target rate, so they are all listed.',
     deadlock: 'The tests that starve and jam the build do not see this, so on this build they do not decide which clock '
-        + 'is selected for you: the clocks that hold the target rate are ranked by their wake-ups.',
+        + 'is selected for you: the clocks that hold the target rate are ranked by their estimated UPS cost.',
     computing: (label: string) => `${label}: computing…`,
     showUnstable: (hidden: number) => `Show ${hidden} unstable clock${hidden === 1 ? '' : 's'} that ${hidden === 1 ? 'was' : 'were'} tried`,
     hideUnstable: (count: number) => `Hide ${count} unstable clock${count === 1 ? '' : 's'}`,

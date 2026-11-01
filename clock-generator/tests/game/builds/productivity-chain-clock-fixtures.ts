@@ -17,7 +17,7 @@ import {PickupClockScenario} from "./pickup-clock-capture";
 const FOLDER = path.dirname(ConfigPaths.REAL_OWNER_PRODUCTIVITY_CHAIN);
 
 /** The id of the alternative the generated clock is: the 72-tick one, which the rule for hands in groups makes stable */
-export const GENERATED_ALTERNATIVE = "planned-belt-slack";
+export const GENERATED_ALTERNATIVE = "planned-belt-slack-shared";
 
 /** The scaffold has the one inserter that brings the coal onto its belt (chest to belt), which the config does not have */
 const SCAFFOLD_FEEDERS = 1;

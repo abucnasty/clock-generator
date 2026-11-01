@@ -11,8 +11,9 @@ import { armAwayOf, InserterEnds, returnTicksOf, WakeUps, WATCHED_END, wakeUpsOf
  *
  * They count, from the same recording and over the same ticks as the wake-ups, what an inserter does and what it costs
  * the game besides being woken: the grabs and swings of its hand, the states it waits in and at which end, the edges of
- * its clock, and the crafts that joined a grab instead of waking it. They decide nothing yet: the ranking of the clocks
- * stays the wake-ups (GOALS.md, goal 2), and no selection, verdict or window reads these figures.
+ * its clock, and the crafts that joined a grab instead of waking it. The selection ranks the clocks by the cost priced
+ * from them (`clockCost`, rank.ts: the wake-ups by list, the belt pickups' waits, the switch-ons, the wired inserters,
+ * the deciders and the craft starts of the machines that wake them); no verdict or window reads them.
  *
  * Every count is a minute (3600 ticks) over the ticks counted, as `wakeUps` gives its own.
  */
@@ -88,6 +89,14 @@ export interface InserterCount {
      * pickup; 0 where the stock has no `at_pickup` series.
      */
     merged_crafts_per_minute?: number;
+
+    /**
+     * For an inserter woken from the list of the machine it takes from (or of the machine placing into its chest): the
+     * crafts that machine started a tick, on average over the ticks counted (the simulator's true starts,
+     * `crafts_started`). What the priced cost reads to tell a busy machine's output wake-ups (`clockCost`, rank.ts).
+     * Absent for any other pickup, and where the stock has no `crafts_started` series.
+     */
+    source_craft_starts_per_tick?: number;
 }
 
 export interface InserterCounters {
@@ -188,6 +197,15 @@ export function countersOfStock(stock: StockRecording, counted: readonly Counted
     const ticks = wake_ups.ticks;
     const per_minute = (count: number) => ticks === 0 ? 0 : count * TICKS_PER_MINUTE / ticks;
     const backed_up = build.backed_up_belts;
+    // the crafts a tick the machine whose list wakes an inserter at its source started over the ticks counted
+    const startsOf = (machine_id: string | null): { source_craft_starts_per_tick?: number } => {
+        const started = machine_id === null ? undefined : machines.get(machine_id)?.crafts_started;
+        const last = stock.ticks - 1;
+        if (started === undefined || started.length < stock.ticks || last < first) {
+            return {};
+        }
+        return { source_craft_starts_per_tick: (started[last] - started[first - 1]) / (last - first + 1) };
+    };
 
     const inserters: InserterCount[] = counted.flatMap(inserter => {
         const series = recorded.get(inserter.inserter_id);
@@ -269,6 +287,7 @@ export function countersOfStock(stock: StockRecording, counted: readonly Counted
             switch_ons_moving_per_minute: per_minute(switch_ons - ons_at_rest),
             network_width: disabled > 0 ? null : 0,
             ...(inserter.pickup_kind === "machine" && { merged_crafts_per_minute: per_minute(merged.get(inserter.inserter_id) ?? 0) }),
+            ...startsOf(inserter.source_machine_id ?? inserter.source_placer_id ?? null),
         }];
     });
     const wired = inserters.filter(it => it.network_width === null).length;
@@ -276,6 +295,13 @@ export function countersOfStock(stock: StockRecording, counted: readonly Counted
         wake_ups,
         counters: { ticks, wired_inserters: wired, unwired_inserters: inserters.length - wired, copies: build.copies, deciders: null, inserters },
     };
+}
+
+/** The decider combinators of a clock's blueprint that switch inserters and drills on and off */
+export function windowDeciderCount(blueprint: FactorioBlueprint): number {
+    return blueprint.entities.filter(entity => entity.name === "decider-combinator"
+        && ((entity.tags as { clock_generator?: { inserters?: unknown; drills?: unknown } } | undefined)?.clock_generator?.inserters !== undefined
+            || (entity.tags as { clock_generator?: { drills?: unknown } } | undefined)?.clock_generator?.drills !== undefined)).length;
 }
 
 /**

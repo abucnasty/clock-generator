@@ -71,8 +71,8 @@ export interface ClockAssessment {
     /**
      * Wake-ups a minute, summed over the inserters of one copy of the build in the long run of the clock (see
      * wake-ups.ts); null when the clock had no long run. Fewer is better: each one is a machine waking an inserter
-     * that a narrower window would have left disabled. Among the clocks that meet the target rate, the one with the
-     * fewest is selected. On a build with a loop of machines or a machine that makes its own ingredient, whose
+     * that a narrower window would have left disabled. They are reported beside the clock's cost, which prices them and
+     * ranks the clocks (`clockCost`, rank.ts). On a build with a loop of machines or a machine that makes its own ingredient, whose
      * wake-ups depend on how it starts, their mean over the starts (`wake_ups_from_starts`); the cold start's own figure
      * stays in the as-built check.
      */
@@ -178,7 +178,7 @@ export interface AsBuiltStabilityCheck {
     /**
      * What each inserter did in the same ticks, beside the wake-ups: its wake-ups by the list that woke it, its grabs and
      * swings, the states it waited in, the edges of its clock and the crafts that joined a grab (inserter-counters.ts).
-     * Nothing selects, ranks or judges a clock by them yet. Set with `wake_ups`.
+     * The selection ranks a clock by the cost priced from them (`clockCost`, rank.ts); no verdict reads them. Set with `wake_ups`.
      */
     counters?: InserterCounters;
     /** The chests the output goes into that nothing empties and that were full where the failing run ended */

@@ -37,6 +37,10 @@ interface ClockOptions extends Partial<ClockRanking> {
 }
 
 /** A stable clock at the target rate, made for the belt asked for, with 10 wake-ups, 4 windows and 4 deciders, unless told otherwise */
+/** A cost in step with the wake-ups, 100 ns a tick for each a minute, as the engine's ranking carries one; null for none counted */
+const costOfWakeUps = (wakeUps: number | null): ClockRanking['cost'] => wakeUps === null ? null
+    : { ns_per_tick: wakeUps * 100, input_wake_ups: wakeUps * 100, output_wake_ups: 0, belt_waits: 0, windows: 0, wires: 0, deciders: 0 };
+
 function clock(id: string, options: ClockOptions = {}): SummaryClock {
     const { verdict = 'stable', beltLabel = 'moving (+4 ticks)', deadlock = false, deciders = 4, loss, ...ranking } = options;
     const full: ClockRanking = {
@@ -48,6 +52,7 @@ function clock(id: string, options: ClockOptions = {}): SummaryClock {
         window_count: 4,
         ...ranking,
     };
+    full.cost = costOfWakeUps(full.wake_ups_per_minute);
     const tried: Loss | null = verdict === 'unstable' ? null : {
         survives: verdict === 'stable', broken_by: verdict === 'no recovery' ? ['an input stops arriving'] : [], recovered_after_periods: verdict === 'stable' ? 1 : null,
     };

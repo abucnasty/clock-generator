@@ -14,7 +14,7 @@ import { CLOCK_STARTS } from "../start-dependence";
 import { TargetProductionRate } from "../target-production-rate";
 import { backpressureLossVerdictOf, clockVerificationSignature, startDependenceVerdictOf } from "../trial";
 import { canonicalVerificationJson } from "../verification-signature";
-import { finishedClock, groupedClockRank, groupedHandsPlan, GroupedHandsNotApplicable, holdsWithMargin } from "./grouped-hands";
+import { finishedClock, groupedClockRank, groupedHandsPlan, GroupedHandsNotApplicable, holdsWithMargin, inCostOrder } from "./grouped-hands";
 import { constructPrimitiveGroupedHands } from "./primitive-grouped-hands";
 
 export interface VerifiedPrimitiveGroupedResult {
@@ -137,8 +137,7 @@ export function verifiedPrimitiveGroupedClock(
         holding.push(result);
     }
     // Same objective and stable-order tie break as ordinary grouped selection, within the eligible assessed set.
-    const ordered = holding.map((clock, index) => ({ clock, index, rank: groupedClockRank(registry, clock) }))
-        .sort((a, b) => a.rank[0] - b.rank[0] || a.rank[1] - b.rank[1] || a.index - b.index);
+    const ordered = inCostOrder(holding, clock => groupedClockRank(registry, clock));
     if (ordered.length === 0) return { clock: null, report };
-    return { clock: ordered[0].clock, report: { ...report, outcome: "accepted" } };
+    return { clock: ordered[0], report: { ...report, outcome: "accepted" } };
 }

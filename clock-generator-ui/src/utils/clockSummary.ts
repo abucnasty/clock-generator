@@ -148,7 +148,7 @@ export function plainClockName(clocks: SummaryClock[], index: number): string {
 
 /**
  * What the name of a clock means, for the clocks whose name is not self-evident: a clock named Fewest deciders is the one
- * with the least wiring to do by hand. Empty for any other clock (the pick's own reason says what Fewest wake-ups means).
+ * with the least wiring to do by hand. Empty for any other clock: Fewest wake-ups says what it means.
  */
 export function pickNameMeaning(clocks: SummaryClock[], index: number, rule: PickRule | null): string {
     return plainClockName(clocks, index) === SUMMARY_COPY.fewestDeciders ? fewestDecidersReason(clocks[index], rule) : '';

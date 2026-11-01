@@ -1,5 +1,5 @@
 {
-  "meaning": "Native summaries of the lithium silo clock family (lithium-silo-clock-fixtures.ts) in Factorio 2.1.21: the lithium plate build with a rocket silo as a chest, on its selected clock (3 output swings) in two build orders, on 1 output swing and on 7, each with the clock lithium-silo-clock.generation.test.ts pins. The standard protocol: the holmium plates cut for 2 periods, the output blocked for 4, the holmium plates cut again; the silo, which holds at most 250 lithium, is empty in each cut. The harness warms the build up for 3600 ticks without a clock, so the silo is full when the clock starts. The clock with 7 output swings does not hold in the game: two output inserters drop onto belts that side-load onto the shared output belt, which the config describes as one belt.",
+  "meaning": "Native summaries of the lithium silo clock family (lithium-silo-clock-fixtures.ts) in Factorio 2.1.21: the lithium plate build with a rocket silo as a chest, on the 3-output-swing clock in two build orders, on 1 output swing and on 7, each with the clock lithium-silo-clock.generation.test.ts pins. The standard protocol: the holmium plates cut for 2 periods, the output blocked for 4, the holmium plates cut again; the silo, which holds at most 250 lithium, is empty in each cut. The harness warms the build up for 3600 ticks without a clock, so the silo is full when the clock starts. The clock with 7 output swings does not hold in the game: two output inserters drop onto belts that side-load onto the shared output belt, which the config describes as one belt. The current selected batched clock was recorded in #530.",
   "cases": {
     "lithium-silo-swings-3": {
       "recorded": {
@@ -723,6 +723,190 @@
           "supply": null
         },
         "clock_sha256": "20b1e40b945097df567a061a5cff3755741b79ebe80603c9b9ab52173732e3d0"
+      }
+    },
+    "lithium-silo-planned-belt-slack": {
+      "recorded": {
+        "pr": 530,
+        "commit": "92b590f7",
+        "frozen_head": "92b590f7",
+        "clock_sha256": "18e91a5043df379412e06d9f69da6fc6065d9435f442dbed49c42f164b6a38ca",
+        "clock_basis": "capture"
+      },
+      "native": {
+        "generationVerdict": "stable",
+        "target": 80,
+        "period": 2160,
+        "expected": 2880,
+        "baseline": [
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880,
+          2880
+        ],
+        "recovery": [
+          {
+            "cut": 66,
+            "during": [
+              1440,
+              0,
+              1920
+            ],
+            "recovered": [
+              2880,
+              2880,
+              2880,
+              2880,
+              2880,
+              2880,
+              2880,
+              2880,
+              2880
+            ]
+          },
+          {
+            "cut": 84,
+            "during": [
+              1048,
+              0,
+              0,
+              0,
+              2472
+            ],
+            "recovered": [
+              2880,
+              2880,
+              2880,
+              2880,
+              2880,
+              2880,
+              2880,
+              2880,
+              2880
+            ]
+          },
+          {
+            "cut": 104,
+            "during": [
+              1088,
+              0,
+              1824
+            ],
+            "recovered": [
+              2880,
+              2880,
+              2880,
+              2880,
+              2880,
+              2880,
+              2880,
+              2880,
+              2880,
+              2880,
+              2880,
+              2880,
+              2880,
+              2880,
+              2880,
+              2880,
+              2880,
+              2880,
+              2880
+            ]
+          }
+        ],
+        "interventions": [
+          [
+            66,
+            68,
+            84
+          ],
+          [
+            84,
+            88,
+            104
+          ],
+          [
+            104,
+            106,
+            132
+          ]
+        ]
+      },
+      "generation": {
+        "period": 2160,
+        "expected": 2880,
+        "verdict": "stable",
+        "selection": {
+          "id": "planned-belt-slack",
+          "holds": true,
+          "rate": 80,
+          "supply": null
+        },
+        "clock_sha256": "18e91a5043df379412e06d9f69da6fc6065d9435f442dbed49c42f164b6a38ca"
+      },
+      "previous": {
+        "id": "swings-3",
+        "clock_sha256": "5dd51ac5749d5e7b9f467141a6219ef0dd31e94ad8344bfd87abeda3697e0505"
       }
     }
   }

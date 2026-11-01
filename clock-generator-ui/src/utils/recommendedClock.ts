@@ -1,5 +1,5 @@
 import type { Config } from 'clock-generator/browser';
-import { combineClockAlternativeRuns } from 'clock-generator/light';
+import { combineClockAlternativeRuns, costOf, costsTie } from 'clock-generator/light';
 import type { ClockAlternativeView } from '../worker/types';
 import { rateVerbs, type TargetCounts } from './targetCounts';
 
@@ -38,12 +38,14 @@ export const RECOMMENDED_COPY = {
         'The simulator checks exported wake windows from a modeled cold start, including clock-phase checks where available. '
             + 'Extended sampled-start checks are separate and optional; Model and tested starts reports what actually ran. '
             + 'Clocks that hold are also assessed for recovery after inputs stop or outputs back up; an unavailable result is not a pass.',
-        'The clock picked for you is the one that holds the rate and recovers with the fewest wake-ups; on a build '
-            + 'with a deadlock risk, the one '
-            + 'with the fewest wake-ups of the clocks that hold the rate. If clocks tie, the one that recovers sooner, then the '
-            + 'one with fewer wake windows. If none qualifies, the stable clock that runs nearest over the target rate; if there is none, the one '
-            + 'that runs nearest to the target rate. On a build with a loop of machines, '
-            + 'whose wake-ups depend on where its clock is when the build starts, their average over 12 start points is compared.',
+        'The clock picked for you is the one that holds the rate and recovers at the lowest estimated UPS cost; on a build '
+            + 'with a deadlock risk, the one with the lowest estimated UPS cost of the clocks that hold the rate. The estimate '
+            + 'prices what each clock\'s inserters do in the game: their wake-ups, the ticks belt inserters wait at the belt, '
+            + 'the wake windows, the wired inserters and the decider combinators. Clocks whose estimates are closer than it '
+            + 'can tell apart are level: of those, the one that recovers sooner, then the one with fewer wake windows. If none '
+            + 'qualifies, the stable clock that runs nearest over the target rate; if there is none, the one that runs nearest '
+            + 'to the target rate. On a build with a loop of machines, whose wake-ups depend on where its clock is when the '
+            + 'build starts, their average over 12 start points is priced.',
         'A clock made for a moving belt keeps each belt inserter\'s wake window open a few ticks longer (belt slack). '
             + 'A clock made without it is only picked when no clock for a moving belt holds the rate. If you say your '
             + 'input belts are backed up (Configure, Belts), every clock is made without the slack.',
@@ -62,35 +64,38 @@ export const RECOMMENDED_COPY = {
      */
     contenders: (rate: string, deadlock: boolean, counts?: TargetCounts) =>
         deadlock ? `the clocks that hold ${rate}/s` : `the clocks that keep ${rateVerbs(counts).ing} ${rate}/s and recover`,
-    fewestWakeUps: (contenders: string, belt: string) => `Fewest wake-ups of ${contenders}${belt}.`,
+    lowestCost: (contenders: string, belt: string) => `Lowest estimated UPS cost of ${contenders}${belt}.`,
     fewestDeciders: (contenders: string, belt: string) => `Fewest deciders of ${contenders}${belt}: the least wiring to do by hand.`,
     onlyContender: (rate: string, belt: string, deadlock: boolean) =>
         deadlock ? `The only clock that holds ${rate}/s${belt}.` : `The only clock that holds ${rate}/s and recovers${belt}.`,
     wakeUpsNotCounted: (contenders: string, belt: string) =>
         `Fewest wake windows among ${contenders}${belt}. Wake-ups could not be counted for them.`,
-    tieOnWakeUps: (others: number, kind: string) =>
-        ` ${othersText(others, kind)} on wake-ups, so the one with fewer wake windows was picked.`,
-    tieOnWakeUpsUncounted: (others: number, kind: string) =>
-        ` ${othersText(others, kind)} on wake-ups, so the one with fewer wake windows was picked, not counting the `
+    tieOnCost: (others: number, kind: string) =>
+        ` ${othersText(others, kind)} on estimated UPS cost, so the one with fewer wake windows was picked.`,
+    tieOnCostUncounted: (others: number, kind: string) =>
+        ` ${othersText(others, kind)} on estimated UPS cost, so the one with fewer wake windows was picked, not counting the `
         + 'extra wake windows that only cut wake-ups.',
     tieOnRecovery: (others: number, kind: string) =>
-        ` ${othersText(others, kind)} on wake-ups, so the one that recovers sooner after inputs stop or outputs back up was picked.`,
+        ` ${othersText(others, kind)} on estimated UPS cost, so the one that recovers sooner after inputs stop or outputs back up was picked.`,
     tieOnWindows: (others: number, kind: string) =>
-        ` ${othersText(others, kind)} on wake-ups and wake windows, so the first one in the list is shown.`,
+        ` ${othersText(others, kind)} on estimated UPS cost and wake windows, so the first one in the list is shown.`,
+    slowerRecovery: (others: number, kind: string) =>
+        ` ${others === 1 ? `One other clock${kind} recovers` : `${others} other clocks${kind} recover`} in fewer clock periods `
+        + 'after inputs stop or outputs back up. This one was picked for its lower estimated UPS cost.',
     tieKindMoving: ' for a moving belt',
     recoveryDoesNotDecide: ' The recovery trials do not decide on this build.',
     noneForMovingBelt: (rate: string, deadlock: boolean) => deadlock
         ? `No clock made for a moving belt holds ${rate}/s.`
         : `No clock made for a moving belt holds ${rate}/s and recovers.`,
     backedUpOnly: ' This one, made for backed-up belts, does.',
-    backedUpFewestWakeUps: ' Of those made for backed-up belts, this one has the fewest wake-ups.',
+    backedUpLowestCost: ' Of those made for backed-up belts, this one has the lowest estimated UPS cost.',
     backedUpWakeUpsNotCounted: ' Of those made for backed-up belts, this one has the fewest wake windows; wake-ups '
         + 'could not be counted for them.',
     mayFailOnMovingBelt: ' It may fail on a moving belt.',
     noneHolds: (rate: string, deadlock: boolean) => deadlock ? `No clock holds ${rate}/s.` : `No clock holds ${rate}/s and recovers.`,
-    atRateHolds: (rate: string, fewest: boolean) =>
-        ` This one holds ${rate}/s from the modeled cold start${fewest ? ' with the fewest wake-ups' : ''}.`,
-    atRateRuns: (rate: string, fewest: boolean) => ` This one runs at ${rate}/s${fewest ? ' with the fewest wake-ups' : ''}.`,
+    atRateHolds: (rate: string, lowest: boolean) =>
+        ` This one holds ${rate}/s from the modeled cold start${lowest ? ' at the lowest estimated UPS cost' : ''}.`,
+    atRateRuns: (rate: string, lowest: boolean) => ` This one runs at ${rate}/s${lowest ? ' at the lowest estimated UPS cost' : ''}.`,
     nearest: ' This one runs nearest to it.',
     nearestAt: (itsRate: string) => ` This one runs nearest to it, at ${itsRate}/s.`,
     nearestHolds: ' Of the equally near clocks, it is the one that holds its output from the modeled cold start.',
@@ -108,9 +113,6 @@ const figure = (rate: number) => Number(rate.toFixed(2)).toString();
 
 /** A share as a percentage, as the engine's labels print it: "2.32%", "under 0.01%" */
 const percentOf = (share: number) => share * 100 < 0.005 ? 'under 0.01%' : `${Number((share * 100).toFixed(2))}%`;
-
-/** Wake-ups as the selection compares them: to a thousandth */
-const wakeUpsKey = (wakeUps: number | null) => wakeUps === null ? null : Math.round(wakeUps * 1000);
 
 /** Rate off the target as the selection compares it: to a thousandth of an item a second */
 const offTargetKey = (rateOffTarget: number) => Math.round(Math.abs(rateOffTarget) * 1000);
@@ -149,7 +151,7 @@ export function recommendationReason(
     if (!pick) {
         return '';
     }
-    const reason = reasonOf(alternatives, pick, rule);
+    const reason = reasonOf(alternatives, pick, rule) + slowerRecoveryOf(alternatives, pick, rule);
     if (final) {
         return reason;
     }
@@ -176,6 +178,28 @@ export function fewestDecidersReason(
     return RECOMMENDED_COPY.fewestDeciders(contenders, beltWordsOf(clock, rule));
 }
 
+/** A cost-first pick can recover more slowly than a dearer stable clock in the same class before cost. */
+function slowerRecoveryOf(alternatives: PickableClock[], pick: PickableClock, rule: PickRule | null): string {
+    const measured = (clock: PickableClock) => clock.verdict === 'stable' && clock.ranking.meets_target_rate
+        && !clock.ranking.recovery_untried && clock.assessment.backpressure_loss !== null
+        && clock.assessment.backpressure_loss?.survives !== false
+        && Number.isFinite(clock.ranking.recovery_periods) && Number.isFinite(costOf(clock.ranking));
+    if (pick.deadlockRisk !== null || !measured(pick)) {
+        return '';
+    }
+    // Target-rate clocks have two tried classes before cost: exact and rounded. Belt choice is the next class.
+    const contenders = alternatives.filter(other => measured(other)
+        && (other.ranking.runs_fast !== undefined) === (pick.ranking.runs_fast !== undefined)
+        && other.ranking.matches_belt_choice === pick.ranking.matches_belt_choice);
+    const cheapest = Math.min(...contenders.map(other => costOf(other.ranking)));
+    const pickedCost = costOf(pick.ranking);
+    const faster = new Set(contenders.filter(other => other.id !== pick.id
+        && other.ranking.recovery_periods! < pick.ranking.recovery_periods!
+        && pickedCost < costOf(other.ranking) && !costsTie(costOf(other.ranking), cheapest)).map(other => other.id));
+    return faster.size === 0 ? '' : RECOMMENDED_COPY.slowerRecovery(faster.size,
+        isOnMovingBelt(pick, rule) ? RECOMMENDED_COPY.tieKindMoving : '');
+}
+
 function reasonOf(alternatives: PickableClock[], pick: PickableClock, rule: PickRule | null): string {
     const { ranking } = pick;
     const rate = figure(pick.assessment.items_per_second - ranking.rate_off_target);
@@ -193,7 +217,7 @@ function reasonOf(alternatives: PickableClock[], pick: PickableClock, rule: Pick
         const others = alternatives.filter(other => other !== pick && other.ranking.meets_target_rate);
         const contest = others.length === 0 ? RECOMMENDED_COPY.backedUpOnly
             : ranking.wake_ups_per_minute === null ? RECOMMENDED_COPY.backedUpWakeUpsNotCounted
-                : RECOMMENDED_COPY.backedUpFewestWakeUps + tieOf(pick, others, '');
+                : RECOMMENDED_COPY.backedUpLowestCost + tieOf(pick, others, '');
         return RECOMMENDED_COPY.noneForMovingBelt(rate, deadlock) + contest + RECOMMENDED_COPY.mayFailOnMovingBelt + recovery;
     }
     const moving = isOnMovingBelt(pick, rule);
@@ -208,24 +232,25 @@ function reasonOf(alternatives: PickableClock[], pick: PickableClock, rule: Pick
     if (ranking.wake_ups_per_minute === null) {
         return RECOMMENDED_COPY.wakeUpsNotCounted(contenders, belt) + recovery;
     }
-    return RECOMMENDED_COPY.fewestWakeUps(contenders, belt)
+    return RECOMMENDED_COPY.lowestCost(contenders, belt)
         + tieOf(pick, others, moving ? RECOMMENDED_COPY.tieKindMoving : '') + recovery;
 }
 
 /**
- * What decided between the pick and those of `others` with as many wake-ups: the windows, or the order. The selection
- * counts the windows without the output feeders' (the inserters that feed the machine the output is taken from); when
- * the table's column does not show the pick with fewer, the sentence says so.
+ * What decided between the pick and those of `others` level with it on estimated cost (closer to the cheapest of them
+ * than the engine's floor, `costsTie`): the recovery, the windows, or the order. The selection counts the windows
+ * without the output feeders' (the inserters that feed the machine the output is taken from); when the table's column
+ * does not show the pick with fewer, the sentence says so.
  */
 function tieOf(pick: PickableClock, others: PickableClock[], kind: string): string {
-    const wakeUps = wakeUpsKey(pick.ranking.wake_ups_per_minute);
-    const tiedOnWakeUps = others.filter(other => wakeUpsKey(other.ranking.wake_ups_per_minute) === wakeUps);
-    // of equals on wake-ups the one that gets back from a loss sooner is picked, before the windows decide
+    const cheapest = Math.min(costOf(pick.ranking), ...others.map(other => costOf(other.ranking)));
+    const tiedOnCost = others.filter(other => costsTie(costOf(other.ranking), cheapest));
+    // of clocks level on cost the one that gets back from a loss sooner is picked, before the windows decide
     const recovery = (clock: PickableClock) => clock.ranking.recovery_periods ?? Infinity;
-    if (tiedOnWakeUps.length > 0 && tiedOnWakeUps.every(other => recovery(other) > recovery(pick))) {
-        return RECOMMENDED_COPY.tieOnRecovery(tiedOnWakeUps.length, kind);
+    if (tiedOnCost.length > 0 && tiedOnCost.every(other => recovery(other) > recovery(pick))) {
+        return RECOMMENDED_COPY.tieOnRecovery(tiedOnCost.length, kind);
     }
-    const tiedOnRecovery = tiedOnWakeUps.filter(other => recovery(other) === recovery(pick));
+    const tiedOnRecovery = tiedOnCost.filter(other => recovery(other) === recovery(pick));
     const tiedOnWindows = tiedOnRecovery.filter(other => other.ranking.window_count === pick.ranking.window_count);
     if (tiedOnWindows.length > 0) {
         return RECOMMENDED_COPY.tieOnWindows(tiedOnWindows.length, kind);
@@ -235,8 +260,8 @@ function tieOf(pick: PickableClock, others: PickableClock[], kind: string): stri
     }
     const fewerOnScreen = tiedOnRecovery.every(other => pick.inserterWindowCount < other.inserterWindowCount);
     return fewerOnScreen
-        ? RECOMMENDED_COPY.tieOnWakeUps(tiedOnRecovery.length, kind)
-        : RECOMMENDED_COPY.tieOnWakeUpsUncounted(tiedOnRecovery.length, kind);
+        ? RECOMMENDED_COPY.tieOnCost(tiedOnRecovery.length, kind)
+        : RECOMMENDED_COPY.tieOnCostUncounted(tiedOnRecovery.length, kind);
 }
 
 /** Why the pick when no clock qualifies: actual modeled-start rate and sampled starts remain distinct. */
@@ -253,7 +278,7 @@ function nearestReason(alternatives: PickableClock[], pick: PickableClock, rate:
     const counted = ranking.wake_ups_per_minute !== null;
     const near = offTargetKey(ranking.rate_off_target);
     if (near === 0) {
-        // at the rate as the selection compares it, so holding the output decided, then the wake-ups
+        // at the rate as the selection compares it, so holding the output decided, then the cost
         return lead + (ranking.holds_expected_output
             ? RECOMMENDED_COPY.atRateHolds(rate, counted)
             : RECOMMENDED_COPY.atRateRuns(rate, counted));
