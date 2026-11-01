@@ -17,7 +17,7 @@ interface NativeAllocation {
 const native: NativeAllocation = JSON.parse(fs.readFileSync(path.join(__dirname,
     "../../tests/game/builds/independent-source-allocations.json"), "utf8"));
 
-test("robustness covers the independently mixed native shared-source allocation", async () => {
+test("Mechanics: robustness covers the independently mixed native shared-source allocation", async () => {
     // Recorded ordinary scaffold trace, not a debugger dependency: three sources exhaust17 LDS in the same tick.
     // Source3 serves7 before5, source4 serves6 before8, source11 serves26 before23. No global ascending/descending
     // order represents all three. Only local pickups from measured inventories are replayed here, not the whole tick.

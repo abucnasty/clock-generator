@@ -25,21 +25,27 @@ describe("a clock for Thaeln's cell 09 from the hands and the order of the chain
         expect(alwaysOnReasonProblemsOf(config, result)).toEqual([]);
     });
 
-    it("keeps the stable one-cycle clock when targeted searches run", () => {
+    it("Behavior: the explicit one-cycle plan holds 480 a second and recovers", () => {
+        // Explicit plan, not selected_index: a future selector change must not masquerade as a behavior regression.
+        const plan = result.alternatives.find(it => it.id === "planned-belt-slack")!;
+        expect(plan, "the explicit behavior plan is offered").toBeDefined();
+        expect(plan.verdict).toBe("stable");
+        expect(plan.assessment.holds).toBe(true);
+        expect(plan.result.simulation_duration.ticks).toBe(168);
+        expect(plan.assessment.items_per_second).toBeCloseTo(480, 6);
+        expect(plan.assessment.backpressure_loss?.survives).toBe(true);
+    });
+
+    it("Selection: the valid pick remains the clock named by its native control", () => {
+        const { generation, native } = readControls("thaeln-cell09-clock-controls.json").cases["generated-one-copy"];
         const selected = result.alternatives[result.selected_index];
         expect(selected.verdict).toBe("stable");
-        expect(selected.result.simulation_duration.ticks).toBe(168);
-        expect(selected.assessment.items_per_second).toBeCloseTo(480, 6);
         expect(selected.assessment.backpressure_loss?.survives).toBe(true);
-        // #527 now offers observed windows past a stable short clock; the native-pinned selection below stays unchanged.
+        // Targeted searches now offer observed windows past a valid short plan, while the native-pinned pick stays.
+        // If ranking chooses another valid plan, only this Selection contract needs a justified/native-tested repin.
         expect(result.alternatives.map(it => it.id)).toContain("derived");
         expect(result.skipped_searches).toEqual(["Uneven output swings", "Full-hand output swings"]);
         expect(result.why_not_stable).toBeNull();
-    });
-
-    it("is the clock recorded in the game: the pin of the control names it", () => {
-        const { generation, native } = readControls("thaeln-cell09-clock-controls.json").cases["generated-one-copy"];
-        const selected = result.alternatives[result.selected_index];
         expect(selected.id).toBe(GENERATED_ALTERNATIVE);
         const exported = selected.result.subtick ?? selected.result;
         expect(createHash("sha256").update(JSON.stringify(clockIdentity(exported))).digest("hex"),
