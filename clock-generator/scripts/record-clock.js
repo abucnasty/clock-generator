@@ -134,7 +134,7 @@ function buildOfConfig(arg) {
     console.log(`  game: ${periods.length} periods, expected ${expected} a period, moved`, JSON.stringify(tally));
     const match = matchRecordingToConfig(recording, config);
     const simulated_wake_ups = result.stability_check.as_built?.wake_ups;
-    console.log(`  wake-ups a minute: simulator ${simulated_wake_ups?.wake_ups_per_minute.toFixed(1)}, game ${wakeUpsOfRecording(recording, match).wake_ups_per_minute.toFixed(1)}`);
+    console.log(`  wake-ups a minute: simulator ${simulated_wake_ups?.wake_ups_per_minute.toFixed(1)}, game ${wakeUpsOfRecording(recording, match, 0, recording.sample_count, config).wake_ups_per_minute.toFixed(1)}`);
     const simulated = simulateRecording(config, result.clock_windows, period, RECORDED_TICKS * 1.5, clock_ticks);
     const compared = compareRecordings(
         { recording, match },

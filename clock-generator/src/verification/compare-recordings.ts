@@ -363,7 +363,7 @@ export function compareRecordings(
     const wakeUpsBy = (side: Side) => {
         const from = side.periods[0]?.start ?? 0;
         const to = side.periods[side.periods.length - 1]?.end ?? 0;
-        return wakeUpsOfRecording(side.recording, side.match, from, to);
+        return wakeUpsOfRecording(side.recording, side.match, from, to, config);
     };
     const [game_wake_ups, sim_wake_ups] = [wakeUpsBy(game), wakeUpsBy(sim)];
     const wakeUpsOfInserter = (wake_ups: typeof game_wake_ups, config_id: number) =>

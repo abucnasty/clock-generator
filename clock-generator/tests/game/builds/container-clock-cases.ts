@@ -6,6 +6,6 @@
  * so each recipe is generated once. Each is the one case of a path through the generator that no sample takes:
  */
 export const CONTAINER_GENERATED: ReadonlyMap<string, string> = new Map([
-    ["container-wagon-normal", "one input from a container between two inserters, the even-hands clock (a cargo wagon of 40 slots, none filtered)"],
+    ["container-wagon-normal", "one input from a container between two inserters, the planned-belt-slack clock, where even-hands ties it with no wake-ups and is still made (a cargo wagon of 40 slots, none filtered)"],
     ["container-car-mixed", "two inputs mixed in one container by slot filters, the planned-belt-slack clock (a car of 80 slots)"],
 ]);

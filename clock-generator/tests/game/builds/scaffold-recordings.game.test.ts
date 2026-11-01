@@ -552,7 +552,7 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
 
             // goal 2: the long run of the selected clock counts the wake-ups the game shows
             const simulated = selected.result.stability_check.as_built?.wake_ups?.wake_ups_per_minute;
-            const recorded = wakeUpsOfRecording(result.recording, matchRecordingToConfig(result.recording, config)).wake_ups_per_minute;
+            const recorded = wakeUpsOfRecording(result.recording, matchRecordingToConfig(result.recording, config), 0, result.recording.sample_count, config).wake_ups_per_minute;
             expect(simulated, `the long run of the selected clock (${selected.label}) counted its wake-ups`).toBeDefined();
             const asRecorded = (figure: number) => Math.abs(figure - recorded) <= WAKE_UPS_TOLERANCE * recorded;
             const by_start = asRecorded(simulated!) ? []

@@ -152,7 +152,7 @@ export function simulatedWakeUpsByStart(
             return to < period_ticks ? [{ start: from, end: to }] : [{ start: 0, end: to - period_ticks }, { start: from, end: period_ticks - 1 }];
         }).sort((a, b) => a.start - b.start)]));
         const recording = recordingOfStock(simulateClockOnly(config, shifted, period_ticks, periods, quiet), config, period_ticks);
-        figures.push(wakeUpsOfRecording(recording, matchOfSimulatedRecording(recording), Math.floor(recording.sample_count / 3)).wake_ups_per_minute);
+        figures.push(wakeUpsOfRecording(recording, matchOfSimulatedRecording(recording), Math.floor(recording.sample_count / 3), recording.sample_count, config).wake_ups_per_minute);
     }
     return figures;
 }

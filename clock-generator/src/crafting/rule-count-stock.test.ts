@@ -13,8 +13,8 @@ import { parseRecording } from "../verification/recording";
 import { ruleCountInputOfRecording } from "../verification/recording-rule-count";
 import { quiet } from "./generate-blueprint-test-helpers";
 
-// The logistic science sample: one machine, three inserters, a clock of 88 ticks (swings-2, selected since
-// belt windows close before their last return swing).
+// The logistic science sample: one machine, three inserters, a clock of 88 ticks. The 1-swing clock now wins
+// the recovery tie-break: 2 periods against the still-stable 2-swing clock's 3, both at 82.76 wake-ups a minute.
 describe("the rule count of a simulated run", () => {
     let config: Config;
     let clock: ReturnType<typeof generateClockAlternatives>["alternatives"][number];
@@ -23,6 +23,12 @@ describe("the rule count of a simulated run", () => {
         config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE);
         const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
         clock = alternatives[selected_index];
+        const previous = alternatives.find(alternative => alternative.id === "swings-2")!;
+        expect(previous.verdict).toBe("stable");
+        expect(previous.ranking.recovery_periods).toBe(3);
+        expect(clock.verdict).toBe("stable");
+        expect(clock.ranking.recovery_periods).toBe(2);
+        expect(clock.ranking.wake_ups_per_minute).toBeCloseTo(previous.ranking.wake_ups_per_minute!, 9);
     });
 
     it("generates the clock itself when ruleCallsOfSample is not given the alternatives, and finds the same calls", () => {
@@ -36,20 +42,19 @@ describe("the rule count of a simulated run", () => {
         { ...config, overrides: { ...config.overrides, terminal_swing_count: clock.result.used_terminal_swing_count } },
         clock.result.clock_windows, clock.result.simulation_duration.ticks, periods, quiet);
 
-    // The simulator counts the crafts a machine starts; it reads them nowhere, so a run is what it was before. The
-    // figures are those of the run before the counter existed (every series of the stock hashed alike, 40 periods),
-    // taken again when the runs began from the staged start (empty machines): the prepared build gave 4082 and 2042.
+    // The simulator counts the crafts a machine starts; it reads them nowhere. These figures use the selected clock
+    // from the staged start (empty machines), over 40 periods; the recovery tie-break now picks the 1-swing clock.
     it("records the crafts a machine starts without changing the run", () => {
-        // swings-2 at 88 ticks since belt windows close before their last return swing: it holds with the slack
-        // and wakes 82.76 a minute, the fewest of the stable clocks
-        expect(clock.id).toBe("swings-2");
+        // Equal wake-ups now select swings-1 by recovery (2 periods rather than 3). These stock figures are of
+        // that clock's own 40-period run; the previous 2-swing clock is still made and stable above.
+        expect(clock.id).toBe("swings-1");
         const stock = stockOf(40);
         expect(stock.ticks).toBe(3520);
         const machine = stock.machines[0];
         expect(machine.crafts_started).toHaveLength(stock.ticks);
-        // a craft pays a product, and the productivity bar pays another for about each: 1396 finished for 699 started
-        expect(machine.products_finished.at(-1)).toBe(1396);
-        expect(machine.crafts_started.at(-1)).toBe(699);
+        // a craft pays a product, and the productivity bar pays another for about each: 1348 finished for 675 started
+        expect(machine.products_finished.at(-1)).toBe(1348);
+        expect(machine.crafts_started.at(-1)).toBe(675);
         expect(machine.crafts_started.every((count, tick) => tick === 0 || count >= machine.crafts_started[tick - 1])).toBe(true);
         // the long run repeats from its first bin, so the wake-ups are the exact eternal rate over the one-period cycle
         expect(clock.result.stability_check.as_built!.long_run_proven).toBe(true);
@@ -97,7 +102,8 @@ describe("the rule count of a simulated run", () => {
         expect(calls.unwired_run.groups.every(group => group.wired === 0)).toBe(true);
         expect(calls.clocked_run.groups.reduce((sum, group) => sum + group.wired, 0)).toBe(3);
         expect(calls.removal.newly_wired_inserters).toBe(3);
-        expect(calls.removal.w_removed_pooled).toBeCloseTo(579.3, 1);
+        // The recovery tie-break selects swings-1; its own long-run removal count replaces swings-2's 579.3.
+        expect(calls.removal.w_removed_pooled).toBeCloseTo(593.1, 1);
         expect(calls.removal.call).toMatchObject({ call: "clock", firm: true, region: "above 175.7", count: "true starts" });
         expect(calls.removal.groups.map(group => group.status)).toEqual(["newly wired", "newly wired", "newly wired"]);
         // its sinks are fed from belts at +0%: the true starts are the inferred ones, and the two counts agree

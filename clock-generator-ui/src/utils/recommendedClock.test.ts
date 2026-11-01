@@ -185,6 +185,14 @@ describe('recommendationReason', () => {
         ])('%s', says);
     });
 
+    it('says the pick recovers sooner when it ties on wake-ups with clocks that take longer to get back', () => {
+        const pick = clock('fast', { wake_ups_per_minute: 0, recovery_periods: 3, window_count: 9 });
+        const slow = clock('slow', { wake_ups_per_minute: 0, recovery_periods: 33, window_count: 2 });
+        sentences(recommendationReason([pick, slow], 0, MOVING, true, false),
+            'Fewest wake-ups of the clocks that keep making 240/s and recover on a moving belt.'
+            + RECOMMENDED_COPY.tieOnRecovery(1, RECOMMENDED_COPY.tieKindMoving));
+    });
+
     describe('when no clock meets the rate', () => {
         const { nearest, nearestAt, nearestHolds } = RECOMMENDED_COPY;
         const none = 'No clock holds 240/s and recovers.';

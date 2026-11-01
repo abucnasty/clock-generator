@@ -146,6 +146,22 @@ describe("combineClockAlternativeRuns", () => {
         ])).toBe("untried");
     });
 
+    // the container wagons: even hands and the batched clock both at 0 wake-ups; even hands is back from a loss sooner
+    it("selects, of clocks equal on wake-ups, the one that gets back from a loss in fewer periods, before the fewest windows", () => {
+        expect(selectedOf([
+            clock("slow", { wake_ups_per_minute: 0, recovery_periods: 33, window_count: 2 }),
+            clock("fast", { wake_ups_per_minute: 0, recovery_periods: 3, window_count: 9 }),
+        ])).toBe("fast");
+        expect(selectedOf([
+            clock("untried", { wake_ups_per_minute: 0, recovery_periods: null, window_count: 2 }),
+            clock("tried", { wake_ups_per_minute: 0, recovery_periods: 40, window_count: 9 }),
+        ])).toBe("tried");
+        expect(selectedOf([
+            clock("fewer-wake-ups", { wake_ups_per_minute: 10, recovery_periods: 40 }),
+            clock("sooner", { wake_ups_per_minute: 11, recovery_periods: 1 }),
+        ])).toBe("fewer-wake-ups");
+    });
+
     it("does not look at how near a clock is to the target rate while one meets it", () => {
         expect(selectedOf([
             clock("meets", { wake_ups_per_minute: 500 }),
