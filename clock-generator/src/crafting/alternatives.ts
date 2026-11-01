@@ -30,7 +30,7 @@ import { MAX_OBSERVED_WINDOWS_PERIOD_TICKS, swingCountsListed } from "./planner/
 import { SecondaryPlanningInvariantError, secondaryPlanningCountOf, withSecondaryPlanningProvenance, type SecondaryPlanningCount } from "./primitive-grouped-policy";
 import { BlueprintGenerationResult, GenerateClockOptions, SimulationStabilityCheck } from "./plan/plan-run";
 import { withRunMemo } from "./plan/run-memo";
-import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, ROUNDED_CLOCK_MAX_FAST, RoundedClock, roundedRateAllowed, searchesAreNeeded } from "./rank";
+import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, ROUNDED_CLOCK_MAX_FAST, RoundedClock, roundedRateAllowed, searchesToRun, searchesAreNeeded } from "./rank";
 import { TargetProductionRate } from "./target-production-rate";
 import { AsBuiltStabilityCheck, BackpressureLossAssessment, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, clockVerificationSignature, FREE_RUNNING_CHECK_TICKS, LOOP_WINDOW_CHECK_TICKS, roundedClockTrial, startDependenceVerdictOf, wakeUpsFromStartsOf, withSettledOutput } from "./trial";
 import { WakeUpsFromStarts } from "./wake-ups-from-starts";
@@ -78,8 +78,9 @@ export interface ClockAlternativesResult {
      */
     selected_index: number;
     /**
-     * The labels of the searches that were not run, because a clock made without one can be selected as stable (see
-     * `searchesAreNeeded`); empty when they ran. `overrides.search_for_fewer_wake_ups` runs them for every build.
+     * The labels of the searches that were not run, because a clock made without one can be selected as stable and
+     * they were not among those that can still improve on it (see `searchesToRun`); empty when all ran.
+     * `overrides.search_for_fewer_wake_ups` runs them for every build.
      */
     skipped_searches: string[];
     /**
@@ -1118,7 +1119,8 @@ export function startDependenceSummary(config: Config, alternatives: readonly Pi
  * with the clock-only simulation from several start phases. Alternatives with identical windows are listed once.
  *
  * The four searches come last and only run when none of the clocks made before them can be selected as stable
- * (`searchesAreNeeded`), unless the config asks for them on every build (`overrides.search_for_fewer_wake_ups`).
+ * (`searchesAreNeeded`), unless the config asks for them on every build (`overrides.search_for_fewer_wake_ups`);
+ * where one can, the two that can still improve on it run on a short period where it has wake-ups (`searchesToRun`).
  * After them, on a config whose belts are backed up, a clock made for a moving belt, when still none can. The
  * alternatives are listed in the same order either way.
  *
@@ -1179,12 +1181,12 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
     const first = definitions.filter(definition => !waiting.includes(definition));
     total = 1 + first.length;
     generate(first);
-    const searches_run = searches.length > 0 && searchesAreNeeded(runs, it => it.ranking);
-    if (searches_run) {
-        total += searches.length;
-        generate(searches);
-    } else if (searches.length > 0) {
-        logger.log(`Not searched (${searches.map(it => it.label).join(", ")}): a clock made without a search is stable. `
+    const searched = searches.length === 0 ? [] : searchesToRun(runs, it => it.ranking, searches, plan.context.period_ticks);
+    const not_searched = searches.filter(it => !searched.includes(it));
+    total += searched.length;
+    generate(searched);
+    if (not_searched.length > 0) {
+        logger.log(`Not searched (${not_searched.map(it => it.label).join(", ")}): a clock made without a search is stable. `
             + "Set overrides.search_for_fewer_wake_ups to search for one with fewer wake-ups.");
     }
     // last, a clock for another belt than the config's, where nothing made so far can be selected as stable
@@ -1198,7 +1200,7 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
     const combined = combineClockAlternativeRuns(runs, it => it.ranking);
     return {
         ...combined,
-        skipped_searches: searches_run ? [] : searches.map(it => it.label),
+        skipped_searches: not_searched.map(it => it.label),
         ...startDependenceSummary(config, combined.alternatives),
         not_made,
         why_not_stable: whyNotStableOf(config, combined.alternatives, combined.selected_index, not_made),

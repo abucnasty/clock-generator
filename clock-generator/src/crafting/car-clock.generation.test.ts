@@ -27,20 +27,21 @@ test("car: every inserter and drill a clock leaves always on says why", () => {
     expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
 });
 
-test("car: the clock with 2 output swings is selected, and the drill into the car is enabled the tick before the takers", () => {
+test("car: the observed-windows clock is selected, and the drill into the car is enabled the tick before the takers", () => {
     const selected = generated.alternatives[generated.selected_index];
-    expect(selected.id).toBe("swings-2");
-    // 617 ore a tick against 128 a 144-tick period: a window of one tick, which drops what the drill holds
-    expect(selected.result.clock_windows["drill:1"]).toEqual([{start: 15, end: 15}]);
-    expect(selected.result.clock_windows["inserter:1"][0].start).toBe(16);
+    expect(selected.id).toBe("derived");
+    // 617 ore a tick against 256 a 288-tick period: a window of one tick, which drops what the drill holds
+    expect(selected.result.clock_windows["drill:1"]).toEqual([{start: 9, end: 9}]);
+    expect(selected.result.clock_windows["inserter:1"][0].start).toBe(10);
     for (const alternative of generated.alternatives) {
         // a clock that does not meet goal 1 with the drill's window is the one with the drill always enabled
         expect(alternative.result.clock_windows["drill:1"]?.length ?? 0, alternative.id).toBe(alternative.verdict === "stable" ? 1 : 0);
     }
 });
 
-// swings-3 (72 ticks) was the selected clock before the generator counted a wake-up only while the inserter's arm is at
-// home; its recordings stay, and they find it still made
+// swings-2 (144 ticks) was the selected clock before the observed windows were searched past a stable clock, and swings-3
+// (72 ticks) before the generator counted a wake-up only while the inserter's arm is at home; their recordings stay, and
+// they find them still made
 for (const variant of carCases()) {
     test(`car clock: ${variant.name}`, () => {
         const {generation, native} = controls.cases[variant.name];

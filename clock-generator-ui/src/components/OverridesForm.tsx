@@ -152,7 +152,7 @@ export function OverridesForm({
                             <HelpButton label="About Search for fewer wake-ups">
                                 <Typography variant="body2">
                                     Runs the four searches for every build: observed wake windows, uneven output swings, shifted swings and full-hand output swings.
-                                    They take most of the time of a generation, so by default they only run when no clock made without a search is stable.
+                                    They take most of the time of a generation, so by default they only run when no clock made without a search is stable, except that observed wake windows and shifted swings also run on a short clock that still has wake-ups.
                                     Where one is, a search can still find a stable clock with fewer wake-ups: turn this on to look for it.
                                 </Typography>
                             </HelpButton>
