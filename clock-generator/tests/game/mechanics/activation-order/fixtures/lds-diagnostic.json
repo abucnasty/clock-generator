@@ -1,0 +1,727 @@
+{
+  "format": "native-scheduler-projection-1",
+  "case": "lds-diagnostic",
+  "factorio_version": "2.1.21",
+  "source_fixture": {
+    "name": "lds-diagnostic.json",
+    "sha256": "56c801be06673fcda35258cb7b0548329a9e843be5c75dada4b9adfea3ec776c"
+  },
+  "source_input_hashes": {
+    "binary_sha256": "64a4dbc1a6de1e2556efd627f543d6072eaca6e69ee8b0c26df358bbd559adf7",
+    "clock_canonical_sha256": "100deea8aac83545d7bb1c9bdbe1f85ff682d873ed82d54db821afae9aafd6d2",
+    "config_canonical_sha256": "6965d41db3354c2d5b8a708953d18fd851e47c949336a34e6a09a9bced37862e",
+    "scaffold_sha256": "50aabb49ecb67641207cc8bd26ffed8ad3ab67269f86a2f22f485dca61f26157",
+    "staging_save_sha256": "a8ec0de612e13c3c36f8f30615c39b5fbba55f9a74bc952f9cc88eda30a95717"
+  },
+  "source_provenance": {
+    "/home/abucnasty/Games/factorio_locked_versions/2_1_21/bin/x64/factorio": "64a4dbc1a6de1e2556efd627f543d6072eaca6e69ee8b0c26df358bbd559adf7",
+    "/home/abucnasty/dev/factorio-scripts/.claude/worktrees/planner-rank/clock-generator/dist/verification/entity-matching.js": "5a6b0e01ad56b4e0e5baf37409310e7401ec1d76732abada2f248c851662b4dd",
+    "/home/abucnasty/dev/factorio-scripts/.claude/worktrees/planner-rank/clock-generator/resources/clock_generator_staging.zip": "a8ec0de612e13c3c36f8f30615c39b5fbba55f9a74bc952f9cc88eda30a95717",
+    "/home/abucnasty/dev/factorio-scripts/.claude/worktrees/planner-rank/clock-generator/resources/config-samples/intermediates/low-density-structure/low-density-structure-scaffold.txt": "50aabb49ecb67641207cc8bd26ffed8ad3ab67269f86a2f22f485dca61f26157",
+    "packages/codex-native-call-trace/followup/SHA256.json": "70f66f47d3877589d0ce6c9d5a83f48c22978c13e78fa5077c58119e63d4241f",
+    "packages/codex-native-call-trace/followup/evidence/lds-replay-baseline/visible.json": "f2138cf7c4d844b2b72bafa1507dba471b6fd49186c19b35bd3591717eebfea4",
+    "packages/codex-native-call-trace/reusable/export.py": "912d02d705e2e09e3081f7899e2826908952616ba654b93c7af92809d6e6ffbc",
+    "packages/codex-native-call-trace/reusable/mapping.js": "f6475c91fa9bec6a4e7a7182ef76655cd7322365136caab97b28866a4bf8d99a",
+    "planner/evidence/input-order/attach/SHA256.json": "8dad7dd5664007390d36594c45b82f71b28ca333394a67abe8b9cd7fff1ce817",
+    "planner/evidence/input-order/attach/lds2/calls.jsonl": "cb4a239361dcbfdc272f6e0fa48b22955506a3a78d7761acfe4d4978d5aaa144",
+    "planner/evidence/input-order/attach/lds2/config.json": "2b5fde75c08a465da3e6d6299165d324825944b6cdc32d565cf4cda49f0922e1",
+    "planner/evidence/input-order/attach/lds2/debugger-exit.json": "1aff36f796932c34d424461078ea28c3b7feef0b4538624958a98e8dc7e4bca4",
+    "planner/evidence/input-order/attach/lds2/driver.js": "fb3c4a8b7f8719a0e1a0f42e2cf0faa2902c1f8de051025abe56bb4d0e874fbe",
+    "planner/evidence/input-order/attach/lds2/handshake.json": "82df6cad1a13112879ffa3b99519ad3e6b5e79e615dba9f66f49f53d1deccc63",
+    "planner/evidence/input-order/attach/lds2/lua-mapping.json": "1f7835be425482e381c29b19ac3ee988bd344f33c59e1c06985725918abfae94",
+    "planner/evidence/input-order/attach/lds2/observe.py": "a2f3fe07e2a9c0d9c4566c4495ea078099eb0a9591b31bbeac7218e906c8f6b5",
+    "planner/evidence/input-order/attach/lds2/prepared.json": "b081a7e819cb629ac8c2139c8397ce04a05d8e46cb1e2de20b1d731807c3e74f",
+    "planner/evidence/input-order/attach/lds2/probe.lua": "15a1b3bbcb9340d9851878435861b50ad74c4bc7acfe4dbf8dd729a2d58aebec",
+    "planner/evidence/input-order/attach/lds2/recording.json": "3a281915ae2b1b5efd8433494561b8be87831192aaa327d05f30d8b0eba0b757",
+    "planner/evidence/input-order/attach/lds2/tick-reference.json": "150aefccbd130874c47203dc8f821b08480c1f0850f63c882012b3660951b425",
+    "planner/evidence/input-order/attach/lds2/visible.json": "72101540108f19a0ac69555eb7ba30a9eb2f639e70a5dec56800dd6e1347c381"
+  },
+  "clock_scope": "diagnostic archived-cadence clock, not exact old archive",
+  "entities": {
+    "destination": {
+      "prepared_id": 1,
+      "prototype": "foundry",
+      "recipe": "casting-low-density-structure",
+      "recording_id": 1,
+      "type": "machine",
+      "unit_number": 302
+    },
+    "input": {
+      "prepared_id": 3,
+      "prototype": "stack-inserter",
+      "recording_id": 8,
+      "type": "inserter",
+      "unit_number": 326
+    },
+    "output": {
+      "prepared_id": 1,
+      "prototype": "stack-inserter",
+      "recording_id": 7,
+      "type": "inserter",
+      "unit_number": 324
+    },
+    "source": {
+      "prepared_id": 3,
+      "prototype": "cryogenic-plant",
+      "recipe": "plastic-bar",
+      "recording_id": 3,
+      "type": "machine",
+      "unit_number": 356
+    }
+  },
+  "tick_mapping": {
+    "raw_game_tick_minus_probe_start": 47696,
+    "visible_row_phase": "pre-update; actual tick t transfers appear in visible row t+1",
+    "window_first": 5621,
+    "window_ticks": 20
+  },
+  "projection": {
+    "first_tick": 5629,
+    "last_tick": 5630,
+    "initial_active_order": [],
+    "initial_state_basis": "selected first-tick Update entries; other selected hands first observed inactive at Alarm",
+    "deactivation_policy": "apply only at inactive observation ending an inferred interval; not an exact detach time"
+  },
+  "events": [
+    {
+      "caller_chain": 9,
+      "cause": "ingredient-consumption",
+      "cause_evidence": "caller-chain",
+      "event": "Alarm",
+      "evidence_class": "intercepted-native-entry",
+      "game_tick": 53325,
+      "raw_function": "Inserter::alarm",
+      "raw_seq": 132,
+      "role": "input",
+      "scheduling_state": {
+        "byte_c8": 0,
+        "byte_c9": 1,
+        "low_state_bits": 0,
+        "next": "self",
+        "previous": "self",
+        "self_linked": true
+      },
+      "sequence": 18,
+      "tick": 5629,
+      "source_event": 59
+    },
+    {
+      "caller_chain": 9,
+      "cause": "ingredient-consumption",
+      "cause_evidence": "caller-chain",
+      "event": "NativeAlarmAttachPath",
+      "evidence_class": "intercepted-native-entry",
+      "game_tick": 53325,
+      "raw_function": "Inserter::alarm:before-attach",
+      "raw_seq": 133,
+      "role": "input",
+      "scheduling_state": {
+        "byte_c8": 1,
+        "byte_c9": 1,
+        "low_state_bits": 1,
+        "next": "self",
+        "previous": "self",
+        "self_linked": true
+      },
+      "sequence": 19,
+      "tick": 5629,
+      "source_event": 60
+    },
+    {
+      "caller_chain": 9,
+      "cause": "ingredient-consumption",
+      "cause_evidence": "caller-chain",
+      "event": "NativeAttachEntry",
+      "evidence_class": "intercepted-native-entry",
+      "game_tick": 53325,
+      "raw_function": "UpdatableEntity::attachInternal",
+      "raw_seq": 134,
+      "role": "input",
+      "scheduling_state": {
+        "byte_c8": 1,
+        "byte_c9": 1,
+        "low_state_bits": 1,
+        "next": "self",
+        "previous": "self",
+        "self_linked": true
+      },
+      "sequence": 20,
+      "tick": 5629,
+      "source_event": 61
+    },
+    {
+      "caller_chain": 6,
+      "cause": "unresolved",
+      "cause_evidence": "not-established",
+      "event": "NativeAttachReturn",
+      "evidence_class": "intercepted-native-return",
+      "game_tick": 53325,
+      "raw_function": "UpdatableEntity::attachInternal:return",
+      "raw_seq": 135,
+      "role": "input",
+      "scheduling_state": {
+        "byte_c8": 1,
+        "byte_c9": 1,
+        "low_state_bits": 1,
+        "next": "unmapped-node",
+        "previous": "unmapped-node",
+        "self_linked": false
+      },
+      "sequence": 21,
+      "tick": 5629,
+      "source_event": 62
+    },
+    {
+      "caller_chain": 5,
+      "cause": "control-dispatch",
+      "cause_evidence": "caller-chain",
+      "event": "Alarm",
+      "evidence_class": "intercepted-native-entry",
+      "game_tick": 53325,
+      "raw_function": "Inserter::alarm",
+      "raw_seq": 136,
+      "role": "output",
+      "scheduling_state": {
+        "byte_c8": 0,
+        "byte_c9": 1,
+        "low_state_bits": 0,
+        "next": "self",
+        "previous": "self",
+        "self_linked": true
+      },
+      "sequence": 22,
+      "tick": 5629,
+      "source_event": 63
+    },
+    {
+      "caller_chain": 5,
+      "cause": "control-dispatch",
+      "cause_evidence": "caller-chain",
+      "event": "NativeAlarmAttachPath",
+      "evidence_class": "intercepted-native-entry",
+      "game_tick": 53325,
+      "raw_function": "Inserter::alarm:before-attach",
+      "raw_seq": 137,
+      "role": "output",
+      "scheduling_state": {
+        "byte_c8": 1,
+        "byte_c9": 1,
+        "low_state_bits": 1,
+        "next": "self",
+        "previous": "self",
+        "self_linked": true
+      },
+      "sequence": 23,
+      "tick": 5629,
+      "source_event": 64
+    },
+    {
+      "caller_chain": 5,
+      "cause": "control-dispatch",
+      "cause_evidence": "caller-chain",
+      "event": "NativeAttachEntry",
+      "evidence_class": "intercepted-native-entry",
+      "game_tick": 53325,
+      "raw_function": "UpdatableEntity::attachInternal",
+      "raw_seq": 138,
+      "role": "output",
+      "scheduling_state": {
+        "byte_c8": 1,
+        "byte_c9": 1,
+        "low_state_bits": 1,
+        "next": "self",
+        "previous": "self",
+        "self_linked": true
+      },
+      "sequence": 24,
+      "tick": 5629,
+      "source_event": 65
+    },
+    {
+      "caller_chain": 6,
+      "cause": "unresolved",
+      "cause_evidence": "not-established",
+      "event": "NativeAttachReturn",
+      "evidence_class": "intercepted-native-return",
+      "game_tick": 53325,
+      "raw_function": "UpdatableEntity::attachInternal:return",
+      "raw_seq": 139,
+      "role": "output",
+      "scheduling_state": {
+        "byte_c8": 1,
+        "byte_c9": 1,
+        "low_state_bits": 1,
+        "next": "input",
+        "previous": "unmapped-node",
+        "self_linked": false
+      },
+      "sequence": 25,
+      "tick": 5629,
+      "source_event": 66
+    },
+    {
+      "caller_chain": 0,
+      "cause": "scheduled-entity-update",
+      "cause_evidence": "caller-chain",
+      "event": "Update",
+      "evidence_class": "intercepted-native-entry",
+      "game_tick": 53326,
+      "raw_function": "Inserter::update",
+      "raw_seq": 147,
+      "role": "output",
+      "scheduling_state": {
+        "byte_c8": 1,
+        "byte_c9": 1,
+        "low_state_bits": 1,
+        "next": "input",
+        "previous": "unmapped-node",
+        "self_linked": false
+      },
+      "sequence": 1,
+      "tick": 5630,
+      "source_event": 67
+    },
+    {
+      "caller_chain": 10,
+      "cause": "transfer-notification",
+      "cause_evidence": "caller-chain",
+      "event": "Alarm",
+      "evidence_class": "intercepted-native-entry",
+      "game_tick": 53326,
+      "raw_function": "Inserter::alarm",
+      "raw_seq": 148,
+      "role": "output",
+      "scheduling_state": {
+        "byte_c8": 1,
+        "byte_c9": 1,
+        "low_state_bits": 1,
+        "next": "input",
+        "previous": "unmapped-node",
+        "self_linked": false
+      },
+      "sequence": 2,
+      "tick": 5630,
+      "source_event": 68
+    },
+    {
+      "caller_chain": 0,
+      "cause": "scheduled-entity-update",
+      "cause_evidence": "caller-chain",
+      "event": "Update",
+      "evidence_class": "intercepted-native-entry",
+      "game_tick": 53326,
+      "raw_function": "Inserter::update",
+      "raw_seq": 150,
+      "role": "input",
+      "scheduling_state": {
+        "byte_c8": 1,
+        "byte_c9": 1,
+        "low_state_bits": 1,
+        "next": "unmapped-node",
+        "previous": "output",
+        "self_linked": false
+      },
+      "sequence": 4,
+      "tick": 5630,
+      "source_event": 70
+    },
+    {
+      "caller_chain": 10,
+      "cause": "transfer-notification",
+      "cause_evidence": "caller-chain",
+      "event": "Alarm",
+      "evidence_class": "intercepted-native-entry",
+      "game_tick": 53326,
+      "raw_function": "Inserter::alarm",
+      "raw_seq": 151,
+      "role": "input",
+      "scheduling_state": {
+        "byte_c8": 1,
+        "byte_c9": 1,
+        "low_state_bits": 1,
+        "next": "unmapped-node",
+        "previous": "output",
+        "self_linked": false
+      },
+      "sequence": 5,
+      "tick": 5630,
+      "source_event": 71
+    }
+  ],
+  "transitions": [
+    {
+      "after": {
+        "byte_c8": 0,
+        "byte_c9": 1,
+        "low_state_bits": 0,
+        "next": "self",
+        "previous": "self",
+        "self_linked": true
+      },
+      "before": {
+        "byte_c8": 1,
+        "byte_c9": 1,
+        "low_state_bits": 1,
+        "next": "unmapped-node",
+        "previous": "unmapped-node",
+        "self_linked": false
+      },
+      "event": "Deactivation",
+      "evidence": "inferred-transition-between-observations-not-intercepted-detach",
+      "from_event": 40,
+      "role": "input",
+      "through_event": 59,
+      "from_observation": {
+        "tick": 5627,
+        "game_tick": 53323,
+        "sequence": 1,
+        "raw_seq": 99,
+        "event": "Update"
+      },
+      "through_observation": {
+        "tick": 5629,
+        "game_tick": 53325,
+        "sequence": 18,
+        "raw_seq": 132,
+        "event": "Alarm"
+      }
+    },
+    {
+      "after": {
+        "byte_c8": 1,
+        "byte_c9": 1,
+        "low_state_bits": 1,
+        "next": "unmapped-node",
+        "previous": "unmapped-node",
+        "self_linked": false
+      },
+      "before": {
+        "byte_c8": 0,
+        "byte_c9": 1,
+        "low_state_bits": 0,
+        "next": "self",
+        "previous": "self",
+        "self_linked": true
+      },
+      "cause": "ingredient-consumption",
+      "event": "Activation",
+      "evidence": "observed-state-change-across-intercepted-attach",
+      "from_event": 59,
+      "role": "input",
+      "through_event": 62,
+      "from_observation": {
+        "tick": 5629,
+        "game_tick": 53325,
+        "sequence": 18,
+        "raw_seq": 132,
+        "event": "Alarm"
+      },
+      "through_observation": {
+        "tick": 5629,
+        "game_tick": 53325,
+        "sequence": 21,
+        "raw_seq": 135,
+        "event": "NativeAttachReturn"
+      }
+    },
+    {
+      "after": {
+        "byte_c8": 0,
+        "byte_c9": 1,
+        "low_state_bits": 0,
+        "next": "self",
+        "previous": "self",
+        "self_linked": true
+      },
+      "before": {
+        "byte_c8": 1,
+        "byte_c9": 1,
+        "low_state_bits": 1,
+        "next": "unmapped-node",
+        "previous": "unmapped-node",
+        "self_linked": false
+      },
+      "event": "Deactivation",
+      "evidence": "inferred-transition-between-observations-not-intercepted-detach",
+      "from_event": 30,
+      "role": "output",
+      "through_event": 63,
+      "from_observation": {
+        "tick": 5626,
+        "game_tick": 53322,
+        "sequence": 1,
+        "raw_seq": 82,
+        "event": "Update"
+      },
+      "through_observation": {
+        "tick": 5629,
+        "game_tick": 53325,
+        "sequence": 22,
+        "raw_seq": 136,
+        "event": "Alarm"
+      }
+    },
+    {
+      "after": {
+        "byte_c8": 1,
+        "byte_c9": 1,
+        "low_state_bits": 1,
+        "next": "input",
+        "previous": "unmapped-node",
+        "self_linked": false
+      },
+      "before": {
+        "byte_c8": 0,
+        "byte_c9": 1,
+        "low_state_bits": 0,
+        "next": "self",
+        "previous": "self",
+        "self_linked": true
+      },
+      "cause": "control-dispatch",
+      "event": "Activation",
+      "evidence": "observed-state-change-across-intercepted-attach",
+      "from_event": 63,
+      "role": "output",
+      "through_event": 66,
+      "from_observation": {
+        "tick": 5629,
+        "game_tick": 53325,
+        "sequence": 22,
+        "raw_seq": 136,
+        "event": "Alarm"
+      },
+      "through_observation": {
+        "tick": 5629,
+        "game_tick": 53325,
+        "sequence": 25,
+        "raw_seq": 139,
+        "event": "NativeAttachReturn"
+      }
+    }
+  ],
+  "caller_chains": {
+    "0": [
+      "_ZN18EntityOrderHelpers15EntityOrderListIJ13LogisticRobot17ConstructionRobot8Inserter8Roboport6Loader17AssemblingMachine17AgriculturalTower20OldAgriculturalTower7Furnace11MiningDrill10FluidWagon14ArtilleryWagon18InfinityCargoWagon10CargoWagon10Locomotive9Character6Boiler9Generator15BurnerGenerator7Reactor3Lab8LandMine14ArtilleryFlare19ArtilleryProjectile15ArtilleryTurret4Beam3Car13SpiderVehicle18TemporaryContainer15CharacterCorpse11CombatRobot12CaptureRobot6Corpse23ElectricEnergyInterface12EnemySpawner9Explosion21FlameThrowerExplosion11FluidStream11FluidTurret16FlyingTextEntity15FusionGenerator13FusionReactor4Gate13HeatInterface18HighlightBoxEntity17InfinityContainer12InfinityPipe16ItemRequestProxy12OffshorePump14ParticleSource11PowerSwitch10Projectile4Pump5Valve5Radar19ProgrammableSpeaker10RocketSilo16RocketSiloRocket8CargoPod16SmokeWithTrigger12SpeechBubble7Sticker6Turret17AsteroidCollector8Asteroid8Thruster10SpiderUnit4UnitEE6updateERSt5arrayINS_19ActiveEntitiesEntryELm68EEbRN27IntrusiveListImplementationI15UpdatableEntityvLb0ELb0EE8IteratorE",
+      "Surface::update()",
+      "Map::updateEntities()",
+      "Scenario::update()"
+    ],
+    "5": [
+      "MultithreadingOutput::dispatchActions(std::span<MultithreadingOutput, 18446744073709551615ul>)",
+      "ControlBehaviorManager::finish()",
+      "std::_Function_handler<void (std::initializer_list<MultithreadedUpdatable*>), Map::createMultiThreadedUpdateRunner(unsigned int)::$_0>::_M_invoke(std::_Any_data const&, std::initializer_list<MultithreadedUpdatable*>&&)",
+      "Map::updateEntities()"
+    ],
+    "6": [],
+    "9": [
+      "CraftingMachine::postTransferHook(NotificationData const&)",
+      "ItemStack::remove(unsigned int, FlowStatistics<IDWithQuality<ID<ItemPrototype, unsigned short> >, unsigned long, void>*, unsigned int, bool)",
+      "CraftingMachine::consumeIngredients(RecipePrototype const&, InventoryBuffer&)",
+      "CraftingMachine::craftWithCurrentRecipe()"
+    ],
+    "10": [
+      "Inserter::postTransferHook(NotificationData const&)",
+      "ItemStack::transferReal(ItemStack&, unsigned int, unsigned int)",
+      "Inserter::update()",
+      "_ZN18EntityOrderHelpers15EntityOrderListIJ13LogisticRobot17ConstructionRobot8Inserter8Roboport6Loader17AssemblingMachine17AgriculturalTower20OldAgriculturalTower7Furnace11MiningDrill10FluidWagon14ArtilleryWagon18InfinityCargoWagon10CargoWagon10Locomotive9Character6Boiler9Generator15BurnerGenerator7Reactor3Lab8LandMine14ArtilleryFlare19ArtilleryProjectile15ArtilleryTurret4Beam3Car13SpiderVehicle18TemporaryContainer15CharacterCorpse11CombatRobot12CaptureRobot6Corpse23ElectricEnergyInterface12EnemySpawner9Explosion21FlameThrowerExplosion11FluidStream11FluidTurret16FlyingTextEntity15FusionGenerator13FusionReactor4Gate13HeatInterface18HighlightBoxEntity17InfinityContainer12InfinityPipe16ItemRequestProxy12OffshorePump14ParticleSource11PowerSwitch10Projectile4Pump5Valve5Radar19ProgrammableSpeaker10RocketSilo16RocketSiloRocket8CargoPod16SmokeWithTrigger12SpeechBubble7Sticker6Turret17AsteroidCollector8Asteroid8Thruster10SpiderUnit4UnitEE6updateERSt5arrayINS_19ActiveEntitiesEntryELm68EEbRN27IntrusiveListImplementationI15UpdatableEntityvLb0ELb0EE8IteratorE"
+    ]
+  },
+  "visible_rows": [
+    {
+      "entities": {
+        "destination": {
+          "bonus": 1,
+          "finished": 5809,
+          "input": {
+            "plastic-bar": 10
+          },
+          "output": {
+            "low-density-structure": 33
+          },
+          "progress": 0.766250000000002,
+          "status": "working"
+        },
+        "input": {
+          "hand": {
+            "x": 402.5,
+            "y": -1.5
+          },
+          "held": 0,
+          "status": "waiting_for_space_in_destination"
+        },
+        "output": {
+          "hand": {
+            "x": 400.5,
+            "y": -5.5
+          },
+          "held": 0,
+          "status": "disabled_by_control_behavior"
+        },
+        "source": {
+          "bonus": 0,
+          "finished": 14711,
+          "input": {
+            "coal": 114
+          },
+          "output": {
+            "plastic-bar": 99
+          },
+          "progress": 1,
+          "status": "full_output"
+        }
+      },
+      "tick": 5629
+    },
+    {
+      "entities": {
+        "destination": {
+          "bonus": 0.15750000000015774,
+          "finished": 5812,
+          "input": {
+            "plastic-bar": 5
+          },
+          "output": {
+            "low-density-structure": 36
+          },
+          "progress": 0.05250000000000206,
+          "status": "working"
+        },
+        "input": {
+          "hand": {
+            "x": 402.5,
+            "y": -1.5
+          },
+          "held": 0,
+          "status": "waiting_for_space_in_destination"
+        },
+        "output": {
+          "hand": {
+            "x": 400.5,
+            "y": -5.5
+          },
+          "held": 0,
+          "status": "waiting_for_source_items"
+        },
+        "source": {
+          "bonus": 1,
+          "finished": 14716,
+          "input": {
+            "coal": 112
+          },
+          "output": {
+            "plastic-bar": 93
+          },
+          "progress": 0.9583333333333333,
+          "status": "working"
+        }
+      },
+      "tick": 5630
+    },
+    {
+      "entities": {
+        "destination": {
+          "bonus": 1,
+          "finished": 5812,
+          "input": {
+            "plastic-bar": 5
+          },
+          "output": {
+            "low-density-structure": 20
+          },
+          "progress": 0.33875000000000205,
+          "status": "working"
+        },
+        "input": {
+          "hand": {
+            "x": 402.5,
+            "y": -1.5
+          },
+          "held": 15,
+          "status": "working"
+        },
+        "output": {
+          "hand": {
+            "x": 400.5,
+            "y": -5.5
+          },
+          "held": 16,
+          "status": "working"
+        },
+        "source": {
+          "bonus": 1,
+          "finished": 14724,
+          "input": {
+            "coal": 110
+          },
+          "output": {
+            "plastic-bar": 79
+          },
+          "progress": 0.9166666666666664,
+          "status": "working"
+        }
+      },
+      "tick": 5631
+    }
+  ],
+  "native_assertions": [
+    {
+      "kind": "update_order",
+      "roles": [
+        "output",
+        "input"
+      ],
+      "tick": 5630
+    },
+    {
+      "field": [
+        "output",
+        "low-density-structure"
+      ],
+      "kind": "visible",
+      "role": "destination",
+      "tick": 5630,
+      "value": 36
+    },
+    {
+      "field": [
+        "output",
+        "low-density-structure"
+      ],
+      "kind": "visible",
+      "role": "destination",
+      "tick": 5631,
+      "value": 20
+    },
+    {
+      "field": [
+        "held"
+      ],
+      "kind": "visible",
+      "role": "input",
+      "tick": 5631,
+      "value": 15
+    }
+  ],
+  "reference_equality": {
+    "belt_reference_sha256": null,
+    "differences": 0,
+    "fields_compared": 432,
+    "reference_sha256": "f2138cf7c4d844b2b72bafa1507dba471b6fd49186c19b35bd3591717eebfea4",
+    "rows": 24,
+    "unique_ticks": 23
+  },
+  "handshake": {
+    "paused": true,
+    "remaining_budget": 0,
+    "ticks": 20
+  },
+  "code_site_checks": "successful observer validates site bytes before enabling methods; source observer hash retained",
+  "limits": [
+    "Deactivation is inferred only between state/link observations; no detach entry was intercepted.",
+    "Alarm invocation is not Activation; alarms on active entities need not attach or reorder.",
+    "Scheduling active membership is separate from hand phase and control enabled.",
+    "No full simulator cure, universal active-list policy, new price or performance timing.",
+    "Scheduling-only replay supplies native Alarms and membership outcomes; World/hand physics are not integrated."
+  ]
+}

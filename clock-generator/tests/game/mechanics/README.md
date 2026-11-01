@@ -5,6 +5,7 @@ targeted commands and screenshot regeneration. Screenshots are layout references
 
 - [Belt pickup](belt-pickup/README.md): exposed reach, moving lane fallback, backed-up supply and front exit mirroring.
 - [Belt lanes](belt-lanes/README.md): physical lanes in recordings and opposite-lane ingredient layouts.
+- [Activation order](activation-order/README.md): observed Alarm/membership/Update sequences projected into an offline scheduler primitive.
 - [Source order](source-order/README.md): compact native shared-source allocations replayed without Factorio.
 - [Staged start](staged-start/README.md): saturated belts and fresh cell inserters built in a controlled order.
 - [Clock wiring](clock-wiring/README.md): replacing inserter conditions inherited from a real build.
