@@ -1,0 +1,23 @@
+{
+  "sample": "BIOCHAMBER_FUEL",
+  "swings 1": [
+    "inserter:2 | nutrients 1 | total 1 | hand 16",
+    "inserter:1 | yumako-mash 2/3 | total 2/3 | needed 2/3 | hand 16"
+  ],
+  "swings 2": [
+    "inserter:2 | nutrients 2 | total 2 | hand 16",
+    "inserter:1 | yumako-mash 4/3 | total 4/3 | needed 4/3 | hand 16"
+  ],
+  "swings 3": [
+    "inserter:2 | nutrients 3 | total 3 | hand 16",
+    "inserter:1 | yumako-mash 2 | total 2 | needed 2 | hand 16"
+  ],
+  "swings 7/3": [
+    "inserter:2 | nutrients 7/3 | total 7/3 | hand 16",
+    "inserter:1 | yumako-mash 14/9 | total 14/9 | needed 14/9 | hand 16"
+  ],
+  "swings 5/2": [
+    "inserter:2 | nutrients 5/2 | total 5/2 | hand 16",
+    "inserter:1 | yumako-mash 5/3 | total 5/3 | needed 5/3 | hand 16"
+  ]
+}

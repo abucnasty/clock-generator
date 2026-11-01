@@ -1,0 +1,73 @@
+{
+  "sample": "REAL_OWNER_GRENADE",
+  "swings 1": [
+    "inserter:1 | grenade 1 | total 1 | hand 16",
+    "inserter:2 | grenade 1 | total 1 | hand 16",
+    "inserter:7 | grenade 1 | total 1 | hand 16",
+    "inserter:8 | grenade 1 | total 1 | hand 16",
+    "inserter:4 | iron-plate 5 | total 5 | needed 5 | hand 16",
+    "drill:1 | coal 10 | total 10 | needed 10 | hand 16",
+    "inserter:3 | iron-plate 5 | total 5 | needed 5 | hand 16",
+    "drill:2 | coal 10 | total 10 | needed 10 | hand 16",
+    "inserter:6 | iron-plate 5 | total 5 | needed 5 | hand 16",
+    "drill:3 | coal 10 | total 10 | needed 10 | hand 16",
+    "inserter:5 | iron-plate 5 | total 5 | needed 5 | hand 16",
+    "drill:4 | coal 10 | total 10 | needed 10 | hand 16"
+  ],
+  "swings 2": [
+    "inserter:1 | grenade 2 | total 2 | hand 16",
+    "inserter:2 | grenade 2 | total 2 | hand 16",
+    "inserter:7 | grenade 2 | total 2 | hand 16",
+    "inserter:8 | grenade 2 | total 2 | hand 16",
+    "inserter:4 | iron-plate 10 | total 10 | needed 10 | hand 16",
+    "drill:1 | coal 20 | total 20 | needed 20 | hand 16",
+    "inserter:3 | iron-plate 10 | total 10 | needed 10 | hand 16",
+    "drill:2 | coal 20 | total 20 | needed 20 | hand 16",
+    "inserter:6 | iron-plate 10 | total 10 | needed 10 | hand 16",
+    "drill:3 | coal 20 | total 20 | needed 20 | hand 16",
+    "inserter:5 | iron-plate 10 | total 10 | needed 10 | hand 16",
+    "drill:4 | coal 20 | total 20 | needed 20 | hand 16"
+  ],
+  "swings 3": [
+    "inserter:1 | grenade 3 | total 3 | hand 16",
+    "inserter:2 | grenade 3 | total 3 | hand 16",
+    "inserter:7 | grenade 3 | total 3 | hand 16",
+    "inserter:8 | grenade 3 | total 3 | hand 16",
+    "inserter:4 | iron-plate 15 | total 15 | needed 15 | hand 16",
+    "drill:1 | coal 30 | total 30 | needed 30 | hand 16",
+    "inserter:3 | iron-plate 15 | total 15 | needed 15 | hand 16",
+    "drill:2 | coal 30 | total 30 | needed 30 | hand 16",
+    "inserter:6 | iron-plate 15 | total 15 | needed 15 | hand 16",
+    "drill:3 | coal 30 | total 30 | needed 30 | hand 16",
+    "inserter:5 | iron-plate 15 | total 15 | needed 15 | hand 16",
+    "drill:4 | coal 30 | total 30 | needed 30 | hand 16"
+  ],
+  "swings 7/3": [
+    "inserter:1 | grenade 7/3 | total 7/3 | hand 16",
+    "inserter:2 | grenade 7/3 | total 7/3 | hand 16",
+    "inserter:7 | grenade 7/3 | total 7/3 | hand 16",
+    "inserter:8 | grenade 7/3 | total 7/3 | hand 16",
+    "inserter:4 | iron-plate 35/3 | total 35/3 | needed 35/3 | hand 16",
+    "drill:1 | coal 70/3 | total 70/3 | needed 70/3 | hand 16",
+    "inserter:3 | iron-plate 35/3 | total 35/3 | needed 35/3 | hand 16",
+    "drill:2 | coal 70/3 | total 70/3 | needed 70/3 | hand 16",
+    "inserter:6 | iron-plate 35/3 | total 35/3 | needed 35/3 | hand 16",
+    "drill:3 | coal 70/3 | total 70/3 | needed 70/3 | hand 16",
+    "inserter:5 | iron-plate 35/3 | total 35/3 | needed 35/3 | hand 16",
+    "drill:4 | coal 70/3 | total 70/3 | needed 70/3 | hand 16"
+  ],
+  "swings 5/2": [
+    "inserter:1 | grenade 5/2 | total 5/2 | hand 16",
+    "inserter:2 | grenade 5/2 | total 5/2 | hand 16",
+    "inserter:7 | grenade 5/2 | total 5/2 | hand 16",
+    "inserter:8 | grenade 5/2 | total 5/2 | hand 16",
+    "inserter:4 | iron-plate 25/2 | total 25/2 | needed 25/2 | hand 16",
+    "drill:1 | coal 25 | total 25 | needed 25 | hand 16",
+    "inserter:3 | iron-plate 25/2 | total 25/2 | needed 25/2 | hand 16",
+    "drill:2 | coal 25 | total 25 | needed 25 | hand 16",
+    "inserter:6 | iron-plate 25/2 | total 25/2 | needed 25/2 | hand 16",
+    "drill:3 | coal 25 | total 25 | needed 25 | hand 16",
+    "inserter:5 | iron-plate 25/2 | total 25/2 | needed 25/2 | hand 16",
+    "drill:4 | coal 25 | total 25 | needed 25 | hand 16"
+  ]
+}

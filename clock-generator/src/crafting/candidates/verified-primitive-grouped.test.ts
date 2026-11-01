@@ -29,7 +29,7 @@ describe("verified primitive adapter orchestration (verification outcomes are ex
 
     function arrange(input = config) {
         const registry = createEntityRegistryFromConfig(input);
-        const cycle = CraftingCyclePlan.create(TargetProductionRate.fromConfig(input.target_output), registry, fraction(1), input.overrides);
+        const cycle = CraftingCyclePlan.create(TargetProductionRate.fromConfig(input.target_output), registry, input, fraction(1), input.overrides);
         made = { logger: quiet, config: input, run: { crafting_cycle_plan: cycle, swing_counts: cycle.entity_transfer_map,
             duration: Duration.ofTicks(40), recipe_lcm: 1, simulation_context: { entity_registry: registry } } } as unknown as planning.PlanRun;
         const plan = vi.spyOn(planning, "planRun").mockImplementation(derived => { made.config = derived; return made; });

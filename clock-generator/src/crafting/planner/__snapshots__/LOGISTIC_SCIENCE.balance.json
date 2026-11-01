@@ -1,0 +1,28 @@
+{
+  "sample": "LOGISTIC_SCIENCE",
+  "swings 1": [
+    "inserter:3 | logistic-science-pack 1 | total 1 | hand 16",
+    "inserter:1 | inserter 1/2 | total 1/2 | needed 1/2 | hand 16",
+    "inserter:2 | transport-belt 1/2 | total 1/2 | needed 1/2 | hand 16"
+  ],
+  "swings 2": [
+    "inserter:3 | logistic-science-pack 2 | total 2 | hand 16",
+    "inserter:1 | inserter 1 | total 1 | needed 1 | hand 16",
+    "inserter:2 | transport-belt 1 | total 1 | needed 1 | hand 16"
+  ],
+  "swings 3": [
+    "inserter:3 | logistic-science-pack 3 | total 3 | hand 16",
+    "inserter:1 | inserter 3/2 | total 3/2 | needed 3/2 | hand 16",
+    "inserter:2 | transport-belt 3/2 | total 3/2 | needed 3/2 | hand 16"
+  ],
+  "swings 7/3": [
+    "inserter:3 | logistic-science-pack 7/3 | total 7/3 | hand 16",
+    "inserter:1 | inserter 7/6 | total 7/6 | needed 7/6 | hand 16",
+    "inserter:2 | transport-belt 7/6 | total 7/6 | needed 7/6 | hand 16"
+  ],
+  "swings 5/2": [
+    "inserter:3 | logistic-science-pack 5/2 | total 5/2 | hand 16",
+    "inserter:1 | inserter 5/4 | total 5/4 | needed 5/4 | hand 16",
+    "inserter:2 | transport-belt 5/4 | total 5/4 | needed 5/4 | hand 16"
+  ]
+}

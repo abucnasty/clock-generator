@@ -49,7 +49,7 @@ function dutiesIn(group: GroupShape, feasibility: Feasibility): PlanDuty[] {
 export function planBuild(facts: PlannerFacts, graph: PlannerGraph, feasibility: Feasibility, cycle: CycleArithmetic | null): BuildPlan {
     const { unbounded_sources, groups } = groupsOf(facts, graph);
     const result_windows: ResultWindowsDecision | null = cycle === null || cycle.config.target_output.counts !== "destroyed" ? null
-        : resultWindowsDecisionOf(TargetProductionRate.fromConfig(cycle.config.target_output), cycle.registry, cycle.config.overrides ?? {});
+        : resultWindowsDecisionOf(TargetProductionRate.fromConfig(cycle.config.target_output), cycle.registry, cycle.config, cycle.config.overrides ?? {});
     const group_of = new Map<string, number>();
     const edge = new Map(graph.edges.map(it => [it.key, it]));
     groups.forEach((group, at) => group.edges.forEach(key => group_of.set(transferKeyOf(edge.get(key)!.entity, edge.get(key)!.item), at)));

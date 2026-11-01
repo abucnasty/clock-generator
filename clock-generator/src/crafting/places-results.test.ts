@@ -206,7 +206,7 @@ describe('a rocket silo as the result target', () => {
         // the silo holds; see result-windows.test.ts
         const config = await parseConfig(await scrapIntoSilo('uncommon', 300));
         const registry = createEntityRegistryFromConfig(config);
-        const plan = CraftingCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), registry, fraction(1), {});
+        const plan = CraftingCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), registry, config, fraction(1), {});
         expect(plan.result_windows?.[0].windows).toHaveLength(12);
         expect(plan.result_windows?.[0].period).toBe(5760);
     });

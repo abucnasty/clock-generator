@@ -1,0 +1,53 @@
+{
+  "sample": "METALLURGIC_SCIENCE_PACK",
+  "swings 1": [
+    "inserter:3 | metallurgic-science-pack 1 | total 1 | hand 16",
+    "inserter:2 | tungsten-carbide 6/5 | total 6/5 | needed 6/5 | hand 16",
+    "inserter:8 | tungsten-plate 4/5 | total 4/5 | needed 4/5 | hand 16",
+    "inserter:1 | carbon 3/5 | total 3/5 | needed 3/5 | hand 16",
+    "inserter:4 | tungsten-ore 3/5 | total 3/5 | needed 3/5 | hand 16",
+    "inserter:5 | tungsten-ore 3/5 | total 3/5 | needed 3/5 | hand 16",
+    "inserter:6 | coal 2/5 | total 2/5 | needed 2/5 | hand 16",
+    "inserter:7 | tungsten-ore 32/25 | total 32/25 | needed 32/25 | hand 16"
+  ],
+  "swings 2": [
+    "inserter:3 | metallurgic-science-pack 2 | total 2 | hand 16",
+    "inserter:2 | tungsten-carbide 12/5 | total 12/5 | needed 12/5 | hand 16",
+    "inserter:8 | tungsten-plate 8/5 | total 8/5 | needed 8/5 | hand 16",
+    "inserter:1 | carbon 6/5 | total 6/5 | needed 6/5 | hand 16",
+    "inserter:4 | tungsten-ore 6/5 | total 6/5 | needed 6/5 | hand 16",
+    "inserter:5 | tungsten-ore 6/5 | total 6/5 | needed 6/5 | hand 16",
+    "inserter:6 | coal 4/5 | total 4/5 | needed 4/5 | hand 16",
+    "inserter:7 | tungsten-ore 64/25 | total 64/25 | needed 64/25 | hand 16"
+  ],
+  "swings 3": [
+    "inserter:3 | metallurgic-science-pack 3 | total 3 | hand 16",
+    "inserter:2 | tungsten-carbide 18/5 | total 18/5 | needed 18/5 | hand 16",
+    "inserter:8 | tungsten-plate 12/5 | total 12/5 | needed 12/5 | hand 16",
+    "inserter:1 | carbon 9/5 | total 9/5 | needed 9/5 | hand 16",
+    "inserter:4 | tungsten-ore 9/5 | total 9/5 | needed 9/5 | hand 16",
+    "inserter:5 | tungsten-ore 9/5 | total 9/5 | needed 9/5 | hand 16",
+    "inserter:6 | coal 6/5 | total 6/5 | needed 6/5 | hand 16",
+    "inserter:7 | tungsten-ore 96/25 | total 96/25 | needed 96/25 | hand 16"
+  ],
+  "swings 7/3": [
+    "inserter:3 | metallurgic-science-pack 7/3 | total 7/3 | hand 16",
+    "inserter:2 | tungsten-carbide 14/5 | total 14/5 | needed 14/5 | hand 16",
+    "inserter:8 | tungsten-plate 28/15 | total 28/15 | needed 28/15 | hand 16",
+    "inserter:1 | carbon 7/5 | total 7/5 | needed 7/5 | hand 16",
+    "inserter:4 | tungsten-ore 7/5 | total 7/5 | needed 7/5 | hand 16",
+    "inserter:5 | tungsten-ore 7/5 | total 7/5 | needed 7/5 | hand 16",
+    "inserter:6 | coal 14/15 | total 14/15 | needed 14/15 | hand 16",
+    "inserter:7 | tungsten-ore 224/75 | total 224/75 | needed 224/75 | hand 16"
+  ],
+  "swings 5/2": [
+    "inserter:3 | metallurgic-science-pack 5/2 | total 5/2 | hand 16",
+    "inserter:2 | tungsten-carbide 3 | total 3 | needed 3 | hand 16",
+    "inserter:8 | tungsten-plate 2 | total 2 | needed 2 | hand 16",
+    "inserter:1 | carbon 3/2 | total 3/2 | needed 3/2 | hand 16",
+    "inserter:4 | tungsten-ore 3/2 | total 3/2 | needed 3/2 | hand 16",
+    "inserter:5 | tungsten-ore 3/2 | total 3/2 | needed 3/2 | hand 16",
+    "inserter:6 | coal 1 | total 1 | needed 1 | hand 16",
+    "inserter:7 | tungsten-ore 16/5 | total 16/5 | needed 16/5 | hand 16"
+  ]
+}

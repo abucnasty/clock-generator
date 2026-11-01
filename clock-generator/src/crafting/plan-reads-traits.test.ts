@@ -62,7 +62,7 @@ function oldComputeMachineTargetRates(config: Config): MachineTargetRate[] {
     assertInserterCoverage(config);
     const registry = createEntityRegistryFromConfig(config);
     const target = TargetProductionRate.fromConfig(config.target_output);
-    const cycle = CraftingCyclePlan.create(target, registry, fraction(1));
+    const cycle = CraftingCyclePlan.create(target, registry, config, fraction(1));
     const seconds = cycle.total_duration_ticks.divide(60);
     const taken = new Map<string, number>();
     const placing = new Map(registry.getAll().filter(Entity.isMachine).flatMap(machine =>

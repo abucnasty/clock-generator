@@ -1,0 +1,58 @@
+{
+  "sample": "REAL_OWNER_PINK_SCIENCE_ORIGINAL_NO_BUFFERS",
+  "swings 1": [
+    "inserter:4 | electromagnetic-science-pack 1 | total 1 | hand 16",
+    "inserter:3 | electromagnetic-science-pack 1 | total 1 | hand 16",
+    "inserter:5 | accumulator 4/11 | total 4/11 | needed 4/11 | hand 16",
+    "inserter:7 | supercapacitor 4/11 | total 4/11 | needed 4/11 | hand 16",
+    "inserter:11 | superconductor 64/121, holmium-plate 64/121 | total 128/121 | needed 128/121 | hand 16",
+    "inserter:12 | battery 32/121 | total 32/121 | needed 32/121 | hand 16",
+    "inserter:10 | processing-unit 128/605 | total 128/605 | needed 128/605 | hand 16",
+    "inserter:6 | supercapacitor 4/11 | total 4/11 | needed 4/11 | hand 16",
+    "inserter:8 | accumulator 4/11 | total 4/11 | needed 4/11 | hand 16"
+  ],
+  "swings 2": [
+    "inserter:4 | electromagnetic-science-pack 2 | total 2 | hand 16",
+    "inserter:3 | electromagnetic-science-pack 2 | total 2 | hand 16",
+    "inserter:5 | accumulator 8/11 | total 8/11 | needed 8/11 | hand 16",
+    "inserter:7 | supercapacitor 8/11 | total 8/11 | needed 8/11 | hand 16",
+    "inserter:11 | superconductor 128/121, holmium-plate 128/121 | total 256/121 | needed 256/121 | hand 16",
+    "inserter:12 | battery 64/121 | total 64/121 | needed 64/121 | hand 16",
+    "inserter:10 | processing-unit 256/605 | total 256/605 | needed 256/605 | hand 16",
+    "inserter:6 | supercapacitor 8/11 | total 8/11 | needed 8/11 | hand 16",
+    "inserter:8 | accumulator 8/11 | total 8/11 | needed 8/11 | hand 16"
+  ],
+  "swings 3": [
+    "inserter:4 | electromagnetic-science-pack 3 | total 3 | hand 16",
+    "inserter:3 | electromagnetic-science-pack 3 | total 3 | hand 16",
+    "inserter:5 | accumulator 12/11 | total 12/11 | needed 12/11 | hand 16",
+    "inserter:7 | supercapacitor 12/11 | total 12/11 | needed 12/11 | hand 16",
+    "inserter:11 | superconductor 192/121, holmium-plate 192/121 | total 384/121 | needed 384/121 | hand 16",
+    "inserter:12 | battery 96/121 | total 96/121 | needed 96/121 | hand 16",
+    "inserter:10 | processing-unit 384/605 | total 384/605 | needed 384/605 | hand 16",
+    "inserter:6 | supercapacitor 12/11 | total 12/11 | needed 12/11 | hand 16",
+    "inserter:8 | accumulator 12/11 | total 12/11 | needed 12/11 | hand 16"
+  ],
+  "swings 7/3": [
+    "inserter:4 | electromagnetic-science-pack 7/3 | total 7/3 | hand 16",
+    "inserter:3 | electromagnetic-science-pack 7/3 | total 7/3 | hand 16",
+    "inserter:5 | accumulator 28/33 | total 28/33 | needed 28/33 | hand 16",
+    "inserter:7 | supercapacitor 28/33 | total 28/33 | needed 28/33 | hand 16",
+    "inserter:11 | superconductor 448/363, holmium-plate 448/363 | total 896/363 | needed 896/363 | hand 16",
+    "inserter:12 | battery 224/363 | total 224/363 | needed 224/363 | hand 16",
+    "inserter:10 | processing-unit 896/1815 | total 896/1815 | needed 896/1815 | hand 16",
+    "inserter:6 | supercapacitor 28/33 | total 28/33 | needed 28/33 | hand 16",
+    "inserter:8 | accumulator 28/33 | total 28/33 | needed 28/33 | hand 16"
+  ],
+  "swings 5/2": [
+    "inserter:4 | electromagnetic-science-pack 5/2 | total 5/2 | hand 16",
+    "inserter:3 | electromagnetic-science-pack 5/2 | total 5/2 | hand 16",
+    "inserter:5 | accumulator 10/11 | total 10/11 | needed 10/11 | hand 16",
+    "inserter:7 | supercapacitor 10/11 | total 10/11 | needed 10/11 | hand 16",
+    "inserter:11 | superconductor 160/121, holmium-plate 160/121 | total 320/121 | needed 320/121 | hand 16",
+    "inserter:12 | battery 80/121 | total 80/121 | needed 80/121 | hand 16",
+    "inserter:10 | processing-unit 64/121 | total 64/121 | needed 64/121 | hand 16",
+    "inserter:6 | supercapacitor 10/11 | total 10/11 | needed 10/11 | hand 16",
+    "inserter:8 | accumulator 10/11 | total 10/11 | needed 10/11 | hand 16"
+  ]
+}
