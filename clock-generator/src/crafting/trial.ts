@@ -10,7 +10,7 @@ import { Logger, defaultLogger } from "../common/logger";
 import { StockDetail, StockRecording } from "./machine-stock";
 import { WakeUps, wakeUpsOfStock } from "./wake-ups";
 import { InserterCounters, inserterEnds, wakeUpsAndCountersOfStock } from "./inserter-counters";
-import { judgeLongRun, judgeProvenCycle, LONG_RUN_SETTLE_SHARE, longRunPeriods } from "./long-run";
+import { judgeCounterSpan, judgeLongRun, judgeProvenCycle, LONG_RUN_SETTLE_SHARE, longRunPeriods } from "./long-run";
 import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, ExcessLoss, LATE_AFTER_PERIODS, LossOutcome, lossLimitOf, MAX_RECOVERY_PERIODS, reportOf, verdictOf } from "./backpressure-loss";
 import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForPeriod, withBeltPickupSlack } from "./clock";
 import { canonicalKey, currentRunMemo } from "./plan/run-memo";
@@ -227,6 +227,34 @@ export function runClockOnBuild(
     // a clock of whole ticks is counted by its own period, also where the plan's is not whole (a clock rounded down)
     return trialRunOf(runBuild(buildAsBuiltConfig(config, windows, period, fuel_clocks, run_options.decider_order, main_clock_shift),
         { logger: quietLogger(logger), cold_start: !named_start, ...(Number.isInteger(period) && { period_ticks: period }), ...run_options }));
+}
+
+/** First checks measure the whole counter the exported blueprint actually repeats, without restarting its clock. */
+function firstClockSpan(
+    config: Config, windows: Map<string, OpenRange[]>, period: number, logger: Logger, options: ClockTrialOptions = {},
+): TrialRun {
+    const repeat = subtickClockForPeriod(period);
+    if (repeat === null) return runClockOnBuild(config, windows, period, logger, options);
+    assert(repeat.period_ticks < MAX_SIMULATION_TICKS, `Physical counter observation of ${repeat.period_ticks} ticks exceeds the simulation limit`);
+    const run = runClockOnBuild(config, windows, period, logger,
+        { ...options, simulate_periods: repeat.scale, observation_ticks: repeat.period_ticks, machine_stock: true, stock_detail: "hands" });
+    const measured = run.stability_check.actual_output_items;
+    const judged = judgeCounterSpan(measured, run.stability_check.expected_output_items, repeat, LCM_STABILITY_TOLERANCE);
+    const registry = createEntityRegistryFromConfig(config), target = targetItemOf(config.target_output);
+    const output_ids = new Set(targetMachinesOf(target, registry)
+        .flatMap(machine => targetInsertersOf(machine, target, registry).map(inserter => inserter.entity_id.id)));
+    const stock = run.machine_stock!;
+    const shortfalls = exportShortfallsOfRun(exportedItemsOf(registry, output_ids),
+        new Map(stock.inserters.map(inserter => [inserter.inserter_id, inserter.held])),
+        { first_tick: 0, bin_ticks: repeat.period_ticks, ticks: stock.ticks, count: 1, proven: false });
+    // This is an observed physical-counter span. Recurrence remains the independent long-run check's judgment.
+    const { repeat_periods: _periods, repeat_output_items: _items, export_shortfalls: _shortfalls, ...measurement } = run.stability_check;
+    return { ...run, stability_check: { ...measurement,
+        holds: judged.holds && shortfalls.length === 0,
+        actual_output_items: judged.output_items_per_period,
+        observation_span: judged.observation_span,
+        ...(shortfalls.length > 0 && { export_shortfalls: shortfalls }),
+    } };
 }
 
 /**
@@ -746,7 +774,7 @@ export interface ExhaustiveStartPhasesOutcome {
  * clocks) has to be within the stability tolerance of the expected output. States of different phases compare at
  * these crossings because every clock of the build stands at the same place there; with fuel clocks of their own
  * moduli they do not, so those builds resolve each phase by its own repeat alone. Null when the check does not
- * apply: a fractional period, or a build not on fixed clocks throughout, keeps the sampled check.
+ * apply: a period without a finite whole-tick counter, or a build not on fixed clocks throughout, keeps the sampled check.
  *
  * What stays sampled here: moving-lane phases (varied one pickup at a time elsewhere), and the competing-takers
  * order, which is the one the game was observed to use.
@@ -758,7 +786,8 @@ export function exhaustiveStartPhases(
     logger: Logger,
     report?: (checked: number, total: number) => void,
 ): ExhaustiveStartPhasesOutcome | null {
-    if (!Number.isInteger(period)) {
+    const counter_ticks = subtickClockForPeriod(period)?.period_ticks ?? period;
+    if (!Number.isInteger(counter_ticks)) {
         return null;
     }
     const as_built = buildAsBuiltConfig(config, decider_windows, period);
@@ -785,7 +814,7 @@ export function exhaustiveStartPhases(
         holds: true, phases_checked: 0, proven: true, unresolved_phases: 0, merged_phases: 0, ticks: 0,
     };
 
-    for (let offset = 0; offset < period && outcome.holds; offset++) {
+    for (let offset = 0; offset < counter_ticks && outcome.holds; offset++) {
         const rotated_config = offset === 0 ? as_built : buildAsBuiltConfig(config, decider_windows, period, undefined, "built", offset);
         const context = coldControlledTrialBuild(rotated_config, base.crafting_cycle_plan, base.recipe_lcm, {}, quiet);
         const output_states = context.inserters.map(it => it.inserter_state)
@@ -822,8 +851,9 @@ export function exhaustiveStartPhases(
                 // the run's own cycle: the bins from `earlier` repeat forever
                 const cycle = drops_at.slice(earlier + 1).concat(dropped()).map((drops, index, all) =>
                     drops - (index === 0 ? drops_at[earlier] : all[index - 1]));
-                run_holds = cycle.every(items => Math.abs(items - expected_per_bin) <= tolerance) && !exports_short(earlier, exported_drops(), true);
-                run_output = Math.round((dropped() - drops_at[earlier]) / (cycle.length * stride_periods));
+                run_holds = cycle.every(items => Math.abs(items - expected_per_bin) <= tolerance)
+                    && dropped() - drops_at[earlier] >= expected_per_bin * cycle.length && !exports_short(earlier, exported_drops(), true);
+                run_output = (dropped() - drops_at[earlier]) / (cycle.length * stride_periods);
                 break;
             }
             const orbit = can_merge ? orbit_of.get(key) : undefined;
@@ -835,8 +865,9 @@ export function exhaustiveStartPhases(
             if (crossing >= PHASE_PROOF_CAP_CROSSINGS) {
                 // unresolved: judged on its last bin, a sample as the shifted runs of the sampled check are
                 const last_bin = dropped() - drops_at[drops_at.length - 1];
-                run_holds = Math.abs(last_bin - expected_per_bin) <= tolerance && !exports_short(exports_at.length - 1, exported_drops(), false);
-                run_output = Math.round(last_bin / stride_periods);
+                run_holds = last_bin >= expected_per_bin && Math.abs(last_bin - expected_per_bin) <= tolerance
+                    && !exports_short(exports_at.length - 1, exported_drops(), false);
+                run_output = last_bin / stride_periods;
                 run_proven = false;
                 outcome.unresolved_phases++;
                 break;
@@ -855,7 +886,7 @@ export function exhaustiveStartPhases(
         outcome.ticks += now();
         outcome.phases_checked++;
         outcome.proven &&= run_proven;
-        report?.(outcome.phases_checked, period);
+        report?.(outcome.phases_checked, counter_ticks);
         if (run_holds === false) {
             outcome.holds = false;
             outcome.failed_start_offset = offset;
@@ -864,7 +895,7 @@ export function exhaustiveStartPhases(
             }
         }
     }
-    logger.log(`Exhaustive start phases: ${outcome.phases_checked} of ${period} checked, ${outcome.merged_phases} merged into earlier orbits, `
+    logger.log(`Exhaustive start phases: ${outcome.phases_checked} of ${counter_ticks} checked, ${outcome.merged_phases} merged into earlier orbits, `
         + `${outcome.unresolved_phases} unresolved, ${outcome.ticks} ticks${outcome.holds ? "" : `, failed at offset ${outcome.failed_start_offset}`}`);
     return outcome;
 }
@@ -932,9 +963,11 @@ export function runAsBuiltCheck(
 ): AsBuiltRun {
     // the drills into chests run on the windows made from their takers' in these windows, as the export gives them
     decider_windows = withChestDrillWindows(config, decider_windows, period);
-    const step = Math.max(1, Math.floor(period / start_phases));
-    const total = Math.min(start_phases, Math.floor((period - 1) / step) + 1);
-    const result = passed !== undefined ? passed.run.result : runClockOnBuild(config, decider_windows, period, logger);
+    const counter_ticks = subtickClockForPeriod(period)?.period_ticks ?? period;
+    const phases = counter_ticks !== period && start_phases === AS_BUILT_START_PHASES ? counter_ticks : start_phases;
+    const step = Math.max(1, Math.floor(counter_ticks / phases));
+    const total = Math.min(phases, Math.floor((counter_ticks - 1) / step) + 1);
+    const result = passed !== undefined ? passed.run.result : firstClockSpan(config, decider_windows, period, logger);
     const check: AsBuiltStabilityCheck = {
         holds: result.stability_check.holds,
         actual_output_items: result.stability_check.actual_output_items,
@@ -957,7 +990,7 @@ export function runAsBuiltCheck(
             check.pickup_phase_starts_checked = (check.pickup_phase_starts_checked ?? 0) + 1;
             continue;
         }
-        const shifted = runClockOnBuild(config, decider_windows, period, logger,
+        const shifted = firstClockSpan(config, decider_windows, period, logger,
             {moving_pickup_phases: phases, factorio_states: false, ...(pickup_phase_cycles && {backpressure_loss:
                 {loss: {kind: "none"}, period_ticks: period, expected_output_items: result.stability_check.expected_output_items}})});
         check.pickup_phase_starts_checked = (check.pickup_phase_starts_checked ?? 0) + 1;
@@ -1049,9 +1082,9 @@ export function runAsBuiltCheck(
             return { result, check, stock };
         }
     }
-    for (let offset = step; offset < period && check.start_phases_checked < start_phases; offset += step) {
+    for (let offset = step; offset < counter_ticks && check.start_phases_checked < phases; offset += step) {
         // only its output count is read
-        const shifted = runClockOnBuild(config, decider_windows, period, logger, { factorio_states: false, main_clock_shift: offset });
+        const shifted = firstClockSpan(config, decider_windows, period, logger, { factorio_states: false, main_clock_shift: offset });
         check.start_phases_checked++;
         report?.(check.start_phases_checked, total);
         if (!shifted.stability_check.holds) {
@@ -1102,7 +1135,7 @@ function heldUnderOtherTakerOrders(
     check.competing_takers = competingTakersOf(config);
     for (const order of orders) {
         check.taker_orders_checked++;
-        const run = runClockOnBuild(config, decider_windows, period, logger, { factorio_states: false, competing_takers_order: order });
+        const run = firstClockSpan(config, decider_windows, period, logger, { factorio_states: false, competing_takers_order: order });
         let failed: { actual_output_items: number; full_output_chests?: FullOutputChest[]; export_shortfalls?: ExportShortfall[];
             repeat_periods?: number; repeat_output_items?: number } | null = run.stability_check.holds ? null : run.stability_check;
         if (failed === null && long_run_ticks > 0) {

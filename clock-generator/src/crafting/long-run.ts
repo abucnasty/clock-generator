@@ -15,6 +15,16 @@ export interface PeriodRepeat {
     scale: number;
 }
 
+/** A first observation covers a complete exported counter; per-period tolerance never excuses missing total output. */
+export function judgeCounterSpan(output_items: number, expected_per_period: number, repeat: PeriodRepeat, tolerance_per_period: number) {
+    const expected = expected_per_period * repeat.scale;
+    return {
+        holds: output_items >= expected && Math.abs(output_items - expected) <= tolerance_per_period * repeat.scale,
+        output_items_per_period: output_items / repeat.scale,
+        observation_span: { ticks: repeat.period_ticks, periods: repeat.scale, output_items },
+    };
+}
+
 /** The first 1/n of the long run carries its start-up and is not judged */
 export const LONG_RUN_SETTLE_SHARE = 3;
 /** The long run is lengthened up to this many ticks so the judged part holds one whole repeat of a fractional period */
