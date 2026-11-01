@@ -1599,9 +1599,11 @@ function settledFuelClocks(
         return keptFromThePlan(undefined);
     }
     const planned_view = fuelConsumptionView(config, windows, inserter_clocks, duration.ticks, logger, false);
-    if (planned_view === undefined || planned_view.ran_out_of_fuel) {
+    if (planned_view === undefined) {
         return keptFromThePlan(planned_view);
     }
+    // A starved pilot can still observe a faster burn than its plan allowed for. Propose clocks
+    // from that observation, then require the same complete validation as every measured clock.
     const limit_lasted = new Map(planned_view.fuel_levels.flatMap(levels => levels.limit_lasts_ticks === null
         ? []
         : [[levels.machine_id, levels.limit_lasts_ticks] as const]));
@@ -1638,7 +1640,9 @@ function settledFuelClocks(
     logger.log(`Fuel clocks: made from the measured burn (${Array.from(measured_clocks.values()).filter(it => it.kind === "fuel").map(it => `${it.inserter_id} every ${it.modulus}`).join(", ")})`);
     return {
         inserter_clocks: measured_clocks,
-        fuel_plan: fuelPlan(simulation_context.entity_registry, measured_clocks, crafting_shares, duration.ticks, limit_lasted),
+        fuel_plan: fuelPlan(simulation_context.entity_registry, measured_clocks, crafting_shares, duration.ticks,
+            new Map(measured_view.fuel_levels.flatMap(levels => levels.limit_lasts_ticks === null
+                ? [] : [[levels.machine_id, levels.limit_lasts_ticks] as const]))),
         fuel_consumption_view: measured_view,
     };
 }

@@ -1,3 +1,4 @@
+import { HandNotifications } from "./hand-notifications";
 import { ItemName } from "../../data";
 import type { InserterState } from "../../state/inserter-state";
 import type { ContainerStorage } from "./container-storage";
@@ -15,6 +16,7 @@ export class ContainerHandDrop implements HandDropPort {
         private readonly scratch: HandScratch,
         private readonly items: CarriedItems,
         private readonly sink: ContainerStorage,
+        private readonly notifications: HandNotifications = new HandNotifications(),
     ) { }
 
     public enter(): void {
@@ -33,7 +35,7 @@ export class ContainerHandDrop implements HandDropPort {
             const amount = this.sink.accepts(held.item_name, held.quantity, DropBy.HAND);
             if (amount > 0) {
                 this.sink.insert(held.item_name, amount);
-                dropFromHand(state, this.scratch, amount);
+                dropFromHand(state, this.scratch, amount, this.notifications);
             }
         }
         this.scratch.drop_ticks += 1;

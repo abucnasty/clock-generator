@@ -232,5 +232,6 @@ export class Crafting implements EnergyUser, YieldUser {
         for (let index = 0; index < takes.length; index++) {
             takes[index].inventory.removeQuantity(takes[index].item_name, takes[index].amount_per_craft);
         }
+        this.yield.notifications.ingredientsConsumed();
     }
 }

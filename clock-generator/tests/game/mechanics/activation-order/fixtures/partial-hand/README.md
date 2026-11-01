@@ -20,3 +20,20 @@ false, while equality after the declared installation-origin subtraction is true
 Transfers in actual tick k appear in visible row k+1. The complete visible rows and initial inventory/topology remain.
 SHA256SUMS seals the fixture and scaffold. Replay supplies observed notification/outcome data to the scheduler;
 it is not a hand-physics prediction or a whole-factory cure.
+
+
+## Derived source and hand outcomes
+
+`src/simulation/inserter-scheduling-native.test.ts` also runs the production machine/hand notification components.
+Source stock0/8/16 establishes carry through real setup pickups; a real plate/progress intervention makes2cable at8,
+and a separately labelled live insertion adds8at14. No native membership or activation outcome is supplied. The
+component matches all24visible rows and each hand's Alarm/Activation/direct-Deactivation/Update sequence. The sink's
+single-item capacity is4800, equivalent to the measured empty48-slot chest for this cable-only, non-full interval.
+
+This comparison deliberately does not force global cross-cell traversal order: native craft and direct insertion
+visit these independent cells in opposite orders. Registration order is a simulator scenario, not a universal native
+list policy. It also does not infer a condition-write rule from this disconnected/effectively enabled baseline.
+
+Default World dispatch remains unchanged. A broader active-World trial passed this fixture but contradicted existing
+native cold-start belt calibrations, so it was isolated and stopped without changing those assertions. These source
+hooks and derived outcomes are an integration prerequisite, not a full agricultural/three-copy or timing fix.
