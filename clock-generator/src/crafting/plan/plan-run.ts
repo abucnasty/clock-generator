@@ -593,7 +593,7 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
         fuel_levels: simulated.fuel_levels,
         machine_stock: simulated.machine_stock,
         // the warm-up counts in full where it stopped at a repeating state: the recording is of the period after it
-        timeline_recording: options.timeline_recording?.settle_periods !== undefined && simulated.timeline_recording
+        timeline_recording: (options.timeline_recording?.settle_periods !== undefined || options.timeline_recording?.settle_ticks !== undefined) && simulated.timeline_recording
             ? { ...simulated.timeline_recording, ticks_before_recording: warmup_period.ticks } : simulated.timeline_recording,
         stability_check: output.stability_check,
         total_expected_output: output.total_expected_output,
@@ -878,10 +878,15 @@ function runPeriodsOf(crafting_cycle_plan: CraftingCyclePlan, recipe_lcm: number
     const requested_warmup_periods = Math.max(options.warmup_periods ?? 10, options.timeline_recording?.settle_periods ?? 0);
     // long periods (large ingredient LCMs) get fewer warmup periods to stay under the tick budget
     const warmup_periods = Math.min(requested_warmup_periods, Math.floor((MAX_SIMULATION_TICKS - 1) / duration.ticks));
-    if (warmup_periods < requested_warmup_periods) {
+    const exact_ticks = options.timeline_recording?.settle_ticks;
+    if (exact_ticks === undefined && warmup_periods < requested_warmup_periods) {
         logger.log(`Warm up shortened to ${warmup_periods} periods to stay under ${MAX_SIMULATION_TICKS} ticks`);
     }
-    const warmup_period: Duration = Duration.ofTicks(duration.ticks * warmup_periods);
+    assert(exact_ticks === undefined || (Number.isInteger(exact_ticks) && exact_ticks >= 0), "The exact timeline start must be a nonnegative whole tick");
+    assert(exact_ticks === undefined || exact_ticks <= duration.ticks * Math.floor((MAX_SIMULATION_TICKS - 1) / duration.ticks),
+        "The exact timeline start exceeds the warm-up tick budget");
+    const warmup_period: Duration = Duration.ofTicks(exact_ticks === undefined ? duration.ticks * warmup_periods
+        : exact_ticks);
 
     logger.log(`Base Cycle Ticks: ${crafting_cycle_plan.total_duration.ticks}`);
     logger.log(`Warm up period: ${warmup_period.ticks} ticks`);

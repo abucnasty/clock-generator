@@ -32,6 +32,16 @@ it('asks the clock replay for the period the long run first judges, and no other
     expect(timelineRequestFor(config, { ...settled, asBuilt: null }, 'clock')).not.toHaveProperty('settle_periods');
     expect(timelineRequestFor(config, clock, 'clock')).not.toHaveProperty('settle_periods');
 });
+it('uses the measured clock origin rather than the judged stock index when both are available', () => {
+    const measured = { ...clock, simulationDurationTicks: 24,
+        asBuilt: { first_judged_tick: 960, clock_tick_at_first_judged: 1200 } } as ClockAlternativeView;
+    expect(timelineRequestFor(config, measured, 'clock')?.settle_ticks).toBe(1200);
+    expect(timelineRequestFor(config, measured, 'plan')).not.toHaveProperty('settle_periods');
+    expect(timelineRequestFor(config, measured, 'plan')).not.toHaveProperty('settle_ticks');
+    expect(timelineRequestFor(config, { ...measured, asBuilt: { clock_tick_at_first_judged: 1201 } } as ClockAlternativeView, 'clock')?.settle_ticks).toBe(1201);
+    expect(settledPeriodLabel(timelineRequestFor(config, measured, 'clock'), { mode: 'clock', ticks_before_recording: 1200 }))
+        .toBe('Period from tick 1200, after the build has settled');
+});
 it('says which period a settled replay shows, and says nothing of the first one', () => {
     const request = timelineRequestFor(config, { ...clock, simulationDurationTicks: 24, asBuilt: { first_judged_tick: 960 } } as ClockAlternativeView, 'clock');
     expect(settledPeriodLabel(request, { mode: 'clock', ticks_before_recording: 960 })).toBe('Period from tick 960, after the build has settled');

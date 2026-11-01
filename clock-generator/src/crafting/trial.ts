@@ -159,6 +159,8 @@ export interface AsBuiltStabilityCheck {
      * set with `wake_ups`, where the check made a long run.
      */
     first_judged_tick?: number;
+    /** Clock ticks since the cold clock start, including the actual warm-up, at that judged stock index. */
+    clock_tick_at_first_judged?: number;
     /** Clock periods in the repeating cycle the proven long run was judged on */
     long_run_cycle_periods?: number;
     /**
@@ -384,6 +386,7 @@ function longRunOfFreeRunningBuild(
     cycle_periods: number | null;
     /** Tick of the run the first judged bin starts at, for judging the same window the verdict is of */
     first_judged_tick: number;
+    clock_tick_at_first_judged: number;
     /** The chests the output goes into that nothing empties and that were full where the run ended */
     full_output_chests: FullOutputChest[] | undefined;
     /** The export belts that received less than their consumers take over the judged part; undefined when none did */
@@ -449,6 +452,7 @@ function longRunOfFreeRunningBuild(
         proven,
         cycle_periods: run.state_repeat === undefined ? null : run.state_repeat.cycle_bins * run.state_repeat.periods_per_bin,
         first_judged_tick: verdict.first_judged_tick,
+        clock_tick_at_first_judged: run.clock_tick_at_start + verdict.first_judged_tick,
         full_output_chests: run.stability_check.full_output_chests,
         export_shortfalls: export_shortfalls.length > 0 ? export_shortfalls : undefined,
     };
@@ -989,6 +993,7 @@ export function runAsBuiltCheck(
                 check.counters = passed.run.check.counters;
                 check.long_run_proven = passed.run.check.long_run_proven;
                 check.first_judged_tick = passed.run.check.first_judged_tick;
+                check.clock_tick_at_first_judged = passed.run.check.clock_tick_at_first_judged;
                 check.long_run_cycle_periods = passed.run.check.long_run_cycle_periods;
             }
         } else {
@@ -1003,6 +1008,7 @@ export function runAsBuiltCheck(
                 check.counters = counted.counters;
                 check.long_run_proven = long_run.proven;
                 check.first_judged_tick = long_run.first_judged_tick;
+                check.clock_tick_at_first_judged = long_run.clock_tick_at_first_judged;
                 if (long_run.results_taken !== undefined) {
                     check.results_taken = long_run.results_taken;
                 }
@@ -1043,6 +1049,7 @@ export function runAsBuiltCheck(
                 check.holds = false;
                 check.failed_start_offset = exhaustive.failed_start_offset;
                 if (exhaustive.failed_output_items !== undefined) {
+                    clearJudgedClock(check);
                     check.actual_output_items = exhaustive.failed_output_items;
                 }
             }
@@ -1056,6 +1063,7 @@ export function runAsBuiltCheck(
         report?.(check.start_phases_checked, total);
         if (!shifted.stability_check.holds) {
             check.holds = false;
+            clearJudgedClock(check);
             check.actual_output_items = shifted.stability_check.actual_output_items;
             check.failed_start_offset = offset;
             if (shifted.stability_check.full_output_chests !== undefined) {
@@ -1070,6 +1078,14 @@ export function runAsBuiltCheck(
         }
     }
     return { result, check, stock };
+}
+
+/** A quantity from another failing run cannot name the successful unshifted run's replay/proof. */
+function clearJudgedClock(check: AsBuiltStabilityCheck): void {
+    delete check.first_judged_tick;
+    delete check.clock_tick_at_first_judged;
+    delete check.long_run_proven;
+    delete check.long_run_cycle_periods;
 }
 
 /**
@@ -1115,6 +1131,7 @@ function heldUnderOtherTakerOrders(
             logger.log(`Competing takers served ${takerOrderName(order)}: the clock moves ${failed.actual_output_items} of ${expected_output_items}`);
             check.holds = false;
             check.failed_taker_order = takerOrderName(order);
+            clearJudgedClock(check);
             check.actual_output_items = failed.actual_output_items;
             check.repeat_periods = failed.repeat_periods;
             check.repeat_output_items = failed.repeat_output_items;
