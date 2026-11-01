@@ -51,8 +51,10 @@ its main product's exact rate), the machines' rates at the target (`yield`, `pro
 (`storage.never_refuses`). The lane check reads what a
 lane carries off the Lane traits of the belt it checks, and the belt pickup slack and the room for a hand of fuel count
 a hand as the timing floor does, one belt stack a tick, each with the hand it reads (the nominal one and the hand of the
-fuel). The cycle plan (`swing-counts.ts`) reads the same figures off the entities, which build them with the trait
-functions: it runs on a registry, and the amounts a craft it divides by are exact fractions there, decimals in the traits.
+fuel). The cycle plan's transfers are the balance equations over the facts and the graph (`planner/balance.ts`): what a
+craft takes and makes of each item (`production.inputs`, the exact `yield.results[].per_craft`), the hands of the edges,
+the fuel by edge and the lanes' exports. The target's own edges, which seed it, are found on the registry made from the
+same config (`sequence/cycle/cycle-transfers.ts`).
 
 Two traits of the catalogue are not in the facts: the inserter order (its decider build order is the clock's, not the
 config's) and the wake-up rule of a node (read by the wake-up count only). Neither the graph nor the feasibility pass

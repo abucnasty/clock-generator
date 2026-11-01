@@ -50,6 +50,8 @@ export interface YieldFacts {
         readonly extra_count_fraction: number;
         readonly ignored_by_productivity: number;
         readonly expected_per_craft: number;
+        /** `expected_per_craft` as the exact fraction it is made as */
+        readonly per_craft: FactsRatio;
         readonly per_second: FactsRatio;
         readonly main: boolean;
         readonly stochastic: boolean;

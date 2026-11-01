@@ -40,9 +40,9 @@ describe("the result windows' decision of a target that counts an item destroyed
             const config = await sampleOf(key);
             const registry = createEntityRegistryFromConfig(config);
             const target = TargetProductionRate.fromConfig(config.target_output);
-            const decision = resultWindowsDecisionOf(target, registry, config.overrides ?? {});
-            const given = CraftingCyclePlan.create(target, registry, fraction(1), config.overrides ?? {}, decision);
-            const made = CraftingCyclePlan.create(target, registry, fraction(1), config.overrides ?? {});
+            const decision = resultWindowsDecisionOf(target, registry, config, config.overrides ?? {});
+            const given = CraftingCyclePlan.create(target, registry, config, fraction(1), config.overrides ?? {}, decision);
+            const made = CraftingCyclePlan.create(target, registry, config, fraction(1), config.overrides ?? {});
             expect(given).toEqual(made);
         }
     });

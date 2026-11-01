@@ -89,7 +89,7 @@ describe("count-only secondary planning provenance", () => {
         const registry = createEntityRegistryFromConfig(config);
         const target = TargetProductionRate.fromConfig(config.target_output);
         const actualResult = (count: number, legacyAggregate: number, lcm: number): BlueprintGenerationResult => {
-            const plan = CraftingCyclePlan.create(target, registry, fraction(count), config.overrides ?? {});
+            const plan = CraftingCyclePlan.create(target, registry, config, fraction(count), config.overrides ?? {});
             return { ...base, crafting_cycle_plan: plan, used_terminal_swing_count: legacyAggregate, used_lcm: lcm,
                 primitive_grouped: undefined, secondary_planning: undefined };
         };

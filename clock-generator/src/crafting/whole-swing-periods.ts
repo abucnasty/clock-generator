@@ -24,7 +24,7 @@ export function* wholeSwingPeriodsBelow(
     const registry = createEntityRegistryFromConfig(config);
     const target = TargetProductionRate.fromConfig(config.target_output);
     for (let count = snapshot.terminal_swing_count - 1; count >= 1; count--) {
-        const plan = CraftingCyclePlan.create(target, registry, fraction(count), { ...config.overrides, terminal_swing_count: count });
+        const plan = CraftingCyclePlan.create(target, registry, config, fraction(count), { ...config.overrides, terminal_swing_count: count });
         const computed_lcm = EntityTransferCountMap.lcm(plan.entity_transfer_map, config.overrides?.ignored_lcm_ingredients);
         const effective_lcm = config.overrides?.lcm ?? computed_lcm;
         const period_ticks = CraftingCyclePlan.ticksOfCycles(plan, effective_lcm);

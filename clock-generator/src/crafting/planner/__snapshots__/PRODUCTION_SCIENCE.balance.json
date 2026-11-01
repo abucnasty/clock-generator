@@ -1,0 +1,48 @@
+{
+  "sample": "PRODUCTION_SCIENCE",
+  "swings 1": [
+    "inserter:1 | production-science-pack 1 | total 1 | hand 16",
+    "inserter:2 | productivity-module 1/6 | total 1/6 | needed 1/6 | hand 16",
+    "inserter:3 | electric-furnace 1/6 | total 1/6 | needed 1/6 | hand 16",
+    "inserter:4 | rail 5 | total 5 | needed 5 | hand 16",
+    "inserter:5 | steel-plate 5/2 | total 5/2 | needed 5/2 | hand 16",
+    "inserter:6 | iron-stick 5/2 | total 5/2 | needed 5/2 | hand 16",
+    "drill:1 | stone 5/2 | total 5/2 | needed 5/2 | hand 16"
+  ],
+  "swings 2": [
+    "inserter:1 | production-science-pack 2 | total 2 | hand 16",
+    "inserter:2 | productivity-module 1/3 | total 1/3 | needed 1/3 | hand 16",
+    "inserter:3 | electric-furnace 1/3 | total 1/3 | needed 1/3 | hand 16",
+    "inserter:4 | rail 10 | total 10 | needed 10 | hand 16",
+    "inserter:5 | steel-plate 5 | total 5 | needed 5 | hand 16",
+    "inserter:6 | iron-stick 5 | total 5 | needed 5 | hand 16",
+    "drill:1 | stone 5 | total 5 | needed 5 | hand 16"
+  ],
+  "swings 3": [
+    "inserter:1 | production-science-pack 3 | total 3 | hand 16",
+    "inserter:2 | productivity-module 1/2 | total 1/2 | needed 1/2 | hand 16",
+    "inserter:3 | electric-furnace 1/2 | total 1/2 | needed 1/2 | hand 16",
+    "inserter:4 | rail 15 | total 15 | needed 15 | hand 16",
+    "inserter:5 | steel-plate 15/2 | total 15/2 | needed 15/2 | hand 16",
+    "inserter:6 | iron-stick 15/2 | total 15/2 | needed 15/2 | hand 16",
+    "drill:1 | stone 15/2 | total 15/2 | needed 15/2 | hand 16"
+  ],
+  "swings 7/3": [
+    "inserter:1 | production-science-pack 7/3 | total 7/3 | hand 16",
+    "inserter:2 | productivity-module 7/18 | total 7/18 | needed 7/18 | hand 16",
+    "inserter:3 | electric-furnace 7/18 | total 7/18 | needed 7/18 | hand 16",
+    "inserter:4 | rail 35/3 | total 35/3 | needed 35/3 | hand 16",
+    "inserter:5 | steel-plate 35/6 | total 35/6 | needed 35/6 | hand 16",
+    "inserter:6 | iron-stick 35/6 | total 35/6 | needed 35/6 | hand 16",
+    "drill:1 | stone 35/6 | total 35/6 | needed 35/6 | hand 16"
+  ],
+  "swings 5/2": [
+    "inserter:1 | production-science-pack 5/2 | total 5/2 | hand 16",
+    "inserter:2 | productivity-module 5/12 | total 5/12 | needed 5/12 | hand 16",
+    "inserter:3 | electric-furnace 5/12 | total 5/12 | needed 5/12 | hand 16",
+    "inserter:4 | rail 25/2 | total 25/2 | needed 25/2 | hand 16",
+    "inserter:5 | steel-plate 25/4 | total 25/4 | needed 25/4 | hand 16",
+    "inserter:6 | iron-stick 25/4 | total 25/4 | needed 25/4 | hand 16",
+    "drill:1 | stone 25/4 | total 25/4 | needed 25/4 | hand 16"
+  ]
+}

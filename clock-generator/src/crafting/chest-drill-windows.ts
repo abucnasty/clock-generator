@@ -160,7 +160,7 @@ function chestDrillsOf(config: Config): ChestDrillConfig[] {
  */
 function takerRates(config: Config, registry: ReadableEntityRegistry): Map<string, Map<string, Fraction>> {
     const rates = new Map<string, Map<string, Fraction>>();
-    const cycle = CraftingCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), registry, fraction(1), config.overrides);
+    const cycle = CraftingCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), registry, config, fraction(1), config.overrides);
     for (const transfer of cycle.entity_transfer_map.values()) {
         if (!Entity.isInserter(transfer.entity)) {
             continue;

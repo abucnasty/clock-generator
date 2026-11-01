@@ -1,0 +1,23 @@
+{
+  "sample": "STONE_BRICKS_DIRECT_INSERT_2_1",
+  "swings 1": [
+    "inserter:1 | stone-brick 1 | total 1 | hand 16",
+    "drill:1 | stone 4/3 | total 4/3 | needed 4/3 | hand 16"
+  ],
+  "swings 2": [
+    "inserter:1 | stone-brick 2 | total 2 | hand 16",
+    "drill:1 | stone 8/3 | total 8/3 | needed 8/3 | hand 16"
+  ],
+  "swings 3": [
+    "inserter:1 | stone-brick 3 | total 3 | hand 16",
+    "drill:1 | stone 4 | total 4 | needed 4 | hand 16"
+  ],
+  "swings 7/3": [
+    "inserter:1 | stone-brick 7/3 | total 7/3 | hand 16",
+    "drill:1 | stone 28/9 | total 28/9 | needed 28/9 | hand 16"
+  ],
+  "swings 5/2": [
+    "inserter:1 | stone-brick 5/2 | total 5/2 | hand 16",
+    "drill:1 | stone 10/3 | total 10/3 | needed 10/3 | hand 16"
+  ]
+}

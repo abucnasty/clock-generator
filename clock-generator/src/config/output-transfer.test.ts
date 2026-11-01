@@ -6,7 +6,7 @@ import { createInserterCoverageValidator, validateInserterCoverage } from './ins
 import { FactorioDataService } from '../data';
 import { createEntityRegistryFromConfig } from '../crafting/sequence/simulation-context';
 import { CraftingCyclePlan } from '../crafting/sequence/cycle/crafting-cycle';
-import { EntityTransferCountMap } from '../crafting/sequence/cycle/swing-counts';
+import { madeTargetBalance } from '../crafting/sequence/cycle/cycle-transfers';
 import { TargetProductionRate } from '../crafting/target-production-rate';
 import { computeMachineTargetRates } from '../crafting/machine-target-rates';
 import { validateConfig } from '../crafting/plan/validate-config';
@@ -140,8 +140,8 @@ describe('physical representation and generation support', () => {
         expect(() => validateConfig(config)).toThrow(refusal);
         expect(() => planRun(config)).toThrow(refusal);
         const registry = createEntityRegistryFromConfig(config);
-        expect(() => CraftingCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), registry, fraction(1))).toThrow(refusal);
-        expect(() => EntityTransferCountMap.create(registry.getAll().filter(Entity.isMachine), registry, fraction(1), 16)).toThrow(refusal);
+        expect(() => CraftingCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), registry, config, fraction(1))).toThrow(refusal);
+        expect(() => madeTargetBalance(registry.getAll().filter(Entity.isMachine), registry, config, fraction(1), 16)).toThrow(refusal);
     });
     it('does not let an unrelated missing route hide a cardinality refusal', () => {
         const config = cell('processing-unit'); config.inserters[0].sink = { type: 'chest', id: 99 };

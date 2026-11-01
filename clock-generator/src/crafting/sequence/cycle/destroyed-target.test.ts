@@ -14,7 +14,7 @@ const FIXTURE = ConfigPaths.REAL_OWNER_ORE_VOIDER_EXACT_SPEED;
 
 async function planOf(edit: (config: Config) => Config = config => config): Promise<CraftingCyclePlan> {
     const config = edit(await loadConfigFromFile(FIXTURE));
-    return CraftingCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), createEntityRegistryFromConfig(config), fraction(1), config.overrides ?? {});
+    return CraftingCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), createEntityRegistryFromConfig(config), config, fraction(1), config.overrides ?? {});
 }
 
 describe("a target that counts an item destroyed", () => {
