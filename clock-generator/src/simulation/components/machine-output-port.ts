@@ -1,5 +1,6 @@
 import { ItemName } from "../../data";
 import { LiveQuantity, WritableInventoryState } from "../../state/inventory-state";
+import type { MachineNotifications } from "./machine-notifications";
 import type { PickupPort } from "./ports";
 
 /**
@@ -11,6 +12,7 @@ export class MachineOutputPort implements PickupPort {
 
     constructor(
         private readonly output: WritableInventoryState,
+        private readonly notifications?: MachineNotifications,
     ) { }
 
     public has(item: ItemName): boolean {
@@ -23,6 +25,13 @@ export class MachineOutputPort implements PickupPort {
 
     public take(item: ItemName, amount: number): void {
         this.output.removeQuantity(item, amount);
+        if (amount > 0) this.notifications?.outputRemoved();
+    }
+
+    /** A live insertion (as distinct from initial-stock hydration) notifies the source subscribers. */
+    public insert(item: ItemName, amount: number): void {
+        this.output.addQuantity(item, amount);
+        if (amount > 0) this.notifications?.outputInserted();
     }
 
     /** What the output holds of an item, read in a tick without a lookup: for a reader that binds it once at build */

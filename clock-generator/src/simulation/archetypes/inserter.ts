@@ -66,7 +66,7 @@ export class InserterArchetype {
             // `wait_for_full_hand`) swings what it holds (rule 18 at a machine that places its results itself)
             swings_part_hands: !waitsForFullHand(inserter_state.inserter.metadata.type, source_state),
             swing_ticks: inserter_state.inserter.animation.rotation.ticks,
-        });
+        }, ports.notifications);
         const wakes = new InserterWakes(inserter_state, control);
         return new InserterArchetype(inserter_state, sink_state, hand, control, wakes);
     }
@@ -94,6 +94,7 @@ export class InserterArchetype {
     public useControl(next: EnableControl): void {
         this.control.use(next);
         this.hand.resetForSwap();
+        this.hand.notifications.controlSwapped();
     }
 
     /**

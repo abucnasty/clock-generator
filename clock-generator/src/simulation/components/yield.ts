@@ -1,3 +1,4 @@
+import { MachineNotifications } from "./machine-notifications";
 import type { EntityId } from "../../entities/entity-id";
 import type { Machine } from "../../entities/machine/machine";
 import { amountIgnoredByProductivity, expectedAmount } from "../../entities/machine/recipe/recipe-metadata";
@@ -70,6 +71,8 @@ interface ResultStack {
  * of the extra eggs were kept; docs/burner-fuel.md).
  */
 export class Yield {
+    /** Live subscriptions belong to this Yield only; clones start with an unbound notification source. */
+    public readonly notifications = new MachineNotifications();
     /** The productivity bar: a full bar pays out at the start of the next tick or after a finished craft */
     public readonly bonusProgress: ProgressState = ProgressState.empty();
 
@@ -400,6 +403,7 @@ export class Yield {
         const kept = this.discards_overflow ? Math.min(amount, Math.max(0, this.output_stack_size - this.output_quantity.get())) : amount;
         if (kept > 0) {
             this.inventory.addQuantity(this.output_name, kept);
+            this.notifications.outputInserted();
         }
         user.countCrafted(amount);
         user.countPlacedInOutput(amount);
@@ -436,6 +440,7 @@ export class Yield {
             const whole = Math.floor(total + PROGRESS_EPSILON);
             if (whole > 0) {
                 this.inventory.addQuantity(by_product.item_name, whole);
+                this.notifications.outputInserted();
                 user.countPlacedInOutput(whole);
             }
             this.carry[by_product.carry_slot] = Math.max(0, total - whole);

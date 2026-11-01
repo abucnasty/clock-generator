@@ -1,3 +1,4 @@
+import { HandNotifications } from "./hand-notifications";
 import assert, { AssertionError } from "../../common/assert";
 import type { TickProvider } from "../current-tick-provider";
 import { reasonId } from "../../state/reason-table";
@@ -120,6 +121,10 @@ export interface HandPickupPort {
      * reason of the start goes into the scratch (`HandReason`, with what the source has of which item).
      */
     startsPickup(): boolean;
+    /** Explicit scheduler eligibility replaces the polling-only wake delay, without changing arm travel. */
+    useNotificationScheduling?(): void;
+    /** A source with inventory notifications can let an empty/partial waiting hand deactivate. */
+    waitsForItems?(): boolean;
 }
 
 /**
@@ -128,6 +133,8 @@ export interface HandPickupPort {
  * asks what kind of entity the sink is.
  */
 export interface HandDropPort {
+    /** Keep polling when mutations that change this port's readiness have no production notification hook. */
+    requiresReadinessPolling?(): boolean;
     /** The drop phase's enter step */
     enter(): void;
     /** The drop phase's step (the target-full phase's too): what the hand puts into the sink in this tick */
@@ -148,7 +155,7 @@ export interface HandDropPort {
  * A pickup into the hand: `quantity` more of what it holds, or a new hand of `item`; counted and traced as `item`. A
  * hand that holds items is filled in place; a new hand fills the record of the hand last emptied, where there is one.
  */
-export function takeIntoHand(state: InserterState, scratch: HandScratch, item: ItemName, quantity: number): void {
+export function takeIntoHand(state: InserterState, scratch: HandScratch, item: ItemName, quantity: number, notifications?: HandNotifications): void {
     const held = state.held_item;
     if (held !== null) {
         held.quantity += quantity;
@@ -166,13 +173,14 @@ export function takeIntoHand(state: InserterState, scratch: HandScratch, item: I
     state.items_picked_up += quantity;
     state.inventoryState.addQuantity(item, quantity);
     state.trace?.record({ type: "pickup", item, quantity });
+    if (quantity > 0) notifications?.transferred();
 }
 
 /**
  * Removes only what the hand holds, and clears the hand when its last items are dropped, keeping its record for the
  * next hand
  */
-export function dropFromHand(state: InserterState, scratch: HandScratch, amount: number): void {
+export function dropFromHand(state: InserterState, scratch: HandScratch, amount: number, notifications?: HandNotifications): void {
     const held = state.held_item;
     if (held === null) {
         throw new AssertionError(`${state.entity_id} Held item should not be null when dropping off`);
@@ -188,6 +196,7 @@ export function dropFromHand(state: InserterState, scratch: HandScratch, amount:
         state.held_item = null;
         scratch.spare_hand = held;
     }
+    if (actual_drop > 0) notifications?.transferred();
 }
 
 /**
@@ -312,6 +321,8 @@ export class Hand {
     private readonly sink_ingress: Ingress | null;
     private readonly from_belt: boolean;
     private readonly swing_ticks: number;
+    /** Bound once by the run scheduler, independent of circuit enable and physical hand phase. */
+    private notification_scheduling = false;
 
     constructor(
         private readonly state: InserterState,
@@ -324,12 +335,18 @@ export class Hand {
         private readonly control: Control,
         private readonly tick_provider: TickProvider,
         binding: HandBinding,
+        public readonly notifications: HandNotifications = new HandNotifications(),
     ) {
         this.sink_wakes = binding.sink_wakes;
         this.sink_ingress = binding.sink_ingress;
         this.from_belt = binding.from_belt;
         this.swings_part_hands = binding.swings_part_hands;
         this.swing_ticks = binding.swing_ticks;
+    }
+
+    public useNotificationScheduling(): void {
+        this.notification_scheduling = true;
+        this.pickup.useNotificationScheduling?.();
     }
 
     /** The phase's rule: the phase to change to, its reason in the scratch, or STAY */
@@ -356,6 +373,20 @@ export class Hand {
                 this.drop.drop();
                 return;
         }
+    }
+
+    /**
+     * Outcome of this Update, separate from the phase/control flags. Sources without notification
+     * coverage keep polling. A full hand must remain active to begin its swing on the next Update.
+     */
+    public sleepReason(): string | null {
+        if (this.phase === InserterPhase.SWING || this.phase === InserterPhase.DROP) return null;
+        if (this.phase === InserterPhase.TARGET_FULL) return "destination-full";
+        if (this.phase === InserterPhase.DISABLED) return "control-disabled";
+        const held = this.state.held_item;
+        if (held !== null && (held.quantity >= this.items.handSizeOf(held.item_name) || this.swings_part_hands)) return null;
+        if (!this.drop.acceptsHand() || (held !== null && !this.drop.takes(held.item_name))) return "destination-refused";
+        return this.pickup.waitsForItems?.() === true ? "source-empty" : null;
     }
 
     /**
@@ -594,6 +625,7 @@ export class Hand {
      * later.
      */
     private wokenThisTick(window_opens: boolean): boolean {
+        if (this.notification_scheduling) return false;
         const wakes = this.sink_wakes;
         const ingress = this.sink_ingress;
         if (wakes === null || ingress === null) {
