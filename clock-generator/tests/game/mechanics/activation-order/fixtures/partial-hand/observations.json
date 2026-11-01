@@ -1,0 +1,1346 @@
+{
+  "schema": "observed-game-behavior-1",
+  "case": "partial-hand",
+  "game_version": "2.1.21",
+  "initial": [
+    {
+      "cell": 1,
+      "hand": 58,
+      "source": 56,
+      "sink": 57,
+      "stock": 0,
+      "position": {
+        "y": 1.5,
+        "x": 387.5
+      },
+      "source_position": {
+        "y": -0.5,
+        "x": 387.5
+      },
+      "sink_position": {
+        "y": 2.5,
+        "x": 387.5
+      },
+      "stack_override": 16,
+      "quality": "legendary",
+      "source_recipe": "copper-cable",
+      "sink_type": "container",
+      "sink_slots": 48
+    },
+    {
+      "cell": 2,
+      "hand": 61,
+      "source": 59,
+      "sink": 60,
+      "stock": 8,
+      "position": {
+        "y": 1.5,
+        "x": 399.5
+      },
+      "source_position": {
+        "y": -0.5,
+        "x": 399.5
+      },
+      "sink_position": {
+        "y": 2.5,
+        "x": 399.5
+      },
+      "stack_override": 16,
+      "quality": "legendary",
+      "source_recipe": "copper-cable",
+      "sink_type": "container",
+      "sink_slots": 48
+    },
+    {
+      "cell": 3,
+      "hand": 64,
+      "source": 62,
+      "sink": 63,
+      "stock": 16,
+      "position": {
+        "y": 1.5,
+        "x": 411.5
+      },
+      "source_position": {
+        "y": -0.5,
+        "x": 411.5
+      },
+      "sink_position": {
+        "y": 2.5,
+        "x": 411.5
+      },
+      "stack_override": 16,
+      "quality": "legendary",
+      "source_recipe": "copper-cable",
+      "sink_type": "container",
+      "sink_slots": 48
+    }
+  ],
+  "initial_active_order": [
+    "hand_3"
+  ],
+  "initial_state_basis": "observed awake/asleep state before the first selected update",
+  "window": {
+    "first_tick": 1,
+    "last_tick": 20
+  },
+  "tick_conversion": "Actual tick k transfers appear in visible row k+1; interventions after visible k may precede the tick k update.",
+  "events": [
+    {
+      "event": "update",
+      "probe_tick": 1,
+      "order": 13,
+      "end_order": 14,
+      "role": "hand_3",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 2,
+      "order": 15,
+      "end_order": 16,
+      "role": "hand_3",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 3,
+      "order": 17,
+      "end_order": 18,
+      "role": "hand_3",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 4,
+      "order": 19,
+      "end_order": 22,
+      "role": "hand_3",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 4,
+      "order": 20,
+      "end_order": 21,
+      "role": "hand_3",
+      "cause": "source-output-change",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 5,
+      "order": 23,
+      "end_order": 24,
+      "role": "hand_3",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 6,
+      "order": 25,
+      "end_order": 26,
+      "role": "hand_3",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 7,
+      "order": 27,
+      "end_order": 28,
+      "role": "hand_3",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 8,
+      "order": 38,
+      "end_order": 43,
+      "role": "hand_3",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "sleep",
+      "probe_tick": 8,
+      "order": 40,
+      "end_order": 41,
+      "role": "hand_3",
+      "cause": "sleep-after-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 8,
+      "order": 45,
+      "end_order": 48,
+      "role": "hand_3",
+      "cause": "source-output-change",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "wake",
+      "probe_tick": 8,
+      "order": 47,
+      "end_order": 49,
+      "role": "hand_3",
+      "cause": "source-output-change",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 8,
+      "order": 53,
+      "end_order": 56,
+      "role": "hand_2",
+      "cause": "source-output-change",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "wake",
+      "probe_tick": 8,
+      "order": 55,
+      "end_order": 57,
+      "role": "hand_2",
+      "cause": "source-output-change",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 8,
+      "order": 61,
+      "end_order": 64,
+      "role": "hand_1",
+      "cause": "source-output-change",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "wake",
+      "probe_tick": 8,
+      "order": 63,
+      "end_order": 65,
+      "role": "hand_1",
+      "cause": "source-output-change",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 9,
+      "order": 68,
+      "end_order": 78,
+      "role": "hand_1",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 9,
+      "order": 72,
+      "end_order": 73,
+      "role": "hand_1",
+      "cause": "source-output-change",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "sleep",
+      "probe_tick": 9,
+      "order": 75,
+      "end_order": 76,
+      "role": "hand_1",
+      "cause": "sleep-after-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 9,
+      "order": 79,
+      "end_order": 89,
+      "role": "hand_2",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 9,
+      "order": 82,
+      "end_order": 83,
+      "role": "hand_2",
+      "cause": "source-output-change",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "sleep",
+      "probe_tick": 9,
+      "order": 86,
+      "end_order": 87,
+      "role": "hand_2",
+      "cause": "sleep-after-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 9,
+      "order": 90,
+      "end_order": 100,
+      "role": "hand_3",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 9,
+      "order": 94,
+      "end_order": 95,
+      "role": "hand_3",
+      "cause": "source-output-change",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "sleep",
+      "probe_tick": 9,
+      "order": 97,
+      "end_order": 98,
+      "role": "hand_3",
+      "cause": "sleep-after-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 14,
+      "order": 102,
+      "end_order": 105,
+      "role": "hand_1",
+      "cause": "source-output-change",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "wake",
+      "probe_tick": 14,
+      "order": 104,
+      "end_order": 106,
+      "role": "hand_1",
+      "cause": "source-output-change",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 14,
+      "order": 108,
+      "end_order": 111,
+      "role": "hand_2",
+      "cause": "source-output-change",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "wake",
+      "probe_tick": 14,
+      "order": 110,
+      "end_order": 112,
+      "role": "hand_2",
+      "cause": "source-output-change",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 14,
+      "order": 114,
+      "end_order": 117,
+      "role": "hand_3",
+      "cause": "source-output-change",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "wake",
+      "probe_tick": 14,
+      "order": 116,
+      "end_order": 118,
+      "role": "hand_3",
+      "cause": "source-output-change",
+      "before": {
+        "awake": false
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 14,
+      "order": 119,
+      "end_order": 129,
+      "role": "hand_3",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 14,
+      "order": 122,
+      "end_order": 123,
+      "role": "hand_3",
+      "cause": "source-output-change",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "sleep",
+      "probe_tick": 14,
+      "order": 126,
+      "end_order": 127,
+      "role": "hand_3",
+      "cause": "sleep-after-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 14,
+      "order": 130,
+      "end_order": 136,
+      "role": "hand_2",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 14,
+      "order": 133,
+      "end_order": 134,
+      "role": "hand_2",
+      "cause": "source-output-change",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 14,
+      "order": 137,
+      "end_order": 147,
+      "role": "hand_1",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 14,
+      "order": 140,
+      "end_order": 141,
+      "role": "hand_1",
+      "cause": "source-output-change",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "sleep",
+      "probe_tick": 14,
+      "order": 144,
+      "end_order": 145,
+      "role": "hand_1",
+      "cause": "sleep-after-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": false
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 15,
+      "order": 148,
+      "end_order": 149,
+      "role": "hand_2",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 16,
+      "order": 150,
+      "end_order": 151,
+      "role": "hand_2",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 17,
+      "order": 152,
+      "end_order": 153,
+      "role": "hand_2",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 18,
+      "order": 154,
+      "end_order": 157,
+      "role": "hand_2",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "alarm",
+      "probe_tick": 18,
+      "order": 155,
+      "end_order": 156,
+      "role": "hand_2",
+      "cause": "source-output-change",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 19,
+      "order": 158,
+      "end_order": 159,
+      "role": "hand_2",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    },
+    {
+      "event": "update",
+      "probe_tick": 20,
+      "order": 160,
+      "end_order": 161,
+      "role": "hand_2",
+      "cause": "scheduled-update",
+      "before": {
+        "awake": true
+      },
+      "after": {
+        "awake": true
+      },
+      "evidence": "observed"
+    }
+  ],
+  "visible": [
+    {
+      "tick": 1,
+      "hands": [
+        0,
+        8,
+        16
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        0,
+        0,
+        0
+      ],
+      "sink_cable": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "tick": 2,
+      "hands": [
+        0,
+        8,
+        16
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        0,
+        0,
+        0
+      ],
+      "sink_cable": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "tick": 3,
+      "hands": [
+        0,
+        8,
+        16
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        0,
+        0,
+        0
+      ],
+      "sink_cable": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "tick": 4,
+      "hands": [
+        0,
+        8,
+        16
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        0,
+        0,
+        0
+      ],
+      "sink_cable": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "tick": 5,
+      "hands": [
+        0,
+        8,
+        0
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        0,
+        0,
+        0
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 6,
+      "hands": [
+        0,
+        8,
+        0
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        0,
+        0,
+        0
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 7,
+      "hands": [
+        0,
+        8,
+        0
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        0,
+        0,
+        0
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 8,
+      "hands": [
+        0,
+        8,
+        0
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        0,
+        0,
+        0
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 9,
+      "hands": [
+        0,
+        8,
+        0
+      ],
+      "source_output": [
+        2,
+        2,
+        2
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 10,
+      "hands": [
+        2,
+        10,
+        2
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 11,
+      "hands": [
+        2,
+        10,
+        2
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 12,
+      "hands": [
+        2,
+        10,
+        2
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 13,
+      "hands": [
+        2,
+        10,
+        2
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 14,
+      "hands": [
+        2,
+        10,
+        2
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 15,
+      "hands": [
+        10,
+        16,
+        10
+      ],
+      "source_output": [
+        0,
+        2,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 16,
+      "hands": [
+        10,
+        16,
+        10
+      ],
+      "source_output": [
+        0,
+        2,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 17,
+      "hands": [
+        10,
+        16,
+        10
+      ],
+      "source_output": [
+        0,
+        2,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 18,
+      "hands": [
+        10,
+        16,
+        10
+      ],
+      "source_output": [
+        0,
+        2,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 19,
+      "hands": [
+        10,
+        0,
+        10
+      ],
+      "source_output": [
+        0,
+        2,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        16,
+        16
+      ]
+    },
+    {
+      "tick": 20,
+      "hands": [
+        10,
+        0,
+        10
+      ],
+      "source_output": [
+        0,
+        2,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        16,
+        16
+      ]
+    },
+    {
+      "tick": 21,
+      "hands": [
+        10,
+        0,
+        10
+      ],
+      "source_output": [
+        0,
+        2,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        16,
+        16
+      ]
+    },
+    {
+      "tick": 22,
+      "hands": [
+        10,
+        0,
+        10
+      ],
+      "source_output": [
+        0,
+        2,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        16,
+        16
+      ]
+    },
+    {
+      "tick": 23,
+      "hands": [
+        10,
+        2,
+        10
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        16,
+        16
+      ]
+    },
+    {
+      "tick": 24,
+      "hands": [
+        10,
+        2,
+        10
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        16,
+        16
+      ]
+    }
+  ],
+  "comparison": {
+    "visible_reference_equal": true,
+    "repeat_relative_visible_equal": true,
+    "repeat_events_equal": true,
+    "repeat_game_origin_difference_ticks": -1,
+    "repeat_absolute_visible_equal": false
+  },
+  "limits": [
+    "Notifications and observed wake/sleep outcomes are supplied to this replay, not derived from hand physics.",
+    "Condition assignment is not control replacement. Earlier delivered full hands do not establish full-carry behavior across disable.",
+    "Per-source role sequences do not establish one universal order for unrelated sources."
+  ]
+}

@@ -1,0 +1,402 @@
+{
+  "schema": "observed-game-behavior-1",
+  "case": "lds-diagnostic",
+  "game_version": "2.1.21",
+  "clock_scope": "diagnostic archived-cadence clock, not exact old archive",
+  "roles": {
+    "destination": {
+      "prepared_id": 1,
+      "prototype": "foundry",
+      "recipe": "casting-low-density-structure",
+      "recording_id": 1,
+      "type": "machine",
+      "unit_number": 302
+    },
+    "input": {
+      "prepared_id": 3,
+      "prototype": "stack-inserter",
+      "recording_id": 8,
+      "type": "inserter",
+      "unit_number": 326
+    },
+    "output": {
+      "prepared_id": 1,
+      "prototype": "stack-inserter",
+      "recording_id": 7,
+      "type": "inserter",
+      "unit_number": 324
+    },
+    "source": {
+      "prepared_id": 3,
+      "prototype": "cryogenic-plant",
+      "recipe": "plastic-bar",
+      "recording_id": 3,
+      "type": "machine",
+      "unit_number": 356
+    }
+  },
+  "game_tick_origin": 47696,
+  "projection": {
+    "first_tick": 5629,
+    "last_tick": 5630,
+    "initial_active_order": [],
+    "initial_state_basis": "first observed update order; other selected hands initially asleep",
+    "deactivation_policy": "apply inferred sleep only at its final asleep observation, without an exact sleep time"
+  },
+  "events": [
+    {
+      "id": 0,
+      "event": "alarm",
+      "role": "input",
+      "tick": 5629,
+      "game_tick": 53325,
+      "order": 18,
+      "cause": "ingredient-consumption",
+      "awake": false
+    },
+    {
+      "id": 1,
+      "event": "wake",
+      "role": "input",
+      "tick": 5629,
+      "game_tick": 53325,
+      "order": 20,
+      "cause": "ingredient-consumption",
+      "awake": false,
+      "stage": "begin"
+    },
+    {
+      "id": 2,
+      "event": "wake",
+      "role": "input",
+      "tick": 5629,
+      "game_tick": 53325,
+      "order": 21,
+      "cause": "unresolved",
+      "awake": true,
+      "stage": "end"
+    },
+    {
+      "id": 3,
+      "event": "alarm",
+      "role": "output",
+      "tick": 5629,
+      "game_tick": 53325,
+      "order": 22,
+      "cause": "control-dispatch",
+      "awake": false
+    },
+    {
+      "id": 4,
+      "event": "wake",
+      "role": "output",
+      "tick": 5629,
+      "game_tick": 53325,
+      "order": 24,
+      "cause": "control-dispatch",
+      "awake": false,
+      "stage": "begin"
+    },
+    {
+      "id": 5,
+      "event": "wake",
+      "role": "output",
+      "tick": 5629,
+      "game_tick": 53325,
+      "order": 25,
+      "cause": "unresolved",
+      "awake": true,
+      "stage": "end"
+    },
+    {
+      "id": 6,
+      "event": "update",
+      "role": "output",
+      "tick": 5630,
+      "game_tick": 53326,
+      "order": 1,
+      "cause": "scheduled-entity-update",
+      "awake": true
+    },
+    {
+      "id": 7,
+      "event": "alarm",
+      "role": "output",
+      "tick": 5630,
+      "game_tick": 53326,
+      "order": 2,
+      "cause": "transfer-notification",
+      "awake": true
+    },
+    {
+      "id": 8,
+      "event": "update",
+      "role": "input",
+      "tick": 5630,
+      "game_tick": 53326,
+      "order": 4,
+      "cause": "scheduled-entity-update",
+      "awake": true
+    },
+    {
+      "id": 9,
+      "event": "alarm",
+      "role": "input",
+      "tick": 5630,
+      "game_tick": 53326,
+      "order": 5,
+      "cause": "transfer-notification",
+      "awake": true
+    }
+  ],
+  "transitions": [
+    {
+      "event": "sleep",
+      "role": "input",
+      "evidence": "inferred-between-observations",
+      "from": {
+        "tick": 5627,
+        "order": 1,
+        "event": "update"
+      },
+      "through": {
+        "tick": 5629,
+        "order": 18,
+        "event": "alarm"
+      }
+    },
+    {
+      "event": "wake",
+      "role": "input",
+      "evidence": "observed",
+      "from": {
+        "tick": 5629,
+        "order": 18,
+        "event": "alarm"
+      },
+      "through": {
+        "tick": 5629,
+        "order": 21,
+        "event": "wake",
+        "stage": "end"
+      }
+    },
+    {
+      "event": "sleep",
+      "role": "output",
+      "evidence": "inferred-between-observations",
+      "from": {
+        "tick": 5626,
+        "order": 1,
+        "event": "update"
+      },
+      "through": {
+        "tick": 5629,
+        "order": 22,
+        "event": "alarm"
+      }
+    },
+    {
+      "event": "wake",
+      "role": "output",
+      "evidence": "observed",
+      "from": {
+        "tick": 5629,
+        "order": 22,
+        "event": "alarm"
+      },
+      "through": {
+        "tick": 5629,
+        "order": 25,
+        "event": "wake",
+        "stage": "end"
+      }
+    }
+  ],
+  "visible_rows": [
+    {
+      "entities": {
+        "destination": {
+          "bonus": 1,
+          "finished": 5809,
+          "input": {
+            "plastic-bar": 10
+          },
+          "output": {
+            "low-density-structure": 33
+          },
+          "progress": 0.766250000000002,
+          "status": "working"
+        },
+        "input": {
+          "hand": {
+            "x": 402.5,
+            "y": -1.5
+          },
+          "held": 0,
+          "status": "waiting_for_space_in_destination"
+        },
+        "output": {
+          "hand": {
+            "x": 400.5,
+            "y": -5.5
+          },
+          "held": 0,
+          "status": "disabled_by_control_behavior"
+        },
+        "source": {
+          "bonus": 0,
+          "finished": 14711,
+          "input": {
+            "coal": 114
+          },
+          "output": {
+            "plastic-bar": 99
+          },
+          "progress": 1,
+          "status": "full_output"
+        }
+      },
+      "tick": 5629
+    },
+    {
+      "entities": {
+        "destination": {
+          "bonus": 0.15750000000015774,
+          "finished": 5812,
+          "input": {
+            "plastic-bar": 5
+          },
+          "output": {
+            "low-density-structure": 36
+          },
+          "progress": 0.05250000000000206,
+          "status": "working"
+        },
+        "input": {
+          "hand": {
+            "x": 402.5,
+            "y": -1.5
+          },
+          "held": 0,
+          "status": "waiting_for_space_in_destination"
+        },
+        "output": {
+          "hand": {
+            "x": 400.5,
+            "y": -5.5
+          },
+          "held": 0,
+          "status": "waiting_for_source_items"
+        },
+        "source": {
+          "bonus": 1,
+          "finished": 14716,
+          "input": {
+            "coal": 112
+          },
+          "output": {
+            "plastic-bar": 93
+          },
+          "progress": 0.9583333333333333,
+          "status": "working"
+        }
+      },
+      "tick": 5630
+    },
+    {
+      "entities": {
+        "destination": {
+          "bonus": 1,
+          "finished": 5812,
+          "input": {
+            "plastic-bar": 5
+          },
+          "output": {
+            "low-density-structure": 20
+          },
+          "progress": 0.33875000000000205,
+          "status": "working"
+        },
+        "input": {
+          "hand": {
+            "x": 402.5,
+            "y": -1.5
+          },
+          "held": 15,
+          "status": "working"
+        },
+        "output": {
+          "hand": {
+            "x": 400.5,
+            "y": -5.5
+          },
+          "held": 16,
+          "status": "working"
+        },
+        "source": {
+          "bonus": 1,
+          "finished": 14724,
+          "input": {
+            "coal": 110
+          },
+          "output": {
+            "plastic-bar": 79
+          },
+          "progress": 0.9166666666666664,
+          "status": "working"
+        }
+      },
+      "tick": 5631
+    }
+  ],
+  "checks": [
+    {
+      "kind": "update_order",
+      "roles": [
+        "output",
+        "input"
+      ],
+      "tick": 5630
+    },
+    {
+      "field": [
+        "output",
+        "low-density-structure"
+      ],
+      "kind": "visible",
+      "role": "destination",
+      "tick": 5630,
+      "value": 36
+    },
+    {
+      "field": [
+        "output",
+        "low-density-structure"
+      ],
+      "kind": "visible",
+      "role": "destination",
+      "tick": 5631,
+      "value": 20
+    },
+    {
+      "field": [
+        "held"
+      ],
+      "kind": "visible",
+      "role": "input",
+      "tick": 5631,
+      "value": 15
+    }
+  ],
+  "comparison": {
+    "visible_reference_differences": 0,
+    "observed_ticks": 20
+  },
+  "limits": [
+    "Sleep intervals are inferred between observations; their exact time is unknown.",
+    "An alarm on an awake inserter need not wake it again or reorder it.",
+    "Awake/asleep observations are separate from arm position, visible status and circuit enable state.",
+    "This local replay supplies observed notifications and outcomes; it does not derive whole-factory physics or a universal ordering rule."
+  ]
+}
