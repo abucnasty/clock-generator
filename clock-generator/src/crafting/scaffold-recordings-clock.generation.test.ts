@@ -33,5 +33,14 @@ for (const [name, pin] of Object.entries(scaffoldClockPins)) {
         const selected = generated.alternatives[generated.selected_index];
         expect(clockHash(selected.result.subtick ?? selected.result), "the selected clock is not the one this build's recorded values belong to")
             .toBe(pin.clock_sha256);
+        // A moved native pin retains the exact previously recorded stable clock, rather than silently replacing it.
+        if (pin.previous) {
+            expect(pin.previous.why.trim()).not.toBe("");
+            const previous = generated.alternatives.find(it => it.id === pin.previous!.id)!;
+            expect(previous, "the previously recorded clock is still offered").toBeDefined();
+            expect(previous.verdict).toBe("stable");
+            expect(selected.verdict).toBe("stable");
+            expect(clockHash(previous.result.subtick ?? previous.result)).toBe(pin.previous.clock_sha256);
+        }
     });
 }
