@@ -1,0 +1,2827 @@
+{
+  "roles": {
+    "source": 73,
+    "sink": 74,
+    "hand": 75,
+    "fixed_generator": 76,
+    "counter": 77,
+    "positive_generator": 78,
+    "fixed_arithmetic_zero": 79,
+    "fixed_simple_true": 80,
+    "fixed_and_true": 81,
+    "fixed_and_false_first": 82,
+    "fixed_and_false_last": 83,
+    "fixed_or_true_first": 84,
+    "fixed_or_true_last": 85,
+    "changing_arithmetic_zero": 86,
+    "changing_simple_true": 87,
+    "changing_and_true": 88,
+    "changing_and_false_first": 89,
+    "changing_and_false_last": 90,
+    "changing_or_true_first": 91,
+    "changing_or_true_last": 92,
+    "clock_relay": 93,
+    "power": 98
+  },
+  "interventions": [
+    {
+      "tick": 1,
+      "name": "fill_destination_after_real16_pickup_and_connect_period8_clock",
+      "inserted": 4800
+    }
+  ],
+  "rows": [
+    {
+      "tick": 1,
+      "counter_C": 1,
+      "fixed_A": 2,
+      "changing_A": 1,
+      "hand": {
+        "held": 16,
+        "position": {
+          "y": -11.5,
+          "x": 414.5
+        },
+        "status": "working",
+        "disabled": false,
+        "condition": {
+          "first_signal": {
+            "type": "virtual",
+            "name": "signal-Z"
+          },
+          "constant": 0,
+          "comparator": "≥",
+          "fulfilled": true
+        }
+      },
+      "sink_iron_plates": 0,
+      "outputs": {
+        "arithmetic_zero": {
+          "fixed": [],
+          "changing": []
+        },
+        "simple_true": {
+          "fixed": [],
+          "changing": []
+        },
+        "and_true": {
+          "fixed": [],
+          "changing": []
+        },
+        "and_false_first": {
+          "fixed": [],
+          "changing": []
+        },
+        "and_false_last": {
+          "fixed": [],
+          "changing": []
+        },
+        "or_true_first": {
+          "fixed": [],
+          "changing": []
+        },
+        "or_true_last": {
+          "fixed": [],
+          "changing": []
+        }
+      }
+    },
+    {
+      "tick": 2,
+      "counter_C": 2,
+      "fixed_A": 2,
+      "changing_A": 2,
+      "hand": {
+        "held": 16,
+        "position": {
+          "y": -11.765625,
+          "x": 415.203125
+        },
+        "status": "working",
+        "disabled": false,
+        "condition": {
+          "first_signal": {
+            "type": "virtual",
+            "name": "signal-C"
+          },
+          "constant": 4,
+          "comparator": "<",
+          "fulfilled": true
+        }
+      },
+      "sink_iron_plates": 4800,
+      "outputs": {
+        "arithmetic_zero": {
+          "fixed": [],
+          "changing": []
+        },
+        "simple_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_false_first": {
+          "fixed": [],
+          "changing": []
+        },
+        "and_false_last": {
+          "fixed": [],
+          "changing": []
+        },
+        "or_true_first": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "or_true_last": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tick": 3,
+      "counter_C": 3,
+      "fixed_A": 2,
+      "changing_A": 3,
+      "hand": {
+        "held": 16,
+        "position": {
+          "y": -11.265625,
+          "x": 415.640625
+        },
+        "status": "working",
+        "disabled": false,
+        "condition": {
+          "first_signal": {
+            "type": "virtual",
+            "name": "signal-C"
+          },
+          "constant": 4,
+          "comparator": "<",
+          "fulfilled": true
+        }
+      },
+      "sink_iron_plates": 4800,
+      "outputs": {
+        "arithmetic_zero": {
+          "fixed": [],
+          "changing": []
+        },
+        "simple_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_false_first": {
+          "fixed": [],
+          "changing": []
+        },
+        "and_false_last": {
+          "fixed": [],
+          "changing": []
+        },
+        "or_true_first": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "or_true_last": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tick": 4,
+      "counter_C": 4,
+      "fixed_A": 2,
+      "changing_A": 4,
+      "hand": {
+        "held": 16,
+        "position": {
+          "y": -10.4296875,
+          "x": 415.640625
+        },
+        "status": "working",
+        "disabled": false,
+        "condition": {
+          "first_signal": {
+            "type": "virtual",
+            "name": "signal-C"
+          },
+          "constant": 4,
+          "comparator": "<",
+          "fulfilled": false
+        }
+      },
+      "sink_iron_plates": 4800,
+      "outputs": {
+        "arithmetic_zero": {
+          "fixed": [],
+          "changing": []
+        },
+        "simple_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_false_first": {
+          "fixed": [],
+          "changing": []
+        },
+        "and_false_last": {
+          "fixed": [],
+          "changing": []
+        },
+        "or_true_first": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "or_true_last": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tick": 5,
+      "counter_C": 5,
+      "fixed_A": 2,
+      "changing_A": 5,
+      "hand": {
+        "held": 16,
+        "position": {
+          "y": -9.30078125,
+          "x": 414.5
+        },
+        "status": "disabled_by_control_behavior",
+        "disabled": true,
+        "condition": {
+          "first_signal": {
+            "type": "virtual",
+            "name": "signal-C"
+          },
+          "constant": 4,
+          "comparator": "<",
+          "fulfilled": false
+        }
+      },
+      "sink_iron_plates": 4800,
+      "outputs": {
+        "arithmetic_zero": {
+          "fixed": [],
+          "changing": []
+        },
+        "simple_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_false_first": {
+          "fixed": [],
+          "changing": []
+        },
+        "and_false_last": {
+          "fixed": [],
+          "changing": []
+        },
+        "or_true_first": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "or_true_last": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tick": 6,
+      "counter_C": 6,
+      "fixed_A": 2,
+      "changing_A": 6,
+      "hand": {
+        "held": 16,
+        "position": {
+          "y": -9.30078125,
+          "x": 414.5
+        },
+        "status": "disabled_by_control_behavior",
+        "disabled": true,
+        "condition": {
+          "first_signal": {
+            "type": "virtual",
+            "name": "signal-C"
+          },
+          "constant": 4,
+          "comparator": "<",
+          "fulfilled": false
+        }
+      },
+      "sink_iron_plates": 4800,
+      "outputs": {
+        "arithmetic_zero": {
+          "fixed": [],
+          "changing": []
+        },
+        "simple_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_false_first": {
+          "fixed": [],
+          "changing": []
+        },
+        "and_false_last": {
+          "fixed": [],
+          "changing": []
+        },
+        "or_true_first": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "or_true_last": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tick": 7,
+      "counter_C": 7,
+      "fixed_A": 2,
+      "changing_A": 7,
+      "hand": {
+        "held": 16,
+        "position": {
+          "y": -9.30078125,
+          "x": 414.5
+        },
+        "status": "disabled_by_control_behavior",
+        "disabled": true,
+        "condition": {
+          "first_signal": {
+            "type": "virtual",
+            "name": "signal-C"
+          },
+          "constant": 4,
+          "comparator": "<",
+          "fulfilled": false
+        }
+      },
+      "sink_iron_plates": 4800,
+      "outputs": {
+        "arithmetic_zero": {
+          "fixed": [],
+          "changing": []
+        },
+        "simple_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_false_first": {
+          "fixed": [],
+          "changing": []
+        },
+        "and_false_last": {
+          "fixed": [],
+          "changing": []
+        },
+        "or_true_first": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "or_true_last": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tick": 8,
+      "counter_C": 0,
+      "fixed_A": 2,
+      "changing_A": 8,
+      "hand": {
+        "held": 16,
+        "position": {
+          "y": -9.30078125,
+          "x": 414.5
+        },
+        "status": "disabled_by_control_behavior",
+        "disabled": true,
+        "condition": {
+          "first_signal": {
+            "type": "virtual",
+            "name": "signal-C"
+          },
+          "constant": 4,
+          "comparator": "<",
+          "fulfilled": true
+        }
+      },
+      "sink_iron_plates": 4800,
+      "outputs": {
+        "arithmetic_zero": {
+          "fixed": [],
+          "changing": []
+        },
+        "simple_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_false_first": {
+          "fixed": [],
+          "changing": []
+        },
+        "and_false_last": {
+          "fixed": [],
+          "changing": []
+        },
+        "or_true_first": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "or_true_last": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tick": 9,
+      "counter_C": 1,
+      "fixed_A": 2,
+      "changing_A": 1,
+      "hand": {
+        "held": 16,
+        "position": {
+          "y": -9.30078125,
+          "x": 414.5
+        },
+        "status": "working",
+        "disabled": false,
+        "condition": {
+          "first_signal": {
+            "type": "virtual",
+            "name": "signal-C"
+          },
+          "constant": 4,
+          "comparator": "<",
+          "fulfilled": true
+        }
+      },
+      "sink_iron_plates": 4800,
+      "outputs": {
+        "arithmetic_zero": {
+          "fixed": [],
+          "changing": []
+        },
+        "simple_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_false_first": {
+          "fixed": [],
+          "changing": []
+        },
+        "and_false_last": {
+          "fixed": [],
+          "changing": []
+        },
+        "or_true_first": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "or_true_last": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tick": 10,
+      "counter_C": 2,
+      "fixed_A": 2,
+      "changing_A": 2,
+      "hand": {
+        "held": 16,
+        "position": {
+          "y": -9.30078125,
+          "x": 414.5
+        },
+        "status": "waiting_for_space_in_destination",
+        "disabled": false,
+        "condition": {
+          "first_signal": {
+            "type": "virtual",
+            "name": "signal-C"
+          },
+          "constant": 4,
+          "comparator": "<",
+          "fulfilled": true
+        }
+      },
+      "sink_iron_plates": 4800,
+      "outputs": {
+        "arithmetic_zero": {
+          "fixed": [],
+          "changing": []
+        },
+        "simple_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_false_first": {
+          "fixed": [],
+          "changing": []
+        },
+        "and_false_last": {
+          "fixed": [],
+          "changing": []
+        },
+        "or_true_first": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "or_true_last": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tick": 11,
+      "counter_C": 3,
+      "fixed_A": 2,
+      "changing_A": 3,
+      "hand": {
+        "held": 16,
+        "position": {
+          "y": -9.30078125,
+          "x": 414.5
+        },
+        "status": "waiting_for_space_in_destination",
+        "disabled": false,
+        "condition": {
+          "first_signal": {
+            "type": "virtual",
+            "name": "signal-C"
+          },
+          "constant": 4,
+          "comparator": "<",
+          "fulfilled": true
+        }
+      },
+      "sink_iron_plates": 4800,
+      "outputs": {
+        "arithmetic_zero": {
+          "fixed": [],
+          "changing": []
+        },
+        "simple_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_false_first": {
+          "fixed": [],
+          "changing": []
+        },
+        "and_false_last": {
+          "fixed": [],
+          "changing": []
+        },
+        "or_true_first": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "or_true_last": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tick": 12,
+      "counter_C": 4,
+      "fixed_A": 2,
+      "changing_A": 4,
+      "hand": {
+        "held": 16,
+        "position": {
+          "y": -9.30078125,
+          "x": 414.5
+        },
+        "status": "waiting_for_space_in_destination",
+        "disabled": false,
+        "condition": {
+          "first_signal": {
+            "type": "virtual",
+            "name": "signal-C"
+          },
+          "constant": 4,
+          "comparator": "<",
+          "fulfilled": false
+        }
+      },
+      "sink_iron_plates": 4800,
+      "outputs": {
+        "arithmetic_zero": {
+          "fixed": [],
+          "changing": []
+        },
+        "simple_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_false_first": {
+          "fixed": [],
+          "changing": []
+        },
+        "and_false_last": {
+          "fixed": [],
+          "changing": []
+        },
+        "or_true_first": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "or_true_last": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tick": 13,
+      "counter_C": 5,
+      "fixed_A": 2,
+      "changing_A": 5,
+      "hand": {
+        "held": 16,
+        "position": {
+          "y": -9.30078125,
+          "x": 414.5
+        },
+        "status": "disabled_by_control_behavior",
+        "disabled": true,
+        "condition": {
+          "first_signal": {
+            "type": "virtual",
+            "name": "signal-C"
+          },
+          "constant": 4,
+          "comparator": "<",
+          "fulfilled": false
+        }
+      },
+      "sink_iron_plates": 4800,
+      "outputs": {
+        "arithmetic_zero": {
+          "fixed": [],
+          "changing": []
+        },
+        "simple_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_false_first": {
+          "fixed": [],
+          "changing": []
+        },
+        "and_false_last": {
+          "fixed": [],
+          "changing": []
+        },
+        "or_true_first": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "or_true_last": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tick": 14,
+      "counter_C": 6,
+      "fixed_A": 2,
+      "changing_A": 6,
+      "hand": {
+        "held": 16,
+        "position": {
+          "y": -9.30078125,
+          "x": 414.5
+        },
+        "status": "disabled_by_control_behavior",
+        "disabled": true,
+        "condition": {
+          "first_signal": {
+            "type": "virtual",
+            "name": "signal-C"
+          },
+          "constant": 4,
+          "comparator": "<",
+          "fulfilled": false
+        }
+      },
+      "sink_iron_plates": 4800,
+      "outputs": {
+        "arithmetic_zero": {
+          "fixed": [],
+          "changing": []
+        },
+        "simple_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_false_first": {
+          "fixed": [],
+          "changing": []
+        },
+        "and_false_last": {
+          "fixed": [],
+          "changing": []
+        },
+        "or_true_first": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "or_true_last": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tick": 15,
+      "counter_C": 7,
+      "fixed_A": 2,
+      "changing_A": 7,
+      "hand": {
+        "held": 16,
+        "position": {
+          "y": -9.30078125,
+          "x": 414.5
+        },
+        "status": "disabled_by_control_behavior",
+        "disabled": true,
+        "condition": {
+          "first_signal": {
+            "type": "virtual",
+            "name": "signal-C"
+          },
+          "constant": 4,
+          "comparator": "<",
+          "fulfilled": false
+        }
+      },
+      "sink_iron_plates": 4800,
+      "outputs": {
+        "arithmetic_zero": {
+          "fixed": [],
+          "changing": []
+        },
+        "simple_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_false_first": {
+          "fixed": [],
+          "changing": []
+        },
+        "and_false_last": {
+          "fixed": [],
+          "changing": []
+        },
+        "or_true_first": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "or_true_last": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tick": 16,
+      "counter_C": 0,
+      "fixed_A": 2,
+      "changing_A": 8,
+      "hand": {
+        "held": 16,
+        "position": {
+          "y": -9.30078125,
+          "x": 414.5
+        },
+        "status": "disabled_by_control_behavior",
+        "disabled": true,
+        "condition": {
+          "first_signal": {
+            "type": "virtual",
+            "name": "signal-C"
+          },
+          "constant": 4,
+          "comparator": "<",
+          "fulfilled": true
+        }
+      },
+      "sink_iron_plates": 4800,
+      "outputs": {
+        "arithmetic_zero": {
+          "fixed": [],
+          "changing": []
+        },
+        "simple_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_false_first": {
+          "fixed": [],
+          "changing": []
+        },
+        "and_false_last": {
+          "fixed": [],
+          "changing": []
+        },
+        "or_true_first": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "or_true_last": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tick": 17,
+      "counter_C": 1,
+      "fixed_A": 2,
+      "changing_A": 1,
+      "hand": {
+        "held": 16,
+        "position": {
+          "y": -9.30078125,
+          "x": 414.5
+        },
+        "status": "working",
+        "disabled": false,
+        "condition": {
+          "first_signal": {
+            "type": "virtual",
+            "name": "signal-C"
+          },
+          "constant": 4,
+          "comparator": "<",
+          "fulfilled": true
+        }
+      },
+      "sink_iron_plates": 4800,
+      "outputs": {
+        "arithmetic_zero": {
+          "fixed": [],
+          "changing": []
+        },
+        "simple_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_false_first": {
+          "fixed": [],
+          "changing": []
+        },
+        "and_false_last": {
+          "fixed": [],
+          "changing": []
+        },
+        "or_true_first": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "or_true_last": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tick": 18,
+      "counter_C": 2,
+      "fixed_A": 2,
+      "changing_A": 2,
+      "hand": {
+        "held": 16,
+        "position": {
+          "y": -9.30078125,
+          "x": 414.5
+        },
+        "status": "waiting_for_space_in_destination",
+        "disabled": false,
+        "condition": {
+          "first_signal": {
+            "type": "virtual",
+            "name": "signal-C"
+          },
+          "constant": 4,
+          "comparator": "<",
+          "fulfilled": true
+        }
+      },
+      "sink_iron_plates": 4800,
+      "outputs": {
+        "arithmetic_zero": {
+          "fixed": [],
+          "changing": []
+        },
+        "simple_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_false_first": {
+          "fixed": [],
+          "changing": []
+        },
+        "and_false_last": {
+          "fixed": [],
+          "changing": []
+        },
+        "or_true_first": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "or_true_last": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tick": 19,
+      "counter_C": 3,
+      "fixed_A": 2,
+      "changing_A": 3,
+      "hand": {
+        "held": 16,
+        "position": {
+          "y": -9.30078125,
+          "x": 414.5
+        },
+        "status": "waiting_for_space_in_destination",
+        "disabled": false,
+        "condition": {
+          "first_signal": {
+            "type": "virtual",
+            "name": "signal-C"
+          },
+          "constant": 4,
+          "comparator": "<",
+          "fulfilled": true
+        }
+      },
+      "sink_iron_plates": 4800,
+      "outputs": {
+        "arithmetic_zero": {
+          "fixed": [],
+          "changing": []
+        },
+        "simple_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_false_first": {
+          "fixed": [],
+          "changing": []
+        },
+        "and_false_last": {
+          "fixed": [],
+          "changing": []
+        },
+        "or_true_first": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "or_true_last": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tick": 20,
+      "counter_C": 4,
+      "fixed_A": 2,
+      "changing_A": 4,
+      "hand": {
+        "held": 16,
+        "position": {
+          "y": -9.30078125,
+          "x": 414.5
+        },
+        "status": "waiting_for_space_in_destination",
+        "disabled": false,
+        "condition": {
+          "first_signal": {
+            "type": "virtual",
+            "name": "signal-C"
+          },
+          "constant": 4,
+          "comparator": "<",
+          "fulfilled": false
+        }
+      },
+      "sink_iron_plates": 4800,
+      "outputs": {
+        "arithmetic_zero": {
+          "fixed": [],
+          "changing": []
+        },
+        "simple_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_false_first": {
+          "fixed": [],
+          "changing": []
+        },
+        "and_false_last": {
+          "fixed": [],
+          "changing": []
+        },
+        "or_true_first": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "or_true_last": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tick": 21,
+      "counter_C": 5,
+      "fixed_A": 2,
+      "changing_A": 5,
+      "hand": {
+        "held": 16,
+        "position": {
+          "y": -9.30078125,
+          "x": 414.5
+        },
+        "status": "disabled_by_control_behavior",
+        "disabled": true,
+        "condition": {
+          "first_signal": {
+            "type": "virtual",
+            "name": "signal-C"
+          },
+          "constant": 4,
+          "comparator": "<",
+          "fulfilled": false
+        }
+      },
+      "sink_iron_plates": 4800,
+      "outputs": {
+        "arithmetic_zero": {
+          "fixed": [],
+          "changing": []
+        },
+        "simple_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_false_first": {
+          "fixed": [],
+          "changing": []
+        },
+        "and_false_last": {
+          "fixed": [],
+          "changing": []
+        },
+        "or_true_first": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "or_true_last": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tick": 22,
+      "counter_C": 6,
+      "fixed_A": 2,
+      "changing_A": 6,
+      "hand": {
+        "held": 16,
+        "position": {
+          "y": -9.30078125,
+          "x": 414.5
+        },
+        "status": "disabled_by_control_behavior",
+        "disabled": true,
+        "condition": {
+          "first_signal": {
+            "type": "virtual",
+            "name": "signal-C"
+          },
+          "constant": 4,
+          "comparator": "<",
+          "fulfilled": false
+        }
+      },
+      "sink_iron_plates": 4800,
+      "outputs": {
+        "arithmetic_zero": {
+          "fixed": [],
+          "changing": []
+        },
+        "simple_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_false_first": {
+          "fixed": [],
+          "changing": []
+        },
+        "and_false_last": {
+          "fixed": [],
+          "changing": []
+        },
+        "or_true_first": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "or_true_last": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tick": 23,
+      "counter_C": 7,
+      "fixed_A": 2,
+      "changing_A": 7,
+      "hand": {
+        "held": 16,
+        "position": {
+          "y": -9.30078125,
+          "x": 414.5
+        },
+        "status": "disabled_by_control_behavior",
+        "disabled": true,
+        "condition": {
+          "first_signal": {
+            "type": "virtual",
+            "name": "signal-C"
+          },
+          "constant": 4,
+          "comparator": "<",
+          "fulfilled": false
+        }
+      },
+      "sink_iron_plates": 4800,
+      "outputs": {
+        "arithmetic_zero": {
+          "fixed": [],
+          "changing": []
+        },
+        "simple_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_false_first": {
+          "fixed": [],
+          "changing": []
+        },
+        "and_false_last": {
+          "fixed": [],
+          "changing": []
+        },
+        "or_true_first": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "or_true_last": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "tick": 24,
+      "counter_C": 0,
+      "fixed_A": 2,
+      "changing_A": 8,
+      "hand": {
+        "held": 16,
+        "position": {
+          "y": -9.30078125,
+          "x": 414.5
+        },
+        "status": "disabled_by_control_behavior",
+        "disabled": true,
+        "condition": {
+          "first_signal": {
+            "type": "virtual",
+            "name": "signal-C"
+          },
+          "constant": 4,
+          "comparator": "<",
+          "fulfilled": true
+        }
+      },
+      "sink_iron_plates": 4800,
+      "outputs": {
+        "arithmetic_zero": {
+          "fixed": [],
+          "changing": []
+        },
+        "simple_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_true": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "and_false_first": {
+          "fixed": [],
+          "changing": []
+        },
+        "and_false_last": {
+          "fixed": [],
+          "changing": []
+        },
+        "or_true_first": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        },
+        "or_true_last": {
+          "fixed": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ],
+          "changing": [
+            {
+              "signal": {
+                "type": "virtual",
+                "name": "signal-D"
+              },
+              "count": 1
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,178 @@
+[
+  {
+    "role": "source",
+    "name": "assembling-machine-3",
+    "position": {
+      "x": 26.5,
+      "y": 0.5
+    }
+  },
+  {
+    "role": "sink",
+    "name": "steel-chest",
+    "position": {
+      "x": 26.5,
+      "y": 3.5
+    }
+  },
+  {
+    "role": "hand",
+    "name": "stack-inserter",
+    "position": {
+      "x": 26.5,
+      "y": 2.5
+    }
+  },
+  {
+    "role": "fixed_generator",
+    "name": "arithmetic-combinator",
+    "position": {
+      "x": 0,
+      "y": 0.5
+    }
+  },
+  {
+    "role": "counter",
+    "name": "decider-combinator",
+    "position": {
+      "x": 12,
+      "y": 0.5
+    }
+  },
+  {
+    "role": "positive_generator",
+    "name": "arithmetic-combinator",
+    "position": {
+      "x": 16,
+      "y": 0.5
+    }
+  },
+  {
+    "role": "fixed_arithmetic_zero",
+    "name": "arithmetic-combinator",
+    "position": {
+      "x": 0,
+      "y": 4.5
+    }
+  },
+  {
+    "role": "fixed_simple_true",
+    "name": "decider-combinator",
+    "position": {
+      "x": 0,
+      "y": 8.5
+    }
+  },
+  {
+    "role": "fixed_and_true",
+    "name": "decider-combinator",
+    "position": {
+      "x": 0,
+      "y": 12.5
+    }
+  },
+  {
+    "role": "fixed_and_false_first",
+    "name": "decider-combinator",
+    "position": {
+      "x": 0,
+      "y": 16.5
+    }
+  },
+  {
+    "role": "fixed_and_false_last",
+    "name": "decider-combinator",
+    "position": {
+      "x": 0,
+      "y": 20.5
+    }
+  },
+  {
+    "role": "fixed_or_true_first",
+    "name": "decider-combinator",
+    "position": {
+      "x": 0,
+      "y": 24.5
+    }
+  },
+  {
+    "role": "fixed_or_true_last",
+    "name": "decider-combinator",
+    "position": {
+      "x": 0,
+      "y": 28.5
+    }
+  },
+  {
+    "role": "changing_arithmetic_zero",
+    "name": "arithmetic-combinator",
+    "position": {
+      "x": 12,
+      "y": 4.5
+    }
+  },
+  {
+    "role": "changing_simple_true",
+    "name": "decider-combinator",
+    "position": {
+      "x": 12,
+      "y": 8.5
+    }
+  },
+  {
+    "role": "changing_and_true",
+    "name": "decider-combinator",
+    "position": {
+      "x": 12,
+      "y": 12.5
+    }
+  },
+  {
+    "role": "changing_and_false_first",
+    "name": "decider-combinator",
+    "position": {
+      "x": 12,
+      "y": 16.5
+    }
+  },
+  {
+    "role": "changing_and_false_last",
+    "name": "decider-combinator",
+    "position": {
+      "x": 12,
+      "y": 20.5
+    }
+  },
+  {
+    "role": "changing_or_true_first",
+    "name": "decider-combinator",
+    "position": {
+      "x": 12,
+      "y": 24.5
+    }
+  },
+  {
+    "role": "changing_or_true_last",
+    "name": "decider-combinator",
+    "position": {
+      "x": 12,
+      "y": 28.5
+    }
+  },
+  {
+    "role": "clock_relay",
+    "name": "steel-chest",
+    "position": {
+      "x": 20.5,
+      "y": 0.5
+    }
+  },
+  {
+    "role": "power",
+    "name": "electric-energy-interface",
+    "position": {
+      "x": 6,
+      "y": -1
+    }
+  }
+]

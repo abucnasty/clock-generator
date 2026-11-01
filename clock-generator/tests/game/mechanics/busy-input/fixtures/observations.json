@@ -1,0 +1,2424 @@
+{
+  "schema": "observed-game-behavior-1",
+  "game_version": "2.1.21",
+  "scope": "Two common ticks only; unmatched real and control layouts.",
+  "cases": {
+    "real": {
+      "selected_inputs": [
+        "entity_205",
+        "entity_204",
+        "entity_206",
+        "entity_211",
+        "entity_210",
+        "entity_212",
+        "entity_232",
+        "entity_235"
+      ],
+      "selected_targets": [
+        "entity_220",
+        "entity_222"
+      ],
+      "stats": {
+        "ticks": 2,
+        "updates": 16,
+        "alarms": 8,
+        "wakes": 8,
+        "sleeps": 8,
+        "observation_target_full_checks_excluded": 12,
+        "target_full_results": {
+          "True": 8
+        },
+        "pickup_filter_checks": 0,
+        "pickup_accept_results": {}
+      },
+      "events": [
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_235",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_235"
+        },
+        {
+          "tick": 0,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_235",
+          "phase": "begin",
+          "target": "entity_222"
+        },
+        {
+          "tick": 0,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_235",
+          "phase": "end",
+          "result": true,
+          "target": "entity_222"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_235",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_235"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_235",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_235"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_235",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_235"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_235",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_235"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_235",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_235"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_210",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_210"
+        },
+        {
+          "tick": 0,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_210",
+          "phase": "begin",
+          "target": "entity_222"
+        },
+        {
+          "tick": 0,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_210",
+          "phase": "end",
+          "result": true,
+          "target": "entity_222"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_210",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_210"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_210",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_210"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_210",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_210"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_210",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_210"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_210",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_210"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_212",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_212"
+        },
+        {
+          "tick": 0,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_212",
+          "phase": "begin",
+          "target": "entity_222"
+        },
+        {
+          "tick": 0,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_212",
+          "phase": "end",
+          "result": true,
+          "target": "entity_222"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_212",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_212"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_212",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_212"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_212",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_212"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_212",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_212"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_212",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_212"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_211",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_211"
+        },
+        {
+          "tick": 0,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_211",
+          "phase": "begin",
+          "target": "entity_222"
+        },
+        {
+          "tick": 0,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_211",
+          "phase": "end",
+          "result": true,
+          "target": "entity_222"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_211",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_211"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_211",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_211"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_211",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_211"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_211",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_211"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_211",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_211"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_206",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_206"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_206",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_206"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_205",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_205"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_205",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_205"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_204",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_204"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_204",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_204"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_232",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_232"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_232",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_232"
+        },
+        {
+          "tick": 0,
+          "event": "alarm",
+          "stage": "delivery",
+          "role": "entity_None",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_211"
+        },
+        {
+          "tick": 0,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_None",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_211"
+        },
+        {
+          "tick": 0,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_None",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_211"
+        },
+        {
+          "tick": 0,
+          "event": "alarm",
+          "stage": "delivery",
+          "role": "entity_None",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_212"
+        },
+        {
+          "tick": 0,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_None",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_212"
+        },
+        {
+          "tick": 0,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_None",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_212"
+        },
+        {
+          "tick": 0,
+          "event": "alarm",
+          "stage": "delivery",
+          "role": "entity_None",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_210"
+        },
+        {
+          "tick": 0,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_None",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_210"
+        },
+        {
+          "tick": 0,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_None",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_210"
+        },
+        {
+          "tick": 0,
+          "event": "alarm",
+          "stage": "delivery",
+          "role": "entity_None",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_235"
+        },
+        {
+          "tick": 0,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_None",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_235"
+        },
+        {
+          "tick": 0,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_None",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_235"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_235",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_235"
+        },
+        {
+          "tick": 1,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_235",
+          "phase": "begin",
+          "target": "entity_222"
+        },
+        {
+          "tick": 1,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_235",
+          "phase": "end",
+          "result": true,
+          "target": "entity_222"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_235",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_235"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_235",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_235"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_235",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_235"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_235",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_235"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_235",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_235"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_210",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_210"
+        },
+        {
+          "tick": 1,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_210",
+          "phase": "begin",
+          "target": "entity_222"
+        },
+        {
+          "tick": 1,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_210",
+          "phase": "end",
+          "result": true,
+          "target": "entity_222"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_210",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_210"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_210",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_210"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_210",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_210"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_210",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_210"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_210",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_210"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_212",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_212"
+        },
+        {
+          "tick": 1,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_212",
+          "phase": "begin",
+          "target": "entity_222"
+        },
+        {
+          "tick": 1,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_212",
+          "phase": "end",
+          "result": true,
+          "target": "entity_222"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_212",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_212"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_212",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_212"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_212",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_212"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_212",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_212"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_212",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_212"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_211",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_211"
+        },
+        {
+          "tick": 1,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_211",
+          "phase": "begin",
+          "target": "entity_222"
+        },
+        {
+          "tick": 1,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_211",
+          "phase": "end",
+          "result": true,
+          "target": "entity_222"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_211",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_211"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_211",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_211"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_211",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_211"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_211",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_211"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_211",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_211"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_206",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_206"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_206",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_206"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_205",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_205"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_205",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_205"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_204",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_204"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_204",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_204"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_232",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_232"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_232",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_232"
+        },
+        {
+          "tick": 1,
+          "event": "alarm",
+          "stage": "delivery",
+          "role": "entity_None",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_211"
+        },
+        {
+          "tick": 1,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_None",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_211"
+        },
+        {
+          "tick": 1,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_None",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_211"
+        },
+        {
+          "tick": 1,
+          "event": "alarm",
+          "stage": "delivery",
+          "role": "entity_None",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_212"
+        },
+        {
+          "tick": 1,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_None",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_212"
+        },
+        {
+          "tick": 1,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_None",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_212"
+        },
+        {
+          "tick": 1,
+          "event": "alarm",
+          "stage": "delivery",
+          "role": "entity_None",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_210"
+        },
+        {
+          "tick": 1,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_None",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_210"
+        },
+        {
+          "tick": 1,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_None",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_210"
+        },
+        {
+          "tick": 1,
+          "event": "alarm",
+          "stage": "delivery",
+          "role": "entity_None",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_235"
+        },
+        {
+          "tick": 1,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_None",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_235"
+        },
+        {
+          "tick": 1,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_None",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_235"
+        }
+      ]
+    },
+    "control": {
+      "selected_inputs": [
+        "entity_5650",
+        "entity_5649",
+        "entity_5652",
+        "entity_5651",
+        "entity_5675",
+        "entity_5677",
+        "entity_5676",
+        "entity_5678",
+        "entity_5655",
+        "entity_5656",
+        "entity_5682",
+        "entity_5681"
+      ],
+      "selected_targets": [
+        "entity_5653",
+        "entity_5679"
+      ],
+      "stats": {
+        "ticks": 2,
+        "updates": 24,
+        "alarms": 16,
+        "wakes": 8,
+        "sleeps": 8,
+        "observation_target_full_checks_excluded": 12,
+        "target_full_results": {
+          "False": 8
+        },
+        "pickup_filter_checks": 8,
+        "pickup_accept_results": {
+          "False": 8
+        }
+      },
+      "events": [
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5655",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5655"
+        },
+        {
+          "tick": 0,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_5655",
+          "phase": "begin",
+          "target": "entity_5653"
+        },
+        {
+          "tick": 0,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_5655",
+          "phase": "end",
+          "result": false,
+          "target": "entity_5653"
+        },
+        {
+          "tick": 0,
+          "event": "pickup",
+          "stage": "filter",
+          "role": "entity_5655",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5655"
+        },
+        {
+          "tick": 0,
+          "event": "pickup",
+          "stage": "accept",
+          "role": "entity_5655",
+          "phase": "begin",
+          "target": "entity_5653"
+        },
+        {
+          "tick": 0,
+          "event": "pickup",
+          "stage": "accept",
+          "role": "entity_5655",
+          "phase": "end",
+          "result": false,
+          "target": "entity_5653"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_5655",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5655"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_5655",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5655"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_5655",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_5655"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_5655",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_5655"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5655",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_5655"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5656",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5656"
+        },
+        {
+          "tick": 0,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_5656",
+          "phase": "begin",
+          "target": "entity_5653"
+        },
+        {
+          "tick": 0,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_5656",
+          "phase": "end",
+          "result": false,
+          "target": "entity_5653"
+        },
+        {
+          "tick": 0,
+          "event": "pickup",
+          "stage": "filter",
+          "role": "entity_5656",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5656"
+        },
+        {
+          "tick": 0,
+          "event": "pickup",
+          "stage": "accept",
+          "role": "entity_5656",
+          "phase": "begin",
+          "target": "entity_5653"
+        },
+        {
+          "tick": 0,
+          "event": "pickup",
+          "stage": "accept",
+          "role": "entity_5656",
+          "phase": "end",
+          "result": false,
+          "target": "entity_5653"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_5656",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5656"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_5656",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5656"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_5656",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_5656"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_5656",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_5656"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5656",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_5656"
+        },
+        {
+          "tick": 0,
+          "event": "alarm",
+          "stage": "delivery",
+          "role": "entity_5664",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_5656"
+        },
+        {
+          "tick": 0,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_5664",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_5656"
+        },
+        {
+          "tick": 0,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_5664",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_5656"
+        },
+        {
+          "tick": 0,
+          "event": "alarm",
+          "stage": "delivery",
+          "role": "entity_5664",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_5655"
+        },
+        {
+          "tick": 0,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_5664",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_5655"
+        },
+        {
+          "tick": 0,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_5664",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_5655"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5681",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5681"
+        },
+        {
+          "tick": 0,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_5681",
+          "phase": "begin",
+          "target": "entity_5679"
+        },
+        {
+          "tick": 0,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_5681",
+          "phase": "end",
+          "result": false,
+          "target": "entity_5679"
+        },
+        {
+          "tick": 0,
+          "event": "pickup",
+          "stage": "filter",
+          "role": "entity_5681",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5681"
+        },
+        {
+          "tick": 0,
+          "event": "pickup",
+          "stage": "accept",
+          "role": "entity_5681",
+          "phase": "begin",
+          "target": "entity_5679"
+        },
+        {
+          "tick": 0,
+          "event": "pickup",
+          "stage": "accept",
+          "role": "entity_5681",
+          "phase": "end",
+          "result": false,
+          "target": "entity_5679"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_5681",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5681"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_5681",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5681"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_5681",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_5681"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_5681",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_5681"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5681",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_5681"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5682",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5682"
+        },
+        {
+          "tick": 0,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_5682",
+          "phase": "begin",
+          "target": "entity_5679"
+        },
+        {
+          "tick": 0,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_5682",
+          "phase": "end",
+          "result": false,
+          "target": "entity_5679"
+        },
+        {
+          "tick": 0,
+          "event": "pickup",
+          "stage": "filter",
+          "role": "entity_5682",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5682"
+        },
+        {
+          "tick": 0,
+          "event": "pickup",
+          "stage": "accept",
+          "role": "entity_5682",
+          "phase": "begin",
+          "target": "entity_5679"
+        },
+        {
+          "tick": 0,
+          "event": "pickup",
+          "stage": "accept",
+          "role": "entity_5682",
+          "phase": "end",
+          "result": false,
+          "target": "entity_5679"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_5682",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5682"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_5682",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5682"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_5682",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_5682"
+        },
+        {
+          "tick": 0,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_5682",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_5682"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5682",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_5682"
+        },
+        {
+          "tick": 0,
+          "event": "alarm",
+          "stage": "delivery",
+          "role": "entity_5690",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_5682"
+        },
+        {
+          "tick": 0,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_5690",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_5682"
+        },
+        {
+          "tick": 0,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_5690",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_5682"
+        },
+        {
+          "tick": 0,
+          "event": "alarm",
+          "stage": "delivery",
+          "role": "entity_5690",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_5681"
+        },
+        {
+          "tick": 0,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_5690",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_5681"
+        },
+        {
+          "tick": 0,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_5690",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_5681"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5677",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5677"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5677",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_5677"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5678",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5678"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5678",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_5678"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5676",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5676"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5676",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_5676"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5675",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5675"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5675",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_5675"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5651",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5651"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5651",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_5651"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5652",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5652"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5652",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_5652"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5650",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5650"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5650",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_5650"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5649",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5649"
+        },
+        {
+          "tick": 0,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5649",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_5649"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5681",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5681"
+        },
+        {
+          "tick": 1,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_5681",
+          "phase": "begin",
+          "target": "entity_5679"
+        },
+        {
+          "tick": 1,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_5681",
+          "phase": "end",
+          "result": false,
+          "target": "entity_5679"
+        },
+        {
+          "tick": 1,
+          "event": "pickup",
+          "stage": "filter",
+          "role": "entity_5681",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5681"
+        },
+        {
+          "tick": 1,
+          "event": "pickup",
+          "stage": "accept",
+          "role": "entity_5681",
+          "phase": "begin",
+          "target": "entity_5679"
+        },
+        {
+          "tick": 1,
+          "event": "pickup",
+          "stage": "accept",
+          "role": "entity_5681",
+          "phase": "end",
+          "result": false,
+          "target": "entity_5679"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_5681",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5681"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_5681",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5681"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_5681",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_5681"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_5681",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_5681"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5681",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_5681"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5682",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5682"
+        },
+        {
+          "tick": 1,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_5682",
+          "phase": "begin",
+          "target": "entity_5679"
+        },
+        {
+          "tick": 1,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_5682",
+          "phase": "end",
+          "result": false,
+          "target": "entity_5679"
+        },
+        {
+          "tick": 1,
+          "event": "pickup",
+          "stage": "filter",
+          "role": "entity_5682",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5682"
+        },
+        {
+          "tick": 1,
+          "event": "pickup",
+          "stage": "accept",
+          "role": "entity_5682",
+          "phase": "begin",
+          "target": "entity_5679"
+        },
+        {
+          "tick": 1,
+          "event": "pickup",
+          "stage": "accept",
+          "role": "entity_5682",
+          "phase": "end",
+          "result": false,
+          "target": "entity_5679"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_5682",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5682"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_5682",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5682"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_5682",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_5682"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_5682",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_5682"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5682",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_5682"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5655",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5655"
+        },
+        {
+          "tick": 1,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_5655",
+          "phase": "begin",
+          "target": "entity_5653"
+        },
+        {
+          "tick": 1,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_5655",
+          "phase": "end",
+          "result": false,
+          "target": "entity_5653"
+        },
+        {
+          "tick": 1,
+          "event": "pickup",
+          "stage": "filter",
+          "role": "entity_5655",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5655"
+        },
+        {
+          "tick": 1,
+          "event": "pickup",
+          "stage": "accept",
+          "role": "entity_5655",
+          "phase": "begin",
+          "target": "entity_5653"
+        },
+        {
+          "tick": 1,
+          "event": "pickup",
+          "stage": "accept",
+          "role": "entity_5655",
+          "phase": "end",
+          "result": false,
+          "target": "entity_5653"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_5655",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5655"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_5655",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5655"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_5655",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_5655"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_5655",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_5655"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5655",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_5655"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5656",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5656"
+        },
+        {
+          "tick": 1,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_5656",
+          "phase": "begin",
+          "target": "entity_5653"
+        },
+        {
+          "tick": 1,
+          "event": "target-full",
+          "stage": "check",
+          "role": "entity_5656",
+          "phase": "end",
+          "result": false,
+          "target": "entity_5653"
+        },
+        {
+          "tick": 1,
+          "event": "pickup",
+          "stage": "filter",
+          "role": "entity_5656",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5656"
+        },
+        {
+          "tick": 1,
+          "event": "pickup",
+          "stage": "accept",
+          "role": "entity_5656",
+          "phase": "begin",
+          "target": "entity_5653"
+        },
+        {
+          "tick": 1,
+          "event": "pickup",
+          "stage": "accept",
+          "role": "entity_5656",
+          "phase": "end",
+          "result": false,
+          "target": "entity_5653"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_5656",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5656"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_5656",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5656"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "transition",
+          "role": "entity_5656",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_5656"
+        },
+        {
+          "tick": 1,
+          "event": "sleep",
+          "stage": "decision",
+          "role": "entity_5656",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_5656"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5656",
+          "phase": "end",
+          "awake": false,
+          "target": "entity_5656"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5677",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5677"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "inventory-change",
+          "role": "entity_5677",
+          "phase": "begin",
+          "target": "entity_5679"
+        },
+        {
+          "tick": 1,
+          "event": "alarm",
+          "stage": "delivery",
+          "role": "entity_5677",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5677"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5677",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_5677"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5678",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5678"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "inventory-change",
+          "role": "entity_5678",
+          "phase": "begin",
+          "target": "entity_5679"
+        },
+        {
+          "tick": 1,
+          "event": "alarm",
+          "stage": "delivery",
+          "role": "entity_5678",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5678"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5678",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_5678"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5676",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5676"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "inventory-change",
+          "role": "entity_5676",
+          "phase": "begin",
+          "target": "entity_5679"
+        },
+        {
+          "tick": 1,
+          "event": "alarm",
+          "stage": "delivery",
+          "role": "entity_5676",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5676"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5676",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_5676"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5675",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5675"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "inventory-change",
+          "role": "entity_5675",
+          "phase": "begin",
+          "target": "entity_5679"
+        },
+        {
+          "tick": 1,
+          "event": "alarm",
+          "stage": "delivery",
+          "role": "entity_5675",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5675"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5675",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_5675"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5651",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5651"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "inventory-change",
+          "role": "entity_5651",
+          "phase": "begin",
+          "target": "entity_5653"
+        },
+        {
+          "tick": 1,
+          "event": "alarm",
+          "stage": "delivery",
+          "role": "entity_5651",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5651"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5651",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_5651"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5652",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5652"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "inventory-change",
+          "role": "entity_5652",
+          "phase": "begin",
+          "target": "entity_5653"
+        },
+        {
+          "tick": 1,
+          "event": "alarm",
+          "stage": "delivery",
+          "role": "entity_5652",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5652"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5652",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_5652"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5650",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5650"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "inventory-change",
+          "role": "entity_5650",
+          "phase": "begin",
+          "target": "entity_5653"
+        },
+        {
+          "tick": 1,
+          "event": "alarm",
+          "stage": "delivery",
+          "role": "entity_5650",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5650"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5650",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_5650"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5649",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5649"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "inventory-change",
+          "role": "entity_5649",
+          "phase": "begin",
+          "target": "entity_5653"
+        },
+        {
+          "tick": 1,
+          "event": "alarm",
+          "stage": "delivery",
+          "role": "entity_5649",
+          "phase": "begin",
+          "awake": true,
+          "target": "entity_5649"
+        },
+        {
+          "tick": 1,
+          "event": "update",
+          "stage": "entity",
+          "role": "entity_5649",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_5649"
+        },
+        {
+          "tick": 1,
+          "event": "alarm",
+          "stage": "delivery",
+          "role": "entity_None",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_5682"
+        },
+        {
+          "tick": 1,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_None",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_5682"
+        },
+        {
+          "tick": 1,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_None",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_5682"
+        },
+        {
+          "tick": 1,
+          "event": "alarm",
+          "stage": "delivery",
+          "role": "entity_None",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_5681"
+        },
+        {
+          "tick": 1,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_None",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_5681"
+        },
+        {
+          "tick": 1,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_None",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_5681"
+        },
+        {
+          "tick": 1,
+          "event": "alarm",
+          "stage": "delivery",
+          "role": "entity_None",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_5656"
+        },
+        {
+          "tick": 1,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_None",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_5656"
+        },
+        {
+          "tick": 1,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_None",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_5656"
+        },
+        {
+          "tick": 1,
+          "event": "alarm",
+          "stage": "delivery",
+          "role": "entity_None",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_5655"
+        },
+        {
+          "tick": 1,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_None",
+          "phase": "begin",
+          "awake": false,
+          "target": "entity_5655"
+        },
+        {
+          "tick": 1,
+          "event": "wake",
+          "stage": "transition",
+          "role": "entity_None",
+          "phase": "end",
+          "awake": true,
+          "target": "entity_5655"
+        }
+      ]
+    }
+  },
+  "limits": [
+    "An alarm is not necessarily a wake; observation-induced target-full checks are excluded.",
+    "Alarm begins were observed; no unobserved alarm end state is supplied.",
+    "Zero selected checks do not establish zero alternative work. No full-period rate, price or universal ordering follows."
+  ]
+}

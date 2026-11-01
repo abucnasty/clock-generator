@@ -1,0 +1,2759 @@
+{
+  "schema": "observed-game-behavior-1",
+  "case": "source-pickup",
+  "game_version": "2.1.21",
+  "initial": [
+    {
+      "cell": 1,
+      "state": "output-overloaded",
+      "many": false,
+      "source": 65,
+      "sink": 66,
+      "hand": 67,
+      "source_slots": 48,
+      "source_stock": {},
+      "destination_input": {},
+      "destination_output": [
+        {
+          "slot": 1,
+          "name": "engine-unit",
+          "count": 50,
+          "quality": "normal"
+        }
+      ],
+      "requested_gears": 0,
+      "fitted_gears": 0,
+      "filled_output": 50,
+      "stack_override": 16,
+      "quality": "legendary",
+      "position": {
+        "y": -0.5,
+        "x": 387.5
+      },
+      "source_position": {
+        "y": -1.5,
+        "x": 387.5
+      },
+      "sink_position": {
+        "y": 1.5,
+        "x": 387.5
+      },
+      "force_stack_bonus": 3
+    },
+    {
+      "cell": 2,
+      "state": "output-overloaded",
+      "many": true,
+      "source": 68,
+      "sink": 69,
+      "hand": 70,
+      "source_slots": 48,
+      "source_stock": {},
+      "destination_input": {},
+      "destination_output": [
+        {
+          "slot": 1,
+          "name": "engine-unit",
+          "count": 50,
+          "quality": "normal"
+        }
+      ],
+      "requested_gears": 0,
+      "fitted_gears": 0,
+      "filled_output": 50,
+      "stack_override": 16,
+      "quality": "legendary",
+      "position": {
+        "y": -0.5,
+        "x": 399.5
+      },
+      "source_position": {
+        "y": -1.5,
+        "x": 399.5
+      },
+      "sink_position": {
+        "y": 1.5,
+        "x": 399.5
+      },
+      "force_stack_bonus": 3
+    },
+    {
+      "cell": 3,
+      "state": "ingredient-refused",
+      "many": false,
+      "source": 71,
+      "sink": 72,
+      "hand": 73,
+      "source_slots": 48,
+      "source_stock": {},
+      "destination_input": [
+        {
+          "slot": 2,
+          "name": "iron-gear-wheel",
+          "count": 128,
+          "quality": "normal"
+        }
+      ],
+      "destination_output": {},
+      "requested_gears": 128,
+      "fitted_gears": 128,
+      "filled_output": 0,
+      "stack_override": 16,
+      "quality": "legendary",
+      "position": {
+        "y": -0.5,
+        "x": 411.5
+      },
+      "source_position": {
+        "y": -1.5,
+        "x": 411.5
+      },
+      "sink_position": {
+        "y": 1.5,
+        "x": 411.5
+      },
+      "force_stack_bonus": 3
+    },
+    {
+      "cell": 4,
+      "state": "ingredient-refused",
+      "many": true,
+      "source": 74,
+      "sink": 75,
+      "hand": 76,
+      "source_slots": 48,
+      "source_stock": {},
+      "destination_input": [
+        {
+          "slot": 2,
+          "name": "iron-gear-wheel",
+          "count": 128,
+          "quality": "normal"
+        }
+      ],
+      "destination_output": {},
+      "requested_gears": 128,
+      "fitted_gears": 128,
+      "filled_output": 0,
+      "stack_override": 16,
+      "quality": "legendary",
+      "position": {
+        "y": -0.5,
+        "x": 423.5
+      },
+      "source_position": {
+        "y": -1.5,
+        "x": 423.5
+      },
+      "sink_position": {
+        "y": 1.5,
+        "x": 423.5
+      },
+      "force_stack_bonus": 3
+    },
+    {
+      "cell": 5,
+      "state": "accepting",
+      "many": false,
+      "source": 77,
+      "sink": 78,
+      "hand": 79,
+      "source_slots": 48,
+      "source_stock": {},
+      "destination_input": {},
+      "destination_output": {},
+      "requested_gears": 0,
+      "fitted_gears": 0,
+      "filled_output": 0,
+      "stack_override": 16,
+      "quality": "legendary",
+      "position": {
+        "y": -0.5,
+        "x": 435.5
+      },
+      "source_position": {
+        "y": -1.5,
+        "x": 435.5
+      },
+      "sink_position": {
+        "y": 1.5,
+        "x": 435.5
+      },
+      "force_stack_bonus": 3
+    },
+    {
+      "cell": 6,
+      "state": "accepting",
+      "many": true,
+      "source": 80,
+      "sink": 81,
+      "hand": 82,
+      "source_slots": 48,
+      "source_stock": {},
+      "destination_input": {},
+      "destination_output": {},
+      "requested_gears": 0,
+      "fitted_gears": 0,
+      "filled_output": 0,
+      "stack_override": 16,
+      "quality": "legendary",
+      "position": {
+        "y": -0.5,
+        "x": 447.5
+      },
+      "source_position": {
+        "y": -1.5,
+        "x": 447.5
+      },
+      "sink_position": {
+        "y": 1.5,
+        "x": 447.5
+      },
+      "force_stack_bonus": 3
+    }
+  ],
+  "interventions": [
+    {
+      "tick": 2,
+      "game_tick": 47399,
+      "name": "source_stock48_after_disabled_observation",
+      "stocks": [
+        {
+          "cell": 1,
+          "source": 65,
+          "slots": [
+            {
+              "slot": 1,
+              "name": "iron-gear-wheel",
+              "count": 48,
+              "quality": "normal"
+            }
+          ]
+        },
+        {
+          "cell": 2,
+          "source": 68,
+          "slots": [
+            {
+              "slot": 1,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 2,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 3,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 4,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 5,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 6,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 7,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 8,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 9,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 10,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 11,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 12,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 13,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 14,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 15,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 16,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 17,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 18,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 19,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 20,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 21,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 22,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 23,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 24,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 25,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 26,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 27,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 28,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 29,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 30,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 31,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 32,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 33,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 34,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 35,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 36,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 37,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 38,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 39,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 40,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 41,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 42,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 43,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 44,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 45,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 46,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 47,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 48,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            }
+          ]
+        },
+        {
+          "cell": 3,
+          "source": 71,
+          "slots": [
+            {
+              "slot": 1,
+              "name": "iron-gear-wheel",
+              "count": 48,
+              "quality": "normal"
+            }
+          ]
+        },
+        {
+          "cell": 4,
+          "source": 74,
+          "slots": [
+            {
+              "slot": 1,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 2,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 3,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 4,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 5,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 6,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 7,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 8,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 9,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 10,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 11,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 12,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 13,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 14,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 15,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 16,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 17,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 18,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 19,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 20,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 21,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 22,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 23,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 24,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 25,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 26,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 27,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 28,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 29,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 30,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 31,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 32,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 33,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 34,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 35,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 36,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 37,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 38,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 39,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 40,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 41,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 42,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 43,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 44,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 45,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 46,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 47,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 48,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            }
+          ]
+        },
+        {
+          "cell": 5,
+          "source": 77,
+          "slots": [
+            {
+              "slot": 1,
+              "name": "iron-gear-wheel",
+              "count": 48,
+              "quality": "normal"
+            }
+          ]
+        },
+        {
+          "cell": 6,
+          "source": 80,
+          "slots": [
+            {
+              "slot": 1,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 2,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 3,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 4,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 5,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 6,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 7,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 8,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 9,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 10,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 11,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 12,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 13,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 14,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 15,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 16,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 17,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 18,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 19,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 20,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 21,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 22,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 23,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 24,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 25,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 26,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 27,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 28,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 29,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 30,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 31,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 32,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 33,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 34,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 35,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 36,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 37,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 38,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 39,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 40,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 41,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 42,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 43,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 44,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 45,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 46,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 47,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            },
+            {
+              "slot": 48,
+              "name": "iron-gear-wheel",
+              "count": 1,
+              "quality": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "tick": 3,
+      "game_tick": 47400,
+      "name": "all_conditions_true"
+    }
+  ],
+  "events": [
+    {
+      "tick": 2,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_6",
+      "order": 54,
+      "end_order": 57
+    },
+    {
+      "tick": 2,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_5",
+      "order": 58,
+      "end_order": 61
+    },
+    {
+      "tick": 2,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_4",
+      "order": 62,
+      "end_order": 65
+    },
+    {
+      "tick": 2,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_3",
+      "order": 66,
+      "end_order": 69
+    },
+    {
+      "tick": 3,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_6",
+      "order": 112,
+      "end_order": 115
+    },
+    {
+      "tick": 3,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_5",
+      "order": 116,
+      "end_order": 119
+    },
+    {
+      "tick": 3,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_4",
+      "order": 120,
+      "end_order": 123
+    },
+    {
+      "tick": 3,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_3",
+      "order": 124,
+      "end_order": 127
+    },
+    {
+      "tick": 3,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_2",
+      "order": 128,
+      "end_order": 131
+    },
+    {
+      "tick": 3,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_1",
+      "order": 132,
+      "end_order": 135
+    },
+    {
+      "tick": 4,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_6",
+      "order": 178,
+      "end_order": 294
+    },
+    {
+      "tick": 4,
+      "event": "target-full",
+      "stage": "check",
+      "role": "hand_6",
+      "result": false,
+      "order": 179,
+      "end_order": 180
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "inventory",
+      "role": "hand_6",
+      "order": 181,
+      "end_order": 181,
+      "api_capacity": 48,
+      "nonempty_slots": 48,
+      "total_items": 48,
+      "source_role": "source_6"
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 182,
+      "end_order": 182,
+      "slot": 48,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "accept",
+      "role": "hand_6",
+      "result": true,
+      "order": 184,
+      "end_order": 185,
+      "source_slot": 48
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 189,
+      "end_order": 189,
+      "slot": 47,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "accept",
+      "role": "hand_6",
+      "result": true,
+      "order": 191,
+      "end_order": 192,
+      "source_slot": 47
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 196,
+      "end_order": 196,
+      "slot": 46,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "accept",
+      "role": "hand_6",
+      "result": true,
+      "order": 198,
+      "end_order": 199,
+      "source_slot": 46
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 203,
+      "end_order": 203,
+      "slot": 45,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "accept",
+      "role": "hand_6",
+      "result": true,
+      "order": 205,
+      "end_order": 206,
+      "source_slot": 45
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 210,
+      "end_order": 210,
+      "slot": 44,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "accept",
+      "role": "hand_6",
+      "result": true,
+      "order": 212,
+      "end_order": 213,
+      "source_slot": 44
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 217,
+      "end_order": 217,
+      "slot": 43,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "accept",
+      "role": "hand_6",
+      "result": true,
+      "order": 219,
+      "end_order": 220,
+      "source_slot": 43
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 224,
+      "end_order": 224,
+      "slot": 42,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "accept",
+      "role": "hand_6",
+      "result": true,
+      "order": 226,
+      "end_order": 227,
+      "source_slot": 42
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 231,
+      "end_order": 231,
+      "slot": 41,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "accept",
+      "role": "hand_6",
+      "result": true,
+      "order": 233,
+      "end_order": 234,
+      "source_slot": 41
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 238,
+      "end_order": 238,
+      "slot": 40,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "accept",
+      "role": "hand_6",
+      "result": true,
+      "order": 240,
+      "end_order": 241,
+      "source_slot": 40
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 245,
+      "end_order": 245,
+      "slot": 39,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "accept",
+      "role": "hand_6",
+      "result": true,
+      "order": 247,
+      "end_order": 248,
+      "source_slot": 39
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 252,
+      "end_order": 252,
+      "slot": 38,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "accept",
+      "role": "hand_6",
+      "result": true,
+      "order": 254,
+      "end_order": 255,
+      "source_slot": 38
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 259,
+      "end_order": 259,
+      "slot": 37,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "accept",
+      "role": "hand_6",
+      "result": true,
+      "order": 261,
+      "end_order": 262,
+      "source_slot": 37
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 266,
+      "end_order": 266,
+      "slot": 36,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "accept",
+      "role": "hand_6",
+      "result": true,
+      "order": 268,
+      "end_order": 269,
+      "source_slot": 36
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 273,
+      "end_order": 273,
+      "slot": 35,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "accept",
+      "role": "hand_6",
+      "result": true,
+      "order": 275,
+      "end_order": 276,
+      "source_slot": 35
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 280,
+      "end_order": 280,
+      "slot": 34,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "accept",
+      "role": "hand_6",
+      "result": true,
+      "order": 282,
+      "end_order": 283,
+      "source_slot": 34
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 287,
+      "end_order": 287,
+      "slot": 33,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "accept",
+      "role": "hand_6",
+      "result": true,
+      "order": 289,
+      "end_order": 290,
+      "source_slot": 33
+    },
+    {
+      "tick": 4,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_5",
+      "order": 295,
+      "end_order": 306
+    },
+    {
+      "tick": 4,
+      "event": "target-full",
+      "stage": "check",
+      "role": "hand_5",
+      "result": false,
+      "order": 296,
+      "end_order": 297
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "inventory",
+      "role": "hand_5",
+      "order": 298,
+      "end_order": 298,
+      "api_capacity": 48,
+      "nonempty_slots": 1,
+      "total_items": 48,
+      "source_role": "source_5"
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_5",
+      "order": 299,
+      "end_order": 299,
+      "slot": 1,
+      "quantity": 48
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "accept",
+      "role": "hand_5",
+      "result": true,
+      "order": 301,
+      "end_order": 302,
+      "source_slot": 1
+    },
+    {
+      "tick": 4,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_4",
+      "order": 307,
+      "end_order": 366
+    },
+    {
+      "tick": 4,
+      "event": "target-full",
+      "stage": "check",
+      "role": "hand_4",
+      "result": false,
+      "order": 308,
+      "end_order": 309
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "inventory",
+      "role": "hand_4",
+      "order": 310,
+      "end_order": 310,
+      "api_capacity": 48,
+      "nonempty_slots": 48,
+      "total_items": 48,
+      "source_role": "source_4"
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 311,
+      "end_order": 311,
+      "slot": 48,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "accept",
+      "role": "hand_4",
+      "result": false,
+      "order": 313,
+      "end_order": 314,
+      "source_slot": 48
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 315,
+      "end_order": 315,
+      "slot": 47,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 316,
+      "end_order": 316,
+      "slot": 46,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 317,
+      "end_order": 317,
+      "slot": 45,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 318,
+      "end_order": 318,
+      "slot": 44,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 319,
+      "end_order": 319,
+      "slot": 43,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 320,
+      "end_order": 320,
+      "slot": 42,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 321,
+      "end_order": 321,
+      "slot": 41,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 322,
+      "end_order": 322,
+      "slot": 40,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 323,
+      "end_order": 323,
+      "slot": 39,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 324,
+      "end_order": 324,
+      "slot": 38,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 325,
+      "end_order": 325,
+      "slot": 37,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 326,
+      "end_order": 326,
+      "slot": 36,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 327,
+      "end_order": 327,
+      "slot": 35,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 328,
+      "end_order": 328,
+      "slot": 34,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 329,
+      "end_order": 329,
+      "slot": 33,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 330,
+      "end_order": 330,
+      "slot": 32,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 331,
+      "end_order": 331,
+      "slot": 31,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 332,
+      "end_order": 332,
+      "slot": 30,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 333,
+      "end_order": 333,
+      "slot": 29,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 334,
+      "end_order": 334,
+      "slot": 28,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 335,
+      "end_order": 335,
+      "slot": 27,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 336,
+      "end_order": 336,
+      "slot": 26,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 337,
+      "end_order": 337,
+      "slot": 25,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 338,
+      "end_order": 338,
+      "slot": 24,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 339,
+      "end_order": 339,
+      "slot": 23,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 340,
+      "end_order": 340,
+      "slot": 22,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 341,
+      "end_order": 341,
+      "slot": 21,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 342,
+      "end_order": 342,
+      "slot": 20,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 343,
+      "end_order": 343,
+      "slot": 19,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 344,
+      "end_order": 344,
+      "slot": 18,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 345,
+      "end_order": 345,
+      "slot": 17,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 346,
+      "end_order": 346,
+      "slot": 16,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 347,
+      "end_order": 347,
+      "slot": 15,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 348,
+      "end_order": 348,
+      "slot": 14,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 349,
+      "end_order": 349,
+      "slot": 13,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 350,
+      "end_order": 350,
+      "slot": 12,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 351,
+      "end_order": 351,
+      "slot": 11,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 352,
+      "end_order": 352,
+      "slot": 10,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 353,
+      "end_order": 353,
+      "slot": 9,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 354,
+      "end_order": 354,
+      "slot": 8,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 355,
+      "end_order": 355,
+      "slot": 7,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 356,
+      "end_order": 356,
+      "slot": 6,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 357,
+      "end_order": 357,
+      "slot": 5,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 358,
+      "end_order": 358,
+      "slot": 4,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 359,
+      "end_order": 359,
+      "slot": 3,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 360,
+      "end_order": 360,
+      "slot": 2,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_4",
+      "order": 361,
+      "end_order": 361,
+      "slot": 1,
+      "quantity": 1
+    },
+    {
+      "tick": 4,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_3",
+      "order": 367,
+      "end_order": 379
+    },
+    {
+      "tick": 4,
+      "event": "target-full",
+      "stage": "check",
+      "role": "hand_3",
+      "result": false,
+      "order": 368,
+      "end_order": 369
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "inventory",
+      "role": "hand_3",
+      "order": 370,
+      "end_order": 370,
+      "api_capacity": 48,
+      "nonempty_slots": 1,
+      "total_items": 48,
+      "source_role": "source_3"
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_3",
+      "order": 371,
+      "end_order": 371,
+      "slot": 1,
+      "quantity": 48
+    },
+    {
+      "tick": 4,
+      "event": "pickup",
+      "stage": "accept",
+      "role": "hand_3",
+      "result": false,
+      "order": 373,
+      "end_order": 374,
+      "source_slot": 1
+    },
+    {
+      "tick": 4,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_2",
+      "order": 380,
+      "end_order": 387
+    },
+    {
+      "tick": 4,
+      "event": "target-full",
+      "stage": "check",
+      "role": "hand_2",
+      "result": true,
+      "order": 381,
+      "end_order": 382
+    },
+    {
+      "tick": 4,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_1",
+      "order": 388,
+      "end_order": 395
+    },
+    {
+      "tick": 4,
+      "event": "target-full",
+      "stage": "check",
+      "role": "hand_1",
+      "result": true,
+      "order": 389,
+      "end_order": 390
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_6",
+      "order": 404,
+      "end_order": 405
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_5",
+      "order": 406,
+      "end_order": 407
+    },
+    {
+      "tick": 6,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_6",
+      "order": 416,
+      "end_order": 417
+    },
+    {
+      "tick": 6,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_5",
+      "order": 418,
+      "end_order": 419
+    },
+    {
+      "tick": 7,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_6",
+      "order": 428,
+      "end_order": 429
+    },
+    {
+      "tick": 7,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_5",
+      "order": 430,
+      "end_order": 431
+    },
+    {
+      "tick": 8,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_6",
+      "order": 440,
+      "end_order": 446
+    },
+    {
+      "tick": 8,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_5",
+      "order": 447,
+      "end_order": 453
+    },
+    {
+      "tick": 9,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_6",
+      "order": 470,
+      "end_order": 471
+    },
+    {
+      "tick": 9,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_5",
+      "order": 472,
+      "end_order": 473
+    },
+    {
+      "tick": 10,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_6",
+      "order": 486,
+      "end_order": 487
+    },
+    {
+      "tick": 10,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_5",
+      "order": 488,
+      "end_order": 489
+    },
+    {
+      "tick": 11,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_6",
+      "order": 502,
+      "end_order": 503
+    },
+    {
+      "tick": 11,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_5",
+      "order": 504,
+      "end_order": 505
+    },
+    {
+      "tick": 12,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_6",
+      "order": 518,
+      "end_order": 561
+    },
+    {
+      "tick": 12,
+      "event": "target-full",
+      "stage": "check",
+      "role": "hand_6",
+      "result": false,
+      "order": 519,
+      "end_order": 520
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "inventory",
+      "role": "hand_6",
+      "order": 521,
+      "end_order": 521,
+      "api_capacity": 48,
+      "nonempty_slots": 32,
+      "total_items": 32,
+      "source_role": "source_6"
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 522,
+      "end_order": 522,
+      "slot": 32,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "accept",
+      "role": "hand_6",
+      "result": false,
+      "order": 524,
+      "end_order": 525,
+      "source_slot": 32
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 526,
+      "end_order": 526,
+      "slot": 31,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 527,
+      "end_order": 527,
+      "slot": 30,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 528,
+      "end_order": 528,
+      "slot": 29,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 529,
+      "end_order": 529,
+      "slot": 28,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 530,
+      "end_order": 530,
+      "slot": 27,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 531,
+      "end_order": 531,
+      "slot": 26,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 532,
+      "end_order": 532,
+      "slot": 25,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 533,
+      "end_order": 533,
+      "slot": 24,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 534,
+      "end_order": 534,
+      "slot": 23,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 535,
+      "end_order": 535,
+      "slot": 22,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 536,
+      "end_order": 536,
+      "slot": 21,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 537,
+      "end_order": 537,
+      "slot": 20,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 538,
+      "end_order": 538,
+      "slot": 19,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 539,
+      "end_order": 539,
+      "slot": 18,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 540,
+      "end_order": 540,
+      "slot": 17,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 541,
+      "end_order": 541,
+      "slot": 16,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 542,
+      "end_order": 542,
+      "slot": 15,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 543,
+      "end_order": 543,
+      "slot": 14,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 544,
+      "end_order": 544,
+      "slot": 13,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 545,
+      "end_order": 545,
+      "slot": 12,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 546,
+      "end_order": 546,
+      "slot": 11,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 547,
+      "end_order": 547,
+      "slot": 10,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 548,
+      "end_order": 548,
+      "slot": 9,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 549,
+      "end_order": 549,
+      "slot": 8,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 550,
+      "end_order": 550,
+      "slot": 7,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 551,
+      "end_order": 551,
+      "slot": 6,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 552,
+      "end_order": 552,
+      "slot": 5,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 553,
+      "end_order": 553,
+      "slot": 4,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 554,
+      "end_order": 554,
+      "slot": 3,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 555,
+      "end_order": 555,
+      "slot": 2,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_6",
+      "order": 556,
+      "end_order": 556,
+      "slot": 1,
+      "quantity": 1
+    },
+    {
+      "tick": 12,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand_5",
+      "order": 562,
+      "end_order": 574
+    },
+    {
+      "tick": 12,
+      "event": "target-full",
+      "stage": "check",
+      "role": "hand_5",
+      "result": false,
+      "order": 563,
+      "end_order": 564
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "inventory",
+      "role": "hand_5",
+      "order": 565,
+      "end_order": 565,
+      "api_capacity": 48,
+      "nonempty_slots": 1,
+      "total_items": 32,
+      "source_role": "source_5"
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "source-slot",
+      "role": "hand_5",
+      "order": 566,
+      "end_order": 566,
+      "slot": 1,
+      "quantity": 32
+    },
+    {
+      "tick": 12,
+      "event": "pickup",
+      "stage": "accept",
+      "role": "hand_5",
+      "result": false,
+      "order": 568,
+      "end_order": 569,
+      "source_slot": 1
+    }
+  ],
+  "comparison": {
+    "visible_reference_equal": true,
+    "repeat_visible_equal": true,
+    "repeat_events_equal": true
+  },
+  "observation_target_full_checks_excluded_each": 106,
+  "limits": [
+    "Selected pickup opportunities only; source-slot/check counts do not establish all possible source work.",
+    "Observation-induced checks are excluded. Quantity and depletion predictions are derived independently by the simulator."
+  ]
+}
