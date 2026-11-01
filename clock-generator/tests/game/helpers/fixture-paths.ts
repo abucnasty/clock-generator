@@ -8,6 +8,8 @@ const PICKUP = path.join(ENGINE_ROOT, "tests/game/mechanics/belt-pickup/fixtures
 /** Mechanic fixtures are deliberately separate from ConfigPaths and ordinary sample sweeps. */
 export const GameFixturePaths = {
     ACTIVATION_ORDER: path.join(ENGINE_ROOT, "tests/game/mechanics/activation-order/fixtures"),
+    PARTIAL_HAND_NOTIFICATIONS: path.join(ENGINE_ROOT, "tests/game/mechanics/activation-order/fixtures/partial-hand"),
+    CONDITION_WRITE_NOTIFICATIONS: path.join(ENGINE_ROOT, "tests/game/mechanics/activation-order/fixtures/condition-writes"),
     INDEPENDENT_SOURCE_ALLOCATIONS: path.join(ENGINE_ROOT, "tests/game/mechanics/source-order/fixtures/independent-source-allocations.json"),
     SAME_ITEM: path.join(PICKUP, "same-item"),
     SAME_ITEM_CONFIG: path.join(PICKUP, "same-item/config.json"),

@@ -73,3 +73,11 @@ initial hidden state, every deactivation/eligibility cause, control replacement 
 shortfall cure. World integration still requires native alarm-source/hand outcomes, lifecycle/steady-state keys,
 all existing native observations/pins, generation, blast/count and moved-pick native checks. No legacy timing
 proxy, production requirement, native clock pin, timeout or priced counter has been changed here.
+
+## Direct membership-transition complements
+
+The [partial-hand source case](fixtures/partial-hand/README.md) and
+[condition-assignment case](fixtures/condition-writes/README.md) add directly intercepted Deactivation
+entry/return evidence. They do not upgrade the older inferred intervals. Scheduling-only replay now covers
+real craft vs direct insertion and same-truth/false/true assignments with the observed native phase order.
+Exact captured scaffolds, native layout JPEGs and generated screenshot provenance are retained.

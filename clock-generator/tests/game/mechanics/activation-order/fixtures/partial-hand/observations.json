@@ -1,0 +1,1648 @@
+{
+  "schema": 1,
+  "contract": "Mechanics: native observed sequence, no production rule inferred",
+  "version": "2.1.21",
+  "binary_sha256": "64a4dbc1a6de1e2556efd627f543d6072eaca6e69ee8b0c26df358bbd559adf7",
+  "comparison": {
+    "raw_reference_capture01_equal": true,
+    "raw_reference_capture02_equal": false,
+    "declared_origin_relative_visible_equal": true,
+    "events_without_untyped_raw_rax_equal": true,
+    "absolute_started": {
+      "reference02": 47397,
+      "capture01": 47397,
+      "capture02": 47396
+    }
+  },
+  "tick_conversion": "Native probe k updates are reflected in visible row k+1; Lua interventions after visible k may precede that actual tick update. Absolute game tick=started+probe tick.",
+  "id_namespaces": {
+    "native_roles": {
+      "hand_1": 58,
+      "source_1": 56,
+      "sink_1": 57,
+      "hand_2": 61,
+      "source_2": 59,
+      "sink_2": 60,
+      "hand_3": 64,
+      "source_3": 62,
+      "sink_3": 63
+    },
+    "config_ids": "not assigned; scaffold entity_number is separate",
+    "captured_recording_ids": "not used by this projection"
+  },
+  "scope": [
+    "Three disconnected, effectively enabled hands; inherited nested condition setter read back blank <0, not intended true. No control-write behavior inferred.",
+    "Initial partial/empty hands are already inactive at first live mapping; their original deactivation was before capture. Later partial deactivation calls are directly intercepted.",
+    "Lua active property is recorded but is not scheduler active-list membership.",
+    "Capture02 retains a raw whole-JSON failure solely from one-tick absolute-origin shift; relative-field equality is explicitly separate.",
+    "Void/helper RAX values are retained raw and excluded from event equivalence; no unverified return ABI inferred.",
+    "No productivity, universal policy, simulator fix, throughput verdict or pricing conclusion."
+  ],
+  "visible": [
+    {
+      "tick": 1,
+      "hands": [
+        0,
+        8,
+        16
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        0,
+        0,
+        0
+      ],
+      "sink_cable": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "tick": 2,
+      "hands": [
+        0,
+        8,
+        16
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        0,
+        0,
+        0
+      ],
+      "sink_cable": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "tick": 3,
+      "hands": [
+        0,
+        8,
+        16
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        0,
+        0,
+        0
+      ],
+      "sink_cable": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "tick": 4,
+      "hands": [
+        0,
+        8,
+        16
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        0,
+        0,
+        0
+      ],
+      "sink_cable": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "tick": 5,
+      "hands": [
+        0,
+        8,
+        0
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        0,
+        0,
+        0
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 6,
+      "hands": [
+        0,
+        8,
+        0
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        0,
+        0,
+        0
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 7,
+      "hands": [
+        0,
+        8,
+        0
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        0,
+        0,
+        0
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 8,
+      "hands": [
+        0,
+        8,
+        0
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        0,
+        0,
+        0
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 9,
+      "hands": [
+        0,
+        8,
+        0
+      ],
+      "source_output": [
+        2,
+        2,
+        2
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 10,
+      "hands": [
+        2,
+        10,
+        2
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 11,
+      "hands": [
+        2,
+        10,
+        2
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 12,
+      "hands": [
+        2,
+        10,
+        2
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 13,
+      "hands": [
+        2,
+        10,
+        2
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 14,
+      "hands": [
+        2,
+        10,
+        2
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 15,
+      "hands": [
+        10,
+        16,
+        10
+      ],
+      "source_output": [
+        0,
+        2,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 16,
+      "hands": [
+        10,
+        16,
+        10
+      ],
+      "source_output": [
+        0,
+        2,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 17,
+      "hands": [
+        10,
+        16,
+        10
+      ],
+      "source_output": [
+        0,
+        2,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 18,
+      "hands": [
+        10,
+        16,
+        10
+      ],
+      "source_output": [
+        0,
+        2,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        0,
+        16
+      ]
+    },
+    {
+      "tick": 19,
+      "hands": [
+        10,
+        0,
+        10
+      ],
+      "source_output": [
+        0,
+        2,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        16,
+        16
+      ]
+    },
+    {
+      "tick": 20,
+      "hands": [
+        10,
+        0,
+        10
+      ],
+      "source_output": [
+        0,
+        2,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        16,
+        16
+      ]
+    },
+    {
+      "tick": 21,
+      "hands": [
+        10,
+        0,
+        10
+      ],
+      "source_output": [
+        0,
+        2,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        16,
+        16
+      ]
+    },
+    {
+      "tick": 22,
+      "hands": [
+        10,
+        0,
+        10
+      ],
+      "source_output": [
+        0,
+        2,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        16,
+        16
+      ]
+    },
+    {
+      "tick": 23,
+      "hands": [
+        10,
+        2,
+        10
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        16,
+        16
+      ]
+    },
+    {
+      "tick": 24,
+      "hands": [
+        10,
+        2,
+        10
+      ],
+      "source_output": [
+        0,
+        0,
+        0
+      ],
+      "finished": [
+        1,
+        1,
+        1
+      ],
+      "sink_cable": [
+        0,
+        16,
+        16
+      ]
+    }
+  ],
+  "events": [
+    {
+      "event": "Update",
+      "probe_tick": 1,
+      "game_tick": 47398,
+      "seq": 13,
+      "return_seq": 14,
+      "role": "hand_3",
+      "native_unit": 64,
+      "function": "Inserter::update",
+      "caller": "scheduled entity-list update",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Update",
+      "probe_tick": 2,
+      "game_tick": 47399,
+      "seq": 15,
+      "return_seq": 16,
+      "role": "hand_3",
+      "native_unit": 64,
+      "function": "Inserter::update",
+      "caller": "scheduled entity-list update",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Update",
+      "probe_tick": 3,
+      "game_tick": 47400,
+      "seq": 17,
+      "return_seq": 18,
+      "role": "hand_3",
+      "native_unit": 64,
+      "function": "Inserter::update",
+      "caller": "scheduled entity-list update",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Update",
+      "probe_tick": 4,
+      "game_tick": 47401,
+      "seq": 19,
+      "return_seq": 22,
+      "role": "hand_3",
+      "native_unit": 64,
+      "function": "Inserter::update",
+      "caller": "scheduled entity-list update",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Alarm",
+      "probe_tick": 4,
+      "game_tick": 47401,
+      "seq": 20,
+      "return_seq": 21,
+      "role": "hand_3",
+      "native_unit": 64,
+      "function": "Inserter::alarm",
+      "caller": "Inserter::postTransferHook(NotificationData const&)",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Update",
+      "probe_tick": 5,
+      "game_tick": 47402,
+      "seq": 23,
+      "return_seq": 24,
+      "role": "hand_3",
+      "native_unit": 64,
+      "function": "Inserter::update",
+      "caller": "scheduled entity-list update",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Update",
+      "probe_tick": 6,
+      "game_tick": 47403,
+      "seq": 25,
+      "return_seq": 26,
+      "role": "hand_3",
+      "native_unit": 64,
+      "function": "Inserter::update",
+      "caller": "scheduled entity-list update",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Update",
+      "probe_tick": 7,
+      "game_tick": 47404,
+      "seq": 27,
+      "return_seq": 28,
+      "role": "hand_3",
+      "native_unit": 64,
+      "function": "Inserter::update",
+      "caller": "scheduled entity-list update",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Update",
+      "probe_tick": 8,
+      "game_tick": 47405,
+      "seq": 38,
+      "return_seq": 43,
+      "role": "hand_3",
+      "native_unit": 64,
+      "function": "Inserter::update",
+      "caller": "scheduled entity-list update",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": false,
+        "self_linked": true
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Deactivation",
+      "probe_tick": 8,
+      "game_tick": 47405,
+      "seq": 40,
+      "return_seq": 41,
+      "role": "hand_3",
+      "native_unit": 64,
+      "function": "UpdatableEntity::deactivate",
+      "caller": "Inserter::tryToGetToSleep(bool, bool)",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": false,
+        "self_linked": true
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Alarm",
+      "probe_tick": 8,
+      "game_tick": 47405,
+      "seq": 45,
+      "return_seq": 48,
+      "role": "hand_3",
+      "native_unit": 64,
+      "function": "Inserter::alarm",
+      "caller": "CraftingMachine::postTransferHook(NotificationData const&)",
+      "before": {
+        "active": false,
+        "self_linked": true
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Activation",
+      "probe_tick": 8,
+      "game_tick": 47405,
+      "seq": 47,
+      "return_seq": 49,
+      "role": "hand_3",
+      "native_unit": 64,
+      "function": "UpdatableEntity::attachInternal",
+      "caller": "CraftingMachine::postTransferHook(NotificationData const&)",
+      "before": {
+        "active": false,
+        "self_linked": true
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return",
+      "links_after": {
+        "next": "unmapped_anchor_1",
+        "previous": "unmapped_anchor_1"
+      }
+    },
+    {
+      "event": "Alarm",
+      "probe_tick": 8,
+      "game_tick": 47405,
+      "seq": 53,
+      "return_seq": 56,
+      "role": "hand_2",
+      "native_unit": 61,
+      "function": "Inserter::alarm",
+      "caller": "CraftingMachine::postTransferHook(NotificationData const&)",
+      "before": {
+        "active": false,
+        "self_linked": true
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Activation",
+      "probe_tick": 8,
+      "game_tick": 47405,
+      "seq": 55,
+      "return_seq": 57,
+      "role": "hand_2",
+      "native_unit": 61,
+      "function": "UpdatableEntity::attachInternal",
+      "caller": "CraftingMachine::postTransferHook(NotificationData const&)",
+      "before": {
+        "active": false,
+        "self_linked": true
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return",
+      "links_after": {
+        "next": "hand_3",
+        "previous": "unmapped_anchor_1"
+      }
+    },
+    {
+      "event": "Alarm",
+      "probe_tick": 8,
+      "game_tick": 47405,
+      "seq": 61,
+      "return_seq": 64,
+      "role": "hand_1",
+      "native_unit": 58,
+      "function": "Inserter::alarm",
+      "caller": "CraftingMachine::postTransferHook(NotificationData const&)",
+      "before": {
+        "active": false,
+        "self_linked": true
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Activation",
+      "probe_tick": 8,
+      "game_tick": 47405,
+      "seq": 63,
+      "return_seq": 65,
+      "role": "hand_1",
+      "native_unit": 58,
+      "function": "UpdatableEntity::attachInternal",
+      "caller": "CraftingMachine::postTransferHook(NotificationData const&)",
+      "before": {
+        "active": false,
+        "self_linked": true
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return",
+      "links_after": {
+        "next": "hand_2",
+        "previous": "unmapped_anchor_1"
+      }
+    },
+    {
+      "event": "Update",
+      "probe_tick": 9,
+      "game_tick": 47406,
+      "seq": 68,
+      "return_seq": 78,
+      "role": "hand_1",
+      "native_unit": 58,
+      "function": "Inserter::update",
+      "caller": "scheduled entity-list update",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": false,
+        "self_linked": true
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Alarm",
+      "probe_tick": 9,
+      "game_tick": 47406,
+      "seq": 72,
+      "return_seq": 73,
+      "role": "hand_1",
+      "native_unit": 58,
+      "function": "Inserter::alarm",
+      "caller": "Inserter::postTransferHook(NotificationData const&)",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Deactivation",
+      "probe_tick": 9,
+      "game_tick": 47406,
+      "seq": 75,
+      "return_seq": 76,
+      "role": "hand_1",
+      "native_unit": 58,
+      "function": "UpdatableEntity::deactivate",
+      "caller": "Inserter::tryToGetToSleep(bool, bool)",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": false,
+        "self_linked": true
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Update",
+      "probe_tick": 9,
+      "game_tick": 47406,
+      "seq": 79,
+      "return_seq": 89,
+      "role": "hand_2",
+      "native_unit": 61,
+      "function": "Inserter::update",
+      "caller": "scheduled entity-list update",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": false,
+        "self_linked": true
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Alarm",
+      "probe_tick": 9,
+      "game_tick": 47406,
+      "seq": 82,
+      "return_seq": 83,
+      "role": "hand_2",
+      "native_unit": 61,
+      "function": "Inserter::alarm",
+      "caller": "Inserter::postTransferHook(NotificationData const&)",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Deactivation",
+      "probe_tick": 9,
+      "game_tick": 47406,
+      "seq": 86,
+      "return_seq": 87,
+      "role": "hand_2",
+      "native_unit": 61,
+      "function": "UpdatableEntity::deactivate",
+      "caller": "Inserter::tryToGetToSleep(bool, bool)",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": false,
+        "self_linked": true
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Update",
+      "probe_tick": 9,
+      "game_tick": 47406,
+      "seq": 90,
+      "return_seq": 100,
+      "role": "hand_3",
+      "native_unit": 64,
+      "function": "Inserter::update",
+      "caller": "scheduled entity-list update",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": false,
+        "self_linked": true
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Alarm",
+      "probe_tick": 9,
+      "game_tick": 47406,
+      "seq": 94,
+      "return_seq": 95,
+      "role": "hand_3",
+      "native_unit": 64,
+      "function": "Inserter::alarm",
+      "caller": "Inserter::postTransferHook(NotificationData const&)",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Deactivation",
+      "probe_tick": 9,
+      "game_tick": 47406,
+      "seq": 97,
+      "return_seq": 98,
+      "role": "hand_3",
+      "native_unit": 64,
+      "function": "UpdatableEntity::deactivate",
+      "caller": "Inserter::tryToGetToSleep(bool, bool)",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": false,
+        "self_linked": true
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Alarm",
+      "probe_tick": 14,
+      "game_tick": 47411,
+      "seq": 102,
+      "return_seq": 105,
+      "role": "hand_1",
+      "native_unit": 58,
+      "function": "Inserter::alarm",
+      "caller": "CraftingMachine::postTransferHook(NotificationData const&)",
+      "before": {
+        "active": false,
+        "self_linked": true
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Activation",
+      "probe_tick": 14,
+      "game_tick": 47411,
+      "seq": 104,
+      "return_seq": 106,
+      "role": "hand_1",
+      "native_unit": 58,
+      "function": "UpdatableEntity::attachInternal",
+      "caller": "CraftingMachine::postTransferHook(NotificationData const&)",
+      "before": {
+        "active": false,
+        "self_linked": true
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return",
+      "links_after": {
+        "next": "unmapped_anchor_1",
+        "previous": "unmapped_anchor_1"
+      }
+    },
+    {
+      "event": "Alarm",
+      "probe_tick": 14,
+      "game_tick": 47411,
+      "seq": 108,
+      "return_seq": 111,
+      "role": "hand_2",
+      "native_unit": 61,
+      "function": "Inserter::alarm",
+      "caller": "CraftingMachine::postTransferHook(NotificationData const&)",
+      "before": {
+        "active": false,
+        "self_linked": true
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Activation",
+      "probe_tick": 14,
+      "game_tick": 47411,
+      "seq": 110,
+      "return_seq": 112,
+      "role": "hand_2",
+      "native_unit": 61,
+      "function": "UpdatableEntity::attachInternal",
+      "caller": "CraftingMachine::postTransferHook(NotificationData const&)",
+      "before": {
+        "active": false,
+        "self_linked": true
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return",
+      "links_after": {
+        "next": "hand_1",
+        "previous": "unmapped_anchor_1"
+      }
+    },
+    {
+      "event": "Alarm",
+      "probe_tick": 14,
+      "game_tick": 47411,
+      "seq": 114,
+      "return_seq": 117,
+      "role": "hand_3",
+      "native_unit": 64,
+      "function": "Inserter::alarm",
+      "caller": "CraftingMachine::postTransferHook(NotificationData const&)",
+      "before": {
+        "active": false,
+        "self_linked": true
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Activation",
+      "probe_tick": 14,
+      "game_tick": 47411,
+      "seq": 116,
+      "return_seq": 118,
+      "role": "hand_3",
+      "native_unit": 64,
+      "function": "UpdatableEntity::attachInternal",
+      "caller": "CraftingMachine::postTransferHook(NotificationData const&)",
+      "before": {
+        "active": false,
+        "self_linked": true
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return",
+      "links_after": {
+        "next": "hand_2",
+        "previous": "unmapped_anchor_1"
+      }
+    },
+    {
+      "event": "Update",
+      "probe_tick": 14,
+      "game_tick": 47411,
+      "seq": 119,
+      "return_seq": 129,
+      "role": "hand_3",
+      "native_unit": 64,
+      "function": "Inserter::update",
+      "caller": "scheduled entity-list update",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": false,
+        "self_linked": true
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Alarm",
+      "probe_tick": 14,
+      "game_tick": 47411,
+      "seq": 122,
+      "return_seq": 123,
+      "role": "hand_3",
+      "native_unit": 64,
+      "function": "Inserter::alarm",
+      "caller": "Inserter::postTransferHook(NotificationData const&)",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Deactivation",
+      "probe_tick": 14,
+      "game_tick": 47411,
+      "seq": 126,
+      "return_seq": 127,
+      "role": "hand_3",
+      "native_unit": 64,
+      "function": "UpdatableEntity::deactivate",
+      "caller": "Inserter::tryToGetToSleep(bool, bool)",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": false,
+        "self_linked": true
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Update",
+      "probe_tick": 14,
+      "game_tick": 47411,
+      "seq": 130,
+      "return_seq": 136,
+      "role": "hand_2",
+      "native_unit": 61,
+      "function": "Inserter::update",
+      "caller": "scheduled entity-list update",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Alarm",
+      "probe_tick": 14,
+      "game_tick": 47411,
+      "seq": 133,
+      "return_seq": 134,
+      "role": "hand_2",
+      "native_unit": 61,
+      "function": "Inserter::alarm",
+      "caller": "Inserter::postTransferHook(NotificationData const&)",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Update",
+      "probe_tick": 14,
+      "game_tick": 47411,
+      "seq": 137,
+      "return_seq": 147,
+      "role": "hand_1",
+      "native_unit": 58,
+      "function": "Inserter::update",
+      "caller": "scheduled entity-list update",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": false,
+        "self_linked": true
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Alarm",
+      "probe_tick": 14,
+      "game_tick": 47411,
+      "seq": 140,
+      "return_seq": 141,
+      "role": "hand_1",
+      "native_unit": 58,
+      "function": "Inserter::alarm",
+      "caller": "Inserter::postTransferHook(NotificationData const&)",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Deactivation",
+      "probe_tick": 14,
+      "game_tick": 47411,
+      "seq": 144,
+      "return_seq": 145,
+      "role": "hand_1",
+      "native_unit": 58,
+      "function": "UpdatableEntity::deactivate",
+      "caller": "Inserter::tryToGetToSleep(bool, bool)",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": false,
+        "self_linked": true
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Update",
+      "probe_tick": 15,
+      "game_tick": 47412,
+      "seq": 148,
+      "return_seq": 149,
+      "role": "hand_2",
+      "native_unit": 61,
+      "function": "Inserter::update",
+      "caller": "scheduled entity-list update",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Update",
+      "probe_tick": 16,
+      "game_tick": 47413,
+      "seq": 150,
+      "return_seq": 151,
+      "role": "hand_2",
+      "native_unit": 61,
+      "function": "Inserter::update",
+      "caller": "scheduled entity-list update",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Update",
+      "probe_tick": 17,
+      "game_tick": 47414,
+      "seq": 152,
+      "return_seq": 153,
+      "role": "hand_2",
+      "native_unit": 61,
+      "function": "Inserter::update",
+      "caller": "scheduled entity-list update",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Update",
+      "probe_tick": 18,
+      "game_tick": 47415,
+      "seq": 154,
+      "return_seq": 157,
+      "role": "hand_2",
+      "native_unit": 61,
+      "function": "Inserter::update",
+      "caller": "scheduled entity-list update",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Alarm",
+      "probe_tick": 18,
+      "game_tick": 47415,
+      "seq": 155,
+      "return_seq": 156,
+      "role": "hand_2",
+      "native_unit": 61,
+      "function": "Inserter::alarm",
+      "caller": "Inserter::postTransferHook(NotificationData const&)",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Update",
+      "probe_tick": 19,
+      "game_tick": 47416,
+      "seq": 158,
+      "return_seq": 159,
+      "role": "hand_2",
+      "native_unit": 61,
+      "function": "Inserter::update",
+      "caller": "scheduled entity-list update",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    },
+    {
+      "event": "Update",
+      "probe_tick": 20,
+      "game_tick": 47417,
+      "seq": 160,
+      "return_seq": 161,
+      "role": "hand_2",
+      "native_unit": 61,
+      "function": "Inserter::update",
+      "caller": "scheduled entity-list update",
+      "before": {
+        "active": true,
+        "self_linked": false
+      },
+      "after": {
+        "active": true,
+        "self_linked": false
+      },
+      "evidence": "intercepted selected call and return"
+    }
+  ],
+  "provenance": {
+    ".scratch/reference02/visible.json": "22dbd743348575ba5083746489188b8f3e36ca9c2a3d77d73fa242379d3cfaea",
+    ".scratch/capture01/visible.json": "22dbd743348575ba5083746489188b8f3e36ca9c2a3d77d73fa242379d3cfaea",
+    ".scratch/capture01/calls.jsonl": "c4f53fbe9ff0e8a03044e5eef338348c9849cefa0158a11f619fd850c400ca7f",
+    ".scratch/capture02/visible.json": "4148a3b2a0e6719a1d3e52b6add7be4c392578a419b15674ffca1fa883c90f27",
+    ".scratch/capture02/calls.jsonl": "e2e8b025031b744b1e2e773d17d0f09ac97ca9a55dacfedfdcef1e1bf1c8e766",
+    ".scratch/capture01/SHA256.json": "19b6b1815ba100e837818f405e0cceafe1bff035d50f7065ee0c7f26f0213a79",
+    ".scratch/capture02/SHA256.json": "0709eaab2bc976fed7d5fb95b8901ad59afcf8e53a5806d34273daff7bb532e1",
+    "scripts/export-mechanics.py": "89d5063048e4000c792ea122a828742d70bc69b7fde799a6cfc9037f79155c3f",
+    ".scratch/reference02/scaffold.txt": "899903adee0ba383503c0830ee8b9ce8c187362cbd4b915a13b5f0a82db0ff75"
+  },
+  "initial": [
+    {
+      "cell": 1,
+      "hand": 58,
+      "source": 56,
+      "sink": 57,
+      "stock": 0,
+      "position": {
+        "y": 1.5,
+        "x": 387.5
+      },
+      "source_position": {
+        "y": -0.5,
+        "x": 387.5
+      },
+      "sink_position": {
+        "y": 2.5,
+        "x": 387.5
+      },
+      "stack_override": 16,
+      "quality": "legendary",
+      "source_recipe": "copper-cable",
+      "sink_type": "container",
+      "sink_slots": 48
+    },
+    {
+      "cell": 2,
+      "hand": 61,
+      "source": 59,
+      "sink": 60,
+      "stock": 8,
+      "position": {
+        "y": 1.5,
+        "x": 399.5
+      },
+      "source_position": {
+        "y": -0.5,
+        "x": 399.5
+      },
+      "sink_position": {
+        "y": 2.5,
+        "x": 399.5
+      },
+      "stack_override": 16,
+      "quality": "legendary",
+      "source_recipe": "copper-cable",
+      "sink_type": "container",
+      "sink_slots": 48
+    },
+    {
+      "cell": 3,
+      "hand": 64,
+      "source": 62,
+      "sink": 63,
+      "stock": 16,
+      "position": {
+        "y": 1.5,
+        "x": 411.5
+      },
+      "source_position": {
+        "y": -0.5,
+        "x": 411.5
+      },
+      "sink_position": {
+        "y": 2.5,
+        "x": 411.5
+      },
+      "stack_override": 16,
+      "quality": "legendary",
+      "source_recipe": "copper-cable",
+      "sink_type": "container",
+      "sink_slots": 48
+    }
+  ],
+  "initial_active_order": [
+    "hand_3"
+  ],
+  "initial_state_basis": "first native mapping: hand_3 linked; hand_1/2 inactive/self-linked",
+  "window": {
+    "first_tick": 1,
+    "last_tick": 20
+  },
+  "source_projection_sha256": "fa3f93491237e27e74d4db08162f47575411f1606cde3dc180e15aa9ad0b4abe",
+  "source_seal": {
+    "/home/abucnasty/dev/factorio-work/0.26.0/packages/release-investigations/05-partial-hand-sleep/scripts/capture.js": "e3762615c7dfab58a83bc957afc6d7c945bdb47dcc0525d127bd663f4ea0577e",
+    "/home/abucnasty/dev/factorio-work/0.26.0/packages/release-investigations/05-partial-hand-sleep/scripts/observe.py": "e2e974c3eebc8117a113f5d143d0ff39e8a786238bb0251e416104ee1f619377",
+    "/home/abucnasty/dev/factorio-work/0.26.0/packages/release-investigations/05-partial-hand-sleep/scripts/probe.lua": "b3fca95271a6c7dc40d0c6d29b632518fb60cf7df1247b550e59086c7516e448",
+    "/home/abucnasty/dev/factorio-work/0.26.0/packages/release-investigations/05-partial-hand-sleep/scripts/code-sites.json": "6d14652c5630dfd4c37e91afa4e8f964f73c71dbbb519bf65866f11fa8b8755f",
+    "/home/abucnasty/Games/factorio_locked_versions/2_1_21/bin/x64/factorio": "64a4dbc1a6de1e2556efd627f543d6072eaca6e69ee8b0c26df358bbd559adf7",
+    "/home/abucnasty/dev/factorio-work/0.26.0/planner/worktrees/task-p-repair/clock-generator/resources/clock_generator_staging.zip": "a8ec0de612e13c3c36f8f30615c39b5fbba55f9a74bc952f9cc88eda30a95717",
+    "/home/abucnasty/dev/factorio-work/0.26.0/planner/worktrees/task-p-repair/clock-generator/dist/harness/factorio-harness.js": "8bd30b4936f4354ce5962a925d6d3614592e19c39c013c8009597b3e76dc9da1",
+    "/home/abucnasty/dev/factorio-work/0.26.0/planner/worktrees/task-p-repair/clock-generator/tests/game/helpers/probe-source.js": "48376f0d5f28c8a6f4a824fccc0b0d368e7d0f2c588480eee69e5ec524d05a85",
+    "/home/abucnasty/dev/factorio-work/0.26.0/packages/release-investigations/05-partial-hand-sleep/.scratch/capture01/scaffold.txt": "899903adee0ba383503c0830ee8b9ce8c187362cbd4b915a13b5f0a82db0ff75",
+    "/home/abucnasty/dev/factorio-work/0.26.0/packages/release-investigations/05-partial-hand-sleep/.scratch/capture01/probe.lua": "bb702a2da730ae124e40a7203479a79eff716be5c8f3400a7f7f956c58982f40"
+  },
+  "scaffold_sha256": "899903adee0ba383503c0830ee8b9ce8c187362cbd4b915a13b5f0a82db0ff75"
+}
