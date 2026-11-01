@@ -1,0 +1,405 @@
+{
+  "provenance": {
+    "report": "packages/release-investigations/01-partial-hands-productivity/REPORT.md",
+    "config_sha256": "3739ef88c902009fb451c031d2e162947cdd91e0fe6052aebf71c9226810026f",
+    "archived_clock_sha256": "ed46ebec2996b8b1a180de92cc05152ed7be3e223e8f3c8b00f88f695447c973",
+    "recovered_generator_commit": "0914f21d",
+    "contract": "Behavior: exact explicit archived plan; no selection or new native mechanic assertion"
+  },
+  "config": {
+    "target_output": {
+      "recipe": "chemical-science-pack",
+      "items_per_second": 10,
+      "copies": 1
+    },
+    "machines": [
+      {
+        "id": 1,
+        "recipe": "casting-steel",
+        "productivity": 300,
+        "crafting_speed": 225.331,
+        "prototype": "foundry"
+      },
+      {
+        "id": 2,
+        "recipe": "casting-iron-gear-wheel",
+        "productivity": 150,
+        "crafting_speed": 129,
+        "prototype": "foundry"
+      },
+      {
+        "id": 3,
+        "recipe": "engine-unit",
+        "productivity": 100,
+        "crafting_speed": 35.07625,
+        "prototype": "assembling-machine-3"
+      },
+      {
+        "id": 4,
+        "recipe": "chemical-science-pack",
+        "productivity": 100,
+        "crafting_speed": 63.007813,
+        "prototype": "assembling-machine-3"
+      },
+      {
+        "id": 5,
+        "recipe": "casting-pipe",
+        "productivity": 50,
+        "crafting_speed": 213.075,
+        "prototype": "foundry"
+      },
+      {
+        "id": 6,
+        "recipe": "advanced-circuit",
+        "productivity": 175,
+        "crafting_speed": 55.372,
+        "prototype": "electromagnetic-plant"
+      },
+      {
+        "id": 7,
+        "recipe": "electronic-circuit",
+        "productivity": 175,
+        "crafting_speed": 45.444,
+        "prototype": "electromagnetic-plant"
+      },
+      {
+        "id": 8,
+        "recipe": "plastic-bar",
+        "productivity": 300,
+        "crafting_speed": 99.194,
+        "prototype": "cryogenic-plant"
+      },
+      {
+        "id": 9,
+        "recipe": "casting-copper-cable",
+        "productivity": 150,
+        "crafting_speed": 129,
+        "prototype": "foundry"
+      },
+      {
+        "id": 10,
+        "recipe": "casting-iron",
+        "productivity": 150,
+        "crafting_speed": 112.244,
+        "prototype": "foundry"
+      }
+    ],
+    "inserters": [
+      {
+        "id": 1,
+        "source": {
+          "type": "machine",
+          "id": 2
+        },
+        "sink": {
+          "type": "machine",
+          "id": 3
+        },
+        "stack_size": 16,
+        "filters": [
+          "iron-gear-wheel"
+        ]
+      },
+      {
+        "id": 2,
+        "source": {
+          "type": "machine",
+          "id": 1
+        },
+        "sink": {
+          "type": "machine",
+          "id": 3
+        },
+        "stack_size": 16,
+        "filters": [
+          "steel-plate"
+        ]
+      },
+      {
+        "id": 3,
+        "source": {
+          "type": "machine",
+          "id": 5
+        },
+        "sink": {
+          "type": "machine",
+          "id": 3
+        },
+        "stack_size": 16,
+        "filters": [
+          "pipe"
+        ]
+      },
+      {
+        "id": 4,
+        "source": {
+          "type": "machine",
+          "id": 3
+        },
+        "sink": {
+          "type": "machine",
+          "id": 4
+        },
+        "stack_size": 16,
+        "filters": [
+          "engine-unit"
+        ]
+      },
+      {
+        "id": 5,
+        "source": {
+          "type": "belt",
+          "id": 1
+        },
+        "sink": {
+          "type": "machine",
+          "id": 4
+        },
+        "stack_size": 16,
+        "filters": [
+          "sulfur"
+        ]
+      },
+      {
+        "id": 6,
+        "source": {
+          "type": "machine",
+          "id": 4
+        },
+        "sink": {
+          "type": "belt",
+          "id": 2,
+          "drop": {
+            "lane": 1,
+            "position": -286.199219
+          }
+        },
+        "stack_size": 16,
+        "filters": [
+          "chemical-science-pack"
+        ]
+      },
+      {
+        "id": 7,
+        "source": {
+          "type": "machine",
+          "id": 6
+        },
+        "sink": {
+          "type": "machine",
+          "id": 4
+        },
+        "stack_size": 16,
+        "filters": [
+          "advanced-circuit"
+        ]
+      },
+      {
+        "id": 8,
+        "source": {
+          "type": "machine",
+          "id": 9
+        },
+        "sink": {
+          "type": "machine",
+          "id": 6
+        },
+        "stack_size": 16,
+        "filters": [
+          "copper-cable"
+        ]
+      },
+      {
+        "id": 9,
+        "source": {
+          "type": "machine",
+          "id": 7
+        },
+        "sink": {
+          "type": "machine",
+          "id": 6
+        },
+        "stack_size": 16,
+        "filters": [
+          "electronic-circuit"
+        ]
+      },
+      {
+        "id": 10,
+        "source": {
+          "type": "machine",
+          "id": 8
+        },
+        "sink": {
+          "type": "machine",
+          "id": 6
+        },
+        "stack_size": 16,
+        "filters": [
+          "plastic-bar"
+        ]
+      },
+      {
+        "id": 11,
+        "source": {
+          "type": "machine",
+          "id": 9
+        },
+        "sink": {
+          "type": "machine",
+          "id": 7
+        },
+        "stack_size": 16,
+        "filters": [
+          "copper-cable"
+        ]
+      },
+      {
+        "id": 12,
+        "source": {
+          "type": "machine",
+          "id": 10
+        },
+        "sink": {
+          "type": "machine",
+          "id": 7
+        },
+        "stack_size": 16,
+        "filters": [
+          "iron-plate"
+        ]
+      },
+      {
+        "id": 13,
+        "source": {
+          "type": "belt",
+          "id": 3
+        },
+        "sink": {
+          "type": "machine",
+          "id": 8
+        },
+        "stack_size": 16,
+        "filters": [
+          "coal"
+        ]
+      }
+    ],
+    "belts": [
+      {
+        "id": 1,
+        "type": "turbo-transport-belt",
+        "lanes": [
+          {
+            "ingredient": "sulfur",
+            "stack_size": 4
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "type": "turbo-transport-belt",
+        "lanes": [
+          {
+            "ingredient": "chemical-science-pack",
+            "stack_size": 4
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "type": "turbo-transport-belt",
+        "lanes": [
+          {
+            "ingredient": "coal",
+            "stack_size": 4
+          }
+        ]
+      }
+    ]
+  },
+  "period": 96,
+  "used_lcm": 1,
+  "used_terminal_swing_count": 1,
+  "output_inserter": "inserter:6",
+  "clock_windows": {
+    "inserter:6": [
+      {
+        "start": 0,
+        "end": 0
+      }
+    ],
+    "inserter:5": [
+      {
+        "start": 2,
+        "end": 18
+      }
+    ],
+    "inserter:4": [
+      {
+        "start": 19,
+        "end": 28
+      }
+    ],
+    "inserter:7": [
+      {
+        "start": 19,
+        "end": 28
+      }
+    ],
+    "inserter:1": [
+      {
+        "start": 35,
+        "end": 44
+      }
+    ],
+    "inserter:2": [
+      {
+        "start": 35,
+        "end": 44
+      }
+    ],
+    "inserter:3": [
+      {
+        "start": 35,
+        "end": 44
+      }
+    ],
+    "inserter:8": [
+      {
+        "start": 35,
+        "end": 52
+      }
+    ],
+    "inserter:9": [
+      {
+        "start": 35,
+        "end": 44
+      }
+    ],
+    "inserter:11": [
+      {
+        "start": 51,
+        "end": 60
+      }
+    ],
+    "inserter:12": [
+      {
+        "start": 51,
+        "end": 60
+      }
+    ],
+    "inserter:10": [
+      {
+        "start": 35,
+        "end": 44
+      }
+    ],
+    "inserter:13": [
+      {
+        "start": 51,
+        "end": 67
+      }
+    ]
+  }
+}
