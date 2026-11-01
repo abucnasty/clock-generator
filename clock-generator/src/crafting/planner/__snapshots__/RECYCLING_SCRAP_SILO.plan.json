@@ -1,0 +1,391 @@
+{
+  "schema": 1,
+  "sample": "RECYCLING_SCRAP_SILO",
+  "target": {
+    "item": "scrap",
+    "counts": "destroyed",
+    "per_copy": {
+      "numerator": 2,
+      "denominator": 1
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "chest:13#scrap",
+      "kind": "infinity-supply"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:1",
+        "chest:14#advanced-circuit",
+        "chest:14#battery",
+        "chest:14#concrete",
+        "chest:14#copper-cable",
+        "chest:14#holmium-ore",
+        "chest:14#ice",
+        "chest:14#iron-gear-wheel",
+        "chest:14#low-density-structure",
+        "chest:14#processing-unit",
+        "chest:14#solid-fuel",
+        "chest:14#steel-plate",
+        "chest:14#stone"
+      ],
+      "edges": [
+        "inserter:1/iron-gear-wheel",
+        "inserter:2/solid-fuel",
+        "inserter:3/concrete",
+        "inserter:4/ice",
+        "inserter:5/steel-plate",
+        "inserter:6/battery",
+        "inserter:7/stone",
+        "inserter:8/advanced-circuit",
+        "inserter:9/copper-cable",
+        "inserter:10/processing-unit",
+        "inserter:11/low-density-structure",
+        "inserter:12/holmium-ore",
+        "inserter:13/scrap",
+        "placement:machine:1/iron-gear-wheel",
+        "placement:machine:1/solid-fuel",
+        "placement:machine:1/concrete",
+        "placement:machine:1/ice",
+        "placement:machine:1/steel-plate",
+        "placement:machine:1/battery",
+        "placement:machine:1/stone",
+        "placement:machine:1/advanced-circuit",
+        "placement:machine:1/copper-cable",
+        "placement:machine:1/processing-unit",
+        "placement:machine:1/low-density-structure",
+        "placement:machine:1/holmium-ore"
+      ],
+      "periods": [
+        {"swings":12,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":5760,"denominator":1},"cycles":1,"period_ticks":5760,"kept":true}
+      ],
+      "duty": [
+        {
+          "producer": "machine:scrap-recycling",
+          "members": [
+            "machine:1"
+          ],
+          "crafts_needed": {
+            "numerator": 2,
+            "denominator": 1
+          },
+          "crafts_capacity": {
+            "numerator": 5,
+            "denominator": 2
+          },
+          "duty": {
+            "numerator": 4,
+            "denominator": 5
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 12,
+    "fractional": false,
+    "main_period": {
+      "ticks": 5760,
+      "exact": {
+        "numerator": 5760,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 5760,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 1
+        }
+      ],
+      "ignored_items": [
+        "iron-gear-wheel",
+        "solid-fuel",
+        "concrete",
+        "ice",
+        "steel-plate",
+        "battery",
+        "stone",
+        "advanced-circuit",
+        "copper-cable",
+        "processing-unit",
+        "low-density-structure",
+        "holmium-ore"
+      ],
+      "computed_lcm": 1,
+      "override_lcm": null,
+      "effective_lcm": 1
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": {
+    "kind": "result-windows",
+    "hands": 12,
+    "cycles": 12,
+    "terms": {
+      "item": "scrap",
+      "machines": [
+        1
+      ],
+      "hand": 16,
+      "ticks_per_hand": {
+        "numerator": 480,
+        "denominator": 1
+      },
+      "base_hands": 1,
+      "forced": null,
+      "cycle_ticks": 480,
+      "whole_hands_fit": false,
+      "windows_feasible": true,
+      "longest_period_ticks": 24000
+    },
+    "plans": [
+      {
+        "machine_id": 1,
+        "kind": "staggered",
+        "period": 5760,
+        "cycles": 12,
+        "crafts": 192,
+        "windows": [
+          {
+            "items": [
+              "iron-gear-wheel"
+            ],
+            "inserter_ids": [
+              "inserter:1"
+            ],
+            "expected_items": 153.60000000000002,
+            "items_at_level": 188,
+            "backlog_items": 1100,
+            "hand": 16,
+            "hands": 13,
+            "window_ticks": 289,
+            "opening": 0,
+            "room_items": 193,
+            "margin_items": 39.39999999999998,
+            "drain_periods": 27.91878172588834
+          },
+          {
+            "items": [
+              "solid-fuel"
+            ],
+            "inserter_ids": [
+              "inserter:2"
+            ],
+            "expected_items": 53.760000000000005,
+            "items_at_level": 76,
+            "backlog_items": 1050,
+            "hand": 16,
+            "hands": 7,
+            "window_ticks": 145,
+            "opening": 480,
+            "room_items": 97,
+            "margin_items": 43.239999999999995,
+            "drain_periods": 24.28307123034228
+          },
+          {
+            "items": [
+              "concrete"
+            ],
+            "inserter_ids": [
+              "inserter:3"
+            ],
+            "expected_items": 46.08,
+            "items_at_level": 67,
+            "backlog_items": 200,
+            "hand": 16,
+            "hands": 6,
+            "window_ticks": 121,
+            "opening": 960,
+            "room_items": 81,
+            "margin_items": 34.92,
+            "drain_periods": 5.72737686139748
+          },
+          {
+            "items": [
+              "ice"
+            ],
+            "inserter_ids": [
+              "inserter:4"
+            ],
+            "expected_items": 38.400000000000006,
+            "items_at_level": 58,
+            "backlog_items": 1050,
+            "hand": 16,
+            "hands": 6,
+            "window_ticks": 121,
+            "opening": 1440,
+            "room_items": 81,
+            "margin_items": 42.599999999999994,
+            "drain_periods": 24.647887323943664
+          },
+          {
+            "items": [
+              "steel-plate"
+            ],
+            "inserter_ids": [
+              "inserter:5"
+            ],
+            "expected_items": 30.720000000000034,
+            "items_at_level": 48,
+            "backlog_items": 500,
+            "hand": 16,
+            "hands": 4,
+            "window_ticks": 73,
+            "opening": 1920,
+            "room_items": 49,
+            "margin_items": 18.279999999999966,
+            "drain_periods": 27.352297592997864
+          },
+          {
+            "items": [
+              "battery"
+            ],
+            "inserter_ids": [
+              "inserter:6"
+            ],
+            "expected_items": 30.720000000000034,
+            "items_at_level": 48,
+            "backlog_items": 600,
+            "hand": 16,
+            "hands": 5,
+            "window_ticks": 97,
+            "opening": 2400,
+            "room_items": 65,
+            "margin_items": 34.279999999999966,
+            "drain_periods": 17.502917152858828
+          },
+          {
+            "items": [
+              "stone"
+            ],
+            "inserter_ids": [
+              "inserter:7"
+            ],
+            "expected_items": 30.72,
+            "items_at_level": 48,
+            "backlog_items": 550,
+            "hand": 16,
+            "hands": 4,
+            "window_ticks": 73,
+            "opening": 2880,
+            "room_items": 49,
+            "margin_items": 18.28,
+            "drain_periods": 30.08752735229759
+          },
+          {
+            "items": [
+              "advanced-circuit"
+            ],
+            "inserter_ids": [
+              "inserter:8"
+            ],
+            "expected_items": 23.04,
+            "items_at_level": 38,
+            "backlog_items": 1200,
+            "hand": 16,
+            "hands": 5,
+            "window_ticks": 97,
+            "opening": 3360,
+            "room_items": 65,
+            "margin_items": 41.96,
+            "drain_periods": 28.59866539561487
+          },
+          {
+            "items": [
+              "copper-cable"
+            ],
+            "inserter_ids": [
+              "inserter:9"
+            ],
+            "expected_items": 23.04,
+            "items_at_level": 38,
+            "backlog_items": 4200,
+            "hand": 16,
+            "hands": 11,
+            "window_ticks": 241,
+            "opening": 3840,
+            "room_items": 161,
+            "margin_items": 137.96,
+            "drain_periods": 30.44360684256306
+          },
+          {
+            "items": [
+              "processing-unit"
+            ],
+            "inserter_ids": [
+              "inserter:10"
+            ],
+            "expected_items": 15.359999999999925,
+            "items_at_level": 28,
+            "backlog_items": 400,
+            "hand": 16,
+            "hands": 3,
+            "window_ticks": 49,
+            "opening": 4320,
+            "room_items": 33,
+            "margin_items": 17.640000000000075,
+            "drain_periods": 22.67573696145115
+          },
+          {
+            "items": [
+              "low-density-structure"
+            ],
+            "inserter_ids": [
+              "inserter:11"
+            ],
+            "expected_items": 7.68,
+            "items_at_level": 17,
+            "backlog_items": 250,
+            "hand": 16,
+            "hands": 2,
+            "window_ticks": 25,
+            "opening": 4800,
+            "room_items": 17,
+            "margin_items": 9.32,
+            "drain_periods": 26.824034334763947
+          },
+          {
+            "items": [
+              "holmium-ore"
+            ],
+            "inserter_ids": [
+              "inserter:12"
+            ],
+            "expected_items": 7.68,
+            "items_at_level": 17,
+            "backlog_items": 550,
+            "hand": 16,
+            "hands": 3,
+            "window_ticks": 49,
+            "opening": 5280,
+            "room_items": 33,
+            "margin_items": 25.32,
+            "drain_periods": 21.721958925750396
+          }
+        ],
+        "container": {
+          "container_id": "chest:14",
+          "measure": "weight",
+          "capacity": 1000000,
+          "at_level": 979980.46875,
+          "mean": 774399.9999805328,
+          "headroom": 20019.53125,
+          "before_opening_of": [
+            "iron-gear-wheel"
+          ]
+        }
+      }
+    ]
+  }
+}

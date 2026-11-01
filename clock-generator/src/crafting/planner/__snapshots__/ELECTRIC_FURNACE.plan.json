@@ -1,0 +1,169 @@
+{
+  "schema": 1,
+  "sample": "ELECTRIC_FURNACE",
+  "target": {
+    "item": "electric-furnace",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 10,
+      "denominator": 1
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "belt:1/lane:1#advanced-circuit",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:1/lane:2#advanced-circuit",
+      "kind": "nothing-drops-on"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:2",
+        "drill:1",
+        "machine:3",
+        "drill:2",
+        "machine:4",
+        "drill:3",
+        "machine:5",
+        "machine:1",
+        "belt:2/lane:1#electric-furnace"
+      ],
+      "edges": [
+        "inserter:1/advanced-circuit",
+        "inserter:2/steel-plate",
+        "inserter:3/stone-brick",
+        "inserter:4/stone-brick",
+        "inserter:5/stone-brick",
+        "inserter:6/electric-furnace",
+        "placement:drill:1/stone",
+        "placement:drill:2/stone",
+        "placement:drill:3/stone"
+      ],
+      "periods": [
+        {"swings":1,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":96,"denominator":1},"cycles":9,"period_ticks":864,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":192,"denominator":1},"cycles":9,"period_ticks":1728,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":288,"denominator":1},"cycles":3,"period_ticks":864,"kept":true},
+        {"swings":1.875,"swings_exact":{"numerator":15,"denominator":8},"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":180,"denominator":1},"cycles":24,"period_ticks":4320,"kept":true}
+      ],
+      "duty": [
+        {
+          "producer": "machine:electric-furnace",
+          "members": [
+            "machine:1"
+          ],
+          "crafts_needed": {
+            "numerator": 10,
+            "denominator": 1
+          },
+          "crafts_capacity": {
+            "numerator": 185,
+            "denominator": 16
+          },
+          "duty": {
+            "numerator": 32,
+            "denominator": 37
+          }
+        },
+        {
+          "producer": "machine:casting-steel",
+          "members": [
+            "machine:2"
+          ],
+          "crafts_needed": {
+            "numerator": 25,
+            "denominator": 1
+          },
+          "crafts_capacity": {
+            "numerator": 925,
+            "denominator": 16
+          },
+          "duty": {
+            "numerator": 16,
+            "denominator": 37
+          }
+        },
+        {
+          "producer": "machine:stone-brick",
+          "members": [
+            "machine:3",
+            "machine:4",
+            "machine:5"
+          ],
+          "crafts_needed": {
+            "numerator": 200,
+            "denominator": 3
+          },
+          "crafts_capacity": {
+            "numerator": 4803,
+            "denominator": 64
+          },
+          "duty": {
+            "numerator": 12800,
+            "denominator": 14409
+          }
+        },
+        {
+          "producer": "drill:stone",
+          "members": [
+            "drill:1",
+            "drill:2",
+            "drill:3"
+          ],
+          "crafts_needed": {
+            "numerator": 400,
+            "denominator": 2403
+          },
+          "crafts_capacity": {
+            "numerator": 81,
+            "denominator": 4
+          },
+          "duty": {
+            "numerator": 1600,
+            "denominator": 194643
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 1,
+    "fractional": false,
+    "listed_from": {
+      "swings": 1,
+      "planned": 1,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 864,
+      "exact": {
+        "numerator": 864,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 96,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 9
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 9,
+      "override_lcm": null,
+      "effective_lcm": 9
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

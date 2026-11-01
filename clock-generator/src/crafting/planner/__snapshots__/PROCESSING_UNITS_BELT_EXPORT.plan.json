@@ -1,0 +1,205 @@
+{
+  "schema": 1,
+  "sample": "PROCESSING_UNITS_BELT_EXPORT",
+  "target": {
+    "item": "processing-unit",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 40,
+      "denominator": 1
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "belt:4/lane:1#electronic-circuit",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:4/lane:2#plastic-bar",
+      "kind": "nothing-drops-on"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:1",
+        "machine:6",
+        "machine:5",
+        "machine:3",
+        "machine:4",
+        "belt:5/lane:1#electronic-circuit",
+        "machine:2",
+        "belt:1/lane:1#processing-unit"
+      ],
+      "edges": [
+        "inserter:1/processing-unit",
+        "inserter:2/advanced-circuit",
+        "inserter:3/electronic-circuit",
+        "inserter:4/electronic-circuit",
+        "inserter:5/iron-plate",
+        "inserter:6/electronic-circuit",
+        "inserter:6/plastic-bar",
+        "inserter:7/copper-cable",
+        "inserter:8/copper-cable",
+        "inserter:9/copper-cable",
+        "inserter:10/copper-cable",
+        "inserter:11/copper-plate",
+        "inserter:12/electronic-circuit"
+      ],
+      "periods": [
+        {"swings":4,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":96,"denominator":1},"cycles":1210,"period_ticks":116160,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":72,"denominator":1},"cycles":4840,"period_ticks":348480,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":48,"denominator":1},"cycles":2420,"period_ticks":116160,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":24,"denominator":1},"cycles":4840,"period_ticks":116160,"kept":true},
+        {"swings":null,"fractional":true,"listed_as":"fractional","pruned":{"rule":"cycle-refused","terms":{"reason":"Cannot satisfy fractional swing constraint: sub-cycle 1 requires 3 swings, but maximum allowed is 2 due to insertion limits. Total swings: 3520, cycle multiplier: 1210."}}}
+      ],
+      "duty": [
+        {
+          "producer": "machine:casting-iron",
+          "members": [
+            "machine:1"
+          ],
+          "crafts_needed": {
+            "numerator": 102,
+            "denominator": 5
+          },
+          "crafts_capacity": {
+            "numerator": 6283,
+            "denominator": 128
+          },
+          "duty": {
+            "numerator": 13056,
+            "denominator": 31415
+          }
+        },
+        {
+          "producer": "machine:processing-unit",
+          "members": [
+            "machine:2"
+          ],
+          "crafts_needed": {
+            "numerator": 10,
+            "denominator": 1
+          },
+          "crafts_capacity": {
+            "numerator": 9023,
+            "denominator": 800
+          },
+          "duty": {
+            "numerator": 8000,
+            "denominator": 9023
+          }
+        },
+        {
+          "producer": "machine:advanced-circuit",
+          "members": [
+            "machine:3"
+          ],
+          "crafts_needed": {
+            "numerator": 80,
+            "denominator": 11
+          },
+          "crafts_capacity": {
+            "numerator": 4544400000000001,
+            "denominator": 600000000000000
+          },
+          "duty": {
+            "numerator": 763636368449,
+            "denominator": 795270005012
+          }
+        },
+        {
+          "producer": "machine:electronic-circuit",
+          "members": [
+            "machine:4"
+          ],
+          "crafts_needed": {
+            "numerator": 102,
+            "denominator": 1
+          },
+          "crafts_capacity": {
+            "numerator": 13111,
+            "denominator": 125
+          },
+          "duty": {
+            "numerator": 12750,
+            "denominator": 13111
+          }
+        },
+        {
+          "producer": "machine:copper-cable",
+          "members": [
+            "machine:5"
+          ],
+          "crafts_needed": {
+            "numerator": 7372,
+            "denominator": 121
+          },
+          "crafts_capacity": {
+            "numerator": 4544400000000001,
+            "denominator": 50000000000000
+          },
+          "duty": {
+            "numerator": 634710744068,
+            "denominator": 946852740495
+          }
+        },
+        {
+          "producer": "machine:casting-copper",
+          "members": [
+            "machine:6"
+          ],
+          "crafts_needed": {
+            "numerator": 7372,
+            "denominator": 605
+          },
+          "crafts_capacity": {
+            "numerator": 645,
+            "denominator": 16
+          },
+          "duty": {
+            "numerator": 117952,
+            "denominator": 390225
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 4,
+    "fractional": false,
+    "listed_from": {
+      "swings": 4,
+      "planned": 4,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 116160,
+      "exact": {
+        "numerator": 116160,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 96,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 1210
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 1210,
+      "override_lcm": null,
+      "effective_lcm": 1210
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

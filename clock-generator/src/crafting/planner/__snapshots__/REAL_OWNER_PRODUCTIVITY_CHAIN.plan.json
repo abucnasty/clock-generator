@@ -1,0 +1,208 @@
+{
+  "schema": 1,
+  "sample": "REAL_OWNER_PRODUCTIVITY_CHAIN",
+  "target": {
+    "item": "productivity-module",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 40,
+      "denominator": 3
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "belt:1/lane:1#coal",
+      "kind": "nothing-drops-on"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:1",
+        "machine:4",
+        "machine:7",
+        "machine:8",
+        "machine:5",
+        "machine:9",
+        "machine:6",
+        "chest:1#copper-cable",
+        "chest:2#plastic-bar",
+        "machine:2",
+        "chest:3#advanced-circuit",
+        "machine:3",
+        "belt:2/lane:1#productivity-module"
+      ],
+      "edges": [
+        "inserter:1/coal",
+        "inserter:2/productivity-module",
+        "inserter:3/copper-cable",
+        "inserter:4/plastic-bar",
+        "inserter:5/copper-cable",
+        "inserter:6/plastic-bar",
+        "inserter:7/advanced-circuit",
+        "inserter:8/advanced-circuit",
+        "inserter:9/electronic-circuit",
+        "inserter:10/electronic-circuit",
+        "inserter:11/iron-plate",
+        "inserter:12/copper-cable",
+        "inserter:13/copper-cable",
+        "inserter:14/iron-plate"
+      ],
+      "periods": [
+        {"swings":2,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":144,"denominator":1},"cycles":363,"period_ticks":52272,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":72,"denominator":1},"cycles":363,"period_ticks":26136,"kept":true},
+        {"swings":null,"fractional":true,"listed_as":"fractional","pruned":{"rule":"cycle-refused","terms":{"reason":"Cannot satisfy fractional swing constraint: each sub-cycle requires 5 swings, but maximum allowed is 4 due to insertion limits. Total swings: 880, cycle multiplier: 176."}}}
+      ],
+      "duty": [
+        {
+          "producer": "machine:plastic-bar",
+          "members": [
+            "machine:1"
+          ],
+          "crafts_needed": {
+            "numerator": 400,
+            "denominator": 99
+          },
+          "crafts_capacity": {
+            "numerator": 10523,
+            "denominator": 80
+          },
+          "duty": {
+            "numerator": 32000,
+            "denominator": 1041777
+          }
+        },
+        {
+          "producer": "machine:advanced-circuit",
+          "members": [
+            "machine:2"
+          ],
+          "crafts_needed": {
+            "numerator": 1600,
+            "denominator": 99
+          },
+          "crafts_capacity": {
+            "numerator": 1601,
+            "denominator": 96
+          },
+          "duty": {
+            "numerator": 51200,
+            "denominator": 52833
+          }
+        },
+        {
+          "producer": "machine:productivity-module",
+          "members": [
+            "machine:3"
+          ],
+          "crafts_needed": {
+            "numerator": 80,
+            "denominator": 9
+          },
+          "crafts_capacity": {
+            "numerator": 2161,
+            "denominator": 240
+          },
+          "duty": {
+            "numerator": 6400,
+            "denominator": 6483
+          }
+        },
+        {
+          "producer": "machine:casting-copper-cable",
+          "members": [
+            "machine:4",
+            "machine:8"
+          ],
+          "crafts_needed": {
+            "numerator": 32320,
+            "denominator": 1089
+          },
+          "crafts_capacity": {
+            "numerator": 249463,
+            "denominator": 1000
+          },
+          "duty": {
+            "numerator": 32320000,
+            "denominator": 271665207
+          }
+        },
+        {
+          "producer": "machine:electronic-circuit",
+          "members": [
+            "machine:5",
+            "machine:6"
+          ],
+          "crafts_needed": {
+            "numerator": 30400,
+            "denominator": 1089
+          },
+          "crafts_capacity": {
+            "numerator": 255,
+            "denominator": 1
+          },
+          "duty": {
+            "numerator": 6080,
+            "denominator": 55539
+          }
+        },
+        {
+          "producer": "machine:casting-iron",
+          "members": [
+            "machine:7",
+            "machine:9"
+          ],
+          "crafts_needed": {
+            "numerator": 6080,
+            "denominator": 1089
+          },
+          "crafts_capacity": {
+            "numerator": 645,
+            "denominator": 8
+          },
+          "duty": {
+            "numerator": 9728,
+            "denominator": 140481
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 2,
+    "fractional": false,
+    "listed_from": {
+      "swings": 2,
+      "planned": 2,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 52272,
+      "exact": {
+        "numerator": 52272,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 144,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 363
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 363,
+      "override_lcm": null,
+      "effective_lcm": 363
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

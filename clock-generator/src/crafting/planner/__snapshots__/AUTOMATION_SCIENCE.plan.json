@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "sample": "AUTOMATION_SCIENCE",
+  "target": {
+    "item": "automation-science-pack",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 80,
+      "denominator": 3
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "belt:1/lane:1#copper-plate",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:1/lane:2#iron-gear-wheel",
+      "kind": "nothing-drops-on"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:1",
+        "belt:2/lane:1#automation-science-pack"
+      ],
+      "edges": [
+        "inserter:1/copper-plate",
+        "inserter:1/iron-gear-wheel",
+        "inserter:2/automation-science-pack"
+      ],
+      "periods": [
+        {"swings":1,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":36,"denominator":1},"cycles":2,"period_ticks":72,"kept":true},
+        {"swings":1,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":36,"denominator":1},"cycles":2,"period_ticks":72,"kept":true}
+      ],
+      "duty": [
+        {
+          "producer": "machine:automation-science-pack",
+          "members": [
+            "machine:1"
+          ],
+          "crafts_needed": {
+            "numerator": 40,
+            "denominator": 3
+          },
+          "crafts_capacity": {
+            "numerator": 6890624761581421,
+            "denominator": 500000000000000
+          },
+          "duty": {
+            "numerator": 3912521047,
+            "denominator": 4043957161
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 1,
+    "fractional": false,
+    "listed_from": {
+      "swings": 1,
+      "planned": 1,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 72,
+      "exact": {
+        "numerator": 72,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 36,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 2
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 2,
+      "override_lcm": null,
+      "effective_lcm": 2
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}
