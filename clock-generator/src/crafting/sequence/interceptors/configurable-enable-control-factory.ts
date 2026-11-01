@@ -32,6 +32,11 @@ export class ConfigurableEnableControlFactory {
         private readonly crafting_cycle_plan: CraftingCyclePlan,
         private readonly resettable_registry: ResettableRegistry,
         entity_state_registry: ReadableEntityStateRegistry,
+        /**
+         * The ticks the clocks of the game count, where they run through the steps of a run (under the new dispatch): they
+         * then keep their count when a later step starts. Without it they count the run's ticks and start again with each step.
+         */
+        private readonly game_tick_provider?: TickProvider,
     ) {
         this.conditional_factory = new ConditionalEnableControlFactory(entity_state_registry);
     }
@@ -110,8 +115,9 @@ export class ConfigurableEnableControlFactory {
         const clocked_control = EnableControl.clocked({
             periodDuration: period_duration,
             enabledRanges: enabled_ranges,
-            tickProvider: this.tick_provider,
+            tickProvider: this.game_tick_provider ?? this.tick_provider,
             is_game_clock: true,
+            runs_through_steps: this.game_tick_provider !== undefined,
             decider_build_order: override.decider_build_order,
             start_latency_ticks: override.latency_ticks,
         });

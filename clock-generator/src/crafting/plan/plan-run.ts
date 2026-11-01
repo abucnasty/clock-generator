@@ -112,6 +112,11 @@ export interface FuelConsumptionView {
     /** Periods of the clock the view covers; the clock itself stays one period */
     periods: number;
     duration_ticks: number;
+    /**
+     * The tick the clocks of the game stand at in the first recorded tick, after the warm-up, where they run through it
+     * (under the new dispatch); absent where they start again with the recorded run, at 0
+     */
+    clock_tick_at_start?: number;
     /** The inserters that fill a fuel slot */
     fuel_inserter_ids: string[];
     /** The fuel inserters' transfers into the fuel slots over the view; false when none swung even over its longest tried length */
@@ -468,6 +473,11 @@ export interface RunOptions {
 /** Everything one run of a build yields, for the planning run to read its windows off and for a trial to judge */
 export interface BuildRun extends PlannedCraftingCycle, TransferPlan {
     /**
+     * The ticks the clocks of the game have run when the recorded run starts, where they run through the warm-up (under
+     * the new dispatch, `gameClocksRunThroughSteps`); absent where they start again with the recorded run, at 0
+     */
+    clock_tick_at_start?: number;
+    /**
      * The context the run ticked, still on the enable controls it ran with (a kept run keeps them and what they close
      * over: the plan, its factories and the tick provider), without the observers that fed the histories
      */
@@ -556,7 +566,8 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
             ? { config_json: JSON.stringify(config), terminal_swing_count } : undefined);
     });
 
-    const repeat_periods = warmUp(config, build, controlled, duration, warmup_period, debug, debug_steps, logger);
+    const warmup = warmUp(config, build, controlled, duration, warmup_period, debug, debug_steps, logger);
+    const repeat_periods = warmup.repeat_periods;
     const repeat_bin = options.detect_repeat === true && (options.simulate_periods ?? 1) > 1 ? provenRepeatBin(config, duration.ticks) : null;
     const simulated = simulate(build, controlled, all_output_inserters, duration, options, debug, debug_steps, logger, repeat_bin);
     // the recorded run is over: what it recorded is sealed once, and the run, the memo and every result share that copy
@@ -573,6 +584,7 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
     const pickups_from_the_take = build.pickup_leads?.given ?? 0;
 
     return {
+        ...(controlled.game_clocks_run_through && { clock_tick_at_start: warmup.ticks_run }),
         simulation_context: build.simulation_context,
         target_production_rate: planned_cycle.target_production_rate,
         output_machine_state_machines: planned_cycle.output_machine_state_machines,
@@ -789,6 +801,18 @@ interface ControlledBuild {
     crafting_shares: Map<string, number>;
     always_enabled_by_config: Set<string>;
     inserter_clocks: Map<string, InserterClock>;
+    /** Whether the clocks of the game run on through the start of the recorded run (`gameClocksRunThroughSteps`) */
+    game_clocks_run_through: boolean;
+}
+
+/**
+ * Whether the clocks of the game (an inserter's own clock, a configured clocked control) run on through the start of a
+ * later step of a run, as they do in the game, where nothing restarts them when a recording starts: under the new
+ * dispatch (simulation/dispatch.ts). Under the configured order they start again with the recorded run, as they always
+ * have, and stand at 0 at its first tick.
+ */
+function gameClocksRunThroughSteps(simulation_context: SimulationContext): boolean {
+    return simulation_context.inserter_dispatch !== "configured-order";
 }
 
 /**
@@ -803,6 +827,9 @@ function withEnableControls(
     logger: Logger,
 ): ControlledBuild {
     const { simulation_context, relative_tick_provider } = build;
+    // the clocks of the game count the context's own ticks where they run through the steps of the run
+    const game_clocks_run_through = gameClocksRunThroughSteps(simulation_context);
+    const game_tick_provider = game_clocks_run_through ? simulation_context.tick_provider : undefined;
 
     // Create resettable registry for centralized reset management
     const resettable_registry = new ResettableRegistry();
@@ -816,7 +843,8 @@ function withEnableControls(
         relative_tick_provider,
         crafting_cycle_plan,
         resettable_registry,
-        simulation_context.state_registry
+        simulation_context.state_registry,
+        game_tick_provider,
     );
 
     // Fuel is not part of the plan, so the fuel inserters swing on clocks of their own that repeat within the period
@@ -840,6 +868,7 @@ function withEnableControls(
         resettable_registry,
         logger,
         inserter_clocks,
+        game_tick_provider,
     );
 
     // Swap the controls of the build's context, in place
@@ -863,7 +892,7 @@ function withEnableControls(
         }
     });
 
-    return { resettable_registry, crafting_shares, always_enabled_by_config, inserter_clocks };
+    return { resettable_registry, crafting_shares, always_enabled_by_config, inserter_clocks, game_clocks_run_through };
 }
 
 /** How long a build runs: the period of the clock, and the warmup before it */
@@ -906,7 +935,7 @@ function warmUp(
     debug: MutableDebugSettingsProvider,
     debug_steps: DebugSteps,
     logger: Logger,
-): number | undefined {
+): { repeat_periods: number | undefined; ticks_run: number } {
     const { simulation_context } = build;
     const { resettable_registry } = controlled;
     logger.log("Warming up simulation...");
@@ -922,7 +951,7 @@ function warmUp(
         if (warmup_step.ticks_run < warmup_period.ticks) {
             logger.log(`Warm up reached a repeating state after ${warmup_step.ticks_run} ticks`);
         }
-        return warmup_step.repeat_periods;
+        return { repeat_periods: warmup_step.repeat_periods, ticks_run: warmup_step.ticks_run };
     });
 }
 
@@ -1004,7 +1033,9 @@ function simulate(
     const ticks_before_run = simulation_context.tick_provider.getCurrentTick() - build.relative_tick.start;
     inventory_transfer_history.ticks_before_run = ticks_before_run;
     build.relative_tick.start = simulation_context.tick_provider.getCurrentTick();
-    // with no warm-up the clocks start with the recorded run; after one they have run since the warm-up started them
+    // with no warm-up the clocks start with the recorded run; after one they have run since the warm-up started them: the
+    // planning schedules start again for the recorded run, and so do the clocks of the game, unless they run through it
+    // (`gameClocksRunThroughSteps`)
     resettable_registry.resetAll(ticks_before_run === 0);
 
     const simulate_periods = options.simulate_periods ?? 1;
@@ -1258,6 +1289,8 @@ function backpressureLossOf(
  * what was recorded of it. It plans nothing of its own and exports nothing.
  */
 export interface TrialRun {
+    /** The ticks the clocks of the game have run when the recorded run starts, where they run through the warm-up (`BuildRun`) */
+    clock_tick_at_start?: number;
     /** On-demand timeline detail; absent from normal generation runs. */
     timeline_recording?: TimelineRecording;
     /** What the run moved against what the plan expects */
@@ -1289,6 +1322,7 @@ function machineFactsOfContext(simulation_context: SimulationContext): MachineFa
 
 export function trialRunOf(run: BuildRun): TrialRun {
     return {
+        ...(run.clock_tick_at_start !== undefined && { clock_tick_at_start: run.clock_tick_at_start }),
         timeline_recording: run.timeline_recording,
         state_repeat: run.state_repeat,
         stability_check: run.stability_check,
@@ -2166,6 +2200,7 @@ function fuelConsumptionView(
             return {
                 periods,
                 duration_ticks: periods * period,
+                ...(run.clock_tick_at_start !== undefined && { clock_tick_at_start: run.clock_tick_at_start }),
                 fuel_inserter_ids,
                 fuel_swings_recorded: swung,
                 fuel_levels: run.fuel_levels ?? [],

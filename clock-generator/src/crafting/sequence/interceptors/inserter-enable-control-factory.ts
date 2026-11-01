@@ -32,6 +32,11 @@ export class EnableControlFactory {
         private readonly logger: Logger,
         /** The clocks of the inserters that only fill a fuel slot or take a by-product away, which are not part of the plan */
         private readonly inserter_clocks: ReadonlyMap<string, InserterClock> = new Map(),
+        /**
+         * The ticks the clocks of the game count, where they run through the steps of a run (under the new dispatch): they
+         * then keep their count when a later step starts. Without it they count the run's ticks and start again with each step.
+         */
+        private readonly game_tick_provider?: TickProvider,
     ) {
         this.target_output_item_name = this.crafting_cycle_plan.production_rate.machine_production_rate.item;
         this.entity_transfer_map = this.crafting_cycle_plan.entity_transfer_map;
@@ -1172,8 +1177,9 @@ export class EnableControlFactory {
         const clocked_control = EnableControl.clocked({
             periodDuration: Duration.ofTicks(inserter_clock.modulus),
             enabledRanges: [inserter_clock.window],
-            tickProvider: this.tick_provider,
+            tickProvider: this.game_tick_provider ?? this.tick_provider,
             is_game_clock: true,
+            runs_through_steps: this.game_tick_provider !== undefined,
         });
         this.resettable_registry.register(clocked_control);
         return clocked_control;
