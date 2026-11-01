@@ -1,3 +1,4 @@
+import { HandNotifications } from "./hand-notifications";
 import { AssertionError } from "../../common/assert";
 import type { TickProvider } from "../current-tick-provider";
 import { ItemName } from "../../data";
@@ -29,6 +30,7 @@ export class BeltHandDrop implements HandDropPort {
         private readonly scratch: HandScratch,
         private readonly sink: TransportBelt,
         private readonly tick_provider: TickProvider,
+        private readonly notifications: HandNotifications = new HandNotifications(),
     ) {
         const drop = state.inserter.drop;
         this.at_spot = drop !== undefined;
@@ -91,7 +93,7 @@ export class BeltHandDrop implements HandDropPort {
         const index = this.at_spot ? 0 : laneForDrop(this.lanes, held_item.item_name);
         const lane = this.lanes[index];
         if (lane.insert(this.drops[index], this.tick_provider.getCurrentTick(), this.spot_ticks)) {
-            dropFromHand(state, this.scratch, lane.stack_size);
+            dropFromHand(state, this.scratch, lane.stack_size, this.notifications);
         } else {
             state.trace?.record({ type: "wait", phase: "drop", reason: "output_space", item: held_item.item_name });
         }

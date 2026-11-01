@@ -1,3 +1,4 @@
+import { HandNotifications } from "./hand-notifications";
 import { AssertionError } from "../../common/assert";
 import { ItemName } from "../../data";
 import type { InserterState } from "../../state/inserter-state";
@@ -21,6 +22,7 @@ export class MachineHandDrop implements HandDropPort {
         private readonly scratch: HandScratch,
         private readonly items: CarriedItems,
         private readonly ingress: Ingress,
+        private readonly notifications: HandNotifications = new HandNotifications(),
     ) {
         this.slots = items.names.map(item => ingress.slotOf(item));
     }
@@ -44,7 +46,7 @@ export class MachineHandDrop implements HandDropPort {
         const amount = this.ingress.accepts(held.item_name, held.quantity, DropBy.HAND);
         const index = this.items.indexOf(held.item_name);
         this.ingress.insertAt(index >= 0 ? this.slots[index] : this.ingress.slotOf(held.item_name), held.item_name, amount);
-        dropFromHand(state, this.scratch, amount);
+        dropFromHand(state, this.scratch, amount, this.notifications);
         this.scratch.drop_ticks += 1;
     }
 

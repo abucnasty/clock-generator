@@ -59,6 +59,9 @@ export class MachineState implements EntityState {
         public readonly selfIngredients: WritableInventoryState,
     ) {
         this.yield = made;
+        this.output = new MachineOutputPort(inventoryState, made.notifications);
+        this.placement = new Placement(this.output,
+            machine.outputs.map(output => output.item_name), machine.metadata.places_results === true);
         this.ingress = new Ingress(machine, inventoryState, fuelInventory, selfIngredients);
         this.crafting = new Crafting(machine, energy, made, this.placement, this.ingress);
     }
@@ -131,7 +134,7 @@ export class MachineState implements EntityState {
      * The pickup port of the machine's output (simulation/components): what its Placement and the inserters' hands that
      * take from the machine take its results from
      */
-    public readonly output: MachineOutputPort = new MachineOutputPort(this.inventoryState);
+    public readonly output: MachineOutputPort;
 
     /**
      * What a machine that places its results itself (rule 18) puts from its output into its result target, bound to the
@@ -141,8 +144,7 @@ export class MachineState implements EntityState {
      * hand was woken by every result put in, of whatever item, and by no craft that gave none). Always 0 for any other
      * machine, whose finishes wake them.
      */
-    public readonly placement: Placement = new Placement(this.output,
-        this.machine.outputs.map(output => output.item_name), this.machine.metadata.places_results === true);
+    public readonly placement: Placement;
 
     /**
      * What the machine's Storage holds, for the machine's key (see CraftingMachineArchetype.stateKey): its ingredients
