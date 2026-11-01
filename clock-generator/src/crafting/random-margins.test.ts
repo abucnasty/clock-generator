@@ -5,7 +5,7 @@ import { fraction } from "../data-types/fraction";
 import { CraftingCyclePlan } from "./sequence/cycle/crafting-cycle";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { TargetProductionRate } from "./target-production-rate";
-import { binomialQuantile, excessAtLevel, randomAmountMargins } from "./random-margins";
+import { backlogAtLevel, binomialQuantile, excessAtLevel, excessLossOf, randomAmountMargins } from "./random-margins";
 import { ConfigPaths } from "../config/config-paths";
 
 // the exact-speed recycler cell of the ore voider benchmark (save F), planned at 400 iron ore a second destroyed
@@ -41,7 +41,7 @@ describe("the room of the windows that carry a result that comes by chance", () 
         // the recycler: 1296 crafts a period against 1280, one standard deviation; its spare covers what comes back over
         // the mean in 1233 ticks (137 crafts against the 137 over the mean of a binomial of 10,960 rolls at 1/4)
         expect(crafting).toEqual([{ machine_id: 1, crafts: 1280, capacity: 1296, sigma_crafts: ore.sigma_items,
-            sigmas: expect.closeTo(1.0328, 4), ticks_to_cover: 1233 }]);
+            sigmas: expect.closeTo(1.0328, 4), ticks_to_cover: 1233, backlog: [{ item: "iron-ore", items: 67 }] }]);
     });
 
     it("gets the hands it is short of three standard deviations, a swing more on as many windows", async () => {
@@ -84,5 +84,23 @@ describe("what a period gives of a result over its mean, in all but 1 in 740 per
         expect(excessAtLevel(result(3, { independent_probability: 0.5 }), 100)).toBe(45);
         // rolls that are not whole are rounded up
         expect(excessAtLevel(result(1, { independent_probability: 0.25 }), 1279.5)).toBe(47);
+    });
+});
+
+describe("the backlog of what comes back that the container takes up", () => {
+    it("is the level's share of a walk that drifts down by the spare crafts less what they give back", () => {
+        // the exact-speed ore voider: 1280 crafts of 1296, a quarter given back, sigma 15.49
+        expect(backlogAtLevel(Math.sqrt(240), 16, 0.25)).toBe(67);
+        // with nothing given back the spare crafts work it off faster
+        expect(backlogAtLevel(Math.sqrt(240), 16, 0)).toBe(50);
+        // no spare crafts, or all of them given back: it grows without end
+        expect(backlogAtLevel(Math.sqrt(240), 0, 0.25)).toBeNull();
+        expect(backlogAtLevel(Math.sqrt(240), 16, 1)).toBeNull();
+    });
+
+    it("makes the excess trial of a clock: each machine's backlog, placed at once", () => {
+        expect(excessLossOf([{ machine_id: 1, backlog: [{ item: "iron-ore", items: 67 }] }, { machine_id: 2, backlog: [] }]))
+            .toEqual({ kind: "excess", at: [{ machine_id: "machine:1", item: "iron-ore", count: 67 }] });
+        expect(excessLossOf([{ machine_id: 1, backlog: [] }])).toBeNull();
     });
 });
