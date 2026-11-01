@@ -3,12 +3,13 @@ import type { InserterArchetype } from "./archetypes/inserter";
 
 /**
  * In what order the inserters that take one product from one machine are served in a tick. The game serves them in one
- * fixed order, every tick: the first takes up to its hand, the next what is left, in the same tick, and the one that
+ * stable local order in the measured intervals: the first takes up to its hand, the next what is left, in the same tick, and the one that
  * took last is not passed over (recorded on the #100 supercapacitor plant, 59 of 62 decided ticks one way, and on the
  * pentapod egg biochambers of #90, every contested tick one way). Which taker the game puts first is not known from a
  * config, so a clock is checked under several orders (`takerOrdersToCheck`, `otherTakerOrdersOf` in trial.ts): "descending" config ids, "ascending",
  * the descending order turned round by `rotation` places in each machine's group, or an order drawn from a seed. The
- * same for the whole run. The default is "descending".
+ * sampled order stays the same for the whole simulation run; this is not a universal native scheduling rule.
+ * Sources can have different local priorities. The default is "descending".
  */
 type SingleTakerOrder = "descending" | "ascending" | { rotation: number } | { seed: number };
 export type TakerOrder = SingleTakerOrder | { source_orders: Readonly<Record<string, SingleTakerOrder>> };

@@ -1,6 +1,6 @@
 import fs from "node:fs";
-import path from "node:path";
 import {expect, test} from "vitest";
+import {GameFixturePaths} from "../../tests/game/helpers/fixture-paths";
 import {loadConfigFromFile} from "../config/loader";
 import {ConfigPaths} from "../config/config-paths";
 import {otherTakerOrdersOf} from "../crafting/trial";
@@ -14,8 +14,7 @@ interface NativeAllocation {
     machines_before: {id: number; input: Record<string, number>; output: Record<string, number>; progress: number; bonus: number}[];
     hands_before: {id: number; held: number}[];
 }
-const native: NativeAllocation = JSON.parse(fs.readFileSync(path.join(__dirname,
-    "../../tests/game/builds/independent-source-allocations.json"), "utf8"));
+const native: NativeAllocation = JSON.parse(fs.readFileSync(GameFixturePaths.INDEPENDENT_SOURCE_ALLOCATIONS, "utf8"));
 
 test("Mechanics: robustness covers the independently mixed native shared-source allocation", async () => {
     // Recorded ordinary scaffold trace, not a debugger dependency: three sources exhaust17 LDS in the same tick.
