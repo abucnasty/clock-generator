@@ -306,6 +306,9 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [],
         warmup_ticks: 3600,
         settle_ticks: 2400,
+        wake_ups_open: "the game counts the first output inserter 0 wake-ups a minute, as it is never shown waiting, and the simulator 15.36, as it shows "
+            + "both output inserters waiting on the machine in 1.56% of the ticks; the build moves its expected output in every period (recorded 2026-11-01: "
+            + "25.6 a minute in all in the game, 41.0 in the simulator, 35.8 a minute of arm-away alarms on either side)",
     },
     // Two inserters each take two items off a belt of their own, and both take low density structures: which item
     // each takes first decides how the structures are split between them (near_lane in the config)
