@@ -33,7 +33,8 @@ interface DrillConfig {type: string; mined_item_name: string; speed_bonus: numbe
     target: {type: string; id: number}; position: {x: number; y: number}; direction: number}
 interface Selection {
     counts: Record<string, number>;
-    export: {drills: {configs: DrillConfig[] | Record<string, never>}; chests: {type: string; id: number; quality?: string}[] | Record<string, never>};
+    export: {drills: {configs: DrillConfig[] | Record<string, never>};
+        chests: {type: string; id: number; quality?: string; prototype?: string; item_filter?: string}[] | Record<string, never>};
     left_out_drills: {target_name: string | false; no_resource: boolean}[] | Record<string, never>;
     targets: Ref[];
 }
@@ -111,6 +112,7 @@ test("Sidecar exports a drill that has not mined or dropped yet", async context 
                 // what the game dropped into, as the export refers to it
                 into: dropped ? trial.at_end.targets[trial.dropped_into - 1] : false,
                 built_into: trial.at_build.targets[0],
+                chests_at_build: list(trial.at_build.export.chests),
                 mined: configs(trial.at_end).map(config => config.mined_item_name),
             };
         });
@@ -131,16 +133,25 @@ test("Sidecar exports a drill that has not mined or dropped yet", async context 
                 expect(["iron-ore", "copper-ore"]).toContain(outcome.mined[0]);
             } else if (outcome.name === "two-targets") {
                 expect(outcome.left_at_build).toEqual([{target_name: false, no_resource: false}]);
-            } else if (outcome.name === "furnace" || outcome.name === "chest") {
-                // a furnace has no recipe before its first ore and an empty steel chest is no buffer chest yet, so neither
-                // is exported before the first tick: the drill is left out naming it, the one the game fills
-                expect(outcome.left_at_build).toEqual([{target_name: outcome.name === "chest" ? "steel-chest" : "electric-furnace", no_resource: false}]);
-                expect(outcome.into).toMatchObject({type: outcome.name === "chest" ? "chest" : "machine"});
+            } else if (outcome.name === "furnace") {
+                // a furnace has no recipe before its first ore, so it is not exported before the first tick: the drill is left
+                // out naming it, the one the game fills
+                expect(outcome.left_at_build).toEqual([{target_name: "electric-furnace", no_resource: false}]);
+                expect(outcome.into).toMatchObject({type: "machine"});
             } else {
                 // found by the rule before the first tick, and the one the game fills
                 expect(outcome.at_build, outcome.name).toEqual([outcome.built_into]);
                 expect(outcome.built_into, outcome.name).toEqual(outcome.into);
                 expect(outcome.mined, outcome.name).toEqual(["iron-ore"]);
+                if (outcome.name === "chest") {
+                    // an empty steel chest is exported before the first tick, as a buffer chest of the ore the drill mines, and
+                    // the drill is exported into it: it is not left out
+                    expect(outcome.left_at_build, "chest: the drill is exported before the first tick").toEqual([]);
+                    expect(outcome.at_build, "chest: the exported drill's target").toEqual([{type: "chest", id: 1}]);
+                    expect(outcome.chests_at_build, "chest: the exported chest")
+                        .toMatchObject([{type: "buffer-chest", id: 1, prototype: "steel-chest", item_filter: "iron-ore"}]);
+                    expect(outcome.into, "chest: the one the game fills").toEqual({type: "chest", id: 1});
+                }
             }
         }
         passed = true;
