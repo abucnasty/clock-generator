@@ -5,7 +5,7 @@ import path from "path";
 import { afterAll, describe, expect, test } from "vitest";
 import { ConfigPaths } from "../../../../src/config/config-paths";
 import { loadConfigFromFile } from "../../../../src/config/loader";
-import { HarnessSession } from "../../../../src/harness/factorio-harness";
+import { CachedHarnessSession } from "../../../../src/harness/factorio-harness";
 
 /** Runs a headless Factorio, so it needs the game and a save to build in; without either it is skipped, not failed */
 const FACTORIO = process.env.FACTORIO_PATH;
@@ -32,7 +32,7 @@ describe("a staged start builds the inserters of the cell in one tick, after the
         const scaffold = path.join(SAMPLE_BUILDS_DIR, "science", "agriculture-science", "agriculture-science-scaffold.txt");
         const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
         const log: string[] = [];
-        const session = await HarnessSession.start({ factorio: FACTORIO!, save: SAVE!, work_dir: path.join(scratch, "work"), timeout_seconds: 900, log: message => log.push(message) });
+        const session = new CachedHarnessSession({ factorio: FACTORIO!, save: SAVE!, work_dir: path.join(scratch, "work"), timeout_seconds: 900, log: message => log.push(message) });
         let failed = true;
         try {
             const record = (build_order: "ascending" | "descending") => session.record({
