@@ -1,0 +1,147 @@
+{
+  "schema": 1,
+  "sample": "MILITARY_SCIENCE",
+  "target": {
+    "item": "military-science-pack",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 24,
+      "denominator": 1
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "belt:2/lane:1#coal",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:3/lane:1#stone-wall",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:3/lane:2#piercing-rounds-magazine",
+      "kind": "nothing-drops-on"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:3",
+        "machine:2",
+        "machine:1",
+        "belt:1/lane:1#military-science-pack"
+      ],
+      "edges": [
+        "inserter:1/military-science-pack",
+        "inserter:2/grenade",
+        "inserter:3/piercing-rounds-magazine",
+        "inserter:3/stone-wall",
+        "inserter:4/coal",
+        "inserter:5/iron-plate",
+        "inserter:6/coal"
+      ],
+      "periods": [
+        {"swings":4,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":160,"denominator":1},"cycles":1,"period_ticks":160,"kept":true},
+        {"swings":5,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":200,"denominator":1},"cycles":4,"period_ticks":800,"kept":true},
+        {"swings":6,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":240,"denominator":1},"cycles":2,"period_ticks":480,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":120,"denominator":1},"cycles":4,"period_ticks":480,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":80,"denominator":1},"cycles":2,"period_ticks":160,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":40,"denominator":1},"cycles":4,"period_ticks":160,"kept":true},
+        {"swings":4,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":160,"denominator":1},"cycles":1,"period_ticks":160,"kept":true}
+      ],
+      "duty": [
+        {
+          "producer": "machine:military-science-pack",
+          "members": [
+            "machine:1"
+          ],
+          "crafts_needed": {
+            "numerator": 6,
+            "denominator": 1
+          },
+          "crafts_capacity": {
+            "numerator": 6603124737739601,
+            "denominator": 1000000000000000
+          },
+          "duty": {
+            "numerator": 6000000000000000,
+            "denominator": 6603124737739601
+          }
+        },
+        {
+          "producer": "machine:grenade",
+          "members": [
+            "machine:2"
+          ],
+          "crafts_needed": {
+            "numerator": 6,
+            "denominator": 1
+          },
+          "crafts_capacity": {
+            "numerator": 62437498569489,
+            "denominator": 8000000000000
+          },
+          "duty": {
+            "numerator": 16000000000000,
+            "denominator": 20812499523163
+          }
+        },
+        {
+          "producer": "machine:casting-iron",
+          "members": [
+            "machine:3"
+          ],
+          "crafts_needed": {
+            "numerator": 6,
+            "denominator": 1
+          },
+          "crafts_capacity": {
+            "numerator": 11220000267029,
+            "denominator": 320000000000
+          },
+          "duty": {
+            "numerator": 1920000000000,
+            "denominator": 11220000267029
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 4,
+    "fractional": false,
+    "listed_from": {
+      "swings": 4,
+      "planned": 4,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 160,
+      "exact": {
+        "numerator": 160,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 160,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 1
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 1,
+      "override_lcm": null,
+      "effective_lcm": 1
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

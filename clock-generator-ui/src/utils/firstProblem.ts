@@ -19,8 +19,9 @@ export const PROBLEM_TEXT = {
     noRate: 'Set Items per Second in Target Output to more than 0',
     noCopies: COPIES_POSITIVE_PROBLEM,
     noMachines: 'Add a machine',
-    rateAboveMax: (total: number, counts: TargetCounts = 'made') =>
-        `Items per Second is more than the machines can ${counts === 'destroyed' ? 'destroy' : 'make'} (at most ${maxRateText(total)})`,
+    rateAboveMax: (total: number, counts: TargetCounts = 'made', byMachines = true) =>
+        byMachines ? `Items per Second is more than the machines can ${counts === 'destroyed' ? 'destroy' : 'make'} (at most ${maxRateText(total)})`
+            : `Items per Second is more than the build can carry (at most ${maxRateText(total)})`,
     machineWithoutRecipe: (machineId: number) => `Set the recipe of ${entityLabel('machine', machineId)}`,
     missingInput: (machineId: number, item: string, itemLabel: LabelOf = identity) =>
         `${entityLabel('machine', machineId)} has no source of ${itemLabel(item)}`,
@@ -119,7 +120,7 @@ export function problemsOf({ targetOutput, machines, machinesMax = null }: Probl
     const capacity = machinesMax ? totalMachineCapacity(machinesMax, targetOutput.copies) : null;
     if (capacity !== null && targetOutput.recipe && isTargetAboveMax(targetOutput.items_per_second, targetOutput.copies, machinesMax)) {
         problems.push({
-            text: PROBLEM_TEXT.rateAboveMax(capacity, countsOf(targetOutput)),
+            text: PROBLEM_TEXT.rateAboveMax(capacity, countsOf(targetOutput), machinesMax?.otherLimit === undefined),
             target: { kind: 'target-rate' },
         });
     }

@@ -1,3 +1,4 @@
+import { HandNotifications } from "./hand-notifications";
 import { ItemName } from "../../data";
 import { InserterStatus } from "../../state/entity-status";
 import type { InserterState } from "../../state/inserter-state";
@@ -22,6 +23,7 @@ export class ContainerHandPickup implements HandPickupPort {
         /** The sink's drop port: whether it takes an item now */
         protected readonly sink: HandDropPort,
         protected readonly source: ContainerStorage,
+        private readonly notifications: HandNotifications = new HandNotifications(),
     ) {
         // what the container gives is its config's, the same in every tick
         this.offered = source.getItemFilters().filter(item => items.lets(item));
@@ -91,7 +93,7 @@ export class ContainerHandPickup implements HandPickupPort {
             return;
         }
 
-        takeIntoHand(state, this.scratch, item, pickup_quantity);
+        takeIntoHand(state, this.scratch, item, pickup_quantity, this.notifications);
         source.take(item, pickup_quantity);
     }
 
@@ -126,8 +128,9 @@ export class MixedContainerHandPickup extends ContainerHandPickup {
         items: CarriedItems,
         sink: HandDropPort,
         private readonly mixed: MixedStorage,
+        notifications: HandNotifications = new HandNotifications(),
     ) {
-        super(state, scratch, items, sink, mixed);
+        super(state, scratch, items, sink, mixed, notifications);
         this.takes_from_slot = item => this.takesFromSlot(item);
     }
 

@@ -122,6 +122,33 @@ describe("Crafting: a working tick", () => {
         // a machine that does not place its results itself counts none placed
         expect(state.placement.results_placed).toBe(0);
     });
+
+    // a crafter update finishes up to one tick's worth of crafting: it finishes a craft, outputs, takes the next craft's
+    // ingredients and goes on with the rest of the tick, stopping early when they run out; the productivity bonus grows
+    // by the share of the tick it crafted (a Factorio developer, forums.factorio.com/72618)
+    it("finishes more than one craft a tick, starting the next with the rest of the tick", () => {
+        // 2.5 crafts a tick
+        const state = stateOf("iron-gear-wheel", { crafting_speed: 75, productivity: 20 });
+        const crafting = state.crafting;
+        state.inventoryState.addQuantity("iron-plate", 10);
+        crafting.tick();
+        expect([crafting.craftsStarted, crafting.craftCount]).toEqual([3, 2]);
+        expect(crafting.craftingProgress.progress).toBeCloseTo(0.5, 12);
+        expect(state.inventoryState.getQuantity("iron-plate")).toBe(4);
+        expect(state.inventoryState.getQuantity("iron-gear-wheel")).toBe(2);
+        expect(state.yield.bonusProgress.progress).toBeCloseTo(2.5 * 0.2, 12);
+    });
+
+    it("stops early when the ingredients run out, the bonus grown by the share of the tick it crafted", () => {
+        const state = stateOf("iron-gear-wheel", { crafting_speed: 75, productivity: 20 });
+        const crafting = state.crafting;
+        state.inventoryState.addQuantity("iron-plate", 4);
+        crafting.tick();
+        expect([crafting.craftsStarted, crafting.craftCount, crafting.craftingProgress.progress]).toEqual([2, 2, 0]);
+        expect(state.inventoryState.getQuantity("iron-gear-wheel")).toBe(2);
+        // two crafts of the 2.5 the tick had room for
+        expect(state.yield.bonusProgress.progress).toBeCloseTo(2 * 0.2, 12);
+    });
 });
 
 describe("MachineWakes", () => {

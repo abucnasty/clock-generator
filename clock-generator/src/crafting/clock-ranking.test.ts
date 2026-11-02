@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { combineClockAlternativeRuns, rankingOf, searchesAreNeeded, type ClockAlternative, type ClockAlternativeRun, type ClockRanking } from "./generate-blueprint";
 import { clockVerdictOf, windowsRoundedTo, type ClockAssessment } from "./trial";
-import type { RoundedClock } from "./rank";
+import { searchesToRun, type RoundedClock } from "./rank";
 import type { Config } from "../config";
 
 type Ranked = ClockRanking & { id: string };
@@ -129,6 +129,39 @@ describe("combineClockAlternativeRuns", () => {
         ])).toBe("under");
     });
 
+    // Thaeln's cell 07: no clock holds 80.42 a second; the stable observed windows clock runs 2.3% over it, an unstable
+    // clock of 6 output swings 0.2% under it
+    it("selects a stable clock over the target rate before an unstable one nearer to it, the nearest of them first", () => {
+        expect(selectedOf([
+            clock("unstable-near", { meets_target_rate: false, rate_off_target: -0.18, holds_expected_output: false, wake_ups_per_minute: 49 }),
+            clock("stable-far-over", { meets_target_rate: false, stable_above_target: true, rate_off_target: 4, wake_ups_per_minute: 100 }),
+            clock("stable-over", { meets_target_rate: false, stable_above_target: true, rate_off_target: 1.87, wake_ups_per_minute: 420 }),
+        ])).toBe("stable-over");
+    });
+
+    it("selects a clock that meets the target rate before one stable over it", () => {
+        expect(selectedOf([
+            clock("stable-over", { meets_target_rate: false, stable_above_target: true, rate_off_target: 0.5, wake_ups_per_minute: 1 }),
+            clock("untried", { recovery_untried: true, wake_ups_per_minute: 900 }),
+        ])).toBe("untried");
+    });
+
+    // the container wagons: even hands and the batched clock both at 0 wake-ups; even hands is back from a loss sooner
+    it("selects, of clocks equal on wake-ups, the one that gets back from a loss in fewer periods, before the fewest windows", () => {
+        expect(selectedOf([
+            clock("slow", { wake_ups_per_minute: 0, recovery_periods: 33, window_count: 2 }),
+            clock("fast", { wake_ups_per_minute: 0, recovery_periods: 3, window_count: 9 }),
+        ])).toBe("fast");
+        expect(selectedOf([
+            clock("untried", { wake_ups_per_minute: 0, recovery_periods: null, window_count: 2 }),
+            clock("tried", { wake_ups_per_minute: 0, recovery_periods: 40, window_count: 9 }),
+        ])).toBe("tried");
+        expect(selectedOf([
+            clock("fewer-wake-ups", { wake_ups_per_minute: 10, recovery_periods: 40 }),
+            clock("sooner", { wake_ups_per_minute: 11, recovery_periods: 1 }),
+        ])).toBe("fewer-wake-ups");
+    });
+
     it("does not look at how near a clock is to the target rate while one meets it", () => {
         expect(selectedOf([
             clock("meets", { wake_ups_per_minute: 500 }),
@@ -195,6 +228,15 @@ describe("a clock whose recovery could not be tried", () => {
         expect(ranked({ backpressure_loss_not_tried: NOT_TRIED, items_per_second: 81.7 })).toMatchObject({ meets_target_rate: false, recovery_untried: false });
         expect(ranked({ backpressure_loss_not_tried: NOT_TRIED }, true)).toMatchObject({ meets_target_rate: true, recovery_untried: false });
     });
+
+    it("is not stable above the target rate, which needs its recovery tried and passed, or on a build with a deadlock risk its output held", () => {
+        const recovers = { survives: true, broken_by: [], recovered_after_periods: 3 };
+        expect(ranked({ backpressure_loss: recovers, items_per_second: 81.7 }).stable_above_target).toBe(true);
+        expect(ranked({ backpressure_loss_not_tried: NOT_TRIED, items_per_second: 81.7 }).stable_above_target).toBeUndefined();
+        expect(ranked({ backpressure_loss: { ...recovers, survives: false, broken_by: ["coal stops arriving"] }, items_per_second: 81.7 }).stable_above_target).toBeUndefined();
+        expect(ranked({ holds: false, items_per_second: 81.7 }).stable_above_target).toBeUndefined();
+        expect(ranked({ backpressure_loss_not_tried: NOT_TRIED, items_per_second: 81.7 }, true).stable_above_target).toBe(true);
+    });
 });
 
 // Atlan cell 29: the 2,888-tick clock of a 2,888.666-tick period runs 0.02% fast, and held and recovered in the game (#332)
@@ -240,6 +282,13 @@ describe("a clock rounded down to whole ticks", () => {
         expect(ranked(9.97, undefined).runs_fast).toBeUndefined();
     });
 
+    it("is stable above the target rate only as a clock of its exact period, never rounded", () => {
+        expect(ranked(9.97 * 1.02, undefined)).toMatchObject({ meets_target_rate: false, stable_above_target: true });
+        expect(ranked(9.97 * 1.0011, {}).stable_above_target).toBeUndefined();
+        expect(ranked(9.97, undefined).stable_above_target).toBeUndefined();
+        expect(ranked(9.97 * 0.98, undefined).stable_above_target).toBeUndefined();
+    });
+
     it("runs on its windows rounded as its blueprint counts them", () => {
         expect(windowsRoundedTo({ "inserter:1": [{ start: 0, end: 30 }, { start: 2870, end: 2888 }, { start: 2888, end: 2888 }] }, 2888))
             .toEqual({ "inserter:1": [{ start: 0, end: 30 }, { start: 2870, end: 2887 }] });
@@ -280,5 +329,30 @@ describe("searchesAreNeeded", () => {
         const separate = clock("separate", { meets_target_rate: false });
         expect(searchesAreNeeded([{ signature: "one", alternatives: [separate] }], it => it)).toBe(true);
         expect(searchesAreNeeded([{ signature: "one", alternatives: [separate], also: [{ signature: "one-shared", alternatives: [clock("shared")] }] }], it => it)).toBe(false);
+    });
+});
+
+describe("searchesToRun", () => {
+    const SEARCHES = [{ id: "derived" }, { id: "uneven-output" }, { id: "shifted-swings" }, { id: "full-hand" }];
+    const toRun = (clocks: Ranked[], period: number) =>
+        searchesToRun(clocks.map(it => ({ signature: it.id, alternatives: [it] })), it => it, SEARCHES, period).map(it => it.id);
+
+    it("runs every search where no clock made without one can be selected as stable", () => {
+        expect(toRun([clock("unstable", { meets_target_rate: false })], 5000)).toEqual(["derived", "uneven-output", "shifted-swings", "full-hand"]);
+    });
+
+    it("runs the two that can improve on a stable clock with wake-ups, on a period of at most 480 ticks", () => {
+        expect(toRun([clock("stable", { wake_ups_per_minute: 197.5 })], 144)).toEqual(["derived", "shifted-swings"]);
+        expect(toRun([clock("stable", { wake_ups_per_minute: 197.5 })], 480)).toEqual(["derived", "shifted-swings"]);
+    });
+
+    it("runs none past a stable clock of no wake-ups, or on a longer period", () => {
+        expect(toRun([clock("stable", { wake_ups_per_minute: 0 })], 144)).toEqual([]);
+        expect(toRun([clock("stable", { wake_ups_per_minute: 0.0004 })], 144)).toEqual([]);
+        expect(toRun([clock("stable", { wake_ups_per_minute: 197.5 })], 481)).toEqual([]);
+    });
+
+    it("judges the clock the selection ends on so far, not another stable one", () => {
+        expect(toRun([clock("more", { wake_ups_per_minute: 30 }), clock("none", { wake_ups_per_minute: 0 })], 144)).toEqual([]);
     });
 });

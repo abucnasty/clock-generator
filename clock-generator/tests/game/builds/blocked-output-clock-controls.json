@@ -7,9 +7,10 @@
       "generation": {"period":192,"expected":16,"verdict":"stable","selection":{"id":"even-hands","holds":true,"rate":5,"supply":null},"clock_sha256":"c607f7b4109bfb2f912f3be80da08306619e01d864374f8cb1b17176b103efb3"}
     },
     "blocked-output-turbo-stack-2": {
-      "recorded": {"pr":277,"commit":"155aa418","frozen_head":"b9fd341b","clock_sha256":"91bb71053272144582c3c949f9acee0c6527f2a78a610c16ea1f2248d5d7beeb","clock_basis":"capture"},
+      "recorded": {"pr":524,"commit":"0d3507f4","frozen_head":"0d3507f4","clock_sha256":"47a5f9705c1e3bfa88e43d3106048209f991b4ab2aa3b584d3b039d5abadd2f9","clock_basis":"capture"},
       "native": {"generationVerdict":"stable","target":5,"period":192,"expected":16,"baseline":[16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16],"recovery":[{"cut":66,"during":[16,16,16,16,14,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,16],"recovered":[16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]}],"interventions":[[66,90,130]]},
-      "generation": {"period":192,"expected":16,"verdict":"stable","selection":{"id":"even-hands","holds":true,"rate":5,"supply":null},"clock_sha256":"91bb71053272144582c3c949f9acee0c6527f2a78a610c16ea1f2248d5d7beeb"}
+      "generation": {"period":192,"expected":16,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":5,"supply":null},"clock_sha256":"47a5f9705c1e3bfa88e43d3106048209f991b4ab2aa3b584d3b039d5abadd2f9"},
+      "previous": {"id":"even-hands","clock_sha256":"91bb71053272144582c3c949f9acee0c6527f2a78a610c16ea1f2248d5d7beeb"}
     },
     "blocked-output-turbo-stack-3": {
       "recorded": {"pr":277,"commit":"155aa418","frozen_head":"b9fd341b","clock_sha256":"aed3a5df815ed3278d859eda48ffecf2fd0fdf95f143f9fe332652f42b28a7bb","clock_basis":"capture"},
@@ -17,9 +18,10 @@
       "generation": {"period":1440,"expected":120,"verdict":"stable","selection":{"id":"shifted-swings","holds":true,"rate":5,"supply":null},"clock_sha256":"aed3a5df815ed3278d859eda48ffecf2fd0fdf95f143f9fe332652f42b28a7bb"}
     },
     "blocked-output-turbo-stack-4": {
-      "recorded": {"pr":277,"commit":"155aa418","frozen_head":"b9fd341b","clock_sha256":"e532fe8beb613ab122e70b6a7e4bcf5fffc23cd054989946e9e5745a9cb3caa3","clock_basis":"capture"},
+      "recorded": {"pr":524,"commit":"0d3507f4","frozen_head":"0d3507f4","clock_sha256":"746b0255ef845f213b4208d0d3452ec88c1c52301a74508e878b85d9d9a096c7","clock_basis":"capture"},
       "native": {"generationVerdict":"stable","target":5,"period":192,"expected":16,"baseline":[16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16],"recovery":[{"cut":66,"during":[16,16,16,16,16,16,16,16,16,12,0,0,0,0,0,0,0,0,0,0,0,0,0,4,16],"recovered":[16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]}],"interventions":[[66,90,130]]},
-      "generation": {"period":192,"expected":16,"verdict":"stable","selection":{"id":"even-hands","holds":true,"rate":5,"supply":null},"clock_sha256":"e532fe8beb613ab122e70b6a7e4bcf5fffc23cd054989946e9e5745a9cb3caa3"}
+      "generation": {"period":192,"expected":16,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":5,"supply":null},"clock_sha256":"746b0255ef845f213b4208d0d3452ec88c1c52301a74508e878b85d9d9a096c7"},
+      "previous": {"id":"even-hands","clock_sha256":"e532fe8beb613ab122e70b6a7e4bcf5fffc23cd054989946e9e5745a9cb3caa3"}
     },
     "blocked-output-express-stack-1": {
       "recorded": {"pr":277,"commit":"155aa418","frozen_head":"b9fd341b","clock_sha256":"b94894eb249d45f9cdd376b82d1b5a696b36f788cb587817558bd7e99845c2e8","clock_basis":"capture"},
@@ -27,9 +29,10 @@
       "generation": {"period":192,"expected":16,"verdict":"stable","selection":{"id":"even-hands","holds":true,"rate":5,"supply":null},"clock_sha256":"b94894eb249d45f9cdd376b82d1b5a696b36f788cb587817558bd7e99845c2e8"}
     },
     "blocked-output-express-stack-2": {
-      "recorded": {"pr":277,"commit":"155aa418","frozen_head":"b9fd341b","clock_sha256":"ca401aaec747646b9300524ef04faf4ae98a01589f66c8d778c766df1099da5e","clock_basis":"capture"},
+      "recorded": {"pr":524,"commit":"0d3507f4","frozen_head":"0d3507f4","clock_sha256":"ac0919cfb847c5aae0dd927b531b01e552ce8258f9fcdba9e44bd141b6599cc3","clock_basis":"capture"},
       "native": {"generationVerdict":"stable","target":5,"period":192,"expected":16,"baseline":[16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16],"recovery":[{"cut":66,"during":[16,16,16,16,14,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,16],"recovered":[16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]}],"interventions":[[66,90,130]]},
-      "generation": {"period":192,"expected":16,"verdict":"stable","selection":{"id":"even-hands","holds":true,"rate":5,"supply":null},"clock_sha256":"ca401aaec747646b9300524ef04faf4ae98a01589f66c8d778c766df1099da5e"}
+      "generation": {"period":192,"expected":16,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":5,"supply":null},"clock_sha256":"ac0919cfb847c5aae0dd927b531b01e552ce8258f9fcdba9e44bd141b6599cc3"},
+      "previous": {"id":"even-hands","clock_sha256":"ca401aaec747646b9300524ef04faf4ae98a01589f66c8d778c766df1099da5e"}
     },
     "blocked-output-express-stack-3": {
       "recorded": {"pr":0,"commit":"6367fc83","frozen_head":"6367fc83","note":"recorded before the PR was opened; pr is set when it is","clock_sha256":"45084334c1a365790000a2f3eb647f618cbb6955f859be111f8b2ae583f861c7","clock_basis":"capture"},
@@ -37,9 +40,10 @@
       "generation": {"period":1440,"expected":120,"verdict":"stable","selection":{"id":"shifted-swings","holds":true,"rate":5,"supply":null},"clock_sha256":"45084334c1a365790000a2f3eb647f618cbb6955f859be111f8b2ae583f861c7"}
     },
     "blocked-output-express-stack-4": {
-      "recorded": {"pr":277,"commit":"155aa418","frozen_head":"b9fd341b","clock_sha256":"e6017b7dae30696b5d536e1167c95ae3f42774d7d7e2aff9900fb20aafca076d","clock_basis":"capture"},
+      "recorded": {"pr":524,"commit":"0d3507f4","frozen_head":"0d3507f4","clock_sha256":"4f137795a449ebd4d8dcc6b9209ae71220c35cd28bc578da13c6358a1bc0403d","clock_basis":"capture"},
       "native": {"generationVerdict":"stable","target":5,"period":192,"expected":16,"baseline":[16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16],"recovery":[{"cut":66,"during":[16,16,16,16,16,16,16,16,16,12,0,0,0,0,0,0,0,0,0,0,0,0,0,4,16],"recovered":[16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]}],"interventions":[[66,90,130]]},
-      "generation": {"period":192,"expected":16,"verdict":"stable","selection":{"id":"even-hands","holds":true,"rate":5,"supply":null},"clock_sha256":"e6017b7dae30696b5d536e1167c95ae3f42774d7d7e2aff9900fb20aafca076d"}
+      "generation": {"period":192,"expected":16,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":5,"supply":null},"clock_sha256":"4f137795a449ebd4d8dcc6b9209ae71220c35cd28bc578da13c6358a1bc0403d"},
+      "previous": {"id":"even-hands","clock_sha256":"e6017b7dae30696b5d536e1167c95ae3f42774d7d7e2aff9900fb20aafca076d"}
     },
     "blocked-output-fast-stack-1": {
       "recorded": {"pr":277,"commit":"155aa418","frozen_head":"b9fd341b","clock_sha256":"6a63b74b81d4e06f960fd2daee8b53901373d911213ff36485fbfa4eeaba1f1a","clock_basis":"capture"},
@@ -57,14 +61,16 @@
       "generation": {"period":1440,"expected":120,"verdict":"stable","selection":{"id":"shifted-swings","holds":true,"rate":5,"supply":null},"clock_sha256":"a3db29cd5ca3e0b3c616f136176ea6ab304892bd3b86a7b074f9800db7b0d529"}
     },
     "blocked-output-fast-stack-4": {
-      "recorded": {"pr":277,"commit":"155aa418","frozen_head":"b9fd341b","clock_sha256":"5e1d1e33fe38c1940d79de23e4a69fcce3b325b1891127f0111c8768a0c76322","clock_basis":"capture"},
+      "recorded": {"pr":524,"commit":"0d3507f4","frozen_head":"0d3507f4","clock_sha256":"efa9ebf0d2785f6563eacc037a1201d4720a5f2bb8c6d2d30505ed3ec6da2f75","clock_basis":"capture"},
       "native": {"generationVerdict":"stable","target":5,"period":192,"expected":16,"baseline":[16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16],"recovery":[{"cut":66,"during":[16,16,16,16,16,16,16,16,16,12,0,0,0,0,0,0,0,0,0,0,0,0,0,4,16],"recovered":[16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]}],"interventions":[[66,90,130]]},
-      "generation": {"period":192,"expected":16,"verdict":"stable","selection":{"id":"even-hands","holds":true,"rate":5,"supply":null},"clock_sha256":"5e1d1e33fe38c1940d79de23e4a69fcce3b325b1891127f0111c8768a0c76322"}
+      "generation": {"period":192,"expected":16,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":5,"supply":null},"clock_sha256":"efa9ebf0d2785f6563eacc037a1201d4720a5f2bb8c6d2d30505ed3ec6da2f75"},
+      "previous": {"id":"even-hands","clock_sha256":"5e1d1e33fe38c1940d79de23e4a69fcce3b325b1891127f0111c8768a0c76322"}
     },
     "blocked-output-normal-stack-1": {
-      "recorded": {"pr":277,"commit":"155aa418","frozen_head":"b9fd341b","clock_sha256":"deed877ad4300e6b6781b97e1f41f609ee363247324ac61ba8f7a3ce28dbbb92","clock_basis":"capture"},
-      "native": {"generationVerdict":"stable","target":5,"period":192,"expected":16,"baseline":[16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16],"recovery":[{"cut":66,"during":[9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,24],"recovered":[16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]}],"interventions":[[66,90,130]]},
-      "generation": {"period":192,"expected":16,"verdict":"stable","selection":{"id":"even-hands","holds":true,"rate":5,"supply":null},"clock_sha256":"deed877ad4300e6b6781b97e1f41f609ee363247324ac61ba8f7a3ce28dbbb92"}
+      "recorded": {"pr":524,"commit":"0d3507f4","frozen_head":"0d3507f4","clock_sha256":"bdfe4fad51e1996797d4e91f72300b1f9a81b1284ae1d542cf9744410abb5931","clock_basis":"capture"},
+      "native": {"generationVerdict":"stable","target":5,"period":192,"expected":16,"baseline":[16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16],"recovery":[{"cut":66,"during":[16,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,15],"recovered":[16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]}],"interventions":[[66,90,130]]},
+      "generation": {"period":192,"expected":16,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":5,"supply":null},"clock_sha256":"bdfe4fad51e1996797d4e91f72300b1f9a81b1284ae1d542cf9744410abb5931"},
+      "previous": {"id":"even-hands","clock_sha256":"deed877ad4300e6b6781b97e1f41f609ee363247324ac61ba8f7a3ce28dbbb92"}
     },
     "blocked-output-normal-stack-2": {
       "recorded": {"pr":277,"commit":"155aa418","frozen_head":"b9fd341b","clock_sha256":"16b0b9f0fd25a04afb8076af7002711aa9ac8e53807d70e2fa75448785ec0dbe","clock_basis":"capture"},
@@ -77,9 +83,10 @@
       "generation": {"period":1440,"expected":120,"verdict":"stable","selection":{"id":"shifted-swings","holds":true,"rate":5,"supply":null},"clock_sha256":"2682f0fbc879a28b7ad1a87368c7e2c5640d6cf0638d6fc21592a54c87419492"}
     },
     "blocked-output-normal-stack-4": {
-      "recorded": {"pr":277,"commit":"155aa418","frozen_head":"b9fd341b","clock_sha256":"ca401aaec747646b9300524ef04faf4ae98a01589f66c8d778c766df1099da5e","clock_basis":"capture"},
+      "recorded": {"pr":524,"commit":"0d3507f4","frozen_head":"0d3507f4","clock_sha256":"ac0919cfb847c5aae0dd927b531b01e552ce8258f9fcdba9e44bd141b6599cc3","clock_basis":"capture"},
       "native": {"generationVerdict":"stable","target":5,"period":192,"expected":16,"baseline":[16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16],"recovery":[{"cut":66,"during":[16,16,16,16,16,16,16,16,12,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,16],"recovered":[16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]}],"interventions":[[66,90,130]]},
-      "generation": {"period":192,"expected":16,"verdict":"stable","selection":{"id":"even-hands","holds":true,"rate":5,"supply":null},"clock_sha256":"ca401aaec747646b9300524ef04faf4ae98a01589f66c8d778c766df1099da5e"}
+      "generation": {"period":192,"expected":16,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":5,"supply":null},"clock_sha256":"ac0919cfb847c5aae0dd927b531b01e552ce8258f9fcdba9e44bd141b6599cc3"},
+      "previous": {"id":"even-hands","clock_sha256":"ca401aaec747646b9300524ef04faf4ae98a01589f66c8d778c766df1099da5e"}
     }
   }
 }

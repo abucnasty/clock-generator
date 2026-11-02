@@ -29,7 +29,6 @@ describe("generateClockForConfig", () => {
         let alternatives: ClockAlternative[];
         let selected: ClockAlternative;
         let observed: ClockAlternative;
-        let observed_rounded: ClockAlternative;
         let one_swing: ClockAlternative;
         let two_swings: ClockAlternative;
 
@@ -38,7 +37,6 @@ describe("generateClockForConfig", () => {
             alternatives = generated.alternatives;
             selected = alternatives[generated.selected_index];
             observed = alternatives.find(a => a.label === "Observed windows: 2 output swings per cycle, subtick clock")!;
-            observed_rounded = alternatives.find(a => a.id === "derived")!;
             one_swing = alternatives.find(a => a.label === "1 output swing per cycle, subtick clock")!;
             two_swings = alternatives.find(a => a.label === "2 output swings per cycle, subtick clock")!;
         });
@@ -51,7 +49,9 @@ describe("generateClockForConfig", () => {
             expect(selected).toBe(observed);
             expect(selected.assessment.items_per_second).toBeCloseTo(45, 6);
             expect(selected.result.subtick?.clock.period_ticks).toBe(640);
-            expect(alternatives.filter(a => a.assessment.holds)).toEqual([observed, observed_rounded]);
+            // listed as its subtick clock alone: its period has one, so it is not also listed rounded down to whole ticks
+            expect(alternatives.filter(a => a.assessment.holds)).toEqual([observed]);
+            expect(alternatives.find(a => a.id === "derived")).toBeUndefined();
         });
 
         it("calls the observed windows stable: by its rate over the cycle into a sink that never blocks, it gets back from every loss, the tungsten ore's included", () => {

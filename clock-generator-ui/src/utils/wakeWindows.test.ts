@@ -47,6 +47,9 @@ function asBuilt(wakeUps: Record<string, number> | null): AsBuiltStabilityCheck 
         alarms_per_minute: wake_ups_per_minute,
         enabled_share: 0.5,
         waiting_share: 0.1,
+        uncounted_per_minute: { 'arm away': 0 },
+        input_wake_ups_per_minute: 0,
+        output_wake_ups_per_minute: wake_ups_per_minute,
     }));
     return {
         holds: true,
@@ -56,6 +59,7 @@ function asBuilt(wakeUps: Record<string, number> | null): AsBuiltStabilityCheck 
             wake_ups: {
                 ticks: 36000,
                 true_starts_unknown: [],
+                uncounted_per_minute: { 'arm away': 0 },
                 wake_ups_per_minute: inserters.reduce((sum, it) => sum + it.wake_ups_per_minute, 0),
                 inserters,
             },

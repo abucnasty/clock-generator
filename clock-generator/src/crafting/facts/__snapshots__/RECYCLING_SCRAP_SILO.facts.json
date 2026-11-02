@@ -50,6 +50,10 @@
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
             "expected_per_craft": 0.8,
+            "per_craft": {
+              "numerator": 4,
+              "denominator": 5
+            },
             "per_second": {
               "numerator": 2,
               "denominator": 1
@@ -64,6 +68,10 @@
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
             "expected_per_craft": 0.28,
+            "per_craft": {
+              "numerator": 7,
+              "denominator": 25
+            },
             "per_second": {
               "numerator": 7,
               "denominator": 10
@@ -78,6 +86,10 @@
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
             "expected_per_craft": 0.24,
+            "per_craft": {
+              "numerator": 6,
+              "denominator": 25
+            },
             "per_second": {
               "numerator": 3,
               "denominator": 5
@@ -92,6 +104,10 @@
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
             "expected_per_craft": 0.2,
+            "per_craft": {
+              "numerator": 1,
+              "denominator": 5
+            },
             "per_second": {
               "numerator": 1,
               "denominator": 2
@@ -106,6 +122,10 @@
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
             "expected_per_craft": 0.16000000000000017,
+            "per_craft": {
+              "numerator": 1000000000000001,
+              "denominator": 6250000000000000
+            },
             "per_second": {
               "numerator": 2,
               "denominator": 5
@@ -120,6 +140,10 @@
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
             "expected_per_craft": 0.16000000000000017,
+            "per_craft": {
+              "numerator": 1000000000000001,
+              "denominator": 6250000000000000
+            },
             "per_second": {
               "numerator": 2,
               "denominator": 5
@@ -134,6 +158,10 @@
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
             "expected_per_craft": 0.16,
+            "per_craft": {
+              "numerator": 4,
+              "denominator": 25
+            },
             "per_second": {
               "numerator": 2,
               "denominator": 5
@@ -148,6 +176,10 @@
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
             "expected_per_craft": 0.12,
+            "per_craft": {
+              "numerator": 3,
+              "denominator": 25
+            },
             "per_second": {
               "numerator": 3,
               "denominator": 10
@@ -162,6 +194,10 @@
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
             "expected_per_craft": 0.12,
+            "per_craft": {
+              "numerator": 3,
+              "denominator": 25
+            },
             "per_second": {
               "numerator": 3,
               "denominator": 10
@@ -176,6 +212,10 @@
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
             "expected_per_craft": 0.07999999999999961,
+            "per_craft": {
+              "numerator": 624999999999997,
+              "denominator": 7812500000000000
+            },
             "per_second": {
               "numerator": 1,
               "denominator": 5
@@ -190,6 +230,10 @@
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
             "expected_per_craft": 0.04,
+            "per_craft": {
+              "numerator": 1,
+              "denominator": 25
+            },
             "per_second": {
               "numerator": 1,
               "denominator": 10
@@ -204,6 +248,10 @@
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
             "expected_per_craft": 0.04,
+            "per_craft": {
+              "numerator": 1,
+              "denominator": 25
+            },
             "per_second": {
               "numerator": 1,
               "denominator": 10

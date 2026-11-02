@@ -1,0 +1,136 @@
+{
+  "schema": 1,
+  "sample": "LOW_DENSITY_STRUCTURE",
+  "target": {
+    "item": "low-density-structure",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 240,
+      "denominator": 1
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "belt:2/lane:1#coal",
+      "kind": "nothing-drops-on"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:3",
+        "chest:1#plastic-bar",
+        "machine:1",
+        "machine:2",
+        "chest:2#plastic-bar",
+        "machine:4",
+        "machine:5",
+        "belt:1/lane:1#low-density-structure"
+      ],
+      "edges": [
+        "inserter:1/low-density-structure",
+        "inserter:2/low-density-structure",
+        "inserter:3/plastic-bar",
+        "inserter:4/plastic-bar",
+        "inserter:5/plastic-bar",
+        "inserter:6/plastic-bar",
+        "inserter:7/plastic-bar",
+        "inserter:8/coal",
+        "inserter:9/low-density-structure",
+        "inserter:10/low-density-structure",
+        "inserter:11/plastic-bar",
+        "inserter:12/plastic-bar",
+        "inserter:13/plastic-bar",
+        "inserter:14/plastic-bar",
+        "inserter:15/plastic-bar"
+      ],
+      "periods": [
+        {"swings":3,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":48,"denominator":1},"cycles":3,"period_ticks":144,"kept":true},
+        {"swings":4,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":64,"denominator":1},"cycles":3,"period_ticks":192,"kept":true},
+        {"swings":5,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":80,"denominator":1},"cycles":3,"period_ticks":240,"kept":true},
+        {"swings":6,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":96,"denominator":1},"cycles":3,"period_ticks":288,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":32,"denominator":1},"cycles":3,"period_ticks":96,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":16,"denominator":1},"cycles":3,"period_ticks":48,"kept":true},
+        {"swings":3,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":48,"denominator":1},"cycles":3,"period_ticks":144,"kept":true}
+      ],
+      "duty": [
+        {
+          "producer": "machine:casting-low-density-structure",
+          "members": [
+            "machine:1",
+            "machine:2",
+            "machine:4",
+            "machine:5"
+          ],
+          "crafts_needed": {
+            "numerator": 60,
+            "denominator": 1
+          },
+          "crafts_capacity": {
+            "numerator": 6440000057220499,
+            "denominator": 93750000000000
+          },
+          "duty": {
+            "numerator": 5625000000000000,
+            "denominator": 6440000057220499
+          }
+        },
+        {
+          "producer": "machine:plastic-bar",
+          "members": [
+            "machine:3"
+          ],
+          "crafts_needed": {
+            "numerator": 75,
+            "denominator": 2
+          },
+          "crafts_capacity": {
+            "numerator": 235,
+            "denominator": 2
+          },
+          "duty": {
+            "numerator": 15,
+            "denominator": 47
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 3,
+    "fractional": false,
+    "listed_from": {
+      "swings": 3,
+      "planned": 3,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 144,
+      "exact": {
+        "numerator": 144,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 48,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 8
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 8,
+      "override_lcm": 3,
+      "effective_lcm": 3
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

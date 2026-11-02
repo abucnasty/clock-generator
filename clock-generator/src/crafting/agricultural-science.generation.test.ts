@@ -81,9 +81,13 @@ describe("generateClockForConfig", () => {
         // The 2-swing clock's 0 is the simulator's, not the game's: on the scaffold the game moved 800 in every period from
         // the 11th to the 37th (2026-10-26), where the takers that both held part of a hand were not served in one order
         // (docs/simulator.md, "Two inserters that take from one machine", open).
-        it("selects the 5-swing clock, the only one that gets back from every loss", () => {
+        it("keeps the batched 5-swing clock when a stable shifted clock is also offered", () => {
             const stable = alternatives.filter(a => a.verdict === "stable");
-            expect(stable.map(a => a.label).sort()).toEqual(["Batched swings: 5 output swings per cycle"]);
+            // #527 searches shifted windows past a stable short clock; both now hold and recover, while the
+            // selected batched clock and its native pin below are unchanged.
+            expect(stable.map(a => a.label).sort()).toEqual([
+                "Batched swings: 5 output swings per cycle", "Shifted swings: 5 output swings per cycle",
+            ]);
             expect(alternatives[selected_index].label).toBe("Batched swings: 5 output swings per cycle");
         });
 

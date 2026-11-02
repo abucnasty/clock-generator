@@ -1,0 +1,164 @@
+{
+  "schema": 1,
+  "sample": "REAL_OWNER_PINK_SCIENCE_RECYCLER",
+  "target": {
+    "item": "electromagnetic-science-pack",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 48,
+      "denominator": 1
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "belt:1/lane:1#accumulator",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:1/lane:2#accumulator",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:2/lane:1#processing-unit",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:3/lane:1#battery",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "chest:6#holmium-plate",
+      "kind": "infinity-supply"
+    },
+    {
+      "vertex": "chest:6#superconductor",
+      "kind": "infinity-supply"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:2",
+        "machine:3",
+        "machine:1",
+        "machine:4",
+        "chest:3#electromagnetic-science-pack",
+        "chest:5#electromagnetic-science-pack"
+      ],
+      "edges": [
+        "inserter:1/accumulator",
+        "inserter:2/processing-unit",
+        "inserter:3/advanced-circuit",
+        "inserter:4/electromagnetic-science-pack",
+        "inserter:5/electromagnetic-science-pack",
+        "inserter:6/supercapacitor",
+        "inserter:7/electromagnetic-science-pack",
+        "inserter:8/electromagnetic-science-pack",
+        "inserter:9/supercapacitor",
+        "inserter:10/holmium-plate",
+        "inserter:10/superconductor",
+        "inserter:11/battery",
+        "inserter:12/accumulator",
+        "placement:machine:2/electronic-circuit"
+      ],
+      "periods": [
+        {"swings":1,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":40,"denominator":1},"cycles":1,"period_ticks":40,"kept":true},
+        {"swings":1,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":40,"denominator":1},"cycles":1,"period_ticks":40,"kept":true}
+      ],
+      "duty": [
+        {
+          "producer": "machine:electromagnetic-science-pack",
+          "members": [
+            "machine:1",
+            "machine:4"
+          ],
+          "crafts_needed": {
+            "numerator": 192,
+            "denominator": 11
+          },
+          "crafts_capacity": {
+            "numerator": 717,
+            "denominator": 40
+          },
+          "duty": {
+            "numerator": 2560,
+            "denominator": 2629
+          }
+        },
+        {
+          "producer": "machine:processing-unit-recycling",
+          "members": [
+            "machine:2"
+          ],
+          "crafts_needed": {
+            "numerator": 3072,
+            "denominator": 605
+          },
+          "crafts_capacity": {
+            "numerator": 7390250000000001,
+            "denominator": 312500000000000
+          },
+          "duty": {
+            "numerator": 169421483278,
+            "denominator": 789063130897
+          }
+        },
+        {
+          "producer": "machine:supercapacitor",
+          "members": [
+            "machine:3"
+          ],
+          "crafts_needed": {
+            "numerator": 768,
+            "denominator": 121
+          },
+          "crafts_capacity": {
+            "numerator": 51,
+            "denominator": 8
+          },
+          "duty": {
+            "numerator": 2048,
+            "denominator": 2057
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 1,
+    "fractional": false,
+    "listed_from": {
+      "swings": 1,
+      "planned": 1,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 40,
+      "exact": {
+        "numerator": 40,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 40,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 605
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 605,
+      "override_lcm": 1,
+      "effective_lcm": 1
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

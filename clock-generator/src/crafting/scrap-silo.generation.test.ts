@@ -17,11 +17,10 @@ beforeAll(async () => {
 });
 
 describe("scrap recycled into a rocket silo", () => {
-    test("gets results in turn and all results at once, both by arithmetic, both bringing 2 scrap a second and recovering", () => {
+    test("gets results in turn by arithmetic, bringing 2 scrap a second and recovering", () => {
         expect(generated.alternatives.map(it => [it.id, it.label, it.result.simulation_duration.ticks, it.verdict, it.assessment.items_per_second]))
             .toEqual([
                 ["results-in-turn", "Results in turn: 12 hands brought in per cycle", 5760, "stable", 2],
-                ["all-results-at-once", "All results at once: 9 hands brought in per cycle", 4320, "stable", 2],
             ]);
         expect(generated.skipped_searches).toEqual([]);
         for (const alternative of generated.alternatives) {
@@ -38,18 +37,12 @@ describe("scrap recycled into a rocket silo", () => {
             expect(taken.takers).toHaveLength(12);
         }
     });
-
-    test("selects results in turn, whose takers wait at the silo for fewer of its placings than all at once", () => {
-        expect(generated.alternatives[generated.selected_index].id).toBe("results-in-turn");
-        const [in_turn, at_once] = generated.alternatives.map(it => it.assessment.wake_ups_per_minute!);
-        expect(in_turn).toBeLessThan(at_once / 3);
-    });
 });
 
 // the clocks the game's four hours were recorded on (tests/game/builds/scrap-silo-clock-controls.json)
 describe("the clocks the scrap silo's hours in the game ran", () => {
     const controls = readControls("scrap-silo-clock-controls.json");
-    for (const [name, id] of [["scrap-silo-results-in-turn", "results-in-turn"], ["scrap-silo-all-results-at-once", "all-results-at-once"]] as const) {
+    for (const [name, id] of [["scrap-silo-results-in-turn", "results-in-turn"]] as const) {
         test(`${name} is still made`, () => {
             const pin = controls.cases[name].generation!;
             const alternative = generated.alternatives.find(it => it.id === id)!;

@@ -306,6 +306,9 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [],
         warmup_ticks: 3600,
         settle_ticks: 2400,
+        wake_ups_open: "the game counts the first output inserter 0 wake-ups a minute, as it is never shown waiting, and the simulator 15.36, as it shows "
+            + "both output inserters waiting on the machine in 1.56% of the ticks; the build moves its expected output in every period (recorded 2026-11-01: "
+            + "25.6 a minute in all in the game, 41.0 in the simulator, 35.8 a minute of arm-away alarms on either side)",
     },
     // Two inserters each take two items off a belt of their own, and both take low density structures: which item
     // each takes first decides how the structures are split between them (near_lane in the config)
@@ -552,7 +555,7 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
 
             // goal 2: the long run of the selected clock counts the wake-ups the game shows
             const simulated = selected.result.stability_check.as_built?.wake_ups?.wake_ups_per_minute;
-            const recorded = wakeUpsOfRecording(result.recording, matchRecordingToConfig(result.recording, config)).wake_ups_per_minute;
+            const recorded = wakeUpsOfRecording(result.recording, matchRecordingToConfig(result.recording, config), 0, result.recording.sample_count, config).wake_ups_per_minute;
             expect(simulated, `the long run of the selected clock (${selected.label}) counted its wake-ups`).toBeDefined();
             const asRecorded = (figure: number) => Math.abs(figure - recorded) <= WAKE_UPS_TOLERANCE * recorded;
             const by_start = asRecorded(simulated!) ? []

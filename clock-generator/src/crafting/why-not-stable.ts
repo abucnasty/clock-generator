@@ -60,6 +60,8 @@ export interface WhyNotStableClock {
     verdict: ClockVerdict;
     /** Goal 1, as the selection reads it (`ClockRanking.meets_target_rate`) */
     meets_target_rate: boolean;
+    /** Stable over the target rate, which the selection picks where none meets goal 1 (`ClockRanking.stable_above_target`) */
+    stable_above_target?: boolean;
     assessment: Pick<ClockAssessment, "holds" | "items_per_second"> & {
         backpressure_loss: Pick<BackpressureLossVerdict, "survives" | "broken_by" | "broken_at_other_lane_phases" | "broken_under_other_taker_orders" | "not_tried"> | null;
     };
@@ -91,7 +93,7 @@ export interface WhyNotStableClock {
 export function whyNotStableClockOf(clock: {
     label: string;
     verdict: ClockVerdict;
-    ranking: Pick<ClockRanking, "meets_target_rate">;
+    ranking: Pick<ClockRanking, "meets_target_rate" | "stable_above_target">;
     assessment: WhyNotStableClock["assessment"];
     belt?: ClockBelt | null;
     as_built: AsBuiltStabilityCheck | null | undefined;
@@ -103,6 +105,7 @@ export function whyNotStableClockOf(clock: {
         label: clock.label,
         verdict: clock.verdict,
         meets_target_rate: clock.ranking.meets_target_rate,
+        ...(clock.ranking.stable_above_target === true && { stable_above_target: true }),
         assessment: clock.assessment,
         moving_belt: clock.belt?.kind === "moving",
         ...(as_built?.failed_pickup_phases !== undefined && { failed_pickup_phases: as_built.failed_pickup_phases }),
@@ -264,8 +267,9 @@ function noRecovery(clock: WhyNotStableClock): WhyNotStable {
 }
 
 /**
- * The selected clock is the nearest to the target where none meets goal 1 (see combineClockAlternativeRuns), and one
- * that holds the target and does not recover is told by noRecovery, so no clock holds the target here
+ * The selected clock is the stable one nearest over the target, or else the nearest to it, where none meets goal 1 (see
+ * combineClockAlternativeRuns), and one that holds the target and does not recover is told by noRecovery, so no clock
+ * holds the target here
  */
 function nothingHolds(clock: WhyNotStableClock, build: WhyNotStableBuild): WhyNotStable {
     return {
@@ -274,10 +278,15 @@ function nothingHolds(clock: WhyNotStableClock, build: WhyNotStableBuild): WhyNo
     };
 }
 
-/** The clock nearest to the target, with how far it is off */
+/** The clock nearest to the target, with how far it is off, or the stable clock over it that is selected before nearer ones */
 function nearestOf(clock: WhyNotStableClock, build: WhyNotStableBuild): string {
     const rate = clock.assessment.items_per_second;
     const off = rate - build.target_items_per_second;
+    if (clock.stable_above_target === true) {
+        return `The selected one, ${clock.label}, is stable and moves ${figure(rate)} a second, ${figure(off)} `
+            + `(${Number((off / build.target_items_per_second * 100).toFixed(2))}%) over the target: a stable clock over the target `
+            + "is picked before a clock nearer to it that is unstable or runs under it.";
+    }
     return Math.abs(off) < MIN_OFF_TARGET
         ? `The closest, ${clock.label}, moves ${figure(rate)} a second from the modeled start, and does not keep it up from every start.`
         : `The closest, ${clock.label}, moves ${figure(rate)} a second, ${figure(Math.abs(off))} ${off < 0 ? "under" : "over"} the target.`;

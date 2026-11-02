@@ -1,0 +1,162 @@
+{
+  "schema": 1,
+  "sample": "REAL_OWNER_PINK_SCIENCE_ORIGINAL_NO_BUFFERS",
+  "target": {
+    "item": "electromagnetic-science-pack",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 48,
+      "denominator": 1
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "belt:1/lane:1#accumulator",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:1/lane:2#accumulator",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:2/lane:1#processing-unit",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:4/lane:1#superconductor",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:4/lane:2#holmium-plate",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:5/lane:1#battery",
+      "kind": "nothing-drops-on"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:4",
+        "belt:3/lane:1#advanced-circuit",
+        "machine:3",
+        "machine:1",
+        "machine:2"
+      ],
+      "edges": [
+        "inserter:3/electromagnetic-science-pack",
+        "inserter:4/electromagnetic-science-pack",
+        "inserter:5/accumulator",
+        "inserter:6/supercapacitor",
+        "inserter:7/supercapacitor",
+        "inserter:8/accumulator",
+        "inserter:9/advanced-circuit",
+        "inserter:10/processing-unit",
+        "inserter:11/superconductor",
+        "inserter:11/holmium-plate",
+        "inserter:12/battery",
+        "placement:machine:4/electronic-circuit"
+      ],
+      "periods": [
+        {"swings":2,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":80,"denominator":1},"cycles":605,"period_ticks":48400,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":40,"denominator":1},"cycles":605,"period_ticks":24200,"kept":true},
+        {"swings":null,"fractional":true,"listed_as":"fractional","pruned":{"rule":"cycle-refused","terms":{"reason":"Cannot satisfy fractional swing constraint: sub-cycle 1 requires 3 swings, but maximum allowed is 2 due to insertion limits. Total swings: 640, cycle multiplier: 220."}}}
+      ],
+      "duty": [
+        {
+          "producer": "machine:electromagnetic-science-pack",
+          "members": [
+            "machine:1",
+            "machine:2"
+          ],
+          "crafts_needed": {
+            "numerator": 192,
+            "denominator": 11
+          },
+          "crafts_capacity": {
+            "numerator": 717,
+            "denominator": 40
+          },
+          "duty": {
+            "numerator": 2560,
+            "denominator": 2629
+          }
+        },
+        {
+          "producer": "machine:supercapacitor",
+          "members": [
+            "machine:3"
+          ],
+          "crafts_needed": {
+            "numerator": 768,
+            "denominator": 121
+          },
+          "crafts_capacity": {
+            "numerator": 51,
+            "denominator": 8
+          },
+          "duty": {
+            "numerator": 2048,
+            "denominator": 2057
+          }
+        },
+        {
+          "producer": "machine:processing-unit-recycling",
+          "members": [
+            "machine:4"
+          ],
+          "crafts_needed": {
+            "numerator": 3072,
+            "denominator": 605
+          },
+          "crafts_capacity": {
+            "numerator": 7390250000000001,
+            "denominator": 312500000000000
+          },
+          "duty": {
+            "numerator": 169421483278,
+            "denominator": 789063130897
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 2,
+    "fractional": false,
+    "listed_from": {
+      "swings": 2,
+      "planned": 2,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 48400,
+      "exact": {
+        "numerator": 48400,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 80,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 605
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 605,
+      "override_lcm": null,
+      "effective_lcm": 605
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

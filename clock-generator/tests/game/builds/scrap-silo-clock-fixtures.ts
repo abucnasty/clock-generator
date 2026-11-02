@@ -34,14 +34,13 @@ export interface ScrapSiloCase {
 }
 
 /**
- * The cases: the sample on each of its clocks, and with SCRAP_SILO_VARIANT set to a config beside its scaffold (and
+ * The cases: the sample on its clock, and with SCRAP_SILO_VARIANT set to a config beside its scaffold (and
  * SCRAP_SILO_VARIANT_ALTERNATIVE to an alternative, if not the selected one), that variant, recorded and not judged
  */
 export function scrapSiloCases(): ScrapSiloCase[] {
     const variant = process.env.SCRAP_SILO_VARIANT;
     return [
         {name: "scrap-silo-results-in-turn", config_path: ConfigPaths.RECYCLING_SCRAP_SILO},
-        {name: "scrap-silo-all-results-at-once", config_path: ConfigPaths.RECYCLING_SCRAP_SILO, alternative: "all-results-at-once"},
         ...(variant ? [{name: `variant-${path.basename(variant, ".json")}`, config_path: path.resolve(variant),
             alternative: process.env.SCRAP_SILO_VARIANT_ALTERNATIVE, explore: true}] : []),
     ];

@@ -1,3 +1,4 @@
+import { HandNotifications } from "./hand-notifications";
 import { AssertionError } from "../../common/assert";
 import type { TickProvider } from "../current-tick-provider";
 import { ItemName } from "../../data";
@@ -15,6 +16,8 @@ import { dropFromHand, HandDropPort, HandScratch } from "./hand";
  * drop spot, else the hand's own local tile of each lane. A belt takes whatever a hand brings.
  */
 export class BeltHandDrop implements HandDropPort {
+    /** Transport-line wakeability is not represented by this port's production notifications. */
+    public requiresReadinessPolling(): boolean { return true; }
     /** The lane of the inserter's drop spot, or each lane of its own local tile when it has none */
     private readonly lanes: readonly BeltLane[];
     /** Where the hand puts its stacks down, by lane: the lane's shared traffic, or its own local tile */
@@ -29,6 +32,7 @@ export class BeltHandDrop implements HandDropPort {
         private readonly scratch: HandScratch,
         private readonly sink: TransportBelt,
         private readonly tick_provider: TickProvider,
+        private readonly notifications: HandNotifications = new HandNotifications(),
     ) {
         const drop = state.inserter.drop;
         this.at_spot = drop !== undefined;
@@ -91,7 +95,7 @@ export class BeltHandDrop implements HandDropPort {
         const index = this.at_spot ? 0 : laneForDrop(this.lanes, held_item.item_name);
         const lane = this.lanes[index];
         if (lane.insert(this.drops[index], this.tick_provider.getCurrentTick(), this.spot_ticks)) {
-            dropFromHand(state, this.scratch, lane.stack_size);
+            dropFromHand(state, this.scratch, lane.stack_size, this.notifications);
         } else {
             state.trace?.record({ type: "wait", phase: "drop", reason: "output_space", item: held_item.item_name });
         }

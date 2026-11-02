@@ -40,8 +40,9 @@ export const RECOMMENDED_COPY = {
             + 'Clocks that hold are also assessed for recovery after inputs stop or outputs back up; an unavailable result is not a pass.',
         'The clock picked for you is the one that holds the rate and recovers with the fewest wake-ups; on a build '
             + 'with a deadlock risk, the one '
-            + 'with the fewest wake-ups of the clocks that hold the rate. If clocks tie, the one with fewer wake '
-            + 'windows. If none qualifies, the one that runs nearest to the target rate. On a build with a loop of machines, '
+            + 'with the fewest wake-ups of the clocks that hold the rate. If clocks tie, the one that recovers sooner, then the '
+            + 'one with fewer wake windows. If none qualifies, the stable clock that runs nearest over the target rate; if there is none, the one '
+            + 'that runs nearest to the target rate. On a build with a loop of machines, '
             + 'whose wake-ups depend on where its clock is when the build starts, their average over 12 start points is compared.',
         'A clock made for a moving belt keeps each belt inserter\'s wake window open a few ticks longer (belt slack). '
             + 'A clock made without it is only picked when no clock for a moving belt holds the rate. If you say your '
@@ -50,7 +51,7 @@ export const RECOMMENDED_COPY = {
     runMovingBelts: 'This run assumed moving belts.',
     runBackedUpBelts: 'This run assumed backed-up belts.',
     runSearched: 'The slower searches for fewer wake-ups were run.',
-    runSearchedWhenNeeded: 'The slower searches were only run if no other clock held the rate and recovered.',
+    runSearchedWhenNeeded: 'The slower searches were only run if no other clock held the rate and recovered, apart from the two that can still find fewer wake-ups on a short clock.',
     provisional: 'More clocks are still being made, so this may change. ',
     stopped: 'You stopped this run early, so a better clock may not have been made yet. ',
     beltBackedUp: ' with backed-up belts',
@@ -72,6 +73,8 @@ export const RECOMMENDED_COPY = {
     tieOnWakeUpsUncounted: (others: number, kind: string) =>
         ` ${othersText(others, kind)} on wake-ups, so the one with fewer wake windows was picked, not counting the `
         + 'extra wake windows that only cut wake-ups.',
+    tieOnRecovery: (others: number, kind: string) =>
+        ` ${othersText(others, kind)} on wake-ups, so the one that recovers sooner after inputs stop or outputs back up was picked.`,
     tieOnWindows: (others: number, kind: string) =>
         ` ${othersText(others, kind)} on wake-ups and wake windows, so the first one in the list is shown.`,
     tieKindMoving: ' for a moving belt',
@@ -91,6 +94,8 @@ export const RECOMMENDED_COPY = {
     nearest: ' This one runs nearest to it.',
     nearestAt: (itsRate: string) => ` This one runs nearest to it, at ${itsRate}/s.`,
     nearestHolds: ' Of the equally near clocks, it is the one that holds its output from the modeled cold start.',
+    stableOver: (itsRate: string, percent: string) => ` This one is stable and runs over it, at ${itsRate}/s (${percent} over): `
+        + 'a stable clock over the target is picked before a clock nearer to it that is unstable or runs under it.',
 };
 
 /** "1 other clock for a moving belt ties" / "2 other clocks tie" */
@@ -100,6 +105,9 @@ function othersText(others: number, kind: string): string {
 
 /** As the rate warning prints a rate: 240, 12.5, 0.33 */
 const figure = (rate: number) => Number(rate.toFixed(2)).toString();
+
+/** A share as a percentage, as the engine's labels print it: "2.32%", "under 0.01%" */
+const percentOf = (share: number) => share * 100 < 0.005 ? 'under 0.01%' : `${Number((share * 100).toFixed(2))}%`;
 
 /** Wake-ups as the selection compares them: to a thousandth */
 const wakeUpsKey = (wakeUps: number | null) => wakeUps === null ? null : Math.round(wakeUps * 1000);
@@ -212,17 +220,23 @@ function reasonOf(alternatives: PickableClock[], pick: PickableClock, rule: Pick
 function tieOf(pick: PickableClock, others: PickableClock[], kind: string): string {
     const wakeUps = wakeUpsKey(pick.ranking.wake_ups_per_minute);
     const tiedOnWakeUps = others.filter(other => wakeUpsKey(other.ranking.wake_ups_per_minute) === wakeUps);
-    const tiedOnWindows = tiedOnWakeUps.filter(other => other.ranking.window_count === pick.ranking.window_count);
+    // of equals on wake-ups the one that gets back from a loss sooner is picked, before the windows decide
+    const recovery = (clock: PickableClock) => clock.ranking.recovery_periods ?? Infinity;
+    if (tiedOnWakeUps.length > 0 && tiedOnWakeUps.every(other => recovery(other) > recovery(pick))) {
+        return RECOMMENDED_COPY.tieOnRecovery(tiedOnWakeUps.length, kind);
+    }
+    const tiedOnRecovery = tiedOnWakeUps.filter(other => recovery(other) === recovery(pick));
+    const tiedOnWindows = tiedOnRecovery.filter(other => other.ranking.window_count === pick.ranking.window_count);
     if (tiedOnWindows.length > 0) {
         return RECOMMENDED_COPY.tieOnWindows(tiedOnWindows.length, kind);
     }
-    if (tiedOnWakeUps.length === 0) {
+    if (tiedOnRecovery.length === 0) {
         return '';
     }
-    const fewerOnScreen = tiedOnWakeUps.every(other => pick.inserterWindowCount < other.inserterWindowCount);
+    const fewerOnScreen = tiedOnRecovery.every(other => pick.inserterWindowCount < other.inserterWindowCount);
     return fewerOnScreen
-        ? RECOMMENDED_COPY.tieOnWakeUps(tiedOnWakeUps.length, kind)
-        : RECOMMENDED_COPY.tieOnWakeUpsUncounted(tiedOnWakeUps.length, kind);
+        ? RECOMMENDED_COPY.tieOnWakeUps(tiedOnRecovery.length, kind)
+        : RECOMMENDED_COPY.tieOnWakeUpsUncounted(tiedOnRecovery.length, kind);
 }
 
 /** Why the pick when no clock qualifies: actual modeled-start rate and sampled starts remain distinct. */
@@ -232,6 +246,10 @@ function nearestReason(alternatives: PickableClock[], pick: PickableClock, rate:
         return `No clock qualifies under the engine's selection rule. This one is assessed at ${figure(pick.assessment.items_per_second)}/s and reaches the target from only some sampled starts. See Model and tested starts.`;
     }
     const lead = RECOMMENDED_COPY.noneHolds(rate, deadlock);
+    if (ranking.stable_above_target === true) {
+        const target = pick.assessment.items_per_second - ranking.rate_off_target;
+        return lead + RECOMMENDED_COPY.stableOver(figure(pick.assessment.items_per_second), percentOf(ranking.rate_off_target / target));
+    }
     const counted = ranking.wake_ups_per_minute !== null;
     const near = offTargetKey(ranking.rate_off_target);
     if (near === 0) {

@@ -1,0 +1,101 @@
+{
+  "schema": 1,
+  "sample": "SAMPLE_CONFIG",
+  "target": {
+    "item": "logistic-science-pack",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 240,
+      "denominator": 11
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "belt:1/lane:1#transport-belt",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:1/lane:2#inserter",
+      "kind": "nothing-drops-on"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:1",
+        "belt:1/lane:1#logistic-science-pack"
+      ],
+      "edges": [
+        "inserter:1/transport-belt",
+        "inserter:1/inserter",
+        "inserter:2/logistic-science-pack"
+      ],
+      "periods": [
+        {"swings":4,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":176,"denominator":1},"cycles":1,"period_ticks":176,"kept":true},
+        {"swings":5,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":220,"denominator":1},"cycles":2,"period_ticks":440,"kept":true},
+        {"swings":6,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":264,"denominator":1},"cycles":1,"period_ticks":264,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":132,"denominator":1},"cycles":2,"period_ticks":264,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":88,"denominator":1},"cycles":1,"period_ticks":88,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":44,"denominator":1},"cycles":2,"period_ticks":88,"kept":true},
+        {"swings":4,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":176,"denominator":1},"cycles":1,"period_ticks":176,"kept":true}
+      ],
+      "duty": [
+        {
+          "producer": "machine:logistic-science-pack",
+          "members": [
+            "machine:1"
+          ],
+          "crafts_needed": {
+            "numerator": 120,
+            "denominator": 11
+          },
+          "crafts_capacity": {
+            "numerator": 3445312380790699,
+            "denominator": 300000000000000
+          },
+          "duty": {
+            "numerator": 978108208861,
+            "denominator": 1029688098310
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 4,
+    "fractional": false,
+    "listed_from": {
+      "swings": 4,
+      "planned": 4,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 176,
+      "exact": {
+        "numerator": 176,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 176,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 1
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 1,
+      "override_lcm": null,
+      "effective_lcm": 1
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TargetCounts } from './targetCounts';
-import { isTargetAboveMax, machinesMaxOf, maxRateText, targetRateLineOf, totalMachineCapacity, type MachinesMax } from './targetRateLimit';
+import { isTargetAboveMax, machinesMaxOf, maxRateText, rateMaxOf, targetRateLineOf, totalMachineCapacity, type MachinesMax } from './targetRateLimit';
 
 /**
  * Machine 1 of the logistic science sample (crafting speed 68.906, productivity 100%), as the engine computes it: 11
@@ -147,5 +147,39 @@ describe('unsupported rate arithmetic remains an editable worker-validation conc
         expect(totalMachineCapacity(max, copies)).toBe(capacity);
         expect(isTargetAboveMax(rate, copies, max)).toBe(false);
         expect(line(rate, copies, max)).toBeNull();
+    });
+});
+
+describe('rateMaxOf', () => {
+    const feasible = (per_copy_per_second: number, limit: string | null, current = true) => ({
+        max: { per_copy: { numerator: per_copy_per_second, denominator: 1 }, per_copy_per_second, limit }, current,
+    });
+    const exact: MachinesMax = { machineIds: [1], perCopy: 30, perCopyRatio: { numerator: 30, denominator: 1 } };
+
+    it('is the machines\' where the engine\'s maximum is the same', () => {
+        expect(rateMaxOf(exact, feasible(30, null))).toBe(exact);
+        expect(rateMaxOf(two, feasible(30, null))).toBe(two);
+        // to within the float noise of the facts' yields
+        expect(rateMaxOf(exact, feasible(30 * (1 + 1e-12), null))).toBe(exact);
+    });
+
+    it('is the machines\' while the engine has not said', () => {
+        expect(rateMaxOf(exact, { max: null, current: false })).toBe(exact);
+        expect(rateMaxOf(null, { max: null, current: false })).toBeNull();
+    });
+
+    it('is the engine\'s where something other than the machines stops the target, and says what once it knows for the rate', () => {
+        const words = 'Inserters 3 and 4 can bring at most 20 a second of iron ore into the build, and the target is 25 a second. Lower the target.';
+        const max = rateMaxOf(exact, feasible(20, words))!;
+        expect(totalMachineCapacity(max, 2)).toBe(40);
+        expect(isTargetAboveMax(41, 2, max)).toBe(true);
+        expect(isTargetAboveMax(40, 2, max)).toBe(false);
+        expect(line(41, 2, max)).toBe(`At most 40/s. For one copy: ${words}`);
+        expect(line(25, 1, max)).toBe(`At most 20/s: ${words}`);
+        expect(line(25, 1, rateMaxOf(exact, feasible(20, words, false)))).toBe(atMost('20/s'));
+    });
+
+    it('is the engine\'s where the machines\' facts are not known yet', () => {
+        expect(totalMachineCapacity(rateMaxOf(null, feasible(20, null))!, 1)).toBe(20);
     });
 });

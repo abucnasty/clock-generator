@@ -1,0 +1,109 @@
+{
+  "schema": 1,
+  "sample": "REAL_OWNER_ORE_VOIDER_EXACT_SPEED",
+  "target": {
+    "item": "iron-ore",
+    "counts": "destroyed",
+    "per_copy": {
+      "numerator": 400,
+      "denominator": 1
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "chest:2#iron-ore",
+      "kind": "infinity-supply"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "loop:1"
+      ],
+      "edges": [
+        "inserter:1/iron-ore",
+        "inserter:2/iron-ore",
+        "inserter:3/iron-ore",
+        "inserter:4/iron-ore",
+        "inserter:5/iron-ore",
+        "inserter:6/iron-ore",
+        "placement:machine:1/iron-ore"
+      ],
+      "periods": [
+        {"swings":5,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":12,"denominator":1},"cycles":12,"period_ticks":144,"kept":true}
+      ],
+      "duty": [
+        {
+          "producer": "machine:iron-ore-recycling",
+          "members": [
+            "machine:1"
+          ],
+          "crafts_needed": {
+            "numerator": 1600,
+            "denominator": 3
+          },
+          "crafts_capacity": {
+            "numerator": 540,
+            "denominator": 1
+          },
+          "duty": {
+            "numerator": 80,
+            "denominator": 81
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 5,
+    "fractional": false,
+    "main_period": {
+      "ticks": 144,
+      "exact": {
+        "numerator": 144,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 12,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 12
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 12,
+      "override_lcm": null,
+      "effective_lcm": 12
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": {
+    "kind": "whole-hands",
+    "hands": 5,
+    "terms": {
+      "item": "iron-ore",
+      "machines": [
+        1
+      ],
+      "hand": 16,
+      "ticks_per_hand": {
+        "numerator": 12,
+        "denominator": 5
+      },
+      "base_hands": 5,
+      "forced": null,
+      "cycle_ticks": 12,
+      "whole_hands_fit": true,
+      "windows_feasible": null,
+      "longest_period_ticks": 24000
+    }
+  }
+}

@@ -4,6 +4,7 @@ import {beforeAll, describe, expect, test} from "vitest";
 import {ClockAlternativesResult, generateClockAlternatives} from "./generate-blueprint";
 import {clockIdentity} from "./clock-identity";
 import {backpressureLossVerdictOf} from "./trial";
+import {outputCapacityPerSecond} from "./alternatives";
 import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config/schema";
@@ -26,18 +27,21 @@ test("car: every inserter and drill a clock leaves always on says why", () => {
     expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
 });
 
-test("car: the clock with 3 output swings is selected, and the drill into the car is enabled the tick before the takers", () => {
+test("car: the observed-windows clock is selected, and the drill into the car is enabled the tick before the takers", () => {
     const selected = generated.alternatives[generated.selected_index];
-    expect(selected.id).toBe("swings-3");
-    // 617 ore a tick against 64 a 72-tick period: a window of one tick, which drops what the drill holds
-    expect(selected.result.clock_windows["drill:1"]).toEqual([{start: 27, end: 27}]);
-    expect(selected.result.clock_windows["inserter:1"][0].start).toBe(28);
+    expect(selected.id).toBe("derived");
+    // 617 ore a tick against 256 a 288-tick period: a window of one tick, which drops what the drill holds
+    expect(selected.result.clock_windows["drill:1"]).toEqual([{start: 9, end: 9}]);
+    expect(selected.result.clock_windows["inserter:1"][0].start).toBe(10);
     for (const alternative of generated.alternatives) {
         // a clock that does not meet goal 1 with the drill's window is the one with the drill always enabled
         expect(alternative.result.clock_windows["drill:1"]?.length ?? 0, alternative.id).toBe(alternative.verdict === "stable" ? 1 : 0);
     }
 });
 
+// swings-2 (144 ticks) was the selected clock before the observed windows were searched past a stable clock, and swings-3
+// (72 ticks) before the generator counted a wake-up only while the inserter's arm is at home; their recordings stay, and
+// they find them still made
 for (const variant of carCases()) {
     test(`car clock: ${variant.name}`, () => {
         const {generation, native} = controls.cases[variant.name];
@@ -90,12 +94,16 @@ describe("the car paste at 80.78/s", () => {
         expect(paste.alternatives[paste.selected_index].id).not.toBe("swings-5");
     });
 
-    // 285 ticks of 285.19: 0.08% fast, but above the furnaces' 80.78015625/s, so not tried on its own period either
-    test("does not let a rounded clock run above what the furnaces make", () => {
-        const rounded = paste.alternatives.find(alternative => alternative.id === "planned-belt-slack")!;
-        expect(rounded.rounded).toMatchObject({period_ticks: 285, within_machines: false, tried_on_its_period: false});
-        expect(rounded.rounded!.runs_fast).toBeLessThan(0.001);
-        expect(rounded.ranking.meets_target_rate).toBe(false);
+    // the batched clock's 285.19 ticks have a subtick clock, so it is listed as that alone: rounded down to 285 ticks it
+    // would run 0.08% fast, but above the furnaces' 80.78015625/s, which a rounded clock may not
+    test("lists the batched clock as its subtick clock alone, whose rounding would run above what the furnaces make", () => {
+        expect(paste.alternatives.find(alternative => alternative.id === "planned-belt-slack")).toBeUndefined();
+        const subtick = paste.alternatives.find(alternative => alternative.id === "planned-belt-slack-subtick")!;
+        expect(subtick.rounded).toBeUndefined();
+        expect(Math.floor(subtick.result.simulation_duration.ticks)).toBe(285);
+        const rounded_rate = subtick.result.stability_check.expected_output_items * 60 / 285 * (paste_config.target_output.copies ?? 1);
+        expect(rounded_rate / paste_config.target_output.items_per_second - 1).toBeLessThan(0.001);
+        expect(rounded_rate).toBeGreaterThan(outputCapacityPerSecond(paste_config));
     });
 
     test("says why the recovery of a clock of 356.524 ticks cannot be tried, and the selected clock meets the target rate", () => {

@@ -1,3 +1,4 @@
+import { HandNotifications } from "./hand-notifications";
 import assert from "../../common/assert";
 import { BeltPickupLayout, pickupLaneLength, pickupTargetRadius } from "../../common/belt-pickup-layout";
 import type { TickProvider } from "../current-tick-provider";
@@ -36,6 +37,7 @@ export class BeltHandPickup implements HandPickupPort {
     private readonly near_lane: 1 | 2;
     /** What the sink machine's last tick tells the inserters that wait on it; null for any other sink */
     private readonly sink_wakes: MachineWakes | null;
+    private notification_scheduling = false;
 
     constructor(
         private readonly state: InserterState,
@@ -46,6 +48,7 @@ export class BeltHandPickup implements HandPickupPort {
         private readonly source: TransportBelt,
         sink_wakes: MachineWakes | null,
         private readonly tick_provider?: TickProvider,
+        private readonly notifications: HandNotifications = new HandNotifications(),
     ) {
         const inserter = state.inserter;
         this.pickup_lane_order = inserter.near_lane === 2 ? [1, 0] : [0, 1];
@@ -80,9 +83,19 @@ export class BeltHandPickup implements HandPickupPort {
         }
     }
 
+    /** The native next scheduled Update can collect its first stack; wake latency is already in eligibility. */
+    public useNotificationScheduling(): void {
+        this.notification_scheduling = true;
+        this.scratch.belt_grab_decided = true;
+    }
+
     /** Reads `waits_for_sink` before the pickup phase clears it (same-tick rule 10) */
     public enter(from: InserterPhase): void {
         const scratch = this.scratch;
+        if (this.notification_scheduling) {
+            scratch.belt_grab_decided = true;
+            return;
+        }
         const waited_in_idle = from === InserterPhase.IDLE && this.state.waits_for_sink;
         // a hand that starts right after a swing back lands its first stack on the usual schedule
         scratch.belt_grab_decided = !(waited_in_idle || from === InserterPhase.WAITING_FOR_SINK);
@@ -146,7 +159,7 @@ export class BeltHandPickup implements HandPickupPort {
                 return;
             }
 
-            takeIntoHand(state, scratch, held_item.item_name, pickup_quantity);
+            takeIntoHand(state, scratch, held_item.item_name, pickup_quantity, this.notifications);
             return;
         }
 
@@ -168,7 +181,7 @@ export class BeltHandPickup implements HandPickupPort {
             }
             const pickup_quantity = this.takeFromBelt(item_name, this.items.handSizeOf(item_name));
             if (pickup_quantity === 0) continue;
-            takeIntoHand(state, scratch, item_name, pickup_quantity);
+            takeIntoHand(state, scratch, item_name, pickup_quantity, this.notifications);
             return;
         }
         if (items.length === 0) state.trace?.record({ type: "wait", phase: "pickup", reason: "no_eligible_item" });

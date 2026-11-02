@@ -8,6 +8,7 @@ import { warnSideLoadedDrops } from "../config/side-loaded-drop";
 import { warnMachinePrototypes } from "../config/machine-prototype";
 import { Entity, EntityId } from "../entities";
 import { FactorioBlueprint } from "../blueprints/blueprint";
+import { withNetwork } from "./inserter-counters";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { decimalOf } from "../entities/traits/ratio";
 import { machinesInOrder, traitsOf } from "../entities/traits/traits-of";
@@ -19,17 +20,17 @@ import { chestDrillFallbackConfig, ChestDrillClock, hasPlannedChestDrill } from 
 import { chestDrillReasons } from "./always-on-reasons";
 import { ClockBelt, clockBeltLabel, fuelHandRoomTicks } from "./clock";
 import { evenHandsClock } from "./candidates/even-hands";
-import { sharedResultWindowClock } from "./candidates/result-windows-clock";
 import { fullHandClock } from "./candidates/full-hand";
 import { observedWindowsClock } from "./candidates/observed-windows";
 import { shiftedSwingsClock } from "./candidates/shifted-swings";
 import { generateClockForConfig, generateClockWithSwingBackoff, terminalCountForAlternativePlanning } from "./generate-clock";
 import { primitiveGroupedOptionsSupported, verifiedPrimitiveGroupedClock } from "./candidates/verified-primitive-grouped";
 import { primitiveGroupedConfigSupported } from "./candidates/primitive-grouped-hands";
+import { MAX_OBSERVED_WINDOWS_PERIOD_TICKS, swingCountsListed } from "./planner/periods";
 import { SecondaryPlanningInvariantError, secondaryPlanningCountOf, withSecondaryPlanningProvenance, type SecondaryPlanningCount } from "./primitive-grouped-policy";
 import { BlueprintGenerationResult, GenerateClockOptions, SimulationStabilityCheck } from "./plan/plan-run";
 import { withRunMemo } from "./plan/run-memo";
-import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, ROUNDED_CLOCK_MAX_FAST, RoundedClock, roundedRateAllowed, searchesAreNeeded } from "./rank";
+import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, ROUNDED_CLOCK_MAX_FAST, RoundedClock, roundedRateAllowed, searchesToRun, searchesAreNeeded } from "./rank";
 import { TargetProductionRate } from "./target-production-rate";
 import { AsBuiltStabilityCheck, BackpressureLossAssessment, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, clockVerificationSignature, FREE_RUNNING_CHECK_TICKS, LOOP_WINDOW_CHECK_TICKS, roundedClockTrial, startDependenceVerdictOf, wakeUpsFromStartsOf, withSettledOutput } from "./trial";
 import { WakeUpsFromStarts } from "./wake-ups-from-starts";
@@ -77,8 +78,9 @@ export interface ClockAlternativesResult {
      */
     selected_index: number;
     /**
-     * The labels of the searches that were not run, because a clock made without one can be selected as stable (see
-     * `searchesAreNeeded`); empty when they ran. `overrides.search_for_fewer_wake_ups` runs them for every build.
+     * The labels of the searches that were not run, because a clock made without one can be selected as stable and
+     * they were not among those that can still improve on it (see `searchesToRun`); empty when all ran.
+     * `overrides.search_for_fewer_wake_ups` runs them for every build.
      */
     skipped_searches: string[];
     /**
@@ -102,12 +104,6 @@ export interface ClockAlternativeRun<T = ClockAlternative> {
     /** Runs of the same clock made with shared windows (see `SHARED_WINDOWS_NOTE`), listed after this run when it is */
     also?: ClockAlternativeRun<T>[];
 }
-
-/** Observed windows re-simulate the build hundreds of times; above this period (a high LCM) that takes minutes */
-const MAX_OBSERVED_WINDOWS_PERIOD_TICKS = 2400;
-
-/** Output swing counts above the planned one offered as alternatives, also when the plan backed off to a lower count */
-const EXTENDED_SWING_COUNTS = 3;
 
 /** What the remaining alternatives need from the first (batched swings) run */
 export interface ClockAlternativeContext {
@@ -180,6 +176,12 @@ interface AlternativeDefinition {
      */
     shared_windows?: () => AlternativeDefinition | undefined;
     /**
+     * Made without the shared-windows variant (`shared_windows`): the other output swing counts and fractional swings,
+     * whose shared clocks were never selected on a sample or fixture, where the batched swings' own shared clock covers
+     * what shared windows give
+     */
+    no_shared_windows?: true;
+    /**
      * The same alternative with the inserters of a loop and those that take out of it always enabled (`loop_windows` of
      * GenerateClockOptions false): made when its clock has windows for them (`loop_windows` of the result) and does not
      * hold, or does not get back from a loss, with them, or with only those out of the loop.
@@ -238,9 +240,6 @@ const RESULTS_IN_TURN_DESCRIPTION = "For results that come by small chances. The
     + "the machine fills open once a period, in turn, each for as many hands as its results give in all but 1 period in 740, "
     + "with room for the part hand it may still hold. The period is the longest whose results the container holds at the "
     + "worst moment, just before an opening.";
-const ALL_RESULTS_AT_ONCE_DESCRIPTION = "For results that come by small chances. Every inserter that takes a result out of the "
-    + "container the machine fills opens at the start of the period, for as long as the busiest one needs. The period is "
-    + "the longest in which the container holds a whole period of every result, in all but 1 period in 740.";
 
 const BATCHED_SWINGS_DESCRIPTION = "The swing schedule the generator plans for the target rate. The build is simulated with each "
     + "inserter waiting on its machine's inventory, and each inserter's windows are the ticks it moved items. Swings are "
@@ -355,15 +354,16 @@ function alternativeDefinitions(
 ): AlternativeDefinition[] {
     const definitions = withChestDrillFallbacks(alternativeDefinitionsWithFuelHandRoom(config, context, quiet, known_stable), config,
         with_chest_drill_fallbacks, fallback_config => alternativeDefinitions(fallback_config, context, quiet, known_stable, false));
-    // the same alternatives made with shared windows, made when one of them is a clock of the grouped hands rule, and
-    // with the inserters that take out of a loop always enabled, made when a clock with windows for them does not meet goal 1
+    // the same alternatives made with shared windows, made when one of them is a clock of the grouped hands rule (except
+    // where a definition goes without, see no_shared_windows), and with the inserters that take out of a loop always
+    // enabled, made when a clock with windows for them does not meet goal 1
     let shared: AlternativeDefinition[] | undefined;
     let without_loop: AlternativeDefinition[] | undefined;
     let without_in_loop: AlternativeDefinition[] | undefined;
-    return definitions.map(definition => ({ ...definition, shared_windows: () => {
+    return definitions.map(definition => ({ ...definition, ...(definition.no_shared_windows !== true && { shared_windows: () => {
         shared ??= alternativeDefinitionsWithFuelHandRoom(config, context, { ...quiet, shared_windows: true }, known_stable);
         return shared.find(it => it.id === definition.id);
-    }, without_loop_windows: () => {
+    } }), without_loop_windows: () => {
         without_loop ??= alternativeDefinitionsWithFuelHandRoom(config, context, { ...quiet, loop_windows: false }, known_stable);
         return without_loop.find(it => it.id === definition.id);
     }, without_in_loop_windows: () => {
@@ -442,24 +442,13 @@ function alternativeDefinitionsFor(
         { ...base_config, overrides: { ...base_config.overrides, terminal_swing_count: count } }, extra);
     // a forced count applies to every alternative
     const swings_forced = config.overrides?.terminal_swing_count !== undefined;
-    const lower_counts = swings_forced ? [] : Array.from({ length: Math.max(0, swings - 1) }, (_, i) => swings - 1 - i);
-    // the planned count only covers what a machine crafts before its output blocks; it keeps crafting while the
-    // output inserter takes hands, so longer cycles can work too, but the machine holds the planned count when a cycle's
-    // swings start: the farthest count is only tried as a multiple of it (the planned cycle repeated)
-    const planned = context.planned_swings ?? swings;
-    const higher_counts = swings_forced || context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? []
-        : Array.from({ length: planned + EXTENDED_SWING_COUNTS - swings }, (_, i) => swings + 1 + i)
-            .filter(count => count < planned + EXTENDED_SWING_COUNTS || (planned > 1 && count % planned === 0));
+    // the counts the build plan lists its main-period choices for (planner/periods.ts)
+    const { lower: lower_counts, higher: higher_counts } = swingCountsListed(swings, context.planned_swings ?? swings, swings_forced, context.period_ticks);
     // a target that counts an item destroyed is planned by arithmetic: its period and every inserter's hands are worked
     // out, not tried, so no other count or search is offered; even hands moves the same hands
     if (config.target_output.counts === "destroyed" && context.result_windows === true) {
-        // results that come by small chances: the windows are worked out, and the other way to open them is offered
-        return [{
-            id: "all-results-at-once",
-            label: "All results at once",
-            description: ALL_RESULTS_AT_ONCE_DESCRIPTION,
-            run: () => generateClockWithSwingBackoff(base_config, quiet, sharedResultWindowClock),
-        }];
+        // results that come by small chances: the windows are worked out, and the primary clock opens them in turn
+        return [];
     }
     if (config.target_output.counts === "destroyed") {
         return [{
@@ -481,6 +470,7 @@ function alternativeDefinitionsFor(
                 quiet
             ),
             planned_on: { ...config, overrides: { ...config.overrides, use_fractional_swings: !fractional } },
+            no_shared_windows: true,
         },
         {
             id: "even-hands",
@@ -542,6 +532,7 @@ function alternativeDefinitionsFor(
             description: `${BATCHED_SWINGS_LABEL} with a longer crafting cycle: the output inserter takes ${higher} hands per cycle instead of `
                 + `${swings} while the machine keeps crafting between swings. Batches more swings into fewer, longer windows.`,
             run: () => withSwings(higher, quiet),
+            no_shared_windows: true as const,
         })),
         ...lower_counts.map(lower => ({
             id: `swings-${lower}`,
@@ -550,6 +541,7 @@ function alternativeDefinitionsFor(
                 + `instead of ${swings}. The output machine buffers more between swings; useful when the higher swing count `
                 + "is unstable.",
             run: () => withSwings(lower, quiet),
+            no_shared_windows: true as const,
         })),
         {
             id: "full-hand",
@@ -874,11 +866,16 @@ function runAlternativeOf(
         }
         return from_starts_of.get(trial)!;
     };
+    /** The trial of a clock rounded down to whole ticks on its own period, where one is made (below) */
+    let rounded_trial: Trial | null = null;
     /** The alternative for a trial of the clock: its notes, insights, assessment and ranking */
     const alternativeOf = (trial: Trial, row: { id: string; label: string; description_suffix: string; result: BlueprintGenerationResult; rounded?: RoundedClock }): ClockAlternative => {
         const tried_as = trial;
         // a clock that fails its first check is listed by the mean of its long run, not the one period measured
-        const settled = (settle_unstable ?? !held) ? settledStability(trial) : trial.result.stability_check;
+        const settled_check = (settle_unstable ?? !held) ? settledStability(trial) : trial.result.stability_check;
+        // the counters of its inserters learn which decider switches each from the blueprint it is listed with
+        const settled = settled_check.as_built?.counters === undefined ? settled_check : { ...settled_check,
+            as_built: { ...settled_check.as_built, counters: withNetwork(settled_check.as_built.counters, row.result.blueprint, windowDeciderCount(row.result.blueprint)) } };
         trial = { ...trial, result: { ...trial.result, stability_check: settled } };
         row = { ...row, result: { ...row.result, stability_check: settled } };
         const { as_built } = trial.result.stability_check;
@@ -927,9 +924,23 @@ function runAlternativeOf(
     if (Number.isInteger(period)) {
         return { signature, alternatives: [exact] };
     }
-    // the blueprint of a period that is not a whole number of ticks counts it rounded down (blueprint.ts), unless it
-    // has a subtick clock: listed as that clock, at the rate it runs the build at, it is judged by its own rate. One
-    // whose rate may meet goal 1 (at most 0.1% fast, within the machines) is tried on its own period
+    // a period that is not a whole number of ticks is exported with its subtick clock where it has one: listed as that
+    // clock, it runs the build at exactly the target rate
+    if (result.subtick) {
+        const { period_ticks, scale } = result.subtick.clock;
+        return { signature, alternatives: [alternativeOf(exact_trial, {
+            id: `${id}-subtick`,
+            label: `${label}, subtick clock`,
+            description_suffix: ` Exported with a subtick clock: the ${period.toFixed(3)}-tick period is `
+                + `${period_ticks}/${scale} ticks, so a ${period_ticks}-tick clock is multiplied by ${scale} and taken modulo `
+                + `${period_ticks} by two extra arithmetic combinators, giving the position in the period in 1/${scale} ticks. `
+                + "Window starts can move by a tick between periods but never drift, so the build runs at exactly the target rate.",
+            result: { ...result, blueprint: result.subtick.blueprint, schedule: result.subtick.schedule },
+        })] };
+    }
+    // with no subtick clock its blueprint counts the period rounded down (blueprint.ts): listed as that clock, it is
+    // judged by its own rate. One whose rate may meet goal 1 (at most 0.1% fast, within the machines) is tried on its
+    // own period
     const rounded_ticks = Math.floor(period);
     const rounded_rate = itemsPerSecondOverCopies(expected_output_items, rounded_ticks, copies);
     const target = config.target_output.items_per_second;
@@ -937,7 +948,7 @@ function runAlternativeOf(
     const within_machines = rounded_rate <= outputCapacityPerSecond(config) * (1 + 1e-9);
     const may_meet = roundedRateAllowed({ runs_fast, within_machines });
     let not_tried_on_its_period: string | null = null;
-    const rounded_trial: Trial | null = may_meet ? (() => {
+    rounded_trial = may_meet ? (() => {
         try {
             const tried = roundedClockTrial(used.planned_on ?? config, result, rounded_ticks, logger, report);
             return { result: tried.result, held: tried.holds, loss: tried.loss, start_dependence: tried.start_dependence, clock_period: rounded_ticks };
@@ -950,11 +961,14 @@ function runAlternativeOf(
     })() : null;
     const rounded: RoundedClock = { period_ticks: rounded_ticks, runs_fast, within_machines, tried_on_its_period: rounded_trial !== null };
     const fast = `${fastPercent(runs_fast)} fast`;
-    const roundedAlternative = (why: string) => alternativeOf(rounded_trial ?? { ...exact_trial, clock_period: rounded_ticks }, {
+    if (rounded_trial !== null) {
+        logger.log(`Clock alternative "${label}" rounded to ${rounded_ticks} ticks (runs ${fast}): holds=${rounded_trial.held} survives=${rounded_trial.loss.backpressure_loss?.survives ?? "not tried"}`);
+    }
+    return { signature, alternatives: [alternativeOf(rounded_trial ?? { ...exact_trial, clock_period: rounded_ticks }, {
         id,
         label: `${label} (clock rounded to ${rounded_ticks} ticks, runs ${fast})`,
-        description_suffix: ` The period is not a whole number of ticks (${period.toFixed(3)})${why}, so this clock runs it `
-            + `rounded down to ${rounded_ticks} ticks, ${fastPercent(runs_fast)} faster than the target`
+        description_suffix: ` The period is not a whole number of ticks (${period.toFixed(3)}) and has no subtick clock of a small `
+            + `enough scale, so this clock runs it rounded down to ${rounded_ticks} ticks, ${fastPercent(runs_fast)} faster than the target`
             + (rounded_trial !== null
                 ? `: within the ${fastPercent(ROUNDED_CLOCK_MAX_FAST)} a rounded clock may run and what the machines make, so it is checked on its own ${rounded_ticks}-tick period.`
                 : not_tried_on_its_period !== null
@@ -963,30 +977,7 @@ function runAlternativeOf(
                     + "the clock-only check models the exact period."),
         result: rounded_trial?.result ?? result,
         rounded,
-    });
-    if (rounded_trial !== null) {
-        logger.log(`Clock alternative "${label}" rounded to ${rounded_ticks} ticks (runs ${fast}): holds=${rounded_trial.held} survives=${rounded_trial.loss.backpressure_loss?.survives ?? "not tried"}`);
-    }
-    if (!result.subtick) {
-        return { signature, alternatives: [roundedAlternative(" and has no subtick clock of a small enough scale")] };
-    }
-    const { period_ticks, scale } = result.subtick.clock;
-    return {
-        signature,
-        alternatives: [
-            // listed first so it wins ties with the rounded clock for the default selection
-            alternativeOf(exact_trial, {
-                id: `${id}-subtick`,
-                label: `${label}, subtick clock`,
-                description_suffix: ` Exported with a subtick clock: the ${period.toFixed(3)}-tick period is `
-                    + `${period_ticks}/${scale} ticks, so a ${period_ticks}-tick clock is multiplied by ${scale} and taken modulo `
-                    + `${period_ticks} by two extra arithmetic combinators, giving the position in the period in 1/${scale} ticks. `
-                    + "Window starts can move by a tick between periods but never drift, so the build runs at exactly the target rate.",
-                result: { ...result, blueprint: result.subtick.blueprint, schedule: result.subtick.schedule },
-            }),
-            roundedAlternative(""),
-        ],
-    };
+    })] };
 }
 
 /** A share as a percentage the labels print: "0.02%", "1.14%", "under 0.01%" */
@@ -1128,7 +1119,8 @@ export function startDependenceSummary(config: Config, alternatives: readonly Pi
  * with the clock-only simulation from several start phases. Alternatives with identical windows are listed once.
  *
  * The four searches come last and only run when none of the clocks made before them can be selected as stable
- * (`searchesAreNeeded`), unless the config asks for them on every build (`overrides.search_for_fewer_wake_ups`).
+ * (`searchesAreNeeded`), unless the config asks for them on every build (`overrides.search_for_fewer_wake_ups`);
+ * where one can, the two that can still improve on it run on a short period where it has wake-ups (`searchesToRun`).
  * After them, on a config whose belts are backed up, a clock made for a moving belt, when still none can. The
  * alternatives are listed in the same order either way.
  *
@@ -1189,12 +1181,12 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
     const first = definitions.filter(definition => !waiting.includes(definition));
     total = 1 + first.length;
     generate(first);
-    const searches_run = searches.length > 0 && searchesAreNeeded(runs, it => it.ranking);
-    if (searches_run) {
-        total += searches.length;
-        generate(searches);
-    } else if (searches.length > 0) {
-        logger.log(`Not searched (${searches.map(it => it.label).join(", ")}): a clock made without a search is stable. `
+    const searched = searches.length === 0 ? [] : searchesToRun(runs, it => it.ranking, searches, plan.context.period_ticks);
+    const not_searched = searches.filter(it => !searched.includes(it));
+    total += searched.length;
+    generate(searched);
+    if (not_searched.length > 0) {
+        logger.log(`Not searched (${not_searched.map(it => it.label).join(", ")}): a clock made without a search is stable. `
             + "Set overrides.search_for_fewer_wake_ups to search for one with fewer wake-ups.");
     }
     // last, a clock for another belt than the config's, where nothing made so far can be selected as stable
@@ -1208,7 +1200,7 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
     const combined = combineClockAlternativeRuns(runs, it => it.ranking);
     return {
         ...combined,
-        skipped_searches: searches_run ? [] : searches.map(it => it.label),
+        skipped_searches: not_searched.map(it => it.label),
         ...startDependenceSummary(config, combined.alternatives),
         not_made,
         why_not_stable: whyNotStableOf(config, combined.alternatives, combined.selected_index, not_made),

@@ -104,6 +104,7 @@ describe('a target that counts the item destroyed, more than the machines can de
     it('says make for a target that counts the item made, as before', () => {
         expect(PROBLEM_TEXT.rateAboveMax(405)).toBe('Items per Second is more than the machines can make (at most 405/s)');
         expect(PROBLEM_TEXT.rateAboveMax(405, 'made')).toBe('Items per Second is more than the machines can make (at most 405/s)');
+        expect(PROBLEM_TEXT.rateAboveMax(480, 'destroyed', false)).toBe('Items per Second is more than the build can carry (at most 480/s)');
         expect(PROBLEM_TEXT.rateAboveMax(405, 'destroyed')).toBe('Items per Second is more than the machines can destroy (at most 405/s)');
     });
 });

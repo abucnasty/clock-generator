@@ -1,0 +1,23 @@
+{
+  "sample": "REAL_STUPIDFATHOBBIT_CELL06",
+  "swings 1": [
+    "inserter:1 | steel-plate 1/2 | total 1/2 | hand 16",
+    "inserter:2 | steel-plate 1/2 | total 1/2 | hand 16"
+  ],
+  "swings 2": [
+    "inserter:1 | steel-plate 1 | total 1 | hand 16",
+    "inserter:2 | steel-plate 1 | total 1 | hand 16"
+  ],
+  "swings 3": [
+    "inserter:1 | steel-plate 3/2 | total 3/2 | hand 16",
+    "inserter:2 | steel-plate 3/2 | total 3/2 | hand 16"
+  ],
+  "swings 7/3": [
+    "inserter:1 | steel-plate 7/6 | total 7/6 | hand 16",
+    "inserter:2 | steel-plate 7/6 | total 7/6 | hand 16"
+  ],
+  "swings 5/2": [
+    "inserter:1 | steel-plate 5/4 | total 5/4 | hand 16",
+    "inserter:2 | steel-plate 5/4 | total 5/4 | hand 16"
+  ]
+}

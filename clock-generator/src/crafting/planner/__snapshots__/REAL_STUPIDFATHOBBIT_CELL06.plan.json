@@ -1,0 +1,94 @@
+{
+  "schema": 1,
+  "sample": "REAL_STUPIDFATHOBBIT_CELL06",
+  "target": {
+    "item": "steel-plate",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 249,
+      "denominator": 10
+    }
+  },
+  "unbounded_sources": [],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:1",
+        "belt:1/lane:1#steel-plate",
+        "belt:2/lane:1#steel-plate"
+      ],
+      "edges": [
+        "inserter:1/steel-plate",
+        "inserter:2/steel-plate"
+      ],
+      "periods": [
+        {"swings":6,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":19200,"denominator":83},"cycles":1,"period_ticks":231.32530120481928,"kept":true},
+        {"swings":7,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":22400,"denominator":83},"cycles":2,"period_ticks":539.7590361445783,"kept":true},
+        {"swings":8,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":25600,"denominator":83},"cycles":1,"period_ticks":308.43373493975906,"kept":true},
+        {"swings":5,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":16000,"denominator":83},"cycles":2,"period_ticks":385.5421686746988,"kept":true},
+        {"swings":4,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":12800,"denominator":83},"cycles":1,"period_ticks":154.21686746987953,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":9600,"denominator":83},"cycles":2,"period_ticks":231.32530120481928,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":6400,"denominator":83},"cycles":1,"period_ticks":77.10843373493977,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":3200,"denominator":83},"cycles":2,"period_ticks":77.10843373493977,"kept":true},
+        {"swings":6.5,"swings_exact":{"numerator":13,"denominator":2},"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":20800,"denominator":83},"cycles":4,"period_ticks":1002.4096385542168,"kept":true}
+      ],
+      "duty": [
+        {
+          "producer": "machine:casting-steel",
+          "members": [
+            "machine:1"
+          ],
+          "crafts_needed": {
+            "numerator": 249,
+            "denominator": 40
+          },
+          "crafts_capacity": {
+            "numerator": 925,
+            "denominator": 16
+          },
+          "duty": {
+            "numerator": 498,
+            "denominator": 4625
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 6,
+    "fractional": false,
+    "listed_from": {
+      "swings": 6,
+      "planned": 6,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 231.32530120481928,
+      "exact": {
+        "numerator": 19200,
+        "denominator": 83
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 19200,
+        "denominator": 83
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 1
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 1,
+      "override_lcm": null,
+      "effective_lcm": 1
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}

@@ -1,6 +1,6 @@
 /**
  * The over-the-hood fixtures (`over-hood-clock-fixtures.ts`: 2 families x 4 belt tiers x 2 mirroring states x moving/backed
- * up) whose clock the generation test still generates end to end; the other 23 of the 32 are checked without generating,
+ * up) whose clock the generation test still generates end to end; the other 22 of the 32 are checked without generating,
  * by over-hood-clock-mechanics.test.ts (the recorded first hands against the simulator's, and the recorded controls
  * against the fixture configs). Same-item mirrored and unmirrored cases pin one and the same clock, so only unmirrored
  * ones are generated. Each is the one case of a path through the generator that no sample takes:
@@ -15,4 +15,5 @@ export const OVER_HOOD_GENERATED: ReadonlyMap<string, string> = new Map([
     ["over-hood-normal-unmirrored-moving-different-items", "normal tier, moving: a longer 960 tick period against 320 mirrored"],
     ["over-hood-normal-mirrored-backed-different-items", "normal tier, backed up, derived windows (period 320)"],
     ["over-hood-normal-unmirrored-backed-same-item", "the same-item fixture at the normal tier, backed up (period 160)"],
+    ["over-hood-normal-unmirrored-moving-same-item", "the same-item fixture at the normal tier on a moving belt: the observed-windows clock (period 320) in place of the batched clock (period 160), which is still made"],
 ]);

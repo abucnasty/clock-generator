@@ -172,11 +172,10 @@
     },
     "generated-three-copies": {
       "recorded": {
-        "pr": 0,
-        "commit": "e1c0aadb",
-        "frozen_head": "e1c0aadb",
-        "note": "recorded before the PR was opened; pr is set when it is",
-        "clock_sha256": "632211409dc2b4bd0a8337f16d48372c40cf277fb808c2ff19677b69c4125251",
+        "pr": 524,
+        "commit": "0d3507f4",
+        "frozen_head": "0d3507f4",
+        "clock_sha256": "636f57cd38979390be2ca7ed40e6698e38d16614dcacebd41b1afe4557e4e92d",
         "clock_basis": "capture"
       },
       "native": {
@@ -273,10 +272,10 @@
             "cut": 84,
             "during": [
               232,
-              84,
+              88,
               0,
               8,
-              232
+              228
             ],
             "recovered": [
               288,
@@ -294,11 +293,11 @@
             "cut": 104,
             "during": [
               288,
-              180,
+              176,
               0
             ],
             "recovered": [
-              284,
+              288,
               288,
               288,
               288,
@@ -343,11 +342,15 @@
         "expected": 288,
         "verdict": "stable",
         "selection": {
-          "id": "swings-2",
+          "id": "swings-6",
           "holds": true,
           "rate": 240,
           "supply": "moving"
         },
+        "clock_sha256": "636f57cd38979390be2ca7ed40e6698e38d16614dcacebd41b1afe4557e4e92d"
+      },
+      "previous": {
+        "id": "swings-2",
         "clock_sha256": "632211409dc2b4bd0a8337f16d48372c40cf277fb808c2ff19677b69c4125251"
       }
     }

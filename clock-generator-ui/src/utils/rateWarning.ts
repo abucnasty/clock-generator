@@ -75,6 +75,10 @@ function clockWarningOf(
             // to three decimals: a rate 0.1% fast prints as the target at two
             + `${Number(items_per_second.toFixed(3))}/s for the ${Number((items_per_second - alternative.ranking.rate_off_target).toFixed(3))}/s requested, `
             + 'within the 0.1% a rounded clock may run and what the machines can make.');
+    } else if (alternative.ranking.stable_above_target === true) {
+        const target = items_per_second - alternative.ranking.rate_off_target;
+        warnings.push(`This clock runs over the target: ${figure(items_per_second)}/s for the ${figure(target)}/s requested, `
+            + `${fastPercent(alternative.ranking.rate_off_target / target)} over, in the simulator.`);
     } else if (Math.abs(alternative.ranking.rate_off_target) >= MIN_SHORTFALL) {
         warnings.push(`This clock’s output rate differs from the target: it runs at ${figure(items_per_second)}/s; requested `
             + `${figure(items_per_second - alternative.ranking.rate_off_target)}/s in the simulator.`);

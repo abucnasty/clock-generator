@@ -1,0 +1,962 @@
+{
+  "schema": "observed-game-behavior-1",
+  "case": "agricultural-belt",
+  "game_version": "2.1.21",
+  "clock_scope": "original agricultural scaffold/clock",
+  "roles": {
+    "belt_input": {
+      "prepared_id": 11,
+      "prototype": "stack-inserter",
+      "recording_id": 10,
+      "type": "inserter",
+      "unit_number": 218
+    },
+    "destination": {
+      "prepared_id": 5,
+      "prototype": "biochamber",
+      "recipe": "agricultural-science-pack",
+      "recording_id": 3,
+      "type": "machine",
+      "unit_number": 233
+    },
+    "egg_input_a": {
+      "prepared_id": 9,
+      "prototype": "stack-inserter",
+      "recording_id": 11,
+      "type": "inserter",
+      "unit_number": 225
+    },
+    "egg_input_b": {
+      "prepared_id": 10,
+      "prototype": "stack-inserter",
+      "recording_id": 15,
+      "type": "inserter",
+      "unit_number": 240
+    },
+    "egg_source_a": {
+      "prepared_id": 3,
+      "prototype": "biochamber",
+      "recipe": "pentapod-egg",
+      "recording_id": 2,
+      "type": "machine",
+      "unit_number": 214
+    },
+    "egg_source_b": {
+      "prepared_id": 4,
+      "prototype": "biochamber",
+      "recipe": "pentapod-egg",
+      "recording_id": 4,
+      "type": "machine",
+      "unit_number": 243
+    },
+    "output": {
+      "prepared_id": 12,
+      "prototype": "stack-inserter",
+      "recording_id": 14,
+      "type": "inserter",
+      "unit_number": 235
+    }
+  },
+  "game_tick_origin": 47696,
+  "projection": {
+    "first_tick": 4836,
+    "last_tick": 4838,
+    "initial_active_order": [
+      "output"
+    ],
+    "initial_state_basis": "first observed update order; other selected hands initially asleep",
+    "deactivation_policy": "apply inferred sleep only at its final asleep observation, without an exact sleep time"
+  },
+  "events": [
+    {
+      "id": 0,
+      "event": "update",
+      "role": "output",
+      "tick": 4836,
+      "game_tick": 52532,
+      "order": 1,
+      "cause": "scheduled-entity-update",
+      "awake": true
+    },
+    {
+      "id": 1,
+      "event": "alarm",
+      "role": "egg_input_a",
+      "tick": 4836,
+      "game_tick": 52532,
+      "order": 6,
+      "cause": "ingredient-consumption",
+      "awake": false
+    },
+    {
+      "id": 2,
+      "event": "wake",
+      "role": "egg_input_a",
+      "tick": 4836,
+      "game_tick": 52532,
+      "order": 8,
+      "cause": "ingredient-consumption",
+      "awake": false,
+      "stage": "begin"
+    },
+    {
+      "id": 3,
+      "event": "wake",
+      "role": "egg_input_a",
+      "tick": 4836,
+      "game_tick": 52532,
+      "order": 9,
+      "cause": "unresolved",
+      "awake": true,
+      "stage": "end"
+    },
+    {
+      "id": 4,
+      "event": "alarm",
+      "role": "egg_input_b",
+      "tick": 4836,
+      "game_tick": 52532,
+      "order": 10,
+      "cause": "ingredient-consumption",
+      "awake": false
+    },
+    {
+      "id": 5,
+      "event": "wake",
+      "role": "egg_input_b",
+      "tick": 4836,
+      "game_tick": 52532,
+      "order": 12,
+      "cause": "ingredient-consumption",
+      "awake": false,
+      "stage": "begin"
+    },
+    {
+      "id": 6,
+      "event": "wake",
+      "role": "egg_input_b",
+      "tick": 4836,
+      "game_tick": 52532,
+      "order": 13,
+      "cause": "unresolved",
+      "awake": true,
+      "stage": "end"
+    },
+    {
+      "id": 7,
+      "event": "alarm",
+      "role": "belt_input",
+      "tick": 4836,
+      "game_tick": 52532,
+      "order": 14,
+      "cause": "ingredient-consumption",
+      "awake": false
+    },
+    {
+      "id": 8,
+      "event": "wake",
+      "role": "belt_input",
+      "tick": 4836,
+      "game_tick": 52532,
+      "order": 16,
+      "cause": "ingredient-consumption",
+      "awake": false,
+      "stage": "begin"
+    },
+    {
+      "id": 9,
+      "event": "wake",
+      "role": "belt_input",
+      "tick": 4836,
+      "game_tick": 52532,
+      "order": 17,
+      "cause": "unresolved",
+      "awake": true,
+      "stage": "end"
+    },
+    {
+      "id": 10,
+      "event": "update",
+      "role": "belt_input",
+      "tick": 4837,
+      "game_tick": 52533,
+      "order": 1,
+      "cause": "scheduled-entity-update",
+      "awake": true
+    },
+    {
+      "id": 11,
+      "event": "update",
+      "role": "egg_input_b",
+      "tick": 4837,
+      "game_tick": 52533,
+      "order": 2,
+      "cause": "scheduled-entity-update",
+      "awake": true
+    },
+    {
+      "id": 12,
+      "event": "update",
+      "role": "egg_input_a",
+      "tick": 4837,
+      "game_tick": 52533,
+      "order": 3,
+      "cause": "scheduled-entity-update",
+      "awake": true
+    },
+    {
+      "id": 13,
+      "event": "update",
+      "role": "output",
+      "tick": 4837,
+      "game_tick": 52533,
+      "order": 4,
+      "cause": "scheduled-entity-update",
+      "awake": true
+    },
+    {
+      "id": 14,
+      "event": "alarm",
+      "role": "output",
+      "tick": 4837,
+      "game_tick": 52533,
+      "order": 5,
+      "cause": "transfer-notification",
+      "awake": true
+    },
+    {
+      "id": 15,
+      "event": "alarm",
+      "role": "egg_input_a",
+      "tick": 4837,
+      "game_tick": 52533,
+      "order": 7,
+      "cause": "transfer-notification",
+      "awake": false
+    },
+    {
+      "id": 16,
+      "event": "wake",
+      "role": "egg_input_a",
+      "tick": 4837,
+      "game_tick": 52533,
+      "order": 9,
+      "cause": "transfer-notification",
+      "awake": false,
+      "stage": "begin"
+    },
+    {
+      "id": 17,
+      "event": "wake",
+      "role": "egg_input_a",
+      "tick": 4837,
+      "game_tick": 52533,
+      "order": 10,
+      "cause": "unresolved",
+      "awake": true,
+      "stage": "end"
+    },
+    {
+      "id": 18,
+      "event": "alarm",
+      "role": "egg_input_b",
+      "tick": 4837,
+      "game_tick": 52533,
+      "order": 11,
+      "cause": "transfer-notification",
+      "awake": false
+    },
+    {
+      "id": 19,
+      "event": "wake",
+      "role": "egg_input_b",
+      "tick": 4837,
+      "game_tick": 52533,
+      "order": 13,
+      "cause": "transfer-notification",
+      "awake": false,
+      "stage": "begin"
+    },
+    {
+      "id": 20,
+      "event": "wake",
+      "role": "egg_input_b",
+      "tick": 4837,
+      "game_tick": 52533,
+      "order": 14,
+      "cause": "unresolved",
+      "awake": true,
+      "stage": "end"
+    },
+    {
+      "id": 21,
+      "event": "alarm",
+      "role": "belt_input",
+      "tick": 4837,
+      "game_tick": 52533,
+      "order": 15,
+      "cause": "transfer-notification",
+      "awake": false
+    },
+    {
+      "id": 22,
+      "event": "wake",
+      "role": "belt_input",
+      "tick": 4837,
+      "game_tick": 52533,
+      "order": 17,
+      "cause": "transfer-notification",
+      "awake": false,
+      "stage": "begin"
+    },
+    {
+      "id": 23,
+      "event": "wake",
+      "role": "belt_input",
+      "tick": 4837,
+      "game_tick": 52533,
+      "order": 18,
+      "cause": "unresolved",
+      "awake": true,
+      "stage": "end"
+    },
+    {
+      "id": 24,
+      "event": "update",
+      "role": "belt_input",
+      "tick": 4838,
+      "game_tick": 52534,
+      "order": 1,
+      "cause": "scheduled-entity-update",
+      "awake": true
+    },
+    {
+      "id": 25,
+      "event": "alarm",
+      "role": "belt_input",
+      "tick": 4838,
+      "game_tick": 52534,
+      "order": 2,
+      "cause": "transfer-notification",
+      "awake": true
+    },
+    {
+      "id": 26,
+      "event": "update",
+      "role": "egg_input_b",
+      "tick": 4838,
+      "game_tick": 52534,
+      "order": 3,
+      "cause": "scheduled-entity-update",
+      "awake": true
+    },
+    {
+      "id": 27,
+      "event": "alarm",
+      "role": "egg_input_b",
+      "tick": 4838,
+      "game_tick": 52534,
+      "order": 5,
+      "cause": "transfer-notification",
+      "awake": true
+    },
+    {
+      "id": 28,
+      "event": "update",
+      "role": "egg_input_a",
+      "tick": 4838,
+      "game_tick": 52534,
+      "order": 6,
+      "cause": "scheduled-entity-update",
+      "awake": true
+    },
+    {
+      "id": 29,
+      "event": "alarm",
+      "role": "egg_input_a",
+      "tick": 4838,
+      "game_tick": 52534,
+      "order": 8,
+      "cause": "transfer-notification",
+      "awake": true
+    },
+    {
+      "id": 30,
+      "event": "update",
+      "role": "output",
+      "tick": 4838,
+      "game_tick": 52534,
+      "order": 9,
+      "cause": "scheduled-entity-update",
+      "awake": true
+    }
+  ],
+  "transitions": [
+    {
+      "event": "sleep",
+      "role": "egg_input_a",
+      "evidence": "inferred-between-observations",
+      "from": {
+        "tick": 4835,
+        "order": 3,
+        "event": "update"
+      },
+      "through": {
+        "tick": 4836,
+        "order": 6,
+        "event": "alarm"
+      }
+    },
+    {
+      "event": "wake",
+      "role": "egg_input_a",
+      "evidence": "observed",
+      "from": {
+        "tick": 4836,
+        "order": 6,
+        "event": "alarm"
+      },
+      "through": {
+        "tick": 4836,
+        "order": 9,
+        "event": "wake",
+        "stage": "end"
+      }
+    },
+    {
+      "event": "sleep",
+      "role": "egg_input_b",
+      "evidence": "inferred-between-observations",
+      "from": {
+        "tick": 4835,
+        "order": 2,
+        "event": "update"
+      },
+      "through": {
+        "tick": 4836,
+        "order": 10,
+        "event": "alarm"
+      }
+    },
+    {
+      "event": "wake",
+      "role": "egg_input_b",
+      "evidence": "observed",
+      "from": {
+        "tick": 4836,
+        "order": 10,
+        "event": "alarm"
+      },
+      "through": {
+        "tick": 4836,
+        "order": 13,
+        "event": "wake",
+        "stage": "end"
+      }
+    },
+    {
+      "event": "sleep",
+      "role": "belt_input",
+      "evidence": "inferred-between-observations",
+      "from": {
+        "tick": 4835,
+        "order": 1,
+        "event": "update"
+      },
+      "through": {
+        "tick": 4836,
+        "order": 14,
+        "event": "alarm"
+      }
+    },
+    {
+      "event": "wake",
+      "role": "belt_input",
+      "evidence": "observed",
+      "from": {
+        "tick": 4836,
+        "order": 14,
+        "event": "alarm"
+      },
+      "through": {
+        "tick": 4836,
+        "order": 17,
+        "event": "wake",
+        "stage": "end"
+      }
+    },
+    {
+      "event": "sleep",
+      "role": "egg_input_a",
+      "evidence": "inferred-between-observations",
+      "from": {
+        "tick": 4837,
+        "order": 3,
+        "event": "update"
+      },
+      "through": {
+        "tick": 4837,
+        "order": 7,
+        "event": "alarm"
+      }
+    },
+    {
+      "event": "wake",
+      "role": "egg_input_a",
+      "evidence": "observed",
+      "from": {
+        "tick": 4837,
+        "order": 7,
+        "event": "alarm"
+      },
+      "through": {
+        "tick": 4837,
+        "order": 10,
+        "event": "wake",
+        "stage": "end"
+      }
+    },
+    {
+      "event": "sleep",
+      "role": "egg_input_b",
+      "evidence": "inferred-between-observations",
+      "from": {
+        "tick": 4837,
+        "order": 2,
+        "event": "update"
+      },
+      "through": {
+        "tick": 4837,
+        "order": 11,
+        "event": "alarm"
+      }
+    },
+    {
+      "event": "wake",
+      "role": "egg_input_b",
+      "evidence": "observed",
+      "from": {
+        "tick": 4837,
+        "order": 11,
+        "event": "alarm"
+      },
+      "through": {
+        "tick": 4837,
+        "order": 14,
+        "event": "wake",
+        "stage": "end"
+      }
+    },
+    {
+      "event": "sleep",
+      "role": "belt_input",
+      "evidence": "inferred-between-observations",
+      "from": {
+        "tick": 4837,
+        "order": 1,
+        "event": "update"
+      },
+      "through": {
+        "tick": 4837,
+        "order": 15,
+        "event": "alarm"
+      }
+    },
+    {
+      "event": "wake",
+      "role": "belt_input",
+      "evidence": "observed",
+      "from": {
+        "tick": 4837,
+        "order": 15,
+        "event": "alarm"
+      },
+      "through": {
+        "tick": 4837,
+        "order": 18,
+        "event": "wake",
+        "stage": "end"
+      }
+    }
+  ],
+  "visible_rows": [
+    {
+      "entities": {
+        "belt_input": {
+          "hand": {
+            "x": 398.5,
+            "y": 4.5
+          },
+          "held": 0,
+          "status": "waiting_for_space_in_destination"
+        },
+        "destination": {
+          "bonus": 1,
+          "finished": 3860,
+          "input": {
+            "bioflux": 7,
+            "pentapod-egg": 23
+          },
+          "output": {
+            "agricultural-science-pack": 36
+          },
+          "progress": 0.701666666666671,
+          "status": "working"
+        },
+        "egg_input_a": {
+          "hand": {
+            "x": 400.5,
+            "y": 1.5
+          },
+          "held": 0,
+          "status": "waiting_for_space_in_destination"
+        },
+        "egg_input_b": {
+          "hand": {
+            "x": 402.5,
+            "y": 1.5
+          },
+          "held": 0,
+          "status": "waiting_for_space_in_destination"
+        },
+        "egg_source_a": {
+          "bonus": 0.8271666666668269,
+          "finished": 728,
+          "input": {
+            "nutrients": 184,
+            "pentapod-egg": 16
+          },
+          "output": {
+            "pentapod-egg": 11
+          },
+          "progress": 0.8847777777777764,
+          "status": "working"
+        },
+        "egg_source_b": {
+          "bonus": 0.8271666666668269,
+          "finished": 728,
+          "input": {
+            "nutrients": 184,
+            "pentapod-egg": 16
+          },
+          "output": {
+            "pentapod-egg": 11
+          },
+          "progress": 0.8847777777777764,
+          "status": "working"
+        },
+        "output": {
+          "hand": {
+            "x": 402.44921875,
+            "y": 6.41015625
+          },
+          "held": 0,
+          "status": "working"
+        }
+      },
+      "tick": 4836
+    },
+    {
+      "entities": {
+        "belt_input": {
+          "hand": {
+            "x": 398.5,
+            "y": 4.5
+          },
+          "held": 0,
+          "status": "waiting_for_space_in_destination"
+        },
+        "destination": {
+          "bonus": 0.6173437500001508,
+          "finished": 3862,
+          "input": {
+            "bioflux": 6,
+            "pentapod-egg": 22
+          },
+          "output": {
+            "agricultural-science-pack": 38
+          },
+          "progress": 0.07822916666667101,
+          "status": "working"
+        },
+        "egg_input_a": {
+          "hand": {
+            "x": 400.5,
+            "y": 1.5
+          },
+          "held": 0,
+          "status": "waiting_for_space_in_destination"
+        },
+        "egg_input_b": {
+          "hand": {
+            "x": 402.5,
+            "y": 1.5
+          },
+          "held": 0,
+          "status": "waiting_for_space_in_destination"
+        },
+        "egg_source_a": {
+          "bonus": 0.934666666666827,
+          "finished": 728,
+          "input": {
+            "nutrients": 184,
+            "pentapod-egg": 16
+          },
+          "output": {
+            "pentapod-egg": 11
+          },
+          "progress": 0.9564444444444431,
+          "status": "working"
+        },
+        "egg_source_b": {
+          "bonus": 0.934666666666827,
+          "finished": 728,
+          "input": {
+            "nutrients": 184,
+            "pentapod-egg": 16
+          },
+          "output": {
+            "pentapod-egg": 11
+          },
+          "progress": 0.9564444444444431,
+          "status": "working"
+        },
+        "output": {
+          "hand": {
+            "x": 402.44921875,
+            "y": 5.89453125
+          },
+          "held": 0,
+          "status": "working"
+        }
+      },
+      "tick": 4837
+    },
+    {
+      "entities": {
+        "belt_input": {
+          "hand": {
+            "x": 398.5,
+            "y": 4.5
+          },
+          "held": 0,
+          "status": "waiting_for_source_items"
+        },
+        "destination": {
+          "bonus": 1,
+          "finished": 3862,
+          "input": {
+            "bioflux": 6,
+            "pentapod-egg": 22
+          },
+          "output": {
+            "agricultural-science-pack": 22
+          },
+          "progress": 0.45479166666667104,
+          "status": "working"
+        },
+        "egg_input_a": {
+          "hand": {
+            "x": 400.5,
+            "y": 1.5
+          },
+          "held": 0,
+          "status": "waiting_for_source_items"
+        },
+        "egg_input_b": {
+          "hand": {
+            "x": 402.5,
+            "y": 1.5
+          },
+          "held": 0,
+          "status": "waiting_for_source_items"
+        },
+        "egg_source_a": {
+          "bonus": 0.04216666666682698,
+          "finished": 730,
+          "input": {
+            "nutrients": 154,
+            "pentapod-egg": 15
+          },
+          "output": {
+            "pentapod-egg": 14
+          },
+          "progress": 0.02811111111110975,
+          "status": "working"
+        },
+        "egg_source_b": {
+          "bonus": 0.04216666666682698,
+          "finished": 730,
+          "input": {
+            "nutrients": 154,
+            "pentapod-egg": 15
+          },
+          "output": {
+            "pentapod-egg": 14
+          },
+          "progress": 0.02811111111110975,
+          "status": "working"
+        },
+        "output": {
+          "hand": {
+            "x": 401.5,
+            "y": 5.5
+          },
+          "held": 16,
+          "status": "working"
+        }
+      },
+      "tick": 4838
+    },
+    {
+      "entities": {
+        "belt_input": {
+          "hand": {
+            "x": 398.73828125,
+            "y": 4.11328125
+          },
+          "held": 4,
+          "status": "working"
+        },
+        "destination": {
+          "bonus": 0.747031250000151,
+          "finished": 3863,
+          "input": {
+            "bioflux": 6,
+            "pentapod-egg": 22
+          },
+          "output": {
+            "agricultural-science-pack": 23
+          },
+          "progress": 0.8313541666666711,
+          "status": "working"
+        },
+        "egg_input_a": {
+          "hand": {
+            "x": 400.5,
+            "y": 1.5
+          },
+          "held": 14,
+          "status": "waiting_for_more_items"
+        },
+        "egg_input_b": {
+          "hand": {
+            "x": 402.5,
+            "y": 1.5
+          },
+          "held": 14,
+          "status": "waiting_for_more_items"
+        },
+        "egg_source_a": {
+          "bonus": 0.14966666666682696,
+          "finished": 730,
+          "input": {
+            "nutrients": 154,
+            "pentapod-egg": 15
+          },
+          "output": {},
+          "progress": 0.09977777777777641,
+          "status": "working"
+        },
+        "egg_source_b": {
+          "bonus": 0.14966666666682696,
+          "finished": 730,
+          "input": {
+            "nutrients": 154,
+            "pentapod-egg": 15
+          },
+          "output": {},
+          "progress": 0.09977777777777641,
+          "status": "working"
+        },
+        "output": {
+          "hand": {
+            "x": 400.796875,
+            "y": 5.234375
+          },
+          "held": 16,
+          "status": "working"
+        }
+      },
+      "tick": 4839
+    }
+  ],
+  "checks": [
+    {
+      "kind": "update_order",
+      "roles": [
+        "belt_input",
+        "egg_input_b",
+        "egg_input_a",
+        "output"
+      ],
+      "tick": 4837
+    },
+    {
+      "field": [
+        "output",
+        "agricultural-science-pack"
+      ],
+      "kind": "visible",
+      "role": "destination",
+      "tick": 4837,
+      "value": 38
+    },
+    {
+      "field": [
+        "output",
+        "agricultural-science-pack"
+      ],
+      "kind": "visible",
+      "role": "destination",
+      "tick": 4838,
+      "value": 22
+    },
+    {
+      "field": [
+        "held"
+      ],
+      "kind": "visible",
+      "role": "egg_input_a",
+      "tick": 4838,
+      "value": 0
+    },
+    {
+      "field": [
+        "held"
+      ],
+      "kind": "visible",
+      "role": "egg_input_a",
+      "tick": 4839,
+      "value": 14
+    },
+    {
+      "field": [
+        "held"
+      ],
+      "kind": "visible",
+      "role": "egg_input_b",
+      "tick": 4839,
+      "value": 14
+    },
+    {
+      "field": [
+        "held"
+      ],
+      "kind": "visible",
+      "role": "belt_input",
+      "tick": 4839,
+      "value": 4
+    }
+  ],
+  "comparison": {
+    "visible_reference_differences": 0,
+    "observed_ticks": 20
+  },
+  "limits": [
+    "Sleep intervals are inferred between observations; their exact time is unknown.",
+    "An alarm on an awake inserter need not wake it again or reorder it.",
+    "Awake/asleep observations are separate from arm position, visible status and circuit enable state.",
+    "This local replay supplies observed notifications and outcomes; it does not derive whole-factory physics or a universal ordering rule."
+  ]
+}

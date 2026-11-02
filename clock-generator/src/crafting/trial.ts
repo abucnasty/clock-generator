@@ -8,9 +8,10 @@ import { Duration, OpenRange } from "../data-types";
 import { Entity, EntityId, Inserter, Machine } from "../entities";
 import { Logger, defaultLogger } from "../common/logger";
 import { StockDetail, StockRecording } from "./machine-stock";
-import { InserterEnds, WakeUps, wakeUpsOfStock } from "./wake-ups";
+import { WakeUps, wakeUpsOfStock } from "./wake-ups";
+import { InserterCounters, inserterEnds, wakeUpsAndCountersOfStock } from "./inserter-counters";
 import { judgeLongRun, judgeProvenCycle, LONG_RUN_SETTLE_SHARE, longRunPeriods } from "./long-run";
-import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, LATE_AFTER_PERIODS, LossOutcome, lossLimitOf, MAX_RECOVERY_PERIODS, reportOf, verdictOf } from "./backpressure-loss";
+import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, ExcessLoss, LATE_AFTER_PERIODS, LossOutcome, lossLimitOf, MAX_RECOVERY_PERIODS, reportOf, verdictOf } from "./backpressure-loss";
 import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForPeriod, withBeltPickupSlack } from "./clock";
 import { canonicalKey, currentRunMemo } from "./plan/run-memo";
 import { BlueprintGenerationResult, LCM_STABILITY_TOLERANCE, MAX_SIMULATION_TICKS, RunOptions, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, planRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
@@ -26,7 +27,8 @@ import type { FullOutputChest } from "./full-output-chests";
 import { ExportShortfall, exportShortfallOfBins, exportShortfallsOfRun, exportedItemsOf } from "./export-delivery";
 import { ResultsTaken, resultsTakenOf } from "./results-taken";
 import { ResultWindowsPlan, resultLossTrialOf } from "./result-windows";
-import { TakerOrder, takerOrderName, takerOrdersToCheck } from "../simulation/competing-takers";
+import { excessLossOf } from "./random-margins";
+import { TakerOrder, takerOrderName, independentTakerOrdersToCheck } from "../simulation/competing-takers";
 import { verificationPlanningConfigOf, verificationTerminalCountOf } from "./primitive-grouped-policy";
 import { CIRCUIT_LATENCY_TICKS } from "../common/rule-constants";
 import { WakeUpsFromStarts, hasStockTheClockDoesNotSet, wakeUpsFromStarts } from "./wake-ups-from-starts";
@@ -173,6 +175,12 @@ export interface AsBuiltStabilityCheck {
      * made no long run: the clock already failed its one-period check, or its period is too long for one.
      */
     wake_ups?: WakeUps;
+    /**
+     * What each inserter did in the same ticks, beside the wake-ups: its wake-ups by the list that woke it, its grabs and
+     * swings, the states it waited in, the edges of its clock and the crafts that joined a grab (inserter-counters.ts).
+     * Nothing selects, ranks or judges a clock by them yet. Set with `wake_ups`.
+     */
+    counters?: InserterCounters;
     /** The chests the output goes into that nothing empties and that were full where the failing run ended */
     full_output_chests?: FullOutputChest[];
     /**
@@ -249,15 +257,17 @@ export function otherTakerOrdersOf(config: Config, windows: Map<string, OpenRang
         }
         enabled_at.set(id, on);
     });
-    let together = 0;
-    let group_size = 0;
+    const contested_sources = new Map<string, {size: number; contested: number}>();
     for (const group of competingTakerGroups(registry)) {
         const most = mostContested(group, enabled_at, ticks);
-        together = Math.max(together, most);
-        if (most >= 3) group_size = Math.max(group_size, group.inserters.length);
+        if (most < 2) continue;
+        const id = group.machine.entity_id.id;
+        const previous = contested_sources.get(id);
+        contested_sources.set(id, {size: Math.max(previous?.size ?? 0, group.inserters.length),
+            contested: Math.max(previous?.contested ?? 0, most)});
     }
-    // more than two enabled together: each taker of such a group has to come first once, whichever of them meet
-    return takerOrdersToCheck(together >= 3 ? group_size : together).slice(1);
+    // Sources choose independently: rotating every group together misses native mixed allocations.
+    return independentTakerOrdersToCheck(Array.from(contested_sources, ([id, group]) => ({id, ...group}))).slice(1);
 }
 
 /** The takers of one product of one machine */
@@ -518,6 +528,8 @@ export function backpressureLossOf(
     on_loss?: (loss: BackpressureLoss, index: number, total: number) => void,
     /** Options of one loss over `options`, where a loss is tried in a way of its own (see resultLossOptionsOf) */
     options_for?: (loss: BackpressureLoss) => Partial<BackpressureLossOptions>,
+    /** The excesses of results that come by chance the clock is tried with too, after the losses (randomExcessLossesOf) */
+    excesses: readonly ExcessLoss[] = [],
 ): BackpressureLossReport {
     const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
@@ -531,7 +543,7 @@ export function backpressureLossOf(
     }).backpressure_loss!;
     const phase_starts = [...movingPickupPhaseStarts(config)];
     const registry = createEntityRegistryFromConfig(config);
-    const losses = backpressureLossesOf(registry, config.target_output.recipe);
+    const losses: BackpressureLoss[] = [...backpressureLossesOf(registry, config.target_output.recipe), ...excesses];
     // a build whose items spoil is tried with losses shorter than its loss limit only
     const loss_limit = lossLimitOf(registry);
     const tried = (loss: BackpressureLoss, index: number): LossOutcome => {
@@ -593,22 +605,6 @@ export function backpressureLossOf(
     }
     return reportOf(period_ticks, expected_output_items, judged, outcomes, loss_limit, losses.slice(outcomes.length));
 }
-
-/** The machines at the ends of every inserter of the config */
-function inserterEnds(config: Config): InserterEnds[] {
-    const machineId = (entity_id: EntityId) => EntityId.isMachine(entity_id) ? entity_id.id : null;
-    const registry = createEntityRegistryFromConfig(config);
-    // a chest a machine places its results into is watched through that machine
-    const placers = new Map(registry.getAll().filter(Entity.isMachine).flatMap(machine =>
-        machine.result_target === undefined ? [] : [[machine.result_target.id, machine.entity_id.id] as const]));
-    return registry.getAll().filter(Entity.isInserter).map(inserter => ({
-        inserter_id: inserter.entity_id.id,
-        source_machine_id: machineId(inserter.source.entity_id),
-        sink_machine_id: machineId(inserter.sink.entity_id),
-        ...(placers.has(inserter.source.entity_id.id) && { source_placer_id: placers.get(inserter.source.entity_id.id)! }),
-    }));
-}
-
 
 /**
  * Where a clock gets to from the starts of CLOCK_STARTS: each is run as the long run of the clock is, from that start,
@@ -990,6 +986,7 @@ export function runAsBuiltCheck(
             stock = passed.run.stock;
             if (stock) {
                 check.wake_ups = passed.run.check.wake_ups;
+                check.counters = passed.run.check.counters;
                 check.long_run_proven = passed.run.check.long_run_proven;
                 check.first_judged_tick = passed.run.check.first_judged_tick;
                 check.long_run_cycle_periods = passed.run.check.long_run_cycle_periods;
@@ -1000,8 +997,10 @@ export function runAsBuiltCheck(
             stock = stock_detail === "hands" ? undefined : long_run?.stock;
             if (long_run && stock) {
                 // judged as the long run is: the proven cycle, or what follows the start-up of a sampled run
-                check.wake_ups = wakeUpsOfStock(stock, inserterEnds(config),
+                const counted = wakeUpsAndCountersOfStock(stock, config,
                     long_run.proven ? long_run.first_judged_tick : Math.floor(stock.ticks / LONG_RUN_SETTLE_SHARE));
+                check.wake_ups = counted.wake_ups;
+                check.counters = counted.counters;
                 check.long_run_proven = long_run.proven;
                 check.first_judged_tick = long_run.first_judged_tick;
                 if (long_run.results_taken !== undefined) {
@@ -1468,10 +1467,12 @@ function triedBackpressureLoss(
     // the config the clock was planned on has its output swings per cycle
     const config = verificationPlanningConfigOf(planned_on, result);
     const quiet: Logger = { log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } };
+    // a build with results that come by chance is tried with the backlog of them its margins say it takes up, too
+    const excess = result.random_margins === undefined ? null : excessLossOf(result.random_margins.crafting);
     try {
         return { backpressure_loss: verdictOf(backpressureLossOf(config, result.clock_windows, result.simulation_duration.ticks,
             result.stability_check.expected_output_items, quiet, {}, (_loss, index, total) => report?.(`Trying backpressure loss ${index + 1}/${total}`),
-            result.result_windows === undefined ? undefined : resultLossOptionsOf(result.result_windows.plans))) };
+            result.result_windows === undefined ? undefined : resultLossOptionsOf(result.result_windows.plans), excess === null ? [] : [excess])) };
     } catch (error) {
         if (errors === "throw") throw error;
         const reason = error instanceof Error ? error.message : String(error);
@@ -1636,5 +1637,8 @@ export function backpressureLossKey(planned_on: Config, result: BlueprintGenerat
     const cycles_set_nothing = Number.isInteger(period)
         && unplannedInserterClocks(createEntityRegistryFromConfig(verification_config), period, new Map(), new Map(), alwaysEnabledByConfig(verification_config)).size === 0;
     const config = cycles_set_nothing ? { ...verification_config, overrides: { ...verification_config.overrides, lcm: undefined } } : verification_config;
-    return canonicalVerificationJson({ config, period, windows: result.clock_windows, expected_output: result.stability_check.expected_output_items });
+    // the excess trial is of the margins: two clocks of the same windows are tried alike only with the same one
+    const excess = result.random_margins === undefined ? null : excessLossOf(result.random_margins.crafting);
+    return canonicalVerificationJson({ config, period, windows: result.clock_windows, expected_output: result.stability_check.expected_output_items,
+        ...(excess !== null && { excess }) });
 }

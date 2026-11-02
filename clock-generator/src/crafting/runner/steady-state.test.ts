@@ -54,7 +54,7 @@ const FIELDS: Record<string, { keyed: readonly string[]; excluded: Readonly<Reco
         keyed: ["status", "held_item", "waits_for_sink", "enabled"],
         excluded: { items_picked_up: TOTAL, items_dropped: TOTAL },
     },
-    Hand: { keyed: ["phase"], excluded: { swings_part_hands: BUILD, from_belt: BUILD, swing_ticks: BUILD }, references: ["sink_wakes", "sink_ingress"] },
+    Hand: { keyed: ["phase"], excluded: { swings_part_hands: BUILD, from_belt: BUILD, swing_ticks: BUILD, notification_scheduling: BUILD }, references: ["sink_wakes", "sink_ingress"] },
     // the idle rule's two flags and the swing's start in the Hand's key; the pickup ticks of a machine or a container,
     // a belt's decision and the drop ticks of a machine or a container in the ports' keys (see KEYED_WHERE)
     HandScratch: {
@@ -65,7 +65,7 @@ const FIELDS: Record<string, { keyed: readonly string[]; excluded: Readonly<Reco
         },
     },
     BeltHandDrop: { keyed: [], excluded: { at_spot: BUILD, spot_ticks: BUILD } },
-    BeltHandPickup: { keyed: [], excluded: { layout: BUILD, near_lane: BUILD }, references: ["sink_wakes"] },
+    BeltHandPickup: { keyed: [], excluded: { layout: BUILD, near_lane: BUILD, notification_scheduling: BUILD }, references: ["sink_wakes"] },
     Control: { keyed: [], excluded: { is_game_clock: CONTROL, looks_ahead: CONTROL, decider_build_order: CONTROL } },
     // its craft underway is a field of its ProgressState: changed in the test of what is no plain field
     Crafting: { keyed: ["status"], excluded: { craftCount: TOTAL, craftsStarted: TOTAL, totalCrafted: TOTAL, crafts_per_tick: BUILD } },

@@ -1,0 +1,1921 @@
+{
+  "schema": "observed-game-behavior-1",
+  "events": [
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "changing_or_true_last",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "fixed_generator",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "fixed_or_true_first",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "conditions",
+      "role": "changing_or_true_last",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "fixed_generator",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "condition",
+      "role": "changing_or_true_last",
+      "phase": "begin",
+      "condition": 1,
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "fixed_or_true_first",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "fixed_or_true_last",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "condition",
+      "role": "changing_or_true_last",
+      "phase": "end",
+      "result": false,
+      "condition": 1,
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "fixed_or_true_last",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "condition",
+      "role": "changing_or_true_last",
+      "phase": "begin",
+      "condition": 2,
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "counter",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "changing_arithmetic_zero",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "conditions",
+      "role": "counter",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "condition",
+      "role": "changing_or_true_last",
+      "phase": "end",
+      "result": false,
+      "condition": 2,
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "output",
+      "role": "changing_arithmetic_zero",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "condition",
+      "role": "changing_or_true_last",
+      "phase": "begin",
+      "condition": 3,
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "condition",
+      "role": "counter",
+      "phase": "begin",
+      "condition": 1,
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "changing_arithmetic_zero",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "condition",
+      "role": "changing_or_true_last",
+      "phase": "end",
+      "result": true,
+      "condition": 3,
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "condition",
+      "role": "counter",
+      "phase": "end",
+      "result": true,
+      "condition": 1,
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "changing_or_true_last",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "counter",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "changing_simple_true",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "positive_generator",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "conditions",
+      "role": "changing_simple_true",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "output",
+      "role": "positive_generator",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "enabled",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "condition",
+      "role": "changing_simple_true",
+      "phase": "begin",
+      "condition": 1,
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "positive_generator",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "condition",
+      "role": "changing_simple_true",
+      "phase": "end",
+      "result": true,
+      "condition": 1,
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "fixed_arithmetic_zero",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "changing_simple_true",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": false,
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "fixed_arithmetic_zero",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "changing_and_true",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "fixed_simple_true",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "conditions",
+      "role": "changing_and_true",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "fixed_simple_true",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "condition",
+      "role": "changing_and_true",
+      "phase": "begin",
+      "condition": 1,
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "fixed_and_true",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "condition",
+      "role": "changing_and_true",
+      "phase": "end",
+      "result": true,
+      "condition": 1,
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "fixed_and_true",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "condition",
+      "role": "changing_and_true",
+      "phase": "begin",
+      "condition": 2,
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "fixed_and_false_first",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "condition",
+      "role": "changing_and_true",
+      "phase": "end",
+      "result": true,
+      "condition": 2,
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "condition",
+      "role": "changing_and_true",
+      "phase": "begin",
+      "condition": 3,
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "fixed_and_false_first",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "condition",
+      "role": "changing_and_true",
+      "phase": "end",
+      "result": true,
+      "condition": 3,
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "changing_and_true",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "fixed_and_false_last",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "changing_and_false_first",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "fixed_and_false_last",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "conditions",
+      "role": "changing_and_false_first",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "condition",
+      "role": "changing_and_false_first",
+      "phase": "begin",
+      "condition": 1,
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "condition",
+      "role": "changing_and_false_first",
+      "phase": "end",
+      "result": false,
+      "condition": 1,
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "changing_and_false_first",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "changing_and_false_last",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "conditions",
+      "role": "changing_and_false_last",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "condition",
+      "role": "changing_and_false_last",
+      "phase": "begin",
+      "condition": 1,
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "condition",
+      "role": "changing_and_false_last",
+      "phase": "end",
+      "result": true,
+      "condition": 1,
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "condition",
+      "role": "changing_and_false_last",
+      "phase": "begin",
+      "condition": 2,
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "condition",
+      "role": "changing_and_false_last",
+      "phase": "end",
+      "result": true,
+      "condition": 2,
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "condition",
+      "role": "changing_and_false_last",
+      "phase": "begin",
+      "condition": 3,
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "condition",
+      "role": "changing_and_false_last",
+      "phase": "end",
+      "result": false,
+      "condition": 3,
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "changing_and_false_last",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "changing_or_true_first",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "conditions",
+      "role": "changing_or_true_first",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "condition",
+      "role": "changing_or_true_first",
+      "phase": "begin",
+      "condition": 1,
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "condition",
+      "role": "changing_or_true_first",
+      "phase": "end",
+      "result": true,
+      "condition": 1,
+      "origin": "game"
+    },
+    {
+      "tick": 5,
+      "event": "update",
+      "stage": "entity",
+      "role": "changing_or_true_first",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 6,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "observation"
+    },
+    {
+      "tick": 6,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": false,
+      "origin": "observation"
+    },
+    {
+      "tick": 6,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 6,
+      "event": "update",
+      "stage": "enabled",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 6,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 6,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": false,
+      "origin": "game"
+    },
+    {
+      "tick": 6,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 7,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "observation"
+    },
+    {
+      "tick": 7,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": false,
+      "origin": "observation"
+    },
+    {
+      "tick": 7,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 7,
+      "event": "update",
+      "stage": "enabled",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 7,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 7,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": false,
+      "origin": "game"
+    },
+    {
+      "tick": 7,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 8,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "observation"
+    },
+    {
+      "tick": 8,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": true,
+      "origin": "observation"
+    },
+    {
+      "tick": 8,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 8,
+      "event": "update",
+      "stage": "enabled",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 8,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 8,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": true,
+      "origin": "game"
+    },
+    {
+      "tick": 8,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 8,
+      "event": "alarm",
+      "stage": "delivery",
+      "role": "hand",
+      "phase": "begin",
+      "awake": false,
+      "origin": "game"
+    },
+    {
+      "tick": 8,
+      "event": "wake",
+      "stage": "transition",
+      "role": "hand",
+      "phase": "begin",
+      "awake": false,
+      "origin": "game"
+    },
+    {
+      "tick": 8,
+      "event": "alarm",
+      "stage": "delivery",
+      "role": "hand",
+      "phase": "end",
+      "awake": true,
+      "origin": "game"
+    },
+    {
+      "tick": 8,
+      "event": "wake",
+      "stage": "transition",
+      "role": "hand",
+      "phase": "end",
+      "awake": true,
+      "origin": "game"
+    },
+    {
+      "tick": 9,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "observation"
+    },
+    {
+      "tick": 9,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": true,
+      "origin": "observation"
+    },
+    {
+      "tick": 9,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand",
+      "phase": "begin",
+      "awake": true,
+      "origin": "game"
+    },
+    {
+      "tick": 9,
+      "event": "sleep",
+      "stage": "transition",
+      "role": "hand",
+      "phase": "begin",
+      "awake": true,
+      "origin": "game"
+    },
+    {
+      "tick": 9,
+      "event": "sleep",
+      "stage": "transition",
+      "role": "hand",
+      "phase": "end",
+      "awake": false,
+      "origin": "game"
+    },
+    {
+      "tick": 9,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand",
+      "phase": "end",
+      "awake": false,
+      "origin": "game"
+    },
+    {
+      "tick": 9,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 9,
+      "event": "update",
+      "stage": "enabled",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 9,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 9,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": true,
+      "origin": "game"
+    },
+    {
+      "tick": 9,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 10,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "observation"
+    },
+    {
+      "tick": 10,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": true,
+      "origin": "observation"
+    },
+    {
+      "tick": 10,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 10,
+      "event": "update",
+      "stage": "enabled",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 10,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 10,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": true,
+      "origin": "game"
+    },
+    {
+      "tick": 10,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 11,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "observation"
+    },
+    {
+      "tick": 11,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": true,
+      "origin": "observation"
+    },
+    {
+      "tick": 11,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 11,
+      "event": "update",
+      "stage": "enabled",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 11,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 11,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": true,
+      "origin": "game"
+    },
+    {
+      "tick": 11,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 12,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "observation"
+    },
+    {
+      "tick": 12,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": false,
+      "origin": "observation"
+    },
+    {
+      "tick": 12,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 12,
+      "event": "update",
+      "stage": "enabled",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 12,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 12,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": false,
+      "origin": "game"
+    },
+    {
+      "tick": 12,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 13,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "observation"
+    },
+    {
+      "tick": 13,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": false,
+      "origin": "observation"
+    },
+    {
+      "tick": 13,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 13,
+      "event": "update",
+      "stage": "enabled",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 13,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 13,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": false,
+      "origin": "game"
+    },
+    {
+      "tick": 13,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 14,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "observation"
+    },
+    {
+      "tick": 14,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": false,
+      "origin": "observation"
+    },
+    {
+      "tick": 14,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 14,
+      "event": "update",
+      "stage": "enabled",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 14,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 14,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": false,
+      "origin": "game"
+    },
+    {
+      "tick": 14,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 15,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "observation"
+    },
+    {
+      "tick": 15,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": false,
+      "origin": "observation"
+    },
+    {
+      "tick": 15,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 15,
+      "event": "update",
+      "stage": "enabled",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 15,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 15,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": false,
+      "origin": "game"
+    },
+    {
+      "tick": 15,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 16,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "observation"
+    },
+    {
+      "tick": 16,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": true,
+      "origin": "observation"
+    },
+    {
+      "tick": 16,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 16,
+      "event": "update",
+      "stage": "enabled",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 16,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 16,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": true,
+      "origin": "game"
+    },
+    {
+      "tick": 16,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 16,
+      "event": "alarm",
+      "stage": "delivery",
+      "role": "hand",
+      "phase": "begin",
+      "awake": false,
+      "origin": "game"
+    },
+    {
+      "tick": 16,
+      "event": "wake",
+      "stage": "transition",
+      "role": "hand",
+      "phase": "begin",
+      "awake": false,
+      "origin": "game"
+    },
+    {
+      "tick": 16,
+      "event": "alarm",
+      "stage": "delivery",
+      "role": "hand",
+      "phase": "end",
+      "awake": true,
+      "origin": "game"
+    },
+    {
+      "tick": 16,
+      "event": "wake",
+      "stage": "transition",
+      "role": "hand",
+      "phase": "end",
+      "awake": true,
+      "origin": "game"
+    },
+    {
+      "tick": 17,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "observation"
+    },
+    {
+      "tick": 17,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": true,
+      "origin": "observation"
+    },
+    {
+      "tick": 17,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand",
+      "phase": "begin",
+      "awake": true,
+      "origin": "game"
+    },
+    {
+      "tick": 17,
+      "event": "sleep",
+      "stage": "transition",
+      "role": "hand",
+      "phase": "begin",
+      "awake": true,
+      "origin": "game"
+    },
+    {
+      "tick": 17,
+      "event": "sleep",
+      "stage": "transition",
+      "role": "hand",
+      "phase": "end",
+      "awake": false,
+      "origin": "game"
+    },
+    {
+      "tick": 17,
+      "event": "update",
+      "stage": "entity",
+      "role": "hand",
+      "phase": "end",
+      "awake": false,
+      "origin": "game"
+    },
+    {
+      "tick": 17,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 17,
+      "event": "update",
+      "stage": "enabled",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 17,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 17,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": true,
+      "origin": "game"
+    },
+    {
+      "tick": 17,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 18,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "observation"
+    },
+    {
+      "tick": 18,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": true,
+      "origin": "observation"
+    },
+    {
+      "tick": 18,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 18,
+      "event": "update",
+      "stage": "enabled",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 18,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 18,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": true,
+      "origin": "game"
+    },
+    {
+      "tick": 18,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 19,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "observation"
+    },
+    {
+      "tick": 19,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": true,
+      "origin": "observation"
+    },
+    {
+      "tick": 19,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 19,
+      "event": "update",
+      "stage": "enabled",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 19,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 19,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": true,
+      "origin": "game"
+    },
+    {
+      "tick": 19,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 20,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "observation"
+    },
+    {
+      "tick": 20,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": false,
+      "origin": "observation"
+    },
+    {
+      "tick": 20,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 20,
+      "event": "update",
+      "stage": "enabled",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 20,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 20,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": false,
+      "origin": "game"
+    },
+    {
+      "tick": 20,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 21,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "observation"
+    },
+    {
+      "tick": 21,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": false,
+      "origin": "observation"
+    },
+    {
+      "tick": 21,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 21,
+      "event": "update",
+      "stage": "enabled",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 21,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 21,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": false,
+      "origin": "game"
+    },
+    {
+      "tick": 21,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 22,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "observation"
+    },
+    {
+      "tick": 22,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": false,
+      "origin": "observation"
+    },
+    {
+      "tick": 22,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 22,
+      "event": "update",
+      "stage": "enabled",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 22,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 22,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": false,
+      "origin": "game"
+    },
+    {
+      "tick": 22,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 23,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "observation"
+    },
+    {
+      "tick": 23,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": false,
+      "origin": "observation"
+    },
+    {
+      "tick": 23,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 23,
+      "event": "update",
+      "stage": "enabled",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 23,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 23,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": false,
+      "origin": "game"
+    },
+    {
+      "tick": 23,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 24,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "observation"
+    },
+    {
+      "tick": 24,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": true,
+      "origin": "observation"
+    },
+    {
+      "tick": 24,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 24,
+      "event": "update",
+      "stage": "enabled",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 24,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "begin",
+      "origin": "game"
+    },
+    {
+      "tick": 24,
+      "event": "update",
+      "stage": "enable-condition",
+      "role": "hand",
+      "phase": "end",
+      "result": true,
+      "origin": "game"
+    },
+    {
+      "tick": 24,
+      "event": "update",
+      "stage": "control",
+      "role": "hand",
+      "phase": "end",
+      "origin": "game"
+    },
+    {
+      "tick": 24,
+      "event": "alarm",
+      "stage": "delivery",
+      "role": "hand",
+      "phase": "begin",
+      "awake": false,
+      "origin": "game"
+    },
+    {
+      "tick": 24,
+      "event": "wake",
+      "stage": "transition",
+      "role": "hand",
+      "phase": "begin",
+      "awake": false,
+      "origin": "game"
+    },
+    {
+      "tick": 24,
+      "event": "alarm",
+      "stage": "delivery",
+      "role": "hand",
+      "phase": "end",
+      "awake": true,
+      "origin": "game"
+    },
+    {
+      "tick": 24,
+      "event": "wake",
+      "stage": "transition",
+      "role": "hand",
+      "phase": "end",
+      "awake": true,
+      "origin": "game"
+    }
+  ],
+  "global_order_equal": false,
+  "per_role_order_equal": true
+}

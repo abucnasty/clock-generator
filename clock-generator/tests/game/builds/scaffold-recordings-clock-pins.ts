@@ -4,7 +4,7 @@ import {ConfigPaths} from "../../../src/config/config-paths";
 import {clockHash, readControls} from "./clock-controls";
 
 /** The clocks the values of the builds of scaffold-recordings.game.test.ts were seen on, by build name */
-export const scaffoldClockPins = readControls<{cases: Record<string, {config: string; backed_up_belts: boolean; clock_sha256: string}>}>(
+export const scaffoldClockPins = readControls<{cases: Record<string, {config: string; backed_up_belts: boolean; clock_sha256: string; previous?: {id: string; clock_sha256: string; why: string}}>}>(
     "scaffold-recordings-clock-pins.json").cases;
 
 /**

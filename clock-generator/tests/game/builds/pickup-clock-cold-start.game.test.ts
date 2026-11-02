@@ -6,7 +6,7 @@ import {expect, test} from "vitest";
 import {Config} from "../../../src/config";
 import {generateClockAlternatives} from "../../../src/crafting/generate-blueprint";
 import {clockFromWindows} from "../../../src/crafting/trial";
-import {SerializableClockWindows} from "../../../src/crafting/clock";
+import {physicalColdClockOf, type ColdStartClock} from "./pickup-clock-cold-start-runs";
 import {encodeBlueprintFile} from "../../../src/blueprints/serde";
 import {recordInFactorio} from "../../../src/harness/factorio-harness";
 import {composeProbeSource} from "../helpers/probe-source";
@@ -25,7 +25,7 @@ interface Run {
 }
 interface Controls {
     frame_offset: number; periods: number;
-    clocks: Record<string, {period: number; terminal_swings: number; clock_windows: SerializableClockWindows; clock_sha256: string; recorded_clock_sha256: string}>;
+    clocks: Record<string, ColdStartClock>;
     runs: Record<string, Run>;
 }
 interface Report {
@@ -73,6 +73,7 @@ for (const [name, run] of Object.entries(controls.runs)) test(`clocked cold star
     const capture = speedCapture(`cold-start-${name}`);
     try {
         const clockControl = controls.clocks[run.clock];
+        physicalColdClockOf(clockControl, run);
         const {config, scaffold, units, backed} = await fixtureOf(run.case);
         const P = clockControl.period;
         let exported: {blueprint: any; schedule: any};
@@ -80,6 +81,7 @@ for (const [name, run] of Object.entries(controls.runs)) test(`clocked cold star
             const generated = generateClockAlternatives(config, {logger: quiet});
             exported = generated.alternatives[generated.selected_index].result;
         } else {
+            if (clockControl.kind === "physical") throw new Error("Rotated clocks require actual planner metadata");
             exported = clockFromWindows({...config, overrides: {...config.overrides, terminal_swing_count: clockControl.terminal_swings}},
                 clockControl.clock_windows, P, quiet);
         }

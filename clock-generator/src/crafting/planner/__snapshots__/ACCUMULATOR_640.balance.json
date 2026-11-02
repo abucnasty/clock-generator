@@ -1,0 +1,63 @@
+{
+  "sample": "ACCUMULATOR_640",
+  "swings 1": [
+    "inserter:1 | accumulator 1 | total 1 | hand 16",
+    "inserter:2 | accumulator 1 | total 1 | hand 16",
+    "inserter:3 | iron-plate 4/3 | total 4/3 | needed 4/3 | hand 16",
+    "inserter:6 | battery 10/3 | total 10/3 | needed 10/3 | hand 16",
+    "inserter:5 | iron-plate 10/9 | total 10/9 | needed 10/9 | hand 16",
+    "inserter:9 | copper-plate 10/9 | total 10/9 | needed 10/9 | hand 16",
+    "inserter:4 | iron-plate 4/3 | total 4/3 | needed 4/3 | hand 16",
+    "inserter:8 | battery 10/3 | total 10/3 | needed 10/3 | hand 16",
+    "inserter:7 | iron-plate 10/9 | total 10/9 | needed 10/9 | hand 16",
+    "inserter:10 | copper-plate 10/9 | total 10/9 | needed 10/9 | hand 16"
+  ],
+  "swings 2": [
+    "inserter:1 | accumulator 2 | total 2 | hand 16",
+    "inserter:2 | accumulator 2 | total 2 | hand 16",
+    "inserter:3 | iron-plate 8/3 | total 8/3 | needed 8/3 | hand 16",
+    "inserter:6 | battery 20/3 | total 20/3 | needed 20/3 | hand 16",
+    "inserter:5 | iron-plate 20/9 | total 20/9 | needed 20/9 | hand 16",
+    "inserter:9 | copper-plate 20/9 | total 20/9 | needed 20/9 | hand 16",
+    "inserter:4 | iron-plate 8/3 | total 8/3 | needed 8/3 | hand 16",
+    "inserter:8 | battery 20/3 | total 20/3 | needed 20/3 | hand 16",
+    "inserter:7 | iron-plate 20/9 | total 20/9 | needed 20/9 | hand 16",
+    "inserter:10 | copper-plate 20/9 | total 20/9 | needed 20/9 | hand 16"
+  ],
+  "swings 3": [
+    "inserter:1 | accumulator 3 | total 3 | hand 16",
+    "inserter:2 | accumulator 3 | total 3 | hand 16",
+    "inserter:3 | iron-plate 4 | total 4 | needed 4 | hand 16",
+    "inserter:6 | battery 10 | total 10 | needed 10 | hand 16",
+    "inserter:5 | iron-plate 10/3 | total 10/3 | needed 10/3 | hand 16",
+    "inserter:9 | copper-plate 10/3 | total 10/3 | needed 10/3 | hand 16",
+    "inserter:4 | iron-plate 4 | total 4 | needed 4 | hand 16",
+    "inserter:8 | battery 10 | total 10 | needed 10 | hand 16",
+    "inserter:7 | iron-plate 10/3 | total 10/3 | needed 10/3 | hand 16",
+    "inserter:10 | copper-plate 10/3 | total 10/3 | needed 10/3 | hand 16"
+  ],
+  "swings 7/3": [
+    "inserter:1 | accumulator 7/3 | total 7/3 | hand 16",
+    "inserter:2 | accumulator 7/3 | total 7/3 | hand 16",
+    "inserter:3 | iron-plate 28/9 | total 28/9 | needed 28/9 | hand 16",
+    "inserter:6 | battery 70/9 | total 70/9 | needed 70/9 | hand 16",
+    "inserter:5 | iron-plate 70/27 | total 70/27 | needed 70/27 | hand 16",
+    "inserter:9 | copper-plate 70/27 | total 70/27 | needed 70/27 | hand 16",
+    "inserter:4 | iron-plate 28/9 | total 28/9 | needed 28/9 | hand 16",
+    "inserter:8 | battery 70/9 | total 70/9 | needed 70/9 | hand 16",
+    "inserter:7 | iron-plate 70/27 | total 70/27 | needed 70/27 | hand 16",
+    "inserter:10 | copper-plate 70/27 | total 70/27 | needed 70/27 | hand 16"
+  ],
+  "swings 5/2": [
+    "inserter:1 | accumulator 5/2 | total 5/2 | hand 16",
+    "inserter:2 | accumulator 5/2 | total 5/2 | hand 16",
+    "inserter:3 | iron-plate 10/3 | total 10/3 | needed 10/3 | hand 16",
+    "inserter:6 | battery 25/3 | total 25/3 | needed 25/3 | hand 16",
+    "inserter:5 | iron-plate 25/9 | total 25/9 | needed 25/9 | hand 16",
+    "inserter:9 | copper-plate 25/9 | total 25/9 | needed 25/9 | hand 16",
+    "inserter:4 | iron-plate 10/3 | total 10/3 | needed 10/3 | hand 16",
+    "inserter:8 | battery 25/3 | total 25/3 | needed 25/3 | hand 16",
+    "inserter:7 | iron-plate 25/9 | total 25/9 | needed 25/9 | hand 16",
+    "inserter:10 | copper-plate 25/9 | total 25/9 | needed 25/9 | hand 16"
+  ]
+}

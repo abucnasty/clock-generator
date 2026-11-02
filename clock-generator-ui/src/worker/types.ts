@@ -29,6 +29,7 @@ import type {
     SerializableClockWindows,
     SerializableMachineFacts,
     MachineTargetRate,
+    TargetRateMax,
     OutputTransferSummary,
     OutputTransferGenerationIssue,
     PortableStateTransitionHistory,
@@ -426,6 +427,7 @@ export type EngineQuery =
     | { kind: 'lookups' }
     | { kind: 'machine-facts'; params: ComputeMachineFactsParams }
     | { kind: 'machine-target-rates'; config: Config }
+    | { kind: 'target-rate-max'; config: Config }
     | { kind: 'output-transfers'; config: Config }
     | { kind: 'inserter-coverage'; config: Config }
     | { kind: 'repeated-unit-conversion'; config: Config }
@@ -473,6 +475,8 @@ export interface EngineAnswers {
     /** Null when they cannot be worked out, e.g. for an unknown recipe */
     'machine-facts': SerializableMachineFacts | null;
     'machine-target-rates': MachineTargetRate[];
+    /** The most the target can be before the feasibility pass refuses it; null when the pass cannot say */
+    'target-rate-max': TargetRateMax | null;
     'output-transfers': { transfers: OutputTransferSummary[]; generation_issues: OutputTransferGenerationIssue[] };
     /**
      * The coverage of each machine, or the refusal of the first inserter that is out of scope (a belt pickup by another

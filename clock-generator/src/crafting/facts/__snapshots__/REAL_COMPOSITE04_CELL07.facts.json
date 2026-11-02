@@ -114,6 +114,10 @@
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
             "expected_per_craft": 2.75,
+            "per_craft": {
+              "numerator": 11,
+              "denominator": 4
+            },
             "per_second": {
               "numerator": 40715535479657,
               "denominator": 887784090863
@@ -216,6 +220,10 @@
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
             "expected_per_craft": 8,
+            "per_craft": {
+              "numerator": 8,
+              "denominator": 1
+            },
             "per_second": {
               "numerator": 38936,
               "denominator": 125
@@ -301,6 +309,10 @@
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
             "expected_per_craft": 5,
+            "per_craft": {
+              "numerator": 5,
+              "denominator": 1
+            },
             "per_second": {
               "numerator": 6283,
               "denominator": 8
@@ -387,6 +399,10 @@
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
             "expected_per_craft": 8,
+            "per_craft": {
+              "numerator": 8,
+              "denominator": 1
+            },
             "per_second": {
               "numerator": 38936,
               "denominator": 125
@@ -491,6 +507,10 @@
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
             "expected_per_craft": 2.75,
+            "per_craft": {
+              "numerator": 11,
+              "denominator": 4
+            },
             "per_second": {
               "numerator": 40715535479657,
               "denominator": 887784090863

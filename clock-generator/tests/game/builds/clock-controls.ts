@@ -5,12 +5,10 @@ import {clockIdentity} from "../../../src/crafting/clock-identity";
 
 /**
  * Where a control came from: the PR that recorded it in the game (or pinned it), the commit that added it, and the
- * frozen engine head its clock was generated and recorded on (null where there is no native recording or the run was
- * on an uncommitted tree)
+ * frozen engine head its clock was generated and recorded on (null where there is no single committed recording head).
+ * Retained captures may instead name their separate control and harness sources below.
  */
-export interface Recorded {
-    pr: number;
-    commit: string;
+interface RecordingIdentity {
     frozen_head: string | null;
     /** What changed in the entry after the recording, such as a verdict a later PR corrected */
     note?: string;
@@ -32,6 +30,15 @@ export interface Recorded {
      */
     carried?: string;
 }
+
+/**
+ * A retained capture can predate the commit that publishes its pin. Its validation PR, generated control and harness
+ * heads identify the actual recording, without claiming a future pin commit or publication PR.
+ */
+export type Recorded = RecordingIdentity & (
+    {pr: number; commit: string; capture?: never}
+    | {pr?: never; commit?: never; capture: {validation_pr: number; control_head: string; harness_head: string; game_version: string}}
+);
 
 /** A native capture's summary, as pickup-clock-capture.ts writes and compares it */
 export interface NativeClockSummary {
@@ -60,6 +67,23 @@ export interface ClockControl {
     recorded: Recorded;
     native: NativeClockSummary;
     generation?: GenerationPin;
+    /**
+     * The alternative the generator selected before the entry's pin, and the sha256 of its exported clock: a generation
+     * test finds it still made, so the clock the earlier recording was on stays one the generator offers
+     */
+    previous?: PreviousClock;
+    /**
+     * Of a container fixture whose two cuts take the same input: the periods the simulator holds the target through the
+     * second cut when it runs the probe's protocol on the pinned clock. A clock that brings more than the target's share
+     * refills the container between the cuts, and the game holds the target as long as that stock lasts
+     */
+    second_cut_held_simulated?: number;
+}
+
+/** An alternative that is no longer selected and is still made: its id and the sha256 of its exported clock */
+export interface PreviousClock {
+    id: string;
+    clock_sha256: string;
 }
 
 /** A family's controls file: one current entry per configuration */
@@ -71,7 +95,7 @@ export interface ClockControls {
 /** A family's history file: the recordings a later PR replaced, per configuration, oldest first */
 export interface ClockHistory {
     meaning: string;
-    cases: Record<string, {recorded: Recorded; native: NativeClockSummary}[]>;
+    cases: Record<string, {recorded: Recorded; native: NativeClockSummary; generation?: GenerationPin}[]>;
 }
 
 /** Reads a controls file of tests/game/builds/ by its name */
@@ -108,6 +132,14 @@ export function pinMismatches(cases: Record<string, ClockControl>, untied: reado
     const hash = /^[0-9a-f]{64}$/;
     for (const [name, control] of Object.entries(cases)) {
         const {recorded, generation} = control;
+        if (recorded.capture !== undefined) {
+            const capture = recorded.capture;
+            if (recorded.pr !== undefined || recorded.commit !== undefined) found.push(`${name}: capture provenance must not claim pin publication identifiers`);
+            if (!Number.isSafeInteger(capture.validation_pr) || capture.validation_pr <= 0) found.push(`${name}: capture.validation_pr must name the validation PR`);
+            if (!/^[0-9a-f]{40}$/.test(capture.control_head) || !/^[0-9a-f]{40}$/.test(capture.harness_head)) found.push(`${name}: capture requires full control and harness commit identities`);
+            if (!capture.game_version.trim()) found.push(`${name}: capture.game_version is missing`);
+            if (recorded.clock_basis !== "capture") found.push(`${name}: capture provenance requires the capture clock basis`);
+        }
         if (name in built) {
             // a hand-made clock is no selection and has no pin: the recording names the clock it ran, and it has to be
             // the clock of the blueprint the test builds
@@ -159,4 +191,26 @@ export function clockToRun(controls: string, name: string): string | undefined {
     const entry = (JSON.parse(fs.readFileSync(controls, "utf8")) as ClockControls).cases[name];
     if (!entry?.recorded.clock_sha256) return undefined;
     return entry.recorded.carried ? entry.generation?.clock_sha256 : entry.recorded.clock_sha256;
+}
+
+/** Checks both active and superseded cold trajectories, retaining missing-clock and unused-clock detection. */
+export function coldClockReferenceMismatches(clocks: Record<string, unknown>, runs: Record<string, {clock: string}>, historical: Record<string, {clock: string}> = {}): string[] {
+    const used = new Set([...Object.values(runs), ...Object.values(historical)].map(run => run.clock));
+    return [
+        ...[...used].filter(key => !Object.prototype.hasOwnProperty.call(clocks, key)).map(key => `${key}: run names a missing clock`),
+        ...Object.keys(clocks).filter(key => !used.has(key)).map(key => `${key}: clock has no current or historical run`),
+    ];
+}
+
+/** A known historical capture keeps its identity, distinct from the current pin and consistent with its old summary. */
+export function historicalPinMismatches(history: ClockHistory["cases"], current: ClockControls["cases"]): string[] {
+    const found: string[] = [];
+    for (const [name, entries] of Object.entries(history)) for (const [index, entry] of entries.entries()) {
+        if (entry.recorded.clock_sha256 === undefined) continue; // No identity was recovered for these older recordings.
+        const label = `${name}[${index}]`;
+        found.push(...pinMismatches({[label]: entry}));
+        if (!current[name]) found.push(`${label}: no current case for the historical recording`);
+        else if (current[name].generation?.clock_sha256 === entry.recorded.clock_sha256) found.push(`${label}: historical capture still names the active pin`);
+    }
+    return found;
 }

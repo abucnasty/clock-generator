@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.26.0] - 2026-11-01
+
+### Changed
+- Where a stable clock still has wake-ups, observed wake windows and shifted swings now look for one with fewer, on clock periods up to 480 ticks.
+- When clocks tie on wake-ups, the one that recovers sooner after inputs stop or outputs back up is picked.
+- Wake-ups are no longer counted for an inserter whose arm is still swinging back from its drop, which the game does not wake, so some builds get another clock.
+- When no clock holds the target rate, a stable clock that runs over it is picked before an unstable one nearer to it, and the page says how far over it runs.
+
+### Removed
+- All results at once is no longer offered for a recycler's rare results: Results in turn, with fewer wake-ups, stays.
+- A clock with a subtick clock is no longer also listed rounded down to whole ticks.
+- The other output swing counts and fractional swings are no longer also listed with shared windows; batched swings keeps its shared-windows clock.
+
+### Fixed
+- A clock for a recycler whose results come back into it is now also tried with a run of results above their mean, so a clock that would come up short in the game is no longer called stable.
+- The most the Items per Second field allows now counts the inserters, belts and hands as well as the machines' speed, so it no longer accepts a rate that Check then refuses.
+
 ## [0.25.0] - 2026-10-28
 
 ### Changed

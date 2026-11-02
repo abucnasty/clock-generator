@@ -317,6 +317,8 @@ export { computeMachineFacts } from './entities/traits/machine-facts-of';
 export type { ComputeMachineFactsParams } from './entities/traits/machine-facts-of';
 export { computeMachineTargetRates } from './crafting/machine-target-rates';
 export type { MachineTargetRate } from './crafting/machine-target-rates';
+export { targetRateMaxOf } from './crafting/feasibility/max-rate';
+export type { TargetRateMax } from './crafting/feasibility/max-rate';
 export type { ClockInsight, MachineFactsEntry, SwingComparison } from './crafting/insights';
 export type { BackpressureLossVerdict } from './crafting/backpressure-loss';
 export { whyNotStable, whyNotStableClockOf } from './crafting/why-not-stable';

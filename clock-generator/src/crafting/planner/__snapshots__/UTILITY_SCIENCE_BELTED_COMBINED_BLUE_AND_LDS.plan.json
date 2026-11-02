@@ -1,0 +1,110 @@
+{
+  "schema": 1,
+  "sample": "UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS",
+  "target": {
+    "item": "utility-science-pack",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 120,
+      "denominator": 7
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "belt:1/lane:1#flying-robot-frame",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:1/lane:2#flying-robot-frame",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:3/lane:1#low-density-structure",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:3/lane:2#processing-unit",
+      "kind": "nothing-drops-on"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:1",
+        "belt:2/lane:1#utility-science-pack"
+      ],
+      "edges": [
+        "inserter:1/flying-robot-frame",
+        "inserter:2/utility-science-pack",
+        "inserter:3/low-density-structure",
+        "inserter:3/processing-unit"
+      ],
+      "periods": [
+        {"swings":3,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":168,"denominator":1},"cycles":2,"period_ticks":336,"kept":true},
+        {"swings":4,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":224,"denominator":1},"cycles":3,"period_ticks":672,"kept":true},
+        {"swings":5,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":280,"denominator":1},"cycles":6,"period_ticks":1680,"kept":true},
+        {"swings":6,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":336,"denominator":1},"cycles":1,"period_ticks":336,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":112,"denominator":1},"cycles":3,"period_ticks":336,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":56,"denominator":1},"cycles":6,"period_ticks":336,"kept":true},
+        {"swings":null,"fractional":true,"listed_as":"fractional","pruned":{"rule":"cycle-refused","terms":{"reason":"Cannot satisfy fractional swing constraint: sub-cycle 1 requires 3 swings, but maximum allowed is 2 due to insertion limits. Total swings: 5, cycle multiplier: 2."}}}
+      ],
+      "duty": [
+        {
+          "producer": "machine:utility-science-pack",
+          "members": [
+            "machine:1"
+          ],
+          "crafts_needed": {
+            "numerator": 20,
+            "denominator": 7
+          },
+          "crafts_capacity": {
+            "numerator": 2100260416666667,
+            "denominator": 700000000000000
+          },
+          "duty": {
+            "numerator": 2000000000000000,
+            "denominator": 2100260416666667
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 3,
+    "fractional": false,
+    "listed_from": {
+      "swings": 3,
+      "planned": 3,
+      "higher_up_to_ticks": 2400
+    },
+    "main_period": {
+      "ticks": 336,
+      "exact": {
+        "numerator": 336,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 168,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 2
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 2,
+      "override_lcm": null,
+      "effective_lcm": 2
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "result_windows": null
+}
