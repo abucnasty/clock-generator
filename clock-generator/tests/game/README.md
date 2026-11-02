@@ -45,6 +45,35 @@ Missing Factorio/save settings cause skips; a skipped test has not verified the 
 
 For verification appropriate to other changes, see the [contributor guide](../../../CONTRIBUTING.md).
 
+## Recording cache
+
+A game test that asks for a recording the game already made does not start the game again. `recordInFactorio` keeps each
+recording under a key and reads it back when the key is the same; the test's own assertions run on it as on a fresh one.
+The key is a hash of everything the game is given: the game's executable and the names and sizes of its data files, the
+save, the mods the harness copies in (the recorder and the sidecar), the harness's own sources, a protocol number, and every
+option of the run but where it writes to (scaffold, clock and its schedule, config, probe script with the helpers it
+composes, seeds, ticks, speed and the rest, so an option added later is in the key without being named). A game that makes
+several builds one after the other (`CachedHarnessSession`) keys each build on the builds before it. What cannot be read or
+told (a missing file, a config that is no plain data) is not guessed: the game runs. A run that fails is never kept, a
+watched run is never read or kept, and a hit leaves no game log (`work_dir` gets the recording and the files of
+`script-output`).
+
+- **Store:** `~/.cache/clock-generator/game-recordings/` (`$XDG_CACHE_HOME` is honoured), outside git and the temporary
+  folder, so it survives a reboot. `CLOCK_RECORDING_CACHE_DIR=<folder>` puts it elsewhere. An entry unused for 30 days is
+  removed when another is stored. Entries are compressed; a scaffold build is about 1 MB.
+- **Cold run:** `CLOCK_RECORDING_CACHE=off` starts the game for every recording and keeps nothing; `=refresh` also starts the
+  game for every recording and replaces what the store holds. Keep one cold pass per release. A value other than `on`,
+  `off` and `refresh` counts as `off`.
+- **What happened:** `CLOCK_RECORDING_CACHE_LOG=<file>` appends a line per recording: `hit`, `miss`, `stored`, `uncached`.
+- **Opting out:** `cache: false` in the options of a run. `npm run record`, `scripts/record-clock.js`, `scripts/capture-probe.js` and
+  `scripts/rule-count-game-check.js` do; `scripts/native/run-lane.sh` sets `CLOCK_RECORDING_CACHE=off` in record mode. A native
+  check that proves a new clock in the game uses one of these.
+
+A change to the key's inputs makes a miss, which runs the game as before and stores the result. The harness's sources are
+part of the key, so a change to `src/harness/` starts every recording again; the files outside it that the harness depends on
+are named in `HOST_SOURCES` (`factorio-harness.ts`), and a change elsewhere in the engine that alters what the harness
+does needs a bump of `RECORDING_CACHE_PROTOCOL`.
+
 ## Bounded parallel runs
 
 The default game suite remains sequential. Independent controls for the same mechanics question may run in
