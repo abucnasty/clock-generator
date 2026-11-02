@@ -17,6 +17,8 @@ import { pickupLaneLength } from "../../common/belt-pickup-layout";
 import { itemsPutInto, PutIntoView } from "../../entities/chest/items-put-into";
 import { ContainerStorage } from "../../simulation/components/container-storage";
 import { MiningDrillArchetype } from "../../simulation/archetypes/mining-drill";
+import { DEFAULT_INSERTER_DISPATCH, InserterDispatch } from "../../simulation/dispatch";
+import { InserterScheduling } from "../../simulation/inserter-scheduling";
 
 /** Initial moving-lane phases by inserter id, in the pickup model's public 1/32-tile units. */
 export type MovingPickupPhases = ReadonlyMap<string, readonly [number, number]>;
@@ -35,6 +37,10 @@ export class SimulationContext {
 
     static fromConfig = createSimulationContextFromConfig;
 
+    /** How a tick picks and orders the inserters it updates (simulation/dispatch.ts); set before the first World */
+    public inserter_dispatch: InserterDispatch = DEFAULT_INSERTER_DISPATCH;
+    private inserter_scheduling: InserterScheduling | null = null;
+
     constructor(
         public readonly tick_provider: MutableTickProvider,
         public readonly entity_registry: WritableEntityRegistry,
@@ -46,6 +52,20 @@ export class SimulationContext {
         /** In what order inserters that compete for one machine's product are updated where the turn rule cannot decide */
         public competing_takers_order: TakerOrder = DEFAULT_TAKER_ORDER,
     ) {}
+
+    /**
+     * The update list of the new dispatch, made at the first World and kept by every later one of this context, so a
+     * new run goes on from the list the last one left; null under "configured-order". The list starts as a build
+     * leaves it: every inserter active, the last built (the highest config id) first, as each one built goes to the
+     * front. A loaded save's order is not modelled.
+     */
+    public inserterScheduling(): InserterScheduling | null {
+        const dispatch = this.inserter_dispatch;
+        if (dispatch === "configured-order") return null;
+        return this.inserter_scheduling ??= new InserterScheduling(this,
+            [...this.inserters].sort((a, b) => b.entity_id.number - a.entity_id.number), () => {}, undefined,
+            {woken_in_walk: dispatch.woken_in_walk, leaves: dispatch.leaves});
+    }
 
     /** Observe one inserter without changing generation or simulation state. Ticks use this context's provider. */
     public traceInserter(id: number, options: InserterTraceOptions = {}): InserterTrace {

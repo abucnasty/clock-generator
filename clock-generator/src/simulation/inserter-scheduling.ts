@@ -2,12 +2,21 @@ import assert from "../common/assert";
 import type {SimulationContext} from "../crafting/sequence/simulation-context";
 import {EntityState} from "../state/entity-state";
 import {ActiveScheduler, ActiveSchedulerState, SchedulingEvent} from "./active-scheduler";
+import type {LeavesList, WokenInWalk} from "./dispatch";
 import type {InserterArchetype} from "./archetypes/inserter";
 import {WakeSubscriptions, WakeSubscriptionState} from "./wake-subscriptions";
 
 export interface InserterSchedulingState extends ActiveSchedulerState {
     readonly wake_subscriptions?: readonly WakeSubscriptionState[];
     readonly updating?: {entity: string; picked: boolean} | null;
+    /** With `leaves` "next-update": the members whose last update found them waiting, still in the list */
+    readonly leaving?: readonly string[];
+}
+
+/** The two points of the list the observations leave open (simulation/dispatch.ts) */
+export interface InserterSchedulingOptions {
+    readonly woken_in_walk?: WokenInWalk;
+    readonly leaves?: LeavesList;
 }
 
 /**
@@ -25,9 +34,13 @@ export class InserterScheduling {
     private readonly polling_sinks = new Set<string>();
     private readonly waits: WakeSubscriptions;
     private updating: {entity: string; pickups_before: number} | null = null;
+    private readonly leaves: LeavesList;
+    private readonly leaving = new Set<string>();
 
     constructor(context: SimulationContext, order: readonly InserterArchetype[],
-        observe: (event: SchedulingEvent) => void = () => {}, state?: InserterSchedulingState) {
+        observe: (event: SchedulingEvent) => void = () => {}, state?: InserterSchedulingState,
+        options: InserterSchedulingOptions = {}) {
+        this.leaves = options.leaves ?? "after-update";
         this.by_id = new Map(order.map(inserter => [inserter.entity_id.id, inserter]));
         const initial = state ?? {active_order: [...this.by_id.keys()], remaining_updates: null, pending_next_phase: []};
         assert([...initial.active_order, ...(initial.remaining_updates ?? []), ...initial.pending_next_phase]
@@ -35,7 +48,11 @@ export class InserterScheduling {
         this.scheduler = new ActiveScheduler(initial, event => {
             observe(event);
             for (const observer of this.observers) observer(event);
-        });
+        }, options.woken_in_walk ?? "next-tick");
+        for (const id of state?.leaving ?? []) {
+            assert(this.by_id.has(id), "Leaving state refers to an unknown inserter");
+            this.leaving.add(id);
+        }
         this.waits = new WakeSubscriptions(state?.wake_subscriptions);
         assert(this.waits.state().every(channel => channel.entities.every(id => this.by_id.has(id))),
             "Wake state refers to an unknown inserter");
@@ -75,6 +92,7 @@ export class InserterScheduling {
 
     private alarm(id: string, cause: string): void {
         this.waits.clear(id);
+        this.leaving.delete(id);
         this.scheduler.deliverAlarm(id, cause, true);
     }
 
@@ -105,6 +123,12 @@ export class InserterScheduling {
         // notification semantics exist; pure clock lookahead does not perform an extra latched read.
         if (!inserter.control.looks_ahead) return;
         const reason = inserter.hand.sleepReason();
+        if (this.leaves === "next-update" && reason !== null && !this.leaving.has(id)) {
+            // stays for one more update; an Alarm meanwhile finds it active and keeps its place
+            if (this.waitsWith(id, reason)) this.leaving.add(id);
+            return;
+        }
+        this.leaving.delete(id);
         const source = this.machine_sources.get(id), sink = this.machine_sinks.get(id);
         if (reason === "source-empty" && source !== undefined) {
             // A successful partial take checks both ends before sleep. Ports without complete
@@ -121,6 +145,13 @@ export class InserterScheduling {
             this.waits.register(id, source === undefined ? [] : [source]);
             this.scheduler.deactivate(id, reason);
         }
+    }
+
+    /** Whether a sleep with this reason leaves the list (the reasons completeUpdate deactivates on) */
+    private waitsWith(id: string, reason: string): boolean {
+        if (reason === "source-empty") return this.machine_sources.has(id);
+        if (reason === "destination-refused") return this.machine_sinks.has(id);
+        return reason === "control-disabled";
     }
 
     /** Finish-dispatch edges arrive after entity Updates and are eligible in the next phase. */
@@ -140,7 +171,9 @@ export class InserterScheduling {
 
     public endUpdates(): void { this.scheduler.endUpdates(); }
     public state(): InserterSchedulingState {
-        return {...this.scheduler.state(), wake_subscriptions: this.waits.state(), updating: this.updating === null ? null : {
+        return {...this.scheduler.state(), wake_subscriptions: this.waits.state(),
+            ...(this.leaving.size > 0 && {leaving: [...this.leaving].sort()}),
+            updating: this.updating === null ? null : {
             entity: this.updating.entity,
             picked: this.by_id.get(this.updating.entity)!.inserter_state.items_picked_up > this.updating.pickups_before,
         }};

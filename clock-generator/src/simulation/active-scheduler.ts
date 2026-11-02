@@ -1,4 +1,5 @@
 import assert from "../common/assert";
+import type {WokenInWalk} from "./dispatch";
 
 export interface SchedulingEvent {
     readonly event: "Alarm" | "Activation" | "Deactivation" | "Update";
@@ -14,16 +15,20 @@ export interface ActiveSchedulerState {
 }
 
 /**
- * A local scheduling policy for projected native fixtures, not yet connected to World.
- * New attachments precede older members; attachments during an open Update phase wait for the next phase.
+ * A local scheduling policy for projected native fixtures; the new dispatch (simulation/dispatch.ts) runs it in World.
+ * New attachments precede older members; attachments during an open Update phase wait for the next phase, or with
+ * `woken_in_walk` "same-tick" are updated after the phase's remaining members when not yet updated in it.
  * The caller decides activation eligibility and deactivation outcomes independently of hand/control state.
  */
 export class ActiveScheduler {
     private active_order: string[];
     private remaining_updates: string[] | null;
     private readonly pending_next_phase: Set<string>;
+    /** The members updated in the open phase, for "same-tick" attachments; not behavior state between phases */
+    private readonly updated_in_phase = new Set<string>();
 
-    constructor(state: ActiveSchedulerState, private readonly observe: (event: SchedulingEvent) => void = () => {}) {
+    constructor(state: ActiveSchedulerState, private readonly observe: (event: SchedulingEvent) => void = () => {},
+        private readonly woken_in_walk: WokenInWalk = "next-tick") {
         assert(new Set(state.active_order).size === state.active_order.length, "Duplicate active member");
         assert(new Set(state.pending_next_phase).size === state.pending_next_phase.length, "Duplicate pending member");
         assert(state.pending_next_phase.every(entity => state.active_order.includes(entity)), "Pending member is inactive");
@@ -47,7 +52,10 @@ export class ActiveScheduler {
     public activate(entity: string, cause: string): void {
         if (this.isActive(entity)) return;
         this.active_order.unshift(entity);
-        if (this.remaining_updates !== null) this.pending_next_phase.add(entity);
+        if (this.remaining_updates !== null) {
+            if (this.woken_in_walk === "same-tick" && !this.updated_in_phase.has(entity)) this.remaining_updates.push(entity);
+            else this.pending_next_phase.add(entity);
+        }
         this.observe({event: "Activation", entity, cause});
     }
 
@@ -61,6 +69,7 @@ export class ActiveScheduler {
     public beginUpdates(): void {
         assert(this.remaining_updates === null, "Update phase is already open");
         this.pending_next_phase.clear();
+        this.updated_in_phase.clear();
         this.remaining_updates = [...this.active_order];
     }
 
@@ -70,6 +79,7 @@ export class ActiveScheduler {
         while (this.remaining_updates.length > 0) {
             const entity = this.remaining_updates.shift()!;
             if (!this.isActive(entity) || this.pending_next_phase.has(entity)) continue;
+            if (this.woken_in_walk === "same-tick") this.updated_in_phase.add(entity);
             this.observe({event: "Update", entity, cause: "scheduled-entity-update"});
             return entity;
         }
@@ -94,6 +104,6 @@ export class ActiveScheduler {
     }
 
     public clone(observe: (event: SchedulingEvent) => void = () => {}): ActiveScheduler {
-        return new ActiveScheduler(this.state(), observe);
+        return new ActiveScheduler(this.state(), observe, this.woken_in_walk);
     }
 }

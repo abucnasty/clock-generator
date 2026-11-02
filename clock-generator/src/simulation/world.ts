@@ -7,6 +7,7 @@ import { EntityState } from "../state";
 import { ContainerStorage } from "./components/container-storage";
 import { TransportBelt } from "./archetypes/transport-belt";
 import { MiningDrillArchetype } from "./archetypes/mining-drill";
+import type { InserterScheduling } from "./inserter-scheduling";
 
 /**
  * The entities a tick runs, one array for each archetype, each in the order the phase table runs it
@@ -35,6 +36,11 @@ export class World {
         public readonly belts: readonly TransportBelt[],
         /** In config order; a container has no step of its own in a tick yet */
         public readonly containers: readonly ContainerStorage[],
+        /**
+         * The new dispatch's update list (simulation/dispatch.ts), or null: then the inserters phase runs `inserters`
+         * in their order, every one every tick
+         */
+        public readonly scheduling: InserterScheduling | null,
     ) {}
 
     public static of(context: SimulationContext): World {
@@ -46,6 +52,7 @@ export class World {
             [...context.machines],
             states.filter(EntityState.isBelt),
             states.filter(ContainerStorage.is),
+            context.inserterScheduling(),
         );
     }
 }
