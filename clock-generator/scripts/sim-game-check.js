@@ -146,7 +146,7 @@ const dispatchEnv = key => ({ CLOCK_NEW_DISPATCH: key === "on" ? "1" : "configur
  * What the recording's first sample gives the simulator to start from, and what it cannot give. The machines' contents (inputs and
  * outputs by item), crafting bar and productivity bar and the items in each inserter's hand are read at sample 0 (each hand starts
  * idle). A productivity bar shown full holds what is over it, which is worked back from a later sample (verification/recorded-bar.ts);
- * where it cannot be, the seed is incomplete. What the recording does not hold, or the start cannot take (fuel, a drill's bars), is listed under "not_seeded"; the
+ * where it cannot be, the bar starts at the 1 shown and "not_seeded" names it. What the recording does not hold, or the start cannot take (fuel, a drill's bars), is listed under "not_seeded"; the
  * simulator assumes for it what filling the machine, a full belt and an infinite chest leave.
  */
 function seedOf(game, gameMatch, config, clock, staged) {
@@ -187,10 +187,10 @@ function seedOf(game, gameMatch, config, clock, staged) {
         ...(fuel.length ? [`fuel slots and the burning fuel item: the start has no way to put fuel in (${fuel.join("; ")})`] : []),
         ...(both.length ? [`outputs of an item the machine also takes: ${both.join(", ")}`] : []),
         ...(drills ? [`mining drills: ${drills} in the build, whose mining and productivity bars start as filling leaves them`] : []),
-        ...(bars_unknown.length ? [`a productivity bar shown full, whose part over a full bar could not be worked back: ${bars_unknown.join("; ")}`] : []),
+        ...(bars_unknown.length ? [`a productivity bar shown full whose part over 1 could not be worked back, seeded at the 1 shown: ${bars_unknown.join("; ")}`] : []),
         "belts (assumed full, as the simulator keeps them), chest contents (the recording has none: infinite, or as filling leaves them), a machine's finished-but-not-placed products (start empty)",
     ];
-    return { ...base, applied: true, complete: fuel.length === 0 && both.length === 0 && drills === 0 && bars_unknown.length === 0, position: game.clock.values[0], start_stock, start_hands, hands_not_empty: hands.length, bars_worked_back, not_seeded };
+    return { ...base, applied: true, complete: fuel.length === 0 && both.length === 0 && drills === 0, position: game.clock.values[0], start_stock, start_hands, hands_not_empty: hands.length, bars_worked_back, not_seeded };
 }
 
 /**
