@@ -145,14 +145,17 @@ const dispatchEnv = key => ({ CLOCK_NEW_DISPATCH: key === "on" ? "1" : "configur
 /**
  * What the recording's first sample gives the simulator to start from, and what it cannot give. The machines' contents (inputs and
  * outputs by item), crafting bar and productivity bar and the items in each inserter's hand are read at sample 0 (each hand starts
- * idle). What the recording does not hold, or the start cannot take (fuel, a drill's bars), is listed under "not_seeded"; the
+ * idle). A productivity bar shown full holds what is over it, which is worked back from a later sample (verification/recorded-bar.ts);
+ * where it cannot be, the bar starts at the 1 shown and "not_seeded" names it. What the recording does not hold, or the start cannot take (fuel, a drill's bars), is listed under "not_seeded"; the
  * simulator assumes for it what filling the machine, a full belt and an infinite chest leave.
  */
 function seedOf(game, gameMatch, config, clock, staged) {
     const base = { applied: false, source: "the recording's first sample" };
     if (staged) return { ...base, reason: "staged start: the game began with the clock on empty machines, which the cold run starts from" };
     if (game.clock === undefined) return { ...base, reason: "the recording has no clock" };
-    const start_stock = {}, fuel = [], both = [];
+    const { Machine } = dist("entities/machine/machine.js");
+    const { barAtFirstSample } = dist("verification/recorded-bar.js");
+    const start_stock = {}, fuel = [], both = [], bars_worked_back = [], bars_unknown = [];
     for (const machine of game.machines) {
         const id = gameMatch.machines.get(machine.id);
         if (id === undefined) continue;
@@ -162,7 +165,12 @@ function seedOf(game, gameMatch, config, clock, staged) {
         // an item the machine takes and makes is kept apart from its output by the simulator, and the start names it once: the ingredient
         for (const item of inputs) { if (outputs.includes(item)) both.push(`machine:${id} ${item}`); items[item] = machine.samples.inputs[item][0]; }
         if (machine.samples.fuel !== undefined && Object.keys(machine.samples.fuel).length > 0) fuel.push(`machine:${id} ${Object.entries(machine.samples.fuel).map(([item, list]) => `${item} ${list[0]}`).join(", ")}`);
-        start_stock[`machine:${id}`] = { items, crafting_progress: machine.samples.crafting_progress[0], bonus_progress: machine.samples.bonus_progress[0] };
+        // the game shows a full productivity bar as 1 and keeps what is over it: worked back from a later sample (verification/recorded-bar.ts)
+        const built = Machine.fromConfig(config.machines.find(it => it.id === id));
+        const bar = barAtFirstSample(machine.samples, { crafts_per_tick: built.crafting_rate.crafts_per_tick, bonus_per_craft: built.bonus_productivity_rate.bonus_per_craft });
+        if (bar.bar === null) bars_unknown.push(`machine:${id} (${bar.reason})`);
+        else if (bar.from_sample > 0) bars_worked_back.push(`machine:${id} ${bar.bar} (shown ${machine.samples.bonus_progress[0]}, worked back from sample ${bar.from_sample})`);
+        start_stock[`machine:${id}`] = { items, crafting_progress: machine.samples.crafting_progress[0], bonus_progress: bar.bar ?? machine.samples.bonus_progress[0] };
     }
     // the hands as the recording holds them at its first sample (the config's inserters only); each starts idle: where the arm is in its swing is not recorded
     const start_hands = {};
@@ -179,9 +187,10 @@ function seedOf(game, gameMatch, config, clock, staged) {
         ...(fuel.length ? [`fuel slots and the burning fuel item: the start has no way to put fuel in (${fuel.join("; ")})`] : []),
         ...(both.length ? [`outputs of an item the machine also takes: ${both.join(", ")}`] : []),
         ...(drills ? [`mining drills: ${drills} in the build, whose mining and productivity bars start as filling leaves them`] : []),
+        ...(bars_unknown.length ? [`a productivity bar shown full whose part over 1 could not be worked back, seeded at the 1 shown: ${bars_unknown.join("; ")}`] : []),
         "belts (assumed full, as the simulator keeps them), chest contents (the recording has none: infinite, or as filling leaves them), a machine's finished-but-not-placed products (start empty)",
     ];
-    return { ...base, applied: true, complete: fuel.length === 0 && both.length === 0 && drills === 0, position: game.clock.values[0], start_stock, start_hands, hands_not_empty: hands.length, not_seeded };
+    return { ...base, applied: true, complete: fuel.length === 0 && both.length === 0 && drills === 0, position: game.clock.values[0], start_stock, start_hands, hands_not_empty: hands.length, bars_worked_back, not_seeded };
 }
 
 /**
@@ -570,7 +579,7 @@ async function check() {
         // the seeded run is judged where there is one; the cycle decides how its periods are judged as it does for the cold one, from both runs' cycles together
         const seededCycleMean = seed.applied && Object.values(seededCycles).some(it => it.game > 1 || it.sim > 1);
         const seedStamp = seed.applied
-            ? { applied: true, complete: seed.complete, source: seed.source, position_of_first_sample: seed.position, sim_tick_0_is_game_sample: 1, not_seeded: seed.not_seeded, machines_seeded: Object.keys(seed.start_stock).length, hands_not_empty: seed.hands_not_empty }
+            ? { applied: true, complete: seed.complete, source: seed.source, position_of_first_sample: seed.position, sim_tick_0_is_game_sample: 1, not_seeded: seed.not_seeded, machines_seeded: Object.keys(seed.start_stock).length, hands_not_empty: seed.hands_not_empty, bars_worked_back: seed.bars_worked_back }
             : { applied: false, source: seed.source, reason: seed.reason };
         for (const key of Object.keys(DISPATCHES)) {
             const ctx = { config, game, gameMatch, clock, period: clock.clock_ticks, staged, groups: byWindows };
