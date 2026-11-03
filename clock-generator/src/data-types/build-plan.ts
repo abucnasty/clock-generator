@@ -40,10 +40,15 @@ export type PeriodListing =
     /** the main clock with fractional swings switched the other way */
     | "fractional";
 
-/** P-limit: a period over the most ticks one simulated run goes on for cannot be simulated */
+/**
+ * P-limit: a period over the most ticks one simulated run goes on for cannot be simulated, nor, under whole-counter
+ * checks (the new dispatch), a fractional period whose whole counter is
+ */
 export interface PeriodLimitTerms {
     readonly period_ticks: number;
     readonly limit_ticks: number;
+    /** The ticks of the period's whole counter (p of p/q), where it is the counter that is over the limit */
+    readonly counter_ticks?: number;
 }
 
 interface PeriodChoiceHead {
