@@ -116,7 +116,7 @@ async function simulate() {
     const offset = Number(opt("--sim-offset") ?? (staged ? STAGED_SIM_OFFSET : SIMULATED_TICK_TO_CLOCK_POSITION));
     const windows = clock.windows;
     const shift = seed === undefined ? 0 : (((offset - (seed.position + 1)) % clock.period) + clock.period) % clock.period;
-    const start = seed !== undefined ? { keep_output_buffers: true, warmup_periods: 0, start_stock: seed.start_stock, main_clock_shift: shift } : staged ? { warmup_periods: 0 } : {};
+    const start = seed !== undefined ? { keep_output_buffers: true, warmup_periods: 0, start_stock: seed.start_stock, start_hands: seed.start_hands, main_clock_shift: shift } : staged ? { warmup_periods: 0 } : {};
     const stock = simulateClockOnly(config, windows, clock.period, Number(opt("--periods")), quiet, start);
     const recording = recordingOfStock(stock, config, clock.clock_ticks);
     // the rule on the simulator's own states, read from its stock (a recording of it leaves out what the rule reads of a belt's room and a machine's placed results)
@@ -144,10 +144,9 @@ const dispatchEnv = key => ({ CLOCK_NEW_DISPATCH: key === "on" ? "1" : "configur
 
 /**
  * What the recording's first sample gives the simulator to start from, and what it cannot give. The machines' contents (inputs and
- * outputs by item), crafting bar and productivity bar are read at sample 0. The engine starts every inserter with an empty hand
- * whatever the recording says (start_stock), so the hands that are not empty at sample 0 are counted and listed, not given. What the
- * recording does not hold, or the start cannot take, is listed under "not_seeded"; the simulator assumes for it what filling the
- * machine, a full belt and an infinite chest leave.
+ * outputs by item), crafting bar and productivity bar and the items in each inserter's hand are read at sample 0 (each hand starts
+ * idle). What the recording does not hold, or the start cannot take (fuel, a drill's bars), is listed under "not_seeded"; the
+ * simulator assumes for it what filling the machine, a full belt and an infinite chest leave.
  */
 function seedOf(game, gameMatch, config, clock, staged) {
     const base = { applied: false, source: "the recording's first sample" };
@@ -165,18 +164,24 @@ function seedOf(game, gameMatch, config, clock, staged) {
         if (machine.samples.fuel !== undefined && Object.keys(machine.samples.fuel).length > 0) fuel.push(`machine:${id} ${Object.entries(machine.samples.fuel).map(([item, list]) => `${item} ${list[0]}`).join(", ")}`);
         start_stock[`machine:${id}`] = { items, crafting_progress: machine.samples.crafting_progress[0], bonus_progress: machine.samples.bonus_progress[0] };
     }
-    const hands = game.inserters.flatMap(it => { const id = gameMatch.inserters.get(it.id); const held = it.samples.held_count[0]; return id !== undefined && held > 0 ? [`inserter:${id} ${held}`] : []; });
+    // the hands as the recording holds them at its first sample (the config's inserters only); each starts idle: where the arm is in its swing is not recorded
+    const start_hands = {};
+    for (const it of game.inserters) {
+        const id = gameMatch.inserters.get(it.id);
+        const held = it.samples.held_count[0];
+        const item = it.samples.held_item.length > 0 && it.samples.held_item[0][0] === 0 ? it.samples.held_item[0][1] : undefined;
+        if (id !== undefined && held > 0 && item !== undefined) start_hands[`inserter:${id}`] = { item_name: item, quantity: held };
+    }
+    const hands = Object.entries(start_hands).map(([id, hand]) => `${id} ${hand.quantity} ${hand.item_name}`);
     const drills = (config.drills ?? []).length;
     const not_seeded = [
-        `inserter hands: the start gives every inserter an empty hand; ${hands.length} of ${game.inserters.length} held something at the first sample${hands.length ? ` (${hands.join(", ")})` : ""}`,
+        `inserter swing: ${hands.length} of ${game.inserters.length} recorded inserters held items at the first sample${hands.length ? ` (${hands.join(", ")})` : ""}; each hand is given and starts idle, since where an arm is in its swing is not recorded`,
         ...(fuel.length ? [`fuel slots and the burning fuel item: the start has no way to put fuel in (${fuel.join("; ")})`] : []),
         ...(both.length ? [`outputs of an item the machine also takes: ${both.join(", ")}`] : []),
         ...(drills ? [`mining drills: ${drills} in the build, whose mining and productivity bars start as filling leaves them`] : []),
         "belts (assumed full, as the simulator keeps them), chest contents (the recording has none: infinite, or as filling leaves them), a machine's finished-but-not-placed products (start empty)",
     ];
-    // a start with something the recording has and the simulator cannot take is run and reported, but not judged: what it loses (a hand's items, the fuel, a drill's bars)
-    // makes a transient of its own, which is not the game's
-    return { ...base, applied: true, complete: hands.length === 0 && fuel.length === 0 && both.length === 0 && drills === 0, position: game.clock.values[0], start_stock, hands_not_empty: hands.length, not_seeded };
+    return { ...base, applied: true, complete: fuel.length === 0 && both.length === 0 && drills === 0, position: game.clock.values[0], start_stock, start_hands, hands_not_empty: hands.length, not_seeded };
 }
 
 /**
@@ -525,7 +530,7 @@ async function check() {
         const gameMatch = matchRecordingToConfig(game, config);
         const seed = seedOf(game, gameMatch, config, clock, staged);
         const seedFile = path.join(work, "seed.json");
-        if (seed.applied) fs.writeFileSync(seedFile, JSON.stringify({ position: seed.position, start_stock: seed.start_stock }));
+        if (seed.applied) fs.writeFileSync(seedFile, JSON.stringify({ position: seed.position, start_stock: seed.start_stock, start_hands: seed.start_hands }));
         // the cold runs, and the seeded ones where the recording gives a seed; each under both dispatches
         const sims = {}, seededSims = {};
         await Promise.all(Object.keys(DISPATCHES).flatMap(key => [false, true].filter(seeded => !seeded || seed.applied).map(async seeded => {
