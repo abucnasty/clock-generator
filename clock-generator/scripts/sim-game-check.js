@@ -7,9 +7,14 @@
 // the game running a clock is laid against the simulator's run of the same clock under the old dispatch (configured order,
 // "off") and the new one (activation order, "on"), per inserter and per clock period, one kind at a time:
 //   wake-ups  the wake-up rule "kept-lists" (crafting/wake-ups.ts) on the game's recording and on each simulated one;
-//             pass: within WAKE_UPS_TOLERANCE of the game in every period, for every inserter
+//             pass: within WAKE_UPS_TOLERANCE of the game in every period, for every inserter. Where the states of the game's
+//             recording or of a simulated one repeat only after more than one period (the repeat cycle: the fewest whole periods
+//             after which every inserter's status and hand repeat at every tick, else all of them), the periods of the two are cut
+//             at other places of the cycle: then the mean a period over whole cycles is compared, pass within
+//             WAKE_UPS_CYCLE_TOLERANCE of the game's mean
 //   bins      the items the output inserters drop in each period; pass: within BINS_TOLERANCE of the game in every period
-//   hands     pickup and drop positions of every transfer, and the hand and status at every clock position; no pass/fail
+//   hands     pickup and drop positions of every transfer, and the hand and status at every clock position; pass (builds whose
+//             cycle is one period only): the hand equals the game's at HANDS_AGREEMENT of the positions; else no pass/fail
 //   windows   the positions an inserter is enabled at (an edge of its control behaviour); no pass/fail
 // Inserters whose windows are identical cannot be told apart by the clock; where only a swap of their roles matches, the
 // line says "matches with roles swapped". The first clock period of the recording is left out, as the scaffold tests leave
@@ -34,7 +39,9 @@ if (process.argv[3] !== undefined && !process.argv[3].startsWith("--")) process.
 const { ROOT, dist, quiet, loadSample } = require("./lib");
 
 const WAKE_UPS_TOLERANCE = 1; // wake-ups per inserter per period
+const WAKE_UPS_CYCLE_TOLERANCE = 0.05; // mean wake-ups a period over whole cycles, share of the game's (at least 1 a period as the base)
 const BINS_TOLERANCE = 0.005; // share of the game's items in a period
+const HANDS_AGREEMENT = 0.99; // share of positions at which an inserter's hand equals the game's (builds whose cycle is one period)
 const RULE = "kept-lists";
 const DEFAULT_SIM_OFFSET = 3; // SIMULATED_TICK_TO_CLOCK_POSITION
 // measured on the staged agricultural recording: with 3 every one of its 745 enable edges of every inserter sits 1 tick before the game's
@@ -42,6 +49,9 @@ const STAGED_SIM_OFFSET = 4;
 const TRUE_COUNT = { // clock hash prefix: what checked the rule against the game's own wake-ups
     "3bc059b3": "front-exit normal mirrored backed: wake-ups read in the running game",
     "ba2c26f4": "electromagnetic science: wake-ups read in the running game",
+};
+const KNOWN_MISS = { // clock hash prefix: a game side the rule's count is known to miss, kept in the output and left out of "closer"
+    "3450755e": "biochamber: the count on a recording is a known miss (docs/wake-ups.md)",
 };
 const DISPATCHES = { off: "configured-order", on: "activation-order" };
 
@@ -158,7 +168,14 @@ function wakesFromTicks(wake_ticks, periods) {
 }
 
 /** by config id: the recording's series of each inserter */
+const seriesCache = new WeakMap();
 function insertersByConfigId(recording, match) {
+    if (seriesCache.has(recording)) return seriesCache.get(recording);
+    const series = readInserters(recording, match);
+    seriesCache.set(recording, series);
+    return series;
+}
+function readInserters(recording, match) {
     const { expandChangeList } = dist("verification/recording.js");
     const { extractTransfers } = dist("verification/recording-history.js");
     const clock = recording.clock.values;
@@ -227,6 +244,35 @@ function agreement(game, sim, gamePeriods, simPeriods, field) {
 }
 const heldMismatches = (game, sim, gamePeriods, simPeriods) => { const a = agreement(game, sim, gamePeriods, simPeriods, "held"); return a.total - a.equal; };
 
+/** the fewest whole periods after which every inserter's status and hand repeat at every tick, over the periods given; all of them when none does */
+function cycleOf(series, ids, periods) {
+    const codes = new Map();
+    const code = status => { if (!codes.has(status)) codes.set(status, codes.size); return codes.get(status); };
+    const signatures = periods.map(period => ids.map(id => {
+        const it = series.get(id);
+        const states = [];
+        for (let i = period.start; i < period.end; i++) states.push(code(it.status[i]) * 1000 + it.held[i]);
+        return states.join(",");
+    }).join("|"));
+    const n = signatures.length;
+    for (let c = 1; c <= Math.floor(n / 2); c++) {
+        let repeats = true;
+        for (let p = 0; p + c < n && repeats; p++) repeats = signatures[p] === signatures[p + c];
+        if (repeats) return c;
+    }
+    return n;
+}
+/** the repeat cycles of the game's recording and of a simulated one, over the periods paired */
+function cyclesOf(game, gameMatch, simRecording, paired) {
+    const { matchOfSimulatedRecording } = dist("verification/simulated-recording.js");
+    const gameSeries = insertersByConfigId(game, gameMatch), simSeries = insertersByConfigId(simRecording, matchOfSimulatedRecording(simRecording));
+    const ids = [...gameSeries.keys()].filter(id => simSeries.has(id)).sort((a, b) => a - b);
+    const n = Math.min(paired.game.length, paired.sim.length);
+    return { game: cycleOf(gameSeries, ids, paired.game.slice(0, n)), sim: cycleOf(simSeries, ids, paired.sim.slice(0, n)) };
+}
+/** the mean of the whole cycles of a series a period (all of it where it holds none) */
+const meanOverCycles = (list, cycle) => { const length = Math.floor(list.length / cycle) * cycle || list.length; return length === 0 ? 0 : sum(list.slice(0, length)) / length; };
+
 // ---- one dispatch against the game ----
 
 function judge(ctx, simRecording, key) {
@@ -264,17 +310,22 @@ function judge(ctx, simRecording, key) {
         const swappedList = sel(simWake.get(`inserter:${mapping.get(id)}`) ?? zero, judgedIdx);
         const diffs = (a, b) => a.map((x, i) => Math.abs(x - b[i]));
         const worst = list => Math.max(0, ...list);
+        const gameMean = meanOverCycles(g, ctx.cycles.game);
+        const means = list => { const mean = meanOverCycles(list, ctx.cycles.sim); return { mean, rel_error: Math.abs(mean - gameMean) / Math.max(gameMean, 1) }; };
         const entry = {
             game: g, sim: labelled,
             max_diff: worst(diffs(g, labelled)), periods_over_tolerance: diffs(g, labelled).filter(d => d > WAKE_UPS_TOLERANCE).length,
+            game_mean: gameMean, sim_mean: means(labelled).mean, rel_error: means(labelled).rel_error,
         };
-        entry.pass = entry.periods_over_tolerance === 0;
-        // where the build's cycle is longer than the clock period, the periods of the two are cut at other places of it: the means say how far apart the rates are
-        entry.mean_diff = g.length === 0 ? 0 : (sum(labelled) - sum(g)) / g.length;
+        entry.mean_diff = entry.sim_mean - gameMean;
+        // builds that repeat over more than one period: the periods of the two are cut at other places of the cycle, so the means are judged
+        const passes = (list, relError) => ctx.cycle_mean ? relError <= WAKE_UPS_CYCLE_TOLERANCE : diffs(g, list).every(d => d <= WAKE_UPS_TOLERANCE);
+        entry.pass = passes(labelled, entry.rel_error);
         if (swapped(id)) {
-            const swappedPass = diffs(g, swappedList).every(d => d <= WAKE_UPS_TOLERANCE);
+            const swappedMeans = means(swappedList);
+            const swappedPass = passes(swappedList, swappedMeans.rel_error);
             entry.swapped_with = mapping.get(id);
-            entry.swapped = { sim: swappedList, max_diff: worst(diffs(g, swappedList)), pass: swappedPass };
+            entry.swapped = { sim: swappedList, max_diff: worst(diffs(g, swappedList)), sim_mean: swappedMeans.mean, rel_error: swappedMeans.rel_error, pass: swappedPass };
             entry.matches_with_roles_swapped = !entry.pass && swappedPass;
         }
         wake[id] = entry;
@@ -323,29 +374,35 @@ function judge(ctx, simRecording, key) {
         };
         const a = one(labelled);
         hands[id] = a.hands; windows[id] = a.windows;
+        hands[id].pass = ctx.cycle_mean ? null : a.hands.hand_agreement >= HANDS_AGREEMENT;
         if (swapped(id)) {
             const b = one(other);
             hands[id].swapped_with = mapping.get(id); hands[id].swapped = b.hands;
-            hands[id].matches_with_roles_swapped = b.hands.hand_agreement > a.hands.hand_agreement && b.hands.hand_agreement >= 0.99;
+            hands[id].matches_with_roles_swapped = b.hands.hand_agreement > a.hands.hand_agreement && b.hands.hand_agreement >= HANDS_AGREEMENT;
             windows[id].swapped = b.windows;
         }
     }
     const error = {
-        wake_ups: sum(ids.map(id => sum(wake[id].game.map((x, i) => Math.abs(x - wake[id].sim[i]))))),
-        wake_ups_mean: sum(ids.map(id => Math.abs(wake[id].mean_diff))),
+        // per period, or (builds that repeat over more than one period) the relative errors of the means
+        wake_ups: ctx.cycle_mean ? sum(ids.map(id => wake[id].rel_error)) : sum(ids.map(id => sum(wake[id].game.map((x, i) => Math.abs(x - wake[id].sim[i]))))),
         bins: sum(judgedIdx.map((p, i) => Math.abs(gameBins[p] - simBins[p]))),
         hands: sum(ids.map(id => 1 - (hands[id].hand_agreement ?? 0))),
         windows: sum(ids.map(id => windows[id].periods_with_other_enable_count + sum(Object.entries(windows[id].enable_delta).filter(([k]) => k !== "0").map(([, v]) => v)))),
     };
     return {
         dispatch: DISPATCHES[key], periods_compared: judgedIdx.length,
-        wake_ups: { tolerance: WAKE_UPS_TOLERANCE, rule: RULE, pass: ids.every(id => wake[id].pass), inserters: wake },
+        cycle: { game: ctx.cycles.game, sim: ctx.cycles.sim, wake_ups_judged_by: ctx.cycle_mean ? "mean a period over whole cycles" : "each period" },
+        wake_ups: ctx.cycle_mean
+            ? { tolerance: WAKE_UPS_CYCLE_TOLERANCE, rule: RULE, max_rel_error: Math.max(0, ...ids.map(id => wake[id].rel_error)), pass: ids.every(id => wake[id].pass), inserters: wake }
+            : { tolerance: WAKE_UPS_TOLERANCE, rule: RULE, pass: ids.every(id => wake[id].pass), inserters: wake },
         bins: { tolerance: BINS_TOLERANCE, ...bins },
-        hands: { pass: null, note: "distribution only", inserters: hands },
+        hands: ctx.cycle_mean
+            ? { pass: null, note: "distribution only: the build repeats over more than one period", inserters: hands }
+            : { pass: ids.every(id => hands[id].pass), tolerance: HANDS_AGREEMENT, inserters: hands },
         windows: { pass: null, note: "distribution only", inserters: windows },
         role_groups: groups.map(members => ({ inserters: members, simulated_as: members.map(id => mapping.get(id)) })),
         error,
-        pass: ids.every(id => wake[id].pass) && bins.pass,
+        pass: ids.every(id => wake[id].pass) && bins.pass && (ctx.cycle_mean || ids.every(id => hands[id].pass)),
     };
 }
 
@@ -390,24 +447,31 @@ async function check() {
             (byWindows[JSON.stringify(ranges)] ??= []).push(Number(entity.slice("inserter:".length)));
         }
         const state = cp.execFileSync("python3", [path.join(ROOT, "scripts", "blast", "key.py"), "--state", path.resolve(ROOT, "..")], { encoding: "utf8" }).trim();
-        const label = TRUE_COUNT[clock.hash.slice(0, 8)] !== undefined ? "true count" : "rule on recording";
+        const hash8 = clock.hash.slice(0, 8);
+        const label = KNOWN_MISS[hash8] !== undefined ? "known miss (biochamber)" : TRUE_COUNT[hash8] !== undefined ? "true count" : "rule on recording";
+        const offsetUsed = Number(opt("--sim-offset") ?? (staged ? STAGED_SIM_OFFSET : DEFAULT_SIM_OFFSET));
         const stamp = {
-            tool: "sim-game-check", format: 1, build: name, game_side: label, game_side_basis: TRUE_COUNT[clock.hash.slice(0, 8)] ?? "the rule applied to the recording",
+            tool: "sim-game-check", format: 2, build: name, game_side: label, game_side_basis: KNOWN_MISS[hash8] ?? TRUE_COUNT[hash8] ?? "the rule applied to the recording",
+            closer_excluded: KNOWN_MISS[hash8] ?? null,
             engine_state: state,
             recording: { file: path.basename(opt("--recording")), sha256: sha256File(opt("--recording")), samples: game.sample_count, factorio_version: game.factorio_version ?? null },
             clock_hash: clock.hash, clock_period: clock.clock_ticks, clock_found_under: clock.found_under, clock_alternative: clock.alternative, clock_selected: clock.selected,
             staged, seed_items: opt("--seed-items") === undefined ? null : Number(opt("--seed-items")),
-            alignment: { simulated_tick_to_clock_position: Number(opt("--sim-offset") ?? (staged ? STAGED_SIM_OFFSET : DEFAULT_SIM_OFFSET)) },
+            alignment: { simulated_tick_to_clock_position: offsetUsed, default: DEFAULT_SIM_OFFSET, differs_from_default: offsetUsed !== DEFAULT_SIM_OFFSET },
             first_period_left_out: true,
         };
+        if (offsetUsed !== DEFAULT_SIM_OFFSET) console.log(`${name}: alignment offset ${offsetUsed} differs from the default ${DEFAULT_SIM_OFFSET}`);
+        // the periods of the two are judged one by one only where neither the game's recording nor either simulated one repeats over more than one
+        const pairs = {}, cycles = {};
+        for (const key of Object.keys(DISPATCHES)) { pairs[key] = pairPeriods(game, sims[key], staged); cycles[key] = cyclesOf(game, gameMatch, sims[key], pairs[key]); }
+        const cycleMean = Object.values(cycles).some(it => it.game > 1 || it.sim > 1);
         const periodsOf = {};
         for (const key of Object.keys(DISPATCHES)) {
-            const paired = pairPeriods(game, sims[key], staged);
-            const result = judge({ config, game, gameMatch, clock, period: clock.clock_ticks, paired, staged, groups: byWindows }, sims[key], key);
+            const result = judge({ config, game, gameMatch, clock, period: clock.clock_ticks, paired: pairs[key], staged, groups: byWindows, cycles: cycles[key], cycle_mean: cycleMean }, sims[key], key);
             const file = path.join(out, `${name}.${key}.json`);
             fs.writeFileSync(file, JSON.stringify({ ...stamp, flag: key, ...result }, null, 1) + "\n");
             periodsOf[key] = result;
-            console.log(`${name} ${key} (${DISPATCHES[key]}): wake-ups ${result.wake_ups.pass ? "pass" : "FAIL"}, bins ${result.bins.pass ? "pass" : "FAIL"} -> ${file}`);
+            console.log(`${name} ${key} (${DISPATCHES[key]}): wake-ups ${result.wake_ups.pass ? "pass" : "FAIL"} (${result.cycle.wake_ups_judged_by}; cycle ${result.cycle.game}/${result.cycle.sim}), bins ${result.bins.pass ? "pass" : "FAIL"}, hands ${result.hands.pass === null ? "-" : result.hands.pass ? "pass" : "FAIL"} -> ${file}`);
         }
     } finally {
         fs.rmSync(work, { recursive: true, force: true });
@@ -416,7 +480,7 @@ async function check() {
 
 // ---- the table of a folder of results ----
 
-const CLOSER_KINDS = ["wake_ups", "wake_ups_mean", "bins", "hands", "windows"];
+const CLOSER_KINDS = ["wake_ups", "bins", "hands", "windows"];
 function closer(off, on, kind) {
     const a = off.error[kind], b = on.error[kind];
     return Math.abs(a - b) < 1e-9 ? "same" : a < b ? "off" : "on";
@@ -432,34 +496,41 @@ const compact = list => {
 function summarise(folder) {
     const names = [...new Set(fs.readdirSync(folder).filter(f => f.endsWith(".off.json")).map(f => f.slice(0, -".off.json".length)))].sort();
     const lines = [];
-    const table = ["| build | game side | wake-ups: off / on | bins: off / on | closer: wake-ups | wake-ups by mean | bins | hands | windows |", "|---|---|---|---|---|---|---|---|---|---|"];
+    const table = ["| build | game side | judged by | wake-ups: off / on | bins: off / on | hands: off / on | closer: wake-ups | bins | hands | windows | alignment offset |", "|---|---|---|---|---|---|---|---|---|---|---|"];
+    const excluded = [];
     for (const name of names) {
         const off = JSON.parse(fs.readFileSync(path.join(folder, `${name}.off.json`), "utf8"));
         const on = JSON.parse(fs.readFileSync(path.join(folder, `${name}.on.json`), "utf8"));
         const word = r => r === null ? "-" : r ? "pass" : "FAIL";
-        table.push(`| ${name} | ${off.game_side} | ${word(off.wake_ups.pass)} / ${word(on.wake_ups.pass)} | ${word(off.bins.pass)} / ${word(on.bins.pass)} | ${CLOSER_KINDS.map(k => closer(off, on, k)).join(" | ")} |`);
-        lines.push("", `## ${name} (clock ${off.clock_hash.slice(0, 8)}, period ${off.clock_period}, game side: ${off.game_side}, ${off.periods_compared} periods compared)`);
+        const closers = off.closer_excluded ? CLOSER_KINDS.map(() => "-") : CLOSER_KINDS.map(k => closer(off, on, k));
+        if (off.closer_excluded) excluded.push(`${name}: ${off.closer_excluded}`);
+        const offset = off.alignment.simulated_tick_to_clock_position;
+        table.push(`| ${name} | ${off.game_side} | ${off.cycle.wake_ups_judged_by} (cycles game ${off.cycle.game}, sim ${off.cycle.sim} / ${on.cycle.sim}) | ${word(off.wake_ups.pass)} / ${word(on.wake_ups.pass)} | ${word(off.bins.pass)} / ${word(on.bins.pass)} | ${word(off.hands.pass)} / ${word(on.hands.pass)} | ${closers.join(" | ")} | ${offset}${off.alignment.differs_from_default ? ` (differs from ${off.alignment.default})` : ""} |`);
+        lines.push("", `## ${name} (clock ${off.clock_hash.slice(0, 8)}, period ${off.clock_period}, game side: ${off.game_side}, ${off.periods_compared} periods compared, alignment offset ${offset}${off.alignment.differs_from_default ? `, differs from ${off.alignment.default}` : ""})`);
+        if (off.closer_excluded) lines.push(`left out of "closer": ${off.closer_excluded}`);
         for (const [key, r] of [["off", off], ["on", on]]) {
-            lines.push(`${key} (${r.dispatch}):`);
+            const cycleMean = r.cycle.wake_ups_judged_by !== "each period";
+            lines.push(`${key} (${r.dispatch}): wake-ups judged by ${r.cycle.wake_ups_judged_by}`
+                + (cycleMean ? `; relative errors of the means (tolerance ${r.wake_ups.tolerance}): max ${short(r.wake_ups.max_rel_error)}, over tolerance ${Object.values(r.wake_ups.inserters).filter(w => !w.pass).length} of ${Object.keys(r.wake_ups.inserters).length}` : ""));
             for (const [id, w] of Object.entries(r.wake_ups.inserters)) {
-                const differs = w.max_diff > 0;
-                lines.push(`  wake-ups inserter:${id}: game ${compact(w.game)} | sim ${compact(w.sim)} | max diff ${w.max_diff}, mean diff ${short(w.mean_diff)} | ${w.pass ? "pass" : "FAIL"}`
-                    + (w.matches_with_roles_swapped ? ` | matches with roles swapped (as inserter:${w.swapped_with}: ${compact(w.swapped.sim)})` : differs && w.swapped ? ` | swapped with inserter:${w.swapped_with}: max diff ${w.swapped.max_diff}` : ""));
+                const differs = cycleMean ? !w.pass : w.max_diff > 0;
+                lines.push(`  wake-ups inserter:${id}: game ${compact(w.game)} | sim ${compact(w.sim)} | ` + (cycleMean ? `means game ${short(w.game_mean)} sim ${short(w.sim_mean)}, relative error ${short(w.rel_error)}` : `max diff ${w.max_diff}, mean diff ${short(w.mean_diff)}`) + ` | ${w.pass ? "pass" : "FAIL"}`
+                    + (w.matches_with_roles_swapped ? ` | matches with roles swapped (as inserter:${w.swapped_with}: ${compact(w.swapped.sim)})` : differs && w.swapped ? ` | swapped with inserter:${w.swapped_with}: ${cycleMean ? `relative error ${short(w.swapped.rel_error)}` : `max diff ${w.swapped.max_diff}`}` : ""));
             }
-            lines.push(`  bins: game ${compact(r.bins.game)} | sim ${compact(r.bins.sim)} | max relative diff ${short(r.bins.max_relative_diff)} | ${r.bins.pass ? "pass" : "FAIL"}`
-                + "");
+            lines.push(`  bins: game ${compact(r.bins.game)} | sim ${compact(r.bins.sim)} | max relative diff ${short(r.bins.max_relative_diff)} | ${r.bins.pass ? "pass" : "FAIL"}`);
             for (const [id, h] of Object.entries(r.hands.inserters)) {
                 lines.push(`  hands inserter:${id}: ${h.transfers} transfers, pickup delta ${JSON.stringify(h.pickup_delta)}, drop delta ${JSON.stringify(h.drop_delta)}, `
-                    + `hand agrees ${short(h.hand_agreement)}, status agrees ${short(h.status_agreement)}`
+                    + `hand agrees ${short(h.hand_agreement)}, status agrees ${short(h.status_agreement)}${h.pass === null || h.pass === undefined ? "" : h.pass ? " | pass" : " | FAIL"}`
                     + (h.matches_with_roles_swapped ? ` | matches with roles swapped (as inserter:${h.swapped_with}: hand ${short(h.swapped.hand_agreement)})` : ""));
             }
             for (const [id, w] of Object.entries(r.windows.inserters)) {
                 lines.push(`  windows inserter:${id}: ${w.enables} enables, delta ${JSON.stringify(w.enable_delta)}, periods with another count ${w.periods_with_other_enable_count}`);
             }
         }
-        lines.push(`closer: ${CLOSER_KINDS.map(k => `${k} ${closer(off, on, k)}`).join(", ")} (error: off ${JSON.stringify(off.error)}, on ${JSON.stringify(on.error)})`);
+        lines.push(`closer: ${off.closer_excluded ? "left out (see above)" : CLOSER_KINDS.map(k => `${k} ${closer(off, on, k)}`).join(", ")} (error: off ${JSON.stringify(off.error)}, on ${JSON.stringify(on.error)})`);
     }
-    return [...table, ...lines].join("\n") + "\n";
+    const note = excluded.length > 0 ? ["", "Left out of \"closer\" (shown as -): " + excluded.join("; ")] : [];
+    return [...table, ...note, ...lines].join("\n") + "\n";
 }
 
 (async () => {
