@@ -156,6 +156,12 @@ export interface HandDropPort {
     takes(item: ItemName): boolean;
     /** The drop rule's ask: whether the sink is full for the item, so that the hand waits at it: only a container ever is */
     fullFor(item: ItemName): boolean;
+    /**
+     * A belt's: whether the lane the hand drops on has room for a stack at its drop spot in this tick. In the game a hand
+     * that took part of a hand from a machine goes to sleep there only when it has (2.1.24: 80 of 80 such takes of a
+     * stack inserter dropping on a belt with room, none of 50 without); absent for any other sink.
+     */
+    roomForStack?(): boolean;
 }
 
 /**

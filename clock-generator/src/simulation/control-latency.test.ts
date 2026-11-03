@@ -104,24 +104,27 @@ describe.each(DISPATCHES)("control latency, %s", (_, dispatch) => {
  * past it), the feeder is enabled while it waits there, and the taker takes in the tick after the third craft finished
  */
 function craftThenTake(dispatch: InserterDispatch): {finished: number; take: number; feeder: number} {
-    const context = gearCell(dispatch);
-    const machine = context.machines[0].machine_state;
-    machine.output.insert("iron-gear-wheel", 2);
-    machine.inventoryState.addQuantity("iron-plate", 6);
-    const crafts: number[] = [];
-    let taker_opens = Number.POSITIVE_INFINITY;
-    context.useControls({inserter: state => state.entity_id.number === 1
-        ? clock(context, t => t >= 55) : clock(context, t => t >= taker_opens)});
-    const trace: Trace = {picked: [[], []]};
-    const tick = new SimulationTick(context);
-    while (context.tick_provider.getCurrentTick() < 120) {
-        tick.executeForTick();
-        crafts.push(machine.craftCount);
-        if (crafts.length > 1 && crafts[crafts.length - 1] === 3 && crafts[crafts.length - 2] === 2) taker_opens = context.tick_provider.getCurrentTick() + 1;
-        trace.picked[0].push(context.inserters.find(it => it.entity_id.number === 1)!.inserter_state.items_picked_up);
-        trace.picked[1].push(context.inserters.find(it => it.entity_id.number === 2)!.inserter_state.items_picked_up);
-    }
-    return {finished: firstChange(crafts.map(count => Math.max(0, count - 2))), take: firstChange(trace.picked[1]), feeder: firstChange(trace.picked[0])};
+    // the taker's clock opens in the tick after the third craft: the tick a first run, the taker off throughout, finds that
+    // craft in (the taker is off until then in both runs, so the crafts come in the same ticks)
+    const runWith = (taker_opens: number) => {
+        const context = gearCell(dispatch);
+        const machine = context.machines[0].machine_state;
+        machine.output.insert("iron-gear-wheel", 2);
+        machine.inventoryState.addQuantity("iron-plate", 6);
+        const crafts: number[] = [];
+        context.useControls({inserter: state => state.entity_id.number === 1
+            ? clock(context, t => t >= 55) : clock(context, t => t >= taker_opens)});
+        const trace: Trace = {picked: [[], []]};
+        const tick = new SimulationTick(context);
+        while (context.tick_provider.getCurrentTick() < 120) {
+            tick.executeForTick();
+            crafts.push(machine.craftCount);
+            trace.picked[0].push(context.inserters.find(it => it.entity_id.number === 1)!.inserter_state.items_picked_up);
+            trace.picked[1].push(context.inserters.find(it => it.entity_id.number === 2)!.inserter_state.items_picked_up);
+        }
+        return {finished: firstChange(crafts.map(count => Math.max(0, count - 2))), take: firstChange(trace.picked[1]), feeder: firstChange(trace.picked[0])};
+    };
+    return runWith(runWith(Number.POSITIVE_INFINITY).finished + 1);
 }
 
 test("the update list: a craft that finished at the block in the tick before the take leaves the feeder's first items a tick after the take, as the game", () => {

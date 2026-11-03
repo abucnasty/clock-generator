@@ -198,17 +198,20 @@ export class InserterScheduling {
         const source = member.machine_source, sink = member.machine_sink;
         if (reason === "source-empty" && source !== undefined) {
             // A successful partial take checks both ends before sleep. Ports without complete
-            // readiness notifications keep polling rather than inventing native wakeability.
-            if (picked && member.polling_sink) return;
+            // readiness notifications keep polling rather than inventing native wakeability, but a belt
+            // lane with room at the drop spot lets the hand sleep on both ends, as the game does (its
+            // machine's next result in the same tick then wakes it again: HandDropPort.roomForStack).
+            if (picked && member.polling_sink && inserter.hand.drop.roomForStack?.() !== true) return;
             this.waits.registerEntry(member.wait, picked ? member.waits_for_both : member.waits_for_source);
             this.scheduler.deactivateNode(member.node, reason);
         } else if (reason === "destination-refused" && sink !== undefined) {
             this.waits.registerEntry(member.wait, member.waits_for_sink);
             this.scheduler.deactivateNode(member.node, reason);
         } else if (reason === "control-disabled") {
-            // Simulator control swaps preserve the source-wait contract separately from native
-            // condition assignment. An unsupported belt source supplies no inventory registration.
-            this.waits.registerEntry(member.wait, member.waits_for_source);
+            // An Update that finds the hand disabled leaves it on no list, as in the game (2.1.24). A hand its clock
+            // switched off while it slept was not updated, so it keeps its lists until one of them wakes it: that
+            // wake-up is the game's too, and the Update it brings ends here.
+            this.waits.clearEntry(member.wait);
             this.scheduler.deactivateNode(member.node, reason);
         }
     }
@@ -251,6 +254,15 @@ export class InserterScheduling {
     }
 
     public endUpdates(): void { this.scheduler.endUpdates(); }
+
+    /** Whether the inserter is out of the update list, asleep on the list of the machine it takes from */
+    public asleepForItems(inserter: InserterArchetype): boolean {
+        const member = this.member_of.get(inserter);
+        if (member === undefined || member.node.active || member.machine_source === undefined) return false;
+        const links = member.wait.links;
+        for (let index = 0; index < links.length; index++) if (links[index].channel === member.machine_source) return true;
+        return false;
+    }
     public state(): InserterSchedulingState {
         const scheduler = this.scheduler.state();
         const id = (member: Member) => member.id;
