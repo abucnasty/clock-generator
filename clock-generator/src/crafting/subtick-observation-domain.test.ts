@@ -79,3 +79,18 @@ it("still rejects output missing over a complete physical counter span", async (
     expect(result.stability_check.as_built?.holds).toBe(false);
     expect(result.stability_check.as_built?.actual_output_items).toBeLessThan(160);
 });
+
+it("observes a counter from where the warm-up left its clocks, not from a counter restarted at the recording", async () => {
+    const sample = await loadConfigFromFile(ConfigPaths.METALLURGIC_SCIENCE_PACK);
+    const config = { ...sample, overrides: { ...sample.overrides, lcm: controls.lcm,
+        terminal_swing_count: controls.terminal_swing_count } };
+    const windows = new Map(Object.entries(controls.clock_windows)
+        .map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))]));
+    // the warm-up of 10 periods of 640/3 ticks leaves the counter 213 1/3 ticks in; restarted at 0 for the recording,
+    // the clock jumps under a build the warm-up left elsewhere, and from the start 27 ticks in that costs a hand
+    const counter = (counter_runs_through: boolean) => trial.runClockOnBuild(config, windows, controls.period, logger, {
+        main_clock_shift: 27, simulate_periods: 3, observation_ticks: 640, counter_runs_through, factorio_states: false,
+    }).stability_check.actual_output_items;
+    expect(counter(true)).toBe(480);
+    expect(counter(false)).toBe(464);
+});
