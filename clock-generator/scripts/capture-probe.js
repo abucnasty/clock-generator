@@ -48,7 +48,7 @@ async function main() {
         factorio: process.env.FACTORIO_PATH, save: path.resolve(ROOT, process.env.FACTORIO_HARNESS_SAVE),
         config, blueprint, lua, out: path.join(run, "recording.json"), work_dir: path.join(run, "game"),
         ticks: backedUp ? 1400 : 1260, warmup_ticks: backedUp ? 3600 : 1200, settle_ticks: 0,
-        seed: [], unclocked: true, game_speed: 1000, watch: false, timeout_seconds: 180,
+        seed: [], unclocked: true, game_speed: 1000, watch: false, timeout_seconds: 180, cache: false,
         log: message => console.error(message),
     });
     console.log(`Recording: ${result.recording_path}`);

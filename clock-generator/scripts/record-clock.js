@@ -121,7 +121,7 @@ function buildOfConfig(arg) {
             blueprint: fs.readFileSync(scaffold, "utf-8").trim(), out: file,
             ticks: RECORDED_TICKS, warmup_ticks: build.warmup_ticks, settle_ticks: build.settle_ticks, seed: build.seed,
             clock: { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule }, config,
-            unclocked: false, game_speed: 1000, timeout_seconds: 900, log: () => { },
+            unclocked: false, game_speed: 1000, timeout_seconds: 900, log: () => { }, cache: false,
         })).recording;
     }
 
