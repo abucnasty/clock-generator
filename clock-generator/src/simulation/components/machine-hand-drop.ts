@@ -74,6 +74,10 @@ export class MachineHandDrop implements HandDropPort {
         return index >= 0 ? !this.ingress.blockedAt(this.slots[index]) : !this.ingress.blocked(item);
     }
 
+    public takesNothing(): boolean {
+        return this.ingress.takesNothing();
+    }
+
     /** A machine is never full for a hand: it takes the whole hand (D14) */
     public fullFor(): boolean {
         return false;

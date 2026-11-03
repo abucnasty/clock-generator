@@ -85,11 +85,11 @@ const FIELDS: Record<string, { keyed: readonly string[]; excluded: Readonly<Reco
             output_stack_size: BUILD, amount_per_bonus: BUILD, bonus_per_craft: BUILD, ingredients_blocked_at: BUILD, main_carry_slot: BUILD,
         },
     },
-    BurnerEnergy: { keyed: ["energy_remaining_mj", "energy_buffer_mj"], excluded: { energy_per_tick: BUILD } },
+    BurnerEnergy: { keyed: ["energy_remaining_mj", "energy_buffer_mj"], excluded: { energy_per_tick: BUILD, fuel_taken: TOTAL } },
     Placement: { keyed: [], excluded: { results_placed: TOTAL, counts_own_output: BUILD, places_results_itself: BUILD }, references: ["target"] },
     Ingress: {
         keyed: [],
-        excluded: { fuel_item: BUILD, fuel_limit: BUILD, nothing_inv: MEMO, nothing_fuel: MEMO, nothing_self: MEMO, nothing_answer: MEMO },
+        excluded: { fuel_item: BUILD, fuel_limit: BUILD, nothing_inv: MEMO, nothing_fuel: MEMO, nothing_self: MEMO, nothing_answer: MEMO, fuel_put_in: TOTAL },
         references: ["fuel_quantity", "placer_stops"],
     },
     CraftingMachineArchetype: { keyed: [], excluded: {}, references: ["result_target"] },

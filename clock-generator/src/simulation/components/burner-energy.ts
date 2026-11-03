@@ -27,6 +27,12 @@ export class BurnerEnergy {
     /** The fuel items waiting in the fuel slot, read without a map lookup */
     private readonly fuel_quantity: LiveQuantity;
 
+    /** Fuel items taken from the fuel slot so far (a running total, out of every key): what a stock records */
+    public fuel_taken: number = 0;
+
+    /** Told each time a fuel item is taken from the fuel slot (the machine's notifications, bound by its state) */
+    public on_fuel_taken: (() => void) | null = null;
+
     constructor(
         /** What the machine burns: the item, its fuel value and the energy a craft takes */
         public readonly fuel_slot: FuelSlot,
@@ -86,6 +92,7 @@ export class BurnerEnergy {
         const cloned = new BurnerEnergy(this.fuel_slot, this.energy_per_tick, fuel_inventory);
         cloned.energy_remaining_mj = this.energy_remaining_mj;
         cloned.energy_buffer_mj = this.energy_buffer_mj;
+        cloned.fuel_taken = this.fuel_taken;
         return cloned;
     }
 
@@ -111,6 +118,8 @@ export class BurnerEnergy {
             if (this.energy_remaining_mj <= ENERGY_EPSILON) {
                 this.fuel_inventory.removeQuantity(fuel.item_name, 1);
                 this.energy_remaining_mj = fuel.fuel_value_mj;
+                this.fuel_taken += 1;
+                this.on_fuel_taken?.();
             }
             const spent = Math.min(required, this.energy_remaining_mj);
             this.energy_remaining_mj -= spent;
