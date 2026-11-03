@@ -132,6 +132,11 @@ export interface HandPickupPort {
     useNotificationScheduling?(): void;
     /** A source with inventory notifications can let an empty/partial waiting hand deactivate. */
     waitsForItems?(): boolean;
+    /**
+     * A belt's: whether every belt line the hand takes from is still now, where that is known (`BeltHandPickup`); a hand
+     * from a belt with nothing it may take goes to sleep only then
+     */
+    linesStill?(): boolean | undefined;
 }
 
 /**

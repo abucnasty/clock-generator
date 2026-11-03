@@ -186,3 +186,62 @@ test("under the new dispatch the simulator wakes the inserters of agricultural s
         expect(fuel_taken.get(id), `${id} fuel taken`).toEqual(machine.fuel_taken.filter(counted));
     }
 });
+
+/**
+ * Ten settled periods of metallurgic science recorded in Factorio 2.1.24 (crafting/fixtures/wake-ups-capture-metallurgic-
+ * science-2.1.24.json, the clock cec15038), run in the simulator under the new dispatch from the game's machines and hands
+ * at the first counted sample. Inserters 4 and 5 take ore from a backed-up turbo belt into a machine that refuses it at its
+ * insertion limit: the game lets them sleep on its input list only while both lines of the belt are still (56 times each in
+ * the ten periods, woken by its craft starts and an output taken); asleep at every refusal, the simulator woke them about
+ * 100 times a period.
+ */
+test("under the new dispatch the simulator wakes the belt-fed inserters of metallurgic science where the game does, tick for tick", async () => {
+    const modules = await underTheNewDispatch();
+    const { simulateClockOnly, InserterScheduling, StockRecorder } = modules;
+    const { loadConfigFromFile } = await import("../config/loader");
+    const { ConfigPaths } = await import("../config/config-paths");
+    const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "crafting", "fixtures", "wake-ups-capture-metallurgic-science-2.1.24.json"), "utf8")) as {
+        ticks: number; count_from: number; inserters: Record<string, { woken_by_machine: [number, string][] }>;
+        clock: { windows: SerializableClockWindows; period: number };
+        seed: { sample: number; start_stock: never; start_hands: never; main_clock_shift: number };
+    };
+    const config = await loadConfigFromFile(ConfigPaths.METALLURGIC_SCIENCE_PACK);
+    const { windows, period } = fixture.clock;
+    const { sample, start_stock, start_hands, main_clock_shift } = fixture.seed;
+    // the simulator's tick t is the fixture's tick sample + 1 + t; its first ten ticks are left out (the seed holds no lists)
+    const fixtureTick = (tick: number) => tick + sample + 1;
+    const counted = (at: number) => at >= fixture.count_from + 10 && at < fixture.ticks;
+    let tick = 0;
+    const own = new Map<string, number[]>();
+    const observed = new WeakSet<object>();
+    const record = StockRecorder.prototype.record;
+    const begin = InserterScheduling.prototype.beginUpdates;
+    const spies = [
+        vi.spyOn(StockRecorder.prototype, "record").mockImplementation(function (this: InstanceType<typeof StockRecorder>) {
+            record.call(this);
+            tick++;
+        }),
+        vi.spyOn(InserterScheduling.prototype, "beginUpdates").mockImplementation(function (this: InstanceType<typeof InserterScheduling>) {
+            if (!observed.has(this)) {
+                observed.add(this);
+                this.observe((event: SchedulingEvent) => {
+                    if (event.event !== "Activation" || event.cause === "control-finish-enable-edge" || event.cause === "hand-transfer") return;
+                    if (counted(fixtureTick(tick))) (own.get(event.entity) ?? own.set(event.entity, []).get(event.entity)!).push(fixtureTick(tick));
+                });
+            }
+            begin.call(this);
+        }),
+    ];
+    const quiet = { log() { }, warn() { }, error() { }, debug() { } };
+    try {
+        simulateClockOnly(config, windows, period, Math.ceil((fixture.ticks - sample) / period) + 1, quiet,
+            { keep_output_buffers: true, warmup_periods: 0, start_stock, start_hands, main_clock_shift });
+    } finally {
+        for (const spy of spies) spy.mockRestore();
+    }
+    for (const id of ["inserter:4", "inserter:5"]) {
+        const game = fixture.inserters[id].woken_by_machine.map(([at]) => at).filter(counted);
+        expect(game.length, id).toBe(54);
+        expect(own.get(id), id).toEqual(game);
+    }
+});

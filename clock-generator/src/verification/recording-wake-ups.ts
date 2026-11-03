@@ -2,6 +2,7 @@ import type { Config } from "../config";
 import { DEFAULT_WAKE_RULE, returnTicksOf, WakeListener, WakeRule, WakeUps, wakeUps, WatchedMachine, WatchingInserter } from "../crafting/wake-ups";
 import { TrueStartStanding, trueStartStandingOf } from "../crafting/true-start-standing";
 import { Entity, EntityId, handSizeFor } from "../entities";
+import { beltLinesOf } from "../crafting/belt-lines";
 import { createEntityRegistryFromConfig } from "../crafting/sequence/simulation-context";
 import { EntityMatch } from "./entity-matching";
 import { expandChangeList, Recording } from "./recording";
@@ -38,8 +39,10 @@ export function wakeUpsOfRecording(
     rule: WakeRule = DEFAULT_WAKE_RULE,
     on_wake?: WakeListener,
 ): RecordingWakeUps {
-    const configured = match === undefined || config === undefined ? []
-        : createEntityRegistryFromConfig(structuredClone(config)).getAll().filter(Entity.isInserter);
+    const registry = match === undefined || config === undefined ? null : createEntityRegistryFromConfig(structuredClone(config));
+    const configured = registry === null ? [] : registry.getAll().filter(Entity.isInserter);
+    // the belt lines each inserter at the side of a straight belt takes from, whose takes are read off the recorded hands
+    const belt_lines = registry === null ? new Map() : beltLinesOf(registry);
     const return_ticks = new Map(configured.map(inserter => [inserter.entity_id.id, returnTicksOf(inserter.animation.rotation.ticks)] as const));
     // the rule "kept-lists" reads the hands and the outputs (WakeRule): a hand holds what the config gives it, else what the game recorded
     const hand_sizes = new Map(configured.map(inserter => [inserter.entity_id.id, (item_name: string) => handSizeFor(inserter, item_name)] as const));
@@ -84,6 +87,7 @@ export function wakeUpsOfRecording(
                 held: inserter.samples.held_count,
                 held_item: expandChangeList(inserter.samples.held_item, recording.sample_count, ""),
                 hand_size_of: hand_sizes.get(inserter_id) ?? (() => inserter.stack_size),
+                ...(belt_lines.has(inserter_id) && { belt_lines: belt_lines.get(inserter_id)! }),
                 // the room at its drop spot after the tick before, when it was updated
                 ...(inserter.samples.drop_lane_room !== undefined && {
                     drop_room: inserter.samples.drop_lane_room.map((_, sample, room) => sample === 0 || room[sample - 1] > 0),

@@ -285,6 +285,19 @@ describe("simulationStateKey", () => {
         }
     });
 
+    it("holds a lane's motion where it is kept (the new dispatch): the same take keys apart a lane that moves after it", () => {
+        const keyAfterTake = (tracked: boolean) => {
+            const context = contextOf("AGRICULTURAL_SCIENCE");
+            const lane = beltsOf(context)[0].lanes[1];
+            if (tracked) for (const each of beltsOf(context)[0].lanes) each.trackMotion();
+            const [id] = lane.pickupIds();
+            expect(lane.take(lane.pickupOf(id)!, 0, 4)).toBe(4);
+            expect(lane.movingAt(0)).toBe(tracked);
+            return simulationStateKey(context);
+        };
+        expect(keyAfterTake(true)).not.toBe(keyAfterTake(false));
+    });
+
     it("tells apart where a container of mixed items holds its items, at the same totals", () => {
         const car = contextOf("REAL_OWNER_CAR");
         const storage = statesOf(car).filter(ContainerStorage.isSlots)[0];

@@ -68,6 +68,29 @@ export interface WatchingInserter {
      * 2.1.24: 80 of 80 such takes of a stack inserter with room, none of 50 without). Absent: room.
      */
     drop_room?: readonly boolean[];
+    /**
+     * For an inserter that takes from the side of a straight belt: the belt lines it takes from, with the inserters whose
+     * takes move each (`BeltLineTakers`). Under the rule "kept-lists" an empty hand shown waiting for items that its
+     * machine refuses goes to sleep only while every one of them is still. Absent: as before, on a list nothing wakes.
+     */
+    belt_lines?: readonly BeltLineTakers[];
+}
+
+/**
+ * A belt line an inserter takes from, and the inserters whose takes move it. A take that empties a stack leaves a gap of
+ * one stack (64 units of 1/256 tile) that the line closes at its speed: the line is moving from the take on, and stops in
+ * the first tick after the gap is closed (simulation `BeltLineMotion`; 9,658 of 9,658 ticks of line movement on a
+ * backed-up turbo belt in Factorio 2.1.24). Worked out from the takers' recorded hands: a rise of the hand by a whole
+ * stack or more in a tick is that many stacks emptied (a rise of less than a stack is taken as none).
+ */
+export interface BeltLineTakers {
+    line_id: string;
+    /** Units of 1/256 tile the line moves a tick: 8, 16, 24 or 32 */
+    speed: number;
+    /** Items in a stack on the line */
+    stack_size: number;
+    /** The inserters that take from this line */
+    takers: readonly string[];
 }
 
 export interface WatchedMachine {
@@ -231,6 +254,35 @@ interface KeptListsAlarms {
      * the latest joined first, so a take by an inserter that joined before another is made after that one's update
      */
     joined?: ReadonlyMap<string, Int32Array>;
+    /** Every inserter's hand after each tick: the takes that move the belt lines (`BeltLineTakers`) */
+    readonly hands: ReadonlyMap<string, readonly number[]>;
+    /** Per belt line, whether it is moving in each tick after the belt's part of it (`lineMovingOf`), worked out once */
+    readonly line_moving: Map<string, Uint8Array>;
+}
+
+/**
+ * Whether a belt line is moving in each tick after the belt's part of it, before the inserters: a moving line closes its
+ * gap by its speed, and stops in the first tick no gap is left; the takes of a tick then add a stack of gap each
+ */
+function lineMovingOf(line: BeltLineTakers, hands: ReadonlyMap<string, readonly number[]>, to_tick: number): Uint8Array {
+    const moving = new Uint8Array(Math.max(1, to_tick));
+    const held = line.takers.flatMap(id => { const hand = hands.get(id); return hand === undefined ? [] : [hand]; });
+    let gap = 0, linked = false;
+    for (let tick = 1; tick < to_tick; tick++) {
+        if (linked) {
+            if (gap > 0) gap = Math.max(0, gap - line.speed);
+            else linked = false;
+        }
+        moving[tick] = linked ? 1 : 0;
+        for (const hand of held) {
+            const stacks = Math.floor((hand[tick] - hand[tick - 1]) / line.stack_size);
+            if (stacks > 0) {
+                gap += 64 * stacks;
+                linked = true;
+            }
+        }
+    }
+    return moving;
 }
 
 function keptListsAlarms(inserters: readonly WatchingInserter[], machines: readonly WatchedMachine[]): KeptListsAlarms {
@@ -268,7 +320,8 @@ function keptListsAlarms(inserters: readonly WatchingInserter[], machines: reado
         }
     }
     const outputs = new Map(machines.flatMap(machine => machine.outputs === undefined ? [] : [[machine.machine_id, machine.outputs] as const]));
-    return { input, taken, output, fuel_put_in, feeders, outputs };
+    const hands = new Map(inserters.flatMap(inserter => inserter.held === undefined ? [] : [[inserter.inserter_id, inserter.held] as const]));
+    return { input, taken, output, fuel_put_in, feeders, outputs, hands, line_moving: new Map() };
 }
 
 /** The part of a tick an inserter joins the update list in: by another inserter's alarm, a machine's, its clock's switch-on */
@@ -347,8 +400,27 @@ function countKeptLists(inserter: WatchingInserter, alarms: KeptListsAlarms, fir
     const sourceHadItems = (tick: number) => source_items.reduce((sum, series) => sum + series[tick - 1], 0) > takenBefore(tick);
     const full = (tick: number) => held_item !== undefined && hand_size !== undefined && held_item[tick] !== "" && held[tick] >= hand_size(held_item[tick]);
 
+    // the belt lines it takes from, each moving after the belt's part of a tick, and their takers updated before it
+    const belt_lines = (inserter.belt_lines ?? []).map(line => {
+        let moving = alarms.line_moving.get(line.line_id);
+        if (moving === undefined) alarms.line_moving.set(line.line_id, moving = lineMovingOf(line, alarms.hands, to_tick));
+        const takers = line.takers.filter(id => id !== inserter.inserter_id).flatMap(id => {
+            const hand = alarms.hands.get(id);
+            return hand === undefined ? [] : [{ hand, join: joined?.get(id) }];
+        });
+        return { moving, takers, stack_size: line.stack_size };
+    });
+    /** Whether a belt line it takes from is moving when it is updated in the tick: after the belt's part, or set moving by a take before it */
+    const lineMovingAt = (tick: number): boolean => belt_lines.some(line => line.moving[tick] === 1 || line.takers.some(({ hand, join }) =>
+        hand[tick] - hand[tick - 1] >= line.stack_size && join !== undefined && !updatedAfter(join[tick - 1])));
+
     /** The lists of a sleep in its own update in the tick, waiting for items at its source (bits) */
     const waitingForItems = (tick: number): number => {
+        // an empty hand from a belt into a machine that refuses what it would take: asleep on the machine's input list (and
+        // the belt lines', which nothing here wakes) only while every line is still; else it stays on the update list
+        if (belt_lines.length > 0 && source === null && sink !== null && held[tick] === 0) {
+            return lineMovingAt(tick) ? 0 : ON_SINK | ON_OTHER;
+        }
         const picked = held[tick] > held[tick - 1];
         let lists = source !== null || inserter.source_placer_id ? ON_SOURCE : 0;
         // with a machine at both ends (agricultural science); from a belt or a chest the rule cannot tell what is there
@@ -626,6 +698,8 @@ export interface InserterEnds {
     return_ticks?: number;
     /** The most its hand holds of an item (see WatchingInserter) */
     hand_size_of?: (item_name: string) => number;
+    /** The belt lines it takes from (see WatchingInserter) */
+    belt_lines?: readonly BeltLineTakers[];
 }
 
 /**
