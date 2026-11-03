@@ -1160,8 +1160,10 @@ export function trialWithLoopWindows(
     if (run.stock === undefined) {
         return null;
     }
+    // a check that held is matched start phase for start phase; one that failed (tried under the new dispatch, see
+    // `checkedClock`) by the windows' own check holding from every start phase it runs
     const passesAsBefore = (check: AsBuiltStabilityCheck) => check.holds && check.failed_start_offset === undefined
-        && check.start_phases_checked === run.check.start_phases_checked;
+        && (!run.check.holds || check.start_phases_checked === run.check.start_phases_checked);
     const checkOf = (candidate: Map<string, OpenRange[]>, what: string) => runAsBuiltCheck(config, candidate, period, logger, start_phases,
         (n, total) => report?.(`Checking the windows ${what}, clock start ${n}/${total}`), LOOP_WINDOW_CHECK_TICKS, undefined, pickup_phase_cycles, "wake-ups");
     let kept: (AsBuiltRun & { windows: Map<string, OpenRange[]>; item_names: Map<string, string>; in_loop_ids: string[] }) | null = null;

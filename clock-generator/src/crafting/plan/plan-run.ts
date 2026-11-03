@@ -60,7 +60,7 @@ import { CompactStateTransitionHistory } from "../sequence/compact-history";
 import { StateTransitionTracker } from "../../simulation/observers/state-transition-tracker";
 import { DrillStateTracker, FactorioStateTracker } from "../../simulation/observers/factorio-state-tracker";
 import type { EntityObserver, Observers, TickRecorder } from "../../simulation/observers/observer";
-import { drillStatusOf, inserterStatusOf, machineStatusOf } from "../../simulation/status-codes";
+import { CraftingStatus, drillStatusOf, InserterPhase, inserterStatusOf, machineStatusOf } from "../../simulation/status-codes";
 import { factorioInserterState, factorioMachineState } from "../../state/factorio-entity-state";
 import type { DerivedClockWindowsReport } from "../candidates/observed-windows";
 import type { SearchReport } from "../candidates/search";
@@ -1663,7 +1663,9 @@ export function clockOnlyRunOf(run: TrialRun): ClockOnlyRun {
  *
  * The windows of the loop are tried wherever the clock-only check holds, whether the planning run held or not: the
  * planning run of a build with a loop lets the loop run free, and on agricultural science makes 432 of the 400 a period
- * of every clock, whose verdict follows the clock-only check alone (see `holds` in alternatives.ts).
+ * of every clock, whose verdict follows the clock-only check alone (see `holds` in alternatives.ts). Under the new
+ * dispatch (simulation/dispatch.ts) they are tried where it does not hold too, and kept where the clock holds with them:
+ * a clock planned for a loop can fail with the loop running free and hold with its windows.
  */
 export function checkedClock(
     plan: PlanRun,
@@ -1693,7 +1695,9 @@ export function checkedClock(
                 extras.verified !== undefined && extras.verified.windows === windows
                     ? { run: extras.verified.run, long_run_ticks: FREE_RUNNING_CHECK_TICKS } : undefined);
         let kept_run = as_built_run;
-        if (as_built_run.check.holds && options.loop_windows !== false) {
+        // under the new dispatch also where the clock does not hold without them: the windows of a loop can make it hold
+        const tries_loop_windows = as_built_run.check.holds || plan.run.simulation_context.inserter_dispatch !== "configured-order";
+        if (tries_loop_windows && options.loop_windows !== false) {
             const looped = trialWithLoopWindows(config, windows, duration.ticks, as_built_run, AS_BUILT_START_PHASES, logger, options.on_progress_detail,
                 false, options.loop_windows !== "out-of-loop");
             if (looped !== null) {
@@ -2436,6 +2440,58 @@ function buildEnableControlOverrideMap(config: Config): EntityEnableControlOverr
 // ============================================================================
 
 /**
+ * Under the new dispatch (simulation/dispatch.ts), where a belt-fed inserter's pickup counts from when it waited at its
+ * machine's output block: from the tick another inserter took the machine's products down from the block, not from the
+ * tick it was next updated. An inserter asleep at the block is woken by the take and updated first in the next tick
+ * (recorded in Factorio 2.1.24: tests/game/mechanics/control-latency/), where an inserter updated every tick in the
+ * configured order starts its pickup in the take's tick and takes its first stack in the next; either way its first
+ * stack comes a tick after the take. The window read off the run (`windowsFromHistory`) opens at the take under both
+ * dispatches, so the order of updates does not move it. A hand from a machine or a chest, and a hand that waited at the
+ * insertion limit (room made by the machine's craft, after the inserters of the tick), start their pickup in the same
+ * tick under both and are left as they are.
+ */
+class PickupStartAtTheTake {
+    /** The machines belt-fed inserters drop into, with the tick their block was last taken down (-1 for none yet) */
+    private readonly lifted = new Map<string, number>();
+
+    constructor(private readonly context: SimulationContext) {
+        for (const inserter of context.inserters) {
+            const definition = inserter.inserter_state.inserter;
+            if (EntityId.isBelt(definition.source.entity_id) && EntityId.isMachine(definition.sink.entity_id)) {
+                this.lifted.set(definition.sink.entity_id.id, -1);
+            }
+        }
+    }
+
+    public watches(machine_id: string): boolean {
+        return this.lifted.has(machine_id);
+    }
+
+    /** At the end of each of its ticks, after its Wakes: whether the take of this tick took it down from its block */
+    public observerOf(machine_state: MachineState): EntityObserver<CraftingStatus> {
+        const id = machine_state.entity_id.id;
+        let blocked = machine_state.wakes.outputBlockedAfterLastTick;
+        return {
+            onTick: () => {
+                const now = machine_state.wakes.outputBlockedAfterLastTick;
+                if (blocked && !now) this.lifted.set(id, this.context.tick_provider.getCurrentTick());
+                blocked = now;
+            },
+        };
+    }
+
+    /** One tick for a pickup after a wait at the sink whose block was taken down in the tick before; none for others */
+    public leadOf(inserter_state: InserterState): ((from: InserterPhase) => number) | undefined {
+        const sink = inserter_state.inserter.sink.entity_id.id;
+        if (!EntityId.isBelt(inserter_state.inserter.source.entity_id) || !this.lifted.has(sink)) return undefined;
+        return from => {
+            const waited = from === InserterPhase.WAITING_FOR_SINK || (from === InserterPhase.IDLE && inserter_state.waits_for_sink);
+            return waited && this.lifted.get(sink) === this.context.tick_provider.getCurrentTick() - 1 ? 1 : 0;
+        };
+    }
+}
+
+/**
  * The observers that feed a run's two histories, onto every entity of its context: per inserter its transfer tracker,
  * its state transition tracker and, with `factorio_states`, the tracker of the state the game shows; per machine the
  * last two; per drill the transfer tracker where it mines into a machine, then the last two. Each history is made
@@ -2454,8 +2510,13 @@ function attachHistoryObservers(
         history_observers.add(observer);
     };
 
+    const pickup_leads = simulation_context.inserter_dispatch === "configured-order" ? null : new PickupStartAtTheTake(simulation_context);
+    simulation_context.machines.forEach(it => {
+        if (pickup_leads?.watches(it.machine_state.entity_id.id)) attach(it.observers, pickup_leads.observerOf(it.machine_state));
+    });
     simulation_context.inserters.forEach(it => {
-        attach(it.observers, new InserterTransferTracker(relative_tick_provider, it.inserter_state, inventory_transfer_history));
+        attach(it.observers, new InserterTransferTracker(relative_tick_provider, it.inserter_state, inventory_transfer_history,
+            pickup_leads?.leadOf(it.inserter_state)));
         const recorder = state_transition_history.recorderFor(it.inserter_state.entity_id, "inserter");
         attach(it.observers, new StateTransitionTracker(relative_tick_provider, recorder, inserterStatusOf));
         if (factorio_states) {

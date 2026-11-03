@@ -48,6 +48,11 @@ export class HandScratch {
     public reason_quantity: number = 0;
     /** The record of the hand last emptied, which the next hand fills (`takeIntoHand`); null for none */
     public spare_hand: InserterHandContents | null = null;
+    /**
+     * Under the new dispatch, true from a control swap to the end of the hand's next update: the swap puts every
+     * inserter on the update list, which is no wake of the hand (see `BeltHandPickup.enter`). Not set back by `reset`.
+     */
+    public after_swap: boolean = false;
 
     /** Every field back to what a new record holds: a control swap starts the scratch afresh (same-tick rule 12) */
     public reset(): void {
@@ -364,6 +369,7 @@ export class Hand {
 
     /** The phase's step: the pickup takes through the source's port, the drop and the target-full wait drop through the sink's */
     public step(): void {
+        this.scratch.after_swap = false;
         switch (this.phase) {
             case InserterPhase.PICKUP:
                 this.pickup.pickup();
@@ -434,6 +440,7 @@ export class Hand {
     public resetForSwap(): void {
         this.phase = InserterPhase.IDLE;
         this.scratch.reset();
+        this.scratch.after_swap = this.notification_scheduling;
     }
 
     /**
