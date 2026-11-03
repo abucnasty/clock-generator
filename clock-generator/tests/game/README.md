@@ -60,7 +60,7 @@ watched run is never read or kept, and a hit leaves no game log (`work_dir` gets
 
 - **Store:** `~/.cache/clock-generator/game-recordings/` (`$XDG_CACHE_HOME` is honoured), outside git and the temporary
   folder, so it survives a reboot. `CLOCK_RECORDING_CACHE_DIR=<folder>` puts it elsewhere. An entry unused for 30 days is
-  removed when another is stored. Entries are compressed; a scaffold build is about 1 MB.
+  removed when another is stored. Entries are compressed: the whole suite's 1,300 recordings take about 95 MB, the largest about 3 MB.
 - **Cold run:** `CLOCK_RECORDING_CACHE=off` starts the game for every recording and keeps nothing; `=refresh` also starts the
   game for every recording and replaces what the store holds. Keep one cold pass per release. A value other than `on`,
   `off` and `refresh` counts as `off`.
