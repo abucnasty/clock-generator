@@ -48,6 +48,7 @@ export function beltPickupClockTests() {
             expectColdStartRunsOnSelection(variant.name, selected);
             expect({id: selected.id, holds: selected.assessment.holds, rate: selected.assessment.items_per_second,
                 supply: selected.belt?.kind ?? null}).toEqual(pin!.selection);
+            if (pin!.as_built) expect(selected.result.stability_check.as_built, "the model's lane-phase evidence of the selection").toMatchObject(pin!.as_built);
             expect(result.why_not_stable?.cause).toBe(pin!.why_not_stable);
             expect(period).toBe(pin!.period);
             expect(selected.verdict).toBe(pin!.verdict);

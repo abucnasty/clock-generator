@@ -58,6 +58,8 @@ export interface GenerationPin {
     verdict: string;
     selection: {id: string; holds: boolean; rate: number; supply: string | null};
     clock_sha256: string;
+    /** Where the pin also holds the model's own evidence of the selection (its `stability_check.as_built`), apart from the native recording: the fields a generation test finds in it */
+    as_built?: Record<string, unknown>;
     /** The cause the generation gives of why its selection does not meet goal 1 (see whyNotStable); absent where it does */
     why_not_stable?: string;
 }
