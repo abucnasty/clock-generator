@@ -55,6 +55,11 @@
 # stores a base meant for later selective runs, e.g. after an engine merge); recording makes a full generation about 1.5
 # times as long in CPU time.
 #
+# The key also holds the environment variables that change what the engine generates (key.py ENV_KEYED: CLOCK_NEW_DISPATCH), by
+# name and value, "unset" apart from any value: a run with CLOCK_NEW_DISPATCH=1 has a key of its own, is stored and reused like any
+# other, and never carries jobs from an entry made under another setting. With none set the key is what it always was. Every
+# command that runs or stores refuses, naming the variable, when the environment holds a CLOCK_* variable that key.py has on no list.
+#
 # Env: BLAST_GROUPS, BLAST_SKIP (jobs to leave out; none by default), BLAST_ONLY (run only these jobs, by ConfigPaths name; never cached; the run is complete, and exits 0, when every listed job is done), BLAST_SETUP (comma list of setup files from
 # clock-generator/, e.g. a rule patch; such a run is never cached), BLAST_CACHE (default
 # <main checkout>/clock-generator/.scratch/blast-cache, shared by every worktree of the repository), BLAST_LOCK (the file
@@ -106,6 +111,8 @@ import json, sys
 e, j = json.load(open(sys.argv[1])), json.load(open(sys.argv[2]))
 print(f"   engine {e['engine'][:12]} ({e['format']}: src {e['src'][:12]} over {e['src_files']} files without *.test.ts and *.md,"
       f" resources {e['resources'][:12]}, package-lock {e['lock'][:12]}, tsconfig {e['tsconfig'][:12]}; HEAD {e['rev'][:8]})")
+if e.get('env'):
+    print("   env    " + ' '.join(f"{n}={v!r}" for n, v in e['env'].items()))
 print(f"   jobs   {j['jobs_sha256'][:12]} ({j['format']}: {j['count']} jobs, groups {','.join(j['groups'])}, skip {','.join(j['skip']) or 'none'})")
 EOF
 }

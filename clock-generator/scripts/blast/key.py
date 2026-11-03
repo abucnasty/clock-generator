@@ -10,9 +10,16 @@ tests-only commit changes.
 
 and, beside the key and not in it, resources_data (data_key): the resources without the sample configs and notes.
 
+  env       the environment variables of the engine that change what it generates, by name and value: only those that are
+            set (unset is not the same as set to the empty string). With none set the key is what it was before the field.
+
 The other half is the job list's hash (each job's config, canonical JSON; blast.sh `key`), which covers the fixture
-definitions in tests/ by what they produce rather than by their source. The engine reads one environment variable
-that changes generation, CLOCK_PROOF_PHASES; the runner always clears it.
+definitions in tests/ by what they produce rather than by their source.
+
+The environment is read by variable, never whole (PATH would make every machine miss). Every CLOCK_* variable of the
+environment the blast would run with is on one of three lists (ENV_KEYED, ENV_CLEARED, ENV_IGNORED below); one that is on
+none of them stops the key, and so every blast.sh command that runs or stores, with a message naming it. A new variable of
+the engine that changes generation goes on ENV_KEYED; one that does not, on ENV_IGNORED.
 
 usage: key.py <worktree> [<rev>]      prints JSON; "dirty" lists uncommitted changes to the key's paths (tracked or
                                       untracked), which make a key from the commit wrong for the working tree
@@ -21,11 +28,36 @@ usage: key.py <worktree> [<rev>]      prints JSON; "dirty" lists uncommitted cha
                                       uncommitted diff and untracked files of the key's paths, and the given files (a
                                       rule patch); blast.sh stamps a run folder with it, so a resume never mixes engines
 """
-import hashlib, json, subprocess, sys
+import hashlib, json, os, subprocess, sys
 
 # the format's name since the first cached entry: renaming it would change every key
 FORMAT = 't1-engine-1'
 PATHS = ['clock-generator/src', 'clock-generator/resources', 'clock-generator/package-lock.json', 'clock-generator/tsconfig.json']
+
+
+# CLOCK_* variables the engine reads that change what it generates: keyed, by name and value
+ENV_KEYED = ['CLOCK_NEW_DISPATCH']
+# changes generation too, but the runner clears it (blast.sh runs every process with `env -u`), so it is never in effect
+ENV_CLEARED = ['CLOCK_PROOF_PHASES']
+# read by the harness or the scripts, not by generation: the game recording store (src/harness) and the sweep scripts' checkout
+ENV_IGNORED = ['CLOCK_RECORDING_CACHE', 'CLOCK_RECORDING_CACHE_DIR', 'CLOCK_RECORDING_CACHE_LOG', 'CLOCK_GENERATOR_ROOT']
+
+
+class UnknownEnvironment(Exception):
+    pass
+
+
+def environment(env=None):
+    """{name: value} of the keyed variables that are set in env (the process's environment by default). Raises
+    UnknownEnvironment naming every CLOCK_* variable that is on no list."""
+    env = os.environ if env is None else env
+    unknown = sorted(n for n in env if n.startswith('CLOCK_') and n not in ENV_KEYED + ENV_CLEARED + ENV_IGNORED)
+    if unknown:
+        raise UnknownEnvironment(f"{', '.join(unknown)} {'is' if len(unknown) == 1 else 'are'} set, and key.py does not know whether "
+                                 f"{'it changes' if len(unknown) == 1 else 'they change'} what the engine generates: unset "
+                                 f"{'it' if len(unknown) == 1 else 'them'}, or add {'it' if len(unknown) == 1 else 'each'} to ENV_KEYED or ENV_IGNORED in "
+                                 f"{os.path.abspath(__file__)} (a blast under an unlisted variable could be stored under the wrong key)")
+    return {n: env[n] for n in ENV_KEYED if n in env}
 
 
 def git(w, *args):
@@ -36,7 +68,7 @@ def counted(path):
     return not (path.startswith('clock-generator/src/') and (path.endswith('.test.ts') or path.endswith('.md')))
 
 
-def engine_key(w, rev='HEAD'):
+def engine_key(w, rev='HEAD', env=None):
     lines = [l for l in git(w, 'ls-tree', '-r', rev, '--', 'clock-generator/src').splitlines() if counted(l.split('\t', 1)[1])]
     parts = {
         'src': hashlib.sha256('\n'.join(lines).encode()).hexdigest(),
@@ -45,8 +77,12 @@ def engine_key(w, rev='HEAD'):
         'lock': git(w, 'rev-parse', f'{rev}:clock-generator/package-lock.json').strip(),
         'tsconfig': git(w, 'rev-parse', f'{rev}:clock-generator/tsconfig.json').strip(),
     }
-    engine = hashlib.sha256(json.dumps({'format': FORMAT, **{k: parts[k] for k in ['src', 'resources', 'lock', 'tsconfig']}}, sort_keys=True).encode()).hexdigest()
-    return {'format': FORMAT, 'rev': git(w, 'rev-parse', rev).strip(), 'engine': engine, **parts, 'resources_data': data_key(w, rev)}
+    variables = environment(env)
+    hashed = {'format': FORMAT, **{k: parts[k] for k in ['src', 'resources', 'lock', 'tsconfig']}}
+    if variables:  # left out when empty, so that the key of a run with none set is the one it always was
+        hashed['env'] = variables
+    engine = hashlib.sha256(json.dumps(hashed, sort_keys=True).encode()).hexdigest()
+    return {'format': FORMAT, 'rev': git(w, 'rev-parse', rev).strip(), 'engine': engine, **parts, 'env': variables, 'resources_data': data_key(w, rev)}
 
 
 def data_key(w, rev='HEAD'):
@@ -81,11 +117,14 @@ def state(w, extra=()):
 
 
 if __name__ == '__main__':
-    if sys.argv[1] == '--state':
-        print(state(sys.argv[2], sys.argv[3:]))
-        sys.exit(0)
-    w = sys.argv[1]
-    rev = sys.argv[2] if len(sys.argv) > 2 else 'HEAD'
-    key = engine_key(w, rev)
+    try:
+        if sys.argv[1] == '--state':
+            print(state(sys.argv[2], sys.argv[3:]))
+            sys.exit(0)
+        w = sys.argv[1]
+        rev = sys.argv[2] if len(sys.argv) > 2 else 'HEAD'
+        key = engine_key(w, rev)
+    except UnknownEnvironment as e:
+        sys.exit(f'key.py: refusing: {e}')
     key['dirty'] = dirty(w) if rev == 'HEAD' else None
     print(json.dumps(key, indent=1))
