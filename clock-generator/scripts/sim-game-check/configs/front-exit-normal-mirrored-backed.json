@@ -1,0 +1,79 @@
+{
+ "target_output": {
+  "recipe": "electromagnetic-science-pack",
+  "items_per_second": 7.5,
+  "copies": 1
+ },
+ "machines": [
+  {
+   "id": 1,
+   "recipe": "electromagnetic-science-pack",
+   "productivity": 175,
+   "crafting_speed": 109.475,
+   "prototype": "electromagnetic-plant"
+  }
+ ],
+ "inserters": [
+  {
+   "id": 1,
+   "source": {
+    "type": "machine",
+    "id": 1
+   },
+   "sink": {
+    "type": "belt",
+    "id": 1
+   },
+   "stack_size": 16
+  },
+  {
+   "id": 2,
+   "source": {
+    "type": "belt",
+    "id": 2,
+    "near_lane": 2,
+    "pickup_length": 0.5,
+    "pickup_layout": "front-exit"
+   },
+   "sink": {
+    "type": "machine",
+    "id": 1
+   },
+   "stack_size": 16
+  }
+ ],
+ "belts": [
+  {
+   "id": 1,
+   "type": "transport-belt",
+   "lanes": [
+    {
+     "ingredient": "electromagnetic-science-pack",
+     "stack_size": 4
+    },
+    {
+     "ingredient": "",
+     "stack_size": 4
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "type": "transport-belt",
+   "lanes": [
+    {
+     "ingredient": "accumulator",
+     "stack_size": 4
+    },
+    {
+     "ingredient": "supercapacitor",
+     "stack_size": 4
+    }
+   ]
+  }
+ ],
+ "chests": [],
+ "overrides": {
+  "backed_up_belts": true
+ }
+}
