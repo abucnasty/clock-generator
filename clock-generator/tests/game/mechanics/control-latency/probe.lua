@@ -5,8 +5,9 @@
 --   circuit-controlled inserters (enabled while E > 0).
 -- A scenario: {name, kind, schedule = {{tick, on}, ...}, gate2 = {{tick, on}, ...}}
 --   kind "chest"         source chest full of iron plates -> legendary stack inserter -> empty chest
---   kind "machine-room"  chest -> inserter -> assembling machine 3 (iron gear wheel) that starts at its output block with no
---                        plates; a second inserter (on its own decider, signal B, `gate2`) takes its gears into a chest
+--   kind "machine-room"  chest -> inserter -> assembling machine 3 (iron gear wheel) that starts with `gears` in its output
+--                        and `plates` (default none) in its input; a second inserter (on its own decider, signal B, `gate2`)
+--                        takes its gears into a chest
 --   kind "machine-craft" chest -> inserter (always enabled, no circuit) -> assembling machine 3 that starts with plates at
 --                        its insertion limit and crafts: the inserter waits for room, which the machine's next craft makes
 --   kind "wake-take"     as machine-room, but the feeder is always enabled (no circuit) and only the taker is switched
@@ -116,6 +117,7 @@ for index, spec in ipairs(options.scenarios) do
         local taker = stack_inserter({cx + 4, cy}, defines.direction.west)
         local sink = chest({cx + 5, cy})
         machine.get_inventory(defines.inventory.crafter_output).insert({name = GEAR, count = spec.gears})
+        if spec.plates then machine.get_inventory(defines.inventory.crafter_input).insert({name = PLATE, count = spec.plates}) end
         if kind == "machine-room" then
             wire_inserter(ctl, feeder)
             local ctl2 = control(cx - 6, cy - 3, SIG_B)

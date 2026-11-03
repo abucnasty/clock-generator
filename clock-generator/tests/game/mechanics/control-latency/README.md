@@ -24,7 +24,8 @@ Counted from the first sample in which the decider's input shows the change:
 - **Asleep at a machine, woken by another entity:** when another inserter takes the machine's products off its output
   block, the inserter waiting to put into it has its first items one sample after the take (2 of 2); when the machine's
   craft takes its input under the insertion limit, one sample after the plates go down (3 of 3). Never in the sample of
-  the take or the craft.
+  the take or the craft. Also when the machine finished a craft (its last: it had no plates for another) in the sample
+  before the take, or in the take's sample, or two or three samples before it (4 of 4).
 
 The simulator reproduces each of these under both dispatches (`src/simulation/control-latency.test.ts`): an inserter
 woken while the tick walks the update list is updated first in the next tick.

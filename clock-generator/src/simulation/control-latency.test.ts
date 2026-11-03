@@ -99,6 +99,37 @@ describe.each(DISPATCHES)("control latency, %s", (_, dispatch) => {
     });
 });
 
+/**
+ * A craft finishes at the block (2 gears, 3 crafts' plates: the second craft puts the output at its block of 4, the third
+ * past it), the feeder is enabled while it waits there, and the taker takes in the tick after the third craft finished
+ */
+function craftThenTake(dispatch: InserterDispatch): {finished: number; take: number; feeder: number} {
+    const context = gearCell(dispatch);
+    const machine = context.machines[0].machine_state;
+    machine.output.insert("iron-gear-wheel", 2);
+    machine.inventoryState.addQuantity("iron-plate", 6);
+    const crafts: number[] = [];
+    let taker_opens = Number.POSITIVE_INFINITY;
+    context.useControls({inserter: state => state.entity_id.number === 1
+        ? clock(context, t => t >= 55) : clock(context, t => t >= taker_opens)});
+    const trace: Trace = {picked: [[], []]};
+    const tick = new SimulationTick(context);
+    while (context.tick_provider.getCurrentTick() < 120) {
+        tick.executeForTick();
+        crafts.push(machine.craftCount);
+        if (crafts.length > 1 && crafts[crafts.length - 1] === 3 && crafts[crafts.length - 2] === 2) taker_opens = context.tick_provider.getCurrentTick() + 1;
+        trace.picked[0].push(context.inserters.find(it => it.entity_id.number === 1)!.inserter_state.items_picked_up);
+        trace.picked[1].push(context.inserters.find(it => it.entity_id.number === 2)!.inserter_state.items_picked_up);
+    }
+    return {finished: firstChange(crafts.map(count => Math.max(0, count - 2))), take: firstChange(trace.picked[1]), feeder: firstChange(trace.picked[0])};
+}
+
+test("the update list: a craft that finished at the block in the tick before the take leaves the feeder's first items a tick after the take, as the game", () => {
+    const {finished, take, feeder} = craftThenTake(ACTIVATION_ORDER);
+    expect(take).toBe(finished + 1);
+    expect(feeder).toBe(take + 1);
+});
+
 test("an inserter woken in the walk updated in that tick (`woken_in_walk` same-tick) takes in the tick of the take, which the game does not show", () => {
     const context = gearCell({...ACTIVATION_ORDER, woken_in_walk: "same-tick"});
     context.machines[0].machine_state.output.insert("iron-gear-wheel", 12);

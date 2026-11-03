@@ -66,6 +66,14 @@ describe("an inserter asleep at a machine, woken by what another entity does in 
         expect(firstChange(cell, "held1", switches(cell)[0])).toBe(take + 1);
     });
 
+    test.each([70, 71, 72, 73])("craft-then-take-%i: a craft finishes at the block, the taker takes the output; the first items come a tick after the take, also when the craft finished in the tick before it", gate => {
+        const cell = `craft-then-take-${gate}`;
+        const finished = firstChange(cell, "finished", 70);
+        const take = firstChange(cell, "held2", gate);
+        expect(take - finished).toBe(gate - 71 + 1);
+        expect(firstChange(cell, "held1", 56)).toBe(take + 1);
+    });
+
     test("the machine's craft makes room under the insertion limit: the first items come a tick after the plates go down", () => {
         const rows = rowsOf(recording, "machine-craft");
         const room = rows.filter((row, index) => index > 0 && row.w1 < 8 && rows[index - 1].w1 >= 8).map(row => row.t);

@@ -10,7 +10,7 @@ export interface LatencyCase {
     gate2?: [number, boolean][];
     /** machine-room, wake-take: the gears put in the machine's output at the start (its block is 4) */
     gears?: number;
-    /** machine-craft: the plates put in the machine's input at the start (its insertion limit is 8) */
+    /** machine-craft, machine-room: the plates put in the machine's input at the start (its insertion limit is 8) */
     plates?: number;
     /** belt-empty: plates put on the belt's first tile in the ticks [belt_from, belt_from + belt_ticks) */
     belt_from?: number;
@@ -33,6 +33,11 @@ export const LATENCY_CASES: LatencyCase[] = [
     // output from 80, and the feeder is enabled at 160 with room in the machine
     {name: "machine-room", kind: "machine-room", initial: true, schedule: [[60, false], [160, true]], gears: 12,
         gate2: [[80, true], [140, false]]},
+    // (b) a craft finishes while the machine is at its block (2 gears and 3 crafts' plates at the start: the crafts finish
+    // 24 ticks apart, the second puts the output at its block of 4, the third past it); the feeder is enabled at 55 and
+    // waits; the taker takes the gears in the sample of the third craft's finish, one, two and three samples after it
+    ...[70, 71, 72, 73].map((gate): LatencyCase => ({name: `craft-then-take-${gate}`, kind: "machine-room", initial: false,
+        schedule: [[55, true]], gears: 2, plates: 6, gate2: [[gate, true]]})),
     // (b) room made by the machine's own crafts: the feeder (no circuit) waits while the input is at its insertion limit
     {name: "machine-craft", kind: "machine-craft", plates: 8},
     // woken in the walk: the feeder (no circuit) waits asleep at the machine's block; the taker is enabled and takes the gears
