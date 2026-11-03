@@ -29,6 +29,19 @@ export class LaneTraffic {
     }
 
     public tryPlace(tick: number, spot_ticks: number): boolean {
+        const landing = this.landingAt(tick, spot_ticks);
+        if (landing === null) return false;
+        this.positions.push(landing);
+        return true;
+    }
+
+    /** Whether a stack put down at the spot in this tick would find room (`tryPlace` without placing it) */
+    public hasRoom(tick: number, spot_ticks: number): boolean {
+        return this.landingAt(tick, spot_ticks) !== null;
+    }
+
+    /** Where a stack put down at the spot in this tick lands, null where there is no room for it */
+    private landingAt(tick: number, spot_ticks: number): number | null {
         this.registerSpot(spot_ticks);
         this.advanceTo(tick);
         const spot = this.spotUnits(spot_ticks);
@@ -36,9 +49,7 @@ export class LaneTraffic {
         for (const ahead of [...this.positions].sort((a, b) => b - a)) {
             if (ahead >= landing - this.speed) landing = Math.min(landing, ahead - STACK_SPACING);
         }
-        if (landing <= spot - DROP_REACH) return false;
-        this.positions.push(landing);
-        return true;
+        return landing <= spot - DROP_REACH ? null : landing;
     }
 
     public stateKey(tick: number): string {

@@ -19,18 +19,45 @@ function driver() {
     return {context, schedule, update};
 }
 
-test("a machine source Alarm activates a disabled hand without authorizing pickup", () => {
+test("an Update that finds a hand disabled leaves it on no list: its machine's results do not wake it", () => {
     const {context, schedule, update} = driver();
     context.useControls({inserter: () => EnableControl.never});
     update();
+    expect(schedule.state().wake_subscriptions).toEqual([]);
     const events: string[] = [];
-    schedule.observe(event => events.push(event.event));
+    schedule.observe(event => events.push(`${event.event} ${event.entity}`));
     context.machines[0].machine_state.output.insert("copper-cable", 2);
-    expect(events).toEqual(["Alarm", "Activation"]);
+    expect(events).toEqual([]);
+});
+
+/**
+ * Recorded in Factorio 2.1.24 (a stack inserter taking electromagnetic science packs from its plant, switched off by its
+ * clock at positions 670 and 1054 while it waited there for items, woken by the plant's results at 687 and 1072): a
+ * clock switching off a hand asleep on its machine's list leaves it there, the machine's next result wakes it, and the
+ * Update that wake brings finds it disabled and leaves it on no list, so the result after that does not wake it.
+ */
+test("a hand switched off while asleep on its machine's list stays on it until the machine wakes it, then leaves every list", () => {
+    const {context, schedule, update} = driver();
+    let on = true;
+    context.useControls({inserter: () => ({isEnabled: () => on, isEnabledIn: () => on, is_game_clock: true})});
     update();
-    expect(events).toEqual(["Alarm", "Activation", "Update", "Deactivation"]);
+    update();
+    expect(schedule.state().active_order).toEqual([]);
+    expect(schedule.state().wake_subscriptions).toContainEqual({channel: "machine:1:output", entities: ["inserter:1"]});
+    on = false;
+    update();
+    expect(schedule.state().wake_subscriptions).toContainEqual({channel: "machine:1:output", entities: ["inserter:1"]});
+    const events: string[] = [];
+    schedule.observe(event => events.push(`${event.event} ${event.entity}`));
+    context.machines[0].machine_state.output.insert("copper-cable", 2);
+    expect(events).toEqual(["Alarm inserter:1", "Activation inserter:1"]);
+    update();
+    expect(events.slice(2)).toEqual(["Update inserter:1", "Deactivation inserter:1"]);
+    expect(schedule.state().wake_subscriptions).not.toContainEqual({channel: "machine:1:output", entities: ["inserter:1"]});
     expect(context.inserters[0].inserter_state.held_item).toBeNull();
-    expect(context.machines[0].machine_state.output.getCurrentQuantity("copper-cable")).toBe(2);
+    context.machines[0].machine_state.output.insert("copper-cable", 2);
+    expect(events).toHaveLength(4);
+    expect(context.machines[0].machine_state.output.getCurrentQuantity("copper-cable")).toBe(4);
 });
 
 test("a simulator control swap preserves partial carry and its live subscriptions", () => {

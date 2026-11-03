@@ -141,6 +141,7 @@ export function countedInserters(config: Config): CountedInserter[] {
         sink_machine_id: machineId(inserter.sink.entity_id),
         ...(placers.has(inserter.source.entity_id.id) && { source_placer_id: placers.get(inserter.source.entity_id.id)! }),
         return_ticks: returnTicksOf(inserter.animation.rotation.ticks),
+        hand_size_of: (item_name: string) => handSizeFor(inserter, item_name),
         pickup_kind: endKindOf(inserter.source.entity_id),
         drop_kind: endKindOf(inserter.sink.entity_id),
         hand_size: handSize(inserter),
