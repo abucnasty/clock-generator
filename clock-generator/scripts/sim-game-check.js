@@ -1,5 +1,5 @@
 // node scripts/sim-game-check.js check   --config <sample key | config file> --hash <clock hash prefix> --recording <recording file>
-//                                        --out <folder> [--name <build>] [--staged] [--seed-items <n>] [--sim-offset <ticks>]
+//                                        --out <folder> [--name <build>] [--staged] [--seed-items <n>] [--sim-offset <ticks>] [--seed-at first|settled]
 // node scripts/sim-game-check.js builds  --recordings <folder> --out <folder> [--only a,b]    the check of every build of sim-game-check/builds.json
 // node scripts/sim-game-check.js summary <out folder>                                         the table of the result files in a folder
 //
@@ -21,15 +21,19 @@
 // it out; a staged start (--staged: the game began with the clock, the simulator runs cold from its first tick) is paired
 // the same way. Totals over inserters are never compared. The tolerances are stamped in every result file ("tolerances").
 //
-// Two starts of the simulator are run side by side. "seeded" starts it from the game's first recorded sample (what the machines
+// Two starts of the simulator are run side by side. "seeded" starts it from a recorded sample of the game (what the machines
 // hold, how far their crafting and productivity bars are) and is the one that is judged: the game is recorded after a warm-up
-// that the simulator does not run, and what that warm-up leaves in the machines decides which inserters wake. "cold" starts it
-// as the scaffold tests do (machines filled as filling leaves them, a free run before the clock) and is reported as before,
-// not judged. The result file's own fields are the seeded run's; the cold run's are under "cold". The stamp "seed" says what
-// the recording gave and what it could not (inserter hands, fuel, belts, chests, drills). A staged recording, and a clock of
-// a fractional period, have no seeded run: the game began cold with the clock, or the clock cannot be placed on the recording;
-// then the cold run is the judged one. Bins: "unsettled" lists the periods of the game's recording in which its stock still
-// drifts, so that a transient of the game's start is visible next to a verdict.
+// that the simulator does not run, and what that warm-up leaves in the machines decides which inserters wake. The sample is the
+// start of the first settled period: the first period from which the game's stock (what each machine holds, in and out, at a
+// period's first sample) stays inside the range it keeps over the last third of the recording. Where the recording still drifts
+// in that last third (its second half leaves the first half's range), or too few periods follow, the sample is the recording's
+// first and the stamp says so ("seed.settling"); --seed-at first forces the first sample. The periods judged are the whole periods
+// after the seed sample. "cold" starts the simulator as the scaffold tests do (machines filled as filling leaves them, a free run
+// before the clock) and is reported as before, not judged. The result file's own fields are the seeded run's; the cold run's are
+// under "cold". The stamp "seed" says what the recording gave and what it could not (inserter hands, fuel, belts, chests, drills).
+// A staged recording, and a clock of a fractional period, have no seeded run: the game began cold with the clock, or the clock
+// cannot be placed on the recording; then the cold run is the judged one. Bins: "unsettled" lists the periods judged in which the
+// game's stock still drifts, so that a transient of the game's start is visible next to a verdict.
 //
 // A game side is labelled "true count" where the rule was checked against the game's own wake-ups on that build (TRUE_COUNT
 // below), else "rule on recording". Needs `npx tsc` first. One result file a build and dispatch: <name>.off.json, <name>.on.json.
@@ -140,17 +144,30 @@ function child(mode, extra, env) {
 // "off" keeps the old dispatch and has the stock record what the rule "kept-lists" reads (simulation/dispatch.ts)
 const dispatchEnv = key => ({ CLOCK_NEW_DISPATCH: key === "on" ? "1" : "configured-order,kept-lists" });
 
-// ---- the seeded start: the game's first recorded sample ----
+// ---- the seeded start: a recorded sample of the game (the start of its first settled period, else its first sample) ----
+
+/** a recording's per-sample series from `from` on, and its change lists (status) shifted to match: what recorded-bar.ts reads, seen from the seed sample */
+function samplesFrom(samples, from) {
+    if (from === 0) return samples;
+    const shifted = list => {
+        const out = [];
+        for (const [index, value] of list) { if (index <= from) { if (out.length) out.pop(); out.push([0, value]); } else out.push([index - from, value]); }
+        return out;
+    };
+    return { ...samples, bonus_progress: samples.bonus_progress.slice(from), crafting_progress: samples.crafting_progress.slice(from), products_finished: samples.products_finished.slice(from), status: shifted(samples.status) };
+}
+/** the value a change list [[sample, value], ...] holds at a sample */
+const changeAt = (list, sample) => { let value; for (const [index, v] of list) { if (index > sample) break; value = v; } return value; };
 
 /**
- * What the recording's first sample gives the simulator to start from, and what it cannot give. The machines' contents (inputs and
- * outputs by item), crafting bar and productivity bar and the items in each inserter's hand are read at sample 0 (each hand starts
+ * What a recorded sample gives the simulator to start from, and what it cannot give. The machines' contents (inputs and
+ * outputs by item), crafting bar and productivity bar and the items in each inserter's hand are read at that sample (each hand starts
  * idle). A productivity bar shown full holds what is over it, which is worked back from a later sample (verification/recorded-bar.ts);
  * where it cannot be, the bar starts at the 1 shown and "not_seeded" names it. What the recording does not hold, or the start cannot take (fuel, a drill's bars), is listed under "not_seeded"; the
  * simulator assumes for it what filling the machine, a full belt and an infinite chest leave.
  */
-function seedOf(game, gameMatch, config, clock, staged) {
-    const base = { applied: false, source: "the recording's first sample" };
+function seedOf(game, gameMatch, config, clock, staged, sample) {
+    const base = { applied: false, source: sample === 0 ? "the recording's first sample" : `the recording's sample ${sample}` };
     if (staged) return { ...base, reason: "staged start: the game began with the clock on empty machines, which the cold run starts from" };
     if (game.clock === undefined) return { ...base, reason: "the recording has no clock" };
     const { Machine } = dist("entities/machine/machine.js");
@@ -161,49 +178,50 @@ function seedOf(game, gameMatch, config, clock, staged) {
         if (id === undefined) continue;
         const items = {};
         const inputs = Object.keys(machine.samples.inputs), outputs = Object.keys(machine.samples.outputs);
-        for (const item of outputs) items[item] = machine.samples.outputs[item][0];
+        for (const item of outputs) items[item] = machine.samples.outputs[item][sample];
         // an item the machine takes and makes is kept apart from its output by the simulator, and the start names it once: the ingredient
-        for (const item of inputs) { if (outputs.includes(item)) both.push(`machine:${id} ${item}`); items[item] = machine.samples.inputs[item][0]; }
-        if (machine.samples.fuel !== undefined && Object.keys(machine.samples.fuel).length > 0) fuel.push(`machine:${id} ${Object.entries(machine.samples.fuel).map(([item, list]) => `${item} ${list[0]}`).join(", ")}`);
+        for (const item of inputs) { if (outputs.includes(item)) both.push(`machine:${id} ${item}`); items[item] = machine.samples.inputs[item][sample]; }
+        if (machine.samples.fuel !== undefined && Object.keys(machine.samples.fuel).length > 0) fuel.push(`machine:${id} ${Object.entries(machine.samples.fuel).map(([item, list]) => `${item} ${list[sample]}`).join(", ")}`);
         // the game shows a full productivity bar as 1 and keeps what is over it: worked back from a later sample (verification/recorded-bar.ts)
         const built = Machine.fromConfig(config.machines.find(it => it.id === id));
-        const bar = barAtFirstSample(machine.samples, { crafts_per_tick: built.crafting_rate.crafts_per_tick, bonus_per_craft: built.bonus_productivity_rate.bonus_per_craft });
+        const bar = barAtFirstSample(samplesFrom(machine.samples, sample), { crafts_per_tick: built.crafting_rate.crafts_per_tick, bonus_per_craft: built.bonus_productivity_rate.bonus_per_craft });
         if (bar.bar === null) bars_unknown.push(`machine:${id} (${bar.reason})`);
-        else if (bar.from_sample > 0) bars_worked_back.push(`machine:${id} ${bar.bar} (shown ${machine.samples.bonus_progress[0]}, worked back from sample ${bar.from_sample})`);
-        start_stock[`machine:${id}`] = { items, crafting_progress: machine.samples.crafting_progress[0], bonus_progress: bar.bar ?? machine.samples.bonus_progress[0] };
+        else if (bar.from_sample > 0) bars_worked_back.push(`machine:${id} ${bar.bar} (shown ${machine.samples.bonus_progress[sample]}, worked back from sample ${sample + bar.from_sample})`);
+        start_stock[`machine:${id}`] = { items, crafting_progress: machine.samples.crafting_progress[sample], bonus_progress: bar.bar ?? machine.samples.bonus_progress[sample] };
     }
     // the hands as the recording holds them at its first sample (the config's inserters only); each starts idle: where the arm is in its swing is not recorded
     const start_hands = {};
     for (const it of game.inserters) {
         const id = gameMatch.inserters.get(it.id);
-        const held = it.samples.held_count[0];
-        const item = it.samples.held_item.length > 0 && it.samples.held_item[0][0] === 0 ? it.samples.held_item[0][1] : undefined;
+        const held = it.samples.held_count[sample];
+        const item = changeAt(it.samples.held_item, sample) || undefined;
         if (id !== undefined && held > 0 && item !== undefined) start_hands[`inserter:${id}`] = { item_name: item, quantity: held };
     }
     const hands = Object.entries(start_hands).map(([id, hand]) => `${id} ${hand.quantity} ${hand.item_name}`);
     const drills = (config.drills ?? []).length;
     const not_seeded = [
-        `inserter swing: ${hands.length} of ${game.inserters.length} recorded inserters held items at the first sample${hands.length ? ` (${hands.join(", ")})` : ""}; each hand is given and starts idle, since where an arm is in its swing is not recorded`,
+        `inserter swing: ${hands.length} of ${game.inserters.length} recorded inserters held items at the seed sample${hands.length ? ` (${hands.join(", ")})` : ""}; each hand is given and starts idle, since where an arm is in its swing is not recorded`,
         ...(fuel.length ? [`fuel slots and the burning fuel item: the start has no way to put fuel in (${fuel.join("; ")})`] : []),
         ...(both.length ? [`outputs of an item the machine also takes: ${both.join(", ")}`] : []),
         ...(drills ? [`mining drills: ${drills} in the build, whose mining and productivity bars start as filling leaves them`] : []),
         ...(bars_unknown.length ? [`a productivity bar shown full whose part over 1 could not be worked back, seeded at the 1 shown: ${bars_unknown.join("; ")}`] : []),
         "belts (assumed full, as the simulator keeps them), chest contents (the recording has none: infinite, or as filling leaves them), a machine's finished-but-not-placed products (start empty)",
     ];
-    return { ...base, applied: true, complete: fuel.length === 0 && both.length === 0 && drills === 0, position: game.clock.values[0], start_stock, start_hands, hands_not_empty: hands.length, bars_worked_back, not_seeded };
+    return { ...base, applied: true, complete: fuel.length === 0 && both.length === 0 && drills === 0, sample, position: game.clock.values[sample], start_stock, start_hands, hands_not_empty: hands.length, bars_worked_back, not_seeded };
 }
 
 /**
- * The periods of a game's recording and of a seeded run, paired by sample: the run's tick t is the game's sample t + 1. Every whole
- * period both hold is paired, the first included: the state its first sample gave the run is what is being tested.
+ * The periods of a game's recording and of a seeded run, paired by sample: the run's tick t is the game's sample seedSample + t + 1.
+ * Every whole period both hold is paired (the periods before the seed sample have none): the state the seed sample gave the run is what
+ * is being tested.
  */
-function pairSeeded(game, sim) {
+function pairSeeded(game, sim, seedSample) {
     const { clockPeriods } = dist("harness/recording-output.js");
     const g = clockPeriods(game.clock.values);
     const s = clockPeriods(sim.clock.values);
     const gp = [], sp = [];
     for (const gamePeriod of g) {
-        const simPeriod = s.find(it => it.start + 1 === gamePeriod.start && it.end + 1 === gamePeriod.end);
+        const simPeriod = s.find(it => it.start + 1 + seedSample === gamePeriod.start && it.end + 1 + seedSample === gamePeriod.end);
         if (simPeriod === undefined) continue;
         gp.push(gamePeriod); sp.push(simPeriod);
     }
@@ -221,11 +239,34 @@ function unsettledPeriods(game, gameMatch, periods) {
     const values = period => machines.flatMap(m => [...Object.entries(m.samples.inputs), ...Object.entries(m.samples.outputs)].map(([item, list]) => list[period.start]));
     const states = periods.map(values);
     const tail = states.slice(Math.floor(states.length * 2 / 3));
-    if (tail.length === 0) return { periods_compared_by_stock: states.length, drifting_periods: [], settled_from: 0 };
-    const low = states[0].map((_, i) => Math.min(...tail.map(it => it[i]))), high = states[0].map((_, i) => Math.max(...tail.map(it => it[i])));
+    if (tail.length === 0) return { periods_compared_by_stock: states.length, drifting_periods: [], settled_from: 0, tail_stable: true };
+    const rangeOfRows = rows => ({ low: states[0].map((_, i) => Math.min(...rows.map(it => it[i]))), high: states[0].map((_, i) => Math.max(...rows.map(it => it[i]))) });
+    const outside = (state, { low, high }) => state.some((v, i) => v < low[i] || v > high[i]); // a value of the state outside the range
+    const whole = rangeOfRows(tail);
     const drifting = [];
-    states.forEach((state, p) => { if (state.some((v, i) => v < low[i] || v > high[i])) drifting.push(p); });
-    return { periods_compared_by_stock: states.length, drifting_periods: drifting, settled_from: drifting.length === 0 ? 0 : drifting[drifting.length - 1] + 1 };
+    states.forEach((state, p) => { if (outside(state, whole)) drifting.push(p); });
+    // the last third is settled itself only if its second half stays in its first half's range: else the stock is still moving there
+    const half = Math.floor(tail.length / 2), first = rangeOfRows(tail.slice(0, half));
+    const tail_stable = half === 0 || tail.slice(half).every(state => !outside(state, first));
+    return { periods_compared_by_stock: states.length, drifting_periods: drifting, settled_from: drifting.length === 0 ? 0 : drifting[drifting.length - 1] + 1, tail_stable };
+}
+
+/** fewest whole periods that must follow the seed sample for a settled seed to be used */
+const MIN_PERIODS_AFTER_SEED = 3;
+/**
+ * Where the simulator is seeded: the first sample of the first settled period of the game's recording (see the top of the file), else
+ * the recording's first sample, with the reason. `how` is "settled" (the default) or "first" (forced).
+ */
+function settlingOf(game, gameMatch, how) {
+    const { clockPeriods } = dist("harness/recording-output.js");
+    const periods = clockPeriods(game.clock.values);
+    const u = unsettledPeriods(game, gameMatch, periods);
+    const base = { rule: "first period whose machine stock (in and out) stays inside the range of the last third of the periods", periods_in_recording: periods.length, settled_from_period: u.settled_from, drifting_periods: u.drifting_periods.length };
+    if (how === "first") return { ...base, seed_sample: 0, settles: null, reason: "--seed-at first: seeded at the recording's first sample" };
+    if (!u.tail_stable) return { ...base, seed_sample: 0, settles: false, reason: "the stock still drifts in the last third of the recording (its second half leaves its first half's range): not settled within the recording, seeded at the first sample" };
+    if (u.settled_from === 0) return { ...base, seed_sample: 0, settles: true, reason: "settled from the first period: seeded at the first sample" };
+    if (periods.length - u.settled_from < MIN_PERIODS_AFTER_SEED) return { ...base, seed_sample: 0, settles: false, reason: `fewer than ${MIN_PERIODS_AFTER_SEED} periods follow the settled period: seeded at the first sample` };
+    return { ...base, seed_sample: periods[u.settled_from].start, settles: true, reason: `settled from period ${u.settled_from} of ${periods.length}: seeded at its first sample` };
 }
 
 // ---- reading a recording per period ----
@@ -537,14 +578,15 @@ async function check() {
         const periods = staged ? gamePeriodCount + 1 : Math.ceil(gamePeriodCount * 1.5) + 2;
         const config = await configOf();
         const gameMatch = matchRecordingToConfig(game, config);
-        const seed = seedOf(game, gameMatch, config, clock, staged);
+        const settling = staged || game.clock === undefined ? undefined : settlingOf(game, gameMatch, opt("--seed-at") ?? "settled");
+        const seed = seedOf(game, gameMatch, config, clock, staged, settling?.seed_sample ?? 0);
         const seedFile = path.join(work, "seed.json");
-        if (seed.applied) fs.writeFileSync(seedFile, JSON.stringify({ position: seed.position, start_stock: seed.start_stock, start_hands: seed.start_hands }));
+        if (seed.applied) fs.writeFileSync(seedFile, JSON.stringify({ sample: seed.sample, position: seed.position, start_stock: seed.start_stock, start_hands: seed.start_hands }));
         // the cold runs, and the seeded ones where the recording gives a seed; each under both dispatches
         const sims = {}, seededSims = {};
         await Promise.all(Object.keys(DISPATCHES).flatMap(key => [false, true].filter(seeded => !seeded || seed.applied).map(async seeded => {
             const file = path.join(work, `sim-${key}${seeded ? "-seeded" : ""}.json`);
-            await child("simulate", ["--clock", clockFile, "--out", file, "--periods", String(seeded ? gamePeriodCount + 2 : periods), ...(staged ? ["--staged"] : []), ...(seeded ? ["--seed", seedFile] : []),
+            await child("simulate", ["--clock", clockFile, "--out", file, "--periods", String(seeded ? Math.floor((game.sample_count - seed.sample) / clock.clock_ticks) + 2 : periods), ...(staged ? ["--staged"] : []), ...(seeded ? ["--seed", seedFile] : []),
                 ...(opt("--sim-offset") ? ["--sim-offset", opt("--sim-offset")] : [])], dispatchEnv(key));
             (seeded ? seededSims : sims)[key] = JSON.parse(fs.readFileSync(file, "utf8"));
         })));
@@ -575,11 +617,11 @@ async function check() {
         for (const key of Object.keys(DISPATCHES)) { pairs[key] = pairPeriods(game, sims[key], staged); cycles[key] = cyclesOf(game, gameMatch, sims[key], pairs[key]); }
         const cycleMean = Object.values(cycles).some(it => it.game > 1 || it.sim > 1);
         const seededPairs = {}, seededCycles = {};
-        if (seed.applied) for (const key of Object.keys(DISPATCHES)) { seededPairs[key] = pairSeeded(game, seededSims[key]); seededCycles[key] = cyclesOf(game, gameMatch, seededSims[key], seededPairs[key]); }
+        if (seed.applied) for (const key of Object.keys(DISPATCHES)) { seededPairs[key] = pairSeeded(game, seededSims[key], seed.sample); seededCycles[key] = cyclesOf(game, gameMatch, seededSims[key], seededPairs[key]); }
         // the seeded run is judged where there is one; the cycle decides how its periods are judged as it does for the cold one, from both runs' cycles together
         const seededCycleMean = seed.applied && Object.values(seededCycles).some(it => it.game > 1 || it.sim > 1);
         const seedStamp = seed.applied
-            ? { applied: true, complete: seed.complete, source: seed.source, position_of_first_sample: seed.position, sim_tick_0_is_game_sample: 1, not_seeded: seed.not_seeded, machines_seeded: Object.keys(seed.start_stock).length, hands_not_empty: seed.hands_not_empty, bars_worked_back: seed.bars_worked_back }
+            ? { applied: true, complete: seed.complete, source: seed.source, seed_sample: seed.sample, settling, position_of_seed_sample: seed.position, sim_tick_0_is_game_sample: seed.sample + 1, not_seeded: seed.not_seeded, machines_seeded: Object.keys(seed.start_stock).length, hands_not_empty: seed.hands_not_empty, bars_worked_back: seed.bars_worked_back }
             : { applied: false, source: seed.source, reason: seed.reason };
         for (const key of Object.keys(DISPATCHES)) {
             const ctx = { config, game, gameMatch, clock, period: clock.clock_ticks, staged, groups: byWindows };
@@ -641,8 +683,11 @@ function summarise(folder) {
         table.push(`| ${name} | ${off.game_side} | ${off.judged_run}${off.seed.applied && !off.seed.complete ? " (seed incomplete)" : ""} | ${off.cycle.wake_ups_judged_by} (cycles game ${off.cycle.game}, sim ${off.cycle.sim} / ${on.cycle.sim}) | ${word(off.wake_ups.pass)} / ${word(on.wake_ups.pass)} | ${word(off.bins.pass)} / ${word(on.bins.pass)} | ${word(off.hands.pass)} / ${word(on.hands.pass)} | ${coldWord("wake_ups")} | ${coldWord("bins")} | ${coldWord("hands")} | ${closers.join(" | ")} | ${offset}${off.alignment.differs_from_default ? ` (differs from ${off.alignment.default})` : ""} |`);
         lines.push("", `## ${name} (clock ${off.clock_hash.slice(0, 8)}, period ${off.clock_period}, game side: ${off.game_side}, ${off.periods_compared} periods compared, alignment offset ${offset}${off.alignment.differs_from_default ? `, differs from ${off.alignment.default}` : ""})`);
         if (off.closer_excluded) lines.push(`left out of "closer": ${off.closer_excluded}`);
+        const startOf = seed => `the recording's sample ${seed.seed_sample ?? 0} (clock position ${seed.position_of_seed_sample ?? seed.position_of_first_sample}, ${seed.machines_seeded} machines)`;
         lines.push(off.seed.applied
-            ? `start: ${off.seed.complete ? `judged on the run seeded from the recording's first sample (clock position ${off.seed.position_of_first_sample}, ${off.seed.machines_seeded} machines); the cold run is reported in the table and under "cold" in the file` : `the seed from the recording's first sample (clock position ${off.seed.position_of_first_sample}, ${off.seed.machines_seeded} machines) lacks what the simulator cannot take, so the run from it is reported (under "seeded" in the file) and the cold run is judged`}. Not seeded: ${off.seed.not_seeded.join("; ")}`
+            ? `start: ${off.seed.complete ? `judged on the run seeded from ${startOf(off.seed)}; the cold run is reported in the table and under "cold" in the file` : `the seed from ${startOf(off.seed)} lacks what the simulator cannot take, so the run from it is reported (under "seeded" in the file) and the cold run is judged`}. `
+                + (off.seed.settling ? `Seed sample: ${off.seed.settling.reason}${off.seed.settling.settles === false ? " (NOT SETTLED)" : ""}. ` : "")
+                + `Not seeded: ${off.seed.not_seeded.join("; ")}`
             : `start: no seeded run (${off.seed.reason}); the cold run is judged`);
         for (const [key, r] of [["off", off], ["on", on]]) {
             const cycleMean = r.cycle.wake_ups_judged_by !== "each period";
