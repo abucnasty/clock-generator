@@ -59,6 +59,8 @@ it("judges the unchanged fractional export on complete physical counter spans", 
     expect(result.stability_check.as_built?.long_run_proven).toBe(true);
 });
 
+// All 640 starts run, 422 of them to the proof cap: about 25 s on a desktop and over 60 s on a GitHub runner. No smaller
+// metallurgic clock (lcm 1-4, 1-4 swings) holds from its first start, so none can stand in for it.
 it("checks every physical counter start and reports the bounded proof limit honestly", async () => {
     const sample = await loadConfigFromFile(ConfigPaths.METALLURGIC_SCIENCE_PACK);
     const config = { ...sample, overrides: { ...sample.overrides, lcm: controls.lcm,
@@ -69,7 +71,7 @@ it("checks every physical counter start and reports the bounded proof limit hone
     expect(proof).toMatchObject({ holds: true, phases_checked: 640 });
     // Some exact state keys do not repeat before the existing cap; those full640tick observations remain samples.
     expect(proof!.proven).toBe(proof!.unresolved_phases === 0);
-});
+}, 180_000);
 
 it("still rejects output missing over a complete physical counter span", async () => {
     const sample = await loadConfigFromFile(ConfigPaths.METALLURGIC_SCIENCE_PACK);
