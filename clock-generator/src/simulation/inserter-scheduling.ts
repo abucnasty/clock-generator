@@ -30,9 +30,12 @@ interface Member {
     readonly machine_source: WakeChannel<Member> | undefined;
     /** The input channel of its sink, when the sink is a machine with readiness notifications */
     readonly machine_sink: WakeChannel<Member> | undefined;
-    /** The input channel of its sink, whatever the sink */
-    readonly sink: WakeChannel<Member>;
     readonly polling_sink: boolean;
+    /** What it registers on as it sleeps, by its reason (completeUpdate): made once */
+    readonly waits_for_source: readonly WakeChannel<Member>[];
+    /** After a partial take: its sink's input channel, whatever the sink, and its source's */
+    readonly waits_for_both: readonly WakeChannel<Member>[];
+    readonly waits_for_sink: readonly WakeChannel<Member>[];
     /** Its place in the update list (set once the scheduler is made) */
     node: ScheduledNode<Member>;
     /** Its registrations on the wake lists */
@@ -103,7 +106,10 @@ export class InserterScheduling {
                     sink.yield.notifications.subscribeInput(cause => this.notify(sink_channel, cause));
                 }
             }
-            const member: Member = {id, inserter, machine_source, machine_sink, sink: sink_channel, polling_sink,
+            const member: Member = {id, inserter, machine_source, machine_sink, polling_sink,
+                waits_for_source: machine_source === undefined ? [] : [machine_source],
+                waits_for_both: machine_source === undefined ? [sink_channel] : [sink_channel, machine_source],
+                waits_for_sink: machine_sink === undefined ? [] : [machine_sink],
                 node: null!, wait: null!, leaving: false};
             (member as {wait: WakeEntry<Member>}).wait = this.waits.entry(member);
             inserter.hand.notifications.subscribe(cause => this.alarm(member, cause));
@@ -139,7 +145,7 @@ export class InserterScheduling {
     private alarm(member: Member, cause: string): void {
         const node = member.node;
         // in the list, waiting on nothing and not leaving: the Alarm changes nothing, and nobody sees it
-        if (node.active && member.wait.channels.length === 0 && !member.leaving && !this.observing) return;
+        if (node.active && member.wait.links.length === 0 && !member.leaving && !this.observing) return;
         this.waits.clearEntry(member.wait);
         member.leaving = false;
         if (this.observing) this.scheduler.deliverAlarm(member, cause, true);
@@ -147,7 +153,7 @@ export class InserterScheduling {
     }
 
     private notify(channel: WakeChannel<Member>, cause: string): void {
-        if (channel.entries.length === 0) return;
+        if (channel.size === 0) return;
         for (const {entity} of this.waits.takeEntries(channel)) this.alarm(entity, cause);
     }
 
@@ -194,15 +200,15 @@ export class InserterScheduling {
             // A successful partial take checks both ends before sleep. Ports without complete
             // readiness notifications keep polling rather than inventing native wakeability.
             if (picked && member.polling_sink) return;
-            this.waits.registerEntry(member.wait, picked ? [member.sink, source] : [source]);
+            this.waits.registerEntry(member.wait, picked ? member.waits_for_both : member.waits_for_source);
             this.scheduler.deactivateNode(member.node, reason);
         } else if (reason === "destination-refused" && sink !== undefined) {
-            this.waits.registerEntry(member.wait, [sink]);
+            this.waits.registerEntry(member.wait, member.waits_for_sink);
             this.scheduler.deactivateNode(member.node, reason);
         } else if (reason === "control-disabled") {
             // Simulator control swaps preserve the source-wait contract separately from native
             // condition assignment. An unsupported belt source supplies no inventory registration.
-            this.waits.registerEntry(member.wait, source === undefined ? [] : [source]);
+            this.waits.registerEntry(member.wait, member.waits_for_source);
             this.scheduler.deactivateNode(member.node, reason);
         }
     }
@@ -216,32 +222,32 @@ export class InserterScheduling {
 
     /**
      * Finish-dispatch edges arrive after entity Updates and are eligible in the next phase. Every control that looks
-     * ahead answers from the clock alone (`Control.looks_ahead`), so asking it is free of effects; an edge changes
-     * something only for an inserter out of the list, waiting or leaving, so while nobody observes, the edges are
-     * worked out only in a tick where one of those opens.
+     * ahead answers from the clock alone (`Control.looks_ahead`), so asking it is free of effects.
+     *
+     * While nobody observes, an edge changes something only for an inserter out of the list, waiting or leaving (a
+     * stirred one): an Alarm to any other changes nothing. So only the stirred inserters' edges are delivered, in the
+     * order all the edges would be; an unstirred inserter is asked only when its control has no decider build order,
+     * since one opening edge without it keeps the edges in the inserters' order.
      */
     public finishControls(): void {
         const members = this.members;
-        if (!this.observing && !this.anyStirredOpens()) return;
-        const opening = members.filter(member => opensNextTick(member.inserter));
+        let opening: Member[] | null = null;
+        let ordered = true;
+        for (let index = 0; index < members.length; index++) {
+            const member = members[index];
+            const stirred = this.observing || !member.node.active || member.wait.links.length > 0 || member.leaving;
+            const unordered = member.inserter.control.decider_build_order === undefined;
+            if (!stirred && (!ordered || !unordered)) continue;
+            if (!opensNextTick(member.inserter)) continue;
+            if (unordered) ordered = false;
+            if (stirred) (opening ??= []).push(member);
+        }
+        if (opening === null) return;
         // Known decider build order already belongs to the exported clock. Its native forward/
         // reversed controls require last-built-first Updates. Deliver ascending so new attachments
         // lead in reverse. Unknown orders keep the trial scenario, without inventing build facts.
-        if (opening.every(member => member.inserter.control.decider_build_order !== undefined)) {
-            opening.sort((a, b) => a.inserter.control.decider_build_order! - b.inserter.control.decider_build_order!);
-        }
+        if (ordered) opening.sort((a, b) => a.inserter.control.decider_build_order! - b.inserter.control.decider_build_order!);
         for (const member of opening) this.alarm(member, "control-finish-enable-edge");
-    }
-
-    /** Whether an inserter whose Alarm would change something (out of the list, waiting or leaving) opens next tick */
-    private anyStirredOpens(): boolean {
-        const members = this.members;
-        for (let index = 0; index < members.length; index++) {
-            const member = members[index];
-            if (member.node.active && member.wait.channels.length === 0 && !member.leaving) continue;
-            if (opensNextTick(member.inserter)) return true;
-        }
-        return false;
     }
 
     public endUpdates(): void { this.scheduler.endUpdates(); }
