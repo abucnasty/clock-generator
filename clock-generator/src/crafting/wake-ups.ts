@@ -10,7 +10,7 @@ import type { StockRecording } from "./machine-stock";
  * pays out a productivity bar (`wakeUps` below). A woken inserter looks for something to move, finds nothing or a
  * little, and goes back to sleep: with the debug option `show-wakeup-lists` the yellow line from the
  * inserter to the machine flickers. An inserter its clock has disabled is on no list and is never woken, once it has
- * been updated disabled (one switched off while asleep keeps its list until woken: `WakeRule` "kept-lists"). A wake-up
+ * been updated disabled (one switched off while asleep stays on its list until woken: `WakeRule` "kept-lists"). A wake-up
  * is one such waking, and what a clock is there to spare a build.
  *
  * The game does not let a mod read its wake-up lists, so they are worked out here from what it does show: the state
@@ -96,19 +96,22 @@ export interface WatchedMachine {
 /**
  * Which lists the rule puts an inserter on.
  * - "shown-waiting": the list of the end its shown state waits on after the tick before, and no other.
- * - "kept-lists" (with the new dispatch, simulation/dispatch.ts): that, and two cases a true count of the game's
- *   wake-ups showed (Factorio 2.1.24: a stack inserter taking from an electromagnetic plant, 13 wake-ups a period by its
- *   machine where "shown-waiting" counts 8):
- *   - **asleep and woken in one tick.** An inserter on the update list takes items from its machine and, its hand not
- *     full, goes to sleep on the machine's list in its own update; a result the machine places later in that tick wakes
- *     it again. Its shown state after the tick is not a waiting one (the game shows it working), so the rule reads it
- *     from the hand and the machine: the hand rose in the tick and is not full, a belt it drops on had room at its drop
- *     spot (without, a part hand stays on the update list: `drop_room`), and the machine's output still holds the item
- *     in the hand after the tick, which a hand with room took everything of when it came first.
- *   - **switched off while asleep keeps the list.** A clock that switches off an inserter asleep on a machine's list
- *     leaves it there (a switch-off alarms nobody): the machine's next alarm wakes it, and the update that brings finds
- *     it disabled and leaves it on no list until it is switched on. That counts an inserter shown waiting in the tick
- *     before it is shown disabled, and one that went to sleep in that tick's update as above.
+ * - "kept-lists" (with the new dispatch, simulation/dispatch.ts): **an inserter is asleep on a machine's list from the
+ *   end of an update of its own that left it nothing to do at that end, earlier in the tick or in an earlier one, until
+ *   the machine's next alarm wakes it, and a switch-off does not take it off.** True counts of the game's wake-ups
+ *   (Factorio 2.1.24, by the machine, tick for tick: a stack inserter taking from an electromagnetic plant onto a belt,
+ *   13 a period where "shown-waiting" counts 8; the sample electromagnetic science build, 10, 10 and 11 where it counts
+ *   3, 0 and 8) showed what "shown-waiting" misses of that:
+ *   - **asleep and woken in one tick.** Its shown state after the tick is not a waiting one (the game shows it working),
+ *     so for an inserter that takes from a machine the rule reads the sleep from its hand and the machine: it was on
+ *     the update list when the tick began, its arm is at home after it, its hand did not fall and is not full, and a
+ *     belt it drops on had room at its drop spot (without, it stays on the update list: `drop_room`). A hand that rose
+ *     took everything there was, an empty one found nothing (another inserter, updated first, took it all); a result
+ *     in the machine's output after the tick then came after its update, and woke it.
+ *   - **asleep across a switch-off.** The machine's next alarm wakes it, and the update that brings finds it disabled
+ *     and leaves it on no list until it is switched on. That counts an inserter shown waiting in the tick before it is
+ *     shown disabled with its arm at home by the end of that tick (the arm may come home in it), and one that went to
+ *     sleep in that tick's update as above.
  *   An alarm to an awake inserter changes nothing; a clock's switch-on wakes an inserter too, and is left out here by
  *   design (the clock is there to make it).
  */
@@ -189,21 +192,25 @@ export function armAwayOf(held: readonly number[] | undefined, return_ticks: num
 
 /**
  * For an inserter that takes from a machine, read off its hand and that machine's output (`WakeRule` "kept-lists"):
- * whether it went to sleep on the machine's list in its own update in a tick (its hand rose there and is not full, with
- * room where it drops on a belt), and
- * whether the machine placed a result after that update (the item in its hand is in the output after the tick: a hand
- * with room takes all of it). Null where the hand or the output is not given.
+ * whether it went to sleep on the machine's list in its own update in a tick (on the update list when the tick began,
+ * its arm at home after it, its hand not fallen and not full, with room where it drops on a belt), and whether the
+ * machine placed a result after that update (the item in its hand, or any with an empty hand, is in the output after
+ * the tick: a hand with room takes all of it). Null where the hand or the output is not given.
  */
-function sleepInUpdateOf(inserter: WatchingInserter, outputs: ReadonlyMap<string, Readonly<Record<string, readonly number[]>>>):
+function sleepInUpdateOf(inserter: WatchingInserter, outputs: ReadonlyMap<string, Readonly<Record<string, readonly number[]>>>,
+    armAway: (tick: number) => boolean, awakeBefore: (tick: number) => boolean):
     { slept(tick: number): boolean; placedAfter(tick: number): boolean } | null {
     const { held, held_item, hand_size_of, drop_room, source_machine_id } = inserter;
     const output = source_machine_id === null ? undefined : outputs.get(source_machine_id);
     if (held === undefined || held_item === undefined || hand_size_of === undefined || output === undefined) {
         return null;
     }
+    const items = Object.values(output);
     return {
-        slept: tick => held[tick] > held[tick - 1] && held[tick] < hand_size_of(held_item[tick]) && drop_room?.[tick] !== false,
-        placedAfter: tick => (output[held_item[tick]]?.[tick] ?? 0) > 0,
+        slept: tick => awakeBefore(tick) && !armAway(tick) && held[tick] >= held[tick - 1]
+            && (held_item[tick] === "" || held[tick] < hand_size_of(held_item[tick])) && drop_room?.[tick] !== false,
+        // the item in its hand, or any it could take with an empty one
+        placedAfter: tick => held_item[tick] === "" ? items.some(series => series[tick] > 0) : (output[held_item[tick]]?.[tick] ?? 0) > 0,
     };
 }
 
@@ -275,7 +282,10 @@ export function wakeUps(
         };
         const alarmedIn = (end: WatchedEnd, tick: number) => lists[end]?.(tick) ?? 0;
         const armAway = armAwayOf(inserter.held, inserter.return_ticks);
-        const sleepsInUpdate = kept_lists ? sleepInUpdateOf(inserter, outputs) : null;
+        // on the update list when the tick began: enabled, and not shown waiting with its arm at home
+        const awakeBefore = (tick: number) => inserter.states[tick - 1] !== FactorioInserterState.DISABLED_BY_CONTROL_BEHAVIOR
+            && (WATCHED_END[inserter.states[tick - 1]] === undefined || armAway(tick - 1));
+        const sleepsInUpdate = kept_lists ? sleepInUpdateOf(inserter, outputs, armAway, awakeBefore) : null;
         let woken_at_sink = 0;
         let woken_at_source = 0;
         let away = 0;
@@ -307,7 +317,8 @@ export function wakeUps(
                     woken = true;
                     on_wake?.(inserter.inserter_id, tick, asleep_on);
                 } else if (kept_lists) {
-                    listed = !armAway(tick - 1);
+                    // on the list after its own update in this tick: its arm is at home by then
+                    listed = !armAway(tick);
                 }
             }
             if (sleepsInUpdate !== null) {

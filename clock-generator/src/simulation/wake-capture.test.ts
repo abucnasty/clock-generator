@@ -1,8 +1,9 @@
 import fs from "fs";
 import path from "path";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import type { Config } from "../config";
 import type { SerializableClockWindows } from "../crafting/generate-blueprint";
+import type { SchedulingEvent } from "./active-scheduler";
 
 /*
  * The new dispatch and its wake-up rule are read from the environment once, as their modules load (simulation/dispatch.ts):
@@ -14,7 +15,8 @@ async function underTheNewDispatch() {
     try {
         return {
             ...await import("../crafting/generate-blueprint"), ...await import("../crafting/inserter-counters"),
-            ...await import("../crafting/wake-ups"), ...await import("../verification/simulated-recording"), ...await import("./dispatch"),
+            ...await import("../crafting/wake-ups"), ...await import("../crafting/machine-stock"),
+            ...await import("../verification/simulated-recording"), ...await import("./dispatch"), ...await import("./inserter-scheduling"),
         };
     } finally {
         if (before === undefined) delete process.env.CLOCK_NEW_DISPATCH;
@@ -22,32 +24,88 @@ async function underTheNewDispatch() {
     }
 }
 
+interface Fixture {
+    clock: { config: Config; windows: SerializableClockWindows; period: number };
+    inserters: Record<string, { states: [number, string][]; woken_by_machine: number[] }>;
+}
+
 /**
- * The clock of the period recorded in Factorio 2.1.24 (crafting/fixtures/wake-ups-capture-2.1.24.json), run in the
- * simulator under the new dispatch: the clock positions at which its machine wakes each inserter, a period's worth, laid
- * against the positions at which the game delivered a wake-up by the machine.
+ * The clock of a period recorded in Factorio 2.1.24 (crafting/fixtures/wake-ups-capture-*.json), run in the simulator
+ * under the new dispatch, the last two of 12 periods: per inserter, the clock positions at which its machine woke it by
+ * the simulator's own lists (an alarm of the machine that put it back on the update list), the positions the rule
+ * counts on its states, and the positions the clock switched it on at
  */
-test("under the new dispatch the simulator wakes the inserters of the recorded period where the game does", async () => {
-    const { simulateClockOnly, inserterEnds, wakeUpsOfStock, SIMULATED_TICK_TO_CLOCK_POSITION, DEFAULT_INSERTER_DISPATCH } = await underTheNewDispatch();
+async function simulated(file: string): Promise<{ fixture: Fixture; own: Map<string, number[]>; ruled: Map<string, number[]>; switched_on: Map<string, number[]> }> {
+    const modules = await underTheNewDispatch();
+    const { simulateClockOnly, inserterEnds, wakeUpsOfStock, SIMULATED_TICK_TO_CLOCK_POSITION, DEFAULT_INSERTER_DISPATCH, InserterScheduling, StockRecorder } = modules;
     expect(DEFAULT_INSERTER_DISPATCH).not.toBe("configured-order");
-    const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "crafting", "fixtures", "wake-ups-capture-2.1.24.json"), "utf8")) as {
-        clock: { config: Config; windows: SerializableClockWindows; period: number };
-        inserters: Record<string, { woken_by_machine: number[] }>;
-    };
+    const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "crafting", "fixtures", file), "utf8")) as Fixture;
     const { config, windows, period } = fixture.clock;
     const quiet = { log() { }, warn() { }, error() { }, debug() { } };
     const periods = 12;
-    const stock = simulateClockOnly(config, windows, period, periods, quiet);
-    // the last two periods, settled
     const from = (periods - 2) * period;
-    const woken = new Map<string, Set<number>>();
-    wakeUpsOfStock(stock, inserterEnds(config), from, (inserter_id, tick) => {
-        if (!woken.has(inserter_id)) woken.set(inserter_id, new Set());
-        woken.get(inserter_id)!.add((tick + SIMULATED_TICK_TO_CLOCK_POSITION) % period);
-    });
-    const game = (id: string) => fixture.inserters[id].woken_by_machine;
-    // 23 and 279 (asleep and woken in one tick), 287, 686 and 1071 (switched off asleep on the list) among them; 61 is one
-    // the game lacks (its inserter is already switched off there), which the simulator had before these two cases too
-    expect([...woken.get("inserter:1")!].sort((a, b) => a - b)).toEqual([...game("inserter:1"), 61].sort((a, b) => a - b));
-    expect([...woken.get("inserter:2")!].sort((a, b) => a - b)).toEqual(game("inserter:2"));
+    const position = (tick: number) => (tick + SIMULATED_TICK_TO_CLOCK_POSITION) % period;
+    const add = (map: Map<string, number[]>, id: string, tick: number) => {
+        if (tick < from) return;
+        if (!map.has(id)) map.set(id, []);
+        map.get(id)!.push(position(tick));
+    };
+    // the scheduling's events, by the tick the stock records next (its after-tick sample)
+    let tick = 0;
+    const own = new Map<string, number[]>(), switched_on = new Map<string, number[]>();
+    const observed = new WeakSet<object>();
+    const record = StockRecorder.prototype.record;
+    const begin = InserterScheduling.prototype.beginUpdates;
+    const spies = [
+        vi.spyOn(StockRecorder.prototype, "record").mockImplementation(function (this: InstanceType<typeof StockRecorder>) {
+            record.call(this);
+            tick++;
+        }),
+        vi.spyOn(InserterScheduling.prototype, "beginUpdates").mockImplementation(function (this: InstanceType<typeof InserterScheduling>) {
+            if (!observed.has(this)) {
+                observed.add(this);
+                this.observe((event: SchedulingEvent) => {
+                    if (event.event !== "Activation") return;
+                    if (event.cause === "control-finish-enable-edge") add(switched_on, event.entity, tick);
+                    else if (event.cause !== "hand-transfer") add(own, event.entity, tick);
+                });
+            }
+            begin.call(this);
+        }),
+    ];
+    try {
+        const stock = simulateClockOnly(config, windows, period, periods, quiet);
+        const ruled = new Map<string, number[]>();
+        wakeUpsOfStock(stock, inserterEnds(config), from, (inserter_id, at) => add(ruled, inserter_id, at));
+        return { fixture, own, ruled, switched_on };
+    } finally {
+        for (const spy of spies) spy.mockRestore();
+    }
+}
+
+/** The fixture's positions of a list of each inserter, once each, in order */
+const positions = (map: Map<string, number[]>, id: string) => [...new Set(map.get(id) ?? [])].sort((a, b) => a - b);
+
+/** The positions at which the game shows each inserter switched on: disabled after the tick before, not after it */
+function switchOns(fixture: Fixture, id: string): number[] {
+    const changes = fixture.inserters[id].states;
+    return changes.flatMap(([at, state], index) => index > 0 && changes[index - 1][1] === "disabled_by_control_behavior"
+        && state !== "disabled_by_control_behavior" ? [at % fixture.clock.period] : []).sort((a, b) => a - b);
+}
+
+test.each([
+    ["front exit onto a belt", "wake-ups-capture-2.1.24.json"],
+    ["two takers into chests", "wake-ups-capture-electromagnetic-science-2.1.24.json"],
+])("under the new dispatch the simulator wakes the inserters of the recorded period where the game does: %s", async (_, file) => {
+    const { fixture, own, ruled, switched_on } = await simulated(file);
+    for (const id of Object.keys(fixture.inserters)) {
+        // the events are read at the ticks the stock records them: the switch-ons fall where the game's do
+        expect(positions(switched_on, id), `${id} switched on`).toEqual(switchOns(fixture, id));
+        const game = [...fixture.inserters[id].woken_by_machine].map(tick => tick % fixture.clock.period).sort((a, b) => a - b);
+        expect(positions(own, id), `${id} by its own lists`).toEqual(game);
+        expect(positions(ruled, id), `${id} by the rule on its states`).toEqual(game);
+        // the same in each of the two periods
+        expect(own.get(id) ?? []).toHaveLength(2 * game.length);
+        expect(ruled.get(id) ?? []).toHaveLength(2 * game.length);
+    }
 });

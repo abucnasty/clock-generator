@@ -1,6 +1,7 @@
 import assert from "../common/assert";
 import type {SimulationContext} from "../crafting/sequence/simulation-context";
 import {EntityState} from "../state/entity-state";
+import type {InserterListing} from "../state/factorio-entity-state";
 import {ActiveScheduler, ActiveSchedulerState, ScheduledNode, SchedulingEvent} from "./active-scheduler";
 import type {LeavesList, WokenInWalk} from "./dispatch";
 import type {InserterArchetype} from "./archetypes/inserter";
@@ -255,13 +256,15 @@ export class InserterScheduling {
 
     public endUpdates(): void { this.scheduler.endUpdates(); }
 
-    /** Whether the inserter is out of the update list, asleep on the list of the machine it takes from */
-    public asleepForItems(inserter: InserterArchetype): boolean {
+    /** Where the inserter is: on the update list, out of it asleep on the list of the machine it takes from, or elsewhere */
+    public listingOf(inserter: InserterArchetype): InserterListing {
         const member = this.member_of.get(inserter);
-        if (member === undefined || member.node.active || member.machine_source === undefined) return false;
+        if (member === undefined) return "elsewhere";
+        if (member.node.active) return "update-list";
+        if (member.machine_source === undefined) return "elsewhere";
         const links = member.wait.links;
-        for (let index = 0; index < links.length; index++) if (links[index].channel === member.machine_source) return true;
-        return false;
+        for (let index = 0; index < links.length; index++) if (links[index].channel === member.machine_source) return "asleep-for-items";
+        return "elsewhere";
     }
     public state(): InserterSchedulingState {
         const scheduler = this.scheduler.state();
