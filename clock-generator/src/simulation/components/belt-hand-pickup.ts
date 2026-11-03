@@ -118,8 +118,9 @@ export class BeltHandPickup implements HandPickupPort {
         }
     }
 
+    /** The decision of the first stack, and whether the hand's next update is its first after a control swap (see `enter`) */
     public key(): string {
-        return `${this.scratch.belt_grab_decided}`;
+        return `${this.scratch.belt_grab_decided};${this.scratch.after_swap}`;
     }
 
     public startsPickup(): boolean {

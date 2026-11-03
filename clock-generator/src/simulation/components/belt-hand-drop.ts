@@ -71,6 +71,12 @@ export class BeltHandDrop implements HandDropPort {
         return true;
     }
 
+    public roomForStack(): boolean {
+        const held_item = this.state.held_item;
+        const index = this.at_spot || held_item === null ? 0 : laneForDrop(this.lanes, held_item.item_name);
+        return this.lanes[index].hasRoom(this.drops[index], this.tick_provider.getCurrentTick(), this.spot_ticks);
+    }
+
     public takesAt(): boolean {
         return true;
     }

@@ -39,10 +39,20 @@ function sinkTakesNothing(sink: EntityState): boolean {
  *
  * The rule for a waiting inserter names the recorded state of every waiting sample but 188 of 328,042.
  */
-export function factorioInserterState(state: InserterState, sink: EntityState): FactorioInserterState {
+export function factorioInserterState(state: InserterState, sink: EntityState, asleep_for_items: boolean = false): FactorioInserterState {
     if (!state.enabled) {
         return FactorioInserterState.DISABLED_BY_CONTROL_BEHAVIOR;
     }
+    const shown = shownWhileEnabled(state, sink);
+    // asleep on its source machine's list (the new dispatch's update list): the game shows it waiting for items, also
+    // after an update that took part of a hand and went to sleep at once, which leaves the hand's status working
+    if (asleep_for_items && shown === FactorioInserterState.WORKING) {
+        return state.held_item === null ? FactorioInserterState.WAITING_FOR_SOURCE_ITEMS : FactorioInserterState.WAITING_FOR_MORE_ITEMS;
+    }
+    return shown;
+}
+
+function shownWhileEnabled(state: InserterState, sink: EntityState): FactorioInserterState {
     const held = state.held_item;
     // on a clock of the game an inserter shows as enabled the tick before it can act, and waits in that tick
     const waits = state.status === InserterStatus.IDLE || state.status === InserterStatus.WAITING_FOR_SINK

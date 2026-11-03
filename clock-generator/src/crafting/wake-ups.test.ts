@@ -1,5 +1,7 @@
+import fs from "fs";
+import path from "path";
 import { describe, expect, it } from "vitest";
-import { returnTicksOf, wakeUps, WatchedMachine, WatchingInserter } from "./wake-ups";
+import { returnTicksOf, WakeRule, wakeUps, WatchedMachine, WatchingInserter } from "./wake-ups";
 
 const WORKING = "working";
 const SOURCE = "waiting_for_source_items";
@@ -176,5 +178,102 @@ describe("wakeUps of a machine that places its results itself", () => {
         // a chest no machine places into wakes no one
         const other = wakeUps([inserter(waiting, { source_machine_id: null })], [placer()], 0, 6);
         expect(other.inserters[0].wake_ups_per_minute).toBe(0);
+    });
+});
+
+/** A series the fixture keeps as [tick, value] where it changes, at its full length */
+function expanded<T>(changes: [number, T][], ticks: number): T[] {
+    const values: T[] = [];
+    let at = 0;
+    for (let tick = 0; tick < ticks; tick++) {
+        while (at < changes.length && changes[at][0] <= tick) at++;
+        values.push(changes[at - 1][1]);
+    }
+    return values;
+}
+
+/**
+ * One clock period recorded in Factorio 2.1.24 (fixtures/wake-ups-capture-2.1.24.json): an electromagnetic plant, the
+ * stack inserter that takes its science packs to a belt (inserter:1) and the one that feeds it from a belt
+ * (inserter:2), with the ticks in which the game delivered a wake-up by the plant to each, read in the running game.
+ */
+function capture(): { inserters: WatchingInserter[]; machines: WatchedMachine[]; ticks: number; woken: Map<string, number[]> } {
+    interface Series { source: string; sink: string; states: [number, string][]; held: number[]; held_item: [number, string][];
+        hand_size: number; return_ticks: number; drop_room?: [number, boolean][]; woken_by_machine: number[] }
+    const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "wake-ups-capture-2.1.24.json"), "utf8")) as {
+        machine: { products_finished: number[]; true_starts: [number, boolean][]; outputs: Record<string, number[]> };
+        inserters: Record<string, Series>;
+    };
+    const ticks = fixture.machine.products_finished.length;
+    const machines: WatchedMachine[] = [{
+        machine_id: "machine:1", products_finished: fixture.machine.products_finished,
+        true_starts: expanded(fixture.machine.true_starts, ticks), outputs: fixture.machine.outputs,
+    }];
+    const inserters = Object.entries(fixture.inserters).map(([inserter_id, series]): WatchingInserter => ({
+        inserter_id,
+        source_machine_id: series.source === "machine" ? "machine:1" : null,
+        sink_machine_id: series.sink === "machine" ? "machine:1" : null,
+        states: expanded(series.states, ticks), held: series.held, return_ticks: series.return_ticks,
+        held_item: expanded(series.held_item, ticks), hand_size_of: () => series.hand_size,
+        ...(series.drop_room !== undefined && { drop_room: expanded(series.drop_room, ticks) }),
+    }));
+    return { inserters, machines, ticks, woken: new Map(Object.entries(fixture.inserters).map(([id, series]) => [id, series.woken_by_machine])) };
+}
+
+function wokenIn(rule: WakeRule): Map<string, number[]> {
+    const { inserters, machines, ticks } = capture();
+    const woken = new Map<string, number[]>(inserters.map(it => [it.inserter_id, []]));
+    wakeUps(inserters, machines, 0, ticks, (inserter_id, tick) => woken.get(inserter_id)!.push(tick), rule);
+    return woken;
+}
+
+describe("the rule \"kept-lists\" against a period of the game", () => {
+    it("counts the game's wake-ups by the machine tick for tick: 13 of the inserter that takes from it, 2 of the one that feeds it", () => {
+        const { woken } = capture();
+        expect(woken.get("inserter:1")).toHaveLength(13);
+        expect(woken.get("inserter:2")).toHaveLength(2);
+        expect(wokenIn("kept-lists")).toEqual(woken);
+    });
+
+    it("where \"shown-waiting\" misses two inserters asleep and woken in one tick and three switched off asleep on the list", () => {
+        const { woken } = capture();
+        const missed = woken.get("inserter:1")!.filter(tick => !wokenIn("shown-waiting").get("inserter:1")!.includes(tick));
+        // clock positions 24 and 280: shown working after the tick before; 288, 687 and 1072: shown disabled
+        expect(missed).toEqual([23, 279, 287, 686, 1071]);
+        expect(wokenIn("shown-waiting").get("inserter:2")).toEqual(woken.get("inserter:2"));
+    });
+});
+
+describe("the rule \"kept-lists\"", () => {
+    // a part hand rises in tick 2 and the machine places a result after it; the inserter shows working throughout
+    const partHand = (ends: Partial<WatchingInserter>, output_after: number): [WatchingInserter, WatchedMachine] => [
+        inserter([WORKING, WORKING, WORKING, WORKING], {
+            held: [4, 4, 5, 6], held_item: ["pack", "pack", "pack", "pack"], hand_size_of: () => 16, ...ends,
+        }),
+        { ...machine("machine:1", 4, [2]), outputs: { pack: [0, 1, output_after, 0] } },
+    ];
+
+    it("counts an inserter that went to sleep in its own update with room at its drop and was woken later in that tick", () => {
+        const [taker, plant] = partHand({}, 1);
+        expect(wakeUps([taker], [plant], 0, 4, undefined, "kept-lists").inserters[0].wake_ups_per_minute).toBe(3600 / 3);
+        expect(wakeUps([taker], [plant], 0, 4, undefined, "shown-waiting").inserters[0].wake_ups_per_minute).toBe(0);
+    });
+
+    it("not when the result came before its update (it took everything), nor when the belt had no room at its drop", () => {
+        const [first, plant] = partHand({}, 0);
+        expect(wakeUps([first], [plant], 0, 4, undefined, "kept-lists").inserters[0].wake_ups_per_minute).toBe(0);
+        const [no_room, plant_again] = partHand({ drop_room: [true, true, false, true] }, 1);
+        expect(wakeUps([no_room], [plant_again], 0, 4, undefined, "kept-lists").inserters[0].wake_ups_per_minute).toBe(0);
+    });
+
+    it("keeps an inserter switched off asleep on the list there until the machine's next alarm, and on none after it", () => {
+        const states = [SOURCE, OFF, OFF, OFF, OFF, OFF];
+        const plant = machine("machine:1", 6, [3, 5]);
+        const result = wakeUps([inserter(states)], [plant], 0, 6, undefined, "kept-lists");
+        expect(result.inserters[0].wake_ups_per_minute).toBe(3600 / 5);
+        expect(wakeUps([inserter(states)], [plant], 0, 6, undefined, "shown-waiting").inserters[0].wake_ups_per_minute).toBe(0);
+        // switched off while working: on no list
+        const working = wakeUps([inserter([WORKING, OFF, OFF, OFF, OFF, OFF])], [plant], 0, 6, undefined, "kept-lists");
+        expect(working.inserters[0].wake_ups_per_minute).toBe(0);
     });
 });

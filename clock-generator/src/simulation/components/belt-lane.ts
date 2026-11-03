@@ -73,6 +73,11 @@ export class BeltLane {
         return drop.traffic.tryPlace(tick, spot_ticks);
     }
 
+    /** Whether one stack put down at the spot in this tick would find room (LaneTraffic), without putting it down */
+    public hasRoom(drop: LaneDrop, tick: number, spot_ticks: number): boolean {
+        return drop.traffic.hasRoom(tick, spot_ticks);
+    }
+
     public pickupOf(inserter_id: string): LanePickup | undefined {
         return this.pickups.get(inserter_id);
     }

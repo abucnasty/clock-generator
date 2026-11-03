@@ -11,7 +11,7 @@ import { ruleCountInputOfStock } from "./rule-count-stock";
 import { FREE_RUNNING_CHECK_TICKS, longRunPeriodsOf, LOOP_WINDOW_CHECK_TICKS, runClockOnBuild } from "./trial";
 import { LONG_RUN_SETTLE_SHARE } from "./long-run";
 import { returnTicksOf, wakeUpsOfStock } from "./wake-ups";
-import { Entity, EntityId } from "../entities";
+import { Entity, EntityId, handSizeFor } from "../entities";
 import { OpenRange } from "../data-types";
 
 /**
@@ -132,6 +132,7 @@ export function ruleCallsOfClock(config: Config, selected: ClockAlternative, log
         source_machine_id: EntityId.isMachine(inserter.source.entity_id) ? inserter.source.entity_id.id : null,
         sink_machine_id: EntityId.isMachine(inserter.sink.entity_id) ? inserter.sink.entity_id.id : null,
         return_ticks: returnTicksOf(inserter.animation.rotation.ticks),
+        hand_size_of: (item_name: string) => handSizeFor(inserter, item_name),
     }));
     return {
         clock: { id: selected.id, label: selected.label, verdict: selected.verdict, period_ticks: period },

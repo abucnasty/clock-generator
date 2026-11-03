@@ -56,9 +56,10 @@ const FIELDS: Record<string, { keyed: readonly string[]; excluded: Readonly<Reco
     },
     Hand: { keyed: ["phase"], excluded: { swings_part_hands: BUILD, from_belt: BUILD, swing_ticks: BUILD, notification_scheduling: BUILD }, references: ["sink_wakes", "sink_ingress"] },
     // the idle rule's two flags and the swing's start in the Hand's key; the pickup ticks of a machine or a container,
-    // a belt's decision and the drop ticks of a machine or a container in the ports' keys (see KEYED_WHERE)
+    // a belt's decision and whether a belt hand's next update follows a control swap, and the drop ticks of a machine or
+    // a container in the ports' keys (see KEYED_WHERE)
     HandScratch: {
-        keyed: ["saw_sink_blocked", "window_opens", "swing_entered_tick", "swing_from", "pickup_ticks", "belt_grab_decided", "drop_ticks"],
+        keyed: ["saw_sink_blocked", "window_opens", "swing_entered_tick", "swing_from", "pickup_ticks", "belt_grab_decided", "drop_ticks", "after_swap"],
         excluded: {
             window_opened: PICKUP_START, ticks_in_pickup: PICKUP_START, reason: REASON, reason_item: REASON, reason_quantity: REASON,
             spare_hand: "the record of the hand last emptied: the next hand fills it, so it holds nothing",
@@ -103,6 +104,7 @@ const FIELDS: Record<string, { keyed: readonly string[]; excluded: Readonly<Reco
 const KEYED_WHERE: Record<string, (inserter: InserterArchetype) => boolean> = {
     "HandScratch.pickup_ticks": it => it.hand.pickup instanceof MachineHandPickup || it.hand.pickup instanceof ContainerHandPickup,
     "HandScratch.belt_grab_decided": it => it.hand.pickup instanceof BeltHandPickup,
+    "HandScratch.after_swap": it => it.hand.pickup instanceof BeltHandPickup,
     "HandScratch.drop_ticks": it => it.hand.drop instanceof MachineHandDrop || it.hand.drop instanceof ContainerHandDrop,
 };
 
