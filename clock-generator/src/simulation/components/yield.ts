@@ -211,6 +211,10 @@ export class Yield {
                 : this.wholeOfMainProduct(this.amount_per_bonus);
             this.productsFinished += 1;
             bar.progress = Math.max(0, bar.progress - 1);
+            if (BAR_WAITS_FOR_CRAFT_ROOM) {
+                // each payout goes in before the next is asked for room: the bar stays full where the next has none
+                this.putHeldProductsInOutput(user);
+            }
         }
         this.putHeldProductsInOutput(user);
     }
