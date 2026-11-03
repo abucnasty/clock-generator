@@ -21,8 +21,14 @@ environment the blast would run with is on one of three lists (ENV_KEYED, ENV_CL
 none of them stops the key, and so every blast.sh command that runs or stores, with a message naming it. A new variable of
 the engine that changes generation goes on ENV_KEYED; one that does not, on ENV_IGNORED.
 
+A run folder records the keyed environment it was generated under (.env.json, written by blast.sh); `blast.sh store` compares it
+with the current key's and refuses when they differ or when the folder has no record (--made-under NAME=VALUE, or `none`, says
+what a folder without one was made under; it must still equal the current environment).
+
 usage: key.py <worktree> [<rev>]      prints JSON; "dirty" lists uncommitted changes to the key's paths (tracked or
                                       untracked), which make a key from the commit wrong for the working tree
+       key.py --check-store <folder> <engine.json> [<NAME=VALUE|none>...]
+                                      exits 0 when the folder's recorded environment is the one in engine.json, else 1 and says why
        key.py --state <worktree> [<file>...]
                                       prints one sha256 of the working tree's engine as it is: HEAD's engine key, the
                                       uncommitted diff and untracked files of the key's paths, and the given files (a
@@ -58,6 +64,32 @@ def environment(env=None):
                                  f"{'it' if len(unknown) == 1 else 'them'}, or add {'it' if len(unknown) == 1 else 'each'} to ENV_KEYED or ENV_IGNORED in "
                                  f"{os.path.abspath(__file__)} (a blast under an unlisted variable could be stored under the wrong key)")
     return {n: env[n] for n in ENV_KEYED if n in env}
+
+
+class StoreRefused(Exception):
+    pass
+
+
+def shown(variables):
+    return ', '.join(f'{n}={v!r}' for n, v in variables.items()) or 'none set'
+
+
+def check_store(folder, current, claimed=None):
+    """Raises StoreRefused unless the keyed environment the run folder was generated under (its .env.json, or what the caller
+    claims for a folder without one: a list of NAME=VALUE, or ['none']) is the current key's. A folder without a record is
+    never guessed."""
+    try:
+        recorded = json.load(open(os.path.join(folder, '.env.json')))
+        source = 'recorded in the folder'
+    except FileNotFoundError:
+        if not claimed:
+            raise StoreRefused(f"{folder} has no record of the environment it was generated under (a folder from before the record): "
+                               f"rerun it, or say what it was made under with --made-under NAME=VALUE (repeat it; --made-under none for no keyed variable set)")
+        recorded = {} if claimed == ['none'] else dict(c.split('=', 1) for c in claimed)
+        source = 'given by --made-under'
+    if recorded != current:
+        raise StoreRefused(f"{folder} was generated under {shown(recorded)} ({source}), but the environment now is {shown(current)}: "
+                           f"storing it would file it under the wrong key; run the command under the environment the jobs were made with")
 
 
 def git(w, *args):
@@ -117,6 +149,12 @@ def state(w, extra=()):
 
 
 if __name__ == '__main__':
+    if sys.argv[1] == '--check-store':
+        try:
+            check_store(sys.argv[2], json.load(open(sys.argv[3])).get('env') or {}, sys.argv[4:] or None)
+        except StoreRefused as e:
+            sys.exit(f'key.py: refusing to store: {e}')
+        sys.exit(0)
     try:
         if sys.argv[1] == '--state':
             print(state(sys.argv[2], sys.argv[3:]))

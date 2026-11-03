@@ -15,9 +15,12 @@
 #                                           a complete run of a clean worktree is also stored in the cache
 #   blast.sh select <worktree> [--base K] [--no-build]
 #                                           builds, then says which jobs a run would rerun and why; generates nothing
-#   blast.sh store <worktree> <jobs-dir> --note <text>
+#   blast.sh store <worktree> <jobs-dir> --note <text> [--made-under NAME=VALUE ... | none]
 #                                           stores finished jobs (made elsewhere, on the same engine and job list) as
-#                                           the worktree's entry; jobs not in its list are left out and named
+#                                           the worktree's entry; jobs not in its list are left out and named. Refuses when
+#                                           the folder's recorded environment (.env.json, written by run) is not the
+#                                           current one, or when it has none: --made-under says what a folder from before
+#                                           the record was made under, and must still equal the current environment
 #   blast.sh compare <before> <after> [--json f]   compare.py (folders or cache entries): the clocks, and the results digest
 #                                           (every job file's results_sha256: what the clock hash leaves out) per job and component
 #   blast.sh same <a> <b>                   whether two jobs folders (or cache entries) hold the same results, job by job
@@ -155,6 +158,8 @@ generate() {
     die "$out holds jobs of another engine state (the worktree or BLAST_SETUP changed since); use a fresh folder"
   fi
   echo "$state" > "$out/.engine-state"
+  # the keyed environment the folder's jobs are made under, for `store` to check (a resume under another refused above)
+  python3 -c "import json,sys; print(json.dumps(json.load(open(sys.argv[1]))['env'], sort_keys=True))" "$KEYDIR/engine.json" > "$out/.env.json"
   # a claim without its job file was left by a process that stopped: free it
   for c in "$out"/.claims/*; do [ -d "$c" ] && [ ! -f "$out/$(basename "$c").json" ] && rmdir "$c"; done
   if [ "$build" = 1 ]; then say "npm run build ($E)"; (cd "$E" && npm run --silent build) || { rm -rf "$out/.lock"; die "npm run build failed"; }; fi
@@ -215,7 +220,7 @@ store_entry() { # $1 jobs dir, $2 source json
 }
 
 cmd=${1:-}; shift || true
-DRY=""; N=4; STORE=1; BUILD=1; NOTE=""; FULL=0; BASE=""; ARGS=()
+DRY=""; N=4; STORE=1; BUILD=1; NOTE=""; FULL=0; BASE=""; ARGS=(); MADE=()
 while [ $# -gt 0 ]; do
   case "$1" in
     -n) N=$2; shift ;;
@@ -224,6 +229,7 @@ while [ $# -gt 0 ]; do
     --note) NOTE=$2; shift ;;
     --full) FULL=1 ;;
     --base) BASE=$2; shift ;;
+    --made-under) MADE+=("$2"); shift ;;
     --json|--md) ARGS+=("$1" "$2"); shift ;;
     -*) die "unknown option $1" ;;
     *) ARGS+=("$1") ;;
@@ -285,6 +291,7 @@ case "$cmd" in
     src=$(cd "$src" && pwd -P)
     compute_key
     [ -z "$DIRTY" ] || die "the worktree has uncommitted changes to the engine's paths"
+    python3 "$HERE/key.py" --check-store "$src" "$KEYDIR/engine.json" ${MADE[@]+"${MADE[@]}"} || die "not stored"
     say "key $KEY"; describe_key
     rev=$(git -C "$W" rev-parse HEAD)
     store_entry "$src" "$(json_of kind stored from "$src" worktree "$W" rev "$rev" note "$NOTE")"

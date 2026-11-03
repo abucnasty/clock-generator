@@ -107,4 +107,46 @@ describe('the environment in the blast cache key', () => {
         expect(basesFor({ CLOCK_NEW_DISPATCH: '1' })).toEqual(['on']);
         expect(basesFor({ CLOCK_NEW_DISPATCH: '' })).toEqual([]);
     });
+
+    describe('storing a run folder', () => {
+        const check = (folder: string, current: Record<string, string>, ...claimed: string[]) => {
+            fs.writeFileSync(path.join(dir, 'current.json'), JSON.stringify(engineOf(current)));
+            return run('python3', [path.join(scriptsDir, 'key.py'), '--check-store', folder, path.join(dir, 'current.json'), ...claimed], clean());
+        };
+        const folder = (name: string, record?: object) => {
+            const made = path.join(dir, name);
+            fs.mkdirSync(made, { recursive: true });
+            if (record) fs.writeFileSync(path.join(made, '.env.json'), JSON.stringify(record));
+            return made;
+        };
+
+        it('accepts a folder made under the current environment', () => {
+            expect(check(folder('off', {}), {}).status).toBe(0);
+            expect(check(folder('on', { CLOCK_NEW_DISPATCH: '1' }), { CLOCK_NEW_DISPATCH: '1' }).status).toBe(0);
+        });
+
+        it('refuses a folder made under another environment, naming both', () => {
+            const flagOn = check(folder('on-2', { CLOCK_NEW_DISPATCH: '1' }), {});
+            expect(flagOn.status).not.toBe(0);
+            expect(flagOn.stderr).toContain("CLOCK_NEW_DISPATCH='1'");
+            expect(flagOn.stderr).toContain('none set');
+            const flagOff = check(folder('off-2', {}), { CLOCK_NEW_DISPATCH: '1' });
+            expect(flagOff.status).not.toBe(0);
+            expect(flagOff.stderr).toContain("environment now is CLOCK_NEW_DISPATCH='1'");
+            // the empty string is a value of its own
+            expect(check(folder('on-3', { CLOCK_NEW_DISPATCH: '1' }), { CLOCK_NEW_DISPATCH: '' }).status).not.toBe(0);
+        });
+
+        it('refuses a folder with no record unless the environment it was made under is given, and then it must be the current one', () => {
+            const old = folder('old');
+            const missing = check(old, {});
+            expect(missing.status).not.toBe(0);
+            expect(missing.stderr).toContain('no record');
+            expect(missing.stderr).toContain('--made-under');
+            expect(check(old, {}, 'none').status).toBe(0);
+            expect(check(old, { CLOCK_NEW_DISPATCH: '1' }, 'CLOCK_NEW_DISPATCH=1').status).toBe(0);
+            expect(check(old, {}, 'CLOCK_NEW_DISPATCH=1').status).not.toBe(0);
+            expect(check(old, { CLOCK_NEW_DISPATCH: '1' }, 'none').status).not.toBe(0);
+        });
+    });
 });
