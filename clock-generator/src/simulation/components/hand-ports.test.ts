@@ -89,7 +89,8 @@ describe("a hand's ports", () => {
             const ports = bind(handOf(source, sink, ["iron-plate"]), source, sink);
             return [ports.pickup.key(), ports.drop.key()];
         };
-        expect(keys(belt(), gears())).toEqual(["true", "0"]);
+        // a belt's pickup keys its decision and whether the next update is the first after a control swap
+        expect(keys(belt(), gears())).toEqual(["true;false", "0"]);
         expect(keys(gears(), buffer())).toEqual(["0", "0"]);
         expect(keys(infinity(), gears())).toEqual(["0", "0"]);
         expect(keys(gears(), belt())).toEqual(["0", ""]);
