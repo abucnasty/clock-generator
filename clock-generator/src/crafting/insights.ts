@@ -4,7 +4,7 @@ import { MAX_RECOVERY_PERIODS, type BackpressureLossVerdict } from "./backpressu
 import { describeSharedItem, type SharedItemDeadlockRisk } from "./deadlock-risk";
 import type { BlueprintGenerationResult } from "./generate-blueprint";
 import { CompactEntityStateTransitions, CompactStateTransitionHistory, transitionsOf } from "./sequence/compact-history";
-import { DEFAULT_LOOP_SEED_ITEMS } from "./runner/cold-start";
+import { DEFAULT_LOOP_SEED_ITEMS, loopSeedTaken } from "./runner/cold-start";
 import type { StartDependence } from "./start-dependence";
 import type { WakeUpsFromStarts } from "./wake-ups-from-starts";
 import { notTriedSentence, type SpareTime } from "./why-not-stable";
@@ -172,7 +172,7 @@ function loopingRecipeInsight(result: BlueprintGenerationResult, entities: Compa
             recipe: machine.facts.recipe,
             item: input.item_name,
             per_craft: input.amount_per_craft,
-            started_with: loop_seed_items,
+            started_with: loopSeedTaken(input.item_name, input.automated_insertion_limit, loop_seed_items),
         })));
     if (rows.length === 0) {
         return null;
