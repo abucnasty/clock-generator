@@ -625,6 +625,11 @@ export function wakeUps(
     };
 }
 
+/** Per tick, whether a running total rose in it */
+function rises(totals: readonly number[]): boolean[] {
+    return totals.map((total, tick) => tick > 0 && total > totals[tick - 1]);
+}
+
 /** The machine ids at the ends of an inserter, as the stock of a run names its machines */
 export interface InserterEnds {
     inserter_id: string;
@@ -659,6 +664,8 @@ export function wakeUpsOfStock(stock: StockRecording, ends: readonly InserterEnd
         true_starts: machine.crafts_started.map((started, tick) => tick > 0 && started > machine.crafts_started[tick - 1]),
         ...(machine.results_placed !== undefined && { results_placed: machine.results_placed }),
         ...(rule === "kept-lists" && Object.keys(machine.outputs).length > 0 && { outputs: machine.outputs }),
+        ...(rule === "kept-lists" && machine.fuel_taken !== undefined && { fuel_taken: rises(machine.fuel_taken) }),
+        ...(rule === "kept-lists" && machine.fuel_put_in !== undefined && { fuel_put_in: rises(machine.fuel_put_in) }),
     }));
     return wakeUps(inserters, machines, from_tick, stock.ticks, on_wake, rule);
 }

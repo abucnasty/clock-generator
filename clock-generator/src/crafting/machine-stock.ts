@@ -2,6 +2,7 @@ import { EntityState, InserterState, MachineState } from "../state";
 import { InserterStatus } from "../state/entity-status";
 import { factorioInserterState, InserterListing } from "../state/factorio-entity-state";
 import type { TickRecorder } from "../simulation/observers/observer";
+import { BurnerEnergy } from "../simulation/components/burner-energy";
 import { DEFAULT_WAKE_RULE, type WakeRule } from "./wake-ups";
 
 /** What one machine held after each tick of a run */
@@ -24,6 +25,12 @@ export interface MachineStockSeries {
      * result target, else its own output); absent for any other machine
      */
     results_placed?: number[];
+    /**
+     * Under the rule "kept-lists", for a machine that burns fuel: fuel items its burner took so far, and drops of fuel
+     * hands put in so far, per tick (what alarms its input and its output list, crafting/wake-ups.ts); absent otherwise
+     */
+    fuel_taken?: number[];
+    fuel_put_in?: number[];
     /** The crafting bar and the bonus (productivity) bar of the machine per tick, in 0 to 1 and to four decimals as the recorder writes them */
     crafting_progress: number[];
     bonus_progress: number[];
@@ -103,7 +110,8 @@ type ItemSeries = readonly [item_name: string, series: number[]];
 /** Samples what the machines and inserters hold after each tick of a run: a recorder of the after-tick phase */
 export class StockRecorder implements TickRecorder {
     private ticks = 0;
-    private readonly machines: { state: MachineState; series: MachineStockSeries; inputs: ItemSeries[]; outputs: ItemSeries[]; fuel_item: string | undefined }[];
+    private readonly machines: { state: MachineState; series: MachineStockSeries; inputs: ItemSeries[]; outputs: ItemSeries[]; fuel_item: string | undefined;
+        burner: BurnerEnergy | null }[];
     private readonly inserters: { state: InserterState; sink: EntityState; series: InserterHandSeries; drop_room: (() => boolean) | undefined;
         listing: (() => InserterListing) | undefined }[];
     /** Whether a lean recording records the item in every hand and what every machine's output held */
@@ -128,6 +136,10 @@ export class StockRecorder implements TickRecorder {
         const items_seen = detail === "loop-windows" || detail === "wake-ups" && wake_rule === "kept-lists";
         this.items_seen = items_seen;
         const reads_room = wake_rule === "kept-lists" && detail !== "hands";
+        // the rule "kept-lists" reads a burner's fuel takes and the fuel put in
+        const reads_fuel = wake_rule === "kept-lists" && detail !== "hands";
+        const burnerOf = (state: MachineState) => reads_fuel && state.energy instanceof BurnerEnergy ? state.energy : null;
+        const fuel_series = (state: MachineState) => burnerOf(state) === null ? {} : { fuel_taken: series_of_ticks(), fuel_put_in: series_of_ticks() };
         this.machines = (detail === "hands" ? machine_states.filter(state => state.machine.metadata.places_results === true) : machine_states).map(state => {
             if (!full) {
                 const places_results = state.machine.metadata.places_results === true || items_seen;
@@ -140,9 +152,10 @@ export class StockRecorder implements TickRecorder {
                     products_finished: series_of_ticks(),
                     crafts_started: series_of_ticks(),
                     ...(state.machine.metadata.places_results === true && { results_placed: series_of_ticks() }),
+                    ...fuel_series(state),
                     crafting_progress: [], bonus_progress: [],
                 };
-                return { state, series, inputs: [], outputs: Object.entries(series.outputs), fuel_item: undefined };
+                return { state, series, inputs: [], outputs: Object.entries(series.outputs), fuel_item: undefined, burner: burnerOf(state) };
             }
             const series: MachineStockSeries = {
                 machine_id: state.entity_id.id,
@@ -154,13 +167,14 @@ export class StockRecorder implements TickRecorder {
                 products_finished: series_of_ticks(),
                 crafts_started: series_of_ticks(),
                 ...(state.machine.metadata.places_results === true && { results_placed: series_of_ticks() }),
+                ...fuel_series(state),
                 crafting_progress: series_of_ticks(),
                 bonus_progress: series_of_ticks(),
             };
             // the items and their series are listed once, in the order Object.keys gives them
             return {
                 state, series, inputs: Object.entries(series.inputs), outputs: Object.entries(series.outputs),
-                fuel_item: state.machine.fuel_slot?.fuel.item_name,
+                fuel_item: state.machine.fuel_slot?.fuel.item_name, burner: burnerOf(state),
             };
         });
         this.inserters = inserters.map(({ state, sink, drop_room, listing }) => ({
@@ -183,7 +197,11 @@ export class StockRecorder implements TickRecorder {
             this.recordLean(tick);
             return;
         }
-        for (const { state, series, inputs, outputs, fuel_item } of this.machines) {
+        for (const { state, series, inputs, outputs, fuel_item, burner } of this.machines) {
+            if (burner !== null) {
+                series.fuel_taken![tick] = burner.fuel_taken;
+                series.fuel_put_in![tick] = state.ingress.fuel_put_in;
+            }
             for (const [item_name, item_series] of inputs) {
                 item_series[tick] = state.ingress.ingredientQuantity(item_name);
             }
@@ -216,9 +234,13 @@ export class StockRecorder implements TickRecorder {
 
     /** The series of a recording that is not "full" */
     private recordLean(tick: number): void {
-        for (const { state, series, outputs } of this.machines) {
+        for (const { state, series, outputs, burner } of this.machines) {
             for (const [item_name, item_series] of outputs) {
                 item_series[tick] = state.inventoryState.getQuantity(item_name);
+            }
+            if (burner !== null) {
+                series.fuel_taken![tick] = burner.fuel_taken;
+                series.fuel_put_in![tick] = state.ingress.fuel_put_in;
             }
             series.products_finished[tick] = state.productsFinished;
             series.crafts_started[tick] = state.craftsStarted;
@@ -257,7 +279,7 @@ export class StockRecorder implements TickRecorder {
             for (const item_series of [...Object.values(series.inputs), ...Object.values(series.outputs)]) {
                 cut(item_series);
             }
-            for (const column of [series.fuel, series.status, series.products_finished, series.crafts_started, series.results_placed, series.crafting_progress, series.bonus_progress]) {
+            for (const column of [series.fuel, series.status, series.products_finished, series.crafts_started, series.results_placed, series.fuel_taken, series.fuel_put_in, series.crafting_progress, series.bonus_progress]) {
                 cut(column);
             }
         }

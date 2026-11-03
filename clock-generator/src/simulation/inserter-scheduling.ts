@@ -206,7 +206,14 @@ export class InserterScheduling {
             this.waits.registerEntry(member.wait, picked ? member.waits_for_both : member.waits_for_source);
             this.scheduler.deactivateNode(member.node, reason);
         } else if (reason === "destination-refused" && sink !== undefined) {
-            this.waits.registerEntry(member.wait, member.waits_for_sink);
+            // An empty hand from a machine into a machine that still takes something waits on the source too: on both
+            // where the source has items the sink does not take, on the source alone where it has none (2.1.24,
+            // agricultural science: 1,814 and 59 such sleeps); where the sink takes nothing at all, on the sink alone (1,356)
+            let waits = member.waits_for_sink;
+            if (source !== undefined && inserter.inserter_state.held_item === null && inserter.hand.drop.takesNothing?.() === false) {
+                waits = inserter.hand.pickup.waitsForItems?.() === true ? member.waits_for_source : member.waits_for_both;
+            }
+            this.waits.registerEntry(member.wait, waits);
             this.scheduler.deactivateNode(member.node, reason);
         } else if (reason === "control-disabled") {
             // An Update that finds the hand disabled leaves it on no list, as in the game (2.1.24). A hand its clock

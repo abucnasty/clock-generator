@@ -2,6 +2,7 @@ import { FactorioDataService, ItemName } from "../../data";
 import { directMachineStop } from "../../entities/drill/mining-drill-ext";
 import type { Machine } from "../../entities/machine/machine";
 import { LiveQuantity, WritableInventoryState } from "../../state/inventory-state";
+import type { MachineNotifications } from "./machine-notifications";
 import { DropBy, DropPort } from "./ports";
 
 /** How the machine takes an item an inserter brings, decided once per item */
@@ -100,6 +101,9 @@ export class Ingress implements DropPort {
     private nothing_self = -1;
     private nothing_answer = false;
 
+    /** Fuel put into the fuel slot by hands so far, in drops (a running total, out of every key): what a stock records */
+    public fuel_put_in = 0;
+
     constructor(
         private readonly machine: Machine,
         /** Ingredients and output */
@@ -108,6 +112,8 @@ export class Ingress implements DropPort {
         private readonly fuel_inventory: WritableInventoryState,
         /** Ingredients the recipe also makes, kept apart from the output */
         private readonly self_inventory: WritableInventoryState,
+        /** The machine's notifications: told when a hand puts fuel in */
+        private readonly notifications?: MachineNotifications,
     ) {
         const inputs: InputView[] = [];
         for (const input of machine.inputs.values()) {
@@ -157,9 +163,12 @@ export class Ingress implements DropPort {
         return this.slot_of.get(item) ?? -1;
     }
 
-    /** Ingredient consumption/output removal notify; lighting the next fuel item is not hooked yet. */
+    /**
+     * Whether a hand that waits to put the item of a slot in is told when the machine may take it: an ingredient's
+     * consumption, the output's removal and the burner taking a fuel item each notify (MachineNotifications)
+     */
     public hasReadinessNotificationsAt(slot: number): boolean {
-        return slot >= 0 && this.slots[slot].kind === SlotKind.INGREDIENT;
+        return slot >= 0;
     }
 
     /** Whether the machine takes no more of the item now (see blockedAt) */
@@ -274,6 +283,7 @@ export class Ingress implements DropPort {
         const to_fuel = item === this.fuel_item && (!this.input_of.has(item) || this.fuelIsBelowLimit());
         const inventory = to_fuel ? this.fuel_inventory : this.ingredientInventory(item);
         inventory.addQuantity(item, amount);
+        if (to_fuel && amount > 0) this.fuelPutIn();
     }
 
     /**
@@ -289,6 +299,13 @@ export class Ingress implements DropPort {
         const to_fuel = slot.kind === SlotKind.FUEL || (slot.kind === SlotKind.FUEL_AND_INGREDIENT && this.fuelIsBelowLimit());
         const inventory = to_fuel ? this.fuel_inventory : slot.input!.self ? this.self_inventory : this.inventory;
         inventory.addQuantity(item, amount);
+        if (to_fuel && amount > 0) this.fuelPutIn();
+    }
+
+    /** A hand put fuel in: counted, and the machine's outputs told */
+    private fuelPutIn(): void {
+        this.fuel_put_in += 1;
+        this.notifications?.fuelInserted();
     }
 
     /** A placer's put into the machine: an ingredient, never as fuel (accepts, by a placer, allowed it) */
