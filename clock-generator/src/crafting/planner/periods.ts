@@ -2,7 +2,8 @@
  * The main-period choices of a build: the output swing counts today's alternatives are listed for (the planned count,
  * the counts above and below the main one, and fractional swings switched the other way), each with its period, kept or
  * pruned by arithmetic before any simulation. The one rule that prunes is P-limit: a period of MAX_SIMULATION_TICKS or
- * more cannot be simulated. Each count's hands come from today's cycle plan (`CraftingCyclePlan.create`), never
+ * more cannot be simulated, nor, under whole-counter checks (the new dispatch), a fractional period whose whole counter
+ * is that long (`counterOverLimitOf`). Each count's hands come from today's cycle plan (`CraftingCyclePlan.create`), never
  * worked out again here; an alternative's count that the cycle plan refuses (fractional swings an inserter cannot make
  * within its insertion limits) is listed as refused, with the plan's reason, as today its run fails.
  */
@@ -12,7 +13,7 @@ import type { PeriodChoice, PeriodListing, ResultWindowsDecision } from "../../d
 import Fraction, { fraction } from "../../data-types/fraction";
 import { Entity, type ReadableEntityRegistry } from "../../entities";
 import { targetInsertersOf, targetMachinesOf, type TargetItem } from "../sequence/cycle/target-ends";
-import { MAX_SIMULATION_TICKS } from "../plan/clock-period-limit";
+import { MAX_SIMULATION_TICKS, counterOverLimitOf } from "../plan/clock-period-limit";
 import { CraftingCyclePlan, plannedTerminalSwingCount } from "../sequence/cycle/crafting-cycle";
 import { TargetProductionRate } from "../target-production-rate";
 import { CycleMeasure, cycleMeasureOf } from "./composition";
@@ -105,8 +106,12 @@ function choiceOf(count: ListedCount, group: number): PeriodChoice {
     const cycles = count.measure.override_lcm ?? count.measure.group_cycles[group];
     const period_ticks = count.measure.cycle_ticks.multiply(cycles).toDecimal();
     const base = { ...head, cycle_ticks: ratioOf(count.measure.cycle_ticks), cycles, period_ticks };
-    return period_ticks >= MAX_SIMULATION_TICKS
-        ? { ...base, pruned: { rule: "P-limit", terms: { period_ticks, limit_ticks: MAX_SIMULATION_TICKS } } }
+    if (period_ticks >= MAX_SIMULATION_TICKS) {
+        return { ...base, pruned: { rule: "P-limit", terms: { period_ticks, limit_ticks: MAX_SIMULATION_TICKS } } };
+    }
+    const counter_ticks = counterOverLimitOf(period_ticks);
+    return counter_ticks !== null
+        ? { ...base, pruned: { rule: "P-limit", terms: { period_ticks, limit_ticks: MAX_SIMULATION_TICKS, counter_ticks } } }
         : { ...base, kept: true };
 }
 

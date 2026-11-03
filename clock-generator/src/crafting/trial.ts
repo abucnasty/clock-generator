@@ -233,15 +233,14 @@ export function runClockOnBuild(
 /**
  * A first check of a clock: under whole-counter checks (`wholeCounterOf`, the new dispatch) a clock of a p/q-tick
  * period runs the whole counter its exported blueprint repeats (p ticks, q periods) and is judged on its total, its
- * clocks running on through the warm-up as in the game (`counter_runs_through`); any other clock runs one period
- * (`runClockOnBuild`), as before.
+ * clocks running on through the warm-up as in the game (`counter_runs_through`); any other clock, and one whose
+ * counter one run cannot hold, runs one period (`runClockOnBuild`), as before.
  */
 function firstClockSpan(
     config: Config, windows: Map<string, OpenRange[]>, period: number, logger: Logger, options: ClockTrialOptions = {},
 ): TrialRun {
     const repeat = wholeCounterOf(period);
     if (repeat === null) return runClockOnBuild(config, windows, period, logger, options);
-    assert(repeat.period_ticks < MAX_SIMULATION_TICKS, `Physical counter observation of ${repeat.period_ticks} ticks exceeds the simulation limit`);
     const run = runClockOnBuild(config, windows, period, logger,
         { ...options, simulate_periods: repeat.scale, observation_ticks: repeat.period_ticks, counter_runs_through: true, machine_stock: true, stock_detail: "hands" });
     const measured = run.stability_check.actual_output_items;

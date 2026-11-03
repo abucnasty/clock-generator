@@ -16,10 +16,20 @@ export const WHOLE_COUNTER_CHECKS: boolean = DEFAULT_INSERTER_DISPATCH !== "conf
 
 /**
  * The whole counter a clock of this period is checked over (`WHOLE_COUNTER_CHECKS`): its p/q where the period is
- * fractional. Null for a whole-tick period and with the checks off.
+ * fractional and p is under MAX_SIMULATION_TICKS. Null for a whole-tick period, with the checks off, and for a counter
+ * one run cannot hold (`counterOverLimitOf`), whose clock keeps the sampled checks of one period.
  */
 export function wholeCounterOf(period: number): SubtickPeriod | null {
-    return WHOLE_COUNTER_CHECKS ? subtickClockForPeriod(period) : null;
+    if (!WHOLE_COUNTER_CHECKS) return null;
+    const counter = subtickClockForPeriod(period);
+    return counter !== null && counter.period_ticks < MAX_SIMULATION_TICKS ? counter : null;
+}
+
+/** The ticks of a fractional period's counter where whole-counter checks are on and one run cannot hold it; else null */
+export function counterOverLimitOf(period: number): number | null {
+    if (!WHOLE_COUNTER_CHECKS) return null;
+    const counter = subtickClockForPeriod(period);
+    return counter !== null && counter.period_ticks >= MAX_SIMULATION_TICKS ? counter.period_ticks : null;
 }
 
 /** Arithmetic only: no inventories, controls, registry or other live simulation state. */
