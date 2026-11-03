@@ -71,5 +71,11 @@ export const DEFAULT_INSERTER_DISPATCH: InserterDispatch = inserterDispatchOf(en
  */
 export const BAR_WAITS_FOR_CRAFT_ROOM: boolean = DEFAULT_INSERTER_DISPATCH !== "configured-order";
 
+/**
+ * Whether a clock's final check requires the measured output to reach its target amount (crafting/target-production.ts):
+ * wherever the new dispatch is on. Without it a final check keeps the hand-sized tolerance around the expected amount.
+ */
+export const STRICT_TARGET_AMOUNT: boolean = DEFAULT_INSERTER_DISPATCH !== "configured-order";
+
 /** Whether the wake-up rule of a new count is "kept-lists" (`keptListsOf` of the environment) */
 export const DEFAULT_KEPT_LISTS: boolean = keptListsOf(environment);
