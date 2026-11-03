@@ -1,6 +1,6 @@
 import assert from "../../../common/assert";
 import { EntityId, Inserter } from "../../../entities";
-import { AlwaysEnabledControl, EnableControl } from "../../../simulation/controls/enable-control";
+import { AlwaysEnabledControl, EXACT_SUBTICK_POSITIONS, EnableControl } from "../../../simulation/controls/enable-control";
 import { ResettableRegistry } from "../../../simulation/controls/resettable-registry";
 import { TickProvider } from "../../../simulation/current-tick-provider";
 import { EnableControlOverrideConfig } from "../../../config/schema";
@@ -37,6 +37,11 @@ export class ConfigurableEnableControlFactory {
          * then keep their count when a later step starts. Without it they count the run's ticks and start again with each step.
          */
         private readonly game_tick_provider?: TickProvider,
+        /**
+         * Whether the clocks it makes of a p/q-tick period answer in whole 1/q ticks (enable-control.ts `SubtickPositions`):
+         * under the new dispatch, as the run's context has it
+         */
+        private readonly exact_subtick_positions: boolean = EXACT_SUBTICK_POSITIONS,
     ) {
         this.conditional_factory = new ConditionalEnableControlFactory(entity_state_registry);
     }
@@ -115,6 +120,7 @@ export class ConfigurableEnableControlFactory {
         const clocked_control = EnableControl.clocked({
             periodDuration: period_duration,
             enabledRanges: enabled_ranges,
+            exact_subtick_positions: this.exact_subtick_positions,
             tickProvider: this.game_tick_provider ?? this.tick_provider,
             is_game_clock: true,
             runs_through_steps: this.game_tick_provider !== undefined,

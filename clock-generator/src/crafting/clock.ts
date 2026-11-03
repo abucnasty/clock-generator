@@ -1,7 +1,6 @@
 import { EnableControlRange } from "../config/schema";
 import { OpenRange } from "../data-types";
 import { Entity, handSizeFor, ReadableEntityRegistry } from "../entities";
-import { SubtickClock } from "./blueprint";
 import { pickupLaneLength } from "../common/belt-pickup-layout";
 import { backedUpHandGrabTicks } from "../state/backed-up-pickup-lane";
 import { CIRCUIT_LATENCY_TICKS } from "../common/rule-constants";
@@ -30,22 +29,7 @@ export function rotateRanges(ranges: OpenRange[], offset: number, period: number
 }
 
 
-const MAX_SUBTICK_SCALE = 1000;
-
-/** A fractional period as p/q ticks with small integers (e.g. 550.9565... = 12672/23), or null */
-export function subtickClockForPeriod(period: number): SubtickClock | null {
-    if (Number.isInteger(period)) {
-        return null;
-    }
-    for (let q = 2; q <= MAX_SUBTICK_SCALE; q++) {
-        const p = Math.round(period * q);
-        // the multiply combinator outputs up to p * q, which must fit a 32-bit signal
-        if (Math.abs(p / q - period) < 1e-6 && p * q < 2 ** 31) {
-            return { period_ticks: p, scale: q };
-        }
-    }
-    return null;
-}
+export { subtickClockForPeriod } from "../common/subtick-period";
 
 /**
  * Ticks added to the end of each window of an inserter that takes fuel for its machine off a belt as well as an

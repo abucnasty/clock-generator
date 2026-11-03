@@ -830,6 +830,8 @@ function withEnableControls(
     // the clocks of the game count the context's own ticks where they run through the steps of the run
     const game_clocks_run_through = gameClocksRunThroughSteps(simulation_context);
     const game_tick_provider = game_clocks_run_through ? simulation_context.tick_provider : undefined;
+    // a clock of a p/q-tick period answers in whole 1/q ticks under the new dispatch, as the context has it
+    const exact_subtick_positions = simulation_context.inserter_dispatch !== "configured-order";
 
     // Create resettable registry for centralized reset management
     const resettable_registry = new ResettableRegistry();
@@ -845,6 +847,7 @@ function withEnableControls(
         resettable_registry,
         simulation_context.state_registry,
         game_tick_provider,
+        exact_subtick_positions,
     );
 
     // Fuel is not part of the plan, so the fuel inserters swing on clocks of their own that repeat within the period
@@ -869,6 +872,7 @@ function withEnableControls(
         logger,
         inserter_clocks,
         game_tick_provider,
+        exact_subtick_positions,
     );
 
     // Swap the controls of the build's context, in place

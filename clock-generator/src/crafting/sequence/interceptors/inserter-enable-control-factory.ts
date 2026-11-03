@@ -3,7 +3,7 @@ import { Entity, EntityId, handSizeFor, Inserter, Machine, MiningDrill, miningDr
 import { EntityTransferCountMap, outputPathOf } from "../cycle/swing-counts";
 import { targetInsertersOf, targetMachinesOf } from "../cycle/target-ends";
 import { resultWindowRanges, takesResultOf } from "../../result-windows";
-import { AlwaysEnabledControl, EnableControl } from "../../../simulation/controls/enable-control";
+import { AlwaysEnabledControl, EXACT_SUBTICK_POSITIONS, EnableControl } from "../../../simulation/controls/enable-control";
 import { ResettableRegistry } from "../../../simulation/controls/resettable-registry";
 import { TickProvider } from "../../../simulation/current-tick-provider";
 import { assertIsInserterState, assertIsMachineState, EntityState, InserterState, MachineState, ReadableEntityStateRegistry } from "../../../state";
@@ -37,6 +37,11 @@ export class EnableControlFactory {
          * then keep their count when a later step starts. Without it they count the run's ticks and start again with each step.
          */
         private readonly game_tick_provider?: TickProvider,
+        /**
+         * Whether the clocks it makes of a p/q-tick period answer in whole 1/q ticks (enable-control.ts `SubtickPositions`):
+         * under the new dispatch, as the run's context has it
+         */
+        private readonly exact_subtick_positions: boolean = EXACT_SUBTICK_POSITIONS,
     ) {
         this.target_output_item_name = this.crafting_cycle_plan.production_rate.machine_production_rate.item;
         this.entity_transfer_map = this.crafting_cycle_plan.entity_transfer_map;
@@ -1163,6 +1168,7 @@ export class EnableControlFactory {
         const clocked_control = EnableControl.clocked({
             periodDuration: Duration.ofTicks(CraftingCyclePlan.ticksOfCycles(this.crafting_cycle_plan, cycles)),
             enabledRanges: enabled_ranges,
+            exact_subtick_positions: this.exact_subtick_positions,
             tickProvider: this.tick_provider,
         });
         this.resettable_registry.register(clocked_control);
@@ -1177,6 +1183,7 @@ export class EnableControlFactory {
         const clocked_control = EnableControl.clocked({
             periodDuration: Duration.ofTicks(inserter_clock.modulus),
             enabledRanges: [inserter_clock.window],
+            exact_subtick_positions: this.exact_subtick_positions,
             tickProvider: this.game_tick_provider ?? this.tick_provider,
             is_game_clock: true,
             runs_through_steps: this.game_tick_provider !== undefined,
@@ -1189,6 +1196,7 @@ export class EnableControlFactory {
         const clocked_control = EnableControl.clocked({
             periodDuration: this.getExtendedPeriodDuration(),
             enabledRanges: [...enable_ranges],
+            exact_subtick_positions: this.exact_subtick_positions,
             tickProvider: this.tick_provider,
         })
         this.resettable_registry.register(clocked_control);
