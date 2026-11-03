@@ -14,6 +14,7 @@ import {
     plannedDescriptionLines, shownPeriodTicks, turnLine, unplannedDescriptionLines,
 } from "./descriptions";
 import { GENERATOR } from "../generator";
+import { wholeBounds } from "../common/subtick-period";
 import { GROUP_GAP_TILES, placeByTurns, TurnGroup, turnTicks } from "./turn-groups";
 import { FactorioDataService } from "../data/factorio-data-service";
 
@@ -208,9 +209,10 @@ export function lockWires(lock: ConstantCombinatorEntity, receivers: CircuitEnti
 
 /** Decider constants are whole numbers; fractional bounds (from a fractional period's wrap) are rounded inward */
 function wholeRanges(ranges: OpenRange[]): OpenRange[] {
-    return ranges
-        .map(range => OpenRange.from(Math.ceil(range.start_inclusive - 1e-9), Math.floor(range.end_inclusive + 1e-9)))
-        .filter(range => range.start_inclusive <= range.end_inclusive);
+    return ranges.flatMap(range => {
+        const bounds = wholeBounds(range.start_inclusive, range.end_inclusive);
+        return bounds === null ? [] : [OpenRange.from(bounds[0], bounds[1])];
+    });
 }
 
 /** A decider's clock windows as the part repeating every `modulus` ticks plus the remaining windows */

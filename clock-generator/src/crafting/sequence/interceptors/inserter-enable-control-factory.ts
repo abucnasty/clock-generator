@@ -3,7 +3,7 @@ import { Entity, EntityId, handSizeFor, Inserter, Machine, MiningDrill, miningDr
 import { EntityTransferCountMap, outputPathOf } from "../cycle/swing-counts";
 import { targetInsertersOf, targetMachinesOf } from "../cycle/target-ends";
 import { resultWindowRanges, takesResultOf } from "../../result-windows";
-import { AlwaysEnabledControl, EnableControl } from "../../../simulation/controls/enable-control";
+import { AlwaysEnabledControl, EXACT_SUBTICK_POSITIONS, EnableControl } from "../../../simulation/controls/enable-control";
 import { ResettableRegistry } from "../../../simulation/controls/resettable-registry";
 import { TickProvider } from "../../../simulation/current-tick-provider";
 import { assertIsInserterState, assertIsMachineState, EntityState, InserterState, MachineState, ReadableEntityStateRegistry } from "../../../state";
@@ -16,6 +16,18 @@ import { SwingDistribution } from "../cycle/swing-distribution";
 import { InserterClock, alwaysEnabledInserters } from "../unplanned-inserter-clock";
 import { Logger } from "../../../common/logger";
 import { ContainerStorage } from "../../../simulation/components/container-storage";
+
+/**
+ * The ticks of the game a clock of the game of this period counts where it runs on through the steps of a run (under
+ * the new dispatch, where they are given), or undefined where it does not: a clock of a whole-tick period runs through.
+ * A warm-up of whole periods ends where a period of such a clock starts, so the one period recorded after it starts
+ * there too. A clock of p/q ticks would be a fraction of a tick into a period after a warm-up of whole periods (10
+ * periods of 12672/23 ticks run 5510 ticks), and its one-period judgement assumes a period's start: it starts again with
+ * the recorded run, as before, until it is judged over whole counters.
+ */
+export function runThroughTicks(game_tick_provider: TickProvider | undefined, period_ticks: number): TickProvider | undefined {
+    return Number.isInteger(period_ticks) ? game_tick_provider : undefined;
+}
 
 export class EnableControlFactory {
 
@@ -32,6 +44,17 @@ export class EnableControlFactory {
         private readonly logger: Logger,
         /** The clocks of the inserters that only fill a fuel slot or take a by-product away, which are not part of the plan */
         private readonly inserter_clocks: ReadonlyMap<string, InserterClock> = new Map(),
+        /**
+         * The ticks the clocks of the game count, where they run through the steps of a run (under the new dispatch): they
+         * then keep their count when a later step starts. Without it they count the run's ticks and start again with each step.
+         * Only a clock of a whole-tick period runs through (`runThroughTicks`).
+         */
+        private readonly game_tick_provider?: TickProvider,
+        /**
+         * Whether the clocks it makes of a p/q-tick period answer in whole 1/q ticks (enable-control.ts `SubtickPositions`):
+         * under the new dispatch, as the run's context has it
+         */
+        private readonly exact_subtick_positions: boolean = EXACT_SUBTICK_POSITIONS,
     ) {
         this.target_output_item_name = this.crafting_cycle_plan.production_rate.machine_production_rate.item;
         this.entity_transfer_map = this.crafting_cycle_plan.entity_transfer_map;
@@ -1158,6 +1181,7 @@ export class EnableControlFactory {
         const clocked_control = EnableControl.clocked({
             periodDuration: Duration.ofTicks(CraftingCyclePlan.ticksOfCycles(this.crafting_cycle_plan, cycles)),
             enabledRanges: enabled_ranges,
+            exact_subtick_positions: this.exact_subtick_positions,
             tickProvider: this.tick_provider,
         });
         this.resettable_registry.register(clocked_control);
@@ -1169,11 +1193,14 @@ export class EnableControlFactory {
         if (!inserter_clock) {
             return AlwaysEnabledControl;
         }
+        const run_through_ticks = runThroughTicks(this.game_tick_provider, inserter_clock.modulus);
         const clocked_control = EnableControl.clocked({
             periodDuration: Duration.ofTicks(inserter_clock.modulus),
             enabledRanges: [inserter_clock.window],
-            tickProvider: this.tick_provider,
+            exact_subtick_positions: this.exact_subtick_positions,
+            tickProvider: run_through_ticks ?? this.tick_provider,
             is_game_clock: true,
+            runs_through_steps: run_through_ticks !== undefined,
         });
         this.resettable_registry.register(clocked_control);
         return clocked_control;
@@ -1183,6 +1210,7 @@ export class EnableControlFactory {
         const clocked_control = EnableControl.clocked({
             periodDuration: this.getExtendedPeriodDuration(),
             enabledRanges: [...enable_ranges],
+            exact_subtick_positions: this.exact_subtick_positions,
             tickProvider: this.tick_provider,
         })
         this.resettable_registry.register(clocked_control);
