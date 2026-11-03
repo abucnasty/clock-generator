@@ -119,7 +119,7 @@ export class BeltLane {
         return taken;
     }
 
-    /** From now on the lane keeps whether it is moving (the new dispatch: a belt-fed hand sleeps only on still lines) */
+    /** From now on the lane keeps whether it is moving (a belt-fed hand sleeps only on still lines) */
     public trackMotion(): void {
         this.motion.track();
     }

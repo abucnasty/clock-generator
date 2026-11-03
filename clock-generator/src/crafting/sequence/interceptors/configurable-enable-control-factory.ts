@@ -1,6 +1,6 @@
 import assert from "../../../common/assert";
 import { EntityId, Inserter } from "../../../entities";
-import { AlwaysEnabledControl, EXACT_SUBTICK_POSITIONS, EnableControl } from "../../../simulation/controls/enable-control";
+import { AlwaysEnabledControl, EnableControl } from "../../../simulation/controls/enable-control";
 import { ResettableRegistry } from "../../../simulation/controls/resettable-registry";
 import { TickProvider } from "../../../simulation/current-tick-provider";
 import { EnableControlOverrideConfig } from "../../../config/schema";
@@ -34,16 +34,16 @@ export class ConfigurableEnableControlFactory {
         private readonly resettable_registry: ResettableRegistry,
         entity_state_registry: ReadableEntityStateRegistry,
         /**
-         * The ticks the clocks of the game count, where they run through the steps of a run (under the new dispatch): they
+         * The ticks the clocks of the game count, where they run through the steps of a run: they
          * then keep their count when a later step starts. Without it they count the run's ticks and start again with each step.
          * Only a clock of a whole-tick period runs through, unless `counter_runs_through` (`runThroughTicks`).
          */
         private readonly game_tick_provider?: TickProvider,
         /**
          * Whether the clocks it makes of a p/q-tick period answer in whole 1/q ticks (enable-control.ts `SubtickPositions`):
-         * under the new dispatch, as the run's context has it
+         * true unless a test asks for floats
          */
-        private readonly exact_subtick_positions: boolean = EXACT_SUBTICK_POSITIONS,
+        private readonly exact_subtick_positions: boolean = true,
         /** Whether a clock of a p/q-tick period runs through as well (`runThroughTicks`), given a game tick provider */
         private readonly counter_runs_through: boolean = false,
     ) {

@@ -67,7 +67,7 @@ export class TransportBelt implements EntityState {
         const pickups = ids(lane => lane.pickupIds())
             .map(id => `${id}:${lanes.map(lane => lane.pickupKey(id, tick)).join("|")}`);
         const key = `${inventoryKey(this.inventoryState)};${this.supply.key()};` + traffic + ";" + drops.join(";") + ";" + pickups.join(";");
-        // the lanes' motion, where a hand keeps it (the new dispatch)
+        // the lanes' motion, where a hand keeps it
         const motion = lanes.map(lane => lane.motionKey(tick));
         return motion.every(it => it === "") ? key : `${key};motion ${motion.join("|")}`;
     }

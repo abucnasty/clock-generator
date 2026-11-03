@@ -9,8 +9,8 @@ export interface TargetProduction {
 }
 
 /**
- * A hand-sized aggregate deficit is still measured underproduction. Under the strict target amount
- * (`STRICT_TARGET_AMOUNT`, the new dispatch) the final checks of a clock (trial.ts) conjoin this with their per-bin,
+ * A hand-sized aggregate deficit is still measured underproduction. The final checks of a clock (trial.ts) hold it to
+ * the strict target amount: they conjoin this with their per-bin,
  * recurrence and recovery checks, which stay separate; the rate is the mean over the judged span, not rounded.
  */
 export function assessTargetProduction(

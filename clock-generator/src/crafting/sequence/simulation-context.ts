@@ -17,7 +17,7 @@ import { pickupLaneLength } from "../../common/belt-pickup-layout";
 import { itemsPutInto, PutIntoView } from "../../entities/chest/items-put-into";
 import { ContainerStorage } from "../../simulation/components/container-storage";
 import { MiningDrillArchetype } from "../../simulation/archetypes/mining-drill";
-import { DEFAULT_INSERTER_DISPATCH, InserterDispatch } from "../../simulation/dispatch";
+import { ACTIVATION_ORDER, InserterDispatch } from "../../simulation/dispatch";
 import { InserterScheduling } from "../../simulation/inserter-scheduling";
 
 /** Initial moving-lane phases by inserter id, in the pickup model's public 1/32-tile units. */
@@ -37,8 +37,8 @@ export class SimulationContext {
 
     static fromConfig = createSimulationContextFromConfig;
 
-    /** How a tick picks and orders the inserters it updates (simulation/dispatch.ts); set before the first World */
-    public inserter_dispatch: InserterDispatch = DEFAULT_INSERTER_DISPATCH;
+    /** The open points of the update list (simulation/dispatch.ts); set before the first World */
+    public inserter_dispatch: InserterDispatch = ACTIVATION_ORDER;
     private inserter_scheduling: InserterScheduling | null = null;
 
     constructor(
@@ -54,14 +54,13 @@ export class SimulationContext {
     ) {}
 
     /**
-     * The update list of the new dispatch, made at the first World and kept by every later one of this context, so a
-     * new run goes on from the list the last one left; null under "configured-order". The list starts as a build
-     * leaves it: every inserter active, the last built (the highest config id) first, as each one built goes to the
-     * front. A loaded save's order is not modelled.
+     * The update list (simulation/dispatch.ts), made at the first World and kept by every later one of this context, so a
+     * new run goes on from the list the last one left. The list starts as a build leaves it: every inserter active, the
+     * last built (the highest config id) first, as each one built goes to the front. A loaded save's order is not
+     * modelled.
      */
-    public inserterScheduling(): InserterScheduling | null {
+    public inserterScheduling(): InserterScheduling {
         const dispatch = this.inserter_dispatch;
-        if (dispatch === "configured-order") return null;
         return this.inserter_scheduling ??= new InserterScheduling(this,
             [...this.inserters].sort((a, b) => b.entity_id.number - a.entity_id.number), undefined, undefined,
             {woken_in_walk: dispatch.woken_in_walk, leaves: dispatch.leaves});

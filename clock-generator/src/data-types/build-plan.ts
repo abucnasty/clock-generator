@@ -42,7 +42,7 @@ export type PeriodListing =
 
 /**
  * P-limit: a period over the most ticks one simulated run goes on for cannot be simulated, nor, under whole-counter
- * checks (the new dispatch), a fractional period whose whole counter is
+ * checks, a fractional period whose whole counter is
  */
 export interface PeriodLimitTerms {
     readonly period_ticks: number;

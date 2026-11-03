@@ -65,12 +65,12 @@ export function generateClockForConfig(
 }
 
 /**
- * Under the new dispatch, the clock of the same planning run with every pickup recorded from its entry, where neither the
+ * The clock of the same planning run with every pickup recorded from its entry, where neither the
  * plan's clock nor the grouped hands' holds as built: kept where it holds, else null. The plan's belt-fed pickups after a wait at their
  * machine's output block count from the take that freed them (`PickupStartAtTheTake`), so such a window opens a tick
  * before the hand's first stack in the planning run, and a clock that reaches it without the block lets the hand act a
  * tick before the plan did. Both starts are the plan's; the as-built check decides. Null where no pickup of the
- * planning run was counted from a take (always under the configured order).
+ * planning run was counted from a take.
  */
 function clockWithPickupsFromTheirEntry(plan: PlanRun, options: GenerateClockOptions): BlueprintGenerationResult | null {
     if (!(plan.run.pickups_from_the_take > 0)) {

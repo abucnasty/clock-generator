@@ -41,7 +41,7 @@ const NOBODY: readonly WakeEntry<never>[] = [];
  * when it is already active. A later sleep registers it anew, changing its place in each list.
  * The native pink source/destination trace observes precisely this cross-channel transition.
  *
- * It runs in every tick of a simulation under the new dispatch: a channel's list is linked through its waiters, so a
+ * It runs in every tick of a simulation: a channel's list is linked through its waiters, so a
  * registration or an Alarm moves nobody else, each waiter keeps its links, so that an Alarm unlinks it from its own
  * channels alone, and a caller that holds its channels and entries (InserterScheduling) calls the `...Entry` methods,
  * which are the same lists without the lookups. An entity is any value compared by identity.
