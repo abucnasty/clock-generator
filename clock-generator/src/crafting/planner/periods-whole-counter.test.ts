@@ -15,13 +15,17 @@ afterAll(() => {
 });
 
 describe("periods whose whole counter one run cannot hold, under whole-counter checks", () => {
-    it("a fractional period's counter of 500,000 ticks or more is none to check over: its clock keeps the sampled checks", () => {
+    it("a fractional period's counter of 500,000 ticks or more is over the limit; a whole-tick period has no counter", () => {
         expect(WHOLE_COUNTER_CHECKS).toBe(true);
-        expect(wholeCounterOf(576_000 / 997)).toBeNull();
         expect(counterOverLimitOf(576_000 / 997)).toBe(576_000);
-        expect(wholeCounterOf(12_672 / 23)).toEqual({ period_ticks: 12_672, scale: 23 });
         expect(counterOverLimitOf(12_672 / 23)).toBeNull();
         expect(counterOverLimitOf(160)).toBeNull();
+    });
+
+    it("such a counter is none to check over: its clock keeps the sampled checks", () => {
+        expect(wholeCounterOf(576_000 / 997)).toBeNull();
+        expect(wholeCounterOf(12_672 / 23)).toEqual({ period_ticks: 12_672, scale: 23 });
+        expect(wholeCounterOf(160)).toBeNull();
     });
 
     it("atlan's cell 29: P-limit prunes the periods of 576,000/997 and 1,152,000/997 ticks by their counters", async () => {

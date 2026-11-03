@@ -8,9 +8,8 @@ import { DEFAULT_INSERTER_DISPATCH } from "../../simulation/dispatch";
 export const MAX_SIMULATION_TICKS = 500_000;
 
 /**
- * Whether the first checks of a clock of a p/q-tick period run its whole exported counter (p ticks, q periods) and
- * judge its total, and its start phases range over the counter: under the new dispatch (simulation/dispatch.ts) only.
- * Read once, from the environment, as the dispatch is.
+ * Whether a clock of a p/q-tick period is checked over its whole exported counter (p ticks, q periods), which one run
+ * must then hold: under the new dispatch (simulation/dispatch.ts) only. Read once, from the environment, as the dispatch is.
  */
 export const WHOLE_COUNTER_CHECKS: boolean = DEFAULT_INSERTER_DISPATCH !== "configured-order";
 
