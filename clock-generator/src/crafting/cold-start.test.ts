@@ -6,7 +6,9 @@ import type { Config } from "../config/schema";
 import { InserterStatus } from "../state";
 import type { StockRecording } from "./machine-stock";
 import { quiet } from "./generate-blueprint-test-helpers";
-import { DEFAULT_LOOP_SEED_ITEMS } from "./runner/cold-start";
+import { DEFAULT_LOOP_SEED_ITEMS, seedLoopingRecipes } from "./runner/cold-start";
+import { SimulationContext } from "./sequence/simulation-context";
+import { ACTIVATION_ORDER, type InserterDispatch } from "../simulation/dispatch";
 
 // docs/stability.md, "How a clock is started": a clock is tried from the staged scaffold, belts full and nothing else in the build
 describe("a clock-only run starts as the staged scaffold does", () => {
@@ -61,5 +63,31 @@ describe("a recipe that makes its own ingredient", () => {
     it("is given the number of eggs the config asks for", async () => {
         expect(await eggs({ loop_seed_items: 50 })).toBeLessThanOrEqual(50);
         expect(await eggs({ loop_seed_items: 50 })).toBeGreaterThan(40);
+    });
+});
+
+describe("the seed a loop machine takes", () => {
+    /** What each machine of the sample that makes its own ingredient holds of it once seeded with `asked` under `dispatch` */
+    const seeded = async (sample: string, asked: number, dispatch: InserterDispatch): Promise<number[]> => {
+        const context = SimulationContext.fromConfig(await loadConfigFromFile(sample));
+        context.inserter_dispatch = dispatch;
+        seedLoopingRecipes(context, asked);
+        return context.machines.flatMap(({ machine_state }) => [...machine_state.machine.looping_ingredients]
+            .map(item => machine_state.selfIngredients.getQuantity(item)));
+    };
+
+    // Factorio 2.1.24, staged starts of the two samples' scaffolds asking the harness for 200: each egg machine took 84
+    // (stack 20, insertion limit 7), each bacteria machine 114 (stack 50, insertion limit 28)
+    it("under the new dispatch, is what the game takes: the larger of the stack and the insertion limit, + 64", async () => {
+        expect(await seeded(ConfigPaths.AGRICULTURAL_SCIENCE, DEFAULT_LOOP_SEED_ITEMS, ACTIVATION_ORDER)).toEqual([84, 84]);
+        expect(await seeded(ConfigPaths.IRON_BACTERIA_CULTIVATION, DEFAULT_LOOP_SEED_ITEMS, ACTIVATION_ORDER)).toEqual([114, 114]);
+    });
+
+    it("under the new dispatch, is what was asked where the machine takes it all", async () => {
+        expect(await seeded(ConfigPaths.AGRICULTURAL_SCIENCE, 50, ACTIVATION_ORDER)).toEqual([50, 50]);
+    });
+
+    it("under the configured order, is what was asked", async () => {
+        expect(await seeded(ConfigPaths.AGRICULTURAL_SCIENCE, DEFAULT_LOOP_SEED_ITEMS, "configured-order")).toEqual([200, 200]);
     });
 });
