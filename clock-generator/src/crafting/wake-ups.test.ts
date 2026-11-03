@@ -364,3 +364,70 @@ describe("the rule \"kept-lists\"", () => {
         expect(working.inserters[0].wake_ups_per_minute).toBe(0);
     });
 });
+
+/**
+ * Ten settled periods of the sample metallurgic science build recorded in Factorio 2.1.24 (fixtures/wake-ups-capture-
+ * metallurgic-science-2.1.24.json, four machines and eight inserters, clock cec15038; four periods before them let the
+ * lists settle), with the ticks the game woke each inserter from a machine's list and why, read in the running game.
+ * Inserters 4 and 5 take tungsten ore from a backed-up turbo belt that inserter 7 takes from too; their machine refuses
+ * the ore at its insertion limit, and they go to sleep on its input list only while both lines of the belt are still.
+ */
+const METALLURGIC = "wake-ups-capture-metallurgic-science-2.1.24.json";
+
+function metallurgicCapture(lines = true): { inserters: WatchingInserter[]; machines: WatchedMachine[]; ticks: number; from: number; woken: Map<string, [number, string][]> } {
+    interface Series { source: string; sink: string; states: [number, string][]; held: [number, number][]; held_item: [number, string][];
+        hand_size: number; return_ticks: number; belt_lines?: WatchingInserter["belt_lines"]; woken_by_machine: [number, string][] }
+    interface Machine { products_finished: [number, number][]; true_starts: number[]; outputs: Record<string, [number, number][]> }
+    const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", METALLURGIC), "utf8")) as {
+        ticks: number; count_from: number; machines: Record<string, Machine>; inserters: Record<string, Series>;
+    };
+    const { ticks } = fixture;
+    const at = (list: number[]) => { const flags = new Array<boolean>(ticks).fill(false); for (const tick of list) flags[tick] = true; return flags; };
+    const machines = Object.entries(fixture.machines).map(([machine_id, it]): WatchedMachine => ({
+        machine_id, products_finished: expanded(it.products_finished, ticks), true_starts: at(it.true_starts),
+        outputs: Object.fromEntries(Object.entries(it.outputs).map(([item, series]) => [item, expanded(series, ticks)])),
+    }));
+    const inserters = Object.entries(fixture.inserters).map(([inserter_id, it]): WatchingInserter => ({
+        inserter_id,
+        source_machine_id: it.source.startsWith("machine:") ? it.source : null,
+        sink_machine_id: it.sink.startsWith("machine:") ? it.sink : null,
+        states: expanded(it.states, ticks), held: expanded(it.held, ticks), return_ticks: it.return_ticks,
+        held_item: expanded(it.held_item, ticks), hand_size_of: () => it.hand_size,
+        ...(lines && it.belt_lines !== undefined && { belt_lines: it.belt_lines }),
+    }));
+    return { inserters, machines, ticks, from: fixture.count_from, woken: new Map(Object.entries(fixture.inserters).map(([id, it]) => [id, it.woken_by_machine])) };
+}
+
+function countedOn(capture: ReturnType<typeof metallurgicCapture>): Map<string, number[]> {
+    const { inserters, machines, ticks, from } = capture;
+    const counted = new Map<string, number[]>(inserters.map(it => [it.inserter_id, []]));
+    wakeUps(inserters, machines, from, ticks, (inserter_id, tick) => counted.get(inserter_id)!.push(tick), "kept-lists");
+    return counted;
+}
+
+describe("the rule \"kept-lists\" against ten periods of metallurgic science", () => {
+    const capture = metallurgicCapture();
+    const counted = countedOn(capture);
+
+    it("counts the 56 wake-ups of each belt-fed inserter its machine refuses tick for tick, by the belt lines read off the takes", () => {
+        for (const id of ["inserter:4", "inserter:5"]) {
+            const game = capture.woken.get(id)!;
+            expect(game).toHaveLength(56);
+            expect(new Set(game.map(([, cause]) => cause))).toEqual(new Set(["craft start", "output taken"]));
+            expect(counted.get(id), id).toEqual(game.map(([tick]) => tick));
+        }
+        // without the belt lines, as before: on a belt's list that nothing wakes
+        const without = countedOn(metallurgicCapture(false));
+        expect(without.get("inserter:4")).toEqual([]);
+    });
+
+    it("counts every other inserter tick for tick, but for four of inserter 7's, asleep with a part hand from its switch-off", () => {
+        // inserter 7 took part of a hand from the belt and went to sleep on its machine's input list in the tick its clock
+        // switched it off, woken by a craft start two ticks later (clock positions 54 and 187): a case the rule does not read
+        for (const [id, game] of capture.woken) {
+            const ticks = game.map(([tick]) => tick);
+            expect(ticks.filter(tick => !counted.get(id)!.includes(tick)), id).toEqual(id === "inserter:7" ? [5174, 5307, 8374, 8507] : []);
+            expect(counted.get(id)!.filter(tick => !ticks.includes(tick)), id).toEqual([]);
+        }
+    });
+});
