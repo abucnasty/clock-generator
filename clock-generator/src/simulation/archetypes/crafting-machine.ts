@@ -78,9 +78,9 @@ export class CraftingMachineArchetype implements StatusChangeReason<CraftingStat
         this.placement.place();
     }
 
-    /** Products the machine holds into its output, as far as there is room, whatever its status */
+    /** Products the machine holds into its output, as far as there is room, whatever its status (Yield.putHeldInOutput) */
     public putHeldProductsInOutput(): void {
-        this.made.putHeldProductsInOutput(this.crafting);
+        this.made.putHeldInOutput(this.crafting);
     }
 
     /** The status rule (same-tick rule 13); on a change, the status written, then the observers told (rule 17) */

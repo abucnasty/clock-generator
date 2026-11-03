@@ -116,11 +116,12 @@ test.each([
  * the new dispatch from the same start. Its loop of eggs does not repeat each period, so the counts are laid against the
  * game's over the ten periods.
  */
-test("under the new dispatch the simulator wakes the inserters of agricultural science about where the game does", async () => {
+test("under the new dispatch the simulator wakes the inserters of agricultural science where the game does, its biochambers taking fuel at the game's ticks", async () => {
     const modules = await underTheNewDispatch();
     const { simulateClockOnly, inserterEnds, wakeUpsOfStock, InserterScheduling, StockRecorder } = modules;
     const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "crafting", "fixtures", "wake-ups-capture-agricultural-science-2.1.24.json"), "utf8")) as {
         count_from: number; ticks: number; inserters: Record<string, { woken_by_machine: [number, string][] }>;
+        machines: Record<string, { fuel_taken: number[] }>;
         clock: Fixture["clock"] & { sample_offset: number; first_sample: number };
     };
     const { config, windows, period, sample_offset, first_sample } = fixture.clock;
@@ -150,11 +151,16 @@ test("under the new dispatch the simulator wakes the inserters of agricultural s
     ];
     const quiet = { log() { }, warn() { }, error() { }, debug() { } };
     const ruled = new Map<string, number[]>();
+    const fuel_taken = new Map<string, number[]>();
     try {
         const stock = simulateClockOnly(config, windows, period, Math.ceil((fixture.ticks + first_sample) / period) + 1, quiet, { warmup_periods: 0 });
         wakeUpsOfStock(stock, inserterEnds(config), 1, (inserter_id, at) => {
             if (counted(fixtureTick(at))) (ruled.get(inserter_id) ?? ruled.set(inserter_id, []).get(inserter_id)!).push(fixtureTick(at));
         });
+        for (const machine of stock.machines) {
+            const taken = machine.fuel_taken ?? [];
+            fuel_taken.set(machine.machine_id, taken.flatMap((count, at) => at > 0 && count > taken[at - 1] && counted(fixtureTick(at)) ? [fixtureTick(at)] : []));
+        }
     } finally {
         for (const spy of spies) spy.mockRestore();
     }
@@ -172,6 +178,11 @@ test("under the new dispatch the simulator wakes the inserters of agricultural s
     for (const id of ["inserter:3", "inserter:4", "inserter:6", "inserter:7"]) {
         expect(own.get(id)?.length ?? 0, id).toBeGreaterThan(100);
     }
-    // and nearly all at the game's ticks: the others are fuel taken a tick early, the burner's phase after a stop
-    expect(same_all / game_all).toBeGreaterThan(0.97);
+    // and all but 1 of the 2,792 at the game's ticks
+    expect(game_all - same_all).toBeLessThanOrEqual(1);
+    // every biochamber takes each fuel item at the game's tick (208 for each egg machine, 27 for each nutrient machine), a
+    // full productivity bar holding the machine in the middle of its craft until its output has room for a craft
+    for (const [id, machine] of Object.entries(fixture.machines)) {
+        expect(fuel_taken.get(id), `${id} fuel taken`).toEqual(machine.fuel_taken.filter(counted));
+    }
 });
