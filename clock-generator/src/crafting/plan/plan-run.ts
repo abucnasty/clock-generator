@@ -431,6 +431,12 @@ export interface RunOptions {
     simulate_periods?: number;
     /** Record the fuel each burner machine holds over the run (default false) */
     fuel_levels?: boolean;
+    /**
+     * Under the new dispatch, where a belt-fed inserter's pickup after a wait at its machine's output block is recorded
+     * from (`PickupStartAtTheTake`): "take" (the default), the tick another inserter took the block down; "entry", the
+     * tick it entered the pickup, as it is recorded for every other pickup. No other run reads it.
+     */
+    pickup_start?: PickupStart;
     /** Record what every machine and inserter holds after each tick of the run (default false) */
     machine_stock?: boolean;
     /**
@@ -493,6 +499,8 @@ export interface BuildRun extends PlannedCraftingCycle, TransferPlan {
     used_terminal_swing_count: number;
     /** What the build made after each trial of the loss, when one was asked for */
     backpressure_loss: LossOutcome | undefined;
+    /** The pickups whose start was recorded from the take that freed them (`PickupStartAtTheTake`); 0 under the configured order */
+    pickups_from_the_take: number;
 }
 
 /**
@@ -562,6 +570,7 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
     // histories (which would keep the raw transfers and transitions of the run alive for as long as the run is kept)
     // (the planned build's context is the run's own, except on a cold start, which runs a build made anew)
     detachHistoryObservers(build, ...new Set([simulation_context, build.simulation_context]));
+    const pickups_from_the_take = build.pickup_leads?.given ?? 0;
 
     return {
         simulation_context: build.simulation_context,
@@ -593,6 +602,7 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
         total_expected_output: output.total_expected_output,
         used_terminal_swing_count: output.used_terminal_swing_count,
         backpressure_loss,
+        pickups_from_the_take,
     };
 }
 
@@ -608,6 +618,8 @@ interface RecordedBuild {
     state_transition_history: StateTransitionHistory;
     /** The observers of inserters, machines and drills that only feed the two histories */
     history_observers: ReadonlySet<object>;
+    /** Where the pickups of belt-fed inserters count from under the new dispatch; null under the configured order or with "entry" */
+    pickup_leads: PickupStartAtTheTake | null;
 }
 
 /** Takes the observers that only feed the two histories off every entity of these contexts */
@@ -653,14 +665,14 @@ function recordedBuildOf(config: Config, options: RunOptions, debug: MutableDebu
     if (Object.values(options.debug_steps ?? {}).some(Boolean)) {
         new DebugObserverFactory(relative_tick_provider, debug).attachTo(simulation_context);
     }
-    const { inventory_transfer_history, state_transition_history, history_observers } =
-        attachHistoryObservers(simulation_context, relative_tick_provider, options.factorio_states ?? true);
+    const { inventory_transfer_history, state_transition_history, history_observers, pickup_leads } =
+        attachHistoryObservers(simulation_context, relative_tick_provider, options.factorio_states ?? true, options.pickup_start ?? "take");
     inventory_transfer_history.recording = false;
     state_transition_history.recording = false;
 
     logger.log(`Created simulation context with ${simulation_context.machines.length} machines and ${simulation_context.inserters.length} inserters.`);
 
-    return { simulation_context, relative_tick, relative_tick_provider, inventory_transfer_history, state_transition_history, history_observers };
+    return { simulation_context, relative_tick, relative_tick_provider, inventory_transfer_history, state_transition_history, history_observers, pickup_leads };
 }
 
 /**
@@ -1285,8 +1297,8 @@ export function trialRunOf(run: BuildRun): TrialRun {
     };
 }
 
-/** The options of GenerateClockOptions the planning run itself reads */
-type PlanRunOptions = Pick<GenerateClockOptions, "debug" | "debug_steps" | "logger" | "factorio_states">;
+/** The options of GenerateClockOptions the planning run itself reads, and where its led pickups count from (see `RunOptions`) */
+type PlanRunOptions = Pick<GenerateClockOptions, "debug" | "debug_steps" | "logger" | "factorio_states"> & { pickup_start?: PickupStart };
 
 /** The planning run of a build, with what a clock and its export read off it */
 export interface PlanRun {
@@ -1311,7 +1323,8 @@ export interface PlanRun {
  */
 export function planRun(config: Config, options: PlanRunOptions = {}): PlanRun {
     const logger = options.logger ?? defaultLogger;
-    const run = runBuild(config, { logger, debug: options.debug, debug_steps: options.debug_steps, factorio_states: options.factorio_states });
+    const run = runBuild(config, { logger, debug: options.debug, debug_steps: options.debug_steps, factorio_states: options.factorio_states,
+        ...(options.pickup_start !== undefined && { pickup_start: options.pickup_start }) });
     // Throws LaneCapacityError if one unit asks a belt lane for more than it carries; after the run, so the planner's
     // own refusal of the target comes first
     assertLaneCapacity(config);
@@ -2450,9 +2463,14 @@ function buildEnableControlOverrideMap(config: Config): EntityEnableControlOverr
  * insertion limit (room made by the machine's craft, after the inserters of the tick), start their pickup in the same
  * tick under both and are left as they are.
  */
+/** Where a belt-fed inserter's pickup after a wait at its machine's output block is recorded from (see `RunOptions.pickup_start`) */
+export type PickupStart = "take" | "entry";
+
 class PickupStartAtTheTake {
     /** The machines belt-fed inserters drop into, with the tick their block was last taken down (-1 for none yet) */
     private readonly lifted = new Map<string, number>();
+    /** The pickups counted from the take so far, warm-up included */
+    public given = 0;
 
     constructor(private readonly context: SimulationContext) {
         for (const inserter of context.inserters) {
@@ -2486,7 +2504,9 @@ class PickupStartAtTheTake {
         if (!EntityId.isBelt(inserter_state.inserter.source.entity_id) || !this.lifted.has(sink)) return undefined;
         return from => {
             const waited = from === InserterPhase.WAITING_FOR_SINK || (from === InserterPhase.IDLE && inserter_state.waits_for_sink);
-            return waited && this.lifted.get(sink) === this.context.tick_provider.getCurrentTick() - 1 ? 1 : 0;
+            if (!waited || this.lifted.get(sink) !== this.context.tick_provider.getCurrentTick() - 1) return 0;
+            this.given++;
+            return 1;
         };
     }
 }
@@ -2501,7 +2521,13 @@ function attachHistoryObservers(
     simulation_context: SimulationContext,
     relative_tick_provider: TickProvider,
     factorio_states: boolean,
-): { inventory_transfer_history: InventoryTransferHistory; state_transition_history: StateTransitionHistory; history_observers: ReadonlySet<object> } {
+    pickup_start: PickupStart,
+): {
+    inventory_transfer_history: InventoryTransferHistory;
+    state_transition_history: StateTransitionHistory;
+    history_observers: ReadonlySet<object>;
+    pickup_leads: PickupStartAtTheTake | null;
+} {
     const inventory_transfer_history = new InventoryTransferHistory();
     const state_transition_history = new StateTransitionHistory();
     const history_observers = new Set<object>();
@@ -2510,7 +2536,8 @@ function attachHistoryObservers(
         history_observers.add(observer);
     };
 
-    const pickup_leads = simulation_context.inserter_dispatch === "configured-order" ? null : new PickupStartAtTheTake(simulation_context);
+    const pickup_leads = simulation_context.inserter_dispatch === "configured-order" || pickup_start === "entry" ? null
+        : new PickupStartAtTheTake(simulation_context);
     simulation_context.machines.forEach(it => {
         if (pickup_leads?.watches(it.machine_state.entity_id.id)) attach(it.observers, pickup_leads.observerOf(it.machine_state));
     });
@@ -2545,5 +2572,5 @@ function attachHistoryObservers(
         }
     });
 
-    return { inventory_transfer_history, state_transition_history, history_observers };
+    return { inventory_transfer_history, state_transition_history, history_observers, pickup_leads };
 }
