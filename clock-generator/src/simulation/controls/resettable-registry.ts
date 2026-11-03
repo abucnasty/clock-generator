@@ -21,4 +21,9 @@ export class ResettableRegistry {
     public resetAll(starts_clock: boolean = false): void {
         this.resettables.forEach(r => r.reset(starts_clock));
     }
+
+    /** Whether none of the registered objects starts again when a later step of a run starts (`Resettable.runs_through_steps`) */
+    public everyOneRunsThroughSteps(): boolean {
+        return this.resettables.every(r => r.runs_through_steps === true);
+    }
 }
