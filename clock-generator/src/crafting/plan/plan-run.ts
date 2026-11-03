@@ -40,6 +40,7 @@ import { CraftingCyclePlan, plannedTerminalSwingCount } from "../sequence/cycle/
 import { PrepareStep } from "../runner/steps/prepare-step";
 import { DEFAULT_LOOP_SEED_ITEMS, seedLoopingRecipes } from "../runner/cold-start";
 import { DEFAULT_TAKER_ORDER, TakerOrder } from "../../simulation/competing-takers";
+import type { InserterDispatch } from "../../simulation/dispatch";
 import { DeciderOrder } from "../decider-order";
 import { WarmupStep } from "../runner/steps/warmup-step";
 import { FullOutputChest, fullOutputChestsOf } from "../full-output-chests";
@@ -457,7 +458,26 @@ export interface RunOptions {
      * run whose histories nobody reads leaves it out: working the state out for every entity every tick takes time.
      */
     factorio_states?: boolean;
+    /**
+     * How the run's ticks pick and order the inserters they update (simulation/dispatch.ts); by default the process's
+     * (`DEFAULT_INSERTER_DISPATCH`). The planning run is made under `PLANNING_DISPATCH` (see there).
+     */
+    inserter_dispatch?: InserterDispatch;
 }
+
+/**
+ * The dispatch of the planning run (`planRun`): every inserter updated every tick, in the configured order, whatever
+ * dispatch the checks run under. The plan reads its windows off that run (`windowsFromHistory`: a window from the tick a
+ * hand starts its pickup) and starts it from a build it sets up by hand (outputs emptied, controls swapped between two
+ * ticks), and both are made for hands that are updated every tick. Under the update list (activation-order) a hand
+ * that waited for its machine sleeps through the tick its wait ends and starts its pickup in the tick it takes its
+ * first items, a tick later than a hand updated every tick does, though every item moves in the same tick; and a hand
+ * asleep when the controls are swapped is woken by the swap and takes its first items a tick earlier, which sets the
+ * machine's crafts a tick earlier against the plan's period for the rest of the run. Either way the plan's windows
+ * would change by a tick with nothing moving differently. The clock made of the plan is checked, and its wake-ups
+ * counted, under the process's dispatch like every other run.
+ */
+export const PLANNING_DISPATCH: InserterDispatch = "configured-order";
 
 /** Everything one run of a build yields, for the planning run to read its windows off and for a trial to judge */
 export interface BuildRun extends PlannedCraftingCycle, TransferPlan {
@@ -638,6 +658,7 @@ function recordedBuildOf(config: Config, options: RunOptions, debug: MutableDebu
 
     // Initialize simulation context
     const simulation_context = SimulationContext.fromConfig(config);
+    if (options.inserter_dispatch !== undefined) simulation_context.inserter_dispatch = options.inserter_dispatch;
     simulation_context.competing_takers_order = options.competing_takers_order ?? DEFAULT_TAKER_ORDER;
     if (options.moving_pickup_phases) simulation_context.initializeMovingPickupPhases(options.moving_pickup_phases);
 
@@ -1311,7 +1332,8 @@ export interface PlanRun {
  */
 export function planRun(config: Config, options: PlanRunOptions = {}): PlanRun {
     const logger = options.logger ?? defaultLogger;
-    const run = runBuild(config, { logger, debug: options.debug, debug_steps: options.debug_steps, factorio_states: options.factorio_states });
+    const run = runBuild(config, { logger, debug: options.debug, debug_steps: options.debug_steps, factorio_states: options.factorio_states,
+        inserter_dispatch: PLANNING_DISPATCH });
     // Throws LaneCapacityError if one unit asks a belt lane for more than it carries; after the run, so the planner's
     // own refusal of the target comes first
     assertLaneCapacity(config);
