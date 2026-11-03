@@ -112,8 +112,8 @@ export interface WatchedMachine {
  *   the third all of them and 7 more in ten periods, `wake-ups.test.ts`):
  *   - **A sleep.** An inserter on the update list goes to sleep in its own update when it finds nothing to do: waiting
  *     for room in a machine, on that machine's input list; waiting for items, on the list of the machine it takes from,
- *     and also on the input list of a machine it puts into when its hand took part of a hand in that update, or is empty
- *     while there were items to take (the machine it puts into refused them). What it waits for is read off the state
+ *     and, from a machine into a machine, also on the input list of the one it puts into when its hand took part of a
+ *     hand in that update, or is empty while there were items to take (the machine it puts into refused them). What it waits for is read off the state
  *     it shows after the tick before, where that was a wait and its hand has not changed, else after the tick (that is
  *     read after the machines' part of the tick). A taker that shows working read off its hand (on the update list when
  *     the tick began, its arm at home, its hand not fallen and not full, room at a belt it drops on: `drop_room`). An
@@ -351,7 +351,8 @@ function countKeptLists(inserter: WatchingInserter, alarms: KeptListsAlarms, fir
     const waitingForItems = (tick: number): number => {
         const picked = held[tick] > held[tick - 1];
         let lists = source !== null || inserter.source_placer_id ? ON_SOURCE : 0;
-        if (sink !== null && (held[tick] === 0 ? source === null || sourceHadItems(tick) : picked)) {
+        // with a machine at both ends (agricultural science); from a belt or a chest the rule cannot tell what is there
+        if (sink !== null && source !== null && (held[tick] === 0 ? sourceHadItems(tick) : picked)) {
             lists |= ON_SINK;
         }
         return lists === 0 ? ON_OTHER : lists;
