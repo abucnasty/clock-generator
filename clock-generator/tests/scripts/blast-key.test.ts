@@ -1,5 +1,6 @@
 // The environment half of the blast cache key (scripts/blast/key.py): the variables that change what the engine generates are
-// in the key by name and value, a key with none set is the one it always was, and a CLOCK_* variable no list knows stops the key.
+// in the key by name and value (none today), a key with none set is the one it always was, and a CLOCK_* variable no list knows
+// stops the key: CLOCK_NEW_DISPATCH too, which the engine no longer reads.
 import crypto from 'crypto';
 import fs from 'fs';
 import os from 'os';
@@ -52,22 +53,6 @@ describe('the environment in the blast cache key', () => {
         expect(engineOf({ PATH: `${process.env.PATH}:/nowhere`, HOME: '/nowhere', SOMETHING_ELSE: '1' }).engine).toBe(engine.engine);
     });
 
-    it('gives a run with the new dispatch a key of its own, apart from unset, from the empty string and from other values', () => {
-        const unset = engineOf().engine;
-        const keys = ['1', '', '0', 'same-tick', 'same-tick,next-update'].map(value => engineOf({ CLOCK_NEW_DISPATCH: value }));
-        expect(new Set([unset, ...keys.map(k => k.engine)]).size).toBe(6);
-        expect(keys[0].env).toEqual({ CLOCK_NEW_DISPATCH: '1' });
-        expect(keys[1].env).toEqual({ CLOCK_NEW_DISPATCH: '' });
-        // the same setting is the same key
-        expect(engineOf({ CLOCK_NEW_DISPATCH: '1' }).engine).toBe(keys[0].engine);
-    });
-
-    it('holds the state of a run folder apart per setting too, so that a resume never mixes them', () => {
-        const of = (env: Record<string, string>) => run('python3', [path.join(scriptsDir, 'key.py'), '--state', repo], { ...clean(), ...env }).stdout;
-        expect(of({})).not.toBe(of({ CLOCK_NEW_DISPATCH: '1' }));
-        expect(of({ CLOCK_NEW_DISPATCH: '1' })).toBe(of({ CLOCK_NEW_DISPATCH: '1' }));
-    });
-
     it('does not count the variables the runner clears or the ones that do not reach generation', () => {
         const unset = engineOf().engine;
         for (const name of ['CLOCK_PROOF_PHASES', 'CLOCK_RECORDING_CACHE', 'CLOCK_RECORDING_CACHE_DIR', 'CLOCK_RECORDING_CACHE_LOG', 'CLOCK_GENERATOR_ROOT']) {
@@ -86,16 +71,23 @@ describe('the environment in the blast cache key', () => {
         expect(key({ CLOCK_SOMETHING_NEW: '' }).status).not.toBe(0);
         // every unknown one is named
         expect(key({ CLOCK_ONE: '1', CLOCK_TWO: '1' }).stderr).toMatch(/CLOCK_ONE, CLOCK_TWO/);
+        // the dispatch setting is gone: a run under it stops
+        for (const args of [[], ['--state']]) {
+            const done = run('python3', [path.join(scriptsDir, 'key.py'), ...args, repo], { ...clean(), CLOCK_NEW_DISPATCH: '1' });
+            expect(done.status).not.toBe(0);
+            expect(done.stderr).toContain('CLOCK_NEW_DISPATCH');
+        }
     });
 
-    it('does not take a result of one setting as a base for a run under another', () => {
+    it('does not take a result made under a keyed setting as a base for a run with none set', () => {
         const cache = path.join(dir, 'cache');
         const entry = (name: string, engine: any, drop = false) => {
             const copy = { ...engine }; delete copy.dirty; if (drop) delete copy.env;
             fs.mkdirSync(path.join(cache, name), { recursive: true });
             fs.writeFileSync(path.join(cache, name, 'MANIFEST.json'), JSON.stringify({ key: name, engine: copy, jobs: { format: 'f' }, functions: { tool: 'tool' } }));
         };
-        entry('off', engineOf()); entry('off-old', engineOf(), true); entry('on', engineOf({ CLOCK_NEW_DISPATCH: '1' }));
+        // 'on': an entry made under CLOCK_NEW_DISPATCH=1 while it was keyed
+        entry('off', engineOf()); entry('off-old', engineOf(), true); entry('on', { ...engineOf(), env: { CLOCK_NEW_DISPATCH: '1' } });
         fs.writeFileSync(path.join(dir, 'jobs.json'), JSON.stringify({ format: 'f' }));
         const basesFor = (env: Record<string, string>) => {
             fs.writeFileSync(path.join(dir, 'engine.json'), JSON.stringify(engineOf(env)));
@@ -104,8 +96,6 @@ describe('the environment in the blast cache key', () => {
         };
         // an entry from before the field was made with none of them set
         expect(basesFor({})).toEqual(['off', 'off-old']);
-        expect(basesFor({ CLOCK_NEW_DISPATCH: '1' })).toEqual(['on']);
-        expect(basesFor({ CLOCK_NEW_DISPATCH: '' })).toEqual([]);
     });
 
     describe('storing a run folder', () => {
@@ -122,7 +112,6 @@ describe('the environment in the blast cache key', () => {
 
         it('accepts a folder made under the current environment', () => {
             expect(check(folder('off', {}), {}).status).toBe(0);
-            expect(check(folder('on', { CLOCK_NEW_DISPATCH: '1' }), { CLOCK_NEW_DISPATCH: '1' }).status).toBe(0);
         });
 
         it('refuses a folder made under another environment, naming both', () => {
@@ -130,11 +119,8 @@ describe('the environment in the blast cache key', () => {
             expect(flagOn.status).not.toBe(0);
             expect(flagOn.stderr).toContain("CLOCK_NEW_DISPATCH='1'");
             expect(flagOn.stderr).toContain('none set');
-            const flagOff = check(folder('off-2', {}), { CLOCK_NEW_DISPATCH: '1' });
-            expect(flagOff.status).not.toBe(0);
-            expect(flagOff.stderr).toContain("environment now is CLOCK_NEW_DISPATCH='1'");
             // the empty string is a value of its own
-            expect(check(folder('on-3', { CLOCK_NEW_DISPATCH: '1' }), { CLOCK_NEW_DISPATCH: '' }).status).not.toBe(0);
+            expect(check(folder('on-3', { CLOCK_NEW_DISPATCH: '' }), {}).status).not.toBe(0);
         });
 
         it('refuses a folder with no record unless the environment it was made under is given, and then it must be the current one', () => {
@@ -144,9 +130,7 @@ describe('the environment in the blast cache key', () => {
             expect(missing.stderr).toContain('no record');
             expect(missing.stderr).toContain('--made-under');
             expect(check(old, {}, 'none').status).toBe(0);
-            expect(check(old, { CLOCK_NEW_DISPATCH: '1' }, 'CLOCK_NEW_DISPATCH=1').status).toBe(0);
             expect(check(old, {}, 'CLOCK_NEW_DISPATCH=1').status).not.toBe(0);
-            expect(check(old, { CLOCK_NEW_DISPATCH: '1' }, 'none').status).not.toBe(0);
         });
     });
 });

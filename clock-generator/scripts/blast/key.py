@@ -41,8 +41,8 @@ FORMAT = 't1-engine-1'
 PATHS = ['clock-generator/src', 'clock-generator/resources', 'clock-generator/package-lock.json', 'clock-generator/tsconfig.json']
 
 
-# CLOCK_* variables the engine reads that change what it generates: keyed, by name and value
-ENV_KEYED = ['CLOCK_NEW_DISPATCH']
+# CLOCK_* variables the engine reads that change what it generates: keyed, by name and value (none today)
+ENV_KEYED: list[str] = []
 # changes generation too, but the runner clears it (blast.sh runs every process with `env -u`), so it is never in effect
 ENV_CLEARED = ['CLOCK_PROOF_PHASES']
 # read by the harness or the scripts, not by generation: the game recording store (src/harness) and the sweep scripts' checkout
