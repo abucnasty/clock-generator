@@ -193,14 +193,21 @@ function expanded<T>(changes: [number, T][], ticks: number): T[] {
 }
 
 /**
- * One clock period recorded in Factorio 2.1.24 (fixtures/wake-ups-capture-2.1.24.json): an electromagnetic plant, the
- * stack inserter that takes its science packs to a belt (inserter:1) and the one that feeds it from a belt
- * (inserter:2), with the ticks in which the game delivered a wake-up by the plant to each, read in the running game.
+ * One clock period recorded in Factorio 2.1.24, with the ticks in which the game delivered a wake-up by the plant to each
+ * inserter, read in the running game:
+ * - FRONT_EXIT (fixtures/wake-ups-capture-2.1.24.json): an electromagnetic plant, the stack inserter that takes its
+ *   science packs to a belt (inserter:1) and the one that feeds it from a belt (inserter:2);
+ * - CHESTS (fixtures/wake-ups-capture-electromagnetic-science-2.1.24.json, the sample electromagnetic science build): the
+ *   inserter that feeds the plant from a belt (inserter:1) and two that take its science packs into a chest each
+ *   (inserter:2 and inserter:3, the one the game updates first).
  */
-function capture(): { inserters: WatchingInserter[]; machines: WatchedMachine[]; ticks: number; woken: Map<string, number[]> } {
+const FRONT_EXIT = "wake-ups-capture-2.1.24.json";
+const CHESTS = "wake-ups-capture-electromagnetic-science-2.1.24.json";
+
+function capture(file: string = FRONT_EXIT): { inserters: WatchingInserter[]; machines: WatchedMachine[]; ticks: number; woken: Map<string, number[]> } {
     interface Series { source: string; sink: string; states: [number, string][]; held: number[]; held_item: [number, string][];
         hand_size: number; return_ticks: number; drop_room?: [number, boolean][]; woken_by_machine: number[] }
-    const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "wake-ups-capture-2.1.24.json"), "utf8")) as {
+    const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", file), "utf8")) as {
         machine: { products_finished: number[]; true_starts: [number, boolean][]; outputs: Record<string, number[]> };
         inserters: Record<string, Series>;
     };
@@ -220,8 +227,8 @@ function capture(): { inserters: WatchingInserter[]; machines: WatchedMachine[];
     return { inserters, machines, ticks, woken: new Map(Object.entries(fixture.inserters).map(([id, series]) => [id, series.woken_by_machine])) };
 }
 
-function wokenIn(rule: WakeRule): Map<string, number[]> {
-    const { inserters, machines, ticks } = capture();
+function wokenIn(rule: WakeRule, file: string = FRONT_EXIT): Map<string, number[]> {
+    const { inserters, machines, ticks } = capture(file);
     const woken = new Map<string, number[]>(inserters.map(it => [it.inserter_id, []]));
     wakeUps(inserters, machines, 0, ticks, (inserter_id, tick) => woken.get(inserter_id)!.push(tick), rule);
     return woken;
@@ -241,6 +248,19 @@ describe("the rule \"kept-lists\" against a period of the game", () => {
         // clock positions 24 and 280: shown working after the tick before; 288, 687 and 1072: shown disabled
         expect(missed).toEqual([23, 279, 287, 686, 1071]);
         expect(wokenIn("shown-waiting").get("inserter:2")).toEqual(woken.get("inserter:2"));
+    });
+
+    it("counts them tick for tick on a build with two takers into chests: 10, 10 and 11, none false", () => {
+        const { woken } = capture(CHESTS);
+        expect(woken.get("inserter:1")).toHaveLength(10);
+        expect(woken.get("inserter:2")).toHaveLength(10);
+        expect(woken.get("inserter:3")).toHaveLength(11);
+        // among them inserters asleep from the update their arm came home in, with an empty hand: the feeder at 600 (home
+        // in 599, nothing needed, switched off), the second taker at 76 and 267 (the first took the whole output; a result
+        // later in the tick) and 460 (switched off in 459)
+        expect(woken.get("inserter:1")).toContain(600);
+        expect(woken.get("inserter:3")).toEqual(expect.arrayContaining([76, 267, 460]));
+        expect(wokenIn("kept-lists", CHESTS)).toEqual(woken);
     });
 });
 
