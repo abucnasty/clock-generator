@@ -34,6 +34,6 @@ This comparison deliberately does not force global cross-cell traversal order: n
 visit these independent cells in opposite orders. Registration order is a simulator scenario, not a universal native
 list policy. It also does not infer a condition-write rule from this disconnected/effectively enabled baseline.
 
-Default World dispatch remains unchanged. A broader active-World trial passed this fixture but contradicted existing
+This fixture left the World dispatch unchanged (the update list became the only dispatch in 0.27.0). A broader active-World trial passed this fixture but contradicted existing
 native cold-start belt calibrations, so it was isolated and stopped without changing those assertions. These source
 hooks and derived outcomes are an integration prerequisite, not a full agricultural/three-copy or timing fix.
