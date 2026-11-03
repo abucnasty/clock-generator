@@ -1,6 +1,7 @@
 import { CraftingMachineArchetype } from "./archetypes/crafting-machine";
 import { InserterArchetype } from "./archetypes/inserter";
 import { MiningDrillArchetype } from "./archetypes/mining-drill";
+import type { InserterScheduling } from "./inserter-scheduling";
 import { World } from "./world";
 
 /**
@@ -149,8 +150,16 @@ export function runTick(world: World, tracer: TickTracer | null): void {
     world.tick_provider.incrementTick();
     if (tracer !== null) tracer.step(TickPhase.TICK, NO_ENTITY, TickStep.INCREMENT);
     runDrills(world.drills, tracer);
-    runInserters(world.inserters, tracer);
+    const scheduling = world.scheduling;
+    if (scheduling === null) {
+        runInserters(world.inserters, tracer);
+        runMachines(world.machines, tracer);
+        return;
+    }
+    runListedInserters(world.inserters, scheduling, tracer);
     runMachines(world.machines, tracer);
+    // a window that opens next tick puts its inserter at the front now, after the machines (simulation/dispatch.ts)
+    scheduling.finishControls();
 }
 
 function runDrills(drills: readonly MiningDrillArchetype[], tracer: TickTracer | null): void {
@@ -172,6 +181,31 @@ function runInserters(inserters: readonly InserterArchetype[], tracer: TickTrace
         inserter.phaseRule();
         if (tracer !== null) tracer.step(TickPhase.INSERTERS, index, InserterStep.PHASE_STEP);
         inserter.phaseStep();
+        if (tracer !== null) tracer.step(TickPhase.INSERTERS, index, InserterStep.TICK_OBSERVERS);
+        inserter.tickObservers();
+        if (tracer !== null) tracer.step(TickPhase.INSERTERS, index, InserterStep.SHOWN_ENABLED);
+        inserter.endOfTick();
+    }
+}
+
+/**
+ * The inserters phase under the new dispatch (simulation/dispatch.ts): the inserters in the update list, from the front,
+ * each through its phase rule and step; then every inserter's tick observers and Wakes in the World's order, so that
+ * recorders see every inserter in every tick, listed or not. The tracer is told of the update steps in list order.
+ */
+function runListedInserters(inserters: readonly InserterArchetype[], scheduling: InserterScheduling, tracer: TickTracer | null): void {
+    scheduling.beginUpdates();
+    for (let inserter = scheduling.nextUpdate(); inserter !== null; inserter = scheduling.nextUpdate()) {
+        const index = tracer === null ? NO_ENTITY : inserters.indexOf(inserter);
+        if (tracer !== null) tracer.step(TickPhase.INSERTERS, index, InserterStep.PHASE_RULE);
+        inserter.phaseRule();
+        if (tracer !== null) tracer.step(TickPhase.INSERTERS, index, InserterStep.PHASE_STEP);
+        inserter.phaseStep();
+        scheduling.completeUpdate(inserter);
+    }
+    scheduling.endUpdates();
+    for (let index = 0; index < inserters.length; index++) {
+        const inserter = inserters[index];
         if (tracer !== null) tracer.step(TickPhase.INSERTERS, index, InserterStep.TICK_OBSERVERS);
         inserter.tickObservers();
         if (tracer !== null) tracer.step(TickPhase.INSERTERS, index, InserterStep.SHOWN_ENABLED);
