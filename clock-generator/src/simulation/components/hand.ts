@@ -50,7 +50,8 @@ export class HandScratch {
     public spare_hand: InserterHandContents | null = null;
     /**
      * Under the new dispatch, true from a control swap to the end of the hand's next update: the swap puts every
-     * inserter on the update list, which is no wake of the hand (see `BeltHandPickup.enter`). Not set back by `reset`.
+     * inserter on the update list, which is no wake of the hand (see `BeltHandPickup.enter`). `reset` clears it and
+     * the swap then sets it (`Hand.resetForSwap`).
      */
     public after_swap: boolean = false;
 
@@ -69,6 +70,7 @@ export class HandScratch {
         this.reason_item = "";
         this.reason_quantity = 0;
         this.spare_hand = null;
+        this.after_swap = false;
     }
 }
 
