@@ -73,7 +73,7 @@ export function generateClockForConfig(
  * planning run was counted from a take (always under the configured order).
  */
 function clockWithPickupsFromTheirEntry(plan: PlanRun, options: GenerateClockOptions): BlueprintGenerationResult | null {
-    if (plan.run.pickups_from_the_take === 0) {
+    if (!(plan.run.pickups_from_the_take > 0)) {
         return null;
     }
     const from_entry = planRun(plan.config, { ...options, pickup_start: "entry" });
