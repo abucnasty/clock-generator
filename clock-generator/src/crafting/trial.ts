@@ -534,9 +534,9 @@ export function simulateClockOnly(
      * `competing_takers_order`. `keep_output_buffers` leaves the machines the output is taken from as full as they get
      * when nothing takes it, and starts the clock at once. `start_stock` names what machines hold instead, to start in a
      * state the game was recorded in: with `warmup_periods: 0` the first tick of the run is the first tick after that
-     * state.
+     * state, and `main_clock_shift` puts the clock where it was then.
      */
-    start: Pick<RunOptions, "cold_start" | "competing_takers_order" | "keep_output_buffers" | "warmup_periods" | "start_stock" | "start_hands"> = {},
+    start: Pick<ClockTrialOptions, "cold_start" | "competing_takers_order" | "keep_output_buffers" | "warmup_periods" | "start_stock" | "start_hands" | "main_clock_shift"> = {},
 ): StockRecording {
     const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
