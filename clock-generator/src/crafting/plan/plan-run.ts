@@ -1025,8 +1025,8 @@ function simulate(
             state: it.inserter_state, sink: it.sink_state,
             drop_room: it.hand.drop.roomForStack === undefined ? undefined : () => it.hand.drop.roomForStack!(),
             // the update list of the new dispatch, made with the run's first World: asked only once it is
-            asleep_for_items: simulation_context.inserter_dispatch === "configured-order" ? undefined
-                : () => simulation_context.inserterScheduling()?.asleepForItems(it) ?? false,
+            listing: simulation_context.inserter_dispatch === "configured-order" ? undefined
+                : () => simulation_context.inserterScheduling()?.listingOf(it) ?? "elsewhere",
         })),
             may_end_early ? undefined : recorded_duration.ticks, options.stock_detail)
         : undefined;

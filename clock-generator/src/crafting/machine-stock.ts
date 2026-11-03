@@ -1,6 +1,6 @@
 import { EntityState, InserterState, MachineState } from "../state";
 import { InserterStatus } from "../state/entity-status";
-import { factorioInserterState } from "../state/factorio-entity-state";
+import { factorioInserterState, InserterListing } from "../state/factorio-entity-state";
 import type { TickRecorder } from "../simulation/observers/observer";
 import { DEFAULT_WAKE_RULE, type WakeRule } from "./wake-ups";
 
@@ -105,20 +105,20 @@ export class StockRecorder implements TickRecorder {
     private ticks = 0;
     private readonly machines: { state: MachineState; series: MachineStockSeries; inputs: ItemSeries[]; outputs: ItemSeries[]; fuel_item: string | undefined }[];
     private readonly inserters: { state: InserterState; sink: EntityState; series: InserterHandSeries; drop_room: (() => boolean) | undefined;
-        asleep_for_items: (() => boolean) | undefined }[];
+        listing: (() => InserterListing) | undefined }[];
     /** Whether a lean recording records the item in every hand and what every machine's output held */
     private readonly items_seen: boolean;
 
     /**
      * @param inserters every inserter with what it puts into, which decides the state the game shows while it waits, and
      *      for one that drops on a belt whether its lane has room at the drop spot now (`InserterHandSeries.drop_room`),
-     *      and under the new dispatch whether it is asleep on its source machine's list (the state it shows then)
+     *      and under the new dispatch where its update list has it (`InserterListing`, the state it shows then)
      * @param expected_ticks the ticks the run will record, when it cannot end sooner: the series are then made at that
      *      length and written by index, instead of grown by push. Left out for a run that may stop early at a repeat,
      *      whose request is far longer than what it records.
      * @param detail which series to record (see `StockDetail`); a series that is not recorded is empty
      */
-    constructor(machine_states: readonly MachineState[], inserters: readonly { state: InserterState; sink: EntityState; drop_room?: () => boolean; asleep_for_items?: () => boolean }[], expected_ticks?: number,
+    constructor(machine_states: readonly MachineState[], inserters: readonly { state: InserterState; sink: EntityState; drop_room?: () => boolean; listing?: () => InserterListing }[], expected_ticks?: number,
         private readonly detail: StockDetail = "full", wake_rule: WakeRule = DEFAULT_WAKE_RULE) {
         const series_of_ticks = (): number[] => canPreallocate(expected_ticks) ? new Array<number>(expected_ticks) : [];
         const strings_of_ticks = (): string[] => canPreallocate(expected_ticks) ? new Array<string>(expected_ticks) : [];
@@ -163,8 +163,8 @@ export class StockRecorder implements TickRecorder {
                 fuel_item: state.machine.fuel_slot?.fuel.item_name,
             };
         });
-        this.inserters = inserters.map(({ state, sink, drop_room, asleep_for_items }) => ({
-            state, sink, asleep_for_items,
+        this.inserters = inserters.map(({ state, sink, drop_room, listing }) => ({
+            state, sink, listing,
             drop_room: reads_room ? drop_room : undefined,
             series: {
                 inserter_id: state.entity_id.id, held: series_of_ticks(),
@@ -202,11 +202,11 @@ export class StockRecorder implements TickRecorder {
             series.crafting_progress[tick] = barOf(state.craftingProgress.progress);
             series.bonus_progress[tick] = barOf(state.bonusProgress.progress);
         }
-        for (const { state, sink, series, drop_room, asleep_for_items } of this.inserters) {
+        for (const { state, sink, series, drop_room, listing } of this.inserters) {
             series.held[tick] = state.held_item?.quantity ?? 0;
             series.held_item[tick] = state.held_item?.item_name ?? "";
             series.status[tick] = state.status;
-            series.factorio_state[tick] = factorioInserterState(state, sink, asleep_for_items?.() ?? false);
+            series.factorio_state[tick] = factorioInserterState(state, sink, listing?.());
             series.at_pickup![tick] = state.status === InserterStatus.PICKUP;
             if (drop_room !== undefined) {
                 series.drop_room![tick] = roomIfRose(series.held, tick, drop_room);
@@ -226,13 +226,13 @@ export class StockRecorder implements TickRecorder {
                 series.results_placed[tick] = state.placement.results_placed;
             }
         }
-        for (const { state, sink, series, drop_room, asleep_for_items } of this.inserters) {
+        for (const { state, sink, series, drop_room, listing } of this.inserters) {
             series.held[tick] = state.held_item?.quantity ?? 0;
             if (drop_room !== undefined) {
                 series.drop_room![tick] = roomIfRose(series.held, tick, drop_room);
             }
             if (this.detail !== "hands") {
-                series.factorio_state[tick] = factorioInserterState(state, sink, asleep_for_items?.() ?? false);
+                series.factorio_state[tick] = factorioInserterState(state, sink, listing?.());
                 series.at_pickup![tick] = state.status === InserterStatus.PICKUP;
             }
             if (this.items_seen) {
