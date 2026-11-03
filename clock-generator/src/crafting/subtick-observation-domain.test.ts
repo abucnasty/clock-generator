@@ -53,7 +53,8 @@ it("judges the unchanged fractional export on complete physical counter spans", 
     expect(result.subtick?.clock).toEqual(controls.physical_repeat);
     expect(result.stability_check.as_built?.holds).toBe(true);
     expect(result.clock_only_run?.observation_span).toEqual({ ticks: 640, periods: 3, output_items: 480 });
-    expect(result.stability_check.as_built?.start_phases_checked).toBe(640);
+    // the 12 sampled starts of `startShiftsOf`; exhaustiveStartPhases checks all 640 (below)
+    expect(result.stability_check.as_built?.start_phases_checked).toBe(12);
     expect(result.stability_check.as_built?.actual_output_items).toBe(160);
     expect(result.stability_check.as_built?.long_run_proven).toBe(true);
 });
@@ -93,4 +94,19 @@ it("observes a counter from where the warm-up left its clocks, not from a counte
     }).stability_check.actual_output_items;
     expect(counter(true)).toBe(480);
     expect(counter(false)).toBe(464);
+});
+
+it("samples a counter's starts at the old whole-tick positions, each at another sub-tick fraction", () => {
+    // no whole counter: 11 shifts 13 ticks apart, as ever
+    expect(trial.startShiftsOf(160, null, 12)).toEqual([13, 26, 39, 52, 65, 78, 91, 104, 117, 130, 143]);
+    // 640/3 ticks: 17 ticks apart, the thirds spread over them, every one of the 3 fractions met
+    const shifts = trial.startShiftsOf(640 / 3, { period_ticks: 640, scale: 3 }, 12);
+    expect(shifts.map(shift => Math.round(shift * 3))).toEqual([51, 102, 153, 205, 256, 307, 358, 410, 461, 512, 563]);
+    expect(new Set(shifts.map(shift => Math.round(shift * 3) % 3))).toEqual(new Set([0, 1, 2]));
+    expect(shifts.every(shift => shift < 640 / 3)).toBe(true);
+    // 12672/23 ticks (550 21/23): 45 ticks apart, 11 of the 23 fractions
+    const adv = trial.startShiftsOf(12_672 / 23, { period_ticks: 12_672, scale: 23 }, 12);
+    expect(adv).toHaveLength(11);
+    expect(new Set(adv.map(shift => Math.round(shift * 23) % 23)).size).toBe(11);
+    expect(adv.map(Math.floor)).toEqual([45, 90, 135, 180, 225, 270, 315, 360, 405, 450, 495]);
 });

@@ -13,6 +13,7 @@ import { InserterCounters, inserterEnds, wakeUpsAndCountersOfStock } from "./ins
 import { judgeCounterSpan, judgeLongRun, judgeProvenCycle, LONG_RUN_SETTLE_SHARE, longRunPeriods } from "./long-run";
 import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, ExcessLoss, LATE_AFTER_PERIODS, LossOutcome, lossLimitOf, MAX_RECOVERY_PERIODS, reportOf, verdictOf } from "./backpressure-loss";
 import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForPeriod, withBeltPickupSlack } from "./clock";
+import type { SubtickPeriod } from "../common/subtick-period";
 import { canonicalKey, currentRunMemo } from "./plan/run-memo";
 import { WHOLE_COUNTER_CHECKS, wholeCounterOf } from "./plan/clock-period-limit";
 import { BlueprintGenerationResult, LCM_STABILITY_TOLERANCE, MAX_SIMULATION_TICKS, RunOptions, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, planRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
@@ -932,6 +933,35 @@ function overItsCycle(run: TrialRun): TrialRun["stability_check"] {
 }
 
 /**
+ * The shifts of the main clock (in ticks of its period) the shifted starts of a clock-only check run from, besides the
+ * unshifted start: `phases` - 1 of them, `step` = floor(period / phases) whole ticks apart from `step` on and within
+ * the period, as they always have been.
+ *
+ * Under whole-counter checks (`counter`, a p/q-tick period) a start is a position u/q (u < p) of the clock in its period:
+ * the p starts of the counter are the p distinct rotations of the windows, no two of them the same start, and nothing in
+ * the clock's arithmetic tells which of them a build fails from (that is the cold build's doing), so they are sampled:
+ * the same whole-tick positions, each at another of the q sub-tick fractions, `m * q / phases` for the m-th, spread
+ * evenly over them (every fraction where q < phases). Every start's judged counter holds each of the q fractions once,
+ * so the fraction differs between starts only in the order the periods come in after the start. A failing start that
+ * is none of these can be missed, as one between the whole-tick positions could be before.
+ */
+export function startShiftsOf(period: number, counter: SubtickPeriod | null, phases: number): number[] {
+    const step = Math.max(1, Math.floor(period / phases));
+    const shifts: number[] = [];
+    for (let m = 1, offset = step; offset < period && m < phases; m++, offset += step) {
+        if (counter === null) {
+            shifts.push(offset);
+            continue;
+        }
+        const { period_ticks: p, scale: q } = counter;
+        const position = offset * q + Math.floor(m * q / phases) % q;
+        // one division, so the shift stays inside the period as it is (see buildAsBuiltConfig)
+        shifts.push((position < p ? position : offset * q) / q);
+    }
+    return shifts;
+}
+
+/**
  * The clock-only check of a clock: the build driven only by the decider windows, first with the clock as planned and
  * then with the whole clock shifted to other start offsets relative to the machines' initial state, and, when the
  * unshifted run holds, over a long run (`longRunOfFreeRunningBuild`), which counts the wake-ups. Stops at the first
@@ -972,12 +1002,11 @@ export function runAsBuiltCheck(
 ): AsBuiltRun {
     // the drills into chests run on the windows made from their takers' in these windows, as the export gives them
     decider_windows = withChestDrillWindows(config, decider_windows, period);
-    // under whole-counter checks the start phases of a p/q-tick period range over its counter's p ticks, every one of
-    // them where the default count is asked for
-    const counter_ticks = wholeCounterOf(period)?.period_ticks ?? period;
-    const phases = counter_ticks !== period && start_phases === AS_BUILT_START_PHASES ? counter_ticks : start_phases;
-    const step = Math.max(1, Math.floor(counter_ticks / phases));
-    const total = Math.min(phases, Math.floor((counter_ticks - 1) / step) + 1);
+    const counter = wholeCounterOf(period);
+    const start_shifts = startShiftsOf(period, counter, start_phases);
+    // the count the progress is reported against: as it always was where no whole counter is checked
+    const total = counter === null ? Math.min(start_phases, Math.floor((period - 1) / Math.max(1, Math.floor(period / start_phases))) + 1)
+        : start_shifts.length + 1;
     const result = passed !== undefined ? passed.run.result : firstClockSpan(config, decider_windows, period, logger);
     const check: AsBuiltStabilityCheck = {
         holds: result.stability_check.holds,
@@ -1093,7 +1122,7 @@ export function runAsBuiltCheck(
             return { result, check, stock };
         }
     }
-    for (let offset = step; offset < counter_ticks && check.start_phases_checked < phases; offset += step) {
+    for (const offset of start_shifts) {
         // only its output count is read
         const shifted = firstClockSpan(config, decider_windows, period, logger, { factorio_states: false, main_clock_shift: offset });
         check.start_phases_checked++;
