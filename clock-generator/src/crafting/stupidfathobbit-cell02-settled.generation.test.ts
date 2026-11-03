@@ -14,6 +14,8 @@ describe("the real stupidfathobbit cell 02", () => {
         const selected = generated.alternatives[generated.selected_index];
         const first_judged_tick = selected.result.stability_check.as_built?.first_judged_tick;
         expect(first_judged_tick).toBe(960);
+        // the clock tick of that index is named under the new dispatch only (stupidfathobbit-cell02-settled-clock-tick)
+        expect(selected.result.stability_check.as_built).not.toHaveProperty("clock_tick_at_first_judged");
         const request = {config, mode: "clock" as const, period_ticks: selected.result.simulation_duration.ticks,
             terminal_swing_count: selected.result.used_terminal_swing_count, windows: selected.result.clock_windows,
             inserter_clocks: selected.result.unplanned_inserter_clocks ?? {}};

@@ -16,7 +16,8 @@ import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, s
 import type { SubtickPeriod } from "../common/subtick-period";
 import { canonicalKey, currentRunMemo } from "./plan/run-memo";
 import { WHOLE_COUNTER_CHECKS, wholeCounterOf } from "./plan/clock-period-limit";
-import { BlueprintGenerationResult, LCM_STABILITY_TOLERANCE, MAX_SIMULATION_TICKS, RunOptions, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, planRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
+import { DEFAULT_INSERTER_DISPATCH } from "../simulation/dispatch";
+import { BlueprintGenerationResult, BuildRun, LCM_STABILITY_TOLERANCE, MAX_SIMULATION_TICKS, RunOptions, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, planRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
 import { SimulationTick } from "./runner/simulation-tick";
 import { simulationStateKey } from "./runner/steady-state";
 import { inLoopInserterWindows, loopInserterWindows } from "./candidates/loop-windows";
@@ -161,6 +162,13 @@ export interface AsBuiltStabilityCheck {
      * set with `wake_ups`, where the check made a long run.
      */
     first_judged_tick?: number;
+    /**
+     * The tick the clocks of the game stand at, counted from the cold start through the warm-up, at `first_judged_tick`:
+     * where a replay from the cold start shows the state the long run judged (`RecordTimelineRequest.settle_ticks`). Only
+     * where every clock of the long run ran on through its warm-up (the new dispatch, clocks of whole ticks:
+     * `BuildRun.every_clock_runs_through`); absent otherwise, and where the check failed from another start or order.
+     */
+    clock_tick_at_first_judged?: number;
     /** Clock periods in the repeating cycle the proven long run was judged on */
     long_run_cycle_periods?: number;
     /**
@@ -224,11 +232,23 @@ export function runClockOnBuild(
     /** Fuel clocks to run the fuel inserters on; without them the run makes its own from its plan */
     fuel_clocks?: ReadonlyMap<string, InserterClock>,
 ): TrialRun {
+    return trialRunOf(clockBuildRun(config, windows, period, logger, options, fuel_clocks));
+}
+
+/** The run of `runClockOnBuild` before its projection into a trial: for what the trial leaves out */
+function clockBuildRun(
+    config: Config,
+    windows: Map<string, OpenRange[]>,
+    period: number,
+    logger: Logger,
+    options: ClockTrialOptions = {},
+    fuel_clocks?: ReadonlyMap<string, InserterClock>,
+): BuildRun {
     const { main_clock_shift = 0, ...run_options } = options;
     const named_start = run_options.keep_output_buffers === true || run_options.start_stock !== undefined;
     // a clock of whole ticks is counted by its own period, also where the plan's is not whole (a clock rounded down)
-    return trialRunOf(runBuild(buildAsBuiltConfig(config, windows, period, fuel_clocks, run_options.decider_order, main_clock_shift),
-        { logger: quietLogger(logger), cold_start: !named_start, ...(Number.isInteger(period) && { period_ticks: period }), ...run_options }));
+    return runBuild(buildAsBuiltConfig(config, windows, period, fuel_clocks, run_options.decider_order, main_clock_shift),
+        { logger: quietLogger(logger), cold_start: !named_start, ...(Number.isInteger(period) && { period_ticks: period }), ...run_options });
 }
 
 /**
@@ -418,6 +438,11 @@ function longRunOfFreeRunningBuild(
     cycle_periods: number | null;
     /** Tick of the run the first judged bin starts at, for judging the same window the verdict is of */
     first_judged_tick: number;
+    /**
+     * The clock tick of the game at that first judged tick (`AsBuiltStabilityCheck.clock_tick_at_first_judged`); undefined
+     * where a clock starts again with the recorded run (`BuildRun.every_clock_runs_through`)
+     */
+    clock_tick_at_first_judged: number | undefined;
     /** The chests the output goes into that nothing empties and that were full where the run ended */
     full_output_chests: FullOutputChest[] | undefined;
     /** The export belts that received less than their consumers take over the judged part; undefined when none did */
@@ -434,7 +459,8 @@ function longRunOfFreeRunningBuild(
         return null;
     }
     // only its stock is read, which names the state of every inserter itself
-    const run = runClockOnBuild(config, decider_windows, period, logger, { simulate_periods: periods, machine_stock: true, factorio_states: false, detect_repeat: true, ...start, stock_detail, record_histories: false });
+    const build_run = clockBuildRun(config, decider_windows, period, logger, { simulate_periods: periods, machine_stock: true, factorio_states: false, detect_repeat: true, ...start, stock_detail, record_histories: false });
+    const run = trialRunOf(build_run);
     const stock = run.machine_stock;
     if (!stock) {
         return null;
@@ -483,6 +509,10 @@ function longRunOfFreeRunningBuild(
         proven,
         cycle_periods: run.state_repeat === undefined ? null : run.state_repeat.cycle_bins * run.state_repeat.periods_per_bin,
         first_judged_tick: verdict.first_judged_tick,
+        // only where every clock ran on from the warm-up: a clock that started again with the recording (one of p/q ticks)
+        // stands at no one tick a replay from the cold start reaches
+        clock_tick_at_first_judged: build_run.clock_tick_at_start !== undefined && build_run.every_clock_runs_through === true
+            ? build_run.clock_tick_at_start + verdict.first_judged_tick : undefined,
         full_output_chests: run.stability_check.full_output_chests,
         export_shortfalls: export_shortfalls.length > 0 ? export_shortfalls : undefined,
     };
@@ -1062,6 +1092,9 @@ export function runAsBuiltCheck(
                 check.counters = passed.run.check.counters;
                 check.long_run_proven = passed.run.check.long_run_proven;
                 check.first_judged_tick = passed.run.check.first_judged_tick;
+                if (passed.run.check.clock_tick_at_first_judged !== undefined) {
+                    check.clock_tick_at_first_judged = passed.run.check.clock_tick_at_first_judged;
+                }
                 check.long_run_cycle_periods = passed.run.check.long_run_cycle_periods;
             }
         } else {
@@ -1076,6 +1109,9 @@ export function runAsBuiltCheck(
                 check.counters = counted.counters;
                 check.long_run_proven = long_run.proven;
                 check.first_judged_tick = long_run.first_judged_tick;
+                if (long_run.clock_tick_at_first_judged !== undefined) {
+                    check.clock_tick_at_first_judged = long_run.clock_tick_at_first_judged;
+                }
                 if (long_run.results_taken !== undefined) {
                     check.results_taken = long_run.results_taken;
                 }
@@ -1116,6 +1152,7 @@ export function runAsBuiltCheck(
                 check.holds = false;
                 check.failed_start_offset = exhaustive.failed_start_offset;
                 if (exhaustive.failed_output_items !== undefined) {
+                    clearJudgedClock(check);
                     check.actual_output_items = exhaustive.failed_output_items;
                 }
             }
@@ -1129,6 +1166,7 @@ export function runAsBuiltCheck(
         report?.(check.start_phases_checked, total);
         if (!shifted.stability_check.holds) {
             check.holds = false;
+            clearJudgedClock(check);
             check.actual_output_items = shifted.stability_check.actual_output_items;
             check.failed_start_offset = offset;
             if (shifted.stability_check.full_output_chests !== undefined) {
@@ -1144,6 +1182,22 @@ export function runAsBuiltCheck(
     }
     return { result, check, stock };
 }
+
+/**
+ * A check that failed from another start or taker order: what its unshifted long run judged names no replay of the
+ * failure, so it is dropped, under the new dispatch (`SETTLED_REPLAY_AT_CLOCK_TICK`); under the configured order the
+ * check keeps it as before.
+ */
+function clearJudgedClock(check: AsBuiltStabilityCheck): void {
+    if (!SETTLED_REPLAY_AT_CLOCK_TICK) return;
+    delete check.first_judged_tick;
+    delete check.clock_tick_at_first_judged;
+    delete check.long_run_proven;
+    delete check.long_run_cycle_periods;
+}
+
+/** Settled replays at the judged clock tick (`clock_tick_at_first_judged`): wherever the new dispatch is on */
+const SETTLED_REPLAY_AT_CLOCK_TICK: boolean = DEFAULT_INSERTER_DISPATCH !== "configured-order";
 
 /**
  * The unshifted clock and its long run (where the check makes one) under each order of the inserters that take one
@@ -1188,6 +1242,7 @@ function heldUnderOtherTakerOrders(
             logger.log(`Competing takers served ${takerOrderName(order)}: the clock moves ${failed.actual_output_items} of ${expected_output_items}`);
             check.holds = false;
             check.failed_taker_order = takerOrderName(order);
+            clearJudgedClock(check);
             check.actual_output_items = failed.actual_output_items;
             check.repeat_periods = failed.repeat_periods;
             check.repeat_output_items = failed.repeat_output_items;
