@@ -1,34 +1,18 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { Config } from "../config";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import { OpenRange } from "../data-types";
-import { ACTIVATION_ORDER, InserterDispatch } from "../simulation/dispatch";
 import { generateClockForConfig } from "./generate-clock";
 import { rotateRanges } from "./clock";
 import { BuildRun, RunOptions, runBuild } from "./plan/plan-run";
-import { SimulationContext, createEntityRegistryFromConfig } from "./sequence/simulation-context";
+import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { unplannedInserterClocks } from "./sequence/unplanned-inserter-clock";
 import { runThroughTicks } from "./sequence/interceptors/inserter-enable-control-factory";
 import { TickProvider } from "../simulation/current-tick-provider";
 import { buildAsBuiltConfig } from "./trial";
 
 const logger = { log() {}, warn() {}, error() {}, debug() {} };
-
-/** What `make` returns with every context it makes under `dispatch` */
-function underDispatch<T>(dispatch: InserterDispatch, make: () => T): T {
-    const fromConfig = SimulationContext.fromConfig.bind(SimulationContext);
-    const spy = vi.spyOn(SimulationContext, "fromConfig").mockImplementation(config => {
-        const context = fromConfig(config);
-        context.inserter_dispatch = dispatch;
-        return context;
-    });
-    try {
-        return make();
-    } finally {
-        spy.mockRestore();
-    }
-}
 
 const period = 128, warmup = 10;
 
@@ -39,7 +23,7 @@ const period = 128, warmup = 10;
  */
 async function shiftedRocketFuel(): Promise<Config> {
     const config = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
-    const generated = underDispatch("configured-order", () => generateClockForConfig(config, { logger, belt_pickup_slack: "always" }));
+    const generated = generateClockForConfig(config, { logger, belt_pickup_slack: "always" });
     const clocks = unplannedInserterClocks(createEntityRegistryFromConfig(config), period);
     for (const [id, serialized] of Object.entries(generated.unplanned_inserter_clocks ?? {})) {
         const clock = clocks.get(id)!;
@@ -63,35 +47,26 @@ async function shiftedRocketFuel(): Promise<Config> {
 }
 
 /** The build recorded after a warm-up of `warmup` periods, and the same ticks of one run from the cold start */
-function segmentedAndContinuous(built: Config, dispatch: InserterDispatch) {
+function segmentedAndContinuous(built: Config) {
     const options: RunOptions = { logger, cold_start: true, period_ticks: period, machine_stock: true, factorio_states: false };
-    return underDispatch(dispatch, () => {
-        const continuous = runBuild(built, { ...options, warmup_periods: 0, simulate_periods: warmup + 1 }).machine_stock!;
-        const segmented: BuildRun = runBuild(built, { ...options, warmup_periods: warmup });
-        const tail = (value: unknown): unknown => Array.isArray(value) ? value.slice(warmup * period)
-            : value !== null && typeof value === "object"
-                ? Object.fromEntries(Object.entries(value).map(([key, nested]) => [key, tail(nested)])) : value;
-        return {
-            segmented,
-            recorded: segmented.machine_stock!,
-            continuous: { machines: continuous.machines.map(tail), inserters: continuous.inserters.map(tail) },
-        };
-    });
+    const continuous = runBuild(built, { ...options, warmup_periods: 0, simulate_periods: warmup + 1 }).machine_stock!;
+    const segmented: BuildRun = runBuild(built, { ...options, warmup_periods: warmup });
+    const tail = (value: unknown): unknown => Array.isArray(value) ? value.slice(warmup * period)
+        : value !== null && typeof value === "object"
+            ? Object.fromEntries(Object.entries(value).map(([key, nested]) => [key, tail(nested)])) : value;
+    return {
+        segmented,
+        recorded: segmented.machine_stock!,
+        continuous: { machines: continuous.machines.map(tail), inserters: continuous.inserters.map(tail) },
+    };
 }
 
 describe("the clocks of the game at the start of the recorded run", () => {
-    it("run on through the warm-up under the new dispatch: the recording is the tail of one uninterrupted run", async () => {
-        const { segmented, recorded, continuous } = segmentedAndContinuous(await shiftedRocketFuel(), ACTIVATION_ORDER);
+    it("run on through the warm-up: the recording is the tail of one uninterrupted run", async () => {
+        const { segmented, recorded, continuous } = segmentedAndContinuous(await shiftedRocketFuel());
         expect(segmented.clock_tick_at_start).toBe(warmup * period);
         expect(recorded.machines).toEqual(continuous.machines);
         expect(recorded.inserters).toEqual(continuous.inserters);
-    });
-
-    it("start again with the recorded run under the configured order, as before", async () => {
-        const { segmented, recorded, continuous } = segmentedAndContinuous(await shiftedRocketFuel(), "configured-order");
-        expect(segmented.clock_tick_at_start).toBeUndefined();
-        expect(recorded.machines).not.toEqual(continuous.machines);
-        expect(recorded.inserters).not.toEqual(continuous.inserters);
     });
 });
 

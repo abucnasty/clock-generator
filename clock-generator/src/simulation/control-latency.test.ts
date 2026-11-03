@@ -14,7 +14,7 @@ import {EnableControl} from "./controls/enable-control";
  *
  * The simulator's frame: a clock of the game enables the inserter in tick `w` and its hand takes in `w` (the tick the
  * game shows the inserter's status change is the one before). These checks hold the simulator's hand to the same ticks
- * the game showed, relative to the window, under both dispatches.
+ * the game showed, relative to the window.
  */
 
 /** chest (plates) -> inserter 1 -> assembling machine 3 (iron gear wheel) -> inserter 2 -> chest */
@@ -67,9 +67,9 @@ function firstChange(series: number[]): number {
     return index < 0 ? -1 : index + 1;
 }
 
-const DISPATCHES: [string, InserterDispatch][] = [["configured order", "configured-order"], ["update list", ACTIVATION_ORDER]];
+const dispatch = ACTIVATION_ORDER;
 
-describe.each(DISPATCHES)("control latency, %s", (_, dispatch) => {
+describe("control latency", () => {
     test("idle with items: the first items in the tick the window opens", () => {
         const context = gearCell(dispatch);
         context.useControls({inserter: state => state.entity_id.number === 1 ? clock(context, t => t >= 10) : always(context)});

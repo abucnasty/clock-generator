@@ -119,7 +119,7 @@ function updatesOf(run: readonly string[], method: boolean): { rest: string[]; u
             updated.clear();
         }
         if (phase === "inserters" && (name === rule || name === step)) {
-            const expected_name = pending === null ? rule : step;
+            const expected_name: string = pending === null ? rule : step;
             if (name !== expected_name || (pending !== null && pending !== id) || (pending === null && updated.has(id))) malformed.push(line);
             if (name === rule) updated.add(id);
             pending = name === rule ? id : null;

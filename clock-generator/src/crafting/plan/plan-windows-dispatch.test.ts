@@ -51,16 +51,22 @@ const ELECTROMAGNETIC_TURBO_BACKED: Config = {
 } as Config;
 
 /**
- * The order the game updates inserters in (the new dispatch) moves no planned window by itself. A belt-fed hand that
- * waited at its machine's output block takes its first stack a tick after another inserter took the products down
- * under both dispatches, and its window opens at the take under both (utility science: 37 and 6923 within the period,
- * not 38); a control swap at the plan's start puts the hands on the list without waking them, so the belt hand asleep
- * at its full assembler takes its first stack when it does under the configured order (automation science).
+ * The windows planned under the order the game updates inserters in, which are those the planning run had read under the
+ * configured order before it. A belt-fed hand that waited at its machine's output block takes its first stack a tick after
+ * another inserter took the products down, and its window opens at the take (utility science: 37 and 6923 within the
+ * period, not 38); a control swap at the plan's start puts the hands on the list without waking them, so the belt hand
+ * asleep at its full assembler takes its first stack when it did under the configured order (automation science).
  */
-describe("planned windows under both dispatches", () => {
-    test.each([["utility science", ConfigPaths.UTILITY_SCIENCE], ["automation science", ConfigPaths.AUTOMATION_SCIENCE]])("%s", async (_, path) => {
-        const config = await loadConfigFromFile(path);
-        expect(plannedWindows(config, ACTIVATION_ORDER)).toEqual(plannedWindows(config, "configured-order"));
+describe("planned windows", () => {
+    test.each([
+        ["utility science", ConfigPaths.UTILITY_SCIENCE, {
+            "inserter:1": ["37-46", "181-190", "373-382", "517-526"],
+            "inserter:2": ["37-57", "181-201", "373-393", "517-537"],
+            "inserter:3": ["1-49", "169-193", "337-385", "505-529"],
+        }],
+        ["automation science", ConfigPaths.AUTOMATION_SCIENCE, { "inserter:1": ["1-19"], "inserter:2": ["2-21", "38-56"] }],
+    ])("%s", async (_, path, windows) => {
+        expect(plannedWindows(await loadConfigFromFile(path), ACTIVATION_ORDER)).toEqual(windows);
     });
 });
 
