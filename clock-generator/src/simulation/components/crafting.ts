@@ -108,7 +108,7 @@ export class Crafting implements EnergyUser, YieldUser {
         if (this.energy.outOfFuel(this)) {
             return CraftingStatus.NO_FUEL;
         }
-        if (this.keepsWorking() && this.energy.hasFuel()) {
+        if (this.keepsWorking() && !this.yield.barWaits() && this.energy.hasFuel()) {
             return CraftingStatus.WORKING;
         }
         return this.yield.outputFullCode() !== OutputFullCode.NONE ? CraftingStatus.FULL_OUTPUT : CraftingStatus.ITEM_INGREDIENT_SHORTAGE;
@@ -150,7 +150,7 @@ export class Crafting implements EnergyUser, YieldUser {
         let worked = false;
 
         this.yield.release(this);
-        while (budget > PROGRESS_EPSILON && !this.yield.holdsProducts()) {
+        while (budget > PROGRESS_EPSILON && !this.yield.holdsProducts() && !this.yield.barWaits()) {
             let progress = this.craftingProgress.progress;
             if (progress <= 0) {
                 if (!this.canStartCraft() || !this.energy.hasFuel()) {
@@ -182,7 +182,11 @@ export class Crafting implements EnergyUser, YieldUser {
         return this.craftingProgress.progress > 0;
     }
 
-    /** Whether the machine works on after this tick: no product waits for room, and a craft is underway or can start */
+    /**
+     * Whether the machine works on after this tick: no product waits for room, and a craft is underway or can start. A
+     * full bar waiting for room (Yield.barWaits) stops the next tick, not this answer: a burner is topped up after the
+     * tick its bar fills.
+     */
     public keepsWorking(): boolean {
         return !this.yield.holdsProducts() && (this.craftInProgress() || this.canStartCraft());
     }
