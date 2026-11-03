@@ -26,17 +26,25 @@ export type InserterDispatch = "configured-order" | ActivationOrderDispatch;
 
 export const ACTIVATION_ORDER: ActivationOrderDispatch = {kind: "activation-order", woken_in_walk: "next-tick", leaves: "after-update"};
 
+/** The values of a setting, none for the setting that leaves the new dispatch off */
+function valuesOf(setting: string | undefined): string[] {
+    if (setting === undefined || setting === "" || setting === "0") return [];
+    const values = setting.split(",").map(it => it.trim());
+    const known = ["1", "next-tick", "same-tick", "after-update", "next-update", "configured-order", "kept-lists"];
+    const unknown = values.filter(it => !known.includes(it));
+    if (unknown.length > 0) throw new Error(`CLOCK_NEW_DISPATCH: unknown value ${unknown.join(", ")}`);
+    return values;
+}
+
 /**
  * The dispatch a new simulation uses: "configured-order" unless the environment variable CLOCK_NEW_DISPATCH turns the
  * new dispatch on: "1" for its defaults, or a comma-separated list of option values ("same-tick", "next-update").
- * Read once; a browser has no environment and keeps the default.
+ * "configured-order,kept-lists" keeps the old dispatch with the new dispatch's wake-up rule (`keptListsOf`), to count
+ * clocks of the old dispatch the new way. Read once; a browser has no environment and keeps the default.
  */
 export function inserterDispatchOf(setting: string | undefined): InserterDispatch {
-    if (setting === undefined || setting === "" || setting === "0") return "configured-order";
-    const values = setting.split(",").map(it => it.trim());
-    const known = ["1", "next-tick", "same-tick", "after-update", "next-update"];
-    const unknown = values.filter(it => !known.includes(it));
-    if (unknown.length > 0) throw new Error(`CLOCK_NEW_DISPATCH: unknown value ${unknown.join(", ")}`);
+    const values = valuesOf(setting);
+    if (values.length === 0 || values.includes("configured-order")) return "configured-order";
     return {
         kind: "activation-order",
         woken_in_walk: values.includes("same-tick") ? "same-tick" : "next-tick",
@@ -44,6 +52,18 @@ export function inserterDispatchOf(setting: string | undefined): InserterDispatc
     };
 }
 
+/**
+ * Whether the setting counts wake-ups by the rule "kept-lists" (crafting/wake-ups.ts, `WakeRule`): wherever it turns the
+ * new dispatch on, and on the old dispatch with "configured-order,kept-lists"
+ */
+export function keptListsOf(setting: string | undefined): boolean {
+    const values = valuesOf(setting);
+    return values.length > 0 && (!values.includes("configured-order") || values.includes("kept-lists"));
+}
+
 const environment: string | undefined = typeof process !== "undefined" ? process.env?.CLOCK_NEW_DISPATCH : undefined;
 
 export const DEFAULT_INSERTER_DISPATCH: InserterDispatch = inserterDispatchOf(environment);
+
+/** Whether the wake-up rule of a new count is "kept-lists" (`keptListsOf` of the environment) */
+export const DEFAULT_KEPT_LISTS: boolean = keptListsOf(environment);

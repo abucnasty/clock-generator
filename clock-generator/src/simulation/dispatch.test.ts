@@ -4,7 +4,7 @@ import {SimulationContext} from "../crafting/sequence/simulation-context";
 import {SimulationTick} from "../crafting/runner/simulation-tick";
 import {simulationStateKey} from "../crafting/runner/steady-state";
 import {partialCells} from "./inserter-scheduling.fixture";
-import {ACTIVATION_ORDER, inserterDispatchOf} from "./dispatch";
+import {ACTIVATION_ORDER, inserterDispatchOf, keptListsOf} from "./dispatch";
 import {ActiveScheduler} from "./active-scheduler";
 import type {EnableControl} from "./controls/enable-control";
 
@@ -26,13 +26,16 @@ function cable(context: SimulationContext, machine: number): {insert(quantity: n
 }
 
 describe("the new dispatch's update list", () => {
-    test("the setting: off by default, its two open points named", () => {
+    test("the setting: off by default, its two open points named, the wake-up rule with it", () => {
         expect(inserterDispatchOf(undefined)).toBe("configured-order");
         expect(inserterDispatchOf("0")).toBe("configured-order");
         expect(inserterDispatchOf("1")).toEqual(ACTIVATION_ORDER);
         expect(inserterDispatchOf("same-tick,next-update"))
             .toEqual({kind: "activation-order", woken_in_walk: "same-tick", leaves: "next-update"});
         expect(() => inserterDispatchOf("ascending")).toThrow(/unknown value ascending/);
+        expect(inserterDispatchOf("configured-order,kept-lists")).toBe("configured-order");
+        expect([undefined, "0", "1", "same-tick", "configured-order", "configured-order,kept-lists"].map(keptListsOf))
+            .toEqual([false, false, true, true, false, true]);
         expect(partialCells().inserter_dispatch).toBe("configured-order");
     });
 

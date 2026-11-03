@@ -1021,7 +1021,13 @@ function simulate(
     // a run that is watched for a repeat may end long before the periods it was asked for, so it grows its series
     const may_end_early = repeat_bin !== null && repeat_bin.ticks < recorded_duration.ticks;
     const stock_recorder = options.machine_stock
-        ? new StockRecorder(simulation_context.machines.map(it => it.machine_state), simulation_context.inserters.map(it => ({ state: it.inserter_state, sink: it.sink_state })),
+        ? new StockRecorder(simulation_context.machines.map(it => it.machine_state), simulation_context.inserters.map(it => ({
+            state: it.inserter_state, sink: it.sink_state,
+            drop_room: it.hand.drop.roomForStack === undefined ? undefined : () => it.hand.drop.roomForStack!(),
+            // the update list of the new dispatch, made with the run's first World: asked only once it is
+            asleep_for_items: simulation_context.inserter_dispatch === "configured-order" ? undefined
+                : () => simulation_context.inserterScheduling()?.asleepForItems(it) ?? false,
+        })),
             may_end_early ? undefined : recorded_duration.ticks, options.stock_detail)
         : undefined;
     const timeline_recorder = options.timeline_recording
