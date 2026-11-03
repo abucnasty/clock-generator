@@ -5,7 +5,7 @@ import path from "path";
 import { afterAll, describe, expect, test } from "vitest";
 import { ConfigPaths } from "../../../../src/config/config-paths";
 import { loadConfigFromFile } from "../../../../src/config/loader";
-import { HarnessSession } from "../../../../src/harness/factorio-harness";
+import { CachedHarnessSession } from "../../../../src/harness/factorio-harness";
 import { servedFirst } from "../../helpers/served-first";
 
 /** Runs a headless Factorio, so it needs the game and a save to build in; without either it is skipped, not failed */
@@ -48,7 +48,7 @@ describe("the order the game serves the takers of one machine in", () => {
         const scaffold = path.join(SAMPLE_BUILDS_DIR, "science", "agriculture-science", "agriculture-science-scaffold.txt");
         const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
         const log: string[] = [];
-        const session = await HarnessSession.start({ factorio: FACTORIO!, save: SAVE!, work_dir: path.join(scratch, "work"), timeout_seconds: 900, log: message => log.push(message) });
+        const session = new CachedHarnessSession({ factorio: FACTORIO!, save: SAVE!, work_dir: path.join(scratch, "work"), timeout_seconds: 900, log: message => log.push(message) });
         let failed = true;
         try {
             const runs: Record<string, { machine: number; first: { config_id: number; x: number; y: number; built: number }; decided: number; share: number; counts: Record<number, number> }[]> = {};

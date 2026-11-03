@@ -19,6 +19,7 @@
 #                       record (default): Factorio, BELT_CLOCK_CALIBRATE=1, BELT_SPEED_CAPTURE_DIR=<root>/<lane>;
 #                       replay: no Factorio, BELT_CLOCK_REPLAY_DIR (-d, default <root>/replay-all), -e expectations;
 #                       generate: no Factorio, BELT_CLOCK_GENERATION_ONLY=1, BELT_CLOCK_GENERATION_DIR=<root>/<lane>
+#                       record mode also sets CLOCK_RECORDING_CACHE=off: no stored recording is read or kept (tests/game/README.md)
 #   -e <controls file>  BELT_CLOCK_EXPECTATIONS (replay)
 #   -d <dir>            BELT_CLOCK_REPLAY_DIR (replay)
 #   -x KEY=VALUE        an extra environment variable for every case (repeatable), e.g. -x SCAFFOLD_CAPTURE_DIR=<root>/<lane>/kept
@@ -64,7 +65,7 @@ case "$MODE" in record|replay|generate) ;; *) die "-m is record, replay or gener
 
 cd "$W/clock-generator" || exit 2
 unset CLOCK_PROOF_PHASES BELT_CLOCK_GENERATION_DIR BELT_CLOCK_GENERATION_ONLY BELT_CLOCK_REPLAY_DIR \
-      BELT_CLOCK_EXPECTATIONS BELT_CLOCK_TRACE_PICKUPS BELT_CLOCK_CALIBRATE BELT_SPEED_CAPTURE_DIR FACTORIO_HARNESS_WATCH
+      BELT_CLOCK_EXPECTATIONS BELT_CLOCK_TRACE_PICKUPS BELT_CLOCK_CALIBRATE BELT_SPEED_CAPTURE_DIR FACTORIO_HARNESS_WATCH CLOCK_RECORDING_CACHE
 export NO_COLOR=1 TMPDIR="$ROOT/tmp/$LANE"
 case "$MODE" in
   replay)
@@ -77,7 +78,8 @@ case "$MODE" in
   record)
     [ -x "$FACTORIO" ] || die "no Factorio at $FACTORIO"
     export FACTORIO_PATH="$FACTORIO" FACTORIO_HARNESS_SAVE="${SAVE:-$W/clock-generator/resources/clock_generator_staging.zip}"
-    export BELT_CLOCK_CALIBRATE=1 BELT_SPEED_CAPTURE_DIR="$ROOT/$LANE" ;;
+    # a native check proves a clock in the game: it never reads a stored recording (-x CLOCK_RECORDING_CACHE=on to allow one)
+    export BELT_CLOCK_CALIBRATE=1 BELT_SPEED_CAPTURE_DIR="$ROOT/$LANE" CLOCK_RECORDING_CACHE=off ;;
 esac
 for kv in ${EXTRA[@]+"${EXTRA[@]}"}; do export "$kv"; done
 mkdir -p "$TMPDIR" "$ROOT/logs/$LANE" "$ROOT/$LANE"

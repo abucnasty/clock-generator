@@ -56,7 +56,7 @@ const PERIODS = 20;
                 out: path.join(out, `${SAMPLE}-${name}.json`), ticks: period * (PERIODS + 1),
                 warmup_ticks: build.warmup, settle_ticks: build.settle, seed: build.seed ?? [],
                 clock: unclocked ? undefined : clock, config: unclocked ? undefined : config, unclocked,
-                game_speed: 1000, timeout_seconds: 900, log: () => { },
+                game_speed: 1000, timeout_seconds: 900, log: () => { }, cache: false,
             });
             console.log(`${name}: recorded in ${Math.round((Date.now() - started) / 1000)} s`);
         }
