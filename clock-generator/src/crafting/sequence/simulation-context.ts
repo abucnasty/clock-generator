@@ -63,7 +63,7 @@ export class SimulationContext {
         const dispatch = this.inserter_dispatch;
         if (dispatch === "configured-order") return null;
         return this.inserter_scheduling ??= new InserterScheduling(this,
-            [...this.inserters].sort((a, b) => b.entity_id.number - a.entity_id.number), () => {}, undefined,
+            [...this.inserters].sort((a, b) => b.entity_id.number - a.entity_id.number), undefined, undefined,
             {woken_in_walk: dispatch.woken_in_walk, leaves: dispatch.leaves});
     }
 
