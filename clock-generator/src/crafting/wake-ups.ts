@@ -486,22 +486,6 @@ function countKeptLists(inserter: WatchingInserter, alarms: KeptListsAlarms, fir
     return { woken_at_sink, woken_at_source, woken: woken_at_sink + woken_at_source, away, alarms: alarm_count, enabled, waiting };
 }
 
-/**
- * The lists each inserter is asleep on after each tick under the rule "kept-lists" (bits: 1 the source's output list, 2
- * the sink's input list, 4 a belt's or a chest's) and whether it is on the update list: what the rule works out, to lay
- * against a capture of the game's lists
- */
-export function keptListStates(inserters: readonly WatchingInserter[], machines: readonly WatchedMachine[], to_tick: number):
-    Map<string, { lists: number[]; awake: boolean[] }> {
-    const alarms = keptListsAlarmsInOrder(inserters, machines, to_tick);
-    return new Map(inserters.map(inserter => {
-        const lists: number[] = [0];
-        const awake: boolean[] = [inserter.states[0] !== FactorioInserterState.DISABLED_BY_CONTROL_BEHAVIOR];
-        countKeptLists(inserter, alarms, to_tick, to_tick, undefined, (tick, on, is_awake) => { lists[tick] = on; awake[tick] = is_awake; });
-        return [inserter.inserter_id, { lists, awake }];
-    }));
-}
-
 /** Called once for each wake-up counted, with the tick it happens in and the end whose machine woke the inserter */
 export type WakeListener = (inserter_id: string, tick: number, end: WatchedEnd) => void;
 
