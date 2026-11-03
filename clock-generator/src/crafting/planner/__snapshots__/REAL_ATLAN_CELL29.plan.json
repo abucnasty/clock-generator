@@ -31,15 +31,15 @@
         "inserter:4/iron-ore"
       ],
       "periods": [
-        {"swings":6,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":576000,"denominator":997},"cycles":1,"period_ticks":577.7331995987964,"kept":true},
+        {"swings":6,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":576000,"denominator":997},"cycles":1,"period_ticks":577.7331995987964,"pruned":{"rule":"P-limit","terms":{"period_ticks":577.7331995987964,"limit_ticks":500000,"counter_ticks":576000}}},
         {"swings":7,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":672000,"denominator":997},"cycles":6,"period_ticks":4044.132397191575,"kept":true},
         {"swings":8,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":768000,"denominator":997},"cycles":3,"period_ticks":2310.9327983951857,"kept":true},
         {"swings":5,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":480000,"denominator":997},"cycles":6,"period_ticks":2888.665997993982,"kept":true},
-        {"swings":4,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":384000,"denominator":997},"cycles":3,"period_ticks":1155.4663991975929,"kept":true},
-        {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":288000,"denominator":997},"cycles":2,"period_ticks":577.7331995987964,"kept":true},
-        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":192000,"denominator":997},"cycles":3,"period_ticks":577.7331995987964,"kept":true},
-        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":96000,"denominator":997},"cycles":6,"period_ticks":577.7331995987964,"kept":true},
-        {"swings":6,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":576000,"denominator":997},"cycles":1,"period_ticks":577.7331995987964,"kept":true}
+        {"swings":4,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":384000,"denominator":997},"cycles":3,"period_ticks":1155.4663991975929,"pruned":{"rule":"P-limit","terms":{"period_ticks":1155.4663991975929,"limit_ticks":500000,"counter_ticks":1152000}}},
+        {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":288000,"denominator":997},"cycles":2,"period_ticks":577.7331995987964,"pruned":{"rule":"P-limit","terms":{"period_ticks":577.7331995987964,"limit_ticks":500000,"counter_ticks":576000}}},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":192000,"denominator":997},"cycles":3,"period_ticks":577.7331995987964,"pruned":{"rule":"P-limit","terms":{"period_ticks":577.7331995987964,"limit_ticks":500000,"counter_ticks":576000}}},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":96000,"denominator":997},"cycles":6,"period_ticks":577.7331995987964,"pruned":{"rule":"P-limit","terms":{"period_ticks":577.7331995987964,"limit_ticks":500000,"counter_ticks":576000}}},
+        {"swings":6,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":576000,"denominator":997},"cycles":1,"period_ticks":577.7331995987964,"pruned":{"rule":"P-limit","terms":{"period_ticks":577.7331995987964,"limit_ticks":500000,"counter_ticks":576000}}}
       ],
       "duty": [
         {

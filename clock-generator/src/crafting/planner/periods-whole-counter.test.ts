@@ -1,22 +1,10 @@
-import { afterAll, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { ConfigPaths } from "../../config/config-paths";
-import { WHOLE_COUNTER_CHECKS, counterOverLimitOf, wholeCounterOf } from "../plan/clock-period-limit";
+import { counterOverLimitOf, wholeCounterOf } from "../plan/clock-period-limit";
 import { planOfSample } from "./plan-test-helpers";
 
-// whole-counter checks are on under the new dispatch only, which is read from the environment when the engine loads
-const dispatch = vi.hoisted(() => {
-    const before = process.env.CLOCK_NEW_DISPATCH;
-    process.env.CLOCK_NEW_DISPATCH = "1";
-    return before;
-});
-afterAll(() => {
-    if (dispatch === undefined) delete process.env.CLOCK_NEW_DISPATCH;
-    else process.env.CLOCK_NEW_DISPATCH = dispatch;
-});
-
-describe("periods whose whole counter one run cannot hold, under whole-counter checks", () => {
+describe("periods whose whole counter one run cannot hold, ", () => {
     it("a fractional period's counter of 500,000 ticks or more is over the limit; a whole-tick period has no counter", () => {
-        expect(WHOLE_COUNTER_CHECKS).toBe(true);
         expect(counterOverLimitOf(576_000 / 997)).toBe(576_000);
         expect(counterOverLimitOf(12_672 / 23)).toBeNull();
         expect(counterOverLimitOf(160)).toBeNull();

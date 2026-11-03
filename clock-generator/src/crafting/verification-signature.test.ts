@@ -89,16 +89,16 @@ describe("request-local duplicate verification", () => {
         const keys = recovery.mock.calls.map(([config, result]) => signature(config, result));
         expect(keys.length).toBeGreaterThan(1);
         expect(new Set(keys).size).toBe(keys.length);
-        // Both clocks are still stable at equal wake-ups; the recovery tie-break selects swings-1 in 2 periods
-        // rather than the previous swings-2's 3. Sharing the verification must preserve that choice.
-        const previous = generated.alternatives.find(clock => clock.id === "swings-2")!;
+        // Both clocks are stable; swings-2 is selected on its fewer wake-ups although swings-1 recovers in 2 periods
+        // rather than 3. Sharing the verification must preserve that choice.
+        const other = generated.alternatives.find(clock => clock.id === "swings-1")!;
         const selected = generated.alternatives[generated.selected_index];
-        expect(previous.verdict).toBe("stable");
-        expect(previous.ranking.recovery_periods).toBe(3);
-        expect(selected.id).toBe("swings-1");
+        expect(other.verdict).toBe("stable");
+        expect(other.ranking.recovery_periods).toBe(2);
+        expect(selected.id).toBe("swings-2");
         expect(selected.verdict).toBe("stable");
-        expect(selected.ranking.recovery_periods).toBe(2);
-        expect(selected.ranking.wake_ups_per_minute).toBeCloseTo(previous.ranking.wake_ups_per_minute!, 9);
+        expect(selected.ranking.recovery_periods).toBe(3);
+        expect(selected.ranking.wake_ups_per_minute).toBeLessThan(other.ranking.wake_ups_per_minute!);
         // A later request must make its own checks, rather than inherit a verdict from this generation.
         const first_count = recovery.mock.calls.length;
         generateClockAlternatives(logistic, {logger: quiet});

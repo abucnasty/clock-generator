@@ -395,6 +395,8 @@ describe("a control swap", () => {
 
         for (const inserter of context.inserters) {
             const anew = anewOf(inserter, next);
+            // except for the mark the swap puts on the hand: it is on the update list, which is no wake (`after_swap`)
+            anew.hand.scratch.after_swap = true;
             expect(inserter.stateKey(tick)).toBe(anew.stateKey(tick));
             expect(inserter.hand.phase).toBe(anew.hand.phase);
             expect(inserter.hand.scratch).toEqual(anew.hand.scratch);

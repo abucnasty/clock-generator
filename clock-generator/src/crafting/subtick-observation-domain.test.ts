@@ -1,25 +1,13 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { afterAll, expect, it, vi } from "vitest";
+import { expect, it } from "vitest";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import { OpenRange } from "../data-types";
 import { clockIdentity } from "./clock-identity";
 import { judgeCounterSpan } from "./long-run";
 import * as trial from "./trial";
-import { WHOLE_COUNTER_CHECKS } from "./plan/clock-period-limit";
-
-// whole-counter checks are on under the new dispatch only, which is read from the environment when the engine loads
-const dispatch = vi.hoisted(() => {
-    const before = process.env.CLOCK_NEW_DISPATCH;
-    process.env.CLOCK_NEW_DISPATCH = "1";
-    return before;
-});
-afterAll(() => {
-    if (dispatch === undefined) delete process.env.CLOCK_NEW_DISPATCH;
-    else process.env.CLOCK_NEW_DISPATCH = dispatch;
-});
 
 const logger = { log() {}, warn() {}, error() {}, debug() {} };
 const controls = JSON.parse(readFileSync(path.join(__dirname, "fixtures/metallurgic-subtick-controls.json"), "utf8")) as {
@@ -28,10 +16,6 @@ const controls = JSON.parse(readFileSync(path.join(__dirname, "fixtures/metallur
     physical_repeat: { period_ticks: number; scale: number };
     clock_windows: Record<string, { start: number; end: number }[]>;
 };
-
-it("runs under whole-counter checks", () => {
-    expect(WHOLE_COUNTER_CHECKS).toBe(true);
-});
 
 it("rejects one missing hand even when its size is below the scaled per-period tolerance", () => {
     // The existing iron-bacteria fractional-clock shape:19logical periods,576items each, one16item hand lost.
