@@ -396,7 +396,9 @@ export class Hand {
     public sleepReason(): string | null {
         if (this.phase === InserterPhase.SWING || this.phase === InserterPhase.DROP) return null;
         if (this.phase === InserterPhase.TARGET_FULL) return "destination-full";
-        if (this.phase === InserterPhase.DISABLED) return "control-disabled";
+        // an arm back at its source that finds its control off leaves at once, whatever the source holds: the swing rule
+        // leaves it idle for that tick (`swingRule`); recorded in Factorio 2.1.24 on two takers into chests
+        if (this.phase === InserterPhase.DISABLED || this.phase === InserterPhase.IDLE && !this.control.enabled()) return "control-disabled";
         const held = this.state.held_item;
         if (held !== null && (held.quantity >= this.items.handSizeOf(held.item_name) || this.swings_part_hands)) return null;
         if (!this.drop.acceptsHand() || (held !== null && !this.drop.takes(held.item_name))) return "destination-refused";
