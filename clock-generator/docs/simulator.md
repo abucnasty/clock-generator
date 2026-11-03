@@ -8,7 +8,7 @@ This project actively runs a simulation of the machines, inserters and mining dr
 
 ### Scope of the mechanics evidence
 
-The [mechanics experiments](../tests/game/mechanics/README.md) keep each observation beside its scenario and limits. The [activation-order replay](../tests/game/mechanics/activation-order/README.md) supplies observed notifications and wake/sleep outcomes; it does not derive the factory behavior that caused them. The [busy-input](../tests/game/mechanics/busy-input/README.md), [source-pickup](../tests/game/mechanics/source-search/README.md) and [circuit/carried-hand](../tests/game/mechanics/circuit-evaluation/README.md) records distinguish selected game actions from observation-induced checks. Their bounded counts do not establish production rates or prices. These fixtures do not switch the simulator's default dispatch.
+The [mechanics experiments](../tests/game/mechanics/README.md) keep each observation beside its scenario and limits. The [activation-order replay](../tests/game/mechanics/activation-order/README.md) supplies observed notifications and wake/sleep outcomes; it does not derive the factory behavior that caused them. The [busy-input](../tests/game/mechanics/busy-input/README.md), [source-pickup](../tests/game/mechanics/source-search/README.md) and [circuit/carried-hand](../tests/game/mechanics/circuit-evaluation/README.md) records distinguish selected game actions from observation-induced checks. Their bounded counts do not establish production rates or prices. The simulator's dispatch, the update list (`clock-generator/src/simulation/dispatch.ts`), follows these observations.
 
 ### The status of an inserter
 

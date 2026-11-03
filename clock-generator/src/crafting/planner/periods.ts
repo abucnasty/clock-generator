@@ -2,7 +2,7 @@
  * The main-period choices of a build: the output swing counts today's alternatives are listed for (the planned count,
  * the counts above and below the main one, and fractional swings switched the other way), each with its period, kept or
  * pruned by arithmetic before any simulation. The one rule that prunes is P-limit: a period of MAX_SIMULATION_TICKS or
- * more cannot be simulated, nor, under whole-counter checks (the new dispatch), a fractional period whose whole counter
+ * more cannot be simulated, nor, under whole-counter checks, a fractional period whose whole counter
  * is that long (`counterOverLimitOf`). Each count's hands come from today's cycle plan (`CraftingCyclePlan.create`), never
  * worked out again here; an alternative's count that the cycle plan refuses (fractional swings an inserter cannot make
  * within its insertion limits) is listed as refused, with the plan's reason, as today its run fails.

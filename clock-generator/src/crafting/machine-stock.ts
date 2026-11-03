@@ -3,7 +3,6 @@ import { InserterStatus } from "../state/entity-status";
 import { factorioInserterState, InserterListing } from "../state/factorio-entity-state";
 import type { TickRecorder } from "../simulation/observers/observer";
 import { BurnerEnergy } from "../simulation/components/burner-energy";
-import { DEFAULT_WAKE_RULE, type WakeRule } from "./wake-ups";
 
 /** What one machine held after each tick of a run */
 export interface MachineStockSeries {
@@ -26,7 +25,7 @@ export interface MachineStockSeries {
      */
     results_placed?: number[];
     /**
-     * Under the rule "kept-lists", for a machine that burns fuel: fuel items its burner took so far, and drops of fuel
+     * For a machine that burns fuel: fuel items its burner took so far, and drops of fuel
      * hands put in so far, per tick (what alarms its input and its output list, crafting/wake-ups.ts); absent otherwise
      */
     fuel_taken?: number[];
@@ -52,7 +51,7 @@ export interface InserterHandSeries {
      */
     at_pickup?: boolean[];
     /**
-     * For an inserter that drops on a belt, recorded under the wake-up rule "kept-lists" (`WakeRule`): in each tick its
+     * For an inserter that drops on a belt, read by the wake-up rule "kept-lists" (wake-ups.ts): in each tick its
      * hand rose, whether the lane had room for a stack at its drop spot then (`HandDropPort.roomForStack`), which decides
      * whether a part hand goes to sleep; true in every other tick. Absent where not recorded.
      */
@@ -66,10 +65,10 @@ export interface InserterHandSeries {
  *   read: the item in every inserter's hand, and what every machine's output held;
  * - "wake-ups": what the wake-ups of a run (`wakeUpsOfStock`), the counters beside them (`countersOfStock`) and the verdict
  *   of a long run read: the hands of every inserter, the state the game shows for it and whether it is at its pickup,
- *   the crafts and payouts of every machine; under the wake-up rule "kept-lists" (`WakeRule`) also the item in every
- *   inserter's hand and what every machine's output held;
- * - under that rule, every level but "hands" also records the room at the drop spot of an inserter that drops on a belt
- *   (`InserterHandSeries.drop_room`);
+ *   the crafts and payouts of every machine, and for the wake-up rule "kept-lists" (wake-ups.ts) also the item in
+ *   every inserter's hand and what every machine's output held;
+ * - every level but "hands" also records the room at the drop spot of an inserter that drops on a belt
+ *   (`InserterHandSeries.drop_room`) and a burner's fuel takes and the fuel put in;
  * - "hands": what the verdict of a long run reads alone: the hands of every inserter.
  * "wake-ups" and "hands" also record, for a machine that places its results where inserters take them, what its output
  * held, which the verdict of a target that counts an item destroyed reads (`resultsTakenOf`); the other machines are
@@ -120,24 +119,24 @@ export class StockRecorder implements TickRecorder {
     /**
      * @param inserters every inserter with what it puts into, which decides the state the game shows while it waits, and
      *      for one that drops on a belt whether its lane has room at the drop spot now (`InserterHandSeries.drop_room`),
-     *      and under the new dispatch where its update list has it (`InserterListing`, the state it shows then)
+     *      and where its update list has it (`InserterListing`, the state it shows then)
      * @param expected_ticks the ticks the run will record, when it cannot end sooner: the series are then made at that
      *      length and written by index, instead of grown by push. Left out for a run that may stop early at a repeat,
      *      whose request is far longer than what it records.
      * @param detail which series to record (see `StockDetail`); a series that is not recorded is empty
      */
     constructor(machine_states: readonly MachineState[], inserters: readonly { state: InserterState; sink: EntityState; drop_room?: () => boolean; listing?: () => InserterListing }[], expected_ticks?: number,
-        private readonly detail: StockDetail = "full", wake_rule: WakeRule = DEFAULT_WAKE_RULE) {
+        private readonly detail: StockDetail = "full") {
         const series_of_ticks = (): number[] => canPreallocate(expected_ticks) ? new Array<number>(expected_ticks) : [];
         const strings_of_ticks = (): string[] => canPreallocate(expected_ticks) ? new Array<string>(expected_ticks) : [];
         const booleans_of_ticks = (): boolean[] => canPreallocate(expected_ticks) ? new Array<boolean>(expected_ticks) : [];
         const full = detail === "full";
-        // the rule "kept-lists" reads a sleep inside a tick off the items in the hands and in the outputs (WakeRule)
-        const items_seen = detail === "loop-windows" || detail === "wake-ups" && wake_rule === "kept-lists";
+        // the rule "kept-lists" reads a sleep inside a tick off the items in the hands and in the outputs (wake-ups.ts)
+        const items_seen = detail === "loop-windows" || detail === "wake-ups";
         this.items_seen = items_seen;
-        const reads_room = wake_rule === "kept-lists" && detail !== "hands";
+        const reads_room = detail !== "hands";
         // the rule "kept-lists" reads a burner's fuel takes and the fuel put in
-        const reads_fuel = wake_rule === "kept-lists" && detail !== "hands";
+        const reads_fuel = detail !== "hands";
         const burnerOf = (state: MachineState) => reads_fuel && state.energy instanceof BurnerEnergy ? state.energy : null;
         const fuel_series = (state: MachineState) => burnerOf(state) === null ? {} : { fuel_taken: series_of_ticks(), fuel_put_in: series_of_ticks() };
         this.machines = (detail === "hands" ? machine_states.filter(state => state.machine.metadata.places_results === true) : machine_states).map(state => {

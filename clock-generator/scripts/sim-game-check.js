@@ -3,9 +3,9 @@
 // node scripts/sim-game-check.js builds  --recordings <folder> --out <folder> [--only a,b]    the check of every build of sim-game-check/builds.json
 // node scripts/sim-game-check.js summary <out folder>                                         the table of the result files in a folder
 //
-// The simulator against the game for one build, to judge the inserter dispatch (CLOCK_NEW_DISPATCH): a stored recording of
-// the game running a clock is laid against the simulator's run of the same clock under the old dispatch (configured order,
-// "off") and the new one (activation order, "on"), per inserter and per clock period, one kind at a time:
+// The simulator against the game for one build, to judge the inserter dispatch (simulation/dispatch.ts, the update list): a
+// stored recording of the game running a clock is laid against the simulator's run of the same clock, per inserter and per
+// clock period, one kind at a time:
 //   wake-ups  the wake-up rule "kept-lists" (crafting/wake-ups.ts) on the game's recording and on each simulated one;
 //             pass: within WAKE_UPS_TOLERANCE of the game in every period, for every inserter. Where the states of the game's
 //             recording or of a simulated one repeat only after more than one period (the repeat cycle: the fewest whole periods
@@ -21,8 +21,8 @@
 // it out; a staged start (--staged: the game began with the clock, the simulator runs cold from its first tick) is paired
 // the same way. Totals over inserters are never compared. The tolerances are stamped in every result file ("tolerances").
 //
-// Besides the two files, a check writes ONE combined result, <name>.check.json, which anything that gates on the check reads: its top-level
-// "pass" is the verdict of the new dispatch (activation order), the one 0.27.0 ships; "dispatches" keeps each one's verdict by kind; "inputs" holds
+// Besides the full result, a check writes ONE combined result, <name>.check.json, which anything that gates on the check reads: its top-level
+// "pass" is the verdict of the dispatch; "dispatches" keeps its verdict by kind (under "on", as before the old dispatch was removed); "inputs" holds
 // the sha256 of what the verdict was judged on (the recording, the config, the exported clock file given by --clock-file, the scaffold) so that a
 // reader can tell a stale result from a fresh one; "made" is the time it was written and "game_version" the game that made the recording.
 // --clock-file takes the file export-clock.js wrote for the clock: its identity hash is worked out from the decoded blueprint and its schedule (the
@@ -43,15 +43,13 @@
 // game's stock still drifts, so that a transient of the game's start is visible next to a verdict.
 //
 // A game side is labelled "true count" where the rule was checked against the game's own wake-ups on that build (TRUE_COUNT
-// below), else "rule on recording". Needs `npx tsc` first. One result file a build and dispatch: <name>.off.json, <name>.on.json.
+// below), else "rule on recording". Needs `npx tsc` first. One full result file a build: <name>.on.json (the name it had beside the old
+// dispatch's <name>.off.json).
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const cp = require("child_process");
 const zlib = require("zlib");
-// the rule is named in every call below: the parent's own dispatch plays no part; each simulation child sets its own
-if (process.argv[2] !== "find" && process.argv[2] !== "simulate") delete process.env.CLOCK_NEW_DISPATCH;
-
 const argv = process.argv.slice(3);
 // lib.js moves to the generator's folder: what names a file is made absolute first (a config that is not a file is a sample's key)
 const PATH_OPTIONS = ["--recording", "--out", "--recordings", "--clock", "--clock-file", "--scaffold"];
@@ -64,7 +62,7 @@ const WAKE_UPS_TOLERANCE = 1; // wake-ups per inserter per period
 const WAKE_UPS_CYCLE_TOLERANCE = 0.02; // mean wake-ups a period over whole cycles, share of the game's (at least 1 a period as the base)
 const BINS_TOLERANCE = 0.005; // share of the game's items in a period
 const HANDS_AGREEMENT = 1; // share of positions at which an inserter's hand equals the game's (builds whose cycle is one period): every position
-const RULE = "kept-lists";
+const RULE = "kept-lists"; // the wake-up rule (crafting/wake-ups.ts), named in the result files
 const DEFAULT_SIM_OFFSET = 3; // SIMULATED_TICK_TO_CLOCK_POSITION
 // measured on the staged agricultural recording: with 3 every one of its 745 enable edges of every inserter sits 1 tick before the game's
 const STAGED_SIM_OFFSET = 4;
@@ -72,9 +70,10 @@ const TRUE_COUNT = { // clock hash prefix: what checked the rule against the gam
     "3bc059b3": "front-exit normal mirrored backed: wake-ups read in the running game",
     "ba2c26f4": "electromagnetic science: wake-ups read in the running game",
 };
-const KNOWN_MISS = { // clock hash prefix: a game side the rule's count is known to miss, kept in the output and left out of "closer"
+const KNOWN_MISS = { // clock hash prefix: a game side the rule's count is known to miss, kept in the output and left out of the verdict
 };
-const DISPATCHES = { off: "configured-order", on: "activation-order" };
+const DISPATCH = "activation-order";
+const KEY = "on"; // the result's key and file suffix
 
 const opt = name => { const i = argv.indexOf(name); return i < 0 ? undefined : argv[i + 1]; };
 const flag = name => argv.includes(name);
@@ -92,7 +91,7 @@ const circular = (a, b, period) => { const d = (((b - a) % period) + period) % p
 const permutations = items => items.length <= 1 ? [items] : items.flatMap((item, i) => permutations([...items.slice(0, i), ...items.slice(i + 1)]).map(rest => [item, ...rest]));
 const sum = list => list.reduce((a, b) => a + b, 0);
 
-// ---- the children: the clock to simulate, and a simulated recording, each under the dispatch their environment names ----
+// ---- the children: the clock to simulate, and a simulated recording ----
 
 /** the build's config; with `seeded`, the egg-style seed of a loop given as the game accepted it (the clock is made on the config as it is) */
 async function configOf(seeded = false) {
@@ -101,7 +100,7 @@ async function configOf(seeded = false) {
     return config;
 }
 
-/** finds the clock with the hash among the alternatives the generator makes under this process's dispatch */
+/** finds the clock with the hash among the alternatives the generator makes */
 async function find() {
     const { generateClockAlternatives } = dist("crafting/generate-blueprint.js");
     const { clockIdentity } = dist("crafting/clock-identity.js");
@@ -122,7 +121,7 @@ async function find() {
     fs.writeFileSync(opt("--out"), JSON.stringify({ not_found: true, alternatives: generated.alternatives.map(it => it.id) }));
 }
 
-/** a run of the clock in the simulator, as a recording, under this process's dispatch */
+/** a run of the clock in the simulator, as a recording */
 async function simulate() {
     const { simulateClockOnly } = dist("crafting/generate-blueprint.js");
     const { recordingOfStock, SIMULATED_TICK_TO_CLOCK_POSITION } = dist("verification/simulated-recording.js");
@@ -143,22 +142,20 @@ async function simulate() {
     const { wakeUpsOfStock } = dist("crafting/wake-ups.js");
     const { inserterEnds } = dist("crafting/inserter-counters.js");
     const wake_ticks = {};
-    wakeUpsOfStock(stock, inserterEnds(config), 0, (inserter_id, tick) => (wake_ticks[inserter_id] ??= []).push(tick), RULE);
+    wakeUpsOfStock(stock, inserterEnds(config), 0, (inserter_id, tick) => (wake_ticks[inserter_id] ??= []).push(tick));
     recording.wake_ticks = wake_ticks;
     recording.clock.values = recording.clock.values.map((_, tick) => (tick + (seed === undefined ? offset : seed.position + 1)) % clock.clock_ticks);
     fs.writeFileSync(opt("--out"), JSON.stringify(recording));
 }
 
-function child(mode, extra, env) {
+function child(mode, extra) {
     return new Promise((resolve, reject) => {
         const args = [__filename, mode, "--config", opt("--config"), ...extra];
         if (opt("--seed-items") !== undefined) args.push("--seed-items", opt("--seed-items"));
-        const run = cp.spawn(process.execPath, args, { env: { ...process.env, ...env }, stdio: ["ignore", "inherit", "inherit"] });
+        const run = cp.spawn(process.execPath, args, { stdio: ["ignore", "inherit", "inherit"] });
         run.on("exit", code => code === 0 ? resolve() : reject(new Error(`${mode} exited with ${code}`)));
     });
 }
-// "off" keeps the old dispatch and has the stock record what the rule "kept-lists" reads (simulation/dispatch.ts)
-const dispatchEnv = key => ({ CLOCK_NEW_DISPATCH: key === "on" ? "1" : "configured-order,kept-lists" });
 
 // ---- the seeded start: a recorded sample of the game (the start of its first settled period, else its first sample) ----
 
@@ -307,7 +304,7 @@ function wakesPerPeriod(recording, match, config, periods) {
     const { wakeUpsOfRecording } = dist("verification/recording-wake-ups.js");
     const counts = new Map();
     const { from, to } = rangeOf(periods);
-    wakeUpsOfRecording(recording, match, from, to, config, RULE, (inserter_id, tick) => {
+    wakeUpsOfRecording(recording, match, from, to, config, (inserter_id, tick) => {
         if (tick < from || tick >= to) return;
         const list = counts.get(inserter_id) ?? new Array(periods.length).fill(0);
         list[binOf(periods, tick)]++;
@@ -436,7 +433,7 @@ const meanOverCycles = (list, cycle) => { const length = Math.floor(list.length 
 
 // ---- one dispatch against the game ----
 
-function judge(ctx, simRecording, key) {
+function judge(ctx, simRecording) {
     const { config, game, gameMatch, clock, period, paired, staged } = ctx;
     const { matchOfSimulatedRecording } = dist("verification/simulated-recording.js");
     const simMatch = matchOfSimulatedRecording(simRecording);
@@ -551,7 +548,7 @@ function judge(ctx, simRecording, key) {
         windows: sum(ids.map(id => windows[id].periods_with_other_enable_count + sum(Object.entries(windows[id].enable_delta).filter(([k]) => k !== "0").map(([, v]) => v)))),
     };
     return {
-        dispatch: DISPATCHES[key], periods_compared: judgedIdx.length,
+        dispatch: DISPATCH, periods_compared: judgedIdx.length,
         cycle: { game: ctx.cycles.game, sim: ctx.cycles.sim, wake_ups_judged_by: ctx.cycle_mean ? "mean a period over whole cycles" : "each period" },
         wake_ups: ctx.cycle_mean
             ? { tolerance: WAKE_UPS_CYCLE_TOLERANCE, rule: RULE, max_rel_error: Math.max(0, ...ids.map(id => wake[id].rel_error)), pass: ids.every(id => wake[id].pass), inserters: wake }
@@ -579,15 +576,12 @@ async function check() {
     if (clockFileIdentity !== undefined && !clockFileIdentity.startsWith(wantedHash)) throw new Error(`--clock-file ${clockFile} has the identity hash ${clockFileIdentity}, which does not start with --hash ${wantedHash}`);
     const work = fs.mkdtempSync(path.join(out, `.${name}-`));
     try {
-        // the clock: found under the old dispatch, else under the new one (a moved pick is the new one's alone)
+        // the clock, among the alternatives the generator makes
         const foundFile = path.join(work, "clock.json");
-        let clock;
-        for (const key of ["off", "on"]) {
-            await child("find", ["--hash", wantedHash, "--out", foundFile], dispatchEnv(key));
-            clock = JSON.parse(fs.readFileSync(foundFile, "utf8"));
-            if (!clock.not_found) { clock.found_under = DISPATCHES[key]; break; }
-        }
-        if (clock.not_found) throw new Error(`No clock with hash ${wantedHash} under either dispatch; alternatives: ${clock.alternatives.join(", ")}`);
+        await child("find", ["--hash", wantedHash, "--out", foundFile]);
+        const clock = JSON.parse(fs.readFileSync(foundFile, "utf8"));
+        if (clock.not_found) throw new Error(`No clock with hash ${wantedHash}; alternatives: ${clock.alternatives.join(", ")}`);
+        clock.found_under = DISPATCH;
 
         const { parseRecording } = dist("verification/recording.js");
         const { matchRecordingToConfig } = dist("verification/entity-matching.js");
@@ -603,14 +597,15 @@ async function check() {
         const seed = seedOf(game, gameMatch, config, clock, staged, settling?.seed_sample ?? 0);
         const seedFile = path.join(work, "seed.json");
         if (seed.applied) fs.writeFileSync(seedFile, JSON.stringify({ sample: seed.sample, position: seed.position, start_stock: seed.start_stock, start_hands: seed.start_hands }));
-        // the cold runs, and the seeded ones where the recording gives a seed; each under both dispatches
-        const sims = {}, seededSims = {};
-        await Promise.all(Object.keys(DISPATCHES).flatMap(key => [false, true].filter(seeded => !seeded || seed.applied).map(async seeded => {
-            const file = path.join(work, `sim-${key}${seeded ? "-seeded" : ""}.json`);
+        // the cold run, and the seeded one where the recording gives a seed
+        const runs = {};
+        await Promise.all([false, true].filter(seeded => !seeded || seed.applied).map(async seeded => {
+            const file = path.join(work, `sim${seeded ? "-seeded" : ""}.json`);
             await child("simulate", ["--clock", foundFile, "--out", file, "--periods", String(seeded ? Math.floor((game.sample_count - seed.sample) / clock.clock_ticks) + 2 : periods), ...(staged ? ["--staged"] : []), ...(seeded ? ["--seed", seedFile] : []),
-                ...(opt("--sim-offset") ? ["--sim-offset", opt("--sim-offset")] : [])], dispatchEnv(key));
-            (seeded ? seededSims : sims)[key] = JSON.parse(fs.readFileSync(file, "utf8"));
-        })));
+                ...(opt("--sim-offset") ? ["--sim-offset", opt("--sim-offset")] : [])]);
+            runs[seeded ? "seeded" : "cold"] = JSON.parse(fs.readFileSync(file, "utf8"));
+        }));
+        const sim = runs.cold, seededSim = runs.seeded;
 
         const byWindows = {};
         for (const [entity, ranges] of Object.entries(clock.windows)) {
@@ -633,40 +628,37 @@ async function check() {
             tolerances: { wake_ups_per_period: WAKE_UPS_TOLERANCE, wake_ups_cycle_mean_relative: WAKE_UPS_CYCLE_TOLERANCE, bins_relative: BINS_TOLERANCE, hands_agreement: HANDS_AGREEMENT },
         };
         if (offsetUsed !== DEFAULT_SIM_OFFSET) console.log(`${name}: alignment offset ${offsetUsed} differs from the default ${DEFAULT_SIM_OFFSET}`);
-        // the periods of the two are judged one by one only where neither the game's recording nor either simulated one repeats over more than one
-        const pairs = {}, cycles = {};
-        for (const key of Object.keys(DISPATCHES)) { pairs[key] = pairPeriods(game, sims[key], staged); cycles[key] = cyclesOf(game, gameMatch, sims[key], pairs[key]); }
-        const cycleMean = Object.values(cycles).some(it => it.game > 1 || it.sim > 1);
-        const seededPairs = {}, seededCycles = {};
-        if (seed.applied) for (const key of Object.keys(DISPATCHES)) { seededPairs[key] = pairSeeded(game, seededSims[key], seed.sample); seededCycles[key] = cyclesOf(game, gameMatch, seededSims[key], seededPairs[key]); }
-        // the seeded run is judged where there is one; the cycle decides how its periods are judged as it does for the cold one, from both runs' cycles together
-        const seededCycleMean = seed.applied && Object.values(seededCycles).some(it => it.game > 1 || it.sim > 1);
+        // the periods of the two are judged one by one only where neither the game's recording nor the simulated one repeats over more than one
+        const paired = pairPeriods(game, sim, staged);
+        const cycles = cyclesOf(game, gameMatch, sim, paired);
+        const cycleMean = cycles.game > 1 || cycles.sim > 1;
+        const seededPaired = seed.applied ? pairSeeded(game, seededSim, seed.sample) : undefined;
+        const seededCycles = seed.applied ? cyclesOf(game, gameMatch, seededSim, seededPaired) : undefined;
+        // the seeded run is judged where there is one; the cycle decides how its periods are judged as it does for the cold one
+        const seededCycleMean = seed.applied && (seededCycles.game > 1 || seededCycles.sim > 1);
         const seedStamp = seed.applied
             ? { applied: true, complete: seed.complete, source: seed.source, seed_sample: seed.sample, settling, position_of_seed_sample: seed.position, sim_tick_0_is_game_sample: seed.sample + 1, not_seeded: seed.not_seeded, machines_seeded: Object.keys(seed.start_stock).length, hands_not_empty: seed.hands_not_empty, bars_worked_back: seed.bars_worked_back }
             : { applied: false, source: seed.source, reason: seed.reason };
-        const written = {};
-        for (const key of Object.keys(DISPATCHES)) {
-            const ctx = { config, game, gameMatch, clock, period: clock.clock_ticks, staged, groups: byWindows };
-            const cold = judge({ ...ctx, paired: pairs[key], cycles: cycles[key], cycle_mean: cycleMean }, sims[key], key);
-            let judged = cold, result = { ...cold, judged_run: "cold" };
-            if (seed.applied) {
-                const seededRun = judge({ ...ctx, paired: seededPairs[key], cycles: seededCycles[key], cycle_mean: seededCycleMean }, seededSims[key], key);
-                // an incomplete seed is reported (under "seeded") and the cold run stays the judged one
-                if (seed.complete) { judged = seededRun; result = { ...judged, judged_run: "seeded", cold }; }
-                else result = { ...cold, judged_run: "cold", seeded: seededRun };
-            }
-            // the periods of the game's recording that are still unsettled, and which of the bins' failures are in them
-            const used = seed.applied && seed.complete ? seededPairs[key] : pairs[key];
-            const gameJudged = used.game.slice(0, Math.min(used.game.length, used.sim.length));
-            const unsettled = unsettledPeriods(game, gameMatch, gameJudged);
-            const failing = judged.bins.game.flatMap((g, p) => (g === 0 ? judged.bins.sim[p] !== 0 : Math.abs(judged.bins.sim[p] - g) / g > BINS_TOLERANCE) ? [p] : []);
-            result.bins.unsettled = { ...unsettled, failing_periods: failing, failing_in_unsettled: failing.filter(p => unsettled.drifting_periods.includes(p)), failing_after_settled: failing.filter(p => !unsettled.drifting_periods.includes(p)) };
-            const file = path.join(out, `${name}.${key}.json`);
-            fs.writeFileSync(file, JSON.stringify({ ...stamp, judged_run: result.judged_run, seed: seedStamp, flag: key, ...result }, null, 1) + "\n");
-            written[key] = { file: path.basename(file), dispatch: DISPATCHES[key], judged_run: result.judged_run, pass: result.pass, wake_ups: result.wake_ups.pass, bins: result.bins.pass, hands: result.hands.pass, periods_compared: result.periods_compared };
-            const line = r => `wake-ups ${r.wake_ups.pass ? "pass" : "FAIL"} (${r.cycle.wake_ups_judged_by}; cycle ${r.cycle.game}/${r.cycle.sim}), bins ${r.bins.pass ? "pass" : "FAIL"}, hands ${r.hands.pass === null ? "-" : r.hands.pass ? "pass" : "FAIL"}`;
-            console.log(`${name} ${key} (${DISPATCHES[key]}): ${seed.applied ? `${seed.complete ? "seeded (judged)" : "seeded (incomplete: not judged)"}: ${line(result.seeded ?? judged)} | cold${seed.complete ? "" : " (judged)"}: ${line(cold)}` : `cold (no seed: ${seed.reason}): ${line(cold)}`} -> ${file}`);
+        const ctx = { config, game, gameMatch, clock, period: clock.clock_ticks, staged, groups: byWindows };
+        const cold = judge({ ...ctx, paired, cycles, cycle_mean: cycleMean }, sim);
+        let judged = cold, result = { ...cold, judged_run: "cold" };
+        if (seed.applied) {
+            const seededRun = judge({ ...ctx, paired: seededPaired, cycles: seededCycles, cycle_mean: seededCycleMean }, seededSim);
+            // an incomplete seed is reported (under "seeded") and the cold run stays the judged one
+            if (seed.complete) { judged = seededRun; result = { ...judged, judged_run: "seeded", cold }; }
+            else result = { ...cold, judged_run: "cold", seeded: seededRun };
         }
+        // the periods of the game's recording that are still unsettled, and which of the bins' failures are in them
+        const used = seed.applied && seed.complete ? seededPaired : paired;
+        const gameJudged = used.game.slice(0, Math.min(used.game.length, used.sim.length));
+        const unsettled = unsettledPeriods(game, gameMatch, gameJudged);
+        const failing = judged.bins.game.flatMap((g, p) => (g === 0 ? judged.bins.sim[p] !== 0 : Math.abs(judged.bins.sim[p] - g) / g > BINS_TOLERANCE) ? [p] : []);
+        result.bins.unsettled = { ...unsettled, failing_periods: failing, failing_in_unsettled: failing.filter(p => unsettled.drifting_periods.includes(p)), failing_after_settled: failing.filter(p => !unsettled.drifting_periods.includes(p)) };
+        const file = path.join(out, `${name}.${KEY}.json`);
+        fs.writeFileSync(file, JSON.stringify({ ...stamp, judged_run: result.judged_run, seed: seedStamp, flag: KEY, ...result }, null, 1) + "\n");
+        const written = { [KEY]: { file: path.basename(file), dispatch: DISPATCH, judged_run: result.judged_run, pass: result.pass, wake_ups: result.wake_ups.pass, bins: result.bins.pass, hands: result.hands.pass, periods_compared: result.periods_compared } };
+        const line = r => `wake-ups ${r.wake_ups.pass ? "pass" : "FAIL"} (${r.cycle.wake_ups_judged_by}; cycle ${r.cycle.game}/${r.cycle.sim}), bins ${r.bins.pass ? "pass" : "FAIL"}, hands ${r.hands.pass === null ? "-" : r.hands.pass ? "pass" : "FAIL"}`;
+        console.log(`${name} (${DISPATCH}): ${seed.applied ? `${seed.complete ? "seeded (judged)" : "seeded (incomplete: not judged)"}: ${line(result.seeded ?? judged)} | cold${seed.complete ? "" : " (judged)"}: ${line(cold)}` : `cold (no seed: ${seed.reason}): ${line(cold)}`} -> ${file}`);
         writeCombined(out, name, { stamp, clock, written, clockFile, clockFileIdentity, game });
     } finally {
         fs.rmSync(work, { recursive: true, force: true });
@@ -681,8 +673,8 @@ function configFileOf(config) {
 }
 
 /**
- * The one result file that anything gating on the check reads: <name>.check.json. "pass" is the new dispatch's verdict (activation order, what 0.27.0
- * ships); each dispatch's verdict by kind stays under "dispatches", and the full per-dispatch files stay beside it. "inputs" are the sha256 of the files
+ * The one result file that anything gating on the check reads: <name>.check.json. "pass" is the dispatch's verdict (activation order); its verdict
+ * by kind stays under "dispatches" (key "on"), and the full result file stays beside it. "inputs" are the sha256 of the files
  * the verdict was judged on; the scaffold is the blueprint the recording was made on (--scaffold, else the config's <name>-scaffold.txt beside it).
  */
 function writeCombined(out, name, { stamp, clock, written, clockFile, clockFileIdentity, game }) {
@@ -694,8 +686,8 @@ function writeCombined(out, name, { stamp, clock, written, clockFile, clockFileI
     if (scaffold !== undefined && fs.existsSync(scaffold)) inputs.scaffold = sha256File(scaffold);
     const combined = {
         tool: "sim-game-check", format: 1, kind: "check-result", build: name,
-        pass: written.on.pass === true,
-        pass_basis: `the new dispatch (${DISPATCHES.on}): wake-ups, bins and hands; windows have no verdict`,
+        pass: written[KEY].pass === true,
+        pass_basis: `the dispatch (${DISPATCH}): wake-ups, bins and hands; windows have no verdict`,
         made: new Date().toISOString(),
         game_version: game.factorio_version ?? null,
         inputs,
@@ -709,11 +701,6 @@ function writeCombined(out, name, { stamp, clock, written, clockFile, clockFileI
 
 // ---- the table of a folder of results ----
 
-const CLOSER_KINDS = ["wake_ups", "bins", "hands", "windows"];
-function closer(off, on, kind) {
-    const a = off.error[kind], b = on.error[kind];
-    return Math.abs(a - b) < 1e-9 ? "same" : a < b ? "off" : "on";
-}
 const short = x => x === null || x === undefined ? "-" : typeof x === "number" ? (Math.round(x * 1000) / 1000).toString() : String(x);
 /** a series a period: one value a number of times when it does not change, else its mean and range (the files hold the series) */
 const compact = list => {
@@ -723,57 +710,53 @@ const compact = list => {
 };
 
 function summarise(folder) {
-    const names = [...new Set(fs.readdirSync(folder).filter(f => f.endsWith(".off.json")).map(f => f.slice(0, -".off.json".length)))].sort();
+    const names = [...new Set(fs.readdirSync(folder).filter(f => f.endsWith(`.${KEY}.json`)).map(f => f.slice(0, -`.${KEY}.json`.length)))].sort();
     const lines = [];
-    const table = ["| build | game side | start judged | judged by | wake-ups: off / on | bins: off / on | hands: off / on | other start (reported): wake-ups off / on | bins off / on | hands off / on | closer: wake-ups | bins | hands | windows | alignment offset |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"];
+    const table = ["| build | game side | start judged | judged by | wake-ups | bins | hands | other start (reported): wake-ups | bins | hands | alignment offset |", "|---|---|---|---|---|---|---|---|---|---|---|"];
     const excluded = [];
     for (const name of names) {
-        const off = JSON.parse(fs.readFileSync(path.join(folder, `${name}.off.json`), "utf8"));
-        const on = JSON.parse(fs.readFileSync(path.join(folder, `${name}.on.json`), "utf8"));
-        // a build left out of the verdict is shown as excluded, never as failing (its files keep the values the check computed)
-        const word = r => off.closer_excluded ? "excluded" : r === null ? "-" : r ? "pass" : "FAIL";
-        const closers = off.closer_excluded ? CLOSER_KINDS.map(() => "-") : CLOSER_KINDS.map(k => closer(off, on, k));
-        if (off.closer_excluded) excluded.push(`${name}: ${off.closer_excluded}`);
-        const offset = off.alignment.simulated_tick_to_clock_position;
+        const r = JSON.parse(fs.readFileSync(path.join(folder, `${name}.${KEY}.json`), "utf8"));
+        // a build left out of the verdict is shown as excluded, never as failing (its file keeps the values the check computed)
+        const word = v => r.closer_excluded ? "excluded" : v === null ? "-" : v ? "pass" : "FAIL";
+        if (r.closer_excluded) excluded.push(`${name}: ${r.closer_excluded}`);
+        const offset = r.alignment.simulated_tick_to_clock_position;
         // the start that is not judged: the cold run where the seeded one is judged, the incomplete seeded run where the cold one is (none for a staged start)
-        const otherOf = r => r.judged_run === "seeded" ? r.cold : r.seeded;
-        const coldWord = kind => otherOf(off) === undefined ? "-" : `${word(otherOf(off)[kind].pass)} / ${word(otherOf(on)[kind].pass)}`;
-        table.push(`| ${name} | ${off.game_side} | ${off.judged_run}${off.seed.applied && !off.seed.complete ? " (seed incomplete)" : ""} | ${off.cycle.wake_ups_judged_by} (cycles game ${off.cycle.game}, sim ${off.cycle.sim} / ${on.cycle.sim}) | ${word(off.wake_ups.pass)} / ${word(on.wake_ups.pass)} | ${word(off.bins.pass)} / ${word(on.bins.pass)} | ${word(off.hands.pass)} / ${word(on.hands.pass)} | ${coldWord("wake_ups")} | ${coldWord("bins")} | ${coldWord("hands")} | ${closers.join(" | ")} | ${offset}${off.alignment.differs_from_default ? ` (differs from ${off.alignment.default})` : ""} |`);
-        lines.push("", `## ${name} (clock ${off.clock_hash.slice(0, 8)}, period ${off.clock_period}, game side: ${off.game_side}, ${off.periods_compared} periods compared, alignment offset ${offset}${off.alignment.differs_from_default ? `, differs from ${off.alignment.default}` : ""})`);
-        if (off.closer_excluded) lines.push(`left out of "closer": ${off.closer_excluded}`);
+        const other = r.judged_run === "seeded" ? r.cold : r.seeded;
+        const otherWord = kind => other === undefined ? "-" : word(other[kind].pass);
+        table.push(`| ${name} | ${r.game_side} | ${r.judged_run}${r.seed.applied && !r.seed.complete ? " (seed incomplete)" : ""} | ${r.cycle.wake_ups_judged_by} (cycles game ${r.cycle.game}, sim ${r.cycle.sim}) | ${word(r.wake_ups.pass)} | ${word(r.bins.pass)} | ${word(r.hands.pass)} | ${otherWord("wake_ups")} | ${otherWord("bins")} | ${otherWord("hands")} | ${offset}${r.alignment.differs_from_default ? ` (differs from ${r.alignment.default})` : ""} |`);
+        lines.push("", `## ${name} (clock ${r.clock_hash.slice(0, 8)}, period ${r.clock_period}, game side: ${r.game_side}, ${r.periods_compared} periods compared, alignment offset ${offset}${r.alignment.differs_from_default ? `, differs from ${r.alignment.default}` : ""})`);
+        if (r.closer_excluded) lines.push(`left out of the verdict: ${r.closer_excluded}`);
         const startOf = seed => `the recording's sample ${seed.seed_sample ?? 0} (clock position ${seed.position_of_seed_sample ?? seed.position_of_first_sample}, ${seed.machines_seeded} machines)`;
-        lines.push(off.seed.applied
-            ? `start: ${off.seed.complete ? `judged on the run seeded from ${startOf(off.seed)}; the cold run is reported in the table and under "cold" in the file` : `the seed from ${startOf(off.seed)} lacks what the simulator cannot take, so the run from it is reported (under "seeded" in the file) and the cold run is judged`}. `
-                + (off.seed.settling ? `Seed sample: ${off.seed.settling.reason}${off.seed.settling.settles === false ? " (NOT SETTLED)" : ""}. ` : "")
-                + `Not seeded: ${off.seed.not_seeded.join("; ")}`
-            : `start: no seeded run (${off.seed.reason}); the cold run is judged`);
-        for (const [key, r] of [["off", off], ["on", on]]) {
-            const cycleMean = r.cycle.wake_ups_judged_by !== "each period";
-            lines.push(`${key} (${r.dispatch}): wake-ups judged by ${r.cycle.wake_ups_judged_by}`
-                + (cycleMean ? `; relative errors of the means (tolerance ${r.wake_ups.tolerance}): max ${short(r.wake_ups.max_rel_error)}, over tolerance ${Object.values(r.wake_ups.inserters).filter(w => !w.pass).length} of ${Object.keys(r.wake_ups.inserters).length}` : ""));
-            for (const [id, w] of Object.entries(r.wake_ups.inserters)) {
-                const differs = cycleMean ? !w.pass : w.max_diff > 0;
-                lines.push(`  wake-ups inserter:${id}: game ${compact(w.game)} | sim ${compact(w.sim)} | ` + (cycleMean ? `means game ${short(w.game_mean)} sim ${short(w.sim_mean)}, relative error ${short(w.rel_error)}` : `max diff ${w.max_diff}, mean diff ${short(w.mean_diff)}`) + ` | ${w.pass ? "pass" : "FAIL"}`
-                    + (w.matches_with_roles_swapped ? ` | matches with roles swapped (as inserter:${w.swapped_with}: ${compact(w.swapped.sim)})` : differs && w.swapped ? ` | swapped with inserter:${w.swapped_with}: ${cycleMean ? `relative error ${short(w.swapped.rel_error)}` : `max diff ${w.swapped.max_diff}`}` : ""));
-            }
-            lines.push(`  bins: game ${compact(r.bins.game)} | sim ${compact(r.bins.sim)} | max relative diff ${short(r.bins.max_relative_diff)} | ${r.bins.pass ? "pass" : "FAIL"}`);
-            const u = r.bins.unsettled;
-            lines.push(`  bins, game's stock: ${u.drifting_periods.length === 0 ? "settled in every period compared" : `still drifting in ${u.drifting_periods.length} of ${u.periods_compared_by_stock} periods compared (periods ${compact(u.drifting_periods)}, settled from period ${u.settled_from})`}`
-                + (u.failing_periods.length === 0 ? "" : `; periods over the bins tolerance: ${u.failing_periods.length}, ${u.failing_in_unsettled.length} of them in the drifting periods, ${u.failing_after_settled.length} after they settle`));
-            for (const [id, h] of Object.entries(r.hands.inserters)) {
-                lines.push(`  hands inserter:${id}: ${h.transfers} transfers, pickup delta ${JSON.stringify(h.pickup_delta)}, drop delta ${JSON.stringify(h.drop_delta)}, `
-                    + `hand agrees ${short(h.hand_agreement)}, status agrees ${short(h.status_agreement)}${h.pass === null || h.pass === undefined ? "" : h.pass ? " | pass" : " | FAIL"}`
-                    + (h.matches_with_roles_swapped ? ` | matches with roles swapped (as inserter:${h.swapped_with}: hand ${short(h.swapped.hand_agreement)})` : ""));
-            }
-            for (const [id, w] of Object.entries(r.windows.inserters)) {
-                lines.push(`  windows inserter:${id}: ${w.enables} enables, delta ${JSON.stringify(w.enable_delta)}, periods with another count ${w.periods_with_other_enable_count}`);
-            }
+        lines.push(r.seed.applied
+            ? `start: ${r.seed.complete ? `judged on the run seeded from ${startOf(r.seed)}; the cold run is reported in the table and under "cold" in the file` : `the seed from ${startOf(r.seed)} lacks what the simulator cannot take, so the run from it is reported (under "seeded" in the file) and the cold run is judged`}. `
+                + (r.seed.settling ? `Seed sample: ${r.seed.settling.reason}${r.seed.settling.settles === false ? " (NOT SETTLED)" : ""}. ` : "")
+                + `Not seeded: ${r.seed.not_seeded.join("; ")}`
+            : `start: no seeded run (${r.seed.reason}); the cold run is judged`);
+        const cycleMean = r.cycle.wake_ups_judged_by !== "each period";
+        lines.push(`${r.dispatch}: wake-ups judged by ${r.cycle.wake_ups_judged_by}`
+            + (cycleMean ? `; relative errors of the means (tolerance ${r.wake_ups.tolerance}): max ${short(r.wake_ups.max_rel_error)}, over tolerance ${Object.values(r.wake_ups.inserters).filter(w => !w.pass).length} of ${Object.keys(r.wake_ups.inserters).length}` : ""));
+        for (const [id, w] of Object.entries(r.wake_ups.inserters)) {
+            const differs = cycleMean ? !w.pass : w.max_diff > 0;
+            lines.push(`  wake-ups inserter:${id}: game ${compact(w.game)} | sim ${compact(w.sim)} | ` + (cycleMean ? `means game ${short(w.game_mean)} sim ${short(w.sim_mean)}, relative error ${short(w.rel_error)}` : `max diff ${w.max_diff}, mean diff ${short(w.mean_diff)}`) + ` | ${w.pass ? "pass" : "FAIL"}`
+                + (w.matches_with_roles_swapped ? ` | matches with roles swapped (as inserter:${w.swapped_with}: ${compact(w.swapped.sim)})` : differs && w.swapped ? ` | swapped with inserter:${w.swapped_with}: ${cycleMean ? `relative error ${short(w.swapped.rel_error)}` : `max diff ${w.swapped.max_diff}`}` : ""));
         }
-        lines.push(`closer: ${off.closer_excluded ? "left out (see above)" : CLOSER_KINDS.map(k => `${k} ${closer(off, on, k)}`).join(", ")} (error: off ${JSON.stringify(off.error)}, on ${JSON.stringify(on.error)})`);
+        lines.push(`  bins: game ${compact(r.bins.game)} | sim ${compact(r.bins.sim)} | max relative diff ${short(r.bins.max_relative_diff)} | ${r.bins.pass ? "pass" : "FAIL"}`);
+        const u = r.bins.unsettled;
+        lines.push(`  bins, game's stock: ${u.drifting_periods.length === 0 ? "settled in every period compared" : `still drifting in ${u.drifting_periods.length} of ${u.periods_compared_by_stock} periods compared (periods ${compact(u.drifting_periods)}, settled from period ${u.settled_from})`}`
+            + (u.failing_periods.length === 0 ? "" : `; periods over the bins tolerance: ${u.failing_periods.length}, ${u.failing_in_unsettled.length} of them in the drifting periods, ${u.failing_after_settled.length} after they settle`));
+        for (const [id, h] of Object.entries(r.hands.inserters)) {
+            lines.push(`  hands inserter:${id}: ${h.transfers} transfers, pickup delta ${JSON.stringify(h.pickup_delta)}, drop delta ${JSON.stringify(h.drop_delta)}, `
+                + `hand agrees ${short(h.hand_agreement)}, status agrees ${short(h.status_agreement)}${h.pass === null || h.pass === undefined ? "" : h.pass ? " | pass" : " | FAIL"}`
+                + (h.matches_with_roles_swapped ? ` | matches with roles swapped (as inserter:${h.swapped_with}: hand ${short(h.swapped.hand_agreement)})` : ""));
+        }
+        for (const [id, w] of Object.entries(r.windows.inserters)) {
+            lines.push(`  windows inserter:${id}: ${w.enables} enables, delta ${JSON.stringify(w.enable_delta)}, periods with another count ${w.periods_with_other_enable_count}`);
+        }
+        lines.push(`error: ${JSON.stringify(r.error)}`);
     }
-    const tol = names.length === 0 ? undefined : JSON.parse(fs.readFileSync(path.join(folder, `${names[0]}.off.json`), "utf8")).tolerances;
+    const tol = names.length === 0 ? undefined : JSON.parse(fs.readFileSync(path.join(folder, `${names[0]}.${KEY}.json`), "utf8")).tolerances;
     const tolerances = tol === undefined ? [] : [`Tolerances: wake-ups within ${tol.wake_ups_per_period} a period per inserter where the cycle is one period, else the mean within ${tol.wake_ups_cycle_mean_relative * 100}% (relative to the game's, at least 1 a period as the base); bins within ${tol.bins_relative * 100}% a period; hands equal at ${tol.hands_agreement * 100}% of the positions where the cycle is one period (no pass/fail otherwise).`, ""];
-    const note = excluded.length > 0 ? ["", "Left out of \"closer\" (shown as -): " + excluded.join("; ")] : [];
+    const note = excluded.length > 0 ? ["", "Left out of the verdict (shown as excluded): " + excluded.join("; ")] : [];
     return [...tolerances, ...table, ...note, ...lines].join("\n") + "\n";
 }
 

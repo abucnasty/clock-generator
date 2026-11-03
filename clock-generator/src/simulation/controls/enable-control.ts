@@ -1,6 +1,5 @@
 import { Duration, OpenRange } from "../../data-types";
 import { TickProvider } from "../current-tick-provider";
-import { DEFAULT_INSERTER_DISPATCH } from "../dispatch";
 import { subtickClockForPeriod, wholeBounds } from "../../common/subtick-period";
 import { Resettable } from "./resettable";
 
@@ -80,13 +79,6 @@ export function clockPosition(tick: number, period: number): number {
     const snapped = Math.abs(position - nearest) < 1e-6 ? nearest : position;
     return snapped >= period ? 0 : snapped;
 }
-
-/**
- * Whether a clock of a p/q-tick period answers in whole 1/q ticks (`SubtickPositions`): under the new dispatch
- * (CLOCK_NEW_DISPATCH), read from the environment once like the dispatch's own default. The default only: the enable
- * control factories of a run pass what the run's context has (`exact_subtick_positions`).
- */
-export const EXACT_SUBTICK_POSITIONS: boolean = DEFAULT_INSERTER_DISPATCH !== "configured-order";
 
 /**
  * The windows of a clock whose period is p/q ticks (`subtickClockForPeriod`), in whole 1/q ticks: the position of
@@ -252,7 +244,7 @@ class ClockedEnableControl implements EnableControl, Resettable {
         start_latency_ticks?: number,
         /** A clock of the game that keeps its count when a later step of the run starts (see `reset`) */
         runs_through_steps?: boolean,
-        /** Whether a p/q-tick period answers in whole 1/q ticks (`SubtickPositions`); `EXACT_SUBTICK_POSITIONS` when unset */
+        /** Whether a p/q-tick period answers in whole 1/q ticks (`SubtickPositions`, the default) or works in floats */
         exact_subtick_positions?: boolean,
     }): ClockedEnableControl {
         return new ClockedEnableControl(
@@ -263,7 +255,7 @@ class ClockedEnableControl implements EnableControl, Resettable {
             args.decider_build_order,
             args.start_latency_ticks ?? 0,
             args.runs_through_steps ?? false,
-            args.exact_subtick_positions ?? EXACT_SUBTICK_POSITIONS,
+            args.exact_subtick_positions ?? true,
         );
     }
     private offset = 0;
@@ -279,7 +271,7 @@ class ClockedEnableControl implements EnableControl, Resettable {
         public readonly decider_build_order?: number,
         public readonly start_latency_ticks: number = 0,
         public readonly runs_through_steps: boolean = false,
-        public readonly exact_subtick_positions: boolean = EXACT_SUBTICK_POSITIONS,
+        public readonly exact_subtick_positions: boolean = true,
     ) {
         this.windows = new ClockWindows(periodDuration.ticks, enabledRanges, exact_subtick_positions);
     }
@@ -299,7 +291,7 @@ class ClockedEnableControl implements EnableControl, Resettable {
 
     /**
      * Starts the clock's count again from this tick. A clock of the game that runs through the steps of a run
-     * (`runs_through_steps`, under the new dispatch) keeps its count when a later step starts, as nothing restarts it in
+     * (`runs_through_steps`) keeps its count when a later step starts, as nothing restarts it in
      * the game; every other clock, the planning schedules included, starts again with that step. Where the reset puts
      * the clock on the build (`starts_clock`), its first `start_latency_ticks` stay dark: a clock of the game counts from
      * 1 at its start and a window decider is open for the values of its window only, so no window from before the start

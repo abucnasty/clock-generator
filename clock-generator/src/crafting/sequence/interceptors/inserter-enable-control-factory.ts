@@ -3,7 +3,7 @@ import { Entity, EntityId, handSizeFor, Inserter, Machine, MiningDrill, miningDr
 import { EntityTransferCountMap, outputPathOf } from "../cycle/swing-counts";
 import { targetInsertersOf, targetMachinesOf } from "../cycle/target-ends";
 import { resultWindowRanges, takesResultOf } from "../../result-windows";
-import { AlwaysEnabledControl, EXACT_SUBTICK_POSITIONS, EnableControl } from "../../../simulation/controls/enable-control";
+import { AlwaysEnabledControl, EnableControl } from "../../../simulation/controls/enable-control";
 import { ResettableRegistry } from "../../../simulation/controls/resettable-registry";
 import { TickProvider } from "../../../simulation/current-tick-provider";
 import { assertIsInserterState, assertIsMachineState, EntityState, InserterState, MachineState, ReadableEntityStateRegistry } from "../../../state";
@@ -18,8 +18,8 @@ import { Logger } from "../../../common/logger";
 import { ContainerStorage } from "../../../simulation/components/container-storage";
 
 /**
- * The ticks of the game a clock of the game of this period counts where it runs on through the steps of a run (under
- * the new dispatch, where they are given), or undefined where it does not: a clock of a whole-tick period runs through.
+ * The ticks of the game a clock of the game of this period counts where it runs on through the steps of a run (where
+ * they are given), or undefined where it does not: a clock of a whole-tick period runs through.
  * A warm-up of whole periods ends where a period of such a clock starts, so the one period recorded after it starts
  * there too. A clock of p/q ticks would be a fraction of a tick into a period after a warm-up of whole periods (10
  * periods of 12672/23 ticks run 5510 ticks), and a one-period judgement assumes a period's start: it starts again with
@@ -46,16 +46,16 @@ export class EnableControlFactory {
         /** The clocks of the inserters that only fill a fuel slot or take a by-product away, which are not part of the plan */
         private readonly inserter_clocks: ReadonlyMap<string, InserterClock> = new Map(),
         /**
-         * The ticks the clocks of the game count, where they run through the steps of a run (under the new dispatch): they
+         * The ticks the clocks of the game count, where they run through the steps of a run: they
          * then keep their count when a later step starts. Without it they count the run's ticks and start again with each step.
          * Only a clock of a whole-tick period runs through, unless `counter_runs_through` (`runThroughTicks`).
          */
         private readonly game_tick_provider?: TickProvider,
         /**
          * Whether the clocks it makes of a p/q-tick period answer in whole 1/q ticks (enable-control.ts `SubtickPositions`):
-         * under the new dispatch, as the run's context has it
+         * true unless a test asks for floats
          */
-        private readonly exact_subtick_positions: boolean = EXACT_SUBTICK_POSITIONS,
+        private readonly exact_subtick_positions: boolean = true,
         /** Whether a clock of a p/q-tick period runs through as well (`runThroughTicks`), given a game tick provider */
         private readonly counter_runs_through: boolean = false,
     ) {

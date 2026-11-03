@@ -58,8 +58,8 @@
 # stores a base meant for later selective runs, e.g. after an engine merge); recording makes a full generation about 1.5
 # times as long in CPU time.
 #
-# The key also holds the environment variables that change what the engine generates (key.py ENV_KEYED: CLOCK_NEW_DISPATCH), by
-# name and value, "unset" apart from any value: a run with CLOCK_NEW_DISPATCH=1 has a key of its own, is stored and reused like any
+# The key also holds the environment variables that change what the engine generates (key.py ENV_KEYED, none today), by
+# name and value, "unset" apart from any value: a run under such a setting has a key of its own, is stored and reused like any
 # other, and never carries jobs from an entry made under another setting. With none set the key is what it always was. Every
 # command that runs or stores refuses, naming the variable, when the environment holds a CLOCK_* variable that key.py has on no list.
 #

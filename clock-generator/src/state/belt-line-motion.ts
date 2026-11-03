@@ -29,7 +29,7 @@ export class BeltLineMotion {
         this.speed = belt_speed / BeltSpeed.TRANSPORT_BELT * 8;
     }
 
-    /** From now on the motion is kept (the new dispatch: a belt-fed hand sleeps only on still lines) */
+    /** From now on the motion is kept (a belt-fed hand sleeps only on still lines) */
     public track(): void {
         this.tracked = true;
     }

@@ -39,7 +39,7 @@ function sinkTakesNothing(sink: EntityState): boolean {
  *
  * The rule for a waiting inserter names the recorded state of every waiting sample but 188 of 328,042.
  *
- * Under the new dispatch `listing` says where its update list has the inserter after the tick (absent under the old one).
+ * `listing` says where the update list has the inserter after the tick (absent where it is not known).
  */
 export function factorioInserterState(state: InserterState, sink: EntityState, listing?: InserterListing): FactorioInserterState {
     if (!state.enabled) {
@@ -62,7 +62,7 @@ export function factorioInserterState(state: InserterState, sink: EntityState, l
 }
 
 /**
- * Where the new dispatch has an inserter (simulation/inserter-scheduling.ts): on the update list, out of it asleep on
+ * Where the update list has an inserter (simulation/inserter-scheduling.ts): on the update list, out of it asleep on
  * the list of the machine it takes from, or out of it otherwise (asleep on another list, or switched off)
  */
 export type InserterListing = "update-list" | "asleep-for-items" | "elsewhere";
