@@ -1,5 +1,7 @@
 import { Duration, OpenRange } from "../../data-types";
 import { TickProvider } from "../current-tick-provider";
+import { DEFAULT_INSERTER_DISPATCH } from "../dispatch";
+import { subtickClockForPeriod, wholeBounds } from "../../common/subtick-period";
 import { Resettable } from "./resettable";
 
 export interface EnableControl {
@@ -80,6 +82,56 @@ export function clockPosition(tick: number, period: number): number {
 }
 
 /**
+ * Whether a clock of a p/q-tick period answers in whole 1/q ticks (`SubtickPositions`): under the new dispatch
+ * (CLOCK_NEW_DISPATCH), read from the environment once like the dispatch's own default.
+ */
+export const EXACT_SUBTICK_POSITIONS: boolean = DEFAULT_INSERTER_DISPATCH !== "configured-order";
+
+/**
+ * The windows of a clock whose period is p/q ticks (`subtickClockForPeriod`), in whole 1/q ticks: the position of
+ * tick t is (t * q) mod p, an integer, and every window is the whole values inside it (`wholeBounds`), which is what
+ * the deciders of the exported subtick clock are open for. Worked out in floats (`clockPosition`), a window one tick
+ * long at a fractional position after the circuit latency's wrap (640/3 ticks: [212, 212] moved to [2/3, 2/3]) is met
+ * in the first period and missed from the second on, as t % period drifts away from the window's bound.
+ */
+class SubtickPositions {
+    private readonly starts: number[] = [];
+    private readonly ends: number[] = [];
+
+    constructor(private readonly period_ticks: number, private readonly scale: number, starts: readonly number[], ends: readonly number[]) {
+        for (let i = 0; i < starts.length; i++) {
+            const bounds = wholeBounds(starts[i] * scale, ends[i] * scale);
+            if (bounds === null) {
+                continue;
+            }
+            // inward rounding keeps the merged windows apart and in order; two that now touch answer as one
+            this.starts.push(bounds[0]);
+            this.ends.push(bounds[1]);
+        }
+    }
+
+    /** Whether a whole tick from 0 on is in a window */
+    public ask(tick: number): boolean {
+        const position = (tick * this.scale) % this.period_ticks;
+        const starts = this.starts;
+        const ends = this.ends;
+        let low = 0;
+        let high = starts.length - 1;
+        while (low <= high) {
+            const mid = (low + high) >> 1;
+            if (position < starts[mid]) {
+                high = mid - 1;
+            } else if (position > ends[mid]) {
+                low = mid + 1;
+            } else {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+/**
  * The merged windows of a clock period. An ask is answered for the whole run of ticks that answer alike (a window, or
  * the gap to the next one), so the clock sleeps between boundaries instead of being worked out every tick, the way the
  * game sleeps an inserter until something wakes it. One binary search pays for the whole run; the answers match
@@ -95,8 +147,10 @@ class ClockWindows {
     private run_end = 0;
     private readonly asked = new LastTwoTicks();
     private readonly answerAt = (tick: number) => this.inRange(clockPosition(tick, this.period));
+    /** A p/q-tick period's windows in whole 1/q ticks, when the clock answers exactly; null to work in floats */
+    private readonly subtick: SubtickPositions | null = null;
 
-    constructor(private readonly period: number, ranges: ReadonlyArray<OpenRange>) {
+    constructor(private readonly period: number, ranges: ReadonlyArray<OpenRange>, exact_subtick_positions: boolean = false) {
         const sorted = [...ranges].sort((a, b) => a.start_inclusive - b.start_inclusive);
         for (const range of sorted) {
             if (this.ends.length > 0 && range.start_inclusive <= this.ends[this.ends.length - 1]) {
@@ -107,6 +161,10 @@ class ClockWindows {
             }
         }
         this.whole_ticks = Number.isInteger(period) && period > 0;
+        const subtick = exact_subtick_positions ? subtickClockForPeriod(period) : null;
+        if (subtick !== null) {
+            this.subtick = new SubtickPositions(subtick.period_ticks, subtick.scale, this.starts, this.ends);
+        }
     }
 
     public inRange(position: number): boolean {
@@ -130,6 +188,9 @@ class ClockWindows {
     public ask(tick: number): boolean {
         if (tick >= this.run_start && tick < this.run_end) {
             return this.run_answer;
+        }
+        if (this.subtick !== null && Number.isInteger(tick) && tick >= 0) {
+            return this.subtick.ask(tick);
         }
         if (!this.whole_ticks || !Number.isInteger(tick) || tick < 0) {
             // a fractional period or an odd tick: worked out as the game's integer clock would snap it
@@ -188,6 +249,8 @@ class ClockedEnableControl implements EnableControl, Resettable {
         decider_build_order?: number,
         /** Ticks of circuit latency the ranges were moved by, which the clock's start leaves dark (see `reset`) */
         start_latency_ticks?: number,
+        /** Whether a p/q-tick period answers in whole 1/q ticks (`SubtickPositions`); `EXACT_SUBTICK_POSITIONS` when unset */
+        exact_subtick_positions?: boolean,
     }): ClockedEnableControl {
         return new ClockedEnableControl(
             args.periodDuration,
@@ -196,6 +259,7 @@ class ClockedEnableControl implements EnableControl, Resettable {
             args.is_game_clock ?? false,
             args.decider_build_order,
             args.start_latency_ticks ?? 0,
+            args.exact_subtick_positions ?? EXACT_SUBTICK_POSITIONS,
         );
     }
     private offset = 0;
@@ -210,8 +274,9 @@ class ClockedEnableControl implements EnableControl, Resettable {
         public readonly is_game_clock: boolean = false,
         public readonly decider_build_order?: number,
         public readonly start_latency_ticks: number = 0,
+        public readonly exact_subtick_positions: boolean = EXACT_SUBTICK_POSITIONS,
     ) {
-        this.windows = new ClockWindows(periodDuration.ticks, enabledRanges);
+        this.windows = new ClockWindows(periodDuration.ticks, enabledRanges, exact_subtick_positions);
     }
 
     public isEnabled(): boolean {
