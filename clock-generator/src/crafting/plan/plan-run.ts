@@ -132,12 +132,16 @@ export interface FuelConsumptionView {
 
 /** What the build does when only the exported clock windows drive it, from the unshifted clock start */
 export interface ClockOnlyRun {
+    /** The unshifted first check's complete physical counter measurement, before long-run judgment. */
+    observation_span?: SimulationStabilityCheck["observation_span"];
     transfer_history: SerializableTransferHistory;
     state_transition_history: CompactStateTransitionHistory;
 }
 
 
 export interface SimulationStabilityCheck {
+    /** Complete physical counter span behind a fractional first-check mean; absent on ordinary one-period runs. */
+    observation_span?: { ticks: number; periods: number; output_items: number };
     /** The run moved its expected output, within a hand of tolerance (and the clock-only check held, when one ran) */
     holds: boolean;
     /** Total items transferred by output inserters during the simulation period */
@@ -435,6 +439,8 @@ export interface RunOptions {
      * the output is judged over one period, so it only means something at 1.
      */
     simulate_periods?: number;
+    /** Exact integer length of a physical counter observation, avoiding fractional-period multiplication noise. */
+    observation_ticks?: number;
     /** Record the fuel each burner machine holds over the run (default false) */
     fuel_levels?: boolean;
     /**
@@ -1045,7 +1051,7 @@ function simulate(
     resettable_registry.resetAll(ticks_before_run === 0);
 
     const simulate_periods = options.simulate_periods ?? 1;
-    const recorded_duration = Duration.ofTicks(duration.ticks * simulate_periods);
+    const recorded_duration = Duration.ofTicks(options.observation_ticks ?? duration.ticks * simulate_periods);
     const fuel_level_recorder = options.fuel_levels
         ? new FuelLevelRecorder(simulation_context.machines.map(it => it.machine_state))
         : undefined;
@@ -1708,7 +1714,9 @@ function settledFuelClocks(
 
 /** The clock-only run of a trial, as the result carries it */
 export function clockOnlyRunOf(run: TrialRun): ClockOnlyRun {
+    const observation_span = run.stability_check.observation_span;
     return {
+        ...(observation_span !== undefined && { observation_span }),
         transfer_history: run.serializable_transfer_history,
         state_transition_history: run.serializable_state_transition_history,
     };

@@ -1,8 +1,26 @@
+import { SubtickPeriod, subtickClockForPeriod } from "../../common/subtick-period";
+import { DEFAULT_INSERTER_DISPATCH } from "../../simulation/dispatch";
+
 /**
  * The most ticks one simulated run goes on for. A guard, not a limit on test time: a config that passes validation
  * but deadlocks something in the simulator, or that it cannot simulate at all, must not keep it running for ever.
  */
 export const MAX_SIMULATION_TICKS = 500_000;
+
+/**
+ * Whether the first checks of a clock of a p/q-tick period run its whole exported counter (p ticks, q periods) and
+ * judge its total, and its start phases range over the counter: under the new dispatch (simulation/dispatch.ts) only.
+ * Read once, from the environment, as the dispatch is.
+ */
+export const WHOLE_COUNTER_CHECKS: boolean = DEFAULT_INSERTER_DISPATCH !== "configured-order";
+
+/**
+ * The whole counter a clock of this period is checked over (`WHOLE_COUNTER_CHECKS`): its p/q where the period is
+ * fractional. Null for a whole-tick period and with the checks off.
+ */
+export function wholeCounterOf(period: number): SubtickPeriod | null {
+    return WHOLE_COUNTER_CHECKS ? subtickClockForPeriod(period) : null;
+}
 
 /** Arithmetic only: no inventories, controls, registry or other live simulation state. */
 export interface WholeSwingArithmeticSnapshot {
