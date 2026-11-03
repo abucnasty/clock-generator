@@ -10,7 +10,7 @@ import { Logger, defaultLogger } from "../common/logger";
 import { StockDetail, StockRecording } from "./machine-stock";
 import { WakeUps, wakeUpsOfStock } from "./wake-ups";
 import { InserterCounters, inserterEnds, wakeUpsAndCountersOfStock } from "./inserter-counters";
-import { judgeCounterSpan, judgeLongRun, judgeProvenCycle, LONG_RUN_SETTLE_SHARE, longRunPeriods, wholeOutputRepeats } from "./long-run";
+import { judgeCounterSpan, judgeLongRun, judgeProvenCycle, LONG_RUN_MAX_TICKS, LONG_RUN_SETTLE_SHARE, longRunPeriods, wholeOutputRepeats } from "./long-run";
 import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, ExcessLoss, LATE_AFTER_PERIODS, LossOutcome, lossLimitOf, MAX_RECOVERY_PERIODS, reportOf, verdictOf } from "./backpressure-loss";
 import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForPeriod, withBeltPickupSlack } from "./clock";
 import type { SubtickPeriod } from "../common/subtick-period";
@@ -179,6 +179,12 @@ export interface AsBuiltStabilityCheck {
     /** Clock periods in the repeating cycle the proven long run was judged on */
     long_run_cycle_periods?: number;
     /**
+     * Under the strict target amount, on a proven long run: what the build moved short of its target before the proven
+     * repeat starts (`orbit_start_period`, periods of the long run). A loss of the start-up, not of the rate: the
+     * amount is judged on the repeat alone. Absent where nothing was short before it.
+     */
+    start_up_shortfall?: StartUpShortfall;
+    /**
      * Every clock start phase of the whole period was checked, each resolved by proof: its own repeating cycle, or
      * a state met on another phase's proven orbit (see exhaustiveStartPhases). Absent when the check sampled its
      * start phases; false when some phase hit the cap unresolved and was judged on its last bin as a sample.
@@ -214,6 +220,12 @@ export interface AsBuiltStabilityCheck {
     results_taken?: ResultsTaken[];
 }
 
+
+/** Items a proven long run moved short of its target before its repeat starts (`AsBuiltStabilityCheck.start_up_shortfall`) */
+export interface StartUpShortfall {
+    orbit_start_period: number;
+    items: number;
+}
 
 /** A trial logs nothing but errors: it is one of many runs the generator makes of a clock */
 const quietLogger = (logger: Logger): Logger => ({ log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } });
@@ -436,6 +448,8 @@ function longRunOfFreeRunningBuild(
     keeps_up: boolean;
     /** Under the strict target amount (`STRICT_TARGET_AMOUNT`): the judged span's amount, which `keeps_up` requires; else absent */
     target_production: TargetProduction | undefined;
+    /** Under the strict target amount, on a proven run: the items short before its repeat starts, where any were */
+    start_up_shortfall: StartUpShortfall | undefined;
     output_items_per_period: number;
     /** Items the output inserters dropped in each judged bin */ judged: number[];
     off_bins: number;
@@ -468,10 +482,12 @@ function longRunOfFreeRunningBuild(
         return null;
     }
     // only its stock is read, which names the state of every inserter itself
-    const build_run = clockBuildRun(config, decider_windows, period, logger, { simulate_periods: periods, machine_stock: true, factorio_states: false, detect_repeat: true, ...start, stock_detail, record_histories: false });
-    const run = trialRunOf(build_run);
-    const stock = run.machine_stock;
-    if (!stock) {
+    const runOf = (simulate_periods: number) => {
+        const build_run = clockBuildRun(config, decider_windows, period, logger, { simulate_periods, machine_stock: true, factorio_states: false, detect_repeat: true, ...start, stock_detail, record_histories: false });
+        return { build_run, run: trialRunOf(build_run) };
+    };
+    let { build_run, run } = runOf(periods);
+    if (!run.machine_stock) {
         return null;
     }
     // what the output inserters drop, counted as the recordings of a build are: by whole periods of the clock that
@@ -484,18 +500,40 @@ function longRunOfFreeRunningBuild(
         .flatMap(machine => targetInsertersOf(machine, target, registry).map(inserter => inserter.entity_id.id)));
     const output_inserters = registry.getAll().filter(Entity.isInserter).filter(inserter => output_ids.has(inserter.entity_id.id));
     const hand = Math.max(1, ...output_inserters.map(it => it.metadata.stack_size));
-    const held = stock.inserters.filter(it => output_ids.has(it.inserter_id)).map(it => it.held);
-    // the first third of the run carries its start-up, which a loop can take a dozen periods to work out of, as a
-    // build does in game before a recording is settled; a build is judged by what follows: the span as a whole has
-    // to come out within a hand, and no bin further off than a hand. A run that repeated is judged on its cycle.
-    const verdict = run.state_repeat !== undefined
-        ? judgeProvenCycle(held, stock.ticks, run.state_repeat, expected_output_items, hand)
-        : judgeLongRun(held, stock.ticks, period, repeat, expected_output_items, hand);
+    const judged = (of: TrialRun) => {
+        const recorded = of.machine_stock!;
+        const held = recorded.inserters.filter(it => output_ids.has(it.inserter_id)).map(it => it.held);
+        // the first third of the run carries its start-up, which a loop can take a dozen periods to work out of, as a
+        // build does in game before a recording is settled; a build is judged by what follows: the span as a whole has
+        // to come out within a hand, and no bin further off than a hand. A run that repeated is judged on its cycle.
+        const verdict = of.state_repeat !== undefined
+            ? judgeProvenCycle(held, recorded.ticks, of.state_repeat, expected_output_items, hand)
+            : judgeLongRun(held, recorded.ticks, period, repeat, expected_output_items, hand);
+        // under the strict amount the judged span must move its target in all: a proven cycle as it is, the settled bins
+        // of a sample over whole repeats of its output where it repeats in them (`wholeOutputRepeats`)
+        const amount = !STRICT_TARGET_AMOUNT ? undefined : of.state_repeat !== undefined ? assessTargetProduction(verdict, true)
+            : sampledAmountOf(verdict);
+        return { held, verdict, amount };
+    };
+    let { held, verdict, amount: target_production } = judged(run);
+    // Under the strict amount a sample short by a hand or less is run on, up to the cap the long run is lengthened to
+    // (LONG_RUN_MAX_TICKS), for its repeat: where the repeat is proven the amount is judged on it alone, so a start-up
+    // loss inside the sampled span is not charged as rate; where it is not, the sample stands as it was judged.
+    if (target_production !== undefined && !target_production.valid && run.state_repeat === undefined && target_production.shortfall <= hand) {
+        const longest = Math.min(Math.floor(LONG_RUN_MAX_TICKS / period), Math.floor((MAX_SIMULATION_TICKS - 1) / period));
+        if (longest > periods) {
+            const longer = runOf(longest);
+            logger.log(`Free running build short by ${target_production.shortfall} (a hand or less) over ${periods} periods: run on for ${longest}, `
+                + (longer.run.state_repeat !== undefined ? "its repeat is proven" : "no repeat proven, the sample stands"));
+            if (longer.run.state_repeat !== undefined && longer.run.machine_stock) {
+                ({ build_run, run } = longer);
+                ({ held, verdict, amount: target_production } = judged(run));
+            }
+        }
+    }
+    const stock = run.machine_stock!;
     const proven = run.state_repeat !== undefined;
-    // under the strict amount the judged span must move its target in all: a proven cycle as it is, the settled bins of
-    // a sample over whole repeats of its output where it repeats in them (`wholeOutputRepeats`)
-    const target_production = !STRICT_TARGET_AMOUNT ? undefined : proven ? assessTargetProduction(verdict, true)
-        : sampledAmountOf(verdict);
+    const start_up_shortfall = STRICT_TARGET_AMOUNT && proven ? startUpShortfallOf(held, verdict.first_judged_tick, period, expected_output_items) : undefined;
     // the exports are judged in the bins of the output: a belt with a consumption rate has to receive it in every bin
     const exported = exportedItemsOf(registry, output_ids);
     const export_shortfalls = exportShortfallsOfRun(exported, new Map(stock.inserters.map(it => [it.inserter_id, it.held])),
@@ -514,6 +552,7 @@ function longRunOfFreeRunningBuild(
     return {
         keeps_up: verdict.keeps_up && (target_production?.valid ?? true) && export_shortfalls.length === 0 && results_kept_up,
         target_production,
+        start_up_shortfall,
         results_taken,
         output_items_per_period: verdict.output_items_per_period,
         judged: verdict.judged,
@@ -530,6 +569,22 @@ function longRunOfFreeRunningBuild(
         full_output_chests: run.stability_check.full_output_chests,
         export_shortfalls: export_shortfalls.length > 0 ? export_shortfalls : undefined,
     };
+}
+
+/**
+ * What a proven run moved short of its target before its repeat starts at `orbit_tick`: the items its output inserters
+ * dropped against what the periods before it expect. Undefined where nothing was short.
+ */
+function startUpShortfallOf(held: readonly (readonly number[])[], orbit_tick: number, period: number, expected_per_period: number): StartUpShortfall | undefined {
+    let dropped = 0;
+    for (const series of held) {
+        for (let t = 1; t < orbit_tick; t++) {
+            if (series[t] < series[t - 1]) dropped += series[t - 1] - series[t];
+        }
+    }
+    const orbit_start_period = Math.round(orbit_tick / period);
+    const items = expected_per_period * orbit_start_period - dropped;
+    return items > 0 ? { orbit_start_period, items } : undefined;
 }
 
 /** The amount of a sampled long run, over the whole repeats of its output in its judged bins (`wholeOutputRepeats`) */
@@ -1137,6 +1192,9 @@ export function runAsBuiltCheck(
                 }
                 check.long_run_cycle_periods = passed.run.check.long_run_cycle_periods;
             }
+            if (passed.run.check.start_up_shortfall !== undefined) {
+                check.start_up_shortfall = passed.run.check.start_up_shortfall;
+            }
         } else {
             // no long run when none is asked for (a quick trial of a search)
             const long_run = long_run_ticks > 0 ? longRunOfFreeRunningBuild(config, decider_windows, period, result.stability_check.expected_output_items, logger, long_run_ticks, {}, stock_detail) : null;
@@ -1158,6 +1216,9 @@ export function runAsBuiltCheck(
                 if (long_run.cycle_periods !== null) {
                     check.long_run_cycle_periods = long_run.cycle_periods;
                 }
+            }
+            if (long_run?.start_up_shortfall !== undefined) {
+                check.start_up_shortfall = long_run.start_up_shortfall;
             }
             if (long_run && !long_run.keeps_up) {
                 check.holds = false;
@@ -1251,6 +1312,7 @@ function clearJudgedClock(check: AsBuiltStabilityCheck): void {
     delete check.clock_tick_at_first_judged;
     delete check.long_run_proven;
     delete check.long_run_cycle_periods;
+    delete check.start_up_shortfall;
 }
 
 /**

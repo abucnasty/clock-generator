@@ -45,8 +45,11 @@ export function wholeOutputRepeats(judged: readonly number[]): { bins: number; t
 
 /** The first 1/n of the long run carries its start-up and is not judged */
 export const LONG_RUN_SETTLE_SHARE = 3;
-/** The long run is lengthened up to this many ticks so the judged part holds one whole repeat of a fractional period */
-const LONG_RUN_MAX_TICKS = 108_000;
+/**
+ * The long run is lengthened up to this many ticks: so the judged part holds one whole repeat of a fractional period, and,
+ * under the strict target amount, so a sample short by a hand or less can prove its repeat (trial.ts)
+ */
+export const LONG_RUN_MAX_TICKS = 108_000;
 
 interface LongRunVerdict {
     keeps_up: boolean;

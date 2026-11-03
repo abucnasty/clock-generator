@@ -227,3 +227,63 @@ test("whole output repeats of judged bins", () => {
     expect(wholeOutputRepeats([16, 16, 15, 16, 16])).toEqual({ bins: 5, total: 79 });
     expect(wholeOutputRepeats([16])).toEqual({ bins: 1, total: 16 });
 });
+
+/**
+ * Long runs replaced in turn: the n-th run with a recording takes the n-th of `runs`, as long as the run asked for. `dip`
+ * puts 15 of 16 in that period of the run (a loss of the start-up); `repeat` proves the repeat from that period on.
+ */
+function recordedRuns(runs: { dip?: number; short_every?: number; repeat?: number }[]) {
+    const original = planning.trialRunOf;
+    let next = 0;
+    const lengths: number[] = [];
+    vi.spyOn(planning, "trialRunOf").mockImplementation(run => {
+        const result = original(run);
+        if (run.machine_stock === undefined) return result;
+        const spec = runs[Math.min(next++, runs.length - 1)];
+        const periods = Math.floor(result.machine_stock!.ticks / fixture.period);
+        lengths.push(periods);
+        const held = new Array<number>(fixture.period * periods).fill(0);
+        for (let period = 0; period < periods; period++) {
+            const short = period === spec.dip || (spec.short_every !== undefined && period % spec.short_every === spec.short_every - 1);
+            const tick = period * fixture.period + 1;
+            held[tick] = short ? 15 : 16;
+            held[tick + 1] = held[tick];
+        }
+        return { ...result, state_repeat: spec.repeat === undefined ? undefined
+                : { bin_ticks: fixture.period, periods_per_bin: 1, from_bin: spec.repeat, cycle_bins: periods - spec.repeat },
+            machine_stock: { ticks: held.length, detail: "hands", machines: [], inserters: [{
+                inserter_id: fixture.output_inserter, held, held_item: [], status: [], factorio_state: [],
+            }] } };
+    });
+    return lengths;
+}
+
+// Settled means a proven repeat. A sample short by a hand or less is run on to the long run's lengthening cap: a proven
+// repeat is judged alone, the loss before it kept as a start-up shortfall; without one the sample stands.
+test("a sample short by a hand is run on and judged on the repeat it proves", async () => {
+    const { config, windows } = await preparedFixture();
+    const lengths = recordedRuns([{ dip: 50 }, { dip: 50, repeat: 60 }]);
+    const { check } = runAsBuiltCheck(config, windows, fixture.period, quiet, 1, undefined, 36_000, undefined, false, "hands");
+    expect(lengths.slice(0, 2)).toEqual([120, 1125]);
+    expect(check.holds).toBe(true);
+    expect(check.target_production).toBeUndefined();
+    expect(check.start_up_shortfall).toEqual({ orbit_start_period: 60, items: 1 });
+});
+
+test("a sample short by a hand that proves no repeat in the longer run stands as judged", async () => {
+    const { config, windows } = await preparedFixture();
+    const lengths = recordedRuns([{ dip: 50 }, { dip: 50 }]);
+    const { check } = runAsBuiltCheck(config, windows, fixture.period, quiet, 1, undefined, 36_000, undefined, false, "hands");
+    expect(lengths).toEqual([120, 1125]);
+    expect(check).toMatchObject({ holds: false, actual_output_items: 1279 / 80,
+        target_production: { valid: false, shortfall: 1, evidence: "sample" } });
+    expect(check.start_up_shortfall).toBeUndefined();
+});
+
+test("a sample short by more than a hand is not run on", async () => {
+    const { config, windows } = await preparedFixture();
+    const lengths = recordedRuns([{ short_every: 4 }]);
+    const { check } = runAsBuiltCheck(config, windows, fixture.period, quiet, 1, undefined, 36_000, undefined, false, "hands");
+    expect(lengths).toEqual([120]);
+    expect(check).toMatchObject({ holds: false, target_production: { valid: false, shortfall: 20, evidence: "sample" } });
+});
