@@ -186,7 +186,7 @@ export class InserterScheduling {
         // notification semantics exist; pure clock lookahead does not perform an extra latched read.
         if (!inserter.control.looks_ahead) return;
         const reason = inserter.hand.sleepReason();
-        if (reason === null) {
+        if (reason === null || this.refusedOnMovingLines(member, reason)) {
             member.leaving = false;
             return;
         }
@@ -222,6 +222,23 @@ export class InserterScheduling {
             this.waits.clearEntry(member.wait);
             this.scheduler.deactivateNode(member.node, reason);
         }
+    }
+
+    /**
+     * An empty hand from a belt that its machine refuses: in the game it asks to sleep in each update at the pickup and
+     * goes to sleep only while every belt line it takes from is still (`BeltHandPickup.linesStill`); while one moves it
+     * stays on the update list. A take that sets a line moving wakes nobody on that line's list (2.1.24: 2 of 2 such takes
+     * while both belt-fed inserters slept on it), so no line wakes it here. That is the hand shown waiting for source
+     * items: its machine takes something, not what the hand would bring (an ingredient at its insertion limit). A machine
+     * that takes nothing at all (its output at the block) shows it waiting for space, and the game puts it to sleep from
+     * the drop without reading the lines (sample metallurgic science, inserter 7); that, a part hand and a pickup where
+     * the motion is not known go on as before.
+     */
+    private refusedOnMovingLines(member: Member, reason: string): boolean {
+        if (reason !== "destination-refused" || member.machine_source !== undefined) return false;
+        const inserter = member.inserter;
+        return inserter.inserter_state.held_item === null && inserter.hand.drop.takesNothing?.() === false
+            && inserter.hand.pickup.linesStill?.() === false;
     }
 
     /** Whether a sleep with this reason leaves the list (the reasons completeUpdate deactivates on) */

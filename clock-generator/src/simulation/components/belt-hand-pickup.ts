@@ -87,6 +87,22 @@ export class BeltHandPickup implements HandPickupPort {
     public useNotificationScheduling(): void {
         this.notification_scheduling = true;
         this.scratch.belt_grab_decided = true;
+        // the lanes' motion decides whether its hand may sleep (`linesStill`): only measured at a straight side pickup
+        if (this.layout === "side-straight") for (const lane of this.lanes) lane.trackMotion();
+    }
+
+    /**
+     * Whether every lane at the pickup is still now (`BeltLineMotion`): in the game a hand from a belt with nothing it may
+     * take asks to sleep in every update at the pickup, and goes to sleep only while every belt line it takes from is still
+     * (2.1.24, sample metallurgic science: 56 sleeps of 56 with both lines still, 1,216 refusals with one moving). Undefined
+     * where it was not measured (a pickup other than at the side of a straight belt), and before the new dispatch.
+     */
+    public linesStill(): boolean | undefined {
+        if (!this.notification_scheduling || this.layout !== "side-straight") return undefined;
+        const tick = this.tick_provider!.getCurrentTick();
+        const lanes = this.lanes;
+        for (let index = 0; index < lanes.length; index++) if (lanes[index].movingAt(tick)) return false;
+        return true;
     }
 
     /**

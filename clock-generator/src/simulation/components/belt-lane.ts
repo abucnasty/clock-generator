@@ -1,5 +1,6 @@
 import { ItemName } from "../../data";
 import { BeltSpeed, Lane } from "../../entities/belt";
+import { BeltLineMotion } from "../../state/belt-line-motion";
 import { BeltPickupStock } from "../../state/belt-pickup-stock";
 import { LaneTraffic } from "../../state/lane-traffic";
 
@@ -31,6 +32,8 @@ export class BeltLane {
     private readonly drops = new Map<string, LaneDrop>();
     /** For each inserter that takes from the belt: the stock it can reach on this lane */
     private readonly pickups = new Map<string, LanePickup>();
+    /** Whether the lane is moving, closing the gaps takes leave (`trackMotion`); null where no hand asks */
+    private motion: BeltLineMotion | null = null;
 
     constructor(lane: Lane, private readonly belt_speed: BeltSpeed) {
         this.item = lane.ingredient_name;
@@ -106,7 +109,28 @@ export class BeltLane {
     }
 
     public take(pickup: LanePickup, tick: number, limit: number): number {
-        return pickup.stock.take(tick, limit);
+        const motion = this.motion;
+        if (motion === null) return pickup.stock.take(tick, limit);
+        const stack = pickup.stock.peek(tick)?.count ?? 0;
+        const taken = pickup.stock.take(tick, limit);
+        // a take that empties the stack leaves a gap the line closes
+        if (taken > 0 && taken === stack) motion.taken(tick, 1);
+        return taken;
+    }
+
+    /** From now on the lane keeps whether it is moving (the new dispatch: a belt-fed hand sleeps only on still lines) */
+    public trackMotion(): void {
+        this.motion ??= new BeltLineMotion(this.belt_speed);
+    }
+
+    /** Whether the lane is moving in `tick` (`BeltLineMotion`); false where its motion is not kept */
+    public movingAt(tick: number): boolean {
+        return this.motion?.movingAt(tick) ?? false;
+    }
+
+    /** The key of the lane's motion, empty where it is not kept */
+    public motionKey(tick: number): string {
+        return this.motion?.key(tick) ?? "";
     }
 
     public takenAt(pickup: LanePickup, tick: number): boolean {
