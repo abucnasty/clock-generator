@@ -83,7 +83,8 @@ export function clockPosition(tick: number, period: number): number {
 
 /**
  * Whether a clock of a p/q-tick period answers in whole 1/q ticks (`SubtickPositions`): under the new dispatch
- * (CLOCK_NEW_DISPATCH), read from the environment once like the dispatch's own default.
+ * (CLOCK_NEW_DISPATCH), read from the environment once like the dispatch's own default. The default only: the enable
+ * control factories of a run pass what the run's context has (`exact_subtick_positions`).
  */
 export const EXACT_SUBTICK_POSITIONS: boolean = DEFAULT_INSERTER_DISPATCH !== "configured-order";
 
@@ -249,6 +250,8 @@ class ClockedEnableControl implements EnableControl, Resettable {
         decider_build_order?: number,
         /** Ticks of circuit latency the ranges were moved by, which the clock's start leaves dark (see `reset`) */
         start_latency_ticks?: number,
+        /** A clock of the game that keeps its count when a later step of the run starts (see `reset`) */
+        runs_through_steps?: boolean,
         /** Whether a p/q-tick period answers in whole 1/q ticks (`SubtickPositions`); `EXACT_SUBTICK_POSITIONS` when unset */
         exact_subtick_positions?: boolean,
     }): ClockedEnableControl {
@@ -259,6 +262,7 @@ class ClockedEnableControl implements EnableControl, Resettable {
             args.is_game_clock ?? false,
             args.decider_build_order,
             args.start_latency_ticks ?? 0,
+            args.runs_through_steps ?? false,
             args.exact_subtick_positions ?? EXACT_SUBTICK_POSITIONS,
         );
     }
@@ -274,6 +278,7 @@ class ClockedEnableControl implements EnableControl, Resettable {
         public readonly is_game_clock: boolean = false,
         public readonly decider_build_order?: number,
         public readonly start_latency_ticks: number = 0,
+        public readonly runs_through_steps: boolean = false,
         public readonly exact_subtick_positions: boolean = EXACT_SUBTICK_POSITIONS,
     ) {
         this.windows = new ClockWindows(periodDuration.ticks, enabledRanges, exact_subtick_positions);
@@ -293,14 +298,17 @@ class ClockedEnableControl implements EnableControl, Resettable {
     }
 
     /**
-     * Starts the clock's count again from this tick. Where the reset puts the clock on the build (`starts_clock`), its
-     * first `start_latency_ticks` stay dark: a clock of the game counts from 1 at its start and a window decider is open
-     * for the values of its window only, so no window from before the start has reached an inserter in the ticks the
-     * latency takes, the part of a window that the latency carries over the end of the period included (recorded in
-     * Factorio 2.1.21: docs/simulator.md, "Starting on supplied belts"). The reset that starts a later step of a run
-     * leaves nothing dark, since the clock has run all along.
+     * Starts the clock's count again from this tick. A clock of the game that runs through the steps of a run
+     * (`runs_through_steps`, under the new dispatch) keeps its count when a later step starts, as nothing restarts it in
+     * the game; every other clock, the planning schedules included, starts again with that step. Where the reset puts
+     * the clock on the build (`starts_clock`), its first `start_latency_ticks` stay dark: a clock of the game counts from
+     * 1 at its start and a window decider is open for the values of its window only, so no window from before the start
+     * has reached an inserter in the ticks the latency takes, the part of a window that the latency carries over the end
+     * of the period included (recorded in Factorio 2.1.21: docs/simulator.md, "Starting on supplied belts"). The reset
+     * that starts a later step of a run leaves nothing dark, since the clock has run all along.
      */
     public reset(starts_clock: boolean = false): void {
+        if (this.runs_through_steps && !starts_clock) return;
         this.offset = this.tickProvider.getCurrentTick() * -1;
         this.dark_until = starts_clock ? this.start_latency_ticks : 0;
     }

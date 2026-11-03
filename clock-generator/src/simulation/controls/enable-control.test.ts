@@ -13,6 +13,43 @@ describe("a clock of the game", () => {
         const enabled = Array.from({ length: 10 }, (_, tick) => { tick_provider.setCurrentTick(tick); return clock.isEnabled(); });
         expect(enabled).toEqual([false, false, true, true, true, false, false, false, false, false]);
     });
+
+    it("keeps its count when a recording starts where it runs through the steps of a run (new dispatch)", () => {
+        const tick = TickProvider.mutable(100);
+        const clock = EnableControl.clocked({ periodDuration: Duration.ofTicks(192),
+            enabledRanges: [OpenRange.from(126, 133)], tickProvider: tick, is_game_clock: true, runs_through_steps: true });
+        clock.reset(true);
+        tick.setCurrentTick(100 + 1280);
+        expect(clock.isEnabled()).toBe(true);
+        clock.reset(false);
+        expect(clock.isEnabled()).toBe(true);
+        tick.setCurrentTick(100 + 1280 + 6);
+        expect(clock.isEnabled()).toBe(false);
+        clock.reset(true);
+        expect(clock.isEnabled()).toBe(false);
+    });
+
+    it("starts its count again when a recording starts where it does not run through the steps (configured order)", () => {
+        const tick = TickProvider.mutable(100);
+        const clock = EnableControl.clocked({ periodDuration: Duration.ofTicks(192),
+            enabledRanges: [OpenRange.from(126, 133)], tickProvider: tick, is_game_clock: true });
+        clock.reset(true);
+        tick.setCurrentTick(100 + 1280);
+        expect(clock.isEnabled()).toBe(true);
+        clock.reset(false);
+        expect(clock.isEnabled()).toBe(false);
+    });
+
+    it("restarts a planning schedule for a new step", () => {
+        const tick = TickProvider.mutable(100);
+        const clock = EnableControl.clocked({ periodDuration: Duration.ofTicks(192),
+            enabledRanges: [OpenRange.from(126, 133)], tickProvider: tick });
+        clock.reset(true);
+        tick.setCurrentTick(100 + 1280);
+        expect(clock.isEnabled()).toBe(true);
+        clock.reset(false);
+        expect(clock.isEnabled()).toBe(false);
+    });
 });
 
 describe("a clock of a period of part ticks", () => {
