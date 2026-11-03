@@ -367,8 +367,9 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [],
         warmup_ticks: 3600,
         settle_ticks: 2400,
-        wake_ups_open: "a chest end wakes no one in the simulator, so the inserters that fill the silo count 0 where the game's states give "
-            + "10 a minute each, as their cryogenic plants wake them (to be measured for every container): ",
+        wake_ups_open: "the inserters into the silo agree (4 wake-ups a period each, game and simulator), but the furnace-to-belt "
+            + "output inserters 11 and 12 wake 10 times a period in the game and 0 in a simulator that starts cold: the furnaces' output "
+            + "levels the warm-up leaves decide it, and a simulator started from the recording's first sample equals the game (sim-game-check)",
     },
     // The iron plate build: a big mining drill drops ore into a car taken as a chest, and two furnaces empty it; 80 a
     // second from one copy. The harness puts the ore under the drill; at its research the drill keeps the car full.

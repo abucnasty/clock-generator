@@ -21,6 +21,16 @@
 // it out; a staged start (--staged: the game began with the clock, the simulator runs cold from its first tick) is paired
 // the same way. Totals over inserters are never compared. The tolerances are stamped in every result file ("tolerances").
 //
+// Two starts of the simulator are run side by side. "seeded" starts it from the game's first recorded sample (what the machines
+// hold, how far their crafting and productivity bars are) and is the one that is judged: the game is recorded after a warm-up
+// that the simulator does not run, and what that warm-up leaves in the machines decides which inserters wake. "cold" starts it
+// as the scaffold tests do (machines filled as filling leaves them, a free run before the clock) and is reported as before,
+// not judged. The result file's own fields are the seeded run's; the cold run's are under "cold". The stamp "seed" says what
+// the recording gave and what it could not (inserter hands, fuel, belts, chests, drills). A staged recording, and a clock of
+// a fractional period, have no seeded run: the game began cold with the clock, or the clock cannot be placed on the recording;
+// then the cold run is the judged one. Bins: "unsettled" lists the periods of the game's recording in which its stock still
+// drifts, so that a transient of the game's start is visible next to a verdict.
+//
 // A game side is labelled "true count" where the rule was checked against the game's own wake-ups on that build (TRUE_COUNT
 // below), else "rule on recording". Needs `npx tsc` first. One result file a build and dispatch: <name>.off.json, <name>.on.json.
 const fs = require("fs");
@@ -99,7 +109,15 @@ async function simulate() {
     const config = await configOf(true);
     const clock = JSON.parse(fs.readFileSync(opt("--clock"), "utf8"));
     const staged = flag("--staged");
-    const stock = simulateClockOnly(config, clock.windows, clock.period, Number(opt("--periods")), quiet, staged ? { warmup_periods: 0 } : {});
+    // seeded: the run starts one tick after the game's first sample, with the machines as it recorded them, and the clock moved so that its
+    // tick t is at clock position (t + position + 1), the position of the game's sample t + 1 (main_clock_shift, which the engine takes for a
+    // fractional period too)
+    const seed = opt("--seed") === undefined ? undefined : JSON.parse(fs.readFileSync(opt("--seed"), "utf8"));
+    const offset = Number(opt("--sim-offset") ?? (staged ? STAGED_SIM_OFFSET : SIMULATED_TICK_TO_CLOCK_POSITION));
+    const windows = clock.windows;
+    const shift = seed === undefined ? 0 : (((offset - (seed.position + 1)) % clock.period) + clock.period) % clock.period;
+    const start = seed !== undefined ? { keep_output_buffers: true, warmup_periods: 0, start_stock: seed.start_stock, main_clock_shift: shift } : staged ? { warmup_periods: 0 } : {};
+    const stock = simulateClockOnly(config, windows, clock.period, Number(opt("--periods")), quiet, start);
     const recording = recordingOfStock(stock, config, clock.clock_ticks);
     // the rule on the simulator's own states, read from its stock (a recording of it leaves out what the rule reads of a belt's room and a machine's placed results)
     const { wakeUpsOfStock } = dist("crafting/wake-ups.js");
@@ -107,8 +125,7 @@ async function simulate() {
     const wake_ticks = {};
     wakeUpsOfStock(stock, inserterEnds(config), 0, (inserter_id, tick) => (wake_ticks[inserter_id] ??= []).push(tick), RULE);
     recording.wake_ticks = wake_ticks;
-    const offset = Number(opt("--sim-offset") ?? (staged ? STAGED_SIM_OFFSET : SIMULATED_TICK_TO_CLOCK_POSITION));
-    recording.clock.values = recording.clock.values.map((_, tick) => (tick + offset) % clock.clock_ticks);
+    recording.clock.values = recording.clock.values.map((_, tick) => (tick + (seed === undefined ? offset : seed.position + 1)) % clock.clock_ticks);
     fs.writeFileSync(opt("--out"), JSON.stringify(recording));
 }
 
@@ -122,6 +139,80 @@ function child(mode, extra, env) {
 }
 // "off" keeps the old dispatch and has the stock record what the rule "kept-lists" reads (simulation/dispatch.ts)
 const dispatchEnv = key => ({ CLOCK_NEW_DISPATCH: key === "on" ? "1" : "configured-order,kept-lists" });
+
+// ---- the seeded start: the game's first recorded sample ----
+
+/**
+ * What the recording's first sample gives the simulator to start from, and what it cannot give. The machines' contents (inputs and
+ * outputs by item), crafting bar and productivity bar are read at sample 0. The engine starts every inserter with an empty hand
+ * whatever the recording says (start_stock), so the hands that are not empty at sample 0 are counted and listed, not given. What the
+ * recording does not hold, or the start cannot take, is listed under "not_seeded"; the simulator assumes for it what filling the
+ * machine, a full belt and an infinite chest leave.
+ */
+function seedOf(game, gameMatch, config, clock, staged) {
+    const base = { applied: false, source: "the recording's first sample" };
+    if (staged) return { ...base, reason: "staged start: the game began with the clock on empty machines, which the cold run starts from" };
+    if (game.clock === undefined) return { ...base, reason: "the recording has no clock" };
+    const start_stock = {}, fuel = [], both = [];
+    for (const machine of game.machines) {
+        const id = gameMatch.machines.get(machine.id);
+        if (id === undefined) continue;
+        const items = {};
+        const inputs = Object.keys(machine.samples.inputs), outputs = Object.keys(machine.samples.outputs);
+        for (const item of outputs) items[item] = machine.samples.outputs[item][0];
+        // an item the machine takes and makes is kept apart from its output by the simulator, and the start names it once: the ingredient
+        for (const item of inputs) { if (outputs.includes(item)) both.push(`machine:${id} ${item}`); items[item] = machine.samples.inputs[item][0]; }
+        if (machine.samples.fuel !== undefined && Object.keys(machine.samples.fuel).length > 0) fuel.push(`machine:${id} ${Object.entries(machine.samples.fuel).map(([item, list]) => `${item} ${list[0]}`).join(", ")}`);
+        start_stock[`machine:${id}`] = { items, crafting_progress: machine.samples.crafting_progress[0], bonus_progress: machine.samples.bonus_progress[0] };
+    }
+    const hands = game.inserters.flatMap(it => { const id = gameMatch.inserters.get(it.id); const held = it.samples.held_count[0]; return id !== undefined && held > 0 ? [`inserter:${id} ${held}`] : []; });
+    const drills = (config.drills ?? []).length;
+    const not_seeded = [
+        `inserter hands: the start gives every inserter an empty hand; ${hands.length} of ${game.inserters.length} held something at the first sample${hands.length ? ` (${hands.join(", ")})` : ""}`,
+        ...(fuel.length ? [`fuel slots and the burning fuel item: the start has no way to put fuel in (${fuel.join("; ")})`] : []),
+        ...(both.length ? [`outputs of an item the machine also takes: ${both.join(", ")}`] : []),
+        ...(drills ? [`mining drills: ${drills} in the build, whose mining and productivity bars start as filling leaves them`] : []),
+        "belts (assumed full, as the simulator keeps them), chest contents (the recording has none: infinite, or as filling leaves them), a machine's finished-but-not-placed products (start empty)",
+    ];
+    // a start with something the recording has and the simulator cannot take is run and reported, but not judged: what it loses (a hand's items, the fuel, a drill's bars)
+    // makes a transient of its own, which is not the game's
+    return { ...base, applied: true, complete: hands.length === 0 && fuel.length === 0 && both.length === 0 && drills === 0, position: game.clock.values[0], start_stock, hands_not_empty: hands.length, not_seeded };
+}
+
+/**
+ * The periods of a game's recording and of a seeded run, paired by sample: the run's tick t is the game's sample t + 1. Every whole
+ * period both hold is paired, the first included: the state its first sample gave the run is what is being tested.
+ */
+function pairSeeded(game, sim) {
+    const { clockPeriods } = dist("harness/recording-output.js");
+    const g = clockPeriods(game.clock.values);
+    const s = clockPeriods(sim.clock.values);
+    const gp = [], sp = [];
+    for (const gamePeriod of g) {
+        const simPeriod = s.find(it => it.start + 1 === gamePeriod.start && it.end + 1 === gamePeriod.end);
+        if (simPeriod === undefined) continue;
+        gp.push(gamePeriod); sp.push(simPeriod);
+    }
+    return { game: gp, sim: sp };
+}
+
+/**
+ * The periods of the game's recording in which its stock still drifts: what each machine holds at a period's first sample (the items in
+ * and out of it, by item) is compared with the range it holds at that sample over the last third of the periods compared; a period with
+ * a value outside that range is unsettled. A build that repeats over several periods has its whole cycle in that range, if the last third
+ * is as long as the cycle.
+ */
+function unsettledPeriods(game, gameMatch, periods) {
+    const machines = game.machines.filter(m => gameMatch.machines.has(m.id));
+    const values = period => machines.flatMap(m => [...Object.entries(m.samples.inputs), ...Object.entries(m.samples.outputs)].map(([item, list]) => list[period.start]));
+    const states = periods.map(values);
+    const tail = states.slice(Math.floor(states.length * 2 / 3));
+    if (tail.length === 0) return { periods_compared_by_stock: states.length, drifting_periods: [], settled_from: 0 };
+    const low = states[0].map((_, i) => Math.min(...tail.map(it => it[i]))), high = states[0].map((_, i) => Math.max(...tail.map(it => it[i])));
+    const drifting = [];
+    states.forEach((state, p) => { if (state.some((v, i) => v < low[i] || v > high[i])) drifting.push(p); });
+    return { periods_compared_by_stock: states.length, drifting_periods: drifting, settled_from: drifting.length === 0 ? 0 : drifting[drifting.length - 1] + 1 };
+}
 
 // ---- reading a recording per period ----
 
@@ -430,16 +521,20 @@ async function check() {
         }
         const gamePeriodCount = Math.floor(game.sample_count / clock.clock_ticks);
         const periods = staged ? gamePeriodCount + 1 : Math.ceil(gamePeriodCount * 1.5) + 2;
-        const sims = {};
-        await Promise.all(Object.keys(DISPATCHES).map(async key => {
-            const file = path.join(work, `sim-${key}.json`);
-            await child("simulate", ["--clock", clockFile, "--out", file, "--periods", String(periods), ...(staged ? ["--staged"] : []),
-                ...(opt("--sim-offset") ? ["--sim-offset", opt("--sim-offset")] : [])], dispatchEnv(key));
-            sims[key] = JSON.parse(fs.readFileSync(file, "utf8"));
-        }));
-
         const config = await configOf();
         const gameMatch = matchRecordingToConfig(game, config);
+        const seed = seedOf(game, gameMatch, config, clock, staged);
+        const seedFile = path.join(work, "seed.json");
+        if (seed.applied) fs.writeFileSync(seedFile, JSON.stringify({ position: seed.position, start_stock: seed.start_stock }));
+        // the cold runs, and the seeded ones where the recording gives a seed; each under both dispatches
+        const sims = {}, seededSims = {};
+        await Promise.all(Object.keys(DISPATCHES).flatMap(key => [false, true].filter(seeded => !seeded || seed.applied).map(async seeded => {
+            const file = path.join(work, `sim-${key}${seeded ? "-seeded" : ""}.json`);
+            await child("simulate", ["--clock", clockFile, "--out", file, "--periods", String(seeded ? gamePeriodCount + 2 : periods), ...(staged ? ["--staged"] : []), ...(seeded ? ["--seed", seedFile] : []),
+                ...(opt("--sim-offset") ? ["--sim-offset", opt("--sim-offset")] : [])], dispatchEnv(key));
+            (seeded ? seededSims : sims)[key] = JSON.parse(fs.readFileSync(file, "utf8"));
+        })));
+
         const byWindows = {};
         for (const [entity, ranges] of Object.entries(clock.windows)) {
             if (!entity.startsWith("inserter:") || ranges.length === 0) continue;
@@ -450,7 +545,7 @@ async function check() {
         const label = KNOWN_MISS[hash8] !== undefined ? "known miss (biochamber)" : TRUE_COUNT[hash8] !== undefined ? "true count" : "rule on recording";
         const offsetUsed = Number(opt("--sim-offset") ?? (staged ? STAGED_SIM_OFFSET : DEFAULT_SIM_OFFSET));
         const stamp = {
-            tool: "sim-game-check", format: 2, build: name, game_side: label, game_side_basis: KNOWN_MISS[hash8] ?? TRUE_COUNT[hash8] ?? "the rule applied to the recording",
+            tool: "sim-game-check", format: 3, build: name, game_side: label, game_side_basis: KNOWN_MISS[hash8] ?? TRUE_COUNT[hash8] ?? "the rule applied to the recording",
             closer_excluded: KNOWN_MISS[hash8] ?? null,
             engine_state: state,
             recording: { file: path.basename(opt("--recording")), sha256: sha256File(opt("--recording")), samples: game.sample_count, factorio_version: game.factorio_version ?? null },
@@ -465,13 +560,33 @@ async function check() {
         const pairs = {}, cycles = {};
         for (const key of Object.keys(DISPATCHES)) { pairs[key] = pairPeriods(game, sims[key], staged); cycles[key] = cyclesOf(game, gameMatch, sims[key], pairs[key]); }
         const cycleMean = Object.values(cycles).some(it => it.game > 1 || it.sim > 1);
-        const periodsOf = {};
+        const seededPairs = {}, seededCycles = {};
+        if (seed.applied) for (const key of Object.keys(DISPATCHES)) { seededPairs[key] = pairSeeded(game, seededSims[key]); seededCycles[key] = cyclesOf(game, gameMatch, seededSims[key], seededPairs[key]); }
+        // the seeded run is judged where there is one; the cycle decides how its periods are judged as it does for the cold one, from both runs' cycles together
+        const seededCycleMean = seed.applied && Object.values(seededCycles).some(it => it.game > 1 || it.sim > 1);
+        const seedStamp = seed.applied
+            ? { applied: true, complete: seed.complete, source: seed.source, position_of_first_sample: seed.position, sim_tick_0_is_game_sample: 1, not_seeded: seed.not_seeded, machines_seeded: Object.keys(seed.start_stock).length, hands_not_empty: seed.hands_not_empty }
+            : { applied: false, source: seed.source, reason: seed.reason };
         for (const key of Object.keys(DISPATCHES)) {
-            const result = judge({ config, game, gameMatch, clock, period: clock.clock_ticks, paired: pairs[key], staged, groups: byWindows, cycles: cycles[key], cycle_mean: cycleMean }, sims[key], key);
+            const ctx = { config, game, gameMatch, clock, period: clock.clock_ticks, staged, groups: byWindows };
+            const cold = judge({ ...ctx, paired: pairs[key], cycles: cycles[key], cycle_mean: cycleMean }, sims[key], key);
+            let judged = cold, result = { ...cold, judged_run: "cold" };
+            if (seed.applied) {
+                const seededRun = judge({ ...ctx, paired: seededPairs[key], cycles: seededCycles[key], cycle_mean: seededCycleMean }, seededSims[key], key);
+                // an incomplete seed is reported (under "seeded") and the cold run stays the judged one
+                if (seed.complete) { judged = seededRun; result = { ...judged, judged_run: "seeded", cold }; }
+                else result = { ...cold, judged_run: "cold", seeded: seededRun };
+            }
+            // the periods of the game's recording that are still unsettled, and which of the bins' failures are in them
+            const used = seed.applied && seed.complete ? seededPairs[key] : pairs[key];
+            const gameJudged = used.game.slice(0, Math.min(used.game.length, used.sim.length));
+            const unsettled = unsettledPeriods(game, gameMatch, gameJudged);
+            const failing = judged.bins.game.flatMap((g, p) => (g === 0 ? judged.bins.sim[p] !== 0 : Math.abs(judged.bins.sim[p] - g) / g > BINS_TOLERANCE) ? [p] : []);
+            result.bins.unsettled = { ...unsettled, failing_periods: failing, failing_in_unsettled: failing.filter(p => unsettled.drifting_periods.includes(p)), failing_after_settled: failing.filter(p => !unsettled.drifting_periods.includes(p)) };
             const file = path.join(out, `${name}.${key}.json`);
-            fs.writeFileSync(file, JSON.stringify({ ...stamp, flag: key, ...result }, null, 1) + "\n");
-            periodsOf[key] = result;
-            console.log(`${name} ${key} (${DISPATCHES[key]}): wake-ups ${result.wake_ups.pass ? "pass" : "FAIL"} (${result.cycle.wake_ups_judged_by}; cycle ${result.cycle.game}/${result.cycle.sim}), bins ${result.bins.pass ? "pass" : "FAIL"}, hands ${result.hands.pass === null ? "-" : result.hands.pass ? "pass" : "FAIL"} -> ${file}`);
+            fs.writeFileSync(file, JSON.stringify({ ...stamp, judged_run: result.judged_run, seed: seedStamp, flag: key, ...result }, null, 1) + "\n");
+            const line = r => `wake-ups ${r.wake_ups.pass ? "pass" : "FAIL"} (${r.cycle.wake_ups_judged_by}; cycle ${r.cycle.game}/${r.cycle.sim}), bins ${r.bins.pass ? "pass" : "FAIL"}, hands ${r.hands.pass === null ? "-" : r.hands.pass ? "pass" : "FAIL"}`;
+            console.log(`${name} ${key} (${DISPATCHES[key]}): ${seed.applied ? `${seed.complete ? "seeded (judged)" : "seeded (incomplete: not judged)"}: ${line(result.seeded ?? judged)} | cold${seed.complete ? "" : " (judged)"}: ${line(cold)}` : `cold (no seed: ${seed.reason}): ${line(cold)}`} -> ${file}`);
         }
     } finally {
         fs.rmSync(work, { recursive: true, force: true });
@@ -496,7 +611,7 @@ const compact = list => {
 function summarise(folder) {
     const names = [...new Set(fs.readdirSync(folder).filter(f => f.endsWith(".off.json")).map(f => f.slice(0, -".off.json".length)))].sort();
     const lines = [];
-    const table = ["| build | game side | judged by | wake-ups: off / on | bins: off / on | hands: off / on | closer: wake-ups | bins | hands | windows | alignment offset |", "|---|---|---|---|---|---|---|---|---|---|---|"];
+    const table = ["| build | game side | start judged | judged by | wake-ups: off / on | bins: off / on | hands: off / on | other start (reported): wake-ups off / on | bins off / on | hands off / on | closer: wake-ups | bins | hands | windows | alignment offset |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"];
     const excluded = [];
     for (const name of names) {
         const off = JSON.parse(fs.readFileSync(path.join(folder, `${name}.off.json`), "utf8"));
@@ -506,9 +621,15 @@ function summarise(folder) {
         const closers = off.closer_excluded ? CLOSER_KINDS.map(() => "-") : CLOSER_KINDS.map(k => closer(off, on, k));
         if (off.closer_excluded) excluded.push(`${name}: ${off.closer_excluded}`);
         const offset = off.alignment.simulated_tick_to_clock_position;
-        table.push(`| ${name} | ${off.game_side} | ${off.cycle.wake_ups_judged_by} (cycles game ${off.cycle.game}, sim ${off.cycle.sim} / ${on.cycle.sim}) | ${word(off.wake_ups.pass)} / ${word(on.wake_ups.pass)} | ${word(off.bins.pass)} / ${word(on.bins.pass)} | ${word(off.hands.pass)} / ${word(on.hands.pass)} | ${closers.join(" | ")} | ${offset}${off.alignment.differs_from_default ? ` (differs from ${off.alignment.default})` : ""} |`);
+        // the start that is not judged: the cold run where the seeded one is judged, the incomplete seeded run where the cold one is (none for a staged start)
+        const otherOf = r => r.judged_run === "seeded" ? r.cold : r.seeded;
+        const coldWord = kind => otherOf(off) === undefined ? "-" : `${word(otherOf(off)[kind].pass)} / ${word(otherOf(on)[kind].pass)}`;
+        table.push(`| ${name} | ${off.game_side} | ${off.judged_run}${off.seed.applied && !off.seed.complete ? " (seed incomplete)" : ""} | ${off.cycle.wake_ups_judged_by} (cycles game ${off.cycle.game}, sim ${off.cycle.sim} / ${on.cycle.sim}) | ${word(off.wake_ups.pass)} / ${word(on.wake_ups.pass)} | ${word(off.bins.pass)} / ${word(on.bins.pass)} | ${word(off.hands.pass)} / ${word(on.hands.pass)} | ${coldWord("wake_ups")} | ${coldWord("bins")} | ${coldWord("hands")} | ${closers.join(" | ")} | ${offset}${off.alignment.differs_from_default ? ` (differs from ${off.alignment.default})` : ""} |`);
         lines.push("", `## ${name} (clock ${off.clock_hash.slice(0, 8)}, period ${off.clock_period}, game side: ${off.game_side}, ${off.periods_compared} periods compared, alignment offset ${offset}${off.alignment.differs_from_default ? `, differs from ${off.alignment.default}` : ""})`);
         if (off.closer_excluded) lines.push(`left out of "closer": ${off.closer_excluded}`);
+        lines.push(off.seed.applied
+            ? `start: ${off.seed.complete ? `judged on the run seeded from the recording's first sample (clock position ${off.seed.position_of_first_sample}, ${off.seed.machines_seeded} machines); the cold run is reported in the table and under "cold" in the file` : `the seed from the recording's first sample (clock position ${off.seed.position_of_first_sample}, ${off.seed.machines_seeded} machines) lacks what the simulator cannot take, so the run from it is reported (under "seeded" in the file) and the cold run is judged`}. Not seeded: ${off.seed.not_seeded.join("; ")}`
+            : `start: no seeded run (${off.seed.reason}); the cold run is judged`);
         for (const [key, r] of [["off", off], ["on", on]]) {
             const cycleMean = r.cycle.wake_ups_judged_by !== "each period";
             lines.push(`${key} (${r.dispatch}): wake-ups judged by ${r.cycle.wake_ups_judged_by}`
@@ -519,6 +640,9 @@ function summarise(folder) {
                     + (w.matches_with_roles_swapped ? ` | matches with roles swapped (as inserter:${w.swapped_with}: ${compact(w.swapped.sim)})` : differs && w.swapped ? ` | swapped with inserter:${w.swapped_with}: ${cycleMean ? `relative error ${short(w.swapped.rel_error)}` : `max diff ${w.swapped.max_diff}`}` : ""));
             }
             lines.push(`  bins: game ${compact(r.bins.game)} | sim ${compact(r.bins.sim)} | max relative diff ${short(r.bins.max_relative_diff)} | ${r.bins.pass ? "pass" : "FAIL"}`);
+            const u = r.bins.unsettled;
+            lines.push(`  bins, game's stock: ${u.drifting_periods.length === 0 ? "settled in every period compared" : `still drifting in ${u.drifting_periods.length} of ${u.periods_compared_by_stock} periods compared (periods ${compact(u.drifting_periods)}, settled from period ${u.settled_from})`}`
+                + (u.failing_periods.length === 0 ? "" : `; periods over the bins tolerance: ${u.failing_periods.length}, ${u.failing_in_unsettled.length} of them in the drifting periods, ${u.failing_after_settled.length} after they settle`));
             for (const [id, h] of Object.entries(r.hands.inserters)) {
                 lines.push(`  hands inserter:${id}: ${h.transfers} transfers, pickup delta ${JSON.stringify(h.pickup_delta)}, drop delta ${JSON.stringify(h.drop_delta)}, `
                     + `hand agrees ${short(h.hand_agreement)}, status agrees ${short(h.status_agreement)}${h.pass === null || h.pass === undefined ? "" : h.pass ? " | pass" : " | FAIL"}`
