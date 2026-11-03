@@ -506,7 +506,7 @@ export function simulateClockOnly(
      * state the game was recorded in: with `warmup_periods: 0` the first tick of the run is the first tick after that
      * state.
      */
-    start: Pick<RunOptions, "cold_start" | "competing_takers_order" | "keep_output_buffers" | "warmup_periods" | "start_stock"> = {},
+    start: Pick<RunOptions, "cold_start" | "competing_takers_order" | "keep_output_buffers" | "warmup_periods" | "start_stock" | "start_hands"> = {},
 ): StockRecording {
     const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));

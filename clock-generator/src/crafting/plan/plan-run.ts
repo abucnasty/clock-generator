@@ -17,7 +17,7 @@ import { createEntityRegistryFromConfig, MovingPickupPhases, SimulationContext }
 import { Duration, OpenRange } from "../../data-types";
 import { Entity, EntityId, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from "../../entities";
 import { TargetProductionRate } from "../target-production-rate";
-import { EntityState, InserterState, MachineState } from "../../state";
+import { EntityState, InserterHandContents, InserterState, MachineState } from "../../state";
 import Fraction, { fraction } from "../../data-types/fraction";
 import { ClockSchedule, createSignalPerInserterBlueprint, mergedClockTicks, SignalPerInserterBlueprint, SubtickClock } from "../blueprint";
 import { FactorioBlueprint } from "../../blueprints/blueprint";
@@ -419,6 +419,12 @@ export interface RunOptions {
      * see what the simulator makes of it (see simulateClockOnly).
      */
     start_stock?: Record<string, MachineStartStock>;
+    /**
+     * What inserters hold when the run starts, by entity id ("inserter:4"): the hand as a recording of the game has it at its first
+     * sample, which `start_stock` would otherwise empty. An inserter not named starts with an empty hand; each hand starts idle.
+     * Only a check of the simulator against a recording passes it (see simulateClockOnly): a generation never does.
+     */
+    start_hands?: Record<string, InserterHandContents>;
     /** Initial lane phases for a simulation trial; transient stock state, separate from saved config geometry. */
     moving_pickup_phases?: MovingPickupPhases;
     /**
@@ -781,6 +787,16 @@ function setUpTheStart(
                 inserter_state.inventoryState.removeQuantity(inserter_state.held_item.item_name, inserter_state.held_item.quantity);
                 inserter_state.held_item = null;
             }
+        }
+    }
+    if (options.start_hands) {
+        for (const { inserter_state } of simulation_context.inserters) {
+            const hand = options.start_hands[inserter_state.entity_id.id];
+            if (hand === undefined || hand.quantity <= 0) {
+                continue;
+            }
+            inserter_state.held_item = { item_name: hand.item_name, quantity: hand.quantity };
+            inserter_state.inventoryState.addQuantity(hand.item_name, hand.quantity);
         }
     }
 
