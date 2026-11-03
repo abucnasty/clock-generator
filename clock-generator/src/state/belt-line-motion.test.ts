@@ -6,6 +6,7 @@ import { BeltLineMotion } from "./belt-line-motion";
 
 /** The ticks the line is moving in, from `from` to `to`, after the takes of each tick */
 function movingTicks(motion: BeltLineMotion, takes: ReadonlyMap<number, number>, from: number, to: number): number[] {
+    motion.track();
     const moving: number[] = [];
     for (let tick = from; tick < to; tick++) {
         motion.taken(tick, takes.get(tick) ?? 0);
@@ -27,8 +28,12 @@ describe("BeltLineMotion", () => {
         expect(movingTicks(new BeltLineMotion(BeltSpeed.EXPRESS_TRANSPORT_BELT), new Map([[0, 1]]), 0, 30)).toHaveLength(4);
     });
 
-    it("keeps a take that empties no stack still, and keys the ticks it still moves", () => {
+    it("keeps a take that empties no stack still, and keys the ticks it still moves; untracked, it keeps nothing", () => {
         const motion = new BeltLineMotion(BeltSpeed.TURBO_TRANSPORT_BELT);
+        motion.taken(2, 1);
+        expect(motion.movingAt(2)).toBe(false);
+        expect(motion.key(2)).toBe("");
+        motion.track();
         motion.taken(5, 0);
         expect(motion.movingAt(5)).toBe(false);
         expect(motion.key(5)).toBe("-1");

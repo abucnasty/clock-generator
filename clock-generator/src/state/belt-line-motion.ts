@@ -17,6 +17,8 @@ const STACK_SPACING = 64;
  * taken from downstream are not checked.
  */
 export class BeltLineMotion {
+    /** Whether the motion is kept (`track`): until then a line is still, and keys nothing */
+    private tracked = false;
     private readonly speed: number;
     /** The gap left to close, after the belt's part of the tick `at` and the takes in it so far */
     private gap = 0;
@@ -27,9 +29,18 @@ export class BeltLineMotion {
         this.speed = belt_speed / BeltSpeed.TRANSPORT_BELT * 8;
     }
 
+    /** From now on the motion is kept (the new dispatch: a belt-fed hand sleeps only on still lines) */
+    public track(): void {
+        this.tracked = true;
+    }
+
+    public get tracking(): boolean {
+        return this.tracked;
+    }
+
     /** A take in `tick` that emptied `stacks` stacks of the line */
     public taken(tick: number, stacks: number): void {
-        if (stacks <= 0) return;
+        if (!this.tracked || stacks <= 0) return;
         this.advanceTo(tick);
         this.gap += stacks * STACK_SPACING;
         this.moving = true;
@@ -41,8 +52,9 @@ export class BeltLineMotion {
         return this.moving;
     }
 
-    /** The ticks the line still moves after `tick`, -1 while it is still: its part of a simulation's key */
+    /** The ticks the line still moves after `tick`, -1 while it is still: its part of a simulation's key; empty untracked */
     public key(tick: number): string {
+        if (!this.tracked) return "";
         this.advanceTo(tick);
         return this.moving ? String(Math.ceil(this.gap / this.speed)) : "-1";
     }
