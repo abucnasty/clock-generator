@@ -321,8 +321,8 @@ describe("an inserter's state key", () => {
             inserter_state: InserterState.createIdle(inserterOf(source, sink, item)), source_state: source, sink_state: sink, tick_provider,
             enable_control: AlwaysEnabledControl,
         });
-        // the drop port of a machine keys its ticks, the pickup port of a belt its decision
-        expect(of(belt, machine, "iron-plate").stateKey(0)).toBe(`[]|${InserterPhase.IDLE};false;false;null;null;0;true;IDLE;false;null;|true`);
+        // the drop port of a machine keys its ticks, the pickup port of a belt its decision and the after-swap flag
+        expect(of(belt, machine, "iron-plate").stateKey(0)).toBe(`[]|${InserterPhase.IDLE};false;false;null;null;0;true;false;IDLE;false;null;|true`);
         // the drop port of a belt keys nothing, the pickup port of a machine its ticks
         expect(of(machine, TransportBelt.create(Belt.fromConfig({ id: 2, type: "turbo-transport-belt", lanes: [{ ingredient: "iron-gear-wheel", stack_size: 4 }, { ingredient: "iron-gear-wheel", stack_size: 4 }] })), "iron-gear-wheel")
             .stateKey(0)).toBe(`[]|${InserterPhase.IDLE};false;false;null;null;;0;IDLE;false;null;|true`);

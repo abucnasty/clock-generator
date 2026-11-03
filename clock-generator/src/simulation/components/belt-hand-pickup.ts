@@ -89,10 +89,14 @@ export class BeltHandPickup implements HandPickupPort {
         this.scratch.belt_grab_decided = true;
     }
 
-    /** Reads `waits_for_sink` before the pickup phase clears it (same-tick rule 10) */
+    /**
+     * Reads `waits_for_sink` before the pickup phase clears it (same-tick rule 10). Under the new dispatch a woken hand
+     * is updated a tick after what woke it, so its first stack is decided: except in the first update after a control
+     * swap, which puts it on the list without waking it, where it decides as a hand updated every tick does.
+     */
     public enter(from: InserterPhase): void {
         const scratch = this.scratch;
-        if (this.notification_scheduling) {
+        if (this.notification_scheduling && !scratch.after_swap) {
             scratch.belt_grab_decided = true;
             return;
         }
@@ -114,8 +118,9 @@ export class BeltHandPickup implements HandPickupPort {
         }
     }
 
+    /** The decision of the first stack, and whether the hand's next update is its first after a control swap (see `enter`) */
     public key(): string {
-        return `${this.scratch.belt_grab_decided}`;
+        return `${this.scratch.belt_grab_decided};${this.scratch.after_swap}`;
     }
 
     public startsPickup(): boolean {
