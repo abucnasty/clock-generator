@@ -62,7 +62,10 @@ export class MachineState implements EntityState {
         this.output = new MachineOutputPort(inventoryState, made.notifications);
         this.placement = new Placement(this.output,
             machine.outputs.map(output => output.item_name), machine.metadata.places_results === true);
-        this.ingress = new Ingress(machine, inventoryState, fuelInventory, selfIngredients);
+        this.ingress = new Ingress(machine, inventoryState, fuelInventory, selfIngredients, made.notifications);
+        if (energy instanceof BurnerEnergy) {
+            energy.on_fuel_taken = () => made.notifications.fuelTaken();
+        }
         this.crafting = new Crafting(machine, energy, made, this.placement, this.ingress);
     }
 

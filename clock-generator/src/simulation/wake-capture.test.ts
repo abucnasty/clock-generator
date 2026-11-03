@@ -109,3 +109,69 @@ test.each([
         expect(ruled.get(id) ?? []).toHaveLength(2 * game.length);
     }
 });
+
+/**
+ * Ten periods of agricultural science recorded in Factorio 2.1.24 (crafting/fixtures/wake-ups-capture-agricultural-
+ * science-2.1.24.json, the clock 3450755e from its staged start, 84 eggs in each egg machine), run in the simulator under
+ * the new dispatch from the same start. Its loop of eggs does not repeat each period, so the counts are laid against the
+ * game's over the ten periods.
+ */
+test("under the new dispatch the simulator wakes the inserters of agricultural science about where the game does", async () => {
+    const modules = await underTheNewDispatch();
+    const { simulateClockOnly, inserterEnds, wakeUpsOfStock, InserterScheduling, StockRecorder } = modules;
+    const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "crafting", "fixtures", "wake-ups-capture-agricultural-science-2.1.24.json"), "utf8")) as {
+        count_from: number; ticks: number; inserters: Record<string, { woken_by_machine: [number, string][] }>;
+        clock: Fixture["clock"] & { sample_offset: number; first_sample: number };
+    };
+    const { config, windows, period, sample_offset, first_sample } = fixture.clock;
+    // the simulator's tick t is the fixture's tick t + sample_offset - first_sample
+    const fixtureTick = (tick: number) => tick + sample_offset - first_sample;
+    const counted = (tick: number) => tick >= fixture.count_from && tick < fixture.ticks;
+    let tick = 0;
+    const own = new Map<string, number[]>();
+    const observed = new WeakSet<object>();
+    const record = StockRecorder.prototype.record;
+    const begin = InserterScheduling.prototype.beginUpdates;
+    const spies = [
+        vi.spyOn(StockRecorder.prototype, "record").mockImplementation(function (this: InstanceType<typeof StockRecorder>) {
+            record.call(this);
+            tick++;
+        }),
+        vi.spyOn(InserterScheduling.prototype, "beginUpdates").mockImplementation(function (this: InstanceType<typeof InserterScheduling>) {
+            if (!observed.has(this)) {
+                observed.add(this);
+                this.observe((event: SchedulingEvent) => {
+                    if (event.event !== "Activation" || event.cause === "control-finish-enable-edge" || event.cause === "hand-transfer") return;
+                    if (counted(fixtureTick(tick))) (own.get(event.entity) ?? own.set(event.entity, []).get(event.entity)!).push(fixtureTick(tick));
+                });
+            }
+            begin.call(this);
+        }),
+    ];
+    const quiet = { log() { }, warn() { }, error() { }, debug() { } };
+    const ruled = new Map<string, number[]>();
+    try {
+        const stock = simulateClockOnly(config, windows, period, Math.ceil((fixture.ticks + first_sample) / period) + 1, quiet, { warmup_periods: 0 });
+        wakeUpsOfStock(stock, inserterEnds(config), 1, (inserter_id, at) => {
+            if (counted(fixtureTick(at))) (ruled.get(inserter_id) ?? ruled.set(inserter_id, []).get(inserter_id)!).push(fixtureTick(at));
+        });
+    } finally {
+        for (const spy of spies) spy.mockRestore();
+    }
+    let game_all = 0, same_all = 0;
+    for (const [id, { woken_by_machine }] of Object.entries(fixture.inserters)) {
+        const game = woken_by_machine.map(([at]) => at).filter(counted);
+        const mine = own.get(id) ?? [], rule = ruled.get(id) ?? [];
+        // per inserter within 3% of the game's count (2,792 in all), by its own lists and by the rule on its states
+        expect(Math.abs(mine.length - game.length), `${id} own ${mine.length} game ${game.length}`).toBeLessThanOrEqual(Math.max(1, 0.03 * game.length));
+        expect(Math.abs(rule.length - game.length), `${id} rule ${rule.length} game ${game.length}`).toBeLessThanOrEqual(Math.max(1, 0.03 * game.length));
+        game_all += game.length;
+        same_all += mine.filter(at => game.includes(at)).length;
+    }
+    // the inserters that carry nutrients, which are fuel, into the egg machines sleep there and are woken by its fuel takes
+    for (const id of ["inserter:3", "inserter:4", "inserter:6", "inserter:7"]) {
+        expect(own.get(id)?.length ?? 0, id).toBeGreaterThan(100);
+    }
+    // and nearly all at the game's ticks: the others are fuel taken a tick early, the burner's phase after a stop
+    expect(same_all / game_all).toBeGreaterThan(0.97);
+});

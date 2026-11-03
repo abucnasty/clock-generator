@@ -264,6 +264,73 @@ describe("the rule \"kept-lists\" against a period of the game", () => {
     });
 });
 
+/**
+ * Ten periods of the sample agricultural science build recorded in Factorio 2.1.24 (fixtures/wake-ups-capture-agricultural-
+ * science-2.1.24.json, five biochambers and twelve inserters, clock 3450755e), with the ticks the game woke each inserter
+ * from a machine's list and why, read in the running game. Counted from `count_from`; the period before lets the lists
+ * settle.
+ */
+const AGRICULTURAL = "wake-ups-capture-agricultural-science-2.1.24.json";
+
+function agriculturalCapture(): { inserters: WatchingInserter[]; machines: WatchedMachine[]; ticks: number; from: number; woken: Map<string, [number, string][]> } {
+    interface Series { source: string; sink: string; states: [number, string][]; held: [number, number][]; held_item: [number, string][];
+        hand_size: number; return_ticks: number; woken_by_machine: [number, string][] }
+    interface Machine { products_finished: [number, number][]; true_starts: number[]; fuel_taken: number[]; fuel_put_in: number[];
+        outputs: Record<string, [number, number][]> }
+    const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", AGRICULTURAL), "utf8")) as {
+        ticks: number; count_from: number; machines: Record<string, Machine>; inserters: Record<string, Series>;
+    };
+    const { ticks } = fixture;
+    const at = (list: number[]) => { const flags = new Array<boolean>(ticks).fill(false); for (const tick of list) flags[tick] = true; return flags; };
+    const machines = Object.entries(fixture.machines).map(([machine_id, it]): WatchedMachine => ({
+        machine_id, products_finished: expanded(it.products_finished, ticks), true_starts: at(it.true_starts),
+        fuel_taken: at(it.fuel_taken), fuel_put_in: at(it.fuel_put_in),
+        outputs: Object.fromEntries(Object.entries(it.outputs).map(([item, series]) => [item, expanded(series, ticks)])),
+    }));
+    const inserters = Object.entries(fixture.inserters).map(([inserter_id, it]): WatchingInserter => ({
+        inserter_id,
+        source_machine_id: it.source.startsWith("machine:") ? it.source : null,
+        sink_machine_id: it.sink.startsWith("machine:") ? it.sink : null,
+        states: expanded(it.states, ticks), held: expanded(it.held, ticks), return_ticks: it.return_ticks,
+        held_item: expanded(it.held_item, ticks), hand_size_of: () => it.hand_size,
+    }));
+    const woken = new Map(Object.entries(fixture.inserters).map(([id, it]) => [id, it.woken_by_machine.filter(([tick]) => tick >= fixture.count_from)]));
+    return { inserters, machines, ticks, from: fixture.count_from, woken };
+}
+
+describe("the rule \"kept-lists\" against ten periods of agricultural science", () => {
+    const { inserters, machines, ticks, from, woken } = agriculturalCapture();
+    const counted = new Map<string, number[]>(inserters.map(it => [it.inserter_id, []]));
+    wakeUps(inserters, machines, from, ticks, (inserter_id, tick) => counted.get(inserter_id)!.push(tick), "kept-lists");
+
+    it("counts the game's wake-ups tick for tick on ten of the twelve inserters", () => {
+        for (const id of ["inserter:1", "inserter:2", "inserter:3", "inserter:4", "inserter:6", "inserter:7", "inserter:9", "inserter:10", "inserter:11", "inserter:12"]) {
+            expect(counted.get(id), id).toEqual(woken.get(id)!.map(([tick]) => tick));
+        }
+        // 2,792 wake-ups by the machines in all, of every kind the game woke them by
+        const causes = new Set([...woken.values()].flatMap(list => list.map(([, cause]) => cause)));
+        expect(causes).toEqual(new Set(["craft start", "fuel taken", "output taken", "result", "fuel put in"]));
+    });
+
+    it("on the two takers between the egg machines, all of the game's and 7 more where two machines alarm in one tick", () => {
+        // in each, the inserter and another taker of the same machine joined the update list in one tick, woken by two
+        // machines: which joined last, and is updated first, follows the game's order of updating machines, which a
+        // recording does not hold; the rule takes the inserter first
+        for (const [id, extra] of [["inserter:5", [914, 1874, 2834, 3794, 4754, 5235]], ["inserter:8", [1045]]] as const) {
+            const game = woken.get(id)!.map(([tick]) => tick);
+            expect(counted.get(id)!.filter(tick => !game.includes(tick)), id).toEqual(extra);
+            expect(game.filter(tick => !counted.get(id)!.includes(tick)), id).toEqual([]);
+        }
+    });
+
+    it("keeps a list across a switch-off on either side until an alarm: none counted from a list the game had left", () => {
+        // an alarm the rule reads (a fuel item taken, an output taken) wakes it while it is off, and the update that
+        // brings leaves it on no list: the next craft start finds it there (inserter:3 at 2896 and 2917 of the capture)
+        expect(counted.get("inserter:3")).toEqual(expect.arrayContaining([496, 517]));
+        expect(counted.get("inserter:3")).not.toEqual(expect.arrayContaining([504]));
+    });
+});
+
 describe("the rule \"kept-lists\"", () => {
     // a part hand rises in tick 2 and the machine places a result after it; the inserter shows working throughout
     const partHand = (ends: Partial<WatchingInserter>, output_after: number): [WatchingInserter, WatchedMachine] => [

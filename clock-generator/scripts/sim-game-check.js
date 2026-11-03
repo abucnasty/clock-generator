@@ -51,7 +51,6 @@ const TRUE_COUNT = { // clock hash prefix: what checked the rule against the gam
     "ba2c26f4": "electromagnetic science: wake-ups read in the running game",
 };
 const KNOWN_MISS = { // clock hash prefix: a game side the rule's count is known to miss, kept in the output and left out of "closer"
-    "3450755e": "biochamber: the count on a recording is a known miss (docs/wake-ups.md)",
 };
 const DISPATCHES = { off: "configured-order", on: "activation-order" };
 
