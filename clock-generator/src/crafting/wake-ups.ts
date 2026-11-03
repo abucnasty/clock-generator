@@ -25,9 +25,9 @@ export type WatchedEnd = "source" | "sink";
  * The list an inserter sleeps on, by the state the game shows for it while it waits: on the machine it takes from
  * while it waits for items, on the machine it puts into while it waits for space. Any other state is on no list.
  *
- * Open: whether a waiting inserter is also on the list of the machine at its other end. The game shows how many
- * lists an inserter is on ("Wakeup list count" in the debug tooltip, 0 for a disabled one); the count of a waiting
- * one has not been read yet. One list is assumed until it is.
+ * Read in Factorio 2.1.24: a stack inserter that took part of a hand from its machine and drops on a belt slept on its
+ * machine's list and one other in 80 of its 150 sleeps, and the other list never woke it; the inserter that fed the
+ * machine slept on the machine's list alone. One list is counted.
  */
 export const WATCHED_END: Readonly<Record<string, WatchedEnd | undefined>> = {
     [FactorioInserterState.WAITING_FOR_SOURCE_ITEMS]: "source",
