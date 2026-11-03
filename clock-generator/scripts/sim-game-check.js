@@ -1,5 +1,5 @@
-// node scripts/sim-game-check.js check   --config <sample key | config file> --hash <clock hash prefix> --recording <recording file>
-//                                        --out <folder> [--name <build>] [--staged] [--seed-items <n>] [--sim-offset <ticks>] [--seed-at first|settled]
+// node scripts/sim-game-check.js check   --config <sample key | config file> (--hash <clock hash prefix> | --clock-file <exported clock>) --recording <recording file>
+//                                        --out <folder> [--name <build>] [--scaffold <blueprint file>] [--staged] [--seed-items <n>] [--sim-offset <ticks>] [--seed-at first|settled]
 // node scripts/sim-game-check.js builds  --recordings <folder> --out <folder> [--only a,b]    the check of every build of sim-game-check/builds.json
 // node scripts/sim-game-check.js summary <out folder>                                         the table of the result files in a folder
 //
@@ -21,6 +21,13 @@
 // it out; a staged start (--staged: the game began with the clock, the simulator runs cold from its first tick) is paired
 // the same way. Totals over inserters are never compared. The tolerances are stamped in every result file ("tolerances").
 //
+// Besides the two files, a check writes ONE combined result, <name>.check.json, which anything that gates on the check reads: its top-level
+// "pass" is the verdict of the new dispatch (activation order), the one 0.27.0 ships; "dispatches" keeps each one's verdict by kind; "inputs" holds
+// the sha256 of what the verdict was judged on (the recording, the config, the exported clock file given by --clock-file, the scaffold) so that a
+// reader can tell a stale result from a fresh one; "made" is the time it was written and "game_version" the game that made the recording.
+// --clock-file takes the file export-clock.js wrote for the clock: its identity hash is worked out from the decoded blueprint and its schedule (the
+// tags and descriptions the export adds do not count), never from the file's "selected" field; it names the clock to find unless --hash does.
+//
 // Two starts of the simulator are run side by side. "seeded" starts it from a recorded sample of the game (what the machines
 // hold, how far their crafting and productivity bars are) and is the one that is judged: the game is recorded after a warm-up
 // that the simulator does not run, and what that warm-up leaves in the machines decides which inserters wake. The sample is the
@@ -41,12 +48,13 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const cp = require("child_process");
+const zlib = require("zlib");
 // the rule is named in every call below: the parent's own dispatch plays no part; each simulation child sets its own
 if (process.argv[2] !== "find" && process.argv[2] !== "simulate") delete process.env.CLOCK_NEW_DISPATCH;
 
 const argv = process.argv.slice(3);
 // lib.js moves to the generator's folder: what names a file is made absolute first (a config that is not a file is a sample's key)
-const PATH_OPTIONS = ["--recording", "--out", "--recordings", "--clock"];
+const PATH_OPTIONS = ["--recording", "--out", "--recordings", "--clock", "--clock-file", "--scaffold"];
 for (const name of PATH_OPTIONS) { const i = argv.indexOf(name); if (i >= 0 && argv[i + 1] !== undefined) argv[i + 1] = path.resolve(argv[i + 1]); }
 { const i = argv.indexOf("--config"); if (i >= 0 && argv[i + 1] !== undefined && fs.existsSync(path.resolve(argv[i + 1]))) argv[i + 1] = path.resolve(argv[i + 1]); }
 if (process.argv[3] !== undefined && !process.argv[3].startsWith("--")) process.argv[3] = path.resolve(process.argv[3]);
@@ -71,6 +79,14 @@ const DISPATCHES = { off: "configured-order", on: "activation-order" };
 const opt = name => { const i = argv.indexOf(name); return i < 0 ? undefined : argv[i + 1]; };
 const flag = name => argv.includes(name);
 const sha256File = file => crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+/** the identity hash of a clock file written by export-clock.js: its blueprint string decoded, tags and descriptions stripped, and its schedule (what find() names a clock by) */
+function clockFileHash(file) {
+    const { clockIdentity } = dist("crafting/clock-identity.js");
+    const clock = JSON.parse(fs.readFileSync(file, "utf8"));
+    if (typeof clock.blueprint !== "string" || clock.schedule === undefined) throw new Error(`${file} is not a clock file of export-clock.js (it has no blueprint string and schedule)`);
+    const decoded = JSON.parse(zlib.inflateSync(Buffer.from(clock.blueprint.slice(1), "base64")).toString("utf-8"));
+    return crypto.createHash("sha256").update(JSON.stringify(clockIdentity({ blueprint: decoded.blueprint, schedule: clock.schedule }))).digest("hex");
+}
 /** the circular difference b - a on a clock of `period` positions, in (-period/2, period/2] */
 const circular = (a, b, period) => { const d = (((b - a) % period) + period) % period; return d > period / 2 ? d - period : d; };
 const permutations = items => items.length <= 1 ? [items] : items.flatMap((item, i) => permutations([...items.slice(0, i), ...items.slice(i + 1)]).map(rest => [item, ...rest]));
@@ -556,17 +572,22 @@ async function check() {
     const out = opt("--out");
     fs.mkdirSync(out, { recursive: true });
     const staged = flag("--staged");
+    const clockFile = opt("--clock-file");
+    const clockFileIdentity = clockFile === undefined ? undefined : clockFileHash(clockFile);
+    const wantedHash = opt("--hash") ?? clockFileIdentity;
+    if (wantedHash === undefined) throw new Error("give --hash <clock hash prefix> or --clock-file <exported clock>");
+    if (clockFileIdentity !== undefined && !clockFileIdentity.startsWith(wantedHash)) throw new Error(`--clock-file ${clockFile} has the identity hash ${clockFileIdentity}, which does not start with --hash ${wantedHash}`);
     const work = fs.mkdtempSync(path.join(out, `.${name}-`));
     try {
         // the clock: found under the old dispatch, else under the new one (a moved pick is the new one's alone)
-        const clockFile = path.join(work, "clock.json");
+        const foundFile = path.join(work, "clock.json");
         let clock;
         for (const key of ["off", "on"]) {
-            await child("find", ["--hash", opt("--hash"), "--out", clockFile], dispatchEnv(key));
-            clock = JSON.parse(fs.readFileSync(clockFile, "utf8"));
+            await child("find", ["--hash", wantedHash, "--out", foundFile], dispatchEnv(key));
+            clock = JSON.parse(fs.readFileSync(foundFile, "utf8"));
             if (!clock.not_found) { clock.found_under = DISPATCHES[key]; break; }
         }
-        if (clock.not_found) throw new Error(`No clock with hash ${opt("--hash")} under either dispatch; alternatives: ${clock.alternatives.join(", ")}`);
+        if (clock.not_found) throw new Error(`No clock with hash ${wantedHash} under either dispatch; alternatives: ${clock.alternatives.join(", ")}`);
 
         const { parseRecording } = dist("verification/recording.js");
         const { matchRecordingToConfig } = dist("verification/entity-matching.js");
@@ -586,7 +607,7 @@ async function check() {
         const sims = {}, seededSims = {};
         await Promise.all(Object.keys(DISPATCHES).flatMap(key => [false, true].filter(seeded => !seeded || seed.applied).map(async seeded => {
             const file = path.join(work, `sim-${key}${seeded ? "-seeded" : ""}.json`);
-            await child("simulate", ["--clock", clockFile, "--out", file, "--periods", String(seeded ? Math.floor((game.sample_count - seed.sample) / clock.clock_ticks) + 2 : periods), ...(staged ? ["--staged"] : []), ...(seeded ? ["--seed", seedFile] : []),
+            await child("simulate", ["--clock", foundFile, "--out", file, "--periods", String(seeded ? Math.floor((game.sample_count - seed.sample) / clock.clock_ticks) + 2 : periods), ...(staged ? ["--staged"] : []), ...(seeded ? ["--seed", seedFile] : []),
                 ...(opt("--sim-offset") ? ["--sim-offset", opt("--sim-offset")] : [])], dispatchEnv(key));
             (seeded ? seededSims : sims)[key] = JSON.parse(fs.readFileSync(file, "utf8"));
         })));
@@ -623,6 +644,7 @@ async function check() {
         const seedStamp = seed.applied
             ? { applied: true, complete: seed.complete, source: seed.source, seed_sample: seed.sample, settling, position_of_seed_sample: seed.position, sim_tick_0_is_game_sample: seed.sample + 1, not_seeded: seed.not_seeded, machines_seeded: Object.keys(seed.start_stock).length, hands_not_empty: seed.hands_not_empty, bars_worked_back: seed.bars_worked_back }
             : { applied: false, source: seed.source, reason: seed.reason };
+        const written = {};
         for (const key of Object.keys(DISPATCHES)) {
             const ctx = { config, game, gameMatch, clock, period: clock.clock_ticks, staged, groups: byWindows };
             const cold = judge({ ...ctx, paired: pairs[key], cycles: cycles[key], cycle_mean: cycleMean }, sims[key], key);
@@ -641,12 +663,48 @@ async function check() {
             result.bins.unsettled = { ...unsettled, failing_periods: failing, failing_in_unsettled: failing.filter(p => unsettled.drifting_periods.includes(p)), failing_after_settled: failing.filter(p => !unsettled.drifting_periods.includes(p)) };
             const file = path.join(out, `${name}.${key}.json`);
             fs.writeFileSync(file, JSON.stringify({ ...stamp, judged_run: result.judged_run, seed: seedStamp, flag: key, ...result }, null, 1) + "\n");
+            written[key] = { file: path.basename(file), dispatch: DISPATCHES[key], judged_run: result.judged_run, pass: result.pass, wake_ups: result.wake_ups.pass, bins: result.bins.pass, hands: result.hands.pass, periods_compared: result.periods_compared };
             const line = r => `wake-ups ${r.wake_ups.pass ? "pass" : "FAIL"} (${r.cycle.wake_ups_judged_by}; cycle ${r.cycle.game}/${r.cycle.sim}), bins ${r.bins.pass ? "pass" : "FAIL"}, hands ${r.hands.pass === null ? "-" : r.hands.pass ? "pass" : "FAIL"}`;
             console.log(`${name} ${key} (${DISPATCHES[key]}): ${seed.applied ? `${seed.complete ? "seeded (judged)" : "seeded (incomplete: not judged)"}: ${line(result.seeded ?? judged)} | cold${seed.complete ? "" : " (judged)"}: ${line(cold)}` : `cold (no seed: ${seed.reason}): ${line(cold)}`} -> ${file}`);
         }
+        writeCombined(out, name, { stamp, clock, written, clockFile, clockFileIdentity, game });
     } finally {
         fs.rmSync(work, { recursive: true, force: true });
     }
+}
+
+/** the file a config key or path names, for the sha256 stamp (a sample key gives the sample's file) */
+function configFileOf(config) {
+    const { ConfigPaths } = dist("config/config-paths.js");
+    const file = ConfigPaths[config] ?? config;
+    return fs.existsSync(file) ? file : undefined;
+}
+
+/**
+ * The one result file that anything gating on the check reads: <name>.check.json. "pass" is the new dispatch's verdict (activation order, what 0.27.0
+ * ships); each dispatch's verdict by kind stays under "dispatches", and the full per-dispatch files stay beside it. "inputs" are the sha256 of the files
+ * the verdict was judged on; the scaffold is the blueprint the recording was made on (--scaffold, else the config's <name>-scaffold.txt beside it).
+ */
+function writeCombined(out, name, { stamp, clock, written, clockFile, clockFileIdentity, game }) {
+    const inputs = { recording: sha256File(opt("--recording")) };
+    const configFile = configFileOf(opt("--config"));
+    if (configFile !== undefined) inputs.config = sha256File(configFile);
+    if (clockFile !== undefined) inputs.clock = sha256File(clockFile);
+    const scaffold = opt("--scaffold") ?? (configFile === undefined ? undefined : configFile.replace(/\.json$/, "-scaffold.txt"));
+    if (scaffold !== undefined && fs.existsSync(scaffold)) inputs.scaffold = sha256File(scaffold);
+    const combined = {
+        tool: "sim-game-check", format: 1, kind: "check-result", build: name,
+        pass: written.on.pass === true,
+        pass_basis: `the new dispatch (${DISPATCHES.on}): wake-ups, bins and hands; windows have no verdict`,
+        made: new Date().toISOString(),
+        game_version: game.factorio_version ?? null,
+        inputs,
+        clock: { hash: clock.hash, period: clock.clock_ticks, alternative: clock.alternative, file_identity_hash: clockFileIdentity ?? null },
+        recording: stamp.recording, engine_state: stamp.engine_state, game_side: stamp.game_side, tolerances: stamp.tolerances,
+        dispatches: written,
+    };
+    fs.writeFileSync(path.join(out, `${name}.check.json`), JSON.stringify(combined, null, 1) + "\n");
+    console.log(`${name}: combined result ${name}.check.json: pass ${combined.pass}`);
 }
 
 // ---- the table of a folder of results ----
