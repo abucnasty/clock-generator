@@ -114,7 +114,8 @@ export interface FuelConsumptionView {
     duration_ticks: number;
     /**
      * The tick the clocks of the game stand at in the first recorded tick, after the warm-up, where they run through it
-     * (under the new dispatch); absent where they start again with the recorded run, at 0
+     * (under the new dispatch, clocks of a whole-tick period: `BuildRun`); absent where they start again with the recorded
+     * run, at 0
      */
     clock_tick_at_start?: number;
     /** The inserters that fill a fuel slot */
@@ -474,7 +475,8 @@ export interface RunOptions {
 export interface BuildRun extends PlannedCraftingCycle, TransferPlan {
     /**
      * The ticks the clocks of the game have run when the recorded run starts, where they run through the warm-up (under
-     * the new dispatch, `gameClocksRunThroughSteps`); absent where they start again with the recorded run, at 0
+     * the new dispatch, `gameClocksRunThroughSteps`): those of a whole-tick period (`runThroughTicks`); a clock of p/q
+     * ticks starts again with the recorded run, at 0. Absent where every clock does (the configured order).
      */
     clock_tick_at_start?: number;
     /**
@@ -808,8 +810,8 @@ interface ControlledBuild {
 /**
  * Whether the clocks of the game (an inserter's own clock, a configured clocked control) run on through the start of a
  * later step of a run, as they do in the game, where nothing restarts them when a recording starts: under the new
- * dispatch (simulation/dispatch.ts). Under the configured order they start again with the recorded run, as they always
- * have, and stand at 0 at its first tick.
+ * dispatch (simulation/dispatch.ts), the clocks of a whole-tick period (`runThroughTicks`). Under the configured order
+ * they start again with the recorded run, as they always have, and stand at 0 at its first tick.
  */
 function gameClocksRunThroughSteps(simulation_context: SimulationContext): boolean {
     return simulation_context.inserter_dispatch !== "configured-order";

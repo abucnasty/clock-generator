@@ -7,6 +7,7 @@ import { EnableControlOverrideConfig } from "../../../config/schema";
 import { CraftingCyclePlan } from "../cycle/crafting-cycle";
 import { Duration, OpenRange } from "../../../data-types";
 import { ReadableEntityStateRegistry } from "../../../state";
+import { runThroughTicks } from "./inserter-enable-control-factory";
 import { ConditionalEnableControlFactory } from "./conditional-enable-control-factory";
 
 /**
@@ -35,6 +36,7 @@ export class ConfigurableEnableControlFactory {
         /**
          * The ticks the clocks of the game count, where they run through the steps of a run (under the new dispatch): they
          * then keep their count when a later step starts. Without it they count the run's ticks and start again with each step.
+         * Only a clock of a whole-tick period runs through (`runThroughTicks`).
          */
         private readonly game_tick_provider?: TickProvider,
         /**
@@ -117,13 +119,14 @@ export class ConfigurableEnableControlFactory {
             return OpenRange.from(range.start, Math.min(range.end, period_duration.ticks));
         });
 
+        const run_through_ticks = runThroughTicks(this.game_tick_provider, period_duration.ticks);
         const clocked_control = EnableControl.clocked({
             periodDuration: period_duration,
             enabledRanges: enabled_ranges,
             exact_subtick_positions: this.exact_subtick_positions,
-            tickProvider: this.game_tick_provider ?? this.tick_provider,
+            tickProvider: run_through_ticks ?? this.tick_provider,
             is_game_clock: true,
-            runs_through_steps: this.game_tick_provider !== undefined,
+            runs_through_steps: run_through_ticks !== undefined,
             decider_build_order: override.decider_build_order,
             start_latency_ticks: override.latency_ticks,
         });

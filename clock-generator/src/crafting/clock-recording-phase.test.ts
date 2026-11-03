@@ -9,6 +9,8 @@ import { rotateRanges } from "./clock";
 import { BuildRun, RunOptions, runBuild } from "./plan/plan-run";
 import { SimulationContext, createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { unplannedInserterClocks } from "./sequence/unplanned-inserter-clock";
+import { runThroughTicks } from "./sequence/interceptors/inserter-enable-control-factory";
+import { TickProvider } from "../simulation/current-tick-provider";
 import { buildAsBuiltConfig } from "./trial";
 
 const logger = { log() {}, warn() {}, error() {}, debug() {} };
@@ -90,5 +92,15 @@ describe("the clocks of the game at the start of the recorded run", () => {
         expect(segmented.clock_tick_at_start).toBeUndefined();
         expect(recorded.machines).not.toEqual(continuous.machines);
         expect(recorded.inserters).not.toEqual(continuous.inserters);
+    });
+});
+
+describe("the clocks of the game that run through", () => {
+    it("are those of a whole-tick period; a p/q clock starts again with the recorded run until it is judged over whole counters", () => {
+        const ticks = TickProvider.mutable(0);
+        expect(runThroughTicks(ticks, 128)).toBe(ticks);
+        // 10 periods of 12672/23 ticks run 5510 ticks: the recording would start 10/23 of a tick into a period
+        expect(runThroughTicks(ticks, 12672 / 23)).toBeUndefined();
+        expect(runThroughTicks(undefined, 128)).toBeUndefined();
     });
 });

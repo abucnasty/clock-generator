@@ -17,6 +17,18 @@ import { InserterClock, alwaysEnabledInserters } from "../unplanned-inserter-clo
 import { Logger } from "../../../common/logger";
 import { ContainerStorage } from "../../../simulation/components/container-storage";
 
+/**
+ * The ticks of the game a clock of the game of this period counts where it runs on through the steps of a run (under
+ * the new dispatch, where they are given), or undefined where it does not: a clock of a whole-tick period runs through.
+ * A warm-up of whole periods ends where a period of such a clock starts, so the one period recorded after it starts
+ * there too. A clock of p/q ticks would be a fraction of a tick into a period after a warm-up of whole periods (10
+ * periods of 12672/23 ticks run 5510 ticks), and its one-period judgement assumes a period's start: it starts again with
+ * the recorded run, as before, until it is judged over whole counters.
+ */
+export function runThroughTicks(game_tick_provider: TickProvider | undefined, period_ticks: number): TickProvider | undefined {
+    return Number.isInteger(period_ticks) ? game_tick_provider : undefined;
+}
+
 export class EnableControlFactory {
 
     private readonly target_output_item_name: string;
@@ -35,6 +47,7 @@ export class EnableControlFactory {
         /**
          * The ticks the clocks of the game count, where they run through the steps of a run (under the new dispatch): they
          * then keep their count when a later step starts. Without it they count the run's ticks and start again with each step.
+         * Only a clock of a whole-tick period runs through (`runThroughTicks`).
          */
         private readonly game_tick_provider?: TickProvider,
         /**
@@ -1180,13 +1193,14 @@ export class EnableControlFactory {
         if (!inserter_clock) {
             return AlwaysEnabledControl;
         }
+        const run_through_ticks = runThroughTicks(this.game_tick_provider, inserter_clock.modulus);
         const clocked_control = EnableControl.clocked({
             periodDuration: Duration.ofTicks(inserter_clock.modulus),
             enabledRanges: [inserter_clock.window],
             exact_subtick_positions: this.exact_subtick_positions,
-            tickProvider: this.game_tick_provider ?? this.tick_provider,
+            tickProvider: run_through_ticks ?? this.tick_provider,
             is_game_clock: true,
-            runs_through_steps: this.game_tick_provider !== undefined,
+            runs_through_steps: run_through_ticks !== undefined,
         });
         this.resettable_registry.register(clocked_control);
         return clocked_control;
