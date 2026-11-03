@@ -132,12 +132,16 @@ export interface FuelConsumptionView {
 
 /** What the build does when only the exported clock windows drive it, from the unshifted clock start */
 export interface ClockOnlyRun {
+    /** The unshifted first check's complete physical counter measurement, before long-run judgment. */
+    observation_span?: SimulationStabilityCheck["observation_span"];
     transfer_history: SerializableTransferHistory;
     state_transition_history: CompactStateTransitionHistory;
 }
 
 
 export interface SimulationStabilityCheck {
+    /** Complete physical counter span behind a fractional first-check mean; absent on ordinary one-period runs. */
+    observation_span?: { ticks: number; periods: number; output_items: number };
     /** The run moved its expected output, within a hand of tolerance (and the clock-only check held, when one ran) */
     holds: boolean;
     /** Total items transferred by output inserters during the simulation period */
@@ -435,6 +439,16 @@ export interface RunOptions {
      * the output is judged over one period, so it only means something at 1.
      */
     simulate_periods?: number;
+    /** Exact integer length of a physical counter observation, avoiding fractional-period multiplication noise. */
+    observation_ticks?: number;
+    /**
+     * Where the clocks of the game run on through the start of the recorded run (the new dispatch,
+     * `gameClocksRunThroughSteps`), those of a p/q-tick period do too (`runThroughTicks`), not only those of a whole-tick
+     * period: set by a first check that observes a whole counter (trial.ts `firstClockSpan`), which then starts where
+     * the warm-up left the counter instead of at a counter the recording restarts under a build the warm-up left
+     * elsewhere (default false)
+     */
+    counter_runs_through?: boolean;
     /** Record the fuel each burner machine holds over the run (default false) */
     fuel_levels?: boolean;
     /**
@@ -476,7 +490,8 @@ export interface BuildRun extends PlannedCraftingCycle, TransferPlan {
     /**
      * The ticks the clocks of the game have run when the recorded run starts, where they run through the warm-up (under
      * the new dispatch, `gameClocksRunThroughSteps`): those of a whole-tick period (`runThroughTicks`); a clock of p/q
-     * ticks starts again with the recorded run, at 0. Absent where every clock does (the configured order).
+     * ticks starts again with the recorded run, at 0, unless the run observes its whole counter (`counter_runs_through`).
+     * Absent where every clock does (the configured order).
      */
     clock_tick_at_start?: number;
     /**
@@ -552,7 +567,8 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
     const transfer_plan = planTransfers(config, crafting_cycle_plan, simulation_context, logger);
     // a staged scaffold starts with nothing in its machines: the plan stands, the build is made anew and seeded
     const build = options.cold_start ? coldBuildOf(config, options, debug, logger) : planned_build;
-    const controlled = withEnableControls(config, build, crafting_cycle_plan, transfer_plan.recipe_lcm, logger);
+    const controlled = withEnableControls(config, build, crafting_cycle_plan, transfer_plan.recipe_lcm, logger,
+        options.counter_runs_through === true);
     const { duration, warmup_period } = runPeriodsOf(crafting_cycle_plan, transfer_plan.recipe_lcm, options, logger, period => {
         // A shared final chest's reported count aggregates several machines. Planner overrides are per machine.
         const terminal_swing_count = config.target_output.counts === "destroyed"
@@ -827,6 +843,8 @@ function withEnableControls(
     crafting_cycle_plan: CraftingCyclePlan,
     recipe_lcm: number,
     logger: Logger,
+    /** Whether a clock of the game of a p/q-tick period runs through too, where they run through (`RunOptions.counter_runs_through`) */
+    counter_runs_through: boolean = false,
 ): ControlledBuild {
     const { simulation_context, relative_tick_provider } = build;
     // the clocks of the game count the context's own ticks where they run through the steps of the run
@@ -850,6 +868,7 @@ function withEnableControls(
         simulation_context.state_registry,
         game_tick_provider,
         exact_subtick_positions,
+        counter_runs_through,
     );
 
     // Fuel is not part of the plan, so the fuel inserters swing on clocks of their own that repeat within the period
@@ -875,6 +894,7 @@ function withEnableControls(
         inserter_clocks,
         game_tick_provider,
         exact_subtick_positions,
+        counter_runs_through,
     );
 
     // Swap the controls of the build's context, in place
@@ -1045,7 +1065,7 @@ function simulate(
     resettable_registry.resetAll(ticks_before_run === 0);
 
     const simulate_periods = options.simulate_periods ?? 1;
-    const recorded_duration = Duration.ofTicks(duration.ticks * simulate_periods);
+    const recorded_duration = Duration.ofTicks(options.observation_ticks ?? duration.ticks * simulate_periods);
     const fuel_level_recorder = options.fuel_levels
         ? new FuelLevelRecorder(simulation_context.machines.map(it => it.machine_state))
         : undefined;
@@ -1708,7 +1728,9 @@ function settledFuelClocks(
 
 /** The clock-only run of a trial, as the result carries it */
 export function clockOnlyRunOf(run: TrialRun): ClockOnlyRun {
+    const observation_span = run.stability_check.observation_span;
     return {
+        ...(observation_span !== undefined && { observation_span }),
         transfer_history: run.serializable_transfer_history,
         state_transition_history: run.serializable_state_transition_history,
     };

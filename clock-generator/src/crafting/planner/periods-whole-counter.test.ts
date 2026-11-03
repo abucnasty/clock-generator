@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { ConfigPaths } from "../../config/config-paths";
-import { WHOLE_COUNTER_CHECKS, counterOverLimitOf } from "../plan/clock-period-limit";
+import { WHOLE_COUNTER_CHECKS, counterOverLimitOf, wholeCounterOf } from "../plan/clock-period-limit";
 import { planOfSample } from "./plan-test-helpers";
 
 // whole-counter checks are on under the new dispatch only, which is read from the environment when the engine loads
@@ -20,6 +20,12 @@ describe("periods whose whole counter one run cannot hold, under whole-counter c
         expect(counterOverLimitOf(576_000 / 997)).toBe(576_000);
         expect(counterOverLimitOf(12_672 / 23)).toBeNull();
         expect(counterOverLimitOf(160)).toBeNull();
+    });
+
+    it("such a counter is none to check over: its clock keeps the sampled checks", () => {
+        expect(wholeCounterOf(576_000 / 997)).toBeNull();
+        expect(wholeCounterOf(12_672 / 23)).toEqual({ period_ticks: 12_672, scale: 23 });
+        expect(wholeCounterOf(160)).toBeNull();
     });
 
     it("atlan's cell 29: P-limit prunes the periods of 576,000/997 and 1,152,000/997 ticks by their counters", async () => {

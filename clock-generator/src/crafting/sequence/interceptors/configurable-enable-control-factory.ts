@@ -36,7 +36,7 @@ export class ConfigurableEnableControlFactory {
         /**
          * The ticks the clocks of the game count, where they run through the steps of a run (under the new dispatch): they
          * then keep their count when a later step starts. Without it they count the run's ticks and start again with each step.
-         * Only a clock of a whole-tick period runs through (`runThroughTicks`).
+         * Only a clock of a whole-tick period runs through, unless `counter_runs_through` (`runThroughTicks`).
          */
         private readonly game_tick_provider?: TickProvider,
         /**
@@ -44,6 +44,8 @@ export class ConfigurableEnableControlFactory {
          * under the new dispatch, as the run's context has it
          */
         private readonly exact_subtick_positions: boolean = EXACT_SUBTICK_POSITIONS,
+        /** Whether a clock of a p/q-tick period runs through as well (`runThroughTicks`), given a game tick provider */
+        private readonly counter_runs_through: boolean = false,
     ) {
         this.conditional_factory = new ConditionalEnableControlFactory(entity_state_registry);
     }
@@ -119,7 +121,7 @@ export class ConfigurableEnableControlFactory {
             return OpenRange.from(range.start, Math.min(range.end, period_duration.ticks));
         });
 
-        const run_through_ticks = runThroughTicks(this.game_tick_provider, period_duration.ticks);
+        const run_through_ticks = runThroughTicks(this.game_tick_provider, period_duration.ticks, this.counter_runs_through);
         const clocked_control = EnableControl.clocked({
             periodDuration: period_duration,
             enabledRanges: enabled_ranges,
