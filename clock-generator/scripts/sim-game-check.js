@@ -19,7 +19,7 @@
 // Inserters whose windows are identical cannot be told apart by the clock; where only a swap of their roles matches, the
 // line says "matches with roles swapped". The first clock period of the recording is left out, as the scaffold tests leave
 // it out; a staged start (--staged: the game began with the clock, the simulator runs cold from its first tick) is paired
-// the same way. Totals over inserters are never compared. The tolerances are a first guess.
+// the same way. Totals over inserters are never compared. The tolerances are stamped in every result file ("tolerances").
 //
 // A game side is labelled "true count" where the rule was checked against the game's own wake-ups on that build (TRUE_COUNT
 // below), else "rule on recording". Needs `npx tsc` first. One result file a build and dispatch: <name>.off.json, <name>.on.json.
@@ -39,9 +39,9 @@ if (process.argv[3] !== undefined && !process.argv[3].startsWith("--")) process.
 const { ROOT, dist, quiet, loadSample } = require("./lib");
 
 const WAKE_UPS_TOLERANCE = 1; // wake-ups per inserter per period
-const WAKE_UPS_CYCLE_TOLERANCE = 0.05; // mean wake-ups a period over whole cycles, share of the game's (at least 1 a period as the base)
+const WAKE_UPS_CYCLE_TOLERANCE = 0.02; // mean wake-ups a period over whole cycles, share of the game's (at least 1 a period as the base)
 const BINS_TOLERANCE = 0.005; // share of the game's items in a period
-const HANDS_AGREEMENT = 0.99; // share of positions at which an inserter's hand equals the game's (builds whose cycle is one period)
+const HANDS_AGREEMENT = 1; // share of positions at which an inserter's hand equals the game's (builds whose cycle is one period): every position
 const RULE = "kept-lists";
 const DEFAULT_SIM_OFFSET = 3; // SIMULATED_TICK_TO_CLOCK_POSITION
 // measured on the staged agricultural recording: with 3 every one of its 745 enable edges of every inserter sits 1 tick before the game's
@@ -459,6 +459,7 @@ async function check() {
             staged, seed_items: opt("--seed-items") === undefined ? null : Number(opt("--seed-items")),
             alignment: { simulated_tick_to_clock_position: offsetUsed, default: DEFAULT_SIM_OFFSET, differs_from_default: offsetUsed !== DEFAULT_SIM_OFFSET },
             first_period_left_out: true,
+            tolerances: { wake_ups_per_period: WAKE_UPS_TOLERANCE, wake_ups_cycle_mean_relative: WAKE_UPS_CYCLE_TOLERANCE, bins_relative: BINS_TOLERANCE, hands_agreement: HANDS_AGREEMENT },
         };
         if (offsetUsed !== DEFAULT_SIM_OFFSET) console.log(`${name}: alignment offset ${offsetUsed} differs from the default ${DEFAULT_SIM_OFFSET}`);
         // the periods of the two are judged one by one only where neither the game's recording nor either simulated one repeats over more than one
@@ -501,7 +502,8 @@ function summarise(folder) {
     for (const name of names) {
         const off = JSON.parse(fs.readFileSync(path.join(folder, `${name}.off.json`), "utf8"));
         const on = JSON.parse(fs.readFileSync(path.join(folder, `${name}.on.json`), "utf8"));
-        const word = r => r === null ? "-" : r ? "pass" : "FAIL";
+        // a build left out of the verdict is shown as excluded, never as failing (its files keep the values the check computed)
+        const word = r => off.closer_excluded ? "excluded" : r === null ? "-" : r ? "pass" : "FAIL";
         const closers = off.closer_excluded ? CLOSER_KINDS.map(() => "-") : CLOSER_KINDS.map(k => closer(off, on, k));
         if (off.closer_excluded) excluded.push(`${name}: ${off.closer_excluded}`);
         const offset = off.alignment.simulated_tick_to_clock_position;
@@ -529,8 +531,10 @@ function summarise(folder) {
         }
         lines.push(`closer: ${off.closer_excluded ? "left out (see above)" : CLOSER_KINDS.map(k => `${k} ${closer(off, on, k)}`).join(", ")} (error: off ${JSON.stringify(off.error)}, on ${JSON.stringify(on.error)})`);
     }
+    const tol = names.length === 0 ? undefined : JSON.parse(fs.readFileSync(path.join(folder, `${names[0]}.off.json`), "utf8")).tolerances;
+    const tolerances = tol === undefined ? [] : [`Tolerances: wake-ups within ${tol.wake_ups_per_period} a period per inserter where the cycle is one period, else the mean within ${tol.wake_ups_cycle_mean_relative * 100}% (relative to the game's, at least 1 a period as the base); bins within ${tol.bins_relative * 100}% a period; hands equal at ${tol.hands_agreement * 100}% of the positions where the cycle is one period (no pass/fail otherwise).`, ""];
     const note = excluded.length > 0 ? ["", "Left out of \"closer\" (shown as -): " + excluded.join("; ")] : [];
-    return [...table, ...note, ...lines].join("\n") + "\n";
+    return [...tolerances, ...table, ...note, ...lines].join("\n") + "\n";
 }
 
 (async () => {
