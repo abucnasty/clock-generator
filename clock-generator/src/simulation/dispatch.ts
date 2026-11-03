@@ -65,5 +65,11 @@ const environment: string | undefined = typeof process !== "undefined" ? process
 
 export const DEFAULT_INSERTER_DISPATCH: InserterDispatch = inserterDispatchOf(environment);
 
+/**
+ * Whether a full productivity bar waits for room for a whole craft's results before it pays out, the machine standing
+ * still in the middle of its craft until then (Yield.barWaits): wherever the new dispatch is on
+ */
+export const BAR_WAITS_FOR_CRAFT_ROOM: boolean = DEFAULT_INSERTER_DISPATCH !== "configured-order";
+
 /** Whether the wake-up rule of a new count is "kept-lists" (`keptListsOf` of the environment) */
 export const DEFAULT_KEPT_LISTS: boolean = keptListsOf(environment);

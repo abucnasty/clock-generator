@@ -1,4 +1,5 @@
 import { MachineNotifications } from "./machine-notifications";
+import { BAR_WAITS_FOR_CRAFT_ROOM } from "../dispatch";
 import type { EntityId } from "../../entities/entity-id";
 import type { Machine } from "../../entities/machine/machine";
 import { amountIgnoredByProductivity, expectedAmount } from "../../entities/machine/recipe/recipe-metadata";
@@ -205,7 +206,7 @@ export class Yield {
     public release(user: YieldUser): void {
         // a full bar pays the amount less what the recipe ignores for productivity: 1 of the 2 pentapod eggs
         const bar = this.bonusProgress;
-        while (bar.progress >= 1 - PROGRESS_EPSILON) {
+        while (bar.progress >= 1 - PROGRESS_EPSILON && !this.barWaits()) {
             this.pendingOutput += this.output_by_chance === null ? this.amount_per_bonus
                 : this.wholeOfMainProduct(this.amount_per_bonus);
             this.productsFinished += 1;
@@ -223,8 +224,28 @@ export class Yield {
         }
     }
 
-    /** A finished craft: its main product held, then put in as far as it fits, its by-products made, the finish counted */
+    /**
+     * What the machine holds put in the output as far as it fits, whatever its status: the products of a finished craft,
+     * and with the new dispatch a full bar that waited for room (barWaits), paid as soon as there is room (agricultural
+     * science, Factorio 2.1.24: an egg machine short of ingredients paid it in the tick an inserter took from its output)
+     */
+    public putHeldInOutput(user: YieldUser): void {
+        if (BAR_WAITS_FOR_CRAFT_ROOM) {
+            this.release(user);
+            return;
+        }
+        this.putHeldProductsInOutput(user);
+    }
+
+    /**
+     * A finished craft: its main product held, then put in as far as it fits, its by-products made, the finish counted.
+     * With the new dispatch a full bar is paid first (Factorio 2.1.24: an egg machine at 18 of 20 paid its bar and held
+     * the craft's 2 eggs).
+     */
     public finishCraft(user: YieldUser): void {
+        if (BAR_WAITS_FOR_CRAFT_ROOM) {
+            this.release(user);
+        }
         this.pendingOutput += this.output_by_chance === null ? this.output_amount
             : this.wholeOfMainProduct(this.output_by_chance);
         this.release(user);
@@ -246,6 +267,18 @@ export class Yield {
     /** Products of a finished craft, or of a paid out productivity bar, that the output has no room for */
     public holdsProducts(): boolean {
         return this.pendingOutput > 0 && !this.hasOutputSpaceFor(this.nextHeldAmount());
+    }
+
+    /**
+     * With the new dispatch (BAR_WAITS_FOR_CRAFT_ROOM): a full productivity bar that the output has no room to pay out,
+     * room being a whole craft's amount of the main product, whatever the bar pays. The bar is held and the machine
+     * makes no progress until there is room. Factorio 2.1.24, agricultural science: a biochamber on pentapod eggs (2 a
+     * craft, 1 a bar, a stack of 20) stood with its bar full at 19 and 20 eggs and paid out from 18, and one on nutrients
+     * (40 a craft and a bar, a stack of 100) at 64 to 96 and paid out from 60; the tick its bar fills is a whole tick of
+     * work, its energy topped up after it as after any tick it works.
+     */
+    public barWaits(): boolean {
+        return BAR_WAITS_FOR_CRAFT_ROOM && this.bonusProgress.progress >= 1 - PROGRESS_EPSILON && !this.hasOutputSpaceFor(this.output_amount);
     }
 
     /** The output room the next craft needs: no stack of a placed result waiting, no products held, by-products with room */
