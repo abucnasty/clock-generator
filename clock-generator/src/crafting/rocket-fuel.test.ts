@@ -11,16 +11,14 @@ describe("generateClockForConfig", () => {
     // The builds are generated in beforeAll hooks, not in the describe bodies: those all run when the file is collected,
     // so a run of one test by name would generate every build in the file first. Each sample is generated once, with
     // the as-built check, for every describe that reads it.
-    let by_product: BlueprintGenerationResult;
+    let rocket_fuel: BlueprintGenerationResult;
     let fuel_inserter: BlueprintGenerationResult;
-    let biochambers: BlueprintGenerationResult;
     let flying_robot_frame: BlueprintGenerationResult;
 
     beforeAll(async () => {
         const verified = async (path: string) => generateClockForConfig(await loadConfigFromFile(path), { verify_as_built: true, logger: quiet });
-        by_product = await verified(ConfigPaths.JELLYNUT_PROCESSING_ROCKET_FUEL);
+        rocket_fuel = await verified(ConfigPaths.GLEBA_ROCKET_FUEL);
         fuel_inserter = await verified(TestConfigPaths.BIOCHAMBER_FUEL);
-        biochambers = await verified(ConfigPaths.JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS);
         flying_robot_frame = generateClockForConfig(await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME), { logger: quiet });
     });
 
@@ -30,30 +28,26 @@ describe("generateClockForConfig", () => {
             // block the machine unless the inserter taking them off picks them up although they are not its main product.
             // The planned clock holds with the four jelly inserters served in the default order and in each of the other
             // three, and so does its long run (the fractional clock does under every order: rocket-fuel.generation.test.ts)
-            expect(by_product.stability_check.actual_output_items).toBeGreaterThan(0);
-            expect(by_product.stability_check.as_built?.taker_orders_checked).toBe(4);
-            expect(by_product.stability_check.as_built?.failed_taker_order).toBeUndefined();
-            expect(by_product.stability_check.as_built?.holds).toBe(true);
+            expect(rocket_fuel.stability_check.actual_output_items).toBeGreaterThan(0);
+            expect(rocket_fuel.stability_check.as_built?.taker_orders_checked).toBe(4);
+            expect(rocket_fuel.stability_check.as_built?.failed_taker_order).toBeUndefined();
+            expect(rocket_fuel.stability_check.as_built?.holds).toBe(true);
         });
 
         it("clocks the inserter taking the by-product off, so it only looks at the machine now and then", () => {
             // it is not in the plan, so its clock repeats within the period instead of coming from swing counts
-            const windows = by_product.clock_windows["inserter:11"];
+            const windows = rocket_fuel.clock_windows["inserter:11"];
             expect(windows.length).toBeGreaterThanOrEqual(1);
             expect(windows[0].end - windows[0].start).toBeLessThan(20);
-            expect(by_product.serializable_transfer_plan.entities.map(entity => entity.entity_id)).not.toContain("inserter:11");
+            expect(rocket_fuel.serializable_transfer_plan.entities.map(entity => entity.entity_id)).not.toContain("inserter:11");
 
-            const described = by_product.blueprint.entities
+            const described = rocket_fuel.blueprint.entities
                 .map(entity => entity.player_description ?? "")
                 .find(description => description.startsWith("By-product: "));
             expect(described).toContain("[item=jellynut-seed] (inserter 11)");
             expect(described).toContain("of every 32 ticks; outside the main plan");
         });
 
-        it("has no fuel plan and no fuel consumption view, as no machine burns fuel", () => {
-            expect(by_product.fuel_plan).toBeUndefined();
-            expect(by_product.fuel_consumption_view).toBeUndefined();
-        });
     });
 
     describe("a biochamber with a fuel inserter", () => {
@@ -79,11 +73,11 @@ describe("generateClockForConfig", () => {
         });
 
         it("keeps the rocket fuel chain stable as built with the fuel of three biochambers", () => {
-            expect(biochambers.stability_check.holds).toBe(true);
-            expect(biochambers.stability_check.as_built?.holds).toBe(true);
+            expect(rocket_fuel.stability_check.holds).toBe(true);
+            expect(rocket_fuel.stability_check.as_built?.holds).toBe(true);
             for (const id of ["inserter:10", "inserter:12", "inserter:13"]) {
-                expect(biochambers.clock_windows[id]).toBeUndefined();
-                expect(biochambers.unplanned_inserter_clocks![id].own_clock).toBe(true);
+                expect(rocket_fuel.clock_windows[id]).toBeUndefined();
+                expect(rocket_fuel.unplanned_inserter_clocks![id].own_clock).toBe(true);
             }
         });
 
@@ -112,7 +106,7 @@ describe("generateClockForConfig", () => {
             });
 
             it("shows the fuel being consumed in a chain that also moves a by-product", () => {
-                const view = biochambers.fuel_consumption_view!;
+                const view = rocket_fuel.fuel_consumption_view!;
                 expect(view.fuel_swings_recorded).toBe(true);
                 const swung = view.transfer_history.entities
                     .filter(entity => view.fuel_inserter_ids.includes(entity.entity_id) && entity.transfers.length > 0);
@@ -129,10 +123,10 @@ describe("generateClockForConfig", () => {
             const behavior = (entity: typeof entities[number]) => JSON.stringify(entity.control_behavior ?? {});
 
             beforeAll(() => {
-                period = biochambers.simulation_duration.ticks;
-                fuel_moduli = Array.from(new Set(Object.values(biochambers.unplanned_inserter_clocks!)
+                period = rocket_fuel.simulation_duration.ticks;
+                fuel_moduli = Array.from(new Set(Object.values(rocket_fuel.unplanned_inserter_clocks!)
                     .filter(clock => clock.own_clock).map(clock => clock.modulus))).sort((a, b) => a - b);
-                entities = biochambers.blueprint.entities;
+                entities = rocket_fuel.blueprint.entities;
                 clocks = entities.filter(entity => (entity.player_description ?? "").startsWith("Clock for"));
                 modulos = entities.filter(entity => entity.name === "arithmetic-combinator");
             });
@@ -190,10 +184,10 @@ describe("generateClockForConfig", () => {
             });
 
             it("is not offered again as a modulo blueprint for the fuel clocks alone", () => {
-                if (biochambers.modulo_blueprint) {
-                    expect(biochambers.modulo_blueprint.label).toContain("(modulo clock)");
+                if (rocket_fuel.modulo_blueprint) {
+                    expect(rocket_fuel.modulo_blueprint.label).toContain("(modulo clock)");
                 }
-                expect(biochambers.blueprint.label).not.toContain("(modulo clock)");
+                expect(rocket_fuel.blueprint.label).not.toContain("(modulo clock)");
             });
         });
     });
@@ -201,7 +195,7 @@ describe("generateClockForConfig", () => {
     describe("combinator descriptions", () => {
         // Factorio keeps at most 500 bytes of the description of a combinator
         it.each([
-            ["rocket fuel biochambers", () => biochambers],
+            ["rocket fuel biochambers", () => rocket_fuel],
             ["a biochamber with a fuel inserter", () => fuel_inserter],
             ["flying robot frames", () => flying_robot_frame],
         ])("are at most 500 bytes in the blueprint of %s", (_name, result) => {

@@ -33,8 +33,8 @@ export interface RocketFuelSample {
 }
 
 /** What the rocket fuel samples have in common: two rocket fuel biochambers fed jelly by one jellynut biochamber */
-export const rocketFuelSample = async (path: string): Promise<RocketFuelSample> => {
-    const config = await loadConfigFromFile(path);
+export const rocketFuelSample = async (source: string | Config): Promise<RocketFuelSample> => {
+    const config = typeof source === "string" ? await loadConfigFromFile(source) : source;
     const ids = (matches: (inserter: Config["inserters"][number]) => boolean) =>
         config.inserters.filter(matches).map(inserter => EntityId.forInserter(inserter.id!).id);
     // with the searches, whose clocks the tests of these samples read as well: batched swings is stable on both

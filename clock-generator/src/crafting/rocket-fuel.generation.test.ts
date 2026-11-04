@@ -2,8 +2,8 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { ConfigPaths } from "../config/config-paths";
 import { alwaysOnReasonProblemsOf, rocketFuelSample, type RocketFuelSample } from "./generate-blueprint-test-helpers";
 
-// The two builds of this suite are in files of their own (rocket-fuel-jelly-stack-15.generation.test.ts is the other), so that a
-// shard of the generation tests does not wait on both.
+// The two builds of this suite (the sample, and the same with the jelly inserters at a hand of 15) are in files of their own
+// (rocket-fuel-jelly-stack-15.generation.test.ts is the other), so that a shard of the generation tests does not wait on both.
 describe("generateClockForConfig", () => {
 
     // The builds are generated in beforeAll hooks, not in the describe bodies: those all run when the file is collected,

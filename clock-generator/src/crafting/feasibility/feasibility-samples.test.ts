@@ -6,6 +6,7 @@ import { overHoodClockCases, overHoodClockConfig } from "../../../tests/game/bui
 import { pickupClockConfig, pickupClockSpeedCases } from "../../../tests/game/builds/pickup-clock-speed-coverage";
 import { ConfigPaths, ExpectedRefusals } from "../../config/config-paths";
 import { TestConfigPaths } from "../../../tests/configs/paths";
+import { withJellyHandsOf15 } from "../../../tests/configs/rocket-fuel-hands";
 import { describeFeasibilityIssue, InserterCoverageError } from "../../config/errors";
 import { assertInserterCoverage } from "../../config/inserter-coverage-validator";
 import { loadConfigFromFile } from "../../config/loader";
@@ -47,18 +48,21 @@ describe("every sample passes the feasibility pass", () => {
 
 /**
  * The samples whose tightest cut sits exactly at its bound: exact fractions and floors, not planned figures, keep them.
- * - Rocket fuel with jelly stack 15: inserters 6-9 bring 4 x 15 x 60 / 8 = 450 jelly a second; at 30 a craft that is
+ * - Rocket fuel with the jelly inserters at a hand of 15: inserters 6-9 bring 4 x 15 x 60 / 8 = 450 jelly a second; at 30 a craft that is
  *   15 crafts a second, and 60 rocket fuel a second at 4 a craft needs 15.
  * - Biochamber fuel: 3 nutrients a second at 6 a craft needs 0.5 crafts a second, its machine's 0.5.
  * - Low density structure: 240 a second dropped onto one turbo belt, whose two sides carry 120 each.
  */
 describe("the samples at exactly their bound pass", () => {
     it.each([
-        ["GLEBA_ROCKET_FUEL_JELLY_STACK_15", "C1 machine:rocket-fuel-from-jelly", 15, 15],
+        ["GLEBA_ROCKET_FUEL_JELLY_HANDS_15", "C1 machine:rocket-fuel-from-jelly", 15, 15],
         ["BIOCHAMBER_FUEL", "C1 machine:nutrients-from-yumako-mash", 0.5, 0.5],
         ["LOW_DENSITY_STRUCTURE", "C3 low-density-structure", 240, 240],
     ] as const)("%s: %s, %d against %d", async (key, name, need, capacity) => {
-        const { issues, tightest } = feasibilityOfConfig(await loadConfigFromFile({ ...ConfigPaths, ...TestConfigPaths }[key]) as Config);
+        const config = key === "GLEBA_ROCKET_FUEL_JELLY_HANDS_15"
+            ? withJellyHandsOf15(await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL) as Config)
+            : await loadConfigFromFile({ ...ConfigPaths, ...TestConfigPaths }[key]) as Config;
+        const { issues, tightest } = feasibilityOfConfig(config);
         expect(issues).toEqual([]);
         expect(tightest!.name).toBe(name);
         expect([tightest!.need.toDecimal(), tightest!.capacity!.toDecimal()]).toEqual([need, capacity]);

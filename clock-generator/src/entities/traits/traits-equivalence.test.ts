@@ -285,7 +285,7 @@ describe("the traits of every sample", () => {
         }
         expect(checked.samples).toBeGreaterThan(50);
         expect(checked.machines).toBeGreaterThan(100);
-        expect(checked.inserters).toBeGreaterThan(400);
+        expect(checked.inserters).toBeGreaterThan(300);
         expect(checked.drills).toBeGreaterThan(0);
         expect(checked.chests).toBeGreaterThan(0);
         expect([checked.merged_fuels, checked.hands_at_placers, checked.belt_pickups, checked.placements_into_chests].every(count => count > 0)).toBe(true);

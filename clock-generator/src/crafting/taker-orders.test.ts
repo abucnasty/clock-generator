@@ -15,7 +15,7 @@ describe("the taker orders a clock is checked under", () => {
 
     beforeAll(async () => {
         electromagnetic = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE);
-        jellynut = await loadConfigFromFile(ConfigPaths.JELLYNUT_PROCESSING_ROCKET_FUEL);
+        jellynut = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
     });
 
     it("names the inserters that take one product from one machine", () => {
@@ -32,7 +32,7 @@ describe("the taker orders a clock is checked under", () => {
         expect(otherTakerOrdersOf(electromagnetic, windows({ "inserter:1": [[0, 59]], "inserter:2": [[0, 9]] }), 60)).toEqual(["ascending"]);
     });
 
-    // jellynut processing: inserters 6 to 9 take its jelly, two into each rocket fuel machine
+    // the rocket fuel sample's jellynut processing: inserters 6 to 9 take its jelly, two into each rocket fuel machine
     it("adds each rotation of the descending order where more than two are enabled together", () => {
         expect(otherTakerOrdersOf(jellynut, new Map(), 128)).toEqual([{ rotation: 1 }, { rotation: 2 }, { rotation: 3 }]);
         // two at a time, in turns of two: the two ways round

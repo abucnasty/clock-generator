@@ -47,11 +47,8 @@ export const ConfigPaths = {
     FLYING_ROBOT_FRAME: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'flying-robot-frame', 'flying-robot-frame.json'),
     LOGISTIC_SCIENCE_DI: path.join(CONFIG_SAMPLES_DIR, 'science', 'logistic-science', 'logistic-science-direct-insert.json'),
     GLEBA_ROCKET_FUEL: path.join(CONFIG_SAMPLES_DIR, 'gleba', 'rocket-fuel', 'rocket-fuel-jelly-stack-16.json'),
-    GLEBA_ROCKET_FUEL_JELLY_STACK_15: path.join(CONFIG_SAMPLES_DIR, 'gleba', 'rocket-fuel', 'rocket-fuel-jelly-stack-15.json'),
-    JELLYNUT_PROCESSING_ROCKET_FUEL: path.join(CONFIG_SAMPLES_DIR, 'gleba', 'jellynut-processing', 'jellynut-processing-rocket-fuel.json'),
     AGRICULTURAL_SCIENCE: path.join(CONFIG_SAMPLES_DIR, 'science', 'agriculture-science', 'agriculture-science.json'),
     IRON_BACTERIA_CULTIVATION: path.join(CONFIG_SAMPLES_DIR, 'gleba', 'iron-bacteria-cultivation', 'iron-bacteria-cultivation.json'),
-    JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS: path.join(CONFIG_SAMPLES_DIR, 'gleba', 'jellynut-processing', 'jellynut-processing-rocket-fuel-biochambers.json'),
     /** Real cells of bases built in the game, with their scaffold and the rate measured in the base (milestone M1) */
     REAL_STUPIDFATHOBBIT_CELL02: path.join(CONFIG_SAMPLES_DIR, 'real', 'stupidfathobbit', 'cell02', 'stupidfathobbit-cell02.json'),
     REAL_THAELN_CELL09: path.join(CONFIG_SAMPLES_DIR, 'real', 'thaeln', 'cell09', 'thaeln-cell09.json'),

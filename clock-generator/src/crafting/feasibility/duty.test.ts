@@ -4,6 +4,7 @@ import { FeasibilityError } from "../../config/errors";
 import { loadConfigFromFile } from "../../config/loader";
 import { Config } from "../../config/schema";
 import { TestConfigPaths } from "../../../tests/configs/paths";
+import { withJellyHandsOf15 } from "../../../tests/configs/rocket-fuel-hands";
 import { assertFeasible } from "./assert-feasible";
 import { feasibilityOfConfig, withTarget } from "./feasibility-test-helpers";
 
@@ -33,8 +34,8 @@ describe("the duty of a machine group", () => {
 
 /** The duty decides nothing: what is refused is what C1 to C7 and the traps refuse, with or without it */
 describe("the duty does not change what is refused", () => {
-    it("rocket fuel with jelly stack 15 at 61 a second is refused by C1 alone, as before, and records its duty", async () => {
-        const over = withTarget(await sampleOf("GLEBA_ROCKET_FUEL_JELLY_STACK_15"), 61);
+    it("rocket fuel with its jelly inserters at a hand of 15 at 61 a second is refused by C1 alone, as before, and records its duty", async () => {
+        const over = withTarget(withJellyHandsOf15(await sampleOf("GLEBA_ROCKET_FUEL")), 61);
         const { rules, duties } = feasibilityOfConfig(over);
         expect(rules).toEqual(["C1"]);
         expect(duties.map(it => it.group)).toContain("machine:rocket-fuel-from-jelly");
