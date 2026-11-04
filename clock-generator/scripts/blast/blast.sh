@@ -21,7 +21,7 @@
 #                                           the folder's recorded environment (.env.json, written by run) is not the
 #                                           current one, or when it has none: --made-under says what a folder from before
 #                                           the record was made under, and must still equal the current environment
-#   blast.sh compare <before> <after> [--json f]   compare.py (folders or cache entries, the latter by key as `list` prints it): the clocks, and the results digest
+#   blast.sh compare [--map f] <before> <after> [--json f]   compare.py (folders or cache entries, the latter by key as `list` prints it; --map: a rename map, `old-key new-key` a line, applied to before's jobs, with the renamed jobs' config hashes compared): the clocks, and the results digest
 #                                           (every job file's results_sha256: what the clock hash leaves out) per job and component;
 #                                           exits 1, naming the side, when either side has no jobs
 #   blast.sh same <a> <b>                   whether two jobs folders (or cache entries, by key) hold the same results, job by job;
@@ -234,7 +234,7 @@ store_entry() { # $1 jobs dir, $2 source json
 }
 
 cmd=${1:-}; shift || true
-DRY=""; N=4; NSLOW=10; STORE=1; BUILD=1; NOTE=""; FULL=0; BASE=""; ARGS=(); MADE=()
+DRY=""; N=4; NSLOW=10; STORE=1; BUILD=1; NOTE=""; FULL=0; BASE=""; MAP=""; ARGS=(); MADE=()
 while [ $# -gt 0 ]; do
   case "$1" in
     -n) N=$2; NSLOW=$2; shift ;;
@@ -245,6 +245,7 @@ while [ $# -gt 0 ]; do
     --base) BASE=$2; shift ;;
     --made-under) MADE+=("$2"); shift ;;
     --json|--md) ARGS+=("$1" "$2"); shift ;;
+    --map) [ $# -ge 2 ] || die "--map takes a file"; MAP=$2; shift ;;
     -*) die "unknown option $1" ;;
     *) ARGS+=("$1") ;;
   esac
@@ -310,9 +311,9 @@ case "$cmd" in
     rev=$(git -C "$W" rev-parse HEAD)
     store_entry "$src" "$(json_of kind stored from "$src" worktree "$W" rev "$rev" note "$NOTE")"
     ;;
-  compare) [ ${#ARGS[@]} -ge 2 ] || die "compare <before> <after> [--json out.json]"
+  compare) [ ${#ARGS[@]} -ge 2 ] || die "compare [--map renames.txt] <before> <after> [--json out.json]"
     ARGS[0]=$(entry_arg "${ARGS[0]}") && ARGS[1]=$(entry_arg "${ARGS[1]}") || exit 1
-    python3 "$HERE/compare.py" "${ARGS[@]}" ;;
+    python3 "$HERE/compare.py" ${MAP:+--map "$MAP"} "${ARGS[@]}" ;;
   same) [ ${#ARGS[@]} -ge 2 ] || die "same <a> <b>"
     ARGS[0]=$(entry_arg "${ARGS[0]}") && ARGS[1]=$(entry_arg "${ARGS[1]}") || exit 1
     python3 "$HERE/cache.py" same "${ARGS[@]}" ;;
