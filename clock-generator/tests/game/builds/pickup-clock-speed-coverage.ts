@@ -7,7 +7,7 @@ import {loadConfigFromFile} from "../../../src/config/loader";
 import {FactorioBlueprintFile} from "../../../src/blueprints/blueprint";
 import {encodeBlueprintFile} from "../../../src/blueprints/serde";
 import {GameFixturePaths} from "../helpers/fixture-paths";
-import {blueprintAtSpeed, CLOCK_TEST_SPEEDS, configAtSpeed, FixtureBeltSpeed} from "../helpers/belt-speed-fixtures";
+import {BELT_SPEEDS, blueprintAtSpeed, CLOCK_TEST_SPEEDS, configAtSpeed, FixtureBeltSpeed} from "../helpers/belt-speed-fixtures";
 import {ordinaryAtSpeed} from "../mechanics/belt-pickup/ordinary-speed-fixtures";
 import {makeInputBeltBackedUp} from "../mechanics/belt-pickup/belt-pickup-fixtures";
 import {capturePickupClockScenario} from "./pickup-clock-capture";
@@ -20,6 +20,13 @@ export function pickupClockSpeedCases(family: Family): ClockCase[] {
         ["straight-belt", "underground-entrance", "underground-exit"].map(geometry => ({
             family, speed, backed, geometry, name: `${family}-${speed.name}-${geometry}-${backed ? "backed" : "moving"}`,
         }))));
+}
+
+/** One case on any belt tier, for tests that pin a tier the game tests no longer record (turbo only) */
+export function pickupClockCase(family: Family, speedName: string, geometry: string, backed: boolean): ClockCase {
+    const speed = BELT_SPEEDS.find(it => it.name === speedName);
+    if (!speed) throw new Error(`No belt speed ${speedName}`);
+    return {family, speed, backed, geometry, name: `${family}-${speed.name}-${geometry}-${backed ? "backed" : "moving"}`};
 }
 
 function gearAtSpeed(text: string, speed: FixtureBeltSpeed, backed: boolean) {

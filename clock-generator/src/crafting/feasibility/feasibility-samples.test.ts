@@ -83,9 +83,9 @@ describe("every synthetic blast fixture passes the feasibility pass", () => {
         ...containerClockCases().map((variant): [string, () => Config] => [`containers ${variant.name}`, () => containerClockConfig(variant)]),
     ];
 
-    it("has every synthetic job of the blast: 48 pickup, 32 over-hood, 48 front, 16 blocked and 6 container configs", () => {
+    it("has every synthetic job of the blast: 12 pickup, 8 over-hood, 12 front, 4 blocked and 6 container configs (turbo tier only)", () => {
         const count = (group: string) => jobs.filter(([name]) => name.startsWith(`${group} `)).length;
-        expect(["pickup", "overhood", "front", "blocked", "containers"].map(count)).toEqual([48, 32, 48, 16, 6]);
+        expect(["pickup", "overhood", "front", "blocked", "containers"].map(count)).toEqual([12, 8, 12, 4, 6]);
     });
 
     it.each(jobs)("%s", async (_name, configOf) => {
