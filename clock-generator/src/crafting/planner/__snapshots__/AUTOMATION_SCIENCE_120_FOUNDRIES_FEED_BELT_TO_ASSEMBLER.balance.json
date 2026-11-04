@@ -1,5 +1,5 @@
 {
-  "sample": "AUTOMATION_SCIENCE_BELTED_BUFFER",
+  "sample": "AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER",
   "swings 1": [
     "inserter:4 | automation-science-pack 1 | total 1 | hand 16",
     "inserter:3 | iron-gear-wheel 1/2, copper-plate 1/2 | total 1 | needed 1 | hand 16",

@@ -49,7 +49,7 @@ describe("even hands", () => {
     });
 
     it("is not made for a build whose inserters take from a belt", async () => {
-        const belt_fed = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+        const belt_fed = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
         expect(() => evenHandsClock(belt_fed, { logger: quiet })).toThrow(/every inserter takes from a machine or a chest/);
     });
 });

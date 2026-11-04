@@ -11,7 +11,7 @@ let alternatives: ClockAlternative[];
 let selected: ClockAlternative;
 
 beforeAll(async () => {
-    config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE);
+    config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_120);
     by_default = generateClockAlternatives(config, {logger: quiet});
     alternatives = by_default.alternatives;
     selected = selectedOf(by_default);

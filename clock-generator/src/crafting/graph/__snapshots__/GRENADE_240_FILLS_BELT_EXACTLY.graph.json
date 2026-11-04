@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "REAL_OWNER_GRENADE",
+  "sample": "GRENADE_240_FILLS_BELT_EXACTLY",
   "target": {
     "item": "grenade",
     "counts": "made",

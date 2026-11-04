@@ -76,7 +76,7 @@ describe('numerical output and actual hold checks', () => {
     });
 });
 
-// Atlan cell 29: the 2,888-tick clock of a 2,888.666-tick period meets goal 1 at 0.02% fast
+// an iron gear wheel build at 9.97 a second: the 2,888-tick clock of a 2,888.666-tick period meets goal 1 at 0.02% fast
 describe('a clock rounded down to whole ticks that meets the target rate', () => {
     it('says how much it runs fast, and not that its rate differs', () => {
         const rounded = clock(9.972299, 0.002299, true);

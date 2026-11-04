@@ -13,7 +13,7 @@ const signature = trial.clockVerificationSignature;
 let config: Config;
 let result: ReturnType<typeof generateClockForConfig>;
 beforeAll(async () => {
-    config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+    config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
     result = generateClockForConfig(config, options);
 });
 afterEach(() => vi.restoreAllMocks());

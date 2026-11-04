@@ -5,7 +5,7 @@ two recyclers inserting electronic circuits directly into their supercapacitor p
 science plants, two curved holmium/superconductor pickups, original source feeders, steel output buffers,
 and advanced-circuit outlet belts leading to the existing disposal loader and infinity chest.
 
-`pink-science-original-scaffold.txt` is the byte-identical full blueprint. Its target is 96 science packs a
+`electromagnetic-240-recycler-belt-fed.scaffold` is the byte-identical full blueprint. Its target is 96 science packs a
 second, equivalent to 240/s across 2.5 full-scaffold copies.
 
 The config describes one repeated cell at 48/s and sets Copies to 5, following the existing one-unit config rule.
@@ -17,7 +17,7 @@ files marked unsupported bend must be captured again, since changing a saved war
 
 ## The config is automatic
 
-`pink-science-original.json` is what the clock generator's own import makes of a fresh Sidecar export of the left cell
+`electromagnetic-240-recycler-belt-fed.json` is what the clock generator's own import makes of a fresh Sidecar export of the left cell
 of this blueprint, with only Target Output's rate and copies set: no inserter is set to Always enabled, and no
 swing count or LCM is fixed. Generate picks the clock for all twelve inserters. It is a 40-tick clock in which the two
 arms that carry supercapacitors to the science plants take turns (each science plant's drain into its steel buffer moves
@@ -27,7 +27,7 @@ survived.
 The supercapacitor plants run at 99.56% of their capacity at this rate, so the margin is thin: the clock keeps both
 plants filled and emptied at the same points of their turns, which is what the game run below checks.
 
-`tests/game/builds/recycler-original-clock.game.test.ts` generates that clock from this config and runs it on the
+`tests/game/builds/electromagnetic-science-240-recycler-belt-fed-clock.game.test.ts` generates that clock from this config and runs it on the
 whole blueprint, both cells, in the game, with the clock's blueprint and schedule wiring both copies. The physical
 blueprint is unchanged; losses use script disable flags and restore the original supplies and outlets.
 

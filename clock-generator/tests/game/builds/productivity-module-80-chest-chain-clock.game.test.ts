@@ -1,7 +1,7 @@
 import fs from "fs";
 import {test} from "vitest";
 import {capturePickupClockScenario} from "./pickup-clock-capture";
-import {productivityChainClockScenario} from "./productivity-chain-clock-fixtures";
+import {productivityChainClockScenario} from "./productivity-module-80-chest-chain-clock-fixtures";
 
 // A passing capture preserves the measured counts, including clock failures; it does not certify stability.
 test("Productivity module chain clock: generated-one-copy", async context => {

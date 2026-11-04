@@ -11,7 +11,7 @@ describe("military science: the counters of each clock beside its wake-ups", () 
     let generated: ClockAlternativesResult;
     let copies: number;
     beforeAll(async () => {
-        const config = await loadConfigFromFile(ConfigPaths.MILITARY_SCIENCE);
+        const config = await loadConfigFromFile(ConfigPaths.MILITARY_SCIENCE_120);
         copies = config.target_output.copies ?? 1;
         generated = await generateClockAlternatives(config, { logger: quiet });
     });

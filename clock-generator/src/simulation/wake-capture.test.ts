@@ -190,7 +190,7 @@ test("under the new dispatch the simulator wakes the belt-fed inserters of metal
         clock: { windows: SerializableClockWindows; period: number };
         seed: { sample: number; start_stock: never; start_hands: never; main_clock_shift: number };
     };
-    const config = await loadConfigFromFile(ConfigPaths.METALLURGIC_SCIENCE_PACK);
+    const config = await loadConfigFromFile(ConfigPaths.METALLURGIC_SCIENCE_45);
     const { windows, period } = fixture.clock;
     const { sample, start_stock, start_hands, main_clock_shift } = fixture.seed;
     // the simulator's tick t is the fixture's tick sample + 1 + t; its first ten ticks are left out (the seed holds no lists)

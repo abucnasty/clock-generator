@@ -14,8 +14,8 @@ describe("the taker orders a clock is checked under", () => {
     let jellynut: Config;
 
     beforeAll(async () => {
-        electromagnetic = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_AUTO);
-        jellynut = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
+        electromagnetic = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_330);
+        jellynut = await loadConfigFromFile(ConfigPaths.ROCKET_FUEL_60);
     });
 
     it("names the inserters that take one product from one machine", () => {

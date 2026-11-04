@@ -2,8 +2,8 @@ import fs from "fs";
 import {describe, expect, test} from "vitest";
 import {ConfigPaths} from "../../../src/config/config-paths";
 import {ClockControl, ClockHistory, coldClockReferenceMismatches, historicalPinMismatches, pinMismatches, readControls} from "./clock-controls";
-import {ownerClockHash as grenadeClockHash} from "./grenade-clock-fixtures";
-import {ownerClockHash} from "./own-clock-fixtures";
+import {handMadeClockHash as grenadeClockHash} from "./grenade-clock-fixtures";
+import {handMadeClockHash} from "./inserter-crafting-240-shared-signal-clock-fixtures";
 
 /**
  * Every game test that runs a generated clock compares what the game did with a recording, and the recording belongs to
@@ -11,15 +11,15 @@ import {ownerClockHash} from "./own-clock-fixtures";
  * fail where a pin was moved to follow a selection and its recording was not made again: the generation tests (pull
  * requests to master) find the selection that moved, this finds the pin that was edited to follow it.
  */
-const FAMILIES = ["blocked-output", "car", "container", "front", "grenade", "lithium-silo", "ore-voider", "over-hood", "own", "pickup", "productivity-chain", "steel-wagon", "stupidfathobbit-cell02", "thaeln-cell09"]
+const FAMILIES = ["blocked-output", "container", "front", "grenade", "inserter-crafting-240-shared-signal", "iron-ore-voider-400", "iron-plate-80-car-chest", "lithium-plate-80-silo-chest", "over-hood", "pickup", "processing-unit-80-circuit-export", "productivity-module-80-chest-chain", "steel-plate-26-wagon-chest", "utility-science-480-lds-foundry-chain"]
     .map(family => `${family}-clock-controls.json`);
 const hash = /^[0-9a-f]{64}$/;
 /** Entries whose native summary has no known clock yet: the list may only shrink */
 const NOT_YET_TIED: Record<string, string[]> = {};
 /** Entries that are a build's hand-made clock, not a selection: the identity of that clock in the blueprint the test builds */
 const OWNER_CLOCKS: Record<string, Record<string, string>> = {
-    "own-clock-controls.json": {"own-clock-three-copies": ownerClockHash()},
-    "grenade-clock-controls.json": {"owner-one-copy": grenadeClockHash("one copy"), "owner-full-build": grenadeClockHash("full build")},
+    "inserter-crafting-240-shared-signal-clock-controls.json": {"hand-made-clock-three-copies": handMadeClockHash()},
+    "grenade-clock-controls.json": {"hand-made-one-copy": grenadeClockHash("one copy"), "hand-made-full-build": grenadeClockHash("full build")},
 };
 
 test("every family of game tests with a controls file is checked here", () => {

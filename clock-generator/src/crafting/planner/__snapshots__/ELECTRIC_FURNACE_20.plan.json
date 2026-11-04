@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "ELECTRIC_FURNACE",
+  "sample": "ELECTRIC_FURNACE_20",
   "target": {
     "item": "electric-furnace",
     "counts": "made",

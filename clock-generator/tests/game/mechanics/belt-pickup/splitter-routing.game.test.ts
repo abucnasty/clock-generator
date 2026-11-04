@@ -40,7 +40,7 @@ for (const speed of BELT_SPEEDS) for (const variant of [
         const fixture = GameFixturePaths.SPLITTER;
         const config = await loadConfigFromFile(path.join(fixture, "config.json"));
         configAtSpeed(config, speed);
-        const original = fs.readFileSync(path.join(fixture, "scaffold.txt"), "utf8").trim();
+        const original = fs.readFileSync(path.join(fixture, "scaffold.scaffold"), "utf8").trim();
         const decoded = JSON.parse(zlib.inflateSync(Buffer.from(original.slice(1), "base64")).toString());
         for (const entity of decoded.blueprint.entities) {
             if (variant.southInput && entity.entity_number <= 11) entity.position.y += 1;

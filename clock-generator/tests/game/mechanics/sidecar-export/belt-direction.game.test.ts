@@ -15,7 +15,7 @@ require = function(name) return assert(capture_modules[name], name) end
     return `capture_modules["__clock-generator-sidecar__.scripts.${name}"] = (function()\n${source}\nend)() or true\n`;
 }).join("");
 
-const SCAFFOLD = path.join(path.dirname(ConfigPaths.REAL_OWNER_LITHIUM_SILO), "..", "grenade", "grenade-scaffold.txt");
+const SCAFFOLD = path.join(path.dirname(ConfigPaths.LITHIUM_PLATE_80_SILO_CHEST), "..", "grenade", "grenade-240-fills-belt-exactly.scaffold");
 
 /** The inserter ids of the scaffold's four output inserters in export order, with the way their belts run: both lines run west */
 const EXPECTED_DIRECTIONS = "west,west,west,west";

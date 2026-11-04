@@ -7,7 +7,7 @@ import { backpressureLossOf } from "./trial";
 import { verdictOf } from "./backpressure-loss";
 import { quiet } from "./generate-blueprint-test-helpers";
 
-// Thaeln's cell has a coal inserter that moves 15/8 hands a cycle, which stretches the period of every clock made from
+// the utility science 480 build has a coal inserter that moves 15/8 hands a cycle, which stretches the period of every clock made from
 // the plan to eight cycles (1,344 ticks); no clock for it is stable at 480 a second. Without the coal in the period (the
 // config's `ignored_lcm_ingredients`) it is two cycles (336 ticks), the coal inserter staying clocked. The observed-windows
 // search finds a clock for that period in about ten minutes, which a test does not wait for: these are the windows it
@@ -52,13 +52,13 @@ const windowsOf = (text: string) => text.split(",").map(range => {
     return { start, end };
 });
 
-describe("a saved clock for a shorter period, on the Thaeln sample", () => {
+describe("a saved clock for a shorter period, on the utility science 480 sample", () => {
     let config: Config;
     let result: BlueprintGenerationResult;
     const windows: SerializableClockWindows = Object.fromEntries(Object.entries(COAL_OUT_OF_PERIOD_WINDOWS).map(([id, text]) => [id, windowsOf(text)]));
 
     beforeAll(async () => {
-        const sample = await loadConfigFromFile(ConfigPaths.REAL_THAELN_CELL09);
+        const sample = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN);
         // the config the clock was planned on: the coal is out of the period, and the output swings per cycle are those of the clock
         config = { ...sample, overrides: { ...sample.overrides, ignored_lcm_ingredients: ["coal"], terminal_swing_count: 3 } };
         result = clockFromWindows(config, windows, PERIOD, quiet);

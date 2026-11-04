@@ -151,8 +151,8 @@ const LOGISTIC_INSERTER_CRAFTING_WAKE_UPS_OPEN = "the wake-ups of the inserter c
 
 const BUILDS: Record<string, ScaffoldBuild> = {
     "agricultural science": {
-        scaffold: path.join(SAMPLES, "science", "agriculture-science", "agriculture-science-scaffold.txt"),
-        config: ConfigPaths.AGRICULTURAL_SCIENCE,
+        scaffold: path.join(SAMPLES, "science", "agricultural", "agricultural-250.scaffold"),
+        config: ConfigPaths.AGRICULTURAL_SCIENCE_250,
         // the egg loop cannot start itself, so the egg machines are given eggs to begin with
         seed: [{ target: { recipe: "pentapod-egg" }, item: "pentapod-egg", count: 200 }],
         warmup_ticks: 300,
@@ -178,30 +178,30 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     // swings (2026-10-10 to 2026-10-14), and again while its nutrients trials dipped a hand late in their 40 periods,
     // until such a trial ran on (2026-10-24)
     "agricultural science (belts are backed up)": {
-        scaffold: path.join(SAMPLES, "science", "agriculture-science", "agriculture-science-scaffold.txt"),
-        config: ConfigPaths.AGRICULTURAL_SCIENCE,
+        scaffold: path.join(SAMPLES, "science", "agricultural", "agricultural-250.scaffold"),
+        config: ConfigPaths.AGRICULTURAL_SCIENCE_250,
         seed: [{ target: { recipe: "pentapod-egg" }, item: "pentapod-egg", count: 200 }],
         warmup_ticks: 300,
         backed_up_belts: true,
         wake_ups_open: AGRICULTURAL_SCIENCE_WAKE_UPS_OPEN,
     },
     "automation science": {
-        scaffold: path.join(SAMPLES, "science", "automation-science", "automation-science-scaffold.txt"),
-        config: ConfigPaths.AUTOMATION_SCIENCE,
+        scaffold: path.join(SAMPLES, "science", "automation", "automation-240.scaffold"),
+        config: ConfigPaths.AUTOMATION_SCIENCE_240,
         seed: [],
         warmup_ticks: 3600,
     },
     // its selected clock has no belt pickup slack: full-hand output swings, which the simulator holds stable without it
     "automation science (belts are backed up)": {
-        scaffold: path.join(SAMPLES, "science", "automation-science", "automation-science-scaffold.txt"),
-        config: ConfigPaths.AUTOMATION_SCIENCE,
+        scaffold: path.join(SAMPLES, "science", "automation", "automation-240.scaffold"),
+        config: ConfigPaths.AUTOMATION_SCIENCE_240,
         seed: [],
         warmup_ticks: 3600,
         backed_up_belts: true,
     },
     "automation science with a belted buffer": {
-        scaffold: path.join(SAMPLES, "science", "automation-science", "automation-science-belted-buffer-scaffold.txt"),
-        config: ConfigPaths.AUTOMATION_SCIENCE_BELTED_BUFFER,
+        scaffold: path.join(SAMPLES, "science", "automation", "automation-120-foundries-feed-belt-to-assembler.scaffold"),
+        config: ConfigPaths.AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER,
         seed: [],
         warmup_ticks: 3600,
         // Pre-existing, not from the belt window trim: the copper foundry's output inserter wakes 25 a minute in
@@ -216,14 +216,14 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     // beacons each) on molten iron from infinity pipes; each assembler takes inserters from a turbo belt of its own and
     // puts its packs onto another. 6 copies of it make 240 a second. The build was given 2026-10-21.
     "logistic science with direct insertion": {
-        scaffold: path.join(SAMPLES, "science", "logistic-science", "logistic-science-direct-insert-scaffold.txt"),
-        config: ConfigPaths.LOGISTIC_SCIENCE_DI,
+        scaffold: path.join(SAMPLES, "science", "logistic", "logistic-240-direct-insert.scaffold"),
+        config: ConfigPaths.LOGISTIC_SCIENCE_240_DIRECT_INSERT,
         seed: [],
         warmup_ticks: 3600,
     },
     "logistic science with direct insertion (belts are backed up)": {
-        scaffold: path.join(SAMPLES, "science", "logistic-science", "logistic-science-direct-insert-scaffold.txt"),
-        config: ConfigPaths.LOGISTIC_SCIENCE_DI,
+        scaffold: path.join(SAMPLES, "science", "logistic", "logistic-240-direct-insert.scaffold"),
+        config: ConfigPaths.LOGISTIC_SCIENCE_240_DIRECT_INSERT,
         seed: [],
         warmup_ticks: 3600,
         backed_up_belts: true,
@@ -235,15 +235,15 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     // more furnaces feed, all legendary. Each pair of furnaces takes its ore from a line of its own; the ore, so the
     // plates, gears and the circuits from infinity chests, is uncommon. The output inserter runs all the time.
     "logistic science with inserter crafting": {
-        scaffold: path.join(SAMPLES, "science", "logistic-science", "logistic-science-inserter-crafting-scaffold.txt"),
-        config: ConfigPaths.LOGISTIC_SCIENCE_INSERTER_CRAFTING,
+        scaffold: path.join(SAMPLES, "intermediates", "inserter-crafting", "inserter-crafting-240-shared-signal-clock.scaffold"),
+        config: ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK,
         seed: [],
         warmup_ticks: 3600,
         wake_ups_open: LOGISTIC_INSERTER_CRAFTING_WAKE_UPS_OPEN,
     },
     "logistic science with inserter crafting (belts are backed up)": {
-        scaffold: path.join(SAMPLES, "science", "logistic-science", "logistic-science-inserter-crafting-scaffold.txt"),
-        config: ConfigPaths.LOGISTIC_SCIENCE_INSERTER_CRAFTING,
+        scaffold: path.join(SAMPLES, "intermediates", "inserter-crafting", "inserter-crafting-240-shared-signal-clock.scaffold"),
+        config: ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK,
         seed: [],
         warmup_ticks: 3600,
         backed_up_belts: true,
@@ -252,8 +252,8 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     // The build of issue 98: two foundries, two electromagnetic plants and a cryogenic plant, 240 a second over three
     // copies. Its clock counts 792 ticks.
     "advanced circuit": {
-        scaffold: path.join(SAMPLES, "intermediates", "advanced-circuit", "advanced-circuit-scaffold.txt"),
-        config: ConfigPaths.ADVANCED_CIRCUIT,
+        scaffold: path.join(SAMPLES, "intermediates", "advanced-circuit", "advanced-circuit.scaffold"),
+        config: ConfigPaths.ADVANCED_CIRCUIT_240,
         seed: [],
         warmup_ticks: 3600,
         wake_ups_open: "the simulator shows an output inserter as waiting on its machine in ticks the game shows it as working: "
@@ -264,7 +264,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     // found full-hand output swings that do; recorded that day, 16,192 in each of 2 repeats, 769 wake-ups a minute in
     // the game against 600 in the simulator.
     "advanced circuit at 230 a second": {
-        scaffold: path.join(SAMPLES, "intermediates", "advanced-circuit", "advanced-circuit-scaffold.txt"),
+        scaffold: path.join(SAMPLES, "intermediates", "advanced-circuit", "advanced-circuit.scaffold"),
         config: ConfigPaths.ADVANCED_CIRCUIT_230,
         seed: [],
         warmup_ticks: 3600,
@@ -274,8 +274,8 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     // build was given 2026-10-15. Without a clock it makes 44.0 a second, a hair over the 43.636 the target asks of one
     // block; with the selected clock, 256 in each of 102 periods of 352 ticks, recorded 2026-10-15.
     "chemical science with a shared foundry": {
-        scaffold: path.join(SAMPLES, "science", "chemical-science", "chemical-science-shared-foundry-scaffold.txt"),
-        config: ConfigPaths.CHEMICAL_SCIENCE_SHARED_FOUNDRY,
+        scaffold: path.join(SAMPLES, "science", "chemical", "chemical-240-shared-foundry.scaffold"),
+        config: ConfigPaths.CHEMICAL_SCIENCE_240_SHARED_FOUNDRY,
         seed: [],
         warmup_ticks: 3600,
         wake_ups_open: "the simulator starts a science machine's craft on the first tick its belt inserter waits for space, and the game one tick later: "
@@ -294,8 +294,8 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     // batched swings clock (period 704) with the output inserters on AUTO: from a staged start (empty machines) 288 in the first
     // period and 352 in each of the 50 after; on this test's start (warm-up and settle) 352 in every period checked.
     "electromagnetic science": {
-        scaffold: path.join(SAMPLES, "science", "electromagnetic-science", "electromagnetic-science-scaffold.txt"),
-        config: ConfigPaths.ELECTROMAGNETIC_SCIENCE_AUTO,
+        scaffold: path.join(SAMPLES, "science", "electromagnetic", "electromagnetic-330.scaffold"),
+        config: ConfigPaths.ELECTROMAGNETIC_SCIENCE_330,
         seed: [],
         warmup_ticks: 3600,
         wake_ups_open: "the game counts the first output inserter 0 wake-ups a minute, as it is never shown waiting, and the simulator 15.36, as it shows "
@@ -305,41 +305,41 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     // Two inserters each take two items off a belt of their own, and both take low density structures: which item
     // each takes first decides how the structures are split between them (near_lane in the config)
     "utility science": {
-        scaffold: path.join(SAMPLES, "science", "utility-science", "utility-science-scaffold.txt"),
-        config: ConfigPaths.UTILITY_SCIENCE,
+        scaffold: path.join(SAMPLES, "science", "utility", "utility-120.scaffold"),
+        config: ConfigPaths.UTILITY_SCIENCE_120,
         seed: [],
         warmup_ticks: 3600,
     },
     "utility science (belts are backed up)": {
-        scaffold: path.join(SAMPLES, "science", "utility-science", "utility-science-scaffold.txt"),
-        config: ConfigPaths.UTILITY_SCIENCE,
+        scaffold: path.join(SAMPLES, "science", "utility", "utility-120.scaffold"),
+        config: ConfigPaths.UTILITY_SCIENCE_120,
         seed: [],
         warmup_ticks: 3600,
         backed_up_belts: true,
     },
     "utility science with processing units and low density structures on one belt": {
-        scaffold: path.join(SAMPLES, "science", "utility-science", "utility-science-belted-combined-blue-and-lds-scaffold.txt"),
-        config: ConfigPaths.UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS,
+        scaffold: path.join(SAMPLES, "science", "utility", "utility-120-processing-unit-and-lds-on-one-belt.scaffold"),
+        config: ConfigPaths.UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT,
         seed: [],
         warmup_ticks: 3600,
     },
     "utility science with processing units and low density structures on one belt (belts are backed up)": {
-        scaffold: path.join(SAMPLES, "science", "utility-science", "utility-science-belted-combined-blue-and-lds-scaffold.txt"),
-        config: ConfigPaths.UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS,
+        scaffold: path.join(SAMPLES, "science", "utility", "utility-120-processing-unit-and-lds-on-one-belt.scaffold"),
+        config: ConfigPaths.UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT,
         seed: [],
         warmup_ticks: 3600,
         backed_up_belts: true,
     },
     "low density structure": {
-        scaffold: path.join(SAMPLES, "intermediates", "low-density-structure", "low-density-structure-scaffold.txt"),
-        config: ConfigPaths.LOW_DENSITY_STRUCTURE,
+        scaffold: path.join(SAMPLES, "intermediates", "lds", "lds-240.scaffold"),
+        config: ConfigPaths.LDS_240,
         seed: [],
         warmup_ticks: 3600,
     },
     // The build of issue 152: two electromagnetic plants, two cryogenic plants and two foundries, 640 a second over 18
     // copies, all of it from machine to machine. The clock 0.9.0 selected made 512 to 544 of its 576 a period here.
     "accumulator": {
-        scaffold: path.join(SAMPLES, "intermediates", "accumulator", "accumulator-640-scaffold.txt"),
+        scaffold: path.join(SAMPLES, "intermediates", "accumulator", "accumulator-640.scaffold"),
         config: ConfigPaths.ACCUMULATOR_640,
         seed: [],
         warmup_ticks: 3600,
@@ -347,8 +347,8 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     // The lithium plate build: two cryogenic plants fill a rocket silo taken as a chest, and six furnaces empty it;
     // 80 a second from one copy. The warm-up fills the silo, which the config exports empty.
     "lithium plates through a rocket silo": {
-        scaffold: path.join(SAMPLES, "real", "owner", "lithium-silo", "lithium-silo-scaffold.txt"),
-        config: ConfigPaths.REAL_OWNER_LITHIUM_SILO,
+        scaffold: path.join(SAMPLES, "smelting", "lithium-plate", "lithium-plate-80-silo-chest.scaffold"),
+        config: ConfigPaths.LITHIUM_PLATE_80_SILO_CHEST,
         seed: [],
         warmup_ticks: 3600,
         wake_ups_open: "the inserters into the silo agree (4 wake-ups a period each, game and simulator), but the furnace-to-belt "
@@ -358,8 +358,8 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     // The iron plate build: a big mining drill drops ore into a car taken as a chest, and two furnaces empty it; 80 a
     // second from one copy. The harness puts the ore under the drill; at its research the drill keeps the car full.
     "iron plates through a car": {
-        scaffold: path.join(SAMPLES, "real", "owner", "car", "car-scaffold.txt"),
-        config: ConfigPaths.REAL_OWNER_CAR,
+        scaffold: path.join(SAMPLES, "smelting", "iron-plate", "iron-plate-80-car-chest.scaffold"),
+        config: ConfigPaths.IRON_PLATE_80_CAR_CHEST,
         seed: [],
         warmup_ticks: 3600,
         wake_ups_open: "the simulator counts 200.0 a minute from the scaffold's cold start, its two output inserters woken by their "
@@ -375,14 +375,14 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     // put back into (ore to plates, plates to steel), and one inserter empties of steel onto the output belt; 26 a second
     // from one copy. The harness puts the ore under the drill and builds the wagon after its rails.
     "steel plates around a cargo wagon": {
-        scaffold: path.join(SAMPLES, "smelting", "steel-wagon", "steel-wagon-scaffold.txt"),
-        config: ConfigPaths.STEEL_CARGO_WAGON,
+        scaffold: path.join(SAMPLES, "smelting", "steel-plate", "steel-plate-26-wagon-chest.scaffold"),
+        config: ConfigPaths.STEEL_PLATE_26_WAGON_CHEST,
         seed: [],
         warmup_ticks: 3600,
     },
     "iron bacteria cultivation": {
-        scaffold: path.join(SAMPLES, "gleba", "iron-bacteria-cultivation", "iron-bacteria-cultivation-scaffold.txt"),
-        config: ConfigPaths.IRON_BACTERIA_CULTIVATION,
+        scaffold: path.join(SAMPLES, "gleba", "iron-bacteria", "iron-bacteria-380-cultivation.scaffold"),
+        config: ConfigPaths.IRON_BACTERIA_380_CULTIVATION,
         // the machines make bacteria from bacteria, so they are given some to begin with
         seed: [{ target: { recipe: "iron-bacteria-cultivation" }, item: "iron-bacteria", count: 50 }],
         warmup_ticks: 300,

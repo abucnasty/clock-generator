@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "REAL_OWNER_LITHIUM_SILO",
+  "sample": "LITHIUM_PLATE_80_SILO_CHEST",
   "target": {
     "item": "lithium-plate",
     "counts": "made",

@@ -11,7 +11,7 @@ const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 describe('advanced circuits on backed-up belts, where the batched counts do not hold but another clock is stable', () => {
     let generated: ReturnType<typeof generateClockAlternatives>;
     beforeAll(async () => {
-        const config = await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT);
+        const config = await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT_240);
         generated = generateClockAlternatives({...config, overrides: {...config.overrides, backed_up_belts: true}}, {logger: quiet});
     });
 

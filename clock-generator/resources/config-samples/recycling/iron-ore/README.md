@@ -6,9 +6,9 @@ the two: a legendary recycler on iron ore. Four legendary stack inserters bring 
 stand where the design's cargo wagon was. The recycler places what it gives back (a quarter of its crafts, at random)
 into a car at its result spot, and two legendary stack inserters bring that back into it. Hands of 16.
 
-- `ore-voider-exact-speed.json`, `-scaffold.txt`: save F, the exact-speed recycler: 1 legendary speed module 3 and 4
+- `iron-ore-voider-400-exact-speed.json`, `-scaffold.txt`: save F, the exact-speed recycler: 1 legendary speed module 3 and 4
   beacons of mixed legendary speed modules, crafting speed 16.875, 540 crafts a second at most.
-- `ore-voider-overbeaconed.json`, `-scaffold.txt`: save B, the recycler with 4 legendary speed modules 3 and 6 beacons of
+- `iron-ore-voider-400-overbeaconed.json`, `-scaffold.txt`: save B, the recycler with 4 legendary speed modules 3 and 6 beacons of
   2 each, crafting speed 26.634375, 852.3 crafts a second at most. Saves C, D and G of the benchmark give the same cell.
 
 The scaffolds were cut from the saves (migrated to vanilla 2.1.21) by factorio-benchmark-tools' `extract-cell` at

@@ -27,7 +27,7 @@ for (const speed of BELT_SPEEDS) for (const stackSize of [1, 2, 3, 4] as BeltSta
     fs.mkdirSync(scratch, {recursive: true});
     try {
         const fixture = GameFixturePaths.TURBO_BELT_DROP;
-        const blueprint = blueprintAtSpeed(fs.readFileSync(path.join(fixture, "scaffold.txt"), "utf8"), speed);
+        const blueprint = blueprintAtSpeed(fs.readFileSync(path.join(fixture, "scaffold.scaffold"), "utf8"), speed);
         const lua = composeProbeSource(path.join(fixture, "probe.lua"), {stackSize, beltPrefix: speed.prefix, ticks: 360});
         fs.writeFileSync(path.join(scratch, "probe.generated.lua"), lua);
         fs.writeFileSync(path.join(scratch, "blueprint.txt"), blueprint + "\n");

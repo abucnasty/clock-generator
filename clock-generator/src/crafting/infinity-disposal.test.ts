@@ -13,7 +13,7 @@ import { TickByHand } from './runner/tick-by-hand.fixture';
 
 const item = 'automation-science-pack';
 async function disposalConfig(explicit = false): Promise<Config> {
-    const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+    const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
     return ConfigSchema.parse({ ...sample,
         chests: [{ id: 1, type: 'infinity-chest', item_filter: [], remove_unfiltered_items: true }],
         inserters: sample.inserters.map(inserter => inserter.source.type === 'machine'

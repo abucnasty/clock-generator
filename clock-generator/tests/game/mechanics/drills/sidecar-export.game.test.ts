@@ -51,7 +51,7 @@ const list = <T>(value: T[] | Record<string, never>): T[] => Array.isArray(value
 
 /** The steel wagon scaffold with its cargo wagon legendary (its drill stays normal: the probe replaces it) */
 function scaffold(): string {
-    const text = fs.readFileSync(path.join(path.dirname(ConfigPaths.STEEL_CARGO_WAGON), "steel-wagon-scaffold.txt"), "utf8").trim();
+    const text = fs.readFileSync(path.join(path.dirname(ConfigPaths.STEEL_PLATE_26_WAGON_CHEST), "steel-plate-26-wagon-chest.scaffold"), "utf8").trim();
     const file = JSON.parse(zlib.inflateSync(Buffer.from(text.slice(1), "base64")).toString()) as FactorioBlueprintFile;
     const entities = file.blueprint!.entities as unknown as {name: string; quality?: string}[];
     for (const entity of entities) if (entity.name === "cargo-wagon") entity.quality = "legendary";

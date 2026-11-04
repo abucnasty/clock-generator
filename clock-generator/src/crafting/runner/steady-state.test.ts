@@ -24,10 +24,10 @@ import { simulationStateKey } from "./steady-state";
  * machines (the electric furnace) and hands from a belt of one item on both lanes (the same-item fixture)
  */
 const SAMPLES = {
-    AGRICULTURAL_SCIENCE: ConfigPaths.AGRICULTURAL_SCIENCE,
-    REAL_OWNER_CAR: ConfigPaths.REAL_OWNER_CAR,
-    LOW_DENSITY_STRUCTURE: ConfigPaths.LOW_DENSITY_STRUCTURE,
-    ELECTRIC_FURNACE: ConfigPaths.ELECTRIC_FURNACE,
+    AGRICULTURAL_SCIENCE_250: ConfigPaths.AGRICULTURAL_SCIENCE_250,
+    IRON_PLATE_80_CAR_CHEST: ConfigPaths.IRON_PLATE_80_CAR_CHEST,
+    LDS_240: ConfigPaths.LDS_240,
+    ELECTRIC_FURNACE_20: ConfigPaths.ELECTRIC_FURNACE_20,
     SAME_ITEM: GameFixturePaths.SAME_ITEM_CONFIG,
 } as const;
 type Sample = keyof typeof SAMPLES;
@@ -221,56 +221,56 @@ describe("simulationStateKey", () => {
 
     it("changes with what the components keep that is no plain field: inventories, bars, carry, lanes, gates, the pickup arm", () => {
         const changes: { sample: Sample; what: string; before?: (context: SimulationContext) => void; change: (context: SimulationContext) => void }[] = [
-            { sample: "AGRICULTURAL_SCIENCE", what: "a machine's ingredients and output (its Storage)",
+            { sample: "AGRICULTURAL_SCIENCE_250", what: "a machine's ingredients and output (its Storage)",
                 change: context => context.machines[0].machine_state.inventoryState.addQuantity("bioflux", 1) },
-            { sample: "AGRICULTURAL_SCIENCE", what: "the ingredients a machine keeps apart from its products (its Storage)",
+            { sample: "AGRICULTURAL_SCIENCE_250", what: "the ingredients a machine keeps apart from its products (its Storage)",
                 change: context => context.machines.find(it => it.machine_state.machine.self_ingredients.size > 0)!
                     .machine_state.selfIngredients.addQuantity("pentapod-egg", 1) },
-            { sample: "AGRICULTURAL_SCIENCE", what: "a burner's fuel slot (its Storage)",
+            { sample: "AGRICULTURAL_SCIENCE_250", what: "a burner's fuel slot (its Storage)",
                 change: context => context.machines.find(it => it.machine_state.energy instanceof BurnerEnergy)!
                     .machine_state.fuelInventory.addQuantity("nutrients", 1) },
-            { sample: "AGRICULTURAL_SCIENCE", what: "the craft underway (Crafting)",
+            { sample: "AGRICULTURAL_SCIENCE_250", what: "the craft underway (Crafting)",
                 change: context => { context.machines[0].machine_state.crafting.craftingProgress.progress = 0.5; } },
-            { sample: "AGRICULTURAL_SCIENCE", what: "the productivity bar (Yield)",
+            { sample: "AGRICULTURAL_SCIENCE_250", what: "the productivity bar (Yield)",
                 change: context => { context.machines[0].machine_state.yield.bonusProgress.progress = 0.25; } },
-            { sample: "AGRICULTURAL_SCIENCE", what: "what a hand has carried (the inserter's Storage)",
+            { sample: "AGRICULTURAL_SCIENCE_250", what: "what a hand has carried (the inserter's Storage)",
                 change: context => context.inserters[0].inserter_state.inventoryState.addQuantity("bioflux", 1) },
-            { sample: "AGRICULTURAL_SCIENCE", what: "the pickup arm's reach while a part hand fills (Hand)", before: armWithPartHand,
+            { sample: "AGRICULTURAL_SCIENCE_250", what: "the pickup arm's reach while a part hand fills (Hand)", before: armWithPartHand,
                 change: context => {
                     const arm = new BeltPickupArm(64);
                     arm.tryCollect(0, 196, true);
                     context.inserters.find(it => it.inserter_state.pickup_arm !== undefined)!.inserter_state.pickup_arm = arm;
                 } },
-            { sample: "REAL_OWNER_CAR", what: "what a drill holds (its Storage)", change: context => context.drills[0].drill_state.held.insert("iron-ore", 1) },
-            { sample: "REAL_OWNER_CAR", what: "a drill's bonus bar (Mining)",
+            { sample: "IRON_PLATE_80_CAR_CHEST", what: "what a drill holds (its Storage)", change: context => context.drills[0].drill_state.held.insert("iron-ore", 1) },
+            { sample: "IRON_PLATE_80_CAR_CHEST", what: "a drill's bonus bar (Mining)",
                 change: context => { (context.drills[0].mining as unknown as { bonus: { bar: number } }).bonus.bar = 0.5; } },
-            { sample: "REAL_OWNER_CAR", what: "a stack put down on a lane at a spot (BeltLane)",
+            { sample: "IRON_PLATE_80_CAR_CHEST", what: "a stack put down on a lane at a spot (BeltLane)",
                 change: context => {
                     const lane = beltsOf(context)[0].lanes[0];
                     lane.insert(lane.sharedDrop(0), 0, 0);
                 } },
-            { sample: "REAL_OWNER_CAR", what: "a stack put down on a hand's own local tile of a lane (BeltLane)",
+            { sample: "IRON_PLATE_80_CAR_CHEST", what: "a stack put down on a hand's own local tile of a lane (BeltLane)",
                 change: context => {
                     const lane = beltsOf(context)[0].lanes[0];
                     const [id] = lane.dropIds();
                     lane.insert(lane.ownDrop(id, 0), 0, 0);
                 } },
-            { sample: "AGRICULTURAL_SCIENCE", what: "the stock a hand reaches on a lane (BeltLane)",
+            { sample: "AGRICULTURAL_SCIENCE_250", what: "the stock a hand reaches on a lane (BeltLane)",
                 change: context => {
                     const lane = beltsOf(context)[0].lanes[1];
                     const [id] = lane.pickupIds();
                     expect(lane.take(lane.pickupOf(id)!, 0, 1)).toBe(1);
                 } },
-            { sample: "AGRICULTURAL_SCIENCE", what: "what a belt withholds (its SupplyGate)",
+            { sample: "AGRICULTURAL_SCIENCE_250", what: "what a belt withholds (its SupplyGate)",
                 change: context => beltsOf(context)[0].supply.withheld.add("nutrients") },
-            { sample: "AGRICULTURAL_SCIENCE", what: "what an infinity chest refuses (its SupplyGate)",
+            { sample: "AGRICULTURAL_SCIENCE_250", what: "what an infinity chest refuses (its SupplyGate)",
                 change: context => statesOf(context).filter(ContainerStorage.isConstant)[0].supply.refused.add("agricultural-science-pack") },
-            { sample: "LOW_DENSITY_STRUCTURE", what: "what a buffer chest holds (its Storage)",
+            { sample: "LDS_240", what: "what a buffer chest holds (its Storage)",
                 change: context => {
                     const chest = statesOf(context).filter(ContainerStorage.isSingleItem)[0];
                     chest.insert(chest.chest.item_filter, 1);
                 } },
-            { sample: "REAL_OWNER_CAR", what: "what a car holds (its Storage)",
+            { sample: "IRON_PLATE_80_CAR_CHEST", what: "what a car holds (its Storage)",
                 change: context => statesOf(context).filter(ContainerStorage.isSlots)[0].insert("iron-ore", 1) },
         ];
         for (const { sample, what, before, change } of changes) {
@@ -284,7 +284,7 @@ describe("simulationStateKey", () => {
 
     it("holds a lane's motion where it is kept (the new dispatch): the same take keys apart a lane that moves after it", () => {
         const keyAfterTake = (tracked: boolean) => {
-            const context = contextOf("AGRICULTURAL_SCIENCE");
+            const context = contextOf("AGRICULTURAL_SCIENCE_250");
             const lane = beltsOf(context)[0].lanes[1];
             if (tracked) for (const each of beltsOf(context)[0].lanes) each.trackMotion();
             const [id] = lane.pickupIds();
@@ -296,7 +296,7 @@ describe("simulationStateKey", () => {
     });
 
     it("tells apart where a container of mixed items holds its items, at the same totals", () => {
-        const car = contextOf("REAL_OWNER_CAR");
+        const car = contextOf("IRON_PLATE_80_CAR_CHEST");
         const storage = statesOf(car).filter(ContainerStorage.isSlots)[0];
         storage.insert("iron-ore", 5);
         const totals = storage.inventoryState.export();
@@ -312,7 +312,7 @@ describe("simulationStateKey", () => {
     });
 
     it("keeps the pickup arm's reach out of the key while the hand is empty or full: the next hand starts its own", () => {
-        const context = withScheduling(contextOf("AGRICULTURAL_SCIENCE"));
+        const context = withScheduling(contextOf("AGRICULTURAL_SCIENCE_250"));
         const state = context.inserters.find(it => it.inserter_state.pickup_arm !== undefined)!.inserter_state;
         const item = carriedBy(state);
         const reach = (radius: number) => {

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "IRON_BACTERIA_CULTIVATION",
+  "sample": "IRON_BACTERIA_380_CULTIVATION",
   "target": {
     "item": "iron-bacteria",
     "counts": "made",

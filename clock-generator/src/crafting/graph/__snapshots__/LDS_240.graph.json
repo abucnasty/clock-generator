@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "LOW_DENSITY_STRUCTURE",
+  "sample": "LDS_240",
   "target": {
     "item": "low-density-structure",
     "counts": "made",

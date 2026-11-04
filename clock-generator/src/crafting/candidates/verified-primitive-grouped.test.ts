@@ -22,7 +22,7 @@ describe("verified primitive adapter orchestration (verification outcomes are ex
     let config: Config;
     let made: planning.PlanRun;
     beforeAll(async () => {
-        const control = await loadConfigFromFile(ConfigPaths.REAL_OWNER_PINK_SCIENCE_ORIGINAL);
+        const control = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED);
         config = { ...control, overrides: undefined, inserters: control.inserters.map(inserter => ({ ...inserter, overrides: undefined })) };
     });
     afterEach(() => vi.restoreAllMocks());

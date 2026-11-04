@@ -1,5 +1,5 @@
 {
-  "sample": "GLEBA_ROCKET_FUEL",
+  "sample": "ROCKET_FUEL_60",
   "swings 1": [
     "inserter:2 | rocket-fuel 1 | total 1 | hand 16",
     "inserter:4 | rocket-fuel 1 | total 1 | hand 16",

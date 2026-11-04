@@ -13,7 +13,7 @@ test("Mechanics: equal circuit outputs and a real full hand carried over clock e
     const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "circuit-evaluation-"));
     try {
         const folder = GameFixturePaths.CIRCUIT_EVALUATION;
-        await recordInFactorio({factorio: factorio!, save: save!, blueprint: fs.readFileSync(path.join(folder, "scaffold.txt"), "utf8"),
+        await recordInFactorio({factorio: factorio!, save: save!, blueprint: fs.readFileSync(path.join(folder, "scaffold.scaffold"), "utf8"),
             lua: composeProbeSource(path.join(folder, "probe.lua"), {layout: JSON.parse(fs.readFileSync(path.join(folder, "layout.json"), "utf8"))}),
             out: path.join(scratch, "recording.json"), work_dir: path.join(scratch, "game"), ticks: 32,
             warmup_ticks: 0, settle_ticks: 32, seed: [], unclocked: true, game_speed: 1000, watch: false, timeout_seconds: 240, log() {}});

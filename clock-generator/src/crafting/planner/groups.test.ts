@@ -67,14 +67,14 @@ describe("the groups of a build", () => {
     });
 
     it("a loop is one member, by its key, with its vertices in the group (agricultural science's two egg machines)", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE) as Config;
+        const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250) as Config;
         const { groups } = groupsOfConfig(config);
         expect(groups.map(group => group.members)).toEqual([["machine:1", "machine:2", "loop:1", "machine:5"]]);
         expect(groups[0].vertices).toEqual(["machine:1", "machine:2", "machine:3", "machine:4", "machine:5"]);
     });
 
     it("the ore voider's infinity chest in no loop is taken out; the loop through the car stays whole", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.REAL_OWNER_ORE_VOIDER_EXACT_SPEED) as Config;
+        const config = await loadConfigFromFile(ConfigPaths.IRON_ORE_VOIDER_400_EXACT_SPEED) as Config;
         const { unbounded_sources, groups } = groupsOfConfig(config);
         expect(unbounded_sources).toEqual([{ vertex: "chest:2#iron-ore", kind: "infinity-supply" }]);
         expect(groups.map(group => [group.members, group.vertices])).toEqual([[["loop:1"], ["machine:1", "chest:1#iron-ore"]]]);

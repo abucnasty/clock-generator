@@ -18,7 +18,7 @@ describe("a run that starts from a recording's first sample", () => {
     const hand = (stock: StockRecording, id: string) => stock.inserters.find(it => it.inserter_id === id)!.held;
 
     beforeAll(async () => {
-        config = await loadConfigFromFile(ConfigPaths.LOW_DENSITY_STRUCTURE);
+        config = await loadConfigFromFile(ConfigPaths.LDS_240);
         result = generateClockForConfig(config, { logger: quiet });
         // an inserter that takes plastic bars out of the plastic machine, outside its window for the first ticks
         const candidates = config.inserters.map((inserter, index) => ({ inserter, id: EntityId.forInserter(inserter.id ?? index + 1).id }))

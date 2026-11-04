@@ -5,11 +5,11 @@ import {ConfigPaths} from "../config/config-paths";
 import {quiet} from "./generate-blueprint-test-helpers";
 import {recordSimulationTimeline} from "./record-timeline";
 
-describe("the real stupidfathobbit cell 02", () => {
+describe("processing units at 80 a second with a circuit export", () => {
     // the replay from the warm-up inventory is the build stalled for its first 42 ticks (every machine full, nothing moves); the
     // long run judges stock from index 960, after 240 warm-up ticks; replaying clock tick 1200 shows the inserters at work
     it("records a settled period from the clock tick the long run judges, not the stalled first one", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.REAL_STUPIDFATHOBBIT_CELL02);
+        const config = await loadConfigFromFile(ConfigPaths.PROCESSING_UNIT_80_CIRCUIT_EXPORT);
         const generated = generateClockAlternatives(config, {logger: quiet});
         const selected = generated.alternatives[generated.selected_index];
         const first_judged_tick = selected.result.stability_check.as_built?.first_judged_tick;

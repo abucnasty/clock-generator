@@ -30,7 +30,7 @@ export function takerOrdersToCheck(takers: number): SingleTakerOrder[] {
 
 /**
  * The existing global orders plus changing one contested source at a time. This adds independent mixed orders without
- * multiplying every source's choices: a real cell02 build has up to 512 combinations before its windows are considered.
+ * multiplying every source's choices: a real the circuit export build build has up to 512 combinations before its windows are considered.
  * Joint changes of several sources are not exhausted; this is a strict extension of the existing sampled-order gate.
  */
 export function independentTakerOrdersToCheck(sources: readonly { id: string; size: number; contested: number }[]): TakerOrder[] {

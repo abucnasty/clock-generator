@@ -1,5 +1,5 @@
 {
-  "sample": "REAL_OWNER_GRENADE",
+  "sample": "GRENADE_240_FILLS_BELT_EXACTLY",
   "swings 1": [
     "inserter:1 | grenade 1 | total 1 | hand 16",
     "inserter:2 | grenade 1 | total 1 | hand 16",

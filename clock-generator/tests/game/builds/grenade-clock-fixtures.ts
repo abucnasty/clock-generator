@@ -11,7 +11,7 @@ import {CLOCK_TEST_SPEEDS} from "../helpers/belt-speed-fixtures";
 import {PickupClockScenario} from "./pickup-clock-capture";
 
 /**
- * The grenade build (`REAL_OWNER_GRENADE`, 240 grenades a second over 7 copies): a copy has four assembling machines, a
+ * The grenade build (`GRENADE_240_FILLS_BELT_EXACTLY`, 240 grenades a second over 7 copies): a copy has four assembling machines, a
  * foundry that fills them with iron plates and four drills that drop coal into them; the grenades of a copy go onto one belt
  * line, and the seven copies, 12 tiles apart, put them on one belt whose two lanes are exactly full. The hand-made clock is in
  * the sample's blueprints: a counter of the clock signal that counts 0 to 111 (112 ticks) and six window deciders (see the
@@ -23,23 +23,23 @@ import {PickupClockScenario} from "./pickup-clock-capture";
  */
 export interface GrenadeClockCase {
     name: string;
-    kind: "owner's clock" | "generated clock";
+    kind: "hand-made clock" | "generated clock";
     build: "one copy" | "full build";
 }
 
 export function grenadeClockCases(): GrenadeClockCase[] {
     return [
-        {name: "owner-one-copy", kind: "owner's clock", build: "one copy"},
-        {name: "owner-full-build", kind: "owner's clock", build: "full build"},
+        {name: "hand-made-one-copy", kind: "hand-made clock", build: "one copy"},
+        {name: "hand-made-full-build", kind: "hand-made clock", build: "full build"},
         {name: "generated-one-copy", kind: "generated clock", build: "one copy"},
         {name: "generated-full-build", kind: "generated clock", build: "full build"},
     ];
 }
 
-const FOLDER = path.dirname(ConfigPaths.REAL_OWNER_GRENADE);
+const FOLDER = path.dirname(ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY);
 const BUILDS = {
-    "one copy": {file: "grenade-hand-clock-scaffold.txt", clock: {counter: 87, period: 112, first_value: 0} as BuiltClock, copies: 1, share: 1 / 7},
-    "full build": {file: "grenade-full-build.txt", clock: {counter: 1, period: 112, first_value: 0} as BuiltClock, copies: 7, share: 1},
+    "one copy": {file: "grenade-240-fills-belt-exactly-hand-clock.blueprint", clock: {counter: 87, period: 112, first_value: 0} as BuiltClock, copies: 1, share: 1 / 7},
+    "full build": {file: "grenade-240-fills-belt-exactly-full-build.blueprint", clock: {counter: 1, period: 112, first_value: 0} as BuiltClock, copies: 7, share: 1},
 } as const;
 
 /** The id of the alternative the generated clock is: the 112-tick one, which the rule for hands in groups makes stable */
@@ -48,7 +48,7 @@ export const GENERATED_ALTERNATIVE = "planned-belt-slack";
 const scaffoldOf = (build: GrenadeClockCase["build"]) => fs.readFileSync(path.join(FOLDER, BUILDS[build].file), "utf8").trim();
 
 /** The sha256 of the identity of the hand-made clock in a blueprint of the sample (`builtClockIdentity`): what its control names it by */
-export function ownerClockHash(build: GrenadeClockCase["build"]): string {
+export function handMadeClockHash(build: GrenadeClockCase["build"]): string {
     return createHash("sha256").update(JSON.stringify(builtClockIdentity(scaffoldOf(build), BUILDS[build].clock))).digest("hex");
 }
 
@@ -70,7 +70,7 @@ export function assertGrenadeHardware(recording: Recording, config: Config, copi
 }
 
 export async function grenadeClockScenario(variant: GrenadeClockCase): Promise<PickupClockScenario> {
-    const config = await loadConfigFromFile(ConfigPaths.REAL_OWNER_GRENADE);
+    const config = await loadConfigFromFile(ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY);
     const generated = variant.kind === "generated clock";
     const {clock, copies, share} = BUILDS[variant.build];
     return {
@@ -80,7 +80,7 @@ export async function grenadeClockScenario(variant: GrenadeClockCase): Promise<P
         share,
         built_clock: clock,
         keep_built_clock: !generated,
-        builtClockSha256: () => ownerClockHash(variant.build),
+        builtClockSha256: () => handMadeClockHash(variant.build),
         ...(generated && {alternative: GENERATED_ALTERNATIVE, copies}),
         probeFile: path.join(__dirname, "grenade-clock-probe.lua"),
         probe: {family: "grenade", stackSize: 4},

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "GLEBA_ROCKET_FUEL",
+  "sample": "ROCKET_FUEL_60",
   "target": {
     "item": "rocket-fuel",
     "counts": "made",

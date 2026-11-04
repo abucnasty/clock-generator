@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "AGRICULTURAL_SCIENCE",
+  "sample": "AGRICULTURAL_SCIENCE_250",
   "target": {
     "item": "agricultural-science-pack",
     "counts": "made",

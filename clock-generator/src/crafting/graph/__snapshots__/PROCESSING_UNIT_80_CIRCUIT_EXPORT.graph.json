@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "REAL_STUPIDFATHOBBIT_CELL02",
+  "sample": "PROCESSING_UNIT_80_CIRCUIT_EXPORT",
   "target": {
     "item": "processing-unit",
     "counts": "made",

@@ -9,7 +9,7 @@ usage:
   cache.py lookup <cache> <key>                 exit 0 and print the entry's jobs folder if it is complete
   cache.py store <cache> <key> <jobs-dir> <_jobs.json> <engine.json> <source-json>
                                                 copies the listed jobs (only those: a job not in the list, Thaeln's
-                                                cell 09 say, is left out and named) into a new entry; refuses if any is
+                                                the utility science 480 build say, is left out and named) into a new entry; refuses if any is
                                                 missing. If the entry exists, compares instead: every job the same
                                                 (but its seconds) or the differences
   cache.py list <cache>

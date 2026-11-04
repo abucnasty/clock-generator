@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { ConfigPaths, ExpectedRefusals } from "../../config/config-paths";
+import { ConfigPaths } from "../../config/config-paths";
 import { FeasibilityError } from "../../config/errors";
 import { loadConfigFromFile } from "../../config/loader";
 import type { Config } from "../../config/schema";
@@ -25,7 +25,7 @@ function refused(config: Config): boolean {
 const typedMax = (config: Config, max: number): number => Math.floor(max * config.target_output.copies * 1000) / 1000;
 
 describe("the most a target can be agrees with the feasibility pass over the samples", () => {
-    const samples = Object.entries(ConfigPaths).filter(([key]) => !(key in ExpectedRefusals));
+    const samples = Object.entries(ConfigPaths);
     it.each(samples)("%s: the pass accepts the maximum and refuses above it", async (_key, file) => {
         const config = await loadConfigFromFile(file) as Config;
         const max = targetRateMaxOf(config);
@@ -42,7 +42,7 @@ describe("the most a target can be agrees with the feasibility pass over the sam
 
 describe("the ore voider", () => {
     let config: Config;
-    beforeAll(async () => { config = await loadConfigFromFile(ConfigPaths.REAL_OWNER_ORE_VOIDER_OVERBEACONED) as Config; });
+    beforeAll(async () => { config = await loadConfigFromFile(ConfigPaths.IRON_ORE_VOIDER_400_OVERBEACONED) as Config; });
     it("is refused above 480 a second, by the inserters that bring the ore in", () => {
         const max = targetRateMaxOf(config)!;
         expect(max.per_copy_per_second).toBe(480);

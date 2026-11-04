@@ -25,7 +25,7 @@ describe("generateClockForConfig", () => {
     // With the config's speeds rounded up (180.8 for the science foundry) and a chest of 480 packs that was never
     // emptied, the batched and full-hand 1-swing clocks held as well, and no clock got back from a loss.
     describe("metallurgic science", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.METALLURGIC_SCIENCE_PACK);
+        const config = await loadConfigFromFile(ConfigPaths.METALLURGIC_SCIENCE_45);
         let alternatives: ClockAlternative[];
         let selected: ClockAlternative;
         let observed: ClockAlternative;

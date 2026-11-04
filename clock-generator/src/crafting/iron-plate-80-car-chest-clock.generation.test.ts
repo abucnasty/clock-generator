@@ -9,18 +9,18 @@ import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config/schema";
 import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
-import {carCases} from "../../tests/game/builds/car-clock-fixtures";
+import {carCases} from "../../tests/game/builds/iron-plate-80-car-chest-clock-fixtures";
 import {readControls, RunControls} from "../../tests/game/builds/clock-controls";
 import {expectRunAgreesWithSelection} from "../../tests/game/helpers/fixture-mechanics";
 
 // each clock pinned beside the in-game recording of it
-const controls = readControls<RunControls>("car-clock-controls.json");
+const controls = readControls<RunControls>("iron-plate-80-car-chest-clock-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 let config: Config;
 let generated: ClockAlternativesResult;
 
 beforeAll(async () => {
-    config = await loadConfigFromFile(ConfigPaths.REAL_OWNER_CAR);
+    config = await loadConfigFromFile(ConfigPaths.IRON_PLATE_80_CAR_CHEST);
     generated = generateClockAlternatives(config, {logger: quiet});
 });
 
@@ -64,7 +64,7 @@ for (const variant of carCases()) {
     });
 }
 
-// the car's Sidecar export (car.sidecar-export.json) as the web app pastes it, at the export's suggested target: the
+// the car's Sidecar export (iron-plate-80-car-chest.sidecar-export.json) as the web app pastes it, at the export's suggested target: the
 // furnaces' ceiling, 80.78015625, floored to 80.780/s (U11)
 describe("the car paste at 80.78/s", () => {
     let paste_config: Config;

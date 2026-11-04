@@ -8,7 +8,7 @@ import { ContainerStorage } from '../simulation/components/container-storage';
 import { TickByHand } from './runner/tick-by-hand.fixture';
 
 it('fills a finite terminal chest and stops production, while an infinity chest keeps accepting output', async () => {
-    const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+    const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
     const item = 'automation-science-pack';
     for (const infinity of [false, true]) {
         const context = SimulationContext.fromConfig({ ...sample,

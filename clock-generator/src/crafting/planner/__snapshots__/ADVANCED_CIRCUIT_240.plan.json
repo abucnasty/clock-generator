@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "ADVANCED_CIRCUIT",
+  "sample": "ADVANCED_CIRCUIT_240",
   "target": {
     "item": "advanced-circuit",
     "counts": "made",

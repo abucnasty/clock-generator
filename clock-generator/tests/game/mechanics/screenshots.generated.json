@@ -1,6 +1,6 @@
 {
   "front-underground-exit": {
-    "blueprint": "belt-pickup/fixtures/front-underground-exit/scaffold.txt",
+    "blueprint": "belt-pickup/fixtures/front-underground-exit/scaffold.scaffold",
     "image": "belt-pickup/fixtures/front-underground-exit/scaffold.jpg",
     "source_sha256": "7db627b7a5f8fa89726eb5955b054d05c8e4530deecfc7f7aee736f1c77643bb",
     "factorio_version": "2.1.21",
@@ -23,8 +23,8 @@
     "jpeg_quality": 82
   },
   "different-items/straight-belt": {
-    "blueprint": "belt-pickup/fixtures/different-items/straight-belt-scaffold.txt",
-    "image": "belt-pickup/fixtures/different-items/straight-belt-scaffold.jpg",
+    "blueprint": "belt-pickup/fixtures/different-items/straight-belt.scaffold",
+    "image": "belt-pickup/fixtures/different-items/straight-belt.jpg",
     "source_sha256": "c8cad07e3a90a3d6a210d34fec727c8fb35486ee02ae67f76a906ee1cd86e7fd",
     "factorio_version": "2.1.21",
     "capture_recipe": 2,
@@ -46,8 +46,8 @@
     "jpeg_quality": 82
   },
   "different-items/underground-entrance": {
-    "blueprint": "belt-pickup/fixtures/different-items/underground-entrance-scaffold.txt",
-    "image": "belt-pickup/fixtures/different-items/underground-entrance-scaffold.jpg",
+    "blueprint": "belt-pickup/fixtures/different-items/underground-entrance.scaffold",
+    "image": "belt-pickup/fixtures/different-items/underground-entrance.jpg",
     "source_sha256": "911e6571e9f330d29ce059567d9241e46c0c0314fa1e89ca3f5aad669571f08c",
     "factorio_version": "2.1.21",
     "capture_recipe": 2,
@@ -69,8 +69,8 @@
     "jpeg_quality": 82
   },
   "different-items/underground-exit": {
-    "blueprint": "belt-pickup/fixtures/different-items/underground-exit-scaffold.txt",
-    "image": "belt-pickup/fixtures/different-items/underground-exit-scaffold.jpg",
+    "blueprint": "belt-pickup/fixtures/different-items/underground-exit.scaffold",
+    "image": "belt-pickup/fixtures/different-items/underground-exit.jpg",
     "source_sha256": "c8fdc6a9f640cc263a91f79428e8c870cfb98dec0250c73c806035286d66122b",
     "factorio_version": "2.1.21",
     "capture_recipe": 2,
@@ -92,8 +92,8 @@
     "jpeg_quality": 82
   },
   "same-item/straight-belt": {
-    "blueprint": "belt-pickup/fixtures/same-item/straight-belt-scaffold.txt",
-    "image": "belt-pickup/fixtures/same-item/straight-belt-scaffold.jpg",
+    "blueprint": "belt-pickup/fixtures/same-item/straight-belt.scaffold",
+    "image": "belt-pickup/fixtures/same-item/straight-belt.jpg",
     "source_sha256": "0f5aafb70b587929fd8c593248b02497b58c17114a985bfc2703b08efe54ca89",
     "factorio_version": "2.1.21",
     "capture_recipe": 2,
@@ -115,8 +115,8 @@
     "jpeg_quality": 82
   },
   "same-item/underground-entrance": {
-    "blueprint": "belt-pickup/fixtures/same-item/underground-entrance-scaffold.txt",
-    "image": "belt-pickup/fixtures/same-item/underground-entrance-scaffold.jpg",
+    "blueprint": "belt-pickup/fixtures/same-item/underground-entrance.scaffold",
+    "image": "belt-pickup/fixtures/same-item/underground-entrance.jpg",
     "source_sha256": "631e36afb89db653017d591e1db3e3d3e01ed8a849e3b36c6b2536fff30c8d56",
     "factorio_version": "2.1.21",
     "capture_recipe": 2,
@@ -138,8 +138,8 @@
     "jpeg_quality": 82
   },
   "same-item/underground-exit": {
-    "blueprint": "belt-pickup/fixtures/same-item/underground-exit-scaffold.txt",
-    "image": "belt-pickup/fixtures/same-item/underground-exit-scaffold.jpg",
+    "blueprint": "belt-pickup/fixtures/same-item/underground-exit.scaffold",
+    "image": "belt-pickup/fixtures/same-item/underground-exit.jpg",
     "source_sha256": "8d0c4cdfbde872280e5e9e482d2951ad300bc44bff00771e18c792f45103686f",
     "factorio_version": "2.1.21",
     "capture_recipe": 2,
@@ -161,7 +161,7 @@
     "jpeg_quality": 82
   },
   "automation-science": {
-    "blueprint": "../../../resources/config-samples/science/automation-science/automation-science-scaffold.txt",
+    "blueprint": "../../../resources/config-samples/science/automation/automation-240.scaffold",
     "image": "images/automation-science.jpg",
     "source_sha256": "09430a24ecdf4614352813877b45ae935fbfa4391b810ee518e78665a35a96d1",
     "factorio_version": "2.1.21",
@@ -184,7 +184,7 @@
     "jpeg_quality": 82
   },
   "agriculture-science": {
-    "blueprint": "../../../resources/config-samples/science/agriculture-science/agriculture-science-scaffold.txt",
+    "blueprint": "../../../resources/config-samples/science/agricultural/agricultural-250.scaffold",
     "image": "images/agriculture-science.jpg",
     "source_sha256": "48e71d241d1fccaf699beffaa7bdb946aa76ffef01e2991a587bbe49141d8230",
     "factorio_version": "2.1.21",
@@ -206,9 +206,9 @@
     "jpeg_bytes": 419116,
     "jpeg_quality": 82
   },
-  "thaeln-cell09": {
-    "blueprint": "../../../resources/config-samples/real/thaeln/cell09/thaeln-cell09-scaffold.txt",
-    "image": "images/thaeln-cell09.jpg",
+  "utility-science-480-lds-foundry-chain": {
+    "blueprint": "../../../resources/config-samples/science/utility/utility-480-lds-foundry-chain.scaffold",
+    "image": "images/utility-science-480-lds-foundry-chain.jpg",
     "source_sha256": "87b163c39cb94cf8906403b3018abfde3290da8ee69598dce811b2836586af5a",
     "factorio_version": "2.1.21",
     "capture_recipe": 2,
@@ -230,7 +230,7 @@
     "jpeg_quality": 82
   },
   "front-underground-entrance": {
-    "blueprint": "belt-pickup/fixtures/front-underground-entrance/scaffold.txt",
+    "blueprint": "belt-pickup/fixtures/front-underground-entrance/scaffold.scaffold",
     "image": "belt-pickup/fixtures/front-underground-entrance/scaffold.jpg",
     "source_sha256": "8bae00a42b932425fa2c4f7125a8c834017da62952d5821ccb44b3eb37169410",
     "factorio_version": "2.1.21",
@@ -253,7 +253,7 @@
     "jpeg_quality": 82
   },
   "splitter": {
-    "blueprint": "belt-pickup/fixtures/splitter/scaffold.txt",
+    "blueprint": "belt-pickup/fixtures/splitter/scaffold.scaffold",
     "image": "belt-pickup/fixtures/splitter/scaffold.jpg",
     "source_sha256": "a8a9028226a382226d79f2b372138385479c48123d961b2eee2f677ddd631915",
     "factorio_version": "2.1.21",
@@ -276,7 +276,7 @@
     "jpeg_quality": 82
   },
   "splitter-two-inserters": {
-    "blueprint": "belt-pickup/fixtures/splitter-two-inserters/scaffold.txt",
+    "blueprint": "belt-pickup/fixtures/splitter-two-inserters/scaffold.scaffold",
     "image": "belt-pickup/fixtures/splitter-two-inserters/scaffold.jpg",
     "source_sha256": "6cb37c8c2256ad8dcf9aec0fe29f11b71a2f17359acf62166d5ccfe2b98f5bd8",
     "factorio_version": "2.1.21",
@@ -299,7 +299,7 @@
     "jpeg_quality": 82
   },
   "turbo-belt-drop-stacks": {
-    "blueprint": "belt-drop/fixtures/turbo-stacks/scaffold.txt",
+    "blueprint": "belt-drop/fixtures/turbo-stacks/scaffold.scaffold",
     "image": "belt-drop/fixtures/turbo-stacks/scaffold.jpg",
     "source_sha256": "ba3688b3652a64b1c379f915f210b03667cb64fdaa33f5cbc419567b74d308b5",
     "factorio_version": "2.1.21",
@@ -322,8 +322,8 @@
     "jpeg_quality": 82
   },
   "front-underground-entrance/compact-normal": {
-    "blueprint": "belt-pickup/fixtures/front-underground-entrance/compact-normal-scaffold.txt",
-    "image": "belt-pickup/fixtures/front-underground-entrance/compact-normal-scaffold.jpg",
+    "blueprint": "belt-pickup/fixtures/front-underground-entrance/compact-normal.scaffold",
+    "image": "belt-pickup/fixtures/front-underground-entrance/compact-normal.jpg",
     "source_sha256": "bd6648d29edd6b8bbccd6c34aea825f6f561741f7edfbb6d831ba05aa77bd96e",
     "factorio_version": "2.1.21",
     "capture_recipe": 2,
@@ -345,7 +345,7 @@
     "jpeg_quality": 82
   },
   "over-the-hood-underground-exit": {
-    "blueprint": "belt-pickup/fixtures/over-the-hood-underground-exit/scaffold.txt",
+    "blueprint": "belt-pickup/fixtures/over-the-hood-underground-exit/scaffold.scaffold",
     "image": "belt-pickup/fixtures/over-the-hood-underground-exit/scaffold.jpg",
     "source_sha256": "648fbd4e261cee3f8d1bbf14d75ce0f55a578265254f3da303333f8ff82f367c",
     "factorio_version": "2.1.21",
@@ -368,8 +368,8 @@
     "jpeg_quality": 82
   },
   "over-the-hood-underground-exit/compact-normal": {
-    "blueprint": "belt-pickup/fixtures/over-the-hood-underground-exit/compact-normal-scaffold.txt",
-    "image": "belt-pickup/fixtures/over-the-hood-underground-exit/compact-normal-scaffold.jpg",
+    "blueprint": "belt-pickup/fixtures/over-the-hood-underground-exit/compact-normal.scaffold",
+    "image": "belt-pickup/fixtures/over-the-hood-underground-exit/compact-normal.jpg",
     "source_sha256": "4032f0a7481cf98d05d20bad0eaf37de4d600e8bf00fe848b220eddb0a1a0617",
     "factorio_version": "2.1.21",
     "capture_recipe": 2,
@@ -391,7 +391,7 @@
     "jpeg_quality": 82
   },
   "activation-order/partial-hand": {
-    "blueprint": "activation-order/fixtures/partial-hand/scaffold.txt",
+    "blueprint": "activation-order/fixtures/partial-hand/scaffold.scaffold",
     "image": "activation-order/fixtures/partial-hand/scaffold.jpg",
     "source_sha256": "899903adee0ba383503c0830ee8b9ce8c187362cbd4b915a13b5f0a82db0ff75",
     "factorio_version": "2.1.21",
@@ -414,7 +414,7 @@
     "jpeg_quality": 82
   },
   "activation-order/condition-writes": {
-    "blueprint": "activation-order/fixtures/condition-writes/scaffold.txt",
+    "blueprint": "activation-order/fixtures/condition-writes/scaffold.scaffold",
     "image": "activation-order/fixtures/condition-writes/scaffold.jpg",
     "source_sha256": "a776eda948728991e95a86f95d3ac57c138f059c1f7c1bdc12c6b0b408fd4cc9",
     "factorio_version": "2.1.21",
@@ -437,7 +437,7 @@
     "jpeg_quality": 82
   },
   "source-search": {
-    "blueprint": "source-search/fixtures/scaffold.txt",
+    "blueprint": "source-search/fixtures/scaffold.scaffold",
     "image": "source-search/fixtures/scaffold.jpg",
     "source_sha256": "16840b10afb9384547e48f240a5b11ed4093a313858bd9921733d569d8bdca93",
     "factorio_version": "2.1.21",
@@ -460,7 +460,7 @@
     "jpeg_quality": 82
   },
   "circuit-evaluation": {
-    "blueprint": "circuit-evaluation/fixtures/scaffold.txt",
+    "blueprint": "circuit-evaluation/fixtures/scaffold.scaffold",
     "image": "circuit-evaluation/fixtures/scaffold.jpg",
     "source_sha256": "15b3348ce535a0e55d186ea39c87973d93c66316135959d4cf66329fb360f87a",
     "factorio_version": "2.1.21",

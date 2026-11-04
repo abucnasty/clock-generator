@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "LOGISTIC_SCIENCE_INSERTER_CRAFTING",
+  "sample": "INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK",
   "target": {
     "item": "inserter",
     "counts": "made",

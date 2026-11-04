@@ -9,7 +9,7 @@ import { GroupedHandsNotApplicable, groupedHandsCycles, groupedHandsPlan, groupe
 import { outputAtWindow } from "./taker-turns";
 import { EntityId, Machine } from "../../entities";
 
-// The grenade build (REAL_OWNER_GRENADE), one copy: a foundry (3) fills four assembling machines (1, 2, 4, 5) with iron
+// The grenade build (GRENADE_240_FILLS_BELT_EXACTLY), one copy: a foundry (3) fills four assembling machines (1, 2, 4, 5) with iron
 // plates through inserters 4, 3, 6 and 5, five hands of 16 a period each; a drill into each machine brings the coal; inserters 1,
 // 2, 7 and 8 take 16 grenades from the machines onto a belt. The period is 112 ticks, the hand cycle 8.
 const windowsOf = (config: Config, by_drops = false) => {
@@ -27,7 +27,7 @@ const ranges = (windows: Map<string, { start_inclusive: number; end_inclusive: n
 describe("hands in groups", () => {
     let config: Config;
     beforeAll(async () => {
-        config = await loadConfigFromFile(ConfigPaths.REAL_OWNER_GRENADE);
+        config = await loadConfigFromFile(ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY);
     });
 
     it("splits the four takers of the foundry into two groups half a period apart, each taker one window for its five hands", () => {
@@ -128,13 +128,13 @@ describe("hands in groups", () => {
     });
 });
 
-// Thaeln's cell 09 (REAL_THAELN_CELL09): thirteen machines in a chain, a cryogenic plant (7) fills four foundries' worth of plastic
+// the utility science 480 build (UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN): thirteen machines in a chain, a cryogenic plant (7) fills four foundries' worth of plastic
 // through inserters 10, 12, 19 and 20 and has coal from a belt (11); foundries (3, 4, 10, 11) fill the eight assemblers with low
 // density structure; units and frames come off two belts; eight inserters take the packs out onto belts. The cycle is 168 ticks.
 describe("hands in a chain of machines", () => {
     let config: Config;
     beforeAll(async () => {
-        config = await loadConfigFromFile(ConfigPaths.REAL_THAELN_CELL09);
+        config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN);
     });
 
     it("asks for one cycle: the hands of the inserters that fill a machine are rounded up, only the output's must be whole", () => {
@@ -171,13 +171,13 @@ describe("hands in a chain of machines", () => {
     });
 });
 
-// Cell 02 (REAL_STUPIDFATHOBBIT_CELL02): two processing unit machines (2, 3) are filled with circuits by four
+// Cell 02 (PROCESSING_UNIT_80_CIRCUIT_EXPORT): two processing unit machines (2, 3) are filled with circuits by four
 // inserters (3, 4, 7, 8) and with advanced circuits by 2 and 9 from two advanced circuit machines (4, 7); two circuit machines (5, 6) are
 // filled by a foundry (1) and three cable foundries each, and export onto a belt through 16 and 17. The cycle is 24 ticks, the hand cycle 8.
 describe("hands that fill the cycle", () => {
     let config: Config;
     beforeAll(async () => {
-        config = await loadConfigFromFile(ConfigPaths.REAL_STUPIDFATHOBBIT_CELL02);
+        config = await loadConfigFromFile(ConfigPaths.PROCESSING_UNIT_80_CIRCUIT_EXPORT);
     });
 
     it("asks for one cycle: an export onto a belt of two lanes is one hand, not two halves", () => {
@@ -218,14 +218,14 @@ describe("hands that fill the cycle", () => {
 });
 
 // One supercapacitor plant (3) fills two electromagnetic science plants (1, 2) through inserters 7 and 6, each a hand of 16 a
-// period: the original electromagnetic science sample (REAL_OWNER_PINK_SCIENCE_ORIGINAL) as a chain of its own, without the recycler (4,
+// period: the original electromagnetic science sample (ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED) as a chain of its own, without the recycler (4,
 // with inserters 9 and 10, its belts 2 and 3) and the buffer chests (3 and 4, with inserters 1 and 2): the science goes straight into the
 // infinity chests, the plant's circuits come from a chest of their own (5, inserter 13), and every inserter is clocked. The period is
 // 40 ticks.
 describe("takers of one machine that it cannot serve together", () => {
     let config: Config;
     beforeAll(async () => {
-        const sample = await loadConfigFromFile(ConfigPaths.REAL_OWNER_PINK_SCIENCE_ORIGINAL);
+        const sample = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED);
         config = {
             ...sample,
             overrides: { ...sample.overrides, terminal_swing_count: 1, lcm: 1 },

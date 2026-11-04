@@ -12,7 +12,7 @@ import {CLOCK_TEST_SPEEDS} from "../helpers/belt-speed-fixtures";
 import {PickupClockScenario} from "./pickup-clock-capture";
 
 /**
- * The lithium plate build, 80 a second from one copy (`REAL_OWNER_LITHIUM_SILO`): two cryogenic plants, fed
+ * The lithium plate build, 80 a second from one copy (`LITHIUM_PLATE_80_SILO_CHEST`): two cryogenic plants, fed
  * holmium plates by infinity chests, put lithium into a rocket silo taken as a chest, and six furnaces take it out and
  * put plates onto a belt that a loader empties into a disposal chest. The silo holds at most 250 lithium (by weight), so
  * the standard cuts of 2 periods (of 7,560 or 1,080 ticks) empty it many times over.
@@ -43,7 +43,7 @@ export function lithiumSiloCases(): LithiumSiloCase[] {
     ];
 }
 
-const SCAFFOLD = path.join(path.dirname(ConfigPaths.REAL_OWNER_LITHIUM_SILO), "lithium-silo-scaffold.txt");
+const SCAFFOLD = path.join(path.dirname(ConfigPaths.LITHIUM_PLATE_80_SILO_CHEST), "lithium-plate-80-silo-chest.scaffold");
 
 interface Placed {entity_number: number; name: string; position: {x: number; y: number}; direction?: number}
 
@@ -88,14 +88,14 @@ export function assertLithiumSiloHardware(recording: Recording, config: Config):
 export function lithiumSiloScenario(variant: LithiumSiloCase): PickupClockScenario {
     return {
         name: variant.name, speed: CLOCK_TEST_SPEEDS[0], backed: false,
-        config: () => loadConfigFromFile(ConfigPaths.REAL_OWNER_LITHIUM_SILO),
+        config: () => loadConfigFromFile(ConfigPaths.LITHIUM_PLATE_80_SILO_CHEST),
         scaffold: () => lithiumSiloScaffold(variant.order),
         alternative: variant.alternative,
         // the clock with 7 output swings repeats over 7,560 ticks, longer than a minute
         ...(variant.alternative === "swings-7" && {baseline: {ticks: 7560, reason: "the clock's output repeats over its 7,560-tick period, longer than a minute"}}),
-        probeFile: path.join(__dirname, "lithium-silo-clock-probe.lua"),
+        probeFile: path.join(__dirname, "lithium-plate-80-silo-chest-clock-probe.lua"),
         probe: {family: "lithium-silo"},
-        controls: path.join(__dirname, "lithium-silo-clock-controls.json"),
+        controls: path.join(__dirname, "lithium-plate-80-silo-chest-clock-controls.json"),
         assertHardware: assertLithiumSiloHardware,
     };
 }

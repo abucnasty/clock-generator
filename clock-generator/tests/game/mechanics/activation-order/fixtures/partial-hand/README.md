@@ -1,6 +1,6 @@
 # Partial machine-source notifications
 
-The [scaffold](scaffold.txt) has three copper-cable assemblers, legendary 16-item inserters and 48-slot chests.
+The [scaffold](scaffold.scaffold) has three copper-cable assemblers, legendary 16-item inserters and 48-slot chests.
 Source outputs receive 0/8/16 cable; hands pick it up themselves. One craft follows visible row 8, using one copper
 plate and progress 0.99. Direct insertion of 8 source output items after visible row 14 is a separate intervention.
 The inherited disconnected condition setter was ineffective, so this case has no condition-assignment conclusion.

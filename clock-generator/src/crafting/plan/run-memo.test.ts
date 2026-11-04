@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { Config } from "../../config";
-import { ConfigPaths, ExpectedRefusals } from "../../config/config-paths";
+import { ConfigPaths } from "../../config/config-paths";
 import { TestConfigPaths } from "../../../tests/configs/paths";
 import { loadConfigFromFile } from "../../config/loader";
 import { DebugSettingsProvider } from "../sequence/debug/debug-settings-provider";
@@ -56,7 +56,6 @@ describe("canonicalKey", () => {
     it("has a key for the config of every sample", async () => {
         const without: string[] = [];
         for (const [name, path] of Object.entries(ConfigPaths)) {
-            if (name in ExpectedRefusals) continue;
             if (canonicalKey(await loadConfigFromFile(path)) === null) without.push(name);
         }
         expect(without).toEqual([]);
@@ -66,7 +65,7 @@ describe("canonicalKey", () => {
 describe("the memo of the runs of a generation", () => {
     let config: Config;
     beforeAll(async () => {
-        config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+        config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
     });
     const options = { logger: quiet, factorio_states: false };
 
@@ -233,7 +232,7 @@ describe("the memo of the runs of a generation", () => {
     });
 
     it("changes nothing a generation yields", async () => {
-        const sample = await loadConfigFromFile(ConfigPaths.PROCESSING_UNITS);
+        const sample = await loadConfigFromFile(ConfigPaths.PROCESSING_UNIT_15_CHEST_FED);
         const generate = (min_ticks: number) => withRunMemo(() => {
             const result = generateClockAlternatives(sample, { logger: quiet });
             return { result, hits: currentRunMemo()!.hits };
@@ -250,7 +249,7 @@ describe("the memo of the backpressure loss verdicts of a generation", () => {
     let config: Config;
     let clock: BlueprintGenerationResult;
     beforeAll(async () => {
-        config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+        config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
         clock = generateClockForConfig(config, { logger: quiet, verify_as_built: false, fuel_consumption_view: false, modulo_blueprint: false, factorio_states: false });
     });
 

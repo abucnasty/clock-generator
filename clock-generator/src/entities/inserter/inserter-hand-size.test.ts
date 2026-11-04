@@ -19,7 +19,7 @@ describe("handSizeFor", () => {
      * than by its id, which changes whenever the build is exported again.
      */
     const inserterThat = async (what: { source: "machine" | "belt", sink: "machine" | "belt", carries: string }) => {
-        const config = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
+        const config = await loadConfigFromFile(ConfigPaths.ROCKET_FUEL_60);
         const registry = SimulationContext.fromConfig(config).entity_registry;
         const inserter = registry.getAll().filter(Entity.isInserter).find(it =>
             it.source.entity_id.type === what.source

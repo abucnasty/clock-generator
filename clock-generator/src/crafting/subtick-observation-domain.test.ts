@@ -28,7 +28,7 @@ it("rejects one missing hand even when its size is below the scaled per-period t
 });
 
 it("judges the unchanged fractional export on complete physical counter spans", async () => {
-    const sample = await loadConfigFromFile(ConfigPaths.METALLURGIC_SCIENCE_PACK);
+    const sample = await loadConfigFromFile(ConfigPaths.METALLURGIC_SCIENCE_45);
     const config = { ...sample, overrides: { ...sample.overrides, lcm: controls.lcm,
         terminal_swing_count: controls.terminal_swing_count } };
     const result = trial.clockFromWindows(config, controls.clock_windows, controls.period, logger);
@@ -46,7 +46,7 @@ it("judges the unchanged fractional export on complete physical counter spans", 
 // All 640 starts run, 422 of them to the proof cap: about 25 s on a desktop and over 60 s on a GitHub runner. No smaller
 // metallurgic clock (lcm 1-4, 1-4 swings) holds from its first start, so none can stand in for it.
 it("checks every physical counter start and reports the bounded proof limit honestly", async () => {
-    const sample = await loadConfigFromFile(ConfigPaths.METALLURGIC_SCIENCE_PACK);
+    const sample = await loadConfigFromFile(ConfigPaths.METALLURGIC_SCIENCE_45);
     const config = { ...sample, overrides: { ...sample.overrides, lcm: controls.lcm,
         terminal_swing_count: controls.terminal_swing_count } };
     const windows = new Map(Object.entries(controls.clock_windows)
@@ -58,7 +58,7 @@ it("checks every physical counter start and reports the bounded proof limit hone
 }, 180_000);
 
 it("still rejects output missing over a complete physical counter span", async () => {
-    const sample = await loadConfigFromFile(ConfigPaths.METALLURGIC_SCIENCE_PACK);
+    const sample = await loadConfigFromFile(ConfigPaths.METALLURGIC_SCIENCE_45);
     const config = { ...sample, overrides: { ...sample.overrides, lcm: controls.lcm,
         terminal_swing_count: controls.terminal_swing_count } };
     const windows = { ...controls.clock_windows, "inserter:3": controls.clock_windows["inserter:3"].slice(0, 2) };
@@ -68,7 +68,7 @@ it("still rejects output missing over a complete physical counter span", async (
 });
 
 it("observes a counter from where the warm-up left its clocks, not from a counter restarted at the recording", async () => {
-    const sample = await loadConfigFromFile(ConfigPaths.METALLURGIC_SCIENCE_PACK);
+    const sample = await loadConfigFromFile(ConfigPaths.METALLURGIC_SCIENCE_45);
     const config = { ...sample, overrides: { ...sample.overrides, lcm: controls.lcm,
         terminal_swing_count: controls.terminal_swing_count } };
     const windows = new Map(Object.entries(controls.clock_windows)

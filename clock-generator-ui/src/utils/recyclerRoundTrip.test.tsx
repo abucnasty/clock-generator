@@ -1,8 +1,8 @@
 import data from '../../../clock-generator/resources/data-filtered.json?raw';
 import { describe, expect, it } from 'vitest';
 import { ConfigSchema, FactorioDataService, type Config } from 'clock-generator/browser';
-import exact from '../../../clock-generator/resources/config-samples/real/owner/ore-voider/ore-voider-exact-speed.json';
-import overbeaconed from '../../../clock-generator/resources/config-samples/real/owner/ore-voider/ore-voider-overbeaconed.json';
+import exact from '../../../clock-generator/resources/config-samples/recycling/iron-ore/iron-ore-voider-400-exact-speed.json';
+import overbeaconed from '../../../clock-generator/resources/config-samples/recycling/iron-ore/iron-ore-voider-400-overbeaconed.json';
 import { configToFormData, formDataToConfig } from './configForm/configMapping';
 import { readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
 import { removeChest, removeMachine, reorderChests, reorderMachines, updateMachine, updateTargetOutput, patchMachine } from './configForm/edits';

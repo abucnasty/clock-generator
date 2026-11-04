@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "UTILITY_SCIENCE",
+  "sample": "UTILITY_SCIENCE_120",
   "target": {
     "item": "utility-science-pack",
     "counts": "made",

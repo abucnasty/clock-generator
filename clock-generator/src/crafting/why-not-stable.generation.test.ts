@@ -39,7 +39,7 @@ describe("why the selected clock does not meet goal 1, as a generation says it",
     });
 
     it("is not said of a sample whose selected clock is stable", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
         const generated = generateClockAlternatives(config, { logger: quiet });
         expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
         expect(generated.alternatives[generated.selected_index].verdict).toBe("stable");

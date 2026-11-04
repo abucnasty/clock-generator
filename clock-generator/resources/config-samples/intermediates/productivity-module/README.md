@@ -8,8 +8,8 @@ circuits and the iron and copper pass from machine to machine. Fourteen stack in
 with the modules on one lane. Every machine is legendary, with beacons. Most machines feed others, and the module machine, which can make 13.51 modules a second (speed 135.0625, 1.5 modules a craft), has 1.3% to spare
 over the 13.33 a copy must make.
 
-- `productivity-chain.json`: the config of the build as the paste reads it, one copy, target 80 a second over 6 copies.
-- `productivity-chain-scaffold.txt`: the blueprint of one copy with its 23 beacons and no clock (95 entities): the coal in an
+- `productivity-module-80-chest-chain.json`: the config of the build as the paste reads it, one copy, target 80 a second over 6 copies.
+- `productivity-module-80-chest-chain.scaffold`: the blueprint of one copy with its 23 beacons and no clock (95 entities): the coal in an
   infinity chest with its inserter, infinity pipes for the petroleum gas, the molten copper and the molten iron, the three
   steel chests, and a turbo loader at the end of the output belt that empties it into an infinity chest.
 

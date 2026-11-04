@@ -17,7 +17,7 @@ describe("generateClockForConfig", () => {
     // test that ranks the alternatives with and without them takes minutes, so it is in a file of its own:
     // agricultural-science-loop-windows-ranking.generation.test.ts.
     describe("agricultural science: windows for the inserters of the egg loop and those that take out of it", async () => {
-        const sample = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
+        const sample = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250);
         const five_swings = (config: Config): Config => ({ ...config, overrides: { ...config.overrides, terminal_swing_count: 5 } });
         const out_of_the_loop = ["inserter:10", "inserter:9"];
         const of_the_loop = ["inserter:5", "inserter:8"];

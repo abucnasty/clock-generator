@@ -59,12 +59,12 @@ const ELECTROMAGNETIC_TURBO_BACKED: Config = {
  */
 describe("planned windows", () => {
     test.each([
-        ["utility science", ConfigPaths.UTILITY_SCIENCE, {
+        ["utility science", ConfigPaths.UTILITY_SCIENCE_120, {
             "inserter:1": ["37-46", "181-190", "373-382", "517-526"],
             "inserter:2": ["37-57", "181-201", "373-393", "517-537"],
             "inserter:3": ["1-49", "169-193", "337-385", "505-529"],
         }],
-        ["automation science", ConfigPaths.AUTOMATION_SCIENCE, { "inserter:1": ["60-90"], "inserter:2": ["1-54"] }],
+        ["automation science", ConfigPaths.AUTOMATION_SCIENCE_240, { "inserter:1": ["60-90"], "inserter:2": ["1-54"] }],
     ])("%s", async (_, path, windows) => {
         expect(plannedWindows(await loadConfigFromFile(path), ACTIVATION_ORDER)).toEqual(windows);
     });

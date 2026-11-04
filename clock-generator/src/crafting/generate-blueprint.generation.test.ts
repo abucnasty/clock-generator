@@ -24,7 +24,7 @@ describe("generateClockForConfig", () => {
     // observed windows move 10,944 in each of 20 repeats too. The simulator had batched swings at 2 swings at 338 a
     // second for as long as it opened every window a tick early.
     describe("iron bacteria from two biochambers, each with two output inserters", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_CULTIVATION);
+        const config = await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_380_CULTIVATION);
         let validation: ConfigValidation;
         let alternatives: ClockAlternative[];
         let selected: ClockAlternative;
@@ -117,8 +117,8 @@ describe("generateClockForConfig", () => {
     // neighbour when there is none with one: the windows with no padding pass from every start and over the long run,
     // where a tick of padding does not. Whether the game has that state is not recorded; there is no scaffold of this
     // build. From the staged start of the simulator (empty machines) that state is gone: every padding passes.
-    describe("PRODUCTION_SCIENCE_JSON derived clock windows", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.PRODUCTION_SCIENCE_JSON);
+    describe("PRODUCTION_SCIENCE_120_TWO_BELTS derived clock windows", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.PRODUCTION_SCIENCE_120_TWO_BELTS);
 
         it("planned windows fail the clock-only check", () => {
             const result = generateClockForConfig(config, { verify_as_built: true });

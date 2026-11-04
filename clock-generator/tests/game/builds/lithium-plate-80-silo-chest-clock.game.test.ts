@@ -1,7 +1,7 @@
 import fs from "fs";
 import {test} from "vitest";
 import {capturePickupClockScenario} from "./pickup-clock-capture";
-import {lithiumSiloCases, lithiumSiloScenario} from "./lithium-silo-clock-fixtures";
+import {lithiumSiloCases, lithiumSiloScenario} from "./lithium-plate-80-silo-chest-clock-fixtures";
 
 // A passing capture preserves the measured counts, including clock failures; it does not certify stability.
 for (const variant of lithiumSiloCases()) {

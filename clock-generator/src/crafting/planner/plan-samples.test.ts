@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
-import { ConfigPaths, isExpectedRefusal } from "../../config/config-paths";
+import { ConfigPaths } from "../../config/config-paths";
 import type { PlanComposition } from "../../data-types/build-plan";
 import { MAX_SIMULATION_TICKS } from "../plan/clock-period-limit";
 import { wholeSwingPeriodsBelow } from "../whole-swing-periods";
@@ -35,11 +35,6 @@ describe("the build plan", () => {
             }
             expect(listed.length).toBeGreaterThanOrEqual(feasibility.duties.length);
 
-            if (isExpectedRefusal(key)) {
-                expect(validation).toBeNull();
-                expect(plan.composition).toBeNull();
-                return;
-            }
             expect(validation).not.toBeNull();
             const composition = plan.composition!;
             // the planning run's period and lcm, as validating the config makes them

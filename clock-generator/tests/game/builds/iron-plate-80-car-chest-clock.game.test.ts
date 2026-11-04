@@ -1,7 +1,7 @@
 import fs from "fs";
 import {test} from "vitest";
 import {capturePickupClockScenario} from "./pickup-clock-capture";
-import {carCases, carScenario} from "./car-clock-fixtures";
+import {carCases, carScenario} from "./iron-plate-80-car-chest-clock-fixtures";
 import {readControls, RunControls} from "./clock-controls";
 import {expectRunAgreesWithSelection} from "../helpers/fixture-mechanics";
 
@@ -14,7 +14,7 @@ for (const variant of carCases()) {
         await capturePickupClockScenario(await carScenario(variant));
         // the run equals its controls entry (compared in the capture): what it says of the selection, but a known difference
         if (process.env.BELT_CLOCK_CALIBRATE === "1" || process.env.BELT_CLOCK_GENERATION_ONLY === "1" || process.env.BELT_CLOCK_EXPECTATIONS) return;
-        const {native, generation, known_differences} = readControls<RunControls>("car-clock-controls.json").cases[variant.name];
+        const {native, generation, known_differences} = readControls<RunControls>("iron-plate-80-car-chest-clock-controls.json").cases[variant.name];
         expectRunAgreesWithSelection(variant.name, native, {verdict: generation!.verdict, holds: generation!.selection.holds}, true, known_differences);
     }, 960_000);
 }

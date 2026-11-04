@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "REAL_THAELN_CELL09",
+  "sample": "UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN",
   "target": {
     "item": "utility-science-pack",
     "counts": "made",

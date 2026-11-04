@@ -19,7 +19,7 @@ describe("long-run output through finite buffers", () => {
     let baseline: ReturnType<typeof runAsBuiltCheck>;
 
     beforeAll(async () => {
-        const sample = await loadConfigFromFile(ConfigPaths.REAL_OWNER_PINK_SCIENCE_ORIGINAL);
+        const sample = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED);
         // A straight mixed-input belt makes the upstream transfers uneven. The two final buffer takers still
         // deliver one hand apiece per clock; the engine must judge those takers, as its planner does. (The sample's
         // pickup of the holmium and superconductor belt is on a bend: here it is straight.)

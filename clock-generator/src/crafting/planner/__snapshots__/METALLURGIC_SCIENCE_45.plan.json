@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "METALLURGIC_SCIENCE_PACK",
+  "sample": "METALLURGIC_SCIENCE_45",
   "target": {
     "item": "metallurgic-science-pack",
     "counts": "made",

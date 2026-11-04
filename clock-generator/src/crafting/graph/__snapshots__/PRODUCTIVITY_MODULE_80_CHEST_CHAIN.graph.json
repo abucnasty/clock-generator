@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "REAL_OWNER_PRODUCTIVITY_CHAIN",
+  "sample": "PRODUCTIVITY_MODULE_80_CHEST_CHAIN",
   "target": {
     "item": "productivity-module",
     "counts": "made",

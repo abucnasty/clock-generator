@@ -7,7 +7,7 @@ const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 
 describe('original electromagnetic science with curved inputs and belt disposal', () => {
     let generated: ReturnType<typeof generateClockAlternatives>;
-    beforeAll(async () => { generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.REAL_OWNER_PINK_SCIENCE_ORIGINAL), {logger: quiet}); });
+    beforeAll(async () => { generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED), {logger: quiet}); });
     // The sample is automatic: no window, count or Always is given. The clock takes turns at the supercapacitor plants and
     // holds and recovers under every order the game may serve the takers of one machine in.
     it('generates a stable 40-tick turns clock at 240/s across five repeated cells with no inserter left always on', () => {
@@ -23,7 +23,7 @@ describe('original electromagnetic science with curved inputs and belt disposal'
         expect([...Array(40).keys()].filter(tick => open('inserter:6', tick) && open('inserter:7', tick))).toEqual([]);
     });
     it('uses the original curved pickup and sends advanced circuits onto a belt', async () => {
-        const config = await loadConfigFromFile(ConfigPaths.REAL_OWNER_PINK_SCIENCE_ORIGINAL);
+        const config = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED);
         expect(config.inserters.find(inserter => inserter.source.type === 'belt' && inserter.source.pickup_layout === 'bend-right-upstream')?.source)
             .toMatchObject({pickup_capture: {status: 'supported', model_version: 3}});
         const byproduct = config.inserters.find(inserter => inserter.filters?.includes('advanced-circuit'))!;

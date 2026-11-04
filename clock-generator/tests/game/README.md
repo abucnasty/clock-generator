@@ -120,7 +120,7 @@ does needs a bump of `RECORDING_CACHE_PROTOCOL`.
 ```bash
 python3 scripts/game/run-suite.py                     # warm: recordings read from the cache where they exist
 python3 scripts/game/run-suite.py --cache off         # a cold pass over tests/game/builds (mechanics stay on the cache)
-python3 scripts/game/run-suite.py --plan car-clock    # the jobs and an estimate, nothing run
+python3 scripts/game/run-suite.py --plan iron-plate-80-car-chest-clock    # the jobs and an estimate, nothing run
 python3 scripts/game/run-suite.py tests/game/mechanics/drills grenade-clock    # only files whose path contains these
 ```
 

@@ -5,8 +5,8 @@ used as a chest. Two legendary stack inserters take the ore from the car into tw
 2 legendary productivity modules 3 and 7 legendary beacons. Their output inserters put the plates onto a turbo belt that
 a loader empties into a disposal chest. The target is 80 plates a second from one copy.
 
-- `car-scaffold.txt`: the build's blueprint as given. The loader and disposal chest are part of it.
-- `car.sidecar-export.json`: what Sidecar 0.12.0 exports from the blueprint built in the harness game, taken again on
+- `iron-plate-80-car-chest.scaffold`: the build's blueprint as given. The loader and disposal chest are part of it.
+- `iron-plate-80-car-chest.sidecar-export.json`: what Sidecar 0.12.0 exports from the blueprint built in the harness game, taken again on
   2026-10-22 with the released mod, which also exports each machine's `prototype` and quality and each entity's position
   (and an inserter's or drill's direction).
 - `car.json`: an earlier export of the same build as the paste reads it (each list through its schema), with the target
@@ -28,6 +28,6 @@ full while the drill runs.
 
 The selected clock (3 output swings, 72 ticks) and the clock with 1 output swing move 96 plates in each of 63 periods in
 the game, and get back to it after the drill is stopped until the car has run dry (71 periods), the output is blocked for
-4 and the drill is stopped again (`tests/game/builds/car-clock-controls.json`). Building the two inserters that take from
+4 and the drill is stopped again (`tests/game/builds/iron-plate-80-car-chest-clock-controls.json`). Building the two inserters that take from
 the car after the output inserters changed nothing in any period. The simulator counts 200.0 wake-ups a minute for the
 selected clock from the scaffold's cold start, where the game's states give 3.8; the difference is not explained yet.

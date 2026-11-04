@@ -6,9 +6,9 @@ the lithium out of the silo into six legendary electric furnaces making lithium 
 beacons. Their output inserters put the plates onto a turbo belt that a loader empties into a disposal chest. The target
 is 80 plates a second from one copy.
 
-- `lithium-silo-scaffold.txt`: the build's blueprint as given. The infinity chests, infinity pipes, loader and disposal
+- `lithium-plate-80-silo-chest.scaffold`: the build's blueprint as given. The infinity chests, infinity pipes, loader and disposal
   chest are part of it.
-- `lithium-silo.sidecar-export.json`: what Sidecar 0.14.0 exports from the blueprint built in the harness game, taken again on
+- `lithium-plate-80-silo-chest.sidecar-export.json`: what Sidecar 0.14.0 exports from the blueprint built in the harness game, taken again on
   2026-10-23, which also exports each machine's `prototype` and quality and each entity's position (and an inserter's or
   drill's direction), and marks inserters 15 and 16 (`drop_capture` on their sinks) as dropping onto a belt that
   side-loads onto another. The game test `tests/game/mechanics/belt-drop/sideload-drop-capture.game.test.ts` takes it
@@ -32,7 +32,7 @@ cryogenic plants 2 × 53.122 / 20 × 5 × 3 = 79.7 lithium a second, of which 80
 
 The selected clock (3 output swings, 1080 ticks) and the clock with 1 output swing move 1440 plates in each of 63
 periods in the game, and get back to it after the holmium plates are cut for 2 periods, the output is blocked for 4 and
-the holmium plates are cut again (`tests/game/builds/lithium-silo-clock-controls.json`). The recording starts with a
+the holmium plates are cut again (`tests/game/builds/lithium-plate-80-silo-chest-clock-controls.json`). The recording starts with a
 filled silo: the harness warms the build up for 3600 ticks without a clock before the clock starts, so the silo holds
 218 lithium then, whatever the config says. Each cut empties it. Building the two inserters that fill the silo after
 the six that empty it changed nothing in any period.

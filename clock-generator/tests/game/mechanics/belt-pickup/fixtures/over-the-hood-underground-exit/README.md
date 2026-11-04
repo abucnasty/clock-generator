@@ -1,6 +1,6 @@
 # Over-the-hood underground-exit pickup
 
-The exact user-supplied 58-entity [scaffold](scaffold.txt) places the input one tile **upstream** of an eastbound
+The exact user-supplied 58-entity [scaffold](scaffold.scaffold) places the input one tile **upstream** of an eastbound
 exit, facing east. Its hand reaches across the hood into the exposed outlet; its body leaves the eastward belt
 continuation free. This is distinct from the existing downstream-facing [front exit](../front-underground-exit/README.md),
 whose inserter blocks the continuation. It does not fill that separate continuously-moving coverage row.
@@ -8,7 +8,7 @@ whose inserter blocks the continuation. It does not fill that separate continuou
 ## Layouts and native coverage
 
 The supplied plant layout is unchanged at turbo/express/fast. Its seven-tile source pair cannot connect at
-normal speed. The separate [compact normal control](compact-normal-scaffold.txt) uses a legendary 3×3 assembler
+normal speed. The separate [compact normal control](compact-normal.scaffold) uses a legendary 3×3 assembler
 centered at `(-106.5,428.5)`, making electronic circuits from iron plates/copper cable. It preserves exit39,
 input36 and output31; entrance21 moves two tiles east to `(-108.5,428.5)`, with ordinary belts bridging its former
 tile and the next. The incompatible five-module plant loadout is removed; native compact crafting speed with
@@ -128,7 +128,7 @@ throughput and generated-clock recovery remain final parity gates before release
 
 ![Supplied turbo layout with the inserter reaching over the exit hood](scaffold.jpg)
 
-![Compact normal layout preserving the over-the-hood exit pickup and using a paired five-tile tunnel](compact-normal-scaffold.jpg)
+![Compact normal layout preserving the over-the-hood exit pickup and using a paired five-tile tunnel](compact-normal.jpg)
 
 These native Factorio screenshots show the baseline layouts after 600 warm-up ticks, with the clock disabled.
 They illustrate geometry rather than the probe's exact starting stock. Refresh either registered case with

@@ -22,10 +22,10 @@ import {RUN_PROTOCOL, runSummary} from './pickup-clock-capture';
  * selected alternative wire both physical copies.
  */
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
-const sample = path.resolve(__dirname, '../../../resources/config-samples/real/owner/pink-science-original/pink-science-original.json');
-const scaffold = sample.replace(/\.json$/, '-scaffold.txt');
+const sample = path.resolve(__dirname, '../../../resources/config-samples/science/electromagnetic/electromagnetic-240-recycler-belt-fed.json');
+const scaffold = sample.replace(/\.json$/, '.scaffold');
 const originalHash = '3cb6ca71400bda8580d605cbbc3eff69f4db594ee761a27311bdefe2487573a5';
-const probe = path.join(__dirname, 'recycler-original-clock-probe.lua');
+const probe = path.join(__dirname, 'electromagnetic-science-240-recycler-belt-fed-clock-probe.lua');
 const period = 40;
 // the disturbances of the warm run, each distinct kind once: the five supplies cut (the feeders off and the item taken from the
 // belt lanes and the supply chests upstream), the output blocked at the four terminals, the advanced-circuit disposal blocked
@@ -67,7 +67,7 @@ for (const run of runs) test(`original electromagnetic science scaffold, automat
     const estimate = run.cold ? COLD_ESTIMATE : WARM_ESTIMATE, cap = run.cold ? COLD_CAP : RUN_PROTOCOL.cap;
     context.skip(estimate > cap, `the run is estimated at ${estimate} ticks, over the ${cap} it may take`);
     const retained = process.env.RECYCLER_ORIGINAL_CAPTURE_DIR;
-    const parent = retained ? path.resolve(retained) : fs.mkdtempSync(path.join(os.tmpdir(), 'recycler-original-'));
+    const parent = retained ? path.resolve(retained) : fs.mkdtempSync(path.join(os.tmpdir(), 'electromagnetic-science-240-recycler-belt-fed-clock-'));
     const directory = path.join(parent, run.name);
     fs.mkdirSync(directory, {recursive: true});
     try {
@@ -119,7 +119,7 @@ for (const run of runs) test(`original electromagnetic science scaffold, automat
             lua: composeProbeSource(probe, options),
             seed: [], unclocked: false, game_speed: 1000, watch: false, timeout_seconds: 1500, log() {},
         }) as any;
-        const report = JSON.parse(fs.readFileSync(path.join(directory, 'game/script-output/recycler-original.json'), 'utf8'));
+        const report = JSON.parse(fs.readFileSync(path.join(directory, 'game/script-output/electromagnetic-science-240-recycler-belt-fed-clock.json'), 'utf8'));
         expect(report.error).toBeUndefined();
         expect(report.protocol.error, 'the probe failed in the game').toBeUndefined();
         expect(report.protocol.result, 'the run did not end before the recording').toBeDefined();

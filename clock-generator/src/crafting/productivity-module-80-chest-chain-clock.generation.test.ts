@@ -8,15 +8,15 @@ import { alwaysOnReasonProblemsOf, quiet } from "./generate-blueprint-test-helpe
 import { clockIdentity } from "./clock-identity";
 import { createHash } from "crypto";
 import {readControls, RunControls, runHolds} from "../../tests/game/builds/clock-controls";
-import { GENERATED_ALTERNATIVE } from "../../tests/game/builds/productivity-chain-clock-fixtures";
+import { GENERATED_ALTERNATIVE } from "../../tests/game/builds/productivity-module-80-chest-chain-clock-fixtures";
 
-// The productivity module chain (REAL_OWNER_PRODUCTIVITY_CHAIN) at 80 modules a second over 6 copies: nine machines with chests
+// The productivity module chain (PRODUCTIVITY_MODULE_80_CHEST_CHAIN) at 80 modules a second over 6 copies: nine machines with chests
 // between them, 1.3% of room in the whole chain. No clock observed from the plan holds. Windows made from the hands, rounded up where
 // they are fractional, and from the order of the chain (src/crafting/candidates/grouped-hands.ts) hold in one cycle (72 ticks).
 // Generated once for both describes of this file: it takes minutes, and the two used to generate it each in a file of their own.
 let generation: Promise<{ config: Config; result: ClockAlternativesResult }> | undefined;
 const generateProductivityChain = () => generation ??= (async () => {
-    const config = await loadConfigFromFile(ConfigPaths.REAL_OWNER_PRODUCTIVITY_CHAIN);
+    const config = await loadConfigFromFile(ConfigPaths.PRODUCTIVITY_MODULE_80_CHEST_CHAIN);
     return { config, result: generateClockAlternatives(config, { logger: quiet }) };
 })();
 
@@ -46,7 +46,7 @@ describe("a clock for the productivity module chain from the hands and the order
     });
 
     it("is the clock recorded in the game: the pin of the control names it", () => {
-        const { generation, native } = readControls<RunControls>("productivity-chain-clock-controls.json").cases["generated-one-copy"];
+        const { generation, native } = readControls<RunControls>("productivity-module-80-chest-chain-clock-controls.json").cases["generated-one-copy"];
         const selected = result.alternatives[result.selected_index];
         const exported = selected.result.subtick ?? selected.result;
         expect(createHash("sha256").update(JSON.stringify(clockIdentity(exported))).digest("hex"),

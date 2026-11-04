@@ -19,7 +19,7 @@ describe("the rules of the game", () => {
         let advanced_circuit: ReadableEntityRegistry;
 
         beforeAll(async () => {
-            advanced_circuit = await registryOf(ConfigPaths.ADVANCED_CIRCUIT);
+            advanced_circuit = await registryOf(ConfigPaths.ADVANCED_CIRCUIT_240);
         });
 
         // the cryogenic plant that makes plastic in the advanced circuit scaffold: with 100 plastic bars in its output
@@ -51,7 +51,7 @@ describe("the rules of the game", () => {
 
         // the function on the stone brick sample, whose furnaces have a limit of 70 for stone, above the stack
         it("fills a stone furnace to its insertion limit for stone plus 64", async () => {
-            const registry = await registryOf(ConfigPaths.STONE_BRICKS_DIRECT_INSERT_2_1);
+            const registry = await registryOf(ConfigPaths.STONE_BRICK_120_DRILL_DIRECT_INSERT);
             const drill = registry.getAll().filter(Entity.isDrill)[0];
             const furnace = registry.getAll().filter(Entity.isMachine).find(it => it.inputs.has("stone"))!;
             expect(furnace.inputs.getOrThrow("stone").automated_insertion_limit.quantity).toBe(70);
@@ -111,7 +111,7 @@ describe("the rules of the game", () => {
         // agricultural science: the three inserters that bring nutrients off the belt with their bioflux; without the
         // room the windows of batched swings closed on partly filled hands, 377 of 400 a period in the game
         it("is the ticks a hand of fuel takes to fill, for an inserter that takes fuel off a belt as well as an ingredient", async () => {
-            const registry = await registryOf(ConfigPaths.AGRICULTURAL_SCIENCE);
+            const registry = await registryOf(ConfigPaths.AGRICULTURAL_SCIENCE_250);
             expect(Object.fromEntries(fuelHandRoomTicks(registry))).toEqual({ "inserter:1": 4, "inserter:2": 4, "inserter:11": 4 });
         });
     });

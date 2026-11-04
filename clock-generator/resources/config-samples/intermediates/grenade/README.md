@@ -17,12 +17,12 @@ Given on 2026-10-23:
   or splitter (#363).
   `target_output.copy_offset` (12 tiles east) and each output inserter's `belt_direction` (west) were added to it afterwards, for the
   check of the copies' drops onto the belt; the export given has neither.
-- `grenade-scaffold.txt`: the blueprint "scaffold" of the book given, one copy with its 22 beacons and no clock (86 entities).
+- `grenade-240-fills-belt-exactly.scaffold`: the blueprint "scaffold" of the book given, one copy with its 22 beacons and no clock (86 entities).
   The harness needs `drill_resource: coal`; its export matches `grenade.json` entity by entity.
-- `grenade-wiring-guide.txt`: the blueprint "wiring guide": one copy without beacons and with the hand-made clock (77 entities).
-- `grenade-hand-clock-scaffold.txt`: the scaffold with the wiring guide's seven decider combinators and their 23 wires added,
+- `grenade-240-fills-belt-exactly-wiring-guide.blueprint`: the blueprint "wiring guide": one copy without beacons and with the hand-made clock (77 entities).
+- `grenade-240-fills-belt-exactly-hand-clock.blueprint`: the scaffold with the wiring guide's seven decider combinators and their 23 wires added,
   made for the game test (the given files are not changed): one copy on the hand-made clock.
-- `grenade-full-build.txt`: the full build, 458 entities: seven copies and one clock of the same design, the belt lines
+- `grenade-240-fills-belt-exactly-full-build.blueprint`: the full build, 458 entities: seven copies and one clock of the same design, the belt lines
   and the loader. The game tests build it as seven copies of the config.
 
 The hand-made clock counts 0 to 111 (112 ticks) and has six window deciders: the output inserters of the north machines are enabled

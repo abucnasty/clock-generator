@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "STONE_BRICKS_DIRECT_INSERT_2_1",
+  "sample": "STONE_BRICK_120_DRILL_DIRECT_INSERT",
   "target": {
     "item": "stone-brick",
     "counts": "made",

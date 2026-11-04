@@ -25,7 +25,7 @@ for (const speed of BELT_SPEEDS) {
         const capture = speedCapture(`drop-window-${speed.name}-${key}`);
         try {
             const fixture = GameFixturePaths.TURBO_BELT_DROP;
-            const blueprint = blueprintAtSpeed(fs.readFileSync(path.join(fixture, "scaffold.txt"), "utf8"), speed);
+            const blueprint = blueprintAtSpeed(fs.readFileSync(path.join(fixture, "scaffold.scaffold"), "utf8"), speed);
             fs.writeFileSync(path.join(capture.directory, "scaffold.txt"), blueprint);
             await recordInFactorio({factorio: factorio!, save: save!, blueprint,
                 lua: composeProbeSource(path.join(fixture, "probe.lua"), {stackSize: 4, beltPrefix: speed.prefix, ticks: 120, seedPosition: position}),

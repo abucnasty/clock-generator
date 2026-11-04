@@ -11,8 +11,8 @@ import { feasibilityOfConfig, withTarget } from "./feasibility-test-helpers";
  * 16 every 8 ticks each: 4 x 16 x 60 / 8 = 480 a second.
  */
 describe("C7: a destroyed target is at most what the machines destroy and what is brought in", async () => {
-    const exact = await loadConfigFromFile(ConfigPaths.REAL_OWNER_ORE_VOIDER_EXACT_SPEED) as Config;
-    const overbeaconed = await loadConfigFromFile(ConfigPaths.REAL_OWNER_ORE_VOIDER_OVERBEACONED) as Config;
+    const exact = await loadConfigFromFile(ConfigPaths.IRON_ORE_VOIDER_400_EXACT_SPEED) as Config;
+    const overbeaconed = await loadConfigFromFile(ConfigPaths.IRON_ORE_VOIDER_400_OVERBEACONED) as Config;
 
     it("the exact-speed recycler crafts 540 a second and destroys 1 - 1/4 a craft, 405 a second; a target of 405 passes, exactly "
         + "at the bound", () => {

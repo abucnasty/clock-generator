@@ -7,17 +7,17 @@ import { alwaysOnReasonProblemsOf, quiet } from "./generate-blueprint-test-helpe
 import { clockIdentity } from "./clock-identity";
 import { createHash } from "crypto";
 import {readControls, RunControls, runHolds} from "../../tests/game/builds/clock-controls";
-import { GENERATED_ALTERNATIVE } from "../../tests/game/builds/thaeln-cell09-clock-fixtures";
+import { GENERATED_ALTERNATIVE } from "../../tests/game/builds/utility-science-480-lds-foundry-chain-clock-fixtures";
 
-// Thaeln's cell 09 (REAL_THAELN_CELL09) at 480 a second: a coal inserter that moves 15/8 hands a cycle stretches every planned
+// the utility science 480 build (UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN) at 480 a second: a coal inserter that moves 15/8 hands a cycle stretches every planned
 // clock to eight cycles (1,344 ticks), and none of those holds. Windows made from the hands, rounded up where they are
 // fractional, and from the order of the chain (src/crafting/candidates/grouped-hands.ts) hold in one cycle (168 ticks), so
 // the selected clock needs no search. Targeted searches still run past it since #527. Before, the observed-windows search ran for about twenty minutes and found no clock that recovers.
-describe("a clock for Thaeln's cell 09 from the hands and the order of the chain", () => {
+describe("a clock for the utility science 480 build from the hands and the order of the chain", () => {
     let result: ClockAlternativesResult;
     let config: Config;
     beforeAll(async () => {
-        config = await loadConfigFromFile(ConfigPaths.REAL_THAELN_CELL09);
+        config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN);
         result = generateClockAlternatives(config, { logger: quiet });
     });
 
@@ -37,7 +37,7 @@ describe("a clock for Thaeln's cell 09 from the hands and the order of the chain
     });
 
     it("Selection: the valid pick remains the clock named by its native control", () => {
-        const { generation, native } = readControls<RunControls>("thaeln-cell09-clock-controls.json").cases["generated-one-copy"];
+        const { generation, native } = readControls<RunControls>("utility-science-480-lds-foundry-chain-clock-controls.json").cases["generated-one-copy"];
         const selected = result.alternatives[result.selected_index];
         expect(selected.verdict).toBe("stable");
         expect(selected.assessment.backpressure_loss?.survives).toBe(true);

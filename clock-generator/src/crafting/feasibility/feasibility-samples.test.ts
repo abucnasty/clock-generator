@@ -4,7 +4,7 @@ import { containerClockCases, containerClockConfig } from "../../../tests/game/b
 import { frontClockConfig, frontEntranceClockCases, frontExitClockCases } from "../../../tests/game/builds/front-clock-fixtures";
 import { overHoodClockCases, overHoodClockConfig } from "../../../tests/game/builds/over-hood-clock-fixtures";
 import { pickupClockConfig, pickupClockSpeedCases } from "../../../tests/game/builds/pickup-clock-speed-coverage";
-import { ConfigPaths, ExpectedRefusals } from "../../config/config-paths";
+import { ConfigPaths } from "../../config/config-paths";
 import { TestConfigPaths } from "../../../tests/configs/paths";
 import { withJellyHandsOf15 } from "../../../tests/configs/rocket-fuel-hands";
 import { describeFeasibilityIssue, InserterCoverageError } from "../../config/errors";
@@ -34,7 +34,7 @@ const texts = (issues: readonly Parameters<typeof describeFeasibilityIssue>[0][]
  * refused by the coverage check before the feasibility pass runs.
  */
 describe("every sample passes the feasibility pass", () => {
-    const samples = Object.entries(ConfigPaths).filter(([key]) => !(key in ExpectedRefusals));
+    const samples = Object.entries(ConfigPaths);
     it.each(samples)("%s", async (_key, file) => {
         const { issues } = feasibilityOfConfig(await loadConfigFromFile(file) as Config);
         expect(texts(issues)).toEqual([]);
@@ -57,10 +57,10 @@ describe("the samples at exactly their bound pass", () => {
     it.each([
         ["GLEBA_ROCKET_FUEL_JELLY_HANDS_15", "C1 machine:rocket-fuel-from-jelly", 15, 15],
         ["BIOCHAMBER_FUEL", "C1 machine:nutrients-from-yumako-mash", 0.5, 0.5],
-        ["LOW_DENSITY_STRUCTURE", "C3 low-density-structure", 240, 240],
+        ["LDS_240", "C3 low-density-structure", 240, 240],
     ] as const)("%s: %s, %d against %d", async (key, name, need, capacity) => {
         const config = key === "GLEBA_ROCKET_FUEL_JELLY_HANDS_15"
-            ? withJellyHandsOf15(await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL) as Config)
+            ? withJellyHandsOf15(await loadConfigFromFile(ConfigPaths.ROCKET_FUEL_60) as Config)
             : await loadConfigFromFile({ ...ConfigPaths, ...TestConfigPaths }[key]) as Config;
         const { issues, tightest } = feasibilityOfConfig(config);
         expect(issues).toEqual([]);

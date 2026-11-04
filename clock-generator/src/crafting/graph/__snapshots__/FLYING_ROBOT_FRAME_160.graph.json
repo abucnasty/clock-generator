@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "FLYING_ROBOT_FRAME",
+  "sample": "FLYING_ROBOT_FRAME_160",
   "target": {
     "item": "flying-robot-frame",
     "counts": "made",

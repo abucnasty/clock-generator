@@ -8,11 +8,11 @@ back. One stack inserter takes the steel out of the wagon onto a turbo belt that
 Every inserter is filtered to its item. The wagon's slots are filtered too: 20 to iron ore, 5 to iron plates, 5 to steel,
 and 10 blocked (a deconstruction planner in the game). The target is 26 steel plates a second from one copy.
 
-- `steel-wagon-scaffold.txt`: the build's blueprint as given. The loader and disposal chest are part of it.
-- `steel-wagon.sidecar-export.json`: what Sidecar 0.12.0 exports from the blueprint built in the harness game, taken again on
+- `steel-plate-26-wagon-chest.scaffold`: the build's blueprint as given. The loader and disposal chest are part of it.
+- `steel-plate-26-wagon-chest.sidecar-export.json`: what Sidecar 0.12.0 exports from the blueprint built in the harness game, taken again on
   2026-10-22 with the released mod, which also exports each machine's `prototype` and quality and each entity's position
   (and an inserter's or drill's direction).
-- `steel-wagon.json`: an earlier export of the same build as the paste reads it (each list through its schema), with the
+- `steel-plate-26-wagon-chest.json`: an earlier export of the same build as the paste reads it (each list through its schema), with the
   target added. It is the export above without the qualities, positions and directions, and with the drill's
   productivity 79990 where the game writes 79990.00000001134; each machine's `prototype` (`electric-furnace` for both
   machines) was taken from the scaffold and is the one the export names. No other field was edited.
@@ -35,7 +35,7 @@ The selected clock (planned with belt slack, a subtick clock of 886.15 ticks, 11
 in each of 63 periods of 11,520 ticks in the game, and the clock planned without iron ore in its period (295.38 ticks,
 3,840 for 13) 1,664 in each of 63 periods of 3,840. Both get back to it after the drill is stopped until the wagon has run
 dry of steel (9 and 10 periods), the output is blocked for 4 and the drill is stopped again
-(`tests/game/builds/steel-wagon-clock-controls.json`). Building the two inserters that put plates and steel into the wagon
+(`tests/game/builds/steel-plate-26-wagon-chest-clock-controls.json`). Building the two inserters that put plates and steel into the wagon
 after the other entities changed nothing in any period: the steel moved, the wagon's contents at each period's start and
 the furnaces' ticks with a full output are equal in all 210 periods.
 

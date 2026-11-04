@@ -1,6 +1,6 @@
 # Condition-assignment notifications
 
-The [scaffold](scaffold.txt) has six copper-cable assemblers feeding legendary 16-item inserters and empty 48-slot
+The [scaffold](scaffold.scaffold) has six copper-cable assemblers feeding legendary 16-item inserters and empty 48-slot
 chests. Each hand is connected to its own zero-signal green chest network for condition assignments. The scaffold
 alone does not include that wiring or the observation stock/interventions. Cells 1–3 begin with 8 source cable,
 cells 4–6 with 16. Hands pick up their stock; none is injected into a hand.

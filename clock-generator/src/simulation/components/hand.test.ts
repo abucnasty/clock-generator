@@ -361,7 +361,7 @@ describe("an inserter's Hand (belt to machine)", () => {
             expect(look()).toBe(InserterPhase.PICKUP);
         })
 
-        // Recorded in Factorio 2.1.21 on the thaeln scaffold (clock-generator/.scratch/geppetto/apprentice-m4-decider-latency.md):
+        // Recorded in Factorio 2.1.21 on the utility science 480 scaffold (clock-generator/.scratch/geppetto/apprentice-m4-decider-latency.md):
         // a belt-fed inserter that is enabled while its machine is at its output block, and whose machine another
         // inserter takes down from the block, grabs 2 ticks after its enable (waiting for space, waiting for items, then
         // the hand grows); the simulator took 1.

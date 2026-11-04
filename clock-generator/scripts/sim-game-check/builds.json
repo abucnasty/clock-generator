@@ -25,19 +25,19 @@
  },
  {
   "name": "electromagnetic-science",
-  "config": "ELECTROMAGNETIC_SCIENCE_AUTO",
+  "config": "ELECTROMAGNETIC_SCIENCE_330",
   "hash": "492f1635",
   "recording": "electromagnetic-science.recording.json"
  },
  {
-  "name": "stupidfathobbit-cell02",
-  "config": "REAL_STUPIDFATHOBBIT_CELL02",
+  "name": "processing-unit-80-circuit-export",
+  "config": "PROCESSING_UNIT_80_CIRCUIT_EXPORT",
   "hash": "52b9b159",
-  "recording": "stupidfathobbit-cell02.recording.json"
+  "recording": "processing-unit-80-circuit-export.recording.json"
  },
  {
   "name": "agricultural-science-staged",
-  "config": "AGRICULTURAL_SCIENCE",
+  "config": "AGRICULTURAL_SCIENCE_250",
   "hash": "3450755e",
   "recording": "agri-3450755e-staged-150.json",
   "staged": true,

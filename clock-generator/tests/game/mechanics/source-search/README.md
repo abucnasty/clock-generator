@@ -2,7 +2,7 @@
 
 This Factorio 2.1.21 scenario has six assembler/inserter/container cells. Each source has either one stack of 48 gears
 or 48 single-item slots. Destinations are output-overloaded, ingredient-full or accepting. No hand contents are
-injected. [GameFixturePaths.SOURCE_SEARCH](../../helpers/fixture-paths.ts) catalogs the [exact scaffold](fixtures/scaffold.txt).
+injected. [GameFixturePaths.SOURCE_SEARCH](../../helpers/fixture-paths.ts) catalogs the [exact scaffold](fixtures/scaffold.scaffold).
 
 ![Source and destination test layout](fixtures/scaffold.jpg)
 

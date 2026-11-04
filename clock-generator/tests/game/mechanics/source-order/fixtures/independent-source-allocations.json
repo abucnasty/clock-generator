@@ -1,7 +1,7 @@
 {
   "format": "native-source-allocation-1",
   "factorio_version": "2.1.21",
-  "source_config": "REAL_THAELN_CELL09",
+  "source_config": "UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN",
   "source_recording": "thaeln-output-cut-drops.json",
   "source_recording_sha256": "55c93a0df2ed58977df87072f67db2e3577ddf07aa8406f8178714f8d0490bcc",
   "priority_derivation_sha256": "cd42b7a98e10d4bab92ef84aa38cd0b652d52ce5ed0ef2006fb5ef3b7887250a",

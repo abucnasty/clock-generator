@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "LOGISTIC_SCIENCE_DI",
+  "sample": "LOGISTIC_SCIENCE_240_DIRECT_INSERT",
   "target": {
     "item": "logistic-science-pack",
     "counts": "made",

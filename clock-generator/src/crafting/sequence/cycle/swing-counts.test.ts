@@ -106,7 +106,7 @@ describe("the transfers of a cycle through belts", () => {
 // biochamber [5] (inserters 9 and 10). Nothing fills a fuel slot alone: nutrients come with the ingredients.
 describe("a build where two machines feed each other", async () => {
     // 7 hands of science a cycle: 112 packs from 44.8 crafts at +150% productivity
-    const swings = transfersOf(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE), "agricultural-science-pack", fraction(7));
+    const swings = transfersOf(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250), "agricultural-science-pack", fraction(7));
     const transfers = (inserter_id: number) => Object.fromEntries(
         Array.from(swings.values()).find(it => it.entity.entity_id.id === EntityId.forInserter(inserter_id).id)!
             .item_transfers.map(it => [it.item_name, it.transfer_count.toString()]));
@@ -140,7 +140,7 @@ describe("a build where two machines feed each other", async () => {
 describe("an item needed at two levels of a chain", () => {
     it("is planned for each machine by what that machine uses", async () => {
         // the inserter machine takes 1 plate an inserter from two furnaces; the gear machine takes its own plates from two others
-        const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_INSERTER_CRAFTING);
+        const config = await loadConfigFromFile(ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK);
         const inserter_machine = createEntityRegistryFromConfig(config).getAll().filter(Entity.isMachine).find(it => it.output.item_name === "inserter")!;
         const swings = transfersOf(config, "inserter", fraction(5));
         const plates_into_inserter_machine = Array.from(swings.values())
@@ -155,7 +155,7 @@ describe("an item needed at two levels of a chain", () => {
 // Two iron bacteria cultivation biochambers [1], [2]. Each has two inserters to a chest (1 and 3, 4 and 6) and one
 // to the other biochamber (8 and 7), which brings the bacteria its crafts start from.
 describe("output machines with several inserters taking from them", async () => {
-    const config = await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_CULTIVATION);
+    const config = await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_380_CULTIVATION);
     const registry = createEntityRegistryFromConfig(config);
     const machines = registry.getAll().filter(Entity.isMachine);
     const ids = (machine: Machine) => outputInsertersOf(machine, registry).map(it => it.entity_id.number).sort((a, b) => a - b);

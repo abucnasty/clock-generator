@@ -57,6 +57,7 @@ for (const name of PATH_OPTIONS) { const i = argv.indexOf(name); if (i >= 0 && a
 { const i = argv.indexOf("--config"); if (i >= 0 && argv[i + 1] !== undefined && fs.existsSync(path.resolve(argv[i + 1]))) argv[i + 1] = path.resolve(argv[i + 1]); }
 if (process.argv[3] !== undefined && !process.argv[3].startsWith("--")) process.argv[3] = path.resolve(process.argv[3]);
 const { ROOT, dist, quiet, loadSample } = require("./lib");
+const { scaffoldOf } = require("./scaffold-of");
 
 const WAKE_UPS_TOLERANCE = 1; // wake-ups per inserter per period
 const WAKE_UPS_CYCLE_TOLERANCE = 0.02; // mean wake-ups a period over whole cycles, share of the game's (at least 1 a period as the base)
@@ -675,14 +676,14 @@ function configFileOf(config) {
 /**
  * The one result file that anything gating on the check reads: <name>.check.json. "pass" is the dispatch's verdict (activation order); its verdict
  * by kind stays under "dispatches" (key "on"), and the full result file stays beside it. "inputs" are the sha256 of the files
- * the verdict was judged on; the scaffold is the blueprint the recording was made on (--scaffold, else the config's <name>-scaffold.txt beside it).
+ * the verdict was judged on; the scaffold is the blueprint the recording was made on (--scaffold, else the config's <name>.scaffold beside it).
  */
 function writeCombined(out, name, { stamp, clock, written, clockFile, clockFileIdentity, game }) {
     const inputs = { recording: sha256File(opt("--recording")) };
     const configFile = configFileOf(opt("--config"));
     if (configFile !== undefined) inputs.config = sha256File(configFile);
     if (clockFile !== undefined) inputs.clock = sha256File(clockFile);
-    const scaffold = opt("--scaffold") ?? (configFile === undefined ? undefined : configFile.replace(/\.json$/, "-scaffold.txt"));
+    const scaffold = opt("--scaffold") ?? (configFile === undefined ? undefined : scaffoldOf(configFile));
     if (scaffold !== undefined && fs.existsSync(scaffold)) inputs.scaffold = sha256File(scaffold);
     const combined = {
         tool: "sim-game-check", format: 1, kind: "check-result", build: name,

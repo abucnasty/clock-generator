@@ -76,7 +76,7 @@ export function frontClockConfig(variant: FrontClockCase): Config | Promise<Conf
 
 function frontEntranceClockScaffold(variant: FrontClockCase): string {
     interface Entity {entity_number: number; name: string; recipe?: string}
-    const text = fs.readFileSync(path.join(GameFixturePaths.FRONT_UNDERGROUND_ENTRANCE, "compact-normal-scaffold.txt"), "utf8");
+    const text = fs.readFileSync(path.join(GameFixturePaths.FRONT_UNDERGROUND_ENTRANCE, "compact-normal.scaffold"), "utf8");
     const routed = compactFrontEntranceAtSpeed(text, variant.speed,
         {mirrored: variant.mirrored, backedUp: variant.backed, sameItem: variant.family === "same-item"});
     if (variant.family === "different-items") return routed;
@@ -88,7 +88,7 @@ function frontEntranceClockScaffold(variant: FrontClockCase): string {
 }
 
 function frontExitClockScaffold(variant: FrontClockCase): string {
-    let blueprint = fs.readFileSync(path.join(GameFixturePaths.FRONT_UNDERGROUND_EXIT, "scaffold.txt"), "utf8");
+    let blueprint = fs.readFileSync(path.join(GameFixturePaths.FRONT_UNDERGROUND_EXIT, "scaffold.scaffold"), "utf8");
     if (!variant.mirrored) blueprint = flipFrontUndergroundInput(blueprint);
     return blueprintAtSpeed(compactFrontUndergroundRouting(blueprint, "exit", variant.speed), variant.speed);
 }

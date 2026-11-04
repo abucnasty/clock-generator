@@ -10,7 +10,7 @@ import {GENERATED_ALTERNATIVE, grenadeClockCases} from "../../tests/game/builds/
 import {readControls, RunControls, runHolds} from "../../tests/game/builds/clock-controls";
 import {GROUP_GAP_TILES} from "./turn-groups";
 
-// the grenade build (REAL_OWNER_GRENADE): the generated clock pinned beside the in-game recording of it on one copy
+// the grenade build (GRENADE_240_FILLS_BELT_EXACTLY): the generated clock pinned beside the in-game recording of it on one copy
 // and on the full build of seven, and the hand-made clock judged by the simulator
 const controls = readControls<RunControls>("grenade-clock-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
@@ -18,7 +18,7 @@ let config: Config;
 let generated: ClockAlternativesResult;
 
 beforeAll(async () => {
-    config = await loadConfigFromFile(ConfigPaths.REAL_OWNER_GRENADE);
+    config = await loadConfigFromFile(ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY);
     generated = generateClockAlternatives(config, {logger: quiet});
 });
 
@@ -103,7 +103,7 @@ test("grenade: the first combinator of each group says which turn is its, and no
 });
 
 test("grenade: laying the combinators out by group changes nothing else: the same entities in the same order, conditions, outputs, tags and networks", async () => {
-    const config = await loadConfigFromFile(ConfigPaths.REAL_OWNER_GRENADE);
+    const config = await loadConfigFromFile(ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY);
     const selected = generated.alternatives[generated.selected_index].result;
     // the same windows as a clock that is not in groups: one row in the order of the entity ids
     const flat = clockFromWindows({...config, overrides: {...config.overrides, terminal_swing_count: 1}}, selected.clock_windows, 112, quiet);
@@ -142,7 +142,7 @@ test("grenade: every alternative says the lanes of the belt are exactly full, an
 });
 
 test("grenade: copies a tile closer put hands on each other, and the insight says so", async () => {
-    const config = await loadConfigFromFile(ConfigPaths.REAL_OWNER_GRENADE);
+    const config = await loadConfigFromFile(ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY);
     const closer = {...config, target_output: {...config.target_output, copy_offset: {x: 11, y: 0}}};
     const made = generateClockAlternatives(closer, {logger: quiet});
     const selected = made.alternatives[made.selected_index];
@@ -153,7 +153,7 @@ test("grenade: copies a tile closer put hands on each other, and the insight say
 });
 
 test("grenade: the hand-made clock, as windows, holds in the simulator and gets back after every loss", async () => {
-    const config = await loadConfigFromFile(ConfigPaths.REAL_OWNER_GRENADE);
+    const config = await loadConfigFromFile(ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY);
     const range = (start: number, end: number) => [{start, end}];
     // counted 0 to 111; a window decider reads the counter, so its first value is the window's first tick
     const windows = {
@@ -174,7 +174,7 @@ for (const variant of grenadeClockCases()) {
         // the game holds the target over the baseline and is back at it after each loss
         expect(runHolds(native), native.result).toBe(true);
         expect(native.period).toBe(112);
-        if (variant.kind === "owner's clock") {
+        if (variant.kind === "hand-made clock") {
             expect(generation).toBeUndefined();
             return;
         }

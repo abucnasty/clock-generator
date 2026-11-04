@@ -12,7 +12,7 @@ import {CLOCK_TEST_SPEEDS} from "../helpers/belt-speed-fixtures";
 import {PickupClockScenario} from "./pickup-clock-capture";
 
 /**
- * The steel build, 26 a second from one copy (`STEEL_CARGO_WAGON`): one cargo wagon is a hub. A big mining
+ * The steel build, 26 a second from one copy (`STEEL_PLATE_26_WAGON_CHEST`): one cargo wagon is a hub. A big mining
  * drill fills it with iron ore, one furnace makes plates from the ore and puts them back, the other makes steel from the
  * plates and puts it back, and one inserter takes the steel out of the wagon onto a belt that a loader empties into a
  * disposal chest. The wagon's slots are filtered: 20 iron ore, 5 iron plate, 5 steel, 10 blocked. The harness puts the
@@ -45,12 +45,12 @@ export function steelWagonCases(): SteelWagonCase[] {
 
 /** The steel build's config, with the items the case leaves out of the period */
 export async function steelWagonConfig(variant: SteelWagonCase): Promise<Config> {
-    const config = await loadConfigFromFile(ConfigPaths.STEEL_CARGO_WAGON);
+    const config = await loadConfigFromFile(ConfigPaths.STEEL_PLATE_26_WAGON_CHEST);
     return variant.ignored_lcm_ingredients === undefined ? config
         : {...config, overrides: {...config.overrides, ignored_lcm_ingredients: variant.ignored_lcm_ingredients}};
 }
 
-const SCAFFOLD = path.join(path.dirname(ConfigPaths.STEEL_CARGO_WAGON), "steel-wagon-scaffold.txt");
+const SCAFFOLD = path.join(path.dirname(ConfigPaths.STEEL_PLATE_26_WAGON_CHEST), "steel-plate-26-wagon-chest.scaffold");
 
 interface Placed {entity_number: number; name: string; position: {x: number; y: number}; direction?: number}
 
@@ -100,9 +100,9 @@ export async function steelWagonScenario(variant: SteelWagonCase): Promise<Picku
         alternative: variant.alternative,
         // the subtick clock's output repeats only over its whole period (13 periods of the rounded clock), longer than a minute
         baseline: {ticks: variant.period_ticks, reason: "the subtick clock's output repeats only over its whole period, longer than a minute"},
-        probeFile: path.join(__dirname, "steel-wagon-clock-probe.lua"),
+        probeFile: path.join(__dirname, "steel-plate-26-wagon-chest-clock-probe.lua"),
         probe: {family: "steel-wagon"},
-        controls: path.join(__dirname, "steel-wagon-clock-controls.json"),
+        controls: path.join(__dirname, "steel-plate-26-wagon-chest-clock-controls.json"),
         assertHardware: assertSteelWagonHardware,
     };
 }

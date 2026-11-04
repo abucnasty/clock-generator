@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "save": "thaeln-cell09.manifest.json",
+  "save": "utility-480-lds-foundry-chain.manifest.json",
   "steps": [
     {
       "step": "extract-cell",
@@ -13,7 +13,7 @@
       "args": {
         "cell": "1825473",
         "box": null,
-        "name": "thaeln-cell09",
+        "name": "utility-science-480-lds-foundry-chain",
         "version": "2.1.21",
         "sample_ticks": 36000,
         "warmup": 1800,
@@ -27,7 +27,7 @@
         "sha256": "9550892de86e6c43bac83e578d169ee15e902f2f35d4b3c4e433aee77b937516"
       },
       "output": {
-        "file": "thaeln-cell09-scaffold.txt",
+        "file": "utility-480-lds-foundry-chain.scaffold",
         "sha256": "87b163c39cb94cf8906403b3018abfde3290da8ee69598dce811b2836586af5a"
       },
       "tick_before": 591040,
@@ -35,11 +35,11 @@
       "entities_player": 186,
       "files": [
         {
-          "file": "thaeln-cell09.json",
+          "file": "utility-480-lds-foundry-chain.json",
           "sha256": "a69dc2f78ced55b51f4ee2edc27f04ba2901d6575d8a1eb1896e652a59247b54"
         },
         {
-          "file": "thaeln-cell09.expected.json",
+          "file": "utility-480-lds-foundry-chain.expected.json",
           "sha256": "4c73dd549f6077d93d177c0a88299ad79c012ae332f22b585e5dfbbabc667c73"
         }
       ],
@@ -742,7 +742,7 @@
       "environment": [],
       "dead_ends": [],
       "scaffold_supplied": {
-        "file": "thaeln-cell09-owner.txt",
+        "file": "utility-science-480-lds-foundry-chain-owner.txt",
         "sha256": "87b163c39cb94cf8906403b3018abfde3290da8ee69598dce811b2836586af5a",
         "entities": 186
       },
@@ -953,7 +953,7 @@
       ],
       "config_notes": [],
       "expected": {
-        "name": "thaeln-cell09",
+        "name": "utility-science-480-lds-foundry-chain",
         "product": "utility-science-pack",
         "recipe": "utility-science-pack",
         "copies": 1,

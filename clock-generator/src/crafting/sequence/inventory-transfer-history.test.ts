@@ -17,7 +17,7 @@ beforeAll(() => {
 describe("trimEndsToAvoidBackSwingWakeLists", () => {
     // a jelly inserter of the rocket fuel build, between two machines: a window ends when its hand is dropped
     const jellyInserter = async () => {
-        const config = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
+        const config = await loadConfigFromFile(ConfigPaths.ROCKET_FUEL_60);
         const registry = SimulationContext.fromConfig(config).entity_registry;
         const inserter = registry.getAll().filter(Entity.isInserter)
             .find(it => EntityId.isMachine(it.source.entity_id) && EntityId.isMachine(it.sink.entity_id))!;

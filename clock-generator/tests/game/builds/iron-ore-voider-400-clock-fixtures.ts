@@ -25,15 +25,15 @@ import {RUN_PROTOCOL, runSummary} from "./pickup-clock-capture";
  */
 export interface OreVoiderCase {
     name: string;
-    sample: "REAL_OWNER_ORE_VOIDER_EXACT_SPEED" | "REAL_OWNER_ORE_VOIDER_OVERBEACONED";
+    sample: "IRON_ORE_VOIDER_400_EXACT_SPEED" | "IRON_ORE_VOIDER_400_OVERBEACONED";
     /** The alternative recorded, in place of the selected one */
     alternative?: string;
 }
 
 export function oreVoiderCases(): OreVoiderCase[] {
     return [
-        {name: "ore-voider-exact-speed", sample: "REAL_OWNER_ORE_VOIDER_EXACT_SPEED"},
-        {name: "ore-voider-overbeaconed", sample: "REAL_OWNER_ORE_VOIDER_OVERBEACONED"},
+        {name: "ore-voider-exact-speed", sample: "IRON_ORE_VOIDER_400_EXACT_SPEED"},
+        {name: "ore-voider-overbeaconed", sample: "IRON_ORE_VOIDER_400_OVERBEACONED"},
     ];
 }
 
@@ -84,7 +84,7 @@ export type OreVoiderRun = NativeRunSummary & {observed: OreVoiderObserved};
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 
 function scaffoldOf(config_path: string): string {
-    return fs.readFileSync(config_path.replace(/\.json$/, "-scaffold.txt"), "utf8").trim();
+    return fs.readFileSync(config_path.replace(/\.json$/, ".scaffold"), "utf8").trim();
 }
 
 /** The capture folder of a case: kept under ORE_VOIDER_CAPTURE_DIR when it is set, else a temporary one removed after */
@@ -154,10 +154,10 @@ export async function captureOreVoider(variant: OreVoiderCase): Promise<OreVoide
             wake_ups_per_minute: selected.assessment.wake_ups_per_minute ?? 0,
             taker_wake_ups_per_minute: sum(per_inserter.filter(it => takers.has(it.inserter_id)).map(it => it.wake_ups_per_minute))};
         const sha = clockHash(exported);
-        const controls = readControls<{cases: Record<string, {recorded: {clock_sha256: string}}>}>("ore-voider-clock-controls.json");
+        const controls = readControls<{cases: Record<string, {recorded: {clock_sha256: string}}>}>("iron-ore-voider-400-clock-controls.json");
         const recorded = controls.cases[variant.name]?.recorded.clock_sha256;
         if (recorded && process.env.ORE_VOIDER_CALIBRATE !== "1") {
-            expect(sha, `the clock ${variant.name} runs is not the one its summary in ore-voider-clock-controls.json was recorded on: record it again`).toBe(recorded);
+            expect(sha, `the clock ${variant.name} runs is not the one its summary in iron-ore-voider-400-clock-controls.json was recorded on: record it again`).toBe(recorded);
         }
         fs.writeFileSync(path.join(capture.directory, "clock.json"), JSON.stringify({...clock, sha256: sha}) + "\n");
         // the baseline is the protocol's minute: the clock's cycle is its period, which a minute holds whole
@@ -167,7 +167,7 @@ export async function captureOreVoider(variant: OreVoiderCase): Promise<OreVoide
             clock: {blueprint: encodeBlueprintFile({blueprint: exported.blueprint}), schedule: exported.schedule}, blueprint: scaffoldOf(config_path),
             out: path.join(capture.directory, "recording.json"), work_dir: path.join(capture.directory, "game"),
             ticks: 3600, record_at_once: true, warmup_ticks: 600, settle_ticks: RUN_PROTOCOL.cap + 1, seed: [], unclocked: false,
-            lua: composeProbeSource(path.join(__dirname, "ore-voider-clock-probe.lua"),
+            lua: composeProbeSource(path.join(__dirname, "iron-ore-voider-400-clock-probe.lua"),
                 {period, window: RUN_PROTOCOL.window, expected: expectedPerWindow, baseline: RUN_PROTOCOL.baseline, cap: RUN_PROTOCOL.cap}),
             game_speed: 1000, watch: false, timeout_seconds: 900, log() {}});
         // the build as Sidecar exports it: the recycler puts its results into the car

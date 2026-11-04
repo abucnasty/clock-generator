@@ -19,7 +19,7 @@ describe("pure primitive grouped construction", () => {
     let config: Config;
     beforeAll(async () => {
         // Same physical original as the historical diagnostic; remove all saved scheduling hints, not physical facts.
-        const control = await loadConfigFromFile(ConfigPaths.REAL_OWNER_PINK_SCIENCE_ORIGINAL);
+        const control = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED);
         config = { ...control, overrides: undefined, inserters: control.inserters.map(inserter => ({ ...inserter, overrides: undefined })) };
     });
 
@@ -191,7 +191,7 @@ describe("pure primitive grouped construction", () => {
     });
 
     it("refuses an under-capacity drill's out-of-period window without clamping or advertising it as constructed", async () => {
-        const grenade = await loadConfigFromFile(ConfigPaths.REAL_OWNER_GRENADE);
+        const grenade = await loadConfigFromFile(ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY);
         const slow = { ...grenade, overrides: undefined, inserters: grenade.inserters.map(inserter => ({ ...inserter, overrides: undefined })),
             drills: { ...grenade.drills!, configs: grenade.drills!.configs.map(drill => ({ ...drill, overrides: undefined, speed_bonus: -0.99 })) } };
         const artifact = constructPrimitiveGroupedHands(slow);
@@ -222,7 +222,7 @@ describe("pure primitive grouped construction", () => {
     });
 
     it("retains ordinary grouped windows exactly when no new route composition is needed", async () => {
-        const ordinary = await loadConfigFromFile(ConfigPaths.REAL_THAELN_CELL09);
+        const ordinary = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN);
         const auto = { ...ordinary, overrides: undefined, inserters: ordinary.inserters.map(inserter => ({ ...inserter, overrides: undefined })) };
         const registry = createEntityRegistryFromConfig(auto), target = TargetProductionRate.fromConfig(auto.target_output);
         const cycle = CraftingCyclePlan.create(target, registry, auto, fraction(1));

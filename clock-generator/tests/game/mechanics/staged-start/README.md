@@ -6,7 +6,7 @@ order, empty machines, and the configured loop seed. It does not infer startup t
 
 ![Agricultural-science scaffold used by the staged-start construction test](../images/agriculture-science.jpg)
 
-The [source blueprint](../../../../resources/config-samples/science/agriculture-science/agriculture-science-scaffold.txt)
+The [source blueprint](../../../../resources/config-samples/science/agricultural/agricultural-250.scaffold)
 remains a shared general clock sample. This native screenshot shows it running freely after warm-up, rather than
 the staged test's initial state. See the [screenshot guide](../../README.md#scaffold-screenshots).
 

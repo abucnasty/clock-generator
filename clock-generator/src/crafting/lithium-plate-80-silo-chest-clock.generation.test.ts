@@ -6,17 +6,17 @@ import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config/schema";
 import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
-import {lithiumSiloCases} from "../../tests/game/builds/lithium-silo-clock-fixtures";
+import {lithiumSiloCases} from "../../tests/game/builds/lithium-plate-80-silo-chest-clock-fixtures";
 import {readControls, runHolds, RunControls} from "../../tests/game/builds/clock-controls";
 
 // each clock pinned beside the in-game recording of it
-const controls = readControls<RunControls>("lithium-silo-clock-controls.json");
+const controls = readControls<RunControls>("lithium-plate-80-silo-chest-clock-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 let config: Config;
 let generated: ClockAlternativesResult;
 
 beforeAll(async () => {
-    config = await loadConfigFromFile(ConfigPaths.REAL_OWNER_LITHIUM_SILO);
+    config = await loadConfigFromFile(ConfigPaths.LITHIUM_PLATE_80_SILO_CHEST);
     generated = generateClockAlternatives(config, {logger: quiet});
 });
 

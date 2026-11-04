@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "CHEMICAL_SCIENCE_SHARED_FOUNDRY",
+  "sample": "CHEMICAL_SCIENCE_240_SHARED_FOUNDRY",
   "target": {
     "item": "chemical-science-pack",
     "counts": "made",

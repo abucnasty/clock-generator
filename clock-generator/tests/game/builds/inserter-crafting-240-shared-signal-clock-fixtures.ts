@@ -11,7 +11,7 @@ import {CLOCK_TEST_SPEEDS} from "../helpers/belt-speed-fixtures";
 import {PickupClockScenario} from "./pickup-clock-capture";
 
 /**
- * The inserter build (`LOGISTIC_SCIENCE_INSERTER_CRAFTING`, 240 a second over three copies, 80 a second each) as
+ * The inserter build (`INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK`, 240 a second over three copies, 80 a second each) as
  * it was built: three copies in a row, the ore lines of the copies running on past the last into loaders and
  * void chests (drained and moving), the circuits and the product from chests and a loader. The hand-made clock is in it,
  * one for the three copies: a counter of the clock signal that counts 0 to 215 (a period of 216 ticks), and two window
@@ -21,27 +21,27 @@ import {PickupClockScenario} from "./pickup-clock-capture";
  * Two clocks run on the one blueprint: the hand-made one, and the generator's selected clock for the config, wired to the same
  * inserters of each copy with the hand-made clock's three combinators taken out.
  */
-export interface OwnClockCase {
+export interface InserterCraftingClockCase {
     name: string;
-    kind: "owner's clock" | "generated clock";
+    kind: "hand-made clock" | "generated clock";
     /** The alternative recorded, for the generated clock */
     alternative?: string;
 }
 
-export function ownClockCases(): OwnClockCase[] {
+export function inserterCraftingClockCases(): InserterCraftingClockCase[] {
     return [
-        {name: "own-clock-three-copies", kind: "owner's clock"},
+        {name: "hand-made-clock-three-copies", kind: "hand-made clock"},
         {name: "generated-three-copies", kind: "generated clock", alternative: GENERATED_ALTERNATIVE},
     ];
 }
 
-const SCAFFOLD = path.join(__dirname, "own-clock-three-copies-scaffold.txt");
+const SCAFFOLD = path.join(__dirname, "inserter-crafting-240-shared-signal-clock-three-copies.scaffold");
 
 /** The counter of the hand-made clock (entity 36 of the blueprint): 0 to 215 */
 export const OWNER_CLOCK: BuiltClock = {counter: 36, period: 216, first_value: 0};
 
 /** The sha256 of the identity of the hand-made clock in the blueprint (`builtClockIdentity`): what its control names it by */
-export function ownerClockHash(): string {
+export function handMadeClockHash(): string {
     return createHash("sha256").update(JSON.stringify(builtClockIdentity(fs.readFileSync(SCAFFOLD, "utf8").trim(), OWNER_CLOCK))).digest("hex");
 }
 
@@ -80,8 +80,8 @@ export function assertOwnClockHardware(recording: Recording, config: Config): vo
     expect(pairs(recording.inserters)).toEqual(Object.fromEntries(Object.entries(per_copy).map(([pair, count]) => [pair, count * COPIES])));
 }
 
-export async function ownClockScenario(variant: OwnClockCase): Promise<PickupClockScenario> {
-    const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_INSERTER_CRAFTING);
+export async function inserterCraftingClockScenario(variant: InserterCraftingClockCase): Promise<PickupClockScenario> {
+    const config = await loadConfigFromFile(ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK);
     const generated = variant.kind === "generated clock";
     return {
         name: variant.name, speed: CLOCK_TEST_SPEEDS[0], backed: false,
@@ -89,11 +89,11 @@ export async function ownClockScenario(variant: OwnClockCase): Promise<PickupClo
         scaffold: () => fs.readFileSync(SCAFFOLD, "utf8").trim(),
         built_clock: OWNER_CLOCK,
         keep_built_clock: !generated,
-        builtClockSha256: ownerClockHash,
+        builtClockSha256: handMadeClockHash,
         ...(generated && {alternative: variant.alternative, copies: COPIES}),
-        probeFile: path.join(__dirname, "own-clock-probe.lua"),
-        probe: {family: "own-clock", stackSize: 4},
-        controls: path.join(__dirname, "own-clock-controls.json"),
+        probeFile: path.join(__dirname, "inserter-crafting-240-shared-signal-clock-probe.lua"),
+        probe: {family: "inserter-crafting-240-shared-signal-clock", stackSize: 4},
+        controls: path.join(__dirname, "inserter-crafting-240-shared-signal-clock-controls.json"),
         assertHardware: assertOwnClockHardware,
     };
 }

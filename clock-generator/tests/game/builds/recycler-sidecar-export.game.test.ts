@@ -13,7 +13,7 @@ const sidecarModules = "local capture_modules, require = {}, nil\nrequire = func
         const source = fs.readFileSync(path.join(REPOSITORY_ROOT, "clock-generator-sidecar/scripts/" + name + ".lua"), "utf8");
         return "capture_modules[\"__clock-generator-sidecar__.scripts." + name + "\"] = (function()\n" + source + "\nend)() or true\n";
     }).join("");
-const scaffold = path.join(REPOSITORY_ROOT, "clock-generator/resources/config-samples/real/owner/pink-science-original/pink-science-original-scaffold.txt");
+const scaffold = path.join(REPOSITORY_ROOT, "clock-generator/resources/config-samples/science/electromagnetic/electromagnetic-240-recycler-belt-fed.scaffold");
 const originalHash = "3cb6ca71400bda8580d605cbbc3eff69f4db594ee761a27311bdefe2487573a5";
 
 type Candidate = {unit_number: number; name: string; type: string; position: {x: number; y: number}};

@@ -31,8 +31,8 @@ describe("the recorder samples the belt lane under an inserter", () => {
         context.skip(WHY_SKIPPED !== null, WHY_SKIPPED ?? undefined);
         scratch ??= fs.mkdtempSync(path.join(os.tmpdir(), "belt-lanes-"));
 
-        const scaffold = path.join(SAMPLE_BUILDS_DIR, "science", "automation-science", "automation-science-scaffold.txt");
-        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+        const scaffold = path.join(SAMPLE_BUILDS_DIR, "science", "automation", "automation-240.scaffold");
+        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
         const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
         const selected = alternatives[selected_index];
         const exported = selected.result.subtick ?? selected.result;

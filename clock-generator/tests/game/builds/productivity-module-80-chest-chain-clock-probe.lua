@@ -1,4 +1,4 @@
--- Run a clock on the productivity module chain build (REAL_OWNER_PRODUCTIVITY_CHAIN) under the game tests' protocol (steady.lua).
+-- Run a clock on the productivity module chain build (PRODUCTIVITY_MODULE_80_CHEST_CHAIN) under the game tests' protocol (steady.lua).
 -- The disturbances: the coal cut (the inserter that puts it on the belt switched off and the belt emptied) until the output
 -- falls, the output loader removed until it falls and rebuilt, the foundries casting iron stopped until it falls.
 local entities, surface, _, settle = ...

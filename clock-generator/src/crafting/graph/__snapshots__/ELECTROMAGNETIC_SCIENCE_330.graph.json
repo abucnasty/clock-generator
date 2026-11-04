@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "ELECTROMAGNETIC_SCIENCE_AUTO",
+  "sample": "ELECTROMAGNETIC_SCIENCE_330",
   "target": {
     "item": "electromagnetic-science-pack",
     "counts": "made",

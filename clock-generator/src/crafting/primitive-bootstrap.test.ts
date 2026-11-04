@@ -103,7 +103,7 @@ describe('verified primitive bootstrap orchestration', () => {
     const options: GenerateClockOptions = { logger: quiet, verify_as_built: true };
 
     beforeAll(async () => {
-        const loaded = await loadConfigFromFile(ConfigPaths.REAL_OWNER_PINK_SCIENCE_ORIGINAL);
+        const loaded = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED);
         original = { ...loaded, overrides: undefined,
             inserters: loaded.inserters.map(inserter => ({ ...inserter, overrides: undefined })) };
     });

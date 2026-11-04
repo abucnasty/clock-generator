@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "AUTOMATION_SCIENCE_BELTED_BUFFER",
+  "sample": "AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER",
   "target": {
     "item": "automation-science-pack",
     "counts": "made",

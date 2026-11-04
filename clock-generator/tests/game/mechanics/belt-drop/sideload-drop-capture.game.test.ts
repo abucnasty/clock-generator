@@ -15,7 +15,7 @@ require = function(name) return assert(capture_modules[name], name) end
     return `capture_modules["__clock-generator-sidecar__.scripts.${name}"] = (function()\n${source}\nend)() or true\n`;
 }).join("");
 
-const SCAFFOLD = path.join(path.dirname(ConfigPaths.REAL_OWNER_LITHIUM_SILO), "lithium-silo-scaffold.txt");
+const SCAFFOLD = path.join(path.dirname(ConfigPaths.LITHIUM_PLATE_80_SILO_CHEST), "lithium-plate-80-silo-chest.scaffold");
 
 /**
  * Every case the lua chunk below builds or reads, with the tiles it must mark ("none": not marked), written to the
@@ -75,7 +75,7 @@ for _, data in ipairs(captured.inserters) do
     end
 end
 -- the export of the scaffold, as the Sidecar's Export button gives it: the sample's export is taken the same way
-helpers.write_file("lithium-silo.sidecar-export.json", export.to_json(captured), false)
+helpers.write_file("lithium-plate-80-silo-chest.sidecar-export.json", export.to_json(captured), false)
 assert(#marked == 2 and marked[1] == 3 and marked[2] == 3, "two drops marked with 3 tiles")
 assert(#unmarked == 4, "four drops not marked")
 note("lithium-scaffold-marked", "2 drops, tiles " .. marked[1] .. " and " .. marked[2])
@@ -239,8 +239,8 @@ helpers.write_file("sideload-drop-cases.txt", table.concat(report, "\\n") .. "\\
             expect(read[name]).toBe(expected);
         }
         // the lithium build's export in the repository is this one, as the game writes it
-        const sample = path.join(path.dirname(ConfigPaths.REAL_OWNER_LITHIUM_SILO), "lithium-silo.sidecar-export.json");
-        const exported = JSON.parse(fs.readFileSync(path.join(scratch, "script-output", "lithium-silo.sidecar-export.json"), "utf8"));
+        const sample = path.join(path.dirname(ConfigPaths.LITHIUM_PLATE_80_SILO_CHEST), "lithium-plate-80-silo-chest.sidecar-export.json");
+        const exported = JSON.parse(fs.readFileSync(path.join(scratch, "script-output", "lithium-plate-80-silo-chest.sidecar-export.json"), "utf8"));
         if (process.env.SIDELOAD_DROP_WRITE_SAMPLE) fs.writeFileSync(sample, JSON.stringify(exported, null, 2) + "\n");
         expect(exported).toEqual(JSON.parse(fs.readFileSync(sample, "utf8")));
         expect(Object.keys(read).sort()).toEqual(Object.keys(EXPECTED_CASES).sort());

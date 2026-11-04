@@ -9,12 +9,12 @@ import {CLOCK_TEST_SPEEDS} from "../helpers/belt-speed-fixtures";
 import {PickupClockScenario} from "./pickup-clock-capture";
 
 /**
- * The productivity module chain (`REAL_OWNER_PRODUCTIVITY_CHAIN`, 80 modules a second over 6 copies, 13.33 a second a copy, the
+ * The productivity module chain (`PRODUCTIVITY_MODULE_80_CHEST_CHAIN`, 80 modules a second over 6 copies, 13.33 a second a copy, the
  * sample's scaffold): nine machines (plastic, copper cable, iron, electronic circuits, advanced circuits and the modules) joined
  * by fourteen inserters and three chests, with the coal on a belt and the modules on another. The generator's selected clock for
  * the config is recorded on the scaffold, wired to the inserters of the build by the harness.
  */
-const FOLDER = path.dirname(ConfigPaths.REAL_OWNER_PRODUCTIVITY_CHAIN);
+const FOLDER = path.dirname(ConfigPaths.PRODUCTIVITY_MODULE_80_CHEST_CHAIN);
 
 /** The id of the alternative the generated clock is: the 72-tick one, which the rule for hands in groups makes stable */
 export const GENERATED_ALTERNATIVE = "planned-belt-slack";
@@ -38,16 +38,16 @@ export function assertProductivityChainHardware(recording: Recording, config: Co
 }
 
 export async function productivityChainClockScenario(): Promise<PickupClockScenario> {
-    const config = await loadConfigFromFile(ConfigPaths.REAL_OWNER_PRODUCTIVITY_CHAIN);
+    const config = await loadConfigFromFile(ConfigPaths.PRODUCTIVITY_MODULE_80_CHEST_CHAIN);
     return {
         name: "generated-one-copy", speed: CLOCK_TEST_SPEEDS[0], backed: false,
         config: () => config,
-        scaffold: () => fs.readFileSync(path.join(FOLDER, "productivity-chain-scaffold.txt"), "utf8").trim(),
+        scaffold: () => fs.readFileSync(path.join(FOLDER, "productivity-module-80-chest-chain.scaffold"), "utf8").trim(),
         share: 1 / 6,
         alternative: GENERATED_ALTERNATIVE,
-        probeFile: path.join(__dirname, "productivity-chain-clock-probe.lua"),
-        probe: {family: "productivity-chain", stackSize: 4},
-        controls: path.join(__dirname, "productivity-chain-clock-controls.json"),
+        probeFile: path.join(__dirname, "productivity-module-80-chest-chain-clock-probe.lua"),
+        probe: {family: "productivity-module-80-chest-chain-clock", stackSize: 4},
+        controls: path.join(__dirname, "productivity-module-80-chest-chain-clock-controls.json"),
         assertHardware: recording => assertProductivityChainHardware(recording, config),
     };
 }

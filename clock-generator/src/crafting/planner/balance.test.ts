@@ -54,7 +54,7 @@ describe("a loop of machines that uses up everything it makes", () => {
     // agricultural science: the two pentapod egg machines feed each other an egg a craft; set to give back 1 egg a craft,
     // as no recipe of the game gives back exactly what it takes
     it("is the named check: no amount of crafting meets the target", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE) as Config;
+        const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250) as Config;
         const registry = createEntityRegistryFromConfig(config);
         const { facts } = balanceBuildOf(config);
         const eggs: PlannerFacts = {
@@ -85,14 +85,14 @@ describe("the balance with inserters that carry nothing", () => {
     const FIXTURES = {
         // stone bricks direct insert, and an inserter from the furnace into a buffer chest that takes only stone
         stone_bricks_and_an_empty_taker: () => {
-            const it = rawOf(ConfigPaths.STONE_BRICKS_DIRECT_INSERT_2_1);
+            const it = rawOf(ConfigPaths.STONE_BRICK_120_DRILL_DIRECT_INSERT);
             it.chests = [{ type: "buffer-chest", id: 1, storage_size: 10, item_filter: "stone" }];
             it.inserters.push({ source: { type: "machine", id: 1 }, sink: { type: "chest", id: 1 }, stack_size: 16 });
             return it;
         },
         // the steel wagon, and an inserter into its cargo wagon from a belt of copper plate, which the wagon takes none of
         steel_wagon_and_an_empty_filler: () => {
-            const it = rawOf(ConfigPaths.STEEL_CARGO_WAGON);
+            const it = rawOf(ConfigPaths.STEEL_PLATE_26_WAGON_CHEST);
             it.belts.push({ id: 2, type: "turbo-transport-belt", lanes: [{ ingredient: "copper-plate", stack_size: 4 }] });
             it.inserters.push({ id: 6, source: { type: "belt", id: 2 }, sink: { type: "chest", id: 2 }, prototype: "stack-inserter", quality: "legendary", stack_size: 16 });
             return it;
@@ -142,7 +142,7 @@ describe("the balance with inserters that carry nothing", () => {
 /**
  * The machine rows are solved loop by loop, the consumers first, where the demand walk eliminated all of them at once. In
  * exact fractions the two are the same; where the walk's elimination grew past what a fraction holds (machine:4 and
- * machine:5 of cell 02 listed in the other order) it was rounded, and the balance is not.
+ * machine:5 of the circuit export build listed in the other order) it was rounded, and the balance is not.
  */
 describe("the balance's machine rows, solved loop by loop", () => {
     /** The transfers of a sample's config with its machines in reverse order, by entity, at so many output swings */
@@ -158,9 +158,9 @@ describe("the balance's machine rows, solved loop by loop", () => {
         return new Map(balance.transfers.map(it => [it.entity, it.total]));
     };
 
-    it("are exact on cell 02 in either order of its machines, where the demand walk's were rounded", async () => {
-        const reversed = await transfersAt(ConfigPaths.REAL_STUPIDFATHOBBIT_CELL02, fraction(97, 13), true);
-        const listed = await transfersAt(ConfigPaths.REAL_STUPIDFATHOBBIT_CELL02, fraction(97, 13), false);
+    it("are exact on the circuit export build in either order of its machines, where the demand walk's were rounded", async () => {
+        const reversed = await transfersAt(ConfigPaths.PROCESSING_UNIT_80_CIRCUIT_EXPORT, fraction(97, 13), true);
+        const listed = await transfersAt(ConfigPaths.PROCESSING_UNIT_80_CIRCUIT_EXPORT, fraction(97, 13), false);
         // the walk gave 184996821348687/9740259739640 in the reversed order
         expect(reversed.get("inserter:6")!.toString()).toBe("2716/143");
         expect([...reversed].map(([entity, total]) => `${entity} ${total}`).sort())

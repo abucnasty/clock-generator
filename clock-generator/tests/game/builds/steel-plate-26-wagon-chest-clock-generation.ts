@@ -2,12 +2,12 @@ import {createHash} from "crypto";
 import {expect, test} from "vitest";
 import {ClockAlternativesResult, generateClockAlternatives} from "../../../src/crafting/generate-blueprint";
 import {clockIdentity} from "../../../src/crafting/clock-identity";
-import {SteelWagonCase, steelWagonCases, steelWagonConfig} from "./steel-wagon-clock-fixtures";
+import {SteelWagonCase, steelWagonCases, steelWagonConfig} from "./steel-plate-26-wagon-chest-clock-fixtures";
 import {readControls, RunControls} from "./clock-controls";
 import {expectRunAgreesWithSelection} from "../helpers/fixture-mechanics";
 
 // each clock pinned beside the in-game recording of it
-const controls = readControls<RunControls>("steel-wagon-clock-controls.json");
+const controls = readControls<RunControls>("steel-plate-26-wagon-chest-clock-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 
 /**

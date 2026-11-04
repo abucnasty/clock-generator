@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "MILITARY_SCIENCE",
+  "sample": "MILITARY_SCIENCE_120",
   "target": {
     "item": "military-science-pack",
     "counts": "made",

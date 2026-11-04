@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "REAL_OWNER_ORE_VOIDER_OVERBEACONED",
+  "sample": "IRON_ORE_VOIDER_400_OVERBEACONED",
   "target": {
     "item": "iron-ore",
     "counts": "destroyed",

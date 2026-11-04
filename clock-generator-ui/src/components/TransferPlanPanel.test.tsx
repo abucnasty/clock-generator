@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
-import cell02 from '../../../clock-generator/resources/config-samples/real/stupidfathobbit/cell02/stupidfathobbit-cell02.json?raw';
+import circuitExport from '../../../clock-generator/resources/config-samples/intermediates/processing-unit/processing-unit-80-circuit-export.json?raw';
 import { fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ConfigSchema, FactorioDataService, validateConfig, type SerializableTransferPlan } from 'clock-generator/browser';
@@ -49,8 +49,8 @@ describe('Swing Plan mutation boundary', () => {
     });
 });
 
-it('lists the swing plan of cell 02, whose export inserters fill both lanes of a belt with circuits, with no key twice', () => {
-    const plan = validateConfig(ConfigSchema.parse(JSON.parse(cell02))).transfer_plan;
+it('lists the swing plan of the circuit export build, whose export inserters fill both lanes of a belt with circuits, with no key twice', () => {
+    const plan = validateConfig(ConfigSchema.parse(JSON.parse(circuitExport))).transfer_plan;
     const exports = plan.entities.filter(entity => ['inserter:16', 'inserter:17'].includes(entity.entity_id));
     expect(exports.map(entity => entity.item_transfers.map(transfer => transfer.item_name))).toEqual([
         ['electronic-circuit', 'electronic-circuit'],

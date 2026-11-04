@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { ConfigPaths, isExpectedRefusal } from "../config/config-paths";
+import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import type { Config } from "../config/schema";
 import { deadlockRiskNote, describeSharedItem, sharedItemDeadlockRisks } from "./deadlock-risk";
@@ -15,7 +15,7 @@ describe("the deadlock risk of two inserters that bring the same item", () => {
     let utility_science: Config;
 
     beforeAll(async () => {
-        utility_science = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE);
+        utility_science = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_120);
     });
 
     it("is a machine with an inserter that brings two items, where another inserter brings one of the same", () => {
@@ -58,11 +58,11 @@ describe("the deadlock risk of two inserters that bring the same item", () => {
 
     it("is on no other sample that generates", async () => {
         const with_risk: string[] = [];
-        for (const [key, path] of Object.entries(ConfigPaths).filter(([key]) => !isExpectedRefusal(key))) {
+        for (const [key, path] of Object.entries(ConfigPaths)) {
             if (risksOf(await loadConfigFromFile(path)).length > 0) {
                 with_risk.push(key);
             }
         }
-        expect(with_risk).toEqual(["UTILITY_SCIENCE"]);
+        expect(with_risk).toEqual(["UTILITY_SCIENCE_120"]);
     });
 });

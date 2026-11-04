@@ -39,13 +39,9 @@ async function loadSample(key, backed_up_belts = false) {
     return config;
 }
 
-/**
- * The keys of the samples the sweeps take: every sample but those that exist to be refused (older builds have no
- * such list).
- */
+/** The keys of the samples the sweeps take: every sample */
 function sampleKeys() {
-    const { ConfigPaths, ExpectedRefusals = {} } = dist("config/config-paths.js");
-    return Object.keys(ConfigPaths).filter(key => !(key in ExpectedRefusals));
+    return Object.keys(dist("config/config-paths.js").ConfigPaths);
 }
 
 module.exports = { ROOT, dist, quiet, loadSample, sampleKeys };

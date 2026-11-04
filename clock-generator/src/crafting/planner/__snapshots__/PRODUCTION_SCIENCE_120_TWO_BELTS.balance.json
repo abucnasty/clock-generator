@@ -1,5 +1,5 @@
 {
-  "sample": "PRODUCTION_SCIENCE_JSON",
+  "sample": "PRODUCTION_SCIENCE_120_TWO_BELTS",
   "swings 1": [
     "inserter:1 | production-science-pack 1 | total 1 | hand 16",
     "inserter:3 | rail 5 | total 5 | needed 5 | hand 16",

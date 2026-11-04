@@ -24,7 +24,7 @@ local outputs, recyclers, science, capacitors, bends, disposal, inserters = {}, 
 local feeds, feed_units, output_units, bend_units, red_units = {}, {}, {}, {}, {}
 local science_units, capacitor_units, recycler_units, buffers = {}, {}, {}, {}
 local report = {period = options.period, topology = {}, events = {}, evidence = {}}
-local function write() helpers.write_file("recycler-original.json", helpers.table_to_json(report), false) end
+local function write() helpers.write_file("electromagnetic-science-240-recycler-belt-fed-clock.json", helpers.table_to_json(report), false) end
 local function check(condition, message)
     if not condition then report.error = message; write(); error(message) end
 end
@@ -328,7 +328,7 @@ steady.run{
     window = options.window, expected = options.expected, baseline = options.baseline, cap = options.cap,
     disturbances = disturbances,
     each_tick = observe,
-    report = report, output = "recycler-original.json", settle = settle,
+    report = report, output = "electromagnetic-science-240-recycler-belt-fed-clock.json", settle = settle,
     done = function()
         -- a run with no disturbance ends in the tick its baseline does, before the next observation: close the ledger here
         if not report.baseline_ledger then observe(report.protocol.ended) end

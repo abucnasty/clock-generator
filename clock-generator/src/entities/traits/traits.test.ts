@@ -170,7 +170,7 @@ describe("the energy of a burner (rule 4)", () => {
 
     // Machine.getInsertableInputs: a fuel that is also an ingredient is one input, which fills the fuel slot along the way
     it("gives a fuel that is also an ingredient one limit, the ingredient's: 210 nutrients, not the slot's 9", async () => {
-        const machine = (await sampleTraits(ConfigPaths.AGRICULTURAL_SCIENCE))["machine:3"] as MachineTraits;
+        const machine = (await sampleTraits(ConfigPaths.AGRICULTURAL_SCIENCE_250))["machine:3"] as MachineTraits;
         expect(machine.input_limits.limits.map(limit => [limit.item, limit.limit, limit.kind])).toEqual([
             ["pentapod-egg", 7, "ingredient"], ["nutrients", 210, "ingredient"],
         ]);

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "save": "stupidfathobbit-cell02.manifest.json",
+  "save": "processing-unit-80-circuit-export.manifest.json",
   "steps": [
     {
       "step": "extract-cell",
@@ -13,7 +13,7 @@
       "args": {
         "cell": "1041496",
         "box": null,
-        "name": "stupidfathobbit-cell02",
+        "name": "processing-unit-80-circuit-export",
         "version": "2.1.21",
         "sample_ticks": 36000,
         "warmup": 1800,
@@ -27,7 +27,7 @@
         "sha256": "dfd676f4809e75979ccd5534650a88f4a8e5673634e08d10622d99a065e4254e"
       },
       "output": {
-        "file": "stupidfathobbit-cell02-scaffold.txt",
+        "file": "processing-unit-80-circuit-export.scaffold",
         "sha256": "6b43c5c39a720147beadcc3636ada18a36927b5e82edb847f6f7611fc1e6f6ed"
       },
       "tick_before": 2814471,
@@ -35,11 +35,11 @@
       "entities_player": 83,
       "files": [
         {
-          "file": "stupidfathobbit-cell02.json",
+          "file": "processing-unit-80-circuit-export.json",
           "sha256": "4d1b2f14d411f1e202bf3269067ae9dd2923fe94714137248d21407f44494c02"
         },
         {
-          "file": "stupidfathobbit-cell02.expected.json",
+          "file": "processing-unit-80-circuit-export.expected.json",
           "sha256": "24fa1f1ac928d1db2f2df312c474c6bab52d56bd738ffb9f3939bca98cc5252d"
         }
       ],
@@ -670,7 +670,7 @@
       "scaffold_notes": [],
       "config_notes": [],
       "expected": {
-        "name": "stupidfathobbit-cell02",
+        "name": "processing-unit-80-circuit-export",
         "product": "processing-unit",
         "recipe": "processing-unit",
         "copies": 1,
@@ -1050,11 +1050,11 @@
       "note": "given after an in-game check, replacing the extracted ones (the extracted scaffold was not the build). The scaffold has 111 entities: 20 beacons (one more, on the first advanced circuit machine) and a plastic line and a circuit line. The circuit export is throttled to the config's 80 a second (40 a lane) by a constant combinator's signal S: four inserters take from the circuit line into infinity chests, and they and their chests and combinators are environment, not in the config. The config is the Sidecar's export of the build, with the circuit belt (belt 2) exported at 40 a second a lane, the draw measured from the save the cell came from (#189). The extraction record in steps is kept as it was.",
       "files": [
         {
-          "file": "stupidfathobbit-cell02-scaffold.txt",
+          "file": "processing-unit-80-circuit-export.scaffold",
           "sha256": "a83ef10325178d103db2b8a837a6b7936e9b779bbe86a852ee3a8528062edfd1"
         },
         {
-          "file": "stupidfathobbit-cell02.json",
+          "file": "processing-unit-80-circuit-export.json",
           "sha256": "6ba78ed31943b79181217f53f0e8181187da7e1622b358eb6890e4f1c64bfa9e"
         }
       ]

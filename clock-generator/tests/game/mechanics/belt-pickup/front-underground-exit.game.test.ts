@@ -47,7 +47,7 @@ for (const speed of BELT_SPEEDS) for (const { label, swapped, sameItem, mirrored
         try {
             const config = await loadConfigFromFile(path.join(fixture, "config.json"));
             configAtSpeed(config, speed);
-            let blueprint = fs.readFileSync(path.join(fixture, "scaffold.txt"), "utf8");
+            let blueprint = fs.readFileSync(path.join(fixture, "scaffold.scaffold"), "utf8");
             if (swapped) {
                 config.belts.find(belt => belt.id === 2)!.lanes.reverse();
                 blueprint = swapElectromagneticIngredientFeeds(blueprint);

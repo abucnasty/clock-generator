@@ -36,7 +36,7 @@ for (const speed of BELT_SPEEDS) for (const geometry of ["straight-belt", "under
                 input.source.near_lane = 2;
                 input.filters = ["accumulator"];
                 config.belts.find(belt => belt.id === input.source.id)!.lanes.forEach(lane => {lane.ingredient = "accumulator";});
-                let blueprint = useAccumulatorsOnBothLanes(fs.readFileSync(path.join(fixture, `${geometry}-scaffold.txt`), "utf8"));
+                let blueprint = useAccumulatorsOnBothLanes(fs.readFileSync(path.join(fixture, `${geometry}.scaffold`), "utf8"));
                 if (backed) blueprint = makeInputBeltBackedUp(blueprint);
                 blueprint = reflectOrdinaryPickup(ordinaryAtSpeed(blueprint, speed));
                 if (!replayRoot) {

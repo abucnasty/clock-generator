@@ -3,7 +3,7 @@
 Question: does `Belt::amountToDropAtTick` predict actual deposits at each effective belt stack size, without
 changing researched technologies?
 
-The [scaffold](scaffold.txt) has one legendary stack inserter taking iron from a source chest and depositing
+The [scaffold](scaffold.scaffold) has one legendary stack inserter taking iron from a source chest and depositing
 onto an eastbound turbo belt. Two more straight tiles lead to an input loader and a receiving steel chest.
 A constant combinator gates the inserter during 120 warm-up ticks. The source is empty during warm-up;
 the probe then inserts exactly 32 iron plates into the source chest and releases the gate. The source is an

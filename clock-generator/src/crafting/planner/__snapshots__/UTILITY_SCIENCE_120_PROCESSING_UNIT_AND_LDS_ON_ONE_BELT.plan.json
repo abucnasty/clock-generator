@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS",
+  "sample": "UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT",
   "target": {
     "item": "utility-science-pack",
     "counts": "made",

@@ -15,7 +15,7 @@ let selected: ClockAlternative;
 // own copy forces it: with it no clock made without a search is stable, which the last group needs); generate its
 // alternatives once.
 beforeAll(async () => {
-    const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+    const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
     config = {...sample, overrides: {...sample.overrides, terminal_swing_count: 1}};
     by_default = generateClockAlternatives(config, {logger: quiet});
     selected = selectedOf(by_default);

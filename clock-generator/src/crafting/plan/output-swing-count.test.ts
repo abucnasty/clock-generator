@@ -34,7 +34,7 @@ describe("output swings per cycle of a build on moving belts", () => {
 // many chests the inserters take them from: as Sidecar exports an ore voider, each feeding inserter has a chest of its own
 describe("hands brought in per cycle of a build whose target counts an item destroyed", () => {
     it("are the hands brought into the recycler over all its inserters, from one chest or from one each", async () => {
-        const voider = await loadConfigFromFile(ConfigPaths.REAL_OWNER_ORE_VOIDER_EXACT_SPEED);
+        const voider = await loadConfigFromFile(ConfigPaths.IRON_ORE_VOIDER_400_EXACT_SPEED);
         expect(validateConfig(voider, { logger: quiet }).output_swings_per_cycle).toBe(5);
         expect(validateConfig(voider, { logger: quiet }).counts).toBe("destroyed");
         const own_chests: Config = { ...voider,

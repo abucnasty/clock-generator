@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "PRODUCTION_SCIENCE_JSON",
+  "sample": "PRODUCTION_SCIENCE_120_TWO_BELTS",
   "target": {
     "item": "production-science-pack",
     "counts": "made",

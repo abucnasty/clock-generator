@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "STEEL_CARGO_WAGON",
+  "sample": "STEEL_PLATE_26_WAGON_CHEST",
   "target": {
     "item": "steel-plate",
     "counts": "made",

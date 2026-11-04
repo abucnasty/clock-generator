@@ -13,7 +13,7 @@ const OUT = process.argv[2] ?? path.join(__dirname, "..", "tests", "game", "mech
 
 /** The hands of the first line: [{copy, inserter (1 or 2 of the pair), slot}] for a pitch and the ticks the pair's inserters start at */
 async function hands(pitch, ticks) {
-    const config = await loadSample("REAL_OWNER_GRENADE");
+    const config = await loadSample("GRENADE_240_FILLS_BELT_EXACTLY");
     config.target_output.copy_offset = { x: pitch, y: 0 };
     const [line] = dropLines(config);
     const L = line.tiles_per_tick * PERIOD;

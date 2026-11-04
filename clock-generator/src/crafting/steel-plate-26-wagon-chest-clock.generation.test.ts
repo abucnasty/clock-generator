@@ -4,14 +4,14 @@ import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config/schema";
 import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
-import {steelWagonClockTests} from "../../tests/game/builds/steel-wagon-clock-generation";
+import {steelWagonClockTests} from "../../tests/game/builds/steel-plate-26-wagon-chest-clock-generation";
 
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 let config: Config;
 let generated: ClockAlternativesResult;
 
 beforeAll(async () => {
-    config = await loadConfigFromFile(ConfigPaths.STEEL_CARGO_WAGON);
+    config = await loadConfigFromFile(ConfigPaths.STEEL_PLATE_26_WAGON_CHEST);
     generated = generateClockAlternatives(config, {logger: quiet});
 });
 
@@ -42,5 +42,5 @@ test("steel wagon: no description shows a float as a fraction (the period is a w
 });
 
 // the clocks that take this build as it is; the one that leaves iron ore out of the period generates a build of its own, in
-// steel-wagon-clock-out-of-period.generation.test.ts
+// steel-plate-26-wagon-chest-clock-out-of-period.generation.test.ts
 steelWagonClockTests(variant => variant.ignored_lcm_ingredients === undefined, () => generated);

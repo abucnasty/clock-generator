@@ -48,7 +48,7 @@ function usage(): never {
         "                         samples file beside it, or --unwired-samples / --clocked-samples), or a recording of",
         "                         the recorder (.json). In a recording an inserter is wired when it shows disabled by",
         "                         the circuit network at some sample.",
-        "  --sample               a sample of the generator (e.g. ADVANCED_CIRCUIT) or a config file: its selected clock",
+        "  --sample               a sample of the generator (e.g. ADVANCED_CIRCUIT_240) or a config file: its selected clock",
         "                         against the same build with every inserter always enabled, in the simulator",
         "",
         ...(["true starts", "original"] as const).map(count => {

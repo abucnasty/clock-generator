@@ -21,7 +21,7 @@ describe("count-only secondary planning provenance", () => {
     let base: BlueprintGenerationResult;
 
     beforeAll(async () => {
-        config = await loadConfigFromFile(ConfigPaths.STONE_BRICKS_DIRECT_INSERT_2_1);
+        config = await loadConfigFromFile(ConfigPaths.STONE_BRICK_120_DRILL_DIRECT_INSERT);
         base = generation.generateClockForConfig(config, options);
     });
 

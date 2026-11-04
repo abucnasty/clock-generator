@@ -12,7 +12,7 @@ import {CLOCK_TEST_SPEEDS} from "../helpers/belt-speed-fixtures";
 import {PickupClockScenario} from "./pickup-clock-capture";
 
 /**
- * The iron plate build, 80 a second from one copy (`REAL_OWNER_CAR`): a big mining drill drops iron ore into a
+ * The iron plate build, 80 a second from one copy (`IRON_PLATE_80_CAR_CHEST`): a big mining drill drops iron ore into a
  * car, two stack inserters take it into two furnaces, and their output inserters put plates onto a belt that a loader
  * empties into a disposal chest. The harness puts the ore under the drill. At the harness's research the drill makes far
  * more than the furnaces take, so the car is full whenever the drill runs.
@@ -46,7 +46,7 @@ export function carCases(): CarCase[] {
     ];
 }
 
-const SCAFFOLD = path.join(path.dirname(ConfigPaths.REAL_OWNER_CAR), "car-scaffold.txt");
+const SCAFFOLD = path.join(path.dirname(ConfigPaths.IRON_PLATE_80_CAR_CHEST), "iron-plate-80-car-chest.scaffold");
 
 interface Placed {entity_number: number; name: string; position: {x: number; y: number}; direction?: number}
 
@@ -87,15 +87,15 @@ export function assertCarHardware(recording: Recording, config: Config): void {
 }
 
 export async function carScenario(variant: CarCase): Promise<PickupClockScenario> {
-    const config = await loadConfigFromFile(ConfigPaths.REAL_OWNER_CAR);
+    const config = await loadConfigFromFile(ConfigPaths.IRON_PLATE_80_CAR_CHEST);
     return {
         name: variant.name, speed: CLOCK_TEST_SPEEDS[0], backed: false,
         config: () => config,
         scaffold: () => carScaffold(variant.order),
         alternative: variant.alternative,
-        probeFile: path.join(__dirname, "car-clock-probe.lua"),
+        probeFile: path.join(__dirname, "iron-plate-80-car-chest-clock-probe.lua"),
         probe: {family: "car"},
-        controls: path.join(__dirname, "car-clock-controls.json"),
+        controls: path.join(__dirname, "iron-plate-80-car-chest-clock-controls.json"),
         assertHardware: assertCarHardware,
     };
 }

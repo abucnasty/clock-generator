@@ -6,35 +6,35 @@ import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config/schema";
 import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
-import {ownClockCases} from "../../tests/game/builds/own-clock-fixtures";
+import {inserterCraftingClockCases} from "../../tests/game/builds/inserter-crafting-240-shared-signal-clock-fixtures";
 import {readControls, runHolds, RunControls} from "../../tests/game/builds/clock-controls";
 
 // the generated clock pinned beside the in-game recording of it on the build's three copies
-const controls = readControls<RunControls>("own-clock-controls.json");
+const controls = readControls<RunControls>("inserter-crafting-240-shared-signal-clock-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 let config: Config;
 let generated: ClockAlternativesResult;
 
 beforeAll(async () => {
-    config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_INSERTER_CRAFTING);
+    config = await loadConfigFromFile(ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK);
     generated = generateClockAlternatives(config, {logger: quiet});
 });
 
-test("own clock: every inserter and drill a clock leaves always on says why", () => {
+test("inserter crafting clock: every inserter and drill a clock leaves always on says why", () => {
     expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
 });
 
 // the clock recorded on the three copies (swings-6) is no longer the selected one; the next test finds it still made
-test("own clock: the selected clock is swings-2, and the one recorded on the three copies is another it makes", () => {
+test("inserter crafting clock: the selected clock is swings-2, and the one recorded on the three copies is another it makes", () => {
     expect(generated.alternatives[generated.selected_index].id).toBe("swings-2");
 });
 
-for (const variant of ownClockCases()) {
-    test(`own clock: ${variant.name}`, () => {
+for (const variant of inserterCraftingClockCases()) {
+    test(`inserter crafting clock: ${variant.name}`, () => {
         const {generation, native, previous} = controls.cases[variant.name];
         // the hand-made clock is not generated: its control is the game's run, 80 a second a copy, held and recovered
         expect(runHolds(native), native.result).toBe(true);
-        if (variant.kind === "owner's clock") {
+        if (variant.kind === "hand-made clock") {
             expect(generation).toBeUndefined();
             expect([native.period, native.target]).toEqual([216, 240]);
             return;

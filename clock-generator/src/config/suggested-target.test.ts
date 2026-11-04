@@ -134,9 +134,9 @@ describe("inferSuggestedTarget", () => {
     // a sample's target is the total over its copies, set a little below what the machines make at most
     it.each([
         "science/logistic-science/logistic-science.json",
-        "science/agriculture-science/agriculture-science.json",
-        "intermediates/advanced-circuit/advanced-circuit.json",
-        "gleba/rocket-fuel/rocket-fuel-jelly-stack-16.json",
+        "science/agricultural/agricultural-250.json",
+        "intermediates/advanced-circuit/advanced-circuit-240.json",
+        "gleba/rocket-fuel/rocket-fuel-60.json",
     ])("agrees with the hand-written target of the sample %s", file => {
         const sample = JSON.parse(fs.readFileSync(
             path.resolve(__dirname, "../../resources/config-samples", file), "utf8",

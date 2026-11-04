@@ -3,7 +3,7 @@ import data from '../../../clock-generator/resources/data-filtered.json?raw';
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { ConfigSchema, FactorioDataService } from 'clock-generator/browser';
-import exact from '../../../clock-generator/resources/config-samples/real/owner/ore-voider/ore-voider-exact-speed.json';
+import exact from '../../../clock-generator/resources/config-samples/recycling/iron-ore/iron-ore-voider-400-exact-speed.json';
 import { show } from '../test/fixtures';
 import { configToFormData } from './configForm/configMapping';
 import { patchMachine, removeChest } from './configForm/edits';

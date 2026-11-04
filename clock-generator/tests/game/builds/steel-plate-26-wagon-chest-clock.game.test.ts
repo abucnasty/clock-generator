@@ -1,7 +1,7 @@
 import fs from "fs";
 import {test} from "vitest";
 import {capturePickupClockScenario} from "./pickup-clock-capture";
-import {steelWagonCases, steelWagonScenario} from "./steel-wagon-clock-fixtures";
+import {steelWagonCases, steelWagonScenario} from "./steel-plate-26-wagon-chest-clock-fixtures";
 
 // A passing capture preserves the measured counts, including clock failures; it does not certify stability.
 for (const variant of steelWagonCases()) {

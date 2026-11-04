@@ -4,7 +4,7 @@ import { render, renderHook } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { ReactFlowProvider, type Node } from '@xyflow/react';
 import type { Config } from 'clock-generator/browser';
-import lithiumSilo from '../../../clock-generator/resources/config-samples/real/owner/lithium-silo/lithium-silo.json?raw';
+import lithiumSilo from '../../../clock-generator/resources/config-samples/smelting/lithium-plate/lithium-plate-80-silo-chest.json?raw';
 import { configToFormData } from '../utils/configForm/configMapping';
 import { buildFlowGraph } from '../utils/buildFlowGraph';
 import { FlowNodeHandles } from '../components/FlowNodeHandles';

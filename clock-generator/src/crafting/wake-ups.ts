@@ -167,7 +167,7 @@ const TICKS_PER_MINUTE = 3600;
  * and the turn back, `rotation_ticks` (the simulator's ticks a turn, inserter-spec.ts) and one, which is
  * ceil(0.5 / rotation speed) - 1 of the game data: 4 for the legendary stack inserter, which drops in tick d, turns
  * back in d + 1 to d + 3 and picks up again from d + 4. The game shows "waiting for space" on such an arm when the
- * machine it dropped into is full, and it is on no list (cell 02's takers in the game read W W W W F F F W).
+ * machine it dropped into is full, and it is on no list (the circuit export build's takers in the game read W W W W F F F W).
  */
 export function returnTicksOf(rotation_ticks: number): number {
     return rotation_ticks + 1;

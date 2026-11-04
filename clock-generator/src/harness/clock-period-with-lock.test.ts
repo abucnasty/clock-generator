@@ -18,7 +18,7 @@ describe("clockPeriodTicks on the clocks the generator makes, with the lock", ()
     const entitiesOf = (blueprint: string) => JSON.parse(zlib.inflateSync(Buffer.from(blueprint.slice(1), "base64")).toString()).blueprint.entities as any[];
 
     it("reads a plain clock: the period of the plan", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
         const result = generateClockForConfig(config, { logger: quiet });
         const blueprint = encodeBlueprintFile({ blueprint: result.blueprint });
         const clock = entitiesOf(blueprint).find(entity => /^Clock for/.test(entity.player_description ?? ""));
@@ -28,14 +28,14 @@ describe("clockPeriodTicks on the clocks the generator makes, with the lock", ()
 
     it("reads a subtick clock: the whole ticks after which the fractional period repeats", async () => {
         // iron bacteria: a period of 1728/19 ticks, so the subtick clock of every clock of the build counts 1728
-        const config = await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_CULTIVATION);
+        const config = await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_380_CULTIVATION);
         const subtick = generateClockForConfig(config, { logger: quiet }).subtick!;
         expect(subtick.clock.period_ticks).toBe(1728);
         expect(clockPeriodTicks(encodeBlueprintFile({ blueprint: subtick.blueprint }))).toBe(1728);
     });
 
     it("reads a clock merged with its modulos and fuel clocks on signal-T: the count of the merged clock", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
+        const config = await loadConfigFromFile(ConfigPaths.ROCKET_FUEL_60);
         const result = generateClockForConfig(config, { logger: quiet });
         const blueprint = encodeBlueprintFile({ blueprint: result.blueprint });
         const clock = entitiesOf(blueprint).find(entity => /^Clock for/.test(entity.player_description ?? ""));
@@ -47,7 +47,7 @@ describe("clockPeriodTicks on the clocks the generator makes, with the lock", ()
     });
 
     it("reads a subtick clock with fuel clocks of their own: the subtick count, not a fuel clock", async () => {
-        const rocket_fuel = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
+        const rocket_fuel = await loadConfigFromFile(ConfigPaths.ROCKET_FUEL_60);
         const result = generateClockForConfig(
             { ...rocket_fuel, target_output: { ...rocket_fuel.target_output, items_per_second: 54 } },
             { logger: quiet, fuel_consumption_view: false },
@@ -75,10 +75,10 @@ describe("the schedule of a generated clock", () => {
     ];
 
     it("is what the tags of its combinators say", async () => {
-        const rocket_fuel = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
+        const rocket_fuel = await loadConfigFromFile(ConfigPaths.ROCKET_FUEL_60);
         const configs = [
-            await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE),
-            await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_CULTIVATION),
+            await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240),
+            await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_380_CULTIVATION),
             rocket_fuel,
             { ...rocket_fuel, target_output: { ...rocket_fuel.target_output, items_per_second: 54 } },
         ];

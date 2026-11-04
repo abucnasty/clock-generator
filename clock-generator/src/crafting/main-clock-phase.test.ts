@@ -39,7 +39,7 @@ function assertTranslated(canonical: Config, shifted: Config, period: number, of
 describe("shared main-clock phase composition", () => {
     let auto: Config, derived: Config, windows: Map<string, OpenRange[]>;
     beforeAll(async () => {
-        const control = await loadConfigFromFile(ConfigPaths.REAL_OWNER_PINK_SCIENCE_ORIGINAL);
+        const control = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED);
         auto = { ...control, overrides: undefined, inserters: control.inserters.map(inserter => ({ ...inserter, overrides: undefined })) };
         const construction = constructPrimitiveGroupedHands(auto);
         const compact = construction.attempts.find(attempt => !attempt.options.share_windows && attempt.options.feeder_offset === 1)!;

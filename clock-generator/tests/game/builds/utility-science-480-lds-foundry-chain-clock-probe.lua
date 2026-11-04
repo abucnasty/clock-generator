@@ -1,4 +1,4 @@
--- Run a clock on Thaeln's cell 09 build (REAL_THAELN_CELL09) under the game tests' protocol (steady.lua). The disturbances: coal
+-- Run a clock on the utility science 480 build build (UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN) under the game tests' protocol (steady.lua). The disturbances: coal
 -- removed from every belt until the output falls, the two output loaders removed until it falls and rebuilt, processing units
 -- removed from every belt until it falls.
 local entities, surface, _, settle = ...

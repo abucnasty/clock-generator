@@ -1,5 +1,5 @@
 {
-  "sample": "REAL_OWNER_PRODUCTIVITY_CHAIN",
+  "sample": "PRODUCTIVITY_MODULE_80_CHEST_CHAIN",
   "swings 1": [
     "inserter:2 | productivity-module 1 | total 1 | hand 16",
     "inserter:8 | advanced-circuit 10/3 | total 10/3 | needed 10/3 | hand 16",

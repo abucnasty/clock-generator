@@ -42,7 +42,7 @@ export function overHoodClockConfig(variant: OverHoodClockCase): Config {
 export function overHoodClockScaffold(variant: OverHoodClockCase): string {
     interface Entity {entity_number: number; name: string; recipe?: string; mirror?: boolean;
         infinity_settings?: {filters?: {name: string}[]}}
-    const text = fs.readFileSync(path.join(GameFixturePaths.OVER_THE_HOOD_UNDERGROUND_EXIT, "compact-normal-scaffold.txt"), "utf8");
+    const text = fs.readFileSync(path.join(GameFixturePaths.OVER_THE_HOOD_UNDERGROUND_EXIT, "compact-normal.scaffold"), "utf8");
     const decoded = JSON.parse(zlib.inflateSync(Buffer.from(text.trim().slice(1), "base64")).toString()) as {blueprint: {entities: Entity[]}};
     const entities = decoded.blueprint.entities;
     const input = entities.find(entity => entity.entity_number === 36)!;

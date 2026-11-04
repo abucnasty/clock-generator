@@ -1,4 +1,4 @@
--- Run a clock on the throttled scaffold of REAL_STUPIDFATHOBBIT_CELL02 under the game tests' protocol (steady.lua). The
+-- Run a clock on the throttled scaffold of PROCESSING_UNIT_80_CIRCUIT_EXPORT under the game tests' protocol (steady.lua). The
 -- disturbances: plastic bars removed from every belt until the output falls; then the two processing unit loaders removed, and
 -- with them the belt tiles the throttle inserters take the circuits from (the export belt then fills and the export inserters
 -- wait), until the output falls, and rebuilt. Stopping the export alone does not reduce the output of processing units, which

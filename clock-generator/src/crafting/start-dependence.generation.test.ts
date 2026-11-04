@@ -7,7 +7,7 @@ import { quiet } from "./generate-blueprint-test-helpers";
 
 describe("a build generated with and without the check", () => {
     it("tries every clock from every start when the config asks, the cold start deciding its own entry", async () => {
-        const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+        const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
         const config = { ...sample, overrides: { ...sample.overrides, check_start_dependence: true } };
         const generated = generateClockAlternatives(config, { logger: quiet });
         expect(generated.start_dependence_checked).toBe(true);

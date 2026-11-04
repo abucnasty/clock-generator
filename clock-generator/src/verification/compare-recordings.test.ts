@@ -27,7 +27,7 @@ let simulated: Recording;
 
 beforeAll(async () => {
     // the recording these tests read is of the clock with one output swing a cycle; the sample is automatic, so it is forced on this copy
-    const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+    const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
     config = { ...sample, overrides: { ...sample.overrides, terminal_swing_count: 1 } };
     const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
     result = alternatives[selected_index].result;

@@ -42,7 +42,7 @@ describe('validateInserterCoverage', () => {
 
     describe('metallurgic-science-pack (machine-to-machine inserters)', () => {
         it('reports no issues when all inserters are valid machine-to-machine connections', async () => {
-            const config = await loadConfigFromFile(ConfigPaths.METALLURGIC_SCIENCE_PACK);
+            const config = await loadConfigFromFile(ConfigPaths.METALLURGIC_SCIENCE_45);
             const issues = validateInserterCoverage(config);
             expect(issues).toHaveLength(0);
         });

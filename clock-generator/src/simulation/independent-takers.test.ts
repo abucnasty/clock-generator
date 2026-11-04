@@ -20,7 +20,7 @@ test("Mechanics: robustness covers the independently mixed native shared-source 
     // Recorded ordinary scaffold observation: three sources exhaust17 LDS in the same tick.
     // Source3 serves7 before5, source4 serves6 before8, source11 serves26 before23. No global ascending/descending
     // order represents all three. Only local pickups from measured inventories are replayed here, not the whole tick.
-    const config = await loadConfigFromFile(ConfigPaths.REAL_THAELN_CELL09);
+    const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN);
     const orders = [DEFAULT_TAKER_ORDER, ...otherTakerOrdersOf(config, new Map(), native.period)];
     const hands = native.hands_before.map(it => it.id).sort((a, b) => a - b);
     expect(native.hands_before.every(it => it.held === 0)).toBe(true);

@@ -28,7 +28,7 @@ test("compact normal entrance naturally crafts and transfers circuits onto its c
         for (const lane of config.belts.find(belt => belt.id === 2)!.lanes)
             lane.ingredient = lane.ingredient === "accumulator" ? "iron-plate" : "copper-cable";
         const blueprint = compactFrontEntranceAtSpeed(
-            fs.readFileSync(path.join(fixture, "compact-normal-scaffold.txt"), "utf8"), speed);
+            fs.readFileSync(path.join(fixture, "compact-normal.scaffold"), "utf8"), speed);
         fs.writeFileSync(path.join(capture.directory, "scaffold.txt"), blueprint);
         await recordInFactorio({factorio: factorio!, save: save!, config, blueprint,
             lua: composeProbeSource(path.join(fixture, "output-probe.lua"), {speed: speed.units / 32}),

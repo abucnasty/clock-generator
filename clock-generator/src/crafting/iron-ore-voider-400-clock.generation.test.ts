@@ -12,7 +12,7 @@ import { expectRunAgreesWithSelection, expectRunIsConsistent } from "../../tests
 // crafting speed 16.875 (540 crafts a second) destroys 400 iron ore a second, brought in by four stack inserters from the
 // ore supply; it places what it gives back (a quarter of its crafts, at random) into a car, which two stack inserters
 // empty back into it. Planned by arithmetic on the expected amounts, with room in the windows for the spread.
-const FIXTURE = ConfigPaths.REAL_OWNER_ORE_VOIDER_EXACT_SPEED;
+const FIXTURE = ConfigPaths.IRON_ORE_VOIDER_400_EXACT_SPEED;
 const quiet = { log() {}, info() {}, warn() {}, error() {}, debug() {} };
 let config: Config;
 let generated: ClockAlternativesResult;
@@ -111,7 +111,7 @@ describe("a recycler that voids iron ore with crafts to spare", () => {
     let overbeaconed: Config;
     let alternatives: ClockAlternativesResult;
     beforeAll(async () => {
-        overbeaconed = await loadConfigFromFile(ConfigPaths.REAL_OWNER_ORE_VOIDER_OVERBEACONED);
+        overbeaconed = await loadConfigFromFile(ConfigPaths.IRON_ORE_VOIDER_400_OVERBEACONED);
         alternatives = generateClockAlternatives(overbeaconed, { logger: quiet });
     });
 
@@ -140,10 +140,10 @@ describe("a recycler that voids iron ore with crafts to spare", () => {
     });
 });
 
-// the clock each cell's run in the game was recorded on (tests/game/builds/ore-voider-clock-controls.json)
+// the clock each cell's run in the game was recorded on (tests/game/builds/iron-ore-voider-400-clock-controls.json)
 describe("the clocks the ore voider's runs in the game ran", () => {
-    const controls = readControls<RunControls>("ore-voider-clock-controls.json");
-    for (const [name, sample] of [["ore-voider-exact-speed", "REAL_OWNER_ORE_VOIDER_EXACT_SPEED"], ["ore-voider-overbeaconed", "REAL_OWNER_ORE_VOIDER_OVERBEACONED"]] as const) {
+    const controls = readControls<RunControls>("iron-ore-voider-400-clock-controls.json");
+    for (const [name, sample] of [["ore-voider-exact-speed", "IRON_ORE_VOIDER_400_EXACT_SPEED"], ["ore-voider-overbeaconed", "IRON_ORE_VOIDER_400_OVERBEACONED"]] as const) {
         test(`${name} is still selected`, async () => {
             const pin = controls.cases[name].generation!;
             const result = generateClockAlternatives(await loadConfigFromFile(ConfigPaths[sample]), { logger: quiet });

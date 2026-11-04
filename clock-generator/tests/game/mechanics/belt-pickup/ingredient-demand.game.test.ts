@@ -30,7 +30,7 @@ for (const speed of BELT_SPEEDS) for (const [swapped, nearCount] of [[false, 13]
             configured.source.pickup_layout = "side-straight";
             const nearItem = swapped ? "supercapacitor" : "accumulator";
             const farItem = swapped ? "accumulator" : "supercapacitor";
-            let blueprint = fs.readFileSync(path.join(fixture, "straight-belt-scaffold.txt"), "utf8");
+            let blueprint = fs.readFileSync(path.join(fixture, "straight-belt.scaffold"), "utf8");
             if (swapped) {
                 blueprint = swapElectromagneticIngredientFeeds(blueprint);
                 config.belts.find(b => b.id === configured.source.id)!.lanes.forEach(lane => {

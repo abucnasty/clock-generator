@@ -24,7 +24,7 @@ describe("the orders a clock is checked under", () => {
     });
 });
 
-// Thaeln's cell: the foundry 3 is taken from by inserters 5 and 7, the foundry 10 by 22 and 25, in the list in that order
+// the utility science 480 build: the foundry 3 is taken from by inserters 5 and 7, the foundry 10 by 22 and 25, in the list in that order
 describe("the order competing inserters are updated in", () => {
     let context: SimulationContext;
     const foundry = (id: number) => context.state_registry.getStateByEntityIdOrThrow<MachineState>(context.machines.find(it => it.machine_state.entity_id.number === id)!.machine_state.entity_id);
@@ -33,7 +33,7 @@ describe("the order competing inserters are updated in", () => {
         inserters.map(it => it.inserter_state.entity_id.number).filter(id => [5, 7, 22, 25].includes(id));
 
     beforeAll(async () => {
-        context = SimulationContext.fromConfig(await loadConfigFromFile(ConfigPaths.REAL_THAELN_CELL09));
+        context = SimulationContext.fromConfig(await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN));
     });
 
     /** The order the inserters of the foundries 3 and 10 are updated in a tick, with each foundry holding `held` low density structures */

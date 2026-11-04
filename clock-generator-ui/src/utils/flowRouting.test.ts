@@ -1,9 +1,9 @@
 import { expect, it } from 'vitest';
 import { Position, type Node, type Edge } from '@xyflow/react';
 import type { Config } from 'clock-generator/browser';
-import agriculture from '../../../clock-generator/resources/config-samples/science/agriculture-science/agriculture-science.json?raw';
-import bacteria from '../../../clock-generator/resources/config-samples/gleba/iron-bacteria-cultivation/iron-bacteria-cultivation.json?raw';
-import circuit from '../../../clock-generator/resources/config-samples/intermediates/advanced-circuit/advanced-circuit.json?raw';
+import agriculture from '../../../clock-generator/resources/config-samples/science/agricultural/agricultural-250.json?raw';
+import bacteria from '../../../clock-generator/resources/config-samples/gleba/iron-bacteria/iron-bacteria-380-cultivation.json?raw';
+import circuit from '../../../clock-generator/resources/config-samples/intermediates/advanced-circuit/advanced-circuit-240.json?raw';
 import { configToFormData } from './configForm/configMapping';
 import { buildFlowGraph } from './buildFlowGraph';
 import { assignFlowPorts, attachFlowRoute, flowGraphBounds, flowNodeRect, flowRoutePath, routeFlowEdges, type FlowPort, type FlowRect } from './flowRouting';

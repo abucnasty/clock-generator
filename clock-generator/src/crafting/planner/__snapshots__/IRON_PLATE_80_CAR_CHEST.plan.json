@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "REAL_OWNER_CAR",
+  "sample": "IRON_PLATE_80_CAR_CHEST",
   "target": {
     "item": "iron-plate",
     "counts": "made",

@@ -11,7 +11,7 @@ import { quiet } from "./generate-blueprint-test-helpers";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { unplannedInserterClocks } from "./sequence/unplanned-inserter-clock";
 
-// The rocket fuel biochambers (GLEBA_ROCKET_FUEL), generated once for the describes below. The fuel consumption view of
+// The rocket fuel biochambers (ROCKET_FUEL_60), generated once for the describes below. The fuel consumption view of
 // every clock alternative of the sample is checked in rocket-fuel.generation.test.ts, with the alternatives; that no
 // fuel plan is made for a build without a fuel inserter in rocket-fuel.test.ts.
 let config: Config;
@@ -20,7 +20,7 @@ let plan: FuelPlan;
 let view: FuelConsumptionView;
 
 beforeAll(async () => {
-    config = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
+    config = await loadConfigFromFile(ConfigPaths.ROCKET_FUEL_60);
     result = generateClockForConfig(config, { logger: quiet });
     plan = result.fuel_plan!;
     view = result.fuel_consumption_view!;

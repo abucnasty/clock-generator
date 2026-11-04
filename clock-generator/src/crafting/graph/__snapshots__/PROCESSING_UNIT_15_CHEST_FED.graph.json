@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "PROCESSING_UNITS",
+  "sample": "PROCESSING_UNIT_15_CHEST_FED",
   "target": {
     "item": "processing-unit",
     "counts": "made",

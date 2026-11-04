@@ -128,7 +128,7 @@ describe("wakeUps", () => {
     });
 });
 
-// cell 02's takers in the game (CELL02-MISS): grab, hold 4 ticks, drop, back 4 ticks later, "waiting for space" on the
+// the circuit export build's takers in the game (CELL02-MISS): grab, hold 4 ticks, drop, back 4 ticks later, "waiting for space" on the
 // 2nd to 4th tick of the return; a machine at their sink that starts a craft on almost every tick
 describe("the arm at home, since 0.26.0", () => {
     const into = (states: string[], held: number[]) =>

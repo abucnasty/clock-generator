@@ -31,7 +31,7 @@ describe("the branches of the terminal outputs into sinks that never block", () 
     });
 
     it("are none where the output goes onto a belt: it is judged exactly in every period", async () => {
-        expect(await branchesOf(ConfigPaths.REAL_STUPIDFATHOBBIT_CELL02)).toEqual([]);
+        expect(await branchesOf(ConfigPaths.PROCESSING_UNIT_80_CIRCUIT_EXPORT)).toEqual([]);
     });
 
     it("keep each branch's part when judged on another count than the plan's", () => {
