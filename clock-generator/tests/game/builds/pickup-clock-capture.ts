@@ -40,14 +40,10 @@ export interface PickupClockScenario {
      * longer stretch); never over RUN_PROTOCOL.maxBaseline
      */
     baseline?: {ticks: number; reason: string};
-    /** TRANSITIONAL, removed when the last family moves to the protocol: the period-counted schedule, no longer read */
-    interventions?: [number, number, number][];
     /** A probe of its own, in place of pickup-clock-speed-probe.lua: it runs steady.lua with its own disturbances and writes clock-speed.json */
     probeFile?: string;
     probe: {family: string; machine_name?: string; ingredients?: readonly [string, string]; output_to_belt?: boolean;
-        trace_ticks?: number; stackSize?: number;
-        /** TRANSITIONAL (see `interventions`): no longer read */
-        trace_periods?: readonly number[]};
+        trace_ticks?: number; stackSize?: number};
     /** The native setup audit, in place of assertPickupClockHardware (which expects a belt-fed input) */
     assertHardware?: (recording: Recording, config: Config, blueprint: string) => void;
     validateRecording?: (recording: Recording, config: Config) => void;
@@ -77,11 +73,6 @@ const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 export const RUN_PROTOCOL = {window: 3600, baseline: 3600, maxBaseline: 36_000, cap: 54_000} as const;
 /** Ticks recorded after the run, for the audit of the native build: one minute from the run's end, cut by no clock */
 const AUDIT_TICKS = 3600;
-
-/** TRANSITIONAL (see PickupClockScenario.interventions): the period-counted schedule of the families not moved yet, no longer read */
-export function pickupClockInterventions(): [number, number, number][] {
-    return [[66, 68, 84], [84, 88, 104], [104, 106, 132]];
-}
 
 async function prepare(scenario: PickupClockScenario): Promise<Prepared> {
     const key = scenario.name;
