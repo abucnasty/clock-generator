@@ -42,7 +42,9 @@ describe("an inserter the config sets to always enabled", () => {
     });
 
     it("has no windows made from what it was seen doing either (observed windows)", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.LITHIUM_PLATES);
+        // a cryogenic plant fills a rocket silo that six furnaces empty: its input from an infinity chest (inserter 1) and its output into the silo (4) are set to always enabled
+        const sample = await loadConfigFromFile(ConfigPaths.REAL_OWNER_LITHIUM_SILO);
+        const config: Config = { ...sample, inserters: sample.inserters.map((it, index) => [0, 3].includes(index) ? { ...it, overrides: { ...it.overrides, ...ALWAYS } } : it) };
         const result = observedWindowsClock(config, { logger: quiet, verify_as_built: true }, "always");
         expect(result.derived_clock_windows).toBeDefined();
         expect(alwaysEnabled(config).length).toBeGreaterThan(0);

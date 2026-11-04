@@ -37,7 +37,6 @@ export const ConfigPaths = {
     MILITARY_SCIENCE: path.join(CONFIG_SAMPLES_DIR, 'science', 'military-science', 'military-science-1-inserter.json'),
     LOW_DENSITY_STRUCTURE: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'low-density-structure', 'low-density-structure.json'),
     METALLURGIC_SCIENCE_PACK: path.join(CONFIG_SAMPLES_DIR, 'science', 'metallurgic-science', 'metallurgic-science.json'),
-    LITHIUM_PLATES: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'lithium-plates', 'lithium-plates.json'),
     UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS: path.join(CONFIG_SAMPLES_DIR, 'science', 'utility-science', 'utility-science-belted-combined-blue-and-lds.json'),
     PROCESSING_UNITS: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'processing-units', 'processing-units.json'),
     ACCUMULATOR_640: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'accumulator', 'accumulator-640.json'),
