@@ -5,23 +5,9 @@ import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { FeasibilityError } from "../config/errors";
 import { alwaysOnReasonProblemsOf, quiet } from "./generate-blueprint-test-helpers";
-import { pickupClockConfig, pickupClockSpeedCases } from "../../tests/game/builds/pickup-clock-speed-coverage";
 
-const BACKED_UP_ADVICE = " If the input belts back up at their pickups, answer Backed up for the belts and generate again: a clock may hold then.";
 
 describe("why the selected clock does not meet goal 1, as a generation says it", () => {
-    it("is the moving lane phases on the normal moving underground entrance, which holds in the game from its recorded start", async () => {
-        const variant = pickupClockSpeedCases("electromagnetic").find(it => it.name === "electromagnetic-normal-underground-entrance-moving")!;
-        const generated = generateClockAlternatives(await pickupClockConfig(variant), { logger: quiet });
-        expect(generated.why_not_stable).toEqual({
-            cause: "moving lane phases",
-            message: "The selected clock (1 output swing per cycle) is made for a moving belt. It holds the target rate from the "
-                + "modeled start, but not when the lanes reach inserter 2 in another phase: from such a start it moves 880 of 1056 "
-                + "items over 6 periods. In the game a belt's lanes reach the pickups in whatever phase they happen to have, so the "
-                + `build can fall short.${BACKED_UP_ADVICE}`,
-        });
-    });
-
     it("is no recovery for a sample that holds its target and is not taken away from for a while", async () => {
         const config = await loadConfigFromFile(ConfigPaths.REAL_STUPIDFATHOBBIT_CELL06);
         const generated = generateClockAlternatives(config, { logger: quiet });

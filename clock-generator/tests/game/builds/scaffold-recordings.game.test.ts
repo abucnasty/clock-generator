@@ -136,6 +136,10 @@ interface ScaffoldBuild {
     moved_open?: { inserter_ids: number[]; why: string };
 }
 
+/** The logistic science build with inserter crafting: an accepted gap in the wake-ups (#586), production and every hand held all the same */
+const LOGISTIC_INSERTER_CRAFTING_WAKE_UPS_OPEN = "the wake-ups of the inserter crafting build differ between the game and the simulator, "
+    + "with the game's order of service and the production the same (#586, an accepted 0.27.0 gap)";
+
 const BUILDS: Record<string, ScaffoldBuild> = {
     "agricultural science": {
         scaffold: path.join(SAMPLES, "science", "agriculture-science", "agriculture-science-scaffold.txt"),
@@ -229,6 +233,8 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         warmup_ticks: 3600,
         backed_up_belts: true,
     },
+    // An accepted 0.27.0 gap (#586): the game serves the inserters in the simulator's order and the production is exact; the
+    // wake-ups differ
     // One of the three copies of the inserter build given 2026-10-21, 240 inserters a second over the three: an
     // inserter assembler (4 speed modules, 8 beacons) fed plates by two furnaces and gears by a gear assembler, which two
     // more furnaces feed, all legendary. Each pair of furnaces takes its ore from a line of its own; the ore, so the
@@ -238,6 +244,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         config: ConfigPaths.LOGISTIC_SCIENCE_INSERTER_CRAFTING,
         seed: [],
         warmup_ticks: 3600,
+        wake_ups_open: LOGISTIC_INSERTER_CRAFTING_WAKE_UPS_OPEN,
     },
     "logistic science with inserter crafting (belts are backed up)": {
         scaffold: path.join(SAMPLES, "science", "logistic-science", "logistic-science-inserter-crafting-scaffold.txt"),
@@ -245,6 +252,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [],
         warmup_ticks: 3600,
         backed_up_belts: true,
+        wake_ups_open: LOGISTIC_INSERTER_CRAFTING_WAKE_UPS_OPEN,
     },
     // The build of issue 98: two foundries, two electromagnetic plants and a cryogenic plant, 240 a second over three
     // copies. Its clock counts 792 ticks.
