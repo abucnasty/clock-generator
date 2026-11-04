@@ -21,9 +21,8 @@ interface OverridesFormProps {
     terminalSwingCount?: number;
     /** What the target counts: for the item destroyed, the forced count is of hands brought into a machine, not of output swings */
     counts?: TargetCounts;
-    useFractionalSwings?: boolean;
     searchForFewerWakeUps?: boolean;
-    onUpdate: (field: 'lcm' | 'terminal_swing_count' | 'use_fractional_swings' | 'search_for_fewer_wake_ups', value: number | boolean | undefined) => void;
+    onUpdate: (field: 'lcm' | 'terminal_swing_count' | 'search_for_fewer_wake_ups', value: number | boolean | undefined) => void;
     /** The swing plan of the last check, under the fields */
     planSlot?: ReactNode;
     /** Closed on a first visit, and again when the build is replaced (Import, Paste, Reset) */
@@ -38,7 +37,6 @@ export function OverridesForm({
     lcm,
     terminalSwingCount,
     counts = 'made',
-    useFractionalSwings,
     searchForFewerWakeUps,
     onUpdate,
     planSlot,
@@ -48,7 +46,6 @@ export function OverridesForm({
 }: OverridesFormProps) {
     const summaryId = useId();
     const forceId = useId();
-    const fractionalId = useId();
     const searchId = useId();
     const force = FORCE_TEXT[counts];
     return (
@@ -118,26 +115,6 @@ export function OverridesForm({
                         />
                         <Typography id={`${forceId}-help`} variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5 }}>
                             {force.field}
-                        </Typography>
-                    </Box>
-                    <Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <FormControlLabel
-                                control={<Switch id={fractionalId} checked={useFractionalSwings ?? false} color="primary"
-                                    slotProps={{ input: { role: 'switch', 'aria-describedby': `${fractionalId}-help` } }}
-                                    onChange={e => onUpdate('use_fractional_swings', e.target.checked ? true : undefined)} />}
-                                label="Enable Fractional Swings"
-                                sx={{ mr: 0 }}
-                            />
-                            <HelpButton label="About Enable Fractional Swings">
-                                <Typography variant="body2">
-                                    When enabled, inserters with fractional swing counts (e.g., 1.5 swings per cycle) will distribute swings across multiple sub-cycles.
-                                    For example, 3/2 swings becomes 1 swing in the first sub-cycle and 2 swings in the second.
-                                </Typography>
-                            </HelpButton>
-                        </Box>
-                        <Typography id={`${fractionalId}-help`} variant="caption" color="text.secondary" component="p">
-                            Spread fractional swings over multiple crafting cycles.
                         </Typography>
                     </Box>
                     <Box>

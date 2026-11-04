@@ -1376,7 +1376,6 @@ function App() {
                                     lcm={config.overrides?.lcm}
                                     terminalSwingCount={config.overrides?.terminal_swing_count}
                                     counts={targetCounts}
-                                    useFractionalSwings={config.overrides?.use_fractional_swings}
                                     searchForFewerWakeUps={config.overrides?.search_for_fewer_wake_ups}
                                     onUpdate={updateOverrides}
                                     expanded={advancedOpen}

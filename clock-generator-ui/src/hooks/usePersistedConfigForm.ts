@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
-import { ChestType, migrateBeltSupplyOverrides, migrateMiningProductivityLevel } from 'clock-generator/light';
+import { ChestType, dropFractionalSwingsOverride, migrateBeltSupplyOverrides, migrateMiningProductivityLevel } from 'clock-generator/light';
 import { askEngine } from '../worker/engineClient';
 import {
     backupKey,
@@ -95,7 +95,8 @@ export function readSavedConfig(stored: string): ConfigFormData | null {
         const parsed = JSON.parse(stored);
         // Basic validation - check if it has the required fields
         if (parsed && parsed.target_output && parsed.machines && parsed.chests) {
-            if (parsed.overrides !== undefined) parsed.overrides = migrateBeltSupplyOverrides(parsed.overrides);
+            // builds saved when the Fractional swings switch existed carry its field: it is dropped, as the engine does
+            if (parsed.overrides !== undefined) parsed.overrides = dropFractionalSwingsOverride(migrateBeltSupplyOverrides(parsed.overrides));
             // Migrate legacy chests
             parsed.chests = migrateChests(parsed.chests);
             // Migrate legacy inserters (assign id / _uuid if missing)
