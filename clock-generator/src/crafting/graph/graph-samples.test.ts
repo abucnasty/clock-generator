@@ -44,8 +44,7 @@ const LOOPS: Readonly<Record<string, readonly (readonly string[])[]>> = {
 
 /**
  * The terminal edges of each sample, by kind (P3 1.4), against the paper check's table (P3 section 5). Where they
- * differ: the scrap silo's 12 by-products into infinity chests plus the scrap brought in (D13: the paper check counts the
- * destroyed target apart), and the ore voiders' 4 edges from the infinity chest (D13; the paper check lists them as
+ * differ: the ore voiders' 4 edges from the infinity chest (D13; the paper check lists them as
  * "from outside: 4 edges").
  */
 const TERMINAL: Readonly<Record<string, number>> = {
@@ -95,7 +94,6 @@ const TERMINAL: Readonly<Record<string, number>> = {
     REAL_STUPIDFATHOBBIT_CELL02: 4,
     REAL_STUPIDFATHOBBIT_CELL06: 2,
     REAL_THAELN_CELL09: 8,
-    RECYCLING_SCRAP_SILO: 13,
     SAMPLE_CONFIG: 1,
     STEEL_CARGO_WAGON: 1,
     STONE_BRICKS_DIRECT_INSERT: 1,

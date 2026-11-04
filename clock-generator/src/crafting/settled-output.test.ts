@@ -10,7 +10,7 @@ describe("the output a clock that fails its first check is listed by", () => {
     it("is the mean items a period of its long run, and the rate and the check say so", async () => {
         const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
         const generated = generateClockAlternatives(config, { logger: quiet });
-        const failed = generated.alternatives.filter(it => it.result.stability_check.as_built?.output_basis !== undefined);
+        const failed = generated.alternatives.filter(it => it.result.stability_check.as_built?.first_check_failed === true);
         expect(failed.length).toBeGreaterThan(0);
         for (const alternative of failed) {
             const as_built = alternative.result.stability_check.as_built!;

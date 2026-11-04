@@ -40,14 +40,106 @@ npm run test:game -- tests/game/builds/moving-pickup.game.test.ts -t 'straight-b
 ```
 
 `npm test` excludes `*.game.test.ts`. `npm run test:generation` checks generated clocks in the simulator.
-`npm run test:game` without a file runs the entire local game suite, serially, and can take many minutes.
+`npm run test:game` without a file runs the entire local game suite, serially, and can take many minutes;
+`python3 scripts/game/run-suite.py` runs it as case-level jobs on as many Factorio lanes as the guard allows (below).
 Missing Factorio/save settings cause skips; a skipped test has not verified the game behavior.
 
 For verification appropriate to other changes, see the [contributor guide](../../../CONTRIBUTING.md).
 
+## How a run is timed
+
+A clock check in the game is timed in game minutes, never in clock periods: a clock's period can be very long (116,160 ticks for
+one build), and the length of the period must not decide how long a check runs. One minute is 3,600 ticks. The game side is
+`helpers/lua/steady.lua`; every clock family and the scripts that start the game for a check use that one helper.
+
+- **Recording and judging are apart.** In the game, the helper only steers the run (when steady state is reached, when a
+  disturbance starts, ends and has recovered) and records it: for each machine that makes the item the build is for, what it has
+  made and how much of it is waiting in its output (its output stock), every second, at each moment the clock is back where it was
+  at steady state, and at every step of the run. Whether the run passes is decided afterwards from that record, outside the game
+  (`helpers/run-judgement.js`), so a change in how a run is judged needs no new recording.
+- **Steady state** is reached the first moment those machines have made the amount the target asks for over the last minute (the
+  target rate times 60 seconds) and that amount has stopped falling. Warming up and settling are not timed in periods either: the
+  run goes on until that happens, and fails if it has not within ten minutes (36,000 ticks).
+- **Baseline:** the minute after steady state. It is judged over its whole clock cycles (from steady state to the last moment in
+  the minute when the clock is back where it was then), by **net output**: what the machines made less what of it is still waiting
+  in their output, so only what left them counts. Net output has to be at least the target over those cycles. A build whose clock
+  cycle is longer than a minute asks for a longer baseline, with the reason written next to it, and never over ten minutes
+  (36,000 ticks).
+- **Stock guard:** at the end of the run the machines' output stock must be no lower than the lowest it was in the baseline. A
+  stock that drains slowly would hide a build that makes too little behind output that still looks right. A build judged by what
+  it takes in (the recyclers, the ore voider) has no output stock to watch and no guard.
+- **Disturbances** follow the baseline: each ingredient cut and the output block, one after the other. A disturbance lasts until the
+  last minute's output falls below the lowest it had in the baseline (so the loss is real and not a burst missing from the window),
+  and is then released. **Recovery** is steady state met again; it has to happen within ten minutes of the release. Ten minutes
+  is a bound for inputs that refill slowly, not what a good clock needs.
+- **Length:** a whole run (steady state, baseline and every disturbance with its recovery) ends at 15 minutes of game time
+  (54,000 ticks) whatever has happened; a build that would need more is not recorded as a test.
+- **Tier:** the clock tests run the turbo belt tier only; the slower tiers are not recorded.
+- **Mechanics probes** (`mechanics/`) are fixed short recordings of one game rule. Their stored recordings are read back and
+  recorded again only when the game binary changes.
+- **Scripts:** `scripts/record-clock.js`, `scripts/rule-count-game-check.js` and `scripts/capture-probe.js` follow the same rule
+  (`capture-probe.js` records a mechanics probe of a fixed, short length). `record-clock.js` and `rule-count-game-check.js` wait for steady state, judge the baseline minute as above and then record at
+  least one more minute (whole clock periods, as the recorder does). They refuse a request over 36,000 ticks, or a recording that
+  would be, unless they are run with `--long "<reason>"` (or `LONG_RUN=<reason>`):
+  a long run is a deliberate choice for one particular build, the reason is printed, and routine checks never use it.
+
+## Recording cache
+
+A game test that asks for a recording the game already made does not start the game again. `recordInFactorio` keeps each
+recording under a key and reads it back when the key is the same; the test's own assertions run on it as on a fresh one.
+The key is a hash of everything the game is given: the game's executable and the names and sizes of its data files, the
+save, the mods the harness copies in (the recorder and the sidecar), the harness's own sources, a protocol number, and every
+option of the run but where it writes to (scaffold, clock and its schedule, config, probe script with the helpers it
+composes, seeds, ticks, speed and the rest, so an option added later is in the key without being named). A game that makes
+several builds one after the other (`CachedHarnessSession`) keys each build on the builds before it. What cannot be read or
+told (a missing file, a config that is no plain data) is not guessed: the game runs. A run that fails is never kept, a
+watched run is never read or kept, and a hit leaves no game log (`work_dir` gets the recording and the files of
+`script-output`).
+
+- **Store:** `~/.cache/clock-generator/game-recordings/` (`$XDG_CACHE_HOME` is honoured), outside git and the temporary
+  folder, so it survives a reboot. `CLOCK_RECORDING_CACHE_DIR=<folder>` puts it elsewhere. An entry unused for 30 days is
+  removed when another is stored. Entries are compressed: the whole suite's 1,300 recordings take about 95 MB, the largest about 3 MB.
+- **Cold run:** `CLOCK_RECORDING_CACHE=off` starts the game for every recording and keeps nothing; `=refresh` also starts the
+  game for every recording and replaces what the store holds. Keep one cold pass per release. A value other than `on`,
+  `off` and `refresh` counts as `off`.
+- **Mechanics probes always use the cache.** They record again only when the game binary changes (its hash is in the key,
+  so a new binary records them anyway). A cold or refresh run applies to `tests/game/builds` only; `scripts/game/run-suite.py`
+  runs `tests/game/mechanics` with `CLOCK_RECORDING_CACHE=on` whatever `--cache` says.
+- **What happened:** `CLOCK_RECORDING_CACHE_LOG=<file>` appends a line per recording: `hit`, `miss`, `stored`, `uncached`.
+- **Opting out:** `cache: false` in the options of a run. `npm run record`, `scripts/record-clock.js`, `scripts/capture-probe.js` and
+  `scripts/rule-count-game-check.js` do; `scripts/native/run-lane.sh` sets `CLOCK_RECORDING_CACHE=off` in record mode. A native
+  check that proves a new clock in the game uses one of these.
+
+A change to the key's inputs makes a miss, which runs the game as before and stores the result. The harness's sources are
+part of the key, so a change to `src/harness/` starts every recording again; the files outside it that the harness depends on
+are named in `HOST_SOURCES` (`factorio-harness.ts`), and a change elsewhere in the engine that alters what the harness
+does needs a bump of `RECORDING_CACHE_PROTOCOL`.
+
+## The whole suite on every lane
+
+```bash
+python3 scripts/game/run-suite.py                     # warm: recordings read from the cache where they exist
+python3 scripts/game/run-suite.py --cache off         # a cold pass over tests/game/builds (mechanics stay on the cache)
+python3 scripts/game/run-suite.py --plan car-clock    # the jobs and an estimate, nothing run
+python3 scripts/game/run-suite.py tests/game/mechanics/drills grenade-clock    # only files whose path contains these
+```
+
+It lists the cases (`vitest list --json`), cuts them into jobs, orders the jobs longest first by the seconds each case took
+last (`scripts/game/case-seconds.json`, a cold pass of 2026-11-02 with Factorio 2.1.24), and starts them through the guard
+on `machine.factorio_max` lanes (`-j` to override; without the guard directory jobs start directly, two at a time). A case of
+at least 120 seconds is a job of its own; shorter cases of one file share a job (`-t '^(a|b)$'`, one game at a time), so the
+many probes of a few seconds do not each pay vitest's start-up. Any case may be cut from its neighbours: every case starts its own
+game with `recordInFactorio`, or opens a `CachedHarnessSession` inside the one case that needs it (the staged-start tests), so no
+recording key depends on another case. The runner never watches (`FACTORIO_HARNESS_WATCH` is cleared); watched `scaffold-recordings`
+share one game and are run by hand. The result is one table for the run (`results.tsv`, `results.json`: passed, failed, skipped
+or no result per case; the exit code is 0 only when every selected case passed), the cache events, `lanes.log` and, in
+`durations.json`, the seconds of this run: copy it over `case-seconds.json` after a cold pass to keep the order current.
+
 ## Bounded parallel runs
 
-The default game suite remains sequential. Independent controls for the same mechanics question may run in
+The limits below are for runs by hand; runs through the guard are limited by `factorio_max` in its policy.
+
+`npm run test:game` remains sequential. Independent controls for the same mechanics question may run in
 separate headless processes at once, within the process limit below. A local check of two short belt-pickup controls (the turbo merge release-17 and
 outlet cases, removed after commit `52b4e9f0`) passed both sequentially and concurrently, with distinct live
 game/RCON ports and write-data directories. The pair took 5.17 seconds sequentially and 3.08 seconds

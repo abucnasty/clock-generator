@@ -15,10 +15,41 @@ export interface PeriodRepeat {
     scale: number;
 }
 
+/** A first observation covers a complete exported counter; per-period tolerance never excuses missing total output. */
+export function judgeCounterSpan(output_items: number, expected_per_period: number, repeat: PeriodRepeat, tolerance_per_period: number) {
+    const expected = expected_per_period * repeat.scale;
+    return {
+        holds: output_items >= expected && Math.abs(output_items - expected) <= tolerance_per_period * repeat.scale,
+        output_items_per_period: output_items / repeat.scale,
+        observation_span: { ticks: repeat.period_ticks, periods: repeat.scale, output_items },
+    };
+}
+
+/**
+ * The judged bins of a sampled long run that make whole repeats of its output: where the items of the bins repeat
+ * exactly every L bins over the whole judged span (L at most half of it, so the span shows two repeats), the first
+ * whole number of L-bin repeats; else every bin. An output that repeats every L bins moves the same total in any L
+ * bins in a row, so a span of whole repeats measures its amount whatever bin it starts at, where a span cut through a
+ * repeat may start on its lean bins: three bins of 17, 16 and 15 judged over 80 bins from the 16 move 1279 of 1280.
+ * A sample that never repeats in its bins is judged on all of them.
+ */
+export function wholeOutputRepeats(judged: readonly number[]): { bins: number; total: number } {
+    for (let length = 1; length <= judged.length / 2; length++) {
+        if (judged.every((items, index) => index < length || items === judged[index - length])) {
+            const bins = judged.length - judged.length % length;
+            return { bins, total: judged.slice(0, bins).reduce((sum, items) => sum + items, 0) };
+        }
+    }
+    return { bins: judged.length, total: judged.reduce((sum, items) => sum + items, 0) };
+}
+
 /** The first 1/n of the long run carries its start-up and is not judged */
 export const LONG_RUN_SETTLE_SHARE = 3;
-/** The long run is lengthened up to this many ticks so the judged part holds one whole repeat of a fractional period */
-const LONG_RUN_MAX_TICKS = 108_000;
+/**
+ * The long run is lengthened up to this many ticks: so the judged part holds one whole repeat of a fractional period, and,
+ * under the strict target amount, so a sample short by a hand or less can prove its repeat (trial.ts)
+ */
+export const LONG_RUN_MAX_TICKS = 108_000;
 
 interface LongRunVerdict {
     keeps_up: boolean;

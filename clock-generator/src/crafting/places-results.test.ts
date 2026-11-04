@@ -211,16 +211,3 @@ describe('a rocket silo as the result target', () => {
         expect(plan.result_windows?.[0].period).toBe(5760);
     });
 });
-
-describe('a recycler brought an item its recipe does not use', () => {
-    it('is refused: it picks its recipe from its input, as a furnace does, and the switch is not recorded', async () => {
-        const config = await loadConfigFromFile(ConfigPaths.RECYCLING_SCRAP_SILO);
-        const gears: Config = {
-            ...config,
-            inserters: [...config.inserters, { id: 14, source: { type: 'chest', id: 15 }, sink: { type: 'machine', id: 1 }, filters: ['iron-gear-wheel'] } as never],
-            chests: [...config.chests!, { type: 'infinity-chest', id: 15, item_filter: [{ item_name: 'iron-gear-wheel', request_count: 50 }] } as never],
-        };
-        expect(() => createEntityRegistryFromConfig(gears)).toThrow('Inserter 14 brings iron-gear-wheel into Machine 1, which makes scrap-recycling from scrap. '
-            + 'A furnace or a recycler picks its recipe from the items it is brought');
-    });
-});

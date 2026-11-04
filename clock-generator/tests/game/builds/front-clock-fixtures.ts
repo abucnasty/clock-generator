@@ -7,7 +7,7 @@ import {loadConfigFromFile} from "../../../src/config/loader";
 import {FactorioBlueprintFile} from "../../../src/blueprints/blueprint";
 import {encodeBlueprintFile} from "../../../src/blueprints/serde";
 import {GameFixturePaths} from "../helpers/fixture-paths";
-import {BELT_SPEEDS, blueprintAtSpeed, configAtSpeed, FixtureBeltSpeed} from "../helpers/belt-speed-fixtures";
+import {blueprintAtSpeed, CLOCK_TEST_SPEEDS, configAtSpeed, FixtureBeltSpeed} from "../helpers/belt-speed-fixtures";
 import {flipFrontUndergroundInput} from "../mechanics/belt-pickup/belt-pickup-fixtures";
 import {compactFrontEntranceAtSpeed, compactFrontUndergroundRouting} from "../mechanics/belt-pickup/front-speed-fixtures";
 import {PickupClockScenario} from "./pickup-clock-capture";
@@ -22,7 +22,7 @@ export interface FrontClockCase {name: string; endpoint: "entrance" | "exit"; fa
 
 /** The front entrance on the compact assembler scaffold, at every tier, mirroring state, supply and family. */
 export function frontEntranceClockCases(family: Family): FrontClockCase[] {
-    return BELT_SPEEDS.flatMap(speed => [false, true].flatMap(mirrored => [false, true].map(backed => ({
+    return CLOCK_TEST_SPEEDS.flatMap(speed => [false, true].flatMap(mirrored => [false, true].map(backed => ({
         name: `front-entrance-${speed.name}-${mirrored ? "mirrored" : "unmirrored"}-${backed ? "backed" : "moving"}-${family}`,
         endpoint: "entrance" as const, family, speed, mirrored, backed,
     }))));
@@ -30,7 +30,7 @@ export function frontEntranceClockCases(family: Family): FrontClockCase[] {
 
 /** The front exit on the electromagnetic plant: backed up, and the same build on a moving config. */
 export function frontExitClockCases(backed: boolean): FrontClockCase[] {
-    return BELT_SPEEDS.flatMap(speed => [false, true].map(mirrored => ({
+    return CLOCK_TEST_SPEEDS.flatMap(speed => [false, true].map(mirrored => ({
         name: `front-exit-${speed.name}-${mirrored ? "mirrored" : "unmirrored"}-${backed ? "backed" : "moving-config"}-different-items`,
         endpoint: "exit" as const, family: "different-items" as const, speed, mirrored, backed,
     })));
@@ -103,8 +103,6 @@ export function frontClockScenario(variant: FrontClockCase): PickupClockScenario
     return {
         // the front exit is backed up in the game whatever its config says
         name: variant.name, speed: variant.speed, backed: variant.endpoint === "exit" || variant.backed,
-        // the compact assembler keeps producing through the ordinary two- and four-period outages on its stock
-        ...(variant.endpoint === "entrance" && {outagePeriods: 24}),
         config: () => frontClockConfig(variant), scaffold: () => frontClockScaffold(variant),
         probe: variant.endpoint === "entrance"
             ? {family: "compact", machine_name: "assembling-machine-3", output_to_belt: true, ingredients}

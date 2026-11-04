@@ -33,6 +33,11 @@ export class InserterTransferTracker implements InserterObserver {
         private readonly tick_provider: TickProvider,
         private readonly inserter_state: InserterState,
         private readonly transfer_history: InventoryTransferHistory,
+        /**
+         * Where a pickup entered from `from` counts from, as ticks before the entry (0 or more); none: from the entry.
+         * See `PickupStartAtTheTake` (plan-run.ts) for the one the planning runs use.
+         */
+        private readonly pickup_lead?: (from: InserterPhase) => number,
     ) { }
 
     public onStatusChange(from: InserterPhase, to: InserterPhase): void {
@@ -40,6 +45,9 @@ export class InserterTransferTracker implements InserterObserver {
         const last_pickup_tick = this.entered[InserterPhase.PICKUP]?.tick;
         this.write(this.exited, from);
         this.write(this.entered, to);
+        if (to === InserterPhase.PICKUP && this.pickup_lead !== undefined) {
+            this.entered[InserterPhase.PICKUP]!.tick -= this.pickup_lead(from);
+        }
 
         if (from !== InserterPhase.SWING || to === InserterPhase.DROP) {
             return;

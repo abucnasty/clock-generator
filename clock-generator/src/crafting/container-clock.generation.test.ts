@@ -4,12 +4,13 @@ import {generateClockAlternatives} from "./generate-blueprint";
 import {clockIdentity} from "./clock-identity";
 import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
 import {containerClockCases, containerClockConfig} from "../../tests/game/builds/container-clock-fixtures";
-import {readControls} from "../../tests/game/builds/clock-controls";
+import {readControls, RunControls} from "../../tests/game/builds/clock-controls";
+import {expectRunAgreesWithSelection} from "../../tests/game/helpers/fixture-mechanics";
 import {CONTAINER_GENERATED} from "../../tests/game/builds/container-clock-cases";
 
 // each selection pinned beside the in-game recording of its clock; only the fixtures of container-clock-cases.ts are
 // generated, the rest are checked by container-clock-mechanics.test.ts
-const controls = readControls("container-clock-controls.json");
+const controls = readControls<RunControls>("container-clock-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 
 for (const variant of containerClockCases().filter(it => CONTAINER_GENERATED.has(it.name))) {
@@ -30,7 +31,7 @@ for (const variant of containerClockCases().filter(it => CONTAINER_GENERATED.has
         expect(selected.verdict).toBe(expected.verdict);
         expect({id: selected.id, holds: selected.assessment.holds, rate: selected.assessment.items_per_second,
             supply: selected.belt?.kind ?? null}).toEqual(expected.selection);
-        expect(native.expected).toBe(expected.expected);
+        expect(native.period).toBe(expected.period);
         if (previous) {
             // the clock selected before the wake-ups were counted with the arm at home is still made, with the same windows
             const earlier = generated.alternatives.find(alternative => alternative.id === previous.id);
@@ -38,13 +39,6 @@ for (const variant of containerClockCases().filter(it => CONTAINER_GENERATED.has
             const earlier_exported = earlier!.result.subtick ?? earlier!.result;
             expect(createHash("sha256").update(JSON.stringify(clockIdentity(earlier_exported))).digest("hex")).toBe(previous.clock_sha256);
         }
-        // the game holds the target in every baseline period, and after each disturbance (a cut that empties the
-        // container, an output block, a second cut) is back at it in every judged period
-        expect(native.baseline.every(items => items === native.expected)).toBe(selected.assessment.holds);
-        for (const loss of native.recovery) {
-            expect(loss.during).toContain(0);
-            expect(loss.recovered.length).toBeGreaterThanOrEqual(30);
-            expect(loss.recovered.every(items => items === native.expected)).toBe(selected.verdict === "stable");
-        }
+        expectRunAgreesWithSelection(variant.name, native, {verdict: selected.verdict, holds: selected.assessment.holds});
     });
 }

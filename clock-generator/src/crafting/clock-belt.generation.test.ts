@@ -1,10 +1,9 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { clockBeltLabel, generateClockAlternatives, type ClockAlternative, type ClockAlternativesResult } from "./generate-blueprint";
+import { clockBeltLabel, generateClockAlternatives, type ClockAlternative } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import type { Config } from "../config/schema";
 import { alwaysOnReasonProblemsOf, quiet } from "./generate-blueprint-test-helpers";
-import { pickupClockConfig, pickupClockSpeedCases } from "../../tests/game/builds/pickup-clock-speed-coverage";
 import { expectPinnedScaffoldClock } from "../../tests/game/builds/scaffold-recordings-clock-pins";
 
 const backedUpBelts = (config: Config): Config => ({ ...config, overrides: { ...config.overrides, backed_up_belts: true } });
@@ -80,36 +79,6 @@ describe("the belt a clock is made for", () => {
             expect(windows["inserter:11"]).toEqual([0, 96, 192, 288, 384].map(start => ({ start, end: start + 42 })));
             expect(windows["inserter:1"]).toEqual([0, 96, 192, 288, 384].map(start => ({ start, end: start + 20 })));
             expect(windows["inserter:2"]).toEqual(windows["inserter:1"]);
-        });
-    });
-
-    // At normal speed a backed-up belt refills a pickup slower than a stack a tick: three stacks are in reach of the half
-    // tile, the fourth comes 8 ticks later, so a hand takes 10 ticks. A window read off the planning run where the hand
-    // there had started earlier, or had waited for its machine while the belt refilled, is shorter; from another start a
-    // hand that starts in it was cut, and the fractional clock selected before moved 128, 128, 96 of 176 in the game, as
-    // its holds false said (#275). Every belt-fed window now lasts as long as a hand takes from the lanes at rest (#456).
-    describe("the normal side underground exit, with backed-up belts", () => {
-        let generated: ClockAlternativesResult;
-
-        beforeAll(async () => {
-            const variant = pickupClockSpeedCases("electromagnetic").find(it => it.name === "electromagnetic-normal-underground-exit-backed")!;
-            generated = generateClockAlternatives(await pickupClockConfig(variant), { logger: quiet });
-        });
-
-        it("makes no clock for a moving belt", () => {
-            expect(generated.alternatives.length).toBeGreaterThan(0);
-            expect(generated.alternatives.some(a => a.id === "planned-moving-belt")).toBe(false);
-            expect(generated.alternatives.every(a => a.belt?.kind === "backed_up")).toBe(true);
-        });
-
-        it("selects a stable clock made for the backed-up belts, every belt window as long as a hand takes", () => {
-            const selected = generated.alternatives[generated.selected_index];
-            expect(selected.verdict).toBe("stable");
-            expect(selected.assessment.holds).toBe(true);
-            expect(selected.belt).toEqual({ kind: "backed_up" });
-            const windows = selected.result.clock_windows["inserter:2"];
-            expect(windows.length).toBeGreaterThan(0);
-            expect(windows.every(range => range.end - range.start + 1 >= 10)).toBe(true);
         });
     });
 

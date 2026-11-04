@@ -3,6 +3,7 @@ import { Config } from "../config";
 import { Entity, EntityId, handSizeFor, Inserter } from "../entities";
 import { FactorioInserterState } from "../state/factorio-entity-state";
 import { StockRecording } from "./machine-stock";
+import { beltLinesOf } from "./belt-lines";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { armAwayOf, InserterEnds, returnTicksOf, WakeUps, WATCHED_END, wakeUpsOfStock } from "./wake-ups";
 
@@ -133,6 +134,7 @@ export function countedInserters(config: Config): CountedInserter[] {
     const placers = new Map(registry.getAll().filter(Entity.isMachine).flatMap(machine =>
         machine.result_target === undefined ? [] : [[machine.result_target.id, machine.entity_id.id] as const]));
     // a hand of the largest size of the items it carries: the stock does not record which item is in the hand
+    const belt_lines = beltLinesOf(registry);
     const handSize = (inserter: Inserter) => inserter.filtered_items.size === 0 ? inserter.metadata.stack_size
         : Math.max(...Array.from(inserter.filtered_items, item_name => handSizeFor(inserter, item_name)));
     return registry.getAll().filter(Entity.isInserter).map(inserter => ({
@@ -141,6 +143,8 @@ export function countedInserters(config: Config): CountedInserter[] {
         sink_machine_id: machineId(inserter.sink.entity_id),
         ...(placers.has(inserter.source.entity_id.id) && { source_placer_id: placers.get(inserter.source.entity_id.id)! }),
         return_ticks: returnTicksOf(inserter.animation.rotation.ticks),
+        hand_size_of: (item_name: string) => handSizeFor(inserter, item_name),
+        ...(belt_lines.has(inserter.entity_id.id) && { belt_lines: belt_lines.get(inserter.entity_id.id)! }),
         pickup_kind: endKindOf(inserter.source.entity_id),
         drop_kind: endKindOf(inserter.sink.entity_id),
         hand_size: handSize(inserter),

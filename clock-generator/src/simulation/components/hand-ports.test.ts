@@ -89,7 +89,8 @@ describe("a hand's ports", () => {
             const ports = bind(handOf(source, sink, ["iron-plate"]), source, sink);
             return [ports.pickup.key(), ports.drop.key()];
         };
-        expect(keys(belt(), gears())).toEqual(["true", "0"]);
+        // a belt's pickup keys its decision and whether the next update is the first after a control swap
+        expect(keys(belt(), gears())).toEqual(["true;false", "0"]);
         expect(keys(gears(), buffer())).toEqual(["0", "0"]);
         expect(keys(infinity(), gears())).toEqual(["0", "0"]);
         expect(keys(gears(), belt())).toEqual(["0", ""]);
@@ -128,7 +129,9 @@ describe("a hand's ports", () => {
         expect(inserter.hand.pickup).toBe(pickup);
         expect(inserter.hand.drop).toBe(drop);
         expect(inserter.hand.scratch).toBe(scratch);
-        expect(scratch).toEqual(new HandScratch());
+        // except that the swap marks the hand: it is on the update list, which is no wake (`after_swap`)
+        expect(scratch.after_swap).toBe(true);
+        expect(scratch).toEqual(Object.assign(new HandScratch(), { after_swap: true }));
         expect([scratch.pickup_ticks, scratch.window_opened, scratch.ticks_in_pickup, scratch.belt_grab_decided, scratch.drop_ticks])
             .toEqual([0, false, 0, true, 0]);
         expect([scratch.saw_sink_blocked, scratch.window_opens, scratch.swing_entered_tick, scratch.swing_from]).toEqual([false, false, null, null]);

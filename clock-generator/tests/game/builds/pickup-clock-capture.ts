@@ -6,12 +6,13 @@ import {generateClockAlternatives} from "../../../src/crafting/generate-blueprin
 import {encodeBlueprintFile} from "../../../src/blueprints/serde";
 import {BuiltClock} from "../../../src/harness/built-clock";
 import {GeneratedClock, recordInFactorio} from "../../../src/harness/factorio-harness";
-import {outputPerPeriod, recipesMaking} from "../../../src/harness/recording-output";
+import {recipesMaking} from "../../../src/harness/recording-output";
 import {Recording} from "../../../src/verification/recording";
 import {FixtureBeltSpeed, speedCapture} from "../helpers/belt-speed-fixtures";
 import {composeProbeSource} from "../helpers/probe-source";
 import {assertPickupClockHardware} from "./pickup-clock-speed-hardware";
-import {clockHash, clockToRun, expectedNativeSummary} from "./clock-controls";
+import {judgeBaseline, RunRecord} from "../helpers/run-judgement";
+import {clockHash, clockToRun, expectedNativeSummary, NativeRunSummary} from "./clock-controls";
 
 export interface PickupClockScenario {
     name: string;
@@ -35,13 +36,15 @@ export interface PickupClockScenario {
     copies?: number;
     /** The share of the config's target the build makes, where it holds fewer copies than the config says (1/7 for one copy of seven) */
     share?: number;
-    outagePeriods?: number;
-    /** Interventions of a probe of its own, in place of pickupClockInterventions(outagePeriods) */
-    interventions?: [number, number, number][];
-    /** A probe of its own, in place of pickup-clock-speed-probe.lua; it writes the same clock-speed.json */
+    /**
+     * A baseline longer than the protocol's minute, with the reason the build needs it (an output that only evens out over a
+     * longer stretch); never over RUN_PROTOCOL.maxBaseline
+     */
+    baseline?: {ticks: number; reason: string};
+    /** A probe of its own, in place of pickup-clock-speed-probe.lua: it runs steady.lua with its own disturbances and writes clock-speed.json */
     probeFile?: string;
     probe: {family: string; machine_name?: string; ingredients?: readonly [string, string]; output_to_belt?: boolean;
-        trace_periods?: readonly number[]; trace_ticks?: number; stackSize?: number};
+        trace_ticks?: number; stackSize?: number};
     /** The native setup audit, in place of assertPickupClockHardware (which expects a belt-fed input) */
     assertHardware?: (recording: Recording, config: Config, blueprint: string) => void;
     validateRecording?: (recording: Recording, config: Config) => void;
@@ -62,14 +65,15 @@ interface Prepared {
 const generated = new Map<string, Prepared>();
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 
-/** Shared timing keeps the observer and host assertions on the same intervention windows. */
-export function pickupClockInterventions(outagePeriods?: number): [number, number, number][] {
-    const ingredient = outagePeriods ?? 2, outlet = outagePeriods ?? 4;
-    const firstRelease = 66 + ingredient, block = firstRelease + 16;
-    const outletRelease = block + outlet, secondCut = outletRelease + 16;
-    const secondRelease = secondCut + ingredient;
-    return [[66, firstRelease, block], [block, outletRelease, secondCut], [secondCut, secondRelease, secondRelease + 26]];
-}
+/**
+ * The game tests' protocol, timed in game ticks (helpers/lua/steady.lua; owner 2026-11-03): steady state is the first tick the
+ * machines that make the target item have finished target x 60 s over the trailing minute; the baseline is the minute after it
+ * (a family may ask for more with a reason, never over 10 minutes); each disturbance lasts until it reduces output and is
+ * recovered within 10 minutes of its release. A whole run is never over 15 minutes of game time: one that would be is not recorded.
+ */
+export const RUN_PROTOCOL = {window: 3600, baseline: 3600, maxBaseline: 36_000, cap: 54_000} as const;
+/** Ticks recorded after the run, for the audit of the native build: one minute from the run's end, cut by no clock */
+const AUDIT_TICKS = 3600;
 
 async function prepare(scenario: PickupClockScenario): Promise<Prepared> {
     const key = scenario.name;
@@ -105,7 +109,21 @@ async function prepare(scenario: PickupClockScenario): Promise<Prepared> {
     return prepared;
 }
 
-/** One run provides >=60 undisturbed periods before any intervention, plus all three recovery checks. */
+/** What steady.lua writes into the probe's report: the record of the run, which helpers/run-judgement.js judges */
+type RunReport = RunRecord;
+
+/** The summary a run is compared with in its controls file: the record judged host-side (helpers/run-judgement.js) */
+export function runSummary(run: RunReport, clock: {generationVerdict: string; target: number; period: number}, exactTarget = clock.target): NativeRunSummary {
+    const {baseline, stock} = judgeBaseline(run, exactTarget);
+    return {protocol: "trailing-minute", generationVerdict: clock.generationVerdict, target: clock.target, period: clock.period,
+        window: run.window, expected: run.expected, steady: run.steady ?? null, baseline,
+        // Lua writes an empty table as {}: a run that never reached steady state has no disturbances
+        disturbances: (Array.isArray(run.disturbances) ? run.disturbances : []).map(({kind, start, drop, release, recovered}) => ({kind, start,
+            ...(drop !== undefined && {drop}), ...(release !== undefined && {release}), ...(recovered !== undefined && {recovered})})),
+        stock, result: run.result!, ended: run.ended!};
+}
+
+/** One run of a clock under the protocol: steady state, the baseline, and each disturbance with its recovery */
 export async function capturePickupClockScenario(scenario: PickupClockScenario) {
     const capture = speedCapture(scenario.name);
     try {
@@ -128,24 +146,31 @@ export async function capturePickupClockScenario(scenario: PickupClockScenario) 
         }
         if (prepared.selection) fs.writeFileSync(path.join(capture.directory, "generation-selection.json"), JSON.stringify(prepared.selection) + "\n");
         if (process.env.BELT_CLOCK_GENERATION_ONLY === "1") return;
-        const {config, clock, period, expected} = prepared;
+        const {config, clock, period} = prepared;
         const inputConfig = config.inserters.find(inserter => inserter.source.type === "belt" && inserter.sink.type === "machine");
         // a probe of the scenario's own may watch a clock whose inputs come from chests
         if (inputConfig?.source.type !== "belt" && !scenario.probeFile) throw new Error("Expected one belt-fed clock input");
         const reach = inputConfig?.source.type === "belt" ? inputConfig.source.pickup_length ?? 1 : undefined;
         const blueprint = scenario.scaffold();
         fs.writeFileSync(path.join(capture.directory, "scaffold.txt"), blueprint.trim() + "\n");
-        const plannedInterventions = scenario.interventions ?? pickupClockInterventions(scenario.outagePeriods);
-        const lastPeriod = plannedInterventions[plannedInterventions.length - 1][2];
-        const settle = (lastPeriod + 10) * period;
+        const share = scenario.share ?? 1;
+        const target = config.target_output.items_per_second * share;
+        const expectedPerWindow = Math.round(target * RUN_PROTOCOL.window / 60 * 1e6) / 1e6;
+        const baselineTicks = scenario.baseline?.ticks ?? RUN_PROTOCOL.baseline;
+        if (scenario.baseline && (!scenario.baseline.reason.trim() || baselineTicks > RUN_PROTOCOL.maxBaseline || baselineTicks <= RUN_PROTOCOL.baseline)) {
+            throw new Error(`${scenario.name}: a longer baseline needs a reason and at most ${RUN_PROTOCOL.maxBaseline} ticks`);
+        }
+        const recipes = [...recipesMaking(config, config.target_output.recipe)];
+        // the copies of the config the build holds: those the clock is wired to, or the config's copies times the build's share of them
+        const buildCopies = scenario.copies ?? Math.round((config.target_output.copies ?? 1) * share);
+        const finals = config.machines.filter(machine => recipes.includes(machine.recipe)).length * buildCopies;
         const recording = replayDirectory ? JSON.parse(fs.readFileSync(path.join(replayDirectory, "recording.json"), "utf8"))
             : (await recordInFactorio({factorio: process.env.FACTORIO_PATH!, save: process.env.FACTORIO_HARNESS_SAVE!, config, clock, blueprint, built_clock: scenario.built_clock, copies: scenario.copies,
                 out: path.join(capture.directory, "recording.json"), work_dir: path.join(capture.directory, "game"),
-                ticks: 2 * period, warmup_ticks: 3600, settle_ticks: settle, seed: [], unclocked: false,
+                ticks: AUDIT_TICKS, record_at_once: true, warmup_ticks: 3600, settle_ticks: RUN_PROTOCOL.cap + 1, seed: [], unclocked: false,
                 lua: composeProbeSource(scenario.probeFile ?? path.join(__dirname, "pickup-clock-speed-probe.lua"), {
-                    period, settle: 10 * period, lastPeriod: lastPeriod + 14, ...scenario.probe,
-                    ...((scenario.outagePeriods !== undefined || scenario.interventions) && {interventions: plannedInterventions}),
-                    speed: scenario.speed.units / 32, reach, product: config.target_output.recipe,
+                    ...scenario.probe, window: RUN_PROTOCOL.window, expected: expectedPerWindow, baseline: baselineTicks, cap: RUN_PROTOCOL.cap,
+                    recipes, item: config.target_output.recipe, speed: scenario.speed.units / 32, reach,
                 }), game_speed: 1000, watch: false, timeout_seconds: 900, log() {},
             })).recording;
         (scenario.assertHardware ?? assertPickupClockHardware)(recording, config, blueprint);
@@ -156,42 +181,12 @@ export async function capturePickupClockScenario(scenario: PickupClockScenario) 
             expect(source.source.pickup_length).toBe(reach);
             expect(report.initial).toMatchObject({speed: scenario.speed.units / 32, reach: reach});
         }
-        const detailed = outputPerPeriod(recording, recipesMaking(config, config.target_output.recipe));
-        expect(detailed).toHaveLength(2);
-        const periods = report.periods as {start: number; end: number; items: number; start_drop?: number}[];
-        expect(periods.length).toBeGreaterThanOrEqual(130);
-        expect(periods.every(value => value.end - value.start === period)).toBe(true);
-        for (const observed of detailed) {
-            const aggregate = periods.find(value => value.start === recording.start_game_tick + observed.start
-                && value.end === recording.start_game_tick + observed.end);
-            expect(aggregate, "compact count overlaps both detailed recorder periods").toBeDefined();
-            // a recording that starts with the period cannot see what was dropped in its first tick (the held count before it
-            // is not sampled): a probe whose output inserters can drop then says how much
-            expect(aggregate!.items - (observed.start === 0 ? aggregate!.start_drop ?? 0 : 0)).toBe(observed.items);
-        }
-        const start = report.starts;
-        const baseline = periods.filter(value => value.end <= start + 64 * period);
-        expect(baseline.length).toBeGreaterThanOrEqual(60);
-        const interventions = report.interventions ?? pickupClockInterventions();
-        const recovery = (interventions as [number, number, number][]).map(([cut, release, next]) => {
-            const during = periods.filter(value => value.start >= start + cut * period
-                && value.end <= start + (release + 2) * period);
-            const after = periods.filter(value => value.start >= start + (release + (scenario.backed ? 10 : 6)) * period
-                && value.end <= start + next * period);
-            expect(during.length).toBeGreaterThan(0);
-            const zeroBaseline = baseline.some(value => value.items === 0);
-            if (!zeroBaseline) {
-                expect(during.some(value => value.items < Math.min(...baseline.map(value => value.items))),
-                    `disturbance at period ${cut} reduced output below the baseline`).toBe(true);
-            }
-            expect(after.length).toBeGreaterThan(1);
-            return {cut, during: during.map(value => value.items), recovered: after.map(value => value.items),
-                ...(zeroBaseline && {not_assessed: "baseline already contains zero-output periods"})};
-        });
-        const share = scenario.share ?? 1;
-        const summary = {generationVerdict: prepared.generationVerdict, target: config.target_output.items_per_second * share, period, expected: Math.round(expected * share * 1e6) / 1e6,
-            baseline: baseline.map(value => value.items), recovery,
-            ...(report.interventions && {interventions: report.interventions})};
+        const run = report.protocol as RunReport;
+        expect(run.error, "the probe failed in the game").toBeUndefined();
+        expect(run.result, "the run did not end before the recording: over the cap").toBeDefined();
+        // the machines the probe counted are the config's that make the target item, in every copy
+        expect(Array.isArray(run.finals) ? run.finals : [], "the final machines the probe counts").toHaveLength(finals);
+        const summary = runSummary(run, {generationVerdict: prepared.generationVerdict, target: Math.round(target * 1e6) / 1e6, period}, target);
         fs.writeFileSync(path.join(capture.directory, "summary.json"), JSON.stringify(summary) + "\n");
         if (process.env.BELT_CLOCK_CALIBRATE !== "1") {
             expect(summary).toEqual(expectedNativeSummary(scenario.controls, scenario.name));

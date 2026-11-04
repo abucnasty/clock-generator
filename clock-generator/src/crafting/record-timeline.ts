@@ -21,6 +21,12 @@ export interface RecordTimelineRequest {
      * after the warm-up.
      */
     settle_periods?: number;
+    /**
+     * Ticks the clock runs from the cold start before the recorded period (mode "clock"), the warm-up included: the tick
+     * the long run judged the build from, `as_built.clock_tick_at_first_judged`, where the check names one (the new
+     * dispatch). Takes precedence over `settle_periods`.
+     */
+    settle_ticks?: number;
 }
 
 /** Replay the saved build, never the form being edited. This is independent of generation and its assessment. */
@@ -28,9 +34,16 @@ export function recordSimulationTimeline(request: RecordTimelineRequest): Timeli
     if (!Number.isFinite(request.period_ticks) || request.period_ticks <= 0 || request.period_ticks >= MAX_SIMULATION_TICKS) {
         throw new Error("This clock period cannot be recorded safely.");
     }
+    if (request.mode === "clock" && request.settle_ticks !== undefined
+        && (!Number.isInteger(request.settle_ticks) || request.settle_ticks < 0
+            || request.settle_ticks > request.period_ticks * Math.floor((MAX_SIMULATION_TICKS - 1) / request.period_ticks))) {
+        throw new Error("This clock period cannot be recorded safely.");
+    }
     const config = { ...request.config, overrides: { ...request.config.overrides, terminal_swing_count: request.terminal_swing_count, derive_clock_windows: false } };
     const logger: Logger = { log() {}, warn() {}, error() {}, debug() {} };
-    const options = { logger, timeline_recording: { period_ticks: request.period_ticks, ...(request.mode === "clock" && request.settle_periods !== undefined && request.settle_periods > 0 && { settle_periods: Math.floor(request.settle_periods) }) }, factorio_states: false };
+    const settling = request.mode !== "clock" ? {} : request.settle_ticks !== undefined ? {settle_ticks: request.settle_ticks}
+        : request.settle_periods !== undefined && request.settle_periods > 0 ? {settle_periods: Math.floor(request.settle_periods)} : {};
+    const options = { logger, timeline_recording: { period_ticks: request.period_ticks, ...settling }, factorio_states: false };
     const windows = new Map(Object.entries(request.windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))]));
     const fuel_clocks = new Map<string, InserterClock>(Object.entries(request.inserter_clocks ?? {}).map(([id, clock]) => [id, {
         ...clock, inserter_id: EntityId.forInserter(Number(id.split(":")[1])), window: OpenRange.from(clock.window.start, clock.window.end),

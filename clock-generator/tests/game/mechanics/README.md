@@ -18,6 +18,7 @@ targeted commands and screenshot regeneration. Screenshots are layout references
 - [Insertion limit](insertion-limit/README.md): inserters dropping into assembling machines and furnaces near the automated insertion limit: where they stop, how much goes in, against the simulator's rule.
 - [Drill status](drill-status/README.md): the status the game shows for mining drills that are switched off, blocked by a full chest or at a machine's stop, against the simulator's tick by tick.
 - [Belt drop lane](belt-drop-lane/README.md): the lane an inserter drops on, from each side and each end of a belt running in each direction, against the simulator's two lane choices.
+- [Control latency](control-latency/README.md): a decider switching inserters idle, asleep at a machine, over a belt, in pairs and while moving; inserters woken by a take or a craft.
 - [Drop spacing](drop-spacing/README.md): the hands of several copies on one belt lane, why a pitch and an offset make them fit or collide.
 
 The [screenshot catalog](screenshots.json) references 14 local fixture blueprints and 3 shared sample

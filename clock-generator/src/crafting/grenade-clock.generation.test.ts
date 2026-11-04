@@ -7,12 +7,12 @@ import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config/schema";
 import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
 import {GENERATED_ALTERNATIVE, grenadeClockCases} from "../../tests/game/builds/grenade-clock-fixtures";
-import {readControls} from "../../tests/game/builds/clock-controls";
+import {readControls, RunControls, runHolds} from "../../tests/game/builds/clock-controls";
 import {GROUP_GAP_TILES} from "./turn-groups";
 
 // the grenade build (REAL_OWNER_GRENADE): the generated clock pinned beside the in-game recording of it on one copy
 // and on the full build of seven, and the hand-made clock judged by the simulator
-const controls = readControls("grenade-clock-controls.json");
+const controls = readControls<RunControls>("grenade-clock-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 let config: Config;
 let generated: ClockAlternativesResult;
@@ -26,7 +26,7 @@ test("grenade: every inserter and drill a clock leaves always on says why", () =
     expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
 });
 
-test("grenade: the 112-tick clock holds the target and is selected; the longer ones, planned the same way, do not", () => {
+test("grenade: the 112-tick clock holds the target and is selected; the observed windows of the same period hold it too, and the longer ones, planned the same way, do not", () => {
     const selected = generated.alternatives[generated.selected_index];
     expect(selected.id).toBe(GENERATED_ALTERNATIVE);
     expect(selected.verdict).toBe("stable");
@@ -42,7 +42,11 @@ test("grenade: the 112-tick clock holds the target and is selected; the longer o
     // the drills of a group share one window, two ticks: 160 coal a period against the 125 to 134 a tick the drills mine (two drill deciders, as the hand-made clock has)
     expect([windows["drill:1"], windows["drill:2"]]).toEqual([[{start: 2, end: 3}], [{start: 2, end: 3}]]);
     expect([windows["drill:3"], windows["drill:4"]]).toEqual([[{start: 58, end: 59}], [{start: 58, end: 59}]]);
-    expect(generated.alternatives.filter(it => it.id !== GENERATED_ALTERNATIVE).every(it => it.verdict === "unstable")).toBe(true);
+    // the observed windows of 112 ticks hold and get back from every loss under the order the game serves the takers in, and wake 2,159 a minute against 138
+    const others = generated.alternatives.filter(it => it.id !== GENERATED_ALTERNATIVE);
+    expect(others.filter(it => it.verdict === "stable").map(it => it.id)).toEqual(["derived"]);
+    expect(others.filter(it => it.id !== "derived").every(it => it.verdict === "unstable")).toBe(true);
+    expect(others.find(it => it.id === "derived")!.assessment.wake_ups_per_minute!).toBeGreaterThan(selected.assessment.wake_ups_per_minute!);
 });
 
 type Entities = ClockAlternativesResult["alternatives"][number]["result"]["blueprint"]["entities"];
@@ -167,13 +171,8 @@ test("grenade: the hand-made clock, as windows, holds in the simulator and gets 
 for (const variant of grenadeClockCases()) {
     test(`grenade clock: ${variant.name}`, () => {
         const {generation, native} = controls.cases[variant.name];
-        // the game holds the target in every baseline period and is back at it in every judged period after each loss
-        expect(native.baseline).toHaveLength(63);
-        expect(native.baseline.every(items => items === native.expected)).toBe(true);
-        for (const loss of native.recovery) {
-            expect(Math.min(...loss.during)).toBeLessThan(native.expected);
-            expect(loss.recovered.length).toBeGreaterThan(1);
-        }
+        // the game holds the target over the baseline and is back at it after each loss
+        expect(runHolds(native), native.result).toBe(true);
         expect(native.period).toBe(112);
         if (variant.kind === "owner's clock") {
             expect(generation).toBeUndefined();
@@ -187,6 +186,6 @@ for (const variant of grenadeClockCases()) {
         expect(chosen.verdict).toBe(generation!.verdict);
         expect({id: chosen.id, holds: chosen.assessment.holds, rate: chosen.assessment.items_per_second,
             supply: chosen.belt?.kind ?? null}).toEqual(generation!.selection);
-        expect(native.expected).toBe(generation!.expected);
+        expect(native.period).toBe(generation!.period);
     });
 }

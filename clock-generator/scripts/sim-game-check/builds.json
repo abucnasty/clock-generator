@@ -1,0 +1,46 @@
+[
+ {
+  "name": "front-exit-normal-mirrored-backed",
+  "config": "configs/front-exit-normal-mirrored-backed.json",
+  "hash": "3bc059b3",
+  "recording": "front-exit-normal-mirrored-backed.recording.json"
+ },
+ {
+  "name": "front-exit-normal-unmirrored-backed",
+  "config": "configs/front-exit-normal-unmirrored-backed.json",
+  "hash": "91437563",
+  "recording": "front-exit-normal-unmirrored-backed.recording.json"
+ },
+ {
+  "name": "pickup-normal-underground-entrance-backed",
+  "config": "configs/pickup-normal-underground-entrance-backed.json",
+  "hash": "91437563",
+  "recording": "pickup-normal-underground-entrance-backed.recording.json"
+ },
+ {
+  "name": "pickup-normal-underground-exit-backed",
+  "config": "configs/pickup-normal-underground-exit-backed.json",
+  "hash": "91437563",
+  "recording": "pickup-normal-underground-exit-backed.recording.json"
+ },
+ {
+  "name": "electromagnetic-science",
+  "config": "ELECTROMAGNETIC_SCIENCE",
+  "hash": "ba2c26f4",
+  "recording": "electromagnetic-science.recording.json"
+ },
+ {
+  "name": "stupidfathobbit-cell02",
+  "config": "REAL_STUPIDFATHOBBIT_CELL02",
+  "hash": "52b9b159",
+  "recording": "stupidfathobbit-cell02.recording.json"
+ },
+ {
+  "name": "agricultural-science-staged",
+  "config": "AGRICULTURAL_SCIENCE",
+  "hash": "3450755e",
+  "recording": "agri-3450755e-staged-150.json",
+  "staged": true,
+  "seed_items": 84
+ }
+]

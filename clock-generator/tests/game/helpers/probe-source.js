@@ -17,7 +17,7 @@ function luaOptions(value) {
  * @param {Record<string, unknown>} [options] Explicit scenario parameters; no Lua placeholder replacement.
  */
 function composeProbeSource(scenario, options = {}) {
-    const modules = [ ["capture", "capture.lua"], ["pickup", "belt-pickup.lua"] ];
+    const modules = [ ["capture", "capture.lua"], ["pickup", "belt-pickup.lua"], ["steady", "steady.lua"] ];
     const shared = modules.map(([name, file]) =>
         `local ${name} = (function()\n${fs.readFileSync(path.join(__dirname, "lua", file), "utf8")}\nend)()\n`).join("");
     return `${shared}\nlocal options = ${luaOptions(options)}\n${fs.readFileSync(scenario, "utf8")}\n`;

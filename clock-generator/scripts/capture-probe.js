@@ -1,5 +1,8 @@
 // One manual capture using the same Lua composition and backed-up transformation as the game regressions.
 // Run from clock-generator/: npm run probe -- --fixture=same-item --geometry=underground-exit --out=.scratch/probes/run-01
+// A mechanics probe, not a clock run: it records a fixed 1,260 or 1,400 ticks (the length its game test records), far inside the 36,000
+// ticks (ten minutes) a game run may take, and it has no tick option, so there is nothing to lengthen. A probe is recorded again only
+// when the game binary changes.
 const fs = require("node:fs");
 const path = require("node:path");
 const { parseArgs } = require("node:util");
@@ -48,7 +51,7 @@ async function main() {
         factorio: process.env.FACTORIO_PATH, save: path.resolve(ROOT, process.env.FACTORIO_HARNESS_SAVE),
         config, blueprint, lua, out: path.join(run, "recording.json"), work_dir: path.join(run, "game"),
         ticks: backedUp ? 1400 : 1260, warmup_ticks: backedUp ? 3600 : 1200, settle_ticks: 0,
-        seed: [], unclocked: true, game_speed: 1000, watch: false, timeout_seconds: 180,
+        seed: [], unclocked: true, game_speed: 1000, watch: false, timeout_seconds: 180, cache: false,
         log: message => console.error(message),
     });
     console.log(`Recording: ${result.recording_path}`);

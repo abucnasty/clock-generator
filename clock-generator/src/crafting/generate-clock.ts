@@ -5,7 +5,7 @@ import { defaultLogger } from "../common/logger";
 import { groupedHandsClock } from "./candidates/grouped-hands";
 import { observedWindowsClock } from "./candidates/observed-windows";
 import { resultWindowsClockOfPlan } from "./candidates/result-windows-clock";
-import { BlueprintGenerationResult, GenerateClockOptions, SwingAttemptResult, SwingBackoffReport, checkedClock, clockOfPlan, planRun } from "./plan/plan-run";
+import { BlueprintGenerationResult, GenerateClockOptions, PlanRun, SwingAttemptResult, SwingBackoffReport, checkedClock, clockOfPlan, planRun } from "./plan/plan-run";
 import { primitiveGroupedOptionsSupported, verifiedPrimitiveGroupedClock } from "./candidates/verified-primitive-grouped";
 import type { PrimitiveGroupedAttemptReport } from "./primitive-grouped-policy";
 
@@ -58,7 +58,30 @@ export function generateClockForConfig(
         return planned;
     }
     const grouped = groupedHandsClock(plan, options);
-    return grouped !== null && grouped.stability_check.holds ? grouped : planned;
+    if (grouped !== null && grouped.stability_check.holds) {
+        return grouped;
+    }
+    return clockWithPickupsFromTheirEntry(plan, options) ?? planned;
+}
+
+/**
+ * The clock of the same planning run with every pickup recorded from its entry, where neither the
+ * plan's clock nor the grouped hands' holds as built: kept where it holds, else null. The plan's belt-fed pickups after a wait at their
+ * machine's output block count from the take that freed them (`PickupStartAtTheTake`), so such a window opens a tick
+ * before the hand's first stack in the planning run, and a clock that reaches it without the block lets the hand act a
+ * tick before the plan did. Both starts are the plan's; the as-built check decides. Null where no pickup of the
+ * planning run was counted from a take.
+ */
+function clockWithPickupsFromTheirEntry(plan: PlanRun, options: GenerateClockOptions): BlueprintGenerationResult | null {
+    if (!(plan.run.pickups_from_the_take > 0)) {
+        return null;
+    }
+    const from_entry = planRun(plan.config, { ...options, pickup_start: "entry" });
+    const clock = clockOfPlan(from_entry, options);
+    const checked = checkedClock(from_entry, clock, clock.windows, options);
+    const holds = checked.stability_check.as_built?.holds ?? checked.stability_check.holds;
+    plan.logger.log(`Pickups counted from their entry, not from the take that freed them: the clock ${holds ? "holds, kept" : "does not hold either"}`);
+    return holds ? checked : null;
 }
 
 /**

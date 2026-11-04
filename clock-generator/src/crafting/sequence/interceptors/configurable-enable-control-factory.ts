@@ -7,6 +7,7 @@ import { EnableControlOverrideConfig } from "../../../config/schema";
 import { CraftingCyclePlan } from "../cycle/crafting-cycle";
 import { Duration, OpenRange } from "../../../data-types";
 import { ReadableEntityStateRegistry } from "../../../state";
+import { runThroughTicks } from "./inserter-enable-control-factory";
 import { ConditionalEnableControlFactory } from "./conditional-enable-control-factory";
 
 /**
@@ -32,6 +33,19 @@ export class ConfigurableEnableControlFactory {
         private readonly crafting_cycle_plan: CraftingCyclePlan,
         private readonly resettable_registry: ResettableRegistry,
         entity_state_registry: ReadableEntityStateRegistry,
+        /**
+         * The ticks the clocks of the game count, where they run through the steps of a run: they
+         * then keep their count when a later step starts. Without it they count the run's ticks and start again with each step.
+         * Only a clock of a whole-tick period runs through, unless `counter_runs_through` (`runThroughTicks`).
+         */
+        private readonly game_tick_provider?: TickProvider,
+        /**
+         * Whether the clocks it makes of a p/q-tick period answer in whole 1/q ticks (enable-control.ts `SubtickPositions`):
+         * true unless a test asks for floats
+         */
+        private readonly exact_subtick_positions: boolean = true,
+        /** Whether a clock of a p/q-tick period runs through as well (`runThroughTicks`), given a game tick provider */
+        private readonly counter_runs_through: boolean = false,
     ) {
         this.conditional_factory = new ConditionalEnableControlFactory(entity_state_registry);
     }
@@ -107,11 +121,14 @@ export class ConfigurableEnableControlFactory {
             return OpenRange.from(range.start, Math.min(range.end, period_duration.ticks));
         });
 
+        const run_through_ticks = runThroughTicks(this.game_tick_provider, period_duration.ticks, this.counter_runs_through);
         const clocked_control = EnableControl.clocked({
             periodDuration: period_duration,
             enabledRanges: enabled_ranges,
-            tickProvider: this.tick_provider,
+            exact_subtick_positions: this.exact_subtick_positions,
+            tickProvider: run_through_ticks ?? this.tick_provider,
             is_game_clock: true,
+            runs_through_steps: run_through_ticks !== undefined,
             decider_build_order: override.decider_build_order,
             start_latency_ticks: override.latency_ticks,
         });

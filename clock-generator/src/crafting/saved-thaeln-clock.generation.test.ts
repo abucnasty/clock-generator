@@ -81,13 +81,11 @@ describe("a saved clock for a shorter period, on the Thaeln sample", () => {
         const coal = report.losses.find(outcome => outcome.loss.kind === "supply" && outcome.loss.item === "coal")!;
         const failures = coal.trials.filter(trial => !trial.recovers);
         expect(failures).toHaveLength(1);
-        // An unused belt-pickup counter used to delay repeat detection and change later trials' starting states.
-        // The behavior-based key exposes this valid recurring outcome. Recovery still requires each period's
-        // exact output: a 768 average does not make the 784/752 periods pass that existing rule. Before 0.23.0 they were
-        // 764/772, cut at 84: the takers of one machine are served in one fixed order now (docs/simulator.md), so the first
-        // takes a full hand and the other what is left, which moves the trial's cut and the share of each period.
-        expect(failures[0]).toMatchObject({cut_at: 168, restore_at: 214, loss_ticks: 718,
-            proven: true, ends_in: [784, 752, 784, 752]});
+        // Recovery requires each period's exact output: a 768 average does not make the 792/744 periods pass that rule.
+        // The takers of one machine take in the order the game serves them (docs/simulator.md), which sets the cut and
+        // the share of each period: before 0.23.0 the periods were 764/772, then 784/752 with the cut at 168.
+        expect(failures[0]).toMatchObject({cut_at: 84, restore_at: 130, loss_ticks: 718,
+            proven: true, ends_in: [792, 744, 792, 744]});
         expect(failures[0].ends_in.reduce((sum, amount) => sum + amount, 0) / failures[0].ends_in.length).toBe(768);
         const backpressure_loss = verdictOf(report);
         // the losses after coal are not tried, and the failing trial is the last of its loss

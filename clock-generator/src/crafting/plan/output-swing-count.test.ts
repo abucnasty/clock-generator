@@ -3,7 +3,7 @@ import { Config } from "../../config";
 import { ConfigPaths } from "../../config/config-paths";
 import { loadConfigFromFile } from "../../config/loader";
 import { validateConfig } from "./validate-config";
-import { pickupClockConfig, pickupClockSpeedCases } from "../../../tests/game/builds/pickup-clock-speed-coverage";
+import { pickupClockCase, pickupClockConfig } from "../../../tests/game/builds/pickup-clock-speed-coverage";
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 
@@ -13,7 +13,7 @@ const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 describe("output swings per cycle of a build on moving belts", () => {
     let moving: Config;
     beforeAll(async () => {
-        const variant = pickupClockSpeedCases("electromagnetic").find(it => it.name === "electromagnetic-express-underground-entrance-moving")!;
+        const variant = pickupClockCase("electromagnetic", "express", "underground-entrance", false);
         moving = await pickupClockConfig(variant);
     });
 

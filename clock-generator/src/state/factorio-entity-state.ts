@@ -38,11 +38,36 @@ function sinkTakesNothing(sink: EntityState): boolean {
  *   waits for space in between, and into a chest as far as there is room.
  *
  * The rule for a waiting inserter names the recorded state of every waiting sample but 188 of 328,042.
+ *
+ * `listing` says where the update list has the inserter after the tick (absent where it is not known).
  */
-export function factorioInserterState(state: InserterState, sink: EntityState): FactorioInserterState {
+export function factorioInserterState(state: InserterState, sink: EntityState, listing?: InserterListing): FactorioInserterState {
     if (!state.enabled) {
         return FactorioInserterState.DISABLED_BY_CONTROL_BEHAVIOR;
     }
+    // on the update list with items in its hand that it has not begun to move (idle, or switched on and not updated
+    // since): the game shows it working (Factorio 2.1.24: 25 of 25 such ticks on two builds; with an empty hand it shows
+    // the waiting state below, as here)
+    if (listing === "update-list" && state.held_item !== null
+        && (state.status === InserterStatus.IDLE || state.status === InserterStatus.DISABLED)) {
+        return FactorioInserterState.WORKING;
+    }
+    const shown = shownWhileEnabled(state, sink);
+    // asleep on its source machine's list: the game shows it waiting for items, also after an update that took part of
+    // a hand and went to sleep at once, which leaves the hand's status working
+    if (listing === "asleep-for-items" && shown === FactorioInserterState.WORKING) {
+        return state.held_item === null ? FactorioInserterState.WAITING_FOR_SOURCE_ITEMS : FactorioInserterState.WAITING_FOR_MORE_ITEMS;
+    }
+    return shown;
+}
+
+/**
+ * Where the update list has an inserter (simulation/inserter-scheduling.ts): on the update list, out of it asleep on
+ * the list of the machine it takes from, or out of it otherwise (asleep on another list, or switched off)
+ */
+export type InserterListing = "update-list" | "asleep-for-items" | "elsewhere";
+
+function shownWhileEnabled(state: InserterState, sink: EntityState): FactorioInserterState {
     const held = state.held_item;
     // on a clock of the game an inserter shows as enabled the tick before it can act, and waits in that tick
     const waits = state.status === InserterStatus.IDLE || state.status === InserterStatus.WAITING_FOR_SINK

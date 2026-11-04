@@ -23,7 +23,7 @@ usage:
   cache.py bases <cache> <engine.json> <_jobs.json> <tool> <worktree>
                                                 the entries a new engine can carry jobs forward from, nearest in git
                                                 first, one JSON object per line: same game data (resources/ without the sample configs), package-lock and tsconfig,
-                                                same job format, footprints recorded by this tool version
+                                                same keyed environment variables (key.py), same job format, footprints recorded by this tool version
 """
 import datetime, glob, gzip, json, os, shutil, subprocess, sys
 
@@ -213,6 +213,10 @@ def main(argv):
             # the game data, not the sample configs (a job's own config hash covers those); entries from before the field have it from their commit
             data = e.get('resources_data') or keymod.data_key_or_none(worktree, e['rev'])
             if data != engine.get('resources_data') or any(e.get(k) != engine.get(k) for k in ('lock', 'tsconfig')):
+                continue
+            # the environment variables of the key: results under one setting are never carried into a run under another
+            # (an entry from before the field was made with none)
+            if (e.get('env') or {}) != (engine.get('env') or {}):
                 continue
             found.append({'key': man['key'], 'rev': e['rev'], 'functions': os.path.join(os.path.dirname(m), 'functions'),
                           'jobs': os.path.join(os.path.dirname(m), 'jobs'), 'distance': distance(worktree, e['rev'], engine['rev'])})

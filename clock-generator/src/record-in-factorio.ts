@@ -89,6 +89,8 @@ async function main() {
         game_speed: Number(argValue("speed") ?? (argFlag("watch") ? 1 : 1000)),
         watch: argFlag("watch"),
         timeout_seconds: Number(argValue("timeout") ?? 900),
+        // this command exists to make a recording in the game, for a clock that is new to it
+        cache: false,
         log: message => console.error(message),
     });
 

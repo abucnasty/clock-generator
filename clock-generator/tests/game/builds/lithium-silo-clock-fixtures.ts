@@ -8,8 +8,8 @@ import {loadConfigFromFile} from "../../../src/config/loader";
 import {FactorioBlueprintFile} from "../../../src/blueprints/blueprint";
 import {encodeBlueprintFile} from "../../../src/blueprints/serde";
 import {Recording} from "../../../src/verification/recording";
-import {BELT_SPEEDS} from "../helpers/belt-speed-fixtures";
-import {PickupClockScenario, pickupClockInterventions} from "./pickup-clock-capture";
+import {CLOCK_TEST_SPEEDS} from "../helpers/belt-speed-fixtures";
+import {PickupClockScenario} from "./pickup-clock-capture";
 
 /**
  * The lithium plate build, 80 a second from one copy (`REAL_OWNER_LITHIUM_SILO`): two cryogenic plants, fed
@@ -17,7 +17,7 @@ import {PickupClockScenario, pickupClockInterventions} from "./pickup-clock-capt
  * put plates onto a belt that a loader empties into a disposal chest. The silo holds at most 250 lithium (by weight), so
  * the standard cuts of 2 periods (of 7,560 or 1,080 ticks) empty it many times over.
  *
- * The selected clock (3 output swings) is recorded in two build orders. The game serves inserters that act on one entity
+ * The clock with 3 output swings (selected until the default dispatch changed) is recorded in two build orders. The game serves inserters that act on one entity
  * in the same tick in the order of their unit numbers, the last built first (docs/simulator.md): as the build's blueprint
  * has them, the two inserters that fill the silo are built before the six that empty it; `fill-last` builds them after.
  * The clock with 1 output swing is a second check. The clock with 7 output swings is the known limit of a drop onto a
@@ -87,11 +87,12 @@ export function assertLithiumSiloHardware(recording: Recording, config: Config):
 
 export function lithiumSiloScenario(variant: LithiumSiloCase): PickupClockScenario {
     return {
-        name: variant.name, speed: BELT_SPEEDS[0], backed: false,
+        name: variant.name, speed: CLOCK_TEST_SPEEDS[0], backed: false,
         config: () => loadConfigFromFile(ConfigPaths.REAL_OWNER_LITHIUM_SILO),
         scaffold: () => lithiumSiloScaffold(variant.order),
         alternative: variant.alternative,
-        interventions: pickupClockInterventions(),
+        // the clock with 7 output swings repeats over 7,560 ticks, longer than a minute
+        ...(variant.alternative === "swings-7" && {baseline: {ticks: 7560, reason: "the clock's output repeats over its 7,560-tick period, longer than a minute"}}),
         probeFile: path.join(__dirname, "lithium-silo-clock-probe.lua"),
         probe: {family: "lithium-silo"},
         controls: path.join(__dirname, "lithium-silo-clock-controls.json"),

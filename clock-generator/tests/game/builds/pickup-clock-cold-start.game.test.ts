@@ -15,6 +15,8 @@ import {reflectOrdinaryPickup} from "../mechanics/belt-pickup/ordinary-reflectio
 import {pickupClockConfig, pickupClockScaffold, pickupClockSpeedCases} from "./pickup-clock-speed-coverage";
 import {overHoodClockCases, overHoodClockConfig, overHoodClockScaffold} from "./over-hood-clock-fixtures";
 import {clockHash, readControls} from "./clock-controls";
+import {recipesMaking} from "../../../src/harness/recording-output";
+import {COLD_START_CAP_TICKS, perPeriod} from "./pickup-clock-cold-start-runs";
 import {reversedDeciders} from "./reversed-deciders";
 
 interface Run {
@@ -22,14 +24,16 @@ interface Run {
     build_order?: "descending"; position?: {x: number; y: number};
     native_phases: [number, number] | null; output: number[]; pickups: number[];
     output_held_sha256: string; input_held_sha256: string;
+    /** The probe tick of steady state, and the samples recorded: steady state plus one window, at most COLD_START_CAP_TICKS */
+    steady: number; ticks: number;
 }
 interface Controls {
-    frame_offset: number; periods: number;
+    frame_offset: number;
     clocks: Record<string, ColdStartClock>;
     runs: Record<string, Run>;
 }
 interface Report {
-    placement_tick: number; phases: number[];
+    placement_tick: number; phases: number[]; steady?: number; ticks: number;
     periods: Record<string, {off_lattice: number; phases: Record<string, boolean>}[]>; clock_offsets: number[];
 }
 const controls = readControls<{cold_start: Controls}>("pickup-clock-start-controls.json").cold_start;
@@ -75,11 +79,20 @@ for (const [name, run] of Object.entries(controls.runs)) test(`clocked cold star
         const clockControl = controls.clocks[run.clock];
         physicalColdClockOf(clockControl, run);
         const {config, scaffold, units, backed} = await fixtureOf(run.case);
-        const P = clockControl.period;
+        const calibrating = process.env.BELT_CLOCK_CALIBRATE === "1";
+        let P = clockControl.period;
         let exported: {blueprint: any; schedule: any};
+        // where the selection moved, a calibration records the clock it makes now, with what the controls keep of it
+        let selection: {period: number; terminal_swings: number; clock_windows: unknown; clock_sha256: string} | undefined;
         if (run.rotate === 0) {
             const generated = generateClockAlternatives(config, {logger: quiet});
-            exported = generated.alternatives[generated.selected_index].result;
+            const selected = generated.alternatives[generated.selected_index];
+            exported = selected.result;
+            if (calibrating) {
+                P = selected.result.simulation_duration.ticks;
+                selection = {period: P, terminal_swings: selected.result.used_terminal_swing_count, clock_windows: selected.result.clock_windows,
+                    clock_sha256: clockHash(selected.result)};
+            }
         } else {
             if (clockControl.kind === "physical") throw new Error("Rotated clocks require actual planner metadata");
             exported = clockFromWindows({...config, overrides: {...config.overrides, terminal_swing_count: clockControl.terminal_swings}},
@@ -87,12 +100,14 @@ for (const [name, run] of Object.entries(controls.runs)) test(`clocked cold star
         }
         if (run.decider_order === "reversed") exported = reversedDeciders(exported.blueprint, exported.schedule);
         const clock = {blueprint: encodeBlueprintFile({blueprint: exported.blueprint}), schedule: exported.schedule};
-        expect(clockHash(exported), "the clock these runs were recorded on (recorded_clock_sha256; its identity: no text or metadata)").toBe(clockControl.recorded_clock_sha256);
-        const ticks = controls.periods * P;
+        if (!calibrating) expect(clockHash(exported), "the clock these runs were recorded on (recorded_clock_sha256; its identity: no text or metadata)").toBe(clockControl.recorded_clock_sha256);
+        // from placement until the plant has made its target over a minute, and a minute more (the game tests' protocol)
         const recording = (await recordInFactorio({factorio: factorio!, save: save!, config, blueprint: scaffold, clock,
             out: path.join(capture.directory, "recording.json"), work_dir: path.join(capture.directory, "game"),
-            ticks, warmup_ticks: 0, staged_start: {saturation_ticks: backed ? 1200 : 30, ...(run.build_order && {build_order: run.build_order})},
-            seed: [], lua: composeProbeSource(path.join(__dirname, "pickup-clock-cold-start-probe.lua"), {ticks, period: P, units}),
+            ticks: COLD_START_CAP_TICKS, warmup_ticks: 0, staged_start: {saturation_ticks: backed ? 1200 : 30, ...(run.build_order && {build_order: run.build_order})},
+            seed: [], lua: composeProbeSource(path.join(__dirname, "pickup-clock-cold-start-probe.lua"), {ticks: COLD_START_CAP_TICKS, period: P, units,
+                window: 3600, expected: config.target_output.items_per_second * 60, recipes: [...recipesMaking(config, config.target_output.recipe)],
+                item: config.target_output.recipe}),
             unclocked: false, game_speed: 1000, watch: false, timeout_seconds: 1500, log() {}, ...(run.position && {position: run.position}),
         })).recording;
         const report = JSON.parse(fs.readFileSync(path.join(capture.directory, "game/script-output/clock-cold-start.json"), "utf8")) as Report;
@@ -107,16 +122,22 @@ for (const [name, run] of Object.entries(controls.runs)) test(`clocked cold star
         }
         for (const lanes of Object.values(report.periods)) for (const [lane, record] of lanes.entries()) {
             expect(record.off_lattice, `lane ${lane + 1} off the lattice`).toBe(0);
-            if (run.native_phases) expect(Object.keys(record.phases).map(Number), `lane ${lane + 1} phase`).toEqual([run.native_phases[lane]]);
+            if (run.native_phases && !calibrating) expect(Object.keys(record.phases).map(Number), `lane ${lane + 1} phase`).toEqual([run.native_phases[lane]]);
         }
-        if (run.native_phases) expect(report.phases).toEqual(run.native_phases);
+        if (run.native_phases && !calibrating) expect(report.phases).toEqual(run.native_phases);
+        expect(report.steady, "the plant made its target over a minute").toBeDefined();
+        const ticks = report.ticks;
+        expect(recording.sample_count).toBe(ticks);
+        if (process.env.BELT_CLOCK_CALIBRATE !== "1") expect({steady: report.steady, ticks}).toEqual({steady: run.steady, ticks: run.ticks});
         const held = (inserter: any) => inserter.samples.held_count.slice(controls.frame_offset, ticks) as number[];
         const output = held(recording.inserters.find((it: any) => it.source.type === "machine"));
         const input = held(recording.inserters.find((it: any) => it.sink.type === "machine"));
-        const perPeriod = (series: number[], sign: 1 | -1) => Array.from({length: controls.periods}, (_, k) =>
-            series.slice(k * P, (k + 1) * P).reduce((sum, count, t) => sum + Math.max(0, sign * (count - (series[k * P + t - 1] ?? 0))), 0));
-        expect(perPeriod(output, -1)).toEqual(run.output);
-        expect(perPeriod(input, 1)).toEqual(run.pickups);
+        const counted = {steady: report.steady, ticks, output: perPeriod(output, P).drops, pickups: perPeriod(input, P).pickups,
+            output_held_sha256: sha(output), input_held_sha256: sha(input), native_phases: report.phases, ...(selection && {selection})};
+        fs.writeFileSync(path.join(capture.directory, "run.json"), JSON.stringify(counted) + "\n");
+        if (process.env.BELT_CLOCK_CALIBRATE === "1") return;
+        expect(counted.output).toEqual(run.output);
+        expect(counted.pickups).toEqual(run.pickups);
         expect(sha(output)).toBe(run.output_held_sha256);
         expect(sha(input)).toBe(run.input_held_sha256);
     } finally {capture.cleanup();}

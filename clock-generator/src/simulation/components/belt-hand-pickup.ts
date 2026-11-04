@@ -87,12 +87,32 @@ export class BeltHandPickup implements HandPickupPort {
     public useNotificationScheduling(): void {
         this.notification_scheduling = true;
         this.scratch.belt_grab_decided = true;
+        // the lanes' motion decides whether its hand may sleep (`linesStill`): only measured at a straight side pickup
+        if (this.layout === "side-straight") for (const lane of this.lanes) lane.trackMotion();
     }
 
-    /** Reads `waits_for_sink` before the pickup phase clears it (same-tick rule 10) */
+    /**
+     * Whether every lane at the pickup is still now (`BeltLineMotion`): in the game a hand from a belt with nothing it may
+     * take asks to sleep in every update at the pickup, and goes to sleep only while every belt line it takes from is still
+     * (2.1.24, sample metallurgic science: 56 sleeps of 56 with both lines still, 1,216 refusals with one moving). Undefined
+     * where it was not measured (a pickup other than at the side of a straight belt), and without the update list.
+     */
+    public linesStill(): boolean | undefined {
+        if (!this.notification_scheduling || this.layout !== "side-straight") return undefined;
+        const tick = this.tick_provider!.getCurrentTick();
+        const lanes = this.lanes;
+        for (let index = 0; index < lanes.length; index++) if (lanes[index].movingAt(tick)) return false;
+        return true;
+    }
+
+    /**
+     * Reads `waits_for_sink` before the pickup phase clears it (same-tick rule 10). A woken hand
+     * is updated a tick after what woke it, so its first stack is decided: except in the first update after a control
+     * swap, which puts it on the list without waking it, where it decides as a hand updated every tick does.
+     */
     public enter(from: InserterPhase): void {
         const scratch = this.scratch;
-        if (this.notification_scheduling) {
+        if (this.notification_scheduling && !scratch.after_swap) {
             scratch.belt_grab_decided = true;
             return;
         }
@@ -114,8 +134,9 @@ export class BeltHandPickup implements HandPickupPort {
         }
     }
 
+    /** The decision of the first stack, and whether the hand's next update is its first after a control swap (see `enter`) */
     public key(): string {
-        return `${this.scratch.belt_grab_decided}`;
+        return `${this.scratch.belt_grab_decided};${this.scratch.after_swap}`;
     }
 
     public startsPickup(): boolean {

@@ -590,7 +590,7 @@ describe("Crafting machine: its steps and observers", () => {
         return { observer, changes, ticks }
     }
 
-    test("pays a full productivity bar at the start of the next working tick, in the status's step (same-tick rule 14)", () => {
+    test("pays a full productivity bar when the machine next puts its held products in the output, not on the tick it fills (same-tick rule 14)", () => {
         const { machine_state, machine } = gears(300)
         executeForTicks(machine, 1)
         // half a craft fills the bar one and a half times: nothing is paid on the tick it fills
@@ -598,12 +598,15 @@ describe("Crafting machine: its steps and observers", () => {
         expect(machine_state.productsFinished).toBe(0)
 
         machine.placeResults()
+        // the bar is paid, once, as the held products go in, before the status rule
         machine.putHeldProductsInOutput()
+        expect(machine_state.productsFinished).toBe(1)
+        expect(machine_state.inventoryState.getQuantity("iron-gear-wheel")).toBe(1)
+        expect(machine_state.yield.bonusProgress.progress).toBeCloseTo(0.5, 12)
         machine.statusRule()
-        // held products go in before the rule, but a full bar is not paid there
-        expect(machine_state.productsFinished).toBe(0)
+        expect(machine_state.productsFinished).toBe(1)
         machine.statusStep()
-        // the bar is paid as the working tick starts, then the craft finishes and pays the two bars it filled
+        // then the craft finishes and pays the bars it filled
         expect(machine_state.productsFinished).toBe(4)
         expect(machine_state.inventoryState.getQuantity("iron-gear-wheel")).toBe(4)
         expect(machine_state.yield.bonusProgress.progress).toBe(0)

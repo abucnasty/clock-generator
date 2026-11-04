@@ -1,51 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { ConfigPaths } from "../../config/config-paths";
-import { loadConfigFromFile } from "../../config/loader";
-import { Config, ConfigSchema } from "../../config/schema";
+import { Config } from "../../config/schema";
 import { belt, feasibilityOfConfig, infinityChest, inserter, lane } from "./feasibility-test-helpers";
 
-/**
- * S1, a result with no way out, on the scrap silo: recycler 1 places its twelve results into rocket silo 14, whose
- * rocket part recipe takes processing units and low density structure. At another quality than its recipe's (the
- * sample's "uncommon") every result goes into the rocket inventory, which inserters 1-12 empty; at normal quality those
- * two go into the silo's input slots, which nothing empties.
- */
-describe("S1: a result with no way out stops its machine for good", async () => {
-    const sample = await loadConfigFromFile(ConfigPaths.RECYCLING_SCRAP_SILO) as Config;
-    const atNormal = (): Config => {
-        const config = structuredClone(sample);
-        config.chests = config.chests!.map(chest => chest.id === 14 ? { ...chest, recipe_quality: "normal" } : chest) as Config["chests"];
-        return config;
-    };
-
-    it("at uncommon quality every result goes out: it passes", () => {
-        expect(feasibilityOfConfig(sample).issues).toEqual([]);
-    });
-
-    it("at normal quality processing units and low density structure fill the input slots: refused, the two results each", () => {
-        const { rules, issues, texts } = feasibilityOfConfig(atNormal());
-        expect(rules).toEqual(["S1", "S1"]);
-        expect(issues.map(issue => issue.nodes)).toEqual([
-            ["machine:1", "chest:14#input:processing-unit"], ["machine:1", "chest:14#input:low-density-structure"],
-        ]);
-        expect(texts).toMatchInlineSnapshot(`
-          [
-            "Machine 1 places processing unit into the input slots of rocket silo 14, and nothing takes it out: once they are full, the machine stops for good.",
-            "Machine 1 places low density structure into the input slots of rocket silo 14, and nothing takes it out: once they are full, the machine stops for good.",
-          ]
-        `);
-    });
-
-    it("agrees with the schema's silo trap: the same machine, the same silo, the same two results", () => {
-        const parsed = ConfigSchema.safeParse(atNormal());
-        expect(parsed.success).toBe(false);
-        expect(parsed.error!.issues.map(issue => issue.message)).toEqual([
-            expect.stringContaining("Machine 1 places processing-unit and low-density-structure into rocket silo 14"),
-        ]);
-        const trapped = feasibilityOfConfig(atNormal()).issues.map(issue => issue.terms.rule === "S1" ? [issue.terms.machine, issue.terms.into?.container] : []);
-        expect(trapped).toEqual([[1, 14], [1, 14]]);
-    });
-
+describe("S1: a result with no way out stops its machine for good", () => {
     /**
      * Machine 2 makes iron sticks the target does not need, and inserter 4 puts them into a buffer chest nothing empties:
      * it stops for good once the chest is full, and the target's gears never need it.

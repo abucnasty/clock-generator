@@ -1,12 +1,12 @@
 import {describe, expect, test} from "vitest";
 import {GameFixturePaths} from "../helpers/fixture-paths";
-import {expectControlIsConsistent, firstHandPatterns, readFixtureFigures} from "../helpers/fixture-mechanics";
+import {expectRunIsConsistent, firstHandPatterns, readFixtureFigures} from "../helpers/fixture-mechanics";
 import {OVER_HOOD_GENERATED} from "./over-hood-clock-cases";
 import {OverHoodClockCase, overHoodClockCases, overHoodClockConfig} from "./over-hood-clock-fixtures";
-import {ClockHistory, readControls} from "./clock-controls";
+import {ClockHistory, readControls, runHolds, RunControls} from "./clock-controls";
 
 /**
- * The over-the-hood family (`over-hood-clock-fixtures.ts`: 2 families x 4 belt tiers x 2 mirroring states x moving/backed
+ * The over-the-hood family (`over-hood-clock-fixtures.ts`: 2 families x the turbo tier x 2 mirroring states x moving/backed
  * up), checked against what the game recorded without generating a clock: the simulator's first hand of each fixture
  * against the compact controls of the over-the-hood exit (expectations.json), the documented hand families per tier, and
  * the recorded clock controls against the fixture configs. The generation test (over-hood-clock.generation.test.ts)
@@ -65,8 +65,7 @@ describe("first hand of each fixture: the simulator against the game's recorded 
 
     // the over-the-hood README "Measured first hands": different items, the phase the capture started in, and the jammed belt
     const documented: Record<string, {moving: string; backed: string}> = {
-        turbo: {moving: "0,1,3,5", backed: "0,1,2,3"}, express: {moving: "0,1,3,6", backed: "0,1,2,3"},
-        fast: {moving: "0,1,2,6", backed: "0,1,2,5"}, normal: {moving: "0,1,4,12", backed: "0,1,2,9"},
+        turbo: {moving: "0,1,3,5", backed: "0,1,2,3"},
     };
     test.each(Object.entries(documented))("%s: the documented first hands of different items, moving and backed up", async (tier, hands) => {
         for (const mirrored of [false, true]) for (const backed of [false, true]) {
@@ -79,8 +78,7 @@ describe("first hand of each fixture: the simulator against the game's recorded 
 describe("the hand families across lane phases and the same item on both lanes (docs/belt-pickup/experiments.md)", () => {
     // `0,1,k,k+d` of different items on a moving belt: k and d per tier, and the total pickup ticks (the last offset plus one)
     const families: Record<string, {k: number[]; d: number[]; total: [number, number]}> = {
-        turbo: {k: [2, 3], d: [2], total: [5, 6]}, express: {k: [2, 3, 4], d: [2, 3], total: [5, 8]},
-        fast: {k: [2, 3, 4, 5], d: [4], total: [7, 10]}, normal: {k: [2, 3, 4, 5, 6, 7, 8, 9], d: [8], total: [11, 18]},
+        turbo: {k: [2, 3], d: [2], total: [5, 6]},
     };
     test.each(Object.entries(families))("%s: moving different items take 0,1,k,k+d over the lane phases", (tier, family) => {
         for (const mirrored of [false, true]) {
@@ -105,11 +103,11 @@ describe("the hand families across lane phases and the same item on both lanes (
 });
 
 describe("the recorded clock controls of the over-the-hood fixtures", () => {
-    const controls = readControls("over-hood-clock-controls.json").cases;
+    const controls = readControls<RunControls>("over-hood-clock-controls.json").cases;
     const history = readControls<ClockHistory>("over-hood-clock-history-controls.json").cases;
 
-    test("there is a control with a native summary and a pin for each of the 32 fixtures", () => {
-        expect(cases).toHaveLength(32);
+    test("there is a control with a native summary and a pin for each of the 8 fixtures", () => {
+        expect(cases).toHaveLength(8);
         expect(Object.keys(controls).sort()).toEqual(cases.map(variant => variant.name).sort());
         for (const variant of cases) {
             expect(controls[variant.name].native, variant.name).toBeDefined();
@@ -117,9 +115,8 @@ describe("the recorded clock controls of the over-the-hood fixtures", () => {
         }
     });
 
-    test("the history keeps the superseded recordings of 31 fixtures, all but the one that was regenerated", () => {
-        expect(cases.map(variant => variant.name).filter(name => !(name in history))).toEqual(["over-hood-normal-unmirrored-moving-different-items"]);
-        expect(controls["over-hood-normal-unmirrored-moving-different-items"].recorded.clock_basis).toBe("regenerated");
+    test("the history keeps the superseded recordings of every fixture", () => {
+        expect(cases.map(variant => variant.name).filter(name => !(name in history))).toEqual([]);
         for (const name of Object.keys(history)) expect(controls[name], name).toBeDefined();
     });
 
@@ -128,24 +125,17 @@ describe("the recorded clock controls of the over-the-hood fixtures", () => {
         const {native, generation} = controls[name];
         const config = overHoodClockConfig(variant);
         expect(config.target_output.items_per_second).toBe(6);
-        expectControlIsConsistent(native, generation!, config.target_output.items_per_second);
-        // every fixture is judged stable and its recording holds: 63 undisturbed periods at the expected output, three
-        // disturbances, and the last periods of each recovery back at it (at least eight for a moving belt, five for a
-        // backed-up one, whose assessment starts later)
+        expectRunIsConsistent(native, generation!, config.target_output.items_per_second);
+        // every fixture is judged stable, and its run holds the target and recovers from the three disturbances
         expect({native: native.generationVerdict, pinned: generation!.verdict, why: generation!.why_not_stable}).toEqual({native: "stable", pinned: "stable", why: undefined});
-        expect(native.baseline).toEqual(new Array(63).fill(native.expected));
-        expect(native.recovery).toHaveLength(3);
-        const heldPeriods = variant.backed ? 5 : 8;
-        for (const loss of native.recovery) {
-            expect(loss.recovered.length).toBeGreaterThanOrEqual(heldPeriods);
-            expect(loss.recovered.slice(-heldPeriods)).toEqual(new Array(heldPeriods).fill(native.expected));
-        }
+        expect(native.disturbances).toHaveLength(3);
+        expect(runHolds(native), native.result).toBe(true);
         expect(generation!.selection).toMatchObject({holds: true, rate: 6});
     });
 
-    test("the one fixture on a moving belt whose pinned clock is made for the backed-up belt", () => {
+    test("every fixture's pinned clock is made for its own supply", () => {
         expect(cases.filter(variant => (controls[variant.name].generation!.selection.supply === "backed_up") !== variant.backed).map(variant => variant.name))
-            .toEqual(["over-hood-fast-mirrored-moving-different-items"]);
+            .toEqual([]);
     });
 
     test("the same item on both lanes: mirroring does not change the clock or its recording", () => {

@@ -1,6 +1,7 @@
 import { CraftingMachineArchetype } from "./archetypes/crafting-machine";
 import { InserterArchetype } from "./archetypes/inserter";
 import { MiningDrillArchetype } from "./archetypes/mining-drill";
+import type { InserterScheduling } from "./inserter-scheduling";
 import { World } from "./world";
 
 /**
@@ -99,7 +100,7 @@ export const TICK_PHASES: readonly TickPhaseRow[] = [
     },
     {
         phase: TickPhase.INSERTERS, name: "inserters", entities: "inserters",
-        order: "takers before feeders, the takers of one machine in the taker order (inserterUpdateOrder)",
+        order: "updates in the update list from the front (simulation/dispatch.ts); then tick observers and Wakes takers before feeders, the takers of one machine in the taker order (inserterUpdateOrder)",
         order_upholds: [2, 3, 4], run_by: "loop",
         steps: [
             { step: InserterStep.PHASE_RULE, name: "phase_rule", does: "the Hand's phase rule; on a change, the status written, then observers, then exit and enter",
@@ -149,8 +150,11 @@ export function runTick(world: World, tracer: TickTracer | null): void {
     world.tick_provider.incrementTick();
     if (tracer !== null) tracer.step(TickPhase.TICK, NO_ENTITY, TickStep.INCREMENT);
     runDrills(world.drills, tracer);
-    runInserters(world.inserters, tracer);
+    const scheduling = world.scheduling;
+    runListedInserters(world.inserters, scheduling, tracer);
     runMachines(world.machines, tracer);
+    // a window that opens next tick puts its inserter at the front now, after the machines (simulation/dispatch.ts)
+    scheduling.finishControls();
 }
 
 function runDrills(drills: readonly MiningDrillArchetype[], tracer: TickTracer | null): void {
@@ -165,13 +169,24 @@ function runDrills(drills: readonly MiningDrillArchetype[], tracer: TickTracer |
     }
 }
 
-function runInserters(inserters: readonly InserterArchetype[], tracer: TickTracer | null): void {
-    for (let index = 0; index < inserters.length; index++) {
-        const inserter = inserters[index];
+/**
+ * The inserters phase (simulation/dispatch.ts): the inserters in the update list, from the front,
+ * each through its phase rule and step; then every inserter's tick observers and Wakes in the World's order, so that
+ * recorders see every inserter in every tick, listed or not. The tracer is told of the update steps in list order.
+ */
+function runListedInserters(inserters: readonly InserterArchetype[], scheduling: InserterScheduling, tracer: TickTracer | null): void {
+    scheduling.beginUpdates();
+    for (let inserter = scheduling.nextUpdate(); inserter !== null; inserter = scheduling.nextUpdate()) {
+        const index = tracer === null ? NO_ENTITY : inserters.indexOf(inserter);
         if (tracer !== null) tracer.step(TickPhase.INSERTERS, index, InserterStep.PHASE_RULE);
         inserter.phaseRule();
         if (tracer !== null) tracer.step(TickPhase.INSERTERS, index, InserterStep.PHASE_STEP);
         inserter.phaseStep();
+        scheduling.completeUpdate(inserter);
+    }
+    scheduling.endUpdates();
+    for (let index = 0; index < inserters.length; index++) {
+        const inserter = inserters[index];
         if (tracer !== null) tracer.step(TickPhase.INSERTERS, index, InserterStep.TICK_OBSERVERS);
         inserter.tickObservers();
         if (tracer !== null) tracer.step(TickPhase.INSERTERS, index, InserterStep.SHOWN_ENABLED);

@@ -9,9 +9,9 @@ export interface TargetProduction {
 }
 
 /**
- * Review candidate; trial verdicts do not consume it yet. A hand-sized aggregate deficit is still
- * measured underproduction. Per-bin jitter and recurrence checks remain separate, and the rate
- * is the mean over the judged span rather than the first period's amount.
+ * A hand-sized aggregate deficit is still measured underproduction. The final checks of a clock (trial.ts) hold it to
+ * the strict target amount: they conjoin this with their per-bin,
+ * recurrence and recovery checks, which stay separate; the rate is the mean over the judged span, not rounded.
  */
 export function assessTargetProduction(
     measured: Pick<ReturnType<typeof judgeLongRun>, "total" | "expected_total" | "output_items_per_period">,

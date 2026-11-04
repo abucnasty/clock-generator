@@ -1,4 +1,5 @@
-// node scripts/rule-count-game-check.js record <out folder>    records a scaffolded sample twice in the game: unclocked, and
+// node scripts/rule-count-game-check.js record <out folder> [--long <reason>]
+//                                                              records a scaffolded sample twice in the game: unclocked, and
 //                                                              on its selected clock (FACTORIO_PATH, FACTORIO_HARNESS_SAVE)
 // node scripts/rule-count-game-check.js compare <out folder>   lays the rule count of both recordings against the simulator's
 //
@@ -7,30 +8,40 @@
 // simulator's runs of its config, per group. SAMPLE names the sample (default ADVANCED_CIRCUIT: machine-to-machine
 // inputs and outputs that take part hands). The first clock period of each recording is left out, as the scaffold
 // tests leave it out. Run the game under the harness lock, one at a time. Needs `npx tsc` first.
+//
+// A run is timed in game ticks, as the game tests are (scripts/game-run.js): after the warm-up a build runs until its final
+// machines have made the target amount over the trailing minute, which is printed (for the unclocked build it only says how
+// that build runs), and then each recording holds at least TICKS=<n> ticks (3,600 by default; the clocked one in whole clock
+// periods, the unclocked one as many ticks as the clocked one). A request over 36,000 ticks, or a clocked recording that would
+// be, is refused unless `--long <reason>` (or LONG_RUN=<reason>) says why; the reason is printed.
 const fs = require("fs");
 const path = require("path");
 const { dist, quiet } = require("./lib");
+const { GAME_RUN, takeLongReason, assertWithinRun, steadyProbeSource, readSteadyReport, describeRun } = require("./game-run");
 
 const SAMPLE = process.env.SAMPLE ?? "ADVANCED_CIRCUIT";
 const SCAFFOLDS = {
-    ADVANCED_CIRCUIT: { scaffold: "intermediates/advanced-circuit/advanced-circuit-scaffold.txt", warmup: 3600, settle: 4800 },
-    AUTOMATION_SCIENCE: { scaffold: "science/automation-science/automation-science-scaffold.txt", warmup: 300, settle: 4800 },
-    ACCUMULATOR_640: { scaffold: "intermediates/accumulator/accumulator-640-scaffold.txt", warmup: 3600, settle: 7200 },
-    LOW_DENSITY_STRUCTURE: { scaffold: "intermediates/low-density-structure/low-density-structure-scaffold.txt", warmup: 3600, settle: 2400 },
+    ADVANCED_CIRCUIT: { scaffold: "intermediates/advanced-circuit/advanced-circuit-scaffold.txt", warmup: 3600 },
+    AUTOMATION_SCIENCE: { scaffold: "science/automation-science/automation-science-scaffold.txt", warmup: 300 },
+    ACCUMULATOR_640: { scaffold: "intermediates/accumulator/accumulator-640-scaffold.txt", warmup: 3600 },
+    LOW_DENSITY_STRUCTURE: { scaffold: "intermediates/low-density-structure/low-density-structure-scaffold.txt", warmup: 3600 },
     // the egg loop cannot start itself, so the egg machines are given eggs to begin with, as the game tests do
     AGRICULTURAL_SCIENCE: {
-        scaffold: "science/agriculture-science/agriculture-science-scaffold.txt", warmup: 300, settle: 4800,
+        scaffold: "science/agriculture-science/agriculture-science-scaffold.txt", warmup: 300,
         seed: [{ target: { recipe: "pentapod-egg" }, item: "pentapod-egg", count: 200 }],
     },
 };
-const PERIODS = 20;
+const TICKS = Number(process.env.TICKS ?? GAME_RUN.baseline);
 
 (async () => {
-    const [mode, out] = process.argv.slice(2);
+    const args = process.argv.slice(2);
+    const long = takeLongReason(args);
+    const [mode, out] = args;
     if (!["record", "compare"].includes(mode) || !out) {
-        console.error("usage: node scripts/rule-count-game-check.js record|compare <out folder>");
+        console.error("usage: node scripts/rule-count-game-check.js record|compare <out folder> [--long <reason>]");
         process.exit(2);
     }
+    if (!Number.isInteger(TICKS) || TICKS <= 0) throw new Error(`TICKS is a whole number of ticks above 0, not ${process.env.TICKS}`);
     const { ConfigPaths } = dist("config/config-paths.js");
     const { loadConfigFromFile } = dist("config/loader.js");
     const { generateClockAlternatives } = dist("crafting/generate-blueprint.js");
@@ -41,23 +52,41 @@ const PERIODS = 20;
     fs.mkdirSync(out, { recursive: true });
 
     if (mode === "record") {
-        const { recordInFactorio } = dist("harness/factorio-harness.js");
+        const { recordInFactorio, recordedTicks } = dist("harness/factorio-harness.js");
+        const { recipesMaking } = dist("harness/recording-output.js");
+        const os = require("os");
         const { encodeBlueprintFile } = dist("blueprints/serde.js");
         const build = SCAFFOLDS[SAMPLE];
         const samples_dir = path.join(path.dirname(ConfigPaths[SAMPLE]), "..", "..");
         const blueprint = fs.readFileSync(path.join(samples_dir, build.scaffold), "utf8").trim();
         const exported = selected.result.subtick ?? selected.result;
         const clock = { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule };
+        // both recordings hold the same ticks: whole periods of the clock, from its next wrap, for the clocked one
+        const clock_ticks = selected.result.subtick?.clock.period_ticks ?? period;
+        const ticks = recordedTicks(TICKS, clock_ticks);
+        assertWithinRun(TICKS, long, "TICKS");
+        assertWithinRun(ticks, long, `the recording of whole periods of ${clock_ticks} ticks`);
+        const target_per_second = selected.result.stability_check.expected_output_items * 60 / period;
+        const recipes = recipesMaking(config, config.target_output.recipe);
         for (const unclocked of [true, false]) {
             const name = unclocked ? "unclocked" : "clocked";
             const started = Date.now();
-            await recordInFactorio({
-                factorio: process.env.FACTORIO_PATH, save: process.env.FACTORIO_HARNESS_SAVE, blueprint,
-                out: path.join(out, `${SAMPLE}-${name}.json`), ticks: period * (PERIODS + 1),
-                warmup_ticks: build.warmup, settle_ticks: build.settle, seed: build.seed ?? [],
-                clock: unclocked ? undefined : clock, config: unclocked ? undefined : config, unclocked,
-                game_speed: 1000, timeout_seconds: 900, log: () => { },
-            });
+            const work_dir = fs.mkdtempSync(path.join(os.tmpdir(), "rule-count-"));
+            try {
+                await recordInFactorio({
+                    factorio: process.env.FACTORIO_PATH, save: process.env.FACTORIO_HARNESS_SAVE, blueprint,
+                    out: path.join(out, `${SAMPLE}-${name}.json`), ticks: unclocked ? ticks : TICKS,
+                    warmup_ticks: build.warmup, settle_ticks: GAME_RUN.cap + 1, seed: build.seed ?? [],
+                    lua: steadyProbeSource(target_per_second, config.target_output.recipe, recipes, "rule-count-steady.json"), work_dir,
+                    clock: unclocked ? undefined : clock, config: unclocked ? undefined : config, unclocked,
+                    game_speed: 1000, timeout_seconds: 900, log: () => { }, cache: false,
+                });
+                const run = readSteadyReport(work_dir, "rule-count-steady.json");
+                fs.writeFileSync(path.join(out, `${SAMPLE}-${name}.steady.json`), JSON.stringify(run) + "\n");
+                console.log(`${name}: ${describeRun(run, target_per_second).lines.join("; ")}`);
+            } finally {
+                fs.rmSync(work_dir, { recursive: true, force: true });
+            }
             console.log(`${name}: recorded in ${Math.round((Date.now() - started) / 1000)} s`);
         }
         return;

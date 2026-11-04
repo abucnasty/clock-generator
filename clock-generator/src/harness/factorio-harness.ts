@@ -14,6 +14,10 @@ import { matchRecordingToConfig } from "../verification/entity-matching";
 import { BuiltClock, blueprintWithNamedClock, recordingOfBuiltClock } from "./built-clock";
 import { parseRecording, Recording } from "../verification/recording";
 import { RconClient } from "./rcon";
+import {
+    CacheEnvironment, RECORDING_CACHE_PROTOCOL, RecordingCacheKey, recordingCacheDir, recordingCacheKey, recordingCacheMode, restoreRecording,
+    storeRecording,
+} from "./recording-cache";
 
 const RECORDER_MOD = "clock-generator-recorder";
 const SIDECAR_MOD = "clock-generator-sidecar";
@@ -132,8 +136,18 @@ export interface HarnessOptions {
      * one; a blueprint with drills that mine more than one is refused.
      */
     drill_resource?: string;
-    /** Lua run right before the recording starts, as a chunk called with (entities, surface, area) */
+    /**
+     * Lua run right before the recording starts, as a chunk called with (entities, surface, area, settle). `settle.finish()`
+     * ends the settle in that tick, so a probe that runs until something happens in the game ends it then; `settle_ticks` stays
+     * the most it may take. `settle.record_samples(n)` shortens a recording without a clock (a staged start, `record_at_once`)
+     * to n samples; `ticks` stays the most it may take
+     */
     lua?: string;
+    /**
+     * Record exactly `ticks` from the end of the settle, without waiting for the clock to wrap: the recording carries no clock.
+     * For a probe that times its run in game ticks (a clock's period can be far longer than the run)
+     */
+    record_at_once?: boolean;
     /** Scratch folder for Factorio's write data; a temporary folder that is removed afterwards when absent */
     work_dir?: string;
     /** Speed the game is set to as the build is built; absent, it stays what it is, as someone watching may have set it */
@@ -156,6 +170,12 @@ export interface HarnessOptions {
     watch_debug?: boolean;
     timeout_seconds: number;
     log: (message: string) => void;
+    /**
+     * false: this run always starts the game and keeps nothing. Without it, a recording the game already made for the same
+     * game, save, mods, build, clock and probe is read back from the store of recordings instead (see recording-cache.ts), unless
+     * the run is watched. For a check that proves a new clock in the game.
+     */
+    cache?: boolean;
 }
 
 /**
@@ -907,7 +927,8 @@ function assertBuildOptions(options: BuildOptions): void {
         return;
     }
     // the clock the recording is cut by: the one swapped in, or the one the build came with when it is kept
-    const period = options.unclocked ? null : options.clock ? clockPeriodOf(options.clock.schedule) : options.built_clock?.period ?? clockPeriodTicks(options.blueprint);
+    const period = options.unclocked || options.record_at_once ? null
+        : options.clock ? clockPeriodOf(options.clock.schedule) : options.built_clock?.period ?? clockPeriodTicks(options.blueprint);
     assertRecordableTicks(options.ticks, period);
 }
 
@@ -1118,7 +1139,7 @@ export class HarnessSession {
             seed: options.seed,
             lua: options.lua,
             settle_ticks: options.settle_ticks,
-            record: { ticks: options.ticks },
+            record: { ticks: options.ticks, at_once: options.record_at_once },
         });
         if (start.clock) {
             options.log(`Wired the clock to ${Object.values(start.clock.wired).length} inserters`
@@ -1136,7 +1157,7 @@ export class HarnessSession {
         const written = path.join(this.work_dir, "script-output", finished.last_recording.filename);
         const text = JSON.parse(await fs.readFile(written, "utf-8"));
         // the clock the build came with is kept: the recording says what it is, as it is read and kept with it
-        const kept_clock = options.built_clock !== undefined && !replaces_clock;
+        const kept_clock = options.built_clock !== undefined && !replaces_clock && !options.record_at_once;
         const file = kept_clock ? recordingOfBuiltClock(text, options.built_clock!) : text;
         const recording = parseRecording(file);
         const recording_path = path.resolve(options.out);
@@ -1333,22 +1354,177 @@ export class HarnessSession {
     }
 }
 
+/** The source files of the harness that decide what the game is given and what is kept of its answers (src, or dist once built) */
+const HOST_SOURCES = [
+    "harness/factorio-harness", "harness/rcon", "harness/built-clock", "harness/recording-cache",
+    "blueprints/serde", "verification/entity-copies", "verification/entity-matching",
+];
+
+async function hostSources(): Promise<string[]> {
+    return Promise.all(HOST_SOURCES.map(async name => {
+        for (const extension of [".ts", ".js"]) {
+            const file = path.resolve(__dirname, "..", name + extension);
+            if (await exists(file)) {
+                return file;
+            }
+        }
+        throw new Error(`The source of ${name} was not found`);
+    }));
+}
+
+/** What the game and the harness are made of, for the key of a recording */
+export async function cacheEnvironmentOf(factorio: string, save: string): Promise<CacheEnvironment> {
+    const executable = await resolveFactorioExecutable(factorio);
+    return {
+        protocol: RECORDING_CACHE_PROTOCOL,
+        executable,
+        data_dir: factorioDataDir(executable),
+        save: path.resolve(save),
+        mods: Object.fromEntries([RECORDER_MOD, SIDECAR_MOD].map(mod => [mod, path.join(REPOSITORY_ROOT, mod)])),
+        host_sources: await hostSources(),
+    };
+}
+
+/** Appends one line about what the store did to the file named by CLOCK_RECORDING_CACHE_LOG, when it is set */
+async function noteCache(event: string, detail: Record<string, unknown>): Promise<void> {
+    const file = process.env.CLOCK_RECORDING_CACHE_LOG;
+    if (file) {
+        await fs.appendFile(file, JSON.stringify({ time: new Date().toISOString(), event, ...detail }) + "\n").catch(() => { });
+    }
+}
+
+/** A recording through the store: read back when the game already made it, else made by `run` and kept */
+interface CachedRecording {
+    result: HarnessResult;
+    /** The key the recording is stored under; null when the run was not through the store, and no key could be made */
+    key: string | null;
+    /** Whether the game was left alone */
+    hit: boolean;
+}
+
+/**
+ * Looks the recording up under the key of everything the game is given. A hit returns what the game made, with its recording
+ * written to `out` and the files it left in script-output restored, and the game is not started. A miss, or a run that is
+ * not through the store (cache: false, a watched run, CLOCK_RECORDING_CACHE=off, or anything that cannot be told for a key)
+ * calls `run`, which starts the game; its result is kept unless the store is off. Errors of `run` are never kept.
+ * `history` is the keys of the recordings made before this one in the same game; null when it cannot be told.
+ */
+async function recordThroughCache(
+    options: HarnessOptions, history: string[] | null, run: (log: (message: string) => void) => Promise<HarnessResult>,
+): Promise<CachedRecording> {
+    const mode = recordingCacheMode();
+    const out = path.basename(options.out);
+    if (options.cache === false || options.watch || mode === "off") {
+        await noteCache("uncached", { out, why: options.cache === false ? "cache: false" : options.watch ? "watched" : "CLOCK_RECORDING_CACHE=off" });
+        return { result: await run(options.log), key: null, hit: false };
+    }
+    let key: RecordingCacheKey | null = null;
+    if (history !== null) {
+        try {
+            key = await recordingCacheKey(options, await cacheEnvironmentOf(options.factorio, options.save), history);
+        } catch (error) {
+            const why = error instanceof Error ? error.message : String(error);
+            options.log(`Recording cache: not used, ${why}`);
+            await noteCache("uncached", { out, why });
+        }
+    }
+    if (key === null) {
+        return { result: await run(options.log), key: null, hit: false };
+    }
+    const store = recordingCacheDir();
+    if (mode === "on") {
+        const stored = await restoreRecording(store, key.key, options);
+        if (stored) {
+            await noteCache("hit", { out, key: key.key });
+            return { result: stored, key: key.key, hit: true };
+        }
+    }
+    await noteCache("miss", { out, key: key.key, mode });
+    const logs: string[] = [];
+    const result = await run(message => { logs.push(message); options.log(message); });
+    try {
+        await storeRecording(store, key, options, result, logs);
+        await noteCache("stored", { out, key: key.key });
+    } catch (error) {
+        const why = error instanceof Error ? error.message : String(error);
+        options.log(`Recording cache: not stored, ${why}`);
+        await noteCache("not stored", { out, key: key.key, why });
+    }
+    return { result, key: key.key, hit: false };
+}
+
 /**
  * Runs Factorio headless on a copy of the save, builds the blueprint, optionally swaps its clock, seeds it,
- * records it with the recorder mod and writes the recording to options.out: a session of one build.
+ * records it with the recorder mod and writes the recording to options.out: a session of one build. Through the store of
+ * recordings (see recordThroughCache): a recording the game already made for the same inputs is read back without a game.
  */
 export async function recordInFactorio(options: HarnessOptions): Promise<HarnessResult> {
     assertBuildOptions(options);
-    const session = await HarnessSession.start(options);
-    let failed = true;
-    try {
-        const result = await session.record(options);
-        if (options.watch) {
-            await session.runUntilWatcherCloses(options.game_speed);
+    return (await recordThroughCache(options, [], async log => {
+        const logged = { ...options, log };
+        const session = await HarnessSession.start(logged);
+        let failed = true;
+        try {
+            const result = await session.record(logged);
+            if (options.watch) {
+                await session.runUntilWatcherCloses(options.game_speed);
+            }
+            failed = false;
+            return result;
+        } finally {
+            await session.close(failed);
         }
-        failed = false;
+    })).result;
+}
+
+/**
+ * A game for a run of builds, one after the other in the same game, started when one of them has to be made and not before:
+ * a build whose recording the store holds is answered from it. What a build leaves behind is what the next is built on, so a
+ * recording is stored under the keys of the builds before it too; when one has to be made after others were read back, the
+ * game is started and those are made again first (their results thrown away), so it is made in the game its key says.
+ */
+export class CachedHarnessSession {
+    private session: HarnessSession | null = null;
+    private answered: { options: BuildOptions; key: string | null }[] = [];
+    /** How many of `answered` the game has made */
+    private played = 0;
+    private replay_dir: string | null = null;
+
+    constructor(private readonly started_with: SessionOptions) { }
+
+    async record(options: BuildOptions): Promise<HarnessResult> {
+        assertBuildOptions(options);
+        const history = this.answered.every(it => it.key !== null) ? this.answered.map(it => it.key!) : null;
+        const full: HarnessOptions = { ...options, ...this.started_with, timeout_seconds: options.timeout_seconds, log: options.log };
+        const { result, key, hit } = await recordThroughCache(full, history, async log => {
+            const session = await this.started();
+            await this.replayAnswered(session);
+            return session.record({ ...options, log });
+        });
+        this.answered.push({ options, key });
+        if (!hit) {
+            this.played = this.answered.length;
+        }
         return result;
-    } finally {
-        await session.close(failed);
+    }
+
+    private async started(): Promise<HarnessSession> {
+        this.session ??= await HarnessSession.start(this.started_with);
+        return this.session;
+    }
+
+    private async replayAnswered(session: HarnessSession): Promise<void> {
+        for (; this.played < this.answered.length; this.played++) {
+            this.replay_dir ??= await fs.mkdtemp(path.join(os.tmpdir(), "clock-generator-replay-"));
+            await session.record({ ...this.answered[this.played].options, out: path.join(this.replay_dir, `${this.played}.json`), log: () => { } });
+        }
+    }
+
+    async close(failed = false): Promise<void> {
+        await this.session?.close(failed);
+        this.session = null;
+        if (this.replay_dir) {
+            await fs.rm(this.replay_dir, { recursive: true, force: true });
+        }
     }
 }

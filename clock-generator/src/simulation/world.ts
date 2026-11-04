@@ -7,6 +7,7 @@ import { EntityState } from "../state";
 import { ContainerStorage } from "./components/container-storage";
 import { TransportBelt } from "./archetypes/transport-belt";
 import { MiningDrillArchetype } from "./archetypes/mining-drill";
+import type { InserterScheduling } from "./inserter-scheduling";
 
 /**
  * The entities a tick runs, one array for each archetype, each in the order the phase table runs it
@@ -27,7 +28,10 @@ export class World {
         public readonly tick_provider: MutableTickProvider,
         /** In the order of the state registry, which is the config's */
         public readonly drills: readonly MiningDrillArchetype[],
-        /** Takers before feeders, the takers of one machine in the context's taker order (`inserterUpdateOrder`) */
+        /**
+         * Takers before feeders, the takers of one machine in the context's taker order (`inserterUpdateOrder`): the
+         * order their tick observers and Wakes run in; their updates follow the update list (`scheduling`)
+         */
         public readonly inserters: readonly InserterArchetype[],
         /** In config order */
         public readonly machines: readonly CraftingMachineArchetype[],
@@ -35,6 +39,8 @@ export class World {
         public readonly belts: readonly TransportBelt[],
         /** In config order; a container has no step of its own in a tick yet */
         public readonly containers: readonly ContainerStorage[],
+        /** The update list (simulation/dispatch.ts) */
+        public readonly scheduling: InserterScheduling,
     ) {}
 
     public static of(context: SimulationContext): World {
@@ -46,6 +52,7 @@ export class World {
             [...context.machines],
             states.filter(EntityState.isBelt),
             states.filter(ContainerStorage.is),
+            context.inserterScheduling(),
         );
     }
 }

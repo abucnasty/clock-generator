@@ -48,6 +48,12 @@ export class HandScratch {
     public reason_quantity: number = 0;
     /** The record of the hand last emptied, which the next hand fills (`takeIntoHand`); null for none */
     public spare_hand: InserterHandContents | null = null;
+    /**
+     * True from a control swap to the end of the hand's next update: the swap puts every
+     * inserter on the update list, which is no wake of the hand (see `BeltHandPickup.enter`). `reset` clears it and
+     * the swap then sets it (`Hand.resetForSwap`).
+     */
+    public after_swap: boolean = false;
 
     /** Every field back to what a new record holds: a control swap starts the scratch afresh (same-tick rule 12) */
     public reset(): void {
@@ -64,6 +70,7 @@ export class HandScratch {
         this.reason_item = "";
         this.reason_quantity = 0;
         this.spare_hand = null;
+        this.after_swap = false;
     }
 }
 
@@ -125,6 +132,11 @@ export interface HandPickupPort {
     useNotificationScheduling?(): void;
     /** A source with inventory notifications can let an empty/partial waiting hand deactivate. */
     waitsForItems?(): boolean;
+    /**
+     * A belt's: whether every belt line the hand takes from is still now, where that is known (`BeltHandPickup`); a hand
+     * from a belt with nothing it may take goes to sleep only then
+     */
+    linesStill?(): boolean | undefined;
 }
 
 /**
@@ -149,6 +161,14 @@ export interface HandDropPort {
     takes(item: ItemName): boolean;
     /** The drop rule's ask: whether the sink is full for the item, so that the hand waits at it: only a container ever is */
     fullFor(item: ItemName): boolean;
+    /** A machine's: whether it takes no item at all now (`Ingress.takesNothing`); absent for any other sink */
+    takesNothing?(): boolean;
+    /**
+     * A belt's: whether the lane the hand drops on has room for a stack at its drop spot in this tick. In the game a hand
+     * that took part of a hand from a machine goes to sleep there only when it has (2.1.24: 80 of 80 such takes of a
+     * stack inserter dropping on a belt with room, none of 50 without); absent for any other sink.
+     */
+    roomForStack?(): boolean;
 }
 
 /**
@@ -364,6 +384,7 @@ export class Hand {
 
     /** The phase's step: the pickup takes through the source's port, the drop and the target-full wait drop through the sink's */
     public step(): void {
+        this.scratch.after_swap = false;
         switch (this.phase) {
             case InserterPhase.PICKUP:
                 this.pickup.pickup();
@@ -382,7 +403,9 @@ export class Hand {
     public sleepReason(): string | null {
         if (this.phase === InserterPhase.SWING || this.phase === InserterPhase.DROP) return null;
         if (this.phase === InserterPhase.TARGET_FULL) return "destination-full";
-        if (this.phase === InserterPhase.DISABLED) return "control-disabled";
+        // an arm back at its source that finds its control off leaves at once, whatever the source holds: the swing rule
+        // leaves it idle for that tick (`swingRule`); recorded in Factorio 2.1.24 on two takers into chests
+        if (this.phase === InserterPhase.DISABLED || this.phase === InserterPhase.IDLE && !this.control.enabled()) return "control-disabled";
         const held = this.state.held_item;
         if (held !== null && (held.quantity >= this.items.handSizeOf(held.item_name) || this.swings_part_hands)) return null;
         if (!this.drop.acceptsHand() || (held !== null && !this.drop.takes(held.item_name))) return "destination-refused";
@@ -434,6 +457,7 @@ export class Hand {
     public resetForSwap(): void {
         this.phase = InserterPhase.IDLE;
         this.scratch.reset();
+        this.scratch.after_swap = this.notification_scheduling;
     }
 
     /**

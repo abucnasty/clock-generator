@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import {createHash} from "crypto";
 import {clockIdentity} from "../../../src/crafting/clock-identity";
+import {runHolds as judgedRunHolds} from "../helpers/run-judgement";
 
 /**
  * Where a control came from: the PR that recorded it in the game (or pinned it), the commit that added it, and the
@@ -51,6 +52,87 @@ export interface NativeClockSummary {
     interventions?: [number, number, number][];
 }
 
+/**
+ * A native run's summary under the game tests' protocol, timed in game ticks (owner 2026-11-03): helpers/lua/steady.lua records
+ * the run (what the machines that make the target item finish over the trailing minute steers each step; their products and
+ * output stock are recorded for the whole run) and helpers/run-judgement.js judges the record, host-side. Ticks count from the
+ * clock's start.
+ */
+export interface NativeRunSummary {
+    protocol: "trailing-minute";
+    generationVerdict: string;
+    /** Products a second the build is asked for (its share of the config's target) */
+    target: number;
+    /** The period of the clock it ran, which ties the summary to its pin; nothing is timed by it */
+    period: number;
+    /** Ticks in the trailing window, and the products the window has to hold: target x window / 60 */
+    window: number;
+    expected: number;
+    /** The first tick the trailing window held `expected`; null where it never did within the bound */
+    steady: number | null;
+    baseline: NativeBaseline | null;
+    disturbances: NativeDisturbance[];
+    /** The output stock guard; null for a build judged by a count (no final machines' output) or with no whole baseline cycle */
+    stock: NativeStockGuard | null;
+    /** "holds", or the step that failed */
+    result: string;
+    /** The tick the run ended in */
+    ended: number;
+}
+
+/** The baseline after steady state: its total against the target over it, the trailing window's range, and how it is judged */
+export interface NativeBaseline {
+    ticks: number;
+    total: number;
+    expected: number;
+    min: number;
+    max: number;
+    /** The trailing window never fell below `expected` in it (not the verdict: a minute holds a burst more or less by where it starts) */
+    held: boolean;
+    /**
+     * The whole clock cycles in it: from the steady-state tick to the last tick of the baseline at which the clock stands where
+     * it stood then, the final machines' products (`items`), their output stock at both ends and the net output (products less
+     * the stock gained: what left them), against the target over those ticks; absent where no cycle fits in the baseline. A
+     * build judged by a count has no stock, and its net output is the count
+     */
+    measured?: {ticks: number; items: number; expected: number; stock_start?: number; stock_end?: number; net: number};
+    /** The baseline holds (owner, 2026-11-03): the net output of its whole clock cycles makes the target, 100% or more */
+    meets: boolean;
+}
+
+/**
+ * The output stock guard (owner, 2026-11-03): the final machines' output stock at the end of the run (after the last recovery)
+ * is no lower than the lowest it was at any tick of the baseline's whole cycles, so a slowly draining stock (underproduction
+ * the output inserters would hide) fails the run
+ */
+export interface NativeStockGuard {
+    lowest: number;
+    end: number | null;
+    holds: boolean;
+}
+
+/** A disturbance: what it was, when it started, when the output fell below the baseline's lowest window and it was released, when the steady-state test was met again */
+export interface NativeDisturbance {
+    kind: string;
+    start: number;
+    drop?: number;
+    release?: number;
+    recovered?: number;
+}
+
+/** A summary under the protocol timed in game ticks, not a legacy one counted in clock periods */
+export function isRunSummary(native: NativeClockSummary | NativeRunSummary): native is NativeRunSummary {
+    return (native as NativeRunSummary).protocol === "trailing-minute";
+}
+
+/**
+ * Whether a run summary shows the clock holding its target (net output over the baseline's whole cycles), recovering from every
+ * disturbance it ran, and ending with its output stock no lower than in the baseline (helpers/run-judgement.js)
+ */
+export function runHolds(native: NativeRunSummary, known?: KnownDifferences): boolean {
+    return judgedRunHolds(known?.stock_guard ? {...native, stock: null} : native);
+}
+
 /** The selection the generator makes, pinned by a portable generation test, with the sha256 of its exported clock */
 export interface GenerationPin {
     period: number;
@@ -58,14 +140,20 @@ export interface GenerationPin {
     verdict: string;
     selection: {id: string; holds: boolean; rate: number; supply: string | null};
     clock_sha256: string;
+    /** Where the pin also holds the model's own evidence of the selection (its `stability_check.as_built`), apart from the native recording: the fields a generation test finds in it */
+    as_built?: Record<string, unknown>;
     /** The cause the generation gives of why its selection does not meet goal 1 (see whyNotStable); absent where it does */
     why_not_stable?: string;
 }
 
 /** One configuration of a family: its current recording and, where a generation test pins it, the selection */
-export interface ClockControl {
+/** Either kind of native summary */
+export type AnyNativeSummary = NativeRunSummary | NativeClockSummary;
+
+export interface ClockControl<N extends AnyNativeSummary = AnyNativeSummary> {
     recorded: Recorded;
-    native: NativeClockSummary;
+    /** The run under the protocol timed in game ticks; a legacy summary counted in clock periods in the history files and the families not moved yet */
+    native: N;
     generation?: GenerationPin;
     /**
      * The alternative the generator selected before the entry's pin, and the sha256 of its exported clock: a generation
@@ -78,6 +166,14 @@ export interface ClockControl {
      * refills the container between the cuts, and the game holds the target as long as that stock lasts
      */
     second_cut_held_simulated?: number;
+    /** Rules of the run that this entry is known to fail, each with its reason and issue; every other rule is still asserted */
+    known_differences?: KnownDifferences;
+}
+
+/** A known difference of a run: a rule it fails, with the reason and the issue that tracks it */
+export interface KnownDifferences {
+    /** The output stock guard: the run ends with the final machines' output stock below the baseline's lowest */
+    stock_guard?: string;
 }
 
 /** An alternative that is no longer selected and is still made: its id and the sha256 of its exported clock */
@@ -87,15 +183,18 @@ export interface PreviousClock {
 }
 
 /** A family's controls file: one current entry per configuration */
-export interface ClockControls {
+export interface ClockControls<N extends AnyNativeSummary = NativeClockSummary> {
     meaning: string;
-    cases: Record<string, ClockControl>;
+    cases: Record<string, ClockControl<N>>;
 }
+
+/** A family's controls file whose entries are runs under the protocol timed in game ticks */
+export type RunControls = ClockControls<NativeRunSummary>;
 
 /** A family's history file: the recordings a later PR replaced, per configuration, oldest first */
 export interface ClockHistory {
     meaning: string;
-    cases: Record<string, {recorded: Recorded; native: NativeClockSummary; generation?: GenerationPin}[]>;
+    cases: Record<string, {recorded: Recorded; native: AnyNativeSummary; generation?: GenerationPin}[]>;
 }
 
 /** Reads a controls file of tests/game/builds/ by its name */
@@ -107,9 +206,9 @@ export function readControls<T = ClockControls>(file: string): T {
  * The native summary a capture of `name` is compared with: the current one in the family file `controls` (a path), or
  * the one BELT_CLOCK_EXPECTATIONS names: a family file, or a history file and the PR of the recording, `<file>#<pr>`.
  */
-export function expectedNativeSummary(controls: string, name: string): NativeClockSummary | undefined {
+export function expectedNativeSummary(controls: string, name: string): AnyNativeSummary | undefined {
     const [file, pr] = (process.env.BELT_CLOCK_EXPECTATIONS ? path.resolve(process.env.BELT_CLOCK_EXPECTATIONS) : controls).split("#");
-    const read = JSON.parse(fs.readFileSync(file, "utf8")) as ClockControls | ClockHistory;
+    const read = JSON.parse(fs.readFileSync(file, "utf8")) as ClockControls<AnyNativeSummary> | ClockHistory;
     const entry = read.cases[name];
     if (pr === undefined) {
         return Array.isArray(entry) ? undefined : entry?.native;
@@ -169,8 +268,11 @@ export function pinMismatches(cases: Record<string, ClockControl>, untied: reado
             found.push(`${name}: has a native summary and no generation pin`);
             continue;
         }
-        if (control.native.expected !== generation.expected || control.native.period !== generation.period) {
-            found.push(`${name}: the native summary (period ${control.native.period}, expected ${control.native.expected}) and the pin (${generation.period}, ${generation.expected}) are of different clocks`);
+        // a run keeps its target to a millionth (34.285714 for 240/7): its output a period is the pin's to a thousandth
+        const perPeriod = isRunSummary(control.native) ? Math.round(control.native.target * control.native.period / 60 * 1e3) / 1e3 : control.native.expected;
+        const pinned = isRunSummary(control.native) ? Math.round(generation.expected * 1e3) / 1e3 : generation.expected;
+        if (perPeriod !== pinned || control.native.period !== generation.period) {
+            found.push(`${name}: the native summary (period ${control.native.period}, expected ${perPeriod} a period) and the pin (${generation.period}, ${generation.expected}) are of different clocks`);
         }
         if (recorded.carried !== undefined && recorded.carried.trim() === "") found.push(`${name}: recorded.carried is empty: say where the pin moved and why the recording still holds`);
         if (recorded.clock_sha256 !== generation.clock_sha256 && !recorded.carried?.trim()) {
@@ -203,7 +305,7 @@ export function coldClockReferenceMismatches(clocks: Record<string, unknown>, ru
 }
 
 /** A known historical capture keeps its identity, distinct from the current pin and consistent with its old summary. */
-export function historicalPinMismatches(history: ClockHistory["cases"], current: ClockControls["cases"]): string[] {
+export function historicalPinMismatches(history: ClockHistory["cases"], current: ClockControls<AnyNativeSummary>["cases"]): string[] {
     const found: string[] = [];
     for (const [name, entries] of Object.entries(history)) for (const [index, entry] of entries.entries()) {
         if (entry.recorded.clock_sha256 === undefined) continue; // No identity was recovered for these older recordings.

@@ -8,20 +8,23 @@ const SOURCE = "waiting_for_source_items";
 const SPACE = "waiting_for_space_in_destination";
 const OFF = "disabled_by_control_behavior";
 
+/** The items in the output of a machine that places one in each tick it finishes a craft, as a recorded stock holds them */
+const placedAtFinish = (products_finished: number[]) => ({ "iron-plate": products_finished.map((done, tick) => done > (products_finished[tick - 1] ?? 0) ? 1 : 0) });
+
 /** A stock of one inserter and one machine, `machine:1`, that finishes a craft in each of `crafts_at` */
-function stockOf(states: string[], held: number[], crafts_at: number[] = [], inserter_id = "inserter:1", at_pickup_in: number[] = []): StockRecording {
+function stockOf(states: string[], held: number[], crafts_at: number[] = [], inserter_id = "inserter:1", at_pickup_in: number[] = [], places_results = false): StockRecording {
     let finished = 0;
     const products_finished = states.map((_, tick) => finished += crafts_at.filter(it => it === tick).length);
     return {
         ticks: states.length,
-        machines: [{ machine_id: "machine:1", products_finished, crafts_started: states.map(() => 0) }],
-        inserters: [{ inserter_id, held, factorio_state: states, at_pickup: states.map((_, tick) => at_pickup_in.includes(tick)) }],
+        machines: [{ machine_id: "machine:1", products_finished, crafts_started: states.map(() => 0), outputs: places_results ? placedAtFinish(products_finished) : {} }],
+        inserters: [{ inserter_id, held, held_item: held.map(count => count > 0 ? "iron-plate" : ""), factorio_state: states, at_pickup: states.map((_, tick) => at_pickup_in.includes(tick)) }],
     } as unknown as StockRecording;
 }
 
 function inserter(ends: Partial<CountedInserter> = {}): CountedInserter {
     return { inserter_id: "inserter:1", source_machine_id: "machine:1", sink_machine_id: null, return_ticks: 3,
-        pickup_kind: "machine", drop_kind: "belt", hand_size: 4, ...ends };
+        pickup_kind: "machine", drop_kind: "belt", hand_size: 4, hand_size_of: () => 4, ...ends };
 }
 
 const BUILD = { copies: 1, backed_up_belts: false };
@@ -89,7 +92,7 @@ describe("inserter counters", () => {
 
     it("does not count a craft for a hand that waits for more items: that inserter is woken again", () => {
         const states = [SOURCE, SOURCE, "waiting_for_more_items", "waiting_for_more_items", SOURCE];
-        const { counters, wake_ups } = of(stockOf(states, [0, 0, 1, 1, 0], [1, 2, 3], "inserter:1", [1, 2, 3]));
+        const { counters, wake_ups } = of(stockOf(states, [0, 0, 1, 1, 0], [1, 2, 3], "inserter:1", [1, 2, 3], true));
         expect(wake_ups.wake_ups_per_minute).toBe(perMinute(3, 4));
         expect(counters.inserters[0].merged_crafts_per_minute).toBe(0);
     });
@@ -109,13 +112,14 @@ describe("inserter counters", () => {
     it("splits the wake-ups by the list that woke the inserter, and the parts add up to the wake-ups", () => {
         const stock = {
             ticks: 6,
-            machines: [1, 2].map(number => ({ machine_id: `machine:${number}`, crafts_started: [0, 1, 1, 2, 2, 3], products_finished: [0, 0, 1, 1, 2, 2] })),
-            inserters: [{ inserter_id: "inserter:1", held: [0, 0, 0, 0, 0, 0], factorio_state: [SPACE, SPACE, SOURCE, SOURCE, SOURCE, SOURCE] }],
+            machines: [1, 2].map(number => ({ machine_id: `machine:${number}`, crafts_started: [0, 1, 1, 2, 2, 3], products_finished: [0, 0, 1, 1, 2, 2], outputs: number === 1 ? { "iron-plate": [0, 0, 0, 0, 1, 0] } : {} })),
+            inserters: [{ inserter_id: "inserter:1", held: [0, 0, 0, 0, 0, 0], held_item: ["", "", "", "", "", ""], factorio_state: [SPACE, SPACE, SOURCE, SOURCE, SOURCE, SOURCE] }],
         } as unknown as StockRecording;
         const { wake_ups, counters } = countersOfStock(stock, [inserter({ sink_machine_id: "machine:2", drop_kind: "machine" })], 0, BUILD);
-        // asleep on the sink list after ticks 0 and 1: machine 2 starts a craft in tick 1; on the source list after ticks 2 to 4: machine 1 finishes in tick 4
+        // asleep on the sink list after ticks 0 and 1: machine 2 starts a craft in tick 1; on the source list after ticks 2 to 4, and still on the
+        // sink list: machine 2 starts crafts in ticks 3 and 5, and machine 1 finishes in tick 4
         const [wakes] = wake_ups.inserters;
-        expect(wakes.input_wake_ups_per_minute).toBe(perMinute(1, 5));
+        expect(wakes.input_wake_ups_per_minute).toBe(perMinute(3, 5));
         expect(wakes.output_wake_ups_per_minute).toBe(perMinute(1, 5));
         expect(wakes.input_wake_ups_per_minute + wakes.output_wake_ups_per_minute).toBe(wakes.wake_ups_per_minute);
         expect(counters.inserters[0].input_wake_ups_per_minute).toBe(wakes.input_wake_ups_per_minute);

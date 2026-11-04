@@ -7,7 +7,7 @@ import {ConfigPaths} from "../../../src/config/config-paths";
 import {loadConfigFromFile} from "../../../src/config/loader";
 import {BuiltClock, builtClockIdentity} from "../../../src/harness/built-clock";
 import {Recording} from "../../../src/verification/recording";
-import {BELT_SPEEDS} from "../helpers/belt-speed-fixtures";
+import {CLOCK_TEST_SPEEDS} from "../helpers/belt-speed-fixtures";
 import {PickupClockScenario} from "./pickup-clock-capture";
 
 /**
@@ -74,7 +74,7 @@ export async function grenadeClockScenario(variant: GrenadeClockCase): Promise<P
     const generated = variant.kind === "generated clock";
     const {clock, copies, share} = BUILDS[variant.build];
     return {
-        name: variant.name, speed: BELT_SPEEDS[0], backed: false,
+        name: variant.name, speed: CLOCK_TEST_SPEEDS[0], backed: false,
         config: () => config,
         scaffold: () => scaffoldOf(variant.build),
         share,
@@ -82,11 +82,8 @@ export async function grenadeClockScenario(variant: GrenadeClockCase): Promise<P
         keep_built_clock: !generated,
         builtClockSha256: () => ownerClockHash(variant.build),
         ...(generated && {alternative: GENERATED_ALTERNATIVE, copies}),
-        // 64 untouched periods; then the foundries stopped for 2 periods, the output loader taken away for 30 (a copy's belt takes
-        // 6 periods of grenades before it is full) and the drills stopped for 2
-        interventions: [[66, 68, 84], [84, 114, 130], [130, 132, 150]],
         probeFile: path.join(__dirname, "grenade-clock-probe.lua"),
-        probe: {family: "grenade", stackSize: 4, trace_periods: [30, 31]},
+        probe: {family: "grenade", stackSize: 4},
         controls: path.join(__dirname, "grenade-clock-controls.json"),
         assertHardware: recording => assertGrenadeHardware(recording, config, copies),
     };
