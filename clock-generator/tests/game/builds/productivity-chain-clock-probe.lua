@@ -65,7 +65,15 @@ local block = {
 }
 local iron = {
     kind = "stop iron foundries",
-    start = function(t) for _, f in ipairs(foundries) do f.disabled_by_script = true end event(t, "stop-iron-foundries") end,
+    -- the stopped foundries' made and undelivered plates go with the cut (owner, 2026-11-03)
+    start = function(t)
+        local removed = 0
+        for _, f in ipairs(foundries) do
+            f.disabled_by_script = true
+            removed = removed + f.get_inventory(defines.inventory.crafter_output).remove{name = "iron-plate", count = 1000000}
+        end
+        table.insert(report.events, {tick = t, action = "stop-iron-foundries", removed = removed})
+    end,
     release = function(t) for _, f in ipairs(foundries) do f.disabled_by_script = false end event(t, "start-iron-foundries") end,
 }
 steady.run{
