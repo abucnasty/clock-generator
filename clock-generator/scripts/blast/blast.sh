@@ -21,9 +21,11 @@
 #                                           the folder's recorded environment (.env.json, written by run) is not the
 #                                           current one, or when it has none: --made-under says what a folder from before
 #                                           the record was made under, and must still equal the current environment
-#   blast.sh compare <before> <after> [--json f]   compare.py (folders or cache entries): the clocks, and the results digest
-#                                           (every job file's results_sha256: what the clock hash leaves out) per job and component
-#   blast.sh same <a> <b>                   whether two jobs folders (or cache entries) hold the same results, job by job
+#   blast.sh compare <before> <after> [--json f]   compare.py (folders or cache entries, the latter by key as `list` prints it): the clocks, and the results digest
+#                                           (every job file's results_sha256: what the clock hash leaves out) per job and component;
+#                                           exits 1, naming the side, when either side has no jobs
+#   blast.sh same <a> <b>                   whether two jobs folders (or cache entries, by key) hold the same results, job by job;
+#                                           exits 1, naming the side, when either side has no jobs
 #   blast.sh list                           the cache's entries
 #
 # The worktree may be another checkout than this script's: blast.blastrun.ts, blast.digest.ts, blast.recorder.ts and the two vitest configs beside this
@@ -80,6 +82,12 @@ else LOCK=$CACHE/.generate.lock; fi
 SCRATCH=tests/game/builds/.scratch
 TEST=$SCRATCH/blast.blastrun.ts
 die() { echo "blast.sh: $*" >&2; exit 1; }
+# a compare/same argument: a folder as given, else the name of a cache entry (a key as `list` prints it) resolved to that entry
+entry_arg() {
+  if [ -d "$1" ]; then printf '%s\n' "$1"
+  elif [ -f "$CACHE/$1/MANIFEST.json" ]; then printf '%s\n' "$CACHE/$1"
+  else die "$1 is neither a folder nor a cache entry of $CACHE"; fi
+}
 say() { echo "== $*"; }
 
 worktree() {
@@ -296,8 +304,12 @@ case "$cmd" in
     rev=$(git -C "$W" rev-parse HEAD)
     store_entry "$src" "$(json_of kind stored from "$src" worktree "$W" rev "$rev" note "$NOTE")"
     ;;
-  compare) [ ${#ARGS[@]} -ge 2 ] || die "compare <before> <after> [--json out.json]"; python3 "$HERE/compare.py" "${ARGS[@]}" ;;
-  same) [ ${#ARGS[@]} -ge 2 ] || die "same <a> <b>"; python3 "$HERE/cache.py" same "${ARGS[@]}" ;;
+  compare) [ ${#ARGS[@]} -ge 2 ] || die "compare <before> <after> [--json out.json]"
+    ARGS[0]=$(entry_arg "${ARGS[0]}") && ARGS[1]=$(entry_arg "${ARGS[1]}") || exit 1
+    python3 "$HERE/compare.py" "${ARGS[@]}" ;;
+  same) [ ${#ARGS[@]} -ge 2 ] || die "same <a> <b>"
+    ARGS[0]=$(entry_arg "${ARGS[0]}") && ARGS[1]=$(entry_arg "${ARGS[1]}") || exit 1
+    python3 "$HERE/cache.py" same "${ARGS[@]}" ;;
   list) python3 "$HERE/cache.py" list "$CACHE" ;;
   *) sed -n '2,/^set -u/{/^#/p}' "$0"; exit 2 ;;
 esac

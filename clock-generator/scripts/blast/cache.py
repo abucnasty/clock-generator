@@ -19,7 +19,7 @@ usage:
                                                 results into <out>, marks them claimed, writes .seed.json; says why
                                                 the others rerun. --dry only says
   cache.py same <a> <b>                         every job the same in two jobs folders (or entries' jobs/), but its seconds;
-                                                exit 1 if any differs or is in one only
+                                                exit 1 if any differs or is in one only, or a side has no jobs
   cache.py bases <cache> <engine.json> <_jobs.json> <tool> <worktree>
                                                 the entries a new engine can carry jobs forward from, nearest in git
                                                 first, one JSON object per line: same game data (resources/ without the sample configs), package-lock and tsconfig,
@@ -165,6 +165,9 @@ def main(argv):
     if cmd == 'same':
         a, b = (os.path.join(x, 'jobs') if os.path.isdir(os.path.join(x, 'jobs')) else x for x in argv[1:3])
         fa, fb = job_files(a), job_files(b)
+        empty = [f"{name} ({x})" for name, x, f in (('first', a, fa), ('second', b, fb)) if not f]
+        if empty:
+            sys.exit(f"cache.py: no jobs in the {' or the '.join(empty)}: not a folder of job files or a cache entry")
         both = sorted(set(fa) & set(fb))
         diff = [k for k in both if not same(fa[k], fb[k])]
         only_a, only_b = sorted(set(fa) - set(fb)), sorted(set(fb) - set(fa))
