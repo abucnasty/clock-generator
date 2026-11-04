@@ -163,6 +163,20 @@ local function fuel_item_names(burner)
     return names
 end
 
+---The items of an inventory by name, counted over every quality. LuaInventory.get_item_count(name) counts the normal quality
+---only, so a build of another quality would record empty machines. nil (no such inventory) counts nothing
+---@param inventory LuaInventory|nil
+---@return table<string, number>
+local function counts_by_name(inventory)
+    local counts = {}
+    if inventory then
+        for _, stack in pairs(inventory.get_contents()) do
+            counts[stack.name] = (counts[stack.name] or 0) + stack.count
+        end
+    end
+    return counts
+end
+
 ---The transport line of a belt that is nearest to a map position, and the linear position in the middle of its piece of
 ---belt, where a drop is made. nil where the entity has no transport lines
 ---@param belt LuaEntity|nil
@@ -368,18 +382,20 @@ local function sample(recording)
             table.insert(s.products_finished, entity.products_finished)
             local input_inventory = entity.get_inventory(defines.inventory.crafter_input)
             local output_inventory = entity.get_inventory(defines.inventory.crafter_output)
+            local input_counts, output_counts = counts_by_name(input_inventory), counts_by_name(output_inventory)
             for name, values in pairs(s.inputs) do
-                table.insert(values, input_inventory and input_inventory.get_item_count(name) or 0)
+                table.insert(values, input_counts[name] or 0)
             end
             for name, values in pairs(s.outputs) do
-                table.insert(values, output_inventory and output_inventory.get_item_count(name) or 0)
+                table.insert(values, output_counts[name] or 0)
             end
             local burner = s.fuel and entity.burner
             if burner then
                 -- the burner's attributes differ between Factorio versions, so a missing one records nothing instead of crashing
-                local _, fuel_inventory = pcall(function() return burner.inventory end)
+                local fuel_ok, fuel_inventory = pcall(function() return burner.inventory end)
+                local fuel_counts = counts_by_name(fuel_ok and fuel_inventory or nil)
                 for name, values in pairs(s.fuel) do
-                    table.insert(values, fuel_inventory and fuel_inventory.get_item_count(name) or 0)
+                    table.insert(values, fuel_counts[name] or 0)
                 end
                 -- energy left in the item being burned, in MJ
                 local _, remaining = pcall(function() return burner.remaining_burning_fuel end)
