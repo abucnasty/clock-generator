@@ -2,10 +2,10 @@
 -- finish over the trailing minute decides every step.
 --   steady state  the first tick the trailing `window` ticks (3,600) hold `expected` products or more (target rate x 60 s)
 --   baseline      the `baseline` ticks after it (3,600 unless the family names a reason for more, at most 36,000). It holds
---                 when the trailing minute never falls below `expected` in it, or, where the output comes in bursts and it
---                 does, when the products from the steady-state tick to the last tick in the baseline at which the trailing
---                 minute reaches `expected` again from below make the target rate over those ticks: both ends at the same
---                 point of the build's cycle, so a minute that ends between two bursts does not count against the clock
+--                 when the products of its whole clock cycles, from the steady-state tick to the last tick in the baseline at
+--                 which the clock stands where it stood then, make the target over those ticks (owner, 2026-11-03): a minute
+--                 holds a burst more or less by where it starts, whole cycles do not. A clock whose cycle is longer than the
+--                 baseline has none in it, and fails: its family names a longer baseline
 --   disturbance   each one starts after the step before it and lasts until the trailing minute falls below the lowest
 --                 trailing minute of the baseline (the loss is real, not a burst missing from the window); then it is released
 --   recovery      the steady-state test met again, within `recover_bound` ticks of the release
@@ -49,7 +49,15 @@ function M.final_machines(entities, recipes, item)
     return finals
 end
 
---- spec: {finals, window, expected, baseline, cap, steady_bound, recover_bound, drop_bound, disturbances, report, output,
+--- The clock of the build: the decider the harness describes as "Clock for ..." (a generated clock, or one the build came with
+--- that the harness names)
+function M.clock(entities)
+    return capture.find_one(entities, function(entity)
+        return entity.type == "decider-combinator" and string.sub(entity.combinator_description or "", 1, 9) == "Clock for"
+    end, "the clock")
+end
+
+--- spec: {finals, clock, window, expected, baseline, cap, steady_bound, recover_bound, drop_bound, disturbances, report, output,
 ---        each_tick?, done?, settle?, count?}
 --- disturbances: {kind, start(t), tick?(t), release(t)}, run one after the other
 --- count: a function giving the cumulative products, in place of the finals' products_finished (a build judged by what it takes in)
@@ -62,6 +70,7 @@ function M.run(spec)
     local drop_bound = spec.drop_bound or 36000
     local disturbances = spec.disturbances or {}
     local finals = spec.finals
+    local clock = assert(spec.clock, "the clock the baseline's whole cycles are counted by")
     local count = spec.count
     if not count then
         assert(finals and #finals > 0, "no final machines")
@@ -83,7 +92,7 @@ function M.run(spec)
     history[0] = 0
     local function at(t) return history[t % size] end
     local phase, step = "steady", 0
-    local steady, baseline, current, previous_trailing
+    local steady, baseline, current
     local started = game.tick
     local function write() helpers.write_file(spec.output, helpers.table_to_json(spec.report), false) end
     local function finish(result)
@@ -115,14 +124,13 @@ function M.run(spec)
             if t < window then return end
             local trailing = cumulative - at(t - window)
             if t % 60 == 0 then table.insert(protocol.trace, trailing) end
-            local rising = previous_trailing ~= nil and previous_trailing < expected and trailing >= expected
-            previous_trailing = trailing
             if t >= cap then return finish("over the cap of " .. cap .. " ticks") end
             if phase == "steady" then
                 if trailing >= expected then
                     steady = t
                     protocol.steady = t
-                    baseline = {start = t, ticks = baseline_ticks, from = cumulative, min = trailing, max = trailing, lapsed = false}
+                    baseline = {start = t, ticks = baseline_ticks, from = cumulative, min = trailing, max = trailing, lapsed = false,
+                        position = capture.clock_value(clock)}
                     phase = "baseline"
                     write()
                 elseif t >= steady_bound then
@@ -132,17 +140,17 @@ function M.run(spec)
                 if trailing < baseline.min then baseline.min = trailing end
                 if trailing > baseline.max then baseline.max = trailing end
                 if trailing < expected then baseline.lapsed = true end
-                if rising then baseline.last_rise, baseline.rise_items = t, cumulative - baseline.from end
+                if capture.clock_value(clock) == baseline.position then baseline.last_cycle, baseline.cycle_items = t, cumulative - baseline.from end
                 if t >= steady + baseline_ticks then
                     local total = cumulative - baseline.from
                     local summary = {ticks = baseline_ticks, total = total, expected = expected * baseline_ticks / window,
                         min = baseline.min, max = baseline.max, held = not baseline.lapsed}
-                    if baseline.lapsed and baseline.last_rise then
-                        local ticks = baseline.last_rise - steady
-                        summary.measured = {ticks = ticks, items = baseline.rise_items, expected = expected * ticks / window}
-                        summary.meets = baseline.rise_items * window >= expected * ticks
+                    if baseline.last_cycle then
+                        local ticks = baseline.last_cycle - steady
+                        summary.measured = {ticks = ticks, items = baseline.cycle_items, expected = expected * ticks / window}
+                        summary.meets = baseline.cycle_items * window >= expected * ticks
                     else
-                        summary.meets = not baseline.lapsed
+                        summary.meets = false
                     end
                     protocol.baseline = summary
                     protocol.drop_below = baseline.min

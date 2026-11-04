@@ -170,7 +170,9 @@ export async function capturePickupClockScenario(scenario: PickupClockScenario) 
             throw new Error(`${scenario.name}: a longer baseline needs a reason and at most ${RUN_PROTOCOL.maxBaseline} ticks`);
         }
         const recipes = [...recipesMaking(config, config.target_output.recipe)];
-        const finals = config.machines.filter(machine => recipes.includes(machine.recipe)).length * (scenario.copies ?? 1);
+        // the copies of the config the build holds: those the clock is wired to, or the config's copies times the build's share of them
+        const buildCopies = scenario.copies ?? Math.round((config.target_output.copies ?? 1) * share);
+        const finals = config.machines.filter(machine => recipes.includes(machine.recipe)).length * buildCopies;
         const recording = replayDirectory ? JSON.parse(fs.readFileSync(path.join(replayDirectory, "recording.json"), "utf8"))
             : (await recordInFactorio({factorio: process.env.FACTORIO_PATH!, save: process.env.FACTORIO_HARNESS_SAVE!, config, clock, blueprint, built_clock: scenario.built_clock, copies: scenario.copies,
                 out: path.join(capture.directory, "recording.json"), work_dir: path.join(capture.directory, "game"),

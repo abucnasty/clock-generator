@@ -82,10 +82,14 @@ export interface NativeBaseline {
     expected: number;
     min: number;
     max: number;
-    /** The trailing window never fell below `expected` in it */
+    /** The trailing window never fell below `expected` in it (not the verdict: a minute holds a burst more or less by where it starts) */
     held: boolean;
-    /** Where it did: the products from the steady-state tick to the last tick the window reached `expected` again, against the target over those ticks */
+    /**
+     * The whole clock cycles in it: the products from the steady-state tick to the last tick of the baseline at which the clock
+     * stands where it stood then, against the target over those ticks; absent where no cycle fits in the baseline
+     */
     measured?: {ticks: number; items: number; expected: number};
+    /** The baseline holds (owner, 2026-11-03): its whole clock cycles make the target, 100% or more */
     meets: boolean;
 }
 
