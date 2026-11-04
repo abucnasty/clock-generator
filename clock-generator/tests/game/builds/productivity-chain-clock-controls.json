@@ -4,8 +4,8 @@
   "generated-one-copy": {
    "recorded": {
     "pr": 0,
-    "commit": "318cdac3",
-    "frozen_head": "318cdac3",
+    "commit": "08b8bcde",
+    "frozen_head": "08b8bcde",
     "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
     "clock_sha256": "15a6523219f3bbce0fa277c4a2e7567d7d02fd694d8dee2ee2975a565a7f7eed",
     "clock_basis": "capture"
@@ -19,23 +19,23 @@
     "expected": 800,
     "steady": 7200,
     "baseline": {
-     "ticks": 3600,
-     "total": 798,
-     "expected": 800,
+     "ticks": 3672,
+     "total": 813,
+     "expected": 816,
      "min": 796,
      "max": 803,
      "held": false,
      "measured": {
-      "ticks": 3600,
-      "items": 798,
-      "expected": 800
+      "ticks": 3672,
+      "items": 813,
+      "expected": 816
      },
      "meets": false
     },
     "disturbances": [
      {
       "kind": "cut coal",
-      "start": 10800,
+      "start": 10872,
       "drop": 13181,
       "release": 13181,
       "recovered": 17354
