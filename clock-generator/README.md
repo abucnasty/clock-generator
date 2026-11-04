@@ -96,7 +96,7 @@ import { generateClockForConfig, blueprintFileFor } from './crafting/generate-bl
 import { encodeBlueprintFile } from './blueprints/serde';
 
 async function main() {
-    const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_SHARED_INSERTER);
+    const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240);
     const result = generateClockForConfig(config);
     console.log(encodeBlueprintFile(blueprintFileFor(result)));
 }

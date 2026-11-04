@@ -81,8 +81,8 @@ describe("generateClockForConfig", () => {
         });
     });
 
-    describe("LOGISTIC_SCIENCE_SHARED_INSERTER config", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_SHARED_INSERTER);
+    describe("LOGISTIC_SCIENCE_240 config", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240);
         let result: BlueprintGenerationResult;
 
         beforeAll(() => {

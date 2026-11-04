@@ -20,7 +20,7 @@
         "belt": "belt:1",
         "lane": 1,
         "listed": true,
-        "item": "transport-belt",
+        "item": "logistic-science-pack",
         "stack": 4,
         "belt_prototype": "turbo-transport-belt",
         "tiles_per_tick": 0.125,
@@ -46,7 +46,7 @@
         "belt": "belt:1",
         "lane": 2,
         "listed": true,
-        "item": "inserter",
+        "item": "",
         "stack": 4,
         "belt_prototype": "turbo-transport-belt",
         "tiles_per_tick": 0.125,
@@ -72,7 +72,7 @@
         "belt": "belt:2",
         "lane": 1,
         "listed": true,
-        "item": "logistic-science-pack",
+        "item": "transport-belt",
         "stack": 4,
         "belt_prototype": "turbo-transport-belt",
         "tiles_per_tick": 0.125,
@@ -97,8 +97,8 @@
         "key": "belt:2/lane:2",
         "belt": "belt:2",
         "lane": 2,
-        "listed": false,
-        "item": null,
+        "listed": true,
+        "item": "inserter",
         "stack": 4,
         "belt_prototype": "turbo-transport-belt",
         "tiles_per_tick": 0.125,
@@ -122,33 +122,33 @@
       "production": {
         "kind": "recipe",
         "recipe_or_resource": "logistic-science-pack",
-        "prototype": null,
-        "prototype_type": null,
-        "speed": 68.906247615814,
+        "prototype": "assembling-machine-3",
+        "prototype_type": "assembling-machine",
+        "speed": 68.890625,
         "energy_required": 6,
-        "ticks_per_craft": 5.224489976687978,
-        "crafts_per_tick": 0.19140624337726106,
+        "ticks_per_craft": 5.22567475618054,
+        "crafts_per_tick": 0.19136284722222222,
         "productivity": 100,
         "bonus_per_craft": 1,
-        "ticks_per_bonus": 5.224489976687978,
+        "ticks_per_bonus": 5.22567475618054,
         "inputs": [
           {
             "item": "inserter",
             "per_craft": 1,
-            "per_second": 11.484374602635663,
-            "per_tick": 0.19140624337726106
+            "per_second": 11.481770833333334,
+            "per_tick": 0.19136284722222222
           },
           {
             "item": "transport-belt",
             "per_craft": 1,
-            "per_second": 11.484374602635663,
-            "per_tick": 0.19140624337726106
+            "per_second": 11.481770833333334,
+            "per_tick": 0.19136284722222222
           }
         ],
-        "insertion_duration_ticks": 39.18367482515984,
+        "insertion_duration_ticks": 39.19256067135404,
         "crafts_per_second": {
-          "numerator": 3445312380790699,
-          "denominator": 300000000000000
+          "numerator": 4409,
+          "denominator": 384
         }
       },
       "yield": {
@@ -165,8 +165,8 @@
               "denominator": 1
             },
             "per_second": {
-              "numerator": 574218730131783,
-              "denominator": 25000000000000
+              "numerator": 1435221354166667,
+              "denominator": 62500000000000
             },
             "main": true,
             "stochastic": false
@@ -205,8 +205,8 @@
       "recipe_selection": "fixed",
       "placement": null,
       "energy": {
-        "source": null,
-        "energy_usage_kw": null,
+        "source": "electric",
+        "energy_usage_kw": 375,
         "energy_bonus": 0,
         "burner": null,
         "fuel_modelled": false,
@@ -225,15 +225,15 @@
   ],
   "edges": [
     {
-      "key": "inserter:1/transport-belt",
+      "key": "inserter:1/inserter",
       "via": "inserter",
       "entity": "inserter:1",
       "group": "inserter:1",
-      "item": "transport-belt",
-      "from": "belt:1/lane:1",
+      "item": "inserter",
+      "from": "belt:2/lane:2",
       "to": "machine:1",
       "from_lanes": [
-        "belt:1/lane:1"
+        "belt:2/lane:2"
       ],
       "lands_in": "ingredients",
       "hand": {
@@ -243,8 +243,8 @@
         "nominal": 16,
         "research": 16,
         "items": [
-          "transport-belt",
-          "inserter"
+          "inserter",
+          "transport-belt"
         ],
         "full_hand": {
           "at_placing_source": true,
@@ -283,15 +283,15 @@
       "enable_latency_ticks": 2
     },
     {
-      "key": "inserter:1/inserter",
+      "key": "inserter:1/transport-belt",
       "via": "inserter",
       "entity": "inserter:1",
       "group": "inserter:1",
-      "item": "inserter",
-      "from": "belt:1/lane:2",
+      "item": "transport-belt",
+      "from": "belt:2/lane:1",
       "to": "machine:1",
       "from_lanes": [
-        "belt:1/lane:2"
+        "belt:2/lane:1"
       ],
       "lands_in": "ingredients",
       "hand": {
@@ -301,8 +301,8 @@
         "nominal": 16,
         "research": 16,
         "items": [
-          "transport-belt",
-          "inserter"
+          "inserter",
+          "transport-belt"
         ],
         "full_hand": {
           "at_placing_source": true,
@@ -347,7 +347,7 @@
       "group": "inserter:2",
       "item": "logistic-science-pack",
       "from": "machine:1",
-      "to": "belt:2/lane:1",
+      "to": "belt:1/lane:1",
       "from_lanes": [],
       "lands_in": "lane",
       "hand": {
@@ -401,14 +401,14 @@
       "group": "inserter:1",
       "edges": [
         {
-          "edge": "inserter:1/transport-belt",
-          "item": "transport-belt",
+          "edge": "inserter:1/inserter",
+          "item": "inserter",
           "hand": 16,
           "floor_cycle": 11
         },
         {
-          "edge": "inserter:1/inserter",
-          "item": "inserter",
+          "edge": "inserter:1/transport-belt",
+          "item": "transport-belt",
           "hand": 16,
           "floor_cycle": 11
         }

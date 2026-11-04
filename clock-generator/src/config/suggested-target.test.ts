@@ -133,7 +133,7 @@ describe("inferSuggestedTarget", () => {
 
     // a sample's target is the total over its copies, set a little below what the machines make at most
     it.each([
-        "science/logistic-science/logistic-science.json",
+        "science/logistic/logistic-240.json",
         "science/agricultural/agricultural-250.json",
         "intermediates/advanced-circuit/advanced-circuit-240.json",
         "gleba/rocket-fuel/rocket-fuel-60.json",

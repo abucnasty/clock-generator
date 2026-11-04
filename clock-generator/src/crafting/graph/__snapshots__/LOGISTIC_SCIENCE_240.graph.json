@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "SAMPLE_CONFIG",
+  "sample": "LOGISTIC_SCIENCE_240",
   "target": {
     "item": "logistic-science-pack",
     "counts": "made",
@@ -14,15 +14,26 @@
       "key": "belt:1/lane:1",
       "kind": "lane",
       "ports": [
-        "belt:1/lane:1#logistic-science-pack",
-        "belt:1/lane:1#transport-belt"
+        "belt:1/lane:1#logistic-science-pack"
       ]
     },
     {
       "key": "belt:1/lane:2",
       "kind": "lane",
+      "ports": []
+    },
+    {
+      "key": "belt:2/lane:1",
+      "kind": "lane",
       "ports": [
-        "belt:1/lane:2#inserter"
+        "belt:2/lane:1#transport-belt"
+      ]
+    },
+    {
+      "key": "belt:2/lane:2",
+      "kind": "lane",
+      "ports": [
+        "belt:2/lane:2#inserter"
       ]
     },
     {
@@ -38,14 +49,14 @@
   ],
   "edges": [
     {
-      "key": "inserter:1/transport-belt",
+      "key": "inserter:1/inserter",
       "via": "inserter",
       "entity": "inserter:1",
       "group": "inserter:1",
-      "item": "transport-belt",
-      "from": "belt:1/lane:1#transport-belt",
+      "item": "inserter",
+      "from": "belt:2/lane:2#inserter",
       "from_ports": [
-        "belt:1/lane:1#transport-belt"
+        "belt:2/lane:2#inserter"
       ],
       "to": "machine:1",
       "lands_in": "ingredients",
@@ -58,14 +69,14 @@
       "terminal": null
     },
     {
-      "key": "inserter:1/inserter",
+      "key": "inserter:1/transport-belt",
       "via": "inserter",
       "entity": "inserter:1",
       "group": "inserter:1",
-      "item": "inserter",
-      "from": "belt:1/lane:2#inserter",
+      "item": "transport-belt",
+      "from": "belt:2/lane:1#transport-belt",
       "from_ports": [
-        "belt:1/lane:2#inserter"
+        "belt:2/lane:1#transport-belt"
       ],
       "to": "machine:1",
       "lands_in": "ingredients",
@@ -100,8 +111,8 @@
   ],
   "components": [],
   "order": [
-    "belt:1/lane:1#transport-belt",
-    "belt:1/lane:2#inserter",
+    "belt:2/lane:1#transport-belt",
+    "belt:2/lane:2#inserter",
     "machine:1",
     "belt:1/lane:1#logistic-science-pack",
     "sink"

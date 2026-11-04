@@ -1,4 +1,4 @@
-# Blast job renames of 0.27.1 (R8 part a): old job name, new job name, one pair a line; '#' starts a comment.
+# Blast job renames of 0.27.1 (R8): old job name, new job name, one pair a line; '#' starts a comment. LOGISTIC_SCIENCE -> LOGISTIC_SCIENCE_240 is a new config under the old job's place (its selected clock moves).
 # Use: blast.sh compare --map scripts/blast/maps/0.27.1-renames.txt <before> <after>
 config-ADVANCED_CIRCUIT config-ADVANCED_CIRCUIT_240
 config-AGRICULTURAL_SCIENCE config-AGRICULTURAL_SCIENCE_250
@@ -30,3 +30,4 @@ config-STEEL_CARGO_WAGON config-STEEL_PLATE_26_WAGON_CHEST
 config-STONE_BRICKS_DIRECT_INSERT_2_1 config-STONE_BRICK_120_DRILL_DIRECT_INSERT
 config-UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS config-UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT
 config-UTILITY_SCIENCE config-UTILITY_SCIENCE_120
+config-LOGISTIC_SCIENCE config-LOGISTIC_SCIENCE_240

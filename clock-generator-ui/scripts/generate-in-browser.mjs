@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { createServer, preview } from 'vite';
 
-// one machine and three inserters, so quick, and its generation runs the as-built check that read process.env
+// one machine and two inserters, so quick, and its generation runs the as-built check that read process.env
 // (automation science's does not reach it)
 const EXAMPLE = /^Logistic science pack/;
 const TIMEOUT_MS = 60_000;

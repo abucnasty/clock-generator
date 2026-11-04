@@ -43,7 +43,7 @@ const read_back: ReturnType<typeof expandStateTransitionHistory>["entities"] = [
 describe("a run's sealed state transition history, read back", () => {
     it.each([
         ["a belt-fed build", ConfigPaths.AUTOMATION_SCIENCE_240, false],
-        ["a machine chain", ConfigPaths.LOGISTIC_SCIENCE, false],
+        ["a machine chain", ConfigPaths.LOGISTIC_SCIENCE_240, false],
         ["drills", ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY, false],
         ["drills into a furnace", ConfigPaths.STONE_BRICK_120_DRILL_DIRECT_INSERT, false],
         ["an inserter that does not move in some runs", ConfigPaths.UTILITY_SCIENCE_120, true],

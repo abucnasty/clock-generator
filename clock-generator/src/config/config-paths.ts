@@ -25,10 +25,9 @@ export const ConfigPaths = {
     /** One electromagnetic plant making electromagnetic science packs from accumulators and supercapacitors on one belt; 11 copies make 330 a second */
     ELECTROMAGNETIC_SCIENCE_330: path.join(CONFIG_SAMPLES_DIR, 'science', 'electromagnetic', 'electromagnetic-330.json'),
     ELECTRIC_FURNACE_20: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'electric-furnace', 'electric-furnace-20.json'),
-    LOGISTIC_SCIENCE: path.join(CONFIG_SAMPLES_DIR, 'science', 'logistic-science', 'logistic-science.json'),
-    LOGISTIC_SCIENCE_SHARED_INSERTER: path.join(CONFIG_SAMPLES_DIR, 'science', 'logistic-science', 'logistic-science-shared-inserter.json'),
+    /** One logistic science assembler: one inserter takes both ingredients from a turbo belt, one packs onto a second belt; 11 copies make 240 a second */
+    LOGISTIC_SCIENCE_240: path.join(CONFIG_SAMPLES_DIR, 'science', 'logistic', 'logistic-240.json'),
     INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'inserter-crafting', 'inserter-crafting-240-shared-signal-clock.json'),
-    SAMPLE_CONFIG: path.join(CONFIG_SAMPLES_DIR, 'science', 'logistic-science', 'logistic-science-sample.json'),
     STONE_BRICK_120_DRILL_DIRECT_INSERT: path.join(CONFIG_SAMPLES_DIR, 'smelting', 'stone-brick', 'stone-brick-120-drill-direct-insert.json'),
     UTILITY_SCIENCE_120: path.join(CONFIG_SAMPLES_DIR, 'science', 'utility', 'utility-120.json'),
     MILITARY_SCIENCE_120: path.join(CONFIG_SAMPLES_DIR, 'science', 'military', 'military-120.json'),

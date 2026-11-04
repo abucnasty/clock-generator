@@ -74,7 +74,7 @@ describe("candidate verification identity", () => {
 
 describe("request-local duplicate verification", () => {
     it("shares requested sampled-start assessments along with recovery", async () => {
-        const logistic = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE);
+        const logistic = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240);
         const starts = vi.spyOn(trial, "startDependenceVerdictOf");
         const generated = generateClockAlternatives({...logistic,
             overrides: {...logistic.overrides, check_start_dependence: true}}, {logger: quiet});
@@ -84,19 +84,19 @@ describe("request-local duplicate verification", () => {
         expect(generated.alternatives.every(clock => clock.assessment.start_dependence !== null)).toBe(true);
     });
     it("assesses a matching primary only once and still supplies a valid run for dependency checks", async () => {
-        const logistic = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE);
+        const logistic = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240);
         const recovery = vi.spyOn(trial, "backpressureLossVerdictOf");
         const generated = generateClockAlternatives(logistic, {logger: quiet});
         const keys = recovery.mock.calls.map(([config, result]) => signature(config, result));
         expect(keys.length).toBeGreaterThan(1);
         expect(new Set(keys).size).toBe(keys.length);
-        // Both clocks are stable; swings-2 is selected on its fewer wake-ups although swings-1 recovers in 2 periods
+        // Both clocks are stable; planned-belt-slack is selected on its fewer wake-ups although swings-1 recovers in 2 periods
         // rather than 3. Sharing the verification must preserve that choice.
         const other = generated.alternatives.find(clock => clock.id === "swings-1")!;
         const selected = generated.alternatives[generated.selected_index];
         expect(other.verdict).toBe("stable");
         expect(other.ranking.recovery_periods).toBe(2);
-        expect(selected.id).toBe("swings-2");
+        expect(selected.id).toBe("planned-belt-slack");
         expect(selected.verdict).toBe("stable");
         expect(selected.ranking.recovery_periods).toBe(3);
         expect(selected.ranking.wake_ups_per_minute).toBeLessThan(other.ranking.wake_ups_per_minute!);
@@ -107,7 +107,7 @@ describe("request-local duplicate verification", () => {
     });
 
     it("lets the worker API skip recovery of a matching primary without changing its completed assessment", async () => {
-        const logistic = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE);
+        const logistic = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240);
         const plan = planClockAlternatives(logistic, {logger: quiet});
         const recovery = vi.spyOn(trial, "backpressureLossVerdictOf");
         const duplicate = runClockAlternativeTask(logistic, plan.context, "fractional", {logger: quiet}, [plan.primary!.signature]);

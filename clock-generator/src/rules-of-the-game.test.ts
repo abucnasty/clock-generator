@@ -98,7 +98,7 @@ describe("the rules of the game", () => {
     describe("belt pickup slack", () => {
         // one more full hand at one belt stack a tick: 4 for a hand of 16 from stacks of 4
         it("is the ticks one more full hand takes, for every inserter that picks up from a belt", async () => {
-            const registry = await registryOf(ConfigPaths.LOGISTIC_SCIENCE);
+            const registry = await registryOf(ConfigPaths.LOGISTIC_SCIENCE_240);
             const slack = beltPickupSlackTicks(registry);
             const belt_fed = registry.getAll().filter(Entity.isInserter).filter(it => Entity.isBelt(registry.getEntityByIdOrThrow(it.source.entity_id)));
             expect(belt_fed.length).toBeGreaterThan(0);

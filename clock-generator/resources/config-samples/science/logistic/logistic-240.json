@@ -1,0 +1,109 @@
+{
+  "target_output": {
+    "recipe": "logistic-science-pack",
+    "items_per_second": 240,
+    "copies": 11,
+    "copy_offset": {
+      "x": 6,
+      "y": 0
+    }
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "logistic-science-pack",
+      "productivity": 100,
+      "crafting_speed": 68.890625,
+      "prototype": "assembling-machine-3",
+      "quality": "legendary",
+      "recipe_quality": "normal",
+      "position": {
+        "x": -445.5,
+        "y": -876.5
+      }
+    }
+  ],
+  "inserters": [
+    {
+      "source": {
+        "type": "belt",
+        "id": 2,
+        "near_lane": 2,
+        "pickup_length": 1,
+        "pickup_layout": "side-straight",
+        "pickup_capture": {
+          "status": "supported",
+          "model": "belt",
+          "model_version": 2,
+          "entity_type": "transport-belt",
+          "entity_name": "turbo-transport-belt",
+          "sidecar_version": "0.15.0"
+        }
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": -445.5,
+        "y": -878.5
+      },
+      "direction": 0,
+      "id": 1
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1,
+        "belt_direction": 4
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": -446.5,
+        "y": -874.5
+      },
+      "direction": 0,
+      "id": 2
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "logistic-science-pack",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "transport-belt",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "inserter",
+          "stack_size": 4
+        }
+      ]
+    }
+  ],
+  "chests": []
+}

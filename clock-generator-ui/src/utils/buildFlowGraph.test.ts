@@ -63,7 +63,7 @@ const dropped = (status: Summary['status'], direct: Result['direct'], coverage: 
 const drillIntoChest = () => ({ ...form({ machines: 1, chests: 1 }, []), drills: { configs: [drillRow(1, { target: chest(1) })] } });
 
 const FIXTURES: Record<string, () => ConfigFormData> = {
-    // as logistic-science.json
+    // as the three-inserter logistic science example was before 0.27.1
     'belt in and out': () => form({ machines: 1, belts: 1 }, [
         inserter(1, belt(1), machine(1)), inserter(2, belt(1), machine(1)), inserter(3, machine(1), belt(1)),
     ]),

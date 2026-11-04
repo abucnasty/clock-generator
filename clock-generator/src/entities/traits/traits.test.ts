@@ -137,7 +137,7 @@ describe("the output block (rule 1)", () => {
 
 describe("the automated insertion limits (rule 2, mechanics/machines.md section 2)", () => {
     it("are 15 on the logistic science assembler", async () => {
-        const assembler = (await sampleTraits(ConfigPaths.LOGISTIC_SCIENCE))["machine:1"] as MachineTraits;
+        const assembler = (await sampleTraits(ConfigPaths.LOGISTIC_SCIENCE_240))["machine:1"] as MachineTraits;
         expect(assembler.input_limits.overload_multiplier).toBe(15);
         expect(assembler.input_limits.limits.map(limit => [limit.item, limit.limit])).toEqual([["inserter", 15], ["transport-belt", 15]]);
     });

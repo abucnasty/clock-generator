@@ -14,7 +14,7 @@ const PUBLIC = new URL('../public/', import.meta.url);
 // One build per science pack, simplest first, so a newcomer's first Generate is quick. Each is copied flat as
 // public/examples/<id>.json and listed in public/examples/index.json, which the examples dialog reads.
 const EXAMPLES = [
-    { id: 'logistic-science', path: 'science/logistic-science/logistic-science.json' },
+    { id: 'logistic-science', path: 'science/logistic/logistic-240.json' },
     { id: 'automation-science', path: 'science/automation/automation-240.json' },
     { id: 'utility-science', path: 'science/utility/utility-120.json' },
     { id: 'chemical-science', path: 'science/chemical/chemical-240-shared-foundry.json' },

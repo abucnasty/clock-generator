@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "SAMPLE_CONFIG",
+  "sample": "LOGISTIC_SCIENCE_240",
   "target": {
     "item": "logistic-science-pack",
     "counts": "made",
@@ -11,11 +11,11 @@
   },
   "unbounded_sources": [
     {
-      "vertex": "belt:1/lane:1#transport-belt",
+      "vertex": "belt:2/lane:1#transport-belt",
       "kind": "nothing-drops-on"
     },
     {
-      "vertex": "belt:1/lane:2#inserter",
+      "vertex": "belt:2/lane:2#inserter",
       "kind": "nothing-drops-on"
     }
   ],
@@ -27,8 +27,8 @@
         "belt:1/lane:1#logistic-science-pack"
       ],
       "edges": [
-        "inserter:1/transport-belt",
         "inserter:1/inserter",
+        "inserter:1/transport-belt",
         "inserter:2/logistic-science-pack"
       ],
       "periods": [
@@ -51,12 +51,12 @@
             "denominator": 11
           },
           "crafts_capacity": {
-            "numerator": 3445312380790699,
-            "denominator": 300000000000000
+            "numerator": 4409,
+            "denominator": 384
           },
           "duty": {
-            "numerator": 978108208861,
-            "denominator": 1029688098310
+            "numerator": 46080,
+            "denominator": 48499
           }
         }
       ]

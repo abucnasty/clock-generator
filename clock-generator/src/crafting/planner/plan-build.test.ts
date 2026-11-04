@@ -20,7 +20,7 @@ describe("the result windows' decision of a target that counts an item destroyed
     });
 
     it("a target that counts an item made has no such decision", async () => {
-        expect((await planOfSample(ConfigPaths.LOGISTIC_SCIENCE)).plan.result_windows).toBeNull();
+        expect((await planOfSample(ConfigPaths.LOGISTIC_SCIENCE_240)).plan.result_windows).toBeNull();
     });
 
     it("the cycle plan made with the decision is the one made without it", async () => {
@@ -44,7 +44,7 @@ describe("the plan a generation reads", () => {
         expect(buildPlanOfConfig(config, registry)).toBe(plan);
         expect(plan!.result_windows).toEqual((await planOfSample(ConfigPaths.IRON_ORE_VOIDER_400_EXACT_SPEED)).plan.result_windows);
         // nothing reads a made target's plan yet
-        const made = await sampleOf("LOGISTIC_SCIENCE");
+        const made = await sampleOf("LOGISTIC_SCIENCE_240");
         expect(buildPlanOfConfig(made, createEntityRegistryFromConfig(made))).toBeNull();
     });
 });
