@@ -26,8 +26,8 @@ describe("generateClockForConfig", () => {
     // The builds are generated in beforeAll hooks, not in the describe bodies: those all run when the file is collected,
     // so a run of one test by name would generate every build in the file first.
 
-    describe("STONE_BRICKS_DIRECT_INSERT config", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.STONE_BRICKS_DIRECT_INSERT);
+    describe("STONE_BRICKS_DIRECT_INSERT_2_1 config", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.STONE_BRICKS_DIRECT_INSERT_2_1);
         let result: BlueprintGenerationResult;
         let inserterId: EntityId;
         let drillId: EntityId;
@@ -290,7 +290,7 @@ describe("generateClockForConfig", () => {
 
     describe("config validation", () => {
         it("throw error if the current configuration cannot meet the target production rate", async () => {
-            const config = await loadConfigFromFile(ConfigPaths.STONE_BRICKS_DIRECT_INSERT);
+            const config = await loadConfigFromFile(ConfigPaths.STONE_BRICKS_DIRECT_INSERT_2_1);
             expect(config.target_output.items_per_second).toBe(120)
             expect(() => generateClockForConfig(config)).not.toThrowError();
             config.target_output.items_per_second = 240;

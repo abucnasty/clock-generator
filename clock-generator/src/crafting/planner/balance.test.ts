@@ -85,7 +85,7 @@ describe("the balance with inserters that carry nothing", () => {
     const FIXTURES = {
         // stone bricks direct insert, and an inserter from the furnace into a buffer chest that takes only stone
         stone_bricks_and_an_empty_taker: () => {
-            const it = rawOf(ConfigPaths.STONE_BRICKS_DIRECT_INSERT);
+            const it = rawOf(ConfigPaths.STONE_BRICKS_DIRECT_INSERT_2_1);
             it.chests = [{ type: "buffer-chest", id: 1, storage_size: 10, item_filter: "stone" }];
             it.inserters.push({ source: { type: "machine", id: 1 }, sink: { type: "chest", id: 1 }, stack_size: 16 });
             return it;

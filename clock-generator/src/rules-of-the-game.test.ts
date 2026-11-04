@@ -51,7 +51,7 @@ describe("the rules of the game", () => {
 
         // the function on the stone brick sample, whose furnaces have a limit of 70 for stone, above the stack
         it("fills a stone furnace to its insertion limit for stone plus 64", async () => {
-            const registry = await registryOf(ConfigPaths.STONE_BRICKS_DIRECT_INSERT);
+            const registry = await registryOf(ConfigPaths.STONE_BRICKS_DIRECT_INSERT_2_1);
             const drill = registry.getAll().filter(Entity.isDrill)[0];
             const furnace = registry.getAll().filter(Entity.isMachine).find(it => it.inputs.has("stone"))!;
             expect(furnace.inputs.getOrThrow("stone").automated_insertion_limit.quantity).toBe(70);

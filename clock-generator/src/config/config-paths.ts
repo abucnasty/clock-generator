@@ -32,7 +32,6 @@ export const ConfigPaths = {
     LOGISTIC_SCIENCE_INSERTER_CRAFTING: path.join(CONFIG_SAMPLES_DIR, 'science', 'logistic-science', 'logistic-science-inserter-crafting.json'),
     PRODUCTION_SCIENCE_SHARED_JSON: path.join(CONFIG_SAMPLES_DIR, 'science', 'production-science', 'production-science-shared.json'),
     SAMPLE_CONFIG: path.join(CONFIG_SAMPLES_DIR, 'science', 'logistic-science', 'logistic-science-sample.json'),
-    STONE_BRICKS_DIRECT_INSERT: path.join(CONFIG_SAMPLES_DIR, 'smelting', 'stone-bricks', 'stone-bricks-direct-insert.json'),
     STONE_BRICKS_DIRECT_INSERT_2_1: path.join(CONFIG_SAMPLES_DIR, 'smelting', 'stone-bricks', 'stone-bricks-direct-insert-2-1.json'),
     UTILITY_SCIENCE: path.join(CONFIG_SAMPLES_DIR, 'science', 'utility-science', 'utility-science.json'),
     MILITARY_SCIENCE: path.join(CONFIG_SAMPLES_DIR, 'science', 'military-science', 'military-science-1-inserter.json'),

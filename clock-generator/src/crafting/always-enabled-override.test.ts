@@ -65,7 +65,7 @@ describe("an inserter the config sets to always enabled", () => {
     });
 
     it("holds for a mining drill too", async () => {
-        const sample = await loadConfigFromFile(ConfigPaths.STONE_BRICKS_DIRECT_INSERT);
+        const sample = await loadConfigFromFile(ConfigPaths.STONE_BRICKS_DIRECT_INSERT_2_1);
         expect(Object.keys(generateClockForConfig(sample, { logger: quiet }).clock_windows)).toContain("drill:1");
 
         const config: Config = {
