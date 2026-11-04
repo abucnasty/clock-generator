@@ -156,9 +156,11 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         // game moved through every inserter and machine; so did the family cuts (64 periods, then back at 400 from the
         // first or second period after each cut). The same that day with only the first two on windows, and with all four
         // always on. The 2-swing clock selected before (recorded 2026-10-16) was one hand short in periods 8 and 9 of the
-        // settling after the staged start.
+        // settling after the staged start. Since 0.27.0 it selects shifted swings (5 output swings per cycle), recorded
+        // 2026-11-03 from the staged start to steady state and a minute more: one period of the settling short (320 at tick
+        // 1,440), 400 in every other.
         staged_start: {
-            dips: [],
+            dips: [{ start: 1440, items: 320 }],
             open_issues: [],
         },
         wake_ups_open: AGRICULTURAL_SCIENCE_WAKE_UPS_OPEN,
