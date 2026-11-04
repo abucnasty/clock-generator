@@ -4,8 +4,8 @@
     "car-derived": {
       "recorded": {
         "pr": 0,
-        "commit": "baaabc76",
-        "frozen_head": "baaabc76",
+        "commit": "3ff86660",
+        "frozen_head": "3ff86660",
         "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
         "clock_sha256": "ada70e1e95f6344645551b76515f3357c953fe28f1586020cc05de38d6143723",
         "clock_basis": "capture"
@@ -17,17 +17,17 @@
         "period": 288,
         "window": 3600,
         "expected": 4800,
-        "steady": 3888,
+        "steady": 7056,
         "baseline": {
           "ticks": 3600,
-          "total": 4846,
+          "total": 4834,
           "expected": 4800,
-          "min": 4844,
+          "min": 4832,
           "max": 4848,
           "held": true,
           "measured": {
             "ticks": 3456,
-            "items": 4654,
+            "items": 4642,
             "expected": 4608
           },
           "meets": true
@@ -35,28 +35,28 @@
         "disturbances": [
           {
             "kind": "stop drill",
-            "start": 7488,
-            "drop": 7570,
-            "release": 7570,
-            "recovered": 11361
+            "start": 10656,
+            "drop": 10752,
+            "release": 10752,
+            "recovered": 14817
           },
           {
             "kind": "block output",
-            "start": 11361,
-            "drop": 11362,
-            "release": 11362,
-            "recovered": 11363
+            "start": 14817,
+            "drop": 14818,
+            "release": 14818,
+            "recovered": 14819
           },
           {
             "kind": "stop drill",
-            "start": 11363,
-            "drop": 11364,
-            "release": 11364,
-            "recovered": 11365
+            "start": 14819,
+            "drop": 14820,
+            "release": 14820,
+            "recovered": 14821
           }
         ],
         "result": "holds",
-        "ended": 11365
+        "ended": 14821
       },
       "generation": {
         "period": 288,
@@ -74,8 +74,8 @@
     "car-derived-takers-last": {
       "recorded": {
         "pr": 0,
-        "commit": "baaabc76",
-        "frozen_head": "baaabc76",
+        "commit": "3ff86660",
+        "frozen_head": "3ff86660",
         "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
         "clock_sha256": "ada70e1e95f6344645551b76515f3357c953fe28f1586020cc05de38d6143723",
         "clock_basis": "capture"
@@ -87,17 +87,17 @@
         "period": 288,
         "window": 3600,
         "expected": 4800,
-        "steady": 3888,
+        "steady": 7056,
         "baseline": {
           "ticks": 3600,
-          "total": 4846,
+          "total": 4834,
           "expected": 4800,
-          "min": 4844,
+          "min": 4832,
           "max": 4848,
           "held": true,
           "measured": {
             "ticks": 3456,
-            "items": 4654,
+            "items": 4642,
             "expected": 4608
           },
           "meets": true
@@ -105,28 +105,28 @@
         "disturbances": [
           {
             "kind": "stop drill",
-            "start": 7488,
-            "drop": 7570,
-            "release": 7570,
-            "recovered": 11361
+            "start": 10656,
+            "drop": 10752,
+            "release": 10752,
+            "recovered": 14817
           },
           {
             "kind": "block output",
-            "start": 11361,
-            "drop": 11362,
-            "release": 11362,
-            "recovered": 11363
+            "start": 14817,
+            "drop": 14818,
+            "release": 14818,
+            "recovered": 14819
           },
           {
             "kind": "stop drill",
-            "start": 11363,
-            "drop": 11364,
-            "release": 11364,
-            "recovered": 11365
+            "start": 14819,
+            "drop": 14820,
+            "release": 14820,
+            "recovered": 14821
           }
         ],
         "result": "holds",
-        "ended": 11365
+        "ended": 14821
       },
       "generation": {
         "period": 288,
@@ -144,8 +144,8 @@
     "car-swings-2": {
       "recorded": {
         "pr": 0,
-        "commit": "baaabc76",
-        "frozen_head": "baaabc76",
+        "commit": "3ff86660",
+        "frozen_head": "3ff86660",
         "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
         "clock_sha256": "007d0402aaa07a6ed5a91cb1e775e28bf39596cf0ddfac734428aaa18ef03efe",
         "clock_basis": "capture"
@@ -157,17 +157,17 @@
         "period": 144,
         "window": 3600,
         "expected": 4800,
-        "steady": 3745,
+        "steady": 7201,
         "baseline": {
           "ticks": 3600,
-          "total": 4846,
+          "total": 4844,
           "expected": 4800,
           "min": 4844,
           "max": 4848,
           "held": true,
           "measured": {
             "ticks": 3600,
-            "items": 4846,
+            "items": 4844,
             "expected": 4800
           },
           "meets": true
@@ -175,28 +175,28 @@
         "disturbances": [
           {
             "kind": "stop drill",
-            "start": 7345,
-            "drop": 7428,
-            "release": 7428,
-            "recovered": 11079
+            "start": 10801,
+            "drop": 10886,
+            "release": 10886,
+            "recovered": 14535
           },
           {
             "kind": "block output",
-            "start": 11079,
-            "drop": 11080,
-            "release": 11080,
-            "recovered": 11081
+            "start": 14535,
+            "drop": 14536,
+            "release": 14536,
+            "recovered": 14537
           },
           {
             "kind": "stop drill",
-            "start": 11081,
-            "drop": 11082,
-            "release": 11082,
-            "recovered": 11083
+            "start": 14537,
+            "drop": 14538,
+            "release": 14538,
+            "recovered": 14539
           }
         ],
         "result": "holds",
-        "ended": 11083
+        "ended": 14539
       },
       "generation": {
         "period": 144,
@@ -214,8 +214,8 @@
     "car-swings-2-takers-last": {
       "recorded": {
         "pr": 0,
-        "commit": "baaabc76",
-        "frozen_head": "baaabc76",
+        "commit": "3ff86660",
+        "frozen_head": "3ff86660",
         "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
         "clock_sha256": "007d0402aaa07a6ed5a91cb1e775e28bf39596cf0ddfac734428aaa18ef03efe",
         "clock_basis": "capture"
@@ -227,17 +227,17 @@
         "period": 144,
         "window": 3600,
         "expected": 4800,
-        "steady": 3745,
+        "steady": 7201,
         "baseline": {
           "ticks": 3600,
-          "total": 4846,
+          "total": 4844,
           "expected": 4800,
           "min": 4844,
           "max": 4848,
           "held": true,
           "measured": {
             "ticks": 3600,
-            "items": 4846,
+            "items": 4844,
             "expected": 4800
           },
           "meets": true
@@ -245,28 +245,28 @@
         "disturbances": [
           {
             "kind": "stop drill",
-            "start": 7345,
-            "drop": 7428,
-            "release": 7428,
-            "recovered": 11079
+            "start": 10801,
+            "drop": 10886,
+            "release": 10886,
+            "recovered": 14535
           },
           {
             "kind": "block output",
-            "start": 11079,
-            "drop": 11080,
-            "release": 11080,
-            "recovered": 11081
+            "start": 14535,
+            "drop": 14536,
+            "release": 14536,
+            "recovered": 14537
           },
           {
             "kind": "stop drill",
-            "start": 11081,
-            "drop": 11082,
-            "release": 11082,
-            "recovered": 11083
+            "start": 14537,
+            "drop": 14538,
+            "release": 14538,
+            "recovered": 14539
           }
         ],
         "result": "holds",
-        "ended": 11083
+        "ended": 14539
       },
       "generation": {
         "period": 144,
@@ -284,8 +284,8 @@
     "car-swings-3": {
       "recorded": {
         "pr": 0,
-        "commit": "baaabc76",
-        "frozen_head": "baaabc76",
+        "commit": "3ff86660",
+        "frozen_head": "3ff86660",
         "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
         "clock_sha256": "680216906ebddadf5638a3116ff240e7c0eec81994ac20e033eee4b22653b662",
         "clock_basis": "capture"
@@ -297,17 +297,17 @@
         "period": 72,
         "window": 3600,
         "expected": 4800,
-        "steady": 3672,
+        "steady": 11415,
         "baseline": {
           "ticks": 3600,
-          "total": 4808,
+          "total": 4800,
           "expected": 4800,
-          "min": 4808,
-          "max": 4848,
+          "min": 4800,
+          "max": 4800,
           "held": true,
           "measured": {
             "ticks": 3600,
-            "items": 4808,
+            "items": 4800,
             "expected": 4800
           },
           "meets": true
@@ -315,28 +315,28 @@
         "disturbances": [
           {
             "kind": "stop drill",
-            "start": 7272,
-            "drop": 7312,
-            "release": 7312,
-            "recovered": 10981
+            "start": 15015,
+            "drop": 15051,
+            "release": 15051,
+            "recovered": 18685
           },
           {
             "kind": "block output",
-            "start": 10981,
-            "drop": 10982,
-            "release": 10982,
-            "recovered": 10983
+            "start": 18685,
+            "drop": 18982,
+            "release": 18982,
+            "recovered": 22612
           },
           {
             "kind": "stop drill",
-            "start": 10983,
-            "drop": 10984,
-            "release": 10984,
-            "recovered": 10985
+            "start": 22612,
+            "drop": 22648,
+            "release": 22648,
+            "recovered": 26317
           }
         ],
         "result": "holds",
-        "ended": 10985
+        "ended": 26317
       },
       "generation": {
         "period": 72,
@@ -354,8 +354,8 @@
     "car-swings-3-takers-last": {
       "recorded": {
         "pr": 0,
-        "commit": "baaabc76",
-        "frozen_head": "baaabc76",
+        "commit": "3ff86660",
+        "frozen_head": "3ff86660",
         "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
         "clock_sha256": "680216906ebddadf5638a3116ff240e7c0eec81994ac20e033eee4b22653b662",
         "clock_basis": "capture"
@@ -367,17 +367,17 @@
         "period": 72,
         "window": 3600,
         "expected": 4800,
-        "steady": 3672,
+        "steady": 11415,
         "baseline": {
           "ticks": 3600,
-          "total": 4808,
+          "total": 4800,
           "expected": 4800,
-          "min": 4808,
-          "max": 4848,
+          "min": 4800,
+          "max": 4800,
           "held": true,
           "measured": {
             "ticks": 3600,
-            "items": 4808,
+            "items": 4800,
             "expected": 4800
           },
           "meets": true
@@ -385,28 +385,28 @@
         "disturbances": [
           {
             "kind": "stop drill",
-            "start": 7272,
-            "drop": 7312,
-            "release": 7312,
-            "recovered": 10981
+            "start": 15015,
+            "drop": 15051,
+            "release": 15051,
+            "recovered": 18685
           },
           {
             "kind": "block output",
-            "start": 10981,
-            "drop": 10982,
-            "release": 10982,
-            "recovered": 10983
+            "start": 18685,
+            "drop": 18982,
+            "release": 18982,
+            "recovered": 22612
           },
           {
             "kind": "stop drill",
-            "start": 10983,
-            "drop": 10984,
-            "release": 10984,
-            "recovered": 10985
+            "start": 22612,
+            "drop": 22648,
+            "release": 22648,
+            "recovered": 26317
           }
         ],
         "result": "holds",
-        "ended": 10985
+        "ended": 26317
       },
       "generation": {
         "period": 72,
@@ -424,8 +424,8 @@
     "car-swings-1": {
       "recorded": {
         "pr": 0,
-        "commit": "baaabc76",
-        "frozen_head": "baaabc76",
+        "commit": "3ff86660",
+        "frozen_head": "3ff86660",
         "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
         "clock_sha256": "2076db78e3f81019464ac681875c38570f79c30a628d0373e906624b99abd6b0",
         "clock_basis": "capture"
@@ -437,17 +437,17 @@
         "period": 72,
         "window": 3600,
         "expected": 4800,
-        "steady": 3672,
+        "steady": 11415,
         "baseline": {
           "ticks": 3600,
-          "total": 4808,
+          "total": 4800,
           "expected": 4800,
-          "min": 4808,
-          "max": 4848,
+          "min": 4800,
+          "max": 4800,
           "held": true,
           "measured": {
             "ticks": 3600,
-            "items": 4808,
+            "items": 4800,
             "expected": 4800
           },
           "meets": true
@@ -455,28 +455,28 @@
         "disturbances": [
           {
             "kind": "stop drill",
-            "start": 7272,
-            "drop": 7312,
-            "release": 7312,
-            "recovered": 10981
+            "start": 15015,
+            "drop": 15051,
+            "release": 15051,
+            "recovered": 18685
           },
           {
             "kind": "block output",
-            "start": 10981,
-            "drop": 10982,
-            "release": 10982,
-            "recovered": 10983
+            "start": 18685,
+            "drop": 19005,
+            "release": 19005,
+            "recovered": 22614
           },
           {
             "kind": "stop drill",
-            "start": 10983,
-            "drop": 10984,
-            "release": 10984,
-            "recovered": 10985
+            "start": 22614,
+            "drop": 22648,
+            "release": 22648,
+            "recovered": 26317
           }
         ],
         "result": "holds",
-        "ended": 10985
+        "ended": 26317
       },
       "generation": {
         "period": 72,

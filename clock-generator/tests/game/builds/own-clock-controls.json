@@ -4,8 +4,8 @@
     "own-clock-three-copies": {
       "recorded": {
         "pr": 0,
-        "commit": "72221cfc",
-        "frozen_head": "72221cfc",
+        "commit": "3ff86660",
+        "frozen_head": "3ff86660",
         "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
         "clock_sha256": "844e39cf2daea124b1911c7050a7b453f82ae18cac2aa352384c95f852885b32",
         "clock_basis": "built"
@@ -17,7 +17,7 @@
         "period": 216,
         "window": 3600,
         "expected": 14400,
-        "steady": 3816,
+        "steady": 7056,
         "baseline": {
           "ticks": 3600,
           "total": 14304,
@@ -35,35 +35,35 @@
         "disturbances": [
           {
             "kind": "cut iron-ore",
-            "start": 7416,
-            "drop": 7575,
-            "release": 7575,
-            "recovered": 11563
+            "start": 10656,
+            "drop": 10815,
+            "release": 10815,
+            "recovered": 14803
           },
           {
             "kind": "block output",
-            "start": 11563,
-            "drop": 11626,
-            "release": 11626,
-            "recovered": 11671
+            "start": 14803,
+            "drop": 14866,
+            "release": 14866,
+            "recovered": 14911
           },
           {
             "kind": "cut electronic-circuit",
-            "start": 11671,
-            "drop": 11732,
-            "release": 11732,
-            "recovered": 16424
+            "start": 14911,
+            "drop": 14972,
+            "release": 14972,
+            "recovered": 19664
           }
         ],
         "result": "holds",
-        "ended": 16424
+        "ended": 19664
       }
     },
     "generated-three-copies": {
       "recorded": {
         "pr": 0,
-        "commit": "72221cfc",
-        "frozen_head": "72221cfc",
+        "commit": "3ff86660",
+        "frozen_head": "3ff86660",
         "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
         "clock_sha256": "f3f231b0f2d40b16883eb9d9f80f01898002867be8a67e0f4f444a6b8c1450ef",
         "clock_basis": "capture"
@@ -75,14 +75,14 @@
         "period": 72,
         "window": 3600,
         "expected": 14400,
-        "steady": 3676,
+        "steady": 7200,
         "baseline": {
           "ticks": 3600,
           "total": 14400,
           "expected": 14400,
-          "min": 14395,
+          "min": 14400,
           "max": 14400,
-          "held": false,
+          "held": true,
           "measured": {
             "ticks": 3600,
             "items": 14400,
@@ -93,28 +93,28 @@
         "disturbances": [
           {
             "kind": "cut iron-ore",
-            "start": 7276,
-            "drop": 7474,
-            "release": 7474,
-            "recovered": 11329
+            "start": 10800,
+            "drop": 11018,
+            "release": 11018,
+            "recovered": 14866
           },
           {
             "kind": "block output",
-            "start": 11329,
-            "drop": 11430,
-            "release": 11430,
-            "recovered": 15173
+            "start": 14866,
+            "drop": 14886,
+            "release": 14886,
+            "recovered": 14896
           },
           {
             "kind": "cut electronic-circuit",
-            "start": 15173,
-            "drop": 15244,
-            "release": 15244,
-            "recovered": 19371
+            "start": 14896,
+            "drop": 14976,
+            "release": 14976,
+            "recovered": 18929
           }
         ],
         "result": "holds",
-        "ended": 19371
+        "ended": 18929
       },
       "generation": {
         "period": 72,

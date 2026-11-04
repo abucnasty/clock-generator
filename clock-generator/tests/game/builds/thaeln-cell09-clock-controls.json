@@ -4,8 +4,8 @@
   "generated-one-copy": {
    "recorded": {
     "pr": 0,
-    "commit": "72221cfc",
-    "frozen_head": "72221cfc",
+    "commit": "3ff86660",
+    "frozen_head": "3ff86660",
     "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
     "clock_sha256": "cf0e6cb014231f0c4aa262a80a859f99f0dbe0ffb8649ecb5a1bb8b39304e008",
     "clock_basis": "capture"
@@ -17,12 +17,12 @@
     "period": 168,
     "window": 3600,
     "expected": 8228.571429,
-    "steady": 4847,
+    "steady": 7131,
     "baseline": {
      "ticks": 3600,
      "total": 8232,
      "expected": 8228.571429,
-     "min": 8184,
+     "min": 8208,
      "max": 8256,
      "held": false,
      "measured": {
@@ -35,28 +35,28 @@
     "disturbances": [
      {
       "kind": "cut coal",
-      "start": 8447,
-      "drop": 9279,
-      "release": 9279,
-      "recovered": 14255
+      "start": 10731,
+      "drop": 11679,
+      "release": 11679,
+      "recovered": 16271
      },
      {
       "kind": "block output",
-      "start": 14255,
-      "drop": 14379,
-      "release": 14379,
-      "recovered": 18435
+      "start": 16271,
+      "drop": 16363,
+      "release": 16363,
+      "recovered": 21311
      },
      {
       "kind": "cut processing-unit",
-      "start": 18435,
-      "drop": 18579,
-      "release": 18579,
-      "recovered": 22823
+      "start": 21311,
+      "drop": 21403,
+      "release": 21403,
+      "recovered": 25659
      }
     ],
     "result": "holds",
-    "ended": 22823
+    "ended": 25659
    },
    "generation": {
     "period": 168,
