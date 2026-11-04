@@ -10,6 +10,9 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 
 ## [0.27.0] - Unreleased
 
+### Removed
+- The recycling scrap silo sample is removed until scrap recycling gets its own tested build.
+
 ### Changed
 - Inserters are now simulated in the order the game updates them, so many builds get a different clock; every changed clock recorded in the game makes its full target.
 - Wake-ups are counted as the game counts them, so the wake-ups shown for many builds go up.
