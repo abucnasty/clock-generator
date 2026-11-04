@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ConfigPaths } from "../../config/config-paths";
+import { TestConfigPaths } from "../../../tests/configs/paths";
 import { describeFeasibilityIssue, FeasibilityError, InserterCoverageError } from "../../config/errors";
 import { loadConfigFromFile } from "../../config/loader";
 import { Config } from "../../config/schema";
@@ -19,7 +20,7 @@ const CALL_SITES: [string, (config: Config) => unknown][] = [
 
 describe("the feasibility pass runs after the coverage check (D10)", async () => {
     // the refusal sample misses an inserter for its iron plates; at 1,000 accumulators a second its machine is far too slow too
-    const uncovered = withTarget(await loadConfigFromFile(ConfigPaths.BAD_ACCUMULATOR_CONFIG) as Config, 1000);
+    const uncovered = withTarget(await loadConfigFromFile(TestConfigPaths.BAD_ACCUMULATOR_CONFIG) as Config, 1000);
     // flying robot frames at 1,600 a second: covered, and its machine makes at most 3.44 crafts of 2 frames a second
     const over = withTarget(await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME) as Config, 1600);
 

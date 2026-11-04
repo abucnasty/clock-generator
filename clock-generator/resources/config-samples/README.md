@@ -1,8 +1,8 @@
 # Sample configurations and scaffolds
 
 One folder per build, grouped by what it makes: `science/`, `intermediates/`, `gleba/`, `smelting/`. A folder holds
-the build's config(s) as JSON and, where one exists, its scaffold. `src/config/config-paths.ts` names the general samples used by sweeps;
-two of them exist to be refused ([below](#samples-that-are-refused)).
+the build's config(s) as JSON and, where one exists, its scaffold. `src/config/config-paths.ts` names the general samples used by sweeps. Configs that only unit tests load are not samples:
+they are in `tests/configs/`.
 
 A **scaffold** is a blueprint string of exactly one copy of the build without a clock: the machines and inserters the
 config describes, in the ideal environment for a clock to be added to them. That environment is the scaffold's own:
@@ -90,15 +90,6 @@ In the order they would settle the most:
 5. **science/military-science**, **intermediates/flying-robot-frame**,
    **intermediates/lithium-plates**, **intermediates/electric-engine-unit**,
    **gleba/biochamber-fuel**, **smelting/stone-bricks**, **smelting/electric-furnace**: never recorded.
-
-## Samples that are refused
-
-One sample exists to be refused, not to generate a clock from, and needs no scaffold. `ExpectedRefusals` in
-`src/config/config-paths.ts` lists it with the reason it is kept and the error generating it must fail with;
-`src/config/expected-refusals.test.ts` checks it, and the sweeps leave it out.
-
-- `intermediates/accumulator/accumulator-bad-config.json` (`BAD_ACCUMULATOR_CONFIG`) is the coverage check's
-  deliberately invalid config (PR #53): its machine has no inserters. It fails with "Missing inserter coverage".
 
 ## Backpressure loss
 

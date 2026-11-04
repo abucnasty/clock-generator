@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
 import { ConfigPaths } from "../../config/config-paths";
+import { TestConfigPaths } from "../../../tests/configs/paths";
 import { InserterCoverageError, InserterCoverageIssue } from "../../config/errors";
 import { assertInserterCoverage } from "../../config/inserter-coverage-validator";
 import { loadConfigFromFile } from "../../config/loader";
@@ -54,7 +55,6 @@ const TERMINAL: Readonly<Record<string, number>> = {
     AGRICULTURAL_SCIENCE: 1,
     AUTOMATION_SCIENCE: 1,
     AUTOMATION_SCIENCE_BELTED_BUFFER: 1,
-    BAD_ACCUMULATOR_CONFIG: 0,
     BIOCHAMBER_FUEL: 1,
     CHEMICAL_SCIENCE_SHARED_FOUNDRY: 4,
     ELECTRIC_FURNACE: 1,
@@ -123,7 +123,7 @@ describe("the planner graph", () => {
     });
 
     it("of the refusal sample leaves uncovered the accumulator's iron plate and its result, as the coverage check does", async () => {
-        const { config, facts, graph } = await graphOf(ConfigPaths.BAD_ACCUMULATOR_CONFIG);
+        const { config, facts, graph } = await graphOf(TestConfigPaths.BAD_ACCUMULATOR_CONFIG);
         const expected = [{ side: "input", at: "machine:1", item: "iron-plate" }, { side: "output", at: "machine:1", item: "accumulator" }];
         expect(uncoveredPortsOf(facts, graph)).toEqual(expected);
         expect(() => assertInserterCoverage(config)).toThrow(InserterCoverageError);

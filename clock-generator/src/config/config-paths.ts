@@ -43,7 +43,6 @@ export const ConfigPaths = {
     LITHIUM_PLATES: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'lithium-plates', 'lithium-plates.json'),
     UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS: path.join(CONFIG_SAMPLES_DIR, 'science', 'utility-science', 'utility-science-belted-combined-blue-and-lds.json'),
     PROCESSING_UNITS: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'processing-units', 'processing-units.json'),
-    BAD_ACCUMULATOR_CONFIG: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'accumulator', 'accumulator-bad-config.json'),
     ACCUMULATOR_640: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'accumulator', 'accumulator-640.json'),
     AUTOMATION_SCIENCE: path.join(CONFIG_SAMPLES_DIR, 'science', 'automation-science', 'automation-science.json'),
     /** Two foundries casting gears and copper onto one belt, which feeds an assembler making the packs */
@@ -104,14 +103,10 @@ export interface ExpectedRefusal {
 
 /**
  * The samples of `ConfigPaths` that exist to be refused, not to generate a clock from, by key. Generating each must
- * fail with its error (`expected-refusals.test.ts`); code that walks every sample leaves these out.
+ * fail with its error (`expected-refusals.test.ts`); code that walks every sample leaves these out. None today: the coverage
+ * refusal's config is a unit-test fixture (`tests/configs/`).
  */
-export const ExpectedRefusals = {
-    BAD_ACCUMULATOR_CONFIG: {
-        reason: "The coverage check's deliberate fixture (PR #53): a machine with no inserters",
-        error: 'Missing inserter coverage',
-    },
-} as const satisfies Partial<Record<keyof typeof ConfigPaths, ExpectedRefusal>>;
+export const ExpectedRefusals = {} as const satisfies Partial<Record<keyof typeof ConfigPaths, ExpectedRefusal>>;
 
 /** Whether the sample of a `ConfigPaths` key is one of the expected refusals */
 export function isExpectedRefusal(key: string): key is keyof typeof ExpectedRefusals {

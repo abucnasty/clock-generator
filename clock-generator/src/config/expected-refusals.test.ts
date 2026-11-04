@@ -13,6 +13,6 @@ describe('the samples that exist to be refused', () => {
     });
 
     it('are told apart from the samples to generate a clock from by their key', () => {
-        expect(Object.keys(ConfigPaths).filter(isExpectedRefusal)).toEqual(['BAD_ACCUMULATOR_CONFIG']);
+        expect(Object.keys(ConfigPaths).filter(isExpectedRefusal)).toEqual([]);
     });
 });

@@ -7,4 +7,6 @@ import * as path from 'path';
 export const TestConfigPaths = {
     /** The original electromagnetic science scaffold of #100 with its buffer chests as infinity chests that remove all: the terminal-rate sink detection */
     REAL_OWNER_PINK_SCIENCE_ORIGINAL_NO_BUFFERS: path.join(__dirname, 'pink-science-original-no-buffers.json'),
+    /** The coverage check's deliberate fixture (PR #53): an accumulator machine with no inserters, which fails with "Missing inserter coverage" */
+    BAD_ACCUMULATOR_CONFIG: path.join(__dirname, 'accumulator-bad-config.json'),
 } as const;

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { generateClockForConfig, generateClockAlternatives, validateConfig, type BlueprintGenerationResult, type ClockAlternative } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
+import { TestConfigPaths } from "../../tests/configs/paths";
 import { EntityId } from "../entities";
 import { FeasibilityError } from "../config/errors";
 import { planCraftingCycle } from "./plan/plan-run";
@@ -270,7 +271,7 @@ describe("generateClockForConfig", () => {
         });
 
         it("throws for a machine without inserters", async () => {
-            const config = await loadConfigFromFile(ConfigPaths.BAD_ACCUMULATOR_CONFIG);
+            const config = await loadConfigFromFile(TestConfigPaths.BAD_ACCUMULATOR_CONFIG);
             expect(() => validateConfig(config)).toThrow("Missing inserter coverage");
         });
 

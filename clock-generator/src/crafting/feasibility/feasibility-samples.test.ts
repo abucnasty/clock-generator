@@ -5,6 +5,7 @@ import { frontClockConfig, frontEntranceClockCases, frontExitClockCases } from "
 import { overHoodClockCases, overHoodClockConfig } from "../../../tests/game/builds/over-hood-clock-fixtures";
 import { pickupClockConfig, pickupClockSpeedCases } from "../../../tests/game/builds/pickup-clock-speed-coverage";
 import { ConfigPaths, ExpectedRefusals } from "../../config/config-paths";
+import { TestConfigPaths } from "../../../tests/configs/paths";
 import { describeFeasibilityIssue, InserterCoverageError } from "../../config/errors";
 import { assertInserterCoverage } from "../../config/inserter-coverage-validator";
 import { loadConfigFromFile } from "../../config/loader";
@@ -38,8 +39,8 @@ describe("every sample passes the feasibility pass", () => {
         expect(texts(issues)).toEqual([]);
     });
 
-    it.each(Object.keys(ExpectedRefusals))("%s is refused by the coverage check first", async key => {
-        const config = await loadConfigFromFile(ConfigPaths[key as keyof typeof ConfigPaths]) as Config;
+    it("the coverage refusal fixture is refused by the coverage check first", async () => {
+        const config = await loadConfigFromFile(TestConfigPaths.BAD_ACCUMULATOR_CONFIG) as Config;
         expect(() => assertInserterCoverage(config)).toThrow(InserterCoverageError);
     });
 });
