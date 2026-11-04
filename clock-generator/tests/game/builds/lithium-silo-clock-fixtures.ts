@@ -8,8 +8,8 @@ import {loadConfigFromFile} from "../../../src/config/loader";
 import {FactorioBlueprintFile} from "../../../src/blueprints/blueprint";
 import {encodeBlueprintFile} from "../../../src/blueprints/serde";
 import {Recording} from "../../../src/verification/recording";
-import {BELT_SPEEDS} from "../helpers/belt-speed-fixtures";
-import {PickupClockScenario, pickupClockInterventions} from "./pickup-clock-capture";
+import {CLOCK_TEST_SPEEDS} from "../helpers/belt-speed-fixtures";
+import {PickupClockScenario} from "./pickup-clock-capture";
 
 /**
  * The lithium plate build, 80 a second from one copy (`REAL_OWNER_LITHIUM_SILO`): two cryogenic plants, fed
@@ -87,11 +87,12 @@ export function assertLithiumSiloHardware(recording: Recording, config: Config):
 
 export function lithiumSiloScenario(variant: LithiumSiloCase): PickupClockScenario {
     return {
-        name: variant.name, speed: BELT_SPEEDS[0], backed: false,
+        name: variant.name, speed: CLOCK_TEST_SPEEDS[0], backed: false,
         config: () => loadConfigFromFile(ConfigPaths.REAL_OWNER_LITHIUM_SILO),
         scaffold: () => lithiumSiloScaffold(variant.order),
         alternative: variant.alternative,
-        interventions: pickupClockInterventions(),
+        // the clock with 7 output swings repeats over 7,560 ticks, longer than a minute
+        ...(variant.alternative === "swings-7" && {baseline: {ticks: 7560, reason: "the clock's output repeats over its 7,560-tick period, longer than a minute"}}),
         probeFile: path.join(__dirname, "lithium-silo-clock-probe.lua"),
         probe: {family: "lithium-silo"},
         controls: path.join(__dirname, "lithium-silo-clock-controls.json"),

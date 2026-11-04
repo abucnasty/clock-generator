@@ -7,9 +7,8 @@ import {ConfigPaths} from "../../../src/config/config-paths";
 import {loadConfigFromFile} from "../../../src/config/loader";
 import {FactorioBlueprintFile} from "../../../src/blueprints/blueprint";
 import {encodeBlueprintFile} from "../../../src/blueprints/serde";
-import {FactorioDataService} from "../../../src/data";
 import {Recording} from "../../../src/verification/recording";
-import {BELT_SPEEDS} from "../helpers/belt-speed-fixtures";
+import {CLOCK_TEST_SPEEDS} from "../helpers/belt-speed-fixtures";
 import {PickupClockScenario} from "./pickup-clock-capture";
 
 /**
@@ -30,7 +29,7 @@ export interface CarCase {
     name: string;
     /** The alternative recorded */
     alternative: "derived" | "swings-2" | "swings-3" | "swings-1";
-    /** The clock's period in ticks: the cuts are sized by it */
+    /** The clock's period in ticks */
     period: 72 | 144 | 288;
     order: "as-built" | "takers-last";
 }
@@ -74,28 +73,6 @@ export function carScaffold(order: CarCase["order"]): string {
     return encodeBlueprintFile({...file, blueprint: {...file.blueprint!, entities: reordered}} as unknown as FactorioBlueprintFile);
 }
 
-/**
- * The periods until the car has run dry with the drill stopped: its 80 stacks of ore over what the furnaces take a
- * period at the target (a plate takes 1 / (1 + productivity) ore), plus 8 periods for what the furnaces and hands hold
- */
-export function carDrainPeriods(config: Config, period_ticks: number): number {
-    const ore = FactorioDataService.containerSlots("car", "normal") * FactorioDataService.findItemOrThrow("iron-ore").stack_size;
-    const productivity = config.machines[0].productivity / 100;
-    const per_period = config.target_output.items_per_second * period_ticks / 60 / (1 + productivity);
-    return Math.ceil(ore / per_period) + 8;
-}
-
-/**
- * The protocol of the container family, with the cuts long enough to empty the car: the drill stopped until the car
- * is dry, the output blocked for 4 periods, the drill stopped again, each followed for 40 periods (the first 6 after a
- * release not judged). A drill is no supply that stops in the generator's checks; here it is stopped as a supply cut.
- */
-export function carInterventions(config: Config, period_ticks: number): [number, number, number][] {
-    const cut = carDrainPeriods(config, period_ticks);
-    const release1 = 66 + cut, block = release1 + 40, unblock = block + 4, again = unblock + 40, release2 = again + cut;
-    return [[66, release1, block], [block, unblock, again], [again, release2, release2 + 40]];
-}
-
 /** The native build is the config's: 2 furnaces at their speeds, the drill into the car, 2 inserters from it and 2 onto the belt */
 export function assertCarHardware(recording: Recording, config: Config): void {
     expect(recording.config.machines).toMatchObject(config.machines.map(({recipe, crafting_speed, productivity}) => ({recipe, crafting_speed, productivity})));
@@ -112,11 +89,10 @@ export function assertCarHardware(recording: Recording, config: Config): void {
 export async function carScenario(variant: CarCase): Promise<PickupClockScenario> {
     const config = await loadConfigFromFile(ConfigPaths.REAL_OWNER_CAR);
     return {
-        name: variant.name, speed: BELT_SPEEDS[0], backed: false,
+        name: variant.name, speed: CLOCK_TEST_SPEEDS[0], backed: false,
         config: () => config,
         scaffold: () => carScaffold(variant.order),
         alternative: variant.alternative,
-        interventions: carInterventions(config, variant.period),
         probeFile: path.join(__dirname, "car-clock-probe.lua"),
         probe: {family: "car"},
         controls: path.join(__dirname, "car-clock-controls.json"),

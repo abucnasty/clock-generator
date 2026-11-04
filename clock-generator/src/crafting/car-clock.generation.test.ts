@@ -10,10 +10,11 @@ import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config/schema";
 import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
 import {carCases} from "../../tests/game/builds/car-clock-fixtures";
-import {readControls} from "../../tests/game/builds/clock-controls";
+import {readControls, RunControls} from "../../tests/game/builds/clock-controls";
+import {expectRunAgreesWithSelection} from "../../tests/game/helpers/fixture-mechanics";
 
 // each clock pinned beside the in-game recording of it
-const controls = readControls("car-clock-controls.json");
+const controls = readControls<RunControls>("car-clock-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 let config: Config;
 let generated: ClockAlternativesResult;
@@ -56,15 +57,10 @@ for (const variant of carCases()) {
         expect(chosen.verdict).toBe(expected.verdict);
         expect({id: chosen.id, holds: chosen.assessment.holds, rate: chosen.assessment.items_per_second,
             supply: chosen.belt?.kind ?? null}).toEqual(expected.selection);
-        expect(native.expected).toBe(expected.expected);
-        // the game holds the target in every baseline period, and is back at it in every judged period after the drill
-        // stopped until the car ran dry, the output blocked and the drill stopped again
-        expect(native.baseline.every(items => items === native.expected)).toBe(true);
-        for (const loss of native.recovery) {
-            expect(Math.min(...loss.during)).toBeLessThan(native.expected);
-            expect(loss.recovered.length).toBeGreaterThanOrEqual(30);
-            expect(loss.recovered.every(items => items === native.expected)).toBe(true);
-        }
+        expect(native.period).toBe(expected.period);
+        // the game holds the target over the baseline, and is back at it after the drill stopped until the car ran dry, the output
+        // blocked and the drill stopped again
+        expectRunAgreesWithSelection(variant.name, native, {verdict: chosen.verdict, holds: chosen.assessment.holds});
     });
 }
 

@@ -5,7 +5,7 @@ import {Config} from "../../../src/config";
 import {ConfigPaths} from "../../../src/config/config-paths";
 import {loadConfigFromFile} from "../../../src/config/loader";
 import {Recording} from "../../../src/verification/recording";
-import {BELT_SPEEDS} from "../helpers/belt-speed-fixtures";
+import {CLOCK_TEST_SPEEDS} from "../helpers/belt-speed-fixtures";
 import {PickupClockScenario} from "./pickup-clock-capture";
 
 /**
@@ -40,14 +40,11 @@ export function assertThaelnCell09Hardware(recording: Recording, config: Config)
 export async function thaelnCell09ClockScenario(): Promise<PickupClockScenario> {
     const config = await loadConfigFromFile(ConfigPaths.REAL_THAELN_CELL09);
     return {
-        name: "generated-one-copy", speed: BELT_SPEEDS[0], backed: false,
+        name: "generated-one-copy", speed: CLOCK_TEST_SPEEDS[0], backed: false,
         config: () => config,
         scaffold: () => fs.readFileSync(path.join(FOLDER, "thaeln-cell09-scaffold.txt"), "utf8").trim(),
         share: 2 / 7,
         alternative: GENERATED_ALTERNATIVE,
-        // 64 untouched periods; then the coal cut for 6 periods (a cell holds about 100 coal, which lasts 2 periods of 168 ticks),
-        // the output blocked for 4 and the units cut for 2, as the family does
-        interventions: [[66, 72, 88], [88, 92, 108], [108, 110, 136]],
         probeFile: path.join(__dirname, "thaeln-cell09-clock-probe.lua"),
         probe: {family: "thaeln-cell09", stackSize: 4},
         controls: path.join(__dirname, "thaeln-cell09-clock-controls.json"),

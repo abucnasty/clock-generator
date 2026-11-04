@@ -7,10 +7,10 @@ import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config/schema";
 import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
 import {ownClockCases} from "../../tests/game/builds/own-clock-fixtures";
-import {readControls} from "../../tests/game/builds/clock-controls";
+import {readControls, runHolds, RunControls} from "../../tests/game/builds/clock-controls";
 
 // the generated clock pinned beside the in-game recording of it on the build's three copies
-const controls = readControls("own-clock-controls.json");
+const controls = readControls<RunControls>("own-clock-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 let config: Config;
 let generated: ClockAlternativesResult;
@@ -32,15 +32,11 @@ test("own clock: the selected clock is swings-2, and the one recorded on the thr
 for (const variant of ownClockCases()) {
     test(`own clock: ${variant.name}`, () => {
         const {generation, native, previous} = controls.cases[variant.name];
-        // the hand-made clock is not generated: its control is the game's numbers, 80 a second a copy in every period
-        expect(native.baseline).toHaveLength(63);
-        expect(native.baseline.every(items => items === native.expected)).toBe(true);
-        for (const loss of native.recovery) {
-            expect(Math.min(...loss.during)).toBeLessThan(native.expected);
-        }
+        // the hand-made clock is not generated: its control is the game's run, 80 a second a copy, held and recovered
+        expect(runHolds(native), native.result).toBe(true);
         if (variant.kind === "owner's clock") {
             expect(generation).toBeUndefined();
-            expect([native.period, native.expected]).toEqual([216, 864]);
+            expect([native.period, native.target]).toEqual([216, 240]);
             return;
         }
         const chosen = generated.alternatives.find(alternative => alternative.id === variant.alternative)!;
@@ -51,7 +47,7 @@ for (const variant of ownClockCases()) {
         expect(chosen.verdict).toBe(generation!.verdict);
         expect({id: chosen.id, holds: chosen.assessment.holds, rate: chosen.assessment.items_per_second,
             supply: chosen.belt?.kind ?? null}).toEqual(generation!.selection);
-        expect(native.expected).toBe(generation!.expected);
+        expect(native.period).toBe(generation!.period);
         if (previous) {
             // the clock selected before the wake-ups were counted with the arm at home is still made, with the same windows
             const earlier = generated.alternatives.find(alternative => alternative.id === previous.id);

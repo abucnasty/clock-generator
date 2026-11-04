@@ -7,12 +7,12 @@ import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config/schema";
 import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
 import {GENERATED_ALTERNATIVE, grenadeClockCases} from "../../tests/game/builds/grenade-clock-fixtures";
-import {readControls} from "../../tests/game/builds/clock-controls";
+import {readControls, RunControls, runHolds} from "../../tests/game/builds/clock-controls";
 import {GROUP_GAP_TILES} from "./turn-groups";
 
 // the grenade build (REAL_OWNER_GRENADE): the generated clock pinned beside the in-game recording of it on one copy
 // and on the full build of seven, and the hand-made clock judged by the simulator
-const controls = readControls("grenade-clock-controls.json");
+const controls = readControls<RunControls>("grenade-clock-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 let config: Config;
 let generated: ClockAlternativesResult;
@@ -171,13 +171,8 @@ test("grenade: the hand-made clock, as windows, holds in the simulator and gets 
 for (const variant of grenadeClockCases()) {
     test(`grenade clock: ${variant.name}`, () => {
         const {generation, native} = controls.cases[variant.name];
-        // the game holds the target in every baseline period and is back at it in every judged period after each loss
-        expect(native.baseline).toHaveLength(63);
-        expect(native.baseline.every(items => items === native.expected)).toBe(true);
-        for (const loss of native.recovery) {
-            expect(Math.min(...loss.during)).toBeLessThan(native.expected);
-            expect(loss.recovered.length).toBeGreaterThan(1);
-        }
+        // the game holds the target over the baseline and is back at it after each loss
+        expect(runHolds(native), native.result).toBe(true);
         expect(native.period).toBe(112);
         if (variant.kind === "owner's clock") {
             expect(generation).toBeUndefined();
@@ -191,6 +186,6 @@ for (const variant of grenadeClockCases()) {
         expect(chosen.verdict).toBe(generation!.verdict);
         expect({id: chosen.id, holds: chosen.assessment.holds, rate: chosen.assessment.items_per_second,
             supply: chosen.belt?.kind ?? null}).toEqual(generation!.selection);
-        expect(native.expected).toBe(generation!.expected);
+        expect(native.period).toBe(generation!.period);
     });
 }
