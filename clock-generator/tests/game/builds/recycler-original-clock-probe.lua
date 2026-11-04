@@ -330,6 +330,8 @@ steady.run{
     each_tick = observe,
     report = report, output = "recycler-original.json", settle = settle,
     done = function()
+        -- a run with no disturbance ends in the tick its baseline does, before the next observation: close the ledger here
+        if not report.baseline_ledger then observe(report.protocol.ended) end
         report.red_at_end = red_stock()
         -- a staged start records from the placement: the recording ends with the run (sample j is the tick after j + 1 ticks)
         if options.cold then settle.record_samples(game.tick - placed_at) end

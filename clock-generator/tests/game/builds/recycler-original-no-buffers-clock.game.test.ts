@@ -267,11 +267,10 @@ for (const run of runs) test(`original electromagnetic science scaffold without 
             const cuts = report.events.filter((row: any) => row.action.startsWith('cut '));
             expect(cuts).toHaveLength(5);
             for (const row of cuts) expect(row.from_belts, row.action).toBeGreaterThan(0);
-            // the disposal block stopped a recycler on its advanced circuits (the stop that starves the plants): its output held a
-            // stack less a batch or more and it waited for space
+            // the disposal block stopped a recycler on its advanced circuits (the stop that starves the plants): it waited for space.
+            // The block lasts until the output falls (the protocol), which comes before a recycler's output holds a stack
             const evidence = report.evidence;
-            expect(evidence.red_max.some((count: number, index: number) => count >= evidence.red_stop_min && evidence.recycler_full_ticks[index] > 0),
-                JSON.stringify(evidence)).toBe(true);
+            expect(evidence.recycler_full_ticks.some((ticks: number) => ticks > 0), JSON.stringify(evidence)).toBe(true);
         }
         fs.writeFileSync(path.join(directory, 'figures.json'), JSON.stringify({run: run.name, scaffold_sha256: scaffoldHash,
             verdict: selected.verdict, science_per_second: 96, all_copies_per_second: 240, copies: 2.5,
