@@ -307,7 +307,9 @@ describe("generateClockForConfig", () => {
     // That the sample's selected clock is stable at the target rate is checked with its alternatives in
     // backpressure-loss.test.ts.
     describe("AUTOMATION_SCIENCE: issue #47 regression (multi-filter fractional per-item transfers)", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+        // The sample is fully automatic; the regression needs the forced single swing, so it is set on this copy
+        const config = structuredClone(await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE));
+        config.overrides = { ...config.overrides, terminal_swing_count: 1 };
 
         it("generates a blueprint whose input inserter (1) transfers both copper-plate and iron-gear-wheel (not just one), and whose output inserter (2) transfers", () => {
             const result = generateClockForConfig(config);

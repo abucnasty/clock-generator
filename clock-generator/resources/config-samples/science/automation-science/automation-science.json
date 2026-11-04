@@ -73,7 +73,5 @@
     }
   ],
   "chests": [],
-  "overrides": {
-    "terminal_swing_count": 1
-  }
+  "overrides": {}
 }
