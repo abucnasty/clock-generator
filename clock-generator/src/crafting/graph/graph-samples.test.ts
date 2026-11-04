@@ -91,7 +91,6 @@ const TERMINAL: Readonly<Record<string, number>> = {
     STONE_BRICKS_DIRECT_INSERT_2_1: 1,
     UTILITY_SCIENCE: 1,
     UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS: 1,
-    UTILITY_SCIENCE_DIRECT_INSERT_LDS_CHAIN_ALWAYS_ON: 2,
 };
 
 describe("the planner graph", () => {

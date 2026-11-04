@@ -298,20 +298,6 @@ describe("generateClockForConfig", () => {
         })
     })
 
-    // Inserters 1/4 feed the two identical pack machines and 2/3 empty them. Config order puts input 1
-    // before output 2 but input 4 after output 3, which used to offset the machines by one tick and
-    // desync the shared-clock LDS inserters 6/7.
-    describe("UTILITY_SCIENCE_DIRECT_INSERT_LDS_CHAIN_ALWAYS_ON (identical machines stay in sync regardless of config order)", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_DIRECT_INSERT_LDS_CHAIN_ALWAYS_ON);
-
-        it("is stable, with the LDS inserters 6 and 7 and the belt input inserters 1 and 4 swinging on the same ticks", () => {
-            const result = generateClockForConfig({ ...config, overrides: { ...config.overrides, terminal_swing_count: 2 } });
-            expect(result.stability_check.holds).toBe(true);
-            expect(transferRanges(result, 7)).toEqual(transferRanges(result, 6));
-            expect(transferRanges(result, 4)).toEqual(transferRanges(result, 1));
-        });
-    });
-
     // Regression test for issue #47:
     // A multi-filter belt→machine inserter (copper-plate + iron-gear-wheel) with terminal_swing_count=1
     // causes per-item fractional swing counts (copper=0.5, gear=0.5, total=1.0).

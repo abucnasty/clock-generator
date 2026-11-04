@@ -54,8 +54,7 @@ const REFUSALS: Record<string, { error: string }> = (configPaths as any).Expecte
 // the slowest first, in this order, so the parallel processes finish together (the heaviest samples of 0.24.0, after the
 // memory work; Thaeln's cell 09 is skipped by default and takes ~1,000 s when it runs)
 const SLOW = ['REAL_THAELN_CELL09', 'CHEMICAL_SCIENCE_SHARED_FOUNDRY', 'STEEL_CARGO_WAGON',
-    'REAL_STUPIDFATHOBBIT_CELL02', 'AGRICULTURAL_SCIENCE', 'REAL_OWNER_PINK_SCIENCE_ORIGINAL',
-    'UTILITY_SCIENCE_DIRECT_INSERT_LDS_CHAIN_ALWAYS_ON'];
+    'REAL_STUPIDFATHOBBIT_CELL02', 'AGRICULTURAL_SCIENCE', 'REAL_OWNER_PINK_SCIENCE_ORIGINAL'];
 
 export interface Job { group: string; name: string; config: () => Promise<any>; refusal?: { error: string } }
 /** The front entrance (8) and front exit, backed up and on a moving config (4; #274); a worktree from before master
