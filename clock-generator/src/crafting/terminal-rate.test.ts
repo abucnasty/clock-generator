@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ConfigPaths } from "../config/config-paths";
+import { TestConfigPaths } from "../../tests/configs/paths";
 import { loadConfigFromFile } from "../config/loader";
 import { Entity } from "../entities";
 import { judgeRecovery, runsOn } from "./backpressure-loss";
@@ -23,14 +24,14 @@ async function branchesOf(path: string) {
 
 describe("the branches of the terminal outputs into sinks that never block", () => {
     it("are the science plants' drains where they drop into infinity chests that remove all", async () => {
-        expect(await branchesOf(ConfigPaths.REAL_OWNER_PINK_SCIENCE_ORIGINAL_NO_BUFFERS)).toEqual([
+        expect(await branchesOf(TestConfigPaths.REAL_OWNER_PINK_SCIENCE_ORIGINAL_NO_BUFFERS)).toEqual([
             { source_id: "machine:1", inserter_ids: ["inserter:4"], share_per_period: 16, hand: 16 },
             { source_id: "machine:2", inserter_ids: ["inserter:3"], share_per_period: 16, hand: 16 },
         ]);
     });
 
     it("are none where the output goes onto a belt: it is judged exactly in every period", async () => {
-        expect(await branchesOf(ConfigPaths.PROCESSING_UNITS_BELT_EXPORT)).toEqual([]);
+        expect(await branchesOf(ConfigPaths.REAL_STUPIDFATHOBBIT_CELL02)).toEqual([]);
     });
 
     it("keep each branch's part when judged on another count than the plan's", () => {

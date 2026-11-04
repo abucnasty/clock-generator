@@ -252,11 +252,6 @@
 "original electromagnetic science scaffold, automatic clock: cold-start": 27,
 "original electromagnetic science scaffold, automatic clock: cold-start-reversed-phase13": 35
 },
-"tests/game/builds/recycler-original-no-buffers-clock.game.test.ts": {
-"original electromagnetic science scaffold without buffer chests, automatic clock: baseline-and-losses": 306,
-"original electromagnetic science scaffold without buffer chests, automatic clock: cold-start": 46,
-"original electromagnetic science scaffold without buffer chests, automatic clock: cold-start-reversed-phase13": 47
-},
 "tests/game/builds/recycler-sidecar-export.game.test.ts": {
 "Sidecar resolves a recycler's selected result receiver before the first output": 5
 },
