@@ -45,7 +45,7 @@ describe("a run's sealed state transition history, read back", () => {
         ["a belt-fed build", ConfigPaths.AUTOMATION_SCIENCE, false],
         ["a machine chain", ConfigPaths.LOGISTIC_SCIENCE, false],
         ["drills", ConfigPaths.REAL_OWNER_GRENADE, false],
-        ["drills into a furnace", ConfigPaths.STONE_BRICKS_DIRECT_INSERT, false],
+        ["drills into a furnace", ConfigPaths.STONE_BRICKS_DIRECT_INSERT_2_1, false],
         ["an inserter that does not move in some runs", ConfigPaths.UTILITY_SCIENCE, true],
     ])("equals what was serialized before, for every run of the generation of %s", async (_, path, backed_up_belts) => {
         const config = await loadConfigFromFile(path);

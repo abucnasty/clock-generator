@@ -152,7 +152,11 @@ describe('the Machine picker groups', () => {
 });
 
 describe('the speed hint on the samples', () => {
-    const samples = import.meta.glob('../../../clock-generator/resources/config-samples/**/*.json', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
+    // the samples and the configs the engine's unit tests keep (one of them, the biochamber fuel config, is the one row at the machine's own speed)
+    const samples = {
+        ...import.meta.glob('../../../clock-generator/resources/config-samples/**/*.json', { eager: true, query: '?raw', import: 'default' }),
+        ...import.meta.glob('../../../clock-generator/tests/configs/*.json', { eager: true, query: '?raw', import: 'default' }),
+    } as Record<string, string>;
     /** Every sample row that names its machine */
     const rows = Object.entries(samples).flatMap(([file, text]) => {
         const config = JSON.parse(text) as { machines?: { id: number; prototype?: string; quality?: MachineFormData['quality']; recipe: string; crafting_speed: number }[] };

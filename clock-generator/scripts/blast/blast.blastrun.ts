@@ -11,7 +11,7 @@
 // Env: BLAST_OUT (folder; one JSON per job, and _jobs.json, the job list with each config's sha256), BLAST_CLAIMS
 // (folder shared by parallel processes, default <BLAST_OUT>/.claims: a job is claimed by creating <claims>/<job>),
 // BLAST_MODE (generate, the default, or jobs: write _jobs.json only), BLAST_ONLY (comma list of job names),
-// BLAST_GROUPS (default config,refusal; also pickup,overhood,front,blocked,containers), BLAST_SKIP (comma list of
+// BLAST_GROUPS (default config; also pickup,overhood,front,blocked,containers), BLAST_SKIP (comma list of
 // jobs to leave out; none by default), BLAST_FUNCTIONS (1: record the functions each job runs; off by default; see below), BLAST_ONE (1:
 // the process runs the first job nobody has claimed and stops, and leaves <BLAST_OUT>/.drained when none is left: blast.sh
 // starts a process for every job, so that no job meets what an earlier one left in the engine's memory, a memo for one).
@@ -46,16 +46,15 @@ const MODE = process.env.BLAST_MODE ?? 'generate';
 const ONE = process.env.BLAST_ONE === '1';
 const ONLY = process.env.BLAST_ONLY ? process.env.BLAST_ONLY.split(',') : undefined;
 const SKIP = (process.env.BLAST_SKIP ?? '').split(',').filter(Boolean);
-const GROUPS = (process.env.BLAST_GROUPS || 'config,refusal').split(',');
+const GROUPS = (process.env.BLAST_GROUPS || 'config').split(',');
 const { ConfigPaths } = configPaths;
 // the samples that exist to be refused, by ConfigPaths key, with the error each must fail with; a worktree from before
 // the list has none, and its config groups keep every sample
 const REFUSALS: Record<string, { error: string }> = (configPaths as any).ExpectedRefusals ?? {};
 // the slowest first, in this order, so the parallel processes finish together (the heaviest samples of 0.24.0, after the
 // memory work; Thaeln's cell 09 is skipped by default and takes ~1,000 s when it runs)
-const SLOW = ['REAL_THAELN_CELL09', 'CHEMICAL_SCIENCE_SHARED_FOUNDRY', 'PROCESSING_UNITS_BELT_EXPORT', 'STEEL_CARGO_WAGON',
-    'REAL_STUPIDFATHOBBIT_CELL02', 'AGRICULTURAL_SCIENCE', 'REAL_OWNER_PINK_SCIENCE_ORIGINAL',
-    'UTILITY_SCIENCE_DIRECT_INSERT_LDS_CHAIN_ALWAYS_ON', 'REAL_COMPOSITE04_CELL07'];
+const SLOW = ['REAL_THAELN_CELL09', 'CHEMICAL_SCIENCE_SHARED_FOUNDRY', 'STEEL_CARGO_WAGON',
+    'REAL_STUPIDFATHOBBIT_CELL02', 'AGRICULTURAL_SCIENCE', 'REAL_OWNER_PINK_SCIENCE_ORIGINAL'];
 
 export interface Job { group: string; name: string; config: () => Promise<any>; refusal?: { error: string } }
 /** The front entrance (8) and front exit, backed up and on a moving config (4; #274); a worktree from before master

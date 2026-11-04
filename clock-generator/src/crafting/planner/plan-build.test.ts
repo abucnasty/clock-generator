@@ -48,16 +48,3 @@ describe("the plan a generation reads", () => {
         expect(buildPlanOfConfig(made, createEntityRegistryFromConfig(made))).toBeNull();
     });
 });
-
-describe("the duty in the plan", () => {
-    it("processing units with a belt export: machine 4 (electronic circuits) at 12750/13111, in the one group with every other machine group", async () => {
-        const { plan } = await planOfSample(ConfigPaths.PROCESSING_UNITS_BELT_EXPORT);
-        expect(plan.groups).toHaveLength(1);
-        expect(plan.groups[0].duty.find(duty => duty.producer === "machine:electronic-circuit")).toEqual({
-            producer: "machine:electronic-circuit", members: ["machine:4"],
-            crafts_needed: { numerator: 102, denominator: 1 }, crafts_capacity: { numerator: 13111, denominator: 125 },
-            duty: { numerator: 12750, denominator: 13111 },
-        });
-        expect(plan.groups[0].duty).toHaveLength(6);
-    });
-});

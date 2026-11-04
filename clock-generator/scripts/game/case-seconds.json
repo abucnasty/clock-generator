@@ -244,18 +244,10 @@
 "tests/game/builds/productivity-chain-clock.game.test.ts": {
 "Productivity module chain clock: generated-one-copy": 471
 },
-"tests/game/builds/recycler-machine-clock.game.test.ts": {
-"recycler direct insertion: the science clock holds its rate and the plant fills to the drill stop": 85
-},
 "tests/game/builds/recycler-original-clock.game.test.ts": {
 "original electromagnetic science scaffold, automatic clock: baseline-and-losses": 260,
 "original electromagnetic science scaffold, automatic clock: cold-start": 27,
 "original electromagnetic science scaffold, automatic clock: cold-start-reversed-phase13": 35
-},
-"tests/game/builds/recycler-original-no-buffers-clock.game.test.ts": {
-"original electromagnetic science scaffold without buffer chests, automatic clock: baseline-and-losses": 306,
-"original electromagnetic science scaffold without buffer chests, automatic clock: cold-start": 46,
-"original electromagnetic science scaffold without buffer chests, automatic clock: cold-start-reversed-phase13": 47
 },
 "tests/game/builds/recycler-sidecar-export.game.test.ts": {
 "Sidecar resolves a recycler's selected result receiver before the first output": 5
@@ -302,8 +294,6 @@
 "the selected clock holds the target rate in Factorio one copy of the automation science build moves the expected output every clock period": 14,
 "the selected clock holds the target rate in Factorio one copy of the automation science with a belted buffer build moves the expected output every clock period": 24,
 "the selected clock holds the target rate in Factorio one copy of the chemical science with a shared foundry build moves the expected output every clock period": 121,
-"the selected clock holds the target rate in Factorio one copy of the composite cell 07 (belts are backed up) build moves the expected output every clock period": 31,
-"the selected clock holds the target rate in Factorio one copy of the composite cell 07 build moves the expected output every clock period": 54,
 "the selected clock holds the target rate in Factorio one copy of the electromagnetic science build moves the expected output every clock period": 13,
 "the selected clock holds the target rate in Factorio one copy of the electromagnetic science with its output inserters on AUTO build moves the expected output every clock period": 14,
 "the selected clock holds the target rate in Factorio one copy of the iron bacteria cultivation build moves the expected output every clock period": 37,

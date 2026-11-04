@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { generateClockAlternatives, type ClockAlternative } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
+import { withJellyHandsOf15 } from "../../tests/configs/rocket-fuel-hands";
 import { Config } from "../config";
 import { OpenRange } from "../data-types";
 import { EntityId } from "../entities";
@@ -16,7 +17,7 @@ import { alwaysOnReasonProblemsOf } from "./generate-blueprint-test-helpers";
  * stands later. It decides which of two windows that open together the game updates first (#268). Checked on
  * every alternative of every sample in the roadmap's blast radius (2026-10-20); these are cheap ones that have both.
  */
-const SAMPLES = ["LITHIUM_PLATES", "ACCUMULATOR_640", "IRON_BACTERIA_CULTIVATION", "CHEMICAL_SCIENCE_SHARED_FOUNDRY", "GLEBA_ROCKET_FUEL_JELLY_STACK_15"] as const;
+const SAMPLES = ["ACCUMULATOR_640", "IRON_BACTERIA_CULTIVATION", "CHEMICAL_SCIENCE_SHARED_FOUNDRY", "GLEBA_ROCKET_FUEL_JELLY_HANDS_15"] as const;
 
 describe("the decider build order of a clock's check", () => {
     for (const sample of SAMPLES) {
@@ -25,7 +26,9 @@ describe("the decider build order of a clock's check", () => {
             let alternatives: ClockAlternative[];
 
             beforeAll(async () => {
-                const loaded = await loadConfigFromFile(ConfigPaths[sample]);
+                const loaded = sample === "GLEBA_ROCKET_FUEL_JELLY_HANDS_15"
+                    ? withJellyHandsOf15(await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL))
+                    : await loadConfigFromFile(ConfigPaths[sample]);
                 config = { ...loaded, overrides: { ...loaded.overrides, backed_up_belts: true } };
                 ({ alternatives } = generateClockAlternatives(config));
             });

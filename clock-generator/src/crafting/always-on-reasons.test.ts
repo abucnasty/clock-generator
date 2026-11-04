@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ConfigPaths } from "../config/config-paths";
+import { TestConfigPaths } from "../../tests/configs/paths";
 import { loadConfigFromFile } from "../config/loader";
 import { alwaysOnReasons, chestDrillReasons } from "./always-on-reasons";
 import type { ChestDrillClock } from "./chest-drill-windows";
@@ -45,10 +46,13 @@ describe("alwaysOnReasons", () => {
 
 describe("the reasons a clock exports", () => {
     it("say that the build's enable rule keeps an inserter on", async () => {
-        const sample = await loadConfigFromFile(ConfigPaths.LITHIUM_PLATES);
+        // a cryogenic plant fills a rocket silo that six furnaces empty: its input from an infinity chest (inserter 1) and its output into the silo (4) are set to always enabled
+        const loaded = await loadConfigFromFile(ConfigPaths.REAL_OWNER_LITHIUM_SILO);
+        const sample = { ...loaded, inserters: loaded.inserters.map((it, index) => [0, 3].includes(index)
+            ? { ...it, overrides: { ...it.overrides, enable_control: { mode: "ALWAYS" as const } } } : it) };
         const result = generateClockForConfig(sample, { logger: quiet });
-        expect(result.always_on_reasons).toEqual({ "inserter:3": { kind: "enable-rule" }, "inserter:5": { kind: "enable-rule" } });
-        expect(alwaysOnReasonProblems(sample, result, "lithium plates")).toEqual([]);
+        expect(result.always_on_reasons).toEqual({ "inserter:1": { kind: "enable-rule" }, "inserter:4": { kind: "enable-rule" } });
+        expect(alwaysOnReasonProblems(sample, result, "lithium silo")).toEqual([]);
     });
 
     it("say that an inserter of a loop of machines is on to keep the loop running", async () => {
@@ -68,7 +72,7 @@ describe("the reasons a clock exports", () => {
 
 describe("a fuel inserter on a clock of its own", () => {
     it("is in the fuel plan, which the clock's inserter list reads it from, so it is listed with its own clock and never as always on", async () => {
-        const sample = await loadConfigFromFile(ConfigPaths.BIOCHAMBER_FUEL);
+        const sample = await loadConfigFromFile(TestConfigPaths.BIOCHAMBER_FUEL);
         const result = generateClockForConfig(sample, { logger: quiet });
         const own = Object.entries(result.unplanned_inserter_clocks ?? {}).filter(([, clock]) => clock.own_clock).map(([id]) => id);
         expect(own.length).toBeGreaterThan(0);

@@ -19,7 +19,6 @@ uses it. Setup, selective execution and artifact retention are in the [game veri
 - `stupidfathobbit-cell02-clock.game.test.ts`: cell 02 (processing units from two circuit machines and two advanced circuit machines, an export belt) on its throttled scaffold with the generated clock, as it is and with the belts backed up.
 - `thaeln-cell09-clock.game.test.ts`: Thaeln's cell 09 (a chain of machines with a coal inserter that moves 15/8 hands a cycle) with the generated clock.
 - `productivity-chain-clock.game.test.ts`: the productivity module chain (nine machines and three chests, 80 a second over 6 copies) with the generated clock.
-- `recycler-machine-clock.game.test.ts`: the electromagnetic science cell of #100, one recycler placing electronic circuits directly into its supercapacitor plant; every output period at the target and the plant filled to the mining drill stop, with advanced circuits removed.
 - `recycler-original-clock.game.test.ts`: the whole 211-entity blueprint of #100, both cells, under the clock the generator selects for the sample's automatic config (240/s over five copies): 3,600 periods at 96 science/s, nine losses with recovery, and two cold starts, with the science of each plant and its buffer closed at every period.
 - `ore-voider-clock.game.test.ts`: the ore voider's recycler cell, at exact speed and overbeaconed, 400 iron ore a second destroyed, an hour on the generated clock: what comes back is random, so the hour's mean is judged against the binomial's range, with the car never full, the target back after the ore is cut and after a backlog in the car, and the recycler's input watched while a stack of its result waits.
 
@@ -254,9 +253,9 @@ other 46 pass.
 
 The same test builds each run's clock from its stored windows and requires the hash the run was recorded on (the four
 fractional-clock runs of the fast tier cannot be rebuilt from windows, and the test says so). `pickup-clock-cold-start.generation.test.ts`
-generates only the seven runs of `pickup-clock-cold-start-cases.ts`, each the one of a path through the generator
-(near lane 2, an underground exit, a cautious verdict, a backed-up clock, an over-the-hood clock) that the nine belt
-pickup fixtures do not take.
+generates only the run of `pickup-clock-cold-start-cases.ts` (an underground exit, backed up), the one of a path through
+the generator that the nine belt pickup fixtures do not take; the over-the-hood run is checked without generating, its clock
+being the one the over-hood generation test makes.
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/belt-clock-cold-start-new \
@@ -283,7 +282,7 @@ the family's `*.generation.test.ts` (pull requests to master).
   (`pickup-clock-capture.ts`; `BELT_CLOCK_CALIBRATE=1` skips the check to record a new summary).
 - The cold starts (`pickup-clock-start-controls.json`, `cold_start`) keep the same pair per clock:
   `clock_sha256` (checked by `pickup-clock-cold-start-mechanics.test.ts` against the clock the stored windows build and the fixture's
-  pin, and for the seven runs of `pickup-clock-cold-start-cases.ts` and those of the nine belt pickup fixtures by the generation tests
+  pin, and for the run of `pickup-clock-cold-start-cases.ts` and those of the nine belt pickup fixtures by the generation tests
   against the selection)
   and `recorded_clock_sha256` (checked by the game test).
 - Three scaffold-recordings builds expect values that belong to one clock (agricultural science having no dip and no

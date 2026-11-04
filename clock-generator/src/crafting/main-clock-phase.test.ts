@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
+import { TestConfigPaths } from "../../tests/configs/paths";
 import type { Config } from "../config/schema";
 import { Duration, OpenRange } from "../data-types";
 import { TickProvider } from "../simulation/current-tick-provider";
@@ -153,7 +154,7 @@ describe("shared main-clock phase composition", () => {
     });
 
     it("preserves independent own-fuel predicates and the existing exhaustive-proof refusal", async () => {
-        const loaded = await loadConfigFromFile(ConfigPaths.BIOCHAMBER_FUEL);
+        const loaded = await loadConfigFromFile(TestConfigPaths.BIOCHAMBER_FUEL);
         const fuel = { ...loaded, inserters: loaded.inserters.map(inserter => ({ ...inserter, overrides: undefined })) };
         const clocks = unplannedInserterClocks(createEntityRegistryFromConfig(fuel), 600);
         const own = [...clocks.values()].filter(clock => clock.own_clock);

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { generateClockForConfig, observedWindowsClock, type BlueprintGenerationResult } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
+import { TestConfigPaths } from "../../tests/configs/paths";
 import type { Config } from "../config/schema";
 import { quiet } from "./generate-blueprint-test-helpers";
 
@@ -41,7 +42,9 @@ describe("an inserter the config sets to always enabled", () => {
     });
 
     it("has no windows made from what it was seen doing either (observed windows)", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.LITHIUM_PLATES);
+        // a cryogenic plant fills a rocket silo that six furnaces empty: its input from an infinity chest (inserter 1) and its output into the silo (4) are set to always enabled
+        const sample = await loadConfigFromFile(ConfigPaths.REAL_OWNER_LITHIUM_SILO);
+        const config: Config = { ...sample, inserters: sample.inserters.map((it, index) => [0, 3].includes(index) ? { ...it, overrides: { ...it.overrides, ...ALWAYS } } : it) };
         const result = observedWindowsClock(config, { logger: quiet, verify_as_built: true }, "always");
         expect(result.derived_clock_windows).toBeDefined();
         expect(alwaysEnabled(config).length).toBeGreaterThan(0);
@@ -51,7 +54,7 @@ describe("an inserter the config sets to always enabled", () => {
     });
 
     it("has no fuel clock when it only fills a fuel slot, and the build is stable with it always enabled", async () => {
-        const sample = await loadConfigFromFile(ConfigPaths.BIOCHAMBER_FUEL);
+        const sample = await loadConfigFromFile(TestConfigPaths.BIOCHAMBER_FUEL);
         const clocked = generateClockForConfig(sample, { logger: quiet, verify_as_built: true });
         expect(Object.keys(clocked.unplanned_inserter_clocks ?? {})).toEqual(["inserter:3"]);
 
@@ -64,7 +67,7 @@ describe("an inserter the config sets to always enabled", () => {
     });
 
     it("holds for a mining drill too", async () => {
-        const sample = await loadConfigFromFile(ConfigPaths.STONE_BRICKS_DIRECT_INSERT);
+        const sample = await loadConfigFromFile(ConfigPaths.STONE_BRICKS_DIRECT_INSERT_2_1);
         expect(Object.keys(generateClockForConfig(sample, { logger: quiet }).clock_windows)).toContain("drill:1");
 
         const config: Config = {

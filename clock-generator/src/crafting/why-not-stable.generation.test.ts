@@ -8,17 +8,6 @@ import { alwaysOnReasonProblemsOf, quiet } from "./generate-blueprint-test-helpe
 
 
 describe("why the selected clock does not meet goal 1, as a generation says it", () => {
-    it("is no recovery for a sample that holds its target and is not taken away from for a while", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.REAL_STUPIDFATHOBBIT_CELL06);
-        const generated = generateClockAlternatives(config, { logger: quiet });
-        expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
-        expect(generated.why_not_stable).toEqual({
-            cause: "no recovery",
-            message: "The selected clock (Batched swings: 6 output swings per cycle, subtick clock) holds the target rate, but does not "
-                + "get back to it by itself after steel plate is not taken away. A buffer, or a faster machine, lets it catch up.",
-        });
-    });
-
     // a hand of 2 every 8 ticks takes at most 15 packs a second out of a copy (the simulator's inserter, free-running, moves
     // exactly that), under the 21.82 a copy of the target: the feasibility pass refuses it before any clock is tried
     it("is not reached where the inserters' hands are too small for the target: the build is refused before any clock", async () => {

@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadConfigFromFile } from '../config/loader';
 import { ConfigPaths } from '../config/config-paths';
+import { TestConfigPaths } from '../../tests/configs/paths';
 import type { Config } from '../config';
 import { SimulationContext } from './sequence/simulation-context';
 import { TimelineRecorder } from './timeline-recording';
@@ -106,7 +107,7 @@ describe('optional timeline observer', () => {
 });
 
 it('records real burner inventory and energy while replaying the saved independent fuel clock', async () => {
-    const fuelConfig = await loadConfigFromFile(ConfigPaths.BIOCHAMBER_FUEL);
+    const fuelConfig = await loadConfigFromFile(TestConfigPaths.BIOCHAMBER_FUEL);
     const planned = runBuild(fuelConfig, { logger: quiet });
     const clocks = Object.fromEntries([...planned.inserter_clocks].map(([id, clock]) => [id, {
         ...clock, window: { start: clock.window.start_inclusive, end: clock.window.end_inclusive },

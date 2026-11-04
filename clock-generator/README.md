@@ -119,8 +119,8 @@ build, each holding the config(s) of that build and, where one exists, its scaff
 build without a clock, for recording it in the game.
 
 - `science/`: automation, logistic, chemical, production, utility, agriculture, metallurgic, electromagnetic and military science
-- `intermediates/`: advanced circuit, processing units, flying robot frame, lithium plates, electric engine unit, productivity module, low density structure, accumulator
-- `gleba/`: rocket fuel from jelly, jellynut processing, biochamber fuel, iron bacteria cultivation
+- `intermediates/`: advanced circuit, processing units, flying robot frame, productivity module, low density structure, accumulator
+- `gleba/`: rocket fuel from jelly, iron bacteria cultivation
 - `smelting/`: stone bricks, electric furnace
 
 `src/config/config-paths.ts` names every sample.

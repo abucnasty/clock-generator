@@ -1,19 +1,20 @@
 import { describe, it, expect, vi } from 'vitest';
 import { loadConfigFromFile } from './loader';
 import { ConfigPaths } from './config-paths';
+import { TestConfigPaths } from '../../tests/configs/paths';
 import { Config } from './schema';
 import { validateInserterCoverage } from './inserter-coverage-validator';
 
 describe('validateInserterCoverage', () => {
     describe('bad-accumulator-config', () => {
         it('reports exactly 2 issues', async () => {
-            const config = await loadConfigFromFile(ConfigPaths.BAD_ACCUMULATOR_CONFIG);
+            const config = await loadConfigFromFile(TestConfigPaths.BAD_ACCUMULATOR_CONFIG);
             const issues = validateInserterCoverage(config);
             expect(issues).toHaveLength(2);
         });
 
         it('reports a missing input inserter for iron-plate on machine 1', async () => {
-            const config = await loadConfigFromFile(ConfigPaths.BAD_ACCUMULATOR_CONFIG);
+            const config = await loadConfigFromFile(TestConfigPaths.BAD_ACCUMULATOR_CONFIG);
             const issues = validateInserterCoverage(config);
             const issue = issues.find(
                 (i) =>
@@ -26,7 +27,7 @@ describe('validateInserterCoverage', () => {
         });
 
         it('reports a missing output inserter for accumulator on machine 1', async () => {
-            const config = await loadConfigFromFile(ConfigPaths.BAD_ACCUMULATOR_CONFIG);
+            const config = await loadConfigFromFile(TestConfigPaths.BAD_ACCUMULATOR_CONFIG);
             const issues = validateInserterCoverage(config);
             const issue = issues.find(
                 (i) =>
@@ -86,12 +87,11 @@ describe('a coverage check that comes before anything read the game data', () =>
         vi.resetModules();
         await import('../data/factorio-data-file');
         const { FactorioDataService: data } = await import('../data/factorio-data-service');
-        const { ConfigPaths: paths } = await import('./config-paths');
         const { generateClockAlternatives } = await import('../crafting/generate-blueprint');
         const { parseConfig: parse } = await import('./loader');
         const fs = await import('fs');
         // without the machines' former type, which is read with the data
-        const raw = JSON.parse(fs.readFileSync(paths.BAD_ACCUMULATOR_CONFIG, 'utf-8'));
+        const raw = JSON.parse(fs.readFileSync(TestConfigPaths.BAD_ACCUMULATOR_CONFIG, 'utf-8'));
         const config = await parse(JSON.stringify({ ...raw, machines: raw.machines.map(({ type: _type, ...machine }: { type?: string }) => machine) }));
         expect(data.isInitialized()).toBe(false);
         expect(() => generateClockAlternatives(config, { logger: quiet })).toThrow(
@@ -103,7 +103,7 @@ describe('a coverage check that comes before anything read the game data', () =>
         vi.resetModules();
         const { FactorioDataService: data } = await import('../data/factorio-data-service');
         const { validateInserterCoverage: validate, createInserterCoverageValidator: live } = await import('./inserter-coverage-validator');
-        const config = JSON.parse(JSON.stringify(await loadConfigFromFile(ConfigPaths.BAD_ACCUMULATOR_CONFIG))) as Config;
+        const config = JSON.parse(JSON.stringify(await loadConfigFromFile(TestConfigPaths.BAD_ACCUMULATOR_CONFIG))) as Config;
         expect(data.isAvailable()).toBe(false);
         expect(validate(config)).toEqual([]);
         expect(live()(config)).toEqual([]);

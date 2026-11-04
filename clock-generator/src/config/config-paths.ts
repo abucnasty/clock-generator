@@ -30,48 +30,30 @@ export const ConfigPaths = {
     LOGISTIC_SCIENCE: path.join(CONFIG_SAMPLES_DIR, 'science', 'logistic-science', 'logistic-science.json'),
     LOGISTIC_SCIENCE_SHARED_INSERTER: path.join(CONFIG_SAMPLES_DIR, 'science', 'logistic-science', 'logistic-science-shared-inserter.json'),
     LOGISTIC_SCIENCE_INSERTER_CRAFTING: path.join(CONFIG_SAMPLES_DIR, 'science', 'logistic-science', 'logistic-science-inserter-crafting.json'),
-    PRODUCTION_SCIENCE: path.join(CONFIG_SAMPLES_DIR, 'science', 'production-science', 'production-science-belt-fed.json'),
-    PRODUCTION_SCIENCE_SHARED: path.join(CONFIG_SAMPLES_DIR, 'science', 'production-science', 'production-science-shared-whole-swings.json'),
     SAMPLE_CONFIG: path.join(CONFIG_SAMPLES_DIR, 'science', 'logistic-science', 'logistic-science-sample.json'),
-    STONE_BRICKS_DIRECT_INSERT: path.join(CONFIG_SAMPLES_DIR, 'smelting', 'stone-bricks', 'stone-bricks-direct-insert.json'),
     STONE_BRICKS_DIRECT_INSERT_2_1: path.join(CONFIG_SAMPLES_DIR, 'smelting', 'stone-bricks', 'stone-bricks-direct-insert-2-1.json'),
     UTILITY_SCIENCE: path.join(CONFIG_SAMPLES_DIR, 'science', 'utility-science', 'utility-science.json'),
     MILITARY_SCIENCE: path.join(CONFIG_SAMPLES_DIR, 'science', 'military-science', 'military-science-1-inserter.json'),
     LOW_DENSITY_STRUCTURE: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'low-density-structure', 'low-density-structure.json'),
     METALLURGIC_SCIENCE_PACK: path.join(CONFIG_SAMPLES_DIR, 'science', 'metallurgic-science', 'metallurgic-science.json'),
-    LITHIUM_PLATES: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'lithium-plates', 'lithium-plates.json'),
     UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS: path.join(CONFIG_SAMPLES_DIR, 'science', 'utility-science', 'utility-science-belted-combined-blue-and-lds.json'),
     PROCESSING_UNITS: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'processing-units', 'processing-units.json'),
-    BAD_ACCUMULATOR_CONFIG: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'accumulator', 'accumulator-bad-config.json'),
     ACCUMULATOR_640: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'accumulator', 'accumulator-640.json'),
     AUTOMATION_SCIENCE: path.join(CONFIG_SAMPLES_DIR, 'science', 'automation-science', 'automation-science.json'),
     /** Two foundries casting gears and copper onto one belt, which feeds an assembler making the packs */
     AUTOMATION_SCIENCE_BELTED_BUFFER: path.join(CONFIG_SAMPLES_DIR, 'science', 'automation-science', 'automation-science-belted-buffer.json'),
-    /** Utility science with low density structure inserted directly, the chain's inserters always on (its clocked twin and scaffold were replaced by REAL_THAELN_CELL09) */
-    UTILITY_SCIENCE_DIRECT_INSERT_LDS_CHAIN_ALWAYS_ON: path.join(CONFIG_SAMPLES_DIR, 'science', 'utility-science', 'utility-science-direct-insert-lds-chain-always-on.json'),
     PRODUCTION_SCIENCE_JSON: path.join(CONFIG_SAMPLES_DIR, 'science', 'production-science', 'production-science.json'),
-    PROCESSING_UNITS_BELT_EXPORT: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'processing-units', 'processing-units-belt-export.json'),
     FLYING_ROBOT_FRAME: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'flying-robot-frame', 'flying-robot-frame.json'),
     LOGISTIC_SCIENCE_DI: path.join(CONFIG_SAMPLES_DIR, 'science', 'logistic-science', 'logistic-science-direct-insert.json'),
     GLEBA_ROCKET_FUEL: path.join(CONFIG_SAMPLES_DIR, 'gleba', 'rocket-fuel', 'rocket-fuel-jelly-stack-16.json'),
-    GLEBA_ROCKET_FUEL_JELLY_STACK_15: path.join(CONFIG_SAMPLES_DIR, 'gleba', 'rocket-fuel', 'rocket-fuel-jelly-stack-15.json'),
-    JELLYNUT_PROCESSING_ROCKET_FUEL: path.join(CONFIG_SAMPLES_DIR, 'gleba', 'jellynut-processing', 'jellynut-processing-rocket-fuel.json'),
     AGRICULTURAL_SCIENCE: path.join(CONFIG_SAMPLES_DIR, 'science', 'agriculture-science', 'agriculture-science.json'),
     IRON_BACTERIA_CULTIVATION: path.join(CONFIG_SAMPLES_DIR, 'gleba', 'iron-bacteria-cultivation', 'iron-bacteria-cultivation.json'),
-    BIOCHAMBER_FUEL: path.join(CONFIG_SAMPLES_DIR, 'gleba', 'biochamber-fuel', 'nutrients-from-yumako-mash-fuel-bonus.json'),
-    JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS: path.join(CONFIG_SAMPLES_DIR, 'gleba', 'jellynut-processing', 'jellynut-processing-rocket-fuel-biochambers.json'),
     /** Real cells of bases built in the game, with their scaffold and the rate measured in the base (milestone M1) */
     REAL_STUPIDFATHOBBIT_CELL02: path.join(CONFIG_SAMPLES_DIR, 'real', 'stupidfathobbit', 'cell02', 'stupidfathobbit-cell02.json'),
-    REAL_COMPOSITE04_CELL07: path.join(CONFIG_SAMPLES_DIR, 'real', 'composite04', 'cell07', 'composite04-cell07.json'),
     REAL_THAELN_CELL09: path.join(CONFIG_SAMPLES_DIR, 'real', 'thaeln', 'cell09', 'thaeln-cell09.json'),
-    REAL_STUPIDFATHOBBIT_CELL06: path.join(CONFIG_SAMPLES_DIR, 'real', 'stupidfathobbit', 'cell06', 'stupidfathobbit-cell06.json'),
-    REAL_ATLAN_CELL29: path.join(CONFIG_SAMPLES_DIR, 'real', 'atlan', 'cell29', 'atlan-cell29.json'),
-    /** The lithium plate build, 80 a second: two cryogenic plants fill a rocket silo used as a chest, which six furnaces empty */
-    REAL_OWNER_PINK_SCIENCE_RECYCLER: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'pink-science-recycler', 'pink-science-recycler.json'),
     /** The original duplicated electromagnetic science scaffold, described as one cell: five cells make 240/s */
     REAL_OWNER_PINK_SCIENCE_ORIGINAL: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'pink-science-original', 'pink-science-original.json'),
-    /** The same scaffold with its buffer chests replaced by infinity chests that remove all and its final takers removed: the science plants' drains are its terminal outputs */
-    REAL_OWNER_PINK_SCIENCE_ORIGINAL_NO_BUFFERS: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'pink-science-original-no-buffers', 'pink-science-original-no-buffers.json'),
+    /** The lithium plate build, 80 a second: two cryogenic plants fill a rocket silo used as a chest, which six furnaces empty */
     REAL_OWNER_LITHIUM_SILO: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'lithium-silo', 'lithium-silo.json'),
     /** The iron plate build, 80 a second: a big mining drill drops ore into a car, which two furnaces empty */
     REAL_OWNER_CAR: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'car', 'car.json'),
@@ -105,14 +87,10 @@ export interface ExpectedRefusal {
 
 /**
  * The samples of `ConfigPaths` that exist to be refused, not to generate a clock from, by key. Generating each must
- * fail with its error (`expected-refusals.test.ts`); code that walks every sample leaves these out.
+ * fail with its error (`expected-refusals.test.ts`); code that walks every sample leaves these out. None today: the coverage
+ * refusal's config is a unit-test fixture (`tests/configs/`).
  */
-export const ExpectedRefusals = {
-    BAD_ACCUMULATOR_CONFIG: {
-        reason: "The coverage check's deliberate fixture (PR #53): a machine with no inserters",
-        error: 'Missing inserter coverage',
-    },
-} as const satisfies Partial<Record<keyof typeof ConfigPaths, ExpectedRefusal>>;
+export const ExpectedRefusals: Readonly<Partial<Record<keyof typeof ConfigPaths, ExpectedRefusal>>> = {};
 
 /** Whether the sample of a `ConfigPaths` key is one of the expected refusals */
 export function isExpectedRefusal(key: string): key is keyof typeof ExpectedRefusals {

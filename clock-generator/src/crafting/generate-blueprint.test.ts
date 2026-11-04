@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { generateClockForConfig, generateClockAlternatives, validateConfig, type BlueprintGenerationResult, type ClockAlternative } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
+import { TestConfigPaths } from "../../tests/configs/paths";
 import { EntityId } from "../entities";
 import { FeasibilityError } from "../config/errors";
 import { planCraftingCycle } from "./plan/plan-run";
@@ -25,8 +26,8 @@ describe("generateClockForConfig", () => {
     // The builds are generated in beforeAll hooks, not in the describe bodies: those all run when the file is collected,
     // so a run of one test by name would generate every build in the file first.
 
-    describe("STONE_BRICKS_DIRECT_INSERT config", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.STONE_BRICKS_DIRECT_INSERT);
+    describe("STONE_BRICKS_DIRECT_INSERT_2_1 config", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.STONE_BRICKS_DIRECT_INSERT_2_1);
         let result: BlueprintGenerationResult;
         let inserterId: EntityId;
         let drillId: EntityId;
@@ -270,7 +271,7 @@ describe("generateClockForConfig", () => {
         });
 
         it("throws for a machine without inserters", async () => {
-            const config = await loadConfigFromFile(ConfigPaths.BAD_ACCUMULATOR_CONFIG);
+            const config = await loadConfigFromFile(TestConfigPaths.BAD_ACCUMULATOR_CONFIG);
             expect(() => validateConfig(config)).toThrow("Missing inserter coverage");
         });
 
@@ -289,27 +290,13 @@ describe("generateClockForConfig", () => {
 
     describe("config validation", () => {
         it("throw error if the current configuration cannot meet the target production rate", async () => {
-            const config = await loadConfigFromFile(ConfigPaths.STONE_BRICKS_DIRECT_INSERT);
+            const config = await loadConfigFromFile(ConfigPaths.STONE_BRICKS_DIRECT_INSERT_2_1);
             expect(config.target_output.items_per_second).toBe(120)
             expect(() => generateClockForConfig(config)).not.toThrowError();
             config.target_output.items_per_second = 240;
             expect(() => generateClockForConfig(config)).toThrowError();
         })
     })
-
-    // Inserters 1/4 feed the two identical pack machines and 2/3 empty them. Config order puts input 1
-    // before output 2 but input 4 after output 3, which used to offset the machines by one tick and
-    // desync the shared-clock LDS inserters 6/7.
-    describe("UTILITY_SCIENCE_DIRECT_INSERT_LDS_CHAIN_ALWAYS_ON (identical machines stay in sync regardless of config order)", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_DIRECT_INSERT_LDS_CHAIN_ALWAYS_ON);
-
-        it("is stable, with the LDS inserters 6 and 7 and the belt input inserters 1 and 4 swinging on the same ticks", () => {
-            const result = generateClockForConfig({ ...config, overrides: { ...config.overrides, terminal_swing_count: 2 } });
-            expect(result.stability_check.holds).toBe(true);
-            expect(transferRanges(result, 7)).toEqual(transferRanges(result, 6));
-            expect(transferRanges(result, 4)).toEqual(transferRanges(result, 1));
-        });
-    });
 
     // Regression test for issue #47:
     // A multi-filter belt→machine inserter (copper-plate + iron-gear-wheel) with terminal_swing_count=1

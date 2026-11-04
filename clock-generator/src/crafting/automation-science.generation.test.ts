@@ -22,6 +22,12 @@ it("names why every inserter and drill a clock leaves always on is", () => {
     expect(alwaysOnReasonProblemsOf(config, by_default)).toEqual([]);
 });
 
+// No machine of the sample burns fuel: its selected clock has no fuel plan and no fuel consumption view
+it("has no fuel plan and no fuel consumption view, as no machine burns fuel", () => {
+    expect(selected.result.fuel_plan).toBeUndefined();
+    expect(selected.result.fuel_consumption_view).toBeUndefined();
+});
+
 describe("a clock tried for backpressure loss", () => {
     let report: BackpressureLossReport;
 

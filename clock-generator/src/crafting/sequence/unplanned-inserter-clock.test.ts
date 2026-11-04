@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { ConfigPaths } from "../../config/config-paths";
+import { TestConfigPaths } from "../../../tests/configs/paths";
 import { loadConfigFromFile } from "../../config/loader";
 import { FactorioDataService } from "../../data";
 import { byProductClockFor, byProductOnlyInserters, fuelDeliveryTicks, fuelOnlyInserters, isByProductOnlyInserter, alwaysEnabledInserters, largestDivisorAtMost, loopInserters, sharedFuelClockTicks, unplannedInserterClocks } from "./unplanned-inserter-clock";
@@ -26,7 +27,7 @@ describe("largestDivisorAtMost", () => {
 
 describe("fuel clocks", () => {
     const registryOf = async (bonus?: number) => {
-        const config = await loadConfigFromFile(ConfigPaths.BIOCHAMBER_FUEL);
+        const config = await loadConfigFromFile(TestConfigPaths.BIOCHAMBER_FUEL);
         const machines = config.machines.map(machine => ({ ...machine, energy_consumption_bonus: bonus ?? machine.energy_consumption_bonus }));
         return SimulationContext.fromConfig({ ...config, machines }).entity_registry;
     };

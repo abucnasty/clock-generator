@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ConfigPaths } from "../../config/config-paths";
+import { withJellyHandsOf15 } from "../../../tests/configs/rocket-fuel-hands";
 import { loadConfigFromFile } from "../../config/loader";
 import { Config } from "../../config/schema";
 import type { InserterEdge } from "../../data-types/planner-facts";
@@ -9,11 +10,11 @@ import { Cut, refuses } from "./checks";
 import { feasibilityOfConfig, withTarget } from "./feasibility-test-helpers";
 
 /**
- * C1, a recipe's machines, on rocket fuel with jelly stack 15: machines 1 and 3 (rocket fuel from jelly) are fed jelly
+ * C1, a recipe's machines, on the rocket fuel sample with the jelly inserters at a hand of 15: machines 1 and 3 (rocket fuel from jelly) are fed jelly
  * by inserters 6, 7, 8 and 9 from machine 2, a hand of 15 every 8 ticks each (pickup 1, two rotations of 3, drop 1).
  */
 describe("C1: a recipe's machines craft no faster than their inputs arrive", async () => {
-    const sample = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL_JELLY_STACK_15) as Config;
+    const sample = withJellyHandsOf15(await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL) as Config);
 
     it("4 hands of 15 every 8 ticks bring 4 x 15 x 60 / 8 = 450 jelly a second; at 30 a craft that is 15 crafts a second; "
         + "a target of 60 rocket fuel at 4 a craft needs 60 / 4 = 15: it passes, exactly at the bound", () => {

@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { ConfigPaths } from "../config/config-paths";
+import { loadConfigFromFile } from "../config/loader";
+import { withJellyHandsOf15 } from "../../tests/configs/rocket-fuel-hands";
 import { alwaysOnReasonProblemsOf, rocketFuelSample, type RocketFuelSample } from "./generate-blueprint-test-helpers";
 
 // The other build of this suite is in rocket-fuel.generation.test.ts.
@@ -17,7 +19,7 @@ describe("generateClockForConfig", () => {
         let jellynut_inserter_id: RocketFuelSample["jellynut_inserter_id"];
 
         beforeAll(async () => {
-            sample = await rocketFuelSample(ConfigPaths.GLEBA_ROCKET_FUEL_JELLY_STACK_15);
+            sample = await rocketFuelSample(withJellyHandsOf15(await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL)));
             ({ alternative, period, jelly_inserter_ids, jellynut_inserter_id } = sample);
         });
 

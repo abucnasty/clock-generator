@@ -35,7 +35,7 @@ describe("clockPeriodTicks on the clocks the generator makes, with the lock", ()
     });
 
     it("reads a clock merged with its modulos and fuel clocks on signal-T: the count of the merged clock", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS);
+        const config = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
         const result = generateClockForConfig(config, { logger: quiet });
         const blueprint = encodeBlueprintFile({ blueprint: result.blueprint });
         const clock = entitiesOf(blueprint).find(entity => /^Clock for/.test(entity.player_description ?? ""));
@@ -79,7 +79,7 @@ describe("the schedule of a generated clock", () => {
         const configs = [
             await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE),
             await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_CULTIVATION),
-            await loadConfigFromFile(ConfigPaths.JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS),
+            rocket_fuel,
             { ...rocket_fuel, target_output: { ...rocket_fuel.target_output, items_per_second: 54 } },
         ];
         for (const config of configs) {

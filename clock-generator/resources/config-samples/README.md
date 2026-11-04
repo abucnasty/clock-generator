@@ -1,8 +1,8 @@
 # Sample configurations and scaffolds
 
 One folder per build, grouped by what it makes: `science/`, `intermediates/`, `gleba/`, `smelting/`. A folder holds
-the build's config(s) as JSON and, where one exists, its scaffold. `src/config/config-paths.ts` names the general samples used by sweeps;
-two of them exist to be refused ([below](#samples-that-are-refused)).
+the build's config(s) as JSON and, where one exists, its scaffold. `src/config/config-paths.ts` names the general samples used by sweeps. Configs that only unit tests load are not samples:
+they are in `tests/configs/`.
 
 A **scaffold** is a blueprint string of exactly one copy of the build without a clock: the machines and inserters the
 config describes, in the ideal environment for a clock to be added to them. That environment is the scaffold's own:
@@ -22,8 +22,8 @@ rules the simulator was missing, and the automation science ones found that the 
 over-produces.
 
 Conventions:
-- `<build>.json` is the config; variants get a suffix that says what differs (`-chain-always-on`, `-belt-fed`).
-- `<build>-scaffold.txt` is the one-copy scaffold; `-scaffold-full-build.txt` is kept only for reference.
+- `<build>.json` is the config; variants get a suffix that says what differs (`-230`, `-direct-insert`).
+- `<build>-scaffold.txt` is the one-copy scaffold.
 - Every config is in the current shape: each machine names its `prototype` (the one its scaffold shows) or none, never a
   `type`. `src/config/current-samples.test.ts` fails on a sample that a load-time migration would change; the former
   shapes live only in `src/config/fixtures/legacy/`, one per migration.
@@ -55,7 +55,6 @@ Conventions:
 | science/chemical-science, shared foundry | yes | selected clock exact: 256 in each of 102 periods of 352 ticks (1 output swing per cycle, 5.5 copies of 240 a second); the runner-up (2 output swings, 122.1 wake-ups) recorded too, 122.7 in the game; the selected clock's wake-ups are not held (see below) | in `test:game`, wake-ups open |
 | science/utility-science | yes | selected clock exact, with "Backed-up belts" off and on: 192 in each of 53 periods | in `test:game`, both ways; a build with a deadlock risk, see "Backpressure loss" and below |
 | science/utility-science, belted blue and LDS | yes | selected clock exact, off and on: 96 in each of 107 periods. Since 2026-10-12 the selected clock is the one with 2 output swings per cycle, which is stable without a search, so the searches are left out; uneven output swings was selected while they ran for every build, at the same 10.7 wake-ups a minute with 5 windows against 7. Recorded that day both ways: 96 in each of 107 periods, 10.7 wake-ups a minute in the game as in the simulator | in `test:game`, both ways |
-| science/utility-science, direct-insert LDS | yes | 32 and 160 of 192 in turn, in the game and in the simulator alike | no clock holds the rate: the generator's to solve, see below |
 | intermediates/advanced-circuit | yes | selected clock exact: 1056 in each of 45 periods of 792 ticks, and 704 in each of 68 of 528 with "Backed-up belts" on | in `test:game` with the switch off; see below |
 | intermediates/advanced-circuit, 230 a second | the same scaffold | selected clock exact: 16,192 in each of 2 repeats of 12,672 ticks (23 periods of 550.957), the first clock of this sample that holds, found by the one search of 2026-10-11 | in `test:game`; see below |
 | intermediates/accumulator, 640 a second | yes | the clock 0.9.0 selected made 512 to 544 of 576 a period; the observed windows clock 0.9.1 selected made 576 in each of 58 periods after 3 at 544 while it settled (60,264 ticks). Since even hands (2026-10-14) the selected clock is that: 576 in each of 46 periods after the game test's settling of 7,200 ticks, no difference from the simulator | in `test:game`; see below |
@@ -63,7 +62,6 @@ Conventions:
 | science/electromagnetic-science | yes (2026-10-16, 12 legendary beacons) | selected clock exact: 352 in every period of 704 ticks (batched swings, 2 output swings per cycle; 30.0 a second a copy, 330 over 11 copies). Unclocked the scaffold makes 30.1 a second a copy. The config's crafting speed is 109.475, what 12 beacons give in the game | in `test:game`; fluids from infinity pipes, the belt's accumulators and supercapacitors from infinity chests |
 | science/electromagnetic-science-auto | the same scaffold | the same build with the enable control of both output inserters on `AUTO` (`electromagnetic-science-auto.json`); `terminal_swing_count` and `lcm` have no `AUTO` value and are kept. Selected clock exact: 352 in every period after the first; from a staged start (empty machines) the first period makes 288 | in `test:game` |
 | science/metallurgic-science | yes (2026-10-21) | the build: a cryogenic plant, an assembler 3 and two foundries, all legendary, with 5, 4, 8 and 9 legendary beacons. The config's speeds are the game's, 68.875, 40.3125, 180.75 and 191.481, where the tooltip's 68.9, 180.8 and 191.5 had been, and its packs go into a chest that removes them, where a chest of 480 had filled up. The science foundry has 1 tick to spare a period of 320. As is, the selected clock (observed windows, 3 output swings) recorded on the scaffold with the ore belt drained: 240 a period, and 240 again within a period or two after the tungsten ore was cut for two periods, the output blocked for four and the coal cut for two. The simulator calls it "no recovery" from the loss of ore, so here it is more pessimistic than the game. With "Backed-up belts" on the selected clock (observed windows, 2 output swings, a subtick clock of 640 ticks) is stable, and recorded 480 in 51 of 56 periods and 496 in the other 5: in the game the science foundry runs at its full speed, 481.5 a period, where the simulator holds it to 480 | not in `test:game`: that test asks for the same output in every period, and the game moves a hand more in about 1 period in 11 |
-| real/composite04/cell07 | yes (the cell's, #189) | selected clock exact, with "Backed-up belts" off and on: 2112 in each of 25 periods of 1408 ticks (2 output swings per cycle, a subtick clock; 90 a second), 500.7 wake-ups a minute in the game, 520.0 in the simulator. With the coal cut for two periods, the output blocked for four and the electronic circuits cut for two, it made 2112 again from the first period after each, the coal line drained or backed up. The target is 90, the rate the cell is built for: the extraction had set the demand of its consumers, 2161/24 = 90.0417 a second, at which no clock held. The coal belt carries coal on both lanes, and the output chests remove what they get, as in the scaffold | in `test:game`, both ways |
 | real/stupidfathobbit/cell02 | yes (given 2026-10-23, 111 entities) | a clock holds 80 a second, as it is and with "Backed-up belts" on. The build makes 82.86 a second with no clock (the cell in the save made 79.96, its output backing up). The generator's clock is 24 ticks, one hand cycle, 32 processing units a period: the hands in groups, with the inserters whose hands take the whole cycle (the circuits into the processing unit machines, the iron and the cable into the circuit machines) enabled all the time and the others in windows (11,295 wake-ups a minute in the simulator as it is, 11,186 backed up; any group of windows can move 4 ticks either way and still hold). It makes 32 in each of the 63 untouched periods in the game and is back at 32 after the plastic is cut for 100 periods and after the output is blocked and the export stopped for 100 periods. Stopping the export alone does not reduce the output, so it is cut with the output block. Before, no clock held: the best, 3 output swings, was unstable at 65.19 in the simulator and made 66.4 in the game. The circuits leave on belt 2, an export belt at 40 a second a lane, measured from the save the cell came from (#189); the scaffold throttles that export to 80 a second with a constant combinator's signal S, and its four throttle inserters, their infinity chests and combinators are environment, not in the config. The simulator has no consumers on that belt, so with every inserter enabled the export inserters put 141 a second on it where the scaffold lets 80 through, and its unclocked baseline is 71.4 against the game's 82.86 (#376); no clock's verdict depends on it | selection and verdict pinned in `stupidfathobbit-cell02.generation.test.ts`; recorded in the game by `test:game` (`tests/game/builds/stupidfathobbit-cell02-clock.game.test.ts`)
 | science/logistic-science, inserter crafting | yes (2026-10-21) | one of the three copies of the inserter build (240 a second over the three): an inserter assembler with 4 speed modules and 8 beacons (73.984375), fed plates by two furnaces and gears by a gear assembler (40.3125), which two more furnaces feed (86.1655 and 91.875), all legendary. Each pair of furnaces takes its ore from a line of its own; the ore, so every product, is uncommon. The output inserter runs all the time at 80 a second. With no overrides, the selected clock (2 output swings, 72 ticks) recorded 96 in every period, the ore lines drained or backed up, and 476.4 wake-ups a minute in the game against 648.8 in the simulator; with "Backed-up belts" on, the clock then selected (3 output swings, 36 ticks) made 48 in every period. Both got back to their rate after the ore and the circuits were cut for 20 periods and the output blocked for 20. With "Backed-up belts" on the selected clock is now 6 output swings in 72 ticks: 96 in each of 499 periods, 741.1 wake-ups a minute in the game against 550.0 in the simulator from its start and 647.5 to 716.3 by where the clock starts (2026-10-24; no losses recorded on it). The hand-made clock on all three copies, 216 ticks, held 80 a second each on the ore lines drained, and got back too; the harness records it as it records a generated clock, and the selected clock (72 ticks) wired to each copy of the same build held 80 a second each and got back too, with a one-period shortfall after the circuits were cut ([the build and the runs](../../tests/game/builds/README.md)) | in `test:game`, both ways |
 | real/owner/lithium-silo | yes (a blueprint given 2026-10-21) | two cryogenic plants fill a rocket silo taken as a chest and six furnaces empty it, all legendary, 80 plates a second. The selected clock (3 output swings, 1080 ticks) recorded 1440 in every period, both build orders, and got back to it after the holmium plates were cut twice and the output blocked; the clock with 1 output swing too. The clock with 7 output swings is short in the game (a side-loaded output belt, the sample's README). the chest ends agree (on the 2160-tick clock the inserters into the silo wake 4 times a period in both the game and the simulator); output inserters 11 and 12 (furnace to belt) wake 10 times a period in the game and 0 in a simulator started cold, because the furnaces' output levels the game's warm-up leaves decide it: started from the recording's first sample the simulator equals the game on all 16 inserters (`scripts/sim-game-check.js`) | in `test:game` |
@@ -85,20 +83,9 @@ In the order they would settle the most:
 1. **science/logistic-science** (shared-inserter, sample): the 1-swing label of the shared-inserter and sample configs
    flipped from unstable to stable. Direct-insert has its scaffold (Status above).
 2. **science/production-science** (shared): its rate changed in the sweep.
-3. **intermediates/processing-units** (belt export): rates moved slightly.
-4. **gleba/rocket-fuel** and **gleba/jellynut-processing**: 3-swing rates swapped between the two jelly stack configs.
-5. **science/military-science**, **intermediates/flying-robot-frame**,
-   **intermediates/lithium-plates**, **intermediates/electric-engine-unit**,
-   **gleba/biochamber-fuel**, **smelting/stone-bricks**, **smelting/electric-furnace**: never recorded.
-
-## Samples that are refused
-
-One sample exists to be refused, not to generate a clock from, and needs no scaffold. `ExpectedRefusals` in
-`src/config/config-paths.ts` lists it with the reason it is kept and the error generating it must fail with;
-`src/config/expected-refusals.test.ts` checks it, and the sweeps leave it out.
-
-- `intermediates/accumulator/accumulator-bad-config.json` (`BAD_ACCUMULATOR_CONFIG`) is the coverage check's
-  deliberately invalid config (PR #53): its machine has no inserters. It fails with "Missing inserter coverage".
+3. **gleba/rocket-fuel**: 3-swing rates swapped between the two jelly stack configs (hands of 16 and, set in the tests, 15).
+4. **science/military-science**, **intermediates/flying-robot-frame**,
+   **smelting/stone-bricks**, **smelting/electric-furnace**: never recorded.
 
 ## Backpressure loss
 
@@ -318,8 +305,7 @@ The block given on 2026-10-15: four chemical science assemblers and four engine 
 
 The build of [issue 98](https://github.com/abucnasty/clock-generator/issues/98), 240 a second over three copies. The
 sample is the copy whose plastic plant is reached by 4 beacons (crafting speed 61.5), as two of the three copies of
-the design are; the third has 5 (68.875), which is what the config attached to the issue says. The whole design is
-kept as `advanced-circuit-scaffold-full-design.txt`. Until 2026-10-10 the sample had a
+the design are; the third has 5 (68.875), which is what the config attached to the issue says. Until 2026-10-10 the sample had a
 target of 230 a second, for which no clock holds.
 
 That one is kept as a second sample, `advanced-circuit-230.json` (`ADVANCED_CIRCUIT_230`), with the subtick clock

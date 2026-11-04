@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
 import { ConfigPaths } from "../../config/config-paths";
+import { TestConfigPaths } from "../../../tests/configs/paths";
 import { InserterCoverageError, InserterCoverageIssue } from "../../config/errors";
 import { assertInserterCoverage } from "../../config/inserter-coverage-validator";
 import { loadConfigFromFile } from "../../config/loader";
@@ -54,19 +55,13 @@ const TERMINAL: Readonly<Record<string, number>> = {
     AGRICULTURAL_SCIENCE: 1,
     AUTOMATION_SCIENCE: 1,
     AUTOMATION_SCIENCE_BELTED_BUFFER: 1,
-    BAD_ACCUMULATOR_CONFIG: 0,
-    BIOCHAMBER_FUEL: 1,
     CHEMICAL_SCIENCE_SHARED_FOUNDRY: 4,
     ELECTRIC_FURNACE: 1,
     ELECTROMAGNETIC_SCIENCE: 2,
     ELECTROMAGNETIC_SCIENCE_AUTO: 2,
     FLYING_ROBOT_FRAME: 1,
     GLEBA_ROCKET_FUEL: 3,
-    GLEBA_ROCKET_FUEL_JELLY_STACK_15: 3,
     IRON_BACTERIA_CULTIVATION: 4,
-    JELLYNUT_PROCESSING_ROCKET_FUEL: 3,
-    JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS: 3,
-    LITHIUM_PLATES: 2,
     LOGISTIC_SCIENCE: 1,
     LOGISTIC_SCIENCE_DI: 2,
     LOGISTIC_SCIENCE_INSERTER_CRAFTING: 1,
@@ -75,31 +70,21 @@ const TERMINAL: Readonly<Record<string, number>> = {
     METALLURGIC_SCIENCE_PACK: 1,
     MILITARY_SCIENCE: 1,
     PROCESSING_UNITS: 1,
-    PROCESSING_UNITS_BELT_EXPORT: 2,
-    PRODUCTION_SCIENCE: 1,
     PRODUCTION_SCIENCE_JSON: 1,
-    PRODUCTION_SCIENCE_SHARED: 1,
-    REAL_ATLAN_CELL29: 2,
-    REAL_COMPOSITE04_CELL07: 2,
     REAL_OWNER_CAR: 2,
     REAL_OWNER_GRENADE: 4,
     REAL_OWNER_LITHIUM_SILO: 6,
     REAL_OWNER_ORE_VOIDER_EXACT_SPEED: 4,
     REAL_OWNER_ORE_VOIDER_OVERBEACONED: 4,
     REAL_OWNER_PINK_SCIENCE_ORIGINAL: 3,
-    REAL_OWNER_PINK_SCIENCE_ORIGINAL_NO_BUFFERS: 3,
-    REAL_OWNER_PINK_SCIENCE_RECYCLER: 3,
     REAL_OWNER_PRODUCTIVITY_CHAIN: 1,
     REAL_STUPIDFATHOBBIT_CELL02: 4,
-    REAL_STUPIDFATHOBBIT_CELL06: 2,
     REAL_THAELN_CELL09: 8,
     SAMPLE_CONFIG: 1,
     STEEL_CARGO_WAGON: 1,
-    STONE_BRICKS_DIRECT_INSERT: 1,
     STONE_BRICKS_DIRECT_INSERT_2_1: 1,
     UTILITY_SCIENCE: 1,
     UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS: 1,
-    UTILITY_SCIENCE_DIRECT_INSERT_LDS_CHAIN_ALWAYS_ON: 2,
 };
 
 describe("the planner graph", () => {
@@ -123,18 +108,11 @@ describe("the planner graph", () => {
     });
 
     it("of the refusal sample leaves uncovered the accumulator's iron plate and its result, as the coverage check does", async () => {
-        const { config, facts, graph } = await graphOf(ConfigPaths.BAD_ACCUMULATOR_CONFIG);
+        const { config, facts, graph } = await graphOf(TestConfigPaths.BAD_ACCUMULATOR_CONFIG);
         const expected = [{ side: "input", at: "machine:1", item: "iron-plate" }, { side: "output", at: "machine:1", item: "accumulator" }];
         expect(uncoveredPortsOf(facts, graph)).toEqual(expected);
         expect(() => assertInserterCoverage(config)).toThrow(InserterCoverageError);
         expect(portsOfCoverageIssues(coverageIssuesOf(config))).toEqual(expected);
-    });
-
-    it("of processing units with a belt export (the brief's reference sample) is well under a megabyte of JSON", async () => {
-        const { graph } = await graphOf(ConfigPaths.PROCESSING_UNITS_BELT_EXPORT);
-        const json = graphSnapshotOf(graph, "PROCESSING_UNITS_BELT_EXPORT");
-        expect(json.length).toBeLessThan(64 * 1024);
-        expect(graph.nodes.length + graph.edges.length).toBeLessThan(100);
     });
 
     it("keeps no snapshot of a sample that is gone, and an expectation for every sample", () => {

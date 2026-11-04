@@ -221,6 +221,6 @@ describe('over the samples, a target the field allows is never refused by a feas
     });
 
     it('checks most of the samples', () => {
-        expect(checked).toBeGreaterThan(40);
+        expect(checked).toBeGreaterThan(35);
     });
 });
