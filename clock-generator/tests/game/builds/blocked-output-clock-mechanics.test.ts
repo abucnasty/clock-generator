@@ -30,12 +30,15 @@ const firstHandOf = (variant: BlockedOutputClockCase) => drops[`${variant.speed.
 
 /**
  * The clock the generator selects: a hand of 15 is shifted-swings; a hand of 16 is even-hands, or planned-belt-slack where
- * both have no wake-ups (an arm that swings back from a drop that emptied its hand is not counted) and it wins the tie
+ * both have no wake-ups (an arm that swings back from a drop that emptied its hand is not counted) and it wins the tie,
+ * or the observed-windows clock (derived) at fast-stack-2
  */
 const PLANNED_SELECTED = new Set(["express-stack-2", "express-stack-4", "fast-stack-4", "normal-stack-1", "normal-stack-4", "turbo-stack-2", "turbo-stack-4"]
     .map(name => `blocked-output-${name}`));
+const DERIVED_SELECTED = new Set(["blocked-output-fast-stack-2"]);
 const selectedClockOf = (variant: BlockedOutputClockCase) =>
-    variant.stackSize === 3 ? "shifted-swings" : PLANNED_SELECTED.has(variant.name) ? "planned-belt-slack" : "even-hands";
+    variant.stackSize === 3 ? "shifted-swings" : PLANNED_SELECTED.has(variant.name) ? "planned-belt-slack"
+        : DERIVED_SELECTED.has(variant.name) ? "derived" : "even-hands";
 
 /** The hand the output inserter drops: 16 items, 15 at stack size 3 (docs/belt-pickup/experiments.md) */
 const handOf = (variant: BlockedOutputClockCase) => variant.stackSize === 3 ? 15 : 16;

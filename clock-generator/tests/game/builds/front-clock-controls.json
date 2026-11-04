@@ -12,9 +12,9 @@
       "generation": {"period":960,"expected":96,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":6,"supply":"backed_up"},"clock_sha256":"403d9cb2fd016ead48d49a1e39a5dfe2fe89b4f6e8fb49bb63302ffc0a9196dd"}
     },
     "front-entrance-express-mirrored-moving-different-items": {
-      "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"09454882e1420b99e8ffacc186e91e578f8188ee157f9bb4b41b07f75d26c138","clock_basis":"history"},
+      "recorded": {"pr":0,"commit":"050ac5dd","frozen_head":"050ac5dd","note":"recorded before the PR was opened; pr is set when it is","clock_sha256":"7ba6b3dfbe6615a0a9082bfe0baa5010878dc90bd4a6129d11284c9577d91cf4","clock_basis":"capture"},
       "native": {"generationVerdict":"stable","target":6,"period":1120,"expected":112,"baseline":[112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112],"recovery":[{"cut":66,"during":[112,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"recovered":[112,112,112,112,112,112,112,112,112]},{"cut":106,"during":[112,76,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,112],"recovered":[112,112,112,112,112,112,112,112,112]},{"cut":146,"during":[112,80,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"recovered":[112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112]}],"interventions":[[66,90,106],[106,130,146],[146,170,196]]},
-      "generation": {"period":1120,"expected":112,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":6,"supply":"moving"},"clock_sha256":"09454882e1420b99e8ffacc186e91e578f8188ee157f9bb4b41b07f75d26c138"}
+      "generation": {"period":1120,"expected":112,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":6,"supply":"moving"},"clock_sha256":"7ba6b3dfbe6615a0a9082bfe0baa5010878dc90bd4a6129d11284c9577d91cf4"}
     },
     "front-entrance-express-mirrored-moving-same-item": {
       "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"e92348fe84759383709513a637824a07e994f078772c5107059b34d8445172b5","clock_basis":"history"},
@@ -32,9 +32,9 @@
       "generation": {"period":960,"expected":96,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":6,"supply":"backed_up"},"clock_sha256":"403d9cb2fd016ead48d49a1e39a5dfe2fe89b4f6e8fb49bb63302ffc0a9196dd"}
     },
     "front-entrance-express-unmirrored-moving-different-items": {
-      "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"db10f5e0040093fd562ca167d5516c3ceaf03e500b5f84cd2f2d59c1f7afafcf","clock_basis":"history"},
+      "recorded": {"pr":0,"commit":"050ac5dd","frozen_head":"050ac5dd","note":"recorded before the PR was opened; pr is set when it is","clock_sha256":"4c2aaf6e5f96fac45a3b7accf9ba37cbe66bcdbd842cabb020b23ea2523d8d76","clock_basis":"capture"},
       "native": {"generationVerdict":"stable","target":6,"period":960,"expected":96,"baseline":[96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96],"recovery":[{"cut":66,"during":[96,96,16,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"recovered":[96,96,96,96,96,96,96,96,96]},{"cut":106,"during":[96,92,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,96],"recovered":[96,96,96,96,96,96,96,96,96]},{"cut":146,"during":[96,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"recovered":[96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96]}],"interventions":[[66,90,106],[106,130,146],[146,170,196]]},
-      "generation": {"period":960,"expected":96,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":6,"supply":"moving"},"clock_sha256":"db10f5e0040093fd562ca167d5516c3ceaf03e500b5f84cd2f2d59c1f7afafcf"}
+      "generation": {"period":960,"expected":96,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":6,"supply":"moving"},"clock_sha256":"4c2aaf6e5f96fac45a3b7accf9ba37cbe66bcdbd842cabb020b23ea2523d8d76"}
     },
     "front-entrance-express-unmirrored-moving-same-item": {
       "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"e92348fe84759383709513a637824a07e994f078772c5107059b34d8445172b5","clock_basis":"history"},
@@ -42,9 +42,9 @@
       "generation": {"period":960,"expected":96,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":6,"supply":"moving"},"clock_sha256":"e92348fe84759383709513a637824a07e994f078772c5107059b34d8445172b5"}
     },
     "front-entrance-fast-mirrored-backed-different-items": {
-      "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"1f62134866b2259555b83c03091da27aa91f8d10c0eb1cf0c54008b376fcd0f0","clock_basis":"history"},
+      "recorded": {"pr":0,"commit":"050ac5dd","frozen_head":"050ac5dd","note":"recorded before the PR was opened; pr is set when it is","clock_sha256":"627559e58dc8b4c2baa39a9aca15106d41a18194c920a8253e93bd31e6cdbbcd","clock_basis":"capture"},
       "native": {"generationVerdict":"stable","target":6,"period":960,"expected":96,"baseline":[96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96],"recovery":[{"cut":66,"during":[96,16,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"recovered":[96,96,96,96,96]},{"cut":106,"during":[96,92,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,96],"recovered":[96,96,96,96,96]},{"cut":146,"during":[96,96,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"recovered":[96,96,96,96,96,96,96,96,96,96,96,96,96,96,96]}],"interventions":[[66,90,106],[106,130,146],[146,170,196]]},
-      "generation": {"period":960,"expected":96,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":6,"supply":"backed_up"},"clock_sha256":"1f62134866b2259555b83c03091da27aa91f8d10c0eb1cf0c54008b376fcd0f0"}
+      "generation": {"period":960,"expected":96,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":6,"supply":"backed_up"},"clock_sha256":"627559e58dc8b4c2baa39a9aca15106d41a18194c920a8253e93bd31e6cdbbcd"}
     },
     "front-entrance-fast-mirrored-backed-same-item": {
       "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"3e7b69ffeebd3e8718efa4f27d000dad0fbed7ff5e18f18dc95cac4340a60603","clock_basis":"history"},
@@ -52,9 +52,9 @@
       "generation": {"period":960,"expected":96,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":6,"supply":"backed_up"},"clock_sha256":"3e7b69ffeebd3e8718efa4f27d000dad0fbed7ff5e18f18dc95cac4340a60603"}
     },
     "front-entrance-fast-mirrored-moving-different-items": {
-      "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"caab631bce08dbcacf29553fad2630d03f0005503f2c5dc445224cb9c3704ecc","clock_basis":"history"},
+      "recorded": {"pr":0,"commit":"050ac5dd","frozen_head":"050ac5dd","note":"recorded before the PR was opened; pr is set when it is","clock_sha256":"718a159fe711884ce2714d7333a55ce6e5fe13c93b9c7f3cd260108914244050","clock_basis":"capture"},
       "native": {"generationVerdict":"stable","target":6,"period":800,"expected":80,"baseline":[80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80],"recovery":[{"cut":66,"during":[80,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"recovered":[80,80,80,80,80,80,80,80,80]},{"cut":106,"during":[80,80,28,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,80],"recovered":[80,80,80,80,80,80,80,80,80]},{"cut":146,"during":[80,80,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"recovered":[80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80]}],"interventions":[[66,90,106],[106,130,146],[146,170,196]]},
-      "generation": {"period":800,"expected":80,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":6,"supply":"moving"},"clock_sha256":"caab631bce08dbcacf29553fad2630d03f0005503f2c5dc445224cb9c3704ecc"}
+      "generation": {"period":800,"expected":80,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":6,"supply":"moving"},"clock_sha256":"718a159fe711884ce2714d7333a55ce6e5fe13c93b9c7f3cd260108914244050"}
     },
     "front-entrance-fast-mirrored-moving-same-item": {
       "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"7423e47f061f0b2a9bf3b7c40befa6426a6fc65b9b793d98cc3f70ea00c13f7a","clock_basis":"history"},
@@ -62,9 +62,9 @@
       "generation": {"period":960,"expected":96,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":6,"supply":"moving"},"clock_sha256":"7423e47f061f0b2a9bf3b7c40befa6426a6fc65b9b793d98cc3f70ea00c13f7a"}
     },
     "front-entrance-fast-unmirrored-backed-different-items": {
-      "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"812663307121ad82da7da975f2e59cda5477a1519ee6a15cce000748bfd235a6","clock_basis":"history"},
+      "recorded": {"pr":0,"commit":"050ac5dd","frozen_head":"050ac5dd","note":"recorded before the PR was opened; pr is set when it is","clock_sha256":"59dec0c7e287e56213266fb9da07c80c38235414df18cec31fb4ec8664a3574e","clock_basis":"capture"},
       "native": {"generationVerdict":"stable","target":6,"period":800,"expected":80,"baseline":[80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80],"recovery":[{"cut":66,"during":[80,80,16,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"recovered":[80,80,80,80,80]},{"cut":106,"during":[80,80,28,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,80],"recovered":[80,80,80,80,80]},{"cut":146,"during":[80,16,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"recovered":[80,80,80,80,80,80,80,80,80,80,80,80,80,80,80]}],"interventions":[[66,90,106],[106,130,146],[146,170,196]]},
-      "generation": {"period":800,"expected":80,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":6,"supply":"backed_up"},"clock_sha256":"812663307121ad82da7da975f2e59cda5477a1519ee6a15cce000748bfd235a6"}
+      "generation": {"period":800,"expected":80,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":6,"supply":"backed_up"},"clock_sha256":"59dec0c7e287e56213266fb9da07c80c38235414df18cec31fb4ec8664a3574e"}
     },
     "front-entrance-fast-unmirrored-backed-same-item": {
       "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"3e7b69ffeebd3e8718efa4f27d000dad0fbed7ff5e18f18dc95cac4340a60603","clock_basis":"history"},
@@ -72,9 +72,9 @@
       "generation": {"period":960,"expected":96,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":6,"supply":"backed_up"},"clock_sha256":"3e7b69ffeebd3e8718efa4f27d000dad0fbed7ff5e18f18dc95cac4340a60603"}
     },
     "front-entrance-fast-unmirrored-moving-different-items": {
-      "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"ea3a97e7bc5b21f37230e75fc877cb65e77918c5fa5e3271c0579973284b9598","clock_basis":"history"},
+      "recorded": {"pr":0,"commit":"050ac5dd","frozen_head":"050ac5dd","note":"recorded before the PR was opened; pr is set when it is","clock_sha256":"2eb4817855bbd58c4c672ff1bd27e55fe00fe9b71f3d830dde526669c467337f","clock_basis":"capture"},
       "native": {"generationVerdict":"stable","target":6,"period":800,"expected":80,"baseline":[80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80],"recovery":[{"cut":66,"during":[80,80,48,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"recovered":[80,80,80,80,80,80,80,80,80]},{"cut":106,"during":[80,80,28,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,80],"recovered":[80,80,80,80,80,80,80,80,80]},{"cut":146,"during":[80,16,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"recovered":[80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80]}],"interventions":[[66,90,106],[106,130,146],[146,170,196]]},
-      "generation": {"period":800,"expected":80,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":6,"supply":"moving"},"clock_sha256":"ea3a97e7bc5b21f37230e75fc877cb65e77918c5fa5e3271c0579973284b9598"}
+      "generation": {"period":800,"expected":80,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":6,"supply":"moving"},"clock_sha256":"2eb4817855bbd58c4c672ff1bd27e55fe00fe9b71f3d830dde526669c467337f"}
     },
     "front-entrance-fast-unmirrored-moving-same-item": {
       "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"7423e47f061f0b2a9bf3b7c40befa6426a6fc65b9b793d98cc3f70ea00c13f7a","clock_basis":"history"},
@@ -82,9 +82,9 @@
       "generation": {"period":960,"expected":96,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":6,"supply":"moving"},"clock_sha256":"7423e47f061f0b2a9bf3b7c40befa6426a6fc65b9b793d98cc3f70ea00c13f7a"}
     },
     "front-entrance-normal-mirrored-backed-different-items": {
-      "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"e57596967719b5f7ae1b55f7f42a3fab202e52ffe6015b41536b4895f2115d62","clock_basis":"history"},
+      "recorded": {"pr":0,"commit":"050ac5dd","frozen_head":"050ac5dd","note":"recorded before the PR was opened; pr is set when it is","clock_sha256":"a4caa2fe4476d249d4abf4f8662793f0ae494b6bd980ae8675245589814853bd","clock_basis":"capture"},
       "native": {"generationVerdict":"stable","target":6,"period":320,"expected":32,"baseline":[32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32],"recovery":[{"cut":66,"during":[32,32,32,16,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"recovered":[32,32,32,32,32]},{"cut":106,"during":[32,32,32,32,28,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,16],"recovered":[32,32,32,32,32]},{"cut":146,"during":[32,32,32,32,32,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"recovered":[32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]}],"interventions":[[66,90,106],[106,130,146],[146,170,196]]},
-      "generation": {"period":320,"expected":32,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":6,"supply":"backed_up"},"clock_sha256":"e57596967719b5f7ae1b55f7f42a3fab202e52ffe6015b41536b4895f2115d62"}
+      "generation": {"period":320,"expected":32,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":6,"supply":"backed_up"},"clock_sha256":"a4caa2fe4476d249d4abf4f8662793f0ae494b6bd980ae8675245589814853bd"}
     },
     "front-entrance-normal-mirrored-backed-same-item": {
       "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"7186b02836e70c7c97f15785f2e65a8b1e2bd6ec71767a203daa781060145eaf","clock_basis":"history"},
@@ -92,20 +92,20 @@
       "generation": {"period":160,"expected":16,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":6,"supply":"backed_up"},"clock_sha256":"7186b02836e70c7c97f15785f2e65a8b1e2bd6ec71767a203daa781060145eaf"}
     },
     "front-entrance-normal-mirrored-moving-different-items": {
-      "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"2c661ead5282337cba2cbc41745fa2a252fa9d33778baad5fb94b97a37a365e1","clock_basis":"history"},
+      "recorded": {"pr":0,"commit":"050ac5dd","frozen_head":"050ac5dd","note":"recorded before the PR was opened; pr is set when it is","clock_sha256":"a79a1d2fdd889cc9cfe38b91bca62b3a2ba1fc65abf8334442010b8e7df89674","clock_basis":"capture"},
       "native": {"generationVerdict":"stable","target":6,"period":960,"expected":96,"baseline":[96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96],"recovery":[{"cut":66,"during":[16,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,48],"recovered":[96,96,96,96,96,96,96,96,96]},{"cut":106,"during":[96,60,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,96],"recovered":[96,96,96,96,96,96,96,96,96]},{"cut":146,"during":[96,96,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,48],"recovered":[96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96]}],"interventions":[[66,90,106],[106,130,146],[146,170,196]]},
-      "generation": {"period":960,"expected":96,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":6,"supply":"backed_up"},"clock_sha256":"2c661ead5282337cba2cbc41745fa2a252fa9d33778baad5fb94b97a37a365e1"}
+      "generation": {"period":960,"expected":96,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":6,"supply":"backed_up"},"clock_sha256":"a79a1d2fdd889cc9cfe38b91bca62b3a2ba1fc65abf8334442010b8e7df89674"}
     },
     "front-entrance-normal-mirrored-moving-same-item": {
-      "recorded": {"pr":527,"commit":"d23d0018","frozen_head":"d23d0018","clock_sha256":"e68b9c04c90915447dd804c81fe5d0ad86aaa66e89282556902254e608205c0e","clock_basis":"capture"},
+      "recorded": {"pr":0,"commit":"050ac5dd","frozen_head":"050ac5dd","note":"recorded before the PR was opened; pr is set when it is","clock_sha256":"d57de59a3ff121f6af2d4c0f2fb71ba3fcf0886220efec23cc560e05909ce7e0","clock_basis":"capture"},
       "native": {"generationVerdict":"stable","target":6,"period":320,"expected":32,"baseline":[32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32],"recovery":[{"cut":66,"during":[16,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"recovered":[32,32,32,32,32,32,32,32,32]},{"cut":106,"during":[32,32,32,32,28,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,32],"recovered":[32,32,32,32,32,32,32,32,32]},{"cut":146,"during":[32,32,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"recovered":[32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]}],"interventions":[[66,90,106],[106,130,146],[146,170,196]]},
-      "generation": {"period":320,"expected":32,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":6,"supply":"moving"},"clock_sha256":"e68b9c04c90915447dd804c81fe5d0ad86aaa66e89282556902254e608205c0e"},
+      "generation": {"period":320,"expected":32,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":6,"supply":"moving"},"clock_sha256":"d57de59a3ff121f6af2d4c0f2fb71ba3fcf0886220efec23cc560e05909ce7e0"},
       "previous": {"id":"planned-belt-slack","clock_sha256":"e00f8e25b5ef82c7be1becc0180dd681de022011912dfa241ebb860f8e0bd97d"}
     },
     "front-entrance-normal-unmirrored-backed-different-items": {
-      "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"a6472a807a556d262af95a17a6a824cc4f6fcd44a6415e8f72c6e5b8b75bd7cc","clock_basis":"history"},
+      "recorded": {"pr":0,"commit":"050ac5dd","frozen_head":"050ac5dd","note":"recorded before the PR was opened; pr is set when it is","clock_sha256":"8162637873c02458902d460cb9d62207538c6b9297456e75b7841b7a2412a9e8","clock_basis":"capture"},
       "native": {"generationVerdict":"stable","target":6,"period":320,"expected":32,"baseline":[32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32],"recovery":[{"cut":66,"during":[32,32,32,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"recovered":[32,32,32,32,32]},{"cut":106,"during":[32,32,32,32,28,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,16],"recovered":[32,32,32,32,32]},{"cut":146,"during":[32,32,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"recovered":[32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]}],"interventions":[[66,90,106],[106,130,146],[146,170,196]]},
-      "generation": {"period":320,"expected":32,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":6,"supply":"backed_up"},"clock_sha256":"a6472a807a556d262af95a17a6a824cc4f6fcd44a6415e8f72c6e5b8b75bd7cc"}
+      "generation": {"period":320,"expected":32,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":6,"supply":"backed_up"},"clock_sha256":"8162637873c02458902d460cb9d62207538c6b9297456e75b7841b7a2412a9e8"}
     },
     "front-entrance-normal-unmirrored-backed-same-item": {
       "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"7186b02836e70c7c97f15785f2e65a8b1e2bd6ec71767a203daa781060145eaf","clock_basis":"history"},
@@ -113,14 +113,14 @@
       "generation": {"period":160,"expected":16,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":6,"supply":"backed_up"},"clock_sha256":"7186b02836e70c7c97f15785f2e65a8b1e2bd6ec71767a203daa781060145eaf"}
     },
     "front-entrance-normal-unmirrored-moving-different-items": {
-      "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"43a0022febd3dffbc20513a32abc9dec48613d344667535d09c753f4df3636bf","clock_basis":"history"},
+      "recorded": {"pr":0,"commit":"050ac5dd","frozen_head":"050ac5dd","note":"recorded before the PR was opened; pr is set when it is","clock_sha256":"d66a65212f3568fc4ec08a6b3ea2a912c570a43baaab4df9917ad7992037707c","clock_basis":"capture"},
       "native": {"generationVerdict":"stable","target":6,"period":960,"expected":96,"baseline":[96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96],"recovery":[{"cut":66,"during":[96,48,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,64],"recovered":[96,96,96,96,96,96,96,96,96]},{"cut":106,"during":[96,60,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,96],"recovered":[96,96,96,96,96,96,96,96,96]},{"cut":146,"during":[96,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,48],"recovered":[96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96]}],"interventions":[[66,90,106],[106,130,146],[146,170,196]]},
-      "generation": {"period":960,"expected":96,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":6,"supply":"moving"},"clock_sha256":"43a0022febd3dffbc20513a32abc9dec48613d344667535d09c753f4df3636bf"}
+      "generation": {"period":960,"expected":96,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":6,"supply":"moving"},"clock_sha256":"d66a65212f3568fc4ec08a6b3ea2a912c570a43baaab4df9917ad7992037707c"}
     },
     "front-entrance-normal-unmirrored-moving-same-item": {
-      "recorded": {"pr":527,"commit":"d23d0018","frozen_head":"d23d0018","clock_sha256":"e68b9c04c90915447dd804c81fe5d0ad86aaa66e89282556902254e608205c0e","clock_basis":"capture"},
+      "recorded": {"pr":0,"commit":"050ac5dd","frozen_head":"050ac5dd","note":"recorded before the PR was opened; pr is set when it is","clock_sha256":"d57de59a3ff121f6af2d4c0f2fb71ba3fcf0886220efec23cc560e05909ce7e0","clock_basis":"capture"},
       "native": {"generationVerdict":"stable","target":6,"period":320,"expected":32,"baseline":[32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32],"recovery":[{"cut":66,"during":[16,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"recovered":[32,32,32,32,32,32,32,32,32]},{"cut":106,"during":[32,32,32,32,28,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,32],"recovered":[32,32,32,32,32,32,32,32,32]},{"cut":146,"during":[32,32,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"recovered":[32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]}],"interventions":[[66,90,106],[106,130,146],[146,170,196]]},
-      "generation": {"period":320,"expected":32,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":6,"supply":"moving"},"clock_sha256":"e68b9c04c90915447dd804c81fe5d0ad86aaa66e89282556902254e608205c0e"},
+      "generation": {"period":320,"expected":32,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":6,"supply":"moving"},"clock_sha256":"d57de59a3ff121f6af2d4c0f2fb71ba3fcf0886220efec23cc560e05909ce7e0"},
       "previous": {"id":"planned-belt-slack","clock_sha256":"e00f8e25b5ef82c7be1becc0180dd681de022011912dfa241ebb860f8e0bd97d"}
     },
     "front-entrance-turbo-mirrored-backed-different-items": {
@@ -154,9 +154,9 @@
       "generation": {"period":960,"expected":96,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":6,"supply":"backed_up"},"clock_sha256":"67c0b278f8609ec3b457a5dfdb3fcb7559c3120efbff5487247c02d8f82b4983"}
     },
     "front-entrance-turbo-unmirrored-moving-different-items": {
-      "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"aa110fe4359663df6844298e74840ea5cee45d4dcf341b33cc0e9b0e5fb97b0f","clock_basis":"history"},
+      "recorded": {"pr":0,"commit":"050ac5dd","frozen_head":"050ac5dd","note":"recorded before the PR was opened; pr is set when it is","clock_sha256":"31bfb83fecce96d545874ed493a4004eec4dfa797e95f037e595a996b69ce484","clock_basis":"capture"},
       "native": {"generationVerdict":"stable","target":6,"period":800,"expected":80,"baseline":[80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80],"recovery":[{"cut":66,"during":[80,80,48,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"recovered":[80,80,80,80,80,80,80,80,80]},{"cut":106,"during":[80,80,28,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,80],"recovered":[80,80,80,80,80,80,80,80,80]},{"cut":146,"during":[80,16,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"recovered":[80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80]}],"interventions":[[66,90,106],[106,130,146],[146,170,196]]},
-      "generation": {"period":800,"expected":80,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":6,"supply":"moving"},"clock_sha256":"aa110fe4359663df6844298e74840ea5cee45d4dcf341b33cc0e9b0e5fb97b0f"}
+      "generation": {"period":800,"expected":80,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":6,"supply":"moving"},"clock_sha256":"31bfb83fecce96d545874ed493a4004eec4dfa797e95f037e595a996b69ce484"}
     },
     "front-entrance-turbo-unmirrored-moving-same-item": {
       "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"c87993796a6adcf5eaab87095fdaf296999e69983997d413452fe74fe236d2c4","clock_basis":"history"},
@@ -169,9 +169,9 @@
       "generation": {"period":1408,"expected":528,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":22.5,"supply":"backed_up"},"clock_sha256":"8e9e63b3e5244e1a9f45a0811fe5324326ecdf89c2dcb005dd22a50207b2c976"}
     },
     "front-exit-express-mirrored-moving-config-different-items": {
-      "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"5e4d71f5890231df5b10ea884b490a4073438a1a98ebc6b791e682246aa13a66","clock_basis":"history"},
-      "native": {"generationVerdict":"no recovery","target":22.5,"period":1408,"expected":528,"baseline":[528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528],"recovery":[{"cut":66,"during":[96,0,432],"recovered":[528,528,528,528,528]},{"cut":84,"during":[144,0,0,0,496],"recovered":[528,528,528,528,528]},{"cut":104,"during":[96,0,432],"recovered":[528,528,528,528,528,528,528,528,528,528,528,528,528,528,528]}]},
-      "generation": {"period":1408,"expected":528,"verdict":"no recovery","selection":{"id":"derived","holds":true,"rate":22.5,"supply":"moving"},"clock_sha256":"5e4d71f5890231df5b10ea884b490a4073438a1a98ebc6b791e682246aa13a66","why_not_stable":"moving lane phases"}
+      "recorded": {"pr":0,"commit":"050ac5dd","frozen_head":"050ac5dd","note":"recorded before the PR was opened; pr is set when it is","clock_sha256":"ad83281bf76f07d87b02c6064be892e9bae407f15a13bbac56698ff23bf98424","clock_basis":"capture"},
+      "native": {"generationVerdict":"stable","target":22.5,"period":1408,"expected":528,"baseline":[528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528],"recovery":[{"cut":66,"during":[48,0,432],"recovered":[528,528,528,528,528]},{"cut":84,"during":[112,0,0,0,512],"recovered":[528,528,528,528,528]},{"cut":104,"during":[48,0,432],"recovered":[528,528,528,528,528,528,528,528,528,528,528,528,528,528,528]}]},
+      "generation": {"period":1408,"expected":528,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":22.5,"supply":"moving"},"clock_sha256":"ad83281bf76f07d87b02c6064be892e9bae407f15a13bbac56698ff23bf98424"}
     },
     "front-exit-express-unmirrored-backed-different-items": {
       "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"ca638ddf9f14509e7180b822ae70c2f2d8d6d9df3343273ccac287d9818ab907","clock_basis":"history"},
@@ -179,9 +179,9 @@
       "generation": {"period":1408,"expected":528,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":22.5,"supply":"backed_up"},"clock_sha256":"ca638ddf9f14509e7180b822ae70c2f2d8d6d9df3343273ccac287d9818ab907"}
     },
     "front-exit-express-unmirrored-moving-config-different-items": {
-      "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"fb5a8533a1788a02cb3a1ce6fd173fb002748fdc7108407b3c58f6299847ece2","clock_basis":"history"},
-      "native": {"generationVerdict":"no recovery","target":22.5,"period":1408,"expected":528,"baseline":[528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528],"recovery":[{"cut":66,"during":[96,0,432],"recovered":[528,528,528,528,528]},{"cut":84,"during":[144,0,0,0,496],"recovered":[528,528,528,528,528]},{"cut":104,"during":[96,0,432],"recovered":[528,528,528,528,528,528,528,528,528,528,528,528,528,528,528]}]},
-      "generation": {"period":1408,"expected":528,"verdict":"no recovery","selection":{"id":"derived","holds":true,"rate":22.5,"supply":"moving"},"clock_sha256":"fb5a8533a1788a02cb3a1ce6fd173fb002748fdc7108407b3c58f6299847ece2","why_not_stable":"moving lane phases"}
+      "recorded": {"pr":0,"commit":"050ac5dd","frozen_head":"050ac5dd","note":"recorded before the PR was opened; pr is set when it is","clock_sha256":"a546b2fee584a0543a07f9fa52eef168080c551dd1c21c052116a8c52348d420","clock_basis":"capture"},
+      "native": {"generationVerdict":"stable","target":22.5,"period":1408,"expected":528,"baseline":[528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528],"recovery":[{"cut":66,"during":[48,0,432],"recovered":[528,528,528,528,528]},{"cut":84,"during":[112,0,0,0,512],"recovered":[528,528,528,528,528]},{"cut":104,"during":[48,0,432],"recovered":[528,528,528,528,528,528,528,528,528,528,528,528,528,528,528]}]},
+      "generation": {"period":1408,"expected":528,"verdict":"stable","selection":{"id":"derived","holds":true,"rate":22.5,"supply":"moving"},"clock_sha256":"a546b2fee584a0543a07f9fa52eef168080c551dd1c21c052116a8c52348d420"}
     },
     "front-exit-fast-mirrored-backed-different-items": {
       "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"75238b057af5d1764f9d9ed114a718f8a5fd009249510430f134f6b4d2080fc5","clock_basis":"history"},
@@ -189,9 +189,9 @@
       "generation": {"period":3520,"expected":880,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":15,"supply":"backed_up"},"clock_sha256":"75238b057af5d1764f9d9ed114a718f8a5fd009249510430f134f6b4d2080fc5"}
     },
     "front-exit-fast-mirrored-moving-config-different-items": {
-      "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"e5e5afd6375c9631cc88d7294e93026450a45868ebd0ec2e4a3322c043cddc92","clock_basis":"history"},
+      "recorded": {"pr":0,"commit":"050ac5dd","frozen_head":"050ac5dd","note":"recorded before the PR was opened; pr is set when it is","clock_sha256":"bea0ce9dbb5b31a9c9b3ebfa070eb689a1b9fb009869805f65dfb52a512e788f","clock_basis":"capture"},
       "native": {"generationVerdict":"stable","target":15,"period":704,"expected":176,"baseline":[176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176],"recovery":[{"cut":66,"during":[64,0,112],"recovered":[176,176,176,176,176]},{"cut":84,"during":[172,0,0,0,180],"recovered":[176,176,176,176,176]},{"cut":104,"during":[64,0,112],"recovered":[176,176,176,176,176,176,176,176,176,176,176,176,176,176,176]}]},
-      "generation": {"period":704,"expected":176,"verdict":"stable","selection":{"id":"fractional","holds":true,"rate":15,"supply":"moving"},"clock_sha256":"e5e5afd6375c9631cc88d7294e93026450a45868ebd0ec2e4a3322c043cddc92"}
+      "generation": {"period":704,"expected":176,"verdict":"stable","selection":{"id":"fractional","holds":true,"rate":15,"supply":"moving"},"clock_sha256":"bea0ce9dbb5b31a9c9b3ebfa070eb689a1b9fb009869805f65dfb52a512e788f"}
     },
     "front-exit-fast-unmirrored-backed-different-items": {
       "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"0fbf7480ad9e2ac7becae6d8fdca6fcbdf2b5f9a0e477b72d9ad02c85ade7434","clock_basis":"history"},
@@ -199,9 +199,9 @@
       "generation": {"period":3520,"expected":880,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":15,"supply":"backed_up"},"clock_sha256":"0fbf7480ad9e2ac7becae6d8fdca6fcbdf2b5f9a0e477b72d9ad02c85ade7434"}
     },
     "front-exit-fast-unmirrored-moving-config-different-items": {
-      "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"3b7f9161aa98b9fbd7ac9615460d7d3104535854d236d9fcdc4dc75d03a838f4","clock_basis":"history"},
+      "recorded": {"pr":0,"commit":"050ac5dd","frozen_head":"050ac5dd","note":"recorded before the PR was opened; pr is set when it is","clock_sha256":"e91f557145366b37d187a239eb02010de22619d652fc2c2a3eefdbbfe6075cba","clock_basis":"capture"},
       "native": {"generationVerdict":"stable","target":15,"period":704,"expected":176,"baseline":[176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176,176],"recovery":[{"cut":66,"during":[64,0,112],"recovered":[176,176,176,176,176]},{"cut":84,"during":[172,0,0,0,180],"recovered":[176,176,176,176,176]},{"cut":104,"during":[64,0,112],"recovered":[176,176,176,176,176,176,176,176,176,176,176,176,176,176,176]}]},
-      "generation": {"period":704,"expected":176,"verdict":"stable","selection":{"id":"fractional","holds":true,"rate":15,"supply":"moving"},"clock_sha256":"3b7f9161aa98b9fbd7ac9615460d7d3104535854d236d9fcdc4dc75d03a838f4"}
+      "generation": {"period":704,"expected":176,"verdict":"stable","selection":{"id":"fractional","holds":true,"rate":15,"supply":"moving"},"clock_sha256":"e91f557145366b37d187a239eb02010de22619d652fc2c2a3eefdbbfe6075cba"}
     },
     "front-exit-normal-mirrored-backed-different-items": {
       "recorded": {"pr":479,"commit":"8b9b415e","frozen_head":"99fb9812","clock_sha256":"3bc059b39c583ed0748405ac06b4714179b699c2ecf5abc29e11ffa8272b7fe5","clock_basis":"capture"},
@@ -224,24 +224,24 @@
       "generation": {"period":1408,"expected":176,"verdict":"unstable","selection":{"id":"swings-1","holds":false,"rate":7.5,"supply":"moving"},"clock_sha256":"a5cc70edd82d18c8b7f6b3f2ba49f29879a3399c4678e1a6894d23172d1ea864","why_not_stable":"moving lane phases"}
     },
     "front-exit-turbo-mirrored-backed-different-items": {
-      "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"b5e72eebefacde7d19e4e1709c523ec32d56f52870ea7e8db1f199d8afbaa083","clock_basis":"history"},
-      "native": {"generationVerdict":"stable","target":30,"period":1056,"expected":528,"baseline":[528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528],"recovery":[{"cut":66,"during":[64,0,400],"recovered":[528,528,528,528,528]},{"cut":84,"during":[140,0,0,0,516],"recovered":[528,528,528,528,528]},{"cut":104,"during":[64,0,400],"recovered":[528,528,528,528,528,528,528,528,528,528,528,528,528,528,528]}]},
-      "generation": {"period":1056,"expected":528,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":30,"supply":"backed_up"},"clock_sha256":"b5e72eebefacde7d19e4e1709c523ec32d56f52870ea7e8db1f199d8afbaa083"}
+      "recorded": {"pr":0,"commit":"050ac5dd","frozen_head":"050ac5dd","note":"recorded before the PR was opened; pr is set when it is","clock_sha256":"3baa1bc39202f176617452cadfedc8fcf3d38bc38369f488fc0fac65b6d57af5","clock_basis":"capture"},
+      "native": {"generationVerdict":"stable","target":30,"period":1056,"expected":528,"baseline":[528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528],"recovery":[{"cut":66,"during":[64,0,432],"recovered":[528,528,528,528,528]},{"cut":84,"during":[140,0,0,0,484],"recovered":[528,528,528,528,528]},{"cut":104,"during":[64,0,416],"recovered":[528,528,528,528,528,528,528,528,528,528,528,528,528,528,528]}]},
+      "generation": {"period":1056,"expected":528,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":30,"supply":"backed_up"},"clock_sha256":"3baa1bc39202f176617452cadfedc8fcf3d38bc38369f488fc0fac65b6d57af5"}
     },
     "front-exit-turbo-mirrored-moving-config-different-items": {
-      "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"57e21330cd238608f831d58e7e9da2aee1bd949bf7496ff4cbe9d59504266dba","clock_basis":"history"},
+      "recorded": {"pr":0,"commit":"050ac5dd","frozen_head":"050ac5dd","note":"recorded before the PR was opened; pr is set when it is","clock_sha256":"0cb1605bd7b1bdbf53b23e201b14d69d652bc6d7f591fc08e6abeed04f4904d7","clock_basis":"capture"},
       "native": {"generationVerdict":"stable","target":30,"period":1056,"expected":528,"baseline":[528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528],"recovery":[{"cut":66,"during":[64,0,432],"recovered":[528,528,528,528,528]},{"cut":84,"during":[140,0,0,0,484],"recovered":[528,528,528,528,528]},{"cut":104,"during":[64,0,432],"recovered":[528,528,528,528,528,528,528,528,528,528,528,528,528,528,528]}]},
-      "generation": {"period":1056,"expected":528,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":30,"supply":"moving"},"clock_sha256":"57e21330cd238608f831d58e7e9da2aee1bd949bf7496ff4cbe9d59504266dba"}
+      "generation": {"period":1056,"expected":528,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":30,"supply":"moving"},"clock_sha256":"0cb1605bd7b1bdbf53b23e201b14d69d652bc6d7f591fc08e6abeed04f4904d7"}
     },
     "front-exit-turbo-unmirrored-backed-different-items": {
-      "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"99ea83697c91ecce1f6b50704b4da753ca7d5c2100786afd5217db5b1b25c94c","clock_basis":"history"},
-      "native": {"generationVerdict":"stable","target":30,"period":1056,"expected":528,"baseline":[528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528],"recovery":[{"cut":66,"during":[64,0,400],"recovered":[528,528,528,528,528]},{"cut":84,"during":[140,0,0,0,516],"recovered":[528,528,528,528,528]},{"cut":104,"during":[64,0,400],"recovered":[528,528,528,528,528,528,528,528,528,528,528,528,528,528,528]}]},
-      "generation": {"period":1056,"expected":528,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":30,"supply":"backed_up"},"clock_sha256":"99ea83697c91ecce1f6b50704b4da753ca7d5c2100786afd5217db5b1b25c94c"}
+      "recorded": {"pr":0,"commit":"050ac5dd","frozen_head":"050ac5dd","note":"recorded before the PR was opened; pr is set when it is","clock_sha256":"0d084222cf320ae8a77b00265c7a9b3c94ceac82d2f7b400d04c4d8f78d1d0bf","clock_basis":"capture"},
+      "native": {"generationVerdict":"stable","target":30,"period":1056,"expected":528,"baseline":[528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528],"recovery":[{"cut":66,"during":[64,0,432],"recovered":[528,528,528,528,528]},{"cut":84,"during":[140,0,0,0,484],"recovered":[528,528,528,528,528]},{"cut":104,"during":[64,0,416],"recovered":[528,528,528,528,528,528,528,528,528,528,528,528,528,528,528]}]},
+      "generation": {"period":1056,"expected":528,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":30,"supply":"backed_up"},"clock_sha256":"0d084222cf320ae8a77b00265c7a9b3c94ceac82d2f7b400d04c4d8f78d1d0bf"}
     },
     "front-exit-turbo-unmirrored-moving-config-different-items": {
-      "recorded": {"pr":274,"commit":"2effcf73","frozen_head":"5cb7c83b","clock_sha256":"85a4fa54a457c15e0c6fb7b28fb4dea2dc29d580f06f9044199c17fc724d94df","clock_basis":"history"},
+      "recorded": {"pr":0,"commit":"050ac5dd","frozen_head":"050ac5dd","note":"recorded before the PR was opened; pr is set when it is","clock_sha256":"fd1c93d860cfb292670810c26315ac93834819c634d492a0a0a0566fe4d247a0","clock_basis":"capture"},
       "native": {"generationVerdict":"stable","target":30,"period":1056,"expected":528,"baseline":[528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528,528],"recovery":[{"cut":66,"during":[64,0,432],"recovered":[528,528,528,528,528]},{"cut":84,"during":[140,0,0,0,484],"recovered":[528,528,528,528,528]},{"cut":104,"during":[64,0,432],"recovered":[528,528,528,528,528,528,528,528,528,528,528,528,528,528,528]}]},
-      "generation": {"period":1056,"expected":528,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":30,"supply":"moving"},"clock_sha256":"85a4fa54a457c15e0c6fb7b28fb4dea2dc29d580f06f9044199c17fc724d94df"}
+      "generation": {"period":1056,"expected":528,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":30,"supply":"moving"},"clock_sha256":"fd1c93d860cfb292670810c26315ac93834819c634d492a0a0a0566fe4d247a0"}
     }
   }
 }

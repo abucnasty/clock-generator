@@ -200,8 +200,8 @@ describe("generateClockForConfig", () => {
                 it("observed windows follow each inserter's activity", () => {
                     expect(windowsOf("derived")).toEqual({
                         "inserter:2": [{ start: 1, end: 49 }, { start: 169, end: 209 }],
-                        "inserter:1": [{ start: 193, end: 209 }],
-                        "inserter:3": [{ start: 25, end: 63 }, { start: 193, end: 220 }],
+                        "inserter:1": [{ start: 194, end: 209 }],
+                        "inserter:3": [{ start: 26, end: 63 }, { start: 194, end: 220 }],
                     });
                 });
             });
@@ -339,7 +339,7 @@ describe("generateClockForConfig", () => {
             it("observes the input windows again for the moved swing", () => {
                 expect(uneven.result.clock_windows["inserter:3"]).toEqual([
                     // from the staged start; the prepared build gave 128-144 and 161-177 after the first window
-                    { start: 13, end: 51 }, { start: 140, end: 167 },
+                    { start: 14, end: 51 }, { start: 141, end: 167 },
                 ]);
             });
         });

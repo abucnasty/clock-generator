@@ -5,7 +5,7 @@ import {backpressureLossOf, simulateClockOnly} from "../../../src/crafting/trial
 import {OpenRange} from "../../../src/data-types";
 import {alwaysOnReasonProblemsOf} from "../../../src/crafting/generate-blueprint-test-helpers";
 import {pickupClockConfig, pickupClockSpeedCases} from "./pickup-clock-speed-coverage";
-import {clockHash, readControls} from "./clock-controls";
+import {baselineMeetsTarget, clockHash, readControls} from "./clock-controls";
 import {expectColdStartRunsOnSelection} from "./pickup-clock-cold-start-runs";
 import {BELT_PICKUP_GENERATED} from "./belt-pickup-clock-cases";
 
@@ -48,6 +48,7 @@ export function beltPickupClockTests() {
             expectColdStartRunsOnSelection(variant.name, selected);
             expect({id: selected.id, holds: selected.assessment.holds, rate: selected.assessment.items_per_second,
                 supply: selected.belt?.kind ?? null}).toEqual(pin!.selection);
+            if (pin!.as_built) expect(selected.result.stability_check.as_built, "the model's lane-phase evidence of the selection").toMatchObject(pin!.as_built);
             expect(result.why_not_stable?.cause).toBe(pin!.why_not_stable);
             expect(period).toBe(pin!.period);
             expect(selected.verdict).toBe(pin!.verdict);
@@ -55,7 +56,7 @@ export function beltPickupClockTests() {
             expect(selected.verdict).toBe(movingPhases.cases[variant.name] ? "unstable" : native.generationVerdict);
             expect(config.target_output.items_per_second * period / 60).toBe(native.expected);
 
-            const meetsTarget = native.baseline.every(items => items === native.expected)
+            const meetsTarget = baselineMeetsTarget(native, pin)
                 && native.recovery.every(trial => trial.recovered.every(items => items === native.expected));
             const startup = startupControls[variant.name];
             if (startup) {
