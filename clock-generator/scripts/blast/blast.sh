@@ -26,6 +26,12 @@
 #                                           exits 1, naming the side, when either side has no jobs
 #   blast.sh same <a> <b>                   whether two jobs folders (or cache entries, by key) hold the same results, job by job;
 #                                           exits 1, naming the side, when either side has no jobs
+#   blast.sh slowed <before> <after> [-n N]  the jobs both sides have, most added seconds first (job seconds are stored in every job
+#                                           file): old, new, added seconds and ratio of the top N (default 10), then each
+#                                           side's summed seconds over the shared jobs. Text only, nothing written; sides as
+#                                           in `compare` (a folder or a cache key), exits 1, naming the side, when a side has
+#                                           no jobs. Blast seconds are noisy: they pick the jobs to time one at a time on a
+#                                           quiet machine, they are not a speed result
 #   blast.sh list                           the cache's entries
 #
 # The worktree may be another checkout than this script's: blast.blastrun.ts, blast.digest.ts, blast.recorder.ts and the two vitest configs beside this
@@ -228,10 +234,10 @@ store_entry() { # $1 jobs dir, $2 source json
 }
 
 cmd=${1:-}; shift || true
-DRY=""; N=4; STORE=1; BUILD=1; NOTE=""; FULL=0; BASE=""; ARGS=(); MADE=()
+DRY=""; N=4; NSLOW=10; STORE=1; BUILD=1; NOTE=""; FULL=0; BASE=""; ARGS=(); MADE=()
 while [ $# -gt 0 ]; do
   case "$1" in
-    -n) N=$2; shift ;;
+    -n) N=$2; NSLOW=$2; shift ;;
     --no-store) STORE=0 ;;
     --no-build) BUILD=0 ;;
     --note) NOTE=$2; shift ;;
@@ -310,6 +316,9 @@ case "$cmd" in
   same) [ ${#ARGS[@]} -ge 2 ] || die "same <a> <b>"
     ARGS[0]=$(entry_arg "${ARGS[0]}") && ARGS[1]=$(entry_arg "${ARGS[1]}") || exit 1
     python3 "$HERE/cache.py" same "${ARGS[@]}" ;;
+  slowed) [ ${#ARGS[@]} -eq 2 ] || die "slowed <before> <after> [-n N]"
+    ARGS[0]=$(entry_arg "${ARGS[0]}") && ARGS[1]=$(entry_arg "${ARGS[1]}") || exit 1
+    python3 "$HERE/slowed.py" "${ARGS[@]}" -n "$NSLOW" ;;
   list) python3 "$HERE/cache.py" list "$CACHE" ;;
   *) sed -n '2,/^set -u/{/^#/p}' "$0"; exit 2 ;;
 esac
