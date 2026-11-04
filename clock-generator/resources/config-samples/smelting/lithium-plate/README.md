@@ -1,19 +1,23 @@
 # Lithium plates through a rocket silo
 
+| Build | Credit | Source | Issues | Recorded in the game |
+|---|---|---|---|---|
+| `lithium-plate-80-silo-chest` | abucnasty | blueprint given on 2026-10-21 | none recorded | Scaffold: yes (a blueprint given 2026-10-21). Two cryogenic plants fill a rocket silo taken as a chest and six furnaces empty it, all legendary, 80 plates a second. The selected clock (3 output swings, 1080 ticks) recorded 1440 in every period, both build orders, and got back to it after the holmium plates were cut twice and the output blocked; the clock with 1 output swing too. The clock with 7 output swings is short in the game (a side-loaded output belt, the sample's README). the chest ends agree (on the 2160-tick clock the inserters into the silo wake 4 times a period in both the game and the simulator); output inserters 11 and 12 (furnace to belt) wake 10 times a period in the game and 0 in a simulator started cold, because the furnaces' output levels the game's warm-up leaves decide it: started from the recording's first sample the simulator equals the game on all 16 inserters (`scripts/sim-game-check.js`). Note: in `test:game`. |
+
 The build: two legendary cryogenic plants make lithium from holmium plates (infinity chests) and fluids
 (infinity pipes), and two stack inserters put it into a rocket silo, which is used as a chest. Six stack inserters take
 the lithium out of the silo into six legendary electric furnaces making lithium plates, each furnace with 4 legendary
 beacons. Their output inserters put the plates onto a turbo belt that a loader empties into a disposal chest. The target
 is 80 plates a second from one copy.
 
-- `lithium-plate-80-silo-chest.scaffold`: the build's blueprint as given. The infinity chests, infinity pipes, loader and disposal
+- `lithium-plate-80-silo-chest.scaffold`: the build's blueprint as given by abucnasty on 2026-10-21. The infinity chests, infinity pipes, loader and disposal
   chest are part of it.
 - `lithium-plate-80-silo-chest.sidecar-export.json`: what Sidecar 0.14.0 exports from the blueprint built in the harness game, taken again on
   2026-10-23, which also exports each machine's `prototype` and quality and each entity's position (and an inserter's or
   drill's direction), and marks inserters 15 and 16 (`drop_capture` on their sinks) as dropping onto a belt that
   side-loads onto another. The game test `tests/game/mechanics/belt-drop/sideload-drop-capture.game.test.ts` takes it
   from the scaffold again and holds it equal to this file.
-- `lithium-silo.json`: an earlier export of the same build as the paste reads it (each list through its schema), with the
+- `lithium-plate-80-silo-chest.json`: an earlier export of the same build as the paste reads it (each list through its schema), with the
   target added. It is the export above without the qualities, positions and directions; each machine's `prototype`
   (`cryogenic-plant` for machines 1 and 2 and `electric-furnace` for 3 to 8) was taken from the scaffold and is the one
   the export names, and the two marks of the export above were added to it. No other field was edited.

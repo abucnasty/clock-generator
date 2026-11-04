@@ -1,15 +1,19 @@
 # Iron plates through a car
 
+| Build | Credit | Source | Issues | Recorded in the game |
+|---|---|---|---|---|
+| `iron-plate-80-car-chest` | abucnasty | blueprint given on 2026-10-22 | #587 | Scaffold: yes (a blueprint given 2026-10-22). A big mining drill drops iron ore into a car taken as a chest and two furnaces empty it, all legendary, 80 plates a second; the harness puts the ore under the drill. The selected clock (3 output swings, 72 ticks) recorded 96 in every period, both build orders, and got back to it after the drill was stopped until the car ran dry, twice, and the output blocked; the clock with 1 output swing too. 200.0 wake-ups a minute in the simulator, 3.8 in the game, not yet explained. Known differences (#587): over the minute-long recording the furnaces finish 193.17 crafts and productivity bars a period in the game and 194.00 in the simulator (the build moves 96 in every period); and the car clock runs end below their baseline's lowest output stock after a final drill stop. Note: in `test:game`. |
+
 The build: a big mining drill with 4 legendary speed modules 3 mines iron ore and drops it into a car, which is
 used as a chest. Two legendary stack inserters take the ore from the car into two legendary electric furnaces, each with
 2 legendary productivity modules 3 and 7 legendary beacons. Their output inserters put the plates onto a turbo belt that
 a loader empties into a disposal chest. The target is 80 plates a second from one copy.
 
-- `iron-plate-80-car-chest.scaffold`: the build's blueprint as given. The loader and disposal chest are part of it.
+- `iron-plate-80-car-chest.scaffold`: the build's blueprint as given by abucnasty on 2026-10-22. The loader and disposal chest are part of it.
 - `iron-plate-80-car-chest.sidecar-export.json`: what Sidecar 0.12.0 exports from the blueprint built in the harness game, taken again on
   2026-10-22 with the released mod, which also exports each machine's `prototype` and quality and each entity's position
   (and an inserter's or drill's direction).
-- `car.json`: an earlier export of the same build as the paste reads it (each list through its schema), with the target
+- `iron-plate-80-car-chest.json`: an earlier export of the same build as the paste reads it (each list through its schema), with the target
   added. It is the export above without the qualities, positions and directions, and with the drill's productivity
   79990 where the game writes 79990.00000001134; each machine's `prototype` (`electric-furnace` for both machines) was
   taken from the scaffold and is the one the export names. No other field was edited.

@@ -4,7 +4,7 @@ Use descriptive branch names such as `fix/moving-belt-pickup` or `refactor/game-
 
 ## Where files belong
 
-- `clock-generator/resources/config-samples/`: general clock builds and real extracted cells. `ConfigPaths` is their named catalog and is used by sample sweeps.
+- `clock-generator/resources/config-samples/`: general clock builds, one folder per target item. `ConfigPaths` is their named catalog and is used by sample sweeps.
 - `clock-generator/tests/game/mechanics/`: isolated game experiments, fixture configs/scaffolds, and probes. Their catalog is `tests/game/helpers/fixture-paths.ts`, separate from `ConfigPaths`.
 - `clock-generator/tests/game/builds/`: generated-clock throughput and recovery checks.
 - `clock-generator/src/harness/`: reusable recording infrastructure used by the CLI and tests.

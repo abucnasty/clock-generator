@@ -13,7 +13,7 @@ import {clockHash, NativeRunSummary, readControls, runHolds} from "./clock-contr
 import {RUN_PROTOCOL, runSummary} from "./pickup-clock-capture";
 
 /**
- * The ore voider's recycler cell (`real/owner/ore-voider`), 400 iron ore a second destroyed, on its selected clock: four
+ * The ore voider's recycler cell (`recycling/iron-ore`), 400 iron ore a second destroyed, on its selected clock: four
  * inserters bring the ore in, the recycler places what it gives back (a quarter of its crafts, at random) into a car, two
  * inserters bring that back. One run under the game tests' protocol (helpers/lua/steady.lua). The recycler makes nothing that
  * counts, so the run counts what it takes in: the ore the four feed inserters drop into it, against the target x 60 s a minute.

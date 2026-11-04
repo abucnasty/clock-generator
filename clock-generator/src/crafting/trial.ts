@@ -1837,8 +1837,8 @@ export function roundedClockTrial(
 
 /**
  * What a clock that failed its first check moves a period, for listing it. The first check measures one period after
- * a warm-up, and a build that does not repeat with its clock moves different amounts in the periods that follow (cell
- * 02 of stupidfathobbit: 480 to 608 items, 608 in the period measured, 546 on average, which is what the game makes), so
+ * a warm-up, and a build that does not repeat with its clock moves different amounts in the periods that follow (the
+ * circuit export build: 480 to 608 items, 608 in the period measured, 546 on average, which is what the game makes), so
  * a clock that fails it is listed by the mean items a period over the judged part of its long run, as one that fails
  * later is (`longRunOfFreeRunningBuild`). The check itself, and the clocks the generator picks by it, are not changed.
  * A period too long for a long run keeps the one period the check measured, and says so.

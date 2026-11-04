@@ -368,7 +368,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         crafts_open: {
             machine_ids: [1, 2],
             why: "#587: the two furnaces finish 193.17 crafts and productivity bars a period in the game under the minute-long recording "
-                + "and 194.00 in the simulator, while the build moves 96 plates in every period (samples README, real/owner/car)",
+                + "and 194.00 in the simulator, while the build moves 96 plates in every period (samples README, smelting/iron-plate)",
         },
     },
     // The steel build: one cargo wagon is a hub that a big mining drill fills with ore, two furnaces take from and

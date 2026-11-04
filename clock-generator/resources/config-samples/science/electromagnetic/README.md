@@ -1,6 +1,16 @@
-# Original electromagnetic science scaffold
+# Electromagnetic science
 
-The blueprint supplied in [#100](https://github.com/abucnasty/clock-generator/issues/100) is unchanged: 211 entities,
+| Build | Credit | Source | Issues | Recorded in the game |
+|---|---|---|---|---|
+| `electromagnetic-240-recycler-belt-fed` | warbaque | the blueprint of #100 (211 entities); config from a Sidecar 0.15.0 export of its left cell | #100 | See "The config is automatic" below: 3,600 periods after settling, nine losses and two cold starts in the game |
+| `electromagnetic-330` | none recorded | none recorded | #388 | Scaffold: yes (2026-10-16, 12 legendary beacons). `electromagnetic-330.json`, a config without overrides (until 2026-11-04 a second config forced 2 terminal swings and lcm 11 and latched both output inserters by a hand-written condition). Selected clock exact: 352 in every period of 704 ticks (2 output swings per cycle, 163.9 wake-ups a minute; 30.0 a second a copy, 330 over 11 copies), recorded 2026-11-04 on the test's start. Unclocked the scaffold makes 30.1 a second a copy. The config's crafting speed is 109.475, what 12 beacons give in the game. Note: in `test:game`; fluids from infinity pipes, the belt's accumulators and supercapacitors from infinity chests. |
+
+`electromagnetic-330` is one plant that takes accumulators and supercapacitors from one belt, 330 science packs a
+second over 11 copies, with 12 legendary beacons; its config has no overrides.
+
+## electromagnetic-240-recycler-belt-fed (warbaque's #100 blueprint)
+
+The blueprint supplied by warbaque in [#100](https://github.com/abucnasty/clock-generator/issues/100) is unchanged: 211 entities,
 two recyclers inserting electronic circuits directly into their supercapacitor plants, four electromagnetic
 science plants, two curved holmium/superconductor pickups, original source feeders, steel output buffers,
 and advanced-circuit outlet belts leading to the existing disposal loader and infinity chest.

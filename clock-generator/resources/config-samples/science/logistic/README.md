@@ -1,0 +1,7 @@
+# Logistic science
+
+| Build | Credit | Source | Issues | Recorded in the game |
+|---|---|---|---|---|
+| `logistic-240-direct-insert` | none recorded | none recorded | #442 | Scaffold: yes (2026-10-21). Selected clock exact, with "Backed-up belts" off and on: 64 in each of 374 periods of 96 ticks (fractional swings, 2 output swings per cycle; 40 a second a copy, 240 over 6 copies), 200.0 wake-ups a minute in the game against 175.0 in the simulator (2026-10-24). The config is the build on turbo belts, each science assembler with an input belt of its own; it replaced a yellow-belt config whose transport belt machine could not be built. The transport belt foundry's productivity of 50 is what the game records. With the ingredients cut twice and the outputs blocked once, the clocks selected on 2026-10-21 (288 ticks) made 192 again from the first period after each. Note: in `test:game`, both ways. |
+
+The default logistic science sample, LOGISTIC_SCIENCE_240 (`logistic-240`), is planned and not in the repo yet; its credit will be abucnasty (Sidecar export and blueprint, #590). Until then the old configs are at `../logistic-science/`.
