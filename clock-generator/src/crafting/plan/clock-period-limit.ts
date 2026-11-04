@@ -1,5 +1,4 @@
 import { SubtickPeriod, subtickClockForPeriod } from "../../common/subtick-period";
-import { DEFAULT_INSERTER_DISPATCH } from "../../simulation/dispatch";
 
 /**
  * The most ticks one simulated run goes on for. A guard, not a limit on test time: a config that passes validation
@@ -8,25 +7,17 @@ import { DEFAULT_INSERTER_DISPATCH } from "../../simulation/dispatch";
 export const MAX_SIMULATION_TICKS = 500_000;
 
 /**
- * Whether a clock of a p/q-tick period is checked over its whole exported counter (p ticks, q periods), which one run
- * must then hold: under the new dispatch (simulation/dispatch.ts) only. Read once, from the environment, as the dispatch is.
- */
-export const WHOLE_COUNTER_CHECKS: boolean = DEFAULT_INSERTER_DISPATCH !== "configured-order";
-
-/**
- * The whole counter a clock of this period is checked over (`WHOLE_COUNTER_CHECKS`): its p/q where the period is
- * fractional and p is under MAX_SIMULATION_TICKS. Null for a whole-tick period, with the checks off, and for a counter
+ * The whole counter a clock of this period is checked over (p ticks, q periods), which one run must then hold: its p/q
+ * where the period is fractional and p is under MAX_SIMULATION_TICKS. Null for a whole-tick period, and for a counter
  * one run cannot hold (`counterOverLimitOf`), whose clock keeps the sampled checks of one period.
  */
 export function wholeCounterOf(period: number): SubtickPeriod | null {
-    if (!WHOLE_COUNTER_CHECKS) return null;
     const counter = subtickClockForPeriod(period);
     return counter !== null && counter.period_ticks < MAX_SIMULATION_TICKS ? counter : null;
 }
 
-/** The ticks of a fractional period's counter where whole-counter checks are on and one run cannot hold it; else null */
+/** The ticks of a fractional period's counter where one run cannot hold it; else null */
 export function counterOverLimitOf(period: number): number | null {
-    if (!WHOLE_COUNTER_CHECKS) return null;
     const counter = subtickClockForPeriod(period);
     return counter !== null && counter.period_ticks >= MAX_SIMULATION_TICKS ? counter.period_ticks : null;
 }

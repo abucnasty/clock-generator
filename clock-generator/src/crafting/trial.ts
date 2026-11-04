@@ -16,7 +16,6 @@ import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, s
 import type { SubtickPeriod } from "../common/subtick-period";
 import { canonicalKey, currentRunMemo } from "./plan/run-memo";
 import { wholeCounterOf } from "./plan/clock-period-limit";
-import { DEFAULT_INSERTER_DISPATCH, STRICT_TARGET_AMOUNT } from "../simulation/dispatch";
 import { assessTargetProduction, TargetProduction } from "./target-production";
 import { BlueprintGenerationResult, BuildRun, LCM_STABILITY_TOLERANCE, MAX_SIMULATION_TICKS, RunOptions, SimulationStabilityCheck, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, planRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
 import { SimulationTick } from "./runner/simulation-tick";
@@ -127,9 +126,8 @@ export interface AsBuiltStabilityCheck {
      */
     output_basis?: "long-run mean" | "one period";
     /**
-     * Under the strict target amount (`STRICT_TARGET_AMOUNT`, the new dispatch), on a check that failed: the amount
-     * and evidence of the measurement it failed on (`actual_output_items` is its unrounded mean a period). Absent on
-     * a check that holds, and on every check without the strict amount.
+     * On a check that failed: the amount and evidence of the measurement it failed on under the strict target amount
+     * (`actual_output_items` is its unrounded mean a period). Absent on a check that holds.
      */
     target_production?: TargetProduction;
     /** The unshifted clock did not hold its first period: `actual_output_items` is that one period (see `withSettledOutput`) */
@@ -172,7 +170,7 @@ export interface AsBuiltStabilityCheck {
     /**
      * The tick the clocks of the game stand at, counted from the cold start through the warm-up, at `first_judged_tick`:
      * where a replay from the cold start shows the state the long run judged (`RecordTimelineRequest.settle_ticks`). Only
-     * where every clock of the long run ran on through its warm-up (the new dispatch, clocks of whole ticks:
+     * where every clock of the long run ran on through its warm-up (clocks of whole ticks:
      * `BuildRun.every_clock_runs_through`); absent otherwise, and where the check failed from another start or order.
      */
     clock_tick_at_first_judged?: number;
@@ -271,7 +269,7 @@ function clockBuildRun(
 }
 
 /**
- * A first check of a clock: under whole-counter checks (`wholeCounterOf`, the new dispatch) a clock of a p/q-tick
+ * A first check of a clock: under whole-counter checks (`wholeCounterOf`) a clock of a p/q-tick
  * period runs the whole counter its exported blueprint repeats (p ticks, q periods) and is judged on its total, its
  * clocks running on through the warm-up as in the game (`counter_runs_through`); any other clock, and one whose
  * counter one run cannot hold, runs one period (`runClockOnBuild`), as before.
@@ -446,7 +444,7 @@ function longRunOfFreeRunningBuild(
     stock_detail: StockDetail = "full",
 ): {
     keeps_up: boolean;
-    /** Under the strict target amount (`STRICT_TARGET_AMOUNT`): the judged span's amount, which `keeps_up` requires; else absent */
+    /** The judged span's amount under the strict target amount, which `keeps_up` requires */
     target_production: TargetProduction | undefined;
     /** Under the strict target amount, on a proven run: the items short before its repeat starts, where any were */
     start_up_shortfall: StartUpShortfall | undefined;
@@ -511,7 +509,7 @@ function longRunOfFreeRunningBuild(
             : judgeLongRun(held, recorded.ticks, period, repeat, expected_output_items, hand);
         // under the strict amount the judged span must move its target in all: a proven cycle as it is, the settled bins
         // of a sample over whole repeats of its output where it repeats in them (`wholeOutputRepeats`)
-        const amount = !STRICT_TARGET_AMOUNT ? undefined : of.state_repeat !== undefined ? assessTargetProduction(verdict, true)
+        const amount = of.state_repeat !== undefined ? assessTargetProduction(verdict, true)
             : sampledAmountOf(verdict);
         return { held, verdict, amount };
     };
@@ -533,7 +531,7 @@ function longRunOfFreeRunningBuild(
     }
     const stock = run.machine_stock!;
     const proven = run.state_repeat !== undefined;
-    const start_up_shortfall = STRICT_TARGET_AMOUNT && proven ? startUpShortfallOf(held, verdict.first_judged_tick, period, expected_output_items) : undefined;
+    const start_up_shortfall = proven ? startUpShortfallOf(held, verdict.first_judged_tick, period, expected_output_items) : undefined;
     // the exports are judged in the bins of the output: a belt with a consumption rate has to receive it in every bin
     const exported = exportedItemsOf(registry, output_ids);
     const export_shortfalls = exportShortfallsOfRun(exported, new Map(stock.inserters.map(it => [it.inserter_id, it.held])),
@@ -971,12 +969,12 @@ export function exhaustiveStartPhases(
                 // under the strict amount the cycle's total must not fall short either, and its mean is not rounded
                 const total = dropped() - drops_at[earlier];
                 const mean = total / (cycle.length * stride_periods);
-                run_target = STRICT_TARGET_AMOUNT ? assessTargetProduction({ total, expected_total: expected_per_bin * cycle.length,
-                    output_items_per_period: mean }, true) : undefined;
+                run_target = assessTargetProduction({ total, expected_total: expected_per_bin * cycle.length,
+                    output_items_per_period: mean }, true);
                 run_holds = cycle.every(items => Math.abs(items - expected_per_bin) <= tolerance)
-                    && (run_target?.valid ?? true)
+                    && run_target.valid
                     && !exports_short(earlier, exported_drops(), true);
-                run_output = STRICT_TARGET_AMOUNT ? mean : Math.round(mean);
+                run_output = mean;
                 break;
             }
             const orbit = can_merge ? orbit_of.get(key) : undefined;
@@ -988,11 +986,11 @@ export function exhaustiveStartPhases(
             if (crossing >= PHASE_PROOF_CAP_CROSSINGS) {
                 // unresolved: judged on its last bin, a sample as the shifted runs of the sampled check are
                 const last_bin = dropped() - drops_at[drops_at.length - 1];
-                run_target = STRICT_TARGET_AMOUNT ? assessTargetProduction({ total: last_bin, expected_total: expected_per_bin,
-                    output_items_per_period: last_bin / stride_periods }, false) : undefined;
-                run_holds = (run_target?.valid ?? true) && Math.abs(last_bin - expected_per_bin) <= tolerance
+                run_target = assessTargetProduction({ total: last_bin, expected_total: expected_per_bin,
+                    output_items_per_period: last_bin / stride_periods }, false);
+                run_holds = run_target.valid && Math.abs(last_bin - expected_per_bin) <= tolerance
                     && !exports_short(exports_at.length - 1, exported_drops(), false);
-                run_output = STRICT_TARGET_AMOUNT ? last_bin / stride_periods : Math.round(last_bin / stride_periods);
+                run_output = last_bin / stride_periods;
                 run_proven = false;
                 outcome.unresolved_phases++;
                 break;
@@ -1144,7 +1142,7 @@ export function runAsBuiltCheck(
         check.export_shortfalls = result.stability_check.export_shortfalls;
     }
     // a final check (one with a long run) holds each start it measures to the strict amount; a quick trial screens
-    const strict = STRICT_TARGET_AMOUNT && long_run_ticks > 0;
+    const strict = long_run_ticks > 0;
     let stock: StockRecording | undefined;
     if (check.holds) for (const phases of movingPickupPhaseStarts(config)) {
         // the handed-over check asked from this start and it held; under the strict amount only a final check's start
@@ -1303,11 +1301,9 @@ export function runAsBuiltCheck(
 
 /**
  * A check that failed from another start or taker order: what its unshifted long run judged names no replay of the
- * failure, so it is dropped, under the new dispatch (`SETTLED_REPLAY_AT_CLOCK_TICK`); under the configured order the
- * check keeps it as before.
+ * failure, so it is dropped (settled replays start at the judged clock tick, `clock_tick_at_first_judged`).
  */
 function clearJudgedClock(check: AsBuiltStabilityCheck): void {
-    if (!SETTLED_REPLAY_AT_CLOCK_TICK) return;
     delete check.first_judged_tick;
     delete check.clock_tick_at_first_judged;
     delete check.long_run_proven;
@@ -1316,7 +1312,7 @@ function clearJudgedClock(check: AsBuiltStabilityCheck): void {
 }
 
 /**
- * The measured amount of a run of one span (`STRICT_TARGET_AMOUNT`): the whole counter it observed where it observed
+ * The measured amount of a run of one span under the strict target amount: the whole counter it observed where it observed
  * one (`firstClockSpan`), else the complete repeat of more than one period where its warm-up found one, else the one
  * period it measured. A repeat of one period, or a whole-counter span, is a repeating cycle; one period is a sample.
  */
@@ -1340,9 +1336,6 @@ function failedOnAmount(check: AsBuiltStabilityCheck, measured: ReturnType<typeo
     check.actual_output_items = measured.target_production.output_items_per_period;
     check.output_basis = measured.output_basis;
 }
-
-/** Settled replays at the judged clock tick (`clock_tick_at_first_judged`): wherever the new dispatch is on */
-const SETTLED_REPLAY_AT_CLOCK_TICK: boolean = DEFAULT_INSERTER_DISPATCH !== "configured-order";
 
 /**
  * The unshifted clock and its long run (where the check makes one) under each order of the inserters that take one
@@ -1385,7 +1378,7 @@ function heldUnderOtherTakerOrders(
                 if (long_run.target_production !== undefined) {
                     amount = { target_production: long_run.target_production, output_basis: "long-run mean" };
                 }
-            } else if (long_run === null && STRICT_TARGET_AMOUNT) {
+            } else if (long_run === null) {
                 // a period too long for a long run: this order's final check has the span it measured
                 const measured = measuredAmountOf(run.stability_check);
                 if (!measured.target_production.valid) {
@@ -1445,7 +1438,7 @@ export function trialWithLoopWindows(
     if (run.stock === undefined) {
         return null;
     }
-    // a check that held is matched start phase for start phase; one that failed (tried under the new dispatch, see
+    // a check that held is matched start phase for start phase; one that failed (tried as well, see
     // `checkedClock`) by the windows' own check holding from every start phase it runs
     const passesAsBefore = (check: AsBuiltStabilityCheck) => check.holds && check.failed_start_offset === undefined
         && (!run.check.holds || check.start_phases_checked === run.check.start_phases_checked);

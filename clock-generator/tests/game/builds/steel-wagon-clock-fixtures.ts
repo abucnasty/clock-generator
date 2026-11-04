@@ -7,9 +7,8 @@ import {ConfigPaths} from "../../../src/config/config-paths";
 import {loadConfigFromFile} from "../../../src/config/loader";
 import {FactorioBlueprintFile} from "../../../src/blueprints/blueprint";
 import {encodeBlueprintFile} from "../../../src/blueprints/serde";
-import {FactorioDataService} from "../../../src/data";
 import {Recording} from "../../../src/verification/recording";
-import {BELT_SPEEDS} from "../helpers/belt-speed-fixtures";
+import {CLOCK_TEST_SPEEDS} from "../helpers/belt-speed-fixtures";
 import {PickupClockScenario} from "./pickup-clock-capture";
 
 /**
@@ -78,31 +77,6 @@ export function steelWagonScaffold(order: SteelWagonCase["order"]): string {
     return encodeBlueprintFile({...file, blueprint: {...file.blueprint!, entities: reordered}} as unknown as FactorioBlueprintFile);
 }
 
-/**
- * The periods until the wagon has run dry of steel with the drill stopped: what its ore, plate and steel slots hold, as
- * steel (an ore makes 1 + the plate furnace's productivity plates, 5 plates make 1 + the steel furnace's productivity
- * steel), over the target's steel a period, plus 8 periods for what the furnaces and hands hold
- */
-export function steelWagonDrainPeriods(config: Config, period_ticks: number): number {
-    const [steel, plate] = ["steel-plate", "iron-plate"].map(recipe => config.machines.find(machine => machine.recipe === recipe)!);
-    const slots = (item: string) => ((config.chests ?? []).find(chest => chest.type === "cargo-wagon") as {slot_filters: {item?: string}[]})
-        .slot_filters.filter(filter => filter.item === item).length * FactorioDataService.findItemOrThrow(item).stack_size;
-    const per_plate = (1 + steel.productivity / 100) / 5;
-    const stock = slots("steel-plate") + slots("iron-plate") * per_plate + slots("iron-ore") * (1 + plate.productivity / 100) * per_plate;
-    return Math.ceil(stock / (config.target_output.items_per_second * period_ticks / 60)) + 8;
-}
-
-/**
- * The protocol of the container family, with the cuts long enough to empty the wagon of steel: the drill stopped, the
- * output blocked for 4 periods, the drill stopped again, each followed for 40 periods (the first 6 after a release not
- * judged). A drill is no supply that stops in the generator's checks; here it is stopped as the supply cut.
- */
-export function steelWagonInterventions(config: Config, period_ticks: number): [number, number, number][] {
-    const cut = steelWagonDrainPeriods(config, period_ticks);
-    const release1 = 66 + cut, block = release1 + 40, unblock = block + 4, again = unblock + 40, release2 = again + cut;
-    return [[66, release1, block], [block, unblock, again], [again, release2, release2 + 40]];
-}
-
 /** The native build is the config's: 2 furnaces at their speeds, the drill into the wagon, 2 inserters into it and 3 from it */
 export function assertSteelWagonHardware(recording: Recording, config: Config): void {
     expect(recording.config.machines).toMatchObject(config.machines.map(({recipe, crafting_speed, productivity}) => ({recipe, crafting_speed, productivity})));
@@ -120,11 +94,12 @@ export function assertSteelWagonHardware(recording: Recording, config: Config): 
 export async function steelWagonScenario(variant: SteelWagonCase): Promise<PickupClockScenario> {
     const config = await steelWagonConfig(variant);
     return {
-        name: variant.name, speed: BELT_SPEEDS[0], backed: false,
+        name: variant.name, speed: CLOCK_TEST_SPEEDS[0], backed: false,
         config: () => config,
         scaffold: () => steelWagonScaffold(variant.order),
         alternative: variant.alternative,
-        interventions: steelWagonInterventions(config, variant.period_ticks),
+        // the subtick clock's output repeats only over its whole period (13 periods of the rounded clock), longer than a minute
+        baseline: {ticks: variant.period_ticks, reason: "the subtick clock's output repeats only over its whole period, longer than a minute"},
         probeFile: path.join(__dirname, "steel-wagon-clock-probe.lua"),
         probe: {family: "steel-wagon"},
         controls: path.join(__dirname, "steel-wagon-clock-controls.json"),

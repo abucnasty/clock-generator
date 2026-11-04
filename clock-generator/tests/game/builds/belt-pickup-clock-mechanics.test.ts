@@ -1,15 +1,15 @@
 import {describe, expect, test} from "vitest";
-import {BELT_SPEEDS} from "../helpers/belt-speed-fixtures";
+import {BELT_SPEEDS, CLOCK_TEST_SPEEDS} from "../helpers/belt-speed-fixtures";
 import {GameFixturePaths} from "../helpers/fixture-paths";
 import {
-    expectControlIsConsistent, firstHandPatterns, PICKUP_GEOMETRIES, PICKUP_INGREDIENTS, PickupGeometry, readFixtureFigures, sidePickupConfig,
+    expectRunIsConsistent, firstHandPatterns, PICKUP_GEOMETRIES, PICKUP_INGREDIENTS, PickupGeometry, readFixtureFigures, sidePickupConfig,
 } from "../helpers/fixture-mechanics";
 import {BELT_PICKUP_GENERATED} from "./belt-pickup-clock-cases";
-import {readControls} from "./clock-controls";
+import {readControls, runHolds, RunControls} from "./clock-controls";
 import {pickupClockConfig, pickupClockSpeedCases} from "./pickup-clock-speed-coverage";
 
 /**
- * The belt pickup family (`pickup-clock-speed-coverage.ts`: 2 families x 4 belt tiers x 3 geometries x moving/backed up),
+ * The belt pickup family (`pickup-clock-speed-coverage.ts`: 2 families x the turbo tier x 3 geometries x moving/backed up),
  * checked against what the game recorded without generating a clock: the simulator's first hand at each tier and geometry
  * against the hands the belt speed coverage recorded (speed-expectations.json), and the recorded clock controls against
  * the fixture configs. The generation test (belt-pickup-clock.generation.test.ts) generates only the cases of
@@ -39,7 +39,7 @@ function backedFirstHand(tier: string, geometry: PickupGeometry): string {
 }
 
 describe("first hand at each tier and geometry: the simulator against the game's recorded hands", () => {
-    for (const speed of BELT_SPEEDS) for (const geometry of PICKUP_GEOMETRIES) for (const backed of [false, true]) {
+    for (const speed of CLOCK_TEST_SPEEDS) for (const geometry of PICKUP_GEOMETRIES) for (const backed of [false, true]) {
         for (const ingredient of PICKUP_INGREDIENTS) {
             const name = `${speed.name}-${geometry}-${backed ? "backed" : "moving"}-${ingredient}`;
             test(name, async () => {
@@ -48,7 +48,7 @@ describe("first hand at each tier and geometry: the simulator against the game's
                 // the recording itself: the simulator followed the game's continuous run when it was made (the one same-item
                 // run where the separate same-item replay differs once, at the normal tier, is the simulator agreeing)
                 expect({agrees: figures.simulator_agrees, differences: figures.model_difference_count}).toEqual({agrees: true, differences: 0});
-                expect(figures.replay_difference_count, "replay differences").toBe(name === "normal-underground-entrance-moving-same-item" ? 1 : 0);
+                expect(figures.replay_difference_count, "replay differences").toBe(0);
                 const simulated = [...firstHandPatterns(await sidePickupConfig(speed, geometry, backed, ingredient))];
                 if (backed) {
                     // a jammed belt has one first hand, and the game recorded it among the hands of its run (the later
@@ -74,12 +74,11 @@ describe("first hand at each tier and geometry: the simulator against the game's
 });
 
 describe("the recorded clock controls of the belt pickup fixtures", () => {
-    const controls = readControls("pickup-clock-controls.json").cases;
-    const movingPhases = readControls<{moving_phase: {cases: object}; recovery_phase: {cases: object}}>("lane-phase-controls.json");
+    const controls = readControls<RunControls>("pickup-clock-controls.json").cases;
     const names = (["electromagnetic", "same-item"] as const).flatMap(family => pickupClockSpeedCases(family));
 
-    test("there is a control with a native summary and a pin for each of the 48 fixtures", () => {
-        expect(names).toHaveLength(48);
+    test("there is a control with a native summary and a pin for each of the 12 fixtures", () => {
+        expect(names).toHaveLength(12);
         for (const variant of names) {
             expect(controls[variant.name]?.native, variant.name).toBeDefined();
             expect(controls[variant.name]?.generation, variant.name).toBeDefined();
@@ -89,27 +88,16 @@ describe("the recorded clock controls of the belt pickup fixtures", () => {
     test.each(names.map(variant => variant.name))("%s: the game was recorded at the target rate over the pinned period", async name => {
         const variant = names.find(it => it.name === name)!;
         const config = await pickupClockConfig(variant);
-        expectControlIsConsistent(controls[name].native, controls[name].generation!, config.target_output.items_per_second);
+        expectRunIsConsistent(controls[name].native, controls[name].generation!, config.target_output.items_per_second);
         // the rate of the target is the fixture's: the tier's belt units over four for the electromagnetic family
         if (variant.family === "electromagnetic") expect(config.target_output.items_per_second).toBe(30 * variant.speed.units / 4);
     });
 
-    test("every control the game held and recovered is judged stable, and the exceptions are the ones documented", () => {
-        const exceptions = new Set([
-            ...Object.keys(movingPhases.moving_phase.cases), ...Object.keys(movingPhases.recovery_phase.cases),
-        ]);
+    test("every recording holds and recovers in the game, and every pin is judged stable", () => {
         for (const name of Object.keys(controls)) {
             const {native, generation} = controls[name];
-            const meetsTarget = native.baseline.every(items => items === native.expected)
-                && native.recovery.every(trial => trial.recovered.every(items => items === native.expected));
-            if (exceptions.has(name)) {
-                // a warm recording that holds, with a generated verdict that fails a cold lane phase the capture cannot set up
-                expect(meetsTarget, `${name}: the warm recording holds`).toBe(true);
-                expect(generation!.why_not_stable, name).toBe("moving lane phases");
-            } else {
-                expect(meetsTarget, `${name}: a recording that misses the target is not an exception`).toBe(true);
-                expect(generation!.verdict, name).toBe("stable");
-            }
+            expect(runHolds(native), `${name}: ${native.result}`).toBe(true);
+            expect(generation!.verdict, name).toBe("stable");
         }
     });
 

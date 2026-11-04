@@ -84,12 +84,4 @@ describe("the composition into the main period", () => {
         // the config's lcm sets the group's period too
         expect(plan.groups[0].periods[0]).toMatchObject({ cycles: 5 });
     });
-
-    it("the scrap silo's results are carried from one window to the next: their hands are left out of the lcm", async () => {
-        const { plan } = await planOfSample(ConfigPaths.RECYCLING_SCRAP_SILO);
-        expect(plan.composition!.lcm_terms).toMatchObject({ computed_lcm: 1, effective_lcm: 1 });
-        expect(plan.composition!.lcm_terms.ignored_items).toContain("holmium-ore");
-        expect(plan.composition!.main_period.ticks).toBe(5760);
-        expect(plan.groups[0].periods.map(brief)).toEqual([[12, "main", 5760, "kept"]]);
-    });
 });

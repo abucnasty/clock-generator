@@ -1,26 +1,15 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { afterAll, afterEach, expect, test, vi } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import { parseConfig } from "../config/loader";
 import { OpenRange } from "../data-types";
 import * as planning from "./plan/plan-run";
 import * as competing from "../simulation/competing-takers";
 import * as moving from "./moving-pickup-phase-starts";
 import { runAsBuiltCheck } from "./trial";
-import { STRICT_TARGET_AMOUNT } from "../simulation/dispatch";
 import { judgeLongRun, wholeOutputRepeats } from "./long-run";
 import { quiet } from "./generate-blueprint-test-helpers";
 
-// the strict target amount is on under the new dispatch only, which is read from the environment when the engine loads
-const dispatch = vi.hoisted(() => {
-    const before = process.env.CLOCK_NEW_DISPATCH;
-    process.env.CLOCK_NEW_DISPATCH = "1";
-    return before;
-});
-afterAll(() => {
-    if (dispatch === undefined) delete process.env.CLOCK_NEW_DISPATCH;
-    else process.env.CLOCK_NEW_DISPATCH = dispatch;
-});
 afterEach(() => vi.restoreAllMocks());
 
 const fixture = JSON.parse(readFileSync(path.join(__dirname, "fixtures/imp-sampled-output.json"), "utf8"));
@@ -55,10 +44,6 @@ function recordedRun(bins: number[], periods: number, proven: boolean) {
             }]} };
     });
 }
-
-test("runs under the strict target amount", () => {
-    expect(STRICT_TARGET_AMOUNT).toBe(true);
-});
 
 // The archived imp plan (fixtures/imp-sampled-output.md): it falls short in the game too (237.18 of 240/s). Its standard
 // long run is within a hand, which the tolerance alone let through.

@@ -49,7 +49,7 @@ export class HandScratch {
     /** The record of the hand last emptied, which the next hand fills (`takeIntoHand`); null for none */
     public spare_hand: InserterHandContents | null = null;
     /**
-     * Under the new dispatch, true from a control swap to the end of the hand's next update: the swap puts every
+     * True from a control swap to the end of the hand's next update: the swap puts every
      * inserter on the update list, which is no wake of the hand (see `BeltHandPickup.enter`). `reset` clears it and
      * the swap then sets it (`Hand.resetForSwap`).
      */

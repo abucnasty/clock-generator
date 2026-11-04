@@ -76,13 +76,20 @@ function idOf(world: World, entities: TickPhaseRow["entities"], index: number): 
     }
 }
 
-/** Every step of `ticks` ticks as the table orders them, as "tick phase entity step"; `method` names the step by its method */
+/** The steps of an inserter's update, which the update list runs for the inserters on it only (simulation/inserter-scheduling.ts) */
+const UPDATE_STEPS = ["phase_rule", "phase_step"];
+
+/**
+ * Every step of `ticks` ticks as the table orders them, as "tick phase entity step"; `method` names the step by its method.
+ * The inserters' update steps are left out: the update list runs them for the inserters on it, in its order (`updatesOf`).
+ */
 function expectedSteps(order: EntityOrder, ticks: number, method: boolean): string[] {
     const steps: string[] = [];
     for (let tick = 1; tick <= ticks; tick++) {
         TICK_PHASES.forEach((row, phase) => {
             for (const id of row.entities === null ? ["-"] : order[row.entities]) {
                 for (const step of row.steps) {
+                    if (row.name === "inserters" && UPDATE_STEPS.includes(step.name)) continue;
                     const name = method ? EXPECTED[phase].steps[step.step][1] : step.name;
                     steps.push(`${tick} ${row.name} ${id} ${name}`);
                 }
@@ -90,6 +97,40 @@ function expectedSteps(order: EntityOrder, ticks: number, method: boolean): stri
         });
     }
     return steps;
+}
+
+/**
+ * The run's steps without the inserters' updates, and those updates: in each tick the inserters on the update list, each once
+ * through its phase rule and then its phase step, before any other step of the inserters phase. `malformed` holds the lines
+ * of a run that part from that.
+ */
+function updatesOf(run: readonly string[], method: boolean): { rest: string[]; updates: string[]; malformed: string[] } {
+    const [rule, step] = UPDATE_STEPS.map((name, index) => method ? EXPECTED[2].steps[index][1] : name);
+    const rest: string[] = [];
+    const updates: string[] = [];
+    const malformed: string[] = [];
+    const updated = new Set<string>();
+    let pending: string | null = null;
+    let last_tick = 0;
+    for (const line of run) {
+        const [tick, phase, id, name] = line.split(" ");
+        if (Number(tick) !== last_tick) {
+            last_tick = Number(tick);
+            updated.clear();
+        }
+        if (phase === "inserters" && (name === rule || name === step)) {
+            const expected_name: string = pending === null ? rule : step;
+            if (name !== expected_name || (pending !== null && pending !== id) || (pending === null && updated.has(id))) malformed.push(line);
+            if (name === rule) updated.add(id);
+            pending = name === rule ? id : null;
+            updates.push(line);
+            continue;
+        }
+        if (pending !== null) malformed.push(`${line} after a phase rule with no phase step`);
+        pending = null;
+        rest.push(line);
+    }
+    return { rest, updates, malformed };
 }
 
 /** Where two lists of steps first part, with a few steps either side; null where they agree */
@@ -192,11 +233,22 @@ describe.each(ORDERS)("a traced run with the takers $taker_order", ({ taker_orde
     });
 
     it("runs every step of every entity in the order of the table, as the tracer is told", () => {
-        expect(firstDifference(run.traced, expectedSteps(order, TICKS, false))).toBeNull();
+        const { rest, malformed } = updatesOf(run.traced, false);
+        expect(malformed).toEqual([]);
+        expect(firstDifference(rest, expectedSteps(order, TICKS, false))).toBeNull();
     });
 
     it("runs every step of every entity in the order of the table, as the archetypes are called", () => {
-        expect(firstDifference(run.called, expectedSteps(order, TICKS, true))).toBeNull();
+        const { rest, malformed } = updatesOf(run.called, true);
+        expect(malformed).toEqual([]);
+        expect(firstDifference(rest, expectedSteps(order, TICKS, true))).toBeNull();
+    });
+
+    it("updates the inserters on the update list: each at most once a tick, only inserters of the build, and every one in some tick", () => {
+        const { updates } = updatesOf(run.traced, false);
+        const updated = new Set(updates.map(line => line.split(" ")[2]));
+        expect([...updated].every(id => order.inserters.includes(id))).toBe(true);
+        expect([...updated].sort()).toEqual([...order.inserters].sort());
     });
 
     it("tells observers only inside the steps that name their event: each entity's tick once a tick, a change in its status rule", () => {

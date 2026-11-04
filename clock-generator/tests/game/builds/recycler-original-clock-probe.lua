@@ -1,32 +1,29 @@
--- Observe the unchanged original scaffold under the same clock throughout every intervention.
--- It also keeps, for the per-branch accounting of the test: a branch map (terminal, buffer, drain and science machine per sorted
--- terminal) and every inserter's native position; per branch the science it holds and its machine's products_finished in every
--- stock reading; and one row per period boundary from the baseline start in report.series.
--- The same probe observes the scaffold without buffer chests, where each science plant's drain drops into an infinity
--- chest and is the terminal. Each branch is judged by the sink its drain drops into: into a buffer (a chest that can
--- fill), its terminal delivers exactly its share every period; into a sink that never blocks (an infinity chest), the
--- branch carries its share as a rate, never more than its hand behind from the hold start, a surplus taken by the sink.
-local all_entities = ...
+-- The original scaffold of #100 (two cells, 96 science a second) on its generated clock, under the game tests' protocol
+-- (steady.lua). The clock sets the rate through the arms that drop the science into the infinity chests, the terminals (four
+-- takers that empty the steel buffers, or, in the scaffold without buffer chests, the four drains of the science plants), so
+-- what the run counts is what the terminals drop. A warm run has the disturbances below, one each; a cold (staged) run has
+-- none, and its recording is cut at the end of the baseline (settle.record_samples).
+--   cut <item>   the feeder inserters of the item switched off and, in that tick, every item of it taken from the belt lanes
+--                and the supply chests upstream (machine inventories and inserter hands stay as they are)
+--   block output the four terminals switched off
+--   block advanced-circuit disposal  the loader that disposes of the advanced circuits switched off (the recyclers fill, stop,
+--                and the plants starve)
+-- Kept for the test: a branch map (terminal, buffer, drain and science machine per sorted terminal), every inserter's native
+-- position, and the closure of each branch's science over the baseline's whole clock cycles (from the steady-state tick to the
+-- last baseline tick at which the clock stands where it stood then): what its machine made, what its terminal dropped, and the
+-- change of what the branch holds (buffer, machine output, hands of its drain and terminal).
+-- The same probe observes the scaffold without buffer chests, where each science plant's drain drops into an infinity chest and
+-- is the terminal: a branch is "exact" when its drain drops into a buffer, "rate" into a sink that never blocks.
+local all_entities, _, _, settle = ...
+local placed_at = game.tick
 local function run_probe(entities)
-options.trials = options.trials or {}
 local ITEM = "electromagnetic-science-pack"
 -- what each branch carries a period, and how far a branch whose drain never blocks may fall behind it
 local SHARE, HAND = options.share_per_period or 16, options.hand or 16
 local outputs, recyclers, science, capacitors, bends, disposal, inserters = {}, {}, {}, {}, {}, {}, {}
 local feeds, feed_units, output_units, bend_units, red_units = {}, {}, {}, {}, {}
 local science_units, capacitor_units, recycler_units, buffers = {}, {}, {}, {}
-local report = {period = options.period, baseline = {}, trials = {}, events = {}, topology = {}, finished = false,
-    maximum_hold_stock_drain = 64}
--- one row per period boundary from the baseline start (columns; pf, reserve, delivered hold 4 values a row, branch
--- order). stage and trial are those of the bin that closes at the boundary.
-report.series = {tick = {}, stage = {}, trial = {}, total = {}, pf = {}, reserve = {}, delivered = {}}
-local function keep_boundary(tick, bin_stage, bin_trial, stock, delivered)
-    local s = report.series
-    table.insert(s.tick, tick); table.insert(s.stage, bin_stage); table.insert(s.trial, bin_trial); table.insert(s.total, stock.total)
-    for i = 1, 4 do
-        table.insert(s.pf, stock.pf_by_branch[i]); table.insert(s.reserve, stock.reserve_by_branch[i]); table.insert(s.delivered, delivered[i])
-    end
-end
+local report = {period = options.period, topology = {}, events = {}, evidence = {}}
 local function write() helpers.write_file("recycler-original.json", helpers.table_to_json(report), false) end
 local function check(condition, message)
     if not condition then report.error = message; write(); error(message) end
@@ -161,75 +158,12 @@ for _, e in ipairs(bends) do
     table.insert(report.topology.bends, {shape = b.belt_shape, direction = b.direction,
         lengths = {b.get_transport_line(1).line_length, b.get_transport_line(2).line_length}})
 end
-local function role(e)
-    if output_units[e.unit_number] then return "science-output", true end
-    if bend_units[e.unit_number] then return "bend-input", true end
-    if red_units[e.unit_number] then return "advanced-circuit-taker", true end
-    if feed_units[e.unit_number] then return "supply-feeder", false end
-    local source, sink = e.pickup_target, e.drop_target
-    if source and science_units[source.unit_number] then return "science-buffer-feeder", true end
-    if sink and science_units[sink.unit_number] then return "science-input", true end
-    if sink and capacitor_units[sink.unit_number] then return "supercapacitor-input", true end
-    if sink and recycler_units[sink.unit_number] then return "recycler-input", true end
-    return "internal", false
-end
-local function partial_hands()
-    local result = {}
-    for _, e in ipairs(inserters) do
-        local count = held(e)
-        if count > 0 and count < 16 then
-            local name, relevant = role(e)
-            table.insert(result, {unit = e.unit_number, position = e.position, role = name, relevant = relevant,
-                count = count, item = e.held_stack.name,
-                source = e.pickup_target and e.pickup_target.unit_number, sink = e.drop_target and e.drop_target.unit_number})
-        end
-    end
-    return result
-end
-local function crafts()
-    local n = 0
-    for _, e in ipairs(science) do n = n + e.products_finished end
-    return n
-end
-local function science_stock()
-    local stock = {total = 0, buffers = {}, machine_outputs = {}, held = {}, products_finished = crafts()}
-    -- one count per terminal, 0 where it takes straight from its machine
-    for _, e in ipairs(buffers) do
-        local count = e and e.get_inventory(defines.inventory.chest).get_item_count(ITEM) or 0
-        stock.total = stock.total + count; table.insert(stock.buffers, count)
-    end
-    for _, e in ipairs(science) do
-        local count = e.get_inventory(defines.inventory.crafter_output).get_item_count(ITEM)
-        stock.total = stock.total + count; table.insert(stock.machine_outputs, count)
-    end
-    for _, e in ipairs(inserters) do
-        if e.held_stack.valid_for_read and e.held_stack.name == ITEM then
-            local count = held(e)
-            stock.total = stock.total + count; table.insert(stock.held, {unit = e.unit_number, count = count})
-        end
-    end
-    -- per branch, the science it holds (buffer, machine output, drain and terminal hands) and its machine's counter
-    stock.reserve_by_branch, stock.pf_by_branch = {}, {}
-    for i, b in ipairs(branches) do
-        local reserve = (b.buffer and b.buffer.get_inventory(defines.inventory.chest).get_item_count(ITEM) or 0)
-            + b.machine.get_inventory(defines.inventory.crafter_output).get_item_count(ITEM)
-        for _, e in ipairs(b.drain == b.terminal and {b.drain} or {b.drain, b.terminal}) do
-            if e.held_stack.valid_for_read and e.held_stack.name == ITEM then reserve = reserve + held(e) end
-        end
-        stock.reserve_by_branch[i], stock.pf_by_branch[i] = reserve, b.machine.products_finished
-    end
-    return stock
-end
+
 local function red_stock()
     local counts = {}
     for _, e in ipairs(recyclers) do
         table.insert(counts, e.get_inventory(defines.inventory.crafter_output).get_item_count("advanced-circuit"))
     end
-    return counts
-end
-local function recycler_crafts()
-    local counts = {}
-    for _, e in ipairs(recyclers) do table.insert(counts, e.products_finished) end
     return counts
 end
 local function recycler_full(e)
@@ -250,196 +184,163 @@ for _, product in ipairs(red_recipe.products or {}) do
 end
 check(red_batch_max > 0 and red_batch_max <= red_stack_size, "native advanced-circuit result batch")
 local red_stop_min = red_stack_size - red_batch_max + 1
-local started, previous, current = game.tick, {}, {0, 0, 0, 0}
--- (record only) the game tick of probe tick 0, to read the recorder's samples in probe phases
-report.started_game_tick = started
+report.red_stack_size, report.red_batch_max, report.red_stop_min = red_stack_size, red_batch_max, red_stop_min
+
+-- what the terminals dropped, by branch; counted once a tick, whoever asks first
+local previous, delivered, counted = {}, {0, 0, 0, 0}, nil
 for i, e in ipairs(outputs) do previous[i] = held(e) end
-local stage, trial_index, stage_at = "settle", 0, 0
-local quiet_ticks, craft_quiet_ticks, output_quiet_ticks, last_crafts = 0, 0, 0, crafts()
-local consecutive, max_consecutive, hold = 0, 0, {}
-local boundary_kept = nil
-local last_boundary_stock = science_stock()
-local function event(action, tick)
-    table.insert(report.events, {tick = tick, phase = tick % options.period, action = action, trial = trial_index})
+local function count()
+    if counted ~= game.tick then
+        counted = game.tick
+        for i, e in ipairs(outputs) do
+            local now = held(e)
+            if now < previous[i] then delivered[i] = delivered[i] + previous[i] - now end
+            previous[i] = now
+        end
+    end
+    return delivered[1] + delivered[2] + delivered[3] + delivered[4]
 end
-local function targets(trial)
-    if trial.kind == "supply" then return assert(feeds[trial.item], "source " .. trial.item) end
-    check(trial.kind == "output" and (trial.item == "advanced-circuit" or trial.item == ITEM), "known output loss")
-    return trial.item == "advanced-circuit" and disposal or outputs
+-- per branch: its machine's counter (crafts and productivity payouts, a pack each), what it holds, what its terminal dropped
+local function branch_snapshot(t)
+    local pf, reserve = {}, {}
+    for i, b in ipairs(branches) do
+        local stock = (b.buffer and b.buffer.get_inventory(defines.inventory.chest).get_item_count(ITEM) or 0)
+            + b.machine.get_inventory(defines.inventory.crafter_output).get_item_count(ITEM)
+        for _, e in ipairs(b.drain == b.terminal and {b.drain} or {b.drain, b.terminal}) do
+            if e.held_stack.valid_for_read and e.held_stack.name == ITEM then stock = stock + held(e) end
+        end
+        pf[i], reserve[i] = b.machine.products_finished, stock
+    end
+    return {tick = t, pf = pf, reserve = reserve, delivered = {delivered[1], delivered[2], delivered[3], delivered[4]}}
 end
-local function loss(on, tick)
-    local trial = options.trials[trial_index]
-    for _, entity in ipairs(targets(trial)) do
+
+-- the belts, to take an item from their lanes
+local belts, qualities = {}, {}
+for _, e in pairs(entities) do
+    if e.valid and (e.type == "transport-belt" or e.type == "underground-belt" or e.type == "splitter") then table.insert(belts, e) end
+end
+for name in pairs(prototypes.quality) do table.insert(qualities, name) end
+local function event(t, action, extra)
+    local row = {tick = t, action = action}
+    for key, value in pairs(extra or {}) do row[key] = value end
+    table.insert(report.events, row)
+end
+local function disable(list, on)
+    for _, entity in ipairs(list) do
         entity.disabled_by_script = on
         check(entity.disabled_by_script == on, "loss flag must take effect on " .. entity.name)
     end
-    event(on and "cut" or "restore", tick)
 end
--- Whether hold periods, from the first, meet every branch's gate: an exact branch carries SHARE in each; a rate branch
--- never falls more than HAND behind SHARE a period from the first, and may run ahead (the sink takes the surplus).
-local function hold_meets_gates(periods)
-    for i, b in ipairs(branches) do
-        local ahead = 0
-        for _, period in ipairs(periods) do
-            local count = period.output[i]
-            if b.gate == "exact" then
-                if count ~= SHARE then return false end
-            else
-                ahead = ahead + count - SHARE
-                if ahead < -HAND then return false end
-            end
-        end
-    end
-    return true
-end
-local function phase_offset(trial)
-    local phase = trial.phase_offset
-    if phase == nil then phase = options.phase_offset or 0 end
-    check(phase >= 0 and phase < options.period and phase % 1 == 0, "cut phase must be a tick within the period")
-    return phase
-end
-local function begin_trial(tick)
-    trial_index = trial_index + 1
-    if trial_index > #options.trials then
-        report.finished, report.finished_tick = true, tick
-        write(); script.on_nth_tick(1, nil); return
-    end
-    stage, stage_at, quiet_ticks, craft_quiet_ticks, output_quiet_ticks, last_crafts = "cut", tick, 0, 0, 0, crafts()
-    local trial = options.trials[trial_index]
-    report.trials[trial_index] = {kind = trial.kind, item = trial.item, cut_at = tick, cut_phase = tick % options.period,
-        red_max = {0, 0}, recycler_full_ticks = {0, 0}, red_stack_size = red_stack_size,
-        red_batch_max = red_batch_max, red_stop_min = red_stop_min, recovered = false,
-        partial_hands_at_cut = partial_hands(), science_stock_at_cut = science_stock(), recovery_samples = {}}
-    loss(true, tick); write()
-end
-local function advanced_loss(trial) return trial.kind == "output" and trial.item == "advanced-circuit" end
-local function red_blocked(trial)
-    for i = 1, #recyclers do
-        if trial.red_max[i] < trial.red_stop_min or trial.recycler_full_ticks[i] == 0 then return false end
-    end
-    return true
-end
-local function red_cleared(trial, red)
-    for i = 1, #recyclers do
-        if red[i] > 16 or red[i] >= trial.red_max[i] then return false end
-    end
-    return true
-end
-script.on_nth_tick(1, function()
-    local ok, problem = pcall(function()
-        local tick, dropped = game.tick - started, 0
-        for i, e in ipairs(outputs) do
-            local now = held(e)
-            if now < previous[i] then
-                local amount = previous[i] - now
-                current[i], dropped = current[i] + amount, dropped + amount
-            end
-            previous[i] = now
-        end
-        local now_crafts = crafts()
-        craft_quiet_ticks = now_crafts == last_crafts and craft_quiet_ticks + 1 or 0
-        output_quiet_ticks = dropped == 0 and output_quiet_ticks + 1 or 0
-        quiet_ticks = now_crafts == last_crafts and dropped == 0 and quiet_ticks + 1 or 0
-        last_crafts = now_crafts
-        if stage == "cut" then
-            local trial, red = report.trials[trial_index], red_stock()
-            for i, e in ipairs(recyclers) do
-                trial.red_max[i] = math.max(trial.red_max[i], red[i])
-                if recycler_full(e) then trial.recycler_full_ticks[i] = trial.recycler_full_ticks[i] + 1 end
-            end
-            local blocked = not advanced_loss(trial) or red_blocked(trial)
-            if tick - stage_at >= options.minimum_cut_ticks and quiet_ticks >= options.stopped_ticks and blocked then
-                trial.stopped, trial.restore_at, trial.restore_phase = true, tick, tick % options.period
-                trial.stopped_after_ticks = tick - stage_at - quiet_ticks
-                trial.craft_quiet_ticks, trial.output_quiet_ticks, trial.joint_quiet_ticks = craft_quiet_ticks, output_quiet_ticks, quiet_ticks
-                trial.partial_hands_at_restore = partial_hands()
-                trial.science_stock_at_restore, trial.red_at_restore = science_stock(), red
-                trial.recycler_crafts_at_restore = recycler_crafts()
-                if advanced_loss(trial) then trial.advanced_disposal_blocked = true end
-                loss(false, tick)
-                stage, stage_at, consecutive, max_consecutive, hold = "recovery", tick, 0, 0, {}
-                write()
-            elseif tick - stage_at >= options.maximum_cut_ticks then
-                error("loss did not stop crafting and final deliveries with required blocking evidence: " .. trial.kind .. " " .. trial.item)
-            end
-        end
-        if tick % options.period == 0 then
-            local stock, exact = science_stock(), true
-            local bin_stage, bin_trial, bin_delivered = stage, trial_index, current
-            for _, count in ipairs(current) do if count ~= SHARE then exact = false end end
-            if stage == "settle" and tick >= options.settle_ticks then
-                stage, stage_at = "baseline", tick; report.baseline_stock_start = stock
-            elseif stage == "baseline" then
-                table.insert(report.baseline, current); report.baseline_stock_end = stock
-                if #report.baseline >= options.baseline_periods then stage, stage_at = "between", tick end
-            elseif stage == "recovery" then
-                local trial = report.trials[trial_index]
-                -- Exclude a bin that began before restoration, including the boundary of the restore tick itself.
-                if tick - options.period < stage_at then
-                    trial.skipped_partial_bins = (trial.skipped_partial_bins or 0) + 1
-                else
-                    local red = red_stock()
-                    table.insert(trial.recovery_samples, {tick = tick, output = current, science_stock = stock.total,
-                        products_finished = stock.products_finished, red = red, reserve_by_branch = stock.reserve_by_branch})
-                    if advanced_loss(trial) and red_cleared(trial, red) then
-                        trial.advanced_disposal_cleared = true
-                        trial.first_red_cleared_tick = trial.first_red_cleared_tick or tick
-                    end
-                    consecutive = exact and consecutive + 1 or 0
-                    max_consecutive = math.max(max_consecutive, consecutive); trial.max_exact_periods = max_consecutive
-                    -- the hold starts at the earliest period from which every gate is met (where every branch is
-                    -- exact: the last periods that were all exact)
-                    table.insert(hold, {output = current, stock_start = last_boundary_stock})
-                    while #hold > options.recovery_hold_periods or (#hold > 0 and not hold_meets_gates(hold)) do
-                        table.remove(hold, 1)
-                    end
-                    if #hold == options.recovery_hold_periods then
-                        local first_stock = hold[1].stock_start
-                        local drift = stock.total - first_stock.total
-                        local production = stock.products_finished - first_stock.products_finished
-                        trial.last_candidate_stock_drift, trial.last_candidate_products_finished = drift, production
-                        local disposal_ok = not advanced_loss(trial) or red_cleared(trial, red)
-                        if drift >= -report.maximum_hold_stock_drain and production > 0 and disposal_ok then
-                            trial.recovered, trial.recovery_periods, trial.hold_periods = true,
-                                math.ceil((tick - stage_at) / options.period) - options.recovery_hold_periods, options.recovery_hold_periods
-                            trial.last_periods = {}
-                            for _, period in ipairs(hold) do table.insert(trial.last_periods, period.output) end
-                            trial.hold_stock_start, trial.hold_stock_end, trial.hold_stock_drift = first_stock, stock, drift
-                            trial.hold_products_finished = production
-                            trial.red_at_recovery, trial.recycler_crafts_at_recovery = red, recycler_crafts()
-                            trial.recovered_at = tick
-                            stage, stage_at = "between", tick
-                            keep_boundary(tick, bin_stage, bin_trial, stock, bin_delivered); boundary_kept = tick
-                            write()
+local function cut(item)
+    return {
+        kind = "cut " .. item,
+        start = function(t)
+            disable(feeds[item], true)
+            -- everything upstream of the clocked machines goes: the belt lanes and the supply chests
+            local from_belts, from_chests, seen = 0, 0, {}
+            for _, e in ipairs(belts) do
+                if e.valid then
+                    for lane = 1, e.get_max_transport_line_index() do
+                        for _, quality in ipairs(qualities) do
+                            from_belts = from_belts + e.get_transport_line(lane).remove_item{name = item, quality = quality, count = 1000000}
                         end
                     end
                 end
             end
-            if stage ~= "settle" and boundary_kept ~= tick then keep_boundary(tick, bin_stage, bin_trial, stock, bin_delivered) end
-            last_boundary_stock, current = stock, {0, 0, 0, 0}
-        end
-        -- Count a successful last allowed bin before applying the recovery timeout.
-        if stage == "recovery" and tick - stage_at >= options.maximum_recovery_ticks then
-            error("clock did not recover with production and stock accounting: " .. report.trials[trial_index].item)
-        end
-        if stage == "between" then
-            local next_trial = options.trials[trial_index + 1]
-            if next_trial == nil then begin_trial(tick)
-            elseif tick > stage_at and tick % options.period == phase_offset(next_trial) then begin_trial(tick) end
-        end
-        if tick >= options.last_tick and not report.finished then error("probe budget exhausted") end
-    end)
-    if not ok then
-        report.error = problem
-        report.failure = {tick = game.tick - started, stage = stage, trial = trial_index, science_stock = science_stock(),
-            red = red_stock(), partial_hands = partial_hands(), craft_quiet_ticks = craft_quiet_ticks, output_quiet_ticks = output_quiet_ticks}
-        write(); script.on_nth_tick(1, nil); error(problem)
+            for _, feeder in ipairs(feeds[item]) do
+                local chest = feeder.pickup_target
+                if chest and chest.valid and not seen[chest.unit_number] then
+                    seen[chest.unit_number] = true
+                    local inventory = chest.get_inventory(defines.inventory.chest)
+                    for _, quality in ipairs(qualities) do
+                        from_chests = from_chests + inventory.remove{name = item, quality = quality, count = 1000000}
+                    end
+                end
+            end
+            event(t, "cut " .. item, {from_belts = from_belts, from_chests = from_chests})
+        end,
+        release = function(t) disable(feeds[item], false) event(t, "restore " .. item) end,
+    }
+end
+local block_output = {
+    kind = "block output",
+    start = function(t) disable(outputs, true) event(t, "block-output") end,
+    release = function(t) disable(outputs, false) event(t, "restore-output") end,
+}
+-- the red disposal blocked: the evidence that a recycler stopped on its advanced circuits is kept, as it is that stop that
+-- starves the plants and lets the output fall
+local evidence = {red_max = {0, 0}, recycler_full_ticks = {0, 0}, red_stop_min = red_stop_min, red_batch_max = red_batch_max}
+report.evidence = evidence
+local red_blocked = false
+local block_red = {
+    kind = "block advanced-circuit disposal",
+    start = function(t) disable(disposal, true) red_blocked = true event(t, "block-disposal") end,
+    release = function(t)
+        disable(disposal, false)
+        red_blocked = false
+        evidence.red_at_release = red_stock()
+        event(t, "restore-disposal")
+    end,
+}
+
+-- the branches' drops, products and holdings from the steady-state tick to the last tick of the baseline at which the clock stands
+-- where it stood then (the baseline's whole clock cycles, as steady.lua counts them)
+local clock = steady.clock(entities)
+local previous_snapshot, previous_position, start_snapshot, start_position, cycle_snapshot
+local function observe(t)
+    local protocol = report.protocol
+    local snapshot, position = branch_snapshot(t), capture.clock_value(clock)
+    if protocol.steady and not start_snapshot and t == protocol.steady + 1 then
+        start_snapshot, start_position = previous_snapshot, previous_position
     end
-end)
+    if start_snapshot and not protocol.baseline and position == start_position then cycle_snapshot = snapshot end
+    if protocol.baseline and not report.baseline_ledger then
+        local ledger = {ticks = 0, branches = {}}
+        if cycle_snapshot then
+            ledger.ticks = cycle_snapshot.tick - start_snapshot.tick
+            for i = 1, #branches do
+                local dropped = cycle_snapshot.delivered[i] - start_snapshot.delivered[i]
+                local made = cycle_snapshot.pf[i] - start_snapshot.pf[i]
+                local change = cycle_snapshot.reserve[i] - start_snapshot.reserve[i]
+                ledger.branches[i] = {gate = branches[i].gate, delivered = dropped, made = made, reserve_start = start_snapshot.reserve[i],
+                    reserve_end = cycle_snapshot.reserve[i], reserve_delta = change, residual = made - dropped - change}
+            end
+        end
+        report.baseline_ledger = ledger
+    end
+    previous_snapshot, previous_position = snapshot, position
+    if red_blocked then
+        local red = red_stock()
+        for i, e in ipairs(recyclers) do
+            evidence.red_max[i] = math.max(evidence.red_max[i], red[i])
+            if recycler_full(e) then evidence.recycler_full_ticks[i] = evidence.recycler_full_ticks[i] + 1 end
+        end
+    end
+end
+
+local disturbances = {}
+if not options.cold then
+    disturbances = {cut("accumulator"), cut("processing-unit"), cut("battery"), cut("holmium-plate"), cut("superconductor"),
+        block_output, block_red}
+end
+steady.run{
+    count = count, clock = clock,
+    window = options.window, expected = options.expected, baseline = options.baseline, cap = options.cap,
+    disturbances = disturbances,
+    each_tick = observe,
+    report = report, output = "recycler-original.json", settle = settle,
+    done = function()
+        -- a run with no disturbance ends in the tick its baseline does, before the next observation: close the ledger here
+        if not report.baseline_ledger then observe(report.protocol.ended) end
+        report.red_at_end = red_stock()
+        -- a staged start records from the placement: the recording ends with the run (sample j is the tick after j + 1 ticks)
+        if options.cold then settle.record_samples(game.tick - placed_at) end
+    end,
+}
 
 end
 -- Freshly revived inserters discover their pickup/drop targets on the following tick. Observe after that discovery;
--- the recorder still starts at placement, and the acceptance baseline follows the same fixed settle interval.
+-- the recorder still starts at placement, and the protocol's ticks count from the first tick observed.
 local delay = options.initialization_delay_ticks or 0
 if delay > 0 then
     local started = game.tick

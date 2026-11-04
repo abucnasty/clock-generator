@@ -114,8 +114,7 @@ export interface FuelConsumptionView {
     duration_ticks: number;
     /**
      * The tick the clocks of the game stand at in the first recorded tick, after the warm-up, where they run through it
-     * (under the new dispatch, clocks of a whole-tick period: `BuildRun`); absent where they start again with the recorded
-     * run, at 0
+     * (clocks of a whole-tick period: `BuildRun`); absent where they start again with the recorded run, at 0
      */
     clock_tick_at_start?: number;
     /** The inserters that fill a fuel slot */
@@ -448,8 +447,8 @@ export interface RunOptions {
     /** Exact integer length of a physical counter observation, avoiding fractional-period multiplication noise. */
     observation_ticks?: number;
     /**
-     * Where the clocks of the game run on through the start of the recorded run (the new dispatch,
-     * `gameClocksRunThroughSteps`), those of a p/q-tick period do too (`runThroughTicks`), not only those of a whole-tick
+     * The clocks of the game run on through the start of the recorded run (`withEnableControls`); with this those of a
+     * p/q-tick period do too (`runThroughTicks`), not only those of a whole-tick
      * period: set by a first check that observes a whole counter (trial.ts `firstClockSpan`), which then starts where
      * the warm-up left the counter instead of at a counter the recording restarts under a build the warm-up left
      * elsewhere (default false)
@@ -458,7 +457,7 @@ export interface RunOptions {
     /** Record the fuel each burner machine holds over the run (default false) */
     fuel_levels?: boolean;
     /**
-     * Under the new dispatch, where a belt-fed inserter's pickup after a wait at its machine's output block is recorded
+     * Where a belt-fed inserter's pickup after a wait at its machine's output block is recorded
      * from (`PickupStartAtTheTake`): "take" (the default), the tick another inserter took the block down; "entry", the
      * tick it entered the pickup, as it is recorded for every other pickup. No other run reads it.
      */
@@ -494,10 +493,9 @@ export interface RunOptions {
 /** Everything one run of a build yields, for the planning run to read its windows off and for a trial to judge */
 export interface BuildRun extends PlannedCraftingCycle, TransferPlan {
     /**
-     * The ticks the clocks of the game have run when the recorded run starts, where they run through the warm-up (under
-     * the new dispatch, `gameClocksRunThroughSteps`): those of a whole-tick period (`runThroughTicks`); a clock of p/q
-     * ticks starts again with the recorded run, at 0, unless the run observes its whole counter (`counter_runs_through`).
-     * Absent where every clock does (the configured order).
+     * The ticks the clocks of the game have run when the recorded run starts, where they run through the warm-up
+     * (`withEnableControls`): those of a whole-tick period (`runThroughTicks`); a clock of p/q ticks starts again with the
+     * recorded run, at 0, unless the run observes its whole counter (`counter_runs_through`).
      */
     clock_tick_at_start?: number;
     /**
@@ -538,7 +536,7 @@ export interface BuildRun extends PlannedCraftingCycle, TransferPlan {
     used_terminal_swing_count: number;
     /** What the build made after each trial of the loss, when one was asked for */
     backpressure_loss: LossOutcome | undefined;
-    /** The pickups whose start was recorded from the take that freed them (`PickupStartAtTheTake`); 0 under the configured order */
+    /** The pickups whose start was recorded from the take that freed them (`PickupStartAtTheTake`) */
     pickups_from_the_take: number;
 }
 
@@ -614,8 +612,8 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
     const pickups_from_the_take = build.pickup_leads?.given ?? 0;
 
     return {
-        ...(controlled.game_clocks_run_through && { clock_tick_at_start: warmup.ticks_run,
-            every_clock_runs_through: controlled.resettable_registry.everyOneRunsThroughSteps() }),
+        clock_tick_at_start: warmup.ticks_run,
+        every_clock_runs_through: controlled.resettable_registry.everyOneRunsThroughSteps(),
         simulation_context: build.simulation_context,
         target_production_rate: planned_cycle.target_production_rate,
         output_machine_state_machines: planned_cycle.output_machine_state_machines,
@@ -661,7 +659,7 @@ interface RecordedBuild {
     state_transition_history: StateTransitionHistory;
     /** The observers of inserters, machines and drills that only feed the two histories */
     history_observers: ReadonlySet<object>;
-    /** Where the pickups of belt-fed inserters count from under the new dispatch; null under the configured order or with "entry" */
+    /** Where the pickups of belt-fed inserters count from; null with "entry" */
     pickup_leads: PickupStartAtTheTake | null;
 }
 
@@ -842,18 +840,6 @@ interface ControlledBuild {
     crafting_shares: Map<string, number>;
     always_enabled_by_config: Set<string>;
     inserter_clocks: Map<string, InserterClock>;
-    /** Whether the clocks of the game run on through the start of the recorded run (`gameClocksRunThroughSteps`) */
-    game_clocks_run_through: boolean;
-}
-
-/**
- * Whether the clocks of the game (an inserter's own clock, a configured clocked control) run on through the start of a
- * later step of a run, as they do in the game, where nothing restarts them when a recording starts: under the new
- * dispatch (simulation/dispatch.ts), the clocks of a whole-tick period (`runThroughTicks`). Under the configured order
- * they start again with the recorded run, as they always have, and stand at 0 at its first tick.
- */
-function gameClocksRunThroughSteps(simulation_context: SimulationContext): boolean {
-    return simulation_context.inserter_dispatch !== "configured-order";
 }
 
 /**
@@ -870,11 +856,12 @@ function withEnableControls(
     counter_runs_through: boolean = false,
 ): ControlledBuild {
     const { simulation_context, relative_tick_provider } = build;
-    // the clocks of the game count the context's own ticks where they run through the steps of the run
-    const game_clocks_run_through = gameClocksRunThroughSteps(simulation_context);
-    const game_tick_provider = game_clocks_run_through ? simulation_context.tick_provider : undefined;
-    // a clock of a p/q-tick period answers in whole 1/q ticks under the new dispatch, as the context has it
-    const exact_subtick_positions = simulation_context.inserter_dispatch !== "configured-order";
+    // the clocks of the game (an inserter's own clock, a configured clocked control) run on through the start of a later
+    // step of a run, as they do in the game, where nothing restarts them when a recording starts: they count the context's
+    // own ticks (the clocks of a whole-tick period, `runThroughTicks`)
+    const game_tick_provider = simulation_context.tick_provider;
+    // a clock of a p/q-tick period answers in whole 1/q ticks
+    const exact_subtick_positions = true;
 
     // Create resettable registry for centralized reset management
     const resettable_registry = new ResettableRegistry();
@@ -941,7 +928,7 @@ function withEnableControls(
         }
     });
 
-    return { resettable_registry, crafting_shares, always_enabled_by_config, inserter_clocks, game_clocks_run_through };
+    return { resettable_registry, crafting_shares, always_enabled_by_config, inserter_clocks };
 }
 
 /** How long a build runs: the period of the clock, and the warmup before it */
@@ -1089,7 +1076,7 @@ function simulate(
     build.relative_tick.start = simulation_context.tick_provider.getCurrentTick();
     // with no warm-up the clocks start with the recorded run; after one they have run since the warm-up started them: the
     // planning schedules start again for the recorded run, and so do the clocks of the game, unless they run through it
-    // (`gameClocksRunThroughSteps`)
+    // (`withEnableControls`)
     resettable_registry.resetAll(ticks_before_run === 0);
 
     const simulate_periods = options.simulate_periods ?? 1;
@@ -1109,9 +1096,8 @@ function simulate(
         ? new StockRecorder(simulation_context.machines.map(it => it.machine_state), simulation_context.inserters.map(it => ({
             state: it.inserter_state, sink: it.sink_state,
             drop_room: it.hand.drop.roomForStack === undefined ? undefined : () => it.hand.drop.roomForStack!(),
-            // the update list of the new dispatch, made with the run's first World: asked only once it is
-            listing: simulation_context.inserter_dispatch === "configured-order" ? undefined
-                : () => simulation_context.inserterScheduling()?.listingOf(it) ?? "elsewhere",
+            // the update list, made with the run's first World: asked only once it is
+            listing: () => simulation_context.inserterScheduling().listingOf(it),
         })),
             may_end_early ? undefined : recorded_duration.ticks, options.stock_detail)
         : undefined;
@@ -1804,9 +1790,8 @@ export function checkedClock(
                 extras.verified !== undefined && extras.verified.windows === windows
                     ? { run: extras.verified.run, long_run_ticks: FREE_RUNNING_CHECK_TICKS } : undefined);
         let kept_run = as_built_run;
-        // under the new dispatch also where the clock does not hold without them: the windows of a loop can make it hold
-        const tries_loop_windows = as_built_run.check.holds || plan.run.simulation_context.inserter_dispatch !== "configured-order";
-        if (tries_loop_windows && options.loop_windows !== false) {
+        // also where the clock does not hold without them: the windows of a loop can make it hold
+        if (options.loop_windows !== false) {
             const looped = trialWithLoopWindows(config, windows, duration.ticks, as_built_run, AS_BUILT_START_PHASES, logger, options.on_progress_detail,
                 false, options.loop_windows !== "out-of-loop");
             if (looped !== null) {
@@ -2550,15 +2535,13 @@ function buildEnableControlOverrideMap(config: Config): EntityEnableControlOverr
 // ============================================================================
 
 /**
- * Under the new dispatch (simulation/dispatch.ts), where a belt-fed inserter's pickup counts from when it waited at its
- * machine's output block: from the tick another inserter took the machine's products down from the block, not from the
- * tick it was next updated. An inserter asleep at the block is woken by the take and updated first in the next tick
- * (recorded in Factorio 2.1.24: tests/game/mechanics/control-latency/), where an inserter updated every tick in the
- * configured order starts its pickup in the take's tick and takes its first stack in the next; either way its first
- * stack comes a tick after the take. The window read off the run (`windowsFromHistory`) opens at the take under both
- * dispatches, so the order of updates does not move it. A hand from a machine or a chest, and a hand that waited at the
- * insertion limit (room made by the machine's craft, after the inserters of the tick), start their pickup in the same
- * tick under both and are left as they are.
+ * Where a belt-fed inserter's pickup counts from when it waited at its machine's output block (simulation/dispatch.ts):
+ * from the tick another inserter took the machine's products down from the block, not from the tick it was next
+ * updated. An inserter asleep at the block is woken by the take and updated first in the next tick (recorded in Factorio
+ * 2.1.24: tests/game/mechanics/control-latency/), so its first stack comes a tick after the take, and the window read
+ * off the run (`windowsFromHistory`) opens at the take. A hand from a machine or a chest, and a hand that waited at the
+ * insertion limit (room made by the machine's craft, after the inserters of the tick), start their pickup in the tick
+ * they are updated and are left as they are.
  */
 /** Where a belt-fed inserter's pickup after a wait at its machine's output block is recorded from (see `RunOptions.pickup_start`) */
 export type PickupStart = "take" | "entry";
@@ -2633,7 +2616,7 @@ function attachHistoryObservers(
         history_observers.add(observer);
     };
 
-    const pickup_leads = simulation_context.inserter_dispatch === "configured-order" || pickup_start === "entry" ? null
+    const pickup_leads = pickup_start === "entry" ? null
         : new PickupStartAtTheTake(simulation_context);
     simulation_context.machines.forEach(it => {
         if (pickup_leads?.watches(it.machine_state.entity_id.id)) attach(it.observers, pickup_leads.observerOf(it.machine_state));

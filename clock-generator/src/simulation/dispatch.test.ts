@@ -4,7 +4,7 @@ import {SimulationContext} from "../crafting/sequence/simulation-context";
 import {SimulationTick} from "../crafting/runner/simulation-tick";
 import {simulationStateKey} from "../crafting/runner/steady-state";
 import {partialCells} from "./inserter-scheduling.fixture";
-import {ACTIVATION_ORDER, inserterDispatchOf, keptListsOf} from "./dispatch";
+import {ACTIVATION_ORDER} from "./dispatch";
 import {ActiveScheduler} from "./active-scheduler";
 import type {EnableControl} from "./controls/enable-control";
 
@@ -25,29 +25,19 @@ function cable(context: SimulationContext, machine: number): {insert(quantity: n
     return {insert: quantity => output.insert("copper-cable", quantity)};
 }
 
-describe("the new dispatch's update list", () => {
-    test("the setting: off by default, its two open points named, the wake-up rule with it", () => {
-        expect(inserterDispatchOf(undefined)).toBe("configured-order");
-        expect(inserterDispatchOf("0")).toBe("configured-order");
-        expect(inserterDispatchOf("1")).toEqual(ACTIVATION_ORDER);
-        expect(inserterDispatchOf("same-tick,next-update"))
-            .toEqual({kind: "activation-order", woken_in_walk: "same-tick", leaves: "next-update"});
-        expect(() => inserterDispatchOf("ascending")).toThrow(/unknown value ascending/);
-        expect(inserterDispatchOf("configured-order,kept-lists")).toBe("configured-order");
-        expect([undefined, "0", "1", "same-tick", "configured-order", "configured-order,kept-lists"].map(keptListsOf))
-            .toEqual([false, false, true, true, false, true]);
-        expect(partialCells().inserter_dispatch).toBe("configured-order");
+describe("the dispatch's update list", () => {
+    test("every simulation runs it, with its two open points at their defaults", () => {
+        expect(ACTIVATION_ORDER).toEqual({kind: "activation-order", woken_in_walk: "next-tick", leaves: "after-update"});
+        expect(partialCells().inserter_dispatch).toEqual(ACTIVATION_ORDER);
     });
 
     test("the list starts as a build leaves it, the last built first", () => {
         const context = partialCells();
-        context.inserter_dispatch = ACTIVATION_ORDER;
         expect(list(context)).toEqual([3, 2, 1]);
     });
 
     test("entry: an inserter that becomes active goes to the front", () => {
         const context = partialCells();
-        context.inserter_dispatch = ACTIVATION_ORDER;
         const tick = new SimulationTick(context);
         tick.executeForTick();
         // every source is empty: all three wait on it and leave
@@ -62,7 +52,6 @@ describe("the new dispatch's update list", () => {
 
     test("exit: an inserter that waits leaves, the others keep their order, and it rejoins at the front", () => {
         const context = partialCells();
-        context.inserter_dispatch = ACTIVATION_ORDER;
         cable(context, 1).insert(160);
         cable(context, 3).insert(160);
         const tick = new SimulationTick(context);
@@ -79,7 +68,6 @@ describe("the new dispatch's update list", () => {
 
     test("a control that disables an inserter takes it off the list; enabling it puts it at the front", () => {
         const context = partialCells();
-        context.inserter_dispatch = ACTIVATION_ORDER;
         [1, 2, 3].forEach(machine => cable(context, machine).insert(160));
         context.useControls({inserter: state => state.entity_id.number === 1 ? openFrom(context, 10) : openFrom(context, 0)});
         const tick = new SimulationTick(context);
@@ -94,12 +82,9 @@ describe("the new dispatch's update list", () => {
         expect(context.inserters.find(it => it.entity_id.number === 1)!.inserter_state.items_picked_up).toBe(16);
     });
 
-    test("the list is part of the state a period repeats on, under the new dispatch only", () => {
-        const off = partialCells();
-        expect(simulationStateKey(off).split("\n")).toHaveLength(9);
-        const on = partialCells();
-        on.inserter_dispatch = ACTIVATION_ORDER;
-        expect(simulationStateKey(on).split("\n")).toHaveLength(10);
+    test("the list is part of the state a period repeats on", () => {
+        // one line for each of the nine entities, and the list
+        expect(simulationStateKey(partialCells()).split("\n")).toHaveLength(10);
     });
 });
 
@@ -119,11 +104,10 @@ describe("two windows that open together on one hand's worth", () => {
     /**
      * Both windows open in tick 10; inserter 1's decider was built after inserter 2's. The game updates the inserter
      * whose decider was built last first (recorded in Factorio 2.1.21, `decider_build_order`): it is enabled last, so
-     * it joins the list last, at the front. The configured order serves the higher config id first instead.
+     * it joins the list last, at the front.
      */
-    function takes(dispatch: "configured-order" | typeof ACTIVATION_ORDER): number[] {
+    function takes(): number[] {
         const context = sharedSource();
-        context.inserter_dispatch = dispatch;
         cable(context, 1).insert(16);
         context.useControls({inserter: state => openFrom(context, 10, state.entity_id.number === 1 ? 1 : 0)});
         const tick = new SimulationTick(context);
@@ -132,12 +116,8 @@ describe("two windows that open together on one hand's worth", () => {
             .map(it => it.items_picked_up);
     }
 
-    test("the configured order serves inserter 2 first", () => {
-        expect(takes("configured-order")).toEqual([0, 16]);
-    });
-
     test("the update list serves the inserter enabled last first: inserter 1", () => {
-        expect(takes(ACTIVATION_ORDER)).toEqual([16, 0]);
+        expect(takes()).toEqual([16, 0]);
     });
 });
 

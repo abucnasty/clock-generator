@@ -4,25 +4,14 @@ import { expect, test, vi } from "vitest";
 import type { Config } from "../config";
 import type { SerializableClockWindows } from "../crafting/generate-blueprint";
 import type { SchedulingEvent } from "./active-scheduler";
+import * as generateBlueprint from "../crafting/generate-blueprint";
+import * as inserterCounters from "../crafting/inserter-counters";
+import * as wakeUps from "../crafting/wake-ups";
+import * as machineStock from "../crafting/machine-stock";
+import * as simulatedRecording from "../verification/simulated-recording";
+import * as inserterScheduling from "./inserter-scheduling";
 
-/*
- * The new dispatch and its wake-up rule are read from the environment once, as their modules load (simulation/dispatch.ts):
- * set for the imports of this file alone, then set back, so that no other test file in this worker sees it.
- */
-async function underTheNewDispatch() {
-    const before = process.env.CLOCK_NEW_DISPATCH;
-    process.env.CLOCK_NEW_DISPATCH = "1";
-    try {
-        return {
-            ...await import("../crafting/generate-blueprint"), ...await import("../crafting/inserter-counters"),
-            ...await import("../crafting/wake-ups"), ...await import("../crafting/machine-stock"),
-            ...await import("../verification/simulated-recording"), ...await import("./dispatch"), ...await import("./inserter-scheduling"),
-        };
-    } finally {
-        if (before === undefined) delete process.env.CLOCK_NEW_DISPATCH;
-        else process.env.CLOCK_NEW_DISPATCH = before;
-    }
-}
+const modules = { ...generateBlueprint, ...inserterCounters, ...wakeUps, ...machineStock, ...simulatedRecording, ...inserterScheduling };
 
 interface Fixture {
     clock: { config: Config; windows: SerializableClockWindows; period: number };
@@ -36,9 +25,7 @@ interface Fixture {
  * counts on its states, and the positions the clock switched it on at
  */
 async function simulated(file: string): Promise<{ fixture: Fixture; own: Map<string, number[]>; ruled: Map<string, number[]>; switched_on: Map<string, number[]> }> {
-    const modules = await underTheNewDispatch();
-    const { simulateClockOnly, inserterEnds, wakeUpsOfStock, SIMULATED_TICK_TO_CLOCK_POSITION, DEFAULT_INSERTER_DISPATCH, InserterScheduling, StockRecorder } = modules;
-    expect(DEFAULT_INSERTER_DISPATCH).not.toBe("configured-order");
+    const { simulateClockOnly, inserterEnds, wakeUpsOfStock, SIMULATED_TICK_TO_CLOCK_POSITION, InserterScheduling, StockRecorder } = modules;
     const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "crafting", "fixtures", file), "utf8")) as Fixture;
     const { config, windows, period } = fixture.clock;
     const quiet = { log() { }, warn() { }, error() { }, debug() { } };
@@ -117,7 +104,6 @@ test.each([
  * game's over the ten periods.
  */
 test("under the new dispatch the simulator wakes the inserters of agricultural science where the game does, its biochambers taking fuel at the game's ticks", async () => {
-    const modules = await underTheNewDispatch();
     const { simulateClockOnly, inserterEnds, wakeUpsOfStock, InserterScheduling, StockRecorder } = modules;
     const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "crafting", "fixtures", "wake-ups-capture-agricultural-science-2.1.24.json"), "utf8")) as {
         count_from: number; ticks: number; inserters: Record<string, { woken_by_machine: [number, string][] }>;
@@ -196,7 +182,6 @@ test("under the new dispatch the simulator wakes the inserters of agricultural s
  * 100 times a period.
  */
 test("under the new dispatch the simulator wakes the belt-fed inserters of metallurgic science where the game does, tick for tick", async () => {
-    const modules = await underTheNewDispatch();
     const { simulateClockOnly, InserterScheduling, StockRecorder } = modules;
     const { loadConfigFromFile } = await import("../config/loader");
     const { ConfigPaths } = await import("../config/config-paths");

@@ -31,12 +31,12 @@ export interface ScheduledNode<T> {
 }
 
 /**
- * A local scheduling policy for projected native fixtures; the new dispatch (simulation/dispatch.ts) runs it in World.
+ * A local scheduling policy for projected native fixtures; the dispatch (simulation/dispatch.ts) runs it in World.
  * New attachments precede older members; attachments during an open Update phase wait for the next phase, or with
  * `woken_in_walk` "same-tick" are updated after the phase's remaining members when not yet updated in it.
  * The caller decides activation eligibility and deactivation outcomes independently of hand/control state.
  *
- * It runs in every tick of a simulation under the new dispatch, so the list is linked through the members' nodes (an
+ * It runs in every tick of a simulation, so the list is linked through the members' nodes (an
  * attachment or a removal moves nobody else), a phase walks a snapshot with a cursor, a phase's number stands for
  * the pending and updated sets, and an event is made only when somebody observes it. A member is any value compared by
  * identity: an id here and in the fixtures; InserterScheduling holds its inserters' nodes and calls the `...Node`

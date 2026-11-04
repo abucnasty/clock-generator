@@ -2,16 +2,16 @@ import {describe, expect, test} from "vitest";
 import {FactorioDataService} from "../../../src/data";
 import {CONTAINER_GENERATED} from "./container-clock-cases";
 import {
-    CONTAINER_TARGET, containerClockCases, containerClockConfig, containerDrainPeriods, containerInterventions,
+    CONTAINER_TARGET, containerClockCases, containerClockConfig, containerDrainPeriods,
 } from "./container-clock-fixtures";
-import {readControls} from "./clock-controls";
-import {expectControlIsConsistent, unclockedContainerStock} from "../helpers/fixture-mechanics";
+import {readControls, runHolds, RunControls} from "./clock-controls";
+import {expectRunIsConsistent, unclockedContainerStock} from "../helpers/fixture-mechanics";
 
 /**
  * The container family (`container-clock-fixtures.ts`: a cargo wagon of normal and legendary quality, a car and a tank
  * between two inserters), checked against what the game recorded without generating a clock: the slots and the stock
- * each container holds in the simulator, the cut lengths that empty that stock, the periods the game took to run dry
- * under each cut, and the recorded clock controls against the fixture configs. The generation test
+ * each container holds in the simulator, the time that stock lasts at the target, and the recorded runs against the fixture
+ * configs (each supply cut takes the container's stock of the item with it, so the loss shows at once). The generation test
  * (container-clock.generation.test.ts) generates only the cases of container-clock-cases.ts. The documented mechanic is
  * docs/simulator.md "Cars, wagons and rocket silos as chests" and tests/game/builds/README.md "Containers between two inserters".
  */
@@ -33,8 +33,9 @@ const EXPECTED: Record<string, Expected> = {
     "container-tank-mixed": {slots: 80, stock: {"iron-plate": {items: 4000, periods: 125}, "copper-cable": {items: 8000, periods: 84}}},
 };
 
-const controls = readControls("container-clock-controls.json").cases;
+const controls = readControls<RunControls>("container-clock-controls.json").cases;
 const variants = containerClockCases();
+const recorded = variants.map(variant => ({variant, native: controls[variant.name].native, generation: controls[variant.name].generation!}));
 
 describe("slots and stock in the simulator", () => {
     test("the game data gives a wagon 40 slots (100 at legendary quality) and a car and a tank 80", () => {
@@ -56,11 +57,11 @@ describe("slots and stock in the simulator", () => {
     }
 });
 
-describe("the cuts that empty the container", () => {
+describe("the stock each cut has to use up", () => {
     for (const variant of variants) {
-        test(`${variant.name}: each cut is the periods the stock lasts at the target, plus 8, as the controls recorded`, () => {
+        test(`${variant.name}: the periods the stock lasts at the target`, () => {
             const expected = EXPECTED[variant.name];
-            const period = controls[variant.name].native.period;
+            const period = controls[variant.name].generation!.period;
             const [cut1, cut2] = variant.recipe === "iron-gear-wheel" ? ["iron-plate", "iron-plate"] : ["iron-plate", "copper-cable"];
             for (const item of new Set([cut1, cut2])) {
                 const perCraft = variant.recipe === "iron-gear-wheel" ? 2 : item === "iron-plate" ? 1 : 3;
@@ -68,53 +69,6 @@ describe("the cuts that empty the container", () => {
                 expect(containerDrainPeriods(variant, item), item).toBe(expected.stock[item].periods);
                 expect(Math.ceil(expected.stock[item].items / (CONTAINER_TARGET * period / 60 * perCraft)), item).toBe(expected.stock[item].periods);
             }
-            const [first, block, second] = containerInterventions(variant);
-            expect(first[1] - first[0], "first cut").toBe(expected.stock[cut1].periods + 8);
-            expect(second[1] - second[0], "second cut").toBe(expected.stock[cut2].periods + 8);
-            expect(block[1] - block[0], "the output block lasts 4 periods").toBe(4);
-            expect(containerInterventions(variant), "the protocol the game ran").toEqual(controls[variant.name].native.interventions);
-        });
-    }
-});
-
-describe("the periods the game took to run dry under each cut", () => {
-    for (const variant of variants) {
-        test(`${variant.name}: output holds the target until the cut input's stock is used up`, () => {
-            const expected = EXPECTED[variant.name];
-            const {native} = controls[variant.name];
-            const [cut1, cut2] = variant.recipe === "iron-gear-wheel" ? ["iron-plate", "iron-plate"] : ["iron-plate", "copper-cable"];
-            const [firstCut, block, secondCut] = native.recovery;
-            expect(native.recovery.map(loss => loss.cut), "one trial a disturbance").toEqual(native.interventions!.map(([cut]) => cut));
-            // the periods at the target before the output first falls short, and what follows: nothing, bar one part period
-            const held = (during: number[]) => {
-                const short = during.findIndex(items => items !== native.expected);
-                const after = during.slice(short);
-                expect(after.filter(items => items > 0).length, "at most one part period, then nothing").toBeLessThanOrEqual(1);
-                expect(after.every(items => items < native.expected), "no period back at the target during the cut").toBe(true);
-                return short;
-            };
-            // the game holds the target while the stock lasts and falls short within a period of it. The 100-slot wagon of
-            // gears is the one container the first cut finds part full: its supply gives only the target's share, so it ran dry earlier
-            const first = held(firstCut.during);
-            if (variant.name === "container-wagon-legendary") {
-                expect(first, "not yet full when the cut began").toBeLessThan(expected.stock[cut1].periods);
-            } else {
-                expect(first - expected.stock[cut1].periods, "periods the stock lasted").toBeGreaterThanOrEqual(0);
-                expect(first - expected.stock[cut1].periods, "periods the stock lasted").toBeLessThanOrEqual(1);
-            }
-            // the output block: the disposal chest is full, nothing is dropped for the 4 periods (the fifth is the release)
-            expect(block.during.slice(0, 4)).toEqual([0, 0, 0, 0]);
-            // a second cut of the same input finds the stock the clock refilled between the cuts: a clock that brings only
-            // the target's share (even hands) refills none, and the gears' output stops within 5 periods; one that brings
-            // more (planned-belt-slack: 48 plates a period against the 32 taken) refills it, and the output holds as long
-            // as the simulator says when it runs the same protocol on the pinned clock (47, 47 and 33 periods; within one).
-            // The circuits' cut of copper cable finds that stock full and takes the cable's own periods
-            const second = held(secondCut.during);
-            const refilled = controls[variant.name].second_cut_held_simulated;
-            if (cut2 === cut1 && refilled === undefined) expect(second, "the stock is not refilled between the cuts").toBeLessThanOrEqual(5);
-            else if (cut2 === cut1) expect(Math.abs(second - refilled!), "periods the refilled stock lasted, as the simulator holds them").toBeLessThanOrEqual(1);
-            else expect(second - expected.stock[cut2].periods, "periods the cable lasted").toBeGreaterThanOrEqual(-1);
-            if (cut2 !== cut1) expect(second - expected.stock[cut2].periods, "periods the cable lasted").toBeLessThanOrEqual(1);
         });
     }
 });
@@ -129,20 +83,14 @@ describe("the recorded clock controls of the container fixtures", () => {
         }
     });
 
-    test.each(variants.map(variant => variant.name))("%s: the game was recorded at the target rate over the pinned period and held it", name => {
-        const variant = variants.find(it => it.name === name)!;
-        const {native, generation} = controls[name];
-        expectControlIsConsistent(native, generation!, containerClockConfig(variant).target_output.items_per_second);
+    test.each(recorded.map(({variant}) => variant.name))("%s: the game was recorded at the target over the pinned period, held it and recovered", name => {
+        const {variant, native, generation} = recorded.find(it => it.variant.name === name)!;
+        expectRunIsConsistent(native, generation, containerClockConfig(variant).target_output.items_per_second);
         expect(native.target).toBe(CONTAINER_TARGET);
-        // all six selected clocks are stable and meet the target in the baseline and in every judged period after each disturbance
-        expect(generation!.verdict).toBe("stable");
-        expect(native.baseline).toHaveLength(63);
-        expect(native.baseline.every(items => items === native.expected), "baseline").toBe(true);
-        for (const loss of native.recovery) {
-            expect(loss.during, "every disturbance drops the output to 0").toContain(0);
-            expect(loss.recovered, "33 judged periods").toHaveLength(33);
-            expect(loss.recovered.every(items => items === native.expected), "back at the target").toBe(true);
-        }
+        expect(generation.verdict).toBe("stable");
+        expect(native.disturbances.map(disturbance => disturbance.kind)).toEqual(["cut iron-plate", "block output",
+            variant.recipe === "iron-gear-wheel" ? "cut iron-plate" : "cut copper-cable"]);
+        expect(runHolds(native), native.result).toBe(true);
     });
 
     test("the clock depends on the recipe, not on the container: one hash and one selection a recipe", () => {

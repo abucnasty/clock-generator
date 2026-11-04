@@ -4,7 +4,7 @@ import {Config, ConfigSchema} from "../../../src/config";
 import {FactorioBlueprintFile} from "../../../src/blueprints/blueprint";
 import {encodeBlueprintFile} from "../../../src/blueprints/serde";
 import {Recording} from "../../../src/verification/recording";
-import {BELT_SPEEDS, FixtureBeltSpeed} from "../helpers/belt-speed-fixtures";
+import {CLOCK_TEST_SPEEDS, FixtureBeltSpeed} from "../helpers/belt-speed-fixtures";
 import {PickupClockScenario} from "./pickup-clock-capture";
 
 /**
@@ -20,17 +20,13 @@ export interface BlockedOutputClockCase {name: string; speed: FixtureBeltSpeed; 
 export const BLOCKED_OUTPUT_CRAFTING_SPEED = 3.125;
 /** Gears a second at every tier and stack size: 80% of the machine, two thirds of a normal lane at stack size 1 */
 export const BLOCKED_OUTPUT_TARGET = 5;
-/** Belt tiles from the drop to the loader: the belt-output controls buffer 112-192 items at stack size 4, 7 to 12 tiles */
-export const BLOCKED_OUTPUT_OUTLET_TILES = 10;
 /**
- * The output alone is blocked, for 24 periods (the over-hood outage): at 16 items a period the stack-4 lane takes about
- * ten periods to fill. Baseline before period 64, recovery judged from 6 periods after the release to period 130: the
- * harness records to two periods past the last intervention's end, and the runner wants 130 counted periods.
+ * Belt tiles from the drop to the loader: the belt-output controls buffer 112-192 items at stack size 4, 7 to 12 tiles. The
+ * output alone is blocked (the loader taken away) until the output falls, then rebuilt (pickup-clock-capture.ts)
  */
-export const BLOCKED_OUTPUT_INTERVENTIONS: [number, number, number][] = [[66, 90, 130]];
-
+export const BLOCKED_OUTPUT_OUTLET_TILES = 10;
 export function blockedOutputClockCases(): BlockedOutputClockCase[] {
-    return BELT_SPEEDS.flatMap(speed => ([1, 2, 3, 4] as const).map(stackSize => ({
+    return CLOCK_TEST_SPEEDS.flatMap(speed => ([1, 2, 3, 4] as const).map(stackSize => ({
         name: `blocked-output-${speed.name}-stack-${stackSize}`, speed, stackSize,
     })));
 }
@@ -94,7 +90,6 @@ export function blockedOutputClockScenario(variant: BlockedOutputClockCase): Pic
     return {
         name: variant.name, speed: variant.speed, backed: false,
         config: () => blockedOutputClockConfig(variant), scaffold: () => blockedOutputClockScaffold(variant),
-        interventions: BLOCKED_OUTPUT_INTERVENTIONS,
         probeFile: path.join(__dirname, "blocked-output-clock-probe.lua"),
         probe: {family: "chest-fed", stackSize: variant.stackSize},
         controls: path.join(__dirname, "blocked-output-clock-controls.json"),

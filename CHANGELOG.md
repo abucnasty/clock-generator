@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.27.0] - Unreleased
+
+### Removed
+- The recycling scrap silo sample is removed until scrap recycling gets its own tested build.
+
+### Changed
+- Inserters are now simulated in the order the game updates them, so many builds get a different clock; every changed clock recorded in the game makes its full target.
+- Wake-ups are counted as the game counts them, so the wake-ups shown for many builds go up.
+- A clock is called stable only when it makes the full target rate; one that falls short by even one item over a long run is not.
+- Moving express belts into electromagnetic plants, and front exits on them, now get a stable clock.
+
 ## [0.26.0] - 2026-11-01
 
 ### Changed

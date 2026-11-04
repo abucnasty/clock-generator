@@ -50,7 +50,7 @@ interface Member {
  * sleep registrations are behavior state, independent of those connections and active membership.
  * Native activation outcomes are never inputs to these handlers.
  *
- * It runs in every tick under the new dispatch, so it holds each inserter's node in the scheduler and entry in the wake
+ * It runs in every tick, so it holds each inserter's node in the scheduler and entry in the wake
  * lists (no lookup by id or inserter in a tick), an Alarm that changes nothing returns at once, and events are made only
  * while somebody observes them.
  */

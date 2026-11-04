@@ -129,7 +129,9 @@ describe("a hand's ports", () => {
         expect(inserter.hand.pickup).toBe(pickup);
         expect(inserter.hand.drop).toBe(drop);
         expect(inserter.hand.scratch).toBe(scratch);
-        expect(scratch).toEqual(new HandScratch());
+        // except that the swap marks the hand: it is on the update list, which is no wake (`after_swap`)
+        expect(scratch.after_swap).toBe(true);
+        expect(scratch).toEqual(Object.assign(new HandScratch(), { after_swap: true }));
         expect([scratch.pickup_ticks, scratch.window_opened, scratch.ticks_in_pickup, scratch.belt_grab_decided, scratch.drop_ticks])
             .toEqual([0, false, 0, true, 0]);
         expect([scratch.saw_sink_blocked, scratch.window_opens, scratch.swing_entered_tick, scratch.swing_from]).toEqual([false, false, null, null]);

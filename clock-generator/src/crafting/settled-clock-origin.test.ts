@@ -1,6 +1,6 @@
 import {readFileSync} from "node:fs";
 import path from "node:path";
-import {afterAll, expect, it, vi} from "vitest";
+import {expect, it, vi} from "vitest";
 import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
 import {OpenRange} from "../data-types";
@@ -9,18 +9,6 @@ import {quiet} from "./generate-blueprint-test-helpers";
 import {recordSimulationTimeline, type RecordTimelineRequest} from "./record-timeline";
 import type {StockRecording} from "./machine-stock";
 import {FREE_RUNNING_CHECK_TICKS, runAsBuiltCheck} from "./trial";
-import {DEFAULT_INSERTER_DISPATCH} from "../simulation/dispatch";
-
-// the judged clock tick is set under the new dispatch only, which is read from the environment when the engine loads
-const dispatch = vi.hoisted(() => {
-    const before = process.env.CLOCK_NEW_DISPATCH;
-    process.env.CLOCK_NEW_DISPATCH = "1";
-    return before;
-});
-afterAll(() => {
-    if (dispatch === undefined) delete process.env.CLOCK_NEW_DISPATCH;
-    else process.env.CLOCK_NEW_DISPATCH = dispatch;
-});
 
 /** How many inserters' hands in the replay's first `ticks` ticks differ from what the long run held from its first judged tick */
 function handsDifferingFromStock(replay: ReturnType<typeof recordSimulationTimeline>, stock: StockRecording, first_judged_tick: number, ticks: number): number {
@@ -34,10 +22,6 @@ function handsDifferingFromStock(replay: ReturnType<typeof recordSimulationTimel
         return JSON.stringify(values) !== JSON.stringify(hand.held.slice(first_judged_tick - 1, first_judged_tick - 1 + ticks));
     }).length;
 }
-
-it("runs under the new dispatch", () => {
-    expect(DEFAULT_INSERTER_DISPATCH).not.toBe("configured-order");
-});
 
 it("replays the judged clock state after the measured warm-up, keeping stock indices relative", async () => {
     const loaded = await loadConfigFromFile(ConfigPaths.REAL_STUPIDFATHOBBIT_CELL02);

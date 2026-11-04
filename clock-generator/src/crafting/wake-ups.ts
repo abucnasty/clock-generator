@@ -1,5 +1,4 @@
 import { FactorioInserterState } from "../state/factorio-entity-state";
-import { DEFAULT_KEPT_LISTS } from "../simulation/dispatch";
 import type { StockRecording } from "./machine-stock";
 
 /**
@@ -10,7 +9,7 @@ import type { StockRecording } from "./machine-stock";
  * pays out a productivity bar (`wakeUps` below). A woken inserter looks for something to move, finds nothing or a
  * little, and goes back to sleep: with the debug option `show-wakeup-lists` the yellow line from the
  * inserter to the machine flickers. An inserter its clock has disabled is on no list and is never woken, once it has
- * been updated disabled (one switched off while asleep stays on its list until woken: `WakeRule` "kept-lists"). A wake-up
+ * been updated disabled (one switched off while asleep stays on its list until woken: the rule "kept-lists", `countKeptLists`). A wake-up
  * is one such waking, and what a clock is there to spare a build.
  *
  * The game does not let a mod read its wake-up lists, so they are worked out here from what it does show: the state
@@ -25,8 +24,8 @@ export type WatchedEnd = "source" | "sink";
  * The list an inserter sleeps on, by the state the game shows for it while it waits: on the machine it takes from
  * while it waits for items, on the machine it puts into while it waits for space. Any other state is on no list.
  *
- * The rule "shown-waiting" counts this one list. The rule "kept-lists" (`WakeRule`) also counts the input list of a
- * machine an inserter waiting for items puts into, which wakes it in the game (agricultural science, Factorio 2.1.24).
+ * The rule "kept-lists" (`countKeptLists`) also counts the input list of a machine an inserter waiting for items puts
+ * into, which wakes it in the game (agricultural science, Factorio 2.1.24).
  */
 export const WATCHED_END: Readonly<Record<string, WatchedEnd | undefined>> = {
     [FactorioInserterState.WAITING_FOR_SOURCE_ITEMS]: "source",
@@ -58,7 +57,7 @@ export interface WatchingInserter {
     /**
      * The item in its hand after each tick, "" while empty, and the most its hand holds of an item: with `held` and the
      * outputs of the machine it takes from (`WatchedMachine.outputs`), what the rule "kept-lists" reads a sleep inside a
-     * tick from (`WakeRule`).
+     * tick from (`countKeptLists`).
      */
     held_item?: readonly string[];
     hand_size_of?: (item_name: string) => number;
@@ -111,11 +110,11 @@ export interface WatchedMachine {
      * any other machine.
      */
     results_placed?: readonly number[];
-    /** Items of each result in its output after each tick: read by the rule "kept-lists" (see `WakeRule`) */
+    /** Items of each result in its output after each tick: read by the rule "kept-lists" (see `countKeptLists`) */
     outputs?: Readonly<Record<string, readonly number[]>>;
     /**
      * Per tick, whether its burner took a fuel item from its fuel slot: alarms the inserters that put into it, under the
-     * rule "kept-lists" (`WakeRule`). Absent for a machine that burns no fuel, or where it is not known.
+     * rule "kept-lists" (`countKeptLists`). Absent for a machine that burns no fuel, or where it is not known.
      */
     fuel_taken?: readonly boolean[];
     /**
@@ -124,40 +123,6 @@ export interface WatchedMachine {
      */
     fuel_put_in?: readonly boolean[];
 }
-
-/**
- * Which lists the rule puts an inserter on.
- * - "shown-waiting": the list of the end its shown state waits on after the tick before, and no other.
- * - "kept-lists" (with the new dispatch, simulation/dispatch.ts): the lists each inserter is on, worked out tick by tick
- *   from the start of the run (`countKeptLists`), from what was read in the running game (Factorio 2.1.24, three builds:
- *   a stack inserter taking from an electromagnetic plant onto a belt, the sample electromagnetic science build, the
- *   sample agricultural science build; it gives the game's wake-ups by a machine tick for tick on the first two, and on
- *   the third all of them and 7 more in ten periods, `wake-ups.test.ts`):
- *   - **A sleep.** An inserter on the update list goes to sleep in its own update when it finds nothing to do: waiting
- *     for room in a machine, on that machine's input list; waiting for items, on the list of the machine it takes from,
- *     and, from a machine into a machine, also on the input list of the one it puts into when its hand took part of a
- *     hand in that update, or is empty while there were items to take (the machine it puts into refused them). What it waits for is read off the state
- *     it shows after the tick before, where that was a wait and its hand has not changed, else after the tick (that is
- *     read after the machines' part of the tick). A taker that shows working read off its hand (on the update list when
- *     the tick began, its arm at home, its hand not fallen and not full, room at a belt it drops on: `drop_room`). An
- *     arm still away from a drop, or a hand waiting for room on a belt or in a chest, stays on the update list.
- *   - **What wakes a list.** A machine's input list: a craft start, its burner taking a fuel item, another inserter
- *     taking from its output. Its output list: a result (a finish or a payout; a placing for a machine that places its
- *     results itself), an inserter putting fuel in. The first alarm on any of its lists wakes it, also later in the tick
- *     it went to sleep in: always by a machine, and by another inserter's take or fuel when that one is updated after it.
- *     The game updates first the inserter that joined the update list last (`joinKey`): by an inserter's alarm, then by
- *     a machine's, then by its clock's switch-on; of two switched on in one tick the other first, of two woken in one
- *     part of a tick this one first (the 7 above are of this kind: the game updates its machines in an order a
- *     recording does not hold).
- *   - **A switch-off sends no alarm.** An inserter switched off while asleep keeps its lists, input or output side,
- *     until an alarm wakes it; the update that brings finds it disabled and leaves it on no list, once a full hand is
- *     dropped and its arm is back.
- *   A clock's switch-on wakes an inserter too, and is left out here by design (the clock is there to make it).
- */
-export type WakeRule = "shown-waiting" | "kept-lists";
-
-/** The rule in force: "kept-lists" with the new dispatch, "shown-waiting" without it (simulation/dispatch.ts, `keptListsOf`) */
-export const DEFAULT_WAKE_RULE: WakeRule = DEFAULT_KEPT_LISTS ? "kept-lists" : "shown-waiting";
 
 /**
  * Why a machine's alarm, in a tick the game shows the inserter waiting on its list, is not counted as a wake-up: the
@@ -293,7 +258,7 @@ function keptListsAlarms(inserters: readonly WatchingInserter[], machines: reado
         const id = machine.machine_id;
         const starts = machine.true_starts;
         const fuel = machine.fuel_taken;
-        // without true starts its finishes and payouts stand in, as for the rule "shown-waiting"
+        // without true starts its finishes and payouts stand in
         const results = machine.products_finished;
         const start: (tick: number) => boolean = starts !== undefined ? tick => starts[tick] : tick => results[tick] > results[tick - 1];
         input.set(id, fuel === undefined ? start : tick => start(tick) || fuel[tick]);
@@ -345,9 +310,33 @@ function keptListsAlarmsInOrder(inserters: readonly WatchingInserter[], machines
 }
 
 /**
- * The rule "kept-lists" for one inserter: the lists it sleeps on, worked out tick by tick from what the game shows, and
- * the alarms that wake it from them (`WakeRule`). Run from the first tick of the run, so that a list kept from before
- * `first` counts; counted from `first`.
+ * The rule "kept-lists" for one inserter: the lists it is on, worked out tick by tick from the start of the run, from
+ * what was read in the running game (Factorio 2.1.24, three builds:
+ * a stack inserter taking from an electromagnetic plant onto a belt, the sample electromagnetic science build, the
+ * sample agricultural science build; it gives the game's wake-ups by a machine tick for tick on the first two, and on
+ * the third all of them and 7 more in ten periods, `wake-ups.test.ts`):
+ * - **A sleep.** An inserter on the update list goes to sleep in its own update when it finds nothing to do: waiting
+ *   for room in a machine, on that machine's input list; waiting for items, on the list of the machine it takes from,
+ *   and, from a machine into a machine, also on the input list of the one it puts into when its hand took part of a
+ *   hand in that update, or is empty while there were items to take (the machine it puts into refused them). What it waits for is read off the state
+ *   it shows after the tick before, where that was a wait and its hand has not changed, else after the tick (that is
+ *   read after the machines' part of the tick). A taker that shows working read off its hand (on the update list when
+ *   the tick began, its arm at home, its hand not fallen and not full, room at a belt it drops on: `drop_room`). An
+ *   arm still away from a drop, or a hand waiting for room on a belt or in a chest, stays on the update list.
+ * - **What wakes a list.** A machine's input list: a craft start, its burner taking a fuel item, another inserter
+ *   taking from its output. Its output list: a result (a finish or a payout; a placing for a machine that places its
+ *   results itself), an inserter putting fuel in. The first alarm on any of its lists wakes it, also later in the tick
+ *   it went to sleep in: always by a machine, and by another inserter's take or fuel when that one is updated after it.
+ *   The game updates first the inserter that joined the update list last (`joinKey`): by an inserter's alarm, then by
+ *   a machine's, then by its clock's switch-on; of two switched on in one tick the other first, of two woken in one
+ *   part of a tick this one first (the 7 above are of this kind: the game updates its machines in an order a
+ *   recording does not hold).
+ * - **A switch-off sends no alarm.** An inserter switched off while asleep keeps its lists, input or output side,
+ *   until an alarm wakes it; the update that brings finds it disabled and leaves it on no list, once a full hand is
+ *   dropped and its arm is back.
+ * A clock's switch-on wakes an inserter too, and is left out here by design (the clock is there to make it).
+ *
+ * Run from the first tick of the run, so that a list kept from before `first` counts; counted from `first`.
  */
 function countKeptLists(inserter: WatchingInserter, alarms: KeptListsAlarms, first: number, to_tick: number, on_wake?: WakeListener,
     trace?: (tick: number, lists: number, awake: boolean, last_join: number) => void):
@@ -577,7 +566,7 @@ export type WakeListener = (inserter_id: string, tick: number, end: WatchedEnd) 
  * and in none of 1,198 in which a craft gave nothing). Any other belt and chest finishes no crafts and wakes no one here.
  * An inserter whose arm is away, swinging back from a drop that emptied its hand, is on no list whatever state it shows
  * (since 0.26.0, where the hand and the turn are given): those alarms are kept apart (`uncounted_per_minute`).
- * `rule` "kept-lists" adds the two cases of `WakeRule`.
+ * The rule "kept-lists" (`countKeptLists`) works out the lists each inserter is on.
  */
 export function wakeUps(
     inserters: readonly WatchingInserter[],
@@ -585,84 +574,16 @@ export function wakeUps(
     from_tick: number,
     to_tick: number,
     on_wake?: WakeListener,
-    rule: WakeRule = DEFAULT_WAKE_RULE,
 ): WakeUps {
-    const kept_lists = rule === "kept-lists";
     const first = Math.max(1, from_tick);
     const ticks = Math.max(0, to_tick - first);
-    const finished = new Map(machines.map(machine => [machine.machine_id, machine.products_finished]));
-    const started = new Map(machines.flatMap(machine => machine.true_starts === undefined ? [] : [[machine.machine_id, machine.true_starts] as const]));
-    const placed = new Map(machines.flatMap(machine => machine.results_placed === undefined ? [] : [[machine.machine_id, machine.results_placed] as const]));
-    const rose = (list: readonly number[]) => (tick: number) => list[tick] > list[tick - 1] ? 1 : 0;
     const true_starts_unknown = machines.filter(machine => machine.true_starts === undefined).map(machine => machine.machine_id);
-    // a tick at which the machine alarmed the list: the sink list on a true start, the source list on a finish or payout
-    const alarmed = (end: WatchedEnd, machine_id: string | null): ((tick: number) => number) | undefined => {
-        if (machine_id === null) {
-            return undefined;
-        }
-        const starts = end === "sink" ? started.get(machine_id) : undefined;
-        if (starts !== undefined) {
-            return tick => starts[tick] ? 1 : 0;
-        }
-        const placings = end === "source" ? placed.get(machine_id) : undefined;
-        if (placings !== undefined) {
-            return rose(placings);
-        }
-        const list = finished.get(machine_id);
-        return list === undefined ? undefined : rose(list);
-    };
-    // the chest a machine places its results into: its takers are alarmed by the placings alone
-    const placedInto = (placer_id: string | null | undefined): ((tick: number) => number) | undefined => {
-        const placings = placer_id === null || placer_id === undefined ? undefined : placed.get(placer_id);
-        return placings === undefined ? undefined : rose(placings);
-    };
     const per_minute = (count: number) => ticks === 0 ? 0 : count * TICKS_PER_MINUTE / ticks;
     const share = (count: number) => ticks === 0 ? 0 : count / ticks;
 
-    const kept_alarms = kept_lists ? keptListsAlarmsInOrder(inserters, machines, to_tick) : null;
-    const counted = inserters.map(inserter => {
-        if (kept_alarms !== null) {
-            return { inserter_id: inserter.inserter_id, ...countKeptLists(inserter, kept_alarms, first, to_tick, on_wake) };
-        }
-        const lists: Record<WatchedEnd, ((tick: number) => number) | undefined> = {
-            source: inserter.source_machine_id !== null ? alarmed("source", inserter.source_machine_id) : placedInto(inserter.source_placer_id),
-            sink: alarmed("sink", inserter.sink_machine_id),
-        };
-        const alarmedIn = (end: WatchedEnd, tick: number) => lists[end]?.(tick) ?? 0;
-        const armAway = armAwayOf(inserter.held, inserter.return_ticks);
-        let woken_at_sink = 0;
-        let woken_at_source = 0;
-        let away = 0;
-        let alarms = 0;
-        let enabled = 0;
-        let waiting = 0;
-        for (let tick = first; tick < to_tick; tick++) {
-            alarms += alarmedIn("source", tick) + alarmedIn("sink", tick);
-            const asleep_on = WATCHED_END[inserter.states[tick - 1]];
-            if (asleep_on !== undefined) {
-                // shown waiting after the tick before; on the list only with its arm at home then
-                const alarm = alarmedIn(asleep_on, tick);
-                if (alarm > 0 && armAway(tick - 1)) {
-                    away += alarm;
-                } else if (alarm > 0) {
-                    if (asleep_on === "sink") {
-                        woken_at_sink += alarm;
-                    } else {
-                        woken_at_source += alarm;
-                    }
-                    on_wake?.(inserter.inserter_id, tick, asleep_on);
-                }
-            }
-            const state = inserter.states[tick];
-            if (state !== FactorioInserterState.DISABLED_BY_CONTROL_BEHAVIOR) {
-                enabled++;
-                if (WATCHED_END[state] !== undefined) {
-                    waiting++;
-                }
-            }
-        }
-        return { inserter_id: inserter.inserter_id, woken_at_sink, woken_at_source, woken: woken_at_sink + woken_at_source, away, alarms, enabled, waiting };
-    });
+    const kept_alarms = keptListsAlarmsInOrder(inserters, machines, to_tick);
+    const counted = inserters.map(inserter =>
+        ({ inserter_id: inserter.inserter_id, ...countKeptLists(inserter, kept_alarms, first, to_tick, on_wake) }));
 
     return {
         ticks,
@@ -704,17 +625,16 @@ export interface InserterEnds {
 
 /**
  * Wake-ups of a simulated run, from the tick `from_tick` to its end. The rule "kept-lists" reads the items in the hands
- * and in the machines' outputs where the stock recorded them (`StockRecorder`, "wake-ups" under that rule).
+ * and in the machines' outputs where the stock recorded them (`StockRecorder`, "wake-ups").
  */
-export function wakeUpsOfStock(stock: StockRecording, ends: readonly InserterEnds[], from_tick: number, on_wake?: WakeListener,
-    rule: WakeRule = DEFAULT_WAKE_RULE): WakeUps {
+export function wakeUpsOfStock(stock: StockRecording, ends: readonly InserterEnds[], from_tick: number, on_wake?: WakeListener): WakeUps {
     const recorded = new Map(stock.inserters.map(series => [series.inserter_id, series]));
     const inserters = ends.flatMap(end => {
         const series = recorded.get(end.inserter_id);
         return series === undefined ? [] : [{
             ...end, states: series.factorio_state, held: series.held,
-            ...(rule === "kept-lists" && series.held_item.length > 0 && { held_item: series.held_item }),
-            ...(rule === "kept-lists" && series.drop_room !== undefined && { drop_room: series.drop_room }),
+            ...(series.held_item.length > 0 && { held_item: series.held_item }),
+            ...(series.drop_room !== undefined && { drop_room: series.drop_room }),
         }];
     });
     const machines: WatchedMachine[] = stock.machines.map(machine => ({
@@ -722,9 +642,9 @@ export function wakeUpsOfStock(stock: StockRecording, ends: readonly InserterEnd
         products_finished: machine.products_finished,
         true_starts: machine.crafts_started.map((started, tick) => tick > 0 && started > machine.crafts_started[tick - 1]),
         ...(machine.results_placed !== undefined && { results_placed: machine.results_placed }),
-        ...(rule === "kept-lists" && Object.keys(machine.outputs).length > 0 && { outputs: machine.outputs }),
-        ...(rule === "kept-lists" && machine.fuel_taken !== undefined && { fuel_taken: rises(machine.fuel_taken) }),
-        ...(rule === "kept-lists" && machine.fuel_put_in !== undefined && { fuel_put_in: rises(machine.fuel_put_in) }),
+        ...(Object.keys(machine.outputs).length > 0 && { outputs: machine.outputs }),
+        ...(machine.fuel_taken !== undefined && { fuel_taken: rises(machine.fuel_taken) }),
+        ...(machine.fuel_put_in !== undefined && { fuel_put_in: rises(machine.fuel_put_in) }),
     }));
-    return wakeUps(inserters, machines, from_tick, stock.ticks, on_wake, rule);
+    return wakeUps(inserters, machines, from_tick, stock.ticks, on_wake);
 }

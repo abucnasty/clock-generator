@@ -19,7 +19,6 @@ uses it. Setup, selective execution and artifact retention are in the [game veri
 - `stupidfathobbit-cell02-clock.game.test.ts`: cell 02 (processing units from two circuit machines and two advanced circuit machines, an export belt) on its throttled scaffold with the generated clock, as it is and with the belts backed up.
 - `thaeln-cell09-clock.game.test.ts`: Thaeln's cell 09 (a chain of machines with a coal inserter that moves 15/8 hands a cycle) with the generated clock.
 - `productivity-chain-clock.game.test.ts`: the productivity module chain (nine machines and three chests, 80 a second over 6 copies) with the generated clock.
-- `scrap-silo-clock.game.test.ts`: the scrap silo (a recycler on scrap at +300% placing its twelve results into a rocket silo, one filter stack inserter for each), four hours on each of its clocks: every period at the target, each result's count against its binomial and taken as placed, the silo's weight at each window's opening, the recycler never stopped, and the target back after windows missed and after the scrap is cut. `SCRAP_SILO_VARIANT` (a config beside its scaffold) records a variant of the build the same way, without judging it.
 - `recycler-machine-clock.game.test.ts`: the electromagnetic science cell of #100, one recycler placing electronic circuits directly into its supercapacitor plant; every output period at the target and the plant filled to the mining drill stop, with advanced circuits removed.
 - `recycler-original-clock.game.test.ts`: the whole 211-entity blueprint of #100, both cells, under the clock the generator selects for the sample's automatic config (240/s over five copies): 3,600 periods at 96 science/s, nine losses with recovery, and two cold starts, with the science of each plant and its buffer closed at every period.
 - `ore-voider-clock.game.test.ts`: the ore voider's recycler cell, at exact speed and overbeaconed, 400 iron ore a second destroyed, an hour on the generated clock: what comes back is random, so the hour's mean is judged against the binomial's range, with the car never full, the target back after the ore is cut and after a backlog in the car, and the recycler's input watched while a stack of its result waits.
@@ -36,7 +35,30 @@ periods and are deliberately separate from the short mechanic probes. Do not run
 refactor that does not change clock behavior. `npm run test:game:watch` currently watches the scaffold-recordings
 suite; it is not a generic visual mode for every mechanic test.
 
+## How a clock run is timed
+
+A clock run is timed in game minutes and never in clock periods; the rule, in full, is in the [game verification
+guide](../README.md#how-a-run-is-timed) and is coded once, in `helpers/lua/steady.lua`. For the clock families here:
+
+- **Steady state:** the first moment the machines that make the target item have made the target amount (the target rate times
+  60 seconds) over the last minute. The run waits for it up to ten minutes.
+- **Baseline:** one minute (3,600 ticks) after it, judged by the rate between returns to the target: the clock holds when the last
+  minute never falls below the target amount, or, where the output comes in bursts and does, when the products from steady state to
+  the last return to the target make at least the target rate over those ticks. A family may ask for a longer baseline with a
+  stated reason, never over ten minutes (36,000 ticks).
+- **Disturbances:** the ingredient cuts and the output block follow, each until the output falls below the baseline's lowest
+  minute, then released; the clock has to be back at steady state within ten minutes of each release.
+- **Turbo only:** the clock families run the turbo belt tier. Their controls files keep each run's summary: the tick of steady
+  state, the baseline's total against the target, and each disturbance's start, release and recovery.
+- **Mechanics probes** (`../mechanics/`) are recorded again only when the game binary changes.
+
+The sections below that count periods (60 untouched periods, cuts at periods 66-68, 63 baseline periods, 33 judged recovery periods)
+record how a family was measured when it was recorded in periods. The controls files of the families already moved to this rule
+(pickup, front, over the hood, blocked output) carry the new summary; the rest keep the period counts until they are moved.
+
 ## Pickup speed backfill
+
+The paragraphs of this section describe the original backfill (#245), which counted clock periods; its summaries are history.
 
 The `speed coverage:` runner covers all four belt speeds, all three ordinary pickup geometries, both
 moving/backed-up supplies and the electromagnetic/gear families: 48 configurations. Its original backfill

@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
-import { returnTicksOf, WakeRule, wakeUps, WatchedMachine, WatchingInserter } from "./wake-ups";
+import { returnTicksOf, wakeUps, WatchedMachine, WatchingInserter } from "./wake-ups";
 
 const WORKING = "working";
 const SOURCE = "waiting_for_source_items";
@@ -24,15 +24,30 @@ function machine(machine_id: string, ticks: number, crafts_at: number[], starts_
     return { machine_id, products_finished, true_starts };
 }
 
+/** The machine with each result it finishes placed in its output the tick it is paid, as the rule "kept-lists" reads it */
+function placing(plant: WatchedMachine): WatchedMachine {
+    const done = plant.products_finished;
+    return { ...plant, outputs: { "iron-plate": done.map((count, tick) => count > (done[tick - 1] ?? 0) ? 1 : 0) } };
+}
+
 function inserter(states: string[], ends: Partial<WatchingInserter> = {}): WatchingInserter {
     return { inserter_id: "inserter:1", source_machine_id: "machine:1", sink_machine_id: null, states, ...ends };
+}
+
+/**
+ * An inserter with the hand its states show (a full one of 4 items working, 1 waiting for more, none otherwise, unless given): the rule "kept-lists"
+ * lets an inserter sleep on what its hand and the machine's output show
+ */
+function with_hand(states: string[], held: number[] = states.map(state => state === WORKING ? 4 : state === MORE ? 1 : 0),
+    ends: Partial<WatchingInserter> = {}): WatchingInserter {
+    return inserter(states, { held, held_item: held.map(count => count > 0 ? "iron-plate" : ""), hand_size_of: () => 4, ...ends });
 }
 
 describe("wakeUps", () => {
     it("counts a craft of the source for an inserter that waited for source items when the tick began", () => {
         const states = [SOURCE, SOURCE, SOURCE, WORKING, WORKING, OFF];
         // the craft in tick 3 is seen: the inserter waited after tick 2; the one in tick 4 finds it working
-        const result = wakeUps([inserter(states)], [machine("machine:1", 6, [1, 3, 4])], 0, 6);
+        const result = wakeUps([with_hand(states)], [placing(machine("machine:1", 6, [1, 3, 4]))], 0, 6);
         expect(result.ticks).toBe(5);
         expect(result.inserters[0].wake_ups_per_minute).toBe(2 * 3600 / 5);
         expect(result.inserters[0].alarms_per_minute).toBe(3 * 3600 / 5);
@@ -66,7 +81,7 @@ describe("wakeUps", () => {
 
     it("counts a craft of the source for a partly filled hand that waits for more items", () => {
         const states = [MORE, MORE, WORKING];
-        const result = wakeUps([inserter(states)], [machine("machine:1", 3, [1, 2])], 0, 3);
+        const result = wakeUps([with_hand(states, [1, 1, 2])], [placing(machine("machine:1", 3, [1, 2]))], 0, 3);
         expect(result.inserters[0].wake_ups_per_minute).toBe(2 * 3600 / 2);
         expect(result.inserters[0].waiting_share).toBe(1 / 2);
     });
@@ -74,14 +89,14 @@ describe("wakeUps", () => {
     it("wakes an inserter once in a tick, however many products its machine finishes in it", () => {
         const states = [SOURCE, SOURCE, SOURCE];
         // a craft and the productivity bar it fills, both paid in tick 1
-        const result = wakeUps([inserter(states)], [machine("machine:1", 3, [1, 1])], 0, 3);
+        const result = wakeUps([with_hand(states)], [placing(machine("machine:1", 3, [1, 1]))], 0, 3);
         expect(result.inserters[0].wake_ups_per_minute).toBe(1 * 3600 / 2);
         expect(result.inserters[0].alarms_per_minute).toBe(1 * 3600 / 2);
     });
 
     it("measures only the ticks asked for", () => {
         const states = [SOURCE, SOURCE, SOURCE, SOURCE, SOURCE, SOURCE];
-        const result = wakeUps([inserter(states)], [machine("machine:1", 6, [1, 2, 4, 5])], 4, 6);
+        const result = wakeUps([with_hand(states)], [placing(machine("machine:1", 6, [1, 2, 4, 5]))], 4, 6);
         expect(result.ticks).toBe(2);
         expect(result.inserters[0].wake_ups_per_minute).toBe(2 * 3600 / 2);
     });
@@ -129,8 +144,8 @@ describe("the arm at home, since 0.26.0", () => {
         const held = [16, 16, 16, 16, 0, 0, 0, 0, 0, 0, 0];
         const states = [WORKING, WORKING, WORKING, WORKING, WORKING, SPACE, SPACE, SPACE, SPACE, SPACE, SPACE];
         const result = wakeUps([into(states, held)], [machine("machine:2", 11, every_tick(11), every_tick(11))], 0, 11);
-        // shown waiting after ticks 5 to 9, so alarmed in 6 to 10: after 5 to 7 the arm is away, after 8 and 9 at home
-        expect(result.inserters[0].wake_ups_per_minute).toBe(2 * 3600 / 10);
+        // woken in ticks 8 to 10, once it is at home; the arm is away in 5 to 7 and those wake-ups are not counted
+        expect(result.inserters[0].wake_ups_per_minute).toBe(3 * 3600 / 10);
         expect(result.inserters[0].uncounted_per_minute).toEqual({ "arm away": 3 * 3600 / 10 });
         expect(result.uncounted_per_minute).toEqual({ "arm away": 3 * 3600 / 10 });
     });
@@ -148,7 +163,7 @@ describe("the arm at home, since 0.26.0", () => {
         const held = [16, 16, 8, 8, 8, 8];
         const states = [WORKING, WORKING, SPACE, SPACE, SPACE, SPACE];
         const result = wakeUps([into(states, held)], [machine("machine:2", 6, every_tick(6), every_tick(6))], 0, 6);
-        expect(result.inserters[0].wake_ups_per_minute).toBe(3 * 3600 / 5);
+        expect(result.inserters[0].wake_ups_per_minute).toBe(4 * 3600 / 5);
         expect(result.inserters[0].uncounted_per_minute).toEqual({ "arm away": 0 });
     });
 
@@ -157,7 +172,7 @@ describe("the arm at home, since 0.26.0", () => {
         const states = [WORKING, WORKING, WORKING, WORKING, WORKING, SPACE, SPACE, SPACE, SPACE, SPACE, SPACE];
         const machines = [machine("machine:2", 11, every_tick(11), every_tick(11))];
         const without = inserter(states, { source_machine_id: null, sink_machine_id: "machine:2", held });
-        expect(wakeUps([without], machines, 0, 11).inserters[0].wake_ups_per_minute).toBe(5 * 3600 / 10);
+        expect(wakeUps([without], machines, 0, 11).inserters[0].wake_ups_per_minute).toBe(6 * 3600 / 10);
     });
 });
 
@@ -227,10 +242,10 @@ function capture(file: string = FRONT_EXIT): { inserters: WatchingInserter[]; ma
     return { inserters, machines, ticks, woken: new Map(Object.entries(fixture.inserters).map(([id, series]) => [id, series.woken_by_machine])) };
 }
 
-function wokenIn(rule: WakeRule, file: string = FRONT_EXIT): Map<string, number[]> {
+function wokenIn(file: string = FRONT_EXIT): Map<string, number[]> {
     const { inserters, machines, ticks } = capture(file);
     const woken = new Map<string, number[]>(inserters.map(it => [it.inserter_id, []]));
-    wakeUps(inserters, machines, 0, ticks, (inserter_id, tick) => woken.get(inserter_id)!.push(tick), rule);
+    wakeUps(inserters, machines, 0, ticks, (inserter_id, tick) => woken.get(inserter_id)!.push(tick));
     return woken;
 }
 
@@ -239,15 +254,7 @@ describe("the rule \"kept-lists\" against a period of the game", () => {
         const { woken } = capture();
         expect(woken.get("inserter:1")).toHaveLength(13);
         expect(woken.get("inserter:2")).toHaveLength(2);
-        expect(wokenIn("kept-lists")).toEqual(woken);
-    });
-
-    it("where \"shown-waiting\" misses two inserters asleep and woken in one tick and three switched off asleep on the list", () => {
-        const { woken } = capture();
-        const missed = woken.get("inserter:1")!.filter(tick => !wokenIn("shown-waiting").get("inserter:1")!.includes(tick));
-        // clock positions 24 and 280: shown working after the tick before; 288, 687 and 1072: shown disabled
-        expect(missed).toEqual([23, 279, 287, 686, 1071]);
-        expect(wokenIn("shown-waiting").get("inserter:2")).toEqual(woken.get("inserter:2"));
+        expect(wokenIn()).toEqual(woken);
     });
 
     it("counts them tick for tick on a build with two takers into chests: 10, 10 and 11, none false", () => {
@@ -260,7 +267,7 @@ describe("the rule \"kept-lists\" against a period of the game", () => {
         // later in the tick) and 460 (switched off in 459)
         expect(woken.get("inserter:1")).toContain(600);
         expect(woken.get("inserter:3")).toEqual(expect.arrayContaining([76, 267, 460]));
-        expect(wokenIn("kept-lists", CHESTS)).toEqual(woken);
+        expect(wokenIn(CHESTS)).toEqual(woken);
     });
 });
 
@@ -301,7 +308,7 @@ function agriculturalCapture(): { inserters: WatchingInserter[]; machines: Watch
 describe("the rule \"kept-lists\" against ten periods of agricultural science", () => {
     const { inserters, machines, ticks, from, woken } = agriculturalCapture();
     const counted = new Map<string, number[]>(inserters.map(it => [it.inserter_id, []]));
-    wakeUps(inserters, machines, from, ticks, (inserter_id, tick) => counted.get(inserter_id)!.push(tick), "kept-lists");
+    wakeUps(inserters, machines, from, ticks, (inserter_id, tick) => counted.get(inserter_id)!.push(tick));
 
     it("counts the game's wake-ups tick for tick on ten of the twelve inserters", () => {
         for (const id of ["inserter:1", "inserter:2", "inserter:3", "inserter:4", "inserter:6", "inserter:7", "inserter:9", "inserter:10", "inserter:11", "inserter:12"]) {
@@ -342,25 +349,23 @@ describe("the rule \"kept-lists\"", () => {
 
     it("counts an inserter that went to sleep in its own update with room at its drop and was woken later in that tick", () => {
         const [taker, plant] = partHand({}, 1);
-        expect(wakeUps([taker], [plant], 0, 4, undefined, "kept-lists").inserters[0].wake_ups_per_minute).toBe(3600 / 3);
-        expect(wakeUps([taker], [plant], 0, 4, undefined, "shown-waiting").inserters[0].wake_ups_per_minute).toBe(0);
+        expect(wakeUps([taker], [plant], 0, 4).inserters[0].wake_ups_per_minute).toBe(3600 / 3);
     });
 
     it("not when the result came before its update (it took everything), nor when the belt had no room at its drop", () => {
         const [first, plant] = partHand({}, 0);
-        expect(wakeUps([first], [plant], 0, 4, undefined, "kept-lists").inserters[0].wake_ups_per_minute).toBe(0);
+        expect(wakeUps([first], [plant], 0, 4).inserters[0].wake_ups_per_minute).toBe(0);
         const [no_room, plant_again] = partHand({ drop_room: [true, true, false, true] }, 1);
-        expect(wakeUps([no_room], [plant_again], 0, 4, undefined, "kept-lists").inserters[0].wake_ups_per_minute).toBe(0);
+        expect(wakeUps([no_room], [plant_again], 0, 4).inserters[0].wake_ups_per_minute).toBe(0);
     });
 
     it("keeps an inserter switched off asleep on the list there until the machine's next alarm, and on none after it", () => {
         const states = [SOURCE, OFF, OFF, OFF, OFF, OFF];
         const plant = machine("machine:1", 6, [3, 5]);
-        const result = wakeUps([inserter(states)], [plant], 0, 6, undefined, "kept-lists");
+        const result = wakeUps([inserter(states)], [plant], 0, 6);
         expect(result.inserters[0].wake_ups_per_minute).toBe(3600 / 5);
-        expect(wakeUps([inserter(states)], [plant], 0, 6, undefined, "shown-waiting").inserters[0].wake_ups_per_minute).toBe(0);
         // switched off while working: on no list
-        const working = wakeUps([inserter([WORKING, OFF, OFF, OFF, OFF, OFF])], [plant], 0, 6, undefined, "kept-lists");
+        const working = wakeUps([inserter([WORKING, OFF, OFF, OFF, OFF, OFF])], [plant], 0, 6);
         expect(working.inserters[0].wake_ups_per_minute).toBe(0);
     });
 });
@@ -401,7 +406,7 @@ function metallurgicCapture(lines = true): { inserters: WatchingInserter[]; mach
 function countedOn(capture: ReturnType<typeof metallurgicCapture>): Map<string, number[]> {
     const { inserters, machines, ticks, from } = capture;
     const counted = new Map<string, number[]>(inserters.map(it => [it.inserter_id, []]));
-    wakeUps(inserters, machines, from, ticks, (inserter_id, tick) => counted.get(inserter_id)!.push(tick), "kept-lists");
+    wakeUps(inserters, machines, from, ticks, (inserter_id, tick) => counted.get(inserter_id)!.push(tick));
     return counted;
 }
 

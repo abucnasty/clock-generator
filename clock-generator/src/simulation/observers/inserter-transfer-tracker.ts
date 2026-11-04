@@ -35,7 +35,7 @@ export class InserterTransferTracker implements InserterObserver {
         private readonly transfer_history: InventoryTransferHistory,
         /**
          * Where a pickup entered from `from` counts from, as ticks before the entry (0 or more); none: from the entry.
-         * See `PickupStartAtTheTake` (plan-run.ts) for the one the planning runs use under the new dispatch.
+         * See `PickupStartAtTheTake` (plan-run.ts) for the one the planning runs use.
          */
         private readonly pickup_lead?: (from: InserterPhase) => number,
     ) { }

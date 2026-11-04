@@ -5,10 +5,11 @@ import {clockIdentity} from "../../../src/crafting/clock-identity";
 import {alwaysOnReasonProblemsOf} from "../../../src/crafting/generate-blueprint-test-helpers";
 import {FRONT_GENERATED} from "./front-clock-cases";
 import {frontClockConfig, frontEntranceClockCases, frontExitClockCases} from "./front-clock-fixtures";
-import {readControls} from "./clock-controls";
+import {readControls, RunControls} from "./clock-controls";
+import {expectRunAgreesWithSelection} from "../helpers/fixture-mechanics";
 
 // each selection pinned beside the in-game recording of its clock
-const controls = readControls("front-clock-controls.json");
+const controls = readControls<RunControls>("front-clock-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 
 /** The generation tests of the front pickup clocks that no other test generates (front-clock-cases.ts), each beside the in-game recording of its clock */
@@ -33,29 +34,19 @@ export function frontPickupClockTests() {
             expect(selected.verdict).toBe(expected.verdict);
             expect({id: selected.id, holds: selected.assessment.holds, rate: selected.assessment.items_per_second,
                 supply: selected.belt?.kind}).toEqual(expected.selection);
-            expect(native.expected).toBe(expected.expected);
+            expect(native.period).toBe(expected.period);
             expect(generated.why_not_stable?.cause).toBe(expected.why_not_stable);
             // The front exit's inserter stands on the exit's output tile: its belt is backed up in the game whatever the
             // config says. Only a recording made under the selection's own supply speaks to its holds verdict.
             const recorded_supply = variant.endpoint === "exit" || variant.backed ? "backed_up" : "moving";
-            if (recorded_supply === expected.selection.supply && native.baseline.some(items => items !== native.expected)) {
-                expect(selected.assessment.holds, "the native baseline misses the expected output: the generator has to see that itself").toBe(false);
-            }
+            expectRunAgreesWithSelection(variant.name, native, {verdict: selected.verdict, holds: selected.assessment.holds},
+                recorded_supply === expected.selection.supply);
             if (previous) {
                 // the clock selected before the observed windows were searched past a stable clock is still made, with the same windows
                 const earlier = generated.alternatives.find(alternative => alternative.id === previous.id);
                 expect(earlier, `${previous.id} is still made`).toBeDefined();
                 const earlier_exported = earlier!.result.subtick ?? earlier!.result;
                 expect(createHash("sha256").update(JSON.stringify(clockIdentity(earlier_exported))).digest("hex")).toBe(previous.clock_sha256);
-            }
-            if (selected.verdict === "stable") {
-                expect(native.baseline.every(items => items === native.expected)).toBe(true);
-                // backed-up recovery windows start later than moving ones and are shorter
-                const heldPeriods = recorded_supply === "backed_up" ? 5 : 8;
-                for (const loss of native.recovery) {
-                    expect(loss.recovered.length).toBeGreaterThanOrEqual(heldPeriods);
-                    expect(loss.recovered.slice(-heldPeriods).every(items => items === native.expected)).toBe(true);
-                }
             }
         });
     }

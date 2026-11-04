@@ -1,22 +1,11 @@
-import {afterAll, describe, expect, it, vi} from "vitest";
+import {describe, expect, it} from "vitest";
 import {generateClockAlternatives} from "./generate-blueprint";
 import {loadConfigFromFile} from "../config/loader";
 import {ConfigPaths} from "../config/config-paths";
 import {quiet} from "./generate-blueprint-test-helpers";
 import {recordSimulationTimeline} from "./record-timeline";
 
-// the judged clock tick is set under the new dispatch only, which is read from the environment when the engine loads
-const dispatch = vi.hoisted(() => {
-    const before = process.env.CLOCK_NEW_DISPATCH;
-    process.env.CLOCK_NEW_DISPATCH = "1";
-    return before;
-});
-afterAll(() => {
-    if (dispatch === undefined) delete process.env.CLOCK_NEW_DISPATCH;
-    else process.env.CLOCK_NEW_DISPATCH = dispatch;
-});
-
-describe("the real stupidfathobbit cell 02 under the new dispatch", () => {
+describe("the real stupidfathobbit cell 02", () => {
     // the replay from the warm-up inventory is the build stalled for its first 42 ticks (every machine full, nothing moves); the
     // long run judges stock from index 960, after 240 warm-up ticks; replaying clock tick 1200 shows the inserters at work
     it("records a settled period from the clock tick the long run judges, not the stalled first one", async () => {

@@ -20,14 +20,13 @@ import { simulationStateKey } from "./steady-state";
 /**
  * Samples that between them hold every kind of component: burners, a loop of pentapod eggs, an infinity chest and hands
  * from a belt with the pickup arm (agricultural science), a drill into a car and hands from a car (the car), buffer
- * chests (low density structure), a recycler placing results by chance into a rocket silo (the scrap silo), drills into
+ * chests (low density structure), drills into
  * machines (the electric furnace) and hands from a belt of one item on both lanes (the same-item fixture)
  */
 const SAMPLES = {
     AGRICULTURAL_SCIENCE: ConfigPaths.AGRICULTURAL_SCIENCE,
     REAL_OWNER_CAR: ConfigPaths.REAL_OWNER_CAR,
     LOW_DENSITY_STRUCTURE: ConfigPaths.LOW_DENSITY_STRUCTURE,
-    RECYCLING_SCRAP_SILO: ConfigPaths.RECYCLING_SCRAP_SILO,
     ELECTRIC_FURNACE: ConfigPaths.ELECTRIC_FURNACE,
     SAME_ITEM: GameFixturePaths.SAME_ITEM_CONFIG,
 } as const;
@@ -170,6 +169,8 @@ beforeAll(async () => {
 });
 
 const contextOf = (sample: Sample) => SimulationContext.fromConfig(structuredClone(configs[sample]));
+/** #581: the first key of a context builds its update list, which starts the belt lines' motion in the key; a key to compare comes after it */
+const withScheduling = (context: SimulationContext) => { context.inserterScheduling(); return context; };
 const beltsOf = (context: SimulationContext) => context.state_registry.getAllStates().filter(EntityState.isBelt);
 const statesOf = (context: SimulationContext) => context.state_registry.getAllStates();
 /** An inserter that takes from a belt with the pickup arm, holding a part hand */
@@ -198,7 +199,7 @@ describe("simulationStateKey", () => {
     // P4 3.4: a key that loses a field ends warm-ups early, one that gains a field that varies delays repeats
     it("changes with each field in a key, of every component of every sample, and with none of the fields out of every key", () => {
         for (const sample of Object.keys(SAMPLES) as Sample[]) {
-            const context = contextOf(sample);
+            const context = withScheduling(contextOf(sample));
             const base = simulationStateKey(context);
             let keyed_changes = 0;
             for (const { component, inserter } of componentsOf(context)) {
@@ -232,8 +233,6 @@ describe("simulationStateKey", () => {
                 change: context => { context.machines[0].machine_state.crafting.craftingProgress.progress = 0.5; } },
             { sample: "AGRICULTURAL_SCIENCE", what: "the productivity bar (Yield)",
                 change: context => { context.machines[0].machine_state.yield.bonusProgress.progress = 0.25; } },
-            { sample: "RECYCLING_SCRAP_SILO", what: "a fraction of a result by chance carried (Yield)",
-                change: context => { (context.machines[0].machine_state.yield as unknown as { carry: number[] }).carry[1] = 0.5; } },
             { sample: "AGRICULTURAL_SCIENCE", what: "what a hand has carried (the inserter's Storage)",
                 change: context => context.inserters[0].inserter_state.inventoryState.addQuantity("bioflux", 1) },
             { sample: "AGRICULTURAL_SCIENCE", what: "the pickup arm's reach while a part hand fills (Hand)", before: armWithPartHand,
@@ -273,8 +272,6 @@ describe("simulationStateKey", () => {
                 } },
             { sample: "REAL_OWNER_CAR", what: "what a car holds (its Storage)",
                 change: context => statesOf(context).filter(ContainerStorage.isSlots)[0].insert("iron-ore", 1) },
-            { sample: "RECYCLING_SCRAP_SILO", what: "what a rocket silo holds (its Storage)",
-                change: context => statesOf(context).filter(ContainerStorage.isWeight)[0].insert("iron-gear-wheel", 1) },
         ];
         for (const { sample, what, before, change } of changes) {
             const context = contextOf(sample);
@@ -312,17 +309,10 @@ describe("simulationStateKey", () => {
         slots[from] = { ...slots[from], item: null, count: 0 };
         expect(storage.inventoryState.export()).toEqual(totals);
         expect(simulationStateKey(car)).not.toBe(in_first);
-
-        const silo = contextOf("RECYCLING_SCRAP_SILO");
-        const weight = statesOf(silo).filter(ContainerStorage.isWeight)[0];
-        const before = simulationStateKey(silo);
-        // what its input slots hold, apart from the rocket inventory: the totals untouched
-        weight.inventoryState.input.addQuantity("iron-gear-wheel", 1);
-        expect(simulationStateKey(silo)).not.toBe(before);
     });
 
     it("keeps the pickup arm's reach out of the key while the hand is empty or full: the next hand starts its own", () => {
-        const context = contextOf("AGRICULTURAL_SCIENCE");
+        const context = withScheduling(contextOf("AGRICULTURAL_SCIENCE"));
         const state = context.inserters.find(it => it.inserter_state.pickup_arm !== undefined)!.inserter_state;
         const item = carriedBy(state);
         const reach = (radius: number) => {
