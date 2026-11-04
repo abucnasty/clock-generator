@@ -49,17 +49,25 @@ For verification appropriate to other changes, see the [contributor guide](../..
 ## How a run is timed
 
 A clock check in the game is timed in game minutes, never in clock periods: a clock's period can be very long (116,160 ticks for
-one build), and the length of the period must not decide how long a check runs. One minute is 3,600 ticks. All of it is in
+one build), and the length of the period must not decide how long a check runs. One minute is 3,600 ticks. The game side is
 `helpers/lua/steady.lua`; every clock family and the scripts that start the game for a check use that one helper.
 
-- **Steady state** is reached the first moment the machines that make the item the build is for have made the amount the target
-  asks for over the last minute (the target rate times 60 seconds). Warming up and settling are not timed in periods either: the
+- **Recording and judging are apart.** In the game, the helper only steers the run (when steady state is reached, when a
+  disturbance starts, ends and has recovered) and records it: for each machine that makes the item the build is for, what it has
+  made and how much of it is waiting in its output (its output stock), every second, at each moment the clock is back where it was
+  at steady state, and at every step of the run. Whether the run passes is decided afterwards from that record, outside the game
+  (`helpers/run-judgement.js`), so a change in how a run is judged needs no new recording.
+- **Steady state** is reached the first moment those machines have made the amount the target asks for over the last minute (the
+  target rate times 60 seconds) and that amount has stopped falling. Warming up and settling are not timed in periods either: the
   run goes on until that happens, and fails if it has not within ten minutes (36,000 ticks).
-- **Baseline:** the minute after steady state. It holds when the last minute's output never falls below the target amount. A
-  build whose output comes in bursts can dip below it between two bursts; then the baseline holds when the products from steady
-  state to the last moment the last minute reached the target again make at least the target rate over that stretch, so a minute
-  that ends between two bursts does not count against the clock. A build whose output only evens out over a longer stretch may ask
-  for a longer baseline, with the reason written next to it, and never over ten minutes (36,000 ticks).
+- **Baseline:** the minute after steady state. It is judged over its whole clock cycles (from steady state to the last moment in
+  the minute when the clock is back where it was then), by **net output**: what the machines made less what of it is still waiting
+  in their output, so only what left them counts. Net output has to be at least the target over those cycles. A build whose clock
+  cycle is longer than a minute asks for a longer baseline, with the reason written next to it, and never over ten minutes
+  (36,000 ticks).
+- **Stock guard:** at the end of the run the machines' output stock must be no lower than the lowest it was in the baseline. A
+  stock that drains slowly would hide a build that makes too little behind output that still looks right. A build judged by what
+  it takes in (the recyclers, the ore voider) has no output stock to watch and no guard.
 - **Disturbances** follow the baseline: each ingredient cut and the output block, one after the other. A disturbance lasts until the
   last minute's output falls below the lowest it had in the baseline (so the loss is real and not a burst missing from the window),
   and is then released. **Recovery** is steady state met again; it has to happen within ten minutes of the release. Ten minutes
