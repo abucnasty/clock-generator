@@ -186,9 +186,8 @@ local block = {
             end
             if put == 0 then break end
         end
-        for _, item in ipairs(items) do
-            assert(not rocket.can_insert{name = item, count = 1}, "the silo must refuse every result: " .. item)
-        end
+        -- can_insert still says yes for a light result when the rocket's weight is reached, which insert refuses: the block is
+        -- shown by the recycler stopping (blocked_at) and the output falling, as for every disturbance
         event(t, "fill-silo", {weight = silo_weight()})
     end,
     tick = function(t)
