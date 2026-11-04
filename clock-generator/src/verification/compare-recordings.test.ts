@@ -26,7 +26,9 @@ let stock: StockRecording;
 let simulated: Recording;
 
 beforeAll(async () => {
-    config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+    // the recording these tests read is of the clock with one output swing a cycle; the sample is automatic, so it is forced on this copy
+    const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+    config = { ...sample, overrides: { ...sample.overrides, terminal_swing_count: 1 } };
     const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
     result = alternatives[selected_index].result;
     period = result.simulation_duration.ticks;
@@ -122,9 +124,9 @@ describe("a simulated run in the format of the recorder", () => {
         expect(machine_standings).toEqual([{ machine_id: "machine:1", standing: "simulator" }]);
         const by_id = (a: { inserter_id: string }, b: { inserter_id: string }) => a.inserter_id.localeCompare(b.inserter_id);
         expect({ ...of_recording, inserters: [...of_recording.inserters].sort(by_id) }).toEqual({ ...of_stock, inserters: [...of_stock.inserters].sort(by_id) });
-        // the trimmed input window alarms the build 62.5 times a minute on average while it shows a wait (a 4-period cycle
-        // of 50/100/0/100); 25 of them find the arm swinging back from its drop, not on the list
-        expect(of_recording.wake_ups_per_minute).toBeCloseTo(37.5, 1);
+        // the trimmed input window alarms the build 75 times a minute while it shows a wait; 25 of them find the arm swinging back
+        // from its drop, not on the list
+        expect(of_recording.wake_ups_per_minute).toBeCloseTo(50, 1);
         expect(of_recording.uncounted_per_minute["arm away"]).toBeCloseTo(25, 1);
     });
 

@@ -124,31 +124,31 @@
         "recipe_or_resource": "automation-science-pack",
         "prototype": "assembling-machine-3",
         "prototype_type": "assembling-machine",
-        "speed": 68.90624761581421,
+        "speed": 68.890625,
         "energy_required": 5,
-        "ticks_per_craft": 4.353741647239967,
-        "crafts_per_tick": 0.22968749205271402,
+        "ticks_per_craft": 4.354728963483783,
+        "crafts_per_tick": 0.22963541666666668,
         "productivity": 100,
         "bonus_per_craft": 1,
-        "ticks_per_bonus": 4.353741647239967,
+        "ticks_per_bonus": 4.354728963483783,
         "inputs": [
           {
             "item": "copper-plate",
             "per_craft": 1,
-            "per_second": 13.781249523162842,
-            "per_tick": 0.22968749205271402
+            "per_second": 13.778125,
+            "per_tick": 0.22963541666666668
           },
           {
             "item": "iron-gear-wheel",
             "per_craft": 1,
-            "per_second": 13.781249523162842,
-            "per_tick": 0.22968749205271402
+            "per_second": 13.778125,
+            "per_tick": 0.22963541666666668
           }
         ],
-        "insertion_duration_ticks": 39.1836748251597,
+        "insertion_duration_ticks": 39.19256067135405,
         "crafts_per_second": {
-          "numerator": 6890624761581421,
-          "denominator": 500000000000000
+          "numerator": 4409,
+          "denominator": 320
         }
       },
       "yield": {
@@ -165,8 +165,8 @@
               "denominator": 1
             },
             "per_second": {
-              "numerator": 6890624761581421,
-              "denominator": 250000000000000
+              "numerator": 4409,
+              "denominator": 160
             },
             "main": true,
             "stochastic": false

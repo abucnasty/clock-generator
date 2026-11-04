@@ -124,25 +124,25 @@
         "recipe_or_resource": "casting-low-density-structure",
         "prototype": "foundry",
         "prototype_type": "assembling-machine",
-        "speed": 257.60000228882,
+        "speed": 257.625,
         "energy_required": 15,
-        "ticks_per_craft": 3.493788788832867,
-        "crafts_per_tick": 0.2862222247653555,
+        "ticks_per_craft": 3.493449781659389,
+        "crafts_per_tick": 0.28625,
         "productivity": 300,
         "bonus_per_craft": 3,
-        "ticks_per_bonus": 10.481366366498602,
+        "ticks_per_bonus": 10.480349344978166,
         "inputs": [
           {
             "item": "plastic-bar",
             "per_craft": 5,
-            "per_second": 85.86666742960665,
-            "per_tick": 1.4311111238267775
+            "per_second": 85.875,
+            "per_tick": 1.43125
           }
         ],
-        "insertion_duration_ticks": 19.215838338580774,
+        "insertion_duration_ticks": 19.213973799126638,
         "crafts_per_second": {
-          "numerator": 6440000057220499,
-          "denominator": 375000000000000
+          "numerator": 687,
+          "denominator": 40
         }
       },
       "yield": {
@@ -159,8 +159,8 @@
               "denominator": 1
             },
             "per_second": {
-              "numerator": 4293333371480331,
-              "denominator": 62500000000000
+              "numerator": 687,
+              "denominator": 10
             },
             "main": true,
             "stochastic": false
@@ -220,25 +220,25 @@
         "recipe_or_resource": "casting-low-density-structure",
         "prototype": "foundry",
         "prototype_type": "assembling-machine",
-        "speed": 257.60000228882,
+        "speed": 257.625,
         "energy_required": 15,
-        "ticks_per_craft": 3.493788788832867,
-        "crafts_per_tick": 0.2862222247653555,
+        "ticks_per_craft": 3.493449781659389,
+        "crafts_per_tick": 0.28625,
         "productivity": 300,
         "bonus_per_craft": 3,
-        "ticks_per_bonus": 10.481366366498602,
+        "ticks_per_bonus": 10.480349344978166,
         "inputs": [
           {
             "item": "plastic-bar",
             "per_craft": 5,
-            "per_second": 85.86666742960665,
-            "per_tick": 1.4311111238267775
+            "per_second": 85.875,
+            "per_tick": 1.43125
           }
         ],
-        "insertion_duration_ticks": 19.215838338580774,
+        "insertion_duration_ticks": 19.213973799126638,
         "crafts_per_second": {
-          "numerator": 6440000057220499,
-          "denominator": 375000000000000
+          "numerator": 687,
+          "denominator": 40
         }
       },
       "yield": {
@@ -255,8 +255,8 @@
               "denominator": 1
             },
             "per_second": {
-              "numerator": 4293333371480331,
-              "denominator": 62500000000000
+              "numerator": 687,
+              "denominator": 10
             },
             "main": true,
             "stochastic": false
@@ -412,25 +412,25 @@
         "recipe_or_resource": "casting-low-density-structure",
         "prototype": "foundry",
         "prototype_type": "assembling-machine",
-        "speed": 257.60000228882,
+        "speed": 257.625,
         "energy_required": 15,
-        "ticks_per_craft": 3.493788788832867,
-        "crafts_per_tick": 0.2862222247653555,
+        "ticks_per_craft": 3.493449781659389,
+        "crafts_per_tick": 0.28625,
         "productivity": 300,
         "bonus_per_craft": 3,
-        "ticks_per_bonus": 10.481366366498602,
+        "ticks_per_bonus": 10.480349344978166,
         "inputs": [
           {
             "item": "plastic-bar",
             "per_craft": 5,
-            "per_second": 85.86666742960665,
-            "per_tick": 1.4311111238267775
+            "per_second": 85.875,
+            "per_tick": 1.43125
           }
         ],
-        "insertion_duration_ticks": 19.215838338580774,
+        "insertion_duration_ticks": 19.213973799126638,
         "crafts_per_second": {
-          "numerator": 6440000057220499,
-          "denominator": 375000000000000
+          "numerator": 687,
+          "denominator": 40
         }
       },
       "yield": {
@@ -447,8 +447,8 @@
               "denominator": 1
             },
             "per_second": {
-              "numerator": 4293333371480331,
-              "denominator": 62500000000000
+              "numerator": 687,
+              "denominator": 10
             },
             "main": true,
             "stochastic": false
@@ -508,25 +508,25 @@
         "recipe_or_resource": "casting-low-density-structure",
         "prototype": "foundry",
         "prototype_type": "assembling-machine",
-        "speed": 257.60000228882,
+        "speed": 257.625,
         "energy_required": 15,
-        "ticks_per_craft": 3.493788788832867,
-        "crafts_per_tick": 0.2862222247653555,
+        "ticks_per_craft": 3.493449781659389,
+        "crafts_per_tick": 0.28625,
         "productivity": 300,
         "bonus_per_craft": 3,
-        "ticks_per_bonus": 10.481366366498602,
+        "ticks_per_bonus": 10.480349344978166,
         "inputs": [
           {
             "item": "plastic-bar",
             "per_craft": 5,
-            "per_second": 85.86666742960665,
-            "per_tick": 1.4311111238267775
+            "per_second": 85.875,
+            "per_tick": 1.43125
           }
         ],
-        "insertion_duration_ticks": 19.215838338580774,
+        "insertion_duration_ticks": 19.213973799126638,
         "crafts_per_second": {
-          "numerator": 6440000057220499,
-          "denominator": 375000000000000
+          "numerator": 687,
+          "denominator": 40
         }
       },
       "yield": {
@@ -543,8 +543,8 @@
               "denominator": 1
             },
             "per_second": {
-              "numerator": 4293333371480331,
-              "denominator": 62500000000000
+              "numerator": 687,
+              "denominator": 10
             },
             "main": true,
             "stochastic": false

@@ -26,7 +26,9 @@ describe("an inserter the config sets to always enabled", () => {
         let result: BlueprintGenerationResult;
 
         beforeAll(async () => {
-            config = await loadConfigFromFile(ConfigPaths.LOW_DENSITY_STRUCTURE);
+            // the sample is automatic; the plastic plant's input and two outputs are set to always enabled on this copy
+            const sample = await loadConfigFromFile(ConfigPaths.LOW_DENSITY_STRUCTURE);
+            config = { ...sample, inserters: sample.inserters.map((it, index) => [4, 7, 10].includes(index) ? { ...it, overrides: { ...it.overrides, ...ALWAYS } } : it) };
             result = generateClockForConfig(config, { logger: quiet, verify_as_built: true });
         });
 

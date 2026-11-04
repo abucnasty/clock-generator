@@ -32,8 +32,12 @@
         "inserter:3/electromagnetic-science-pack"
       ],
       "periods": [
-        {"swings":2,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":64,"denominator":1},"cycles":11,"period_ticks":704,"kept":true},
-        {"swings":2,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":64,"denominator":1},"cycles":11,"period_ticks":704,"kept":true}
+        {"swings":5,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":160,"denominator":1},"cycles":22,"period_ticks":3520,"kept":true},
+        {"swings":4,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":128,"denominator":1},"cycles":11,"period_ticks":1408,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":96,"denominator":1},"cycles":22,"period_ticks":2112,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":64,"denominator":1},"cycles":11,"period_ticks":704,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":32,"denominator":1},"cycles":22,"period_ticks":704,"kept":true},
+        {"swings":null,"fractional":true,"listed_as":"fractional","pruned":{"rule":"cycle-refused","terms":{"reason":"Cannot satisfy fractional swing constraint: each sub-cycle requires 4 swings, but maximum allowed is 2 due to insertion limits. Total swings: 16, cycle multiplier: 4."}}}
       ],
       "duty": [
         {
@@ -58,35 +62,35 @@
     }
   ],
   "composition": {
-    "swings": 2,
+    "swings": 5,
     "fractional": false,
     "listed_from": {
-      "swings": 2,
-      "planned": 2,
+      "swings": 5,
+      "planned": 5,
       "higher_up_to_ticks": 2400
     },
     "main_period": {
-      "ticks": 704,
+      "ticks": 3520,
       "exact": {
-        "numerator": 704,
+        "numerator": 3520,
         "denominator": 1
       }
     },
     "lcm_terms": {
       "cycle_ticks": {
-        "numerator": 64,
+        "numerator": 160,
         "denominator": 1
       },
       "group_cycles": [
         {
           "group": "group:1",
-          "cycles": 11
+          "cycles": 22
         }
       ],
       "ignored_items": [],
-      "computed_lcm": 11,
-      "override_lcm": 11,
-      "effective_lcm": 11
+      "computed_lcm": 22,
+      "override_lcm": null,
+      "effective_lcm": 22
     },
     "over_limit_action": {
       "action": "none"
