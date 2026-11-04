@@ -1,6 +1,6 @@
 -- Run a generated clock on the iron plate build, whose car is a chest between the mining drill that fills it and the two
 -- furnaces that empty it, under the game tests' protocol (steady.lua). The disturbances: the first and the third stop the
--- drill (it is disabled by script) until the car has run dry and the output falls, the second blocks the output (the chest
+-- drill (it is disabled by script) and take the car's ore, until the output falls, the second blocks the output (the chest
 -- the loader fills keeps what it gets and is filled with wooden chests, then emptied and set to remove again).
 local entities, surface, _, settle = ...
 local car = capture.find_one(entities, function(entity) return entity.type == "car" end, "car")
@@ -31,7 +31,12 @@ local function event(t, action) table.insert(report.events, {tick = t, action = 
 local function stop_drill()
     return {
         kind = "stop drill",
-        start = function(t) drill.disabled_by_script = true event(t, "stop-drill") end,
+        -- the ore in the car goes with the cut (owner, 2026-11-03), so the loss shows at once
+        start = function(t)
+            drill.disabled_by_script = true
+            local removed = trunk.remove{name = "iron-ore", count = 1000000}
+            table.insert(report.events, {tick = t, action = "stop-drill", removed = removed})
+        end,
         release = function(t) drill.disabled_by_script = false event(t, "start-drill") end,
     }
 end

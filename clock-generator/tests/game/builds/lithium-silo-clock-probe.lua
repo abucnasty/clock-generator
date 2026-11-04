@@ -40,6 +40,8 @@ local function set_supplies(on)
         -- "exactly" none empties the chest too; the blueprint's filter ("at-least" 100) is set again on release
         supply.chest.set_infinity_container_filter(1, on and {name = filter.name, count = filter.count, mode = filter.mode, index = 1}
             or {name = filter.name, count = 0, mode = "exactly", index = 1})
+        -- the chest's plates go with the cut at once (owner, 2026-11-03)
+        if not on then supply.chest.get_inventory(defines.inventory.chest).clear() end
     end
 end
 local function cut()

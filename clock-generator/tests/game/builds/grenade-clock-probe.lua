@@ -1,5 +1,5 @@
 -- Run a clock on the grenade build (one copy, or seven on one belt) under the game tests' protocol (steady.lua): the build's own
--- clock or a generated one. The disturbances: the foundries stopped until the output falls (the iron plates stop), the output
+-- clock or a generated one. The disturbances: the foundries stopped and their waiting plates taken until the output falls, the output
 -- loader removed until it falls and rebuilt, the drills stopped until it falls (the coal stops). The ticks each output inserter
 -- waits for room on the belt are counted over the baseline.
 local entities, surface, _, settle = ...
@@ -44,10 +44,19 @@ local report = {events = {}, outputs = count, baseline_waits = {}, initial = {
     output_positions = {}, crafting_speed = {assemblers[1].crafting_speed, foundries[1].crafting_speed}}}
 for k = 1, count do report.initial.output_positions[k] = {outputs[k].position.x, outputs[k].position.y} report.baseline_waits[k] = 0 end
 local function event(t, action) table.insert(report.events, {tick = t, action = action}) end
+-- a stopped producer's made and undelivered output goes with the cut (owner, 2026-11-03): the foundries' plates waiting in
+-- their output; the drills drop straight into the assemblers and hold nothing
 local function stop(list, kind, stopped, started)
     return {
         kind = kind,
-        start = function(t) for _, e in ipairs(list) do e.disabled_by_script = true end event(t, stopped) end,
+        start = function(t)
+            local removed = 0
+            for _, e in ipairs(list) do
+                e.disabled_by_script = true
+                if e.type ~= "mining-drill" then removed = removed + e.get_inventory(defines.inventory.crafter_output).remove{name = "iron-plate", count = 1000000} end
+            end
+            table.insert(report.events, {tick = t, action = stopped, removed = removed})
+        end,
         release = function(t) for _, e in ipairs(list) do e.disabled_by_script = false end event(t, started) end,
     }
 end

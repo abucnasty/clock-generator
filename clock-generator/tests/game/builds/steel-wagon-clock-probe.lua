@@ -1,7 +1,7 @@
 -- Run a generated clock on the steel build under the game tests' protocol (steady.lua). Its cargo wagon is a hub: a mining drill
 -- fills it with ore, one furnace makes plates from the ore and puts them back, the other makes steel from the plates and puts it
 -- back, and the steel is taken out of the wagon onto a belt that a loader empties into a disposal chest. The disturbances: the
--- first and the third stop the drill (disabled by script) until the wagon has run dry of steel and the output falls, the second
+-- first and the third stop the drill (disabled by script) and take the wagon's ore, until the output falls, the second
 -- blocks the output (the chest the loader fills keeps what it gets and is filled with wooden chests, then emptied and set to
 -- remove again). The ticks each furnace stood at its output block (a full wagon slot) are counted over the run.
 local entities, surface, _, settle = ...
@@ -43,7 +43,12 @@ end
 local function stop_drill()
     return {
         kind = "stop drill",
-        start = function(t) drill.disabled_by_script = true event(t, "stop-drill") end,
+        -- the ore in the wagon goes with the cut (owner, 2026-11-03); its plates and steel stay, being downstream of the ore
+        start = function(t)
+            drill.disabled_by_script = true
+            local removed = cargo.remove{name = "iron-ore", count = 1000000}
+            table.insert(report.events, {tick = t, action = "stop-drill", removed = removed, wagon = contents()})
+        end,
         release = function(t) drill.disabled_by_script = false event(t, "start-drill") end,
     }
 end
