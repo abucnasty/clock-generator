@@ -19,7 +19,7 @@
 #                     and the first tick and signal at which they differ
 #
 # A job runs in a process of its own (node replay.js), N at a time (default: nproc - 1), so that none meets what an
-# earlier job left in the engine's memory; its heap may grow to REPLAY_HEAP_MB (default 6144: the as-built run of
+# earlier job left in the engine's memory; its heap may grow to REPLAY_HEAP_MB (default 6144: the as-built run of the former sample
 # processing units with a belt export, 4 periods of 116,160 ticks recorded, peaks near 3.6 GB RSS). Results are resumable: a job whose result exists is not run again (delete the
 # folder to start over). Each run also records its milliseconds, ticks per second and scavenges (V8's GC profiler); the
 # speed run (the as-built run with nothing recorded) is the one compare.js sets against the base's, as a median ratio.

@@ -68,7 +68,7 @@ traits, and a test holds both to the traits `buildTraits` builds from the config
 **The duty of a machine group** is recorded with the feasibility result (`Feasibility.duties`, `src/crafting/feasibility/duty.ts`):
 the crafts a second the group must make (the pass's own demand figure) over the crafts a second its machines make at their
 crafting speed, as an exact fraction, for each group that must craft. It is recorded only: it skips no check, refuses nothing and
-changes no clock, and a duty of 1 can still clock (the biochamber fuel sample's one machine is asked exactly what it makes).
+changes no clock, and a duty of 1 can still clock (the biochamber fuel test config's one machine, `tests/configs/`, is asked exactly what it makes).
 
 **The build plan** (`planBuild`, `src/crafting/planner/plan-build.ts`; types in `src/data-types/build-plan.ts`) is one arithmetic
 pass after the feasibility pass and before any simulation, over the facts, the graph and today's cycle plan
