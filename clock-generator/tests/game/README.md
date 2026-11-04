@@ -46,6 +46,35 @@ Missing Factorio/save settings cause skips; a skipped test has not verified the 
 
 For verification appropriate to other changes, see the [contributor guide](../../../CONTRIBUTING.md).
 
+## How a run is timed
+
+A clock check in the game is timed in game minutes, never in clock periods: a clock's period can be very long (116,160 ticks for
+one build), and the length of the period must not decide how long a check runs. One minute is 3,600 ticks. All of it is in
+`helpers/lua/steady.lua`; every clock family and the scripts that start the game for a check use that one helper.
+
+- **Steady state** is reached the first moment the machines that make the item the build is for have made the amount the target
+  asks for over the last minute (the target rate times 60 seconds). Warming up and settling are not timed in periods either: the
+  run goes on until that happens, and fails if it has not within ten minutes (36,000 ticks).
+- **Baseline:** the minute after steady state. It holds when the last minute's output never falls below the target amount. A
+  build whose output comes in bursts can dip below it between two bursts; then the baseline holds when the products from steady
+  state to the last moment the last minute reached the target again make at least the target rate over that stretch, so a minute
+  that ends between two bursts does not count against the clock. A build whose output only evens out over a longer stretch may ask
+  for a longer baseline, with the reason written next to it, and never over ten minutes (36,000 ticks).
+- **Disturbances** follow the baseline: each ingredient cut and the output block, one after the other. A disturbance lasts until the
+  last minute's output falls below the lowest it had in the baseline (so the loss is real and not a burst missing from the window),
+  and is then released. **Recovery** is steady state met again; it has to happen within ten minutes of the release. Ten minutes
+  is a bound for inputs that refill slowly, not what a good clock needs.
+- **Length:** a whole run (steady state, baseline and every disturbance with its recovery) ends at 15 minutes of game time
+  (54,000 ticks) whatever has happened; a build that would need more is not recorded as a test.
+- **Tier:** the clock tests run the turbo belt tier only; the slower tiers are not recorded.
+- **Mechanics probes** (`mechanics/`) are fixed short recordings of one game rule. Their stored recordings are read back and
+  recorded again only when the game binary changes.
+- **Scripts:** `scripts/record-clock.js`, `scripts/rule-count-game-check.js` and `scripts/capture-probe.js` follow the same rule
+  (`capture-probe.js` records a mechanics probe of a fixed, short length). `record-clock.js` and `rule-count-game-check.js` wait for steady state, judge the baseline minute as above and then record at
+  least one more minute (whole clock periods, as the recorder does). They refuse a request over 36,000 ticks, or a recording that
+  would be, unless they are run with `--long "<reason>"` (or `LONG_RUN=<reason>`):
+  a long run is a deliberate choice for one particular build, the reason is printed, and routine checks never use it.
+
 ## Recording cache
 
 A game test that asks for a recording the game already made does not start the game again. `recordInFactorio` keeps each
