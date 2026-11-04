@@ -7,7 +7,7 @@ import {loadConfigFromFile} from "../../../src/config/loader";
 import {FactorioBlueprintFile} from "../../../src/blueprints/blueprint";
 import {encodeBlueprintFile} from "../../../src/blueprints/serde";
 import {GameFixturePaths} from "../helpers/fixture-paths";
-import {BELT_SPEEDS, blueprintAtSpeed, configAtSpeed, FixtureBeltSpeed} from "../helpers/belt-speed-fixtures";
+import {blueprintAtSpeed, CLOCK_TEST_SPEEDS, configAtSpeed, FixtureBeltSpeed} from "../helpers/belt-speed-fixtures";
 import {ordinaryAtSpeed} from "../mechanics/belt-pickup/ordinary-speed-fixtures";
 import {makeInputBeltBackedUp} from "../mechanics/belt-pickup/belt-pickup-fixtures";
 import {capturePickupClockScenario} from "./pickup-clock-capture";
@@ -16,7 +16,7 @@ type Family = "electromagnetic" | "same-item";
 interface ClockCase {family: Family; speed: FixtureBeltSpeed; backed: boolean; geometry: string; name: string}
 
 export function pickupClockSpeedCases(family: Family): ClockCase[] {
-    return BELT_SPEEDS.flatMap(speed => [false, true].flatMap(backed =>
+    return CLOCK_TEST_SPEEDS.flatMap(speed => [false, true].flatMap(backed =>
         ["straight-belt", "underground-entrance", "underground-exit"].map(geometry => ({
             family, speed, backed, geometry, name: `${family}-${speed.name}-${geometry}-${backed ? "backed" : "moving"}`,
         }))));

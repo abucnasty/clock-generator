@@ -1,9 +1,9 @@
 import fs from "fs";
 import {test} from "vitest";
-import {capturePickupClockScenario, pickupClockInterventions} from "./pickup-clock-capture";
+import {capturePickupClockScenario} from "./pickup-clock-capture";
 import {frontClockScenario, frontEntranceClockCases, frontExitClockCases} from "./front-clock-fixtures";
 
-// A passing capture preserves the measured counts, including clock failures; it does not certify stability.
+// One run each under the protocol (pickup-clock-capture.ts); a passing capture preserves what the game did, including a failure.
 const cases = [...frontEntranceClockCases("different-items"), ...frontEntranceClockCases("same-item"),
     ...frontExitClockCases(true), ...frontExitClockCases(false)];
 for (const variant of cases) {
@@ -13,7 +13,7 @@ for (const variant of cases) {
             && (!factorio || !save || !fs.existsSync(save)), "Factorio harness is not configured");
         const scenario = frontClockScenario(variant);
         if (process.env.BELT_CLOCK_TRACE_PICKUPS === "1") {
-            scenario.probe.trace_periods = [62, ...pickupClockInterventions(scenario.outagePeriods).map(([, release]) => release + 6)];
+            // 64 ticks of pickups, machine inventory and output after each release
             scenario.probe.trace_ticks = 64;
         }
         await capturePickupClockScenario(scenario);

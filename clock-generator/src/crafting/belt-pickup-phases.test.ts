@@ -1,7 +1,7 @@
 import {expect, test} from "vitest";
 import {Config} from "../config";
 import {OpenRange} from "../data-types";
-import {backpressureLossOf, runAsBuiltCheck, runClockOnBuild} from "./trial";
+import {runAsBuiltCheck, runClockOnBuild} from "./trial";
 import {SerializableClockWindows} from "./clock";
 import {readControls} from "../../tests/game/builds/clock-controls";
 
@@ -15,8 +15,7 @@ interface NativeControl {
     clock_windows: SerializableClockWindows;
     windows: {phase_units_256: [number[], number[]]}[];
 }
-const {over_hood_turbo_trace: native, over_hood_express_trace: express} =
-    readControls<{over_hood_turbo_trace: NativeControl; over_hood_express_trace: NativeControl}>("lane-phase-controls.json");
+const {over_hood_turbo_trace: native} = readControls<{over_hood_turbo_trace: NativeControl}>("lane-phase-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 
 function outputWithPhases(window: NativeControl["windows"][number]): number[] {
@@ -65,43 +64,4 @@ test("clock verification rejects the native false-stable clock without a pickup 
     expect(check.failed_pickup_phases?.["inserter:2"]).toBeDefined();
     const [first, second] = check.failed_pickup_phases!["inserter:2"];
     expect(first).not.toBe(second);
-});
-
-test("express recovery reproduces the native seven-period shortfall with independently phased lanes", () => {
-    const config = {...express.config, overrides: {...express.config.overrides,
-        terminal_swing_count: express.terminal_swings}};
-    const windows = new Map(Object.entries(express.clock_windows).map(([id, ranges]) =>
-        [id, ranges.map(range => OpenRange.from(range.start, range.end))]));
-    const recovery = {loss: {kind: "supply", item: "iron-plate"} as const, period_ticks: express.period,
-        expected_output_items: express.expected, places: [0], shares: [1]};
-    expect(runClockOnBuild(config, windows, express.period, quiet, {
-        factorio_states: false, backpressure_loss: recovery,
-    }).backpressure_loss!.recovers).toBe(true);
-    // Native observer ticks and model clock ticks have different origins. Both starts below have the
-    // observed half-stack phase difference, without supplying the post-loss machine or hand state.
-    const observed = express.windows[1].phase_units_256.map(values => values[0]);
-    expect(Math.abs(observed[0] - observed[1])).toBe(32);
-    const loss = runClockOnBuild(config, windows, express.period, quiet, {
-        factorio_states: false, moving_pickup_phases: new Map([["inserter:2", [3, 7]]]),
-        backpressure_loss: recovery,
-    }).backpressure_loss!;
-    expect(loss.recovers).toBe(false);
-    expect(loss.trials).toHaveLength(1);
-    const cycle = express.recovery[0].recovered.slice(0, 7);
-    expect(cycle.filter(count => count === express.expected)).toHaveLength(6);
-    const rotations = cycle.map((_, index) => [...cycle.slice(index), ...cycle.slice(0, index)]);
-    expect(rotations).toContainEqual(loss.trials[0].ends_in);
-});
-
-test("recovery verification rejects the express clock that passed canonical recovery", () => {
-    const config = {...express.config, overrides: {...express.config.overrides,
-        terminal_swing_count: express.terminal_swings}};
-    const report = backpressureLossOf(config, express.clock_windows, express.period, express.expected, quiet,
-        {places: [0], shares: [1]});
-    expect(report.undisturbed.pickup_phase_starts_checked).toBeGreaterThan(0);
-    const iron = report.losses.find(outcome => outcome.loss.kind === "supply" && outcome.loss.item === "iron-plate")!;
-    expect(iron.recovers).toBe(false);
-    expect(iron.pickup_phase_starts_checked).toBeGreaterThan(0);
-    expect(iron.failed_pickup_phases?.["inserter:2"]).toBeDefined();
-    expect(report.survives).toBe(false);
 });

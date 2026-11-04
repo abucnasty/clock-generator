@@ -1,9 +1,8 @@
--- Observe a generated clock on the chest-fed blocked-output fixture. The force's belt stack size is set first (as the
--- belt-drop calibration of PR #251 does: only belt_stack_size_bonus changes, research is checked unchanged); output is
--- counted per clock period from the output inserter's drops; for each intervention the output loader is removed and
--- rebuilt at its release, so the belt fills from its end back to the drop. Interventions happen only after 64 untouched
--- periods.
-local entities, surface = ...
+-- Run a generated clock on the chest-fed blocked-output fixture under the game tests' protocol (steady.lua). The force's belt
+-- stack size is set first (as the belt-drop calibration of PR #251 does: only belt_stack_size_bonus changes, research is
+-- checked unchanged). The one disturbance is the output: the loader is removed until the output falls and rebuilt at the
+-- release, so the belt fills from its end back to the drop.
+local entities, surface, _, settle = ...
 local machine = capture.find_one(entities, function(entity) return entity.name == "assembling-machine-3" end, "machine")
 local input = capture.find_one(entities, function(entity)
     return entity.type == "inserter" and entity.drop_target == machine
@@ -27,48 +26,25 @@ local loader_index
 for index, entity in pairs(entities) do if entity == loader then loader_index = index end end
 local loader_spec = {name = loader.name, position = loader.position, direction = loader.direction,
     force = loader.force, type = loader.loader_type}
-local clock = capture.find_one(entities, function(entity)
-    return entity.type == "decider-combinator" and string.sub(entity.combinator_description or "", 1, 9) == "Clock for"
-end, "generated clock")
-local period = options.period
-local interventions = assert(options.interventions)
-local starts = game.tick + options.settle
-local report = {starts = starts, interventions = interventions, events = {}, periods = {}, initial = {
+local report = {events = {}, initial = {
     stack_size = force.belt_stack_size_bonus + 1, research_unchanged = true, crafting_speed = machine.crafting_speed,
     belt = output.drop_target.name, loader = loader.name}}
-local function held() return output.held_stack.valid_for_read and output.held_stack.count or 0 end
-local previous_clock, previous_held, current = capture.clock_value(clock), held(), nil
-local blocked, restored = {}, {}
-script.on_nth_tick(1, function()
-    local tick = game.tick - starts
-    local value, count = capture.clock_value(clock), held()
-    if value < previous_clock and game.tick >= starts then
-        if current then
-            current["end"] = game.tick
-            table.insert(report.periods, current)
-        end
-        current = {start = game.tick, items = 0}
-        helpers.write_file("clock-speed.json", helpers.table_to_json(report), false)
-    end
-    if current and count < previous_held then current.items = current.items + previous_held - count end
-    previous_clock, previous_held = value, count
-    for index, intervention in ipairs(interventions) do
-        if tick >= intervention[1] * period and not blocked[index] then
-            loader.destroy()
-            blocked[index] = true
-            table.insert(report.events, {tick = tick, action = "block-output"})
-        end
-        if tick >= intervention[2] * period and not restored[index] then
-            loader = assert(surface.create_entity(loader_spec))
-            -- Recorder extraction happens after these interventions during settling. Replace its stale handle.
-            entities[loader_index] = loader
-            restored[index] = true
-            table.insert(report.events, {tick = tick, action = "restore-output"})
-        end
-    end
-    if tick >= options.lastPeriod * period then
-        script.on_nth_tick(1, nil)
-        report.initial.research_unchanged = research() == before
-        helpers.write_file("clock-speed.json", helpers.table_to_json(report), false)
-    end
-end)
+local block = {
+    kind = "block output",
+    start = function(t)
+        loader.destroy()
+        table.insert(report.events, {tick = t, action = "block-output"})
+    end,
+    release = function(t)
+        loader = assert(surface.create_entity(loader_spec))
+        -- the recorder reads the build after the probe: replace its stale handle
+        entities[loader_index] = loader
+        table.insert(report.events, {tick = t, action = "restore-output"})
+    end,
+}
+steady.run{
+    finals = steady.final_machines(entities, options.recipes, options.item),
+    window = options.window, expected = options.expected, baseline = options.baseline, cap = options.cap,
+    disturbances = {block}, report = report, output = "clock-speed.json", settle = settle,
+    done = function() report.initial.research_unchanged = research() == before end,
+}

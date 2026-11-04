@@ -6,14 +6,14 @@ import {Config, ConfigSchema} from "../../../src/config";
 import {FactorioBlueprintFile} from "../../../src/blueprints/blueprint";
 import {encodeBlueprintFile} from "../../../src/blueprints/serde";
 import {GameFixturePaths} from "../helpers/fixture-paths";
-import {BELT_SPEEDS, blueprintAtSpeed, FixtureBeltSpeed} from "../helpers/belt-speed-fixtures";
+import {blueprintAtSpeed, CLOCK_TEST_SPEEDS, FixtureBeltSpeed} from "../helpers/belt-speed-fixtures";
 import {PickupClockScenario} from "./pickup-clock-capture";
 
 type Family = "different-items" | "same-item";
 export interface OverHoodClockCase {name: string; family: Family; speed: FixtureBeltSpeed; mirrored: boolean; backed: boolean}
 
 export function overHoodClockCases(family: Family): OverHoodClockCase[] {
-    return BELT_SPEEDS.flatMap(speed => [false, true].flatMap(mirrored => [false, true].map(backed => ({
+    return CLOCK_TEST_SPEEDS.flatMap(speed => [false, true].flatMap(mirrored => [false, true].map(backed => ({
         name: `over-hood-${speed.name}-${mirrored ? "mirrored" : "unmirrored"}-${backed ? "backed" : "moving"}-${family}`,
         family, speed, mirrored, backed,
     }))));
@@ -66,7 +66,7 @@ export function overHoodClockScaffold(variant: OverHoodClockCase): string {
 
 export function overHoodClockScenario(variant: OverHoodClockCase): PickupClockScenario {
     return {
-        name: variant.name, speed: variant.speed, backed: variant.backed, outagePeriods: 24,
+        name: variant.name, speed: variant.speed, backed: variant.backed,
         config: () => overHoodClockConfig(variant), scaffold: () => overHoodClockScaffold(variant),
         probe: {family: "compact", machine_name: "assembling-machine-3", output_to_belt: true,
             ingredients: ["iron-plate", variant.family === "different-items" ? "copper-cable" : "iron-plate"]},

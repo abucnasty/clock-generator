@@ -13,6 +13,11 @@ export const BELT_SPEEDS = [
     {name: "normal", prefix: "", units: 1},
 ] as const;
 export type FixtureBeltSpeed = typeof BELT_SPEEDS[number];
+/**
+ * The belt tiers the clock game tests, their controls and their generation tests sweep: turbo only (owner, 2026-11-03: turbo
+ * belts are the priority; a bug reported on another tier gets a scaffold of its own for that case)
+ */
+export const CLOCK_TEST_SPEEDS: readonly FixtureBeltSpeed[] = BELT_SPEEDS.filter(speed => speed.name === "turbo");
 
 /** Change transport prototypes only, retaining all positions, controls, filters and connections. */
 export function blueprintAtSpeed(text: string, speed: FixtureBeltSpeed): string {

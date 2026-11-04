@@ -10,7 +10,7 @@ import {BeltPickupLane} from "../../../../src/state/belt-pickup-lane";
 import {EntityState} from "../../../../src/state";
 import {GameFixturePaths} from "../../helpers/fixture-paths";
 import {composeProbeSource} from "../../helpers/probe-source";
-import {BELT_SPEEDS, configAtSpeed, speedCapture} from "../../helpers/belt-speed-fixtures";
+import {CLOCK_TEST_SPEEDS, configAtSpeed, speedCapture} from "../../helpers/belt-speed-fixtures";
 import {ordinaryAtSpeed} from "./ordinary-speed-fixtures";
 import {compareContinuousSimulator} from "./ordinary-pickup-comparison";
 import {makeInputBeltBackedUp, useAccumulatorsOnBothLanes} from "./belt-pickup-fixtures";
@@ -44,7 +44,7 @@ function simulatorPatterns(config: Config) {
     return patterns;
 }
 
-for (const speed of BELT_SPEEDS) for (const geometry of ["straight-belt", "underground-entrance", "underground-exit"])
+for (const speed of CLOCK_TEST_SPEEDS) for (const geometry of ["straight-belt", "underground-entrance", "underground-exit"])
     for (const backed of [false, true]) for (const ingredient of ["accumulator", "supercapacitor", "same-item"] as const) {
         const name = `${speed.name}-${geometry}-${backed ? "backed" : "moving"}-${ingredient}`;
         test(name, async context => {

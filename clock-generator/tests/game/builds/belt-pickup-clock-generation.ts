@@ -1,29 +1,15 @@
 import {describe, expect, test} from "vitest";
 import {generateClockAlternatives} from "../../../src/crafting/generate-blueprint";
-import {rotateRanges, SerializableClockWindows} from "../../../src/crafting/clock";
-import {backpressureLossOf, simulateClockOnly} from "../../../src/crafting/trial";
-import {OpenRange} from "../../../src/data-types";
 import {alwaysOnReasonProblemsOf} from "../../../src/crafting/generate-blueprint-test-helpers";
 import {pickupClockConfig, pickupClockSpeedCases} from "./pickup-clock-speed-coverage";
-import {baselineMeetsTarget, clockHash, readControls} from "./clock-controls";
+import {clockHash, readControls, runHolds, RunControls} from "./clock-controls";
+import {expectRunAgreesWithSelection} from "../helpers/fixture-mechanics";
 import {expectColdStartRunsOnSelection} from "./pickup-clock-cold-start-runs";
 import {BELT_PICKUP_GENERATED} from "./belt-pickup-clock-cases";
 
-const controls = readControls("pickup-clock-controls.json").cases;
+const controls = readControls<RunControls>("pickup-clock-controls.json").cases;
 
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
-interface StartupControl {
-    period: number;
-    terminal_swings: number;
-    clock_windows: SerializableClockWindows;
-    phases: {offset: number; items_per_period: number[]}[];
-}
-const startupControls = readControls<{backed_up_start: {cases: Record<string, StartupControl>}}>("pickup-clock-start-controls.json")
-    .backed_up_start.cases;
-const {moving_phase: movingPhases, recovery_phase: recoveryPhases} = readControls<{
-    moving_phase: {cases: Record<string, {phases: Record<string, [number, number]>; bins: number[]}>};
-    recovery_phase: {cases: Record<string, {phases: Record<string, [number, number]>}>};
-}>("lane-phase-controls.json");
 
 // The native controls witness the selected default, including its failures. A different default must be
 // rechecked in the game; matching the requested rate in the simulator alone does not replace that evidence.
@@ -53,56 +39,11 @@ export function beltPickupClockTests() {
             expect(period).toBe(pin!.period);
             expect(selected.verdict).toBe(pin!.verdict);
             expect(period).toBe(native.period);
-            expect(selected.verdict).toBe(movingPhases.cases[variant.name] ? "unstable" : native.generationVerdict);
-            expect(config.target_output.items_per_second * period / 60).toBe(native.expected);
-
-            const meetsTarget = baselineMeetsTarget(native, pin)
-                && native.recovery.every(trial => trial.recovered.every(items => items === native.expected));
-            const startup = startupControls[variant.name];
-            if (startup) {
-                // The fixed windows stay as a check of the simulator against the game's measured cold starts (a
-                // fully jammed start at offset 1287 alternates 144/208 natively), independent of the selection:
-                // the clock the game was recorded on was planned with the belts moving (#275), which is no longer made.
-                for (const phase of startup.phases) {
-                    const windows = Object.fromEntries(Object.entries(startup.clock_windows).map(([id, ranges]) =>
-                        [id, rotateRanges(ranges.map(range => OpenRange.from(range.start, range.end)), phase.offset, startup.period)
-                            .map(range => ({start: range.start_inclusive, end: range.end_inclusive}))]));
-                    const stock = simulateClockOnly({...config, overrides: {...config.overrides,
-                        terminal_swing_count: startup.terminal_swings}}, windows, startup.period,
-                        phase.items_per_period.length, quiet, {cold_start: true, warmup_periods: 0});
-                    expect(stock.ticks).toBe(startup.period * phase.items_per_period.length);
-                    const items = new Array<number>(phase.items_per_period.length).fill(0);
-                    const output = stock.inserters.find(inserter => inserter.inserter_id === "inserter:1")!;
-                    output.held.forEach((held, tick) => {
-                        items[Math.floor(tick / startup.period)] += Math.max(0, (output.held[tick - 1] ?? 0) - held);
-                    });
-                    expect(items, `native cold-start output at offset ${phase.offset}`).toEqual(phase.items_per_period);
-                }
-            }
-            if (movingPhases.cases[variant.name]) {
-                // These warm native runs still pass. The verifier finds a cold lane-phase start the clock fails from,
-                // and the game fails from it too (lane-phase-controls.json, normal_underground): the retained warm
-                // run started at another phase.
-                expect(meetsTarget).toBe(true);
-                expect(selected.assessment.holds).toBe(false);
-                expect(selected.result.stability_check.as_built?.failed_pickup_phases)
-                    .toEqual(movingPhases.cases[variant.name].phases);
-                // and the result says so: it holds from the modeled start, and a belt in another lane phase can fall short
-                expect(result.why_not_stable?.cause).toBe("moving lane phases");
-            } else if (recoveryPhases.cases[variant.name]) {
-                // The capture holds and recovers, and the generator's loss trials find a lane-phase start the clock does not
-                // get back from after a loss, which the capture cannot set up: a cautious verdict, not a measured failure.
-                expect(meetsTarget).toBe(true);
-                expect(selected.assessment.holds).toBe(true);
-                expect(selected.belt?.kind).toBe("moving");
-                const swings = {...config, overrides: {...config.overrides, terminal_swing_count: selected.result.used_terminal_swing_count}};
-                const failed = backpressureLossOf(swings, selected.result.clock_windows, period, native.expected, quiet).losses
-                    .filter(loss => !loss.recovers);
-                expect(failed.length).toBeGreaterThan(0);
-                expect(failed.map(loss => loss.failed_pickup_phases)).toEqual(failed.map(() => recoveryPhases.cases[variant.name].phases));
-                // which the result tells as the moving lane phases, not as a clock that does not recover
-                expect(result.why_not_stable?.cause).toBe("moving lane phases");
-            } else if (meetsTarget) {
+            expect(selected.verdict).toBe(native.generationVerdict);
+            expect(Math.round(config.target_output.items_per_second * period / 60 * 1e6) / 1e6).toBe(pin!.expected);
+            expectRunAgreesWithSelection(variant.name, native, {verdict: selected.verdict, holds: selected.assessment.holds},
+                selected.belt?.kind === (variant.backed ? "backed_up" : "moving"));
+            if (runHolds(native)) {
                 expect(selected.verdict).toBe("stable");
                 expect(selected.assessment.items_per_second).toBe(config.target_output.items_per_second);
                 expect(selected.belt?.kind).toBe(variant.backed ? "backed_up" : "moving");
@@ -111,12 +52,6 @@ export function beltPickupClockTests() {
                 // A fallback requiring backed-up supply is not a verified clock for moving input.
                 expect(selected.verdict !== "stable" || selected.belt?.kind !== (variant.backed ? "backed_up" : "moving"),
                     "a measured shortfall must not be advertised as stable for this supply").toBe(true);
-                // And where the clock was recorded under its own supply, a baseline miss has to be the generator's own
-                // finding: a clock rejected for recovery alone can hide a baseline it wrongly believes holds.
-                if (selected.belt?.kind === (variant.backed ? "backed_up" : "moving")
-                    && native.baseline.some(items => items !== native.expected)) {
-                    expect(selected.assessment.holds, "the native baseline misses the expected output: the generator has to see that itself").toBe(false);
-                }
             }
         });
     });

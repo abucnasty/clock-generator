@@ -1,5 +1,7 @@
--- Observe a running generated clock. Interventions happen only after64 untouched periods.
-local entities, surface = ...
+-- Run a generated clock on a belt-fed pickup fixture under the game tests' protocol (steady.lua): steady state, the baseline,
+-- then the first ingredient cut, the output block and the second ingredient cut, each until it reduces output, then
+-- released and recovered.
+local entities, surface, _, settle = ...
 local machine = capture.find_one(entities, function(entity)
     return entity.name == (options.machine_name or (options.family == "electromagnetic" and "electromagnetic-plant" or "assembling-machine-3"))
 end, "machine")
@@ -9,20 +11,11 @@ end, "input")
 local belt = assert(input.pickup_target)
 local reach = pickup.lanes(belt)[1].length
 assert(reach == options.reach and belt.prototype.belt_speed == options.speed, "native pickup differs from config")
-local period = options.period
-local interventions = options.interventions or {{66, 68, 84}, {84, 88, 104}, {104, 106, 132}}
-local starts = game.tick + options.settle
-local report = {starts = starts, initial = {speed = belt.prototype.belt_speed, reach = reach}, events = {}, periods = {}}
-if options.interventions then report.interventions = options.interventions end
-if options.trace_periods then report.pickups = {} end
-local clock = capture.find_one(entities, function(entity)
-    return entity.type == "decider-combinator" and string.sub(entity.combinator_description or "", 1, 9) == "Clock for"
-end, "generated clock")
+local report = {initial = {speed = belt.prototype.belt_speed, reach = reach}, events = {}}
+if options.trace_ticks then report.pickups = {} end
 local output = capture.find_one(entities, function(entity)
     return entity.type == "inserter" and entity.pickup_target == machine
 end, "output inserter")
-local function held() return output.held_stack.valid_for_read and output.held_stack.count or 0 end
-local previous_clock, previous_held, current = capture.clock_value(clock), held(), nil
 local loader, loader_spec, loader_index, disposal
 if options.output_to_belt or options.family == "electromagnetic" then
     loader = capture.find_one(entities, function(entity)
@@ -36,75 +29,64 @@ else
     disposal = assert(output.drop_target)
     assert(disposal.name == "infinity-chest")
 end
-local blocked, restored = false, false
 local ingredients = options.ingredients or (options.family == "electromagnetic"
     and {"accumulator", "supercapacitor"} or {"iron-plate", "iron-plate"})
-script.on_nth_tick(1, function()
-    local tick = game.tick - starts
-    local value, count = capture.clock_value(clock), held()
-    if value < previous_clock and game.tick >= starts then
-        if current then
-            current["end"] = game.tick
-            table.insert(report.periods, current)
-        end
-        current = {start = game.tick, items = 0}
-        helpers.write_file("clock-speed.json", helpers.table_to_json(report), false)
-    end
-    if current and count < previous_held then current.items = current.items + previous_held - count end
-    previous_clock, previous_held = value, count
-    for _, first in ipairs(options.trace_periods or {}) do
-        if tick >= first * period and tick < first * period + (options.trace_ticks or 64) then
-            local snapshot = pickup.snapshot(input, tick)
-            snapshot.clock = value
-            local inventory = machine.get_inventory(defines.inventory.crafter_input)
-            snapshot.machine = {inputs = {}, crafting_progress = machine.crafting_progress, bonus_progress = machine.bonus_progress}
-            for _, ingredient in ipairs(ingredients) do snapshot.machine.inputs[ingredient] = inventory.get_item_count(ingredient) end
-            if options.product then
-                snapshot.machine.output = machine.get_inventory(defines.inventory.crafter_output).get_item_count(options.product)
-            end
-            table.insert(report.pickups, snapshot)
-            break
-        end
-    end
-    local item
-    if tick >= interventions[1][1] * period and tick < interventions[1][2] * period then
-        item = ingredients[1]
-    elseif tick >= interventions[3][1] * period and tick < interventions[3][2] * period then
-        item = ingredients[2]
-    end
-    if item then
-        for _, entity in pairs(entities) do
-            if entity.valid and (entity.type == "transport-belt" or entity.type == "underground-belt") then
-                for lane = 1, entity.get_max_transport_line_index() do
-                    entity.get_transport_line(lane).remove_item{name = item, count = 100000}
+local function event(t, action) table.insert(report.events, {tick = t, action = action}) end
+-- the pickups, machine inventory and output of the first ticks after each release, where a trace is asked for
+local tracing
+local function trace(t)
+    if not tracing or t >= tracing + options.trace_ticks then return end
+    local snapshot = pickup.snapshot(input, t)
+    local inventory = machine.get_inventory(defines.inventory.crafter_input)
+    snapshot.machine = {inputs = {}, crafting_progress = machine.crafting_progress, bonus_progress = machine.bonus_progress}
+    for _, ingredient in ipairs(ingredients) do snapshot.machine.inputs[ingredient] = inventory.get_item_count(ingredient) end
+    snapshot.machine.output = machine.get_inventory(defines.inventory.crafter_output).get_item_count(options.item)
+    table.insert(report.pickups, snapshot)
+end
+local function cut(item)
+    return {
+        kind = "cut " .. item,
+        start = function(t) event(t, "cut " .. item) end,
+        -- Clearing belt items every tick also keeps an underground's buffer from hiding the cut.
+        tick = function()
+            for _, entity in pairs(entities) do
+                if entity.valid and (entity.type == "transport-belt" or entity.type == "underground-belt") then
+                    for lane = 1, entity.get_max_transport_line_index() do
+                        entity.get_transport_line(lane).remove_item{name = item, count = 100000}
+                    end
                 end
             end
-        end
-    end
-    if tick >= interventions[2][1] * period and not blocked then
+        end,
+        release = function(t) event(t, "restore " .. item) tracing = options.trace_ticks and t end,
+    }
+end
+local block = {
+    kind = "block output",
+    start = function(t)
         if loader then loader.destroy()
         else
             disposal.remove_unfiltered_items = false
-            disposal.insert{name = "iron-gear-wheel", count = 1000000}
-            assert(not disposal.can_insert{name = "iron-gear-wheel", count = 1}, "output must really be blocked")
+            disposal.insert{name = options.item, count = 1000000}
+            assert(not disposal.can_insert{name = options.item, count = 1}, "output must really be blocked")
         end
-        blocked = true
-        table.insert(report.events, {tick = tick, action = "block-output"})
-    end
-    if tick >= interventions[2][2] * period and not restored then
+        event(t, "block-output")
+    end,
+    release = function(t)
         if loader_spec then
             loader = assert(surface.create_entity(loader_spec))
-            -- Recorder extraction happens after these interventions during settling. Replace its stale handle.
+            -- the recorder reads the build after the probe: replace its stale handle
             entities[loader_index] = loader
         else
             disposal.get_inventory(defines.inventory.chest).clear()
             disposal.remove_unfiltered_items = true
         end
-        restored = true
-        table.insert(report.events, {tick = tick, action = "restore-output"})
-    end
-    if tick >= options.lastPeriod * period then
-        script.on_nth_tick(1, nil)
-        helpers.write_file("clock-speed.json", helpers.table_to_json(report), false)
-    end
-end)
+        event(t, "restore-output")
+        tracing = options.trace_ticks and t
+    end,
+}
+steady.run{
+    finals = steady.final_machines(entities, options.recipes, options.item),
+    window = options.window, expected = options.expected, baseline = options.baseline, cap = options.cap,
+    disturbances = {cut(ingredients[1]), block, cut(ingredients[2])},
+    report = report, output = "clock-speed.json", settle = settle, each_tick = options.trace_ticks and trace,
+}
