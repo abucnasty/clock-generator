@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { Config } from "../../config";
 import { ConfigPaths, ExpectedRefusals } from "../../config/config-paths";
+import { TestConfigPaths } from "../../../tests/configs/paths";
 import { loadConfigFromFile } from "../../config/loader";
 import { DebugSettingsProvider } from "../sequence/debug/debug-settings-provider";
 import { SimulationContext } from "../sequence/simulation-context";
@@ -280,7 +281,7 @@ describe("the memo of the backpressure loss verdicts of a generation", () => {
     });
 
     it("tells clocks apart by the cycles they are planned on where those set the clocks of the inserters outside the plan", async () => {
-        const fuel = await loadConfigFromFile(ConfigPaths.BIOCHAMBER_FUEL);
+        const fuel = await loadConfigFromFile(TestConfigPaths.BIOCHAMBER_FUEL);
         const built = generateClockForConfig(fuel, { logger: quiet, verify_as_built: false, fuel_consumption_view: false, modulo_blueprint: false, factorio_states: false });
         expect(Object.keys(built.unplanned_inserter_clocks ?? {})).not.toEqual([]);
         expect(backpressureLossKey({ ...fuel, overrides: { ...fuel.overrides, lcm: 7 } }, built)).not.toBe(backpressureLossKey(fuel, built));

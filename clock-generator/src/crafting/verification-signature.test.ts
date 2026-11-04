@@ -1,5 +1,6 @@
 import {afterEach, beforeAll, describe, expect, it, vi} from "vitest";
 import {ConfigPaths} from "../config/config-paths";
+import { TestConfigPaths } from "../../tests/configs/paths";
 import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config";
 import {generateClockForConfig} from "./generate-clock";
@@ -60,7 +61,7 @@ describe("candidate verification identity", () => {
     });
 
     it("does not equate fractional AUTO fuel controls with whole-swing controls", async () => {
-        const fuel = await loadConfigFromFile(ConfigPaths.BIOCHAMBER_FUEL);
+        const fuel = await loadConfigFromFile(TestConfigPaths.BIOCHAMBER_FUEL);
         const built = generateClockForConfig(fuel, options);
         expect(Object.values(built.unplanned_inserter_clocks ?? {}).some(clock => clock.own_clock)).toBe(true);
         expect(signature({...fuel, overrides: {...fuel.overrides, use_fractional_swings: true}}, built))

@@ -58,7 +58,6 @@ export const ConfigPaths = {
     JELLYNUT_PROCESSING_ROCKET_FUEL: path.join(CONFIG_SAMPLES_DIR, 'gleba', 'jellynut-processing', 'jellynut-processing-rocket-fuel.json'),
     AGRICULTURAL_SCIENCE: path.join(CONFIG_SAMPLES_DIR, 'science', 'agriculture-science', 'agriculture-science.json'),
     IRON_BACTERIA_CULTIVATION: path.join(CONFIG_SAMPLES_DIR, 'gleba', 'iron-bacteria-cultivation', 'iron-bacteria-cultivation.json'),
-    BIOCHAMBER_FUEL: path.join(CONFIG_SAMPLES_DIR, 'gleba', 'biochamber-fuel', 'nutrients-from-yumako-mash-fuel-bonus.json'),
     JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS: path.join(CONFIG_SAMPLES_DIR, 'gleba', 'jellynut-processing', 'jellynut-processing-rocket-fuel-biochambers.json'),
     /** Real cells of bases built in the game, with their scaffold and the rate measured in the base (milestone M1) */
     REAL_STUPIDFATHOBBIT_CELL02: path.join(CONFIG_SAMPLES_DIR, 'real', 'stupidfathobbit', 'cell02', 'stupidfathobbit-cell02.json'),

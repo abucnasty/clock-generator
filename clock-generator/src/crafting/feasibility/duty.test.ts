@@ -3,6 +3,7 @@ import { ConfigPaths } from "../../config/config-paths";
 import { FeasibilityError } from "../../config/errors";
 import { loadConfigFromFile } from "../../config/loader";
 import { Config } from "../../config/schema";
+import { TestConfigPaths } from "../../../tests/configs/paths";
 import { assertFeasible } from "./assert-feasible";
 import { feasibilityOfConfig, withTarget } from "./feasibility-test-helpers";
 
@@ -33,7 +34,7 @@ describe("the duty of a machine group", () => {
     });
 
     it("biochamber fuel: its one machine is asked 1/2 a craft a second of the 1/2 it makes, a duty of exactly 1, and the build still passes", async () => {
-        const config = await sampleOf("BIOCHAMBER_FUEL");
+        const config = await loadConfigFromFile(TestConfigPaths.BIOCHAMBER_FUEL) as Config;
         expect(dutiesOf(config)).toEqual([["machine:nutrients-from-yumako-mash", [1], "1/2", "1/2", "1"]]);
         expect(feasibilityOfConfig(config).issues).toEqual([]);
         expect(() => assertFeasible(config)).not.toThrow();

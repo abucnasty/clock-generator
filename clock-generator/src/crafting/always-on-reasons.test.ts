@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ConfigPaths } from "../config/config-paths";
+import { TestConfigPaths } from "../../tests/configs/paths";
 import { loadConfigFromFile } from "../config/loader";
 import { alwaysOnReasons, chestDrillReasons } from "./always-on-reasons";
 import type { ChestDrillClock } from "./chest-drill-windows";
@@ -68,7 +69,7 @@ describe("the reasons a clock exports", () => {
 
 describe("a fuel inserter on a clock of its own", () => {
     it("is in the fuel plan, which the clock's inserter list reads it from, so it is listed with its own clock and never as always on", async () => {
-        const sample = await loadConfigFromFile(ConfigPaths.BIOCHAMBER_FUEL);
+        const sample = await loadConfigFromFile(TestConfigPaths.BIOCHAMBER_FUEL);
         const result = generateClockForConfig(sample, { logger: quiet });
         const own = Object.entries(result.unplanned_inserter_clocks ?? {}).filter(([, clock]) => clock.own_clock).map(([id]) => id);
         expect(own.length).toBeGreaterThan(0);

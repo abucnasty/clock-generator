@@ -58,7 +58,7 @@ describe("the samples at exactly their bound pass", () => {
         ["BIOCHAMBER_FUEL", "C1 machine:nutrients-from-yumako-mash", 0.5, 0.5],
         ["LOW_DENSITY_STRUCTURE", "C3 low-density-structure", 240, 240],
     ] as const)("%s: %s, %d against %d", async (key, name, need, capacity) => {
-        const { issues, tightest } = feasibilityOfConfig(await loadConfigFromFile(ConfigPaths[key]) as Config);
+        const { issues, tightest } = feasibilityOfConfig(await loadConfigFromFile({ ...ConfigPaths, ...TestConfigPaths }[key]) as Config);
         expect(issues).toEqual([]);
         expect(tightest!.name).toBe(name);
         expect([tightest!.need.toDecimal(), tightest!.capacity!.toDecimal()]).toEqual([need, capacity]);

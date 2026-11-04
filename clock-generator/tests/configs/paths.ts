@@ -9,4 +9,6 @@ export const TestConfigPaths = {
     REAL_OWNER_PINK_SCIENCE_ORIGINAL_NO_BUFFERS: path.join(__dirname, 'pink-science-original-no-buffers.json'),
     /** The coverage check's deliberate fixture (PR #53): an accumulator machine with no inserters, which fails with "Missing inserter coverage" */
     BAD_ACCUMULATOR_CONFIG: path.join(__dirname, 'accumulator-bad-config.json'),
+    /** A biochamber making nutrients from yumako mash at duty exactly 1 (0.5 of 0.5 crafts a second), with the fuel inserters and the burn bonus: the duty, fuel and burner-inventory cases */
+    BIOCHAMBER_FUEL: path.join(__dirname, 'nutrients-from-yumako-mash-fuel-bonus.json'),
 } as const;

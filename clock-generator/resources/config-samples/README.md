@@ -89,7 +89,7 @@ In the order they would settle the most:
 4. **gleba/rocket-fuel** and **gleba/jellynut-processing**: 3-swing rates swapped between the two jelly stack configs.
 5. **science/military-science**, **intermediates/flying-robot-frame**,
    **intermediates/lithium-plates**, **intermediates/electric-engine-unit**,
-   **gleba/biochamber-fuel**, **smelting/stone-bricks**, **smelting/electric-furnace**: never recorded.
+   **smelting/stone-bricks**, **smelting/electric-furnace**: never recorded.
 
 ## Backpressure loss
 

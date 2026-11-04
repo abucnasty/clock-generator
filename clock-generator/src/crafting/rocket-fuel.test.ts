@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { generateClockForConfig, type BlueprintGenerationResult } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
+import { TestConfigPaths } from "../../tests/configs/paths";
 import { quiet } from "./generate-blueprint-test-helpers";
 
 // The clock alternatives of the rocket fuel samples, which take a minute to generate, are in rocket-fuel.generation.test.ts
@@ -18,7 +19,7 @@ describe("generateClockForConfig", () => {
     beforeAll(async () => {
         const verified = async (path: string) => generateClockForConfig(await loadConfigFromFile(path), { verify_as_built: true, logger: quiet });
         by_product = await verified(ConfigPaths.JELLYNUT_PROCESSING_ROCKET_FUEL);
-        fuel_inserter = await verified(ConfigPaths.BIOCHAMBER_FUEL);
+        fuel_inserter = await verified(TestConfigPaths.BIOCHAMBER_FUEL);
         biochambers = await verified(ConfigPaths.JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS);
         flying_robot_frame = generateClockForConfig(await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME), { logger: quiet });
     });
@@ -68,7 +69,7 @@ describe("generateClockForConfig", () => {
         });
 
         it("does not change the LCM", async () => {
-            const config = await loadConfigFromFile(ConfigPaths.BIOCHAMBER_FUEL);
+            const config = await loadConfigFromFile(TestConfigPaths.BIOCHAMBER_FUEL);
             const plain = generateClockForConfig({
                 ...config,
                 machines: config.machines.map(machine => ({ ...machine, prototype: undefined })),

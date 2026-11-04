@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { ConfigPaths } from "../config/config-paths";
+import { TestConfigPaths } from "../../tests/configs/paths";
 import { loadConfigFromFile } from "../config/loader";
 import { generateClockForConfig } from "../crafting/generate-blueprint";
 import { FactorioDataService } from "../data";
@@ -20,7 +20,7 @@ beforeAll(() => {
  * its configuration predicts.
  */
 async function recordFuelBiochamber(options: { swing_offset?: number; later_swing_offset?: number; burn_factor?: number; out_of_fuel_from?: number } = {}) {
-    const config = await loadConfigFromFile(ConfigPaths.BIOCHAMBER_FUEL);
+    const config = await loadConfigFromFile(TestConfigPaths.BIOCHAMBER_FUEL);
     const result = generateClockForConfig(config, { logger: quiet });
     const period = result.simulation_duration.ticks;
     const clock_of_fuel_inserter = result.unplanned_inserter_clocks!["inserter:3"];

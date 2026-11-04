@@ -1,6 +1,7 @@
 import {describe, expect, it} from "vitest";
 import {ChestType} from "../common/entity-types";
 import {ConfigPaths} from "../config/config-paths";
+import { TestConfigPaths } from "../../tests/configs/paths";
 import {loadConfigFromFile} from "../config/loader";
 import {EnableControlMode} from "../config/schema";
 import {planClockAlternatives} from "./alternatives";
@@ -24,7 +25,7 @@ describe("belt supply alternative tasks", () => {
     });
 
     it("offers no clock for another supply where the only belt pickup supplies fuel", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.BIOCHAMBER_FUEL);
+        const config = await loadConfigFromFile(TestConfigPaths.BIOCHAMBER_FUEL);
         config.chests = [{type: ChestType.INFINITY_CHEST, id: 1,
             item_filter: [{item_name: "yumako-mash", request_count: 32}]}];
         config.inserters[0].source = {type: "chest", id: 1};

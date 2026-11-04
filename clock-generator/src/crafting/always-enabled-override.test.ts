@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { generateClockForConfig, observedWindowsClock, type BlueprintGenerationResult } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
+import { TestConfigPaths } from "../../tests/configs/paths";
 import type { Config } from "../config/schema";
 import { quiet } from "./generate-blueprint-test-helpers";
 
@@ -51,7 +52,7 @@ describe("an inserter the config sets to always enabled", () => {
     });
 
     it("has no fuel clock when it only fills a fuel slot, and the build is stable with it always enabled", async () => {
-        const sample = await loadConfigFromFile(ConfigPaths.BIOCHAMBER_FUEL);
+        const sample = await loadConfigFromFile(TestConfigPaths.BIOCHAMBER_FUEL);
         const clocked = generateClockForConfig(sample, { logger: quiet, verify_as_built: true });
         expect(Object.keys(clocked.unplanned_inserter_clocks ?? {})).toEqual(["inserter:3"]);
 
