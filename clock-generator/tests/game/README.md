@@ -40,7 +40,8 @@ npm run test:game -- tests/game/builds/moving-pickup.game.test.ts -t 'straight-b
 ```
 
 `npm test` excludes `*.game.test.ts`. `npm run test:generation` checks generated clocks in the simulator.
-`npm run test:game` without a file runs the entire local game suite, serially, and can take many minutes.
+`npm run test:game` without a file runs the entire local game suite, serially, and can take many minutes;
+`python3 scripts/game/run-suite.py` runs it as case-level jobs on as many Factorio lanes as the guard allows (below).
 Missing Factorio/save settings cause skips; a skipped test has not verified the game behavior.
 
 For verification appropriate to other changes, see the [contributor guide](../../../CONTRIBUTING.md).
@@ -64,6 +65,9 @@ watched run is never read or kept, and a hit leaves no game log (`work_dir` gets
 - **Cold run:** `CLOCK_RECORDING_CACHE=off` starts the game for every recording and keeps nothing; `=refresh` also starts the
   game for every recording and replaces what the store holds. Keep one cold pass per release. A value other than `on`,
   `off` and `refresh` counts as `off`.
+- **Mechanics probes always use the cache.** They record again only when the game binary changes (its hash is in the key,
+  so a new binary records them anyway). A cold or refresh run applies to `tests/game/builds` only; `scripts/game/run-suite.py`
+  runs `tests/game/mechanics` with `CLOCK_RECORDING_CACHE=on` whatever `--cache` says.
 - **What happened:** `CLOCK_RECORDING_CACHE_LOG=<file>` appends a line per recording: `hit`, `miss`, `stored`, `uncached`.
 - **Opting out:** `cache: false` in the options of a run. `npm run record`, `scripts/record-clock.js`, `scripts/capture-probe.js` and
   `scripts/rule-count-game-check.js` do; `scripts/native/run-lane.sh` sets `CLOCK_RECORDING_CACHE=off` in record mode. A native
@@ -74,9 +78,31 @@ part of the key, so a change to `src/harness/` starts every recording again; the
 are named in `HOST_SOURCES` (`factorio-harness.ts`), and a change elsewhere in the engine that alters what the harness
 does needs a bump of `RECORDING_CACHE_PROTOCOL`.
 
+## The whole suite on every lane
+
+```bash
+python3 scripts/game/run-suite.py                     # warm: recordings read from the cache where they exist
+python3 scripts/game/run-suite.py --cache off         # a cold pass over tests/game/builds (mechanics stay on the cache)
+python3 scripts/game/run-suite.py --plan car-clock    # the jobs and an estimate, nothing run
+python3 scripts/game/run-suite.py tests/game/mechanics/drills grenade-clock    # only files whose path contains these
+```
+
+It lists the cases (`vitest list --json`), cuts them into jobs, orders the jobs longest first by the seconds each case took
+last (`scripts/game/case-seconds.json`, a cold pass of 2026-11-02 with Factorio 2.1.24), and starts them through the guard
+on `machine.factorio_max` lanes (`-j` to override; without the guard directory jobs start directly, two at a time). A case of
+at least 120 seconds is a job of its own; shorter cases of one file share a job (`-t '^(a|b)$'`, one game at a time), so the
+many probes of a few seconds do not each pay vitest's start-up. Any case may be cut from its neighbours: every case starts its own
+game with `recordInFactorio`, or opens a `CachedHarnessSession` inside the one case that needs it (the staged-start tests), so no
+recording key depends on another case. The runner never watches (`FACTORIO_HARNESS_WATCH` is cleared); watched `scaffold-recordings`
+share one game and are run by hand. The result is one table for the run (`results.tsv`, `results.json`: passed, failed, skipped
+or no result per case; the exit code is 0 only when every selected case passed), the cache events, `lanes.log` and, in
+`durations.json`, the seconds of this run: copy it over `case-seconds.json` after a cold pass to keep the order current.
+
 ## Bounded parallel runs
 
-The default game suite remains sequential. Independent controls for the same mechanics question may run in
+The limits below are for runs by hand; runs through the guard are limited by `factorio_max` in its policy.
+
+`npm run test:game` remains sequential. Independent controls for the same mechanics question may run in
 separate headless processes at once, within the process limit below. A local check of two short belt-pickup controls (the turbo merge release-17 and
 outlet cases, removed after commit `52b4e9f0`) passed both sequentially and concurrently, with distinct live
 game/RCON ports and write-data directories. The pair took 5.17 seconds sequentially and 3.08 seconds
