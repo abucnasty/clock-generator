@@ -253,7 +253,7 @@ function heldAtLevel(measure: ContainerMeasure, results: readonly { item: ItemNa
  * The refusal of an inserter that takes several of the results a machine places into a container, or null where none
  * does. An inserter that waits for a full hand and holds part of one takes only more of that item (recorded on a car,
  * and on scrap into a rocket silo), so its other results pile up in the container, and once it is full the item it
- * waits for cannot come in: the build stops for good. Recorded in Factorio 2.1.21 on the scrap silo with the
+ * waits for cannot come in: the build stops for good. Recorded in Factorio 2.1.21 on a recycler on scrap placing into a rocket silo with the
  * processing units, low density structure and holmium ore on one filter stack inserter: after 47 minutes it held the
  * same part hand at 284 openings in a row with the silo full, and no scrap came in again.
  */
