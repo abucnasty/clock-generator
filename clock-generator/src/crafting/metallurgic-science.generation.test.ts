@@ -57,7 +57,8 @@ describe("generateClockForConfig", () => {
         it("calls the observed windows stable: by its rate over the cycle into a sink that never blocks, it gets back from every loss, the tungsten ore's included", () => {
             expect(selected.verdict).toBe("stable");
             expect(selected.assessment.backpressure_loss).toMatchObject({ survives: true, broken_by: [] });
-            expect(selected.result.stability_check.as_built?.long_run_proven).toBe(true);
+            // the long run repeats no state: the game makes 480 and every eighth period 496, 100% of the target over 38 periods
+            expect(selected.result.stability_check.as_built?.long_run_proven).toBe(false);
         });
 
         it("calls the 1-swing and 2-swing clocks unstable, and ranks them after the clock that holds", () => {

@@ -24,8 +24,8 @@ test("lithium silo: every inserter and drill a clock leaves always on says why",
     expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
 });
 
-test("lithium silo: the clock with 3 output swings is selected", () => {
-    expect(generated.alternatives[generated.selected_index].id).toBe("swings-3");
+test("lithium silo: the even-hands clock is selected; the clock with 3 output swings, recorded in the game, is another it makes", () => {
+    expect(generated.alternatives[generated.selected_index].id).toBe("even-hands");
 });
 
 for (const variant of lithiumSiloCases()) {

@@ -19,9 +19,9 @@ test("steel wagon: every inserter and drill a clock leaves always on says why", 
     expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
 });
 
-test("steel wagon: the clock with belt slack is selected, and the drill into the wagon is enabled before the ore is taken", () => {
+test("steel wagon: the clock of 1 output swing is selected, and the drill into the wagon is enabled before the ore is taken", () => {
     const selected = generated.alternatives[generated.selected_index];
-    expect(selected.id).toBe("planned-belt-slack-subtick");
+    expect(selected.id).toBe("swings-1-subtick");
     // a period of 886.15 ticks: a window of two whole positions is enabled 1 or 2 ticks a period, 1.08 on average
     expect(selected.result.clock_windows["drill:1"]).toEqual([{start: 346, end: 347}]);
     expect(Math.min(...selected.result.clock_windows["inserter:5"].map(range => range.start))).toBeLessThanOrEqual(348);
