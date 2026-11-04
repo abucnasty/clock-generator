@@ -170,6 +170,8 @@ beforeAll(async () => {
 });
 
 const contextOf = (sample: Sample) => SimulationContext.fromConfig(structuredClone(configs[sample]));
+/** #581: the first key of a context builds its update list, which starts the belt lines' motion in the key; a key to compare comes after it */
+const withScheduling = (context: SimulationContext) => { context.inserterScheduling(); return context; };
 const beltsOf = (context: SimulationContext) => context.state_registry.getAllStates().filter(EntityState.isBelt);
 const statesOf = (context: SimulationContext) => context.state_registry.getAllStates();
 /** An inserter that takes from a belt with the pickup arm, holding a part hand */
@@ -198,7 +200,7 @@ describe("simulationStateKey", () => {
     // P4 3.4: a key that loses a field ends warm-ups early, one that gains a field that varies delays repeats
     it("changes with each field in a key, of every component of every sample, and with none of the fields out of every key", () => {
         for (const sample of Object.keys(SAMPLES) as Sample[]) {
-            const context = contextOf(sample);
+            const context = withScheduling(contextOf(sample));
             const base = simulationStateKey(context);
             let keyed_changes = 0;
             for (const { component, inserter } of componentsOf(context)) {
@@ -322,7 +324,7 @@ describe("simulationStateKey", () => {
     });
 
     it("keeps the pickup arm's reach out of the key while the hand is empty or full: the next hand starts its own", () => {
-        const context = contextOf("AGRICULTURAL_SCIENCE");
+        const context = withScheduling(contextOf("AGRICULTURAL_SCIENCE"));
         const state = context.inserters.find(it => it.inserter_state.pickup_arm !== undefined)!.inserter_state;
         const item = carriedBy(state);
         const reach = (radius: number) => {
