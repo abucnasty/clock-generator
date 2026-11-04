@@ -11,7 +11,7 @@ import { quiet } from './generate-blueprint-test-helpers';
 import { expandStateTransitionHistory } from './sequence/compact-history';
 
 let config: Config;
-beforeAll(async () => { config = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE); });
+beforeAll(async () => { config = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_AUTO); });
 
 describe('optional timeline observer', () => {
     it('rejects an exact clock tick outside the existing warm-up budget instead of silently replaying an earlier tick', () => {

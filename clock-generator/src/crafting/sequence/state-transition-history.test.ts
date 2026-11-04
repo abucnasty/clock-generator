@@ -56,7 +56,7 @@ describe("a run's sealed state transition history, read back", () => {
     });
 
     it("equals what was serialized before over two periods, and without the game's states", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE);
+        const config = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_AUTO);
         const recorded = recordedBothWays(() => {
             runBuild(config, { logger: quiet, simulate_periods: 2 });
             runBuild(config, { logger: quiet, factorio_states: false });

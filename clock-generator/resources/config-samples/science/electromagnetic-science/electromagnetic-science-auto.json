@@ -36,11 +36,7 @@
         "id": 1
       },
       "stack_size": 16,
-      "overrides": {
-        "enable_control": {
-          "mode": "AUTO"
-        }
-      }
+      "overrides": {}
     },
     {
       "source": {
@@ -52,11 +48,7 @@
         "id": 1
       },
       "stack_size": 16,
-      "overrides": {
-        "enable_control": {
-          "mode": "AUTO"
-        }
-      }
+      "overrides": {}
     }
   ],
   "belts": [
@@ -87,8 +79,5 @@
       ]
     }
   ],
-  "overrides": {
-    "terminal_swing_count": 2,
-    "lcm": 11
-  }
+  "overrides": {}
 }
