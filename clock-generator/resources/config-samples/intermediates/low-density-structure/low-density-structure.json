@@ -96,11 +96,7 @@
         "id": 1
       },
       "stack_size": 16,
-      "overrides": {
-        "enable_control": {
-          "mode": "ALWAYS"
-        }
-      }
+      "overrides": {}
     },
     {
       "source": {
@@ -134,11 +130,7 @@
         "id": 3
       },
       "stack_size": 16,
-      "overrides": {
-        "enable_control": {
-          "mode": "ALWAYS"
-        }
-      }
+      "overrides": {}
     },
     {
       "source": {
@@ -172,11 +164,7 @@
         "id": 2
       },
       "stack_size": 16,
-      "overrides": {
-        "enable_control": {
-          "mode": "ALWAYS"
-        }
-      }
+      "overrides": {}
     },
     {
       "source": {
