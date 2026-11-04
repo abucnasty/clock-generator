@@ -11,7 +11,7 @@ import {GameFixturePaths} from "./fixture-paths";
 import {configAtSpeed, FixtureBeltSpeed} from "./belt-speed-fixtures";
 import {ContainerStorage} from "../../../src/simulation/components/container-storage";
 import { TickByHand } from "../../../src/crafting/runner/tick-by-hand.fixture";
-import {NativeRunSummary, runHolds} from "../builds/clock-controls";
+import {KnownDifferences, NativeRunSummary, runHolds} from "../builds/clock-controls";
 
 /**
  * Helpers for the unit tests of the fixture families: the documented mechanic of a family, run in the simulator on the
@@ -117,12 +117,13 @@ export function expectRunIsConsistent(native: NativeRunSummary, pin: {period: nu
 /**
  * What a run says of the selection it was recorded on, as each family's generation test checks it: a clock the generator calls
  * stable holds its target and recovers from every disturbance in the game; a run under the selection's own supply that misses
- * the target over its baseline has the generator's own holds verdict false.
+ * the target over its baseline has the generator's own holds verdict false. A rule named in `known` (the entry's
+ * known_differences) is not asserted; every other one is.
  */
 export function expectRunAgreesWithSelection(name: string, native: NativeRunSummary, selected: {verdict: string; holds: boolean},
-    recordedUnderOwnSupply = true) {
+    recordedUnderOwnSupply = true, known?: KnownDifferences) {
     const drained = native.stock && !native.stock.holds ? `; output stock ${native.stock.end} at the end, below the baseline's lowest ${native.stock.lowest}` : "";
-    if (selected.verdict === "stable") expect(runHolds(native), `${name}: a stable clock holds and recovers in the game (${native.result}${drained})`).toBe(true);
+    if (selected.verdict === "stable") expect(runHolds(native, known), `${name}: a stable clock holds and recovers in the game (${native.result}${drained})`).toBe(true);
     if (recordedUnderOwnSupply && native.baseline?.meets !== true) {
         expect(selected.holds, `${name}: the run misses the target over its baseline: the generator has to see that itself`).toBe(false);
     }

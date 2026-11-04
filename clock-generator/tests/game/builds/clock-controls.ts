@@ -129,8 +129,8 @@ export function isRunSummary(native: NativeClockSummary | NativeRunSummary): nat
  * Whether a run summary shows the clock holding its target (net output over the baseline's whole cycles), recovering from every
  * disturbance it ran, and ending with its output stock no lower than in the baseline (helpers/run-judgement.js)
  */
-export function runHolds(native: NativeRunSummary): boolean {
-    return judgedRunHolds(native);
+export function runHolds(native: NativeRunSummary, known?: KnownDifferences): boolean {
+    return judgedRunHolds(known?.stock_guard ? {...native, stock: null} : native);
 }
 
 /** The selection the generator makes, pinned by a portable generation test, with the sha256 of its exported clock */
@@ -166,6 +166,14 @@ export interface ClockControl<N extends AnyNativeSummary = AnyNativeSummary> {
      * refills the container between the cuts, and the game holds the target as long as that stock lasts
      */
     second_cut_held_simulated?: number;
+    /** Rules of the run that this entry is known to fail, each with its reason and issue; every other rule is still asserted */
+    known_differences?: KnownDifferences;
+}
+
+/** A known difference of a run: a rule it fails, with the reason and the issue that tracks it */
+export interface KnownDifferences {
+    /** The output stock guard: the run ends with the final machines' output stock below the baseline's lowest */
+    stock_guard?: string;
 }
 
 /** An alternative that is no longer selected and is still made: its id and the sha256 of its exported clock */

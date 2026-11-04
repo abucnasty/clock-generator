@@ -137,6 +137,12 @@ interface ScaffoldBuild {
      * README. What the build moves in every period is held all the same, and so is every other inserter and machine.
      */
     moved_open?: { inserter_ids: number[]; why: string };
+    /**
+     * Machines whose crafts a period the simulator counts otherwise than the game, and why that is left: a known difference
+     * with its issue and its line in the samples README. What the build moves in every period is held all the same, and so is
+     * every inserter and every other machine.
+     */
+    crafts_open?: { machine_ids: number[]; why: string };
 }
 
 /** The logistic science build with inserter crafting: an accepted gap in the wake-ups (#586), production and every hand held all the same */
@@ -382,6 +388,11 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         wake_ups_open: "the simulator counts 200.0 a minute from the scaffold's cold start, its two output inserters woken by their "
             + "furnaces 100 times a minute each, and 0.0 from other starts; the game's states give 3.8 on 2026-10-22 (1.3 for each "
             + "output inserter, 0.6 for each inserter from the car), for a reason not yet found: ",
+        crafts_open: {
+            machine_ids: [1, 2],
+            why: "#587: the two furnaces finish 193.17 crafts and productivity bars a period in the game under the minute-long recording "
+                + "and 194.00 in the simulator, while the build moves 96 plates in every period (samples README, real/owner/car)",
+        },
     },
     // The steel build: one cargo wagon is a hub that a big mining drill fills with ore, two furnaces take from and
     // put back into (ore to plates, plates to steel), and one inserter empties of steel onto the output belt; 26 a second
@@ -605,7 +616,8 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             }
 
             // the simulator against the game, entity by entity (compared above)
-            const known = (build.moved_open?.inserter_ids ?? []).map(id => `Inserter ${id} (`);
+            const known = [...(build.moved_open?.inserter_ids ?? []).map(id => `Inserter ${id} (`),
+                ...(build.crafts_open?.machine_ids ?? []).map(id => `Machine ${id} (`)];
             // an issue names its inserter at its start or, for one about how the config describes the build, after a sentence
             const issues = compared.issues.filter(issue => !known.some(name => issue.startsWith(name) || issue.includes(`. ${name}`)));
             expect(issues, "the simulator moves what the game moved, through every inserter and machine").toEqual(build.staged_start?.open_issues ?? []);

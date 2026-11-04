@@ -45,7 +45,7 @@ test("car: the observed-windows clock is selected, and the drill into the car is
 // they find them still made
 for (const variant of carCases()) {
     test(`car clock: ${variant.name}`, () => {
-        const {generation, native} = controls.cases[variant.name];
+        const {generation, native, known_differences} = controls.cases[variant.name];
         const expected = generation!;
         const chosen = generated.alternatives.find(alternative => alternative.id === variant.alternative)!;
         const result = chosen.result;
@@ -60,7 +60,7 @@ for (const variant of carCases()) {
         expect(native.period).toBe(expected.period);
         // the game holds the target over the baseline, and is back at it after the drill stopped until the car ran dry, the output
         // blocked and the drill stopped again
-        expectRunAgreesWithSelection(variant.name, native, {verdict: chosen.verdict, holds: chosen.assessment.holds});
+        expectRunAgreesWithSelection(variant.name, native, {verdict: chosen.verdict, holds: chosen.assessment.holds}, true, known_differences);
     });
 }
 

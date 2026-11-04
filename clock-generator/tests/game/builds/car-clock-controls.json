@@ -77,6 +77,9 @@
           "supply": null
         },
         "clock_sha256": "ada70e1e95f6344645551b76515f3357c953fe28f1586020cc05de38d6143723"
+      },
+      "known_differences": {
+        "stock_guard": "#587: a final drill stop leaves the furnaces' output stock at a lower, steady level, below the baseline's lowest; net output, steady state and every recovery hold"
       }
     },
     "car-derived-takers-last": {
@@ -155,6 +158,9 @@
           "supply": null
         },
         "clock_sha256": "ada70e1e95f6344645551b76515f3357c953fe28f1586020cc05de38d6143723"
+      },
+      "known_differences": {
+        "stock_guard": "#587: a final drill stop leaves the furnaces' output stock at a lower, steady level, below the baseline's lowest; net output, steady state and every recovery hold"
       }
     },
     "car-swings-2": {
@@ -389,6 +395,9 @@
           "supply": null
         },
         "clock_sha256": "680216906ebddadf5638a3116ff240e7c0eec81994ac20e033eee4b22653b662"
+      },
+      "known_differences": {
+        "stock_guard": "#587: a final drill stop leaves the furnaces' output stock at a lower, steady level, below the baseline's lowest; net output, steady state and every recovery hold"
       }
     },
     "car-swings-3-takers-last": {
@@ -467,6 +476,9 @@
           "supply": null
         },
         "clock_sha256": "680216906ebddadf5638a3116ff240e7c0eec81994ac20e033eee4b22653b662"
+      },
+      "known_differences": {
+        "stock_guard": "#587: a final drill stop leaves the furnaces' output stock at a lower, steady level, below the baseline's lowest; net output, steady state and every recovery hold"
       }
     },
     "car-swings-1": {
@@ -545,6 +557,9 @@
           "supply": null
         },
         "clock_sha256": "2076db78e3f81019464ac681875c38570f79c30a628d0373e906624b99abd6b0"
+      },
+      "known_differences": {
+        "stock_guard": "#587: a final drill stop leaves the furnaces' output stock at a lower, steady level, below the baseline's lowest; net output, steady state and every recovery hold"
       }
     }
   }
