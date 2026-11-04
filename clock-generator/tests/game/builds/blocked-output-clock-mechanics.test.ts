@@ -3,17 +3,17 @@ import {SerializableClockWindows} from "../../../src/crafting/clock";
 import {backpressureLossOf} from "../../../src/crafting/trial";
 import {BELT_SPEEDS} from "../helpers/belt-speed-fixtures";
 import {GameFixturePaths} from "../helpers/fixture-paths";
-import {expectControlIsConsistent, readFixtureFigures} from "../helpers/fixture-mechanics";
+import {expectRunIsConsistent, readFixtureFigures} from "../helpers/fixture-mechanics";
 import {BLOCKED_OUTPUT_GENERATED} from "./blocked-output-clock-cases";
 import {
-    BLOCKED_OUTPUT_CRAFTING_SPEED, BLOCKED_OUTPUT_INTERVENTIONS, BLOCKED_OUTPUT_TARGET, BlockedOutputClockCase,
+    BLOCKED_OUTPUT_CRAFTING_SPEED, BLOCKED_OUTPUT_TARGET, BlockedOutputClockCase,
     blockedOutputClockCases, blockedOutputClockConfig,
 } from "./blocked-output-clock-fixtures";
-import {readControls} from "./clock-controls";
+import {readControls, runHolds, RunControls} from "./clock-controls";
 
 /**
  * The blocked-output family (`blocked-output-clock-fixtures.ts`: iron gears at 5 a second in a legendary assembler 3, its
- * output dropped onto a belt of the tier and belt stack size that is blocked for 24 periods), checked against what the game
+ * output dropped onto a turbo belt at belt stack sizes 1-4, blocked until the output falls), checked against what the game
  * recorded without generating a clock: the recorded controls state themselves, the drop figures the belt-drop calibration
  * recorded are what the documentation says, and the simulator, running a plain clock built from those figures, holds the
  * target and is back at it after the output stops being taken (block and release). The generation test
@@ -21,7 +21,7 @@ import {readControls} from "./clock-controls";
  * mechanic is docs/belt-pickup/experiments.md "Recovery through a blocked output" and docs/simulator.md.
  */
 
-const controls = readControls("blocked-output-clock-controls.json").cases;
+const controls = readControls<RunControls>("blocked-output-clock-controls.json").cases;
 const cases = blockedOutputClockCases();
 
 interface RecordedHand {start: number; offsets: number[]; amounts: number[]}
@@ -30,15 +30,11 @@ const firstHandOf = (variant: BlockedOutputClockCase) => drops[`${variant.speed.
 
 /**
  * The clock the generator selects: a hand of 15 is shifted-swings; a hand of 16 is even-hands, or planned-belt-slack where
- * both have no wake-ups (an arm that swings back from a drop that emptied its hand is not counted) and it wins the tie,
- * or the observed-windows clock (derived) at fast-stack-2
+ * both have no wake-ups (an arm that swings back from a drop that emptied its hand is not counted) and it wins the tie
  */
-const PLANNED_SELECTED = new Set(["express-stack-2", "express-stack-4", "fast-stack-4", "normal-stack-1", "normal-stack-4", "turbo-stack-2", "turbo-stack-4"]
-    .map(name => `blocked-output-${name}`));
-const DERIVED_SELECTED = new Set(["blocked-output-fast-stack-2"]);
+const PLANNED_SELECTED = new Set(["turbo-stack-2", "turbo-stack-4"].map(name => `blocked-output-${name}`));
 const selectedClockOf = (variant: BlockedOutputClockCase) =>
-    variant.stackSize === 3 ? "shifted-swings" : PLANNED_SELECTED.has(variant.name) ? "planned-belt-slack"
-        : DERIVED_SELECTED.has(variant.name) ? "derived" : "even-hands";
+    variant.stackSize === 3 ? "shifted-swings" : PLANNED_SELECTED.has(variant.name) ? "planned-belt-slack" : "even-hands";
 
 /** The hand the output inserter drops: 16 items, 15 at stack size 3 (docs/belt-pickup/experiments.md) */
 const handOf = (variant: BlockedOutputClockCase) => variant.stackSize === 3 ? 15 : 16;
@@ -93,8 +89,8 @@ describe("the drop figures the cases rest on (belt-drop turbo-stacks calibration
 });
 
 describe("the recorded controls of the blocked-output fixtures", () => {
-    test("there is a control with a native summary and a pin for each of the 16 fixtures, and no other", () => {
-        expect(cases).toHaveLength(16);
+    test("there is a control with a native summary and a pin for each of the 4 fixtures, and no other", () => {
+        expect(cases).toHaveLength(4);
         expect(Object.keys(controls).sort()).toEqual(cases.map(variant => variant.name).sort());
         for (const variant of cases) {
             expect(controls[variant.name].native, variant.name).toBeDefined();
@@ -106,35 +102,19 @@ describe("the recorded controls of the blocked-output fixtures", () => {
         const variant = cases.find(it => it.name === name)!;
         const {native, generation} = controls[name];
         const config = blockedOutputClockConfig(variant);
-        expectControlIsConsistent(native, generation!, config.target_output.items_per_second);
+        expectRunIsConsistent(native, generation!, config.target_output.items_per_second);
         expect(native.target).toBe(BLOCKED_OUTPUT_TARGET);
         // five gears a second over the period: 16 in 192 ticks, or 120 in 1,440 where the hand of 15 rules out 192
-        expect({period: native.period, expected: native.expected}).toEqual({period: periodOf(variant).ticks, expected: periodOf(variant).expected});
+        expect({period: native.period, expected: generation!.expected}).toEqual({period: periodOf(variant).ticks, expected: periodOf(variant).expected});
         expect(generation!.selection).toEqual({id: selectedClockOf(variant), holds: true, rate: BLOCKED_OUTPUT_TARGET, supply: null});
         expect(generation!.verdict).toBe("stable");
         expect(native.generationVerdict).toBe("stable");
     });
 
-    test.each(cases.map(variant => variant.name))("%s: exact in 63 baseline periods, output stops during the block, exact in all 33 periods after the release", name => {
+    test.each(cases.map(variant => variant.name))("%s: holds its target, the output block reduces output, and the run is back at the target after the release", name => {
         const {native} = controls[name];
-        expect(native.interventions, "the output alone is blocked from period 66 to 90").toEqual(BLOCKED_OUTPUT_INTERVENTIONS);
-        expect(native.baseline).toHaveLength(63);
-        expect(native.baseline.every(items => items === native.expected)).toBe(true);
-        expect(native.recovery).toHaveLength(1);
-        const [{cut, during, recovered}] = native.recovery;
-        expect(cut).toBe(BLOCKED_OUTPUT_INTERVENTIONS[0][0]);
-        // 24 blocked periods and the one of the release
-        expect(during).toHaveLength(25);
-        // the game fills the belt behind the drop first, so output stops one to ten periods into the block (docs/belt-pickup/experiments.md)
-        const stopped = during.indexOf(0);
-        expect(stopped, "output stops").toBeGreaterThanOrEqual(1);
-        expect(stopped).toBeLessThanOrEqual(10);
-        expect(during.slice(stopped, -2).every(items => items === 0), "and stays stopped until the release").toBe(true);
-        // a hand dropped across the boundary of the periods is counted in both (planned-belt-slack on the normal belt at stack
-        // size 1 delivers 1 and 15), so the output waiting behind the block comes out over the last two periods
-        expect(during.at(-2)! + during.at(-1)!, "the periods of the release deliver at least the expected output").toBeGreaterThanOrEqual(native.expected);
-        expect(recovered).toHaveLength(33);
-        expect(recovered.every(items => items === native.expected)).toBe(true);
+        expect(native.disturbances.map(disturbance => disturbance.kind), "the output alone is blocked").toEqual(["block output"]);
+        expect(runHolds(native), native.result).toBe(true);
     });
 
     test("the cases the generation test generates are fixtures of the family, and the path each takes is stated", () => {

@@ -1,12 +1,12 @@
 import {describe, expect, test} from "vitest";
-import {BELT_SPEEDS} from "../helpers/belt-speed-fixtures";
-import {expectControlIsConsistent, firstHandPatterns} from "../helpers/fixture-mechanics";
+import {CLOCK_TEST_SPEEDS} from "../helpers/belt-speed-fixtures";
+import {expectRunIsConsistent, firstHandPatterns} from "../helpers/fixture-mechanics";
 import {FRONT_GENERATED} from "./front-clock-cases";
 import {frontClockConfig, FrontClockCase, frontEntranceClockCases, frontExitClockCases} from "./front-clock-fixtures";
-import {readControls} from "./clock-controls";
+import {readControls, runHolds, RunControls} from "./clock-controls";
 
 /**
- * The front underground entrance and exit family (`front-clock-fixtures.ts`: 32 entrance clocks and 16 exit clocks),
+ * The front underground entrance and exit family (`front-clock-fixtures.ts`, turbo: 8 entrance clocks and 4 exit clocks),
  * checked against what the game recorded without generating a clock: the simulator's first hand at each tier against the
  * hands in the fixture folders' READMEs and docs/belt-pickup/timing.md, and the recorded clock controls against the fixture
  * configs. The generation test (front-pickup-clock.generation.test.ts) generates only the cases of front-clock-cases.ts.
@@ -30,7 +30,7 @@ const sorted = (hands: Set<string>) => [...hands].sort();
 const totalTicks = (pattern: string) => Number(pattern.split(",").pop()) + 1;
 
 describe("front entrance: the simulator's first hand at each tier against the recorded hands", () => {
-    for (const speed of BELT_SPEEDS) for (const mirrored of [false, true]) {
+    for (const speed of CLOCK_TEST_SPEEDS) for (const mirrored of [false, true]) {
         const side = mirrored ? "mirrored" : "unmirrored";
         const variant = (family: "different-items" | "same-item", backed: boolean) => frontEntranceClockCases(family)
             .find(it => it.speed.name === speed.name && it.mirrored === mirrored && it.backed === backed)!;
@@ -64,7 +64,7 @@ describe("front exit: the simulator's first hand at each tier against the record
     const exit = (speedName: string, mirrored: boolean, backed: boolean) => frontExitClockCases(backed)
         .find(it => it.speed.name === speedName && it.mirrored === mirrored)!;
 
-    for (const speed of BELT_SPEEDS) for (const mirrored of [false, true]) {
+    for (const speed of CLOCK_TEST_SPEEDS) for (const mirrored of [false, true]) {
         const side = mirrored ? "mirrored" : "unmirrored";
 
         test(`${speed.name} ${side}, different items: the backed-up hand, with the fourth stack arriving after the hidden line refills`, async () => {
@@ -89,12 +89,12 @@ describe("front exit: the simulator's first hand at each tier against the record
 });
 
 describe("the recorded clock controls of the front fixtures", () => {
-    const controls = readControls("front-clock-controls.json").cases;
+    const controls = readControls<RunControls>("front-clock-controls.json").cases;
     const variants: FrontClockCase[] = [...frontEntranceClockCases("different-items"), ...frontEntranceClockCases("same-item"),
         ...frontExitClockCases(true), ...frontExitClockCases(false)];
 
-    test("there is a control with a native summary and a pin for each of the 48 fixtures", () => {
-        expect(variants).toHaveLength(48);
+    test("there is a control with a native summary and a pin for each of the 12 fixtures", () => {
+        expect(variants).toHaveLength(12);
         expect(Object.keys(controls).sort()).toEqual(variants.map(variant => variant.name).sort());
         for (const variant of variants) {
             expect(controls[variant.name].native, variant.name).toBeDefined();
@@ -105,39 +105,20 @@ describe("the recorded clock controls of the front fixtures", () => {
     test.each(variants.map(variant => variant.name))("%s: the game was recorded at the target rate over the pinned period", async name => {
         const variant = variants.find(it => it.name === name)!;
         const config = await frontClockConfig(variant);
-        expectControlIsConsistent(controls[name].native, controls[name].generation!, config.target_output.items_per_second);
+        expectRunIsConsistent(controls[name].native, controls[name].generation!, config.target_output.items_per_second);
         // the targets: 6/s on the compact entrance scaffold, the tier's belt units over four times 30/s on the exit's plant
         expect(config.target_output.items_per_second).toBe(variant.endpoint === "entrance" ? 6 : 30 * variant.speed.units / 4);
     });
 
-    test("all 48 recordings are exact in baseline and in the last periods of every recovery", () => {
-        for (const variant of variants) {
-            const {native} = controls[variant.name];
-            expect(native.baseline.every(items => items === native.expected), `${variant.name}: baseline`).toBe(true);
-            // backed-up recovery windows start later than moving ones and are shorter; the exit is backed up whatever its config says
-            const held = variant.endpoint === "exit" || variant.backed ? 5 : 8;
-            for (const loss of native.recovery) {
-                expect(loss.recovered.length, `${variant.name}: recovered periods`).toBeGreaterThanOrEqual(held);
-                expect(loss.recovered.slice(-held).every(items => items === native.expected), `${variant.name}: recovery`).toBe(true);
-            }
-        }
+    test("all 12 recordings hold their target and recover from every disturbance", () => {
+        for (const variant of variants) expect(runHolds(controls[variant.name].native), `${variant.name}: ${controls[variant.name].native.result}`).toBe(true);
     });
 
-    test("the generator judged all 32 entrance clocks and the 8 backed-up exit clocks stable", () => {
-        for (const variant of variants.filter(it => it.endpoint === "entrance" || it.backed)) {
+    test("the generator judged every turbo clock stable, the moving-config exits included", () => {
+        for (const variant of variants) {
             expect(controls[variant.name].generation!.verdict, variant.name).toBe("stable");
             expect(controls[variant.name].generation!.why_not_stable, variant.name).toBeUndefined();
         }
-    });
-
-    test("the only fixtures that are not stable are moving-config exits at normal, which the game holds and recovers", () => {
-        const notStable = Object.keys(controls).filter(name => controls[name].generation!.verdict !== "stable").sort();
-        expect(notStable).toEqual([
-            "front-exit-normal-mirrored-moving-config-different-items", "front-exit-normal-unmirrored-moving-config-different-items",
-        ]);
-        expect(notStable.map(name => controls[name].generation!.verdict)).toEqual(["unstable", "unstable"]);
-        // both verdicts come from moving lane-phase starts the exit cannot have
-        for (const name of notStable) expect(controls[name].generation!.why_not_stable, name).toBe("moving lane phases");
     });
 
     test("the generated cases are fixtures of the family, and the path each takes is stated", () => {

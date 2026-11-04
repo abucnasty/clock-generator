@@ -1,345 +1,124 @@
 {
-  "meaning": "Native summaries of the inserter build (LOGISTIC_SCIENCE_INSERTER_CRAFTING, 240 a second over three copies) as it was built, in Factorio 2.1.21: three copies in a row, the ore lines running on past the last copy into loaders and void chests (drained and moving), and the hand-made clock, a counter of 0 to 215 (216 ticks) with an iron plate window for the ore and plate inserters and an iron gear wheel window for the gear inserters. The copies are not alike (the first two have a gear assembler at 44.92, the first a fourth furnace at 91.875). 'own-clock-three-copies' is the hand-made clock, kept and recorded as the build came; 'generated-three-copies' is the generator's selected clock for the config (swings-2, 72 ticks) wired to each copy, with the hand-made clock's three combinators taken out. Both with the family's protocol: ore cut at periods 66-68, output blocked 84-88, circuits cut 104-106, in periods of each clock, so the cuts last 432 ticks for the hand-made clock and 144 for the generated one. Do not compare their recoveries tick for tick.",
+  "meaning": "The inserter build on three copies, with the hand-made clock (its identity from the blueprint, clock_basis built) and the generated clock (own-clock-fixtures.ts); the disturbances are the ore and the circuits taken off every belt and the output loader removed. `native` is the run under the game tests' protocol, timed in game ticks (tests/game/helpers/lua/steady.lua), recorded in Factorio 2.1.24: steady state (the machines making the target have made it over the trailing 3,600 ticks, no less than a window of whole clock cycles earlier), a baseline judged over its whole clock cycles (3,600 ticks unless the fixture names a longer one), then each disturbance until the output falls below the baseline's lowest minute, released and recovered. `generation` is the selection the family's generation test pins, with the sha256 of its exported clock's identity (`clockIdentity`); `recorded` is the recording that is current.",
   "cases": {
     "own-clock-three-copies": {
       "recorded": {
         "pr": 0,
-        "commit": "e1c0aadb",
-        "frozen_head": "e1c0aadb",
-        "note": "recorded before the PR was opened; pr is set when it is",
+        "commit": "3ff86660",
+        "frozen_head": "3ff86660",
+        "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
         "clock_sha256": "844e39cf2daea124b1911c7050a7b453f82ae18cac2aa352384c95f852885b32",
         "clock_basis": "built"
       },
       "native": {
+        "protocol": "trailing-minute",
         "generationVerdict": "the build's own clock",
         "target": 240,
         "period": 216,
-        "expected": 864,
-        "baseline": [
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864,
-          864
-        ],
-        "recovery": [
+        "window": 3600,
+        "expected": 14400,
+        "steady": 7056,
+        "baseline": {
+          "ticks": 3600,
+          "total": 14304,
+          "expected": 14400,
+          "min": 14259,
+          "max": 14478,
+          "held": false,
+          "measured": {
+            "ticks": 3456,
+            "items": 13824,
+            "expected": 13824
+          },
+          "meets": true
+        },
+        "disturbances": [
           {
-            "cut": 66,
-            "during": [
-              528,
-              0,
-              96
-            ],
-            "recovered": [
-              864,
-              864,
-              864,
-              864,
-              864,
-              864,
-              864,
-              864,
-              864
-            ]
+            "kind": "cut iron-ore",
+            "start": 10656,
+            "drop": 10815,
+            "release": 10815,
+            "recovered": 14803
           },
           {
-            "cut": 84,
-            "during": [
-              80,
-              0,
-              0,
-              232,
-              808
-            ],
-            "recovered": [
-              864,
-              864,
-              864,
-              864,
-              864,
-              864,
-              864,
-              864,
-              864
-            ]
+            "kind": "block output",
+            "start": 14803,
+            "drop": 14866,
+            "release": 14866,
+            "recovered": 14911
           },
           {
-            "cut": 104,
-            "during": [
-              184,
-              0,
-              356
-            ],
-            "recovered": [
-              864,
-              864,
-              864,
-              864,
-              864,
-              864,
-              864,
-              864,
-              864,
-              864,
-              864,
-              864,
-              864,
-              864,
-              864,
-              864,
-              864,
-              864,
-              864
-            ]
+            "kind": "cut electronic-circuit",
+            "start": 14911,
+            "drop": 14972,
+            "release": 14972,
+            "recovered": 19664
           }
         ],
-        "interventions": [
-          [
-            66,
-            68,
-            84
-          ],
-          [
-            84,
-            88,
-            104
-          ],
-          [
-            104,
-            106,
-            132
-          ]
-        ]
+        "result": "holds",
+        "ended": 19664
       }
     },
     "generated-three-copies": {
       "recorded": {
-        "pr": 524,
-        "commit": "0d3507f4",
-        "frozen_head": "0d3507f4",
-        "clock_sha256": "636f57cd38979390be2ca7ed40e6698e38d16614dcacebd41b1afe4557e4e92d",
+        "pr": 0,
+        "commit": "3ff86660",
+        "frozen_head": "3ff86660",
+        "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
+        "clock_sha256": "f3f231b0f2d40b16883eb9d9f80f01898002867be8a67e0f4f444a6b8c1450ef",
         "clock_basis": "capture"
       },
       "native": {
+        "protocol": "trailing-minute",
         "generationVerdict": "stable",
         "target": 240,
         "period": 72,
-        "expected": 288,
-        "baseline": [
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288,
-          288
-        ],
-        "recovery": [
+        "window": 3600,
+        "expected": 14400,
+        "steady": 7200,
+        "baseline": {
+          "ticks": 3600,
+          "total": 14400,
+          "expected": 14400,
+          "min": 14400,
+          "max": 14400,
+          "held": true,
+          "measured": {
+            "ticks": 3600,
+            "items": 14400,
+            "expected": 14400
+          },
+          "meets": true
+        },
+        "disturbances": [
           {
-            "cut": 66,
-            "during": [
-              288,
-              288,
-              284
-            ],
-            "recovered": [
-              288,
-              288,
-              288,
-              288,
-              288,
-              288,
-              288,
-              288,
-              288
-            ]
+            "kind": "cut iron-ore",
+            "start": 10800,
+            "drop": 11018,
+            "release": 11018,
+            "recovered": 14866
           },
           {
-            "cut": 84,
-            "during": [
-              232,
-              88,
-              0,
-              8,
-              228
-            ],
-            "recovered": [
-              288,
-              288,
-              288,
-              288,
-              288,
-              288,
-              288,
-              288,
-              288
-            ]
+            "kind": "block output",
+            "start": 14866,
+            "drop": 14886,
+            "release": 14886,
+            "recovered": 14896
           },
           {
-            "cut": 104,
-            "during": [
-              288,
-              176,
-              0
-            ],
-            "recovered": [
-              288,
-              288,
-              288,
-              288,
-              288,
-              288,
-              288,
-              288,
-              288,
-              288,
-              288,
-              288,
-              288,
-              288,
-              288,
-              288,
-              288,
-              288,
-              288
-            ]
+            "kind": "cut electronic-circuit",
+            "start": 14896,
+            "drop": 14976,
+            "release": 14976,
+            "recovered": 18929
           }
         ],
-        "interventions": [
-          [
-            66,
-            68,
-            84
-          ],
-          [
-            84,
-            88,
-            104
-          ],
-          [
-            104,
-            106,
-            132
-          ]
-        ]
+        "result": "holds",
+        "ended": 18929
       },
       "generation": {
         "period": 72,
-        "expected": 288,
+        "expected": 288.0,
         "verdict": "stable",
         "selection": {
           "id": "swings-6",
@@ -347,11 +126,11 @@
           "rate": 240,
           "supply": "moving"
         },
-        "clock_sha256": "636f57cd38979390be2ca7ed40e6698e38d16614dcacebd41b1afe4557e4e92d"
+        "clock_sha256": "f3f231b0f2d40b16883eb9d9f80f01898002867be8a67e0f4f444a6b8c1450ef"
       },
       "previous": {
         "id": "swings-2",
-        "clock_sha256": "632211409dc2b4bd0a8337f16d48372c40cf277fb808c2ff19677b69c4125251"
+        "clock_sha256": "be80e121bbde8bc96db94cd4714b4b259e38e77a0ff7ec429cfc032a0c6e6b99"
       }
     }
   }

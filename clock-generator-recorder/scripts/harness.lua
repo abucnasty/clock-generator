@@ -1131,7 +1131,7 @@ function harness.advance(job)
 end
 
 ---Wire a clock, seed the build, start recording and let the game run
----@param job {clock: table?, unclocked: boolean?, seed: table[]?, lua: string?, settle_ticks: number?, record: {ticks: number?, periods: number?}?}
+---@param job {clock: table?, unclocked: boolean?, seed: table[]?, lua: string?, settle_ticks: number?, record: {ticks: number?, periods: number?, at_once: boolean?}?}
 ---@return table report
 function harness.start(job)
     local state = storage.harness
@@ -1196,7 +1196,21 @@ function harness.start(job)
         if not chunk then
             error(problem)
         end
-        chunk(state.entities, game.surfaces[state.surface_index], state.area)
+        -- settle.finish() ends the settle in the tick it is called in: a probe that runs until something happens in the game
+        -- ends it then, and settle_ticks is the most it may take. settle.record_samples(n) shortens a recording without a clock
+        -- (a staged start, or record.at_once) to n samples: a probe that records until something happens ends it then, and
+        -- record.ticks is the most it may take
+        local settle = {
+            finish = function()
+                if state.record_tick and state.record_tick > game.tick then state.record_tick = game.tick end
+            end,
+            record_samples = function(samples)
+                local recording = storage.recording
+                assert(recording and not recording.clock, "record_samples needs a recording without a clock that has started")
+                if samples < recording.fallback_ticks then recording.fallback_ticks = math.max(samples, recording.sample_count) end
+            end,
+        }
+        chunk(state.entities, game.surfaces[state.surface_index], state.area, settle)
     end
 
     local record = job.record or {}
@@ -1206,7 +1220,8 @@ function harness.start(job)
         minimum_ticks = record.ticks or 0,
         ticks_without_clock = record.ticks or 600,
         -- a staged start records from the tick its inserters and clock are placed in, not from the clock's next wrap
-        ignore_clock = job.unclocked or state.staged ~= nil,
+        -- at_once: exactly the ticks asked for from the end of the settle, without waiting for the clock to wrap
+        ignore_clock = job.unclocked or state.staged ~= nil or record.at_once == true,
     }
     state.ready = false
     if (job.settle_ticks or 0) > 0 or state.staged then

@@ -6,7 +6,7 @@ import {FactorioDataService} from "../../../src/data";
 import {FactorioBlueprintFile} from "../../../src/blueprints/blueprint";
 import {encodeBlueprintFile} from "../../../src/blueprints/serde";
 import {Recording} from "../../../src/verification/recording";
-import {BELT_SPEEDS} from "../helpers/belt-speed-fixtures";
+import {CLOCK_TEST_SPEEDS} from "../helpers/belt-speed-fixtures";
 import {PickupClockScenario} from "./pickup-clock-capture";
 
 /**
@@ -47,17 +47,6 @@ export function containerDrainPeriods(variant: ContainerClockCase, item: string)
     const per_craft = INPUTS[variant.recipe].find(([name]) => name === item)![1];
     const per_period = CONTAINER_TARGET * PERIOD_TICKS[variant.recipe] / 60 * per_craft;
     return Math.ceil(stock / per_period);
-}
-
-/**
- * The standard protocol, with the cuts long enough to empty the container: a cut of one input, an output block and a
- * cut of another (the only one again for gears), each followed until the output is back (40 periods, the first 6 after a release not judged).
- */
-export function containerInterventions(variant: ContainerClockCase): [number, number, number][] {
-    const [first, second] = variant.recipe === "iron-gear-wheel" ? ["iron-plate", "iron-plate"] : ["iron-plate", "copper-cable"];
-    const cut1 = containerDrainPeriods(variant, first) + 8, cut2 = containerDrainPeriods(variant, second) + 8;
-    const release1 = 66 + cut1, block = release1 + 40, unblock = block + 4, cut = unblock + 40, release2 = cut + cut2;
-    return [[66, release1, block], [block, unblock, cut], [cut, release2, release2 + 40]];
 }
 
 const filtered = (from: number, to: number, item: string) =>
@@ -162,9 +151,8 @@ export function assertContainerHardware(recording: Recording, config: Config, va
 
 export function containerClockScenario(variant: ContainerClockCase): PickupClockScenario {
     return {
-        name: variant.name, speed: BELT_SPEEDS[0], backed: false,
+        name: variant.name, speed: CLOCK_TEST_SPEEDS[0], backed: false,
         config: () => containerClockConfig(variant), scaffold: () => containerClockScaffold(variant),
-        interventions: containerInterventions(variant),
         probeFile: path.join(__dirname, "container-clock-probe.lua"),
         probe: {family: "container", cuts: variant.recipe === "iron-gear-wheel" ? ["iron-plate", "iron-plate"] : ["iron-plate", "copper-cable"]} as PickupClockScenario["probe"],
         controls: path.join(__dirname, "container-clock-controls.json"),

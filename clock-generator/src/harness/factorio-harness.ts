@@ -136,8 +136,18 @@ export interface HarnessOptions {
      * one; a blueprint with drills that mine more than one is refused.
      */
     drill_resource?: string;
-    /** Lua run right before the recording starts, as a chunk called with (entities, surface, area) */
+    /**
+     * Lua run right before the recording starts, as a chunk called with (entities, surface, area, settle). `settle.finish()`
+     * ends the settle in that tick, so a probe that runs until something happens in the game ends it then; `settle_ticks` stays
+     * the most it may take. `settle.record_samples(n)` shortens a recording without a clock (a staged start, `record_at_once`)
+     * to n samples; `ticks` stays the most it may take
+     */
     lua?: string;
+    /**
+     * Record exactly `ticks` from the end of the settle, without waiting for the clock to wrap: the recording carries no clock.
+     * For a probe that times its run in game ticks (a clock's period can be far longer than the run)
+     */
+    record_at_once?: boolean;
     /** Scratch folder for Factorio's write data; a temporary folder that is removed afterwards when absent */
     work_dir?: string;
     /** Speed the game is set to as the build is built; absent, it stays what it is, as someone watching may have set it */
@@ -917,7 +927,8 @@ function assertBuildOptions(options: BuildOptions): void {
         return;
     }
     // the clock the recording is cut by: the one swapped in, or the one the build came with when it is kept
-    const period = options.unclocked ? null : options.clock ? clockPeriodOf(options.clock.schedule) : options.built_clock?.period ?? clockPeriodTicks(options.blueprint);
+    const period = options.unclocked || options.record_at_once ? null
+        : options.clock ? clockPeriodOf(options.clock.schedule) : options.built_clock?.period ?? clockPeriodTicks(options.blueprint);
     assertRecordableTicks(options.ticks, period);
 }
 
@@ -1128,7 +1139,7 @@ export class HarnessSession {
             seed: options.seed,
             lua: options.lua,
             settle_ticks: options.settle_ticks,
-            record: { ticks: options.ticks },
+            record: { ticks: options.ticks, at_once: options.record_at_once },
         });
         if (start.clock) {
             options.log(`Wired the clock to ${Object.values(start.clock.wired).length} inserters`
@@ -1146,7 +1157,7 @@ export class HarnessSession {
         const written = path.join(this.work_dir, "script-output", finished.last_recording.filename);
         const text = JSON.parse(await fs.readFile(written, "utf-8"));
         // the clock the build came with is kept: the recording says what it is, as it is read and kept with it
-        const kept_clock = options.built_clock !== undefined && !replaces_clock;
+        const kept_clock = options.built_clock !== undefined && !replaces_clock && !options.record_at_once;
         const file = kept_clock ? recordingOfBuiltClock(text, options.built_clock!) : text;
         const recording = parseRecording(file);
         const recording_path = path.resolve(options.out);

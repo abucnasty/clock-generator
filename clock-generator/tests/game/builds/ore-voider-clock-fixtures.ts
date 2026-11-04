@@ -9,14 +9,19 @@ import {generateClockAlternatives} from "../../../src/crafting/generate-blueprin
 import {encodeBlueprintFile} from "../../../src/blueprints/serde";
 import {recordInFactorio} from "../../../src/harness/factorio-harness";
 import {composeProbeSource} from "../helpers/probe-source";
-import {clockHash, readControls} from "./clock-controls";
+import {clockHash, NativeRunSummary, readControls, runHolds} from "./clock-controls";
+import {RUN_PROTOCOL, runSummary} from "./pickup-clock-capture";
 
 /**
  * The ore voider's recycler cell (`real/owner/ore-voider`), 400 iron ore a second destroyed, on its selected clock: four
  * inserters bring the ore in, the recycler places what it gives back (a quarter of its crafts, at random) into a car, two
- * inserters bring that back. What comes back is random in the game and at its expected amount in the simulator, so a
- * period is not the same twice: the run is judged on its mean over an hour against the binomial's range, on the car never
- * being full, and on getting back to the target after a loss and after a backlog in the car.
+ * inserters bring that back. One run under the game tests' protocol (helpers/lua/steady.lua). The recycler makes nothing that
+ * counts, so the run counts what it takes in: the ore the four feed inserters drop into it, against the target x 60 s a minute.
+ * The disturbances: the ore supply cut, and the output blocked (the car filled to capacity and its two inserters disabled
+ * by script). What comes back is random in the game and at its expected amount in the simulator, so beside the protocol the
+ * baseline is judged on the ore destroyed against the binomial's range, the share of crafts that gave ore back, and on the car
+ * never being full and the recycler never waiting for room. Dropped with the hour (owner's protocol, 2026-11-03): the mean of
+ * the ore brought in per period, which the baseline's whole clock cycles now judge, and the backlog of 2000 ore put into the car.
  */
 export interface OreVoiderCase {
     name: string;
@@ -32,79 +37,49 @@ export function oreVoiderCases(): OreVoiderCase[] {
     ];
 }
 
-/** The phases of a run, in clock periods of 144 ticks (2.4 s) */
-export const ORE_VOIDER_PHASES = {
-    settle_periods: 20,
-    /** An hour: 1,500 periods of 2.4 s */
-    baseline_periods: 1500,
-    /** The ore supply stopped and emptied for 48 s */
-    cut_periods: 20,
-    after_cut_periods: 60,
-    /** Ore put into the car at once, and the periods it is followed for */
-    backlog: 2000,
-    backlog_periods: 400,
-    /** Ticks the last check watches the recycler's input for, with a stack of its result waiting */
-    probe_ticks: 600,
-    /** Periods of the baseline traced tick by tick */
-    trace_periods: 3,
-} as const;
-
-export interface OreVoiderPeriod {
-    start: number; end: number;
-    /** Ore the four inserters dropped into the recycler */
-    fresh: number;
-    crafts: number;
-    /** Ore the recycler placed into the car */
-    placed: number;
-    /** Ore the two inserters dropped back into the recycler */
-    taken: number;
-    car: number; car_min: number; car_max: number;
-    source_max: number;
-    /** Ticks the recycler showed full output or waiting for space */
-    full_ticks: number;
-}
-
+/** What the probe writes into its report, beside steady.lua's `protocol` */
 interface OreVoiderReport {
-    starts: number;
-    period: number;
-    phases: {baseline: number; cut: number; release: number; backlog: number; probe: number};
-    backlog: number;
-    capacity: number;
-    periods: OreVoiderPeriod[];
-    events: {tick: number; action: string; inserted?: number}[];
-    wake: {alarms: number[]; woken: number[]; waiting_ticks: number[]; enabled_ticks: number[]};
-    result_after_tick: Record<string, number>;
-    recycler_status: Record<string, number>;
-    blocked_input?: {stopped?: number; result_waiting: number; source_before?: number; source_max?: number; fresh_after?: number; status?: string};
-    error?: string;
-}
-
-/** What a run shows, as the controls keep it */
-export interface OreVoiderSummary {
-    generationVerdict: string;
-    /** Ore destroyed a second, the target */
-    target: number;
-    period: number;
-    /** Ore brought in a period at the target */
-    expected: number;
-    clock: {id: string; period: number; expected: number; verdict: string; wake_ups_per_minute: number; taker_wake_ups_per_minute: number};
+    initial: {period: number; capacity: number; car_contents: number};
+    /** Counted over the baseline's ticks */
     baseline: {
-        periods: number;
-        /** Ore brought in a period on average, and the binomial's range of the mean: 3 standard deviations of a period's returns over √periods */
-        fresh_mean: number; destroyed_mean: number; range: number;
-        destroyed_per_second: number;
-        crafts: number; placed: number; returned_share: number; returned_range: number;
-        car_max: number; car_capacity: number; full_ticks: number;
+        ticks: number;
+        /** Crafts of the recycler (products_finished), ore it placed into the car, ore the two inserters dropped back into it */
+        crafts: number; placed: number; taken: number;
+        car_max: number; source_max: number;
+        /** Ticks the recycler showed full output or waiting for space */
+        full_ticks: number;
         recycler_status: Record<string, number>;
         /** What waited in the recycler's output after a tick while the car had room, by the count, in ticks */
         result_after_tick: Record<string, number>;
+        wake: {alarms: number[]; woken: number[]; waiting_ticks: number[]; enabled_ticks: number[]};
+    };
+    events: {tick: number; action: string; inserted?: number}[];
+    /** During the output block: whether the feeds still bring ore in while a stack of the recycler's result waits */
+    blocked_input?: {started: number; filled: number; stopped?: number; result_waiting?: number; source_before?: number;
+        source_max?: number; fresh_after?: number; watched: number; status?: string; result_waiting_end?: number};
+    protocol: Parameters<typeof runSummary>[0];
+    error?: string;
+}
+
+/** What the baseline shows beyond the protocol's verdict, as the controls keep it */
+export interface OreVoiderObserved {
+    clock: {id: string; period: number; expected: number; verdict: string; wake_ups_per_minute: number; taker_wake_ups_per_minute: number};
+    baseline: {
+        ticks: number; periods: number;
+        crafts: number; placed: number;
+        /** Ore destroyed over the baseline (each craft destroys the ore it takes, less what it gives back), its expectation at the target, and the range of 3 standard deviations of the returns over the periods */
+        destroyed: number; destroyed_expected: number; destroyed_range: number;
+        returned_share: number; returned_range: number;
+        car_max: number; car_capacity: number; full_ticks: number;
+        recycler_status: Record<string, number>;
+        result_after_tick: Record<string, number>;
         taker_wake_ups_per_minute: number;
     };
-    cut: {during: number[]; first_back: number | null; car_after: number};
-    /** The backlog put into the car: the periods until the car was back under its highest of the hour, and the ore brought in a period meanwhile and after (periods, and of them at the target) */
-    backlog: {inserted: number; periods_to_drain: number | null; fresh_while_draining: number[]; after: {periods: number; at_target: number}};
     blocked_input: OreVoiderReport["blocked_input"];
 }
+
+/** A run under the protocol, with the figures this family still judges */
+export type OreVoiderRun = NativeRunSummary & {observed: OreVoiderObserved};
 
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 
@@ -125,63 +100,43 @@ function sum(values: number[]): number {
     return values.reduce((total, value) => total + value, 0);
 }
 
-/** Judges a run: the summary, and an assertion for each condition a clock for a random output has to meet */
-export function summarize(report: OreVoiderReport, config: Config, clock: OreVoiderSummary["clock"], sigma_period: number, chance: number): OreVoiderSummary {
-    const {phases, periods} = report;
-    const baseline = periods.slice(0, phases.cut);
-    expect(baseline.length, "an hour of whole periods").toBe(phases.cut);
-    const expected = clock.expected;
-    const fresh = sum(baseline.map(it => it.fresh));
-    const crafts = sum(baseline.map(it => it.crafts));
-    const placed = sum(baseline.map(it => it.placed));
+/** The run's summary under the protocol, with the baseline's figures for the checks a clock for a random output has to meet */
+export function summarize(report: OreVoiderReport, config: Config, clock: OreVoiderObserved["clock"], sigma_period: number, chance: number): OreVoiderRun {
+    const run = runSummary(report.protocol, {generationVerdict: clock.verdict, target: config.target_output.items_per_second, period: clock.period});
+    const b = report.baseline;
+    const periods = b.ticks / clock.period;
     // each craft destroys the ore it takes, less what it gives back
-    const destroyed = crafts - placed;
-    const range = 3 * sigma_period / Math.sqrt(baseline.length);
-    const car_max = Math.max(...baseline.map(it => it.car_max));
-    const ticks = baseline.length * clock.period;
-    const wake = report.wake.alarms.reduce((total, alarms) => total + alarms, 0);
-    const cut = periods.slice(phases.cut, phases.backlog);
-    const after_release = periods.slice(phases.release, phases.backlog);
-    const first_back = after_release.findIndex((_, index) => after_release.slice(index).every(it => it.fresh === expected));
-    const drain = periods.slice(phases.backlog, phases.probe);
-    const drained = drain.findIndex(it => it.car_max <= car_max);
+    const destroyed = b.crafts - b.placed;
     return {
-        generationVerdict: clock.verdict, target: config.target_output.items_per_second, period: clock.period, expected,
-        clock: {...clock, taker_wake_ups_per_minute: clock.taker_wake_ups_per_minute},
-        baseline: {
-            periods: baseline.length,
-            fresh_mean: fresh / baseline.length, destroyed_mean: destroyed / baseline.length, range,
-            destroyed_per_second: destroyed / (ticks / 60),
-            crafts, placed, returned_share: placed / crafts, returned_range: 3 * Math.sqrt(crafts * chance * (1 - chance)) / crafts,
-            car_max, car_capacity: report.capacity, full_ticks: sum(baseline.map(it => it.full_ticks)),
-            recycler_status: report.recycler_status, result_after_tick: report.result_after_tick,
-            taker_wake_ups_per_minute: wake * 3600 / ticks,
+        ...run,
+        observed: {
+            clock,
+            baseline: {
+                ticks: b.ticks, periods, crafts: b.crafts, placed: b.placed,
+                destroyed, destroyed_expected: config.target_output.items_per_second * b.ticks / 60, destroyed_range: 3 * sigma_period * Math.sqrt(periods),
+                returned_share: b.crafts > 0 ? b.placed / b.crafts : 0,
+                returned_range: b.crafts > 0 ? 3 * Math.sqrt(b.crafts * chance * (1 - chance)) / b.crafts : 0,
+                car_max: b.car_max, car_capacity: report.initial.capacity, full_ticks: b.full_ticks,
+                recycler_status: b.recycler_status, result_after_tick: b.result_after_tick,
+                taker_wake_ups_per_minute: b.ticks > 0 ? sum(b.wake.alarms) * 3600 / b.ticks : 0,
+            },
+            blocked_input: report.blocked_input,
         },
-        cut: {during: cut.slice(0, phases.release - phases.cut + 4).map(it => it.fresh), first_back: first_back < 0 ? null : first_back,
-            car_after: after_release[after_release.length - 1]?.car ?? -1},
-        backlog: {inserted: report.events.find(it => it.action === "backlog")?.inserted ?? 0,
-            periods_to_drain: drained < 0 ? null : drained,
-            fresh_while_draining: drain.slice(0, Math.max(0, drained)).map(it => it.fresh),
-            after: {periods: drain.length - Math.max(0, drained), at_target: drain.slice(Math.max(0, drained)).filter(it => it.fresh === expected).length}},
-        blocked_input: report.blocked_input,
     };
 }
 
-/** The conditions a clock for a random output meets in the game (holds, the car never full, recovers) */
-export function assertHolds(summary: OreVoiderSummary): void {
-    const {baseline, clock} = summary;
-    expect(Math.abs(baseline.fresh_mean - clock.expected), "the ore brought in a period, on average over the hour").toBeLessThanOrEqual(baseline.range);
-    expect(Math.abs(baseline.destroyed_mean - clock.expected), "the ore destroyed a period, on average over the hour").toBeLessThanOrEqual(baseline.range);
+/** The conditions a clock for a random output meets in the game: the protocol (holds the target, recovers from the cut and the block), the car never full, the ore destroyed and returned as the chances give */
+export function assertHolds(summary: OreVoiderRun): void {
+    const {baseline} = summary.observed;
+    expect(runHolds(summary), `the run holds the target and recovers from each disturbance (${summary.result})`).toBe(true);
+    expect(baseline.ticks, "the baseline's ticks were counted").toBeGreaterThanOrEqual(RUN_PROTOCOL.baseline);
+    expect(Math.abs(baseline.destroyed - baseline.destroyed_expected), "the ore destroyed over the baseline").toBeLessThanOrEqual(baseline.destroyed_range);
     expect(Math.abs(baseline.returned_share - 0.25), "the share of crafts that gave the ore back").toBeLessThanOrEqual(baseline.returned_range);
     expect(baseline.car_max, "the car is never full").toBeLessThan(baseline.car_capacity);
     expect(baseline.full_ticks, "the recycler never waits for room in the car").toBe(0);
-    expect(summary.cut.first_back, "back at the target after the ore came back").not.toBeNull();
-    expect(summary.cut.first_back!, "within 10 periods").toBeLessThanOrEqual(10);
-    expect(summary.backlog.periods_to_drain, "the backlog in the car drained").not.toBeNull();
-    expect(summary.backlog.after.at_target, "at the target once the backlog is gone").toBe(summary.backlog.after.periods);
 }
 
-export async function captureOreVoider(variant: OreVoiderCase): Promise<OreVoiderSummary> {
+export async function captureOreVoider(variant: OreVoiderCase): Promise<OreVoiderRun> {
     const capture = captureOf(variant.name);
     try {
         const config_path = ConfigPaths[variant.sample];
@@ -205,20 +160,23 @@ export async function captureOreVoider(variant: OreVoiderCase): Promise<OreVoide
             expect(sha, `the clock ${variant.name} runs is not the one its summary in ore-voider-clock-controls.json was recorded on: record it again`).toBe(recorded);
         }
         fs.writeFileSync(path.join(capture.directory, "clock.json"), JSON.stringify({...clock, sha256: sha}) + "\n");
-        const phases = ORE_VOIDER_PHASES;
-        const total_periods = phases.settle_periods + phases.baseline_periods + phases.cut_periods + phases.after_cut_periods + phases.backlog_periods + 10;
+        // the baseline is the protocol's minute: the clock's cycle is its period, which a minute holds whole
+        expect(RUN_PROTOCOL.baseline % period, "a whole number of the clock's periods in the baseline").toBe(0);
+        const expectedPerWindow = Math.round(config.target_output.items_per_second * RUN_PROTOCOL.window / 60 * 1e6) / 1e6;
         const {recording} = await recordInFactorio({factorio: process.env.FACTORIO_PATH!, save: process.env.FACTORIO_HARNESS_SAVE!, config,
             clock: {blueprint: encodeBlueprintFile({blueprint: exported.blueprint}), schedule: exported.schedule}, blueprint: scaffoldOf(config_path),
             out: path.join(capture.directory, "recording.json"), work_dir: path.join(capture.directory, "game"),
-            ticks: 2 * period, warmup_ticks: 600, settle_ticks: total_periods * period + phases.probe_ticks * 2, seed: [], unclocked: false,
-            lua: composeProbeSource(path.join(__dirname, "ore-voider-clock-probe.lua"), {period, ...phases}),
-            game_speed: 1000, watch: false, timeout_seconds: 3600, log() {}});
+            ticks: 3600, record_at_once: true, warmup_ticks: 600, settle_ticks: RUN_PROTOCOL.cap + 1, seed: [], unclocked: false,
+            lua: composeProbeSource(path.join(__dirname, "ore-voider-clock-probe.lua"),
+                {period, window: RUN_PROTOCOL.window, expected: expectedPerWindow, baseline: RUN_PROTOCOL.baseline, cap: RUN_PROTOCOL.cap}),
+            game_speed: 1000, watch: false, timeout_seconds: 900, log() {}});
         // the build as Sidecar exports it: the recycler puts its results into the car
         const exported_config = recording.config as {machines?: {result_target?: unknown}[]; chests?: {type: string; id: number}[]};
         const car = exported_config.chests?.find(chest => chest.type === "car");
         expect(exported_config.machines?.[0]?.result_target, "Sidecar exports the car as the recycler's result target").toEqual({type: "chest", id: car?.id});
         const report = JSON.parse(fs.readFileSync(path.join(capture.directory, "game/script-output/ore-voider.json"), "utf8")) as OreVoiderReport;
-        expect(report.error, "the probe ran to its end").toBeUndefined();
+        expect(report.error ?? report.protocol.error, "the probe ran to its end").toBeUndefined();
+        expect(report.protocol.result, "the run did not end before the recording: over the cap").toBeDefined();
         const summary = summarize(report, config, clock, margin.sigma_items, margin.expected_items / margin.crafts);
         fs.writeFileSync(path.join(capture.directory, "summary.json"), JSON.stringify(summary, null, 1) + "\n");
         fs.writeFileSync(path.join(capture.directory, "report.json"), JSON.stringify(report) + "\n");

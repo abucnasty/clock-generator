@@ -11,6 +11,7 @@ import {GameFixturePaths} from "./fixture-paths";
 import {configAtSpeed, FixtureBeltSpeed} from "./belt-speed-fixtures";
 import {ContainerStorage} from "../../../src/simulation/components/container-storage";
 import { TickByHand } from "../../../src/crafting/runner/tick-by-hand.fixture";
+import {NativeRunSummary, runHolds} from "../builds/clock-controls";
 
 /**
  * Helpers for the unit tests of the fixture families: the documented mechanic of a family, run in the simulator on the
@@ -77,18 +78,53 @@ export function firstHandPatterns(config: Config, handSize = 16): Set<string> {
     return patterns;
 }
 
+/** The protocol's bounds (pickup-clock-capture.ts RUN_PROTOCOL): a minute's window, a baseline of 1 to 10 minutes, a run of at most 15 */
+const RUN_BOUNDS = {window: 3600, baseline: 3600, maxBaseline: 36_000, cap: 54_000};
+
 /**
- * What a recorded clock control states about itself, checked without the generator: the rate it was recorded at is the
- * period's share of the target, the game's baseline periods are all at that figure or the control says why not, and every
- * recovery was judged on enough periods.
+ * What a run under the protocol timed in game ticks states about itself, checked without the game: it ran the pinned clock
+ * at the target's share, over the protocol's window, and its steps follow each other within the bounds: steady state, the
+ * baseline after it, each disturbance after the step before it, released when the output fell and recovered after that.
  */
-export function expectControlIsConsistent(native: {period: number; expected: number; baseline: number[];
-    recovery: {recovered: number[]}[]}, pin: {period: number; expected: number}, targetItemsPerSecond: number) {
+export function expectRunIsConsistent(native: NativeRunSummary, pin: {period: number; expected: number}, targetItemsPerSecond: number) {
+    expect(native.protocol).toBe("trailing-minute");
     expect(native.period, "the game was recorded on the pinned period").toBe(pin.period);
-    expect(native.expected, "the pinned output per period is the target's share of it").toBe(pin.expected);
-    expect(targetItemsPerSecond * native.period / 60, "output per period at the target rate").toBe(native.expected);
-    expect(native.baseline.length).toBeGreaterThan(0);
-    for (const loss of native.recovery) expect(loss.recovered.length).toBeGreaterThan(0);
+    expect(native.target, "the target's share the build is asked for").toBe(targetItemsPerSecond);
+    // the run keeps its target to a millionth (34.285714 for 240/7): its output a period is the pin's to a thousandth
+    expect(Math.round(native.target * native.period / 60 * 1e3) / 1e3, "the pinned output per period is the target's").toBe(Math.round(pin.expected * 1e3) / 1e3);
+    expect(native.window).toBe(RUN_BOUNDS.window);
+    expect(native.expected, "the window holds the target rate over it").toBe(Math.round(native.target * native.window / 60 * 1e6) / 1e6);
+    expect(native.ended).toBeLessThanOrEqual(RUN_BOUNDS.cap);
+    if (native.steady === null) return;
+    expect(native.steady).toBeGreaterThanOrEqual(native.window);
+    const baseline = native.baseline;
+    if (!baseline) return;
+    expect(baseline.ticks).toBeGreaterThanOrEqual(RUN_BOUNDS.baseline);
+    expect(baseline.ticks).toBeLessThanOrEqual(RUN_BOUNDS.maxBaseline);
+    expect(baseline.expected).toBe(native.expected * baseline.ticks / native.window);
+    expect(baseline.min).toBeLessThanOrEqual(baseline.max);
+    expect(baseline.held, "held: the trailing window never fell below the target in the baseline").toBe(baseline.min >= native.expected);
+    let after = native.steady + baseline.ticks;
+    for (const disturbance of native.disturbances) {
+        expect(disturbance.start, `${disturbance.kind}: starts after the step before it`).toBe(after);
+        if (disturbance.drop !== undefined) expect(disturbance.release, `${disturbance.kind}: released when the output fell`).toBe(disturbance.drop);
+        if (disturbance.recovered === undefined) break;
+        expect(disturbance.recovered).toBeGreaterThan(disturbance.release!);
+        after = disturbance.recovered;
+    }
+}
+
+/**
+ * What a run says of the selection it was recorded on, as each family's generation test checks it: a clock the generator calls
+ * stable holds its target and recovers from every disturbance in the game; a run under the selection's own supply that misses
+ * the target over its baseline has the generator's own holds verdict false.
+ */
+export function expectRunAgreesWithSelection(name: string, native: NativeRunSummary, selected: {verdict: string; holds: boolean},
+    recordedUnderOwnSupply = true) {
+    if (selected.verdict === "stable") expect(runHolds(native), `${name}: a stable clock holds and recovers in the game (${native.result})`).toBe(true);
+    if (recordedUnderOwnSupply && native.baseline?.meets !== true) {
+        expect(selected.holds, `${name}: the run misses the target over its baseline: the generator has to see that itself`).toBe(false);
+    }
 }
 
 /**

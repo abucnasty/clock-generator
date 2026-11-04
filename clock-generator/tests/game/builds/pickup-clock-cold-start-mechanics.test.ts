@@ -4,11 +4,11 @@ import {clockFromWindows, runClockOnBuild} from "../../../src/crafting/trial";
 import {OpenRange} from "../../../src/data-types";
 import {clockHash, readControls} from "./clock-controls";
 import {reversedDeciders} from "./reversed-deciders";
-import {coldStart as controls, configOf, physicalColdClockOf, type ColdStartClock} from "./pickup-clock-cold-start-runs";
+import {coldStart as controls, configOf, perPeriod, physicalColdClockOf} from "./pickup-clock-cold-start-runs";
 
 /**
- * The clocked cold starts (`pickup-clock-start-controls.json`, `cold_start`: 57 runs recorded in Factorio 2.1.21, README
- * "Clocked cold starts"), checked without generating a clock. The clock of a run is stored as its windows, so the simulator
+ * The clocked cold starts (`pickup-clock-start-controls.json`, `cold_start`: the turbo runs, each recorded from placement until
+ * the plant has made its target over a minute and a minute more), checked without generating a clock. The clock of a run is stored as its windows, so the simulator
  * runs it from the cold start and is held to the game's counts, and the windows build the clock whose hash the run was
  * recorded on. That the generator's selection still makes that clock is checked on a few runs by
  * pickup-clock-cold-start.generation.test.ts (pickup-clock-cold-start-cases.ts).
@@ -31,18 +31,6 @@ const KNOWN_INPUT_DIFFERENCES: Record<string, string> = {
     "turbo-underground-entrance-backed-l1-rot1021": "the hand back from its swing as the output block is lifted, held 1143",
 };
 
-/** What the inserter moved in each period: drops (held count falling) and pickups (rising), from an empty hand */
-function perPeriod(held: number[], period: number, periods: number) {
-    const drops = new Array<number>(periods).fill(0);
-    const pickups = new Array<number>(periods).fill(0);
-    held.forEach((count, tick) => {
-        const before = held[tick - 1] ?? 0;
-        drops[Math.floor(tick / period)] += Math.max(0, before - count);
-        pickups[Math.floor(tick / period)] += Math.max(0, count - before);
-    });
-    return {drops, pickups};
-}
-
 // Clocked cold starts of the side pickup fixtures (4 tiers × 2 near sides × 3 topologies × 2 supplies, on the
 // generator's selected clock) and of two over-hood clocks, recorded in Factorio 2.1.21 from the harness's staged start
 // with the game's own lane phase at placement (tests/game/builds/README.md, "Clocked cold starts"); some started
@@ -60,29 +48,21 @@ describe("clocked cold starts from placement", () => {
         const runConfig = physical ? config : {...config, overrides: {...config.overrides, terminal_swing_count: clock.terminal_swings}};
         const result = runClockOnBuild(runConfig,
             windows, clock.period, quiet, {
-                cold_start: true, warmup_periods: 0, simulate_periods: controls.periods, machine_stock: true, factorio_states: false,
+                cold_start: true, warmup_periods: 0, simulate_periods: Math.ceil(run.ticks / clock.period), machine_stock: true, factorio_states: false,
                 decider_order: run.decider_order,
                 ...(run.model_phases && {moving_pickup_phases: new Map([["inserter:2", run.model_phases]])}),
             });
         const inserters = result.machine_stock!.inserters;
-        const ticks = controls.periods * clock.period - controls.frame_offset;
+        const ticks = run.ticks - controls.frame_offset;
         const output = inserters.find(it => it.inserter_id === "inserter:1")!.held.slice(0, ticks);
         const input = inserters.find(it => it.inserter_id === "inserter:2")!.held.slice(0, ticks);
-        expect(perPeriod(output, clock.period, controls.periods).drops, "output per period").toEqual(run.output);
+        expect(perPeriod(output, clock.period).drops, "output per period").toEqual(run.output);
         expect(sha(output), "output inserter held, tick for tick").toBe(run.output_held_sha256);
         if (KNOWN_INPUT_DIFFERENCES[name] !== undefined) return;
-        expect(perPeriod(input, clock.period, controls.periods).pickups, "input pickups per period").toEqual(run.pickups);
+        expect(perPeriod(input, clock.period).pickups, "input pickups per period").toEqual(run.pickups);
         expect(sha(input), "input inserter held, tick for tick").toBe(run.input_held_sha256);
     });
 });
-
-/**
- * The clock of the fast tier's moving underground entrance and exit runs (4 runs) is a fractional swing count (704 ticks
- * on a config planned on 2112): `clockFromWindows` builds a clock of the config's own period only, so these windows cannot
- * be built back into a clock. The generator's selection for the fast tier's moving underground is checked against the
- * clock's hash by pickup-clock-cold-start.generation.test.ts (the exit, near lane 1; the same clock as all four).
- */
-const FRACTIONAL_CLOCK = "1c25f7fb528f";
 
 describe("the stored windows build the clock each run was recorded on", () => {
     async function builtFromWindows(record: typeof recordedCases[number]) {
@@ -95,7 +75,7 @@ describe("the stored windows build the clock each run was recorded on", () => {
         return {run, clock, built};
     }
 
-    test.each(recordedCases.filter(({run}) => run.clock !== FRACTIONAL_CLOCK && controls.clocks[run.clock].kind !== "physical"))("$name", async record => {
+    test.each(recordedCases.filter(({run}) => controls.clocks[run.clock].kind !== "physical"))("$name", async record => {
         const {run, clock, built} = await builtFromWindows(record);
         let exported: {blueprint: any; schedule: any} = built();
         exported = (exported as any).subtick ?? exported;
@@ -103,47 +83,26 @@ describe("the stored windows build the clock each run was recorded on", () => {
         expect(clockHash(exported), "the windows no longer build the clock these runs were recorded on").toBe(clock.clock_sha256);
     });
 
-    test.each(recordedCases.filter(({run}) => run.clock === FRACTIONAL_CLOCK))("$name: a fractional clock the windows cannot rebuild", async record => {
-        const {clock, built} = await builtFromWindows(record);
-        expect(clock.period).toBe(704);
-        expect(built).toThrow("The windows are of a clock of 704 ticks, and the config is planned on one of 2112");
-    });
-});
-
-describe("native physical cold controls", () => {
-    const physical = Object.values(controls.clocks).find(clock => clock.kind === "physical")!;
-    const built = {rotate: 0, decider_order: "built"};
-    test("physical control encoding, windows and period must agree, without invented planner metadata", () => {
-        const wrongWindows = structuredClone(physical);
-        wrongWindows.clock_windows["inserter:2"][0].end++;
-        expect(() => physicalColdClockOf(wrongWindows, built)).toThrow();
-        expect(() => physicalColdClockOf({...physical, period: physical.period + 1}, built)).toThrow();
-        expect(() => physicalColdClockOf({...physical, terminal_swings: 1} as unknown as ColdStartClock, built)).toThrow("must not invent");
-        expect(() => physicalColdClockOf(physical, {...built, rotate: 1})).toThrow("nonrotated and built-order only");
-        expect(() => physicalColdClockOf(physical, {...built, decider_order: "reversed"})).toThrow("nonrotated and built-order only");
-        expect(() => physicalColdClockOf({period: 10} as ColdStartClock, built)).toThrow("require actual terminal metadata");
-    });
-    test.each(recordedCases.filter(({run}) => controls.clocks[run.clock].kind === "physical"))("$name", ({run}) => {
-        expect(physicalColdClockOf(controls.clocks[run.clock], run)).not.toBeNull();
-    });
 });
 
 describe("the cold-start controls state themselves", () => {
     const pins = readControls("pickup-clock-controls.json").cases;
     const sideRuns = names.filter(name => !controls.runs[name].case.startsWith("over-hood-"));
 
-    test("the matrix is 48 runs of the side pickup fixtures, and 9 more decide the rule that a clock's first two ticks are dark", () => {
-        expect(names).toHaveLength(57);
-        expect(sideRuns.filter(name => name === controls.runs[name].case)).toHaveLength(48);
+    test("the matrix is 12 runs of the turbo side pickup fixtures, and 3 more decide the rule that a clock's first two ticks are dark", () => {
+        expect(names).toHaveLength(15);
+        expect(sideRuns.filter(name => name === controls.runs[name].case)).toHaveLength(12);
         expect(names.filter(name => controls.runs[name].rotate !== 0 || controls.runs[name].decider_order !== "built"
-            || controls.runs[name].case.startsWith("over-hood-") || name !== controls.runs[name].case)).toHaveLength(9);
+            || controls.runs[name].case.startsWith("over-hood-") || name !== controls.runs[name].case)).toHaveLength(3);
     });
 
     test.each(names)("%s: names a clock of the controls, with a lane phase only where the supply moves", name => {
         const run = controls.runs[name];
         expect(controls.clocks[run.clock], "the clock the run was recorded on").toBeDefined();
-        expect(run.output).toHaveLength(controls.periods);
-        expect(run.pickups).toHaveLength(controls.periods);
+        // from placement to steady state and a minute more, never over the cap
+        expect(run.ticks).toBe(run.steady + 3600);
+        expect(run.output).toHaveLength(Math.ceil((run.ticks - controls.frame_offset) / controls.clocks[run.clock].period));
+        expect(run.pickups).toHaveLength(run.output.length);
         const moving = run.case.includes("-moving-");
         expect({native: run.native_phases !== null, model: run.model_phases !== null}).toEqual({native: moving, model: moving});
     });

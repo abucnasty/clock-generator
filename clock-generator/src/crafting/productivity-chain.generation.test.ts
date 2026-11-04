@@ -6,7 +6,7 @@ import { generateClockAlternatives, type ClockAlternativesResult } from "./gener
 import { alwaysOnReasonProblemsOf, quiet } from "./generate-blueprint-test-helpers";
 import { clockIdentity } from "./clock-identity";
 import { createHash } from "crypto";
-import { readControls } from "../../tests/game/builds/clock-controls";
+import {readControls, RunControls, runHolds} from "../../tests/game/builds/clock-controls";
 import { GENERATED_ALTERNATIVE } from "../../tests/game/builds/productivity-chain-clock-fixtures";
 
 // The productivity module chain (REAL_OWNER_PRODUCTIVITY_CHAIN) at 80 modules a second over 6 copies: nine machines with chests
@@ -39,7 +39,7 @@ describe("a clock for the productivity module chain from the hands and the order
     });
 
     it("is the clock recorded in the game: the pin of the control names it", () => {
-        const { generation, native } = readControls("productivity-chain-clock-controls.json").cases["generated-one-copy"];
+        const { generation, native } = readControls<RunControls>("productivity-chain-clock-controls.json").cases["generated-one-copy"];
         const selected = result.alternatives[result.selected_index];
         const exported = selected.result.subtick ?? selected.result;
         expect(createHash("sha256").update(JSON.stringify(clockIdentity(exported))).digest("hex"),
@@ -47,13 +47,8 @@ describe("a clock for the productivity module chain from the hands and the order
         expect(selected.result.simulation_duration.ticks).toBe(generation!.period);
         expect({ id: selected.id, holds: selected.assessment.holds, rate: selected.assessment.items_per_second, supply: selected.belt?.kind ?? null })
             .toEqual(generation!.selection);
-        expect(native.expected).toBe(generation!.expected);
-        // the game holds the target in every baseline period and is back at it after each loss
-        expect(native.baseline.length).toBeGreaterThanOrEqual(60);
-        expect(native.baseline.every(items => items === native.expected)).toBe(true);
-        for (const loss of native.recovery) {
-            expect(Math.min(...loss.during)).toBeLessThan(native.expected);
-            expect(loss.recovered[loss.recovered.length - 1]).toBe(native.expected);
-        }
+        expect(native.period).toBe(generation!.period);
+        // the game holds the target over the baseline and is back at it after each loss
+        expect(runHolds(native), native.result).toBe(true);
     });
 });

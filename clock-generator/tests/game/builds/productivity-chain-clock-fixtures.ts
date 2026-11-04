@@ -5,7 +5,7 @@ import {Config} from "../../../src/config";
 import {ConfigPaths} from "../../../src/config/config-paths";
 import {loadConfigFromFile} from "../../../src/config/loader";
 import {Recording} from "../../../src/verification/recording";
-import {BELT_SPEEDS} from "../helpers/belt-speed-fixtures";
+import {CLOCK_TEST_SPEEDS} from "../helpers/belt-speed-fixtures";
 import {PickupClockScenario} from "./pickup-clock-capture";
 
 /**
@@ -40,15 +40,11 @@ export function assertProductivityChainHardware(recording: Recording, config: Co
 export async function productivityChainClockScenario(): Promise<PickupClockScenario> {
     const config = await loadConfigFromFile(ConfigPaths.REAL_OWNER_PRODUCTIVITY_CHAIN);
     return {
-        name: "generated-one-copy", speed: BELT_SPEEDS[0], backed: false,
+        name: "generated-one-copy", speed: CLOCK_TEST_SPEEDS[0], backed: false,
         config: () => config,
         scaffold: () => fs.readFileSync(path.join(FOLDER, "productivity-chain-scaffold.txt"), "utf8").trim(),
         share: 1 / 6,
         alternative: GENERATED_ALTERNATIVE,
-        // 64 untouched periods; then the coal cut for 10 periods (a cell holds about 2 periods of it), the output loader taken away
-        // for 24 (the output belt takes 17 periods of modules before it is full) and the iron foundries stopped for 6, each
-        // followed by 20 periods to get back
-        interventions: [[66, 106, 126], [126, 150, 170], [170, 196, 218]],
         probeFile: path.join(__dirname, "productivity-chain-clock-probe.lua"),
         probe: {family: "productivity-chain", stackSize: 4},
         controls: path.join(__dirname, "productivity-chain-clock-controls.json"),

@@ -6,9 +6,9 @@ import {Config} from "../../../src/config";
 import {ConfigPaths} from "../../../src/config/config-paths";
 import {loadConfigFromFile} from "../../../src/config/loader";
 import {BuiltClock, builtClockIdentity} from "../../../src/harness/built-clock";
-import {recordedClockPeriod, Recording} from "../../../src/verification/recording";
-import {BELT_SPEEDS} from "../helpers/belt-speed-fixtures";
-import {PickupClockScenario, pickupClockInterventions} from "./pickup-clock-capture";
+import {Recording} from "../../../src/verification/recording";
+import {CLOCK_TEST_SPEEDS} from "../helpers/belt-speed-fixtures";
+import {PickupClockScenario} from "./pickup-clock-capture";
 
 /**
  * The inserter build (`LOGISTIC_SCIENCE_INSERTER_CRAFTING`, 240 a second over three copies, 80 a second each) as
@@ -84,22 +84,16 @@ export async function ownClockScenario(variant: OwnClockCase): Promise<PickupClo
     const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_INSERTER_CRAFTING);
     const generated = variant.kind === "generated clock";
     return {
-        name: variant.name, speed: BELT_SPEEDS[0], backed: false,
+        name: variant.name, speed: CLOCK_TEST_SPEEDS[0], backed: false,
         config: () => config,
         scaffold: () => fs.readFileSync(SCAFFOLD, "utf8").trim(),
         built_clock: OWNER_CLOCK,
         keep_built_clock: !generated,
         builtClockSha256: ownerClockHash,
         ...(generated && {alternative: variant.alternative, copies: COPIES}),
-        // the family's protocol: 64 untouched periods, the ore cut at 66-68, the output blocked at 84-88, the circuits cut at 104-106
-        interventions: pickupClockInterventions(),
         probeFile: path.join(__dirname, "own-clock-probe.lua"),
         probe: {family: "own-clock", stackSize: 4},
         controls: path.join(__dirname, "own-clock-controls.json"),
-        assertHardware: (recording, hardware_config) => {
-            assertOwnClockHardware(recording, hardware_config);
-            // the recording is cut by the clock that ran: 216 ticks the hand-made clock's, the generated clock's own
-            if (!generated) expect(recordedClockPeriod(recording)).toBe(OWNER_CLOCK.period);
-        },
+        assertHardware: assertOwnClockHardware,
     };
 }

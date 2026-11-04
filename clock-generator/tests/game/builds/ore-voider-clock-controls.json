@@ -1,147 +1,94 @@
 {
-  "meaning": "Native summaries of the ore voider's recycler cell (ore-voider-clock-fixtures.ts) in Factorio 2.1.21, on its selected clock: an hour of periods, then the ore supply cut for 20 periods, then 2000 ore put into the car, then the recycler's input watched with its car full and its car inserters disabled by script. What comes back is random in the game, so each entry is one run's figures, judged by assertHolds against the binomial's range, not compared period for period. taker_wake_ups_per_minute in baseline is the game's count (an inserter waiting at the car woken by ore placed into it), in clock the simulator's.",
+  "meaning": "The ore voider's recycler cell, at exact speed and overbeaconed (ore-voider-clock-fixtures.ts), judged by the ore its four feeds bring into the recycler (it destroys what it takes); the disturbances are the ore cut (the supply chests emptied) and the output block (the car full); `native.observed` keeps the family's checks over the baseline. `native` is the run under the game tests' protocol, timed in game ticks (tests/game/helpers/lua/steady.lua), recorded in Factorio 2.1.24: steady state (the machines making the target have made it over the trailing 3,600 ticks, no less than a window of whole clock cycles earlier), a baseline judged over its whole clock cycles (3,600 ticks unless the fixture names a longer one), then each disturbance until the output falls below the baseline's lowest minute, released and recovered. `generation` is the selection the family's generation test pins, with the sha256 of its exported clock's identity (`clockIdentity`); `recorded` is the recording that is current.",
   "cases": {
     "ore-voider-exact-speed": {
       "recorded": {
         "pr": 0,
-        "commit": "b3ec2520",
-        "frozen_head": "b3ec2520",
-        "note": "recorded on the engine of b3ec2520 with this probe before it was committed (the same figures as a run on 4305137e); pr is set when the PR is opened",
+        "commit": "d55661f5",
+        "frozen_head": "d55661f5",
+        "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
         "clock_sha256": "719cfc482830f08461177b8cd086e39d44271fdf480c4767780adfc0a7d90d61",
         "clock_basis": "capture"
       },
       "native": {
+        "protocol": "trailing-minute",
         "generationVerdict": "stable",
         "target": 400,
         "period": 144,
-        "expected": 960,
-        "clock": {
-          "id": "even-hands",
-          "period": 144,
-          "expected": 960,
-          "verdict": "stable",
-          "wake_ups_per_minute": 402.7972027972028,
-          "taker_wake_ups_per_minute": 402.7972027972028
-        },
+        "window": 3600,
+        "expected": 24000,
+        "steady": 7200,
         "baseline": {
-          "periods": 1500,
-          "fresh_mean": 960,
-          "destroyed_mean": 960.022,
-          "range": 1.2000000000000002,
-          "destroyed_per_second": 400.00916666666666,
-          "crafts": 1920021,
-          "placed": 479988,
-          "returned_share": 0.24999101572326551,
-          "returned_range": 0.0009374948730889318,
-          "car_max": 74,
-          "car_capacity": 4000,
-          "full_ticks": 0,
-          "recycler_status": {
-            "working": 210702,
-            "item_ingredient_shortage": 447,
-            "no_ingredients": 4851
+          "ticks": 3600,
+          "total": 24000,
+          "expected": 24000,
+          "min": 24000,
+          "max": 24000,
+          "held": true,
+          "measured": {
+            "ticks": 3600,
+            "items": 24000,
+            "expected": 24000
           },
-          "result_after_tick": {
-            "0": 216000
+          "meets": true
+        },
+        "disturbances": [
+          {
+            "kind": "cut ore",
+            "start": 10800,
+            "drop": 10810,
+            "release": 10810,
+            "recovered": 10816
           },
-          "taker_wake_ups_per_minute": 355.48333333333335
-        },
-        "cut": {
-          "during": [
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            960,
-            960,
-            960,
-            960
-          ],
-          "first_back": 0,
-          "car_after": 30
-        },
-        "backlog": {
-          "inserted": 2000,
-          "periods_to_drain": 46,
-          "fresh_while_draining": [
-            960,
-            896,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960,
-            896,
-            960
-          ],
-          "after": {
-            "periods": 354,
-            "at_target": 354
+          {
+            "kind": "block output",
+            "start": 10816,
+            "drop": 10820,
+            "release": 10820,
+            "recovered": 10824
           }
-        },
-        "blocked_input": {
-          "started": 336001,
-          "filled": 3974,
-          "stopped": 336031,
-          "result_waiting": 50,
-          "source_before": 30,
-          "source_max": 0,
-          "fresh_after": 0,
-          "status": "waiting_for_space_in_destination",
-          "result_waiting_end": 50
+        ],
+        "result": "holds",
+        "ended": 10824,
+        "observed": {
+          "clock": {
+            "id": "even-hands",
+            "period": 144,
+            "expected": 960,
+            "verdict": "stable",
+            "wake_ups_per_minute": 0,
+            "taker_wake_ups_per_minute": 0
+          },
+          "baseline": {
+            "ticks": 3600,
+            "periods": 25,
+            "crafts": 31926,
+            "placed": 7941,
+            "destroyed": 23985,
+            "destroyed_expected": 24000,
+            "destroyed_range": 232.37900077244504,
+            "returned_share": 0.24873144145837248,
+            "returned_range": 0.00727025487181477,
+            "car_max": 58,
+            "car_capacity": 4000,
+            "full_ticks": 0,
+            "recycler_status": {
+              "working": 3488,
+              "no_ingredients": 106,
+              "item_ingredient_shortage": 6
+            },
+            "result_after_tick": {
+              "0": 3600
+            },
+            "taker_wake_ups_per_minute": 343
+          },
+          "blocked_input": {
+            "started": 10816,
+            "filled": 3999,
+            "watched": 0,
+            "status": "working",
+            "result_waiting": 5
+          }
         }
       },
       "generation": {
@@ -160,153 +107,103 @@
     "ore-voider-overbeaconed": {
       "recorded": {
         "pr": 0,
-        "commit": "b3ec2520",
-        "frozen_head": "b3ec2520",
-        "note": "recorded on the engine of b3ec2520 with this probe before it was committed (the same figures as a run on 4305137e); pr is set when the PR is opened",
-        "clock_sha256": "719cfc482830f08461177b8cd086e39d44271fdf480c4767780adfc0a7d90d61",
+        "commit": "d55661f5",
+        "frozen_head": "d55661f5",
+        "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
+        "clock_sha256": "d540d9e19d7e0a96c8109a0922d9a9d1dac1ff4c51cc0ea42b07a2bd6a52c49f",
         "clock_basis": "capture"
       },
       "native": {
+        "protocol": "trailing-minute",
         "generationVerdict": "stable",
         "target": 400,
         "period": 144,
-        "expected": 960,
-        "clock": {
-          "id": "even-hands",
-          "period": 144,
-          "expected": 960,
-          "verdict": "stable",
-          "wake_ups_per_minute": 553.8461538461538,
-          "taker_wake_ups_per_minute": 553.8461538461538
-        },
+        "window": 3600,
+        "expected": 24000,
+        "steady": 7200,
         "baseline": {
-          "periods": 1500,
-          "fresh_mean": 960,
-          "destroyed_mean": 959.9926666666667,
-          "range": 1.2000000000000002,
-          "destroyed_per_second": 399.99694444444447,
-          "crafts": 1919952,
-          "placed": 479963,
-          "returned_share": 0.24998697884113769,
-          "returned_range": 0.000937511718969731,
-          "car_max": 66,
-          "car_capacity": 4000,
-          "full_ticks": 0,
-          "recycler_status": {
-            "working": 119997,
-            "no_ingredients": 96003
+          "ticks": 3600,
+          "total": 24000,
+          "expected": 24000,
+          "min": 24000,
+          "max": 24000,
+          "held": true,
+          "measured": {
+            "ticks": 3600,
+            "items": 24000,
+            "expected": 24000
           },
-          "result_after_tick": {
-            "0": 216000
+          "meets": true
+        },
+        "disturbances": [
+          {
+            "kind": "cut ore",
+            "start": 10800,
+            "drop": 10811,
+            "release": 10811,
+            "recovered": 10817
           },
-          "taker_wake_ups_per_minute": 286.45
-        },
-        "cut": {
-          "during": [
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            960,
-            960,
-            960,
-            960
-          ],
-          "first_back": 0,
-          "car_after": 24
-        },
-        "backlog": {
-          "inserted": 2000,
-          "periods_to_drain": 43,
-          "fresh_while_draining": [
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960,
-            960
-          ],
-          "after": {
-            "periods": 357,
-            "at_target": 357
+          {
+            "kind": "block output",
+            "start": 10817,
+            "drop": 10819,
+            "release": 10819,
+            "recovered": 10825
           }
-        },
-        "blocked_input": {
-          "started": 336001,
-          "filled": 3952,
-          "stopped": 336030,
-          "result_waiting": 50,
-          "source_before": 29,
-          "source_max": 0,
-          "fresh_after": 0,
-          "status": "waiting_for_space_in_destination",
-          "result_waiting_end": 50
+        ],
+        "result": "holds",
+        "ended": 10825,
+        "observed": {
+          "clock": {
+            "id": "planned-belt-slack",
+            "period": 144,
+            "expected": 960,
+            "verdict": "stable",
+            "wake_ups_per_minute": 8.391608391608392,
+            "taker_wake_ups_per_minute": 0
+          },
+          "baseline": {
+            "ticks": 3600,
+            "periods": 25,
+            "crafts": 31957,
+            "placed": 7958,
+            "destroyed": 23999,
+            "destroyed_expected": 24000,
+            "destroyed_range": 232.37900077244504,
+            "returned_share": 0.24902212347842415,
+            "returned_range": 0.007266727748106217,
+            "car_max": 34,
+            "car_capacity": 4000,
+            "full_ticks": 0,
+            "recycler_status": {
+              "no_ingredients": 1602,
+              "working": 1998
+            },
+            "result_after_tick": {
+              "0": 3600
+            },
+            "taker_wake_ups_per_minute": 361
+          },
+          "blocked_input": {
+            "started": 10817,
+            "filled": 3997,
+            "watched": 0,
+            "status": "working",
+            "result_waiting": 9
+          }
         }
       },
       "generation": {
         "period": 144,
-        "expected": 960,
+        "expected": 960.0,
         "verdict": "stable",
         "selection": {
-          "id": "even-hands",
+          "id": "planned-belt-slack",
           "holds": true,
           "rate": 400,
           "supply": null
         },
-        "clock_sha256": "719cfc482830f08461177b8cd086e39d44271fdf480c4767780adfc0a7d90d61"
+        "clock_sha256": "d540d9e19d7e0a96c8109a0922d9a9d1dac1ff4c51cc0ea42b07a2bd6a52c49f"
       }
     }
   }

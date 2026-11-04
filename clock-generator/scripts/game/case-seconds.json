@@ -320,9 +320,6 @@
 "the selected clock holds the target rate in Factorio one copy of the utility science with processing units and low density structures on one belt (belts are backed up) build moves the expected output every clock period": 14,
 "the selected clock holds the target rate in Factorio one copy of the utility science with processing units and low density structures on one belt build moves the expected output every clock period": 14
 },
-"tests/game/builds/scrap-silo-clock.game.test.ts": {
-"scrap silo clock: scrap-silo-results-in-turn": 193
-},
 "tests/game/builds/steel-wagon-clock.game.test.ts": {
 "steel wagon clock: steel-wagon-belt-slack": 267,
 "steel wagon clock: steel-wagon-belt-slack-fill-last": 286,
