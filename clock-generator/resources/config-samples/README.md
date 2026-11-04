@@ -23,7 +23,7 @@ over-produces.
 
 Conventions:
 - `<build>.json` is the config; variants get a suffix that says what differs (`-230`, `-direct-insert`).
-- `<build>-scaffold.txt` is the one-copy scaffold; `-scaffold-full-build.txt` is kept only for reference.
+- `<build>-scaffold.txt` is the one-copy scaffold.
 - Every config is in the current shape: each machine names its `prototype` (the one its scaffold shows) or none, never a
   `type`. `src/config/current-samples.test.ts` fails on a sample that a load-time migration would change; the former
   shapes live only in `src/config/fixtures/legacy/`, one per migration.
@@ -83,9 +83,8 @@ In the order they would settle the most:
 1. **science/logistic-science** (shared-inserter, sample): the 1-swing label of the shared-inserter and sample configs
    flipped from unstable to stable. Direct-insert has its scaffold (Status above).
 2. **science/production-science** (shared): its rate changed in the sweep.
-3. **gleba/rocket-fuel** and **gleba/jellynut-processing**: 3-swing rates swapped between the two jelly stack configs.
+3. **gleba/rocket-fuel**: 3-swing rates swapped between the two jelly stack configs (hands of 16 and, set in the tests, 15).
 4. **science/military-science**, **intermediates/flying-robot-frame**,
-   **intermediates/electric-engine-unit**,
    **smelting/stone-bricks**, **smelting/electric-furnace**: never recorded.
 
 ## Backpressure loss
@@ -306,8 +305,7 @@ The block given on 2026-10-15: four chemical science assemblers and four engine 
 
 The build of [issue 98](https://github.com/abucnasty/clock-generator/issues/98), 240 a second over three copies. The
 sample is the copy whose plastic plant is reached by 4 beacons (crafting speed 61.5), as two of the three copies of
-the design are; the third has 5 (68.875), which is what the config attached to the issue says. The whole design is
-kept as `advanced-circuit-scaffold-full-design.txt`. Until 2026-10-10 the sample had a
+the design are; the third has 5 (68.875), which is what the config attached to the issue says. Until 2026-10-10 the sample had a
 target of 230 a second, for which no clock holds.
 
 That one is kept as a second sample, `advanced-circuit-230.json` (`ADVANCED_CIRCUIT_230`), with the subtick clock

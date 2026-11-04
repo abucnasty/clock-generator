@@ -253,9 +253,9 @@ other 46 pass.
 
 The same test builds each run's clock from its stored windows and requires the hash the run was recorded on (the four
 fractional-clock runs of the fast tier cannot be rebuilt from windows, and the test says so). `pickup-clock-cold-start.generation.test.ts`
-generates only the seven runs of `pickup-clock-cold-start-cases.ts`, each the one of a path through the generator
-(near lane 2, an underground exit, a cautious verdict, a backed-up clock, an over-the-hood clock) that the nine belt
-pickup fixtures do not take.
+generates only the run of `pickup-clock-cold-start-cases.ts` (an underground exit, backed up), the one of a path through
+the generator that the nine belt pickup fixtures do not take; the over-the-hood run is checked without generating, its clock
+being the one the over-hood generation test makes.
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/belt-clock-cold-start-new \
@@ -282,7 +282,7 @@ the family's `*.generation.test.ts` (pull requests to master).
   (`pickup-clock-capture.ts`; `BELT_CLOCK_CALIBRATE=1` skips the check to record a new summary).
 - The cold starts (`pickup-clock-start-controls.json`, `cold_start`) keep the same pair per clock:
   `clock_sha256` (checked by `pickup-clock-cold-start-mechanics.test.ts` against the clock the stored windows build and the fixture's
-  pin, and for the seven runs of `pickup-clock-cold-start-cases.ts` and those of the nine belt pickup fixtures by the generation tests
+  pin, and for the run of `pickup-clock-cold-start-cases.ts` and those of the nine belt pickup fixtures by the generation tests
   against the selection)
   and `recorded_clock_sha256` (checked by the game test).
 - Three scaffold-recordings builds expect values that belong to one clock (agricultural science having no dip and no
