@@ -40,7 +40,7 @@ const { ConfigPaths } = dist("config/config-paths.js");
 const { generateClockAlternatives, clockBeltLabel, clockFromWindows } = dist("crafting/generate-blueprint.js");
 const { encodeBlueprintFile } = dist("blueprints/serde.js");
 const { recordInFactorio, recordedTicks } = dist("harness/factorio-harness.js");
-const { outputPerPeriod, recipesMaking } = dist("harness/recording-output.js");
+const { outputPerPeriod, recipesMaking, clockPeriods } = dist("harness/recording-output.js");
 const { matchRecordingToConfig } = dist("verification/entity-matching.js");
 const { wakeUpsOfRecording } = dist("verification/recording-wake-ups.js");
 const { compareRecordings } = dist("verification/compare-recordings.js");
@@ -160,12 +160,17 @@ function buildOfConfig(arg) {
     periods.forEach(p => tally[p.items] = (tally[p.items] ?? 0) + 1);
     console.log(`  game: ${periods.length} periods, expected ${expected} a period, moved`, JSON.stringify(tally));
     const match = matchRecordingToConfig(recording, config);
-    const simulated_wake_ups = result.stability_check.as_built?.wake_ups;
-    console.log(`  wake-ups a minute: simulator ${simulated_wake_ups?.wake_ups_per_minute.toFixed(1)}, game ${wakeUpsOfRecording(recording, match, 0, recording.sample_count, config).wake_ups_per_minute.toFixed(1)}`);
     const simulated = simulateRecording(config, result.clock_windows, period, recording.sample_count * 1.5, clock_ticks);
+    const simulated_match = matchOfSimulatedRecording(simulated);
+    // both sides by the rule "kept-lists" on a recording, as scripts/sim-game-check.js counts them: the game's whole recording, and the
+    // simulator's whole periods after its first third (the settled run the scaffold tests and the comparison below judge)
+    const settled = clockPeriods(simulated.clock.values).filter(it => it.start >= Math.floor(simulated.sample_count / 3));
+    const simulated_wake_ups = settled.length === 0 ? undefined
+        : wakeUpsOfRecording(simulated, simulated_match, settled[0].start, settled[settled.length - 1].end, config);
+    console.log(`  wake-ups a minute, rule "kept-lists" on the recording: simulator ${simulated_wake_ups?.wake_ups_per_minute.toFixed(1) ?? "-"}, game ${wakeUpsOfRecording(recording, match, 0, recording.sample_count, config).wake_ups_per_minute.toFixed(1)}`);
     const compared = compareRecordings(
         { recording, match },
-        { recording: simulated, match: matchOfSimulatedRecording(simulated), from_sample: Math.floor(simulated.sample_count / 3) },
+        { recording: simulated, match: simulated_match, from_sample: Math.floor(simulated.sample_count / 3) },
         config, { expected_output_per_period: expected });
     console.log("  simulator against game, issues:", JSON.stringify(compared.issues).slice(0, 1500));
     // production is judged by the game tests' rule over the final machines, not by the periods tallied above

@@ -6,7 +6,7 @@ each component beside it) covers what the clock hash leaves out (label, descript
 histories, the clock-only run, the fuel view, why_not_stable): a job whose digest differs is listed with the alternative
 and component that moved, whether or not its clock did. A side without the digest (a cache entry from before it) is named.
 
-usage: compare.py <before> <after> [--json out.json]
+usage: compare.py <before> <after> [--json out.json]   exit 1, naming the side, when a side has no jobs
 
 Each side is a folder of job files (blast.sh run <out>) or a cache entry (<cache>/<key>/ or its jobs/).
 Files whose name starts with "_" (the job list) are not jobs. A refusal check (group refusal: a job with `refused`)
@@ -43,6 +43,10 @@ def results_moved(b, a):
     return moved
 
 before, after = load(sys.argv[1]), load(sys.argv[2])
+# a side with no job compares nothing, and "no change" of nothing is not a proof
+empty = [f"{name} ({sys.argv[i]})" for i, (name, side) in ((1, ('before', before)), (2, ('after', after))) if not side]
+if empty:
+    sys.exit(f"compare.py: no jobs in the {' or the '.join(empty)}: not a folder of job files or a cache entry")
 rows = []
 only_after = sorted(set(after) - set(before))
 for key in sorted(before):
