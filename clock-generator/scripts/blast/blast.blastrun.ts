@@ -58,8 +58,8 @@ const SLOW = ['REAL_THAELN_CELL09', 'CHEMICAL_SCIENCE_SHARED_FOUNDRY', 'PROCESSI
     'UTILITY_SCIENCE_DIRECT_INSERT_LDS_CHAIN_ALWAYS_ON', 'REAL_COMPOSITE04_CELL07'];
 
 export interface Job { group: string; name: string; config: () => Promise<any>; refusal?: { error: string } }
-/** The front entrance (32) and front exit, backed up and on a moving config (16; #274); a worktree from before master
- * b77cc09f has no front fixtures and so no front jobs (its job list, and key, stay the 166 of the four other groups) */
+/** The front entrance (8) and front exit, backed up and on a moving config (4; #274); a worktree from before master
+ * b77cc09f has no front fixtures and so no front jobs (its job list, and key, stay the 74 of the four other groups) */
 async function frontJobs(): Promise<Job[]> {
     const file = path.join(__dirname, '..', 'front-clock-fixtures.ts');
     if (!fs.existsSync(file)) return [];
@@ -69,7 +69,7 @@ async function frontJobs(): Promise<Job[]> {
         ...front.frontExitClockCases(true), ...front.frontExitClockCases(false)]
         .map(variant => ({ group: 'front', name: variant.name, config: async () => front.frontClockConfig(variant) }));
 }
-/** The 16 blocked-output configs (#277: every speed at stack sizes 1-4); none in a worktree from before fb515464 */
+/** The 4 blocked-output configs (#277: every speed at stack sizes 1-4); none in a worktree from before fb515464 */
 async function blockedJobs(): Promise<Job[]> {
     const file = path.join(__dirname, '..', 'blocked-output-clock-fixtures.ts');
     if (!fs.existsSync(file)) return [];
