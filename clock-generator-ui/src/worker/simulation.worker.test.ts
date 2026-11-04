@@ -333,6 +333,18 @@ describe('live advice on a gear assembler, which does not block', () => {
     });
 });
 
+it('loads an imported build file that carries the former Fractional swings override, without it', async () => {
+    const config = {
+        target_output: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
+        machines: [{ id: 1, recipe: 'iron-plate', crafting_speed: 2, productivity: 0, prototype: 'electric-furnace' }],
+        inserters: [], belts: [],
+    };
+    const loaded = await ask({ kind: 'config-file', config: { ...config, overrides: { use_fractional_swings: true, lcm: 2 } } });
+    expect(loaded.overrides).toEqual({ lcm: 2 });
+    expect(await ask({ kind: 'config-file', config: { ...config, overrides: { use_fractional_swings: true } } }))
+        .toEqual(await ask({ kind: 'config-file', config: { ...config, overrides: {} } }));
+});
+
 it("gives the crafting machines, fills a prototype's rule on import and paste, and warns live of a machine that cannot make its recipe", async () => {
     const lookups = await ask({ kind: 'lookups' });
     expect(lookups.craftingMachines.machines.map(machine => machine.name)).toContain('cryogenic-plant');

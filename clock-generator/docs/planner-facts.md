@@ -78,7 +78,7 @@ pass after the feasibility pass and before any simulation, over the facts, the g
   container or lane port nothing drops on, and a port of a container of constant supply outside every loop). Two groups
   share no node; a loop is one member, by its key. Every sample is one group.
 - **Main-period choices** per group: the output swing counts today's alternatives are listed for (the planned count, the
-  counts it backs off through, the main one, the counts above and below it and fractional swings switched the other way;
+  counts it backs off through, the main one, the counts above and below it and fractional swings;
   `swingCountsListed` makes the lists for both), each with its cycle's ticks and the group's cycles, kept or pruned. Only
   P-limit prunes: a period of 500,000 ticks or more. A count whose cycle the cycle plan refuses is listed with the
   plan's reason (`cycle-refused`), as today its run fails. The planned count is the planning run's (its prepare step);

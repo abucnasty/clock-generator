@@ -434,7 +434,6 @@ function alternativeDefinitionsFor(
     const secondary = secondaryPlanningCountOf(config, context);
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false,
         ...(secondary === undefined ? {} : { terminal_swing_count: secondary.terminal_swing_count }) } };
-    const fractional = config.overrides?.use_fractional_swings === true;
     const { swings } = context;
     // as the primary alternative makes it (see primaryDefinition), on the config's own counts
     const small_batches_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
@@ -461,15 +460,14 @@ function alternativeDefinitionsFor(
     return [
         {
             id: "fractional",
-            label: fractional ? "Without fractional swings" : "Fractional swings",
-            description: fractional ? `${BATCHED_SWINGS_LABEL} with fractional swings turned off: every cycle uses the same whole number of swings.`
-                : `${BATCHED_SWINGS_LABEL} with fractional swings turned on: an inserter that needs e.g. 3/2 swings per cycle alternates `
+            label: "Fractional swings",
+            description: `${BATCHED_SWINGS_LABEL} with fractional swings turned on: an inserter that needs e.g. 3/2 swings per cycle alternates `
                 + "between 1 and 2 swings instead of rounding, which can need fewer or shorter windows.",
             run: () => generateClockWithSwingBackoff(
-                { ...base_config, overrides: { ...base_config.overrides, use_fractional_swings: !fractional } },
+                { ...base_config, overrides: { ...base_config.overrides, use_fractional_swings: true } },
                 quiet
             ),
-            planned_on: { ...config, overrides: { ...config.overrides, use_fractional_swings: !fractional } },
+            planned_on: { ...config, overrides: { ...config.overrides, use_fractional_swings: true } },
             no_shared_windows: true,
         },
         {

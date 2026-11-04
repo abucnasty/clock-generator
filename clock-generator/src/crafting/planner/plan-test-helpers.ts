@@ -20,8 +20,7 @@ const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 
 /** The output swings a cycle the prepare step finds on the config with fractional swings on or off */
 export function maxSwingsOf(config: Config, fractional: boolean): Fraction {
-    const variant: Config = (config.overrides?.use_fractional_swings === true) === fractional ? config
-        : { ...config, overrides: { ...config.overrides, use_fractional_swings: fractional } };
+    const variant: Config = fractional ? { ...config, overrides: { ...config.overrides, use_fractional_swings: true } } : config;
     const context = SimulationContext.fromConfig(variant);
     new PrepareStep(context).execute();
     return maxSwingsOfPreparedBuild(variant, context, quiet);
