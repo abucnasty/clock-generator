@@ -1,8 +1,9 @@
 -- The game tests' protocol, timed in game ticks (never in clock periods): what the machines that make the target item
 -- finish over the trailing minute decides every step.
 --   steady state  the first tick the trailing `window` ticks (3,600) hold `expected` products or more (target rate x 60 s) and
---                 the trailing window has stopped falling after the warm-up's overshoot: it is no lower than it was one clock
---                 cycle earlier, at the last tick the clock stood where it stands now (owner, 2026-11-03)
+--                 the trailing window has stopped falling after the warm-up's overshoot (owner, 2026-11-03): it is no lower than
+--                 it was a whole number of clock cycles earlier, as many as fit in the window (one where a cycle is longer),
+--                 so the two windows compared stand at the same point of the clock and do not overlap by more than a cycle
 --   baseline      the `baseline` ticks after it (3,600 unless the family names a reason for more, at most 36,000). It holds
 --                 when the products of its whole clock cycles, from the steady-state tick to the last tick in the baseline at
 --                 which the clock stands where it stood then, make the target over those ticks (owner, 2026-11-03): a minute
@@ -135,8 +136,12 @@ function M.run(spec)
             trailing_at[t % cycles] = trailing
             if t % 60 == 0 then table.insert(protocol.trace, trailing) end
             if t >= cap then return finish("over the cap of " .. cap .. " ticks") end
-            local settled = cycle_start ~= nil and cycle_start >= window and t - cycle_start < cycles
-                and trailing >= trailing_at[cycle_start % cycles]
+            local settled = false
+            if cycle_start ~= nil then
+                local cycle = t - cycle_start
+                local back = cycle * math.max(1, math.floor(window / cycle))
+                settled = t - back >= window and back < cycles and trailing >= trailing_at[(t - back) % cycles]
+            end
             if phase == "steady" then
                 if trailing >= expected and settled then
                     steady = t

@@ -1,7 +1,7 @@
 -- Observe a clocked cold start without changing anything: the lane phase of the pickup tile at placement, the lattice
 -- its stock keeps in every period, and the clock against the probe tick. The run is timed in game ticks (the game tests'
 -- protocol): it lasts until the machine making the target has made `expected` over the trailing `window` ticks, no less than
--- one clock cycle earlier (steady state), then one more window, at most `ticks`; the recording is cut there too (settle.record_samples).
+-- as many whole clock cycles earlier as fit in the window (steady state), then one more window, at most `ticks`; the recording is cut there too (settle.record_samples).
 -- options: ticks, period, units (the belt tier's step in 1/32 tile a tick: 1 normal, 2 fast, 3 express, 4 turbo), window,
 -- expected, recipes, item
 local entities, surface, _, settle = ...
@@ -87,13 +87,17 @@ script.on_nth_tick(1, function()
     local ok, problem = pcall(function()
         observe(tick)
         history[tick] = made()
-        -- steady state as steady.lua takes it: the trailing window at the target, and no lower than one clock cycle earlier
+        -- steady state as steady.lua takes it: the trailing window at the target, and no lower than whole clock cycles earlier
         local position = capture.clock_value(clock)
         local cycle_start = last_at[position]
         last_at[position] = tick
         local trailing = tick >= window and history[tick] - history[tick - window] or nil
-        local settled = trailing ~= nil and cycle_start ~= nil and cycle_start >= window
-            and trailing >= history[cycle_start] - history[cycle_start - window]
+        local settled = false
+        if trailing ~= nil and cycle_start ~= nil then
+            local cycle = tick - cycle_start
+            local back = tick - cycle * math.max(1, math.floor(window / cycle))
+            settled = back >= window and trailing >= history[back] - history[back - window]
+        end
         if not report.steady and trailing ~= nil and trailing >= options.expected and settled then
             report.steady = tick
             -- the recording holds samples 0 .. tick + window - 1 (sample j is probe tick j + 1)
