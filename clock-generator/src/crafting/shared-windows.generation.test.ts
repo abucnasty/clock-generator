@@ -52,7 +52,7 @@ describe("the productivity chain: the separate windows are selected, the shared 
         ]);
         expect(descriptions("planned-belt-slack-shared")).toContainEqual([
             "3 inserters [item=copper-cable] [item=plastic-bar] [item=electronic-circuit] (5, 6, 9)",
-            "2.424 to 4.848 swings (inserters 6, 9: 2.424; inserter 5: 4.848) in 1 window per 72-tick period: open 5–46",
+            "2.424 to 4.848 swings (inserters 6, 9: 2.424; inserter 5: 4.848) in 2 windows per 72-tick period: open 1–4, 35–72",
         ]);
     });
 

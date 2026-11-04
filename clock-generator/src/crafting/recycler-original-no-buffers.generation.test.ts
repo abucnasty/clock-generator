@@ -12,11 +12,15 @@ describe('original electromagnetic science without buffer chests', () => {
     let generated: ReturnType<typeof generateClockAlternatives>;
     beforeAll(async () => { generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.REAL_OWNER_PINK_SCIENCE_ORIGINAL_NO_BUFFERS), {logger: quiet}); });
 
-    it('generates a stable 40-tick Small batches clock at 240/s that recovers from every loss, with no inserter left always on', () => {
+    it('generates a stable 40-tick Small batches clock for a 240/s target, reports its measured rate, and recovers from every loss', () => {
         const selected = generated.alternatives[generated.selected_index];
         expect(selected.id).toBe('primitive-grouped');
         expect(selected.verdict).toBe('stable');
         expect(selected.assessment.items_per_second).toBe(240);
+        const measured = selected.result.stability_check.as_built!;
+        // the rate is the measured output of the period, over the five copies
+        expect(measured.actual_output_items).toBe(32);
+        expect(selected.assessment.items_per_second).toBeCloseTo(measured.actual_output_items * 60 * 5 / 40, 9);
         expect(selected.result.simulation_duration.ticks).toBe(40);
         expect(selected.result.stability_check.as_built?.holds).toBe(true);
         expect(selected.assessment.backpressure_loss?.survives).toBe(true);

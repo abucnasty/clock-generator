@@ -26,7 +26,7 @@ test("grenade: every inserter and drill a clock leaves always on says why", () =
     expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
 });
 
-test("grenade: the 112-tick clock holds the target and is selected; the longer ones, planned the same way, do not", () => {
+test("grenade: the 112-tick clock holds the target and is selected; the observed windows of the same period hold it too, and the longer ones, planned the same way, do not", () => {
     const selected = generated.alternatives[generated.selected_index];
     expect(selected.id).toBe(GENERATED_ALTERNATIVE);
     expect(selected.verdict).toBe("stable");
@@ -42,7 +42,11 @@ test("grenade: the 112-tick clock holds the target and is selected; the longer o
     // the drills of a group share one window, two ticks: 160 coal a period against the 125 to 134 a tick the drills mine (two drill deciders, as the hand-made clock has)
     expect([windows["drill:1"], windows["drill:2"]]).toEqual([[{start: 2, end: 3}], [{start: 2, end: 3}]]);
     expect([windows["drill:3"], windows["drill:4"]]).toEqual([[{start: 58, end: 59}], [{start: 58, end: 59}]]);
-    expect(generated.alternatives.filter(it => it.id !== GENERATED_ALTERNATIVE).every(it => it.verdict === "unstable")).toBe(true);
+    // the observed windows of 112 ticks hold and get back from every loss under the order the game serves the takers in, and wake 2,159 a minute against 138
+    const others = generated.alternatives.filter(it => it.id !== GENERATED_ALTERNATIVE);
+    expect(others.filter(it => it.verdict === "stable").map(it => it.id)).toEqual(["derived"]);
+    expect(others.filter(it => it.id !== "derived").every(it => it.verdict === "unstable")).toBe(true);
+    expect(others.find(it => it.id === "derived")!.assessment.wake_ups_per_minute!).toBeGreaterThan(selected.assessment.wake_ups_per_minute!);
 });
 
 type Entities = ClockAlternativesResult["alternatives"][number]["result"]["blueprint"]["entities"];

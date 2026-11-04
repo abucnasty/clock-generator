@@ -6,7 +6,7 @@ import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config/schema";
 import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
-import {GENERATED_ALTERNATIVE, ownClockCases} from "../../tests/game/builds/own-clock-fixtures";
+import {ownClockCases} from "../../tests/game/builds/own-clock-fixtures";
 import {readControls} from "../../tests/game/builds/clock-controls";
 
 // the generated clock pinned beside the in-game recording of it on the build's three copies
@@ -24,8 +24,9 @@ test("own clock: every inserter and drill a clock leaves always on says why", ()
     expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
 });
 
-test("own clock: the selected clock is the one recorded on the three copies", () => {
-    expect(generated.alternatives[generated.selected_index].id).toBe(GENERATED_ALTERNATIVE);
+// the clock recorded on the three copies (swings-6) is no longer the selected one; the next test finds it still made
+test("own clock: the selected clock is swings-2, and the one recorded on the three copies is another it makes", () => {
+    expect(generated.alternatives[generated.selected_index].id).toBe("swings-2");
 });
 
 for (const variant of ownClockCases()) {

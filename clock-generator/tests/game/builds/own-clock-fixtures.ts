@@ -48,7 +48,7 @@ export function ownerClockHash(): string {
 /** The copies of the unit the blueprint holds */
 export const COPIES = 3;
 
-/** The generator's clock for the config (`swings-6`, 6 output swings): the selected one */
+/** The clock recorded on the three copies (`swings-6`, 6 output swings): the generator's selected clock until the default dispatch changed, still made */
 export const GENERATED_ALTERNATIVE = "swings-6";
 
 /**
