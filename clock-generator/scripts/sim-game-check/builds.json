@@ -25,8 +25,8 @@
  },
  {
   "name": "electromagnetic-science",
-  "config": "ELECTROMAGNETIC_SCIENCE",
-  "hash": "ba2c26f4",
+  "config": "ELECTROMAGNETIC_SCIENCE_AUTO",
+  "hash": "492f1635",
   "recording": "electromagnetic-science.recording.json"
  },
  {

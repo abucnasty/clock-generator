@@ -177,11 +177,7 @@
         "coal",
         "coal"
       ],
-      "overrides": {
-        "enable_control": {
-          "mode": "ALWAYS"
-        }
-      }
+      "overrides": {}
     }
   ],
   "belts": [
@@ -241,9 +237,5 @@
     }
   ],
   "chests": [],
-  "overrides": {
-    "ignored_lcm_ingredients": [
-      "coal"
-    ]
-  }
+  "overrides": {}
 }

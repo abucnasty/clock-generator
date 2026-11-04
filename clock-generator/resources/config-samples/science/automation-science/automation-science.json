@@ -9,7 +9,7 @@
       "id": 1,
       "recipe": "automation-science-pack",
       "productivity": 100,
-      "crafting_speed": 68.90624761581421,
+      "crafting_speed": 68.890625,
       "prototype": "assembling-machine-3"
     }
   ],
@@ -73,7 +73,5 @@
     }
   ],
   "chests": [],
-  "overrides": {
-    "terminal_swing_count": 1
-  }
+  "overrides": {}
 }

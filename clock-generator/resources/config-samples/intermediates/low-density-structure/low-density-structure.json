@@ -9,14 +9,14 @@
       "id": 1,
       "recipe": "casting-low-density-structure",
       "productivity": 300,
-      "crafting_speed": 257.60000228882,
+      "crafting_speed": 257.625,
       "prototype": "foundry"
     },
     {
       "id": 2,
       "recipe": "casting-low-density-structure",
       "productivity": 300,
-      "crafting_speed": 257.60000228882,
+      "crafting_speed": 257.625,
       "prototype": "foundry"
     },
     {
@@ -30,14 +30,14 @@
       "id": 4,
       "recipe": "casting-low-density-structure",
       "productivity": 300,
-      "crafting_speed": 257.60000228882,
+      "crafting_speed": 257.625,
       "prototype": "foundry"
     },
     {
       "id": 5,
       "recipe": "casting-low-density-structure",
       "productivity": 300,
-      "crafting_speed": 257.60000228882,
+      "crafting_speed": 257.625,
       "prototype": "foundry"
     }
   ],
@@ -96,11 +96,7 @@
         "id": 1
       },
       "stack_size": 16,
-      "overrides": {
-        "enable_control": {
-          "mode": "ALWAYS"
-        }
-      }
+      "overrides": {}
     },
     {
       "source": {
@@ -134,11 +130,7 @@
         "id": 3
       },
       "stack_size": 16,
-      "overrides": {
-        "enable_control": {
-          "mode": "ALWAYS"
-        }
-      }
+      "overrides": {}
     },
     {
       "source": {
@@ -172,11 +164,7 @@
         "id": 2
       },
       "stack_size": 16,
-      "overrides": {
-        "enable_control": {
-          "mode": "ALWAYS"
-        }
-      }
+      "overrides": {}
     },
     {
       "source": {

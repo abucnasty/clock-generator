@@ -28,11 +28,11 @@ afterAll(() => fs.rmSync(out, { recursive: true, force: true }));
 describe('export-clock.js on automation science', () => {
     it('writes the selected clock where place-clocks reads it, with the tag on each schedule combinator', () => {
         expect(run.status, String(run.stderr)).toBe(0);
-        const arm = read(out, 'full-hand', 'arm.json');
-        expect(arm).toMatchObject({ alternative: { id: 'full-hand' }, selected: true, always_on: false, verdict: 'stable', holds: true, recovers: true, config: 'AUTOMATION_SCIENCE' });
+        const arm = read(out, 'swings-2', 'arm.json');
+        expect(arm).toMatchObject({ alternative: { id: 'swings-2' }, selected: true, always_on: false, verdict: 'stable', holds: true, recovers: true, config: 'AUTOMATION_SCIENCE' });
         expect(arm.wake_ups_per_minute).toBeGreaterThan(0);
-        const clock = read(out, 'full-hand', 'automation-science.json');
-        expect(clock.selected).toMatchObject({ id: 'full-hand', verdict: 'stable' });
+        const clock = read(out, 'swings-2', 'automation-science.json');
+        expect(clock.selected).toMatchObject({ id: 'swings-2', verdict: 'stable' });
         expect(clock.period_ticks).toBe(arm.period_ticks);
         expect(clock.counted_ticks).toBeGreaterThan(0);
         const combinators = clock.schedule.inserter_combinators as { entity_number: number; inserter_ids: number[] }[];
@@ -48,7 +48,7 @@ describe('export-clock.js on automation science', () => {
     });
 
     it('writes the always-on arm as one combinator wired to the same inserters', () => {
-        const clock = read(out, 'full-hand', 'automation-science.json');
+        const clock = read(out, 'swings-2', 'automation-science.json');
         const on = read(out, 'always-on', 'automation-science.json');
         const ids = clock.schedule.inserter_combinators.flatMap((it: { inserter_ids: number[] }) => it.inserter_ids).sort();
         expect(on.schedule.inserter_combinators).toHaveLength(1);
@@ -82,7 +82,7 @@ describe('export-clock.js on automation science', () => {
         const refused = spawnSync('node', [script('export-clock.js'), 'AUTOMATION_SCIENCE', `--out=${path.join(out, 'refused')}`, '--alternative=nothing', '--no-cells'], { cwd: root, encoding: 'utf-8' });
         expect(refused.status).toBe(1);
         expect(String(refused.stderr)).toContain('No potential clock nothing');
-        expect(read(out, 'refused', 'error.json').error).toContain('full-hand');
+        expect(read(out, 'refused', 'error.json').error).toContain('swings-2');
     });
 });
 

@@ -11,9 +11,12 @@ let config: Config;
 let by_default: ClockAlternativesResult;
 let selected: ClockAlternative;
 
-// These assertion groups exercise the same unmodified build; generate its alternatives once.
+// These assertion groups exercise the same build, with the one output swing a cycle that the sample no longer forces (its
+// own copy forces it: with it no clock made without a search is stable, which the last group needs); generate its
+// alternatives once.
 beforeAll(async () => {
-    config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+    const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+    config = {...sample, overrides: {...sample.overrides, terminal_swing_count: 1}};
     by_default = generateClockAlternatives(config, {logger: quiet});
     selected = selectedOf(by_default);
 });

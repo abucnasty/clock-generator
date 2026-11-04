@@ -14,7 +14,7 @@ describe("the taker orders a clock is checked under", () => {
     let jellynut: Config;
 
     beforeAll(async () => {
-        electromagnetic = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE);
+        electromagnetic = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_AUTO);
         jellynut = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
     });
 

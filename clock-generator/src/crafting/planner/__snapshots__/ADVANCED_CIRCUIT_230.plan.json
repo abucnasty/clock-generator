@@ -145,9 +145,7 @@
           "cycles": 11
         }
       ],
-      "ignored_items": [
-        "coal"
-      ],
+      "ignored_items": [],
       "computed_lcm": 11,
       "override_lcm": null,
       "effective_lcm": 11

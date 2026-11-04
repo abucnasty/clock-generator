@@ -68,12 +68,12 @@
             "denominator": 1
           },
           "crafts_capacity": {
-            "numerator": 6440000057220499,
-            "denominator": 93750000000000
+            "numerator": 687,
+            "denominator": 10
           },
           "duty": {
-            "numerator": 5625000000000000,
-            "denominator": 6440000057220499
+            "numerator": 200,
+            "denominator": 229
           }
         },
         {

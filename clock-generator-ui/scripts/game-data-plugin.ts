@@ -18,7 +18,7 @@ const EXAMPLES = [
     { id: 'automation-science', path: 'science/automation-science/automation-science.json' },
     { id: 'utility-science', path: 'science/utility-science/utility-science.json' },
     { id: 'chemical-science', path: 'science/chemical-science/chemical-science-shared-foundry.json' },
-    { id: 'electromagnetic-science', path: 'science/electromagnetic-science/electromagnetic-science.json' },
+    { id: 'electromagnetic-science', path: 'science/electromagnetic-science/electromagnetic-science-auto.json' },
     { id: 'military-science', path: 'science/military-science/military-science-1-inserter.json' },
     { id: 'production-science', path: 'science/production-science/production-science.json' },
     { id: 'metallurgic-science', path: 'science/metallurgic-science/metallurgic-science.json' },

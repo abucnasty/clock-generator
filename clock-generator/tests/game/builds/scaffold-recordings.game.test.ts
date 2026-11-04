@@ -289,18 +289,11 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         },
     },
     // One electromagnetic plant (legendary, five legendary productivity modules, 12 legendary beacons) on accumulators and
-    // supercapacitors from one belt, its fluids from infinity pipes: 11 copies of it make 330 a second. Recorded 2026-10-16:
-    // 352 in every period of 704 ticks (batched swings, 2 output swings per cycle). The config's crafting speed is 109.475, what
-    // 12 beacons give in the game.
+    // supercapacitors from one belt, its fluids from infinity pipes: 11 copies of it make 330 a second. A fully automatic config
+    // (no override). The config's crafting speed is 109.475, what 12 beacons give in the game. Recorded 2026-10-16 on the same
+    // batched swings clock (period 704) with the output inserters on AUTO: from a staged start (empty machines) 288 in the first
+    // period and 352 in each of the 50 after; on this test's start (warm-up and settle) 352 in every period checked.
     "electromagnetic science": {
-        scaffold: path.join(SAMPLES, "science", "electromagnetic-science", "electromagnetic-science-scaffold.txt"),
-        config: ConfigPaths.ELECTROMAGNETIC_SCIENCE,
-        seed: [],
-        warmup_ticks: 3600,
-    },
-    // The same build with both output inserters on AUTO. Recorded 2026-10-16 on the same batched swings clock (period 704): from a
-    // staged start (empty machines) 288 in the first period and 352 in each of the 50 after; on this test's start (warm-up and settle) 352 in every period checked.
-    "electromagnetic science with its output inserters on AUTO": {
         scaffold: path.join(SAMPLES, "science", "electromagnetic-science", "electromagnetic-science-scaffold.txt"),
         config: ConfigPaths.ELECTROMAGNETIC_SCIENCE_AUTO,
         seed: [],
