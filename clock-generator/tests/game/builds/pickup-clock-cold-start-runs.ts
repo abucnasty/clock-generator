@@ -68,7 +68,10 @@ export interface ColdStartRun {
     native_phases: [number, number] | null;
     /** The same in the model's frame: native - frame_offset × the tier's speed in 1/32 tile a tick, mod 8 */
     model_phases: [number, number] | null;
-    /** What the game's output and input inserters moved in each period, in the model's frame */
+    /** The probe tick the plant had made its target over the trailing minute (steady state), and the samples recorded: that and a minute more */
+    steady: number;
+    ticks: number;
+    /** What the game's output and input inserters moved in each period of the recorded ticks, in the model's frame (the last one cut short) */
     output: number[];
     pickups: number[];
     /** sha256 of the game's held count of each in every tick of the model's frame, as JSON */
@@ -78,11 +81,26 @@ export interface ColdStartRun {
 interface ColdStartControls {
     /** Model `held[i]` is native sample i + frame_offset */
     frame_offset: number;
-    periods: number;
     clocks: Record<string, ColdStartClock>;
     runs: Record<string, ColdStartRun>;
     /** Old controls stay mechanically checked after their selection moves. */
     historical_runs?: Record<string, ColdStartRun>;
+}
+
+/** The most a cold start records: 10 minutes of game time (the game tests' protocol); steady state and a minute more is the run */
+export const COLD_START_CAP_TICKS = 36_000;
+
+/** What an inserter moved in each period of a held series (the last period cut short where the series ends in it): drops and pickups */
+export function perPeriod(held: number[], period: number) {
+    const periods = Math.ceil(held.length / period);
+    const drops = new Array<number>(periods).fill(0);
+    const pickups = new Array<number>(periods).fill(0);
+    held.forEach((count, tick) => {
+        const before = held[tick - 1] ?? 0;
+        drops[Math.floor(tick / period)] += Math.max(0, before - count);
+        pickups[Math.floor(tick / period)] += Math.max(0, count - before);
+    });
+    return {drops, pickups};
 }
 
 export const coldStart = readControls<{cold_start: ColdStartControls}>("pickup-clock-start-controls.json").cold_start;

@@ -5,7 +5,7 @@ import {Config} from "../../../src/config";
 import {ConfigPaths} from "../../../src/config/config-paths";
 import {loadConfigFromFile} from "../../../src/config/loader";
 import {Recording} from "../../../src/verification/recording";
-import {BELT_SPEEDS} from "../helpers/belt-speed-fixtures";
+import {CLOCK_TEST_SPEEDS} from "../helpers/belt-speed-fixtures";
 import {PickupClockScenario} from "./pickup-clock-capture";
 
 /**
@@ -53,13 +53,10 @@ export async function stupidfathobbitCell02ClockScenario(variant: Stupidfathobbi
     const loaded = await loadConfigFromFile(ConfigPaths.REAL_STUPIDFATHOBBIT_CELL02);
     const config = variant.backed ? {...loaded, overrides: {...loaded.overrides, backed_up_belts: true}} : loaded;
     return {
-        name: variant.name, speed: BELT_SPEEDS[0], backed: variant.backed,
+        name: variant.name, speed: CLOCK_TEST_SPEEDS[0], backed: variant.backed,
         config: () => config,
         scaffold: () => fs.readFileSync(path.join(FOLDER, "stupidfathobbit-cell02-scaffold.txt"), "utf8").trim(),
         alternative: GENERATED_ALTERNATIVE,
-        // 70 untouched periods; then each loss lasts 100 periods and 100 more follow it (the machines hold about 5 periods of plastic,
-        // and the belts take a while to fill): the plastic cut, then the processing unit output blocked with the export belt stopped
-        interventions: [[70, 170, 270], [270, 370, 470]],
         probeFile: path.join(__dirname, "stupidfathobbit-cell02-clock-probe.lua"),
         probe: {family: "stupidfathobbit-cell02"},
         controls: path.join(__dirname, "stupidfathobbit-cell02-clock-controls.json"),

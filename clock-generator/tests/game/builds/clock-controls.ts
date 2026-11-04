@@ -122,8 +122,6 @@ export interface GenerationPin {
     clock_sha256: string;
     /** Where the pin also holds the model's own evidence of the selection (its `stability_check.as_built`), apart from the native recording: the fields a generation test finds in it */
     as_built?: Record<string, unknown>;
-    /** Where the clock's output repeats every this many periods, not every one (the game's output alternates 0 and 2x expected): the baseline is judged by its total over whole cycles (owner's rule 2026-11-03: the total reaches the target amount) */
-    cycle_periods?: number;
     /** The cause the generation gives of why its selection does not meet goal 1 (see whyNotStable); absent where it does */
     why_not_stable?: string;
 }
@@ -190,17 +188,30 @@ export function expectedNativeSummary(controls: string, name: string): AnyNative
     return (Array.isArray(entry) ? entry : [entry]).find(it => it?.recorded.pr === Number(pr))?.native;
 }
 
+/** A rate as a fraction of whole numbers (the closest with a denominator of at most a million: 480 x 2/7 is 960/7) */
+export function rateFraction(rate: number): [number, number] {
+    let [h0, h1, k0, k1, x] = [0, 1, 1, 0, rate];
+    for (let i = 0; i < 64; i++) {
+        const a = Math.floor(x);
+        const [h2, k2] = [a * h1 + h0, a * k1 + k0];
+        if (k2 > 1_000_000) break;
+        [h0, h1, k0, k1] = [h1, h2, k1, k2];
+        if (Math.abs(h1 / k1 - rate) < 1e-12 * Math.max(1, rate) || x === a) break;
+        x = 1 / (x - a);
+    }
+    return [h1, k1];
+}
+
 /**
- * Whether a native baseline reaches the target: every period at the expected output, or (owner's rule 2026-11-03: a game check
- * passes when the total over whole periods reaches the target amount) where the pin names a cycle of several periods, the total
- * over whole cycles at least the expected output of those periods
+ * The baseline's verdict in whole numbers: its whole clock cycles made the target, items x 60 x d >= n x ticks for the target
+ * n/d a second. steady.lua compares in floating point, against the target rounded to a millionth, which can put the exact
+ * target (8,064 in 3,528 ticks at 960/7 a second) a hair over what was made
  */
-export function baselineMeetsTarget(native: NativeClockSummary, generation?: GenerationPin): boolean {
-    if (native.baseline.every(items => items === native.expected)) return true;
-    const cycle = generation?.cycle_periods;
-    if (!cycle) return false;
-    const whole = Math.floor(native.baseline.length / cycle) * cycle;
-    return whole > 0 && native.baseline.slice(0, whole).reduce((sum, items) => sum + items, 0) >= native.expected * whole;
+export function exactBaseline(baseline: NativeBaseline, target: number): NativeBaseline {
+    const measured = baseline.measured;
+    if (!measured) return {...baseline, meets: false};
+    const [n, d] = rateFraction(target);
+    return {...baseline, meets: measured.items * 60 * d >= n * measured.ticks};
 }
 
 /** sha256 of the identity of an exported clock: the hash the pins use */
@@ -255,8 +266,10 @@ export function pinMismatches(cases: Record<string, ClockControl>, untied: reado
             found.push(`${name}: has a native summary and no generation pin`);
             continue;
         }
-        const perPeriod = isRunSummary(control.native) ? Math.round(control.native.target * control.native.period / 60 * 1e6) / 1e6 : control.native.expected;
-        if (perPeriod !== generation.expected || control.native.period !== generation.period) {
+        // a run keeps its target to a millionth (34.285714 for 240/7): its output a period is the pin's to a thousandth
+        const perPeriod = isRunSummary(control.native) ? Math.round(control.native.target * control.native.period / 60 * 1e3) / 1e3 : control.native.expected;
+        const pinned = isRunSummary(control.native) ? Math.round(generation.expected * 1e3) / 1e3 : generation.expected;
+        if (perPeriod !== pinned || control.native.period !== generation.period) {
             found.push(`${name}: the native summary (period ${control.native.period}, expected ${perPeriod} a period) and the pin (${generation.period}, ${generation.expected}) are of different clocks`);
         }
         if (recorded.carried !== undefined && recorded.carried.trim() === "") found.push(`${name}: recorded.carried is empty: say where the pin moved and why the recording still holds`);

@@ -78,20 +78,6 @@ export function firstHandPatterns(config: Config, handSize = 16): Set<string> {
     return patterns;
 }
 
-/**
- * What a recorded clock control states about itself, checked without the generator: the rate it was recorded at is the
- * period's share of the target, the game's baseline periods are all at that figure or the control says why not, and every
- * recovery was judged on enough periods.
- */
-export function expectControlIsConsistent(native: {period: number; expected: number; baseline: number[];
-    recovery: {recovered: number[]}[]}, pin: {period: number; expected: number}, targetItemsPerSecond: number) {
-    expect(native.period, "the game was recorded on the pinned period").toBe(pin.period);
-    expect(native.expected, "the pinned output per period is the target's share of it").toBe(pin.expected);
-    expect(targetItemsPerSecond * native.period / 60, "output per period at the target rate").toBe(native.expected);
-    expect(native.baseline.length).toBeGreaterThan(0);
-    for (const loss of native.recovery) expect(loss.recovered.length).toBeGreaterThan(0);
-}
-
 /** The protocol's bounds (pickup-clock-capture.ts RUN_PROTOCOL): a minute's window, a baseline of 1 to 10 minutes, a run of at most 15 */
 const RUN_BOUNDS = {window: 3600, baseline: 3600, maxBaseline: 36_000, cap: 54_000};
 
@@ -104,7 +90,8 @@ export function expectRunIsConsistent(native: NativeRunSummary, pin: {period: nu
     expect(native.protocol).toBe("trailing-minute");
     expect(native.period, "the game was recorded on the pinned period").toBe(pin.period);
     expect(native.target, "the target's share the build is asked for").toBe(targetItemsPerSecond);
-    expect(Math.round(native.target * native.period / 60 * 1e6) / 1e6, "the pinned output per period is the target's").toBe(pin.expected);
+    // the run keeps its target to a millionth (34.285714 for 240/7): its output a period is the pin's to a thousandth
+    expect(Math.round(native.target * native.period / 60 * 1e3) / 1e3, "the pinned output per period is the target's").toBe(Math.round(pin.expected * 1e3) / 1e3);
     expect(native.window).toBe(RUN_BOUNDS.window);
     expect(native.expected, "the window holds the target rate over it").toBe(Math.round(native.target * native.window / 60 * 1e6) / 1e6);
     expect(native.ended).toBeLessThanOrEqual(RUN_BOUNDS.cap);

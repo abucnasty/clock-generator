@@ -11,7 +11,7 @@ import {Recording} from "../../../src/verification/recording";
 import {FixtureBeltSpeed, speedCapture} from "../helpers/belt-speed-fixtures";
 import {composeProbeSource} from "../helpers/probe-source";
 import {assertPickupClockHardware} from "./pickup-clock-speed-hardware";
-import {clockHash, clockToRun, expectedNativeSummary, NativeBaseline, NativeDisturbance, NativeRunSummary} from "./clock-controls";
+import {clockHash, clockToRun, exactBaseline, expectedNativeSummary, NativeBaseline, NativeDisturbance, NativeRunSummary} from "./clock-controls";
 
 export interface PickupClockScenario {
     name: string;
@@ -124,10 +124,11 @@ interface RunReport {
 }
 
 /** The summary a run is compared with in its controls file */
-export function runSummary(run: RunReport, clock: {generationVerdict: string; target: number; period: number}): NativeRunSummary {
+export function runSummary(run: RunReport, clock: {generationVerdict: string; target: number; period: number}, exactTarget = clock.target): NativeRunSummary {
     return {protocol: "trailing-minute", generationVerdict: clock.generationVerdict, target: clock.target, period: clock.period,
-        window: run.window, expected: run.expected, steady: run.steady ?? null, baseline: run.baseline ?? null,
-        disturbances: run.disturbances.map(({kind, start, drop, release, recovered}) => ({kind, start,
+        window: run.window, expected: run.expected, steady: run.steady ?? null, baseline: run.baseline ? exactBaseline(run.baseline, exactTarget) : null,
+        // Lua writes an empty table as {}: a run that never reached steady state has no disturbances
+        disturbances: (Array.isArray(run.disturbances) ? run.disturbances : []).map(({kind, start, drop, release, recovered}) => ({kind, start,
             ...(drop !== undefined && {drop}), ...(release !== undefined && {release}), ...(recovered !== undefined && {recovered})})),
         result: run.result!, ended: run.ended!};
 }
@@ -194,8 +195,8 @@ export async function capturePickupClockScenario(scenario: PickupClockScenario) 
         expect(run.error, "the probe failed in the game").toBeUndefined();
         expect(run.result, "the run did not end before the recording: over the cap").toBeDefined();
         // the machines the probe counted are the config's that make the target item, in every copy
-        expect(run.finals ?? [], "the final machines the probe counts").toHaveLength(finals);
-        const summary = runSummary(run, {generationVerdict: prepared.generationVerdict, target: Math.round(target * 1e6) / 1e6, period});
+        expect(Array.isArray(run.finals) ? run.finals : [], "the final machines the probe counts").toHaveLength(finals);
+        const summary = runSummary(run, {generationVerdict: prepared.generationVerdict, target: Math.round(target * 1e6) / 1e6, period}, target);
         fs.writeFileSync(path.join(capture.directory, "summary.json"), JSON.stringify(summary) + "\n");
         if (process.env.BELT_CLOCK_CALIBRATE !== "1") {
             expect(summary).toEqual(expectedNativeSummary(scenario.controls, scenario.name));
