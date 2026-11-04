@@ -176,14 +176,15 @@ local block = {
     start = function(t)
         for _, taker in ipairs(takers) do taker.disabled_by_script = true end
         -- results, the heaviest first, until the game refuses every one of them: the recycler cannot place what it gives
-        for _, item in ipairs(by_weight) do
-            local room = math.max(0, math.floor((options.lift - silo_weight()) / weight[item]))
-            local inserted = room > 0 and rocket.insert{name = item, count = room} or 0
-            for _ = 1, 8 do
-                if not rocket.can_insert{name = item, count = 1} then break end
-                inserted = inserted + rocket.insert{name = item, count = 1}
+        -- as many as the game takes of each, heaviest first, and again until a pass puts nothing in
+        for _ = 1, 16 do
+            local put = 0
+            for _, item in ipairs(by_weight) do
+                local inserted = rocket.insert{name = item, count = 1000000}
+                filled[item] = (filled[item] or 0) + inserted
+                put = put + inserted
             end
-            filled[item] = inserted
+            if put == 0 then break end
         end
         for _, item in ipairs(items) do
             assert(not rocket.can_insert{name = item, count = 1}, "the silo must refuse every result: " .. item)
