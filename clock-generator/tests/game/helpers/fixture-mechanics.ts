@@ -121,7 +121,8 @@ export function expectRunIsConsistent(native: NativeRunSummary, pin: {period: nu
  */
 export function expectRunAgreesWithSelection(name: string, native: NativeRunSummary, selected: {verdict: string; holds: boolean},
     recordedUnderOwnSupply = true) {
-    if (selected.verdict === "stable") expect(runHolds(native), `${name}: a stable clock holds and recovers in the game (${native.result})`).toBe(true);
+    const drained = native.stock && !native.stock.holds ? `; output stock ${native.stock.end} at the end, below the baseline's lowest ${native.stock.lowest}` : "";
+    if (selected.verdict === "stable") expect(runHolds(native), `${name}: a stable clock holds and recovers in the game (${native.result}${drained})`).toBe(true);
     if (recordedUnderOwnSupply && native.baseline?.meets !== true) {
         expect(selected.holds, `${name}: the run misses the target over its baseline: the generator has to see that itself`).toBe(false);
     }
