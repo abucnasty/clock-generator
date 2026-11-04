@@ -60,7 +60,6 @@ export const ConfigPaths = {
     REAL_COMPOSITE04_CELL07: path.join(CONFIG_SAMPLES_DIR, 'real', 'composite04', 'cell07', 'composite04-cell07.json'),
     REAL_THAELN_CELL09: path.join(CONFIG_SAMPLES_DIR, 'real', 'thaeln', 'cell09', 'thaeln-cell09.json'),
     REAL_STUPIDFATHOBBIT_CELL06: path.join(CONFIG_SAMPLES_DIR, 'real', 'stupidfathobbit', 'cell06', 'stupidfathobbit-cell06.json'),
-    REAL_ATLAN_CELL29: path.join(CONFIG_SAMPLES_DIR, 'real', 'atlan', 'cell29', 'atlan-cell29.json'),
     /** The lithium plate build, 80 a second: two cryogenic plants fill a rocket silo used as a chest, which six furnaces empty */
     REAL_OWNER_PINK_SCIENCE_RECYCLER: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'pink-science-recycler', 'pink-science-recycler.json'),
     /** The original duplicated electromagnetic science scaffold, described as one cell: five cells make 240/s */
