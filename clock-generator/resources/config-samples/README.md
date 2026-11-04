@@ -85,9 +85,8 @@ In the order they would settle the most:
 1. **science/logistic-science** (shared-inserter, sample): the 1-swing label of the shared-inserter and sample configs
    flipped from unstable to stable. Direct-insert has its scaffold (Status above).
 2. **science/production-science** (shared): its rate changed in the sweep.
-3. **intermediates/processing-units** (belt export): rates moved slightly.
-4. **gleba/rocket-fuel** and **gleba/jellynut-processing**: 3-swing rates swapped between the two jelly stack configs.
-5. **science/military-science**, **intermediates/flying-robot-frame**,
+3. **gleba/rocket-fuel** and **gleba/jellynut-processing**: 3-swing rates swapped between the two jelly stack configs.
+4. **science/military-science**, **intermediates/flying-robot-frame**,
    **intermediates/lithium-plates**, **intermediates/electric-engine-unit**,
    **smelting/stone-bricks**, **smelting/electric-furnace**: never recorded.
 

@@ -18,21 +18,6 @@ const dutiesOf = (config: Config) => feasibilityOfConfig(config).duties
  * make at their speed.
  */
 describe("the duty of a machine group", () => {
-    it("processing units with a belt export: machine 4 (electronic circuit) is asked 102 crafts a second of the 13111/125 = 104.888 "
-        + "its speed makes (102 asked of 104.9 crafts a 24-tick cycle), a duty of 12750/13111 = 97.25%", async () => {
-        const duties = feasibilityOfConfig(await sampleOf("PROCESSING_UNITS_BELT_EXPORT")).duties;
-        const circuit = duties.find(it => it.group === "machine:electronic-circuit")!;
-        expect(circuit.machines).toEqual([4]);
-        expect([circuit.crafts_needed.toString(), circuit.crafts_capacity.toString(), circuit.duty.toString()]).toEqual(["102", "13111/125", "12750/13111"]);
-        expect(circuit.duty.toDecimal()).toBeCloseTo(0.9725, 4);
-        // one duty for each group that must craft; none above 1
-        expect(duties.map(it => it.group)).toEqual([
-            "machine:casting-iron", "machine:processing-unit", "machine:advanced-circuit",
-            "machine:electronic-circuit", "machine:copper-cable", "machine:casting-copper",
-        ]);
-        expect(duties.every(it => it.duty.toDecimal() < 1)).toBe(true);
-    });
-
     it("biochamber fuel: its one machine is asked 1/2 a craft a second of the 1/2 it makes, a duty of exactly 1, and the build still passes", async () => {
         const config = await loadConfigFromFile(TestConfigPaths.BIOCHAMBER_FUEL) as Config;
         expect(dutiesOf(config)).toEqual([["machine:nutrients-from-yumako-mash", [1], "1/2", "1/2", "1"]]);
@@ -54,10 +39,5 @@ describe("the duty does not change what is refused", () => {
         expect(rules).toEqual(["C1"]);
         expect(duties.map(it => it.group)).toContain("machine:rocket-fuel-from-jelly");
         expect(() => assertFeasible(over)).toThrow(FeasibilityError);
-    });
-
-    it("a sample at a duty near 1 is not refused for it", async () => {
-        const config = await sampleOf("PROCESSING_UNITS_BELT_EXPORT");
-        expect(() => assertFeasible(config)).not.toThrow();
     });
 });

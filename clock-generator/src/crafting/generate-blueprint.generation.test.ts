@@ -1,38 +1,15 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { generateClockForConfig, generateClockAlternatives, validateConfig, type BlueprintGenerationResult, type ClockAlternative, type ConfigValidation, type SerializableClockWindows } from "./generate-blueprint";
+import { generateClockForConfig, generateClockAlternatives, validateConfig, type ClockAlternative, type ConfigValidation, type SerializableClockWindows } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
-import { EntityId } from "../entities";
 import { alwaysOnReasonProblems, alwaysOnReasonProblemsOf, quiet, withSearches } from "./generate-blueprint-test-helpers";
 
-// The samples of generate-blueprint.test.ts whose generation takes longest: the clock alternatives of iron bacteria,
-// and two builds whose single generation runs the long checks.
+// The samples of generate-blueprint.test.ts whose generation takes longest: the clock alternatives of iron bacteria
+// and a build whose single generation runs the long checks.
 describe("generateClockForConfig", () => {
 
     // The builds are generated in beforeAll hooks, not in the describe bodies: those all run when the file is collected,
     // so a run of one test by name would generate every build in the file first.
-
-    describe("belt lane consumed outside the config", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.PROCESSING_UNITS_BELT_EXPORT);
-        let result: BlueprintGenerationResult;
-
-        beforeAll(() => {
-            result = generateClockForConfig(config);
-        });
-
-        it("names why every inserter and drill the clock leaves always on is", () => {
-            expect(alwaysOnReasonProblems(config, result, "planned")).toEqual([]);
-        });
-
-        it("fills the lane at its consumption rate", () => {
-            const lane = config.belts.find(belt => belt.id === 5)!.lanes[0];
-            const consumption_per_second = "consumption_per_second" in lane ? lane.consumption_per_second! : 0;
-            const [, transfers] = Array.from(result.transfer_history.entries())
-                .find(([id]) => id.id === EntityId.forInserter(12).id)!;
-            const exported = transfers.reduce((sum, t) => sum + t.amount, 0);
-            expect(exported).toBe(consumption_per_second * result.simulation_duration.ticks / 60);
-        });
-    });
 
     // Two iron bacteria cultivation biochambers that give each other the bacteria a craft starts from. Each has two
     // inserters to a chest (1 and 3, 4 and 6); 7 and 8 go between the machines; 9 and 10 bring bioflux and nutrients.

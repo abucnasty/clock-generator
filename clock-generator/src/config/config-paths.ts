@@ -47,7 +47,6 @@ export const ConfigPaths = {
     /** Utility science with low density structure inserted directly, the chain's inserters always on (its clocked twin and scaffold were replaced by REAL_THAELN_CELL09) */
     UTILITY_SCIENCE_DIRECT_INSERT_LDS_CHAIN_ALWAYS_ON: path.join(CONFIG_SAMPLES_DIR, 'science', 'utility-science', 'utility-science-direct-insert-lds-chain-always-on.json'),
     PRODUCTION_SCIENCE_JSON: path.join(CONFIG_SAMPLES_DIR, 'science', 'production-science', 'production-science.json'),
-    PROCESSING_UNITS_BELT_EXPORT: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'processing-units', 'processing-units-belt-export.json'),
     FLYING_ROBOT_FRAME: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'flying-robot-frame', 'flying-robot-frame.json'),
     LOGISTIC_SCIENCE_DI: path.join(CONFIG_SAMPLES_DIR, 'science', 'logistic-science', 'logistic-science-direct-insert.json'),
     GLEBA_ROCKET_FUEL: path.join(CONFIG_SAMPLES_DIR, 'gleba', 'rocket-fuel', 'rocket-fuel-jelly-stack-16.json'),
@@ -102,7 +101,7 @@ export interface ExpectedRefusal {
  * fail with its error (`expected-refusals.test.ts`); code that walks every sample leaves these out. None today: the coverage
  * refusal's config is a unit-test fixture (`tests/configs/`).
  */
-export const ExpectedRefusals = {} as const satisfies Partial<Record<keyof typeof ConfigPaths, ExpectedRefusal>>;
+export const ExpectedRefusals: Readonly<Partial<Record<keyof typeof ConfigPaths, ExpectedRefusal>>> = {};
 
 /** Whether the sample of a `ConfigPaths` key is one of the expected refusals */
 export function isExpectedRefusal(key: string): key is keyof typeof ExpectedRefusals {

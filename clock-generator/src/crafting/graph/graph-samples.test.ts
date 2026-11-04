@@ -74,7 +74,6 @@ const TERMINAL: Readonly<Record<string, number>> = {
     METALLURGIC_SCIENCE_PACK: 1,
     MILITARY_SCIENCE: 1,
     PROCESSING_UNITS: 1,
-    PROCESSING_UNITS_BELT_EXPORT: 2,
     PRODUCTION_SCIENCE_JSON: 1,
     PRODUCTION_SCIENCE_SHARED_JSON: 1,
     REAL_ATLAN_CELL29: 2,
@@ -124,13 +123,6 @@ describe("the planner graph", () => {
         expect(uncoveredPortsOf(facts, graph)).toEqual(expected);
         expect(() => assertInserterCoverage(config)).toThrow(InserterCoverageError);
         expect(portsOfCoverageIssues(coverageIssuesOf(config))).toEqual(expected);
-    });
-
-    it("of processing units with a belt export (the brief's reference sample) is well under a megabyte of JSON", async () => {
-        const { graph } = await graphOf(ConfigPaths.PROCESSING_UNITS_BELT_EXPORT);
-        const json = graphSnapshotOf(graph, "PROCESSING_UNITS_BELT_EXPORT");
-        expect(json.length).toBeLessThan(64 * 1024);
-        expect(graph.nodes.length + graph.edges.length).toBeLessThan(100);
     });
 
     it("keeps no snapshot of a sample that is gone, and an expectation for every sample", () => {

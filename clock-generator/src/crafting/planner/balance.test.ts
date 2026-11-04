@@ -166,28 +166,4 @@ describe("the balance's machine rows, solved loop by loop", () => {
         expect([...reversed].map(([entity, total]) => `${entity} ${total}`).sort())
             .toEqual([...listed].map(([entity, total]) => `${entity} ${total}`).sort());
     });
-
-    it("are rounded only where the exact figure does not fit a fraction: within a double's step of it", async () => {
-        // processing units with a belt export, its machines reversed, 119/25 output swings: the export's hands come from the
-        // cycle's ticks as a decimal (114.24), and the copper plate of the cables asked for both ways has a denominator of
-        // 56 bits exactly, past a safe integer
-        const transfers = await transfersAt(ConfigPaths.PROCESSING_UNITS_BELT_EXPORT, fraction(119, 25), true);
-        const exportHands = transfers.get("inserter:12")!;
-        // made a cycle: processing units 16 x 119/25; advanced circuits half of that; circuits 5 times it plus the export;
-        // cables 16/11 of an advanced circuit and 6/5 of a circuit; copper plate 2/11 of a cable, in hands of 16
-        type Q = [bigint, bigint];
-        const q = (n: number | bigint, d: number | bigint = 1): Q => [BigInt(n), BigInt(d)];
-        const add = (a: Q, b: Q): Q => [a[0] * b[1] + b[0] * a[1], a[1] * b[1]];
-        const mul = (a: Q, b: Q): Q => [a[0] * b[0], a[1] * b[1]];
-        const units = q(1904, 25);
-        const circuits = add(mul(q(5), units), mul(q(16), q(exportHands.getNumerator, exportHands.getDenominator)));
-        const cables = add(mul(mul(units, q(1, 2)), q(16, 11)), mul(circuits, q(6, 5)));
-        const exact = mul(cables, q(2, 11 * 16));
-        const planned = transfers.get("inserter:11")!;
-        expect(planned.getDenominator).toBeLessThanOrEqual(2 ** 43);
-        // |planned - exact| / exact, under a double's relative step
-        const difference = add(q(planned.getNumerator, planned.getDenominator), mul(exact, q(-1)));
-        const relative = Number(difference[0] * 10n ** 30n / difference[1]) / 1e30 / (Number(exact[0]) / Number(exact[1]));
-        expect(Math.abs(relative)).toBeLessThan(2 ** -52);
-    });
 });

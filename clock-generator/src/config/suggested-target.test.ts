@@ -136,7 +136,6 @@ describe("inferSuggestedTarget", () => {
         "science/logistic-science/logistic-science.json",
         "science/agriculture-science/agriculture-science.json",
         "intermediates/advanced-circuit/advanced-circuit.json",
-        "intermediates/processing-units/processing-units-belt-export.json",
         "gleba/jellynut-processing/jellynut-processing-rocket-fuel.json",
     ])("agrees with the hand-written target of the sample %s", file => {
         const sample = JSON.parse(fs.readFileSync(

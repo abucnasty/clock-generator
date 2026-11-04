@@ -1,7 +1,7 @@
 import {createHash} from "crypto";
 import {beforeAll, describe, expect, it} from "vitest";
 import type {Config} from "../../../src/config";
-import {generateClockAlternatives, type ClockAlternativesResult} from "../../../src/crafting/generate-blueprint";
+import {generateClockAlternatives, type ClockAlternative, type ClockAlternativesResult} from "../../../src/crafting/generate-blueprint";
 import {clockIdentity} from "../../../src/crafting/clock-identity";
 import {loadConfigFromFile} from "../../../src/config/loader";
 import {ConfigPaths} from "../../../src/config/config-paths";
@@ -13,7 +13,9 @@ import {GENERATED_ALTERNATIVE, STUPIDFATHOBBIT_CELL02_CASES, StupidfathobbitCell
 const BEHAVIOR_PLAN = "planned-belt-slack";
 
 /** Shared generation setup; Behavior and Selection have separate assertions and failure meanings. */
-export function cell02ClockTests(which: (variant: StupidfathobbitCell02ClockCase) => boolean) {
+export function cell02ClockTests(which: (variant: StupidfathobbitCell02ClockCase) => boolean,
+    /** More claims on the selected clock of each variant, from the generation the variant already made */
+    selectedClaims?: (selected: ClockAlternative, config: Config) => void) {
     describe.each(STUPIDFATHOBBIT_CELL02_CASES.filter(which))("$name", ({name, backed}) => {
         let config: Config;
         let generated: ClockAlternativesResult;
@@ -55,6 +57,7 @@ export function cell02ClockTests(which: (variant: StupidfathobbitCell02ClockCase
                 "same windows and exported clock as the native control (its identity: no text or metadata)").toBe(pin.clock_sha256);
             expect({id: selected.id, holds: selected.assessment.holds, rate: selected.assessment.items_per_second, supply: selected.belt?.kind ?? null}).toEqual(pin.selection);
             expect(selected.result.simulation_duration.ticks).toBe(pin.period);
+            selectedClaims?.(selected, config);
         });
     });
 }
