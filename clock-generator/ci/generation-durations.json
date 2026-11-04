@@ -25,7 +25,6 @@
  "src/crafting/pickup-clock-cold-start.generation.test.ts": 3,
  "src/crafting/productivity-chain.generation.test.ts": 699,
  "src/crafting/recycler-clock.generation.test.ts": 3.8,
- "src/crafting/recycler-machine.generation.test.ts": 89.2,
  "src/crafting/recycler-original.generation.test.ts": 64.8,
  "src/crafting/rocket-fuel-jelly-stack-15.generation.test.ts": 33.1,
  "src/crafting/rocket-fuel.generation.test.ts": 51.3,
