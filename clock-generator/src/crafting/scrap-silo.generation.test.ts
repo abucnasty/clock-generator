@@ -2,7 +2,8 @@ import { beforeAll, describe, expect, test } from "vitest";
 import { ClockAlternativesResult, generateClockAlternatives } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
-import { clockHash, readControls } from "../../tests/game/builds/clock-controls";
+import { clockHash, readControls, RunControls, runHolds } from "../../tests/game/builds/clock-controls";
+import { expectRunAgreesWithSelection, expectRunIsConsistent } from "../../tests/game/helpers/fixture-mechanics";
 
 // The scrap silo sample: a recycler on scrap at +300% productivity destroys 2 scrap a second and places its twelve
 // results into a rocket silo, one filter stack inserter for each result out of it. The results come too rarely for the
@@ -39,9 +40,9 @@ describe("scrap recycled into a rocket silo", () => {
     });
 });
 
-// the clocks the game's four hours were recorded on (tests/game/builds/scrap-silo-clock-controls.json)
-describe("the clocks the scrap silo's hours in the game ran", () => {
-    const controls = readControls("scrap-silo-clock-controls.json");
+// the clocks the game's runs were recorded on (tests/game/builds/scrap-silo-clock-controls.json)
+describe("the clocks the scrap silo's runs in the game ran", () => {
+    const controls = readControls<RunControls>("scrap-silo-clock-controls.json");
     for (const [name, id] of [["scrap-silo-results-in-turn", "results-in-turn"]] as const) {
         test(`${name} is still made`, () => {
             const pin = controls.cases[name].generation!;
@@ -49,6 +50,15 @@ describe("the clocks the scrap silo's hours in the game ran", () => {
             expect(clockHash(alternative.result.subtick ?? alternative.result), "the clock recorded in the game").toBe(pin.clock_sha256);
             expect(alternative.verdict).toBe(pin.verdict);
             expect(alternative.result.simulation_duration.ticks).toBe(pin.period);
+        });
+
+        // the run under the protocol (a baseline of one whole cycle, the scrap cut, the output blocked) was recorded on that clock,
+        // and what the game found agrees with the selection
+        test(`${name}: the run in the game agrees with the selection`, () => {
+            const { native, generation } = controls.cases[name];
+            expectRunIsConsistent(native, generation!, 2); // the sample asks for 2 scrap a second destroyed
+            expectRunAgreesWithSelection(name, native, { verdict: generation!.verdict, holds: generation!.selection.holds });
+            expect(runHolds(native), native.result).toBe(true);
         });
     }
 });
