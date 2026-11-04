@@ -60,6 +60,8 @@ export interface GenerationPin {
     clock_sha256: string;
     /** Where the pin also holds the model's own evidence of the selection (its `stability_check.as_built`), apart from the native recording: the fields a generation test finds in it */
     as_built?: Record<string, unknown>;
+    /** Where the clock's output repeats every this many periods, not every one (the game's output alternates 0 and 2x expected): the baseline is judged by its total over whole cycles (owner's rule 2026-11-03: the total reaches the target amount) */
+    cycle_periods?: number;
     /** The cause the generation gives of why its selection does not meet goal 1 (see whyNotStable); absent where it does */
     why_not_stable?: string;
 }
@@ -117,6 +119,19 @@ export function expectedNativeSummary(controls: string, name: string): NativeClo
         return Array.isArray(entry) ? undefined : entry?.native;
     }
     return (Array.isArray(entry) ? entry : [entry]).find(it => it?.recorded.pr === Number(pr))?.native;
+}
+
+/**
+ * Whether a native baseline reaches the target: every period at the expected output, or (owner's rule 2026-11-03: a game check
+ * passes when the total over whole periods reaches the target amount) where the pin names a cycle of several periods, the total
+ * over whole cycles at least the expected output of those periods
+ */
+export function baselineMeetsTarget(native: NativeClockSummary, generation?: GenerationPin): boolean {
+    if (native.baseline.every(items => items === native.expected)) return true;
+    const cycle = generation?.cycle_periods;
+    if (!cycle) return false;
+    const whole = Math.floor(native.baseline.length / cycle) * cycle;
+    return whole > 0 && native.baseline.slice(0, whole).reduce((sum, items) => sum + items, 0) >= native.expected * whole;
 }
 
 /** sha256 of the identity of an exported clock: the hash the pins use */

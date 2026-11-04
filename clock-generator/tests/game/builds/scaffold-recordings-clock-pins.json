@@ -14,7 +14,7 @@
     "chemical science with a shared foundry": {
       "config": "CHEMICAL_SCIENCE_SHARED_FOUNDRY",
       "backed_up_belts": false,
-      "clock_sha256": "615b068dc5632c958fda00b58c83452a12056d43165f4425e8e2d03330d6e381",
+      "clock_sha256": "73cef131a8c006b4066206f5f56300bff59812c4f348781dc20ba8658b405239",
       "previous": {
         "id": "swings-1",
         "clock_sha256": "0754ff7fba92b1df02544983c7d074446b9f0913181ce64d894820bf52d31b2a",

@@ -4,10 +4,10 @@
     "container-car-mixed": {
       "recorded": {
         "pr": 0,
-        "commit": "000ad913",
-        "frozen_head": "000ad913",
+        "commit": "050ac5dd",
+        "frozen_head": "050ac5dd",
         "note": "recorded before the PR was opened; pr is set when it is",
-        "clock_sha256": "15244eafb10a45deab3632d00b9420c485ea885e9428cd427141ecdf94d8b6ee",
+        "clock_sha256": "3834ac13326977058cfa7ae2da7d7f1c65a44325322f701af4ad33a3e36828a2",
         "clock_basis": "capture"
       },
       "native": {
@@ -217,7 +217,7 @@
               0,
               0,
               0,
-              0
+              16
             ],
             "recovered": [
               32,
@@ -395,7 +395,7 @@
               0,
               0,
               0,
-              16
+              0
             ],
             "recovered": [
               32,
@@ -462,16 +462,16 @@
           "rate": 5,
           "supply": null
         },
-        "clock_sha256": "15244eafb10a45deab3632d00b9420c485ea885e9428cd427141ecdf94d8b6ee"
+        "clock_sha256": "3834ac13326977058cfa7ae2da7d7f1c65a44325322f701af4ad33a3e36828a2"
       }
     },
     "container-tank-mixed": {
       "recorded": {
         "pr": 0,
-        "commit": "000ad913",
-        "frozen_head": "000ad913",
+        "commit": "050ac5dd",
+        "frozen_head": "050ac5dd",
         "note": "recorded before the PR was opened; pr is set when it is",
-        "clock_sha256": "15244eafb10a45deab3632d00b9420c485ea885e9428cd427141ecdf94d8b6ee",
+        "clock_sha256": "3834ac13326977058cfa7ae2da7d7f1c65a44325322f701af4ad33a3e36828a2",
         "clock_basis": "capture"
       },
       "native": {
@@ -681,7 +681,7 @@
               0,
               0,
               0,
-              0
+              16
             ],
             "recovered": [
               32,
@@ -859,7 +859,7 @@
               0,
               0,
               0,
-              16
+              0
             ],
             "recovered": [
               32,
@@ -926,15 +926,16 @@
           "rate": 5,
           "supply": null
         },
-        "clock_sha256": "15244eafb10a45deab3632d00b9420c485ea885e9428cd427141ecdf94d8b6ee"
+        "clock_sha256": "3834ac13326977058cfa7ae2da7d7f1c65a44325322f701af4ad33a3e36828a2"
       }
     },
     "container-wagon-filtered": {
       "recorded": {
-        "pr": 524,
-        "commit": "0d3507f4",
-        "frozen_head": "0d3507f4",
-        "clock_sha256": "6ec299ec0f49fd8df80c2e8a525da5403b1bce4046d6e20542616ea86a3cfa3b",
+        "pr": 0,
+        "commit": "050ac5dd",
+        "frozen_head": "050ac5dd",
+        "note": "recorded before the PR was opened; pr is set when it is",
+        "clock_sha256": "8b46fa6614f1dce9d1a5e55999767fd8a8ac6c4c92f64c2312bf4d9a862ab4d5",
         "clock_basis": "capture"
       },
       "native": {
@@ -1169,7 +1170,7 @@
               16,
               16,
               16,
-              16,
+              0,
               0,
               0,
               0,
@@ -1244,7 +1245,7 @@
           "rate": 5,
           "supply": null
         },
-        "clock_sha256": "6ec299ec0f49fd8df80c2e8a525da5403b1bce4046d6e20542616ea86a3cfa3b"
+        "clock_sha256": "8b46fa6614f1dce9d1a5e55999767fd8a8ac6c4c92f64c2312bf4d9a862ab4d5"
       },
       "previous": {
         "id": "even-hands",
@@ -1254,10 +1255,11 @@
     },
     "container-wagon-legendary": {
       "recorded": {
-        "pr": 524,
-        "commit": "0d3507f4",
-        "frozen_head": "0d3507f4",
-        "clock_sha256": "6ec299ec0f49fd8df80c2e8a525da5403b1bce4046d6e20542616ea86a3cfa3b",
+        "pr": 0,
+        "commit": "050ac5dd",
+        "frozen_head": "050ac5dd",
+        "note": "recorded before the PR was opened; pr is set when it is",
+        "clock_sha256": "8b46fa6614f1dce9d1a5e55999767fd8a8ac6c4c92f64c2312bf4d9a862ab4d5",
         "clock_basis": "capture"
       },
       "native": {
@@ -1788,7 +1790,7 @@
               16,
               16,
               16,
-              16,
+              0,
               0,
               0,
               0,
@@ -2129,7 +2131,7 @@
           "rate": 5,
           "supply": null
         },
-        "clock_sha256": "6ec299ec0f49fd8df80c2e8a525da5403b1bce4046d6e20542616ea86a3cfa3b"
+        "clock_sha256": "8b46fa6614f1dce9d1a5e55999767fd8a8ac6c4c92f64c2312bf4d9a862ab4d5"
       },
       "previous": {
         "id": "even-hands",
@@ -2140,10 +2142,10 @@
     "container-wagon-legendary-mixed": {
       "recorded": {
         "pr": 0,
-        "commit": "000ad913",
-        "frozen_head": "000ad913",
+        "commit": "050ac5dd",
+        "frozen_head": "050ac5dd",
         "note": "recorded before the PR was opened; pr is set when it is",
-        "clock_sha256": "15244eafb10a45deab3632d00b9420c485ea885e9428cd427141ecdf94d8b6ee",
+        "clock_sha256": "3834ac13326977058cfa7ae2da7d7f1c65a44325322f701af4ad33a3e36828a2",
         "clock_basis": "capture"
       },
       "native": {
@@ -2385,7 +2387,7 @@
               0,
               0,
               0,
-              0
+              16
             ],
             "recovered": [
               32,
@@ -2575,7 +2577,7 @@
               32,
               32,
               32,
-              32,
+              16,
               0,
               0,
               0,
@@ -2584,7 +2586,7 @@
               0,
               0,
               0,
-              0
+              16
             ],
             "recovered": [
               32,
@@ -2651,15 +2653,16 @@
           "rate": 5,
           "supply": null
         },
-        "clock_sha256": "15244eafb10a45deab3632d00b9420c485ea885e9428cd427141ecdf94d8b6ee"
+        "clock_sha256": "3834ac13326977058cfa7ae2da7d7f1c65a44325322f701af4ad33a3e36828a2"
       }
     },
     "container-wagon-normal": {
       "recorded": {
-        "pr": 524,
-        "commit": "0d3507f4",
-        "frozen_head": "0d3507f4",
-        "clock_sha256": "6ec299ec0f49fd8df80c2e8a525da5403b1bce4046d6e20542616ea86a3cfa3b",
+        "pr": 0,
+        "commit": "050ac5dd",
+        "frozen_head": "050ac5dd",
+        "note": "recorded before the PR was opened; pr is set when it is",
+        "clock_sha256": "8b46fa6614f1dce9d1a5e55999767fd8a8ac6c4c92f64c2312bf4d9a862ab4d5",
         "clock_basis": "capture"
       },
       "native": {
@@ -3155,7 +3158,7 @@
           "rate": 5,
           "supply": null
         },
-        "clock_sha256": "6ec299ec0f49fd8df80c2e8a525da5403b1bce4046d6e20542616ea86a3cfa3b"
+        "clock_sha256": "8b46fa6614f1dce9d1a5e55999767fd8a8ac6c4c92f64c2312bf4d9a862ab4d5"
       },
       "previous": {
         "id": "even-hands",

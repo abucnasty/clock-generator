@@ -5,7 +5,7 @@ import {
     expectControlIsConsistent, firstHandPatterns, PICKUP_GEOMETRIES, PICKUP_INGREDIENTS, PickupGeometry, readFixtureFigures, sidePickupConfig,
 } from "../helpers/fixture-mechanics";
 import {BELT_PICKUP_GENERATED} from "./belt-pickup-clock-cases";
-import {readControls} from "./clock-controls";
+import {baselineMeetsTarget, readControls} from "./clock-controls";
 import {pickupClockConfig, pickupClockSpeedCases} from "./pickup-clock-speed-coverage";
 
 /**
@@ -100,7 +100,7 @@ describe("the recorded clock controls of the belt pickup fixtures", () => {
         ]);
         for (const name of Object.keys(controls)) {
             const {native, generation} = controls[name];
-            const meetsTarget = native.baseline.every(items => items === native.expected)
+            const meetsTarget = baselineMeetsTarget(native, generation)
                 && native.recovery.every(trial => trial.recovered.every(items => items === native.expected));
             if (exceptions.has(name)) {
                 // a warm recording that holds, with a generated verdict that fails a cold lane phase the capture cannot set up

@@ -130,13 +130,12 @@ describe("the recorded clock controls of the front fixtures", () => {
         }
     });
 
-    test("the only fixtures that are not stable are moving-config exits at express and normal, which the game holds and recovers", () => {
+    test("the only fixtures that are not stable are moving-config exits at normal, which the game holds and recovers", () => {
         const notStable = Object.keys(controls).filter(name => controls[name].generation!.verdict !== "stable").sort();
         expect(notStable).toEqual([
-            "front-exit-express-mirrored-moving-config-different-items", "front-exit-express-unmirrored-moving-config-different-items",
             "front-exit-normal-mirrored-moving-config-different-items", "front-exit-normal-unmirrored-moving-config-different-items",
         ]);
-        expect(notStable.map(name => controls[name].generation!.verdict)).toEqual(["no recovery", "no recovery", "unstable", "unstable"]);
+        expect(notStable.map(name => controls[name].generation!.verdict)).toEqual(["unstable", "unstable"]);
         // both verdicts come from moving lane-phase starts the exit cannot have
         for (const name of notStable) expect(controls[name].generation!.why_not_stable, name).toBe("moving lane phases");
     });

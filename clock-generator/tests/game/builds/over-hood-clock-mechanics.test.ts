@@ -119,7 +119,7 @@ describe("the recorded clock controls of the over-the-hood fixtures", () => {
 
     test("the history keeps the superseded recordings of 31 fixtures, all but the one that was regenerated", () => {
         expect(cases.map(variant => variant.name).filter(name => !(name in history))).toEqual(["over-hood-normal-unmirrored-moving-different-items"]);
-        expect(controls["over-hood-normal-unmirrored-moving-different-items"].recorded.clock_basis).toBe("regenerated");
+        expect(controls["over-hood-normal-unmirrored-moving-different-items"].recorded.clock_basis, "recorded again in the game for 0.27.0").toBe("capture");
         for (const name of Object.keys(history)) expect(controls[name], name).toBeDefined();
     });
 
