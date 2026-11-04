@@ -34,6 +34,10 @@ because the guard's systemd unit does not inherit yours; the rest comes from clo
   --cache MODE       on (default) | off | refresh, for tests/game/builds only
   --chunk-seconds S  job size, see above (default 120)
   --durations FILE   last known seconds per case (default scripts/game/case-seconds.json: a cold pass, 2026-11-02, Factorio 2.1.24)
+  --calibrate        tests/game/builds record their runs' summaries without comparing them with the controls files
+                     (BELT_CLOCK_CALIBRATE=1, ORE_VOIDER_CALIBRATE=1), each job into its own capture/<job>/ under the run's
+                     folder (BELT_SPEED_CAPTURE_DIR, ORE_VOIDER_CAPTURE_DIR and the recyclers' capture folders): the pass that
+                     records a protocol change, whose summaries are then written into the controls
   --plan             print the jobs and an estimate of the wall time, run nothing
   --owner NAME       the guard's owner label (default game-suite)
 """
@@ -68,6 +72,10 @@ PASS_ENV = ["FACTORIO_PATH", "FACTORIO_HARNESS_SAVE", "CLOCK_RECORDING_CACHE_DIR
 CLEAR_ENV = ["FACTORIO_HARNESS_WATCH", "CLOCK_PROOF_PHASES", "BELT_CLOCK_GENERATION_DIR", "BELT_CLOCK_GENERATION_ONLY",
              "BELT_CLOCK_REPLAY_DIR", "BELT_CLOCK_EXPECTATIONS", "BELT_CLOCK_TRACE_PICKUPS", "BELT_CLOCK_CALIBRATE",
              "BELT_SPEED_CAPTURE_DIR", "SCAFFOLD_CAPTURE_DIR"]
+
+# the capture folders a calibrating pass sets (--calibrate), one per job
+CAPTURE_ENV = ["BELT_SPEED_CAPTURE_DIR", "ORE_VOIDER_CAPTURE_DIR", "RECYCLER_MACHINE_CAPTURE_DIR", "RECYCLER_ORIGINAL_CAPTURE_DIR",
+               "RECYCLER_ORIGINAL_NO_BUFFERS_CAPTURE_DIR"]
 
 
 def js_escape(text: str) -> str:
@@ -193,6 +201,9 @@ class Runner:
         env += ["NO_COLOR=1", f"CLOCK_RECORDING_CACHE={mode}", f"CLOCK_RECORDING_CACHE_LOG={self.out / 'events' / (job['id'] + '.jsonl')}"]
         vitest = ["npx", "vitest", "run", "--config", "vitest.game.config.ts", job["file"], "-t", job["pattern"],
                   "--reporter=json", f"--outputFile={self.out / 'json' / (job['id'] + '.json')}"]
+        if self.args.calibrate and not is_mechanics(job["file"]):
+            capture = self.out / "capture" / job["id"]
+            env += ["BELT_CLOCK_CALIBRATE=1", "ORE_VOIDER_CALIBRATE=1"] + [f"{k}={capture}" for k in CAPTURE_ENV]
         inner = ["env"] + [f"-u{k}" for k in CLEAR_ENV] + env + vitest
         if not self.guard:
             return inner
@@ -254,6 +265,7 @@ def main() -> int:
     p.add_argument("--durations", type=Path, default=DEFAULT_DURATIONS)
     p.add_argument("--guard-dir", default=os.environ.get("GUARD_DIR", DEFAULT_GUARD_DIR))
     p.add_argument("--owner", default="game-suite")
+    p.add_argument("--calibrate", action="store_true")
     p.add_argument("--plan", action="store_true")
     if len(sys.argv) > 1 and sys.argv[1] in ("-h", "--help"):
         print(__doc__)
