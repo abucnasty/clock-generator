@@ -44,6 +44,10 @@ export async function productivityChainClockScenario(): Promise<PickupClockScena
         config: () => config,
         scaffold: () => fs.readFileSync(path.join(FOLDER, "productivity-chain-scaffold.txt"), "utf8").trim(),
         share: 1 / 6,
+        // The output repeats over 3 clock cycles, not 1 (owner, 2026-11-03: a baseline over whole payout cycles): 16 modules a
+        // 72-tick cycle at productivity 50% are 16 / 1.5 = 32/3 crafts a cycle, a whole number of crafts every 3 cycles (32), whose
+        // 16 bars of 0.5 pay out whole; 3 cycles are 216 ticks, and 17 of them (3,672 ticks) the first such span over a minute
+        baseline: {ticks: 3672, reason: "the module machine's crafts and productivity payouts repeat every 3 clock cycles (216 ticks)"},
         alternative: GENERATED_ALTERNATIVE,
         probeFile: path.join(__dirname, "productivity-chain-clock-probe.lua"),
         probe: {family: "productivity-chain", stackSize: 4},
