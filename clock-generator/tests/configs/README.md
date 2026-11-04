@@ -12,7 +12,7 @@ take them. `paths.ts` names the ones unit tests load by sample-style keys (`Test
   accumulator machine with no inserters. Generating from it fails with "Missing inserter coverage"
   (`src/config/inserter-coverage-validator.test.ts`, `feasibility-order`, `feasibility-samples`, `generate-blueprint` and
   `graph/graph-samples` tests).
-- `electromagnetic-science-240-recycler-belt-fed-no-buffers.json` (`REAL_OWNER_PINK_SCIENCE_ORIGINAL_NO_BUFFERS`): the original electromagnetic
+- `electromagnetic-science-240-recycler-belt-fed-no-buffers.json` (`ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED_NO_BUFFERS`): the original electromagnetic
   science scaffold of #100 (`resources/config-samples/science/electromagnetic/`) with its buffer chests replaced
   by infinity chests that remove all and its final takers removed, so the science plants' drains are terminal outputs into
   sinks that never fill. `src/crafting/terminal-rate.test.ts` takes its sink detection from it.

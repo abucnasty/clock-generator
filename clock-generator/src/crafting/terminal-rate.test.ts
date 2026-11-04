@@ -24,7 +24,7 @@ async function branchesOf(path: string) {
 
 describe("the branches of the terminal outputs into sinks that never block", () => {
     it("are the science plants' drains where they drop into infinity chests that remove all", async () => {
-        expect(await branchesOf(TestConfigPaths.REAL_OWNER_PINK_SCIENCE_ORIGINAL_NO_BUFFERS)).toEqual([
+        expect(await branchesOf(TestConfigPaths.ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED_NO_BUFFERS)).toEqual([
             { source_id: "machine:1", inserter_ids: ["inserter:4"], share_per_period: 16, hand: 16 },
             { source_id: "machine:2", inserter_ids: ["inserter:3"], share_per_period: 16, hand: 16 },
         ]);
