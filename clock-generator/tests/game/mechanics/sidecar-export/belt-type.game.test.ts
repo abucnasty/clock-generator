@@ -15,7 +15,7 @@ require = function(name) return assert(capture_modules[name], name) end
     return `capture_modules["__clock-generator-sidecar__.scripts.${name}"] = (function()\n${source}\nend)() or true\n`;
 }).join("");
 
-const SCAFFOLD = path.join(path.dirname(ConfigPaths.LITHIUM_PLATE_80_SILO_CHEST), "..", "grenade", "grenade-240-fills-belt-exactly.scaffold");
+const SCAFFOLD = ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY.replace(/\.json$/, ".scaffold");
 
 /** Every case the lua chunk builds, with the belt type the export gives the line, written as `case: type` lines */
 const EXPECTED_CASES: Record<string, string> = {
