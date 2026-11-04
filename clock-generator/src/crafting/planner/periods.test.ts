@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { ConfigPaths } from "../../config/config-paths";
 import type { PeriodChoice } from "../../data-types/build-plan";
-import { planOfSample } from "./plan-test-helpers";
+import { loadConfigFromFile } from "../../config/loader";
+import { productionScienceSharedPickup } from "../generate-blueprint-test-helpers";
+import { planOfConfig, planOfSample } from "./plan-test-helpers";
 import { swingCountsListed } from "./periods";
 
 /** A choice as [swings, listed as, period ticks, kept or the rule that prunes it] */
@@ -62,12 +64,13 @@ describe("the main-period choices of a build", () => {
             .toMatch(/^Cannot satisfy fractional swing constraint/);
     });
 
-    it("production science with fractional swings: 3/2 swings a cycle, and the lists start from the 2 the run reports", async () => {
-        const { plan } = await planOfSample(ConfigPaths.PRODUCTION_SCIENCE_SHARED_JSON);
-        const main = plan.groups[0].periods[0];
-        expect(main).toMatchObject({ swings: 1.5, swings_exact: { numerator: 3, denominator: 2 }, fractional: true, listed_as: "main" });
-        expect(plan.composition!.listed_from).toEqual({ swings: 2, planned: 2, higher_up_to_ticks: 2400 });
-        expect(plan.groups[0].periods.filter(choice => choice.listed_as !== "main").map(choice => choice.swings)).toEqual([3, 4, 1, 1]);
+    it("production science with one pickup for its two input items: whole swings are the main, and the fractional alternative is 3/2 swings a cycle", async () => {
+        const { plan } = planOfConfig(productionScienceSharedPickup(await loadConfigFromFile(ConfigPaths.PRODUCTION_SCIENCE_JSON)));
+        const [main, ...others] = plan.groups[0].periods;
+        expect(main).toMatchObject({ swings: 1, fractional: false, listed_as: "main" });
+        expect(plan.composition!.listed_from).toEqual({ swings: 1, planned: 1, higher_up_to_ticks: 2400 });
+        expect(others.map(choice => [choice.listed_as, choice.swings])).toEqual([["higher", 2], ["higher", 3], ["fractional", 1.5]]);
+        expect(others[2]).toMatchObject({ swings_exact: { numerator: 3, denominator: 2 }, fractional: true, period_ticks: 336, kept: true });
     });
 });
 

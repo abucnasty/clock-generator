@@ -19,6 +19,13 @@ describe('readSavedConfig', () => {
         expect(serializeConfig(form)).not.toContain('non_moving_belts');
     });
 
+    it('drops the Fractional swings override of a build saved when the switch existed, so it is not exported again', () => {
+        const saved = JSON.stringify({ ...createDefaultConfig(), overrides: { use_fractional_swings: true, lcm: 2 } });
+        const form = readSavedConfig(saved)!;
+        expect(form.overrides).toEqual({ lcm: 2 });
+        expect(serializeConfig(form)).not.toContain('use_fractional_swings');
+    });
+
     it("reads a build saved with one mining productivity level as each drill's productivity", () => {
         const drill = { id: 1, type: 'electric-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 0, target: { type: 'machine', id: 1 } };
         const saved = JSON.stringify({ ...createDefaultConfig(), drills: { mining_productivity_level: 12, configs: [drill, { ...drill, id: 2 }] } });

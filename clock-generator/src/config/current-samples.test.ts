@@ -5,6 +5,7 @@ import { ConfigPaths } from "./config-paths";
 import { parseConfig } from "./loader";
 import { migrateBeltSupplyOverrides } from "./migrate-belt-supply";
 import { migrateBlockedSlotFilter } from "./migrate-blocked-slots";
+import { dropFractionalSwingsOverride } from "./migrate-fractional-swings";
 import { migrateChestType } from "./migrate-chest-type";
 import { migrateMachineType } from "./migrate-machine-type";
 import { migrateMiningProductivityLevel } from "./migrate-mining-productivity";
@@ -30,11 +31,12 @@ const MIGRATIONS: Record<string, (config: Raw) => Raw> = {
     "blocked-slot-item": config => at(config, "chests", chests => each(chests, chest =>
         object(chest) ? at(chest, "slot_filters", filters => each(filters, migrateBlockedSlotFilter)) : chest)),
     "non-moving-belts": config => at(config, "overrides", migrateBeltSupplyOverrides),
+    "fractional-swings": config => at(config, "overrides", dropFractionalSwingsOverride),
 };
 
 /** The schema's preprocess steps that MIGRATIONS holds (`z.preprocess(<step>, ...)` in schema.ts) */
 const SCHEMA_STEPS = ["normalizePickupCaptureConfig", "migrateMachineTypeStep", "migrateMiningProductivityLevelStep",
-    "migrateBlockedSlotFilter", "migrateBeltSupplyOverrides"];
+    "migrateBlockedSlotFilter", "migrateBeltSupplyOverrides", "dropFractionalSwingsOverride"];
 
 const migrated = (config: Raw) => Object.values(MIGRATIONS).reduce((value, step) => step(value), config);
 const read = (file: string) => JSON.parse(fs.readFileSync(file, "utf8")) as Raw;

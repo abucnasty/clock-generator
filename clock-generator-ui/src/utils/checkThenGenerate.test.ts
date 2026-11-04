@@ -122,7 +122,6 @@ describe('checkKeyOf', () => {
     it.each<[string, Edit]>([
         ['the LCM override', withOverrides({ lcm: 2 })],
         ['the forced output swings', withOverrides({ terminal_swing_count: 3 })],
-        ['fractional swings', withOverrides({ use_fractional_swings: true })],
         ['the ingredients left out of the LCM', withOverrides({ ignored_lcm_ingredients: ['iron-plate'] })],
         ['a machine recipe', (c) => edits.updateMachine(c, 0, 'recipe', 'automation-science-pack')],
         ['the target rate', (c) => edits.updateTargetOutput(c, 'items_per_second', 200)],
