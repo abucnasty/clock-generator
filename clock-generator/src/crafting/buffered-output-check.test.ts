@@ -38,13 +38,16 @@ describe("long-run output through finite buffers", () => {
     });
 
     it("accepts regular final deliveries despite bursty transfers into the buffers", () => {
-        const stock = baseline.stock!;
+        // inserter 5 moves the packs into its buffer on a clock of its own, one window of 8 ticks in 40, so they arrive in
+        // bursts; inserter 8, the other transfer, is left free. The final takers, 4 and 7, deliver regularly.
+        const bursty = runAsBuiltCheck(config, new Map([...windows(), ["inserter:5", [OpenRange.from(4, 12)]]]), period, quiet, 1);
+        const stock = bursty.stock!;
         const judged = (ids: string[]) => judgeLongRun(stock.inserters.filter(inserter => ids.includes(inserter.inserter_id))
             .map(inserter => inserter.held), stock.ticks, period, null, 32, 16);
         expect(judged(["inserter:5", "inserter:8"]).keeps_up).toBe(false);
         expect(judged(["inserter:4", "inserter:7"]).keeps_up).toBe(true);
-        expect(baseline.check.holds).toBe(true);
-        expect(baseline.check.actual_output_items).toBe(32);
+        expect(bursty.check.holds).toBe(true);
+        expect(bursty.check.actual_output_items).toBe(32);
     });
 
     // machine 4's packs end in chest 4 (inserter 8 puts them into chest 5, inserter 7 moves them on into chest 4), which
