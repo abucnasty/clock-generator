@@ -1,7 +1,10 @@
 -- Observe a clocked cold start without changing anything: the lane phase of the pickup tile at placement, the lattice
--- its stock keeps in every period, and the clock against the probe tick.
--- options: ticks, period, units (the belt tier's step in 1/32 tile a tick: 1 normal, 2 fast, 3 express, 4 turbo)
-local entities, surface = ...
+-- its stock keeps in every period, and the clock against the probe tick. The run is timed in game ticks (the game tests'
+-- protocol): it lasts until the machine making the target has made `expected` over the trailing `window` ticks, no less than
+-- one clock cycle earlier (steady state), then one more window, at most `ticks`; the recording is cut there too (settle.record_samples).
+-- options: ticks, period, units (the belt tier's step in 1/32 tile a tick: 1 normal, 2 fast, 3 express, 4 turbo), window,
+-- expected, recipes, item
+local entities, surface, _, settle = ...
 local machine = capture.find_one(entities, function(entity) return entity.type == "assembling-machine" end, "machine")
 local box = machine.bounding_box
 local input = capture.find_one(entities, function(entity)
@@ -43,7 +46,15 @@ end
 
 local report = {placement_tick = game.tick, step = step, phases = phases, initial = initial, periods = {}, clock_offsets = {}, samples = {}}
 local offsets = {}
-capture.each_tick{first_tick = 1, last_tick = options.ticks, report = report, output = "clock-cold-start.json", sample = function(tick)
+local finals = steady.final_machines(entities, options.recipes, options.item)
+assert(#finals > 0, "no machine makes the target")
+local function made()
+    local total = 0
+    for _, final in ipairs(finals) do total = total + final.entity.products_finished * final.worth end
+    return total
+end
+local window, history, last_tick, last_at = options.window, {[0] = made()}, options.ticks, {}
+local function observe(tick)
     -- the period of the model's frame the tick falls in (model held[i] is sample i + 4, and sample j is probe tick j + 1)
     local key = tostring(math.max(0, math.floor((tick - 5) / options.period)))
     local record = report.periods[key]
@@ -68,5 +79,33 @@ capture.each_tick{first_tick = 1, last_tick = options.ticks, report = report, ou
             table.insert(report.clock_offsets, offset)
         end
     end
-    return nil
-end}
+end
+local started = game.tick
+script.on_nth_tick(1, function()
+    local tick = game.tick - started
+    if tick < 1 then return end
+    local ok, problem = pcall(function()
+        observe(tick)
+        history[tick] = made()
+        -- steady state as steady.lua takes it: the trailing window at the target, and no lower than one clock cycle earlier
+        local position = capture.clock_value(clock)
+        local cycle_start = last_at[position]
+        last_at[position] = tick
+        local trailing = tick >= window and history[tick] - history[tick - window] or nil
+        local settled = trailing ~= nil and cycle_start ~= nil and cycle_start >= window
+            and trailing >= history[cycle_start] - history[cycle_start - window]
+        if not report.steady and trailing ~= nil and trailing >= options.expected and settled then
+            report.steady = tick
+            -- the recording holds samples 0 .. tick + window - 1 (sample j is probe tick j + 1)
+            last_tick = math.min(options.ticks, tick + window)
+            report.samples_recorded = last_tick
+            settle.record_samples(last_tick)
+        end
+        if tick >= last_tick then
+            report.ticks = last_tick
+            helpers.write_file("clock-cold-start.json", helpers.table_to_json(report), false)
+        end
+    end)
+    if not ok or tick >= last_tick then script.on_nth_tick(1, nil) end
+    if not ok then error(problem) end
+end)
