@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { generateClockForConfig, generateClockAlternatives, type BlueprintGenerationResult, type ClockAlternative } from "./generate-blueprint";
-import { loadConfigFromFile } from "../config/loader";
+import { loadConfigFromFile, parseConfig } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { EntityId } from "../entities";
 import { OpenRange } from "../data-types";
-import { alwaysOnReasonProblems, alwaysOnReasonProblemsOf, withSearches } from "./generate-blueprint-test-helpers";
+import { alwaysOnReasonProblems, alwaysOnReasonProblemsOf, productionScienceSharedPickup, withSearches } from "./generate-blueprint-test-helpers";
 import { transitionsOf } from "./sequence/compact-history";
 
 describe("generateClockForConfig", () => {
@@ -36,17 +36,20 @@ describe("generateClockForConfig", () => {
     });
 
     describe("fractional swings", () => {
-        describe("PRODUCTION_SCIENCE_SHARED with fractional swings enabled", async () => {
-            const configWithFractionalSwings = await loadConfigFromFile(ConfigPaths.PRODUCTION_SCIENCE_SHARED_JSON);
+        // the production science sample with the pickups of its input belt made one inserter with two filters, and the
+        // packs put onto that belt, so that the input inserter has 3/2 hands a cycle
+        describe("PRODUCTION_SCIENCE_JSON with one pickup for its two input items: the fractional swings alternative", async () => {
+            const config = productionScienceSharedPickup(await loadConfigFromFile(ConfigPaths.PRODUCTION_SCIENCE_JSON));
 
             let result: BlueprintGenerationResult;
 
             beforeAll(() => {
-                result = generateClockForConfig(configWithFractionalSwings);
+                const { alternatives } = generateClockAlternatives(config);
+                result = alternatives.find(alternative => alternative.id === "fractional")!.result;
             });
 
             it("names why every inserter and drill the clock leaves always on is", () => {
-                expect(alwaysOnReasonProblems(configWithFractionalSwings, result, "fractional")).toEqual([]);
+                expect(alwaysOnReasonProblems(config, result, "fractional")).toEqual([]);
             });
 
             it("has fractional_swings_enabled set to true", () => {
@@ -95,23 +98,16 @@ describe("generateClockForConfig", () => {
             });
         });
 
-        describe("PRODUCTION_SCIENCE_SHARED without fractional swings without fractional swings", async () => {
-            const config = await loadConfigFromFile(ConfigPaths.PRODUCTION_SCIENCE_SHARED_JSON);
-            const configWithoutFractionalSwings = {
-                ...config,
-                overrides: {
-                    ...config.overrides,
-                    use_fractional_swings: false
-                }
-            };
+        describe("PRODUCTION_SCIENCE_JSON with one pickup for its two input items: whole swings, the primary clock", async () => {
+            const config = productionScienceSharedPickup(await loadConfigFromFile(ConfigPaths.PRODUCTION_SCIENCE_JSON));
             let result: BlueprintGenerationResult;
 
             beforeAll(() => {
-                result = generateClockForConfig(configWithoutFractionalSwings);
+                result = generateClockForConfig(config);
             });
 
             it("names why every inserter and drill the clock leaves always on is", () => {
-                expect(alwaysOnReasonProblems(configWithoutFractionalSwings, result, "whole swings")).toEqual([]);
+                expect(alwaysOnReasonProblems(config, result, "whole swings")).toEqual([]);
             });
 
             it("has fractional_swings_enabled set to false", () => {
@@ -124,6 +120,18 @@ describe("generateClockForConfig", () => {
 
             it("does not have cycle_multiplier defined", () => {
                 expect(result.crafting_cycle_plan.cycle_multiplier).toBeUndefined();
+            });
+
+            // configs saved when the switch existed carry use_fractional_swings: true, which is read and dropped
+            it("is the clock a config that carries the former use_fractional_swings override gets", async () => {
+                const saved = await parseConfig(JSON.stringify({ ...config, overrides: { ...config.overrides, use_fractional_swings: true } }));
+                // the config has no overrides, the saved one has none left of the one it carried
+                expect(saved.overrides).toEqual({});
+                expect({ ...saved, overrides: undefined }).toEqual(await parseConfig(JSON.stringify(config)));
+                const again = generateClockForConfig(saved);
+                expect(again.crafting_cycle_plan.fractional_swings_enabled).toBe(false);
+                expect(again.clock_windows).toEqual(result.clock_windows);
+                expect(again.simulation_duration.ticks).toBe(result.simulation_duration.ticks);
             });
         });
 

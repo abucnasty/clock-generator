@@ -19,6 +19,26 @@ export const selectedAlternativeOf = (generated: ClockAlternativesResult) => gen
 export const withSearches = (config: Config): Config =>
     ({ ...config, overrides: { ...config.overrides, search_for_fewer_wake_ups: true } });
 
+/**
+ * The production science sample with the two pickups of its input belt made one inserter with two filters, and the packs
+ * put onto that belt: the build whose input inserter has a fractional hand count (3/2 swings a cycle) when fractional
+ * swings are on. Built from the sample, with no override.
+ */
+export const productionScienceSharedPickup = (config: Config): Config => {
+    const [output_belt, input_belt] = config.belts;
+    const pickups = config.inserters.filter(inserter => inserter.source.type === "belt" && inserter.source.id === input_belt.id);
+    const [first, ...others] = pickups;
+    const merged = { ...first, filters: pickups.flatMap(inserter => inserter.filters ?? []) };
+    return {
+        ...config,
+        belts: [input_belt],
+        inserters: config.inserters
+            .filter(inserter => !others.includes(inserter))
+            .map(inserter => inserter === first ? merged
+                : inserter.sink.type === "belt" && inserter.sink.id === output_belt.id ? { ...inserter, sink: { ...inserter.sink, id: input_belt.id } } : inserter),
+    };
+};
+
 export interface RocketFuelSample {
     config: Config;
     alternatives: ClockAlternative[];
