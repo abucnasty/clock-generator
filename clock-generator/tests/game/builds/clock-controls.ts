@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import {createHash} from "crypto";
 import {clockIdentity} from "../../../src/crafting/clock-identity";
+import {runHolds as judgedRunHolds} from "../helpers/run-judgement";
 
 /**
  * Where a control came from: the PR that recorded it in the game (or pinned it), the commit that added it, and the
@@ -52,8 +53,10 @@ export interface NativeClockSummary {
 }
 
 /**
- * A native run's summary under the game tests' protocol, timed in game ticks (helpers/lua/steady.lua, owner 2026-11-03): what the
- * machines that make the target item finish over the trailing minute decides each step. Ticks count from the clock's start.
+ * A native run's summary under the game tests' protocol, timed in game ticks (owner 2026-11-03): helpers/lua/steady.lua records
+ * the run (what the machines that make the target item finish over the trailing minute steers each step; their products and
+ * output stock are recorded for the whole run) and helpers/run-judgement.js judges the record, host-side. Ticks count from the
+ * clock's start.
  */
 export interface NativeRunSummary {
     protocol: "trailing-minute";
@@ -69,6 +72,8 @@ export interface NativeRunSummary {
     steady: number | null;
     baseline: NativeBaseline | null;
     disturbances: NativeDisturbance[];
+    /** The output stock guard; null for a build judged by a count (no final machines' output) or with no whole baseline cycle */
+    stock: NativeStockGuard | null;
     /** "holds", or the step that failed */
     result: string;
     /** The tick the run ended in */
@@ -85,12 +90,25 @@ export interface NativeBaseline {
     /** The trailing window never fell below `expected` in it (not the verdict: a minute holds a burst more or less by where it starts) */
     held: boolean;
     /**
-     * The whole clock cycles in it: the products from the steady-state tick to the last tick of the baseline at which the clock
-     * stands where it stood then, against the target over those ticks; absent where no cycle fits in the baseline
+     * The whole clock cycles in it: from the steady-state tick to the last tick of the baseline at which the clock stands where
+     * it stood then, the final machines' products (`items`), their output stock at both ends and the net output (products less
+     * the stock gained: what left them), against the target over those ticks; absent where no cycle fits in the baseline. A
+     * build judged by a count has no stock, and its net output is the count
      */
-    measured?: {ticks: number; items: number; expected: number};
-    /** The baseline holds (owner, 2026-11-03): its whole clock cycles make the target, 100% or more */
+    measured?: {ticks: number; items: number; expected: number; stock_start?: number; stock_end?: number; net: number};
+    /** The baseline holds (owner, 2026-11-03): the net output of its whole clock cycles makes the target, 100% or more */
     meets: boolean;
+}
+
+/**
+ * The output stock guard (owner, 2026-11-03): the final machines' output stock at the end of the run (after the last recovery)
+ * is no lower than the lowest it was at any tick of the baseline's whole cycles, so a slowly draining stock (underproduction
+ * the output inserters would hide) fails the run
+ */
+export interface NativeStockGuard {
+    lowest: number;
+    end: number | null;
+    holds: boolean;
 }
 
 /** A disturbance: what it was, when it started, when the output fell below the baseline's lowest window and it was released, when the steady-state test was met again */
@@ -107,10 +125,12 @@ export function isRunSummary(native: NativeClockSummary | NativeRunSummary): nat
     return (native as NativeRunSummary).protocol === "trailing-minute";
 }
 
-/** Whether a run summary shows the clock holding its target and recovering from every disturbance it ran */
+/**
+ * Whether a run summary shows the clock holding its target (net output over the baseline's whole cycles), recovering from every
+ * disturbance it ran, and ending with its output stock no lower than in the baseline (helpers/run-judgement.js)
+ */
 export function runHolds(native: NativeRunSummary): boolean {
-    return native.result === "holds" && native.baseline?.meets === true
-        && native.disturbances.every(disturbance => disturbance.recovered !== undefined);
+    return judgedRunHolds(native);
 }
 
 /** The selection the generator makes, pinned by a portable generation test, with the sha256 of its exported clock */
@@ -186,32 +206,6 @@ export function expectedNativeSummary(controls: string, name: string): AnyNative
         return Array.isArray(entry) ? undefined : entry?.native;
     }
     return (Array.isArray(entry) ? entry : [entry]).find(it => it?.recorded.pr === Number(pr))?.native;
-}
-
-/** A rate as a fraction of whole numbers (the closest with a denominator of at most a million: 480 x 2/7 is 960/7) */
-export function rateFraction(rate: number): [number, number] {
-    let [h0, h1, k0, k1, x] = [0, 1, 1, 0, rate];
-    for (let i = 0; i < 64; i++) {
-        const a = Math.floor(x);
-        const [h2, k2] = [a * h1 + h0, a * k1 + k0];
-        if (k2 > 1_000_000) break;
-        [h0, h1, k0, k1] = [h1, h2, k1, k2];
-        if (Math.abs(h1 / k1 - rate) < 1e-12 * Math.max(1, rate) || x === a) break;
-        x = 1 / (x - a);
-    }
-    return [h1, k1];
-}
-
-/**
- * The baseline's verdict in whole numbers: its whole clock cycles made the target, items x 60 x d >= n x ticks for the target
- * n/d a second. steady.lua compares in floating point, against the target rounded to a millionth, which can put the exact
- * target (8,064 in 3,528 ticks at 960/7 a second) a hair over what was made
- */
-export function exactBaseline(baseline: NativeBaseline, target: number): NativeBaseline {
-    const measured = baseline.measured;
-    if (!measured) return {...baseline, meets: false};
-    const [n, d] = rateFraction(target);
-    return {...baseline, meets: measured.items * 60 * d >= n * measured.ticks};
 }
 
 /** sha256 of the identity of an exported clock: the hash the pins use */

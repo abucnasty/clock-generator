@@ -2,7 +2,7 @@
 // clock periods. Steady state is the first tick at which the machines that make the target item have finished the target
 // amount over the trailing minute (3,600 ticks); the baseline is the minute after it; no run is over 36,000 ticks (ten minutes)
 // unless it is asked for with `--long <reason>`, and then the reason is printed. The judgement is the game tests' own
-// (tests/game/helpers/lua/steady.lua, run summary and runHolds in tests/game/builds/clock-controls.ts): this module only starts it
+// (tests/game/helpers/lua/steady.lua records, tests/game/helpers/run-judgement.js judges): this module only starts it
 // with the same numbers (RUN_PROTOCOL in tests/game/builds/pickup-clock-capture.ts, which TypeScript keeps out of reach of these
 // plain scripts) and reads its report.
 const fs = require("fs");
@@ -63,25 +63,34 @@ function readSteadyReport(workDir, output) {
     return report.protocol;
 }
 
-/** Whether a run holds, as runHolds says it for the game tests, and the lines that say why */
-function describeRun(run) {
+/**
+ * Whether a run holds, judged by the game tests' own judgement (tests/game/helpers/run-judgement.js: net output over the
+ * baseline's whole clock cycles and the output stock guard), and the lines that say why. `items_per_second` is the target the
+ * run was started with (its exact value: the report keeps it to a millionth)
+ */
+function describeRun(run, items_per_second) {
     const lines = [];
     if (run.error !== undefined) {
         return { holds: false, lines: [`the probe failed in the game: ${run.error}`] };
     }
+    const { judgeBaseline, runHolds } = require(path.join(__dirname, "..", "tests", "game", "helpers", "run-judgement"));
     const disturbances = Array.isArray(run.disturbances) ? run.disturbances : [];
-    const baseline = run.baseline;
+    const { baseline, stock } = judgeBaseline(run, items_per_second ?? run.expected * 60 / run.window);
     lines.push(run.steady === undefined
         ? `no steady state: ${run.result}`
         : `steady state at tick ${run.steady}: the final machines made ${run.expected} over the trailing ${run.window} ticks`);
     if (baseline) {
-        lines.push(`baseline ${baseline.ticks} ticks: ${baseline.total} against ${baseline.expected}, trailing window ${baseline.min} to ${baseline.max}, `
-            + (baseline.held ? "never below the target" : baseline.measured
-                ? `below it at times, so judged by the rate to its last return to the target: ${baseline.measured.items} against ${baseline.measured.expected} over ${baseline.measured.ticks} ticks`
-                : "below the target and never back to it")
+        const measured = baseline.measured;
+        lines.push(`baseline ${baseline.ticks} ticks: ${baseline.total} made against ${baseline.expected}, trailing window ${baseline.min} to ${baseline.max}, `
+            + (measured
+                ? `whole clock cycles over ${measured.ticks} ticks: net output ${measured.net} (made ${measured.items}`
+                    + (measured.stock_start !== undefined ? `, output stock ${measured.stock_start} to ${measured.stock_end}` : "")
+                    + `) against ${measured.expected}`
+                : "no whole clock cycle in it")
             + (baseline.meets ? ": meets" : ": does not meet"));
     }
-    const holds = run.result === "holds" && baseline?.meets === true && disturbances.every(disturbance => disturbance.recovered !== undefined);
+    if (stock) lines.push(`output stock at the end ${stock.end}, lowest in the baseline ${stock.lowest}: ${stock.holds ? "holds" : "DRAINED"}`);
+    const holds = runHolds({ result: run.result, baseline, disturbances, stock });
     if (run.result !== "holds") lines.push(`the run ended: ${run.result ?? "it did not end before the recording started"}`);
     return { holds, lines };
 }

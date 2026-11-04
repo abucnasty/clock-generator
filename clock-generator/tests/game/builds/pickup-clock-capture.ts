@@ -11,7 +11,8 @@ import {Recording} from "../../../src/verification/recording";
 import {FixtureBeltSpeed, speedCapture} from "../helpers/belt-speed-fixtures";
 import {composeProbeSource} from "../helpers/probe-source";
 import {assertPickupClockHardware} from "./pickup-clock-speed-hardware";
-import {clockHash, clockToRun, exactBaseline, expectedNativeSummary, NativeBaseline, NativeDisturbance, NativeRunSummary} from "./clock-controls";
+import {judgeBaseline, RunRecord} from "../helpers/run-judgement";
+import {clockHash, clockToRun, expectedNativeSummary, NativeRunSummary} from "./clock-controls";
 
 export interface PickupClockScenario {
     name: string;
@@ -108,20 +109,18 @@ async function prepare(scenario: PickupClockScenario): Promise<Prepared> {
     return prepared;
 }
 
-/** What steady.lua writes into the probe's report */
-interface RunReport {
-    window: number; expected: number; steady?: number; baseline?: NativeBaseline; disturbances: NativeDisturbance[];
-    result?: string; ended?: number; error?: string; finals?: {unit_number: number; recipe: string; worth: number}[];
-}
+/** What steady.lua writes into the probe's report: the record of the run, which helpers/run-judgement.js judges */
+type RunReport = RunRecord;
 
-/** The summary a run is compared with in its controls file */
+/** The summary a run is compared with in its controls file: the record judged host-side (helpers/run-judgement.js) */
 export function runSummary(run: RunReport, clock: {generationVerdict: string; target: number; period: number}, exactTarget = clock.target): NativeRunSummary {
+    const {baseline, stock} = judgeBaseline(run, exactTarget);
     return {protocol: "trailing-minute", generationVerdict: clock.generationVerdict, target: clock.target, period: clock.period,
-        window: run.window, expected: run.expected, steady: run.steady ?? null, baseline: run.baseline ? exactBaseline(run.baseline, exactTarget) : null,
+        window: run.window, expected: run.expected, steady: run.steady ?? null, baseline,
         // Lua writes an empty table as {}: a run that never reached steady state has no disturbances
         disturbances: (Array.isArray(run.disturbances) ? run.disturbances : []).map(({kind, start, drop, release, recovered}) => ({kind, start,
             ...(drop !== undefined && {drop}), ...(release !== undefined && {release}), ...(recovered !== undefined && {recovered})})),
-        result: run.result!, ended: run.ended!};
+        stock, result: run.result!, ended: run.ended!};
 }
 
 /** One run of a clock under the protocol: steady state, the baseline, and each disturbance with its recovery */

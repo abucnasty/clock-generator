@@ -172,7 +172,7 @@ function buildOfConfig(arg) {
     if (run === undefined) {
         console.log("  protocol: no steady-state report beside this recording (it was made before the minute protocol)");
     } else {
-        const verdict = describeRun(run);
+        const verdict = describeRun(run, target_per_second);
         for (const line of verdict.lines) console.log(`  protocol: ${line}`);
         console.log(`  protocol: ${verdict.holds ? "holds" : "DOES NOT HOLD"}`);
         if (!verdict.holds) process.exitCode = 1;

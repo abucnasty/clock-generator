@@ -83,7 +83,7 @@ const TICKS = Number(process.env.TICKS ?? GAME_RUN.baseline);
                 });
                 const run = readSteadyReport(work_dir, "rule-count-steady.json");
                 fs.writeFileSync(path.join(out, `${SAMPLE}-${name}.steady.json`), JSON.stringify(run) + "\n");
-                console.log(`${name}: ${describeRun(run).lines.join("; ")}`);
+                console.log(`${name}: ${describeRun(run, target_per_second).lines.join("; ")}`);
             } finally {
                 fs.rmSync(work_dir, { recursive: true, force: true });
             }
