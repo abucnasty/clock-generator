@@ -9,6 +9,7 @@ import { loadConfigFromFile } from "../../../src/config/loader";
 import { generateClockAlternatives } from "../../../src/crafting/generate-blueprint";
 import { HarnessOptions, HarnessResult, HarnessSession, recordInFactorio, Seed } from "../../../src/harness/factorio-harness";
 import { outputPerPeriod, recipesMaking } from "../../../src/harness/recording-output";
+import { composeProbeSource } from "../helpers/probe-source";
 import { clockHash, readControls } from "./clock-controls";
 import { matchRecordingToConfig } from "../../../src/verification/entity-matching";
 import { wakeUpsOfRecording } from "../../../src/verification/recording-wake-ups";
@@ -45,8 +46,20 @@ const WHY_SKIPPED = !FACTORIO ? "FACTORIO_PATH is not set to a Factorio executab
     : null;
 
 const SAMPLES = path.join(SAMPLE_BUILDS_DIR);
-/** Ticks to record: ten minutes of game time, as a build with a loop is checked for in the simulator */
-const RECORDED_TICKS = 36_000;
+/**
+ * The game tests' protocol, timed in game ticks (tests/game/helpers/lua/steady.lua; scaffold-recordings-probe.lua): a build
+ * settles until its final machines have made the target over the trailing minute and no less than one clock cycle earlier
+ * (steady state), and is then recorded for a minute.
+ */
+const WINDOW_TICKS = 3600;
+/** Ticks recorded after the settle: one minute, cut into whole clock periods; a clock that counts more than a minute is recorded over one period */
+const RECORDED_TICKS = 3600;
+/** The longest clock period recorded (a run is at most 15 minutes of game time); a clock that counts more is skipped */
+const MAX_RECORDED_PERIOD = 36_000;
+/** The most ticks a build may take to reach steady state, and a staged start to be recorded */
+const SETTLE_CAP_TICKS = 36_000;
+/** What the probe writes into the game's script-output */
+const STEADY_REPORT = "scaffold-steady-state.json";
 /**
  * How far the simulator's wake-ups a minute may be off the game's (GOALS.md, goal 2), as a share of the game's. On
  * 2026-10-10 the simulator counted what the game did on automation science and 7 to 21% fewer on the other four
@@ -92,21 +105,20 @@ interface ScaffoldBuild {
     scaffold: string;
     config: string;
     seed: Seed[];
-    /** Ticks the build runs before it is seeded, so belts are full */
+    /** Ticks the build runs before it is seeded, so belts are full; the clock is not wired yet, so no clock period runs in them */
     warmup_ticks: number;
-    /** Ticks the build runs on the generated clock before the recording starts, so its start-up is left out */
-    settle_ticks: number;
     /** The clock is made for backed-up belts (`overrides.backed_up_belts`), which is what a scaffold has */
     backed_up_belts?: boolean;
     /**
      * The build is recorded from the staged start of the harness, as the simulator runs it: the belts are saturated first,
      * then every inserter of the cell and the clock are placed in one tick, with the machines empty but for the egg loop,
-     * seeded once. `warmup_ticks` and `settle_ticks` are not used, and the recording holds the first periods of the clock,
-     * which the build may still be settling into: the periods are cut from the first sample (the recorder does not read the
-     * clock of a staged start), and the game is compared with the simulator on what follows the first third of each.
+     * seeded once. `warmup_ticks` is not used, and the recording runs from the placement until steady state and a minute
+     * more (at most SETTLE_CAP_TICKS), so it holds the first periods of the clock, which the build may still be settling
+     * into: the periods are cut from the first sample (the recorder does not read the clock of a staged start), and the game
+     * is compared with the simulator on what follows the first third of each.
      */
     staged_start?: {
-        /** The periods of the recording that move less than the expected output, as the game showed them: where each starts, and the items it moved */
+        /** The periods of the recording that move less than the expected output, as the game showed them (the first is left out): where each starts, and the items it moved */
         dips: { start: number; items: number }[];
         /** What the game and the simulator still differ in after the first third of each, as the comparison words it */
         open_issues: string[];
@@ -131,7 +143,6 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         // the egg loop cannot start itself, so the egg machines are given eggs to begin with
         seed: [{ target: { recipe: "pentapod-egg" }, item: "pentapod-egg", count: 200 }],
         warmup_ticks: 300,
-        settle_ticks: 4800,
         // Recorded 2026-10-24 on batched swings (5 output swings per cycle) with windows on the two inserters that take eggs
         // out of the loop into the science biochamber (ticks 23 to 46 of every 96) and on the two of the loop itself (31 to 80
         // and 79 to 128 of every 96): 400 in every one of 74 periods after the staged start, and the simulator moves what the
@@ -156,7 +167,6 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         config: ConfigPaths.AGRICULTURAL_SCIENCE,
         seed: [{ target: { recipe: "pentapod-egg" }, item: "pentapod-egg", count: 200 }],
         warmup_ticks: 300,
-        settle_ticks: 4800,
         backed_up_belts: true,
         wake_ups_open: AGRICULTURAL_SCIENCE_WAKE_UPS_OPEN,
     },
@@ -165,7 +175,6 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         config: ConfigPaths.AUTOMATION_SCIENCE,
         seed: [],
         warmup_ticks: 3600,
-        settle_ticks: 1200,
     },
     // its selected clock has no belt pickup slack: full-hand output swings, which the simulator holds stable without it
     "automation science (belts are backed up)": {
@@ -173,7 +182,6 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         config: ConfigPaths.AUTOMATION_SCIENCE,
         seed: [],
         warmup_ticks: 3600,
-        settle_ticks: 1200,
         backed_up_belts: true,
     },
     "automation science with a belted buffer": {
@@ -181,7 +189,6 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         config: ConfigPaths.AUTOMATION_SCIENCE_BELTED_BUFFER,
         seed: [],
         warmup_ticks: 3600,
-        settle_ticks: 1200,
         // Pre-existing, not from the belt window trim: the copper foundry's output inserter wakes 25 a minute in
         // the game and 5 in the simulator, because the game counts a held product when it enters the output and
         // the simulator when it is made (docs/simulator.md). The gap crossed the tolerance only once the trim cut
@@ -198,14 +205,12 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         config: ConfigPaths.LOGISTIC_SCIENCE_DI,
         seed: [],
         warmup_ticks: 3600,
-        settle_ticks: 2400,
     },
     "logistic science with direct insertion (belts are backed up)": {
         scaffold: path.join(SAMPLES, "science", "logistic-science", "logistic-science-direct-insert-scaffold.txt"),
         config: ConfigPaths.LOGISTIC_SCIENCE_DI,
         seed: [],
         warmup_ticks: 3600,
-        settle_ticks: 2400,
         backed_up_belts: true,
     },
     // A real cell (#189): two electromagnetic plants making advanced circuits from one copper cable foundry and two
@@ -216,14 +221,12 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         config: ConfigPaths.REAL_COMPOSITE04_CELL07,
         seed: [],
         warmup_ticks: 3600,
-        settle_ticks: 4800,
     },
     "composite cell 07 (belts are backed up)": {
         scaffold: path.join(SAMPLES, "real", "composite04", "cell07", "composite04-cell07-scaffold.txt"),
         config: ConfigPaths.REAL_COMPOSITE04_CELL07,
         seed: [],
         warmup_ticks: 3600,
-        settle_ticks: 4800,
         backed_up_belts: true,
     },
     // One of the three copies of the inserter build given 2026-10-21, 240 inserters a second over the three: an
@@ -235,24 +238,21 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         config: ConfigPaths.LOGISTIC_SCIENCE_INSERTER_CRAFTING,
         seed: [],
         warmup_ticks: 3600,
-        settle_ticks: 2400,
     },
     "logistic science with inserter crafting (belts are backed up)": {
         scaffold: path.join(SAMPLES, "science", "logistic-science", "logistic-science-inserter-crafting-scaffold.txt"),
         config: ConfigPaths.LOGISTIC_SCIENCE_INSERTER_CRAFTING,
         seed: [],
         warmup_ticks: 3600,
-        settle_ticks: 2400,
         backed_up_belts: true,
     },
     // The build of issue 98: two foundries, two electromagnetic plants and a cryogenic plant, 240 a second over three
-    // copies. Its clock of 792 ticks takes two periods more than the others to settle.
+    // copies. Its clock counts 792 ticks.
     "advanced circuit": {
         scaffold: path.join(SAMPLES, "intermediates", "advanced-circuit", "advanced-circuit-scaffold.txt"),
         config: ConfigPaths.ADVANCED_CIRCUIT,
         seed: [],
         warmup_ticks: 3600,
-        settle_ticks: 4800,
         wake_ups_open: "the simulator shows an output inserter as waiting on its machine in ticks the game shows it as working: "
             + "510 wake-ups a minute against 400 on 2026-10-10 (samples README, Advanced circuit)",
     },
@@ -265,7 +265,6 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         config: ConfigPaths.ADVANCED_CIRCUIT_230,
         seed: [],
         warmup_ticks: 3600,
-        settle_ticks: 4800,
     },
     // One block of four chemical science assemblers, four engine assemblers and one foundry casting the pipes of all four
     // engines, all legendary with legendary modules and 40 legendary beacons: 5.5 copies of it make 240 a second. The
@@ -276,7 +275,6 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         config: ConfigPaths.CHEMICAL_SCIENCE_SHARED_FOUNDRY,
         seed: [],
         warmup_ticks: 3600,
-        settle_ticks: 4800,
         wake_ups_open: "the simulator starts a science machine's craft on the first tick its belt inserter waits for space, and the game one tick later: "
             + "the four belt inserters of the science machines are woken once a period in the game and never in the simulator, "
             + "122.7 wake-ups a minute against 82.2 on 2026-10-15 (samples README, Chemical science with a shared foundry)",
@@ -296,7 +294,6 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         config: ConfigPaths.ELECTROMAGNETIC_SCIENCE,
         seed: [],
         warmup_ticks: 3600,
-        settle_ticks: 2400,
     },
     // The same build with both output inserters on AUTO. Recorded 2026-10-16 on the same batched swings clock (period 704): from a
     // staged start (empty machines) 288 in the first period and 352 in each of the 50 after; on this test's start (warm-up and settle) 352 in every period checked.
@@ -305,7 +302,6 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         config: ConfigPaths.ELECTROMAGNETIC_SCIENCE_AUTO,
         seed: [],
         warmup_ticks: 3600,
-        settle_ticks: 2400,
         wake_ups_open: "the game counts the first output inserter 0 wake-ups a minute, as it is never shown waiting, and the simulator 15.36, as it shows "
             + "both output inserters waiting on the machine in 1.56% of the ticks; the build moves its expected output in every period (recorded 2026-11-01: "
             + "25.6 a minute in all in the game, 41.0 in the simulator, 35.8 a minute of arm-away alarms on either side)",
@@ -317,14 +313,12 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         config: ConfigPaths.UTILITY_SCIENCE,
         seed: [],
         warmup_ticks: 3600,
-        settle_ticks: 2400,
     },
     "utility science (belts are backed up)": {
         scaffold: path.join(SAMPLES, "science", "utility-science", "utility-science-scaffold.txt"),
         config: ConfigPaths.UTILITY_SCIENCE,
         seed: [],
         warmup_ticks: 3600,
-        settle_ticks: 2400,
         backed_up_belts: true,
     },
     "utility science with processing units and low density structures on one belt": {
@@ -332,14 +326,12 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         config: ConfigPaths.UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS,
         seed: [],
         warmup_ticks: 3600,
-        settle_ticks: 2400,
     },
     "utility science with processing units and low density structures on one belt (belts are backed up)": {
         scaffold: path.join(SAMPLES, "science", "utility-science", "utility-science-belted-combined-blue-and-lds-scaffold.txt"),
         config: ConfigPaths.UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS,
         seed: [],
         warmup_ticks: 3600,
-        settle_ticks: 2400,
         backed_up_belts: true,
     },
     "low density structure": {
@@ -347,17 +339,14 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         config: ConfigPaths.LOW_DENSITY_STRUCTURE,
         seed: [],
         warmup_ticks: 3600,
-        settle_ticks: 2400,
     },
     // The build of issue 152: two electromagnetic plants, two cryogenic plants and two foundries, 640 a second over 18
     // copies, all of it from machine to machine. The clock 0.9.0 selected made 512 to 544 of its 576 a period here.
-    // It settles from the scaffold's start over 4 periods of 972 ticks after the 2,400 the others take.
     "accumulator": {
         scaffold: path.join(SAMPLES, "intermediates", "accumulator", "accumulator-640-scaffold.txt"),
         config: ConfigPaths.ACCUMULATOR_640,
         seed: [],
         warmup_ticks: 3600,
-        settle_ticks: 7200,
     },
     // The lithium plate build: two cryogenic plants fill a rocket silo taken as a chest, and six furnaces empty it;
     // 80 a second from one copy. The warm-up fills the silo, which the config exports empty.
@@ -366,7 +355,6 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         config: ConfigPaths.REAL_OWNER_LITHIUM_SILO,
         seed: [],
         warmup_ticks: 3600,
-        settle_ticks: 2400,
         wake_ups_open: "the inserters into the silo agree (4 wake-ups a period each, game and simulator), but the furnace-to-belt "
             + "output inserters 11 and 12 wake 10 times a period in the game and 0 in a simulator that starts cold: the furnaces' output "
             + "levels the warm-up leaves decide it, and a simulator started from the recording's first sample equals the game (sim-game-check)",
@@ -378,7 +366,6 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         config: ConfigPaths.REAL_OWNER_CAR,
         seed: [],
         warmup_ticks: 3600,
-        settle_ticks: 2400,
         wake_ups_open: "the simulator counts 200.0 a minute from the scaffold's cold start, its two output inserters woken by their "
             + "furnaces 100 times a minute each, and 0.0 from other starts; the game's states give 3.8 on 2026-10-22 (1.3 for each "
             + "output inserter, 0.6 for each inserter from the car), for a reason not yet found: ",
@@ -391,7 +378,6 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         config: ConfigPaths.STEEL_CARGO_WAGON,
         seed: [],
         warmup_ticks: 3600,
-        settle_ticks: 11520,
     },
     "iron bacteria cultivation": {
         scaffold: path.join(SAMPLES, "gleba", "iron-bacteria-cultivation", "iron-bacteria-cultivation-scaffold.txt"),
@@ -399,12 +385,19 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         // the machines make bacteria from bacteria, so they are given some to begin with
         seed: [{ target: { recipe: "iron-bacteria-cultivation" }, item: "iron-bacteria", count: 50 }],
         warmup_ticks: 300,
-        settle_ticks: 3600,
         // recorded 2026-10-24 on 6 output swings per cycle (subtick) with windows on the loop's two inserters (ticks 15 to 23
         // and 60 to 68 of every 90.95): 10,944 in every one of the 20 repeats of 1,728 ticks after the first
         wake_ups_open: IRON_BACTERIA_WAKE_UPS_OPEN,
     },
 };
+
+/** What steady.lua writes into the probe's report (`protocol`) */
+interface SteadyReport {
+    steady?: number;
+    result?: string;
+    error?: string;
+    finals?: unknown;
+}
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 
@@ -484,8 +477,12 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             // to move is what that many ticks ask for.
             const subtick = selected.result.subtick;
             const period = subtick?.clock.period_ticks ?? selected.result.simulation_duration.ticks;
+            context.skip(!build.staged_start && period > MAX_RECORDED_PERIOD,
+                `the selected clock counts ${period} ticks, over the ${MAX_RECORDED_PERIOD} ticks one period of a recording may take`);
             // a subtick clock's repeat and a rate per copy can leave a float a hair off the whole number of items
             const expected = Math.round(config.target_output.items_per_second / config.target_output.copies * period / 60 * 1e6) / 1e6;
+            // what the machines that make the target item have to finish over the trailing minute for steady state
+            const expected_per_window = Math.round(config.target_output.items_per_second / config.target_output.copies * WINDOW_TICKS / 60 * 1e6) / 1e6;
             // the clock with its schedule as the generator made it, which the harness wires without reading descriptions
             const exported = subtick ?? selected.result;
             // the dips and issues this build expects were seen on one clock: on another they say nothing
@@ -494,25 +491,44 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                     .toBe(clockPins[name].clock_sha256);
             }
             const clock = { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule };
-            const result = await record({
-                factorio: FACTORIO!,
-                save: SAVE!,
-                blueprint: fs.readFileSync(build.scaffold, "utf-8").trim(),
-                out: `${base}.json`,
-                ticks: RECORDED_TICKS,
-                warmup_ticks: build.staged_start ? 0 : build.warmup_ticks,
-                settle_ticks: build.staged_start ? undefined : build.settle_ticks,
-                seed: build.staged_start ? [] : build.seed,
-                staged_start: build.staged_start ? {} : undefined,
-                clock,
-                config,
-                unclocked: false,
-                game_speed: UNWATCHED_SPEED,
-                watch: WATCH,
-                timeout_seconds: WATCH ? 3600 : 900,
-                log: () => { },
-                ...(KEEP && { work_dir: `${base}-game`, lua: INSERTER_POSITIONS_LUA }),
+            // the probe ends the settle at steady state (a staged start: cuts the recording a minute after it); it writes its
+            // report into the game's script-output, which the build has a folder of its own for (all builds share the one game
+            // watched)
+            const recipes = [...recipesMaking(config, config.target_output.recipe)];
+            const probe = composeProbeSource(path.join(__dirname, "scaffold-recordings-probe.lua"), {
+                window: WINDOW_TICKS, expected: expected_per_window, recipes, item: config.target_output.recipe, cap: SETTLE_CAP_TICKS,
+                output: STEADY_REPORT, staged: !!build.staged_start, ticks: SETTLE_CAP_TICKS,
             });
+            const work_dir = WATCH ? path.join(scratch, "watch-game") : `${base}-game`;
+            let result: HarnessResult;
+            let steady: SteadyReport;
+            try {
+                result = await record({
+                    factorio: FACTORIO!,
+                    save: SAVE!,
+                    blueprint: fs.readFileSync(build.scaffold, "utf-8").trim(),
+                    out: `${base}.json`,
+                    ticks: build.staged_start ? SETTLE_CAP_TICKS : RECORDED_TICKS,
+                    warmup_ticks: build.staged_start ? 0 : build.warmup_ticks,
+                    settle_ticks: build.staged_start ? undefined : SETTLE_CAP_TICKS + 1,
+                    seed: build.staged_start ? [] : build.seed,
+                    staged_start: build.staged_start ? {} : undefined,
+                    clock,
+                    config,
+                    unclocked: false,
+                    game_speed: UNWATCHED_SPEED,
+                    watch: WATCH,
+                    timeout_seconds: WATCH ? 3600 : 900,
+                    log: () => { },
+                    work_dir,
+                    lua: KEEP ? `do ${INSERTER_POSITIONS_LUA} end\n${probe}` : probe,
+                });
+                steady = JSON.parse(fs.readFileSync(path.join(work_dir, "script-output", STEADY_REPORT), "utf-8")).protocol;
+            } finally {
+                if (!KEEP && !WATCH) {
+                    fs.rmSync(work_dir, { recursive: true, force: true });
+                }
+            }
 
             if (build.staged_start) {
                 // a staged recording does not read the clock (the recorder ignores it: it records fixed ticks from the tick the
@@ -523,7 +539,7 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             // the simulator against the game, entity by entity: a run of the same clock, half as long again as the
             // recording and judged on what follows its first third, moves what the game moved through every inserter
             // and finishes what it finished in every machine (asserted below, once the evidence is kept)
-            const simulated_run = simulateRecording(config, selected.result.clock_windows, selected.result.simulation_duration.ticks, RECORDED_TICKS * 1.5, period);
+            const simulated_run = simulateRecording(config, selected.result.clock_windows, selected.result.simulation_duration.ticks, result.recording.sample_count * 1.5, period);
             const compared = compareRecordings(
                 {
                     recording: result.recording,
@@ -541,12 +557,19 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                     name, label: selected.label, verdict: selected.verdict, period, expected, clock_windows: selected.result.clock_windows,
                     simulation_ticks: selected.result.simulation_duration.ticks, backed_up_belts: !!build.backed_up_belts,
                     staged_start: !!build.staged_start, issues: compared.issues, config, harness_build: result.build,
-                    harness_start: result.start, periods,
+                    harness_start: result.start, periods, steady,
                 }, null, 1));
             }
-            expect(periods.length, `the recording of ${result.recording.sample_count} ticks holds whole clock periods`).toBeGreaterThan(1);
-            // the first period is left out: the build may still be settling into the clock
-            const checked = periods.slice(1);
+            // the build reached steady state in the game, within the ticks it may take
+            expect(steady.error, "the probe failed in the game").toBeUndefined();
+            expect(steady.steady, `the build did not reach steady state within ${SETTLE_CAP_TICKS} ticks (${steady.result ?? "the game ended first"})`).toBeDefined();
+            // the machines the probe counted are those of the config that make the target item (one copy)
+            expect(Array.isArray(steady.finals) ? steady.finals : [], "the final machines the probe counts")
+                .toHaveLength(config.machines.filter(machine => recipes.includes(machine.recipe)).length);
+            expect(periods.length, `the recording of ${result.recording.sample_count} ticks holds a whole clock period`).toBeGreaterThan(0);
+            // the first period is left out: the build may still be settling into the clock. A clock that counts over a minute is
+            // recorded over one period, which is checked whole: the settle ended at steady state
+            const checked = periods.length > 1 ? periods.slice(1) : periods;
             const wrong_length = checked.filter(it => it.end - it.start !== period);
             expect(wrong_length, `every one of the ${checked.length} periods checked lasts ${period} ticks, as the generated clock does`).toEqual([]);
             const short = checked.filter(it => it.items !== expected);

@@ -9,7 +9,8 @@ import {generateClockAlternatives} from '../../../src/crafting/generate-blueprin
 import {encodeBlueprintFile} from '../../../src/blueprints/serde';
 import {matchBuiltCopies, recordInFactorio, scheduledInserterIds, stagedBuildOrder} from '../../../src/harness/factorio-harness';
 import {composeProbeSource} from '../helpers/probe-source';
-import {branchDeliveryGate, branchSeriesLedger, nativeScienceLedger} from '../helpers/science-ledger';
+import {clockHash, runHolds} from './clock-controls';
+import {RUN_PROTOCOL, runSummary} from './pickup-clock-capture';
 
 /**
  * The 203-entity scaffold of #100 without its buffer chests (each replaced in place by an infinity chest that removes all,
@@ -17,9 +18,12 @@ import {branchDeliveryGate, branchSeriesLedger, nativeScienceLedger} from '../he
  * automatic config (one cell at 48 a second, five copies for 240). The science plants' drains are the terminals and drop
  * into sinks that never block, so each branch (a plant and its drain) is judged by its rate: never more than a hand behind
  * its share of 16 a period from the start of the baseline or of a hold, its surplus taken by the sink (the probe's "rate"
- * gate, chosen by the sink the drain drops into). One run of 3,600 periods with nine losses, and two cold starts. The clock
- * is the generator's, never changed in the game: the clock's blueprint and schedule of the selected alternative wire both
- * physical copies. recycler-original-clock.game.test.ts is the same proof of the build with its buffers, judged exactly.
+ * gate, chosen by the sink the drain drops into). The runs follow the game tests' protocol (helpers/lua/steady.lua), counted in
+ * the science the four drains drop into their infinity chests: a warm run with steady state, a baseline of 3,600 ticks and seven
+ * disturbances (each distinct kind once), and two cold (staged) starts that record from the placement until steady state and one
+ * more minute. The clock is the generator's, never changed in the game: the clock's blueprint and schedule of the selected
+ * alternative wire both physical copies. recycler-original-clock.game.test.ts is the same proof of the build with its buffers,
+ * judged exactly.
  */
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 const sample = path.resolve(__dirname, '../../../resources/config-samples/real/owner/pink-science-original-no-buffers/pink-science-original-no-buffers.json');
@@ -27,30 +31,23 @@ const scaffold = sample.replace(/\.json$/, '-scaffold.txt');
 const scaffoldHash = '04db19a009a09bad17a15b0615b8c938ddb5c94857b29da9ff4931bfe256417a';
 const probe = path.join(__dirname, 'recycler-original-clock-probe.lua');
 const period = 40;
-const settleTicks = 24_000;
-const holdPeriods = 726;
 // each science plant's share of the cell's 48 a second in a period, and the hand of its drain
 const share = 16, hand = 16;
-type Loss = {kind: 'supply' | 'output'; item: string; phase_offset: number};
-// Losses at probe phases: the seven of the buffered build's proof, then a battery cut at the first tick after each
-// supercapacitor arm's turn (this clock's windows for the two arms that take from one plant are modeled 19-28 for arm 7
-// and 39-8 for arm 6; the probe reads 5 ticks later, so the turns are probe 24-33 and 4-13).
-const losses: Loss[] = [
-    {kind: 'supply', item: 'accumulator', phase_offset: 0},
-    {kind: 'supply', item: 'processing-unit', phase_offset: 7},
-    {kind: 'supply', item: 'battery', phase_offset: 13},
-    {kind: 'supply', item: 'holmium-plate', phase_offset: 19},
-    {kind: 'supply', item: 'superconductor', phase_offset: 27},
-    {kind: 'output', item: 'electromagnetic-science-pack', phase_offset: 3},
-    {kind: 'output', item: 'advanced-circuit', phase_offset: 31},
-    {kind: 'supply', item: 'battery', phase_offset: 34},
-    {kind: 'supply', item: 'battery', phase_offset: 14},
-];
-// the tick the probe may run to: the settle, the baseline and one allowance for each loss (cut, recovery and the hold)
-const BASELINE_TICKS = 3600 * period, LOSS_TICKS = 240_000;
-const lossesLastTick = settleTicks + BASELINE_TICKS + losses.length * LOSS_TICKS;
-// the first seven losses must recover within the tick the run first allowed them, each later one within one more allowance
-const recoveryCaps = losses.map((_, index) => lossesLastTick - (losses.length - Math.max(7, index + 1)) * LOSS_TICKS);
+// the disturbances of the warm run, each distinct kind once: the five supplies cut (the feeders off and the item taken from the
+// belt lanes and the supply chests upstream), the output blocked at the four drains, the advanced-circuit disposal blocked
+const disturbanceKinds = ['cut accumulator', 'cut processing-unit', 'cut battery', 'cut holmium-plate', 'cut superconductor',
+    'block output', 'block advanced-circuit disposal'];
+// The two copies of the config the scaffold holds: 96 science a second, 5,760 in the trailing minute
+const COPIES = 2;
+// Ticks from the probe's start (after a warm-up of 3,600), by arithmetic. Steady state is no earlier than the window plus a window
+// back (7,200); the baseline 3,600; a supply cut falls within ~200 ticks and recovers 3,600 + ~300 after its release (the
+// recorded runs of the other families: 3,750-3,990 from the release), so ~4,300 each; the output block falls at once, ~4,100; the
+// disposal block must fill the recyclers' advanced circuits (a stack of 200 at ~2.5 a second a recycler, ~4,800 ticks) and the
+// belt before them, then starve the plants, ~9,000 to fall, then ~4,200 to recover. A cold start is steady state at 7,200 or when
+// the plants have filled (~3,000 ticks) plus the window, whichever is later, and the baseline.
+const WARM_ESTIMATE = 7_200 + 3_600 + 5 * 4_300 + 4_100 + (9_000 + 4_200);
+const COLD_ESTIMATE = 7_200 + 3_600;
+const COLD_CAP = 36_000;
 
 type Run = {name: string; cold: boolean; order: 'ascending' | 'descending'; phase: number};
 const runs: Run[] = [
@@ -73,6 +70,8 @@ const key = (at: {x: number; y: number}) => `${at.x},${at.y}`;
 for (const run of runs) test(`original electromagnetic science scaffold without buffer chests, automatic clock: ${run.name}`, async context => {
     const factorio = process.env.FACTORIO_PATH, save = process.env.FACTORIO_HARNESS_SAVE;
     context.skip(!factorio || !save || !fs.existsSync(save), 'Factorio harness is not configured');
+    const estimate = run.cold ? COLD_ESTIMATE : WARM_ESTIMATE, cap = run.cold ? COLD_CAP : RUN_PROTOCOL.cap;
+    context.skip(estimate > cap, `the run is estimated at ${estimate} ticks, over the ${cap} it may take`);
     const retained = process.env.RECYCLER_ORIGINAL_NO_BUFFERS_CAPTURE_DIR;
     const parent = retained ? path.resolve(retained) : fs.mkdtempSync(path.join(os.tmpdir(), 'recycler-original-no-buffers-'));
     const directory = path.join(parent, run.name);
@@ -105,7 +104,7 @@ for (const run of runs) test(`original electromagnetic science scaffold without 
         const [turnsA, turnsB] = [result.clock_windows['inserter:6'], result.clock_windows['inserter:7']];
         expect(turnsA && turnsB).toBeTruthy();
         expect([...Array(period).keys()].filter(tick => open(turnsA, tick) && open(turnsB, tick))).toEqual([]);
-        // the turns the last two losses' phases are placed by
+        // the turns of the two arms that take from the supercapacitor plants (the selection's pin)
         expect(turnsA).toEqual([{start: 39, end: 39}, {start: 0, end: 8}]);
         expect(turnsB).toEqual([{start: 19, end: 28}]);
         fs.writeFileSync(path.join(directory, 'generation.json'), JSON.stringify({
@@ -115,35 +114,53 @@ for (const run of runs) test(`original electromagnetic science scaffold without 
         const combinatorOf = new Map<number, number>(result.schedule.inserter_combinators
             .flatMap((row: any) => row.inserter_ids.map((id: number) => [id, row.entity_number] as const)));
 
-        const options = run.cold
-            ? {period, share_per_period: share, hand, initialization_delay_ticks: 2, settle_ticks: settleTicks, baseline_periods: 600, minimum_cut_ticks: 12_000, maximum_cut_ticks: 120_000,
-                stopped_ticks: 2400, maximum_recovery_ticks: 120_000, recovery_hold_periods: holdPeriods, trials: [] as Loss[], last_tick: 48_080}
-            : {period, share_per_period: share, hand, initialization_delay_ticks: 0, settle_ticks: settleTicks, baseline_periods: 3600, minimum_cut_ticks: 12_000, maximum_cut_ticks: 120_000,
-                stopped_ticks: 2400, maximum_recovery_ticks: 120_000, recovery_hold_periods: holdPeriods, trials: losses, last_tick: lossesLastTick};
-        const {recording, build, start} = await recordInFactorio({factorio: factorio!, save: save!, config, copies: 2,
+        // the build is two of the config's copies: 96 science a second, 5,760 in the trailing minute
+        const target = config.target_output.items_per_second / (config.target_output.copies ?? 1) * COPIES;
+        expect(target).toBe(96);
+        const options = {period, share_per_period: share, hand, cold: run.cold, initialization_delay_ticks: run.cold ? 2 : 0,
+            window: RUN_PROTOCOL.window, expected: Math.round(target * RUN_PROTOCOL.window / 60 * 1e6) / 1e6, baseline: RUN_PROTOCOL.baseline, cap};
+        const {recording, build, start} = await recordInFactorio({factorio: factorio!, save: save!, config, copies: COPIES,
             blueprint: bytes.toString('utf8').trim(),
             clock: {blueprint: encodeBlueprintFile({blueprint: result.blueprint}), schedule: result.schedule},
             out: path.join(directory, 'recording.json'), work_dir: path.join(directory, 'game'),
-            ticks: run.cold ? options.last_tick : 2 * period, warmup_ticks: 600,
-            ...(run.cold ? {staged_start: {build_order: run.order, clock_phase: run.phase}} : {settle_ticks: options.last_tick + 40}),
+            ...(run.cold
+                // from the placement until steady state and one more minute (the probe cuts the recording there), at most 10 minutes
+                ? {ticks: COLD_CAP, warmup_ticks: 0, staged_start: {build_order: run.order, clock_phase: run.phase}}
+                : {ticks: 3600, record_at_once: true, warmup_ticks: 3600, settle_ticks: RUN_PROTOCOL.cap + 1}),
             lua: composeProbeSource(probe, options),
             seed: [], unclocked: false, game_speed: 1000, watch: false, timeout_seconds: 1500, log() {},
         }) as any;
         const report = JSON.parse(fs.readFileSync(path.join(directory, 'game/script-output/recycler-original.json'), 'utf8'));
         expect(report.error).toBeUndefined();
-        expect(report.finished).toBe(true);
+        expect(report.protocol.error, 'the probe failed in the game').toBeUndefined();
+        expect(report.protocol.result, 'the run did not end before the recording').toBeDefined();
         expect(report.topology).toMatchObject({outputs: 4, science: 4, recyclers: 2, capacitors: 2, disposal: 1});
         expect(report.topology.red_outlets).toHaveLength(2);
         // every terminal is a science plant's drain into an infinity chest: no buffer, judged by its rate
         expect(values(report.topology.branches).every((branch: any) => branch.gate === 'rate' && !branch.buffer
             && branch.terminal.unit === branch.drain.unit)).toBe(true);
         expect(report).toMatchObject({share_per_period: share, hand});
-        expect(report.baseline).toHaveLength(options.baseline_periods);
-        const baselineGate = branchDeliveryGate(report, report.baseline);
-        fs.writeFileSync(path.join(directory, 'baseline-gate.json'), JSON.stringify(baselineGate, null, 2));
-        expect(baselineGate.passes, JSON.stringify(baselineGate.branches)).toBe(true);
-        // at least the share a period from the first: 96 a second, less one hand per branch over the baseline
-        expect(baselineGate.branches.every((branch: any) => branch.gate === 'rate' && branch.delivered >= branch.expected - hand)).toBe(true);
+        // the protocol: steady state, a baseline whose whole clock cycles make the target, each disturbance recovered
+        const summary = runSummary(report.protocol, {generationVerdict: selected.verdict, target, period});
+        fs.writeFileSync(path.join(directory, 'summary.json'), JSON.stringify(summary) + '\n');
+        expect(summary.result).toBe('holds');
+        expect(summary.steady).not.toBeNull();
+        expect(summary.disturbances.map(disturbance => disturbance.kind)).toEqual(run.cold ? [] : disturbanceKinds);
+        expect(runHolds(summary), JSON.stringify(summary)).toBe(true);
+        // the science of each branch (a plant and its drain) closes over the baseline's whole clock cycles: what its plant made is
+        // what its drain dropped and what it holds more. The drain takes the plant's surplus a hand at a time: it drops at least
+        // its share in every cycle, less one hand, and no branch loses more than the probe's own bound
+        const ledger = report.baseline_ledger;
+        expect(ledger.ticks).toBeGreaterThan(0);
+        expect(ledger.ticks).toBe(summary.baseline!.measured!.ticks);
+        expect(ledger.ticks % period).toBe(0);
+        expect(ledger.branches).toHaveLength(4);
+        for (const [index, branch] of ledger.branches.entries()) {
+            expect(branch.gate).toBe('rate');
+            expect(branch.residual, `branch ${index} closes`).toBe(0);
+            expect(branch.delivered, `branch ${index} drops its share, less a hand`).toBeGreaterThanOrEqual(share * ledger.ticks / period - hand);
+            expect(branch.reserve_delta).toBeGreaterThanOrEqual(-64);
+        }
 
         // Wiring: 20 arms, two for each of the 10 configured inserters, and none of the six feeders the scaffold brings
         const wired = values(start.clock?.wired);
@@ -212,27 +229,6 @@ for (const run of runs) test(`original electromagnetic science scaffold without 
             expect(report.topology.recycler_targets).toHaveLength(2);
         }
 
-        // The science of each branch (a plant and its drain) closes at every period boundary
-        const ledger = nativeScienceLedger(recording, report);
-        const series = branchSeriesLedger(report, {settle_ticks: options.settle_ticks, baseline_periods: options.baseline_periods, hold_periods: holdPeriods});
-        fs.writeFileSync(path.join(directory, 'branch-ledger.json'), JSON.stringify(ledger, null, 2));
-        fs.writeFileSync(path.join(directory, 'branch-series-ledger.json'), JSON.stringify(series, null, 2));
-        expect(ledger.endpoint_component_sums_match).toBe(true);
-        expect(ledger.unassigned_science_hands).toHaveLength(0);
-        expect(ledger.spans_without_recovered_hold).toHaveLength(0);
-        expect(ledger.probe_branch_map_matches, 'the probe and the recorder name the same units for each branch').toBe(true);
-        expect(series.columns_consistent).toBe(true);
-        expect(series.boundary_gaps).toHaveLength(0);
-        expect(series.first_tick).toBe(series.expected_first_tick);
-        expect(series.baseline_bins).toBe(options.baseline_periods);
-        const baseline = series.spans.find((span: any) => span.name === 'baseline');
-        expect(baseline.branches.map((b: any) => b.reserve_start)).toEqual(report.baseline_stock_start.reserve_by_branch);
-        expect(baseline.branches.map((b: any) => b.reserve_end)).toEqual(report.baseline_stock_end.reserve_by_branch);
-        expect(series.residual_nonzero, JSON.stringify(series.first_residuals.slice(0, 3))).toBe(0);
-        expect(series.reserve_sum_total_mismatch, JSON.stringify(series.first_reserve_sum_mismatches.slice(0, 3))).toBe(0);
-        // no branch loses more than the probe's own bound over the baseline or a recovered hold; none drains while another fills
-        expect(series.drift_failures, JSON.stringify(series.drift_failures)).toHaveLength(0);
-
         if (run.cold) {
             // The clock is placed first and runs alone until its counter reads the phase; in that tick the arms are built, in the
             // order asked for, and wired to that same clock, which is not built again. Machines and buffers are empty then.
@@ -264,36 +260,22 @@ for (const run of runs) test(`original electromagnetic science scaffold without 
             expect(stock.filter(row => row.type === 'container').every(row => row.chest === 0)).toBe(true);
             expect(values(start.loop_seeds)).toHaveLength(0);
             expect(recording.machines.every((machine: any) => machine.samples.products_finished[0] === 0)).toBe(true);
-            expect(Object.keys(report.trials)).toHaveLength(0);
+            expect(summary.disturbances).toHaveLength(0);
         } else {
             expect(build.built).toBe(203);
-            expect(report.trials).toHaveLength(losses.length);
-            for (const [index, trial] of report.trials.entries()) {
-                const loss = losses[index];
-                expect(trial, `${loss.kind} ${loss.item} at ${loss.phase_offset}`).toMatchObject({kind: loss.kind, item: loss.item,
-                    cut_phase: loss.phase_offset, stopped: true, recovered: true, hold_periods: holdPeriods});
-                expect(trial.recovered_at).toBeLessThanOrEqual(recoveryCaps[index]);
-                expect(trial.craft_quiet_ticks).toBeGreaterThanOrEqual(options.stopped_ticks);
-                expect(trial.output_quiet_ticks).toBeGreaterThanOrEqual(options.stopped_ticks);
-                expect(trial.hold_stock_drift).toBeGreaterThanOrEqual(-report.maximum_hold_stock_drain);
-                expect(trial.hold_products_finished).toBeGreaterThan(0);
-                expect(trial.last_periods).toHaveLength(holdPeriods);
-                const holdGate = branchDeliveryGate(report, trial.last_periods);
-                expect(holdGate.passes, `${loss.kind} ${loss.item}: ${JSON.stringify(holdGate.branches)}`).toBe(true);
-            }
-            expect(report.trials.some((trial: any) => values(trial.partial_hands_at_restore).some(held => held.relevant && held.count > 0 && held.count < hand)),
-                'at least one restoration resumes a relevant partially filled hand').toBe(true);
-            const red = report.trials.find((trial: any) => trial.item === 'advanced-circuit');
-            expect(red.advanced_disposal_blocked).toBe(true);
-            expect(red.advanced_disposal_cleared).toBe(true);
-            expect(red.red_max.every((count: number) => count >= red.red_stop_min)).toBe(true);
-            expect(red.recycler_full_ticks.every((ticks: number) => ticks > 0)).toBe(true);
-            expect(red.red_at_recovery.every((count: number) => count <= 16)).toBe(true);
+            // each cut took the item from the belt lanes upstream of the clocked machines
+            const cuts = report.events.filter((row: any) => row.action.startsWith('cut '));
+            expect(cuts).toHaveLength(5);
+            for (const row of cuts) expect(row.from_belts, row.action).toBeGreaterThan(0);
+            // the disposal block stopped a recycler on its advanced circuits (the stop that starves the plants): its output held a
+            // stack less a batch or more and it waited for space
+            const evidence = report.evidence;
+            expect(evidence.red_max.some((count: number, index: number) => count >= evidence.red_stop_min && evidence.recycler_full_ticks[index] > 0),
+                JSON.stringify(evidence)).toBe(true);
         }
-        fs.writeFileSync(path.join(directory, 'summary.json'), JSON.stringify({run: run.name, scaffold_sha256: scaffoldHash, baseline_gate: baselineGate,
+        fs.writeFileSync(path.join(directory, 'figures.json'), JSON.stringify({run: run.name, scaffold_sha256: scaffoldHash,
             verdict: selected.verdict, science_per_second: 96, all_copies_per_second: 240, copies: 2.5,
-            clock_period: period, clock_start_phase: run.phase, build_order: run.order,
-            wake_ups_per_minute: selected.assessment.wake_ups_per_minute, per_branch_drift: series.drift,
-            branches_needing_depletion_review: ledger.branches_needing_depletion_review, ...report}, null, 2));
+            clock_period: period, clock_start_phase: run.phase, build_order: run.order, clock_sha256: clockHash(result.subtick ?? result),
+            wake_ups_per_minute: selected.assessment.wake_ups_per_minute, estimated_ticks: estimate, ended: summary.ended, ...report}, null, 2));
     } finally { if (!retained) fs.rmSync(parent, {recursive: true, force: true}); }
 }, 1_800_000);
