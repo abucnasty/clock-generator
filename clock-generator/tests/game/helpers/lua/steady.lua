@@ -1,6 +1,8 @@
 -- The game tests' protocol, timed in game ticks (never in clock periods): what the machines that make the target item
 -- finish over the trailing minute decides every step.
---   steady state  the first tick the trailing `window` ticks (3,600) hold `expected` products or more (target rate x 60 s)
+--   steady state  the first tick the trailing `window` ticks (3,600) hold `expected` products or more (target rate x 60 s) and
+--                 the trailing window has stopped falling after the warm-up's overshoot: it is no lower than it was one clock
+--                 cycle earlier, at the last tick the clock stood where it stands now (owner, 2026-11-03)
 --   baseline      the `baseline` ticks after it (3,600 unless the family names a reason for more, at most 36,000). It holds
 --                 when the products of its whole clock cycles, from the steady-state tick to the last tick in the baseline at
 --                 which the clock stands where it stood then, make the target over those ticks (owner, 2026-11-03): a minute
@@ -8,7 +10,7 @@
 --                 baseline has none in it, and fails: its family names a longer baseline
 --   disturbance   each one starts after the step before it and lasts until the trailing minute falls below the lowest
 --                 trailing minute of the baseline (the loss is real, not a burst missing from the window); then it is released
---   recovery      the steady-state test met again, within `recover_bound` ticks of the release
+--   recovery      the steady-state test (both parts) met again, within `recover_bound` ticks of the release
 -- The run ends when the last disturbance has recovered, or at the first step that fails, or at `cap` ticks; then the
 -- harness's settle is ended so the recording starts. Ticks are counted from the tick the probe is installed in.
 local M = {}
@@ -88,6 +90,10 @@ function M.run(spec)
     spec.report.protocol = protocol
     local size = window + 1
     local history = {}
+    -- the trailing window at each tick of the last `cycles` ticks, and the last tick the clock stood at each of its values: a
+    -- clock cycle of at most `cycles` ticks is compared with itself
+    local cycles = 36001
+    local trailing_at, last_at = {}, {}
     local origin = count()
     history[0] = 0
     local function at(t) return history[t % size] end
@@ -121,16 +127,23 @@ function M.run(spec)
             history[t % size] = cumulative
             if spec.each_tick then spec.each_tick(t) end
             if phase == "disturbed" and disturbances[step].tick then disturbances[step].tick(t) end
+            local position = capture.clock_value(clock)
+            local cycle_start = last_at[position]
+            last_at[position] = t
             if t < window then return end
             local trailing = cumulative - at(t - window)
+            trailing_at[t % cycles] = trailing
             if t % 60 == 0 then table.insert(protocol.trace, trailing) end
             if t >= cap then return finish("over the cap of " .. cap .. " ticks") end
+            local settled = cycle_start ~= nil and cycle_start >= window and t - cycle_start < cycles
+                and trailing >= trailing_at[cycle_start % cycles]
             if phase == "steady" then
-                if trailing >= expected then
+                if trailing >= expected and settled then
                     steady = t
                     protocol.steady = t
+                    protocol.steady_against = cycle_start
                     baseline = {start = t, ticks = baseline_ticks, from = cumulative, min = trailing, max = trailing, lapsed = false,
-                        position = capture.clock_value(clock)}
+                        position = position}
                     phase = "baseline"
                     write()
                 elseif t >= steady_bound then
@@ -140,7 +153,7 @@ function M.run(spec)
                 if trailing < baseline.min then baseline.min = trailing end
                 if trailing > baseline.max then baseline.max = trailing end
                 if trailing < expected then baseline.lapsed = true end
-                if capture.clock_value(clock) == baseline.position then baseline.last_cycle, baseline.cycle_items = t, cumulative - baseline.from end
+                if position == baseline.position then baseline.last_cycle, baseline.cycle_items = t, cumulative - baseline.from end
                 if t >= steady + baseline_ticks then
                     local total = cumulative - baseline.from
                     local summary = {ticks = baseline_ticks, total = total, expected = expected * baseline_ticks / window,
@@ -169,7 +182,7 @@ function M.run(spec)
                     return finish("disturbance " .. step .. " (" .. current.kind .. ") did not reduce output within " .. drop_bound .. " ticks")
                 end
             elseif phase == "recovering" then
-                if trailing >= expected then
+                if trailing >= expected and settled then
                     current.recovered = t
                     next_disturbance(t)
                 elseif t - current.release >= recover_bound then
