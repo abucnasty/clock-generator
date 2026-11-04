@@ -1,6 +1,6 @@
 /**
  * The main-period choices of a build: the output swing counts today's alternatives are listed for (the planned count,
- * the counts above and below the main one, and fractional swings switched the other way), each with its period, kept or
+ * the counts above and below the main one, and fractional swings), each with its period, kept or
  * pruned by arithmetic before any simulation. The one rule that prunes is P-limit: a period of MAX_SIMULATION_TICKS or
  * more cannot be simulated, nor, under whole-counter checks, a fractional period whose whole counter
  * is that long (`counterOverLimitOf`). Each count's hands come from today's cycle plan (`CraftingCyclePlan.create`), never
@@ -149,9 +149,8 @@ export function plannedPeriodsOf(
     const { config, registry } = input;
     const overrides = config.overrides ?? {};
     const target = TargetProductionRate.fromConfig(config.target_output);
-    const fractional = overrides.use_fractional_swings === true;
     const forced = overrides.terminal_swing_count !== undefined;
-    const planned = (cycle: CraftingCyclePlan, listed_as: PeriodListing, is_fractional = fractional, swings_exact?: Fraction): PlannedCount => {
+    const planned = (cycle: CraftingCyclePlan, listed_as: PeriodListing, is_fractional = false, swings_exact?: Fraction): PlannedCount => {
         const swings = target.counts === "destroyed" ? result_windows!.hands : plannedTerminalSwingCount(cycle);
         assert(swings !== undefined, "the cycle plan has no output swing count");
         return { swings, ...(is_fractional && swings_exact !== undefined ? { swings_exact } : {}), fractional: is_fractional, listed_as, cycle,
@@ -173,8 +172,8 @@ export function plannedPeriodsOf(
 
     // the planning run's count, then today's swing backoff while the period is over the limit; the main clock's count
     // is the first under it, or the planned one where there is none
-    const can_back_off = !forced && !fractional;
-    const first = planned(CraftingCyclePlan.create(target, registry, config, max_swings(fractional), overrides), "planned", fractional, max_swings(fractional));
+    const can_back_off = !forced;
+    const first = planned(CraftingCyclePlan.create(target, registry, config, max_swings(false), overrides), "planned", false, max_swings(false));
     const tried: PlannedCount[] = [first];
     if (!under(first) && can_back_off) {
         for (let count = first.swings - 1; count >= 1 && !under(tried[tried.length - 1]); count--) {
@@ -199,15 +198,15 @@ export function plannedPeriodsOf(
     const listed_from = main_at === 0 ? outputSwingsOf(main.cycle, registry, item) : main.swings;
     const planned_from = main_at === 0 ? listed_from : first.swings;
     const { lower, higher } = swingCountsListed(listed_from, planned_from, forced, main.measure.main_period.toDecimal());
-    const toggled = alternative(null, "fractional", !fractional, () => {
-        const exact = max_swings(!fractional);
-        return planned(CraftingCyclePlan.create(target, registry, config, exact, { ...overrides, use_fractional_swings: !fractional }),
-            "fractional", !fractional, exact);
+    const toggled = alternative(null, "fractional", true, () => {
+        const exact = max_swings(true);
+        return planned(CraftingCyclePlan.create(target, registry, config, exact, { ...overrides, use_fractional_swings: true }),
+            "fractional", true, exact);
     });
     const counts: ListedCount[] = [
         ...tried,
-        ...higher.map(count => alternative(count, "higher", fractional, () => atCount(count, "higher"))),
-        ...lower.map(count => alternative(count, "lower", fractional, () => atCount(count, "lower"))),
+        ...higher.map(count => alternative(count, "higher", false, () => atCount(count, "higher"))),
+        ...lower.map(count => alternative(count, "lower", false, () => atCount(count, "lower"))),
         toggled,
     ];
     return { per_group: groups.map((_, at) => counts.map(count => choiceOf(count, at))), tried, main, can_back_off,

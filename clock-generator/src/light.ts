@@ -45,6 +45,7 @@ export { Option } from "./data-types/option";
 export { COPIES_DECIMAL_ERROR, isShortDecimalCopies } from "./config/copies-value";
 export { fraction } from "./data-types/fraction";
 export { migrateBeltSupplyOverrides } from "./config/migrate-belt-supply";
+export { dropFractionalSwingsOverride } from "./config/migrate-fractional-swings";
 export { BLOCKED_SLOT_MARKERS } from "./config/migrate-blocked-slots";
 export { migrateMiningProductivityLevel, PRODUCTIVITY_PER_MINING_LEVEL } from "./config/migrate-mining-productivity";
 

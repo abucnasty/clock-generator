@@ -14,6 +14,7 @@ import {
 import { MachineStatus } from "../state/entity-status";
 import { COPIES_DECIMAL_ERROR, isShortDecimalCopies } from "./copies-value";
 import { migrateBeltSupplyOverrides } from "./migrate-belt-supply";
+import { dropFractionalSwingsOverride } from "./migrate-fractional-swings";
 import { migrateBlockedSlotFilter } from "./migrate-blocked-slots";
 import { migrateMiningProductivityLevelStep } from "./migrate-mining-productivity";
 import { migrateMachineTypeStep } from "./migrate-machine-type";
@@ -768,7 +769,7 @@ export type ChestConfig = z.infer<typeof ChestConfigSchema>;
 // Config Overrides
 // ============================================================================
 
-export const ConfigOverridesSchema = z.preprocess(migrateBeltSupplyOverrides, z.object({
+export const ConfigOverridesSchema = z.preprocess(dropFractionalSwingsOverride, z.preprocess(migrateBeltSupplyOverrides, z.object({
     lcm: z.number().int().positive().optional(),
     /**
      * Forces the number of output swings per crafting cycle. Without it the generator picks the count and lowers it
@@ -776,16 +777,10 @@ export const ConfigOverridesSchema = z.preprocess(migrateBeltSupplyOverrides, z.
      */
     terminal_swing_count: z.number().int().positive().optional(),
     /**
-     * Enable fractional swing support for inserters.
-     * 
-     * When enabled, inserters with fractional swing counts (e.g., 3/2 swings per cycle)
-     * will have their cycles extended to distribute swings across multiple sub-cycles.
-     * For example, 3/2 swings becomes 1 swing in the first sub-cycle and 2 swings in the second.
-     * 
-     * The swing distribution uses a back-loaded strategy to maximize items available
-     * before swinging, while respecting automated_insertion_limit constraints.
-     * 
-     * @default false
+     * Not part of the config format: a config that carries it loads without it (migrate-fractional-swings.ts). The
+     * generator sets it on its own copy of a config to plan the "Fractional swings" alternative: inserters with
+     * fractional swing counts (e.g., 3/2 swings per cycle) alternate between 1 and 2 swings over sub-cycles, with the
+     * swings back-loaded within automated_insertion_limit.
      */
     use_fractional_swings: z.boolean().optional(),
     /**
@@ -853,7 +848,7 @@ export const ConfigOverridesSchema = z.preprocess(migrateBeltSupplyOverrides, z.
      * regardless of the clock period.
      */
     ignored_lcm_ingredients: z.array(z.string()).optional()
-}));
+})));
 
 export type ConfigOverrides = z.infer<typeof ConfigOverridesSchema>;
 
