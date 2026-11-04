@@ -101,3 +101,19 @@ describe('the cells index of a scaffold with a car', () => {
         expect(JSON.parse(result.stdout)).toEqual({ matched: 4, count: 4, problems: [], ids: ['1', '2', '3', '4'] });
     });
 });
+
+describe('the cells index of a scaffold with a turbo splitter', () => {
+    it('follows the belt past the splitter, so the logistic science build (22 assemblers) gives both inserters of its config', () => {
+        const code = `const { dist, loadSample } = require('./lib'); const { ConfigPaths } = dist('config/config-paths.js');
+            const zlib = require('zlib'), fs = require('fs'); const { cellOf } = require('./scaffold-cells');
+            loadSample('LOGISTIC_SCIENCE_240').then(config => {
+                const text = fs.readFileSync(ConfigPaths.LOGISTIC_SCIENCE_240.replace(/\\.json$/, '.scaffold'), 'utf-8').trim();
+                const blueprint = JSON.parse(zlib.inflateSync(Buffer.from(text.slice(1), 'base64')).toString('utf-8'));
+                const { cell, matched } = cellOf({ blueprint, config, name: 'logistic', clock_file: 'logistic.json' });
+                console.log(JSON.stringify({ matched, count: config.inserters.length, problems: cell.problems, ids: Object.keys(cell.inserters) }));
+            });`;
+        const result = spawnSync('node', ['-e', code], { cwd: path.join(root, 'scripts'), encoding: 'utf-8' });
+        expect(result.status, String(result.stderr)).toBe(0);
+        expect(JSON.parse(result.stdout)).toEqual({ matched: 2, count: 2, problems: [], ids: ['1', '2'] });
+    });
+});
