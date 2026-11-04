@@ -57,7 +57,6 @@ export const ConfigPaths = {
     JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS: path.join(CONFIG_SAMPLES_DIR, 'gleba', 'jellynut-processing', 'jellynut-processing-rocket-fuel-biochambers.json'),
     /** Real cells of bases built in the game, with their scaffold and the rate measured in the base (milestone M1) */
     REAL_STUPIDFATHOBBIT_CELL02: path.join(CONFIG_SAMPLES_DIR, 'real', 'stupidfathobbit', 'cell02', 'stupidfathobbit-cell02.json'),
-    REAL_COMPOSITE04_CELL07: path.join(CONFIG_SAMPLES_DIR, 'real', 'composite04', 'cell07', 'composite04-cell07.json'),
     REAL_THAELN_CELL09: path.join(CONFIG_SAMPLES_DIR, 'real', 'thaeln', 'cell09', 'thaeln-cell09.json'),
     /** The lithium plate build, 80 a second: two cryogenic plants fill a rocket silo used as a chest, which six furnaces empty */
     REAL_OWNER_PINK_SCIENCE_RECYCLER: path.join(CONFIG_SAMPLES_DIR, 'real', 'owner', 'pink-science-recycler', 'pink-science-recycler.json'),

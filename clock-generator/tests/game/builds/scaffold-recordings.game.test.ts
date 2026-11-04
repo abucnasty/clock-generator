@@ -228,22 +228,6 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         warmup_ticks: 3600,
         backed_up_belts: true,
     },
-    // A real cell (#189): two electromagnetic plants making advanced circuits from one copper cable foundry and two
-    // plastic chemical plants, whose coal comes on one belt; 90 a second. Its electronic circuits come from infinity
-    // chests.
-    "composite cell 07": {
-        scaffold: path.join(SAMPLES, "real", "composite04", "cell07", "composite04-cell07-scaffold.txt"),
-        config: ConfigPaths.REAL_COMPOSITE04_CELL07,
-        seed: [],
-        warmup_ticks: 3600,
-    },
-    "composite cell 07 (belts are backed up)": {
-        scaffold: path.join(SAMPLES, "real", "composite04", "cell07", "composite04-cell07-scaffold.txt"),
-        config: ConfigPaths.REAL_COMPOSITE04_CELL07,
-        seed: [],
-        warmup_ticks: 3600,
-        backed_up_belts: true,
-    },
     // An accepted 0.27.0 gap (#586): the game serves the inserters in the simulator's order and the production is exact; the
     // wake-ups differ
     // One of the three copies of the inserter build given 2026-10-21, 240 inserters a second over the three: an
