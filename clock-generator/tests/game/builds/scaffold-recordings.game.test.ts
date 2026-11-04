@@ -52,10 +52,13 @@ const SAMPLES = path.join(SAMPLE_BUILDS_DIR);
  * (steady state), and is then recorded for a minute.
  */
 const WINDOW_TICKS = 3600;
-/** Ticks recorded after the settle: one minute, cut into whole clock periods; a clock that counts more than a minute is recorded over one period */
+/**
+ * Ticks recorded after the settle: one minute, cut into whole clock periods; a clock that counts more than a minute is recorded
+ * over a tick more than its period, so a whole period stands between two wraps
+ */
 const RECORDED_TICKS = 3600;
-/** The longest clock period recorded (a run is at most 15 minutes of game time); a clock that counts more is skipped */
-const MAX_RECORDED_PERIOD = 36_000;
+/** The longest clock period recorded: two of them stay within 10 minutes (a run is at most 15 minutes of game time); a longer one is skipped */
+const MAX_RECORDED_PERIOD = 18_000;
 /** The most ticks a build may take to reach steady state, and a staged start to be recorded */
 const SETTLE_CAP_TICKS = 36_000;
 /** What the probe writes into the game's script-output */
@@ -516,7 +519,8 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                     save: SAVE!,
                     blueprint: fs.readFileSync(build.scaffold, "utf-8").trim(),
                     out: `${base}.json`,
-                    ticks: build.staged_start ? SETTLE_CAP_TICKS : RECORDED_TICKS,
+                    // a clock longer than a minute: a tick more than its period, so the recorder holds a whole period between two wraps
+                    ticks: build.staged_start ? SETTLE_CAP_TICKS : Math.max(RECORDED_TICKS, period + 1),
                     warmup_ticks: build.staged_start ? 0 : build.warmup_ticks,
                     settle_ticks: build.staged_start ? undefined : SETTLE_CAP_TICKS + 1,
                     seed: build.staged_start ? [] : build.seed,
