@@ -1,0 +1,23 @@
+{
+  "format": "clock-record-1",
+  "job": "overhood-over-hood-turbo-unmirrored-backed-different-items",
+  "group": "overhood",
+  "name": "over-hood-turbo-unmirrored-backed-different-items",
+  "config_sha256": "2cab1cfeef9cf3485f5b00cc8d234cb7940153c2df13fc36f9fb8f05e65c7b93",
+  "job_results_sha256": "48a6e3c077813398ef1db7d10a2e50b78529262f672841aa4d2717fbbe51e24a",
+  "selected": "planned-belt-slack",
+  "selected_windows": {
+    "inserter:1": "1-73",
+    "inserter:2": "77-338"
+  },
+  "alternatives": [
+    {"id": "planned-belt-slack", "verdict": "stable", "holds": true, "rate": 6, "supply": "backed_up", "period": 960, "wake_ups": 3.754, "descriptions_cut": 0, "clock_sha256": "91a7311000b1333a154ef9003e94b6ad24d90368c99089c2e78e72b3786e0a76", "windows_sha256": "1833899f43c856d1c02f9a28536d5cd975f52ab738a4d042be6e52f37d432972", "text_sha256": "19be7421990a4160e1fdd10f7359b70fad95e3edb753ad75af476367abe89b2b", "results_sha256": "ee386ae0227b014f9a2f6f6d1e6b53c7898a30ce2b1bb5f8bb83a08f0f2b8144"},
+    {"id": "fractional", "verdict": "stable", "holds": true, "rate": 6, "supply": "backed_up", "period": 800, "wake_ups": 4.506, "descriptions_cut": 0, "clock_sha256": "5fa66a571772204f932e67002d23690293201e47786151cb61e28f0b54de6aef", "windows_sha256": "6b73f1b2fc6b5c6aad42d7ecd48c97bde5735d3146867c833984da7e7a8c1997", "text_sha256": "3dc83192b38a95151048e7999ebdb571f67f3475d8bef22c9449dc251fab60d6", "results_sha256": "750a7a83d66825896a6a9c9a6e016b73faf28f5a4ec471a38d6544767f124944"},
+    {"id": "swings-7", "verdict": "unstable", "holds": false, "rate": 6, "supply": "backed_up", "period": 1120, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "2774e35ceaaf157f484507f6c470a51979d2c6e0ffa80e4a872d8cae45ebe226", "windows_sha256": "61bb40c912708ccd218fee58abbd6a64d5e4f1c92d051d7ae10dab99f11308c6", "text_sha256": "8a8ff3e3676ee2e643e6d742082ca57517fb3471cfa7f6ad94770d9bccccb363", "results_sha256": "58341ba4c9110a1dbde7c27cf4e8f7ea93089a399e77af09077cb436c71f6cbb"},
+    {"id": "swings-8", "verdict": "unstable", "holds": false, "rate": 5.25, "supply": "backed_up", "period": 1280, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "284eaf13ae4cacb18902670c9af29de126778950d1a7e734a8b82a3d26cc25d5", "windows_sha256": "a5708bd2f403119d443ac3596a2ded19d8eef09813a541806e70a64a3ff4d850", "text_sha256": "0f355cc329b98549aaf7dcfb85b6c2da8658f1a6a5e8eeec539228438d234153", "results_sha256": "28ca3cfd17cce804d20e28abc42b34f760535ed7cb26e0e28a73e53923e3a488"},
+    {"id": "swings-4", "verdict": "stable", "holds": true, "rate": 6, "supply": "backed_up", "period": 640, "wake_ups": 5.634, "descriptions_cut": 0, "clock_sha256": "3d21dab184e1d710f414300214cde223d9a25982cf4611d878e85caf50a76059", "windows_sha256": "df8c9394ff590c997b59f4496b5e374325d136454effbd3ce8eebd2f37911308", "text_sha256": "019142766810632a0df22b683e07569e3aee49324174a69883dbb9bb4e8095f5", "results_sha256": "a9a9b5f9fe2e7d70a22fffdac62818ab923db807d3a01642941828940b8e2f2e"},
+    {"id": "swings-3", "verdict": "stable", "holds": true, "rate": 6, "supply": "backed_up", "period": 480, "wake_ups": 7.516, "descriptions_cut": 0, "clock_sha256": "4c65f0a62b6693b59b281b19de639dced1dfcb55ccf7d12a49e667247190be53", "windows_sha256": "12cf9c190c78d4a6fdcd3230978e02628ff6e9eef7b28417c54f08a486108f67", "text_sha256": "32b099ec1e34a7b1616a0b83b50899fca30044741ff643e39f4bf2796497965b", "results_sha256": "6e36c8b4c9240b6e0c4fe7854912a62d57195d6319437d668b84a99d6a81f3a5"},
+    {"id": "swings-2", "verdict": "stable", "holds": true, "rate": 6, "supply": "backed_up", "period": 320, "wake_ups": 11.285, "descriptions_cut": 0, "clock_sha256": "ac9af25a6f0ab532cc2e01d5344f6d71a9aa972c25a635e77462f38f3e844bf5", "windows_sha256": "bf13ef174c388e51b63dd3c5e51d9c3e57aa7bb961fb1c760dbd421f69d38587", "text_sha256": "7602029a31ec420db9fc9ec20c9c35288c91650c342f465f99a4a0f6cb3a9679", "results_sha256": "1588335ae23a893ae6bac175123ff7036bd2ccc2fe5e0a86e3107b9250c1c0f0"},
+    {"id": "swings-1", "verdict": "stable", "holds": true, "rate": 6, "supply": "backed_up", "period": 160, "wake_ups": 22.642, "descriptions_cut": 0, "clock_sha256": "b552856da44d055a327a1702fc0b67359afa37e21e7dc753d96853dac54d5f76", "windows_sha256": "51f7a355033f05da7feef38b04ab8e1886fd7c3a8960673d953c50e3b4c598ee", "text_sha256": "518b7d18cac0be025ccac67ddd89d76cefea24980f362a149a87708a1c93c5bf", "results_sha256": "9c2b39a54e2e4888004e5813359b12c0e1eb7eac62b81126aeaf088aeef5e7b1"}
+  ]
+}

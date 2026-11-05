@@ -1,0 +1,22 @@
+{
+  "format": "clock-record-1",
+  "job": "front-front-exit-turbo-mirrored-moving-config-different-items",
+  "group": "front",
+  "name": "front-exit-turbo-mirrored-moving-config-different-items",
+  "config_sha256": "f7b03fdbe850967bc65e5af0cc065d1b494ec35ef66c14da579756bafdce8d04",
+  "job_results_sha256": "50f826d389caff7823be8d3afba94d2a47e741c8d74f718145a79baad5da9e7c",
+  "selected": "planned-belt-slack",
+  "selected_windows": {
+    "inserter:1": "1-37,97-133,193-229,289-325,385-421,481-517,577-613,673-709,769-805,865-901,961-997",
+    "inserter:2": "25-49,121-145,217-243,313-337,347-361,409-423,435-449,505-516,523-549,610-635,697-723,793-819,889-915,985-1011"
+  },
+  "alternatives": [
+    {"id": "planned-belt-slack", "verdict": "stable", "holds": true, "rate": 30, "supply": "moving", "period": 1056, "wake_ups": 197.915, "descriptions_cut": 0, "clock_sha256": "0cb1605bd7b1bdbf53b23e201b14d69d652bc6d7f591fc08e6abeed04f4904d7", "windows_sha256": "0221194dfb95d4cf2d7384e14563509e8a34b7474447f05d077d757866eafa4f", "text_sha256": "fb621c751c4569a83bdf6948baadf9fef30eb1b85a0dc8afd4aa7ce9e92345ee", "results_sha256": "81802aa1ba7c674e0133a68787475be6b8e2be5f857d2f1fa0634c07c529965b"},
+    {"id": "swings-4", "verdict": "unstable", "holds": false, "rate": 27.954545454545453, "supply": "moving", "period": 1408, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "6674a8df639c9baf720495576032edff17d331127de50e6dd09ebd288c1b922b", "windows_sha256": "649eef6e62dd8e59f5d9fe8e947be8662875813d0cf289dbfe770434fe846083", "text_sha256": "dffca1f2cc7c4e4f752277a5e39f08edd92d3080c2f9e6f26d7c41f43097ed13", "results_sha256": "ec0bc870df6246afa19b78be2edfb62cd44ae7b23960995ed3862dfb8dbb66cd"},
+    {"id": "swings-5", "verdict": "unstable", "holds": false, "rate": 24, "supply": "backed_up", "period": 1760, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "80bdeb02d93536868f9d7a59206f722cf90f794ce0bb3037080c4e3b03958a69", "windows_sha256": "ef04c967f2010f7238277e36673516afb19c87f9ffee5656bb1ba79b3eb37116", "text_sha256": "1a0dbd6c818b19d5fc19c22960c47689e56dc0d03ae891e7485cddcbc9d13225", "results_sha256": "c7b4d49451fcd396999424cbbe540f5622e9e0c13767c4d11552712b27186ba3"},
+    {"id": "swings-6", "verdict": "unstable", "holds": false, "rate": 20.90909090909091, "supply": "moving", "period": 2112, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "7c498999a3a1328dd29c40f3ef5cc1e066b646671b3ddc5115e140cee399b668", "windows_sha256": "34a9cef257a68a26aab8300788b56641b7d50c8591b409d8786a3f71e0bc26b9", "text_sha256": "070bc8599a31f5489b320b04de6953fd658610b8227c347b22e557b4e1144d46", "results_sha256": "df8d36ea56fb8888c7895b457e3dbd1ade7d22580cfb3bb4d9ad3bf3d0b210df"},
+    {"id": "swings-7", "verdict": "unstable", "holds": false, "rate": 21.428571428571427, "supply": "moving", "period": 2464, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "c3e0931e1186b3ff07b03809a3666eb1f75b5d4766fa3648bcfd4c3de08b5109", "windows_sha256": "a81fbb36f551845642d77ab957780f50364a147206318e94d2bf3e7c913b930e", "text_sha256": "9ac8ef925098dabc55f7e0a6ae437ba634350d5bbf830d91190495288a2ed3c3", "results_sha256": "f2137a9d77acb7f30d2433e498cdfdf369137132dd708d7fa57b905f801f5a5d"},
+    {"id": "swings-2", "verdict": "stable", "holds": true, "rate": 30, "supply": "moving", "period": 704, "wake_ups": 302.134, "descriptions_cut": 0, "clock_sha256": "6428836828c7d9dbb29e64af896ca1e5e336625277b5fb198e1a4e204921dc08", "windows_sha256": "1fc1c37c0adcfc3483e52a0ea87b1b05c8e3d2049b2383fad7d2843e1872a66e", "text_sha256": "f56743479071bb96824838d3f107aa4f5e744ee27568ee90be5fc20c11c91230", "results_sha256": "add205d37201fa03bdf2201824d58dd4b30c06f29743be1d99ec4c31419c62cc"},
+    {"id": "swings-1", "verdict": "stable", "holds": true, "rate": 30, "supply": "moving", "period": 352, "wake_ups": 584.615, "descriptions_cut": 0, "clock_sha256": "7f20b6be7baddf6a75bdae62ee3e1991ca4bb6d0e6846cacf33a93c43c144a5e", "windows_sha256": "195b802c45cabd40979e1fab5789b8b255ba473857320b5741c250ac0e151b16", "text_sha256": "379ba575bce47dac1531eadf46c6217194252cf2d8ddae549d8fe766333ab8c5", "results_sha256": "9a2b6823c7c920390b91f0a6ab1cd25e0f71e461682a5e8580acaee4f3a14c72"}
+  ]
+}

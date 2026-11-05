@@ -1,0 +1,23 @@
+{
+  "format": "clock-record-1",
+  "job": "front-front-entrance-turbo-unmirrored-moving-same-item",
+  "group": "front",
+  "name": "front-entrance-turbo-unmirrored-moving-same-item",
+  "config_sha256": "99274c0edb494daebd7b980858cc1871908a2e33c9a9b2c2ff10b60c251931c3",
+  "job_results_sha256": "48a6e3c077813398ef1db7d10a2e50b78529262f672841aa4d2717fbbe51e24a",
+  "selected": "planned-belt-slack",
+  "selected_windows": {
+    "inserter:1": "1-70",
+    "inserter:2": "65-198"
+  },
+  "alternatives": [
+    {"id": "planned-belt-slack", "verdict": "stable", "holds": true, "rate": 6, "supply": "moving", "period": 960, "wake_ups": 0, "descriptions_cut": 0, "clock_sha256": "c87993796a6adcf5eaab87095fdaf296999e69983997d413452fe74fe236d2c4", "windows_sha256": "360fd375a492dda3b6f4cf1b54b15113cdb9c953e6edf2972584ed2ff120cbd1", "text_sha256": "0431bdc9a514577536f8566a857459f6ff5bf28766091779bf7b8866f1401cfd", "results_sha256": "2343cf3ade63800002fb61a985a90f8248af3ee0b9a477d8793b4d6f4cc2104a"},
+    {"id": "fractional", "verdict": "stable", "holds": true, "rate": 6, "supply": "moving", "period": 800, "wake_ups": 0, "descriptions_cut": 0, "clock_sha256": "0b10c40906ce88ba8c298669d1fc37e903ddf905cc286fcbdaa78c998b6e5634", "windows_sha256": "30076394b1e01d4f4aaccab5ff66586c2be0c953ca62fa43acf2e4455be04365", "text_sha256": "2f3d70779c56f6828a6f21aad0d2494cefce8d0067ad74b8912cba91af3cff39", "results_sha256": "1e9b350ee801437053429433cd019679ff05ff000a62dcd659e0dea502106942"},
+    {"id": "swings-7", "verdict": "unstable", "holds": false, "rate": 6, "supply": "moving", "period": 1120, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "f0f3285471f1423606aac877fe8e40961cb52acccb2f3d5baae5e6f19d2f8d34", "windows_sha256": "196570bad9fedcc3970f3af1236411108b26701a98b1bec460413f4cfbacf9b0", "text_sha256": "657b08e8526ef8ccc157510921e293d204f7b7ae8cc57b376f7848391ef689e4", "results_sha256": "9a6a7954b497461706f321b6eaedda103c33edd524d08ed2d6ded1789df56ac3"},
+    {"id": "swings-8", "verdict": "unstable", "holds": false, "rate": 5.25, "supply": "moving", "period": 1280, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "61705d71b2bf468473c681aaa72786ac7c52dab39ce699901b3248628198e54c", "windows_sha256": "f05e7b823691aae5950a912df931e2c1a1ce2761ac0e3b6becf2b8e25c921d19", "text_sha256": "e9de5df2914eff5697bb08298b880516201bab5a509aa45662f1f5ef479560a5", "results_sha256": "4d428139f3b7710190361fe8b0ad8bcd7155a8a8d682cb4a79a43cb635a81162"},
+    {"id": "swings-4", "verdict": "stable", "holds": true, "rate": 6, "supply": "moving", "period": 640, "wake_ups": 5.625, "descriptions_cut": 0, "clock_sha256": "ded3ebd64edfe9cc3b76b0973d15224add98f2e88e8058389ef484399de84966", "windows_sha256": "ec4e53330da1e3bcd140157706f45e28ddcf168db28af650daca207fcf08eb54", "text_sha256": "291d2d1c2d7d96f2eb0ad02532ed12a7a3c142ab02f8fef327b3304f7d8c95e4", "results_sha256": "ca85b300d6f637ff481b6adfd2abd4ec4f4fe72a4d94ef693f5491a5113ebf48"},
+    {"id": "swings-3", "verdict": "stable", "holds": true, "rate": 6, "supply": "moving", "period": 480, "wake_ups": 7.5, "descriptions_cut": 0, "clock_sha256": "9a6740fb9cbc05e57e260ff0285347185d6db2507eb620d62220c6e1a77dd309", "windows_sha256": "37208f9909305449755babdc8abc87e5080f0201a0b5173cead01fccfc6d4eb3", "text_sha256": "4f7d316b6265f2f876fabd1f54efb564744c2809eb1aebad90f5b0e9f2c16e5f", "results_sha256": "468802fd3b2a9ce65cb689e50af93c4e4822ff4bbe1f7a18e66e42245d5ab4f5"},
+    {"id": "swings-2", "verdict": "stable", "holds": true, "rate": 6, "supply": "moving", "period": 320, "wake_ups": 11.25, "descriptions_cut": 0, "clock_sha256": "39c0f7e888bdf3e22cfacb3aecbeb6bce1c319211bccb8c9da8af88d504d5f8a", "windows_sha256": "07c10fb44f7266f9b7165498a4298af553b491159b9a0023200619e9ba437e45", "text_sha256": "1123cc073208bb101c884b6ba20b1851810ee3f986bb04401142248e0bf243df", "results_sha256": "5545feefb6d561ba6a05d1226ab88d2b0f3a81f962a6dbd8440c3303c79745d8"},
+    {"id": "swings-1", "verdict": "stable", "holds": true, "rate": 6, "supply": "moving", "period": 160, "wake_ups": 22.5, "descriptions_cut": 0, "clock_sha256": "3432d568ba1de4ab415cad12f25e7f87c4dc830457acee8258827188c8327d3f", "windows_sha256": "a1a822d52fc9dc46d16aa2fdef68dff6d79052f3337c3bf539f4cc7be4fd2b47", "text_sha256": "a6f1a15975f178f4e914a3c75c3b77caa2ca314017b2918457ed9251025cfddd", "results_sha256": "dbd87d235b4f3bd2d28c7e34759f869e67b550be81b6d91a6e249fd2dcf9caee"}
+  ]
+}
