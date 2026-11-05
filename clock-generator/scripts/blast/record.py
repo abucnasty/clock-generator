@@ -28,8 +28,6 @@ ALTERNATIVE_FIELDS = ['id', 'verdict', 'holds', 'rate', 'supply', 'period', 'wak
                       'windows_sha256', 'text_sha256', 'results_sha256']
 # wake-ups a minute are written to this many decimals: the record is read by people, and the results digest holds the rest
 WAKE_UP_DECIMALS = 3
-# files of the folder that are not records
-NOT_RECORDS = {'README.md', 'MOVES.md'}
 
 
 def die(message):
@@ -83,6 +81,9 @@ def load_jobs(path):
     if not os.path.exists(listing):
         die(f'{path} has no _jobs.json: the record holds each job\'s config hash')
     hashes = {e['key']: e.get('config_sha256') for e in json.load(open(listing)).get('jobs', [])}
+    listed = sorted(k for k in hashes if not os.path.exists(os.path.join(d, k + '.json')))
+    if listed:
+        die(f'{path} is an incomplete run: {len(listed)} listed jobs have no result ({", ".join(listed[:5])}{", ..." if len(listed) > 5 else ""})')
     records = {}
     for f in files:
         key = os.path.basename(f)[:-5]

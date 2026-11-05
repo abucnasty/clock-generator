@@ -19,7 +19,7 @@ A field's name and meaning do not change; a new field or a changed meaning is a 
 | `job_results_sha256` | the digest of what belongs to the job and no alternative: why it is not stable, the selected index, the alternatives' ids |
 | `selected` | the id of the selected alternative (one of `alternatives`) |
 | `selected_windows` | the selected clock's windows: for each inserter or drill, `start-end` pairs in ticks of the period (`0-10,54-64`: the opening edge and the closing edge of each window); empty when the machine has none |
-| `alternatives` | every alternative, in the generator's order, one per line |
+| `alternatives` | every alternative, in the generator's order, one per line. Only the selected clock's windows are written out; an alternative carries the hash of its windows (`windows_sha256`), since written out they would be four times the size of everything else (1.4 MB for 33 jobs) |
 | `error` | instead of the fields from `job_results_sha256` on, when the config failed to generate: the error |
 
 An alternative:
@@ -27,13 +27,13 @@ An alternative:
 | Field | Meaning |
 | --- | --- |
 | `id` | the alternative's id, unique in the job |
-| `verdict` | stable, unstable or whatever the generator says of it |
+| `verdict` | the generator's verdict: `stable`, `unstable` or `no recovery` |
 | `holds` | whether the clock holds the target |
 | `rate` | items a second it makes |
-| `supply` | the belt's kind (`moving` or `backed`), or null |
+| `supply` | the belt's kind the alternative was weighed with: `moving` or `backed_up`; null where the build has none |
 | `period` | the period in ticks |
 | `wake_ups` | inserter wake-ups a minute, to three decimals; null where the clock has none |
-| `descriptions_cut` | descriptions Factorio's 500 bytes would cut (0 is the rule) |
+| `descriptions_cut` | how many descriptions Factorio's 500-byte limit cut (0 in all but one alternative of the first record) |
 | `clock_sha256` | the hash of the exported clock's identity (the blueprint without its text, and the schedule): the hash a game recording is tied to |
 | `windows_sha256` | the hash of all this alternative's windows (the selected one's are in `selected_windows`) |
 | `text_sha256` | the hash of the exported blueprint with its text, which moves with any description |

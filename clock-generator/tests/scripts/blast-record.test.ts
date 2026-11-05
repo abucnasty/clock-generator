@@ -70,6 +70,17 @@ describe('record.py write', () => {
         expect(fs.existsSync(path.join(dir, 'config-B.json'))).toBe(false);
     });
 
+    it('refuses an incomplete run, which would delete the records of the jobs it lacks', () => {
+        const dir = written({ A: jobFile('A'), B: jobFile('B') });
+        const partial = side({ A: jobFile('A'), B: jobFile('B') });
+        fs.rmSync(path.join(partial, 'config-B.json'));
+        const done = run('write', '--dir', dir, partial);
+        expect(done.status).toBe(1);
+        expect(done.stderr).toContain('incomplete run: 1 listed jobs have no result (config-B)');
+        expect(fs.existsSync(path.join(dir, 'config-B.json'))).toBe(true);
+        expect(run('check', '--dir', dir, partial).status).toBe(1);
+    });
+
     it('refuses a folder with no job and a run without a job list', () => {
         const empty = path.join(tmp, `side${count++}`);
         fs.mkdirSync(empty);
