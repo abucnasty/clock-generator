@@ -430,18 +430,6 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [],
         warmup_ticks: 3600,
     },
-    // The owner's processing unit build (2026-11-05): one electromagnetic plant (legendary, 90.372) between two infinity chests, one
-    // chest of circuits (200 of each kind) and one that voids the units, each through one inserter; the sulfuric acid comes from an
-    // infinity pipe. 15 a second from one copy (the build's most is 36.1). The selected clock (1 output swing per cycle, 128 ticks)
-    // does not hold the target in the game (2026-11-05): 16 processing units in every one of 28 periods checked where 32 are
-    // needed (7.5 a second, 50%), the first inserter moving 88 items a period where the simulator moves 176 and the machine
-    // finishing half the crafts. Recorded raw, not tuned.
-    "processing units between two chests": {
-        scaffold: path.join(SAMPLES, "intermediates", "processing-unit", "processing-unit-15-chest-fed.scaffold"),
-        config: ConfigPaths.PROCESSING_UNIT_15_CHEST_FED,
-        seed: [],
-        warmup_ticks: 3600,
-    },
     // The owner's military science build (2026-11-05): a science assembler (66.0253) fed grenades by a grenade assembler (57.8125)
     // that takes iron from a foundry (112.244) and coal from a belt of its own (both lanes, six infinity chests); stone walls and
     // piercing rounds come on one backed-up belt, one lane each. The packs go onto a moving belt into a void chest. 24 a second from
