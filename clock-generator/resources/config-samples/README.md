@@ -86,9 +86,9 @@ was recorded in the game for each build, its credit, source and issues are in th
 | IRON_PLATE_80_CAR_CHEST | `smelting/iron-plate/iron-plate-80-car-chest` | `iron-plate` 80/s over 1 copy | Game: a car as a chest; sidecar-export mechanics; known differences #587 | REAL_OWNER_CAR |
 | LITHIUM_PLATE_80_SILO_CHEST | `smelting/lithium-plate/lithium-plate-80-silo-chest` | `lithium-plate` 80/s over 1 copy | Game: a rocket silo as a chest; side-loaded output; three sidecar-export mechanics tests; an always-on override honoured and reported, set inline (from a dropped buffer-chest build) | REAL_OWNER_LITHIUM_SILO |
 | STEEL_PLATE_26_WAGON_CHEST | `smelting/steel-plate/steel-plate-26-wagon-chest` | `steel-plate` 26/s over 1 copy | Game: a cargo wagon as a hub; sidecar-export mechanics; blast SLOW job | STEEL_CARGO_WAGON |
-| STONE_BRICK_120_DRILL_DIRECT_INSERT | `smelting/stone-brick/stone-brick-120-drill-direct-insert` | `stone-brick` 120/s over 3 copies | Units: always-enabled override, primitive alternatives, output count | STONE_BRICKS_DIRECT_INSERT_2_1 |
+| STONE_BRICK_120_DRILL_DIRECT_INSERT | `smelting/stone-brick/stone-brick-120-drill-direct-insert` | `stone-brick` 120/s over 3 copies | Game (`scaffold-recordings`, on the owner's build and its own export); units: always-enabled override, primitive alternatives, output count | STONE_BRICKS_DIRECT_INSERT_2_1 |
 | IRON_BACTERIA_380_CULTIVATION | `gleba/iron-bacteria/iron-bacteria-380-cultivation` | `iron-bacteria` 380/s over 1 copy | Game: the loop with a timed belt end; loop-windows units | IRON_BACTERIA_CULTIVATION |
-| ROCKET_FUEL_60 | `gleba/rocket-fuel/rocket-fuel-60` | `rocket-fuel` 60/s over 1 copy | Rocket-fuel generation and many units; fuel clocks (from the merged seed-belt config: fuel-clock blueprint, clock-period-with-lock); hand size 15 against 16 set inline (from the merged stack-15 config: its generation file, decider-order, feasibility); taker orders of the four jelly inserters and the seed by-product take-off (from the merged by-product config) | GLEBA_ROCKET_FUEL. It absorbed three configs: GLEBA_ROCKET_FUEL_JELLY_STACK_15, JELLYNUT_PROCESSING_ROCKET_FUEL and JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS |
+| ROCKET_FUEL_60 | `gleba/rocket-fuel/rocket-fuel-60` | `rocket-fuel` 60/s over 1 copy | Game (`scaffold-recordings`, on the owner's build); rocket-fuel generation and many units; fuel clocks (from the merged seed-belt config: fuel-clock blueprint, clock-period-with-lock); hand size 15 against 16 set inline (from the merged stack-15 config: its generation file, decider-order, feasibility); taker orders of the four jelly inserters and the seed by-product take-off (from the merged by-product config) | GLEBA_ROCKET_FUEL. It absorbed three configs: GLEBA_ROCKET_FUEL_JELLY_STACK_15, JELLYNUT_PROCESSING_ROCKET_FUEL and JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS |
 | IRON_ORE_VOIDER_400_EXACT_SPEED | `recycling/iron-ore/iron-ore-voider-400-exact-speed` | `iron-ore` 400/s destroyed over 1 copy | Game (an hour, binomial range) and generation: the `counts: "destroyed"` target; two cells with different margins (batched vs even hands) | REAL_OWNER_ORE_VOIDER_EXACT_SPEED |
 | IRON_ORE_VOIDER_400_OVERBEACONED | `recycling/iron-ore/iron-ore-voider-400-overbeaconed` | `iron-ore` 400/s destroyed over 1 copy | As IRON_ORE_VOIDER_400_EXACT_SPEED: the same cell with 6 beacons on the recycler (crafting speed 26.634) | REAL_OWNER_ORE_VOIDER_OVERBEACONED |
 
@@ -105,12 +105,14 @@ label is trusted. One copy each, in the build's item folder, named `<stem>.scaff
 In the order they would settle the most:
 1. **PRODUCTION_SCIENCE_120_TWO_BELTS** (the shared variants of production science are merged into it or dropped): its rate
    changed in the sweep.
-2. **ROCKET_FUEL_60**: 3-swing rates swapped between the two jelly stack configs (hands of 16 and, set in the tests, 15).
-3. **MILITARY_SCIENCE_120**, **FLYING_ROBOT_FRAME_160**, **STONE_BRICK_120_DRILL_DIRECT_INSERT**, **ELECTRIC_FURNACE_20**:
+2. **MILITARY_SCIENCE_120**, **FLYING_ROBOT_FRAME_160**, **ELECTRIC_FURNACE_20**:
    never recorded.
 
 Not on the list any more: **LOGISTIC_SCIENCE_240** (2026-11-04). Its scaffold is the owner's whole build, 22 assemblers, not one copy;
 the test names the copies (`copies: 22`).
+
+Also not on the list any more (2026-11-04, the owner's builds): **ROCKET_FUEL_60** and **STONE_BRICK_120_DRILL_DIRECT_INSERT**, each with the
+owner's scaffold and a game check of the selected clock.
 
 ## Backpressure loss
 
