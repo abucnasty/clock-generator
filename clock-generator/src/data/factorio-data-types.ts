@@ -178,6 +178,11 @@ export interface FactorioData {
   "transport_belt": Record<string, TransportBeltPrototype>
   /** Every item's weight as the running game holds it (in 1/65536 parts; resources/dump-item-weights.js) */
   "item_weight": Record<ItemName, number>
+  /**
+   * Every item in the order the game sorts an inventory (item group, subgroup, then the item, each by its `order` and
+   * then its name; resources/filter-raw.js): an infinity chest's slots are in this order
+   */
+  "item_order": ItemName[]
   /** The game's English names by id, items (entities and fluids too) and recipes apart (resources/locale-names.js) */
   "names"?: { item: Record<string, string>; recipe: Record<string, string> }
 }

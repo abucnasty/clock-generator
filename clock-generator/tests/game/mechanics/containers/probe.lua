@@ -1,11 +1,13 @@
 -- Containers as chests, compared with the simulator inserter by inserter. On install the probe puts a container's
 -- starting contents in (options.car: {slot, item, count} per slot; options.silo: {rocket = {{item, count}}, input = ...})
 -- and then logs, every tick for options.ticks ticks, each inserter's hand when it changes. At the end it writes the
--- hands, what each inserter holds, a container's slots and a silo's rocket inventory and input slots.
+-- hands, what each inserter holds, a container's slots, a silo's rocket inventory and input slots, and with options.infinity
+-- the slots of the build's one infinity chest.
 local entities = ...
-local inserters, car, wagon, silo, chest, drill = {}, nil, nil, nil, nil, nil
+local inserters, car, wagon, silo, chest, drill, infinity = {}, nil, nil, nil, nil, nil, nil
 for _, entity in pairs(entities) do
     if entity.type == "inserter" then table.insert(inserters, entity)
+    elseif entity.type == "infinity-container" and options.infinity then infinity = entity
     elseif entity.type == "car" then car = entity
     elseif entity.type == "cargo-wagon" then wagon = entity
     elseif entity.type == "rocket-silo" then silo = entity
@@ -78,6 +80,8 @@ script.on_nth_tick(1, function()
             report.slots = slots(container.get_inventory(car and defines.inventory.car_trunk or defines.inventory.cargo_wagon))
         end
         if chest then report.chest = contents(chest.get_inventory(defines.inventory.chest)) end
+        -- options.infinity: the one infinity chest's slots, as the game keeps them
+        if infinity then report.infinity_slots = slots(infinity.get_inventory(defines.inventory.chest)) end
         if drill then
             report.drill = {status = drill.status, drop_target = fed and fed.name or nil, mining_target = drill.mining_target and drill.mining_target.name or nil,
                 fed_input = silo and contents(silo.get_inventory(defines.inventory.crafter_input)) or nil}

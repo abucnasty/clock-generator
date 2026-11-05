@@ -1,6 +1,6 @@
 # Containers as chests
 
-`containers.game.test.ts` records ten builds in the game, unclocked, and compares each with the simulator inserter by
+`containers.game.test.ts` records twelve builds in the game, unclocked, and compares each with the simulator inserter by
 inserter: the hand each inserter carried at its fullest, what it holds at the end, the container's slots, or the
 silo's rocket inventory and input slots. The probe ([probe.lua](probe.lua)) puts a container's starting contents in.
 
@@ -12,6 +12,8 @@ silo's rocket inventory and input slots. The probe ([probe.lua](probe.lua)) puts
 | `wagon-sink` | a wagon with five slots filtered to copper filled by two feeders to the last slot |
 | `wagon-blocked-slots` | a wagon with 39 slots blocked by No item or Deconstruction planner fills its one free slot; Sidecar exports both blocking filters as blocked slots and the full wagon empty |
 | `car-source` | a car of mixed items emptied by an unfiltered inserter: the last slot's item first, a hand across stacks |
+| `infinity-source` | an infinity chest of electronic circuits, cable, plastic and processing units (filters in that order) into an advanced circuit machine: the chest's slots read in the game are in the game's inventory order (plastic, cable, electronic circuits, processing units), and the hand takes electronic circuits, cable, then plastic, the last slot's item the machine takes first |
+| `infinity-source-reversed` | the same with the filters reversed: the same slots and hands |
 | `drill-into-car` | a big mining drill on iron ore fills a car (the car build's geometry) to its 80 stacks and waits for room |
 | `drill-into-filtered-car` | the same with five car slots filtered to copper plates: the ore fills the 75 free slots only |
 | `drill-into-chest` | the drill fills a steel chest (the config's buffer chest) to its 48 stacks; recorded from 60 ticks in, as an empty chest is not exported |
@@ -29,6 +31,10 @@ No silo crafts: its sinks lack rocket fuel or have a recipe of another quality, 
 blueprint builds the inserters in descending config id, so the game serves inserter 1 first in a tick, as the
 simulator does. `CONTAINERS_BUILD_ORDER=ascending` builds them the other way and `CONTAINERS_POSITION=x,y` moves the
 build; the ascending order is recorded but not asserted. `CONTAINERS_CAPTURE_DIR` keeps each run's comparison.
+
+The two infinity chest builds were recorded in Factorio 2.1.24 (0.27.2, #617): the slots and every hand as the simulator
+has them, where until 0.27.2 the simulator took plastic second, the machine's ingredient order. The run stops before the
+machine's first craft ends.
 
 `wagon-blocked-slots` was also recorded in Factorio 2.1.23: the game and simulator agree on every hand and slot,
 with 100 iron plates in the free slot and no items in the 39 blocked slots. The recording's config uses the real
