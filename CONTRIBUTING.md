@@ -32,8 +32,8 @@ impact: `fix`, then `feature`, then `perf`.
 
 ### Body
 
-Start from the type's template in `.github/PULL_REQUEST_TEMPLATE/`
-(`gh pr create --template .github/PULL_REQUEST_TEMPLATE/<template>.md`):
+Start from the type's template in `.github/PULL_REQUEST_TEMPLATE/`: copy it, fill it and pass it with
+`gh pr create --body-file <file>` (`--template` works only in an interactive terminal):
 
 | Template | Types |
 | --- | --- |
