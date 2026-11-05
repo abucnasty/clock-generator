@@ -6,7 +6,6 @@ import {clockIdentity} from "./clock-identity";
 import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config/schema";
-import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
 import {inserterCraftingClockCases} from "../../tests/game/builds/inserter-crafting-240-shared-signal-clock-fixtures";
 import {readControls, runHolds, RunControls} from "../../tests/game/builds/clock-controls";
 
@@ -23,10 +22,6 @@ beforeAll(async () => {
     generated = generateClockAlternatives(config, {logger: quiet});
     backed_up = generateClockAlternatives({...config, overrides: {...config.overrides, backed_up_belts: true}}, {logger: quiet});
 }, 300_000);
-
-test("inserter crafting clock: every inserter and drill a clock leaves always on says why", () => {
-    expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
-});
 
 // the clock recorded on the three copies (swings-6) is no longer the selected one; the next test finds it still made
 test("inserter crafting clock: the selected clock is swings-2, and the one recorded on the three copies is another it makes", () => {

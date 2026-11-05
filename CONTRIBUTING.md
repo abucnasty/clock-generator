@@ -133,7 +133,10 @@ A generation is shared within a file and no further: Vitest runs each file in a 
 one file needs the selection of a build that another file generates from the same config, make the check in the file
 that generates it (`expectPinnedScaffoldClock` in `tests/game/builds/` does), and
 keep a test in the first file that the other still makes it. A game-tied pin of a selection that is a job of the record
-(`clock-generator/record/`) is checked against the record by `clock-controls.test.ts`, with no generation of its own.
+(`clock-generator/record/`) is checked against the record by `clock-controls.test.ts`, with no generation of its own. A
+property that must hold of every job's result (not a value) belongs in `clock-generator/tests/game/builds/record-properties.ts`,
+which the blast runs on every alternative of every job and `blast.sh record check` reports; do not write it again as a test of
+one build.
 
 Prioritize reducing repeated generation and simulation work; adding workers is not a substitute, especially
 on CI runners with limited CPU capacity. Preserve every case, phase, clock offset and recovery check.

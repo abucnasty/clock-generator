@@ -4,7 +4,6 @@ import {lossId} from "./backpressure-loss";
 import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config/schema";
-import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
 import {GENERATED_ALTERNATIVE, logisticDirectInsertClockCases} from "../../tests/game/builds/logistic-science-240-direct-insert-clock-fixtures";
 import {readControls, RunControls, runHolds} from "../../tests/game/builds/clock-controls";
 
@@ -19,10 +18,6 @@ beforeAll(async () => {
     config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240_DIRECT_INSERT);
     generated = generateClockAlternatives(config, {logger: quiet});
 }, 300_000);
-
-test("logistic science direct insert clock: every inserter a clock leaves always on says why", () => {
-    expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
-});
 
 test("logistic science direct insert clock: the selected clock is fractional swings of 96 ticks, stable on moving belts, and the simulator gets back from both losses", () => {
     const selected = generated.alternatives[generated.selected_index];

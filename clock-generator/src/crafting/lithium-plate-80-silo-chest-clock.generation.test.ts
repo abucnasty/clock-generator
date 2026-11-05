@@ -3,7 +3,6 @@ import {ClockAlternativesResult, generateClockAlternatives} from "./generate-blu
 import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config/schema";
-import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
 import {lithiumSiloCases} from "../../tests/game/builds/lithium-plate-80-silo-chest-clock-fixtures";
 import {readControls, runHolds, RunControls} from "../../tests/game/builds/clock-controls";
 
@@ -16,10 +15,6 @@ let generated: ClockAlternativesResult;
 beforeAll(async () => {
     config = await loadConfigFromFile(ConfigPaths.LITHIUM_PLATE_80_SILO_CHEST);
     generated = generateClockAlternatives(config, {logger: quiet});
-});
-
-test("lithium silo: every inserter and drill a clock leaves always on says why", () => {
-    expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
 });
 
 test("lithium silo: the even-hands clock is selected; the clock with 3 output swings, recorded in the game, is another it makes", () => {

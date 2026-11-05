@@ -1,11 +1,19 @@
 import fs from "fs";
 import {describe, expect, test} from "vitest";
 import {ConfigPaths} from "../../../src/config/config-paths";
-import {ClockControl, ClockHistory, coldClockReferenceMismatches, historicalPinMismatches, pinMismatches, readControls, readRecordJob, RecordJob, recordMismatches, RecordLink} from "./clock-controls";
+import {ClockControl, ClockHistory, coldClockReferenceMismatches, fixtureAlternativeMismatches, historicalPinMismatches, pinMismatches, readControls, readRecordJob, RecordJob, recordMismatches, RecordLink} from "./clock-controls";
 import {coldStart} from "./pickup-clock-cold-start-runs";
 import {scaffoldClockPins} from "./scaffold-recordings-clock-pins";
 import {handMadeClockHash as grenadeClockHash} from "./grenade-clock-fixtures";
-import {handMadeClockHash} from "./inserter-crafting-240-shared-signal-clock-fixtures";
+import {handMadeClockHash, inserterCraftingClockCases} from "./inserter-crafting-240-shared-signal-clock-fixtures";
+import {carCases} from "./iron-plate-80-car-chest-clock-fixtures";
+import {steelWagonCases} from "./steel-plate-26-wagon-chest-clock-fixtures";
+import {lithiumSiloCases} from "./lithium-plate-80-silo-chest-clock-fixtures";
+import {GENERATED_ALTERNATIVE as LOGISTIC_ALTERNATIVE} from "./logistic-science-240-direct-insert-clock-fixtures";
+import {GENERATED_ALTERNATIVE as GRENADE_ALTERNATIVE, grenadeClockCases} from "./grenade-clock-fixtures";
+import {GENERATED_ALTERNATIVE as PRODUCTIVITY_ALTERNATIVE} from "./productivity-module-80-chest-chain-clock-fixtures";
+import {GENERATED_ALTERNATIVE as UTILITY_ALTERNATIVE} from "./utility-science-480-lds-foundry-chain-clock-fixtures";
+import {GENERATED_ALTERNATIVE as CIRCUIT_EXPORT_ALTERNATIVE, PROCESSING_UNIT_80_CIRCUIT_EXPORT_CASES} from "./processing-unit-80-circuit-export-clock-fixtures";
 
 /**
  * Every game test that runs a generated clock compares what the game did with a recording, and the recording belongs to
@@ -210,6 +218,43 @@ const NO_RECORD_JOB: Record<string, string[]> = {
     "steel-plate-26-wagon-chest-clock-controls.json": ["steel-wagon-iron-ore-out-of-period"],
 };
 const NO_RECORD_JOB_SCAFFOLD = ["agricultural science (belts are backed up)"];
+
+/**
+ * The alternative each game test's fixture says it records, by entry name, for the families whose fixture names one (the
+ * others record the job's selection, whatever it is). The record check above finds the pin's alternative in the record
+ * by `generation.selection.id`; a fixture that names another one would be recorded in the game on a clock the pin is not
+ * of, and nothing but this finds it now that the generation tests do not read the fixture's id.
+ */
+const FIXTURE_ALTERNATIVES: Record<string, Record<string, string>> = {
+    "inserter-crafting-240-shared-signal-clock-controls.json": Object.fromEntries(inserterCraftingClockCases().filter(it => it.alternative !== undefined).map(it => [it.name, it.alternative!])),
+    "iron-plate-80-car-chest-clock-controls.json": Object.fromEntries(carCases().map(it => [it.name, it.alternative])),
+    "steel-plate-26-wagon-chest-clock-controls.json": Object.fromEntries(steelWagonCases().map(it => [it.name, it.alternative])),
+    "lithium-plate-80-silo-chest-clock-controls.json": Object.fromEntries(lithiumSiloCases().map(it => [it.name, it.alternative])),
+    "logistic-science-240-direct-insert-clock-controls.json": {"generated-one-copy": LOGISTIC_ALTERNATIVE},
+    "grenade-clock-controls.json": Object.fromEntries(grenadeClockCases().filter(it => it.kind === "generated clock").map(it => [it.name, GRENADE_ALTERNATIVE])),
+    "productivity-module-80-chest-chain-clock-controls.json": {"generated-one-copy": PRODUCTIVITY_ALTERNATIVE},
+    "utility-science-480-lds-foundry-chain-clock-controls.json": {"generated-one-copy": UTILITY_ALTERNATIVE},
+    "processing-unit-80-circuit-export-clock-controls.json": Object.fromEntries(PROCESSING_UNIT_80_CIRCUIT_EXPORT_CASES.map(it => [it.name, CIRCUIT_EXPORT_ALTERNATIVE])),
+};
+
+describe("the fixtures name the alternative their pin is of", () => {
+    describe.each(Object.entries(FIXTURE_ALTERNATIVES))("%s", (file, named) => {
+        const controls = readControls(file).cases;
+        test("every entry with a generation pin has a fixture that names its alternative, and it is the pin's selection.id", () => {
+            expect(fixtureAlternativeMismatches(controls, named)).toEqual([]);
+        });
+        test("every fixture that names an alternative has an entry in the controls", () => {
+            expect(Object.keys(named).filter(name => controls[name] === undefined)).toEqual([]);
+        });
+    });
+    test("a fixture and a pin that name different alternatives, or a pin with no fixture alternative, are found, with the entry and both ids", () => {
+        const pin = (id: string) => ({generation: {selection: {id}}}) as unknown as ClockControl;
+        expect(fixtureAlternativeMismatches({one: pin("swings-2")}, {one: "swings-2"})).toEqual([]);
+        expect(fixtureAlternativeMismatches({one: pin("swings-2")}, {one: "swings-3"})).toEqual(["one: the fixture records swings-3 and the pin is of swings-2"]);
+        expect(fixtureAlternativeMismatches({one: pin("swings-2")}, {})).toEqual(["one: has a generation pin and its fixture names no alternative"]);
+        expect(fixtureAlternativeMismatches({one: {} as ClockControl}, {})).toEqual([]);
+    });
+});
 
 describe("the record", () => {
     test("every family of controls with a generation pin has a link to the record", () => {

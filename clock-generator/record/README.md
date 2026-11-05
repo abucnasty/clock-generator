@@ -51,6 +51,28 @@ bash scripts/blast/blast.sh record check <out>          # the table of differenc
 A run that is cached (the key of the engine and the job list) writes the record in seconds. After a rename of jobs, `record check --map <renames.txt>`
 takes the blast's rename map (`old-job-key new-job-key` a line) and compares a renamed job with its new name.
 
+## The properties
+
+What must be true of the result of every job, whatever the build, is checked on every alternative of every job by one module,
+[`tests/game/builds/record-properties.ts`](../tests/game/builds/record-properties.ts). It runs in the blast, on the live results (the simulation's
+histories are too big to keep), and writes what it found into the job file as `properties` (not into the record): the alternatives each
+property applied to, and the problems. `blast.sh record check` fails on any problem with a table of job, property, alternative and the
+values. The five properties:
+
+| Property | It says |
+| --- | --- |
+| `always-on-reasons-named` | every inserter and drill a clock leaves always on says why, and nothing that has a window has a reason |
+| `decider-build-order` | the order the check gives the window deciders is the order the exported blueprint builds them in |
+| `stable-holds-and-survives-loss` | a clock is tried for backpressure loss when it is not unstable; it is stable only when it survives; a clock that meets the target rate is stable |
+| `counters-add-up` | the per-inserter counters add up to the wake-ups, and the clock-level figures agree with the alternative |
+| `fuel-never-dry` | no machine that burns fuel runs out of it in the fuel consumption view |
+
+A property states what a result must satisfy; the record pins the values. A property that fails on a job is a finding about that job's
+result, and is not loosened to pass: a job that cannot satisfy one for a reason of its own goes in `EXCEPTIONS` of the module, with the
+reason, and the pull request says so. A job file made before the module, or carried by a selective run from one, has no `properties` (or
+those of another version of the module): `record check` fails on it, and `blast.sh run --full` makes it again (`--allow-unchecked` lists
+such jobs and goes on).
+
 ## MOVES.md
 
 A pull request that changes any record file commits the new files and adds an entry to [MOVES.md](MOVES.md) naming each moved job and why.

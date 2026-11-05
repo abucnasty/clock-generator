@@ -4,7 +4,7 @@ import { backpressureLossOf, generateClockAlternatives, type ClockAlternative } 
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import type { Config } from "../config/schema";
-import { alwaysOnReasonProblemsOf, quiet } from "./generate-blueprint-test-helpers";
+import { quiet } from "./generate-blueprint-test-helpers";
 
 // The clocks of whole samples, generated and tried for backpressure loss, which takes seconds: the trials themselves and
 // the losses a build can have are tested in backpressure-loss.test.ts
@@ -22,25 +22,6 @@ describe("what the generator calls stable", () => {
         const generated = generateClockAlternatives(config, { logger: quiet });
         alternatives = generated.alternatives;
         selected = alternatives[generated.selected_index];
-    });
-
-    it("names why every inserter and drill a clock leaves always on is", () => {
-        expect(alwaysOnReasonProblemsOf(config, { alternatives })).toEqual([]);
-    });
-
-    it("tries every clock that holds its expected output for backpressure loss, and no other", () => {
-        expect(alternatives.some(alternative => alternative.verdict !== "unstable")).toBe(true);
-        expect(alternatives.some(alternative => alternative.verdict === "unstable")).toBe(true);
-        for (const alternative of alternatives) {
-            expect(alternative.assessment.backpressure_loss !== null, alternative.id).toBe(alternative.verdict !== "unstable");
-        }
-    });
-
-    it("is a clock that holds its expected output and gets back to it after every loss", () => {
-        for (const alternative of alternatives) {
-            expect(alternative.verdict === "stable", alternative.id).toBe(alternative.verdict !== "unstable" && alternative.assessment.backpressure_loss!.survives);
-            expect(alternative.ranking.meets_target_rate && alternative.verdict !== "stable", alternative.id).toBe(false);
-        }
     });
 
     it("gives a clock the verdict the trials give its windows", () => {

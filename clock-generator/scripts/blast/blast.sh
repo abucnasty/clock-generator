@@ -35,10 +35,14 @@
 #   blast.sh record write <jobs> [--dir D]  writes the record (clock-generator/record/, one small JSON per job: the selected clock and every
 #                                           alternative, record.py) from a jobs folder or a cache entry (by key) of a run of all six groups
 #                                           (BLAST_GROUPS=config,pickup,overhood,front,blocked,containers)
-#   blast.sh record check [--map f] [--dir D] [--summary f] <jobs>
+#   blast.sh record check [--map f] [--dir D] [--summary f] [--allow-unchecked] <jobs>
 #                                           regenerates the records from <jobs> and compares them with the committed ones field by field:
 #                                           a table of job, field, before, after; exits 1 on any difference (--map: a rename map as in
-#                                           `compare`, applied to the committed records)
+#                                           `compare`, applied to the committed records); then the properties of the run (the job files'
+#                                           `properties`, tests/game/builds/record-properties.ts: five properties on every alternative of every job,
+#                                           judged where the results are made): a table of job, property, alternative and the values, exit 1 on any
+#                                           problem, and on a job with none of them (a run from before the module, or carried from one: --full
+#                                           reruns it; --allow-unchecked lists such jobs and goes on)
 #   blast.sh list                           the cache's entries
 #
 # The worktree may be another checkout than this script's: blast.blastrun.ts, blast.digest.ts, blast.recorder.ts and the two vitest configs beside this
@@ -241,11 +245,12 @@ store_entry() { # $1 jobs dir, $2 source json
 }
 
 cmd=${1:-}; shift || true
-DRY=""; N=4; NSLOW=10; STORE=1; BUILD=1; NOTE=""; FULL=0; BASE=""; MAP=""; RDIR=""; SUMMARY=""; ARGS=(); MADE=()
+DRY=""; ALLOW=""; N=4; NSLOW=10; STORE=1; BUILD=1; NOTE=""; FULL=0; BASE=""; MAP=""; RDIR=""; SUMMARY=""; ARGS=(); MADE=()
 while [ $# -gt 0 ]; do
   case "$1" in
     -n) N=$2; NSLOW=$2; shift ;;
     --no-store) STORE=0 ;;
+    --allow-unchecked) ALLOW=1 ;;
     --no-build) BUILD=0 ;;
     --note) NOTE=$2; shift ;;
     --full) FULL=1 ;;
@@ -332,7 +337,7 @@ case "$cmd" in
   record) sub=${ARGS[0]:-}; case "$sub" in write|check) ;; *) die "record write|check <jobs> (see the header)" ;; esac
     [ ${#ARGS[@]} -eq 2 ] || die "record $sub <jobs folder or cache entry>"
     jobs=$(entry_arg "${ARGS[1]}") || exit 1
-    python3 "$HERE/record.py" "$sub" ${MAP:+--map "$MAP"} ${RDIR:+--dir "$RDIR"} ${SUMMARY:+--summary "$SUMMARY"} "$jobs" ;;
+    python3 "$HERE/record.py" "$sub" ${MAP:+--map "$MAP"} ${RDIR:+--dir "$RDIR"} ${SUMMARY:+--summary "$SUMMARY"} ${ALLOW:+--allow-unchecked} "$jobs" ;;
   list) python3 "$HERE/cache.py" list "$CACHE" ;;
   *) sed -n '2,/^set -u/{/^#/p}' "$0"; exit 2 ;;
 esac

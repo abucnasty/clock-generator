@@ -8,19 +8,26 @@ usage:
                                                     files of jobs <jobs> does not have (a folder of job files made by
                                                     blast.sh run with BLAST_GROUPS=config,pickup,overhood,front,blocked,containers,
                                                     or a cache entry)
-  record.py check [--dir record/] [--map renames.txt] [--summary file] <jobs>
+  record.py check [--dir record/] [--map renames.txt] [--summary file] [--allow-unchecked] <jobs>
                                                     regenerates the records from <jobs> and compares them with <dir> field by
                                                     field; prints a table of job, field, before (the committed record) and
-                                                    after (<jobs>); exit 1 on any difference or when a side has no job
+                                                    after (<jobs>); then the properties of <jobs> (below); exit 1 on any
+                                                    difference, any property problem or when a side has no job
 
 --map: the blast's rename map (`old-job-key new-job-key` a line, '#' starts a comment): the committed record's jobs are
 renamed through it before the join, so a renamed job compares with its new name; the config hash of a renamed job is
 a field like another (a pure rename keeps it; a config_sha256 row says it did not). --summary: the table is also appended to this file (GITHUB_STEP_SUMMARY).
 
+The properties: every job file the blast writes holds `properties`, what tests/game/builds/record-properties.ts found on the live
+results of the job (the five properties, on every alternative; the results are too big to keep). `check` fails, with a table of job,
+property, alternative and the values, on any problem; it also fails on a job file with no `properties`, one the module could not run
+on, or one judged by another version of the module than the checkout's (a run made before the module, or carried from one by a
+selective run): rerun with `blast.sh run --full`, or pass --allow-unchecked to list them and go on.
+
 The format (clock-record-1) is documented in clock-generator/record/README.md. Field names are stable: a new field is a new
 format number.
 """
-import glob, json, os, re, sys
+import glob, hashlib, json, os, re, sys
 
 FORMAT = 'clock-record-1'
 # the fields of an alternative, in the order they are written
@@ -91,6 +98,61 @@ def load_jobs(path):
             die(f'{key} is not in the job list of {path} (or has no config hash)')
         records[key] = project(json.load(open(f)), hashes[key])
     return records
+
+
+MODULE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'tests', 'game', 'builds', 'record-properties.ts')
+
+
+def load_properties(path):
+    """the `properties` of each job file of a jobs folder or cache entry, {job key: properties, or None where the file has none};
+    a job that failed to generate has none to have (the record says it failed)"""
+    d = jobs_dir(path)
+    out = {}
+    for f in sorted(glob.glob(os.path.join(d, '*.json'))):
+        if os.path.basename(f).startswith('_'):
+            continue
+        body = json.load(open(f))
+        if 'error' not in body:
+            out[os.path.basename(f)[:-5]] = body.get('properties')
+    return out
+
+
+def module_sha256(module):
+    try:
+        return hashlib.sha256(open(module, 'rb').read()).hexdigest()
+    except OSError as e:
+        die(f'cannot read the property module {module}: {e.strerror}')
+
+
+def property_rows(properties, module, allow_unchecked):
+    """(rows, unchecked, totals, excepted): the rows (job, property, alternative, found) of what the properties found, the jobs with no
+    usable result of them (and why), what ran: [jobs, alternatives checked a property on, seconds], and the rows of what the
+    module's named exceptions found (not problems, and shown)"""
+    rows, unchecked, excepted = [], [], []
+    jobs = alternatives = 0
+    seconds = 0.0
+    current = module_sha256(module)
+    for key in sorted(properties):
+        p = properties[key]
+        if p is None:
+            unchecked.append((key, 'no properties in the job file (made before the module, or carried from such a run)'))
+        elif 'error' in p:
+            rows.append((key, '(module)', '', p['error']))
+        elif p.get('module_sha256') != current:
+            unchecked.append((key, f"judged by another version of the property module ({str(p.get('module_sha256'))[:12]}.. against {current[:12]}..)"))
+        else:
+            jobs += 1
+            alternatives += sum(p['checked'].values())
+            seconds += p.get('seconds', 0)
+            rows.extend((key, q['property'], q['alternative'], q['message']) for q in p['problems'])
+            excepted.extend((key, e['property'], e['alternative'], f"{len(e['found'])} found, excepted: {e['reason']}") for e in p.get('excepted', []))
+    return rows, unchecked, [jobs, alternatives, seconds], excepted
+
+
+def property_table(rows):
+    cells = [('job', 'property', 'alternative', 'found')] + rows
+    widths = [max(len(c[i]) for c in cells) for i in range(3)]
+    return '\n'.join('  '.join(c[i].ljust(widths[i]) for i in range(3)) + '  ' + c[3] for c in cells)
 
 
 def load_record(directory):
@@ -214,7 +276,9 @@ def table(rows):
 def parse(argv):
     pos, opts, i = [], {}, 0
     while i < len(argv):
-        if argv[i] in ('--dir', '--map', '--summary'):
+        if argv[i] == '--allow-unchecked':
+            opts['allow-unchecked'] = True; i += 1
+        elif argv[i] in ('--dir', '--map', '--summary', '--module'):
             if i + 1 >= len(argv):
                 die(f'{argv[i]} takes an argument')
             opts[argv[i][2:]] = argv[i + 1]; i += 2
@@ -254,16 +318,37 @@ def main(argv):
               + (f'; map entries not in the record: {unused}' if unused else ''))
 
     jobs_moved = len({r[0] for r in rows})
+    failed = False
     if not rows:
         print(f'record.py: {len(after)} jobs, {sum(len(r.get("alternatives", [])) for r in after.values())} alternatives: no difference from the record in {directory}')
-        return 0
-    text = table(rows)
-    print(f'record.py: {len(rows)} differences in {jobs_moved} of {len(set(before) | set(after))} jobs (the record in {directory} against the run)\n')
-    print(text)
-    if opts.get('summary'):
-        with open(opts['summary'], 'a') as out:
-            out.write(f'### Record check: {len(rows)} differences in {jobs_moved} jobs\n\n```\n{text}\n```\n')
-    return 1
+    else:
+        failed = True
+        text = table(rows)
+        print(f'record.py: {len(rows)} differences in {jobs_moved} of {len(set(before) | set(after))} jobs (the record in {directory} against the run)\n')
+        print(text)
+        if opts.get('summary'):
+            with open(opts['summary'], 'a') as out:
+                out.write(f'### Record check: {len(rows)} differences in {jobs_moved} jobs\n\n```\n{text}\n```\n')
+    # the properties of the run's results, on every alternative of every job
+    allowed = opts.get('allow-unchecked', False)
+    found, unchecked, (jobs, checked, seconds), excepted = property_rows(load_properties(pos[0]), opts.get('module') or MODULE, allowed)
+    print(f'\nrecord.py: properties checked on {jobs} jobs ({checked} alternative checks, {seconds:.1f} s of the module): '
+          f'{len(found)} problems' + (f', {len(unchecked)} jobs with no result of them' if unchecked else ''))
+    if found:
+        failed = True
+        text = property_table(found)
+        print('\n' + text)
+        if opts.get('summary'):
+            with open(opts['summary'], 'a') as out:
+                out.write(f'### Properties: {len(found)} problems in {len({r[0] for r in found})} jobs\n\n```\n{text}\n```\n')
+    for key, prop, alternative, what in excepted:
+        print(f'  excepted: {key} {prop} {alternative}: {what}')
+    for key, why in unchecked:
+        print(f'  {key}: {why}')
+        failed = failed or not allowed
+    if unchecked and not allowed:
+        print('record.py: the properties were not checked on these jobs: rerun them (blast.sh run --full), or pass --allow-unchecked')
+    return 1 if failed else 0
 
 
 if __name__ == '__main__':

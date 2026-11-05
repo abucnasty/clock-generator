@@ -2,7 +2,6 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { generateClockAlternatives, type ClockAlternative } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
-import { alwaysOnReasonProblemsOf } from "./generate-blueprint-test-helpers";
 
 describe("generateClockForConfig", () => {
 
@@ -39,10 +38,6 @@ describe("generateClockForConfig", () => {
             observed = alternatives.find(a => a.label === "Observed windows: 2 output swings per cycle, subtick clock")!;
             one_swing = alternatives.find(a => a.label === "1 output swing per cycle, subtick clock")!;
             two_swings = alternatives.find(a => a.label === "2 output swings per cycle, subtick clock")!;
-        });
-
-        it("names why every inserter and drill a clock leaves always on is", () => {
-            expect(alwaysOnReasonProblemsOf(config, { alternatives })).toEqual([]);
         });
 
         it("selects the observed windows of 2 output swings on a subtick clock at 45 a second: by the rate over the cycle into a sink that never blocks, the only clocks that hold are these windows", () => {

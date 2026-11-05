@@ -4,7 +4,6 @@ import {clockIdentity} from "./clock-identity";
 import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config/schema";
-import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
 import {GENERATED_ALTERNATIVE, grenadeClockCases} from "../../tests/game/builds/grenade-clock-fixtures";
 import {readControls, RunControls, runHolds} from "../../tests/game/builds/clock-controls";
 import {GROUP_GAP_TILES} from "./turn-groups";
@@ -19,10 +18,6 @@ let generated: ClockAlternativesResult;
 beforeAll(async () => {
     config = await loadConfigFromFile(ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY);
     generated = generateClockAlternatives(config, {logger: quiet});
-});
-
-test("grenade: every inserter and drill a clock leaves always on says why", () => {
-    expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
 });
 
 test("grenade: the 112-tick clock holds the target and is selected; the observed windows of the same period hold it too, and the longer ones, planned the same way, do not", () => {
