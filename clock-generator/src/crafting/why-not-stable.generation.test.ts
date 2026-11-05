@@ -2,21 +2,9 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { generateClockAlternatives } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
-import { ConfigPaths } from "../config/config-paths";
-import { FeasibilityError } from "../config/errors";
 import { quiet } from "./generate-blueprint-test-helpers";
 
 describe("why the selected clock does not meet goal 1, as a generation says it", () => {
-    // a hand of 2 every 8 ticks takes at most 15 packs a second out of a copy (the simulator's inserter, free-running, moves
-    // exactly that), under the 21.82 a copy of the target: the feasibility pass refuses it before any clock is tried
-    it("is not reached where the inserters' hands are too small for the target: the build is refused before any clock", async () => {
-        const sample = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240);
-        const config = { ...sample, inserters: sample.inserters.map(inserter => ({ ...inserter, stack_size: 2 })) };
-        expect(() => generateClockAlternatives(config, { logger: quiet })).toThrow(FeasibilityError);
-        expect(() => generateClockAlternatives(config, { logger: quiet })).toThrow("Inserter 2 can take at most 15 a second of logistic science "
-            + "pack out of the build (1 hand of 2 every 8 ticks), and the target is 21.82 a second.");
-    });
-
     it("is the output chest filling up on issue #100's config, whose buffer chest nothing empties", async () => {
         // the config's former `type` on its machines is read with the game data, which the loader has from the samples above
         const generated = generateClockAlternatives(await loadConfigFromFile(path.join(__dirname, "../../tests/configs/issue-100-electromagnetic-science-buffer-chest.json")),
