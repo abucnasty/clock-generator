@@ -108,7 +108,8 @@ export { wakeUps, wakeUpsOfStock } from "./crafting/wake-ups";
  * An infinity chest keeps its slots in the game's inventory order (`FactorioDataService.itemInventoryRankOrThrow`, docs/simulator.md
  * "What an inserter takes from an infinity chest"), so it gives the item that order puts last of those the sink takes
  * now (`ContainerHandPickup`). Cases: `simulation/components/hand-ports.test.ts`; in the game (2.1.24), 24 of 24 starts
- * of an advanced circuit machine took electronic circuits, cable, then plastic, whatever the chest's filter order.
+ * of an advanced circuit machine took electronic circuits, cable, then plastic, whatever the chest's filter order, and
+ * `tests/game/mechanics/containers` (`infinity-source`) holds the slots and hands against the simulator.
  *
  * Known limit, a stand-in: which of two inserters acting on one container in the same tick goes first. The game serves
  * the last built first; the simulator serves the lowest config id first, as for clock deciders (rule 5). Built the

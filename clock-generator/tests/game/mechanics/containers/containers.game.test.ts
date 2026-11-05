@@ -11,6 +11,7 @@ import {SlotContainer} from "../../../../src/entities/chest/slot-container";
 import {composeProbeSource} from "../../helpers/probe-source";
 import {ContainerStorage} from "../../../../src/simulation/components/container-storage";
 import { TickByHand } from "../../../../src/crafting/runner/tick-by-hand.fixture";
+import { FactorioDataService } from "../../../../src/data";
 
 /**
  * Containers as chests in the game against the simulator, inserter by inserter: the hands each inserter carried, what
@@ -68,6 +69,21 @@ function drillInto(name: string, container: Record<string, unknown>, chest: Reco
             chests: [chest, disposal(10)],
             inserters: [{id: 1, source: {type: "chest", id: 1}, sink: {type: "chest", id: 10}, stack_size: 16}]},
         probe: {fill_ticks: 30},
+    };
+}
+
+/** An infinity chest of `items`, in that filter order, north of a stack inserter into an assembling machine 3 of advanced circuits */
+function infinitySource(name: string, items: string[]): ContainerMechanicCase {
+    return {
+        name, ticks: 150,
+        entities: [{name: "infinity-chest", position: {x: 0.5, y: -2.5}, infinity_settings: {remove_unfiltered_items: false,
+            filters: items.map((item, index) => ({name: item, count: 100, mode: "exactly", index: index + 1}))}},
+        inserterEntity(0.5, -1.5, 0), {name: "assembling-machine-3", position: {x: 0.5, y: 0.5}, recipe: "advanced-circuit"}],
+        config: {target_output: {recipe: "advanced-circuit", items_per_second: 1, copies: 1}, belts: [],
+            machines: [{id: 1, recipe: "advanced-circuit", crafting_speed: 1.25, productivity: 0}],
+            chests: [{type: "infinity-chest", id: 10, item_filter: items.map(item_name => ({item_name, request_count: 100}))}],
+            inserters: [{id: 1, source: {type: "chest", id: 10}, sink: {type: "machine", id: 1}, stack_size: 16}]},
+        probe: {infinity: true},
     };
 }
 
@@ -130,6 +146,12 @@ export function containerMechanicCases(): ContainerMechanicCase[] {
                 inserters: [{id: 1, source: {type: "chest", id: 10}, sink: {type: "chest", id: 1}, stack_size: 16}]},
             probe: {sidecar: true},
         },
+        // an infinity chest of four items feeding an advanced circuit machine (ingredients electronic circuit, plastic, cable):
+        // the hand takes the item of the chest's last slot the machine takes, its slots in the game's inventory order whatever
+        // the filters say (plastic, cable, electronic circuit, processing unit), so electronic circuits, cable, then plastic;
+        // filled in turn, the machine takes no more before its first craft ends (the run stops before it)
+        infinitySource("infinity-source", ["electronic-circuit", "copper-cable", "plastic-bar", "processing-unit"]),
+        infinitySource("infinity-source-reversed", ["processing-unit", "plastic-bar", "copper-cable", "electronic-circuit"]),
         {
             // a car of mixed items emptied by an unfiltered inserter: the last slot's item first, a hand across stacks
             name: "car-source", ticks: 400,
@@ -245,6 +267,13 @@ for (const variant of containerMechanicCases()) test(`containers as chests: ${va
         fs.writeFileSync(path.join(scratch, "comparison.json"), JSON.stringify({order, position: position ?? null, game, simulated,
             rocket_parts: report.rocket_parts, drill: report.drill}, null, 2) + "\n");
         if (report.rocket_parts !== undefined) expect(report.rocket_parts, "the silo crafted nothing").toBe(0);
+        if (variant.probe.infinity) {
+            // the chest's own slots, read in the game: its items in the game's inventory order, whatever its filters say
+            const slots = (report.infinity_slots as string[]).filter(slot => slot !== "").map(slot => slot.split(":")[0]);
+            const chest = config.chests!.find(chest => chest.type === "infinity-chest")!;
+            const items = chest.type === "infinity-chest" ? chest.item_filter.map(filter => filter.item_name) : [];
+            expect(slots).toEqual([...items].sort((a, b) => FactorioDataService.itemInventoryRankOrThrow(a) - FactorioDataService.itemInventoryRankOrThrow(b)));
+        }
         if (variant.probe.sidecar) {
             // Recorder uses the real Sidecar extraction/export pipeline when it starts this capture.
             const recording = JSON.parse(fs.readFileSync(path.join(scratch, 'recording.json'), 'utf8'));
