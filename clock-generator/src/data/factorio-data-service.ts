@@ -22,6 +22,8 @@ export class FactorioDataService {
     private static factorio_data: FactorioData | null = null;
     private static initialized: boolean = false;
     private static default_source: (() => FactorioData) | null = null;
+    /** Each item's place in `item_order`, made from the data on first use */
+    private static item_ranks: Map<ItemName, number> | null = null;
 
     /**
      * Initialize the service with Factorio data.
@@ -30,6 +32,7 @@ export class FactorioDataService {
      */
     public static initialize(data: FactorioData): void {
         this.factorio_data = data;
+        this.item_ranks = null;
         this.initialized = true;
     }
 
@@ -317,6 +320,21 @@ export class FactorioDataService {
             throw new Error(`Item ${item} has no weight in the game data`);
         }
         return weights[item];
+    }
+
+    /**
+     * An item's place in the order the game sorts an inventory (the data's `item_order`): an infinity chest holds its
+     * items in their slots in this order, the lowest first. An item the data does not order is refused
+     */
+    public static itemInventoryRankOrThrow(item: ItemName): number {
+        if (this.item_ranks === null) {
+            this.item_ranks = new Map(this.getData().item_order.map((name, rank) => [name, rank]));
+        }
+        const rank = this.item_ranks.get(item);
+        if (rank === undefined) {
+            throw new Error(`Item ${item} has no place in the game data's inventory order`);
+        }
+        return rank;
     }
 
     /** What all the technologies together add to the hand of an inserter */
