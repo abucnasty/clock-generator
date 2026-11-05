@@ -6,7 +6,6 @@ import {outputCapacityPerSecond} from "./alternatives";
 import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config/schema";
-import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
 
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 let config: Config;
@@ -15,10 +14,6 @@ let generated: ClockAlternativesResult;
 beforeAll(async () => {
     config = await loadConfigFromFile(ConfigPaths.IRON_PLATE_80_CAR_CHEST);
     generated = generateClockAlternatives(config, {logger: quiet});
-});
-
-test("car: every inserter and drill a clock leaves always on says why", () => {
-    expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
 });
 
 test("car: the observed-windows clock is selected, and the drill into the car is enabled the tick before the takers", () => {

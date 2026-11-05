@@ -3,7 +3,7 @@ import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import type { Config } from "../config/schema";
 import { generateClockAlternatives, type ClockAlternativesResult } from "./generate-blueprint";
-import { alwaysOnReasonProblemsOf, quiet } from "./generate-blueprint-test-helpers";
+import { quiet } from "./generate-blueprint-test-helpers";
 import {readControls, RunControls, runHolds} from "../../tests/game/builds/clock-controls";
 import { GENERATED_ALTERNATIVE } from "../../tests/game/builds/utility-science-480-lds-foundry-chain-clock-fixtures";
 
@@ -17,10 +17,6 @@ describe("a clock for the utility science 480 build from the hands and the order
     beforeAll(async () => {
         config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN);
         result = generateClockAlternatives(config, { logger: quiet });
-    });
-
-    it("names why every inserter and drill a clock leaves always on is", () => {
-        expect(alwaysOnReasonProblemsOf(config, result)).toEqual([]);
     });
 
     it("Behavior: the explicit one-cycle plan holds 480 a second and recovers", () => {

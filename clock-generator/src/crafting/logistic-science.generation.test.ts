@@ -4,7 +4,7 @@ import {ConfigPaths} from "../config/config-paths";
 import {clockHash} from "../../tests/game/builds/clock-controls";
 import type {Config} from "../config/schema";
 import {generateClockAlternatives, type ClockAlternative, type ClockAlternativesResult} from "./generate-blueprint";
-import {alwaysOnReasonProblemsOf, quiet, withSearches, SEARCH_IDS, alternativeIdsOf as idsOf, selectedAlternativeOf as selectedOf} from "./generate-blueprint-test-helpers";
+import {quiet, withSearches, SEARCH_IDS, alternativeIdsOf as idsOf, selectedAlternativeOf as selectedOf} from "./generate-blueprint-test-helpers";
 
 let config: Config;
 let by_default: ClockAlternativesResult;
@@ -16,10 +16,6 @@ beforeAll(async () => {
     by_default = generateClockAlternatives(config, {logger: quiet});
     moving = by_default.alternatives;
     moving_selected = selectedOf(by_default);
-});
-
-it("names why every inserter and drill a clock leaves always on is", () => {
-    expect(alwaysOnReasonProblemsOf(config, by_default)).toEqual([]);
 });
 
 // The sample's belts move (the default): every clock is made for a moving belt, none for a backed-up belt

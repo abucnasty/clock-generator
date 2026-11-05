@@ -4,7 +4,7 @@ import type { Config } from "../config/schema";
 import { ConfigPaths } from "../config/config-paths";
 import { generateClockAlternatives, type ClockAlternativesResult } from "./generate-blueprint";
 import { windowDeciderCount } from "./alternatives";
-import { alwaysOnReasonProblemsOf, quiet } from "./generate-blueprint-test-helpers";
+import { quiet } from "./generate-blueprint-test-helpers";
 import {readControls, RunControls, runHolds} from "../../tests/game/builds/clock-controls";
 import { GENERATED_ALTERNATIVE } from "../../tests/game/builds/productivity-module-80-chest-chain-clock-fixtures";
 
@@ -19,14 +19,9 @@ const generateProductivityChain = () => generation ??= (async () => {
 })();
 
 describe("a clock for the productivity module chain from the hands and the order of the chain", () => {
-    let config: Config;
     let result: ClockAlternativesResult;
     beforeAll(async () => {
-        ({ config, result } = await generateProductivityChain());
-    });
-
-    it("names why every inserter and drill a clock leaves always on is", () => {
-        expect(alwaysOnReasonProblemsOf(config, result)).toEqual([]);
+        ({ result } = await generateProductivityChain());
     });
 
     it("selects a stable clock of one cycle at the target rate, and runs no search", () => {

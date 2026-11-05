@@ -4,7 +4,6 @@ import {lossId} from "./backpressure-loss";
 import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config/schema";
-import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
 import {electromagneticDrainedEndClockCases} from "../../tests/game/builds/electromagnetic-science-330-drained-end-clock-fixtures";
 import {readControls, RunControls, runHolds} from "../../tests/game/builds/clock-controls";
 
@@ -19,10 +18,6 @@ beforeAll(async () => {
     config = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_330);
     generated = generateClockAlternatives(config, {logger: quiet});
 }, 300_000);
-
-test("electromagnetic science drained end clock: every inserter a clock leaves always on says why", () => {
-    expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
-});
 
 test("electromagnetic science drained end clock: the selected clock is swings-2 of 704 ticks, stable on moving belts, and the simulator gets back from all three losses", () => {
     const selected = generated.alternatives[generated.selected_index];

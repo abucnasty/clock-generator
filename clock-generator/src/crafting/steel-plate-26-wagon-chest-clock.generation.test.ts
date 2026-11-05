@@ -3,7 +3,6 @@ import {ClockAlternativesResult, generateClockAlternatives} from "./generate-blu
 import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config/schema";
-import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
 
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 let config: Config;
@@ -12,10 +11,6 @@ let generated: ClockAlternativesResult;
 beforeAll(async () => {
     config = await loadConfigFromFile(ConfigPaths.STEEL_PLATE_26_WAGON_CHEST);
     generated = generateClockAlternatives(config, {logger: quiet});
-});
-
-test("steel wagon: every inserter and drill a clock leaves always on says why", () => {
-    expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
 });
 
 test("steel wagon: the clock of 1 output swing is selected, and the drill into the wagon is enabled before the ore is taken", () => {

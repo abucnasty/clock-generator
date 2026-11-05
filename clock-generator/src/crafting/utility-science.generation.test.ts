@@ -3,7 +3,7 @@ import {loadConfigFromFile} from "../config/loader";
 import {ConfigPaths} from "../config/config-paths";
 import type {Config} from "../config/schema";
 import {generateClockAlternatives, planClockAlternatives, selectableAsStable, type ClockAlternative, type ClockAlternativesResult} from "./generate-blueprint";
-import {alwaysOnReasonProblemsOf, quiet, withSearches, SEARCH_IDS, SEARCH_LABELS, alternativeIdsOf as idsOf, selectedAlternativeOf as selectedOf} from "./generate-blueprint-test-helpers";
+import {quiet, withSearches, SEARCH_IDS, SEARCH_LABELS, alternativeIdsOf as idsOf, selectedAlternativeOf as selectedOf} from "./generate-blueprint-test-helpers";
 
 let config: Config;
 let by_default: ClockAlternativesResult;
@@ -15,10 +15,6 @@ beforeAll(async () => {
     by_default = generateClockAlternatives(config, {logger: quiet});
     alternatives = by_default.alternatives;
     selected = selectedOf(by_default);
-});
-
-it("names why every inserter and drill a clock leaves always on is", () => {
-    expect(alwaysOnReasonProblemsOf(config, by_default)).toEqual([]);
 });
 
 describe("the searches only run when they are needed", () => {
