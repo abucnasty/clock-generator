@@ -132,16 +132,18 @@ describe("matching inserters that take from chests of different types into one m
 
 describe("matching an inserter whose belt holds more or fewer items than the config says", () => {
     /** A machine fed from a belt that carries the given items, as read at one moment of the build */
-    function recordingWithBelt(items: string[]) {
+    function recordingWithBelt(items: string[], dropped: string[] = ["iron-gear-wheel"]) {
         return parseRecording({
             format: "clock-generator-recording", version: 1, start_game_tick: 0, sample_count: 0,
             config: {
                 machines: [{ id: 1, recipe: "automation-science-pack" }],
-                inserters: [{ source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: 16 }],
+                inserters: [{ source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: 16 },
+                    { source: { type: "machine", id: 1 }, sink: { type: "belt", id: 1 }, stack_size: 16, filters: dropped }],
                 belts: [{ id: 1, type: "turbo-transport-belt", lanes: items.map(ingredient => ({ ingredient, stack_size: 4 })) }],
             },
             machines: [{ id: 1, name: "assembling-machine-3", recipe: "automation-science-pack", samples: { status: [], crafting_progress: [], bonus_progress: [], products_finished: [], inputs: {}, outputs: {} } }],
-            inserters: [{ id: 1, name: "stack-inserter", source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: 16, samples: { held_count: [], held_item: [], status: [] } }],
+            inserters: [{ id: 1, name: "stack-inserter", source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: 16, samples: { held_count: [], held_item: [], status: [] } },
+                { id: 2, name: "stack-inserter", source: { type: "machine", id: 1 }, sink: { type: "belt", id: 1 }, stack_size: 16, samples: { held_count: [], held_item: [], status: [] } }],
         });
     }
     const configWithBelt = (items: string[]) => ({
@@ -158,6 +160,11 @@ describe("matching an inserter whose belt holds more or fewer items than the con
     test("a belt read after its by-product reached it is the config's belt that does not name it", () => {
         const match = matchRecordingToConfig(recordingWithBelt(["copper-plate", "iron-gear-wheel"]), configWithBelt(["copper-plate"]));
         expect(match.inserters.get(1)).toBe(1);
+    });
+
+    test("a lane that is empty because the build has not filled it yet is not the config's belt", () => {
+        const match = matchRecordingToConfig(recordingWithBelt(["copper-plate"], ["automation-science-pack"]), configWithBelt(["copper-plate", "iron-gear-wheel"]));
+        expect(match.inserters.has(1)).toBe(false);
     });
 
     test("a belt of other items is not the config's belt", () => {
