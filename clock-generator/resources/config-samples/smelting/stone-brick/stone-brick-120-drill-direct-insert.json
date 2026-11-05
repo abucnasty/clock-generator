@@ -10,24 +10,35 @@
       "recipe": "stone-brick",
       "productivity": 50,
       "crafting_speed": 91.875,
-      "prototype": "electric-furnace"
+      "prototype": "electric-furnace",
+      "quality": "legendary",
+      "recipe_quality": "normal",
+      "position": {
+        "x": -503.5,
+        "y": -1069.5
+      }
     }
   ],
   "inserters": [
     {
-      "id": 1,
       "source": {
         "type": "machine",
         "id": 1
       },
       "sink": {
         "type": "belt",
-        "id": 1
+        "id": 1,
+        "belt_direction": 8
       },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
       "stack_size": 16,
-      "filters": [
-        "stone-brick"
-      ]
+      "position": {
+        "x": -501.5,
+        "y": -1069.5
+      },
+      "direction": 12,
+      "id": 1
     }
   ],
   "belts": [
@@ -40,7 +51,7 @@
           "stack_size": 4
         },
         {
-          "ingredient": "stone-brick",
+          "ingredient": "",
           "stack_size": 4
         }
       ]
@@ -53,12 +64,17 @@
         "id": 1,
         "type": "electric-mining-drill",
         "mined_item_name": "stone",
-        "speed_bonus": 19.0575,
-        "productivity": 80000,
+        "speed_bonus": 15.3075,
+        "productivity": 80010.00000001132,
         "target": {
           "type": "machine",
           "id": 1
-        }
+        },
+        "position": {
+          "x": -506.5,
+          "y": -1069.5
+        },
+        "direction": 4
       }
     ]
   }
