@@ -345,6 +345,17 @@ export interface RecordLink {
 }
 
 /**
+ * The entries of a family's controls whose generation pin is of another alternative than the one the game test's fixture
+ * says it records (`named`, by entry name), or that have a pin and no fixture alternative. Lines to read.
+ */
+export function fixtureAlternativeMismatches(cases: Record<string, ClockControl>, named: Record<string, string>): string[] {
+    return Object.entries(cases).filter(([, control]) => control.generation).flatMap(([name, control]) =>
+        named[name] === undefined ? [`${name}: has a generation pin and its fixture names no alternative`]
+            : named[name] === control.generation!.selection.id ? []
+                : [`${name}: the fixture records ${named[name]} and the pin is of ${control.generation!.selection.id}`]);
+}
+
+/**
  * The entries of a family's controls whose generation pin differs from the record: the pin is of the record job's alternative
  * with the pin's `selection.id` (its clock hash, period, verdict, holds, rate and supply), the selection where the entry is not
  * listed as `offered`, and its `previous` clock is an alternative of the job with that hash. Where the game's run is judged
