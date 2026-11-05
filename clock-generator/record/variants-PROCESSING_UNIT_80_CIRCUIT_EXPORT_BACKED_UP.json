@@ -1,0 +1,32 @@
+{
+  "format": "clock-record-1",
+  "job": "variants-PROCESSING_UNIT_80_CIRCUIT_EXPORT_BACKED_UP",
+  "group": "variants",
+  "name": "PROCESSING_UNIT_80_CIRCUIT_EXPORT_BACKED_UP",
+  "config_sha256": "658a9680bd68f65d40d2f1acf2cc1cf18f02db2407b1170808ea4dd9aaa8a955",
+  "job_results_sha256": "e66f952ebc64ac88bdd4b5709b2dc2f2bd19ec9eb630f8ae88d812cfd0e2015e",
+  "selected": "planned-belt-slack",
+  "selected_windows": {
+    "inserter:16": "0-0",
+    "inserter:17": "0-0",
+    "inserter:23": "0-0",
+    "inserter:24": "0-0",
+    "inserter:2": "4-13",
+    "inserter:9": "4-13",
+    "inserter:1": "5-17",
+    "inserter:11": "5-14",
+    "inserter:12": "5-14",
+    "inserter:10": "5-17",
+    "inserter:21": "5-14",
+    "inserter:22": "5-14"
+  },
+  "alternatives": [
+    {"id": "planned-belt-slack", "verdict": "stable", "holds": true, "rate": 80, "supply": "backed_up", "period": 24, "wake_ups": 7331.25, "descriptions_cut": 0, "clock_sha256": "430a8c6f199c3affacda6a26dc8c21ddee0eb3b30b436fc82b4b0891924d823f", "windows_sha256": "4bec81196c57c942e7cbda1e4a0ddd1d3ccb5759cc4e1e0288c4416e11783832", "text_sha256": "a2b52af9ffb02eb1f64f30b6ce9d2708deb49f4f02efb13c3dab0ffdc7b92e78", "results_sha256": "9a5291942740a475a4bfcfe0da045ac02ed42ea49d3632ca1306bf23f4d5ddff"},
+    {"id": "planned-belt-slack-shared", "verdict": "stable", "holds": true, "rate": 80, "supply": "backed_up", "period": 24, "wake_ups": 7809.375, "descriptions_cut": 1, "clock_sha256": "0e3ac5b21cb7f45a379387a2fc28002290945e30108b30136998be7dbcddc845", "windows_sha256": "f903ea741e954c7a01cc1aac7e6f91e271460ce3f3b004644e9b91a2a04c1009", "text_sha256": "69274e93b54fd502a3530edf0202efb83982c3daa45073e6ff3314ed1229fc12", "results_sha256": "ce0a4ee4c6ccba2dc92022076d0e421ffd9a5053bddc75c52e3061424eb95454"},
+    {"id": "derived", "verdict": "unstable", "holds": false, "rate": 50.90909090909091, "supply": "backed_up", "period": 1056, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "83ff79a6376e98f8ba08d5874274ee770ba660e7cda2c09402fd18e538c28083", "windows_sha256": "cf6551cc8e48f7a1a619af6676eea7f9510047f040565ad96a9a61039f298ff0", "text_sha256": "f5f72b100a17ee507f707c01e9604355fd15de7fba28074f818c244a016ee447", "results_sha256": "c95d474f82fa62ab2ccf0d83822b408c3ca63f76ff555bcb7f2cb979d375ebde"},
+    {"id": "swings-2", "verdict": "unstable", "holds": false, "rate": 65.45454545454545, "supply": "backed_up", "period": 528, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "e944f117d3ee1b0054266e3f70d598c071deeab198e87fd67dfea3234d1f5efc", "windows_sha256": "be147ff6efec453e61e74bf70410fe4dfae3ed95d34ae5820697ac4e76eaac55", "text_sha256": "9d15877d95f659335d28ee36b6b86cdf032a7491bfd4358ad68219d04311345e", "results_sha256": "022ec79f2ba8e59e8492c2c3d5417bc449175b88c024e84e31b33ea34dd66bad"},
+    {"id": "swings-3", "verdict": "unstable", "holds": false, "rate": 60.60606060606061, "supply": "backed_up", "period": 1584, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "a4e0e86b9c1fb77d283c9972f11552da21397117f6eb2d9370a796ca287f1b5c", "windows_sha256": "f00f8c7461669e7355c089cb1011c7cda293f3c726ad5971716bba050125873f", "text_sha256": "e035551ca1c27e44e5df97207af650d1fb8d03023692f6c7e720b7a115915175", "results_sha256": "b574900e118532d4f65ac6be9af1ab674b7252e7e6f6f2657a981e221aa4bb77"},
+    {"id": "swings-5", "verdict": "unstable", "holds": false, "rate": 48, "supply": "backed_up", "period": 2640, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "856cccad21dc2383f05d1f7b5a28be11d6a5af0ef96d065d51b0dabe59748d98", "windows_sha256": "5e34247f210b9282ede7bc652ca4e6482ced442f7ceb7f3ee3377e2a0672f0dd", "text_sha256": "dc1125ebe4870aeebde3904a30f0f19a4fa5aaf63c1eeb6db7edb046c2777216", "results_sha256": "7667e746b547bc54cf25d2e5156f8562162584a16a008aef6d1ba1f907d966c4"},
+    {"id": "swings-6", "verdict": "unstable", "holds": false, "rate": 38.18181818181818, "supply": "backed_up", "period": 1584, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "e7f7333f5c752ac2a0461d99bc9f9f6cb6d2437002c4d87a6359cb685b06cd69", "windows_sha256": "9d632cb58e4fcde490a6aabb60850b94abe65e7a4c5a035720df5c777c34c87f", "text_sha256": "77264801226c3e4588342fd1adfd5f0e08ec9c425288723cde00f90611e53d86", "results_sha256": "64ea639543d77f7535135daf7fc84e61b8d28d51bcc64b5b941d3084e2164b0a"}
+  ]
+}

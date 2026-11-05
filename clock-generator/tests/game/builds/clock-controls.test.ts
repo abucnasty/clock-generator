@@ -183,6 +183,8 @@ describe("historical identity validation", () => {
  */
 const fixture = (group: string) => (name: string) => `${group}-${name}`;
 const config = (key: string) => (): string => `config-${key}`;
+/** The job of a variant of a sample (tests/game/builds/variant-jobs.ts): a build with its belts backed up, an ingredient left out of the period */
+const variant = (name: string) => `variants-${name}`;
 const backed = (name: string) => /-backed(-|$)/.test(name) ? "backed_up" as const : "moving" as const;
 const RECORD_LINKS: Record<string, RecordLink & {runs?: boolean}> = {
     "blocked-output-clock-controls.json": {jobOf: fixture("blocked"), runs: true},
@@ -194,7 +196,7 @@ const RECORD_LINKS: Record<string, RecordLink & {runs?: boolean}> = {
     "electromagnetic-science-330-drained-end-clock-controls.json": {jobOf: config("ELECTROMAGNETIC_SCIENCE_330")},
     "grenade-clock-controls.json": {jobOf: config("GRENADE_240_FILLS_BELT_EXACTLY")},
     "inserter-crafting-240-shared-signal-clock-controls.json": {
-        jobOf: name => name === "generated-backed-up-one-copy" ? undefined : "config-INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK",
+        jobOf: name => name === "generated-backed-up-one-copy" ? variant("INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK_BACKED_UP") : "config-INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK",
         offered: ["generated-three-copies"]},
     "iron-ore-voider-400-clock-controls.json": {
         jobOf: name => name === "ore-voider-exact-speed" ? "config-IRON_ORE_VOIDER_400_EXACT_SPEED" : "config-IRON_ORE_VOIDER_400_OVERBEACONED", runs: true},
@@ -204,20 +206,14 @@ const RECORD_LINKS: Record<string, RecordLink & {runs?: boolean}> = {
     "lithium-plate-80-silo-chest-clock-controls.json": {
         jobOf: config("LITHIUM_PLATE_80_SILO_CHEST"), offered: ["lithium-silo-swings-1", "lithium-silo-swings-3", "lithium-silo-swings-3-fill-last", "lithium-silo-swings-7"]},
     "logistic-science-240-direct-insert-clock-controls.json": {jobOf: config("LOGISTIC_SCIENCE_240_DIRECT_INSERT")},
-    "processing-unit-80-circuit-export-clock-controls.json": {jobOf: name => name === "generated-backed-up" ? undefined : "config-PROCESSING_UNIT_80_CIRCUIT_EXPORT"},
+    "processing-unit-80-circuit-export-clock-controls.json": {
+        jobOf: name => name === "generated-backed-up" ? variant("PROCESSING_UNIT_80_CIRCUIT_EXPORT_BACKED_UP") : "config-PROCESSING_UNIT_80_CIRCUIT_EXPORT"},
     "productivity-module-80-chest-chain-clock-controls.json": {jobOf: config("PRODUCTIVITY_MODULE_80_CHEST_CHAIN")},
     "steel-plate-26-wagon-chest-clock-controls.json": {
-        jobOf: name => name === "steel-wagon-iron-ore-out-of-period" ? undefined : "config-STEEL_PLATE_26_WAGON_CHEST", runs: true,
-        offered: ["steel-wagon-belt-slack", "steel-wagon-belt-slack-fill-last"]},
+        jobOf: name => name === "steel-wagon-iron-ore-out-of-period" ? variant("STEEL_PLATE_26_WAGON_CHEST_IRON_ORE_OUT_OF_PERIOD") : "config-STEEL_PLATE_26_WAGON_CHEST", runs: true,
+        offered: ["steel-wagon-belt-slack", "steel-wagon-belt-slack-fill-last", "steel-wagon-iron-ore-out-of-period"]},
     "utility-science-480-lds-foundry-chain-clock-controls.json": {jobOf: config("UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN")},
 };
-/** The pins whose build is not a job of the record: a variant of a config (belts backed up, an ingredient left out of the period). PR 4 of #600 gives each a job; the list may only shrink */
-const NO_RECORD_JOB: Record<string, string[]> = {
-    "inserter-crafting-240-shared-signal-clock-controls.json": ["generated-backed-up-one-copy"],
-    "processing-unit-80-circuit-export-clock-controls.json": ["generated-backed-up"],
-    "steel-plate-26-wagon-chest-clock-controls.json": ["steel-wagon-iron-ore-out-of-period"],
-};
-const NO_RECORD_JOB_SCAFFOLD = ["agricultural science (belts are backed up)"];
 
 /**
  * The alternative each game test's fixture says it records, by entry name, for the families whose fixture names one (the
@@ -265,9 +261,9 @@ describe("the record", () => {
         test("each generation pin is the record's: clock hash, period, verdict, selection and earlier clock", () => {
             expect(recordMismatches(controls.cases, link, readRecordJob, link.runs)).toEqual([]);
         });
-        test("the pins with no job in the record are the ones listed", () => {
+        test("every generation pin has a job in the record", () => {
             const without = Object.entries(controls.cases).filter(([name, control]) => control.generation && link.jobOf(name) === undefined).map(([name]) => name);
-            expect(without).toEqual(NO_RECORD_JOB[file] ?? []);
+            expect(without).toEqual([]);
         });
     });
 
@@ -276,23 +272,24 @@ describe("the record", () => {
         test("each pin is the record's selected clock of its config, and its earlier clock is still made", () => {
             const found: string[] = [];
             for (const [name, pin] of pins) {
-                if (NO_RECORD_JOB_SCAFFOLD.includes(name)) continue;
-                const made = readRecordJob(`config-${pin.config}`);
-                if (made === undefined) { found.push(`${name}: config-${pin.config} has no result in the record`); continue; }
+                const job = pin.backed_up_belts ? variant(`${pin.config}_BACKED_UP`) : `config-${pin.config}`;
+                const made = readRecordJob(job);
+                if (made === undefined) { found.push(`${name}: ${job} has no result in the record`); continue; }
                 const selected = made.alternatives.find(it => it.id === made.selected)!;
-                if (selected.clock_sha256 !== pin.clock_sha256) found.push(`${name}: the pin names clock ${pin.clock_sha256.slice(0, 12)} and record job config-${pin.config} selects ${selected.clock_sha256.slice(0, 12)}`);
+                if (selected.clock_sha256 !== pin.clock_sha256) found.push(`${name}: the pin names clock ${pin.clock_sha256.slice(0, 12)} and record job ${job} selects ${selected.clock_sha256.slice(0, 12)}`);
                 if (pin.previous) {
                     const earlier = made.alternatives.find(it => it.id === pin.previous!.id);
                     expect(pin.previous.why.trim(), `${name}: why the earlier clock is kept`).not.toBe("");
                     if (earlier?.clock_sha256 !== pin.previous.clock_sha256 || earlier.verdict !== "stable" || selected.verdict !== "stable") {
-                        found.push(`${name}: the earlier clock ${pin.previous.id} is not a stable alternative with the hash ${pin.previous.clock_sha256.slice(0, 12)} in record job config-${pin.config}`);
+                        found.push(`${name}: the earlier clock ${pin.previous.id} is not a stable alternative with the hash ${pin.previous.clock_sha256.slice(0, 12)} in record job ${job}`);
                     }
                 }
             }
             expect(found).toEqual([]);
         });
-        test("the pins with no job in the record are the ones listed (the config with its belts backed up is no job)", () => {
-            expect(pins.filter(([, pin]) => pin.backed_up_belts).map(([name]) => name)).toEqual(NO_RECORD_JOB_SCAFFOLD);
+        test("a pin of a config with its belts backed up is of the variant's job, the others of the config's", () => {
+            expect(pins.filter(([, pin]) => pin.backed_up_belts).map(([name, pin]) => `${name}: ${variant(`${pin.config}_BACKED_UP`)}`))
+                .toEqual(["agricultural science (belts are backed up): variants-AGRICULTURAL_SCIENCE_250_BACKED_UP"]);
         });
     });
 

@@ -131,7 +131,7 @@ results only within that test run; persisted generation caches can hide regressi
 
 A generation is shared within a file and no further: Vitest runs each file in a context of its own. When a check in
 one file needs the selection of a build that another file generates from the same config, make the check in the file
-that generates it (`expectPinnedScaffoldClock` in `tests/game/builds/` does), and
+that generates it, and
 keep a test in the first file that the other still makes it. A game-tied pin of a selection that is a job of the record
 (`clock-generator/record/`) is checked against the record by `clock-controls.test.ts`, with no generation of its own. A
 property that must hold of every job's result (not a value) belongs in `clock-generator/tests/game/builds/record-properties.ts`,
@@ -163,7 +163,7 @@ reduction from scheduling changes; do not report a faster test from a less busy 
 
 ## The record of the blast jobs
 
-[`clock-generator/record/`](clock-generator/record/README.md) holds one small JSON file for each of the 75 blast jobs: the clock the generator selects for the
+[`clock-generator/record/`](clock-generator/record/README.md) holds one small JSON file for each of the 86 blast jobs: the clock the generator selects for the
 sample or fixture and every alternative it weighed (verdict, holds, rate, period, wake-ups, windows, clock hash). The job named "Record check" in CI
 regenerates it and compares it with the committed files field by field; a difference fails with a table of job, field, before and after in the job summary.
 It is not a required check yet.
@@ -172,7 +172,7 @@ A pull request that changes what the generator selects or computes on purpose re
 [`record/MOVES.md`](clock-generator/record/MOVES.md) that names each moved job and why. From `clock-generator/`, with a clean engine commit:
 
 ```bash
-BLAST_GROUPS=config,pickup,overhood,front,blocked,containers bash scripts/blast/blast.sh run .. <out>   # cached by the engine's key; a rerun is selective
+BLAST_GROUPS=config,pickup,overhood,front,blocked,containers,variants bash scripts/blast/blast.sh run .. <out>   # cached by the engine's key; a rerun is selective
 bash scripts/blast/blast.sh record write <out>        # rewrites record/ (the cache entry's key works in place of <out>)
 bash scripts/blast/blast.sh record check <out>        # exit 0: the committed files equal the run
 git diff --stat record/                               # the moved jobs; each one gets a line in MOVES.md

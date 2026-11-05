@@ -6,7 +6,7 @@ what blast.sh computes and nothing else: no seconds, no path, no machine.
 usage:
   record.py write [--dir record/] <jobs>            writes <dir>/<job>.json for every job of <jobs>; removes the record
                                                     files of jobs <jobs> does not have (a folder of job files made by
-                                                    blast.sh run with BLAST_GROUPS=config,pickup,overhood,front,blocked,containers,
+                                                    blast.sh run with BLAST_GROUPS=config,pickup,overhood,front,blocked,containers,variants,
                                                     or a cache entry)
   record.py check [--dir record/] [--map renames.txt] [--summary file] [--allow-unchecked] <jobs>
                                                     regenerates the records from <jobs> and compares them with <dir> field by

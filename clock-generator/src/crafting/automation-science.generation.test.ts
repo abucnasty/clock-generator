@@ -5,7 +5,7 @@ import type {Config} from "../config/schema";
 import {backpressureLossOf, generateClockAlternatives, selectableAsStable, type ClockAlternative, type ClockAlternativesResult} from "./generate-blueprint";
 import {lossId, verdictOf, type BackpressureLossReport} from "./backpressure-loss";
 import {START_DEPENDENCE_NOT_CHECKED} from "./start-dependence";
-import {alwaysOnReasonProblemsOf, quiet, SEARCH_IDS, selectedAlternativeOf as selectedOf} from "./generate-blueprint-test-helpers";
+import {quiet, SEARCH_IDS, selectedAlternativeOf as selectedOf} from "./generate-blueprint-test-helpers";
 
 let config: Config;
 let by_default: ClockAlternativesResult;
@@ -21,10 +21,6 @@ beforeAll(async () => {
     selected = selectedOf(by_default);
 });
 
-it("names why every inserter and drill a clock leaves always on is", () => {
-    expect(alwaysOnReasonProblemsOf(config, by_default)).toEqual([]);
-});
-
 // No machine of the sample burns fuel: its selected clock has no fuel plan and no fuel consumption view
 it("has no fuel plan and no fuel consumption view, as no machine burns fuel", () => {
     expect(selected.result.fuel_plan).toBeUndefined();
@@ -37,15 +33,6 @@ describe("a clock tried for backpressure loss", () => {
     beforeAll(() => {
         report = backpressureLossOf(config, selected.result.clock_windows, selected.result.simulation_duration.ticks,
             selected.result.stability_check.expected_output_items, quiet);
-    });
-
-    // Pinned before the supply gates were added: the selected clock of the sample and its windows are the same with
-    // them in place, since a run in which nothing is cut is the run it was before
-    it("is selected and stable at the target rate, as it was before a loss was ever tried", () => {
-        expect(selected.id).toBe("full-hand");
-        expect(selected.result.simulation_duration.ticks).toBe(72);
-        expect(selected.verdict).toBe("stable");
-        expect(selected.assessment.items_per_second).toBeCloseTo(config.target_output.items_per_second, 6);
     });
 
     it("is run once with nothing cut, where it makes what the generator's own check found", () => {
@@ -120,10 +107,6 @@ describe("a clock that does not get back from a loss", () => {
         expect(trials[trials.length - 1].recovers).toBe(false);
     });
 
-    it("says in its description which were not tried", () => {
-        expect(broken.description).toContain("after copper plate stops arriving. Not tried, since one failure is enough: "
-            + "iron gear wheel stops arriving, automation science pack is not taken away.");
-    });
 });
 
 describe("the searches only run when they are needed", () => {
@@ -134,10 +117,6 @@ describe("the searches only run when they are needed", () => {
             expect(by_default.alternatives.filter(a => !SEARCH_IDS.includes(a.id)).some(a => selectableAsStable(a.ranking))).toBe(false);
         });
 
-        it("selects the stable clock a search finds", () => {
-            expect(selectedOf(by_default).id).toBe("full-hand");
-            expect(selectedOf(by_default).verdict).toBe("stable");
-        });
     });
 });
 

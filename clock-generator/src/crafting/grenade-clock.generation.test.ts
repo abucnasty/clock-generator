@@ -4,7 +4,7 @@ import {clockIdentity} from "./clock-identity";
 import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config/schema";
-import {GENERATED_ALTERNATIVE, grenadeClockCases} from "../../tests/game/builds/grenade-clock-fixtures";
+import {grenadeClockCases} from "../../tests/game/builds/grenade-clock-fixtures";
 import {readControls, RunControls, runHolds} from "../../tests/game/builds/clock-controls";
 import {GROUP_GAP_TILES} from "./turn-groups";
 
@@ -18,29 +18,6 @@ let generated: ClockAlternativesResult;
 beforeAll(async () => {
     config = await loadConfigFromFile(ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY);
     generated = generateClockAlternatives(config, {logger: quiet});
-});
-
-test("grenade: the 112-tick clock holds the target and is selected; the observed windows of the same period hold it too, and the longer ones, planned the same way, do not", () => {
-    const selected = generated.alternatives[generated.selected_index];
-    expect(selected.id).toBe(GENERATED_ALTERNATIVE);
-    expect(selected.verdict).toBe("stable");
-    expect(selected.assessment.items_per_second).toBe(240);
-    expect(selected.result.simulation_duration.ticks).toBe(112);
-    // two groups of two machines, half a period apart: the foundry cannot serve four at once. The machines of one row of the belt
-    // (inserters 1 and 2, and 3 and 4 that fill them) are one group, the machines of the other row (7 and 8; 5 and 6) the other
-    const windows = selected.result.clock_windows;
-    expect([windows["inserter:3"], windows["inserter:4"]]).toEqual([[{start: 2, end: 43}], [{start: 2, end: 43}]]);
-    expect([windows["inserter:5"], windows["inserter:6"]]).toEqual([[{start: 58, end: 99}], [{start: 58, end: 99}]]);
-    expect([windows["inserter:1"], windows["inserter:2"]]).toEqual([[{start: 0, end: 0}], [{start: 0, end: 0}]]);
-    expect([windows["inserter:7"], windows["inserter:8"]]).toEqual([[{start: 56, end: 56}], [{start: 56, end: 56}]]);
-    // the drills of a group share one window, two ticks: 160 coal a period against the 125 to 134 a tick the drills mine (two drill deciders, as the hand-made clock has)
-    expect([windows["drill:1"], windows["drill:2"]]).toEqual([[{start: 2, end: 3}], [{start: 2, end: 3}]]);
-    expect([windows["drill:3"], windows["drill:4"]]).toEqual([[{start: 58, end: 59}], [{start: 58, end: 59}]]);
-    // the observed windows of 112 ticks hold and get back from every loss under the order the game serves the takers in, and wake 2,159 a minute against 138
-    const others = generated.alternatives.filter(it => it.id !== GENERATED_ALTERNATIVE);
-    expect(others.filter(it => it.verdict === "stable").map(it => it.id)).toEqual(["derived"]);
-    expect(others.filter(it => it.id !== "derived").every(it => it.verdict === "unstable")).toBe(true);
-    expect(others.find(it => it.id === "derived")!.assessment.wake_ups_per_minute!).toBeGreaterThan(selected.assessment.wake_ups_per_minute!);
 });
 
 type Entities = ClockAlternativesResult["alternatives"][number]["result"]["blueprint"]["entities"];

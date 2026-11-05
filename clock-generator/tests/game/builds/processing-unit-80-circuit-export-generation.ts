@@ -1,12 +1,9 @@
-import {createHash} from "crypto";
 import {beforeAll, describe, expect, it} from "vitest";
 import type {Config} from "../../../src/config";
 import {generateClockAlternatives, type ClockAlternative, type ClockAlternativesResult} from "../../../src/crafting/generate-blueprint";
-import {clockIdentity} from "../../../src/crafting/clock-identity";
 import {loadConfigFromFile} from "../../../src/config/loader";
 import {ConfigPaths} from "../../../src/config/config-paths";
 import {alwaysOnReasonProblemsOf, quiet} from "../../../src/crafting/generate-blueprint-test-helpers";
-import {readControls} from "./clock-controls";
 import {GENERATED_ALTERNATIVE, PROCESSING_UNIT_80_CIRCUIT_EXPORT_CASES, ProcessingUnitCircuitExportClockCase} from "./processing-unit-80-circuit-export-clock-fixtures";
 
 // This is an explicit strategy to verify, independently of the strategy selected by the current ranking.
@@ -51,16 +48,6 @@ export function circuitExportClockTests(which: (variant: ProcessingUnitCircuitEx
             // The 12 inserters with no window are the ones whose hands take all 24 ticks of this selected period.
             expect(selected.result.always_on_reasons).toEqual(Object.fromEntries([3, 4, 5, 6, 7, 8, 13, 14, 15, 18, 19, 20]
                 .map(number => [`inserter:${number}`, {kind: "busy", period_ticks: 24}])));
-            // The pin of the as-is config's clock is checked against the record (clock-controls.test.ts). The config with its belts
-            // backed up is no job of the record yet, so its pin is checked here
-            if (backed) {
-                const exported = selected.result.subtick ?? selected.result;
-                const pin = readControls("processing-unit-80-circuit-export-clock-controls.json").cases[name].generation!;
-                expect(createHash("sha256").update(JSON.stringify(clockIdentity(exported))).digest("hex"),
-                    "same windows and exported clock as the native control (its identity: no text or metadata)").toBe(pin.clock_sha256);
-                expect({id: selected.id, holds: selected.assessment.holds, rate: selected.assessment.items_per_second, supply: selected.belt?.kind ?? null}).toEqual(pin.selection);
-                expect(selected.result.simulation_duration.ticks).toBe(pin.period);
-            }
             selectedClaims?.(selected, config);
         });
     });

@@ -4,7 +4,7 @@ import { loadConfigFromFile, parseConfig } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { EntityId } from "../entities";
 import { OpenRange } from "../data-types";
-import { alwaysOnReasonProblems, alwaysOnReasonProblemsOf, productionScienceSharedPickup, withSearches } from "./generate-blueprint-test-helpers";
+import { alwaysOnReasonProblems, productionScienceSharedPickup, withSearches } from "./generate-blueprint-test-helpers";
 import { transitionsOf } from "./sequence/compact-history";
 
 describe("generateClockForConfig", () => {
@@ -20,10 +20,6 @@ describe("generateClockForConfig", () => {
 
         beforeAll(() => {
             ({ alternatives } = generateClockAlternatives(config));
-        });
-
-        it("names why every inserter and drill a clock leaves always on is", () => {
-            expect(alwaysOnReasonProblemsOf(config, { alternatives })).toEqual([]);
         });
 
         it("uses the terminal_swing_count override as-is instead of backing off, for every clock alternative", () => {
@@ -46,10 +42,6 @@ describe("generateClockForConfig", () => {
             beforeAll(() => {
                 const { alternatives } = generateClockAlternatives(config);
                 result = alternatives.find(alternative => alternative.id === "fractional")!.result;
-            });
-
-            it("names why every inserter and drill the clock leaves always on is", () => {
-                expect(alwaysOnReasonProblems(config, result, "fractional")).toEqual([]);
             });
 
             it("has fractional_swings_enabled set to true", () => {
@@ -104,10 +96,6 @@ describe("generateClockForConfig", () => {
 
             beforeAll(() => {
                 result = generateClockForConfig(config);
-            });
-
-            it("names why every inserter and drill the clock leaves always on is", () => {
-                expect(alwaysOnReasonProblems(config, result, "whole swings")).toEqual([]);
             });
 
             it("has fractional_swings_enabled set to false", () => {

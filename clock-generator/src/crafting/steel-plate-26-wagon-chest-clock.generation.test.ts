@@ -35,6 +35,5 @@ test("steel wagon: no description shows a float as a fraction (the period is a w
     }
 });
 
-// the clocks of this build as it is are pinned beside their recordings, and the pins are checked against the record
-// (tests/game/builds/clock-controls.test.ts); the one that leaves iron ore out of the period generates a build of its own, in
-// steel-plate-26-wagon-chest-clock-out-of-period.generation.test.ts
+// the clocks of this build, and the one that leaves iron ore out of the period (record job variants-STEEL_PLATE_26_WAGON_CHEST_IRON_ORE_OUT_OF_PERIOD),
+// are pinned beside their recordings, and the pins are checked against the record (tests/game/builds/clock-controls.test.ts)

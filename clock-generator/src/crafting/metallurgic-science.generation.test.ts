@@ -27,7 +27,6 @@ describe("generateClockForConfig", () => {
         const config = await loadConfigFromFile(ConfigPaths.METALLURGIC_SCIENCE_45);
         let alternatives: ClockAlternative[];
         let selected: ClockAlternative;
-        let observed: ClockAlternative;
         let one_swing: ClockAlternative;
         let two_swings: ClockAlternative;
 
@@ -35,18 +34,8 @@ describe("generateClockForConfig", () => {
             const generated = generateClockAlternatives(config);
             alternatives = generated.alternatives;
             selected = alternatives[generated.selected_index];
-            observed = alternatives.find(a => a.label === "Observed windows: 2 output swings per cycle, subtick clock")!;
             one_swing = alternatives.find(a => a.label === "1 output swing per cycle, subtick clock")!;
             two_swings = alternatives.find(a => a.label === "2 output swings per cycle, subtick clock")!;
-        });
-
-        it("selects the observed windows of 2 output swings on a subtick clock at 45 a second: by the rate over the cycle into a sink that never blocks, the only clocks that hold are these windows", () => {
-            expect(selected).toBe(observed);
-            expect(selected.assessment.items_per_second).toBeCloseTo(45, 6);
-            expect(selected.result.subtick?.clock.period_ticks).toBe(640);
-            // listed as its subtick clock alone: its period has one, so it is not also listed rounded down to whole ticks
-            expect(alternatives.filter(a => a.assessment.holds)).toEqual([observed]);
-            expect(alternatives.find(a => a.id === "derived")).toBeUndefined();
         });
 
         it("calls the observed windows stable: by its rate over the cycle into a sink that never blocks, it gets back from every loss, the tungsten ore's included", () => {

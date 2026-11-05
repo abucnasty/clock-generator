@@ -278,8 +278,8 @@ the family's `*.generation.test.ts` (pull requests to master).
   again in the game and set `recorded.clock_sha256` (a pin that moves is recorded again; nothing is carried over).
   It also checks every generation pin against the record (`clock-generator/record/`, one file per blast job): the pin is the
   clock hash, period, verdict, holds, rate and supply of the record job's alternative with the pin's id, and the game's run agrees
-  with that alternative's verdict. A pin whose build is no job of the record yet (a config with its belts backed up, an ingredient
-  left out of the period) is listed in the test and checked by its generation test.
+  with that alternative's verdict. A pin of a build that is a sample with an option set (belts backed up, an ingredient left out of the
+  period) is of a job of the variants group (`variant-jobs.ts`), which lists the recording or test that qualifies each.
 - A game test checks the hash of the clock it generated against the recorded one before it starts Factorio
   (`pickup-clock-capture.ts`; `BELT_CLOCK_CALIBRATE=1` skips the check to record a new summary).
 - The cold starts (`pickup-clock-start-controls.json`, `cold_start`) keep the same pair per clock:

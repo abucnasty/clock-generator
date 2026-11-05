@@ -63,18 +63,6 @@ describe("generateClockForConfig", () => {
             expect(odd.every(a => a.verdict !== "stable")).toBe(true);
         });
 
-        it("opens one window a cycle for each output inserter, for its 3 hands", () => {
-            for (const id of ["inserter:1", "inserter:3", "inserter:4", "inserter:6"]) {
-                expect(windows[id]).toEqual([{ start: 0, end: 20 }, { start: 30, end: 50 }, { start: 60, end: 80 }]);
-            }
-        });
-
-        it("keeps the window of an inserter on the belt open long enough for a pickup that starts late or fills slowly", () => {
-            for (const id of ["inserter:9", "inserter:10"]) {
-                expect(windows[id]).toEqual([{ start: 0, end: 16 }, { start: 30, end: 46 }, { start: 60, end: 76 }]);
-            }
-        });
-
         // a biochamber takes bacteria under a limit of 28, which holds a hand of 16, so a hand it refuses is taken at the next
         // window: each loop inserter gets a window of a swing and a tick for each of its 2 hands a period, from midway
         // between the openings of its source's first two output windows (inLoopInserterWindows)
@@ -87,13 +75,6 @@ describe("generateClockForConfig", () => {
             expect(observed.verdict).toBe("stable");
             expect(observed.result.clock_windows["inserter:7"]).toBeUndefined();
             expect(observed.result.clock_windows["inserter:8"]).toBeUndefined();
-        });
-
-        it("holds the target with batched swings at 2 output swings a cycle too, as it does in the game", () => {
-            const batched = alternatives.find(a => a.id === "planned-belt-slack-subtick")!;
-            expect(batched.label).toBe("Batched swings: 2 output swings per cycle, subtick clock");
-            expect(batched.verdict).toBe("stable");
-            expect(batched.assessment.items_per_second).toBeCloseTo(380, 6);
         });
 
         // belt pickup slack is not given to a period that is not a whole number of ticks (GOALS.md, the belt a clock is made for)

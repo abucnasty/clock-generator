@@ -71,14 +71,6 @@ describe("a recycler that voids iron ore at exact speed", () => {
             .toEqual(["Batched swings: 5 hands brought in per cycle", "Even hands: 5 hands brought in per cycle"]);
     });
 
-    test("selects even hands, whose inserters out of the car are not woken by the ore it places there", () => {
-        const selected = generated.alternatives[generated.selected_index];
-        expect(selected.id).toBe("even-hands");
-        const [planned, even] = generated.alternatives.map(it => it.assessment.wake_ups_per_minute);
-        expect(even).toBeLessThan(planned!);
-        expect(even).toBe(0);
-    });
-
     test("gives the windows that take the returns out of the car the room for all but 1 in 740 periods' returns", () => {
         for (const alternative of generated.alternatives) {
             const margins = alternative.result.random_margins!;
@@ -113,15 +105,6 @@ describe("a recycler that voids iron ore with crafts to spare", () => {
     beforeAll(async () => {
         overbeaconed = await loadConfigFromFile(ConfigPaths.IRON_ORE_VOIDER_400_OVERBEACONED);
         alternatives = generateClockAlternatives(overbeaconed, { logger: quiet });
-    });
-
-    test("gets the same two clocks on the same hands, both stable, and selects the batched clock, which wakes as many inserters as even hands", () => {
-        expect(alternatives.alternatives.map(it => [it.id, it.verdict, it.assessment.items_per_second, it.result.simulation_duration.ticks]))
-            .toEqual([["planned-belt-slack", "stable", 400, 144], ["even-hands", "stable", 400, 144]]);
-        const [planned, even] = alternatives.alternatives;
-        expect(alternatives.alternatives[alternatives.selected_index]).toBe(planned);
-        expect(planned.assessment.wake_ups_per_minute!).toBeCloseTo(8.3916, 3);
-        expect(even.assessment.wake_ups_per_minute!).toBeCloseTo(8.3916, 3);
     });
 
     test("needs no more room of its recycler: what comes back over the mean is covered within a tick", () => {
