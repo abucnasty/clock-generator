@@ -5,6 +5,7 @@ import os from 'os';
 import path from 'path';
 import { spawnSync } from 'child_process';
 import { afterAll, describe, expect, it } from 'vitest';
+import { moduleSha256 } from '../game/builds/record-properties';
 
 const record = path.resolve(__dirname, '../../scripts/blast/record.py');
 const recordDir = path.resolve(__dirname, '../../record');
@@ -22,9 +23,14 @@ const alternative = (e: Edit = {}) => ({
     windows_sha256: sha('7'), windows: e.windows ?? { 'inserter:1': [{ start: 0, end: 10 }, { start: 54, end: 64 }], 'drill:1': [] },
     results_sha256: sha('3'), results: { label: sha('1'), assessment: sha('9') },
 });
-const jobFile = (name: string, alternatives = [alternative(), alternative({ id: 'plain', verdict: 'unstable', clock: sha('b') })], group = 'config') => ({
+/** What the property module writes into a job file of a result it found nothing wrong with */
+const clean = () => ({
+    module_sha256: moduleSha256(), seconds: 0.5, problems: [] as { property: string; alternative: string; message: string }[],
+    checked: { 'always-on-reasons-named': 2, 'decider-build-order': 2, 'stable-holds-and-survives-loss': 2, 'counters-add-up': 1, 'fuel-never-dry': 0 },
+});
+const jobFile = (name: string, alternatives = [alternative(), alternative({ id: 'plain', verdict: 'unstable', clock: sha('b') })], group = 'config', properties: object | null = clean()) => ({
     group, name, selected_index: 0, results_sha256: sha('4'), job_results: { results_sha256: sha('5'), results: { ids: sha('6') } },
-    selected: alternatives[0], alternatives, seconds: 12.5,
+    selected: alternatives[0], alternatives, seconds: 12.5, ...(properties !== null && { properties }),
 });
 
 let count = 0;
@@ -155,6 +161,69 @@ describe('record.py check', () => {
         expect(run('check', '--dir', written({ A: jobFile('A') }), empty).status).toBe(1);
         const noRecord = folder(); fs.mkdirSync(noRecord);
         expect(run('check', '--dir', noRecord, side({ A: jobFile('A') })).stderr).toContain('no records');
+    });
+});
+
+describe('record.py check: the properties of the run', () => {
+    const dirOf = () => written({ A: jobFile('A'), B: jobFile('B') });
+    const found = (property: string, alternative: string, message: string) => ({ ...clean(), problems: [{ property, alternative, message }] });
+
+    it('says what it checked and how long it took, and passes a run with no problem', () => {
+        const done = run('check', '--dir', dirOf(), side({ A: jobFile('A'), B: jobFile('B') }));
+        expect(done.status, done.stdout).toBe(0);
+        expect(done.stdout).toContain('properties checked on 2 jobs (14 alternative checks, 1.0 s of the module): 0 problems');
+    });
+
+    it('fails on one problem with a table of job, property, alternative and the values, though the record has no difference', () => {
+        const broken = jobFile('B', undefined, 'config', found('fuel-never-dry', 'plain', 'machine:2 had no fuel for 12 ticks, from tick 340'));
+        const done = run('check', '--dir', dirOf(), side({ A: jobFile('A'), B: broken }));
+        expect(done.status).toBe(1);
+        expect(done.stdout).toContain('no difference from the record');
+        expect(done.stdout).toContain('1 problems');
+        const rows = done.stdout.split('\n').filter(line => line.startsWith('config-B'));
+        expect(rows).toHaveLength(1);
+        expect(rows[0].split(/\s{2,}/)).toEqual(['config-B', 'fuel-never-dry', 'plain', 'machine:2 had no fuel for 12 ticks, from tick 340']);
+    });
+
+    it('shows what a named exception found, and does not fail on it', () => {
+        const excused = jobFile('A', undefined, 'config', { ...clean(), excepted: [{ property: 'counters-add-up', alternative: 'plain', reason: 'a subtick clock', found: ['inserter:5: 2 swings against 1 grabs a minute'] }] });
+        const done = run('check', '--dir', dirOf(), side({ A: excused, B: jobFile('B') }));
+        expect(done.status, done.stdout).toBe(0);
+        expect(done.stdout).toContain('excepted: config-A counters-add-up plain: 1 found, excepted: a subtick clock');
+    });
+
+    it('appends the problems to the summary file', () => {
+        const summary = path.join(tmp, `summary${count++}.md`);
+        const broken = jobFile('A', undefined, 'config', found('counters-add-up', 'even-hands', 'inserter:1: input and output wake-ups 6 against its wake-ups 3'));
+        const done = run('check', '--dir', dirOf(), '--summary', summary, side({ A: broken, B: jobFile('B') }));
+        expect(done.status).toBe(1);
+        expect(fs.readFileSync(summary, 'utf8')).toContain('config-A  counters-add-up  even-hands');
+    });
+
+    it('fails on a job file with no properties, on one the module failed on and on one judged by another version of the module; --allow-unchecked lists them and goes on', () => {
+        const none = jobFile('A', undefined, 'config', null);
+        const failed = jobFile('B', undefined, 'config', { module_sha256: moduleSha256(), error: 'TypeError: x is undefined' });
+        const older = jobFile('C', undefined, 'config', { ...clean(), module_sha256: sha('9') });
+        const dir = written({ A: jobFile('A'), B: jobFile('B'), C: jobFile('C') });
+        const jobs = side({ A: none, B: failed, C: older });
+        const done = run('check', '--dir', dir, jobs);
+        expect(done.status).toBe(1);
+        expect(done.stdout).toContain('config-A: no properties in the job file');
+        expect(done.stdout).toMatch(/config-B\s+\(module\)\s+TypeError: x is undefined/);
+        expect(done.stdout).toContain('config-C: judged by another version of the property module (999999999999..');
+        const allowed = run('check', '--dir', dir, '--allow-unchecked', jobs);
+        expect(allowed.status, allowed.stdout).toBe(1); // the module's own error is a problem, not a missing result
+        const only = run('check', '--dir', dir, '--allow-unchecked', side({ A: none, B: jobFile('B'), C: older }));
+        expect(only.status, only.stdout).toBe(0);
+        expect(only.stdout).toContain('2 jobs with no result of them');
+    });
+
+    it('leaves a job that failed to generate to the record: it has no properties to have', () => {
+        const dir = written({ A: jobFile('A') });
+        const errored = { group: 'config', name: 'A', error: 'Error: no feasible clock', seconds: 1 };
+        const done = run('check', '--dir', dir, side({ A: errored as any }));
+        expect(done.stdout).toContain('properties checked on 0 jobs');
+        expect(done.stdout).not.toContain('no properties in the job file');
     });
 });
 

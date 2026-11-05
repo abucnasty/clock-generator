@@ -173,8 +173,15 @@ async function historyExpander(): Promise<ExpandHistory | undefined> {
     return (await import(file)).expandStateTransitionHistory;
 }
 
-/** Every alternative of a config, each exported clock hashed, and the selected one */
-function clocksOf(config: any, expand: ExpandHistory | undefined) {
+/** The property module of the record (tests/game/builds/record-properties.ts), where the build has it: a worktree from before it
+ * leaves `properties` out of its job files. A path, not a literal, so that a worktree without the file neither resolves nor typechecks the import */
+async function propertyModule(): Promise<{ checkProperties: (job: string, config: any, generated: any) => unknown } | undefined> {
+    const file = path.join(__dirname, '..', 'record-properties.ts');
+    return fs.existsSync(file) ? import(file) : undefined;
+}
+
+/** Every alternative of a config, each exported clock hashed, and the selected one; with the properties of the result, where the module is there */
+function clocksOf(config: any, expand: ExpandHistory | undefined, key: string, properties: Awaited<ReturnType<typeof propertyModule>>) {
     const generated = generateClockAlternatives(config, { logger: quiet });
     const summary = (a: any) => {
         const exported = a.result.subtick ?? a.result;
@@ -191,8 +198,14 @@ function clocksOf(config: any, expand: ExpandHistory | undefined) {
     const job_results = digestJob(generated);
     // the job's own digest: why_not_stable, the selected index and the ids, then every alternative's, in order
     const results_sha256 = sha([job_results.results_sha256, ...alternatives.map(a => a.results_sha256)]);
+    // what the module finds on the live results, which no job file keeps; the seconds it took are measured here, beside the job's
+    const started = Date.now();
+    let checked: unknown;
+    try { checked = properties?.checkProperties(key, config, generated); }
+    catch (error: any) { checked = { error: `${error?.name}: ${error?.message}` }; }
     return {
         selected_index: generated.selected_index, results_sha256, job_results,
+        ...(checked !== undefined && { properties: { ...checked as object, seconds: (Date.now() - started) / 1000 } }),
         selected: alternatives[generated.selected_index], alternatives,
     };
 }
@@ -204,6 +217,7 @@ test.skipIf(!OUT)('blast', async () => {
     if (!ONE || MODE === 'jobs' || !fs.existsSync(path.join(OUT!, '_jobs.json'))) await writeJobList(jobs);
     if (MODE === 'jobs') return;
     const expand = await historyExpander();
+    const properties = await propertyModule();
     const recorder = functionRecorder();
     if (recorder) {
         // what ran before the first job: the engine loading and the job list. Every job depends on it, so it is a record of its own
@@ -220,7 +234,7 @@ test.skipIf(!OUT)('blast', async () => {
         let body: any;
         try {
             const config = await job.config();
-            body = { group: job.group, name: job.name, ...clocksOf(config, expand) };
+            body = { group: job.group, name: job.name, ...clocksOf(config, expand, key, properties) };
         } catch (error: any) {
             body = { group: job.group, name: job.name, error: `${error?.name}: ${error?.message}` };
         }

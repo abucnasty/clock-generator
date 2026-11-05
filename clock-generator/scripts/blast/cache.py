@@ -57,7 +57,9 @@ def complete(d, list_file=None):
 
 def same(a, b):
     a, b = dict(json.load(open(a))), dict(json.load(open(b)))
-    a.pop('seconds', None); b.pop('seconds', None)
+    # the seconds, and the property module's verdicts (their own seconds, and a module that changed with the engine unchanged), are not results
+    for body in (a, b):
+        body.pop('seconds', None); body.pop('properties', None)
     return a == b
 
 
