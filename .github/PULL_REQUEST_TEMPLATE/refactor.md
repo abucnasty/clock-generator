@@ -2,7 +2,7 @@
 
 {one line, then the smallest picture of the change: call tree, file tree or diff-sketch}
 
-**Blast:** {zero-change | N jobs moved, listed, and why}
+**Blast:** {zero-change | not run: reason}
 
 ## Impact
 

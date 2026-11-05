@@ -7,8 +7,9 @@ for someone reading that history later. These rules hold for every pull request,
 
 ### Branch and type
 
-Name the branch `<type>/<slug>`, the slug at most five words in kebab-case: `fix/moving-belt-pickup`. The type says what
-the change does for the user, the person generating clocks:
+Name the branch `<type>/<slug>`, the slug at most five words in kebab-case and without the issue number (the title
+carries it): `fix/moving-belt-pickup`. An integration branch is `release/<slug>`. The type says what the change does for
+the user, the person generating clocks:
 
 | Type | The change | User changelog |
 | --- | --- | --- |
@@ -41,27 +42,29 @@ Start from the type's template in `.github/PULL_REQUEST_TEMPLATE/`: copy it, fil
 | `refactor.md`, `test.md`, `docs.md`, `chore.md`, `release.md` | the type of the same name |
 
 Fill every slot; a `{…}` placeholder left in shows a rule was skipped. The visible body fits on one screen, about 25
-lines: put longer lists in a `<details>` block. The slots:
+lines: put longer lists in a `<details>` block. The slots that carry a rule:
 
-- **Blast**: `zero-change`, `<N> jobs moved` with the jobs listed, `selective: <jobs>`, or `not run: <reason>`. The Blast
-  column of [Choose checks for the change](#choose-checks-for-the-change) says when one is needed. A pull request that
-  says behaviour is unchanged shows a zero-change blast: CI cannot prove that.
+- **Blast**: `zero-change`, `<N> jobs moved` with the jobs listed, `selective: <jobs>`, or `not run: <reason>`. The
+  Blast column of [Choose checks for the change](#choose-checks-for-the-change) says when one is needed; where it says
+  not needed, write `not run:` and the row. A pull request that says behavior is unchanged shows a zero-change blast:
+  CI cannot prove that.
 - **Evidence**: the best there is, each shown before → after: a game recording that agrees with the simulator, the test
   that failed and now passes, the jobs the blast moved, a screenshot of the UI. Write `factorio: not run` when no game
   ran: a skipped game test is not game verification.
 - **Impact**: the door (two-way, or one-way and what cannot be undone) and what it affects (whose builds, saved configs,
   CI time, or none).
 - **Version**: the generator version, `sidecar <version>`, both, `bundled: #<pull request>` when another pull request
-  carries the bump (as under a [release hold](#release-hold-for-unreleased-merges)), or `none`.
+  carries the bump (as under a [release hold](#release-hold-for-unreleased-merges)), or `none`. A fix reaches users
+  only with a version bump, in its own pull request or in the one that carries the bump.
 - **Changelog**: the file (`CHANGELOG.md` or `sidecar`) and the exact entry, or `none: no user impact`.
 
 ### Changelogs
 
-Changelogs say "user", never "player".
+Changelogs and pull requests say "user", never "player".
 
 - `CHANGELOG.md`, for the generator and its UI, is shown in the app. It lists only what a user notices, under the Keep a
   Changelog headings, one entry per change: `<area>: <change>`, at most 15 words after the area and no full stop. Name
-  the build, item, field or result that changes; leave out field names, mechanisms and reasons. The areas:
+  the build, item, field or result that changes; leave out field names, geometry, mechanisms and reasons. The areas:
   - `simulation`: how the game is modelled
   - `generation`: which potential clocks are found, and which becomes the selected clock
   - `blueprint`: what the user takes into the game
@@ -98,7 +101,7 @@ Run commands from the package they belong to. Engine commands below run from `cl
 | Change | Verification | Blast |
 | --- | --- | --- |
 | Documentation only | Check changed links and command paths. Simulation and game runs are unnecessary. | not needed |
-| File moves, import paths, fixture catalog, test/build configuration | `npm run test:typecheck`, `npm run build`, `npm run lint`, `npm run knip`, and `npx vitest list --config vitest.game.config.ts --filesOnly`. Run affected simulator tests. | when engine files move: zero-change expected |
+| File moves, import paths, fixture catalog, test/build configuration | `npm run test:typecheck`, `npm run build`, `npm run lint`, `npm run knip`, and `npx vitest list --config vitest.game.config.ts --filesOnly`. Run affected simulator tests. | engine files or import paths: yes, zero-change expected; catalog or configuration only: not needed |
 | Shared Lua capture or a probe | Type-check, run helper unit tests and affected mechanic game tests. Preserve observation/intervention ordering and capture windows. | not needed |
 | Simulator mechanic | Affected unit tests and a targeted game comparison when Factorio is available. Include generation tests when clock selection or windows change. | yes |
 | Clock planning or selection | Affected generation tests and relevant clock throughput/recovery game cases when available. | yes |
