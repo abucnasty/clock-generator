@@ -271,7 +271,7 @@ and metadata, and the schedule), `recorded.clock_basis` says how it is known (`c
 equals `native`; `history`: the pin has not changed since the commit that recorded `native`; `regenerated`: the clock
 generated on the engine of that commit; `built`: a hand-made clock, which no selection makes, so it has no pin and the
 hash is `builtClockIdentity` of the build's blueprint, recomputed by `clock-controls.test.ts`), and `generation.clock_sha256` is the clock the selection makes today, checked by
-the family's `*.generation.test.ts` (pull requests to master).
+`clock-controls.test.ts` against the record's alternative of the same id, for a build that is a job of the record (`clock-generator/record/`), or the family's `*.generation.test.ts` (pull requests to master) for one that is not.
 
 - `clock-controls.test.ts` runs with the unit tests and reads the files only: it fails where the pin and the recording
   name different clocks, which is what editing a pin to follow a moved selection leaves behind: record the entry
@@ -462,9 +462,9 @@ stacks), where the simulator holds the output inserter at once; the periods judg
 both ([experiments](../../../docs/belt-pickup/experiments.md#generated-clocks-and-drops)). The portable
 `blocked-output-clock-mechanics.test.ts` checks all 16 controls against the fixture config, the documentation and the
 belt-drop calibration's drop figures, and runs a plain clock built from those figures through the block and release in
-the simulator, without generating a clock. `blocked-output-clock.generation.test.ts` pins the selection and exported clock
-(each entry's `generation`) of the three cases in [blocked-output-clock-cases.ts](blocked-output-clock-cases.ts) (the even-hands
-and shifted-swings paths, and the longest drop), and checks it against its native summary beside it.
+the simulator, without generating a clock. The selection and exported clock (each entry's `generation`) of the three cases in
+[blocked-output-clock-cases.ts](blocked-output-clock-cases.ts) (the even-hands and shifted-swings paths, and the longest drop) are
+checked against the record's `blocked-` jobs by `clock-controls.test.ts`, which also checks them against the native summary beside them.
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/blocked-output-new \
@@ -492,9 +492,9 @@ lasts 4 periods (the disposal chest is filled), and recovery is judged over 40 p
 at commit `000ad913`. **All 6 selected clocks are stable, meet exact baseline output (63 periods), drop to 0 in every
 disturbance and are exact in all 33 judged periods after each.** `container-clock-mechanics.test.ts` checks all 6 without
 generating: each container's slots and stock in the simulator, the cut lengths against the stock, the periods the game
-took to run dry under each cut, and the controls against the fixture configs. `container-clock.generation.test.ts` pins
+took to run dry under each cut, and the controls against the fixture configs. `clock-controls.test.ts` checks
 the selection and exported clock of the 2 cases in [container-clock-cases.ts](container-clock-cases.ts) (one a recipe: the
-clock depends on the recipe, and the 3 fixtures of each recipe record one clock hash) and checks each against its native summary.
+clock depends on the recipe, and the 3 fixtures of each recipe record one clock hash) against the record's `containers-` jobs and each against its native summary.
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/container-new BELT_CLOCK_CALIBRATE=1 \

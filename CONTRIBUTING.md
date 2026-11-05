@@ -107,8 +107,8 @@ Run commands from the package they belong to. Engine commands below run from `cl
 | File moves, import paths, fixture catalog, test/build configuration | `npm run test:typecheck`, `npm run build`, `npm run lint`, `npm run knip`, and `npx vitest list --config vitest.game.config.ts --filesOnly`. Run affected simulator tests. | engine files or import paths: yes, zero-change expected; catalog or configuration only: not needed |
 | Shared Lua capture or a probe | Type-check, run helper unit tests and affected mechanic game tests. Preserve observation/intervention ordering and capture windows. | not needed |
 | Simulator mechanic | Affected unit tests and a targeted game comparison when Factorio is available. Include generation tests when clock selection or windows change. | yes |
-| Clock planning or selection | Affected generation tests and relevant clock throughput/recovery game cases when available. | yes |
-| Samples or fixture configs | Affected generation tests and the samples' game cases when available. | selective: the jobs they feed |
+| Clock planning or selection | Affected generation tests and relevant clock throughput/recovery game cases when available; where a job's result moves, a new record and a MOVES.md entry ([the record](#the-record-of-the-blast-jobs)). | yes |
+| Samples or fixture configs | Affected generation tests and the samples' game cases when available; the record of the jobs they feed (a new sample or fixture is a new record file). | selective: the jobs they feed |
 | UI | UI lint/type checks and affected UI tests. Build when imports or package integration change. | not needed |
 
 Use `npm test -- <file>` for unit/helper tests and `npm run test:generation -- <file>` for generation tests.
@@ -196,6 +196,53 @@ git diff --stat record/                               # the moved jobs; each one
 
 A pull request that moves no record changes no file in `record/`. A rename of jobs is checked with `blast.sh record check --map <renames.txt> <out>`
 (the rename map of `blast.sh compare`), then the files are renamed with `record write`.
+
+### Which test a check belongs in
+
+| The check | It goes in | Why |
+| --- | --- | --- |
+| What the generator selects or computes for a sample or fixture as it is (verdict, rate, period, wake-ups, windows, clock hash) | nothing: the record holds it | a moved value is a changed file in `record/` and a MOVES.md entry, not a hand-edited assertion |
+| The same for a sample with an option set (belts backed up, an ingredient out of the period) that a game recording is tied to or a test pins | a job of the `variants` group: an entry in [`variant-jobs.ts`](clock-generator/tests/game/builds/variant-jobs.ts) naming the recording or test that qualifies it | the job gets the record and every property; the generation test goes |
+| Something that must be true of every job's result, whatever the build | a property of `record-properties.ts` (below) | one definition, run on every alternative of every job |
+| A game recording's clock | its `*-clock-controls.json` entry; `clock-controls.test.ts` checks the hash against the record | no generation of its own |
+| An option or search the record does not run (a changed config, an explicit search, a start-dependence override, a ranking such as the speed-80 agricultural one), or a check of a hand-made clock or a direct call | a generation test (`*.generation.test.ts`), one generation shared in the file (above) | a job would be one more generation for a check no recording needs; add a variant job only when a recording or a pin does |
+| A function or rule that needs no generation | a unit test (`npm test`) | runs on every pull request, in seconds |
+
+A job file is never edited by hand: `record write` makes it, and `blast.sh record check` fails on a job with no file and on a file with no job.
+
+### The property module
+
+[`record-properties.ts`](clock-generator/tests/game/builds/record-properties.ts) holds the five properties
+([listed in `record/README.md`](clock-generator/record/README.md#the-properties)). To add one: name it in `PROPERTIES`, write its check in
+`checkProperties` so that it returns the problems it finds on an alternative (a message with the values) and applies only where the alternative
+has what it needs, then make a full blast, so that every job file carries the new module's hash (a job file from another version of the module
+fails `record check`):
+
+```bash
+BLAST_GROUPS=config,pickup,overhood,front,blocked,containers,variants bash scripts/blast/blast.sh run .. <out> --full
+bash scripts/blast/blast.sh record check <out>        # the problems, by job, property and alternative
+```
+
+A property is never loosened because a job fails it: the failure is a finding. When a job fails one for a reason of its own, name it in
+`EXCEPTIONS` (job key, property, the alternative ids, the reason with the issue number), file the issue, and say so in the pull request;
+`record check` lists what each exception found. #626 is the example: `counters-add-up` finds an inserter's swings a minute above its grabs a
+minute on five alternatives (`config-ADVANCED_CIRCUIT_230`, `config-PRODUCTIVITY_MODULE_80_CHEST_CHAIN`, `config-STEEL_PLATE_26_WAGON_CHEST` and two
+variant jobs); each is in `EXCEPTIONS` with `#626` in its reason, and the entries go when #626 is fixed.
+
+### The CI jobs
+
+| Check name | What it does | Runs |
+| --- | --- | --- |
+| Unit tests | knip, typecheck, build, lint, `npm test` (the units, `clock-controls.test.ts` among them) | every pull request that changes more than documentation |
+| Generation tests (shard n of 8), then Generation tests | the `*.generation.test.ts` files, dealt out by `ci/generation-durations.json` | pull requests to `master` or `feature/` that change more than documentation, and releases |
+| Record jobs (shard n of 8), then Record check | the 86 jobs, joined, compared with `record/`, with the properties and the never-worse rule | pull requests to `master` or `feature/` that change more than documentation |
+| UI build, UI tests of every sample, UI generate in a browser | the UI | every pull request that changes more than documentation |
+
+The ruleset "Integration branches: CI before merge" (`feature/*`, `release/*`) lists `Record check` among its required checks, so a record
+that moved without a file, a property problem or an unnamed worse selected clock stops a merge into an integration branch. No ruleset
+covers `master` today. After a change to the jobs, refresh `ci/record-durations.json` (above); after a change to the generation tests,
+`node scripts/ci/update-generation-durations.js <dir of the downloaded generation-test-results-* artifacts of a run>` (a median of several runs is
+steadier than one).
 
 ## Release hold for unreleased merges
 
