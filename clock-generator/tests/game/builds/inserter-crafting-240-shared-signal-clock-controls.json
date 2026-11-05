@@ -148,6 +148,84 @@
         "id": "swings-2",
         "clock_sha256": "be80e121bbde8bc96db94cd4714b4b259e38e77a0ff7ec429cfc032a0c6e6b99"
       }
+    },
+    "generated-backed-up-one-copy": {
+      "recorded": {
+        "pr": 0,
+        "commit": "052a4129bb7dc2bb1ee24bd3d0a092cd36ba6891",
+        "frozen_head": "052a4129bb7dc2bb1ee24bd3d0a092cd36ba6891",
+        "note": "recorded under the protocol in game ticks on the engine of this head with the tests of the branch that added it; pr is set when the PR is opened",
+        "clock_sha256": "c3709dc06e8c411a8e7aa067785cd6fc0e676b37a06554f25e91fd63b5f561b3",
+        "clock_basis": "capture"
+      },
+      "native": {
+        "protocol": "trailing-minute",
+        "generationVerdict": "stable",
+        "target": 80,
+        "period": 72,
+        "window": 3600,
+        "expected": 4800,
+        "steady": 7200,
+        "baseline": {
+          "ticks": 3600,
+          "total": 4800,
+          "expected": 4800,
+          "min": 4800,
+          "max": 4800,
+          "held": true,
+          "meets": true,
+          "measured": {
+            "ticks": 3600,
+            "items": 4800,
+            "expected": 4800,
+            "stock_start": 0,
+            "stock_end": 0,
+            "net": 4800
+          }
+        },
+        "disturbances": [
+          {
+            "kind": "cut iron-ore",
+            "start": 10800,
+            "drop": 11012,
+            "release": 11012,
+            "recovered": 14794
+          },
+          {
+            "kind": "block output",
+            "start": 14794,
+            "drop": 14842,
+            "release": 14842,
+            "recovered": 14888
+          },
+          {
+            "kind": "cut electronic-circuit",
+            "start": 14888,
+            "drop": 14914,
+            "release": 14914,
+            "recovered": 14960
+          }
+        ],
+        "stock": {
+          "lowest": 0,
+          "end": 0,
+          "holds": true
+        },
+        "result": "holds",
+        "ended": 14960
+      },
+      "generation": {
+        "period": 72,
+        "expected": 96.0,
+        "verdict": "stable",
+        "selection": {
+          "id": "swings-6",
+          "holds": true,
+          "rate": 240,
+          "supply": "backed_up"
+        },
+        "clock_sha256": "c3709dc06e8c411a8e7aa067785cd6fc0e676b37a06554f25e91fd63b5f561b3"
+      }
     }
   }
 }
