@@ -48,11 +48,14 @@ const ONLY = process.env.BLAST_ONLY ? process.env.BLAST_ONLY.split(',') : undefi
 const SKIP = (process.env.BLAST_SKIP ?? '').split(',').filter(Boolean);
 const GROUPS = (process.env.BLAST_GROUPS || 'config').split(',');
 const { ConfigPaths } = configPaths;
-// the slowest first, in this order, so the parallel processes finish together (the heaviest samples of 0.24.0, after the
-// memory work; the utility science 480 build is skipped by default and takes ~1,000 s when it runs)
-const SLOW = ['UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN', 'CHEMICAL_SCIENCE_240_SHARED_FOUNDRY', 'STEEL_PLATE_26_WAGON_CHEST',
-    'PROCESSING_UNIT_80_CIRCUIT_EXPORT', 'AGRICULTURAL_SCIENCE_250', 'ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED',
-    'AGRICULTURAL_SCIENCE_250_BACKED_UP', 'STEEL_PLATE_26_WAGON_CHEST_IRON_ORE_OUT_OF_PERIOD'];
+// the slowest first, so that the parallel processes finish together: by the seconds each job took on a CI runner
+// (ci/record-durations.json, which `--shard` deals the jobs out by too); a job it does not list goes after those it does, in the
+// order of the job list. The file is read from the package this script is installed in; a worktree without it keeps the order of the list
+// (the utility science 480 build is skipped by default and takes ~1,000 s when it runs)
+function measuredSeconds(): Record<string, number> {
+    try { return JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../..', 'ci', 'record-durations.json'), 'utf8')); }
+    catch { return {}; }
+}
 
 export interface Job { group: string; name: string; config: () => Promise<any> }
 /** The front entrance (8) and front exit, backed up and on a moving config (4; #274); a worktree from before master
@@ -98,8 +101,9 @@ const baseJobs: Job[] = [
         ({ group: 'overhood', name: variant.name, config: async () => overHoodClockConfig(variant) }))),
 ];
 export async function loadJobs(): Promise<Job[]> {
+    const seconds = measuredSeconds();
     return [...baseJobs, ...await frontJobs(), ...await blockedJobs(), ...await containerJobs(), ...await variantsJobs()]
-        .sort((a, b) => (SLOW.indexOf(a.name) < 0 ? SLOW.length : SLOW.indexOf(a.name)) - (SLOW.indexOf(b.name) < 0 ? SLOW.length : SLOW.indexOf(b.name)))
+        .sort((a, b) => (seconds[keyOf(b)] ?? 0) - (seconds[keyOf(a)] ?? 0))
         .filter(job => GROUPS.includes(job.group) && !SKIP.includes(job.name) && (!ONLY || ONLY.includes(job.name)));
 }
 export const keyOf = (job: Job) => `${job.group}-${job.name}`;

@@ -140,9 +140,9 @@ one build.
 
 Prioritize reducing repeated generation and simulation work; adding workers is not a substitute, especially
 on CI runners with limited CPU capacity. Preserve every case, phase, clock offset and recovery check.
-CI runs the generation tests in four shards (`vitest --shard`, files shared out by the hash of their paths; the
-count is the `shard` list of the `generation-shards` job in `.github/workflows/test.yml`), so a pull request waits for
-the slowest shard. A file is never split between shards, so the slowest file sets a floor under that time however many
+CI runs the generation tests in eight shards (`vitest --shard`, files shared out by their measured CI seconds in
+`clock-generator/ci/generation-durations.json`; the count is the `shard` list of the `generation-shards` job in
+`.github/workflows/test.yml`), so a pull request waits for the slowest shard. A file is never split between shards, so the slowest file sets a floor under that time however many
 shards there are.
 The check named "Generation tests" is the job after the shards. A pull request to master that changes only Markdown,
 `docs/` or `clock-generator/docs/` skips the shards, and the check reports success; a run by hand and a release run
@@ -164,9 +164,25 @@ reduction from scheduling changes; do not report a faster test from a less busy 
 ## The record of the blast jobs
 
 [`clock-generator/record/`](clock-generator/record/README.md) holds one small JSON file for each of the 86 blast jobs: the clock the generator selects for the
-sample or fixture and every alternative it weighed (verdict, holds, rate, period, wake-ups, windows, clock hash). The job named "Record check" in CI
-regenerates it and compares it with the committed files field by field; a difference fails with a table of job, field, before and after in the job summary.
-It is not a required check yet.
+sample or fixture and every alternative it weighed (verdict, holds, rate, period, wake-ups, windows, clock hash). The check named "Record check" in CI
+generates the jobs in eight shards (`Record jobs (shard n of 8)`, dealt out by the seconds each job took on a runner,
+`clock-generator/ci/record-durations.json`), joins them and compares them with the committed files field by field; a difference fails with a table of job,
+field, before and after in the job summary. The check runs on every pull request to `master` or `feature/` that changes more than documentation, and reports
+success on one that changes documentation only. Its name is stable so that it can be a required check. It is never faster than the slowest job
+(the productivity module chest chain). After a change to the jobs or the engine, refresh the durations with
+`node scripts/ci/update-record-durations.js <dir of the downloaded record-jobs-* artifacts of a run>`.
+
+**A selected clock never gets worse unless MOVES.md says so.** The same check sets the selected clock of every job against the record of the pull
+request's base (the first parent of the merge commit CI tests) and fails when one got worse and its job key is not in the lines the pull request adds to
+[`record/MOVES.md`](clock-generator/record/MOVES.md). The record has no target, so worse is defined by its fields, on the selected alternative:
+
+- the job generated before and now fails to (`error`);
+- the verdict ranks lower: `stable`, then `no recovery`, then `unstable`;
+- `holds` went from true to false;
+- `rate` is lower;
+- `wake_ups` (inserter wake-ups a minute) is higher.
+
+Locally: `python3 scripts/blast/record.py worse --base <the base's record folder> --moves <the lines added to MOVES.md>`.
 
 A pull request that changes what the generator selects or computes on purpose regenerates the record, commits the new files and adds an entry to
 [`record/MOVES.md`](clock-generator/record/MOVES.md) that names each moved job and why. From `clock-generator/`, with a clean engine commit:

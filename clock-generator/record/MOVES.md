@@ -1,11 +1,12 @@
 # Moves
 
 A pull request that changes a record file (a file in this folder) adds an entry at the top of this file, newest first: its title and the pull
-request number, then one line for each moved job (the job key as in the file name) with what moved and why. A job whose clock got worse (a
-verdict from stable to unstable, a lost hold, a rate under target) says so and why it is accepted. Many jobs that move for one reason may share
+request number, then one line for each moved job (the job key as in the file name) with what moved and why. A job whose clock got worse (the verdict
+lower, a lost hold, a lower rate, more wake-ups a minute; CONTRIBUTING.md, "The record of the blast jobs") must be named here, and says why it is accepted. Many jobs that move for one reason may share
 a line that names the reason and lists the jobs. A pull request that moves no record needs no entry.
 
-Nothing checks this file yet: the rule that a worse selected clock fails unless it is named here is a later change's.
+CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
+request adds to this file.
 
 ## Pinned variants become jobs (#600)
 - variants-AGRICULTURAL_SCIENCE_250_BACKED_UP, variants-INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK_BACKED_UP, variants-PROCESSING_UNIT_80_CIRCUIT_EXPORT_BACKED_UP, variants-STEEL_PLATE_26_WAGON_CHEST_IRON_ORE_OUT_OF_PERIOD: new jobs, the builds four game recordings are tied to (a sample with its belts backed up, or with iron ore left out of the period)
