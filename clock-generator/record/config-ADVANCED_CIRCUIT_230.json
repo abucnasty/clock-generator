@@ -1,0 +1,30 @@
+{
+  "format": "clock-record-1",
+  "job": "config-ADVANCED_CIRCUIT_230",
+  "group": "config",
+  "name": "ADVANCED_CIRCUIT_230",
+  "config_sha256": "6bacdf227dc715a9aeae0b9191ec7ebd0062f82cd1d7c4dd8a3afb33f652a058",
+  "job_results_sha256": "61b63b4623a6a0120f6a3f585f24a9ebf2d753240bf0bc8624bf6a003a2fba67",
+  "selected": "full-hand-subtick",
+  "selected_windows": {
+    "inserter:2": "29-50,79-100,129-150,179-200,229-250,279-300,329-350,379-400,429-450,479-500,529-542,544.9565217391304-549.9565217391304",
+    "inserter:1": "29-50,79-100,129-150,179-200,229-250,279-300,329-350,379-400,429-450,479-500,529-542,544.9565217391304-549.9565217391304",
+    "inserter:8": "2-9,27-34,52-59,77-84,102-109,127-134,152-159,177-184,202-209,227-234,252-259,277-284,302-309,327-334,352-359,377-384,402-409,427-434,452-459,477-484,502-509,527-534",
+    "inserter:7": "2-9,27-34,52-59,77-84,102-109,127-134,152-159,177-184,202-209,227-234,252-259,277-284,302-309,327-334,352-359,377-384,402-409,427-434,452-459,477-484,502-509,527-534",
+    "inserter:5": "29-42,80-93,130-143,180-185,280-293,330-343,380-393,430-443,480-485",
+    "inserter:4": "29-42,80-93,130-143,180-185,280-293,330-343,380-393,430-443,480-485",
+    "inserter:6": "29-48,80-88,180-199,230-249,280-299,330-349,380-388,480-499,530-549",
+    "inserter:3": "29-48,80-88,180-199,230-249,280-299,330-349,380-388,480-499,530-549",
+    "inserter:9": "82-123"
+  },
+  "alternatives": [
+    {"id": "planned-belt-slack-subtick", "verdict": "unstable", "holds": false, "rate": 156.66666666666666, "supply": "backed_up", "period": 19008, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "417490ad3d35a886e5bd535f6d7167f27dcccc92e47c3e49a9ef3858de449639", "windows_sha256": "4c746ff7a057e036a55ceb19f33aac2dcfa20081d2e0ef212810f5053253da1e", "text_sha256": "a29c8bd93c36f82f0797fc85f8e53ff346035af9fde694e6e1c057852d1661c2", "results_sha256": "72f601f57df7170f1359bba985a49b3359cff31a11f36ba91fa11c16b87d30a2"},
+    {"id": "fractional-subtick", "verdict": "unstable", "holds": false, "rate": 119.77922077922078, "supply": "backed_up", "period": 31680, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "3e17d5b2ed21e20ef4d90e90c7ba5078c58e2771eb03f15f22cb6cb29f851a40", "windows_sha256": "42895ba39a13fd817f1b0877d4377bb6f523a94f77c047ec0ae37fc3e2a10b85", "text_sha256": "44181d72d00f31cbbf38b7de663bdf2adc1e589346bb82f3fb4915989a814baf", "results_sha256": "46dfe21a28a4c79a5d45b1a8bc4c6e90695d5925aae8d2d895e249138baaacab"},
+    {"id": "swings-4-subtick", "verdict": "unstable", "holds": false, "rate": 115.90909090909092, "supply": "backed_up", "period": 25344, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "192116290e23fb58ddaf57024c055bd60872db1b01e676f70a29093a5ff3083c", "windows_sha256": "409b075a9f7206992758445770a295e15b2f2154a9bbab7588d2591111bb991c", "text_sha256": "717254b761eaf5b870c3ca8d2b1aad571432a41c2b5b10d277b4c43c3f93d324", "results_sha256": "5decd496233d436d4e2b2798b02b24be723682daf8cbc999dbca187b2e4661b2"},
+    {"id": "swings-5-subtick", "verdict": "unstable", "holds": false, "rate": 96, "supply": "backed_up", "period": 31680, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "e106fed5ad8e87972f12d1eac434f659acf852e53f56dfcee79afdfabf19fec1", "windows_sha256": "b8b9331f7c7608d27d2e0ae8482485398b2565d1a6cda8bcf7e82141a17bf04f", "text_sha256": "be108f851e23bff68f435a8d275839177c93e58c852ce65b5f26113c7d7ef740", "results_sha256": "7e10d23ca73045b41f253d9b3350431eaa021010d6ba79c234aeb2c65da1f472"},
+    {"id": "swings-6-subtick", "verdict": "unstable", "holds": false, "rate": 106.51515151515152, "supply": "backed_up", "period": 38016, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "48d03f91ffe21fcfaf73060a54c0b39f74250e55ec7fc94b2b77c1c5084f6ba7", "windows_sha256": "dd6d82e5be279e6b6c348f21bbe60f932843aebcdc7bd7a353c4c3467d777779", "text_sha256": "d7c2b648b201d4f861e51181ed50aafdc8363e34a130eccf8e2992f239af70fd", "results_sha256": "07295d82293ec077e2689833da2392f4e739cf4b2107e3cde214e4e73b0d760a"},
+    {"id": "swings-2-subtick", "verdict": "unstable", "holds": false, "rate": 207.27272727272728, "supply": "backed_up", "period": 12672, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "dab0de77d97e7f9615191b28e10ea9a5ffee18435346eacd8857d1bfe03899fc", "windows_sha256": "99a625c22f2bf39d9ec66670cf7e77de3e4a87f4b51315608c9395f60f7ee919", "text_sha256": "b527d358b91ac72c2926622eecfc1e1975a7f565ad3588f30e012ed29cd0f9dd", "results_sha256": "e4295a4fdfe18e791f60d4e50d2d7f3cbddaec9727d04cbe9b5d0affa9f9bd4f"},
+    {"id": "swings-1-subtick", "verdict": "unstable", "holds": false, "rate": 184.24242424242425, "supply": "backed_up", "period": 6336, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "280824222dc5f3c7157814ce726535a5c3b5623f7d920ad575e94f7f4a4f0e6a", "windows_sha256": "e5f35a35ea42160b71040c387c48afa1a5e238d3d4b3a63442248b809acd3d9a", "text_sha256": "de08028e780c67fd7f56a3e619e8574fb074be3af26e8727f6bfbe0d1ced9b46", "results_sha256": "9f528b49d245d11c2e358e3fba1e5a331d8c7047b1aaeadce1a59a6bd8706229"},
+    {"id": "full-hand-subtick", "verdict": "stable", "holds": true, "rate": 230, "supply": "backed_up", "period": 12672, "wake_ups": 59.993, "descriptions_cut": 0, "clock_sha256": "9cdc8d06a5bb1887dbff8a99b856b5eb3cd90a3f3506a535b435ae6db58bde85", "windows_sha256": "e127c41a0f328fda4d466e7db69c919a3db697ac59e32964ef5c85ca324c94f7", "text_sha256": "84d4ff3dec1f0ee0704077f35287441ac7a46886a4fc3a65a81e4b81d6579ee5", "results_sha256": "c4784bab8312e75b8d53b9e65f5859279d244d82afeb1f82673a969a30729004"}
+  ]
+}

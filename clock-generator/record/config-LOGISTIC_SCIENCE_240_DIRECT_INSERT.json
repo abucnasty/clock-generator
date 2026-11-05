@@ -1,0 +1,28 @@
+{
+  "format": "clock-record-1",
+  "job": "config-LOGISTIC_SCIENCE_240_DIRECT_INSERT",
+  "group": "config",
+  "name": "LOGISTIC_SCIENCE_240_DIRECT_INSERT",
+  "config_sha256": "dda9c102549d6aa6c037a95e1b50122863207dee6b7339344a385791f1325576",
+  "job_results_sha256": "101a2ce83a52a866ced00bc9afee1941d637cdff9a8ad3c401c1d613709cb8c2",
+  "selected": "fractional",
+  "selected_windows": {
+    "inserter:1": "0-24",
+    "inserter:7": "0-24",
+    "inserter:2": "14-30",
+    "inserter:8": "14-30",
+    "inserter:4": "31-40",
+    "inserter:6": "31-40",
+    "inserter:3": "47-48",
+    "inserter:5": "47-48"
+  },
+  "alternatives": [
+    {"id": "planned-belt-slack", "verdict": "stable", "holds": true, "rate": 240, "supply": "moving", "period": 576, "wake_ups": 312.609, "descriptions_cut": 0, "clock_sha256": "1e7912aed9146262a6c3ec0e157b9faee11427cfa1fb5ecb98712546f486ef37", "windows_sha256": "0903a2fdd57bb19715329bbe77206d0db8fc874da28a54ee181ca3993f5eb5d5", "text_sha256": "fe6aab10e04317b39d18a759ff81ace715493d6e84658dc101c5a30789e4014c", "results_sha256": "ec07c6c61bfeffa6b8787305450d8fdc11009c9cd0e8ca60ada2467fd0bf1c5a"},
+    {"id": "fractional", "verdict": "stable", "holds": true, "rate": 240, "supply": "moving", "period": 96, "wake_ups": 250, "descriptions_cut": 0, "clock_sha256": "fdfe060fff30fe5241a9cf234623a3a00b8a9578e0b021743c326f4679337304", "windows_sha256": "740b095c4c89245e52b53bb35fb226980708351f8ecc0717962f87423c48bbbf", "text_sha256": "4e31fe7e182d35acc39c0fc53479364c4d2de1a5a9fd104b299964d14ea9f708", "results_sha256": "e0f638ae5247761dbbc2b11899ad356a17512cb11b8d7fadde93165e54b54e13"},
+    {"id": "swings-5", "verdict": "unstable", "holds": false, "rate": 192, "supply": "moving", "period": 1440, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "69569aacfa9bff2aef65db2d5aa84f37beecfdaed6c4d148b9e3dcb1177a9aa6", "windows_sha256": "e86ad0a79143643306166b3fbcc7972f158f417217da4074f440df166646d3cd", "text_sha256": "bc6f3b877133070765397ccd1954ddbeb012f990f1adb829bda8151a4052f9d4", "results_sha256": "fa204d769362b7777d1a0c9574f19479cc597e411a88464b54fabbf7b26784c8"},
+    {"id": "swings-6", "verdict": "unstable", "holds": false, "rate": 160, "supply": "moving", "period": 288, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "f69c75f7427ec913bf6ea71e862c960d09fb122f5c68d211a7cc21bfa5418869", "windows_sha256": "4f51270e7b3defc21fc61c2edd00b8e5f107d1074d75cb11b85e17d11da892d4", "text_sha256": "e58dc6931efa3259ea6e3e129bd60ba19e05dcecd6a44edb134216d55257ae71", "results_sha256": "d43e96adc9225ac0f8f14e9014ec630c363bd9ec18900e1217c9df426db98573"},
+    {"id": "swings-3", "verdict": "stable", "holds": true, "rate": 240, "supply": "moving", "period": 288, "wake_ups": 400.278, "descriptions_cut": 0, "clock_sha256": "e00826cdc044f7d069ca818eefb7a31932e730260be2fba611275387a171ec08", "windows_sha256": "a63375f32ef3ace5b8421695ddf3b1deffe5bf9b19dccc5fee9f050643bb81aa", "text_sha256": "5587a1a2833836b0724e2368a81fea4dc3b334a42edc7a5af884cbaed9b3ac98", "results_sha256": "00547ef1b95ca3351a7f530ff98a707c3547ba07cd73ce61d0c89be097dfa49f"},
+    {"id": "swings-2", "verdict": "stable", "holds": true, "rate": 240, "supply": "moving", "period": 288, "wake_ups": 325.226, "descriptions_cut": 0, "clock_sha256": "b765180317f68e418cdcbfb72dc0d5174dd704000741e43feec6f54f60aa6686", "windows_sha256": "fbaab52796afb01f99a6b0067582df85a06138d792e36ee53c7d68c546b31c51", "text_sha256": "0c1f5e593972cbad67b25ba2fe30ee07e1966ee1032a5d81387dcdbaa5ab0536", "results_sha256": "41ad5f8ed70b75bcc011a43a562d0b215fb3c6d6f738889c5555bae236551abd"},
+    {"id": "swings-1", "verdict": "stable", "holds": true, "rate": 240, "supply": "moving", "period": 288, "wake_ups": 350.243, "descriptions_cut": 0, "clock_sha256": "b3c069c7b432c578095014335bbe7e3e384234d07f2faccd50b89b4dd3591a05", "windows_sha256": "1a8a64fd0560d570d6f847564f18cfa14c0df4eef22c3e66b357ef4175a894e0", "text_sha256": "77cc3db34373cf2947f1a89ce6b844ec03b23ca63efaaafeea2348c784cbe1b3", "results_sha256": "efc298ddbd09b47fdc2a5171363475b2598f418cd1a3fedb39d4c25b5da29a93"}
+  ]
+}

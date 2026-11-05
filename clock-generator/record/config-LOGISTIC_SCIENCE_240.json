@@ -1,0 +1,22 @@
+{
+  "format": "clock-record-1",
+  "job": "config-LOGISTIC_SCIENCE_240",
+  "group": "config",
+  "name": "LOGISTIC_SCIENCE_240",
+  "config_sha256": "b8edf3d3681318803b1de0caca4d0333a7f14f8a663b4e7b7ff85ae8353ed151",
+  "job_results_sha256": "11c8abe1e732dbd181aefe544071f59ac6bdf8cf8300bf35ffd223bb48a57a9c",
+  "selected": "planned-belt-slack",
+  "selected_windows": {
+    "inserter:2": "1-49",
+    "inserter:1": "52-99"
+  },
+  "alternatives": [
+    {"id": "planned-belt-slack", "verdict": "stable", "holds": true, "rate": 239.99999999999997, "supply": "moving", "period": 176, "wake_ups": 61.714, "descriptions_cut": 0, "clock_sha256": "2f07693464e59ecf077c9dc4270c58d5ad6e04b6666c9bb26fac45f8c8d7f4d7", "windows_sha256": "d0fa0a1a1ffc93698c23cd0d3761dba6e5f9c6af3f461ca522c4e77af8c29b0c", "text_sha256": "3240c3092db7e7778ad8d57392defc1fdde758ce42124a618e91f9e9df0066d5", "results_sha256": "34158a6f57832cb021d94b80ebd803b04f166047ea89c9b65062bdcfcd455a0b"},
+    {"id": "derived", "verdict": "stable", "holds": true, "rate": 239.99999999999997, "supply": "moving", "period": 176, "wake_ups": 102.857, "descriptions_cut": 0, "clock_sha256": "9339fdf1cbf5269cfc1a420c46906cda0eaa4ce892ab1980bdc7a8fbce3bc2ed", "windows_sha256": "f4955fadcdc6872bf603fd0f64d37f6c53ef0044b701697b8d078450e19e9eb8", "text_sha256": "72faa2849bbd468871132b9fef80ff4d8c74841a5be482c568047917297884f2", "results_sha256": "f24ba5600169bcd66edc80957f5458891ef76eb231ea393a9406308f1e1a93b9"},
+    {"id": "swings-5", "verdict": "unstable", "holds": false, "rate": 192, "supply": "moving", "period": 440, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "59a112f1e7d68b35548d2c3ac11fedc857862ebadadd66f074b29a9d0c74a7b3", "windows_sha256": "7ef417f59712584286d98e414981961900a1cc1f644487050c641e686482d5e3", "text_sha256": "41b73b32bd755e582f952c27321aa6ee3f6443bfef68a09566b37cbb387d83f9", "results_sha256": "7afde965123ebb8f666bdae2a1de13f5a40886c208af004d680db602cc5ae176"},
+    {"id": "swings-6", "verdict": "unstable", "holds": false, "rate": 160, "supply": "moving", "period": 264, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "0ab2a665ce19b8e58e1f59d57bf70ac1f5fe023d2ebe8929428fb0486d15206c", "windows_sha256": "e2fff7a1c23641477bc7a5d6d64dfdc7c0837d5471c5bcdc7858a04153fb6733", "text_sha256": "43d183b2b602b2f08465ba69a6149533c0c7dc688ee24123bdd8539ca8223aa7", "results_sha256": "686a22691da9cdd2513439abcacf125f65aa3b7068b346f4c28d707160040f7c"},
+    {"id": "swings-3", "verdict": "stable", "holds": true, "rate": 239.99999999999997, "supply": "moving", "period": 264, "wake_ups": 164.259, "descriptions_cut": 0, "clock_sha256": "2a9d22bdfc189d957483a557acb560e767fd36b23304f3e4e8727ddcda065b7c", "windows_sha256": "0cc37aaee9f33f956d33017f1ad5a5a42ddc331f5efe4a3723d0180dc13fad7a", "text_sha256": "16993c8f2327fa23d55badcd1e65168c483a217ca751450d33c7676620adcf8c", "results_sha256": "26a7cafae3d7e145cd40a2818eea834839df3ce9ae96ac4fc5d4b0ea86591fb7"},
+    {"id": "swings-2", "verdict": "stable", "holds": true, "rate": 239.99999999999997, "supply": "moving", "period": 88, "wake_ups": 82.759, "descriptions_cut": 0, "clock_sha256": "a1c8750c986ced4566c7f998a21dabf49614fd28b34c6f565e6180b065cddd8b", "windows_sha256": "48c9eff3d467c5efd60307f5f6a2c449a5761a03ec5cd0af7404c7981637972d", "text_sha256": "ec3bf34554b4aa307d20cb32c139db245e56a7d3943fcfd5e4191f76286da6cb", "results_sha256": "e5a1157e7bae439bab004f9c6b542b0bd378d6a301f22cd636d14e4be1097bd5"},
+    {"id": "swings-1", "verdict": "stable", "holds": true, "rate": 239.99999999999997, "supply": "backed_up", "period": 88, "wake_ups": 82.759, "descriptions_cut": 0, "clock_sha256": "d96887933052f0f1c3f58f17896613f1f77edf34aeab4875637fe5f404c470ca", "windows_sha256": "6a8b0cc88ab5311dbbb28f06b1a5a7c38e5f3ac1c613312e9c6301a065ecf89f", "text_sha256": "3f4c771f2b5379bc2ebe071d48fae252d39c221d7688162bb428689ddb2bf05e", "results_sha256": "87c814bde73f32404c574d8ff61658a5a4f9b220d40e29dbe8b6e8a08c2b79f1"}
+  ]
+}
