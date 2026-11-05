@@ -11,7 +11,7 @@ import {handMadeClockHash} from "./inserter-crafting-240-shared-signal-clock-fix
  * fail where a pin was moved to follow a selection and its recording was not made again: the generation tests (pull
  * requests to master) find the selection that moved, this finds the pin that was edited to follow it.
  */
-const FAMILIES = ["blocked-output", "container", "front", "grenade", "inserter-crafting-240-shared-signal", "iron-ore-voider-400", "iron-plate-80-car-chest", "lithium-plate-80-silo-chest", "over-hood", "pickup", "processing-unit-80-circuit-export", "productivity-module-80-chest-chain", "steel-plate-26-wagon-chest", "utility-science-480-lds-foundry-chain"]
+const FAMILIES = ["blocked-output", "container", "front", "grenade", "inserter-crafting-240-shared-signal", "iron-ore-voider-400", "iron-plate-80-car-chest", "electromagnetic-science-330-drained-end", "lithium-plate-80-silo-chest", "logistic-science-240-direct-insert", "over-hood", "pickup", "processing-unit-80-circuit-export", "productivity-module-80-chest-chain", "steel-plate-26-wagon-chest", "utility-science-480-lds-foundry-chain"]
     .map(family => `${family}-clock-controls.json`);
 const hash = /^[0-9a-f]{64}$/;
 /** Entries whose native summary has no known clock yet: the list may only shrink */

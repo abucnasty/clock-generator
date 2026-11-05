@@ -14,6 +14,44 @@ import {assertPickupClockHardware} from "./pickup-clock-speed-hardware";
 import {judgeBaseline, RunRecord} from "../helpers/run-judgement";
 import {clockHash, clockToRun, expectedNativeSummary, NativeRunSummary} from "./clock-controls";
 
+/** One lane of a belt tile an inserter picks up from, as a probe read it: its stacks by item and the unique ids of the stacks with their places */
+export interface FeedLane {length: number; items: Record<string, number> | never[]; stacks: number; ids: string}
+/** The belt tile one belt-fed inserter picks up from, read at steady state and again 20 ticks later (the probe's `feed`) */
+export interface FeedRead {x: number; y: number; lanes: FeedLane[]; line_end: {closed: boolean; tiles: number; ends_in?: string}}
+export interface ProbeReport {feed?: {at_steady: FeedRead[]; later: FeedRead[]}}
+
+/**
+ * The fact a probe's `feed` states about a scaffold: the belt lines the belt-fed inserters pick up from end closed (no loader or chest
+ * drains them) and hold the ingredient where the inserters take it, so the supply is backed up in the game, whatever supply the clock was
+ * made for. The lanes' stacks are the probe's raw record; they shift as the inserters take hands, so they are not compared.
+ */
+export function assertFeedBacksUp(report: ProbeReport): void {
+    expect(report.feed, "the probe reads the lanes the belt-fed inserters pick up from").toBeDefined();
+    const {at_steady, later} = report.feed!;
+    expect(at_steady.length).toBeGreaterThan(0);
+    expect(later.length).toBe(at_steady.length);
+    for (const reads of [at_steady, later]) {
+        for (const tile of reads) {
+            expect(tile.line_end.closed, `the belt line of tile (${tile.x}, ${tile.y}) ends in ${tile.line_end.ends_in}`).toBe(true);
+            expect(tile.lanes.some(lane => lane.stacks > 0), `tile (${tile.x}, ${tile.y}) holds items`).toBe(true);
+        }
+    }
+}
+
+/** The fact a probe's `feed` states about a drained scaffold: the belt lines the belt-fed inserters pick up from end in a loader, and hold the ingredient where the inserters take it, so the supply moves in the game */
+export function assertFeedDrains(report: ProbeReport): void {
+    expect(report.feed, "the probe reads the lanes the belt-fed inserters pick up from").toBeDefined();
+    const {at_steady, later} = report.feed!;
+    expect(at_steady.length).toBeGreaterThan(0);
+    expect(later.length).toBe(at_steady.length);
+    for (const reads of [at_steady, later]) {
+        for (const tile of reads) {
+            expect(tile.line_end, `the belt line of tile (${tile.x}, ${tile.y})`).toMatchObject({closed: false, ends_in: "turbo-loader"});
+            expect(tile.lanes.some(lane => lane.stacks > 0), `tile (${tile.x}, ${tile.y}) holds items`).toBe(true);
+        }
+    }
+}
+
 export interface PickupClockScenario {
     name: string;
     speed: FixtureBeltSpeed;
@@ -44,10 +82,12 @@ export interface PickupClockScenario {
     /** A probe of its own, in place of pickup-clock-speed-probe.lua: it runs steady.lua with its own disturbances and writes clock-speed.json */
     probeFile?: string;
     probe: {family: string; machine_name?: string; ingredients?: readonly [string, string]; output_to_belt?: boolean;
-        trace_ticks?: number; stackSize?: number};
+        trace_ticks?: number; stackSize?: number; assemblers?: number};
     /** The native setup audit, in place of assertPickupClockHardware (which expects a belt-fed input) */
     assertHardware?: (recording: Recording, config: Config, blueprint: string) => void;
     validateRecording?: (recording: Recording, config: Config) => void;
+    /** What the probe wrote besides the run (`clock-speed.json`), for a fact about the build that the run's own summary does not hold */
+    validateReport?: (report: ProbeReport) => void;
 }
 
 interface Prepared {
@@ -181,6 +221,7 @@ export async function capturePickupClockScenario(scenario: PickupClockScenario) 
             expect(source.source.pickup_length).toBe(reach);
             expect(report.initial).toMatchObject({speed: scenario.speed.units / 32, reach: reach});
         }
+        scenario.validateReport?.(report);
         const run = report.protocol as RunReport;
         expect(run.error, "the probe failed in the game").toBeUndefined();
         expect(run.result, "the run did not end before the recording: over the cap").toBeDefined();
