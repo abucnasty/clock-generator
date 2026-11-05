@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.27.2] - 2026-11-05
+
+### Fixed
+- Clocks for builds fed from an infinity chest with several items now follow the game's pick order: the inserter takes the item the chest sorts last first.
+
 ## [0.27.1] - 2026-11-04
 
 ### Changed

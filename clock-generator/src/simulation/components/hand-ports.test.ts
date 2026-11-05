@@ -243,6 +243,48 @@ describe("the pickup port of a container, as a hand reaches it", () => {
     });
 });
 
+describe("the pickup port of an infinity chest, as a hand reaches it", () => {
+    const chestOf = (items: ItemName[]) => ContainerStorage.forChest(Chest.fromConfig({ type: "infinity-chest", id: 1,
+        item_filter: items.map(item_name => ({ item_name, request_count: 100 })) }));
+    const machineOf = (recipe: string) => MachineState.forMachine(Machine.createMachine(2, { crafting_speed: 1.25, productivity: 0,
+        recipe: RecipeMetadata.fromRecipeName(recipe) }));
+    /** The items of hands the inserter takes and drops one after the other into the machine, which does not craft */
+    function picks(chest_items: ItemName[], recipe: string, carried: ItemName[], hands: number): string[] {
+        const source = chestOf(chest_items);
+        const sink = machineOf(recipe);
+        const state = handOf(source, sink, carried);
+        const { pickup, drop } = bind(state, source, sink);
+        const taken: string[] = [];
+        for (let hand = 0; hand < hands; hand++) {
+            pickup.enter(InserterPhase.IDLE);
+            pickup.pickup();
+            if (state.held_item === null) {
+                break;
+            }
+            taken.push(`${state.held_item.item_name}:${state.held_item.quantity}`);
+            drop.enter();
+            drop.drop();
+        }
+        return taken;
+    }
+
+    it("gives the item the game sorts last of those the machine takes, whatever the recipe's or the filters' order", () => {
+        // the game (Factorio 2.1.24, two chests of opposite filter order, 24 of 24 starts from an empty machine): electronic
+        // circuits, then cable, then plastic; the processing units of the last slot are not an ingredient and stay
+        const chest = ["electronic-circuit", "copper-cable", "plastic-bar", "processing-unit"];
+        const ingredients = ["electronic-circuit", "plastic-bar", "copper-cable"];
+        expect(picks(chest, "advanced-circuit", ingredients, 4))
+            .toEqual(["electronic-circuit:16", "copper-cable:16", "plastic-bar:16"]);
+        expect(picks([...chest].reverse(), "advanced-circuit", [...ingredients].reverse(), 4))
+            .toEqual(["electronic-circuit:16", "copper-cable:16", "plastic-bar:16"]);
+    });
+
+    it("gives advanced circuits before electronic ones to a processing unit machine, as the game's chest-fed build took them", () => {
+        expect(picks(["electronic-circuit", "advanced-circuit"], "processing-unit", ["electronic-circuit", "advanced-circuit"], 1))
+            .toEqual(["advanced-circuit:16"]);
+    });
+});
+
 describe("the items a hand carries", () => {
     it("are bound in the hand's order with the hand of each, and let any item through when there are none", () => {
         const state = handOf(gears(), gears(), ["iron-gear-wheel", "iron-plate"], InserterStackSize.SIZE_12);

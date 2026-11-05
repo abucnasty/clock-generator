@@ -158,6 +158,7 @@ async function main() {
         throw new Error("--weights=<the item weights of the running game, from resources/dump-item-weights.js> is required");
     }
     filtered["item_weight"] = itemWeights(rawData, filtered, JSON.parse(await fs.readFile(weights_file, "utf-8")));
+    filtered["item_order"] = itemOrder(rawData, filtered);
     const table = await readLocale(FACTORIO_DATA_DIR);
     const { names, fallbackIds, fallbackCount } = buildNames(rawData, filtered, table);
     filtered["names"] = names;
@@ -361,6 +362,45 @@ function itemWeights(rawData, filtered, game_weights) {
         weights[name] = weight;
     }
     return weights;
+}
+
+/**
+ * Every item the generator knows, in the order the game sorts an inventory: by its item group, then its subgroup, then
+ * the item itself, each by its `order` string and then its name (an item that names no subgroup is in "other"; a prototype
+ * without an order has ""). Recorded in Factorio 2.1.24: an infinity chest keeps its slots in this order whatever its
+ * filters say, and an inserter takes from it the item of the last slot it may take (docs/simulator.md).
+ */
+function itemOrder(rawData, filtered) {
+    const prototypes = {};
+    for (const section of Object.values(rawData)) {
+        for (const [name, prototype] of Object.entries(section ?? {})) {
+            if (prototype && typeof prototype === "object" && "stack_size" in prototype && name in filtered.item) {
+                prototypes[name] = prototype;
+            }
+        }
+    }
+    const key = name => {
+        const prototype = prototypes[name];
+        if (!prototype) {
+            throw new Error(`The dump has no item prototype for ${name}`);
+        }
+        const subgroup = rawData["item-subgroup"]?.[prototype.subgroup ?? "other"];
+        const group = subgroup && rawData["item-group"]?.[subgroup.group];
+        if (!subgroup || !group) {
+            throw new Error(`The dump has no item subgroup or group for ${name} (${prototype.subgroup ?? "other"})`);
+        }
+        return [group.order ?? "", group.name, subgroup.order ?? "", subgroup.name, prototype.order ?? "", name];
+    };
+    const keys = Object.fromEntries(Object.keys(filtered.item).map(name => [name, key(name)]));
+    const compare = (a, b) => {
+        for (let index = 0; index < a.length; index++) {
+            if (a[index] !== b[index]) {
+                return a[index] < b[index] ? -1 : 1;
+            }
+        }
+        return 0;
+    };
+    return Object.keys(filtered.item).sort((a, b) => compare(keys[a], keys[b]));
 }
 
 /** An inserter: its swing and its hand first, then the manifest's other fields (how it fills its hand, its filters) */

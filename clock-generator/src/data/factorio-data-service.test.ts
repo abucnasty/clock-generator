@@ -123,4 +123,14 @@ describe("a result's chance in the 2.1 data", () => {
         expect(FactorioDataService.itemSpoilTicks("iron-plate")).toBeNull();
         expect(FactorioDataService.itemSpoilTicks("spoilage")).toBeNull();
     });
+
+    it("orders the items as the game sorts an inventory: by group, subgroup and then the item's own order", () => {
+        // an infinity chest in the game (Factorio 2.1.24) held them in its slots in this order whatever its filters: plastic
+        // first by its subgroup (raw material) though its own order string sorts after cable's
+        const rank = (item: string) => FactorioDataService.itemInventoryRankOrThrow(item);
+        const items = ["processing-unit", "electronic-circuit", "plastic-bar", "advanced-circuit", "copper-cable"];
+        expect([...items].sort((a, b) => rank(a) - rank(b)))
+            .toEqual(["plastic-bar", "copper-cable", "electronic-circuit", "advanced-circuit", "processing-unit"]);
+        expect(() => rank("no-such-item")).toThrow("Item no-such-item has no place in the game data's inventory order");
+    });
 });
