@@ -1,8 +1,8 @@
 import {createHash} from "crypto";
 import {expect, test} from "vitest";
-import {ClockAlternativesResult, generateClockAlternatives} from "../../../src/crafting/generate-blueprint";
+import {generateClockAlternatives} from "../../../src/crafting/generate-blueprint";
 import {clockIdentity} from "../../../src/crafting/clock-identity";
-import {SteelWagonCase, steelWagonCases, steelWagonConfig} from "./steel-plate-26-wagon-chest-clock-fixtures";
+import {steelWagonCases, steelWagonConfig} from "./steel-plate-26-wagon-chest-clock-fixtures";
 import {readControls, RunControls} from "./clock-controls";
 import {expectRunAgreesWithSelection} from "../helpers/fixture-mechanics";
 
@@ -11,17 +11,16 @@ const controls = readControls<RunControls>("steel-plate-26-wagon-chest-clock-con
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 
 /**
- * The generation tests of the steel wagon clocks that `which` picks, each against the in-game recording of its clock.
- * A case that leaves items out of the period generates its own build; the others take `generated`, the build as it is.
+ * The generation test of the steel wagon clock that leaves items out of the period, against the in-game recording of its clock. It
+ * generates a build of its own, which is no job of the record, so its pin is checked here; the pins of the clocks of the build as it
+ * is are checked against the record (clock-controls.test.ts)
  */
-export function steelWagonClockTests(which: (variant: SteelWagonCase) => boolean, generated?: () => ClockAlternativesResult) {
-    for (const variant of steelWagonCases().filter(which)) {
+export function steelWagonClockTests() {
+    for (const variant of steelWagonCases().filter(it => it.ignored_lcm_ingredients !== undefined)) {
         test(`steel wagon clock: ${variant.name}`, async () => {
             const {generation, native} = controls.cases[variant.name];
             const expected = generation!;
-            if (variant.ignored_lcm_ingredients === undefined && generated === undefined) throw new Error("a case that takes the build as it is needs it generated");
-            const alternatives = variant.ignored_lcm_ingredients === undefined ? generated!()
-                : generateClockAlternatives(await steelWagonConfig(variant), {logger: quiet});
+            const alternatives = generateClockAlternatives(await steelWagonConfig(variant), {logger: quiet});
             const chosen = alternatives.alternatives.find(alternative => alternative.id === variant.alternative)!;
             const result = chosen.result;
             const exported = result.subtick ?? result;

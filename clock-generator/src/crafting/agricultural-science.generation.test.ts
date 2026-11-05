@@ -3,7 +3,6 @@ import { generateClockAlternatives, simulateClockOnly, validateConfig, type Cloc
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { alwaysOnReasonProblemsOf } from "./generate-blueprint-test-helpers";
-import { expectPinnedScaffoldClock } from "../../tests/game/builds/scaffold-recordings-clock-pins";
 
 describe("generateClockForConfig", () => {
 
@@ -92,11 +91,7 @@ describe("generateClockForConfig", () => {
         });
 
         // The values the scaffold recordings expect of this build (no dip and no open issue after its staged start) were seen on
-        // one clock. The build is generated here, from the same config, and not again for that test
-        // (scaffold-recordings-clock.generation.test.ts).
-        it("selects the clock the values of the scaffold recordings of this build were seen on", () => {
-            expectPinnedScaffoldClock("agricultural science", { config: ConfigPaths.AGRICULTURAL_SCIENCE_250, backed_up_belts: false }, alternatives[selected_index]);
-        });
+        // one clock: the record's selected clock of this config is checked against the pin in clock-controls.test.ts.
 
         // Recorded in the game with 400 in every period; in the simulator the 1-swing clock holds the rate under both orders of
         // the egg takers, but with the takers served in one fixed order it does not get back after the bioflux stops, so it

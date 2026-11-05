@@ -529,7 +529,7 @@ afterAll(async () => {
     }
 }, 60_000);
 
-/** The clocks the values of three builds belong to (scaffold-recordings-clock-pins.json); the generation tests check the selection (src/crafting/scaffold-recordings-clock.generation.test.ts) */
+/** The clocks the values of three builds belong to (scaffold-recordings-clock-pins.json); clock-controls.test.ts checks the selection against the record, and clock-belt.generation.test.ts the build with backed-up belts */
 const clockPins = readControls<{ cases: Record<string, { config: string; backed_up_belts: boolean; clock_sha256: string }> }>("scaffold-recordings-clock-pins.json").cases;
 
 test("every build with a pinned clock is a build of this file", () => {

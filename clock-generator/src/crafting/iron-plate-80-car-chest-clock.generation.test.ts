@@ -1,20 +1,13 @@
-import {createHash} from "crypto";
 import path from "path";
 import {beforeAll, describe, expect, test} from "vitest";
 import {ClockAlternativesResult, generateClockAlternatives} from "./generate-blueprint";
-import {clockIdentity} from "./clock-identity";
 import {backpressureLossVerdictOf} from "./trial";
 import {outputCapacityPerSecond} from "./alternatives";
 import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config/schema";
 import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
-import {carCases} from "../../tests/game/builds/iron-plate-80-car-chest-clock-fixtures";
-import {readControls, RunControls} from "../../tests/game/builds/clock-controls";
-import {expectRunAgreesWithSelection} from "../../tests/game/helpers/fixture-mechanics";
 
-// each clock pinned beside the in-game recording of it
-const controls = readControls<RunControls>("iron-plate-80-car-chest-clock-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 let config: Config;
 let generated: ClockAlternativesResult;
@@ -41,28 +34,9 @@ test("car: the observed-windows clock is selected, and the drill into the car is
 });
 
 // swings-2 (144 ticks) was the selected clock before the observed windows were searched past a stable clock, and swings-3
-// (72 ticks) before the generator counted a wake-up only while the inserter's arm is at home; their recordings stay, and
-// they find them still made
-for (const variant of carCases()) {
-    test(`car clock: ${variant.name}`, () => {
-        const {generation, native, known_differences} = controls.cases[variant.name];
-        const expected = generation!;
-        const chosen = generated.alternatives.find(alternative => alternative.id === variant.alternative)!;
-        const result = chosen.result;
-        const exported = result.subtick ?? result;
-        const clock = clockIdentity(exported);
-        expect(createHash("sha256").update(JSON.stringify(clock)).digest("hex"), "same windows and exported clock as the native control (its identity: no text or metadata)")
-            .toBe(expected.clock_sha256);
-        expect(result.subtick?.clock.period_ticks ?? result.simulation_duration.ticks).toBe(expected.period);
-        expect(chosen.verdict).toBe(expected.verdict);
-        expect({id: chosen.id, holds: chosen.assessment.holds, rate: chosen.assessment.items_per_second,
-            supply: chosen.belt?.kind ?? null}).toEqual(expected.selection);
-        expect(native.period).toBe(expected.period);
-        // the game holds the target over the baseline, and is back at it after the drill stopped until the car ran dry, the output
-        // blocked and the drill stopped again
-        expectRunAgreesWithSelection(variant.name, native, {verdict: chosen.verdict, holds: chosen.assessment.holds}, true, known_differences);
-    });
-}
+// (72 ticks) before the generator counted a wake-up only while the inserter's arm is at home; their recordings stay. The pin of each
+// recorded clock (hash, period, verdict, selection), and that the generator still makes it, is checked against the record
+// (tests/game/builds/clock-controls.test.ts), with the game's run against the verdict and the holds of the alternative
 
 // the car's Sidecar export (iron-plate-80-car-chest.sidecar-export.json) as the web app pastes it, at the export's suggested target: the
 // furnaces' ceiling, 80.78015625, floored to 80.780/s (U11)

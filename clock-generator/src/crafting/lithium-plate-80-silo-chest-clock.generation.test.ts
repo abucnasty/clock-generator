@@ -1,7 +1,5 @@
-import {createHash} from "crypto";
 import {beforeAll, expect, test} from "vitest";
 import {ClockAlternativesResult, generateClockAlternatives} from "./generate-blueprint";
-import {clockIdentity} from "./clock-identity";
 import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config/schema";
@@ -9,7 +7,7 @@ import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
 import {lithiumSiloCases} from "../../tests/game/builds/lithium-plate-80-silo-chest-clock-fixtures";
 import {readControls, runHolds, RunControls} from "../../tests/game/builds/clock-controls";
 
-// each clock pinned beside the in-game recording of it
+// each clock pinned beside the in-game recording of it; the pins are checked against the record (tests/game/builds/clock-controls.test.ts)
 const controls = readControls<RunControls>("lithium-plate-80-silo-chest-clock-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 let config: Config;
@@ -30,19 +28,9 @@ test("lithium silo: the even-hands clock is selected; the clock with 3 output sw
 
 for (const variant of lithiumSiloCases()) {
     test(`lithium silo clock: ${variant.name}`, () => {
-        const {generation, native} = controls.cases[variant.name];
-        const expected = generation!;
+        // the pin of the clock (hash, period, verdict, selection) is checked against the record (clock-controls.test.ts)
+        const {native} = controls.cases[variant.name];
         const chosen = generated.alternatives.find(alternative => alternative.id === variant.alternative)!;
-        const result = chosen.result;
-        const exported = result.subtick ?? result;
-        const clock = clockIdentity(exported);
-        expect(createHash("sha256").update(JSON.stringify(clock)).digest("hex"), "same windows and exported clock as the native control (its identity: no text or metadata)")
-            .toBe(expected.clock_sha256);
-        expect(result.subtick?.clock.period_ticks ?? result.simulation_duration.ticks).toBe(expected.period);
-        expect(chosen.verdict).toBe(expected.verdict);
-        expect({id: chosen.id, holds: chosen.assessment.holds, rate: chosen.assessment.items_per_second,
-            supply: chosen.belt?.kind ?? null}).toEqual(expected.selection);
-        expect(native.period).toBe(expected.period);
         // the game holds the target over the baseline and is back at it after each disturbance, but for the known limit, which
         // never makes the target over a minute
         const holds = variant.known_limit === undefined;

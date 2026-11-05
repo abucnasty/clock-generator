@@ -5,8 +5,6 @@ import { ConfigPaths } from "../config/config-paths";
 import { generateClockAlternatives, type ClockAlternativesResult } from "./generate-blueprint";
 import { windowDeciderCount } from "./alternatives";
 import { alwaysOnReasonProblemsOf, quiet } from "./generate-blueprint-test-helpers";
-import { clockIdentity } from "./clock-identity";
-import { createHash } from "crypto";
 import {readControls, RunControls, runHolds} from "../../tests/game/builds/clock-controls";
 import { GENERATED_ALTERNATIVE } from "../../tests/game/builds/productivity-module-80-chest-chain-clock-fixtures";
 
@@ -45,16 +43,9 @@ describe("a clock for the productivity module chain from the hands and the order
         expect(result.why_not_stable).toBeNull();
     });
 
-    it("is the clock recorded in the game: the pin of the control names it", () => {
-        const { generation, native } = readControls<RunControls>("productivity-module-80-chest-chain-clock-controls.json").cases["generated-one-copy"];
-        const selected = result.alternatives[result.selected_index];
-        const exported = selected.result.subtick ?? selected.result;
-        expect(createHash("sha256").update(JSON.stringify(clockIdentity(exported))).digest("hex"),
-            "same windows and exported clock as the native control (its identity: no text or metadata)").toBe(generation!.clock_sha256);
-        expect(selected.result.simulation_duration.ticks).toBe(generation!.period);
-        expect({ id: selected.id, holds: selected.assessment.holds, rate: selected.assessment.items_per_second, supply: selected.belt?.kind ?? null })
-            .toEqual(generation!.selection);
-        expect(native.period).toBe(generation!.period);
+    it("the game's run of the recorded clock holds the target and recovers", () => {
+        // the pin of the clock (hash, period, selection) is checked against the record (clock-controls.test.ts)
+        const { native } = readControls<RunControls>("productivity-module-80-chest-chain-clock-controls.json").cases["generated-one-copy"];
         // the game holds the target over the baseline and is back at it after each loss
         expect(runHolds(native), native.result).toBe(true);
     });

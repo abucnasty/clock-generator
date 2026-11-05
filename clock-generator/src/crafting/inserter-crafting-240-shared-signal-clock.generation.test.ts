@@ -51,7 +51,7 @@ test("inserter crafting clock: with the belts backed up the selected clock is sw
 
 for (const variant of inserterCraftingClockCases()) {
     test(`inserter crafting clock: ${variant.name}`, () => {
-        const {generation, native, previous} = controls.cases[variant.name];
+        const {generation, native} = controls.cases[variant.name];
         // the hand-made clock is not generated: its control is the game's run, 80 a second a copy, held and recovered
         expect(runHolds(native), native.result).toBe(true);
         if (variant.kind === "hand-made clock") {
@@ -59,7 +59,10 @@ for (const variant of inserterCraftingClockCases()) {
             expect([native.period, native.target]).toEqual([216, 240]);
             return;
         }
-        const chosen = (variant.backed_up_one_copy ? backed_up : generated).alternatives.find(alternative => alternative.id === variant.alternative)!;
+        // the pin of the clock the three copies were recorded on, and its earlier clock, are checked against the record
+        // (clock-controls.test.ts); the config with its belts backed up is no job of the record yet, so its pin is checked here
+        if (!variant.backed_up_one_copy) return;
+        const chosen = backed_up.alternatives.find(alternative => alternative.id === variant.alternative)!;
         const exported = chosen.result.subtick ?? chosen.result;
         expect(createHash("sha256").update(JSON.stringify(clockIdentity(exported))).digest("hex"),
             "same windows and exported clock as the native control (its identity: no text or metadata)").toBe(generation!.clock_sha256);
@@ -68,12 +71,5 @@ for (const variant of inserterCraftingClockCases()) {
         expect({id: chosen.id, holds: chosen.assessment.holds, rate: chosen.assessment.items_per_second,
             supply: chosen.belt?.kind ?? null}).toEqual(generation!.selection);
         expect(native.period).toBe(generation!.period);
-        if (previous) {
-            // the clock selected before the wake-ups were counted with the arm at home is still made, with the same windows
-            const earlier = generated.alternatives.find(alternative => alternative.id === previous.id);
-            expect(earlier, `${previous.id} is still made`).toBeDefined();
-            const earlier_exported = earlier!.result.subtick ?? earlier!.result;
-            expect(createHash("sha256").update(JSON.stringify(clockIdentity(earlier_exported))).digest("hex")).toBe(previous.clock_sha256);
-        }
     });
 }

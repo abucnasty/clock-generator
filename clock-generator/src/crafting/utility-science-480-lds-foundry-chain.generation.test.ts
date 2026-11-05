@@ -4,8 +4,6 @@ import { ConfigPaths } from "../config/config-paths";
 import type { Config } from "../config/schema";
 import { generateClockAlternatives, type ClockAlternativesResult } from "./generate-blueprint";
 import { alwaysOnReasonProblemsOf, quiet } from "./generate-blueprint-test-helpers";
-import { clockIdentity } from "./clock-identity";
-import { createHash } from "crypto";
 import {readControls, RunControls, runHolds} from "../../tests/game/builds/clock-controls";
 import { GENERATED_ALTERNATIVE } from "../../tests/game/builds/utility-science-480-lds-foundry-chain-clock-fixtures";
 
@@ -37,7 +35,7 @@ describe("a clock for the utility science 480 build from the hands and the order
     });
 
     it("Selection: the valid pick remains the clock named by its native control", () => {
-        const { generation, native } = readControls<RunControls>("utility-science-480-lds-foundry-chain-clock-controls.json").cases["generated-one-copy"];
+        const { native } = readControls<RunControls>("utility-science-480-lds-foundry-chain-clock-controls.json").cases["generated-one-copy"];
         const selected = result.alternatives[result.selected_index];
         expect(selected.verdict).toBe("stable");
         expect(selected.assessment.backpressure_loss?.survives).toBe(true);
@@ -47,13 +45,7 @@ describe("a clock for the utility science 480 build from the hands and the order
         expect(result.skipped_searches).toEqual(["Uneven output swings", "Full-hand output swings"]);
         expect(result.why_not_stable).toBeNull();
         expect(selected.id).toBe(GENERATED_ALTERNATIVE);
-        const exported = selected.result.subtick ?? selected.result;
-        expect(createHash("sha256").update(JSON.stringify(clockIdentity(exported))).digest("hex"),
-            "same windows and exported clock as the native control (its identity: no text or metadata)").toBe(generation!.clock_sha256);
-        expect(selected.result.simulation_duration.ticks).toBe(generation!.period);
-        expect({ id: selected.id, holds: selected.assessment.holds, rate: selected.assessment.items_per_second, supply: selected.belt?.kind ?? null })
-            .toEqual(generation!.selection);
-        expect(native.period).toBe(generation!.period);
+        // the pin of the selection (clock hash, period, selection) is checked against the record (clock-controls.test.ts)
         // the game holds the target over the baseline and is back at it after each loss
         expect(runHolds(native), native.result).toBe(true);
     });

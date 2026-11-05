@@ -1,4 +1,3 @@
-import {createHash} from "crypto";
 import {beforeAll, expect, test} from "vitest";
 import {ClockAlternativesResult, backpressureLossOf, clockFromWindows, generateClockAlternatives} from "./generate-blueprint";
 import {clockIdentity} from "./clock-identity";
@@ -178,14 +177,6 @@ for (const variant of grenadeClockCases()) {
             expect(generation).toBeUndefined();
             return;
         }
-        const chosen = generated.alternatives.find(alternative => alternative.id === GENERATED_ALTERNATIVE)!;
-        const exported = chosen.result.subtick ?? chosen.result;
-        expect(createHash("sha256").update(JSON.stringify(clockIdentity(exported))).digest("hex"),
-            "same windows and exported clock as the native control (its identity: no text or metadata)").toBe(generation!.clock_sha256);
-        expect(chosen.result.subtick?.clock.period_ticks ?? chosen.result.simulation_duration.ticks).toBe(generation!.period);
-        expect(chosen.verdict).toBe(generation!.verdict);
-        expect({id: chosen.id, holds: chosen.assessment.holds, rate: chosen.assessment.items_per_second,
-            supply: chosen.belt?.kind ?? null}).toEqual(generation!.selection);
-        expect(native.period).toBe(generation!.period);
+        // the pin of the generated clock (hash, period, verdict, selection) is checked against the record (clock-controls.test.ts)
     });
 }
