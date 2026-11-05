@@ -80,7 +80,7 @@ was recorded in the game for each build, its credit, source and issues are in th
 | GRENADE_240_FILLS_BELT_EXACTLY | `intermediates/grenade/grenade-240-fills-belt-exactly` | `grenade` 240/s over 7 copies | Purpose: output inserters dropping onto the same lanes of one belt, which the simulator must model so the belt fills exactly. Game: one copy and the full build of 7, hand-made and generated clock; the rule for hands in groups; drop-spacing | REAL_OWNER_GRENADE |
 | INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK | `intermediates/inserter-crafting/inserter-crafting-240-shared-signal-clock` | `inserter` 240/s over 3 copies | Purpose: how the furnaces' inputs are clocked; its hand-made clock shares one signal between several inserters. Game both ways plus its own game test (three copies, hand-made and generated clock); open gaps #586 and G2 | LOGISTIC_SCIENCE_INSERTER_CRAFTING |
 | LDS_240 | `intermediates/lds/lds-240` | `low-density-structure` 240/s over 1 copy | Game: selected clock with 6 output swings; start-hands and cold-start units | LOW_DENSITY_STRUCTURE |
-| PROCESSING_UNIT_15_CHEST_FED | `intermediates/processing-unit/processing-unit-15-chest-fed` | `processing-unit` 15/s over 1 copy | Not in `test:game` (the selected clock makes half the target in the game, #617); units: clock-belt generation, run-memo, shared swings | PROCESSING_UNITS |
+| PROCESSING_UNIT_15_CHEST_FED | `intermediates/processing-unit/processing-unit-15-chest-fed` | `processing-unit` 15/s over 1 copy | Game (`scaffold-recordings`, on the owner's build): an inserter taking two items from an infinity chest, the one the chest's inventory order puts last first (#617); units: clock-belt generation, run-memo, shared swings | PROCESSING_UNITS |
 | PROCESSING_UNIT_80_CIRCUIT_EXPORT | `intermediates/processing-unit/processing-unit-80-circuit-export` | `processing-unit` 80/s over 1 copy | Game as is and backed up; 3 generation files; sim-game-check; blast SLOW job; UI test; also the export lane consumed outside the config and the output-onto-a-belt terminal rate (repointed from a dropped 40/s build) | REAL_STUPIDFATHOBBIT_CELL02 |
 | PRODUCTIVITY_MODULE_80_CHEST_CHAIN | `intermediates/productivity-module/productivity-module-80-chest-chain` | `productivity-module` 80/s over 6 copies | Game and generation: a chain of 9 machines; 1.3% spare, so every window must hold | REAL_OWNER_PRODUCTIVITY_CHAIN |
 | IRON_PLATE_80_CAR_CHEST | `smelting/iron-plate/iron-plate-80-car-chest` | `iron-plate` 80/s over 1 copy | Game: a car as a chest; sidecar-export mechanics; known differences #587 | REAL_OWNER_CAR |
@@ -109,8 +109,8 @@ the test names the copies (`copies: 22`).
 
 Also not on the list any more (2026-11-04, the owner's builds): **ROCKET_FUEL_60** and **STONE_BRICK_120_DRILL_DIRECT_INSERT**, each with the
 owner's scaffold and a game check of the selected clock; and (2026-11-05) **PRODUCTION_SCIENCE_120_TWO_BELTS**, **PROCESSING_UNIT_15_CHEST_FED**,
-**MILITARY_SCIENCE_120**, **FLYING_ROBOT_FRAME_160** and **ELECTRIC_FURNACE_20**. Four of the five are in `test:game` and hold their target; the selected
-clock of PROCESSING_UNIT_15_CHEST_FED makes half of it in the game and is not in it (see its README, #617).
+**MILITARY_SCIENCE_120**, **FLYING_ROBOT_FRAME_160** and **ELECTRIC_FURNACE_20**, all five in `test:game` holding their target;
+PROCESSING_UNIT_15_CHEST_FED since 0.27.2, when the simulator took the infinity chest's items in the game's order (see its README, #617).
 
 ## Backpressure loss
 
