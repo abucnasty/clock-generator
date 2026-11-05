@@ -5,8 +5,8 @@ import { excessLossOf } from "./random-margins";
 import { loadConfigFromFile } from "../config/loader";
 import type { Config } from "../config/schema";
 import { ConfigPaths } from "../config/config-paths";
-import { clockHash, readControls, RunControls, runHolds } from "../../tests/game/builds/clock-controls";
-import { expectRunAgreesWithSelection, expectRunIsConsistent } from "../../tests/game/helpers/fixture-mechanics";
+import { readControls, RunControls, runHolds } from "../../tests/game/builds/clock-controls";
+import { expectRunIsConsistent } from "../../tests/game/helpers/fixture-mechanics";
 
 // The exact-speed recycler cell of the ore voider benchmark (save F, the benchmark's waste inserters clocked): a recycler at
 // crafting speed 16.875 (540 crafts a second) destroys 400 iron ore a second, brought in by four stack inserters from the
@@ -140,27 +140,16 @@ describe("a recycler that voids iron ore with crafts to spare", () => {
     });
 });
 
-// the clock each cell's run in the game was recorded on (tests/game/builds/iron-ore-voider-400-clock-controls.json)
+// the clock each cell's run in the game was recorded on (tests/game/builds/iron-ore-voider-400-clock-controls.json); that the generator still
+// selects it is checked against the record (tests/game/builds/clock-controls.test.ts)
 describe("the clocks the ore voider's runs in the game ran", () => {
     const controls = readControls<RunControls>("iron-ore-voider-400-clock-controls.json");
     for (const [name, sample] of [["ore-voider-exact-speed", "IRON_ORE_VOIDER_400_EXACT_SPEED"], ["ore-voider-overbeaconed", "IRON_ORE_VOIDER_400_OVERBEACONED"]] as const) {
-        test(`${name} is still selected`, async () => {
-            const pin = controls.cases[name].generation!;
-            const result = generateClockAlternatives(await loadConfigFromFile(ConfigPaths[sample]), { logger: quiet });
-            const selected = result.alternatives[result.selected_index];
-            expect(clockHash(selected.result.subtick ?? selected.result), "the clock recorded in the game").toBe(pin.clock_sha256);
-            expect({ id: selected.id, holds: selected.assessment.holds, rate: selected.assessment.items_per_second, supply: selected.belt?.kind ?? null })
-                .toEqual(pin.selection);
-            expect(selected.verdict).toBe(pin.verdict);
-            expect(selected.result.simulation_duration.ticks).toBe(pin.period);
-        });
-
-        // the run under the protocol (a minute of baseline, the ore cut, the output blocked) was recorded on that clock, and what
-        // the game found agrees with the selection: a stable clock holds the target and recovers from both
-        test(`${name}: the run in the game agrees with the selection`, async () => {
+        // the run under the protocol (a minute of baseline, the ore cut, the output blocked) was recorded on that clock and holds the
+        // target and recovers from both (that it agrees with the generator's verdict is checked against the record)
+        test(`${name}: the run in the game is the pin's and holds`, async () => {
             const { native, generation } = controls.cases[name];
             expectRunIsConsistent(native, generation!, (await loadConfigFromFile(ConfigPaths[sample])).target_output.items_per_second);
-            expectRunAgreesWithSelection(name, native, { verdict: generation!.verdict, holds: generation!.selection.holds });
             expect(runHolds(native), native.result).toBe(true);
         });
     }

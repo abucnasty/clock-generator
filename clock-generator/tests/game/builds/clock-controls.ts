@@ -25,11 +25,6 @@ interface RecordingIdentity {
      * from the blueprint
      */
     clock_basis?: "capture" | "history" | "regenerated" | "built";
-    /**
-     * Set where the pin (`generation.clock_sha256`) moved and the recording was not made again: the commit or PR and why
-     * the recording still holds. The game test then runs on the pinned clock, which shows whether it does
-     */
-    carried?: string;
 }
 
 /**
@@ -223,8 +218,8 @@ export function clockHash(clock: Parameters<typeof clockIdentity>[0]): string {
 
 /**
  * The entries of a family's controls whose recording and pin name different clocks, as lines to read: an entry with a
- * `native` summary has the hash of the clock it was recorded on, and it is the hash of its pin unless `carried` says
- * why not. `untied` names the entries still without a hash (they may only be removed from the list).
+ * `native` summary has the hash of the clock it was recorded on, and it is the hash of its pin: a pin that moved is
+ * recorded again in the game. `untied` names the entries still without a hash (they may only be removed from the list).
  */
 export function pinMismatches(cases: Record<string, ClockControl>, untied: readonly string[] = [], built: Record<string, string> = {}): string[] {
     const found: string[] = [];
@@ -244,7 +239,6 @@ export function pinMismatches(cases: Record<string, ClockControl>, untied: reado
             // the clock of the blueprint the test builds
             if (recorded.clock_basis !== "built") found.push(`${name}: is named as a hand-made clock and its recorded.clock_basis is not "built"`);
             if (generation) found.push(`${name}: a hand-made clock is no selection and has no generation pin`);
-            if (recorded.carried !== undefined) found.push(`${name}: a hand-made clock has no pin to carry`);
             if (!recorded.clock_sha256 || !hash.test(recorded.clock_sha256)) found.push(`${name}: recorded.clock_sha256 is missing: it is the identity of the hand-made clock`);
             else if (recorded.clock_sha256 !== built[name]) {
                 found.push(`${name}: the hand-made clock in the blueprint is ${built[name].slice(0, 12)} and the native summary was recorded on ${recorded.clock_sha256.slice(0, 12)}: record it again in the game`);
@@ -274,25 +268,22 @@ export function pinMismatches(cases: Record<string, ClockControl>, untied: reado
         if (perPeriod !== pinned || control.native.period !== generation.period) {
             found.push(`${name}: the native summary (period ${control.native.period}, expected ${perPeriod} a period) and the pin (${generation.period}, ${generation.expected}) are of different clocks`);
         }
-        if (recorded.carried !== undefined && recorded.carried.trim() === "") found.push(`${name}: recorded.carried is empty: say where the pin moved and why the recording still holds`);
-        if (recorded.clock_sha256 !== generation.clock_sha256 && !recorded.carried?.trim()) {
-            found.push(`${name}: the pin names clock ${generation.clock_sha256.slice(0, 12)} and the native summary was recorded on ${recorded.clock_sha256.slice(0, 12)}: record it again in the game (recorded.clock_sha256), or say in recorded.carried why the recording still holds`);
+        if (recorded.clock_sha256 !== generation.clock_sha256) {
+            found.push(`${name}: the pin names clock ${generation.clock_sha256.slice(0, 12)} and the native summary was recorded on ${recorded.clock_sha256.slice(0, 12)}: record it again in the game (recorded.clock_sha256)`);
         }
-        if (recorded.clock_sha256 === generation.clock_sha256 && recorded.carried !== undefined) found.push(`${name}: recorded.carried is set and the hashes agree: remove it`);
     }
     return found;
 }
 
 /**
  * The hash a game test has to find the clock it runs to have, for the entry `name` of the family file `controls`: the
- * recorded one, or the pin's where the recording is carried. Undefined where BELT_CLOCK_EXPECTATIONS names other
- * summaries, or the file has no hash for the entry
+ * recorded one. Undefined where BELT_CLOCK_EXPECTATIONS names other summaries, or the file has no hash for the entry
  */
 export function clockToRun(controls: string, name: string): string | undefined {
     if (process.env.BELT_CLOCK_EXPECTATIONS) return undefined;
     const entry = (JSON.parse(fs.readFileSync(controls, "utf8")) as ClockControls).cases[name];
     if (!entry?.recorded.clock_sha256) return undefined;
-    return entry.recorded.carried ? entry.generation?.clock_sha256 : entry.recorded.clock_sha256;
+    return entry.recorded.clock_sha256;
 }
 
 /** Checks both active and superseded cold trajectories, retaining missing-clock and unused-clock detection. */
@@ -313,6 +304,95 @@ export function historicalPinMismatches(history: ClockHistory["cases"], current:
         found.push(...pinMismatches({[label]: entry}));
         if (!current[name]) found.push(`${label}: no current case for the historical recording`);
         else if (current[name].generation?.clock_sha256 === entry.recorded.clock_sha256) found.push(`${label}: historical capture still names the active pin`);
+    }
+    return found;
+}
+
+/** An alternative of a record job (`record/<job>.json`, format clock-record-1): the fields a control's pin is checked against */
+export interface RecordAlternative {
+    id: string;
+    verdict: string;
+    holds: boolean;
+    rate: number;
+    supply: string | null;
+    period: number;
+    clock_sha256: string;
+}
+
+/** A job of the record: the id of the selected alternative and every alternative the generator made */
+export interface RecordJob {
+    job: string;
+    selected: string;
+    alternatives: RecordAlternative[];
+}
+
+/** The record's job `job`, or undefined where it has no file or its config failed to generate */
+export function readRecordJob(job: string): RecordJob | undefined {
+    const file = path.join(__dirname, "../../../record", `${job}.json`);
+    if (!fs.existsSync(file)) return undefined;
+    const read = JSON.parse(fs.readFileSync(file, "utf8")) as RecordJob & {error?: string};
+    return read.error === undefined ? read : undefined;
+}
+
+/** How a family's entries meet the record: the job of an entry, which of them are alternatives the generator offers and does not select, and the supply a run was made under */
+export interface RecordLink {
+    /** The record job of the entry `name`, or undefined for a pin that has no job (the list of those is kept by the test) */
+    jobOf(name: string): string | undefined;
+    /** Entries whose pin is of an alternative the generator makes and does not select (the others are the selection) */
+    offered?: readonly string[];
+    /** The supply the game run of the entry `name` was made under: only then does the run speak to the generator's `holds` verdict; undefined where it always does */
+    runSupply?(name: string): "moving" | "backed_up";
+}
+
+/**
+ * The entries of a family's controls whose generation pin differs from the record: the pin is of the record job's alternative
+ * with the pin's `selection.id` (its clock hash, period, verdict, holds, rate and supply), the selection where the entry is not
+ * listed as `offered`, and its `previous` clock is an alternative of the job with that hash. Where the game's run is judged
+ * (`runs`), a stable alternative holds in the game and a run that misses its target over the baseline is one the generator
+ * sees, as `expectRunAgreesWithSelection` asked of the generation. Lines to read; an entry with no job is not looked at.
+ */
+export function recordMismatches(cases: Record<string, ClockControl>, link: RecordLink, record: (job: string) => RecordJob | undefined = readRecordJob, runs = false): string[] {
+    const found: string[] = [];
+    for (const [name, control] of Object.entries(cases)) {
+        const pin = control.generation;
+        const job = link.jobOf(name);
+        if (pin === undefined || job === undefined) continue;
+        const made = record(job);
+        if (made === undefined) {
+            found.push(`${name}: record job ${job} has no result in the record`);
+            continue;
+        }
+        const alternative = made.alternatives.find(it => it.id === pin.selection.id);
+        if (alternative === undefined) {
+            found.push(`${name}: record job ${job} has no alternative ${pin.selection.id}`);
+            continue;
+        }
+        const where = `record job ${job}, alternative ${alternative.id}`;
+        if (alternative.clock_sha256 !== pin.clock_sha256) {
+            found.push(`${name}: the pin names clock ${pin.clock_sha256.slice(0, 12)} and ${where} makes ${alternative.clock_sha256.slice(0, 12)}: the generation moved, so the game recording is of another clock`);
+        }
+        const shape = (period: number, verdict: string, selection: GenerationPin["selection"]) =>
+            ({period, verdict, selection: {id: selection.id, holds: selection.holds, rate: selection.rate, supply: selection.supply}});
+        const asPinned = shape(alternative.period, alternative.verdict, alternative);
+        const pinned = shape(pin.period, pin.verdict, pin.selection);
+        if (JSON.stringify(asPinned) !== JSON.stringify(pinned)) found.push(`${name}: the pin (${JSON.stringify(pinned)}) and ${where} (${JSON.stringify(asPinned)}) differ`);
+        const offered = link.offered?.includes(name) ?? false;
+        if (!offered && made.selected !== pin.selection.id) {
+            found.push(`${name}: the pin is of ${pin.selection.id} and ${job} selects ${made.selected}: record the selection in the game, or list the entry as an alternative the generator makes and does not select`);
+        }
+        if (offered && made.selected === pin.selection.id) found.push(`${name}: is listed as not selected and ${job} selects ${pin.selection.id}: take it off the list`);
+        if (control.previous) {
+            const earlier = made.alternatives.find(it => it.id === control.previous!.id);
+            if (earlier === undefined) found.push(`${name}: the earlier clock ${control.previous.id} is no longer made by record job ${job}`);
+            else if (earlier.clock_sha256 !== control.previous.clock_sha256) found.push(`${name}: the earlier clock ${control.previous.id} is ${control.previous.clock_sha256.slice(0, 12)} and record job ${job} makes ${earlier.clock_sha256.slice(0, 12)}`);
+        }
+        if (runs && isRunSummary(control.native)) {
+            const native = control.native;
+            if (native.generationVerdict !== alternative.verdict) found.push(`${name}: the game run was recorded on a ${native.generationVerdict} clock and ${where} is ${alternative.verdict}`);
+            if (alternative.verdict === "stable" && !runHolds(native, control.known_differences)) found.push(`${name}: ${where} is stable and the game run does not hold and recover (${native.result})`);
+            const ownSupply = link.runSupply === undefined || link.runSupply(name) === alternative.supply;
+            if (ownSupply && native.baseline?.meets !== true && alternative.holds) found.push(`${name}: the run misses the target over its baseline and ${where} says it holds: the generator has to see that itself`);
+        }
     }
     return found;
 }

@@ -68,8 +68,9 @@ describe("the belt a clock is made for", () => {
             expect(selected.belt).toEqual({ kind: "backed_up" });
         });
 
-        // The values the scaffold recordings expect of this build with backed-up belts were seen on one clock. The build is
-        // generated here, from the same config, and not again for that test (scaffold-recordings-clock.generation.test.ts).
+        // The values the scaffold recordings expect of this build with backed-up belts were seen on one clock. The config with its
+        // belts backed up is no job of the record yet, so its pin is checked here, on this generation; the pins of the other two
+        // builds are checked against the record (clock-controls.test.ts).
         it("selects the clock the values of the scaffold recordings of this build were seen on", () => {
             expectPinnedScaffoldClock("agricultural science (belts are backed up)", { config: ConfigPaths.AGRICULTURAL_SCIENCE_250, backed_up_belts: true }, selected);
         });

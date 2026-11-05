@@ -254,10 +254,8 @@ start rule the 11 runs where a window the latency carries over the period's end 
 other 46 pass.
 
 The same test builds each run's clock from its stored windows and requires the hash the run was recorded on (the four
-fractional-clock runs of the fast tier cannot be rebuilt from windows, and the test says so). `pickup-clock-cold-start.generation.test.ts`
-generates only the run of `pickup-clock-cold-start-cases.ts` (an underground exit, backed up), the one of a path through
-the generator that the nine belt pickup fixtures do not take; the over-the-hood run is checked without generating, its clock
-being the one the over-hood generation test makes.
+fractional-clock runs of the fast tier cannot be rebuilt from windows, and the test says so). `clock-controls.test.ts` checks the clock of each run started at the period's
+beginning (a side pickup fixture on near lane 1, and the over-the-hood run) against the record's selected clock of its fixture, with no generation.
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/belt-clock-cold-start-new \
@@ -276,16 +274,17 @@ hash is `builtClockIdentity` of the build's blueprint, recomputed by `clock-cont
 the family's `*.generation.test.ts` (pull requests to master).
 
 - `clock-controls.test.ts` runs with the unit tests and reads the files only: it fails where the pin and the recording
-  name different clocks, which is what editing a pin to follow a moved selection leaves behind. Either record the entry
-  again in the game and set `recorded.clock_sha256`, or write in `recorded.carried` the commit or PR and why the
-  recording still holds (a re-pin with the same windows, verdicts and game result). The game test then runs on the
-  pinned clock, which shows whether it does.
+  name different clocks, which is what editing a pin to follow a moved selection leaves behind: record the entry
+  again in the game and set `recorded.clock_sha256` (a pin that moves is recorded again; nothing is carried over).
+  It also checks every generation pin against the record (`clock-generator/record/`, one file per blast job): the pin is the
+  clock hash, period, verdict, holds, rate and supply of the record job's alternative with the pin's id, and the game's run agrees
+  with that alternative's verdict. A pin whose build is no job of the record yet (a config with its belts backed up, an ingredient
+  left out of the period) is listed in the test and checked by its generation test.
 - A game test checks the hash of the clock it generated against the recorded one before it starts Factorio
   (`pickup-clock-capture.ts`; `BELT_CLOCK_CALIBRATE=1` skips the check to record a new summary).
 - The cold starts (`pickup-clock-start-controls.json`, `cold_start`) keep the same pair per clock:
   `clock_sha256` (checked by `pickup-clock-cold-start-mechanics.test.ts` against the clock the stored windows build and the fixture's
-  pin, and for the run of `pickup-clock-cold-start-cases.ts` and those of the nine belt pickup fixtures by the generation tests
-  against the selection)
+  pin, and for the runs started at the period's beginning by `clock-controls.test.ts` against the record's selection)
   and `recorded_clock_sha256` (checked by the game test).
 - Three scaffold-recordings builds expect values that belong to one clock (agricultural science having no dip and no
   difference after its staged start, agricultural science with backed-up belts having no difference, and the moved

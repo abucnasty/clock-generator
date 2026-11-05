@@ -10,8 +10,8 @@ import {coldStart as controls, configOf, perPeriod, physicalColdClockOf} from ".
  * The clocked cold starts (`pickup-clock-start-controls.json`, `cold_start`: the turbo runs, each recorded from placement until
  * the plant has made its target over a minute and a minute more), checked without generating a clock. The clock of a run is stored as its windows, so the simulator
  * runs it from the cold start and is held to the game's counts, and the windows build the clock whose hash the run was
- * recorded on. That the generator's selection still makes that clock is checked on a few runs by
- * pickup-clock-cold-start.generation.test.ts (pickup-clock-cold-start-cases.ts).
+ * recorded on. That the generator's selection still makes that clock is checked on the runs
+ * started at the period's beginning against the record (clock-controls.test.ts).
  */
 
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};

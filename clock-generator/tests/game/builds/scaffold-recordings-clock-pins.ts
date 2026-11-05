@@ -9,8 +9,9 @@ export const scaffoldClockPins = readControls<{cases: Record<string, {config: st
 
 /**
  * Checks that the clock a generation selected is the one the values of the scaffold-recordings build `name` were seen
- * on. A generation test that makes the build's clock anyway calls this on its own generation, instead of the build being
- * generated a second time in scaffold-recordings-clock.generation.test.ts. `build` is what that generation was made of,
+ * on. The pins of the builds that are jobs of the record are checked
+ * against it (clock-controls.test.ts); the build whose config has its belts backed up is no job yet, and its generation test calls
+ * this on its own generation. `build` is what that generation was made of,
  * checked against the pin: the config file, and whether the config says the belts are backed up.
  */
 export function expectPinnedScaffoldClock(name: string, build: {config: string; backed_up_belts: boolean}, selected: ClockAlternative) {
