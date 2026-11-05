@@ -351,9 +351,11 @@ jobs:
             echo "::error::The checkout is not a merge commit, so the base of the pull request is not known."
             exit 1
           fi
+          # paths from the root of the repository, whatever the folder of the step
+          root=$(git rev-parse --show-toplevel)
           base=$(mktemp -d)
-          git archive HEAD^1 clock-generator/record | tar -x -C "$base"
-          git diff -U0 HEAD^1 HEAD -- clock-generator/record/MOVES.md | sed -n 's/^+\([^+].*\)$/\1/p' > "$RUNNER_TEMP/moves-added.txt"
+          git -C "$root" archive HEAD^1 clock-generator/record | tar -x -C "$base"
+          git -C "$root" diff -U0 HEAD^1 HEAD -- clock-generator/record/MOVES.md | sed -n 's/^+\([^+].*\)$/\1/p' > "$RUNNER_TEMP/moves-added.txt"
           python3 scripts/blast/record.py worse --base "$base/clock-generator/record" --moves "$RUNNER_TEMP/moves-added.txt" --summary "$GITHUB_STEP_SUMMARY"
 
   ui:
