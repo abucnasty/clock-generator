@@ -20,9 +20,7 @@
     {
       "key": "belt:1/lane:2",
       "kind": "lane",
-      "ports": [
-        "belt:1/lane:2#stone-brick"
-      ]
+      "ports": []
     },
     {
       "key": "machine:1",
@@ -81,7 +79,6 @@
   ],
   "components": [],
   "order": [
-    "belt:1/lane:2#stone-brick",
     "drill:1",
     "machine:1",
     "belt:1/lane:1#stone-brick",
