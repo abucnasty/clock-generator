@@ -252,7 +252,7 @@ controls below exposed a recovery failure when the lanes acquire different phase
 
 ### Related belt-drop calibration
 
-These are **deposit offsets**, not pickups. The original turbo table is below. A finite 32-item source feeds the belt; only the belt-stack
+These are **deposit offsets**, not pickups. The approaches, lane states and inserter kinds beyond this calibration are in the [belt drop documentation](../belt-drop/README.md). The original turbo table is below. A finite 32-item source feeds the belt; only the belt-stack
 bonus changes, with researched technologies checked unchanged.
 
 | Belt stack size | Effective full hand | First-hand deposit offsets | Next hand's first deposit, relative to the first hand's start |
