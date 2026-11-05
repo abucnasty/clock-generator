@@ -34,7 +34,8 @@
     {
       "source": {
         "type": "belt",
-        "id": 1
+        "id": 1,
+        "near_lane": 2
       },
       "sink": {
         "type": "machine",
@@ -58,7 +59,8 @@
     {
       "source": {
         "type": "belt",
-        "id": 1
+        "id": 1,
+        "near_lane": 2
       },
       "sink": {
         "type": "machine",
@@ -82,7 +84,8 @@
     {
       "source": {
         "type": "belt",
-        "id": 1
+        "id": 1,
+        "near_lane": 2
       },
       "sink": {
         "type": "machine",
@@ -142,7 +145,8 @@
     {
       "source": {
         "type": "belt",
-        "id": 3
+        "id": 3,
+        "near_lane": 1
       },
       "sink": {
         "type": "machine",
@@ -169,7 +173,8 @@
     {
       "source": {
         "type": "belt",
-        "id": 3
+        "id": 3,
+        "near_lane": 1
       },
       "sink": {
         "type": "machine",
@@ -181,7 +186,8 @@
     {
       "source": {
         "type": "belt",
-        "id": 3
+        "id": 3,
+        "near_lane": 1
       },
       "sink": {
         "type": "machine",
@@ -215,7 +221,7 @@
           "stack_size": 4
         },
         {
-          "ingredient": "",
+          "ingredient": "rocket-fuel",
           "stack_size": 4
         }
       ]
@@ -229,7 +235,7 @@
           "stack_size": 4
         },
         {
-          "ingredient": "",
+          "ingredient": "jellynut-seed",
           "stack_size": 4
         }
       ]

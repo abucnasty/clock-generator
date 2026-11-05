@@ -20,6 +20,19 @@ function beltKey(lanes: { ingredient: string }[]): string {
     return Array.from(new Set(lanes.map(l => l.ingredient).filter(Boolean))).sort().join("|");
 }
 
+function beltItems(lanes: { ingredient: string }[]): Set<string> {
+    return new Set(lanes.map(l => l.ingredient).filter(Boolean));
+}
+
+/**
+ * Whether two item sets of a belt differ only in items the build puts on that belt itself: the same belt read before and after
+ * a by-product reached it. A lane that is empty because the build has not filled it yet is not that, and is left to a longer warm-up.
+ */
+function differOnlyInDropped(a: Set<string>, b: Set<string>, dropped: Set<string>): boolean {
+    const [small, large] = a.size <= b.size ? [a, b] : [b, a];
+    return small.size > 0 && [...small].every(item => large.has(item)) && [...large].every(item => small.has(item) || dropped.has(item));
+}
+
 function filterKey(filters: string[] | undefined): string {
     return Array.from(new Set(filters ?? [])).sort().join("|");
 }
@@ -45,6 +58,17 @@ export function matchRecordingToConfig(recording: Recording, config: Config): En
     const config_inserters = config.inserters.map((ins, index) => ({ ...ins, id: ins.id ?? index + 1 }));
     const config_belt_keys = new Map(config.belts.map(b => [b.id, beltKey(b.lanes)]));
     const recorded_belt_keys = new Map(recording.config.belts.map(b => [b.id, beltKey(b.lanes)]));
+    const config_belt_items = new Map(config.belts.map(b => [b.id, beltItems(b.lanes)]));
+    const recorded_belt_items = new Map(recording.config.belts.map(b => [b.id, beltItems(b.lanes)]));
+    // what the build's own inserters drop on each belt, by what they are set to take
+    const dropped_on_belt = new Map<number, Set<string>>();
+    recording.config.inserters.forEach(inserter => {
+        if (inserter.sink.type === "belt") {
+            const items = dropped_on_belt.get(inserter.sink.id) ?? new Set<string>();
+            (inserter.filters ?? []).forEach(item => items.add(item));
+            dropped_on_belt.set(inserter.sink.id, items);
+        }
+    });
 
     const recipes = Array.from(new Set(recording.machines.map(m => m.recipe)));
     const groups = recipes.map(recipe => {
@@ -118,6 +142,25 @@ export function matchRecordingToConfig(recording: Recording, config: Config): En
                 if (assigned.has(ins.id)) continue;
                 const endpoints = recordedEndpoints(ins, mapping, typed);
                 const match = config_keys.find(c => !c.has_filters && c.unfiltered_key === endpoints && !used.has(c.id));
+                if (match) {
+                    used.add(match.id);
+                    assigned.set(ins.id, match.id);
+                }
+            }
+            // A belt is read by what lies on it, and a by-product reaches its lane only once the build runs (the seeds a machine puts
+            // back on the belt that brings it nutrients): the same belt read earlier or later holds fewer or more items. An inserter
+            // that takes from a belt whose items differ from the config belt's only in items the build's inserters drop on it, with
+            // the same machine at the other end and the same filters, is that config inserter.
+            for (const ins of recording.inserters) {
+                if (assigned.has(ins.id) || ins.source.type !== "belt" || ins.sink.type === "belt") continue;
+                const recorded_items = recorded_belt_items.get(ins.source.id);
+                const sink = recordedEndpointKey(ins.sink, "sink", mapping, typed);
+                const filters = filterKey(recording.config.inserters[ins.id - 1]?.filters);
+                const match = config_inserters.find(c => !used.has(c.id) && c.source.type === "belt" && c.sink.type !== "belt"
+                    && configEndpointKey(c.sink, "sink", typed) === sink
+                    && (filterKey(c.filters) === filters || ((c.filters ?? []).length === 0 || filters === ""))
+                    && recorded_items !== undefined
+                    && differOnlyInDropped(recorded_items, config_belt_items.get(c.source.id) ?? new Set(), dropped_on_belt.get(ins.source.id) ?? new Set()));
                 if (match) {
                     used.add(match.id);
                     assigned.set(ins.id, match.id);

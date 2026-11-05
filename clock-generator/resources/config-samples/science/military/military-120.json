@@ -9,19 +9,19 @@
       "id": 1,
       "recipe": "military-science-pack",
       "productivity": 100,
-      "crafting_speed": 66.031247377396
+      "crafting_speed": 66.0253125
     },
     {
       "id": 2,
       "recipe": "grenade",
       "productivity": 0,
-      "crafting_speed": 62.437498569489
+      "crafting_speed": 57.8125
     },
     {
       "id": 3,
       "recipe": "casting-iron",
       "productivity": 150,
-      "crafting_speed": 112.20000267029
+      "crafting_speed": 112.244
     }
   ],
   "inserters": [
@@ -52,7 +52,8 @@
     {
       "source": {
         "type": "belt",
-        "id": 3
+        "id": 3,
+        "near_lane": 1
       },
       "sink": {
         "type": "machine",

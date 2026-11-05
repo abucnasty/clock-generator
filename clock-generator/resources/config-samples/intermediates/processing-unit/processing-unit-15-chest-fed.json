@@ -9,7 +9,7 @@
       "id": 1,
       "recipe": "processing-unit",
       "productivity": 300,
-      "crafting_speed": 90.3499984741211,
+      "crafting_speed": 90.372,
       "prototype": "electromagnetic-plant"
     }
   ],
@@ -47,24 +47,20 @@
       "id": 1,
       "item_filter": [
         {
-          "item_name": "electronic-circuit",
-          "request_count": 5420
+          "item_name": "advanced-circuit",
+          "request_count": 200
         },
         {
-          "item_name": "advanced-circuit",
-          "request_count": 542
+          "item_name": "electronic-circuit",
+          "request_count": 200
         }
-      ]
+      ],
+      "remove_unfiltered_items": false
     },
     {
       "type": "infinity-chest",
       "id": 2,
-      "item_filter": [
-        {
-          "item_name": "processing-unit",
-          "request_count": 4416
-        }
-      ]
+      "remove_unfiltered_items": true
     }
   ]
 }

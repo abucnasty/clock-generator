@@ -21,21 +21,21 @@
       "id": 3,
       "recipe": "stone-brick",
       "productivity": 50,
-      "crafting_speed": 80.05,
+      "crafting_speed": 80.0375,
       "prototype": "electric-furnace"
     },
     {
       "id": 4,
       "recipe": "stone-brick",
       "productivity": 50,
-      "crafting_speed": 80.05,
+      "crafting_speed": 80.0375,
       "prototype": "electric-furnace"
     },
     {
       "id": 5,
       "recipe": "stone-brick",
       "productivity": 50,
-      "crafting_speed": 80.05,
+      "crafting_speed": 80.0375,
       "prototype": "electric-furnace"
     }
   ],
@@ -45,8 +45,8 @@
         "id": 1,
         "type": "electric-mining-drill",
         "mined_item_name": "stone",
-        "speed_bonus": 12.5,
-        "productivity": 80000,
+        "speed_bonus": 15.3075,
+        "productivity": 79990,
         "target": {
           "type": "machine",
           "id": 3
@@ -57,7 +57,7 @@
         "type": "electric-mining-drill",
         "mined_item_name": "stone",
         "speed_bonus": 12.5,
-        "productivity": 80000,
+        "productivity": 79990,
         "target": {
           "type": "machine",
           "id": 4
@@ -67,8 +67,8 @@
         "id": 3,
         "type": "electric-mining-drill",
         "mined_item_name": "stone",
-        "speed_bonus": 12.5,
-        "productivity": 80000,
+        "speed_bonus": 13.975,
+        "productivity": 79990,
         "target": {
           "type": "machine",
           "id": 5
@@ -187,20 +187,6 @@
         },
         {
           "ingredient": "electric-furnace",
-          "stack_size": 4
-        }
-      ]
-    },
-    {
-      "id": 3,
-      "type": "turbo-transport-belt",
-      "lanes": [
-        {
-          "ingredient": "stone",
-          "stack_size": 4
-        },
-        {
-          "ingredient": "stone",
           "stack_size": 4
         }
       ]

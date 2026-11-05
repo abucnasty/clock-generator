@@ -219,7 +219,19 @@ describe("generateClockForConfig", () => {
     // One machine, two output hands and nine input hands per 288 ticks. Clocks for it are easy to get to the
     // expected output in one simulated period without the build actually repeating that period.
     describe("FLYING_ROBOT_FRAME_160 clock-only check", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_160);
+        // The sample as it was before it took the lanes of the build (2026-11-05): no near lane on the belt inserters, the
+        // output belt's lanes the processing unit and the frame. With the build's own lanes the planned clock is unstable
+        // (the selected clock, the observed windows, is not), and the checks below, which need a stable planned clock to
+        // shift and to cut, would have nothing to look at.
+        const config = structuredClone(await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_160));
+        for (const inserter of config.inserters) {
+            if (inserter.source.type === "belt") {
+                delete inserter.source.near_lane;
+            }
+        }
+        const output_lanes = config.belts[0]!.lanes;
+        output_lanes[0]!.ingredient = "processing-unit";
+        output_lanes[1]!.ingredient = "flying-robot-frame";
 
         // the clock alternatives of the config, generated once for the describes below, which only read them: with
         // the searches, which batched swings being stable would leave out

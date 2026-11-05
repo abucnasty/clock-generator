@@ -34,20 +34,23 @@
     {
       "key": "belt:2/lane:2",
       "kind": "lane",
-      "ports": []
+      "ports": [
+        "belt:2/lane:2#rocket-fuel"
+      ]
     },
     {
       "key": "belt:3/lane:1",
       "kind": "lane",
       "ports": [
-        "belt:3/lane:1#jellynut-seed",
         "belt:3/lane:1#nutrients"
       ]
     },
     {
       "key": "belt:3/lane:2",
       "kind": "lane",
-      "ports": []
+      "ports": [
+        "belt:3/lane:2#jellynut-seed"
+      ]
     },
     {
       "key": "machine:1",
@@ -281,7 +284,7 @@
       "from_ports": [
         "machine:2"
       ],
-      "to": "belt:3/lane:1#jellynut-seed",
+      "to": "belt:3/lane:2#jellynut-seed",
       "lands_in": "lane",
       "hand": 8,
       "floor_cycle": 9,
@@ -336,9 +339,10 @@
   "order": [
     "belt:1/lane:1#bioflux",
     "belt:1/lane:2#jellynut",
+    "belt:2/lane:2#rocket-fuel",
     "belt:3/lane:1#nutrients",
     "machine:2",
-    "belt:3/lane:1#jellynut-seed",
+    "belt:3/lane:2#jellynut-seed",
     "machine:1",
     "machine:3",
     "belt:2/lane:1#rocket-fuel",

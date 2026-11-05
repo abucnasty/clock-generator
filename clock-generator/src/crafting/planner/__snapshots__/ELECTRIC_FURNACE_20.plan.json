@@ -99,12 +99,12 @@
             "denominator": 3
           },
           "crafts_capacity": {
-            "numerator": 4803,
-            "denominator": 64
+            "numerator": 19209,
+            "denominator": 256
           },
           "duty": {
-            "numerator": 12800,
-            "denominator": 14409
+            "numerator": 51200,
+            "denominator": 57627
           }
         },
         {
@@ -115,16 +115,16 @@
             "drill:3"
           ],
           "crafts_needed": {
-            "numerator": 400,
-            "denominator": 2403
+            "numerator": 4000,
+            "denominator": 24027
           },
           "crafts_capacity": {
-            "numerator": 81,
-            "denominator": 4
+            "numerator": 17913,
+            "denominator": 800
           },
           "duty": {
-            "numerator": 1600,
-            "denominator": 194643
+            "numerator": 3200000,
+            "denominator": 430395651
           }
         }
       ]

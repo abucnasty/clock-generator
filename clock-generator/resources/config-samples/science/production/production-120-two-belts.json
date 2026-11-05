@@ -16,7 +16,7 @@
       "id": 2,
       "recipe": "rail",
       "productivity": 0,
-      "crafting_speed": 46.37125,
+      "crafting_speed": 46.796875,
       "prototype": "assembling-machine-3"
     },
     {
@@ -98,32 +98,15 @@
     {
       "source": {
         "type": "belt",
-        "id": 2
+        "id": 2,
+        "near_lane": 1
       },
       "sink": {
         "type": "machine",
         "id": 1
       },
       "stack_size": 16,
-      "filters": [
-        "productivity-module"
-      ],
       "id": 5
-    },
-    {
-      "source": {
-        "type": "belt",
-        "id": 2
-      },
-      "sink": {
-        "type": "machine",
-        "id": 1
-      },
-      "stack_size": 16,
-      "filters": [
-        "electric-furnace"
-      ],
-      "id": 6
     }
   ],
   "belts": [
@@ -146,11 +129,11 @@
       "type": "turbo-transport-belt",
       "lanes": [
         {
-          "ingredient": "electric-furnace",
+          "ingredient": "productivity-module",
           "stack_size": 4
         },
         {
-          "ingredient": "productivity-module",
+          "ingredient": "electric-furnace",
           "stack_size": 4
         }
       ]
@@ -164,7 +147,7 @@
         "type": "electric-mining-drill",
         "mined_item_name": "stone",
         "speed_bonus": 8.8388,
-        "productivity": 269990,
+        "productivity": 79990,
         "target": {
           "type": "machine",
           "id": 2

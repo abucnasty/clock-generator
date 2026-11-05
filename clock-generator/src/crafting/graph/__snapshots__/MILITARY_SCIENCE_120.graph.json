@@ -111,14 +111,14 @@
       "terminal": null
     },
     {
-      "key": "inserter:3/piercing-rounds-magazine",
+      "key": "inserter:3/stone-wall",
       "via": "inserter",
       "entity": "inserter:3",
       "group": "inserter:3",
-      "item": "piercing-rounds-magazine",
-      "from": "belt:3/lane:2#piercing-rounds-magazine",
+      "item": "stone-wall",
+      "from": "belt:3/lane:1#stone-wall",
       "from_ports": [
-        "belt:3/lane:2#piercing-rounds-magazine"
+        "belt:3/lane:1#stone-wall"
       ],
       "to": "machine:1",
       "lands_in": "ingredients",
@@ -131,14 +131,14 @@
       "terminal": null
     },
     {
-      "key": "inserter:3/stone-wall",
+      "key": "inserter:3/piercing-rounds-magazine",
       "via": "inserter",
       "entity": "inserter:3",
       "group": "inserter:3",
-      "item": "stone-wall",
-      "from": "belt:3/lane:1#stone-wall",
+      "item": "piercing-rounds-magazine",
+      "from": "belt:3/lane:2#piercing-rounds-magazine",
       "from_ports": [
-        "belt:3/lane:1#stone-wall"
+        "belt:3/lane:2#piercing-rounds-magazine"
       ],
       "to": "machine:1",
       "lands_in": "ingredients",

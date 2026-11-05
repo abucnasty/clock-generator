@@ -58,16 +58,16 @@
             "drill:1"
           ],
           "crafts_needed": {
-            "numerator": 160,
-            "denominator": 2403
+            "numerator": 64544650757,
+            "denominator": 969500994777
           },
           "crafts_capacity": {
-            "numerator": 5014375000000001,
-            "denominator": 500000000000000
+            "numerator": 6523,
+            "denominator": 800
           },
           "duty": {
-            "numerator": 7282560788,
-            "denominator": 1096894128443
+            "numerator": 51635720605600,
+            "denominator": 6324054988930371
           }
         }
       ]

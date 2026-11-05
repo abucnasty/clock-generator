@@ -32,14 +32,14 @@
       "key": "group:1",
       "members": [
         "machine:1",
-        "belt:1/lane:2#flying-robot-frame"
+        "belt:1/lane:1#flying-robot-frame"
       ],
       "edges": [
         "inserter:1/flying-robot-frame",
         "inserter:2/steel-plate",
         "inserter:2/electric-engine-unit",
-        "inserter:3/electronic-circuit",
-        "inserter:3/battery"
+        "inserter:3/battery",
+        "inserter:3/electronic-circuit"
       ],
       "periods": [
         {"swings":1,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":144,"denominator":1},"cycles":2,"period_ticks":288,"kept":true},
