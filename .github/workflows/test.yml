@@ -227,7 +227,7 @@ jobs:
           echo "The generation tests passed in every shard." | tee -a "$GITHUB_STEP_SUMMARY"
 
   # The record (clock-generator/record/): one small JSON per blast job, the selected clock and every alternative. The job
-  # generates all 75 jobs the way `blast.sh run` does (a process for each job, four at a time on the runner's 4 vCPUs) and
+  # generates all 86 jobs the way `blast.sh run` does (a process for each job, four at a time on the runner's 4 vCPUs) and
   # compares what it made with the committed files field by field; a difference fails with a table of job, field, before and
   # after (in the job summary too). Not a required check yet, and it runs on pull requests only, so that a release (which
   # calls this workflow and does nothing unless it passes) does not wait for it: when it is required, it replaces the
@@ -242,7 +242,7 @@ jobs:
       run:
         working-directory: clock-generator
     env:
-      BLAST_GROUPS: config,pickup,overhood,front,blocked,containers
+      BLAST_GROUPS: config,pickup,overhood,front,blocked,containers,variants
     steps:
       - uses: actions/checkout@v4
 
@@ -258,7 +258,7 @@ jobs:
       - name: Runner CPU
         run: lscpu | grep -E '^(Model name|CPU\(s\)):'
 
-      # builds the engine, generates the 75 jobs into a folder (not cached: the runner starts empty)
+      # builds the engine, generates the 86 jobs into a folder (not cached: the runner starts empty)
       - name: Generate the jobs
         run: bash scripts/blast/blast.sh run .. "$RUNNER_TEMP/blast-jobs" --no-store
 

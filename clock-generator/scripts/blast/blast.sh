@@ -33,8 +33,8 @@
 #                                           no jobs. Blast seconds are noisy: they pick the jobs to time one at a time on a
 #                                           quiet machine, they are not a speed result
 #   blast.sh record write <jobs> [--dir D]  writes the record (clock-generator/record/, one small JSON per job: the selected clock and every
-#                                           alternative, record.py) from a jobs folder or a cache entry (by key) of a run of all six groups
-#                                           (BLAST_GROUPS=config,pickup,overhood,front,blocked,containers)
+#                                           alternative, record.py) from a jobs folder or a cache entry (by key) of a run of all seven groups
+#                                           (BLAST_GROUPS=config,pickup,overhood,front,blocked,containers,variants)
 #   blast.sh record check [--map f] [--dir D] [--summary f] [--allow-unchecked] <jobs>
 #                                           regenerates the records from <jobs> and compares them with the committed ones field by field:
 #                                           a table of job, field, before, after; exits 1 on any difference (--map: a rename map as in

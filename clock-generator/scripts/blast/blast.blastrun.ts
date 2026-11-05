@@ -1,6 +1,7 @@
 // The blast radius: generate every sample config as it is (its belts moving or backed up as the config says; nothing makes
 // a copy with the other supply) and, when BLAST_GROUPS asks for them, every pickup, over-hood, front and blocked-output
-// fixture and every container config (each has a generation test of its own that runs in CI), and hash every alternative's
+// fixture, every container config and every variant (a sample with the options a test or a game recording sets: belts backed up,
+// an ingredient left out of the period) (each has a generation test of its own that runs in CI), and hash every alternative's
 // exported clock as over-hood-clock-<tier>.generation.test.ts do
 // (clock_sha256: sha256 of its identity, clockIdentity of subtick ?? result: the blueprint without its text or metadata,
 // and the schedule; text_sha256: sha256 of {blueprint, schedule} with the text, which moves with any description;
@@ -10,7 +11,7 @@
 // Env: BLAST_OUT (folder; one JSON per job, and _jobs.json, the job list with each config's sha256), BLAST_CLAIMS
 // (folder shared by parallel processes, default <BLAST_OUT>/.claims: a job is claimed by creating <claims>/<job>),
 // BLAST_MODE (generate, the default, or jobs: write _jobs.json only), BLAST_ONLY (comma list of job names),
-// BLAST_GROUPS (default config; also pickup,overhood,front,blocked,containers), BLAST_SKIP (comma list of
+// BLAST_GROUPS (default config; also pickup,overhood,front,blocked,containers,variants), BLAST_SKIP (comma list of
 // jobs to leave out; none by default), BLAST_FUNCTIONS (1: record the functions each job runs; off by default; see below), BLAST_ONE (1:
 // the process runs the first job nobody has claimed and stops, and leaves <BLAST_OUT>/.drained when none is left: blast.sh
 // starts a process for every job, so that no job meets what an earlier one left in the engine's memory, a memo for one).
@@ -50,7 +51,8 @@ const { ConfigPaths } = configPaths;
 // the slowest first, in this order, so the parallel processes finish together (the heaviest samples of 0.24.0, after the
 // memory work; the utility science 480 build is skipped by default and takes ~1,000 s when it runs)
 const SLOW = ['UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN', 'CHEMICAL_SCIENCE_240_SHARED_FOUNDRY', 'STEEL_PLATE_26_WAGON_CHEST',
-    'PROCESSING_UNIT_80_CIRCUIT_EXPORT', 'AGRICULTURAL_SCIENCE_250', 'ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED'];
+    'PROCESSING_UNIT_80_CIRCUIT_EXPORT', 'AGRICULTURAL_SCIENCE_250', 'ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED',
+    'AGRICULTURAL_SCIENCE_250_BACKED_UP', 'STEEL_PLATE_26_WAGON_CHEST_IRON_ORE_OUT_OF_PERIOD'];
 
 export interface Job { group: string; name: string; config: () => Promise<any> }
 /** The front entrance (8) and front exit, backed up and on a moving config (4; #274); a worktree from before master
@@ -80,6 +82,14 @@ async function containerJobs(): Promise<Job[]> {
     return containers.containerClockCases()
         .map((variant: any) => ({ group: 'containers', name: variant.name, config: async () => containers.containerClockConfig(variant) }));
 }
+/** The variants (#600): a sample with the options a test or a game recording sets on it, listed with what qualifies each in
+ * tests/game/builds/variant-jobs.ts; none in a worktree from before it */
+async function variantsJobs(): Promise<Job[]> {
+    const file = path.join(__dirname, '..', 'variant-jobs.ts');
+    if (!fs.existsSync(file)) return [];
+    const variants = await import(file);
+    return variants.variantJobs().map((variant: any) => ({ group: 'variants', name: variant.name, config: variant.config }));
+}
 const baseJobs: Job[] = [
     ...Object.entries(ConfigPaths).map(([name, file]) => ({ group: 'config', name, config: () => loadConfigFromFile(file as string) })),
     ...(['electromagnetic', 'same-item'] as const).flatMap(family => pickupClockSpeedCases(family).map(variant =>
@@ -88,7 +98,7 @@ const baseJobs: Job[] = [
         ({ group: 'overhood', name: variant.name, config: async () => overHoodClockConfig(variant) }))),
 ];
 export async function loadJobs(): Promise<Job[]> {
-    return [...baseJobs, ...await frontJobs(), ...await blockedJobs(), ...await containerJobs()]
+    return [...baseJobs, ...await frontJobs(), ...await blockedJobs(), ...await containerJobs(), ...await variantsJobs()]
         .sort((a, b) => (SLOW.indexOf(a.name) < 0 ? SLOW.length : SLOW.indexOf(a.name)) - (SLOW.indexOf(b.name) < 0 ? SLOW.length : SLOW.indexOf(b.name)))
         .filter(job => GROUPS.includes(job.group) && !SKIP.includes(job.name) && (!ONLY || ONLY.includes(job.name)));
 }

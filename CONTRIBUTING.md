@@ -172,7 +172,7 @@ A pull request that changes what the generator selects or computes on purpose re
 [`record/MOVES.md`](clock-generator/record/MOVES.md) that names each moved job and why. From `clock-generator/`, with a clean engine commit:
 
 ```bash
-BLAST_GROUPS=config,pickup,overhood,front,blocked,containers bash scripts/blast/blast.sh run .. <out>   # cached by the engine's key; a rerun is selective
+BLAST_GROUPS=config,pickup,overhood,front,blocked,containers,variants bash scripts/blast/blast.sh run .. <out>   # cached by the engine's key; a rerun is selective
 bash scripts/blast/blast.sh record write <out>        # rewrites record/ (the cache entry's key works in place of <out>)
 bash scripts/blast/blast.sh record check <out>        # exit 0: the committed files equal the run
 git diff --stat record/                               # the moved jobs; each one gets a line in MOVES.md
