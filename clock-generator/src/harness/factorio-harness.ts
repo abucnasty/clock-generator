@@ -15,7 +15,7 @@ import { BuiltClock, blueprintWithNamedClock, recordingOfBuiltClock } from "./bu
 import { parseRecording, Recording } from "../verification/recording";
 import { RconClient } from "./rcon";
 import {
-    CacheEnvironment, RECORDING_CACHE_PROTOCOL, RecordingCacheKey, recordingCacheDir, recordingCacheKey, recordingCacheMode, restoreRecording,
+    CacheEnvironment, RECORDING_CACHE_PROTOCOL, RecordingCacheKey, describedRecordingKey, recordingCacheDir, recordingCacheMode, restoreRecording,
     storeRecording,
 } from "./recording-cache";
 
@@ -1059,6 +1059,56 @@ export class HarnessSession {
         }
     }
 
+    /** What the game is asked to build for a run that is not staged */
+    private buildJob(options: BuildOptions) {
+        const replaces_clock = options.clock !== undefined || options.unclocked;
+        return {
+            blueprint: options.built_clock ? blueprintWithNamedClock(options.blueprint, options.built_clock) : options.blueprint,
+            surface: options.surface,
+            position: options.position,
+            clock: replaces_clock ? "remove" : "keep",
+            // a clock built by hand gates its inserters with a condition that holds only while its signal is on the wire
+            free_warmup: options.built_clock !== undefined && options.clock !== undefined,
+            warmup_ticks: options.warmup_ticks,
+            speed: options.game_speed,
+            drill_resource: drillResourceOf(options),
+        };
+    }
+
+    /** What the game is asked to build for the trial build of a staged start, which tells which built inserter is which */
+    private trialJob(options: BuildOptions) {
+        return {
+            blueprint: options.blueprint,
+            surface: options.surface,
+            position: options.position,
+            clock: "remove",
+            warmup_ticks: options.staged_start?.trial_build_ticks ?? 900,
+            speed: options.game_speed,
+            drill_resource: drillResourceOf(options),
+        };
+    }
+
+    /**
+     * Builds what a run builds before it describes the build to match the config to it (the trial build of a staged start, else
+     * the build after its warm-up) and returns that description, with nothing seeded, wired or recorded. The recording cache keys
+     * a recording on it (see describedRecordingKey).
+     */
+    async describeBuild(options: BuildOptions): Promise<Record<string, unknown>> {
+        assertBuildOptions(options);
+        const deadline = Date.now() + options.timeout_seconds * 1000;
+        if (this.has_build) {
+            await this.call("harness_clear");
+        }
+        this.has_build = true;
+        const build = await this.call("harness_build", options.staged_start ? this.trialJob(options) : this.buildJob(options));
+        const not_built = Object.values<string>(build.failed);
+        if (not_built.length > 0) {
+            throw new Error(`Could not build ${not_built.length} of the blueprint's entities: ${Array.from(new Set(not_built)).join(", ")}`);
+        }
+        await this.waitFor("the warm-up", deadline, status => status.ready);
+        return await this.call("harness_describe");
+    }
+
     /**
      * Builds the blueprint, in the place of the build this session recorded before, optionally swaps its clock, seeds
      * it, records it with the recorder mod and writes the recording to options.out.
@@ -1076,17 +1126,7 @@ export class HarnessSession {
         this.has_build = true;
 
         const replaces_clock = options.clock !== undefined || options.unclocked;
-        const build = await this.call("harness_build", {
-            blueprint: options.built_clock ? blueprintWithNamedClock(options.blueprint, options.built_clock) : options.blueprint,
-            surface: options.surface,
-            position: options.position,
-            clock: replaces_clock ? "remove" : "keep",
-            // a clock built by hand gates its inserters with a condition that holds only while its signal is on the wire
-            free_warmup: options.built_clock !== undefined && options.clock !== undefined,
-            warmup_ticks: options.warmup_ticks,
-            speed: options.game_speed,
-            drill_resource: drillResourceOf(options),
-        });
+        const build = await this.call("harness_build", this.buildJob(options));
         const not_built = Object.values<string>(build.failed);
         if (not_built.length > 0) {
             throw new Error(`Could not build ${not_built.length} of the blueprint's entities: ${Array.from(new Set(not_built)).join(", ")}`);
@@ -1190,15 +1230,7 @@ export class HarnessSession {
         let order: { x: number; y: number; config_id: number; copy?: number }[] = [];
         let position = options.position;
         if (options.config) {
-            const trial = await this.call("harness_build", {
-                blueprint: options.blueprint,
-                surface: options.surface,
-                position: options.position,
-                clock: "remove",
-                warmup_ticks: staged.trial_build_ticks ?? 900,
-                speed: options.game_speed,
-                drill_resource: drillResourceOf(options),
-            });
+            const trial = await this.call("harness_build", this.trialJob(options));
             await this.waitFor("the trial build", deadline, status => status.ready);
             const described = await this.call("harness_describe");
             // one copy unless the test names the copies, which are then matched as a clock of copies is wired (see matchCopies)
@@ -1380,7 +1412,10 @@ export async function cacheEnvironmentOf(factorio: string, save: string): Promis
         executable,
         data_dir: factorioDataDir(executable),
         save: path.resolve(save),
-        mods: Object.fromEntries([RECORDER_MOD, SIDECAR_MOD].map(mod => [mod, path.join(REPOSITORY_ROOT, mod)])),
+        mods: { [RECORDER_MOD]: path.join(REPOSITORY_ROOT, RECORDER_MOD) },
+        // the Sidecar turns what the game holds into the description of a build: a recording is keyed on what it made of the
+        // build, not on its files (see describedRecordingKey)
+        transforms: { [SIDECAR_MOD]: path.join(REPOSITORY_ROOT, SIDECAR_MOD) },
         host_sources: await hostSources(),
     };
 }
@@ -1408,9 +1443,12 @@ interface CachedRecording {
  * not through the store (cache: false, a watched run, CLOCK_RECORDING_CACHE=off, or anything that cannot be told for a key)
  * calls `run`, which starts the game; its result is kept unless the store is off. Errors of `run` are never kept.
  * `history` is the keys of the recordings made before this one in the same game; null when it cannot be told.
+ * `describe` builds the build in a game of its own and describes it: the key holds what the Sidecar made of the build, asked
+ * of the game only when the Sidecar's files, the game, the save or the options are not those a description was kept for.
  */
 async function recordThroughCache(
     options: HarnessOptions, history: string[] | null, run: (log: (message: string) => void) => Promise<HarnessResult>,
+    describe: () => Promise<Record<string, unknown>>,
 ): Promise<CachedRecording> {
     const mode = recordingCacheMode();
     const out = path.basename(options.out);
@@ -1421,7 +1459,7 @@ async function recordThroughCache(
     let key: RecordingCacheKey | null = null;
     if (history !== null) {
         try {
-            key = await recordingCacheKey(options, await cacheEnvironmentOf(options.factorio, options.save), history);
+            key = await describedRecordingKey(options, await cacheEnvironmentOf(options.factorio, options.save), history, recordingCacheDir(), mode === "refresh", describe);
         } catch (error) {
             const why = error instanceof Error ? error.message : String(error);
             options.log(`Recording cache: not used, ${why}`);
@@ -1474,6 +1512,14 @@ export async function recordInFactorio(options: HarnessOptions): Promise<Harness
         } finally {
             await session.close(failed);
         }
+    }, async () => {
+        const quiet = { ...options, work_dir: undefined, watch: false, log: () => { } };
+        const session = await HarnessSession.start(quiet);
+        try {
+            return await session.describeBuild(quiet);
+        } finally {
+            await session.close(false);
+        }
     })).result;
 }
 
@@ -1500,6 +1546,19 @@ export class CachedHarnessSession {
             const session = await this.started();
             await this.replayAnswered(session);
             return session.record({ ...options, log });
+        }, async () => {
+            // a game of its own, where the builds before this one were made, so the description is of the build the run makes
+            const quiet = { ...this.started_with, work_dir: undefined, watch: false, log: () => { } };
+            const session = await HarnessSession.start(quiet);
+            try {
+                for (const [index, before] of this.answered.entries()) {
+                    this.replay_dir ??= await fs.mkdtemp(path.join(os.tmpdir(), "clock-generator-replay-"));
+                    await session.record({ ...before.options, out: path.join(this.replay_dir, `described-${index}.json`), log: () => { } });
+                }
+                return await session.describeBuild({ ...options, log: () => { } });
+            } finally {
+                await session.close(false);
+            }
         });
         this.answered.push({ options, key });
         if (!hit) {
