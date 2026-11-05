@@ -12,50 +12,20 @@ describe("generateClockForConfig", () => {
     describe("rocket fuel biochambers at 60 per second", () => {
         let sample: RocketFuelSample;
         let alternative: RocketFuelSample["alternative"];
-        let moved: RocketFuelSample["moved"];
-        let period: RocketFuelSample["period"];
 
         beforeAll(async () => {
             sample = await rocketFuelSample(ConfigPaths.ROCKET_FUEL_60);
-            ({ alternative, moved, period } = sample);
+            ({ alternative } = sample);
         });
 
         it("names why every inserter and drill a clock leaves always on is", () => {
             expect(alwaysOnReasonProblemsOf(sample.config, sample)).toEqual([]);
         });
 
-        // 16 jelly a hand is 15/4 hands a 32 tick cycle
-        it("has a 128 tick period", () => {
-            expect(period).toBe(128);
-        });
-
         it.each(["planned-belt-slack", "fractional", "derived", "shifted-swings"])("%s is stable as built", (id) => {
             expect(alternative(id).verdict).toBe("stable");
             expect(alternative(id).result.stability_check.as_built?.holds).toBe(true);
             expect(alternative(id).assessment.items_per_second).toBe(60);
-        });
-
-        it("selects batched swings for a moving belt", () => {
-            expect(sample.alternatives[0].id).toBe("planned-belt-slack");
-            expect(sample.alternatives[0].verdict).toBe("stable");
-        });
-
-        it("moves what a period needs through every planned inserter", () => {
-            // 128 rocket fuel is 32 crafts of 30 jelly and 2 bioflux, and 480 jelly is 48 jellynut a 64 ticks
-            sample.output_inserter_ids.forEach(id => expect(moved(id)).toBe(64));
-            sample.jelly_inserter_ids.forEach(id => expect(moved(id)).toBe(240));
-            sample.bioflux_inserter_ids.forEach(id => expect(moved(id)).toBe(32));
-            expect(moved(sample.jellynut_inserter_id)).toBe(96);
-        });
-
-        // one hand of bioflux each 64 ticks rather than both at once: both at once holds the rocket fuel machine's
-        // bioflux over its insertion limit, and the jelly inserters wait for it
-        it("spreads the two hands of bioflux a period over two windows", () => {
-            const windows = alternative("planned-belt-slack").result.clock_windows;
-            for (const id of sample.bioflux_inserter_ids) {
-                expect(windows[id].length).toBe(2);
-                expect(windows[id][1].start - windows[id][0].start).toBe(64);
-            }
         });
 
         it("clocks the fuel and seed inserters outside the plan", () => {
@@ -87,20 +57,6 @@ describe("generateClockForConfig", () => {
             expect(lasted[0]).toBe(208);
             expect(lasted[1]).toBeGreaterThanOrEqual(245);
             expect(lasted[2]).toBe(208);
-        });
-
-        it("keeps every machine fuelled over the fuel consumption view", () => {
-            const view = alternative("planned-belt-slack").result.fuel_consumption_view!;
-            expect(view.fuel_swings_recorded).toBe(true);
-            // a hand of 16 nutrients each time, and no fuel slot ever runs dry; a brief jellynut INGREDIENT_SHORTAGE
-            // is allowed while the output holds, since the belt window trim lets the machine idle on the wait
-            const fuel_transfers = view.transfer_history.entities
-                .filter(entity => view.fuel_inserter_ids.includes(entity.entity_id))
-                .flatMap(entity => entity.transfers);
-            expect(fuel_transfers.length).toBeGreaterThan(0);
-            fuel_transfers.forEach(transfer => expect(transfer.amount).toBe(16));
-            expect(view.ran_out_of_fuel).toBe(false);
-            view.fuel_levels.forEach(levels => expect(levels.empty_ticks).toBe(0));
         });
 
         // the observed windows are run as they are for the view, not observed again

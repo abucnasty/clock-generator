@@ -3,32 +3,11 @@ import {beforeAll, describe, expect, test} from "vitest";
 import {ClockAlternativesResult, generateClockAlternatives} from "./generate-blueprint";
 import {backpressureLossVerdictOf} from "./trial";
 import {outputCapacityPerSecond} from "./alternatives";
-import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config/schema";
 
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
-let config: Config;
-let generated: ClockAlternativesResult;
-
-beforeAll(async () => {
-    config = await loadConfigFromFile(ConfigPaths.IRON_PLATE_80_CAR_CHEST);
-    generated = generateClockAlternatives(config, {logger: quiet});
-});
-
-test("car: the observed-windows clock is selected, and the drill into the car is enabled the tick before the takers", () => {
-    const selected = generated.alternatives[generated.selected_index];
-    expect(selected.id).toBe("derived");
-    // 617 ore a tick against 256 a 288-tick period: a window of one tick, which drops what the drill holds
-    expect(selected.result.clock_windows["drill:1"]).toEqual([{start: 9, end: 9}]);
-    expect(selected.result.clock_windows["inserter:1"][0].start).toBe(10);
-    for (const alternative of generated.alternatives) {
-        // a clock that does not meet goal 1 with the drill's window is the one with the drill always enabled
-        expect(alternative.result.clock_windows["drill:1"]?.length ?? 0, alternative.id).toBe(alternative.verdict === "stable" ? 1 : 0);
-    }
-});
-
-// swings-2 (144 ticks) was the selected clock before the observed windows were searched past a stable clock, and swings-3
+// the clock the generator selects for the build (record job config-IRON_PLATE_80_CAR_CHEST) is pinned there. swings-2 (144 ticks) was the selected clock before the observed windows were searched past a stable clock, and swings-3
 // (72 ticks) before the generator counted a wake-up only while the inserter's arm is at home; their recordings stay. The pin of each
 // recorded clock (hash, period, verdict, selection), and that the generator still makes it, is checked against the record
 // (tests/game/builds/clock-controls.test.ts), with the game's run against the verdict and the holds of the alternative

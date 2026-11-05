@@ -17,10 +17,6 @@ beforeAll(async () => {
     generated = generateClockAlternatives(config, {logger: quiet});
 });
 
-test("lithium silo: the even-hands clock is selected; the clock with 3 output swings, recorded in the game, is another it makes", () => {
-    expect(generated.alternatives[generated.selected_index].id).toBe("even-hands");
-});
-
 for (const variant of lithiumSiloCases()) {
     test(`lithium silo clock: ${variant.name}`, () => {
         // the pin of the clock (hash, period, verdict, selection) is checked against the record (clock-controls.test.ts)

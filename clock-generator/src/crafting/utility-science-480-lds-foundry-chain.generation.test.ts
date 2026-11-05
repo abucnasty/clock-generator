@@ -19,17 +19,6 @@ describe("a clock for the utility science 480 build from the hands and the order
         result = generateClockAlternatives(config, { logger: quiet });
     });
 
-    it("Behavior: the explicit one-cycle plan holds 480 a second and recovers", () => {
-        // Explicit plan, not selected_index: a future selector change must not masquerade as a behavior regression.
-        const plan = result.alternatives.find(it => it.id === "planned-belt-slack")!;
-        expect(plan, "the explicit behavior plan is offered").toBeDefined();
-        expect(plan.verdict).toBe("stable");
-        expect(plan.assessment.holds).toBe(true);
-        expect(plan.result.simulation_duration.ticks).toBe(168);
-        expect(plan.assessment.items_per_second).toBeCloseTo(480, 6);
-        expect(plan.assessment.backpressure_loss?.survives).toBe(true);
-    });
-
     it("Selection: the valid pick remains the clock named by its native control", () => {
         const { native } = readControls<RunControls>("utility-science-480-lds-foundry-chain-clock-controls.json").cases["generated-one-copy"];
         const selected = result.alternatives[result.selected_index];

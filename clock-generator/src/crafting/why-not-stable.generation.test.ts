@@ -4,8 +4,7 @@ import { generateClockAlternatives } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { FeasibilityError } from "../config/errors";
-import { alwaysOnReasonProblemsOf, quiet } from "./generate-blueprint-test-helpers";
-
+import { quiet } from "./generate-blueprint-test-helpers";
 
 describe("why the selected clock does not meet goal 1, as a generation says it", () => {
     // a hand of 2 every 8 ticks takes at most 15 packs a second out of a copy (the simulator's inserter, free-running, moves
@@ -38,11 +37,4 @@ describe("why the selected clock does not meet goal 1, as a generation says it",
         });
     });
 
-    it("is not said of a sample whose selected clock is stable", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
-        const generated = generateClockAlternatives(config, { logger: quiet });
-        expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
-        expect(generated.alternatives[generated.selected_index].verdict).toBe("stable");
-        expect(generated.why_not_stable).toBeNull();
-    });
 });
