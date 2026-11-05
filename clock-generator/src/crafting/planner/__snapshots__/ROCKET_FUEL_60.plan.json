@@ -28,7 +28,7 @@
       "key": "group:1",
       "members": [
         "machine:2",
-        "belt:3/lane:1#jellynut-seed",
+        "belt:3/lane:2#jellynut-seed",
         "machine:1",
         "machine:3",
         "belt:2/lane:1#rocket-fuel"

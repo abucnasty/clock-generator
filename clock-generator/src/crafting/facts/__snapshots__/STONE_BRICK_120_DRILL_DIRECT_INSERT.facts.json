@@ -46,7 +46,7 @@
         "belt": "belt:1",
         "lane": 2,
         "listed": true,
-        "item": "stone-brick",
+        "item": "",
         "stack": 4,
         "belt_prototype": "turbo-transport-belt",
         "tiles_per_tick": 0.125,
@@ -168,18 +168,18 @@
         "recipe_or_resource": "stone",
         "prototype": "electric-mining-drill",
         "prototype_type": "mining-drill",
-        "speed": 10.02875,
+        "speed": 8.153749999999999,
         "energy_required": 1,
-        "ticks_per_craft": 5.9827994515767156,
-        "crafts_per_tick": 0.16714583333333335,
-        "productivity": 80000,
+        "ticks_per_craft": 7.358577341713936,
+        "crafts_per_tick": 0.13589583333333333,
+        "productivity": 80010.00000001132,
         "bonus_per_craft": null,
         "ticks_per_bonus": null,
         "inputs": [],
         "insertion_duration_ticks": null,
         "crafts_per_second": {
-          "numerator": 5014375000000001,
-          "denominator": 500000000000000
+          "numerator": 6523,
+          "denominator": 800
         }
       },
       "yield": {
@@ -190,14 +190,14 @@
             "probability": 1,
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
-            "expected_per_craft": 801,
+            "expected_per_craft": 801.1000000001131,
             "per_craft": {
-              "numerator": 801,
-              "denominator": 1
+              "numerator": 8011000000001131,
+              "denominator": 10000000000000
             },
             "per_second": {
-              "numerator": 8279986718748728,
-              "denominator": 1030742821473
+              "numerator": 882671752701731,
+              "denominator": 135131035651
             },
             "main": true,
             "stochastic": false
