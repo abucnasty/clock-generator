@@ -122,8 +122,9 @@ a hand of 16 is exactly the four stacks, and the next hand is picked up and find
 ## The other inserter kinds
 
 The five electric prototypes at normal and legendary quality (the burner inserter needs fuel and is not run by the engine), with the
-save's research (hands of 4, 12 and 16), on `left` onto an empty lane; the other sides, ends and lane states agree with the stack inserter's
-(`recordings.test.ts`). The long-handed inserter stands two slots from the line.
+save's research (hands of 4, 12 and 16), on `left` onto an empty lane; on the other sides and ends, empty, every kind lands on the lane and the
+places the stack inserter does (`recordings.test.ts`), and with a stream or a full lane the kinds' first hands were recorded the same way
+(the recordings). The long-handed inserter stands two slots from the line.
 
 | Kind | Hand | Delay, normal | Delay, legendary | Items in a drop | Offsets of the first hand |
 | --- | --- | --- | --- | --- | --- |

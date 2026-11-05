@@ -3,7 +3,7 @@ import path from "path";
 import {describe, expect, test} from "vitest";
 import {Belt, BeltSpeed} from "../../../../src/entities/belt/belt";
 import {rotationTicks} from "../../../../src/entities/inserter/metadata/inserter-spec";
-import {figuresOf, Hand, scenarioOf, summarise} from "./analysis";
+import {Hand, scenarioOf, summarise} from "./analysis";
 import {ALL_RUNS, DropRun, KIND_RUNS, STACK_RUNS, VALIDATION_RUNS} from "./cases";
 import {DropRecording, loadRecording} from "./recording";
 import {compareRun} from "./simulator-replay";
@@ -351,12 +351,29 @@ describe("the simulator's lane rule against the game (LaneTraffic, with the hand
     });
 });
 
+describe("the same scenario built in another run", () => {
+    test("gives the same figures, except one landing: the first stack behind the line, beside a stream stack, is read 0.07 tile apart (the ticks agree)", () => {
+        const different: string[] = [];
+        for (const [stackRun, kindsRun] of [["stack-1", "kinds-1"], ["stack-4", "kinds-4"]]) {
+            const a = runFigures(recording(stackRun)), b = runFigures(recording(kindsRun));
+            for (const approach of ["left", "right", "back"]) for (const state of ["empty", "d50-p0", "d50-p2", "full"]) {
+                const mine = a[name(approach, state)].hands[0]!, other = b[name(approach, state, "stack-inserter-legendary")].hands[0]!;
+                if (JSON.stringify(mine) === JSON.stringify(other)) continue;
+                different.push(`${stackRun} ${approach}-${state}`);
+                expect(other.offsets).toEqual(mine.offsets);
+                expect(rounded([mine.landings[0], other.landings[0]])).toEqual([0.246, 0.176]);
+                expect(other.landings.slice(1)).toEqual(mine.landings.slice(1));
+            }
+        }
+        expect(different).toEqual(["stack-1 back-d50-p2", "stack-4 back-d50-p2"]);
+    });
+});
+
 describe("the runs keep the figures a fresh run is compared with", () => {
     test.each(ALL_RUNS.map(it => it.name))("%s: figures of every scenario", runName => {
         const figures = runFigures(recording(runName));
         expect(Object.keys(figures)).toHaveLength(run(runName).scenarios.length);
         for (const scenario of run(runName).scenarios) expect(figures[scenario.name].hands[0], scenario.name).not.toBeUndefined();
-        void figuresOf;
     });
     test("the validation, stack and kind runs are all of them", () => {
         expect(ALL_RUNS).toEqual([...VALIDATION_RUNS, ...STACK_RUNS, ...KIND_RUNS]);

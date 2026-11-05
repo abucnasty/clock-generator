@@ -58,6 +58,17 @@ ticks, sizes and places are set against the game's. No simulator code was change
 | The swing from chest to belt (delay to the first drop), all five kinds, both qualities | `rotation + 1`: 35, 14, 24, 9, 12, 4, 12, 4, 12, 4 | `rotationTicks(prototype, quality) + 1` | **equal** |
 | Lane choice by approach | the lane farther from the inserter for a side drop; the right lane (2) for a drop along the line, either way; the same for every kind | a hand with no named drop spot takes the lane of its item or the larger stack; the config's `drop` names the lane | not compared (the config names the lane, as the [lane probe](../../tests/game/mechanics/belt-drop-lane/README.md) says) |
 
+**Reproducibility.** The same scenario built in two runs (the legendary stack inserter of `stack-n` and of `kinds-n`, with the same hand, stream
+and phase) gives the same ticks, sizes and lanes, and the same landings in 22 of 24 pairs. The two that differ are one scenario at belt
+stack 1 and 4: behind the line, a stream of 50%, phase 2. The first stack is read 0.246 tile from the end in `stack-n` and 0.176 in
+`kinds-n` (0.07 tile apart, a stream stack beside it); the ticks agree. Most likely it is whether the game updates the inserter or the belt
+first within that tick, which follows the order the entities were built in (not isolated here). A landing beside a stream stack is
+therefore good to about 0.07 tile, and the one case the simulator misses on a 75% stream (0.754 against 0.824 along) is inside that.
+
+The 25% phases the rule misses were tried against five variants of the one comparison in `LaneTraffic.landingAt` that decides whether a
+stream stack counts as ahead of the landing (on the offline replay, scratch only, not kept): none does better than the rule as it is (224 of
+252 first hands with a stream or a full lane over the four sizes; the variants give 224, 212 or 0), so the fix is not that comparison alone.
+
 ### What a release that takes the fix would change
 
 For the release that takes #388's simulator half; none of it is done here.

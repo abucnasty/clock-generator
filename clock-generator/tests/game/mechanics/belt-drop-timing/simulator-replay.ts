@@ -18,6 +18,8 @@ export function nominalSpot(approach: string): number | null {
 }
 
 const UNITS = 256;
+/** The last tick the stream of a case is modelled to: past the window of a run (the chest is filled at tick 40, a run logs 150 ticks after it) */
+const STREAM_UNTIL = 200;
 /** What the stream of a case puts on the line: a stack at the start of the line at each of its ticks, which `insert_at` places one movement step in */
 function streamPositions(spec: DropCase, speed: number, tick0: number): number[] {
     const traffic = spec.traffic;
@@ -25,7 +27,7 @@ function streamPositions(spec: DropCase, speed: number, tick0: number): number[]
     const positions: number[] = [];
     for (let t = 1; t <= traffic.stop; t++) {
         if (!traffic.ticks.includes(((t - traffic.phase) % traffic.period + traffic.period) % traffic.period)) continue;
-        if (t > 200) break;
+        if (t > STREAM_UNTIL) break;
         // the log's first sample of such a stack is 0.871 tiles from the end of the first slot, one step after the 1/256 tile it was asked for
         positions.push(Math.round(UNITS - 0.871 * UNITS) + (tick0 - t) * speed);
     }
