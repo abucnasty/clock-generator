@@ -165,10 +165,11 @@ remain enabled. Keep the hold active until the held work is ready to release.
 Reserve the next engine/UI version and the next Sidecar version for the work held back. Keep the engine/UI package and
 lock versions synchronized. Update the existing unreleased changelog sections rather than adding a version for
 each change. Keep Sidecar's `info.json`, newest changelog entry, `LATEST_SIDECAR_VERSION`, feature-version
-checks and documentation aligned at the reserved Sidecar version. Published versions and their release notes stay unchanged.
+checks and documentation aligned at the reserved Sidecar version. Published version numbers and their GitHub release
+notes stay unchanged; a published changelog entry may be reworded when it keeps its meaning and its version.
 
 While the hold is on, publishing waits until the user authorizes the release. Do not clear `RELEASE_HOLD` or dispatch publishing
 workflows to bypass that hold. At release time, finalize both changelog dates/summaries and run the release
 checks. Only then set the repository variable to `false` and explicitly dispatch the release and Sidecar
 publishing workflows on `master` (a change outside the Sidecar directory does not trigger its push workflow).
-Reserved versions and published release notes remain unchanged until that release.
+Reserved versions and published GitHub release notes remain unchanged until that release.

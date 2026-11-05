@@ -2,12 +2,12 @@
 Version: 0.15.1
 Date: 2026-11-04
   Bugfixes:
-    - reads a belt lane's item where the inserters take from it, not from the first belt piece built
+    - reads a belt lane's item where inserters take from it, not its first-built piece
 ---------------------------------------------------------------------------------------------------
 Version: 0.15.0
 Date: 2026-10-27
   Features:
-    - captures supported belt bends with their pickup geometry
+    - captures pickups from supported belt bends
     - exports the container a recycler puts its results into
     - exports the machine a recycler puts its results into, even before its first output
   Bugfixes:
@@ -16,59 +16,62 @@ Date: 2026-10-27
 Version: 0.14.0
 Date: 2026-10-24
   Features:
-    - exports the way the belt runs where an inserter drops onto it, so the Clock Generator can tell which of the drops along it comes first
+    - exports which way a belt runs under an inserter's drop
   Bugfixes:
-    - exports a belt that has a loader in it, which the Clock Generator refused to import (#363)
-    - exports a chest that is empty when you select the build, with the item the inserters into and out of it move (#366)
+    - exports a belt with a loader in it, which the Clock Generator refused to import (#363)
+    - exports a chest empty at selection with the item its inserters move (#366)
 ---------------------------------------------------------------------------------------------------
 Version: 0.13.0
 Date: 2026-10-23
   Features:
-    - marks an inserter that drops onto a belt that side-loads onto another belt downstream, with the tiles to the merge
+    - marks an inserter dropping onto a belt that side-loads onto another belt downstream
 ---------------------------------------------------------------------------------------------------
 Version: 0.12.0
 Date: 2026-10-23
   Features:
-    - exports cars, tanks, cargo wagons and rocket silos as chests, with their slot filters and quality, exported empty
+    - exports cars, tanks, cargo wagons and rocket silos as chests, with slot filters and quality
     - exports mining drills that drop into a chest, car, tank, cargo wagon or rocket silo
     - exports each mining drill's own productivity, research and modules together
-    - exports each machine's and chest's prototype and quality, shown as icons in a clock's descriptions
+    - exports each machine's and chest's kind and quality, shown as icons in clock descriptions
     - exports where each entity stands and which way inserters and drills face
   Changes:
-    - no longer exports a machine's type: the Clock Generator works it out from the machine
-    - the button is Export (was Copy JSON)
+    - no longer exports a machine's type, which the Clock Generator works out itself
+    - renames the Copy JSON button to Export
   Bugfixes:
-    - exports a mining drill that has not mined or dropped yet, such as one just upgraded beside a full container (#316)
+    - exports a mining drill that has not yet mined or dropped (#316)
     - selects linked belts
-    - a mining drill or inserter that drops into something not in the export is listed as left out, instead of exported as dropping into the first machine, belt or chest
+    - lists a mining drill or inserter dropping into something not exported as left out
 ---------------------------------------------------------------------------------------------------
 Version: 0.11.0
 Date: 2026-10-21
   Features:
-    - captures pickups over the hood of an underground exit: lane 1 unmirrored, lane 2 mirrored, half-tile reach
-    - captures the pickup layout (side, front or over the hood) apart from the reach and the supply; older underground captures need recapture
-    - exports each pickup's classification and source, so a pickup the Clock Generator does not support stays marked through saves and imports
-    - captures the preferred lane and half-tile reach in front of an underground entrance: lane 2 mirrored, lane 1 otherwise
+    - captures pickups over the hood of an underground exit
+    - captures the pickup layout: side, front or over the hood
+    - asks for older underground captures to be captured again
+    - keeps a pickup the Clock Generator does not support marked through saves and imports
+    - captures the preferred lane and reach in front of an underground entrance
   Changes:
-    - a pickup from a belt tile that another belt side-loads onto is marked unsupported, as a splitter pickup is; earlier versions exported it as an ordinary belt pickup
+    - marks a pickup from a side-loaded belt tile unsupported, as it does a splitter pickup
   Bugfixes:
-    - exports each inserter's kind and quality, and its filter mode for a blacklist; filters switched off are no longer exported. Earlier versions made the Clock Generator run every inserter as a legendary stack inserter
+    - exports each inserter's kind and quality instead of leaving every inserter a legendary stack inserter
+    - exports an inserter's blacklist filter mode
+    - no longer exports filters that are switched off
 ---------------------------------------------------------------------------------------------------
 Version: 0.10.0
 Date: 2026-10-18
   Features:
-    - captures the preferred lane and half-tile pickup length in front of an underground exit: lane 2 for a mirrored inserter, lane 1 when flipped
+    - captures the preferred lane and pickup length in front of an underground exit
 ---------------------------------------------------------------------------------------------------
 Version: 0.9.1
 Date: 2026-10-17
   Features:
-    - explains unclassified belt pickups in the copy window and JSON: bends, splitters, inline pickups and unsupported geometry
+    - explains unclassified belt pickups, like bends, splitters and inline pickups, in the window and JSON
 
 ---------------------------------------------------------------------------------------------------
 Version: 0.9.0
 Date: 2026-10-17
   Features:
-    - exports the exposed pickup length for inserters beside straight belts and underground endpoints, so moving pickup timing can be simulated
+    - exports the pickup length for inserters beside straight belts and underground ends
     - exports the nearest lane at underground entrances and exits as well as straight belts
 ---------------------------------------------------------------------------------------------------
 Version: 0.8.0
@@ -76,40 +79,42 @@ Date: 2026-10-17
   Features:
     - exports the Remove unfiltered items setting of infinity chests, including empty disposal chests
   Bugfixes:
-    - infinity chest filters are read from their configured settings instead of their current contents
+    - reads infinity chest filters from their settings, not their current contents
 ---------------------------------------------------------------------------------------------------
 Version: 0.7.1
 Date: 2026-10-16
   Bugfixes:
-    - two belts that carry the same items on opposite lanes are exported as two belts, not one. As one, the lanes of the first were listed for both, and the near_lane of an inserter on the other named the wrong item
+    - exports two belts carrying the same items on opposite lanes as two belts, not one
 ---------------------------------------------------------------------------------------------------
 Version: 0.7.0
 Date: 2026-10-14
   Features:
-    - the window with the JSON lists each inserter left out of it, with where it stands and why: what it takes from or drops into is not in the JSON, or is something the sidecar has no type for. The window with the selection numbers each inserter by its id in the JSON and marks one left out with -
+    - lists each inserter left out of the JSON, with where it stands and why
+    - numbers each inserter in the selection window by its JSON id, marking left-out ones
   Changes:
-    - an inserter that takes from an empty belt or chest or from a machine that is not exported, or that drops into a lab, a machine without a recipe or a machine outside the selection, is left out of the JSON. It used to point at machine, belt or chest 1, which is some other entity. The inserters after it are numbered one lower than before
+    - leaves out an inserter whose source or target is not in the JSON
+    - numbers the inserters after a left-out one one lower than before
+    - points the contact and homepage links at the clock-generator repository
   Bugfixes:
-    - selecting an assembling machine without a recipe, or a lab, no longer crashes the game
-  Info:
-    - the contact and homepage links point at the clock-generator repository
+    - no longer crashes the game on selecting a lab or a recipe-less assembling machine
 ---------------------------------------------------------------------------------------------------
 Version: 0.6.0
 Date: 2026-10-05
   Features:
-    - biochambers are exported with the type "biochamber" and their energy consumption bonus (energy_consumption_bonus, in percent) so the clock generator can work out how many nutrients they burn
-    - the version of the mod is exported as sidecar_version so the clock generator can ask for an update when it is older than the version that exports a setting it can use
-    - an inserter that picks up from a straight piece of belt is exported with the lane nearest to it (near_lane on its source: 1 for the left lane in the direction the belt runs, 2 for the right one), which is the lane it takes from first when its machine takes the items of both
+    - exports biochambers with their energy consumption bonus
+    - exports the mod's version, letting the clock generator ask for an update
+    - exports the lane nearest to an inserter picking up from a straight belt
   Bugfixes:
-    - belt pieces joined to each other, through undergrounds and splitters as well, are exported as one belt, with lanes read from all of its pieces. A lane that had run dry under one inserter used to split a belt in two, and an inserter over an empty piece was put on the first belt
-    - inserters are exported with only the filters set on the inserter. Filters were guessed from the source machine's recipe or the source belt's lanes, which listed items the sink does not accept and made the config invalid; the clock generator works out what an inserter moves itself
+    - exports joined belt pieces, through undergrounds and splitters too, as one belt
+    - reads a belt's lanes from all of its pieces
+    - exports only the filters set on an inserter, no longer guessing them from its source
 ---------------------------------------------------------------------------------------------------
 Version: 0.3.0
 Date: 2026-06-23
   Changes:
-    - Updated compatibility to Factorio 2.0 or 2.1
+    - works with Factorio 2.0 or 2.1
 ---------------------------------------------------------------------------------------------------
 Version: 0.2.0
 Date: 2026-02-17
   Features:
-    - ability to extract info from a biochamber
+    - extracts info from a biochamber
