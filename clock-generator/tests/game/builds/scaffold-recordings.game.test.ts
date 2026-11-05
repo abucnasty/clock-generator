@@ -400,6 +400,25 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [],
         warmup_ticks: 3600,
     },
+    // The owner's rocket fuel build (2026-11-04): jellynut processing between two rocket fuel biochambers (legendary, four
+    // legendary productivity modules each, 13 legendary beacons), 60 a second from one copy. Bioflux and jellynut come on one
+    // moving turbo belt from infinity chests and drain into a void chest; nutrients come on a belt of their own whose end lets
+    // 8 ticks in 61 through, and the seeds return on its other lane; water comes from an infinity pipe.
+    "rocket fuel": {
+        scaffold: path.join(SAMPLES, "gleba", "rocket-fuel", "rocket-fuel-60.scaffold"),
+        config: ConfigPaths.ROCKET_FUEL_60,
+        seed: [],
+        warmup_ticks: 3600,
+    },
+    // The owner's stone brick build (2026-11-04): a drill (6 beacons, no modules) drops its stone straight into an electric
+    // furnace (two legendary productivity modules, 8 beacons) whose one output inserter puts the bricks on a moving belt that
+    // drains into a void chest; 40 a second from one copy, 120 over three. The harness puts the ore under the drill.
+    "stone bricks from a drill into a furnace": {
+        scaffold: path.join(SAMPLES, "smelting", "stone-brick", "stone-brick-120-drill-direct-insert.scaffold"),
+        config: ConfigPaths.STONE_BRICK_120_DRILL_DIRECT_INSERT,
+        seed: [],
+        warmup_ticks: 3600,
+    },
     "iron bacteria cultivation": {
         scaffold: path.join(SAMPLES, "gleba", "iron-bacteria", "iron-bacteria-380-cultivation.scaffold"),
         config: ConfigPaths.IRON_BACTERIA_380_CULTIVATION,
