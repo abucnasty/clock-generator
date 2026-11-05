@@ -419,6 +419,61 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [],
         warmup_ticks: 3600,
     },
+    // The owner's production science build (2026-11-05): one science assembler (legendary, 63.0078) fed rails by a rail assembler
+    // (5 beacons, 46.7969), whose steel comes from one foundry and whose iron sticks come from another, both on molten iron from
+    // infinity pipes; a drill drops stone straight into the rail assembler. Electric furnaces and productivity modules come on one
+    // backed-up turbo belt (one lane each) from two infinity chests and one inserter takes both; the packs go onto a moving belt
+    // into a void chest. 17.14 a second from one copy, 120 over seven.
+    "production science with a drill into the rail assembler": {
+        scaffold: path.join(SAMPLES, "science", "production", "production-120-two-belts.scaffold"),
+        config: ConfigPaths.PRODUCTION_SCIENCE_120_TWO_BELTS,
+        seed: [],
+        warmup_ticks: 3600,
+    },
+    // The owner's processing unit build (2026-11-05): one electromagnetic plant (legendary, 90.372) between two infinity chests, one
+    // chest of circuits (200 of each kind) and one that voids the units, each through one inserter; the sulfuric acid comes from an
+    // infinity pipe. 15 a second from one copy (the build's most is 36.1). The selected clock (1 output swing per cycle, 128 ticks)
+    // does not hold the target in the game (2026-11-05): 16 processing units in every one of 28 periods checked where 32 are
+    // needed (7.5 a second, 50%), the first inserter moving 88 items a period where the simulator moves 176 and the machine
+    // finishing half the crafts. Recorded raw, not tuned.
+    "processing units between two chests": {
+        scaffold: path.join(SAMPLES, "intermediates", "processing-unit", "processing-unit-15-chest-fed.scaffold"),
+        config: ConfigPaths.PROCESSING_UNIT_15_CHEST_FED,
+        seed: [],
+        warmup_ticks: 3600,
+    },
+    // The owner's military science build (2026-11-05): a science assembler (66.0253) fed grenades by a grenade assembler (57.8125)
+    // that takes iron from a foundry (112.244) and coal from a belt of its own (both lanes, six infinity chests); stone walls and
+    // piercing rounds come on one backed-up belt, one lane each. The packs go onto a moving belt into a void chest. 24 a second from
+    // one copy, 120 over five.
+    "military science with grenades": {
+        scaffold: path.join(SAMPLES, "science", "military", "military-120.scaffold"),
+        config: ConfigPaths.MILITARY_SCIENCE_120,
+        seed: [],
+        warmup_ticks: 3600,
+        wake_ups_open: "the game counts 90.0 wake-ups a minute and the simulator 181.1: the two coal inserters into the grenade assembler "
+            + "(inserters 4 and 6) are not woken in the game, which leaves 22.5 a minute of each uncounted as an arm away, and 45.3 a minute "
+            + "each in the simulator; the other four inserters count 22.5 against 22.6 (2026-11-05), with the production the same",
+    },
+    // The owner's flying robot frame build (2026-11-05): one assembler (legendary, 68.8906) taking engine units and steel from one
+    // backed-up turbo belt and batteries and circuits from another, four infinity chests in all; the frames go onto a moving belt
+    // into a void chest. 6.67 a second from one copy, 160 over twenty-four.
+    "flying robot frames": {
+        scaffold: path.join(SAMPLES, "intermediates", "flying-robot-frame", "flying-robot-frame-160.scaffold"),
+        config: ConfigPaths.FLYING_ROBOT_FRAME_160,
+        seed: [],
+        warmup_ticks: 3600,
+    },
+    // The owner's electric furnace build (2026-11-05): an electric furnace assembler (57.8125) taking steel from a foundry (185),
+    // stone bricks from three furnaces (80.0375) that each have a drill of their own dropping stone into them (speed bonuses 15.3075,
+    // 12.5 and 13.975), and advanced circuits from two infinity chests on one backed-up belt. The furnaces go onto a moving belt into
+    // a void chest. 10 a second from one copy, 20 over two.
+    "electric furnaces with a drill for each brick furnace": {
+        scaffold: path.join(SAMPLES, "intermediates", "electric-furnace", "electric-furnace-20.scaffold"),
+        config: ConfigPaths.ELECTRIC_FURNACE_20,
+        seed: [],
+        warmup_ticks: 3600,
+    },
     "iron bacteria cultivation": {
         scaffold: path.join(SAMPLES, "gleba", "iron-bacteria", "iron-bacteria-380-cultivation.scaffold"),
         config: ConfigPaths.IRON_BACTERIA_380_CULTIVATION,
