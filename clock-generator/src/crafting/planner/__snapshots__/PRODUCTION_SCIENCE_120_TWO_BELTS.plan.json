@@ -11,11 +11,11 @@
   },
   "unbounded_sources": [
     {
-      "vertex": "belt:2/lane:1#electric-furnace",
+      "vertex": "belt:2/lane:1#productivity-module",
       "kind": "nothing-drops-on"
     },
     {
-      "vertex": "belt:2/lane:2#productivity-module",
+      "vertex": "belt:2/lane:2#electric-furnace",
       "kind": "nothing-drops-on"
     }
   ],
@@ -36,7 +36,7 @@
         "inserter:3/rail",
         "inserter:4/steel-plate",
         "inserter:5/productivity-module",
-        "inserter:6/electric-furnace",
+        "inserter:5/electric-furnace",
         "placement:drill:1/stone"
       ],
       "periods": [
@@ -74,12 +74,12 @@
             "denominator": 7
           },
           "crafts_capacity": {
-            "numerator": 37097,
-            "denominator": 400
+            "numerator": 2995,
+            "denominator": 32
           },
           "duty": {
-            "numerator": 120000,
-            "denominator": 259679
+            "numerator": 1920,
+            "denominator": 4193
           }
         },
         {
@@ -124,16 +124,16 @@
             "drill:1"
           ],
           "crafts_needed": {
-            "numerator": 1000,
-            "denominator": 63021
+            "numerator": 3000,
+            "denominator": 56063
           },
           "crafts_capacity": {
             "numerator": 4919400000000001,
             "denominator": 1000000000000000
           },
           "duty": {
-            "numerator": 3081515717,
-            "denominator": 955348473724
+            "numerator": 6817332699,
+            "denominator": 626731761866
           }
         }
       ]

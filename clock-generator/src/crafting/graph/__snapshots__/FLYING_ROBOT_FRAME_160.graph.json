@@ -14,15 +14,13 @@
       "key": "belt:1/lane:1",
       "kind": "lane",
       "ports": [
-        "belt:1/lane:1#processing-unit"
+        "belt:1/lane:1#flying-robot-frame"
       ]
     },
     {
       "key": "belt:1/lane:2",
       "kind": "lane",
-      "ports": [
-        "belt:1/lane:2#flying-robot-frame"
-      ]
+      "ports": []
     },
     {
       "key": "belt:2/lane:1",
@@ -74,7 +72,7 @@
       "from_ports": [
         "machine:1"
       ],
-      "to": "belt:1/lane:2#flying-robot-frame",
+      "to": "belt:1/lane:1#flying-robot-frame",
       "lands_in": "lane",
       "hand": 16,
       "floor_cycle": 11,
@@ -125,26 +123,6 @@
       "terminal": null
     },
     {
-      "key": "inserter:3/electronic-circuit",
-      "via": "inserter",
-      "entity": "inserter:3",
-      "group": "inserter:3",
-      "item": "electronic-circuit",
-      "from": "belt:5/lane:1#electronic-circuit",
-      "from_ports": [
-        "belt:5/lane:1#electronic-circuit"
-      ],
-      "to": "machine:1",
-      "lands_in": "ingredients",
-      "hand": 16,
-      "floor_cycle": 11,
-      "ceiling": {
-        "numerator": 960,
-        "denominator": 11
-      },
-      "terminal": null
-    },
-    {
       "key": "inserter:3/battery",
       "via": "inserter",
       "entity": "inserter:3",
@@ -163,17 +141,36 @@
         "denominator": 11
       },
       "terminal": null
+    },
+    {
+      "key": "inserter:3/electronic-circuit",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "electronic-circuit",
+      "from": "belt:5/lane:1#electronic-circuit",
+      "from_ports": [
+        "belt:5/lane:1#electronic-circuit"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
     }
   ],
   "components": [],
   "order": [
-    "belt:1/lane:1#processing-unit",
     "belt:2/lane:1#steel-plate",
     "belt:2/lane:2#electric-engine-unit",
     "belt:5/lane:1#electronic-circuit",
     "belt:5/lane:2#battery",
     "machine:1",
-    "belt:1/lane:2#flying-robot-frame",
+    "belt:1/lane:1#flying-robot-frame",
     "sink"
   ],
   "shared": {

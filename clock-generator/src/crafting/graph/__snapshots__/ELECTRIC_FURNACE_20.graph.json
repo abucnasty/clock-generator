@@ -39,20 +39,6 @@
       ]
     },
     {
-      "key": "belt:3/lane:1",
-      "kind": "lane",
-      "ports": [
-        "belt:3/lane:1#stone"
-      ]
-    },
-    {
-      "key": "belt:3/lane:2",
-      "kind": "lane",
-      "ports": [
-        "belt:3/lane:2#stone"
-      ]
-    },
-    {
       "key": "machine:1",
       "kind": "machine",
       "ports": []
@@ -277,8 +263,6 @@
     "belt:1/lane:1#advanced-circuit",
     "belt:1/lane:2#advanced-circuit",
     "belt:2/lane:2#electric-furnace",
-    "belt:3/lane:1#stone",
-    "belt:3/lane:2#stone",
     "machine:2",
     "drill:1",
     "machine:3",

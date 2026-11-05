@@ -35,8 +35,8 @@
       "edges": [
         "inserter:1/military-science-pack",
         "inserter:2/grenade",
-        "inserter:3/piercing-rounds-magazine",
         "inserter:3/stone-wall",
+        "inserter:3/piercing-rounds-magazine",
         "inserter:4/coal",
         "inserter:5/iron-plate",
         "inserter:6/coal"
@@ -61,12 +61,12 @@
             "denominator": 1
           },
           "crafts_capacity": {
-            "numerator": 6603124737739601,
-            "denominator": 1000000000000000
+            "numerator": 211281,
+            "denominator": 32000
           },
           "duty": {
-            "numerator": 6000000000000000,
-            "denominator": 6603124737739601
+            "numerator": 64000,
+            "denominator": 70427
           }
         },
         {
@@ -79,12 +79,12 @@
             "denominator": 1
           },
           "crafts_capacity": {
-            "numerator": 62437498569489,
-            "denominator": 8000000000000
+            "numerator": 925,
+            "denominator": 128
           },
           "duty": {
-            "numerator": 16000000000000,
-            "denominator": 20812499523163
+            "numerator": 768,
+            "denominator": 925
           }
         },
         {
@@ -97,12 +97,12 @@
             "denominator": 1
           },
           "crafts_capacity": {
-            "numerator": 11220000267029,
-            "denominator": 320000000000
+            "numerator": 5612200000000001,
+            "denominator": 160000000000000
           },
           "duty": {
-            "numerator": 1920000000000,
-            "denominator": 11220000267029
+            "numerator": 960000000000000,
+            "denominator": 5612200000000001
           }
         }
       ]

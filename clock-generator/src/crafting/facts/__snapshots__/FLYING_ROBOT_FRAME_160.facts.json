@@ -20,7 +20,7 @@
         "belt": "belt:1",
         "lane": 1,
         "listed": true,
-        "item": "processing-unit",
+        "item": "flying-robot-frame",
         "stack": 4,
         "belt_prototype": "turbo-transport-belt",
         "tiles_per_tick": 0.125,
@@ -46,7 +46,7 @@
         "belt": "belt:1",
         "lane": 2,
         "listed": true,
-        "item": "flying-robot-frame",
+        "item": "",
         "stack": 4,
         "belt_prototype": "turbo-transport-belt",
         "tiles_per_tick": 0.125,
@@ -305,7 +305,7 @@
       "group": "inserter:1",
       "item": "flying-robot-frame",
       "from": "machine:1",
-      "to": "belt:1/lane:2",
+      "to": "belt:1/lane:1",
       "from_lanes": [],
       "lands_in": "lane",
       "hand": {
@@ -470,15 +470,15 @@
       "enable_latency_ticks": 2
     },
     {
-      "key": "inserter:3/electronic-circuit",
+      "key": "inserter:3/battery",
       "via": "inserter",
       "entity": "inserter:3",
       "group": "inserter:3",
-      "item": "electronic-circuit",
-      "from": "belt:5/lane:1",
+      "item": "battery",
+      "from": "belt:5/lane:2",
       "to": "machine:1",
       "from_lanes": [
-        "belt:5/lane:1"
+        "belt:5/lane:2"
       ],
       "lands_in": "ingredients",
       "hand": {
@@ -488,8 +488,8 @@
         "nominal": 16,
         "research": 16,
         "items": [
-          "electronic-circuit",
-          "battery"
+          "battery",
+          "electronic-circuit"
         ],
         "full_hand": {
           "at_placing_source": true,
@@ -528,15 +528,15 @@
       "enable_latency_ticks": 2
     },
     {
-      "key": "inserter:3/battery",
+      "key": "inserter:3/electronic-circuit",
       "via": "inserter",
       "entity": "inserter:3",
       "group": "inserter:3",
-      "item": "battery",
-      "from": "belt:5/lane:2",
+      "item": "electronic-circuit",
+      "from": "belt:5/lane:1",
       "to": "machine:1",
       "from_lanes": [
-        "belt:5/lane:2"
+        "belt:5/lane:1"
       ],
       "lands_in": "ingredients",
       "hand": {
@@ -546,8 +546,8 @@
         "nominal": 16,
         "research": 16,
         "items": [
-          "electronic-circuit",
-          "battery"
+          "battery",
+          "electronic-circuit"
         ],
         "full_hand": {
           "at_placing_source": true,
@@ -619,14 +619,14 @@
       "group": "inserter:3",
       "edges": [
         {
-          "edge": "inserter:3/electronic-circuit",
-          "item": "electronic-circuit",
+          "edge": "inserter:3/battery",
+          "item": "battery",
           "hand": 16,
           "floor_cycle": 11
         },
         {
-          "edge": "inserter:3/battery",
-          "item": "battery",
+          "edge": "inserter:3/electronic-circuit",
+          "item": "electronic-circuit",
           "hand": 16,
           "floor_cycle": 11
         }

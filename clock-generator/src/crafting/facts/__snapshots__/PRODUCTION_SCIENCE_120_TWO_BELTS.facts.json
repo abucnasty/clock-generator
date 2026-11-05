@@ -72,7 +72,7 @@
         "belt": "belt:2",
         "lane": 1,
         "listed": true,
-        "item": "electric-furnace",
+        "item": "productivity-module",
         "stack": 4,
         "belt_prototype": "turbo-transport-belt",
         "tiles_per_tick": 0.125,
@@ -98,7 +98,7 @@
         "belt": "belt:2",
         "lane": 2,
         "listed": true,
-        "item": "productivity-module",
+        "item": "electric-furnace",
         "stack": 4,
         "belt_prototype": "turbo-transport-belt",
         "tiles_per_tick": 0.125,
@@ -242,10 +242,10 @@
         "recipe_or_resource": "rail",
         "prototype": "assembling-machine-3",
         "prototype_type": "assembling-machine",
-        "speed": 46.37125,
+        "speed": 46.796875,
         "energy_required": 0.5,
-        "ticks_per_craft": 0.6469525837668815,
-        "crafts_per_tick": 1.5457083333333332,
+        "ticks_per_craft": 0.6410684474123539,
+        "crafts_per_tick": 1.5598958333333333,
         "productivity": 0,
         "bonus_per_craft": 0,
         "ticks_per_bonus": 0,
@@ -253,26 +253,26 @@
           {
             "item": "stone",
             "per_craft": 1,
-            "per_second": 92.7425,
-            "per_tick": 1.5457083333333332
+            "per_second": 93.59375,
+            "per_tick": 1.5598958333333333
           },
           {
             "item": "iron-stick",
             "per_craft": 1,
-            "per_second": 92.7425,
-            "per_tick": 1.5457083333333332
+            "per_second": 93.59375,
+            "per_tick": 1.5598958333333333
           },
           {
             "item": "steel-plate",
             "per_craft": 1,
-            "per_second": 92.7425,
-            "per_tick": 1.5457083333333332
+            "per_second": 93.59375,
+            "per_tick": 1.5598958333333333
           }
         ],
-        "insertion_duration_ticks": 32.34762918834407,
+        "insertion_duration_ticks": 32.053422370617696,
         "crafts_per_second": {
-          "numerator": 37097,
-          "denominator": 400
+          "numerator": 2995,
+          "denominator": 32
         }
       },
       "yield": {
@@ -289,8 +289,8 @@
               "denominator": 1
             },
             "per_second": {
-              "numerator": 37097,
-              "denominator": 200
+              "numerator": 2995,
+              "denominator": 16
             },
             "main": true,
             "stochastic": false
@@ -530,7 +530,7 @@
         "energy_required": 1,
         "ticks_per_craft": 12.196609342602754,
         "crafts_per_tick": 0.08199000000000002,
-        "productivity": 269990,
+        "productivity": 79990,
         "bonus_per_craft": null,
         "ticks_per_bonus": null,
         "inputs": [],
@@ -548,14 +548,14 @@
             "probability": 1,
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
-            "expected_per_craft": 2700.9,
+            "expected_per_craft": 800.9,
             "per_craft": {
-              "numerator": 27009,
+              "numerator": 8009,
               "denominator": 10
             },
             "per_second": {
-              "numerator": 7697975507999090,
-              "denominator": 579369839683
+              "numerator": 4294537811930383,
+              "denominator": 1089998751387
             },
             "main": true,
             "stochastic": false
@@ -819,10 +819,10 @@
       "entity": "inserter:5",
       "group": "inserter:5",
       "item": "productivity-module",
-      "from": "belt:2/lane:2",
+      "from": "belt:2/lane:1",
       "to": "machine:1",
       "from_lanes": [
-        "belt:2/lane:2"
+        "belt:2/lane:1"
       ],
       "lands_in": "ingredients",
       "hand": {
@@ -832,7 +832,8 @@
         "nominal": 16,
         "research": 16,
         "items": [
-          "productivity-module"
+          "productivity-module",
+          "electric-furnace"
         ],
         "full_hand": {
           "at_placing_source": true,
@@ -871,15 +872,15 @@
       "enable_latency_ticks": 2
     },
     {
-      "key": "inserter:6/electric-furnace",
+      "key": "inserter:5/electric-furnace",
       "via": "inserter",
-      "entity": "inserter:6",
-      "group": "inserter:6",
+      "entity": "inserter:5",
+      "group": "inserter:5",
       "item": "electric-furnace",
-      "from": "belt:2/lane:1",
+      "from": "belt:2/lane:2",
       "to": "machine:1",
       "from_lanes": [
-        "belt:2/lane:1"
+        "belt:2/lane:2"
       ],
       "lands_in": "ingredients",
       "hand": {
@@ -889,6 +890,7 @@
         "nominal": 16,
         "research": 16,
         "items": [
+          "productivity-module",
           "electric-furnace"
         ],
         "full_hand": {
@@ -993,14 +995,9 @@
           "item": "productivity-module",
           "hand": 16,
           "floor_cycle": 11
-        }
-      ]
-    },
-    {
-      "group": "inserter:6",
-      "edges": [
+        },
         {
-          "edge": "inserter:6/electric-furnace",
+          "edge": "inserter:5/electric-furnace",
           "item": "electric-furnace",
           "hand": 16,
           "floor_cycle": 11

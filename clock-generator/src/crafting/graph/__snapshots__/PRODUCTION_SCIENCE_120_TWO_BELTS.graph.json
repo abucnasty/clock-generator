@@ -26,14 +26,14 @@
       "key": "belt:2/lane:1",
       "kind": "lane",
       "ports": [
-        "belt:2/lane:1#electric-furnace"
+        "belt:2/lane:1#productivity-module"
       ]
     },
     {
       "key": "belt:2/lane:2",
       "kind": "lane",
       "ports": [
-        "belt:2/lane:2#productivity-module"
+        "belt:2/lane:2#electric-furnace"
       ]
     },
     {
@@ -154,9 +154,9 @@
       "entity": "inserter:5",
       "group": "inserter:5",
       "item": "productivity-module",
-      "from": "belt:2/lane:2#productivity-module",
+      "from": "belt:2/lane:1#productivity-module",
       "from_ports": [
-        "belt:2/lane:2#productivity-module"
+        "belt:2/lane:1#productivity-module"
       ],
       "to": "machine:1",
       "lands_in": "ingredients",
@@ -169,14 +169,14 @@
       "terminal": null
     },
     {
-      "key": "inserter:6/electric-furnace",
+      "key": "inserter:5/electric-furnace",
       "via": "inserter",
-      "entity": "inserter:6",
-      "group": "inserter:6",
+      "entity": "inserter:5",
+      "group": "inserter:5",
       "item": "electric-furnace",
-      "from": "belt:2/lane:1#electric-furnace",
+      "from": "belt:2/lane:2#electric-furnace",
       "from_ports": [
-        "belt:2/lane:1#electric-furnace"
+        "belt:2/lane:2#electric-furnace"
       ],
       "to": "machine:1",
       "lands_in": "ingredients",
@@ -208,8 +208,8 @@
   ],
   "components": [],
   "order": [
-    "belt:2/lane:1#electric-furnace",
-    "belt:2/lane:2#productivity-module",
+    "belt:2/lane:1#productivity-module",
+    "belt:2/lane:2#electric-furnace",
     "machine:3",
     "machine:4",
     "drill:1",

@@ -20,31 +20,31 @@
         "recipe_or_resource": "processing-unit",
         "prototype": "electromagnetic-plant",
         "prototype_type": "assembling-machine",
-        "speed": 90.3499984741211,
+        "speed": 90.372,
         "energy_required": 10,
-        "ticks_per_craft": 6.640841285369337,
-        "crafts_per_tick": 0.15058333079020184,
+        "ticks_per_craft": 6.639224538573894,
+        "crafts_per_tick": 0.15062,
         "productivity": 300,
         "bonus_per_craft": 3,
-        "ticks_per_bonus": 19.92252385610801,
+        "ticks_per_bonus": 19.917673615721682,
         "inputs": [
           {
             "item": "electronic-circuit",
             "per_craft": 20,
-            "per_second": 180.6999969482422,
-            "per_tick": 3.0116666158040366
+            "per_second": 180.744,
+            "per_tick": 3.0124
           },
           {
             "item": "advanced-circuit",
             "per_craft": 2,
-            "per_second": 18.06999969482422,
-            "per_tick": 0.30116666158040367
+            "per_second": 18.0744,
+            "per_tick": 0.30124
           }
         ],
-        "insertion_duration_ticks": 19.92252385610801,
+        "insertion_duration_ticks": 19.917673615721682,
         "crafts_per_second": {
-          "numerator": 903499984741211,
-          "denominator": 100000000000000
+          "numerator": 22593,
+          "denominator": 2500
         }
       },
       "yield": {
@@ -61,8 +61,8 @@
               "denominator": 1
             },
             "per_second": {
-              "numerator": 903499984741211,
-              "denominator": 25000000000000
+              "numerator": 22593,
+              "denominator": 625
             },
             "main": true,
             "stochastic": false
@@ -127,21 +127,21 @@
         "chest_type": "infinity-chest",
         "capacity_by_item": [
           {
-            "item": "electronic-circuit",
+            "item": "advanced-circuit",
             "capacity": null
           },
           {
-            "item": "advanced-circuit",
+            "item": "electronic-circuit",
             "capacity": null
           }
         ],
         "accepts": [
-          "electronic-circuit",
-          "advanced-circuit"
+          "advanced-circuit",
+          "electronic-circuit"
         ],
         "gives": [
-          "electronic-circuit",
-          "advanced-circuit"
+          "advanced-circuit",
+          "electronic-circuit"
         ],
         "items_put_in": [],
         "never_refuses": true,
@@ -167,12 +167,8 @@
             "capacity": null
           }
         ],
-        "accepts": [
-          "processing-unit"
-        ],
-        "gives": [
-          "processing-unit"
-        ],
+        "accepts": "any",
+        "gives": [],
         "items_put_in": [
           "processing-unit"
         ],

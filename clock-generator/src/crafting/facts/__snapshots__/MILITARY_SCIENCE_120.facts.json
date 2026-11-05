@@ -176,37 +176,37 @@
         "recipe_or_resource": "military-science-pack",
         "prototype": null,
         "prototype_type": null,
-        "speed": 66.031247377396,
+        "speed": 66.0253125,
         "energy_required": 10,
-        "ticks_per_craft": 9.08660708120128,
-        "crafts_per_tick": 0.11005207896232669,
+        "ticks_per_craft": 9.087423857327446,
+        "crafts_per_tick": 0.1100421875,
         "productivity": 100,
         "bonus_per_craft": 1,
-        "ticks_per_bonus": 9.08660708120128,
+        "ticks_per_bonus": 9.087423857327446,
         "inputs": [
           {
             "item": "piercing-rounds-magazine",
             "per_craft": 1,
-            "per_second": 6.603124737739601,
-            "per_tick": 0.11005207896232669
+            "per_second": 6.60253125,
+            "per_tick": 0.1100421875
           },
           {
             "item": "grenade",
             "per_craft": 1,
-            "per_second": 6.603124737739601,
-            "per_tick": 0.11005207896232669
+            "per_second": 6.60253125,
+            "per_tick": 0.1100421875
           },
           {
             "item": "stone-wall",
             "per_craft": 2,
-            "per_second": 13.206249475479202,
-            "per_tick": 0.22010415792465338
+            "per_second": 13.2050625,
+            "per_tick": 0.220084375
           }
         ],
-        "insertion_duration_ticks": 20.44486593270288,
+        "insertion_duration_ticks": 20.44670367898675,
         "crafts_per_second": {
-          "numerator": 6603124737739601,
-          "denominator": 1000000000000000
+          "numerator": 211281,
+          "denominator": 32000
         }
       },
       "yield": {
@@ -223,8 +223,8 @@
               "denominator": 1
             },
             "per_second": {
-              "numerator": 6603124737739601,
-              "denominator": 250000000000000
+              "numerator": 211281,
+              "denominator": 8000
             },
             "main": true,
             "stochastic": false
@@ -294,10 +294,10 @@
         "recipe_or_resource": "grenade",
         "prototype": null,
         "prototype_type": null,
-        "speed": 62.437498569489,
+        "speed": 57.8125,
         "energy_required": 8,
-        "ticks_per_craft": 7.687687863820974,
-        "crafts_per_tick": 0.13007812201976876,
+        "ticks_per_craft": 8.302702702702703,
+        "crafts_per_tick": 0.12044270833333333,
         "productivity": 0,
         "bonus_per_craft": 0,
         "ticks_per_bonus": 0,
@@ -305,20 +305,20 @@
           {
             "item": "iron-plate",
             "per_craft": 5,
-            "per_second": 39.02343660593063,
-            "per_tick": 0.6503906100988438
+            "per_second": 36.1328125,
+            "per_tick": 0.6022135416666666
           },
           {
             "item": "coal",
             "per_craft": 10,
-            "per_second": 78.04687321186125,
-            "per_tick": 1.3007812201976876
+            "per_second": 72.265625,
+            "per_tick": 1.2044270833333333
           }
         ],
-        "insertion_duration_ticks": 84.56456650203071,
+        "insertion_duration_ticks": 83.02702702702703,
         "crafts_per_second": {
-          "numerator": 62437498569489,
-          "denominator": 8000000000000
+          "numerator": 925,
+          "denominator": 128
         }
       },
       "yield": {
@@ -335,8 +335,8 @@
               "denominator": 1
             },
             "per_second": {
-              "numerator": 62437498569489,
-              "denominator": 8000000000000
+              "numerator": 925,
+              "denominator": 128
             },
             "main": true,
             "stochastic": false
@@ -346,16 +346,16 @@
         "payouts_count_as_finishes": true
       },
       "input_limits": {
-        "overload_multiplier": 11,
+        "overload_multiplier": 10,
         "limits": [
           {
             "item": "iron-plate",
-            "limit": 55,
+            "limit": 50,
             "kind": "ingredient"
           },
           {
             "item": "coal",
-            "limit": 110,
+            "limit": 100,
             "kind": "ingredient"
           }
         ]
@@ -366,8 +366,8 @@
           {
             "item": "grenade",
             "rule": "overload",
-            "ingredients_blocked_at": 11,
-            "held_limit": 11,
+            "ingredients_blocked_at": 10,
+            "held_limit": 10,
             "stack": 100
           }
         ]
@@ -401,18 +401,18 @@
         "recipe_or_resource": "casting-iron",
         "prototype": null,
         "prototype_type": null,
-        "speed": 112.20000267029,
+        "speed": 112.244,
         "energy_required": 3.2,
-        "ticks_per_craft": 1.71122990579786,
-        "crafts_per_tick": 0.5843750139077604,
+        "ticks_per_craft": 1.7105591390185664,
+        "crafts_per_tick": 0.5846041666666668,
         "productivity": 150,
         "bonus_per_craft": 1.5,
-        "ticks_per_bonus": 2.56684485869679,
+        "ticks_per_bonus": 2.5658387085278496,
         "inputs": [],
-        "insertion_duration_ticks": 14.374331208702024,
+        "insertion_duration_ticks": 14.368696767755958,
         "crafts_per_second": {
-          "numerator": 11220000267029,
-          "denominator": 320000000000
+          "numerator": 5612200000000001,
+          "denominator": 160000000000000
         }
       },
       "yield": {
@@ -429,8 +429,8 @@
               "denominator": 1
             },
             "per_second": {
-              "numerator": 11220000267029,
-              "denominator": 64000000000
+              "numerator": 7015250000000001,
+              "denominator": 40000000000000
             },
             "main": true,
             "stochastic": false
@@ -588,15 +588,15 @@
       "enable_latency_ticks": 2
     },
     {
-      "key": "inserter:3/piercing-rounds-magazine",
+      "key": "inserter:3/stone-wall",
       "via": "inserter",
       "entity": "inserter:3",
       "group": "inserter:3",
-      "item": "piercing-rounds-magazine",
-      "from": "belt:3/lane:2",
+      "item": "stone-wall",
+      "from": "belt:3/lane:1",
       "to": "machine:1",
       "from_lanes": [
-        "belt:3/lane:2"
+        "belt:3/lane:1"
       ],
       "lands_in": "ingredients",
       "hand": {
@@ -606,8 +606,8 @@
         "nominal": 16,
         "research": 16,
         "items": [
-          "piercing-rounds-magazine",
-          "stone-wall"
+          "stone-wall",
+          "piercing-rounds-magazine"
         ],
         "full_hand": {
           "at_placing_source": true,
@@ -646,15 +646,15 @@
       "enable_latency_ticks": 2
     },
     {
-      "key": "inserter:3/stone-wall",
+      "key": "inserter:3/piercing-rounds-magazine",
       "via": "inserter",
       "entity": "inserter:3",
       "group": "inserter:3",
-      "item": "stone-wall",
-      "from": "belt:3/lane:1",
+      "item": "piercing-rounds-magazine",
+      "from": "belt:3/lane:2",
       "to": "machine:1",
       "from_lanes": [
-        "belt:3/lane:1"
+        "belt:3/lane:2"
       ],
       "lands_in": "ingredients",
       "hand": {
@@ -664,8 +664,8 @@
         "nominal": 16,
         "research": 16,
         "items": [
-          "piercing-rounds-magazine",
-          "stone-wall"
+          "stone-wall",
+          "piercing-rounds-magazine"
         ],
         "full_hand": {
           "at_placing_source": true,
@@ -900,14 +900,14 @@
       "group": "inserter:3",
       "edges": [
         {
-          "edge": "inserter:3/piercing-rounds-magazine",
-          "item": "piercing-rounds-magazine",
+          "edge": "inserter:3/stone-wall",
+          "item": "stone-wall",
           "hand": 16,
           "floor_cycle": 11
         },
         {
-          "edge": "inserter:3/stone-wall",
-          "item": "stone-wall",
+          "edge": "inserter:3/piercing-rounds-magazine",
+          "item": "piercing-rounds-magazine",
           "hand": 16,
           "floor_cycle": 11
         }

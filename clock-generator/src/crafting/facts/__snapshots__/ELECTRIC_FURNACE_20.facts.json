@@ -116,58 +116,6 @@
       }
     },
     {
-      "key": "belt:3/lane:1",
-      "kind": "lane",
-      "entity": "belt:3",
-      "lane": {
-        "key": "belt:3/lane:1",
-        "belt": "belt:3",
-        "lane": 1,
-        "listed": true,
-        "item": "stone",
-        "stack": 4,
-        "belt_prototype": "turbo-transport-belt",
-        "tiles_per_tick": 0.125,
-        "belt_speed": 60,
-        "items_per_second_ceiling": {
-          "numerator": 120,
-          "denominator": 1
-        },
-        "supply": "moving",
-        "export_per_second": null
-      },
-      "spoilage": {
-        "items": [],
-        "loss_limit_share": 0.75
-      }
-    },
-    {
-      "key": "belt:3/lane:2",
-      "kind": "lane",
-      "entity": "belt:3",
-      "lane": {
-        "key": "belt:3/lane:2",
-        "belt": "belt:3",
-        "lane": 2,
-        "listed": true,
-        "item": "stone",
-        "stack": 4,
-        "belt_prototype": "turbo-transport-belt",
-        "tiles_per_tick": 0.125,
-        "belt_speed": 60,
-        "items_per_second_ceiling": {
-          "numerator": 120,
-          "denominator": 1
-        },
-        "supply": "moving",
-        "export_per_second": null
-      },
-      "spoilage": {
-        "items": [],
-        "loss_limit_share": 0.75
-      }
-    },
-    {
       "key": "machine:1",
       "kind": "machine",
       "entity": "machine:1",
@@ -377,25 +325,25 @@
         "recipe_or_resource": "stone-brick",
         "prototype": "electric-furnace",
         "prototype_type": "furnace",
-        "speed": 80.05,
+        "speed": 80.0375,
         "energy_required": 3.2,
-        "ticks_per_craft": 2.3985009369144286,
-        "crafts_per_tick": 0.41692708333333334,
+        "ticks_per_craft": 2.3988755270966733,
+        "crafts_per_tick": 0.4168619791666667,
         "productivity": 50,
         "bonus_per_craft": 0.5,
-        "ticks_per_bonus": 1.1992504684572143,
+        "ticks_per_bonus": 1.1994377635483366,
         "inputs": [
           {
             "item": "stone",
             "per_craft": 2,
-            "per_second": 50.03125,
-            "per_tick": 0.8338541666666667
+            "per_second": 50.0234375,
+            "per_tick": 0.8337239583333333
           }
         ],
-        "insertion_duration_ticks": 49.56901936289819,
+        "insertion_duration_ticks": 49.576760893331254,
         "crafts_per_second": {
-          "numerator": 1601,
-          "denominator": 64
+          "numerator": 6403,
+          "denominator": 256
         }
       },
       "yield": {
@@ -412,8 +360,8 @@
               "denominator": 2
             },
             "per_second": {
-              "numerator": 4803,
-              "denominator": 128
+              "numerator": 19209,
+              "denominator": 512
             },
             "main": true,
             "stochastic": false
@@ -473,25 +421,25 @@
         "recipe_or_resource": "stone-brick",
         "prototype": "electric-furnace",
         "prototype_type": "furnace",
-        "speed": 80.05,
+        "speed": 80.0375,
         "energy_required": 3.2,
-        "ticks_per_craft": 2.3985009369144286,
-        "crafts_per_tick": 0.41692708333333334,
+        "ticks_per_craft": 2.3988755270966733,
+        "crafts_per_tick": 0.4168619791666667,
         "productivity": 50,
         "bonus_per_craft": 0.5,
-        "ticks_per_bonus": 1.1992504684572143,
+        "ticks_per_bonus": 1.1994377635483366,
         "inputs": [
           {
             "item": "stone",
             "per_craft": 2,
-            "per_second": 50.03125,
-            "per_tick": 0.8338541666666667
+            "per_second": 50.0234375,
+            "per_tick": 0.8337239583333333
           }
         ],
-        "insertion_duration_ticks": 49.56901936289819,
+        "insertion_duration_ticks": 49.576760893331254,
         "crafts_per_second": {
-          "numerator": 1601,
-          "denominator": 64
+          "numerator": 6403,
+          "denominator": 256
         }
       },
       "yield": {
@@ -508,8 +456,8 @@
               "denominator": 2
             },
             "per_second": {
-              "numerator": 4803,
-              "denominator": 128
+              "numerator": 19209,
+              "denominator": 512
             },
             "main": true,
             "stochastic": false
@@ -569,25 +517,25 @@
         "recipe_or_resource": "stone-brick",
         "prototype": "electric-furnace",
         "prototype_type": "furnace",
-        "speed": 80.05,
+        "speed": 80.0375,
         "energy_required": 3.2,
-        "ticks_per_craft": 2.3985009369144286,
-        "crafts_per_tick": 0.41692708333333334,
+        "ticks_per_craft": 2.3988755270966733,
+        "crafts_per_tick": 0.4168619791666667,
         "productivity": 50,
         "bonus_per_craft": 0.5,
-        "ticks_per_bonus": 1.1992504684572143,
+        "ticks_per_bonus": 1.1994377635483366,
         "inputs": [
           {
             "item": "stone",
             "per_craft": 2,
-            "per_second": 50.03125,
-            "per_tick": 0.8338541666666667
+            "per_second": 50.0234375,
+            "per_tick": 0.8337239583333333
           }
         ],
-        "insertion_duration_ticks": 49.56901936289819,
+        "insertion_duration_ticks": 49.576760893331254,
         "crafts_per_second": {
-          "numerator": 1601,
-          "denominator": 64
+          "numerator": 6403,
+          "denominator": 256
         }
       },
       "yield": {
@@ -604,8 +552,8 @@
               "denominator": 2
             },
             "per_second": {
-              "numerator": 4803,
-              "denominator": 128
+              "numerator": 19209,
+              "denominator": 512
             },
             "main": true,
             "stochastic": false
@@ -665,18 +613,18 @@
         "recipe_or_resource": "stone",
         "prototype": "electric-mining-drill",
         "prototype_type": "mining-drill",
-        "speed": 6.75,
+        "speed": 8.153749999999999,
         "energy_required": 1,
-        "ticks_per_craft": 8.88888888888889,
-        "crafts_per_tick": 0.1125,
-        "productivity": 80000,
+        "ticks_per_craft": 7.358577341713936,
+        "crafts_per_tick": 0.13589583333333333,
+        "productivity": 79990,
         "bonus_per_craft": null,
         "ticks_per_bonus": null,
         "inputs": [],
         "insertion_duration_ticks": null,
         "crafts_per_second": {
-          "numerator": 27,
-          "denominator": 4
+          "numerator": 6523,
+          "denominator": 800
         }
       },
       "yield": {
@@ -687,14 +635,14 @@
             "probability": 1,
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
-            "expected_per_craft": 801,
+            "expected_per_craft": 800.9,
             "per_craft": {
-              "numerator": 801,
-              "denominator": 1
+              "numerator": 8009,
+              "denominator": 10
             },
             "per_second": {
-              "numerator": 21627,
-              "denominator": 4
+              "numerator": 3376671718748589,
+              "denominator": 517074541141
             },
             "main": true,
             "stochastic": false
@@ -743,7 +691,7 @@
         "energy_required": 1,
         "ticks_per_craft": 8.88888888888889,
         "crafts_per_tick": 0.1125,
-        "productivity": 80000,
+        "productivity": 79990,
         "bonus_per_craft": null,
         "ticks_per_bonus": null,
         "inputs": [],
@@ -761,14 +709,14 @@
             "probability": 1,
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
-            "expected_per_craft": 801,
+            "expected_per_craft": 800.9,
             "per_craft": {
-              "numerator": 801,
-              "denominator": 1
+              "numerator": 8009,
+              "denominator": 10
             },
             "per_second": {
-              "numerator": 21627,
-              "denominator": 4
+              "numerator": 216243,
+              "denominator": 40
             },
             "main": true,
             "stochastic": false
@@ -813,18 +761,18 @@
         "recipe_or_resource": "stone",
         "prototype": "electric-mining-drill",
         "prototype_type": "mining-drill",
-        "speed": 6.75,
+        "speed": 7.4875,
         "energy_required": 1,
-        "ticks_per_craft": 8.88888888888889,
-        "crafts_per_tick": 0.1125,
-        "productivity": 80000,
+        "ticks_per_craft": 8.013355592654424,
+        "crafts_per_tick": 0.12479166666666666,
+        "productivity": 79990,
         "bonus_per_craft": null,
         "ticks_per_bonus": null,
         "inputs": [],
         "insertion_duration_ticks": null,
         "crafts_per_second": {
-          "numerator": 27,
-          "denominator": 4
+          "numerator": 599,
+          "denominator": 80
         }
       },
       "yield": {
@@ -835,14 +783,14 @@
             "probability": 1,
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
-            "expected_per_craft": 801,
+            "expected_per_craft": 800.9,
             "per_craft": {
-              "numerator": 801,
-              "denominator": 1
+              "numerator": 8009,
+              "denominator": 10
             },
             "per_second": {
-              "numerator": 21627,
-              "denominator": 4
+              "numerator": 4797391,
+              "denominator": 800
             },
             "main": true,
             "stochastic": false
