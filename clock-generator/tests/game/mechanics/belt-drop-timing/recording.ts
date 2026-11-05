@@ -36,6 +36,29 @@ export interface DropScenarioInfo {
     allow_custom_vectors: boolean;
 }
 
+/**
+ * What `recordings/` keeps of a run: only what the offline checks read, made from the full recording by trim-recordings.ts.
+ * Per scenario: how many rows the log had, and each hand with the stacks it put down.
+ */
+export interface TrimmedRecording {
+    info: {
+        scenarios: TrimmedScenarioInfo[];
+        force: {belt_stack_size_bonus: number};
+        research_unchanged: boolean;
+        factorio: string;
+    };
+    scenarios: Record<string, {rows: number; hands: TrimmedHand[]}>;
+}
+
+export type TrimmedScenarioInfo = Pick<DropScenarioInfo, "name" | "flows" | "pickup" | "drop_target" | "allow_custom_vectors"> & {drop: {u: number}};
+
+/** `drops`: [tick, slot, line, position in 1/256 tile, count, 1 on a belt piece (whose landing has a path along the line)] */
+export interface TrimmedHand {
+    pickup: number;
+    held: number;
+    drops: [number, number, number, number, number, number][];
+}
+
 export const RECORDINGS_DIR = path.join(__dirname, "recordings");
 
 /** The game writes an empty list of stacks as `{}` */
@@ -45,6 +68,13 @@ export function parseRecording(text: string): DropRecording {
     return recording;
 }
 
-export function loadRecording(run: string): DropRecording {
-    return parseRecording(zlib.gunzipSync(fs.readFileSync(path.join(RECORDINGS_DIR, `${run}.json.gz`))).toString("utf8"));
+/** A full recording, as the game wrote it (gzip or not) */
+export function loadFullRecording(file: string): DropRecording {
+    const bytes = fs.readFileSync(file);
+    return parseRecording((file.endsWith(".gz") ? zlib.gunzipSync(bytes) : bytes).toString("utf8"));
+}
+
+/** The kept recording of a run */
+export function loadRecording(run: string): TrimmedRecording {
+    return JSON.parse(zlib.gunzipSync(fs.readFileSync(path.join(RECORDINGS_DIR, `${run}.json.gz`))).toString("utf8")) as TrimmedRecording;
 }

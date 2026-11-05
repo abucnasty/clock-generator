@@ -9,7 +9,7 @@ import {recordInFactorio} from "../../../../src/harness/factorio-harness";
 import {composeProbeSource} from "../../helpers/probe-source";
 import {ALL_RUNS} from "./cases";
 import {loadRecording, parseRecording, RECORDINGS_DIR} from "./recording";
-import {runFigures} from "./summary";
+import {runFigures, trimRecording} from "./summary";
 
 /**
  * Inserters dropping full hands onto turbo lines, logged every tick (probe.lua). Each run's recording is written to
@@ -42,7 +42,7 @@ for (const run of ALL_RUNS.filter(run => !wanted || wanted.includes(run.name))) 
         if (retained) fs.writeFileSync(path.join(scratch, `${run.name}.json.gz`), zlib.gzipSync(fs.readFileSync(output), {level: 9}));
         // the control: the game still gives, for every scenario, the ticks, sizes, lanes and landings of the recording kept in recordings/
         if (fs.existsSync(path.join(RECORDINGS_DIR, `${run.name}.json.gz`))) {
-            expect(runFigures(recording), "figures of the retained recording").toEqual(runFigures(loadRecording(run.name)));
+            expect(runFigures(trimRecording(recording)), "figures of the retained recording").toEqual(runFigures(loadRecording(run.name)));
         }
     } finally {if (!retained) fs.rmSync(scratch, {recursive: true, force: true});}
 }, 1_000_000);

@@ -1,4 +1,4 @@
-import {DropRecording, DropScenarioInfo, RawRow} from "./recording";
+import {DropRecording, RawRow, TrimmedHand, TrimmedRecording, TrimmedScenarioInfo} from "./recording";
 
 /** One stack on a transport line in one tick */
 /** `line` is the game's transport line of the piece: 1 and 2 are the surface lanes, 3 and 4 the lanes below ground of an underground end */
@@ -36,23 +36,19 @@ export interface Summary {
     /** Pickups of the log: every tick the hand grew */
     pickups: number[];
     hands: Hand[];
-    /** The statuses seen, by name */
-    statuses: string[];
 }
 
-/** The hands of one scenario: when each was picked up and the stacks it put down, found as iron stacks not seen before */
-export function summarise(recording: DropRecording, name: string): Summary {
+/** The hands of one scenario of a full recording: when each was picked up and the stacks it put down, found as iron stacks not seen before */
+export function handsOf(recording: DropRecording, name: string): TrimmedHand[] {
     const info = recording.info.scenarios.find(scenario => scenario.name === name)!;
     const rows = recording.runs[name];
     const slotOfPiece = info.pieces.map(piece => piece.u);
     const isBelt = info.pieces.map(piece => piece.kind === "transport-belt");
     const seen = new Set<number>();
-    const hands: Hand[] = [];
-    const statuses = new Set<number>();
+    const hands: TrimmedHand[] = [];
     let previous = 0;
     for (const row of rows) {
-        const [tick, held, status] = row;
-        statuses.add(status);
+        const [tick, held] = row;
         if (held > previous) hands.push({pickup: tick, held, drops: []});
         previous = held;
         for (const stack of stacksOf(row)) {
@@ -60,12 +56,22 @@ export function summarise(recording: DropRecording, name: string): Summary {
             seen.add(stack.id);
             const hand = hands.at(-1);
             if (!hand) continue;
-            const slot = slotOfPiece[stack.piece - 1];
-            hand.drops.push({tick, slot, line: stack.line, lane: (stack.line - 1) % 2 + 1, position: stack.position,
-                path: isBelt[stack.piece - 1] ? slot + 1 - stack.position : NaN, count: stack.count});
+            hand.drops.push([tick, slotOfPiece[stack.piece - 1], stack.line, stack.position * UNITS, stack.count, isBelt[stack.piece - 1] ? 1 : 0]);
         }
     }
-    return {pickups: hands.map(hand => hand.pickup), hands, statuses: [...statuses].sort().map(code => recording.info.status[String(code)] ?? String(code))};
+    return hands;
+}
+
+const UNITS = 256;
+
+/** The hands of one scenario of a kept recording, with the lane and the path along the line worked out */
+export function summarise(recording: TrimmedRecording, name: string): Summary {
+    const hands: Hand[] = recording.scenarios[name].hands.map(hand => ({
+        pickup: hand.pickup, held: hand.held,
+        drops: hand.drops.map(([tick, slot, line, units, count, belt]) => ({tick, slot, line, lane: (line - 1) % 2 + 1, position: units / UNITS,
+            path: belt ? slot + 1 - units / UNITS : NaN, count})),
+    }));
+    return {pickups: hands.map(hand => hand.pickup), hands};
 }
 
 /** What the controls pin about a hand: the wait from pickup to the first stack, the ticks of the others from the first, the sizes, the lines and the landings */
@@ -89,6 +95,6 @@ export function figuresOf(hand: Hand): HandFigures | null {
     };
 }
 
-export function scenarioOf(recording: DropRecording, name: string): DropScenarioInfo {
+export function scenarioOf(recording: TrimmedRecording, name: string): TrimmedScenarioInfo {
     return recording.info.scenarios.find(scenario => scenario.name === name)!;
 }

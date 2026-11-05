@@ -38,7 +38,7 @@ piece's lanes are emptied each tick); a dead end is not drained.
 cd clock-generator
 # every run; the harness reuses a recording whose probe, build and game are unchanged
 npm run test:game -- tests/game/mechanics/belt-drop-timing/timing.game.test.ts
-# one run, with a new recording kept
+# one run, with its full log kept (then trim-recordings.ts makes the kept recording: see the probe README)
 DROP_TIMING_RUNS=stack-4 DROP_TIMING_CAPTURE_DIR=.scratch/drop-run \
   npm run test:game -- tests/game/mechanics/belt-drop-timing/timing.game.test.ts
 # the offline checks, no Factorio
@@ -46,7 +46,7 @@ npm test -- tests/game/mechanics/belt-drop-timing/recordings.test.ts
 ```
 
 A run takes under half a minute for 160 to 240 scenarios. The game test compares the fresh figures of every scenario with the kept
-recording, so a change in the game, or in the probe, fails there. The recordings are gzip, 3 to 10 MB of JSON each when read.
+recording, so a change in the game, or in the probe, fails there. The kept recordings hold only the hands and stacks the checks read (84 KB in all); the full logs, 3 to 10 MB of JSON each when read, are kept outside the repository.
 
 ## What is out of scope
 

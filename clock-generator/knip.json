@@ -14,7 +14,8 @@
     "scripts/prototype-types/generate.mjs",
     "resources/filter-raw.js",
     "resources/dump-item-weights.js",
-    "tests/**/*.test.ts"
+    "tests/**/*.test.ts",
+    "tests/game/mechanics/belt-drop-timing/trim-recordings.ts"
   ],
   "project": [
     "src/**/*.ts",

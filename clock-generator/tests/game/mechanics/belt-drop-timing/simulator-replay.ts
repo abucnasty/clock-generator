@@ -4,7 +4,7 @@ import {fullResearchHandSize} from "../../../../src/entities/inserter/metadata/i
 import {LaneTraffic} from "../../../../src/state/lane-traffic";
 import {DropCase, DropRun} from "./cases";
 import {Drop, Hand, summarise} from "./analysis";
-import {DropRecording} from "./recording";
+import {TrimmedRecording} from "./recording";
 
 /** Tiles of the line where a hand drops, from the start of its first slot: slot centre + the drop's along-line offset (probe.lua APPROACHES, and the drop positions the log holds) */
 export function nominalSpot(approach: string): number | null {
@@ -100,7 +100,7 @@ export interface CaseComparison extends Comparison {
  * first hand: the simulator is given the hand it would give that inserter, the tick the hand first tries to drop (the pickup and the
  * wait of the same inserter on an empty lane) and the case's own stream of copper as the stock on the lane.
  */
-export function compareRun(run: DropRun, recording: DropRecording): CaseComparison[] {
+export function compareRun(run: DropRun, recording: TrimmedRecording): CaseComparison[] {
     const stackSize = (run.force?.belt_stack_size_bonus ?? 3) + 1;
     const results: CaseComparison[] = [];
     for (const spec of run.scenarios) {

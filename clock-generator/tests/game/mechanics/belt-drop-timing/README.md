@@ -23,18 +23,24 @@ the end of a dead-end line. Then 64 iron plates go into the chest and the insert
 sink: its last piece is emptied after every sample. Only the belt stack size, a force setting of the run, differs between runs; the
 research is checked unchanged.
 
-`recordings/` keeps the logs as gzip. `recordings.test.ts` reads them without Factorio: it checks the probe against the calibrated case first
+`recordings/` keeps, per run, only what the offline checks read, as gzip: for every scenario the number of ticks logged and each hand with the
+stacks it put down (tick, slot, line, position, count), and the few facts of the run (game version, belt stack bonus, research unchanged, the
+pickup and drop target of each scenario). `trim-recordings.ts` makes them from the full logs the probe writes (every stack of every line, every
+tick, up to 2 MB gzip each); the full recordings are kept outside the repository. `recordings.test.ts` reads the kept ones without Factorio: it checks the probe against the calibrated case first
 (`Belt.amountToDropAtTick` and `belt-drop/fixtures/turbo-stacks/speed-expectations.json`), then asserts the tables of the write-up and sets the
 simulator's lane rule (`LaneTraffic`) against the game, case by case. A game run compares its figures with the kept recording
 (`npm run test:game` makes every run; the harness reuses a recording whose probe, build and game are unchanged):
 
 ```bash
 npm run test:game -- tests/game/mechanics/belt-drop-timing/timing.game.test.ts
-# one run, and a new recording to copy into recordings/ (an empty directory)
+# one run, with the full log kept in <dir>/<run>/<run>.json.gz (an empty directory)
 DROP_TIMING_RUNS=stack-4 DROP_TIMING_CAPTURE_DIR=.scratch/drop-run \
   npm run test:game -- tests/game/mechanics/belt-drop-timing/timing.game.test.ts
+# make the kept recordings from a directory holding full <run>.json.gz files (copy each one out of its <run>/ folder first)
+npx esbuild tests/game/mechanics/belt-drop-timing/trim-recordings.ts --bundle --platform=node --format=cjs --outfile=.scratch/trim-recordings.cjs
+node .scratch/trim-recordings.cjs <directory of full recordings> "$PWD/tests/game/mechanics/belt-drop-timing/recordings"
 ```
 
-Copy `<run>/<run>.json.gz` from the capture into `recordings/` to replace a log. Not recorded: side-loading, splitters, bends, other belt speeds
+The second argument is the directory to write; give it as an absolute path. Not recorded: side-loading, splitters, bends, other belt speeds
 (game tests keep the turbo tier), a belt with traffic from outside the line other than the scripted stream, and inserters with a named drop
 position (none of these inserters allows one).

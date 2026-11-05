@@ -5,7 +5,7 @@ import {Belt, BeltSpeed} from "../../../../src/entities/belt/belt";
 import {rotationTicks} from "../../../../src/entities/inserter/metadata/inserter-spec";
 import {Hand, scenarioOf, summarise} from "./analysis";
 import {ALL_RUNS, DropRun, KIND_RUNS, STACK_RUNS, VALIDATION_RUNS} from "./cases";
-import {DropRecording, loadRecording} from "./recording";
+import {loadRecording, TrimmedRecording} from "./recording";
 import {compareRun} from "./simulator-replay";
 import {runFigures} from "./summary";
 
@@ -15,8 +15,8 @@ import {runFigures} from "./summary";
  * of an underground pair, in each state of the receiving lane, with each inserter kind; and the simulator's lane rule set against them.
  * See README.md and docs/belt-drop/.
  */
-const cache = new Map<string, DropRecording>();
-const recording = (run: string): DropRecording => {
+const cache = new Map<string, TrimmedRecording>();
+const recording = (run: string): TrimmedRecording => {
     let loaded = cache.get(run);
     if (!loaded) { loaded = loadRecording(run); cache.set(run, loaded); }
     return loaded;
@@ -36,7 +36,7 @@ describe("the runs are what cases.ts says", () => {
         expect(loaded.info.research_unchanged).toBe(true);
         expect(loaded.info.factorio).toMatch(/^2\.1\./);
         expect(loaded.info.scenarios.map(scenario => scenario.name)).toEqual(run(runName).scenarios.map(scenario => scenario.name));
-        for (const scenario of run(runName).scenarios) expect(loaded.runs[scenario.name].length, scenario.name).toBe(run(runName).ticks + 3);
+        for (const scenario of run(runName).scenarios) expect(loaded.scenarios[scenario.name].rows, scenario.name).toBe(run(runName).ticks + 3);
         expect(loaded.info.force.belt_stack_size_bonus).toBe(run(runName).force!.belt_stack_size_bonus);
     });
 
