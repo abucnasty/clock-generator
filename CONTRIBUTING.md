@@ -11,7 +11,8 @@ Use descriptive branch names such as `fix/moving-belt-pickup` or `refactor/game-
 - Simulator regressions stay near their implementation. They may read game fixtures without launching Factorio.
 - Full raw recordings and generated probe sources belong in the ignored `clock-generator/.scratch/<topic>/<run>/`, rather than beside committed fixtures.
 - `clock-generator/scripts/`: sweeps and capture helpers, and the tools for checking an engine change, each with its usage in its header:
-  - `blast/blast.sh`: the blast radius: every sample and fixture generated, every alternative's exported clock hashed, cached by a key of the engine's content and of the environment variables that change what it generates (none today; a `CLOCK_*` variable no list in `key.py` knows stops the command) (`blast.sh key`, `before`, `run`, `select`, `compare`); a run reruns only the jobs a change of the engine reaches, per the functions each job ran (see the header of `blast.sh`).
+  - `blast/blast.sh`: the blast radius: every sample and fixture generated, every alternative's exported clock hashed, cached by a key of the engine's content and of the environment variables that change what it generates (none today; a `CLOCK_*` variable no list in `key.py` knows stops the command) (`blast.sh key`, `before`, `run`, `select`, `compare`, `record`); a run reruns only the jobs a change of the engine reaches, per the functions each job ran (see the header of `blast.sh`).
+  - `blast/record.py` (through `blast.sh record write|check`): the record in `clock-generator/record/`, one small JSON per blast job (the selected clock and every alternative), written from a blast run and checked against one in CI. See [`record/README.md`](clock-generator/record/README.md).
   - `replay/replay.sh`: the replay check of a change that must keep results identical: every blast job's selected clock run with no search (the as-built run, the planning run, a speed run and, with `--losses`, the supply losses), what every entity holds and shows hashed per period, and laid against a base recorded once on the parent commit (`record`, `check`, `explain`).
   - `native/run-lane.sh`: one Factorio lane over a list of game test cases, at most four harness Factorio processes on the machine; `native/expected-from-blast.py` and `native/check.cjs` check a capture's clocks against the blast's.
   - `classify/features.py` and `summarize.py`: the windows a native recording lifted from a full machine, by when the input's hand grew.
@@ -77,6 +78,26 @@ npm run test:generation -- src/crafting/automation-science.generation.test.ts \
 
 Compare elapsed time and CPU time as well as test names and outcomes. Use a single worker to isolate work
 reduction from scheduling changes; do not report a faster test from a less busy machine as a code speedup.
+
+## The record of the blast jobs
+
+[`clock-generator/record/`](clock-generator/record/README.md) holds one small JSON file for each of the 75 blast jobs: the clock the generator selects for the
+sample or fixture and every alternative it weighed (verdict, holds, rate, period, wake-ups, windows, clock hash). The job named "Record check" in CI
+regenerates it and compares it with the committed files field by field; a difference fails with a table of job, field, before and after in the job summary.
+It is not a required check yet.
+
+A pull request that changes what the generator selects or computes on purpose regenerates the record, commits the new files and adds an entry to
+[`record/MOVES.md`](clock-generator/record/MOVES.md) that names each moved job and why. From `clock-generator/`, with a clean engine commit:
+
+```bash
+BLAST_GROUPS=config,pickup,overhood,front,blocked,containers bash scripts/blast/blast.sh run .. <out>   # cached by the engine's key; a rerun is selective
+bash scripts/blast/blast.sh record write <out>        # rewrites record/ (the cache entry's key works in place of <out>)
+bash scripts/blast/blast.sh record check <out>        # exit 0: the committed files equal the run
+git diff --stat record/                               # the moved jobs; each one gets a line in MOVES.md
+```
+
+A pull request that moves no record changes no file in `record/`. A rename of jobs is checked with `blast.sh record check --map <renames.txt> <out>`
+(the rename map of `blast.sh compare`), then the files are renamed with `record write`.
 
 ## Release hold for unreleased merges
 
