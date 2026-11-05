@@ -57,6 +57,8 @@ lines: put longer lists in a `<details>` block. The slots that carry a rule:
   carries the bump (as under a [release hold](#release-hold-for-unreleased-merges)), or `none`. A fix reaches users
   only with a version bump, in its own pull request or in the one that carries the bump.
 - **Changelog**: the file (`CHANGELOG.md` or `sidecar`) and the exact entry, or `none: no user impact`.
+- **Overview** (release): two to four lines on what the release changes for the user, by area, above the list of
+  pull requests it ships.
 
 ### Changelogs
 

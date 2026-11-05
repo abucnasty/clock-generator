@@ -1,3 +1,7 @@
+## Overview
+
+{two to four lines: what this release changes for the user, by area (simulation, generation, blueprint, ui); or none: prep only}
+
 ## Shipped
 
 {one line per merged pull request, from `git log --first-parent --format='- %s' <last tag>..`; or none: prep only}
