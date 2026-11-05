@@ -12,7 +12,7 @@ import { feasibilityOfFacts } from "./feasibility-test-helpers";
  * yield is set by hand, as no recipe of the game gives back exactly what it takes.
  */
 describe("S3: a loop that uses up all it makes meets no target", async () => {
-    const facts = toPlannerFacts(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE) as Config);
+    const facts = toPlannerFacts(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250) as Config);
     const eggsMade = (per_craft: number): PlannerFacts => {
         const copy = structuredClone(facts) as { -readonly [K in keyof PlannerFacts]: PlannerFacts[K] };
         copy.nodes = copy.nodes.map(node => node.kind === "machine" && node.production.recipe_or_resource === "pentapod-egg"

@@ -18,7 +18,7 @@ it.each([false, true])('places the legend before the first plotted row (cycle vi
         .toEqual([LEGEND_WINDOW, LEGEND_SLACK, LEGEND_SELECTED, cycleView ? 'One crafting cycle' : LEGEND_TRACK]);
 });
 
-// Atlan cell 29's selected clock: its period is 2880000/997 ticks, and its blueprint counts 2888 ("clock rounded to 2888
+// an iron gear wheel build at 9.97 a second's selected clock: its period is 2880000/997 ticks, and its blueprint counts 2888 ("clock rounded to 2888
 // ticks, runs 0.02% fast")
 it.each([
     { clock: 'a rounded clock', view: { ...alternative, simulationDurationTicks: 2880000 / 997, roundedPeriodTicks: 2888 }, periodTicks: 2888,

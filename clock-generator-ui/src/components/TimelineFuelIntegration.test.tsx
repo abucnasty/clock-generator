@@ -2,7 +2,7 @@
 import { screen, within } from '@testing-library/react';
 import { expect, it } from 'vitest';
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
-import agricultureConfig from '../../../clock-generator/resources/config-samples/science/agriculture-science/agriculture-science.json?raw';
+import agricultureConfig from '../../../clock-generator/resources/config-samples/science/agricultural/agricultural-250.json?raw';
 import { show } from '../test/fixtures';
 import { DEFAULT_INSPECTION } from '../utils/timelineInspection';
 import { signalsForTimelinePause } from '../utils/timelinePresentation';

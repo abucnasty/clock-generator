@@ -42,7 +42,7 @@ describe("a clock built from windows that are given", () => {
     let result: BlueprintGenerationResult;
 
     beforeAll(async () => {
-        const sample = await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT);
+        const sample = await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT_240);
         config = { ...sample, overrides: { ...sample.overrides, terminal_swing_count: 2 } };
         result = clockFromWindows(config, tightened, PERIOD, quiet);
     });

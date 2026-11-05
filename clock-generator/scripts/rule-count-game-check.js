@@ -5,7 +5,7 @@
 //
 // The check of the rule count's simulator path against the game (round 0 of the real-save loop, the reviewer's change
 // A): the same build, unclocked and clocked, counted the rule's way from recordings of the game and from the
-// simulator's runs of its config, per group. SAMPLE names the sample (default ADVANCED_CIRCUIT: machine-to-machine
+// simulator's runs of its config, per group. SAMPLE names the sample (default ADVANCED_CIRCUIT_240: machine-to-machine
 // inputs and outputs that take part hands). The first clock period of each recording is left out, as the scaffold
 // tests leave it out. Run the game under the harness lock, one at a time. Needs `npx tsc` first.
 //
@@ -19,15 +19,15 @@ const path = require("path");
 const { dist, quiet } = require("./lib");
 const { GAME_RUN, takeLongReason, assertWithinRun, steadyProbeSource, readSteadyReport, describeRun } = require("./game-run");
 
-const SAMPLE = process.env.SAMPLE ?? "ADVANCED_CIRCUIT";
+const SAMPLE = process.env.SAMPLE ?? "ADVANCED_CIRCUIT_240";
 const SCAFFOLDS = {
-    ADVANCED_CIRCUIT: { scaffold: "intermediates/advanced-circuit/advanced-circuit-scaffold.txt", warmup: 3600 },
-    AUTOMATION_SCIENCE: { scaffold: "science/automation-science/automation-science-scaffold.txt", warmup: 300 },
-    ACCUMULATOR_640: { scaffold: "intermediates/accumulator/accumulator-640-scaffold.txt", warmup: 3600 },
-    LOW_DENSITY_STRUCTURE: { scaffold: "intermediates/low-density-structure/low-density-structure-scaffold.txt", warmup: 3600 },
+    ADVANCED_CIRCUIT_240: { scaffold: "intermediates/advanced-circuit/advanced-circuit.scaffold", warmup: 3600 },
+    AUTOMATION_SCIENCE_240: { scaffold: "science/automation/automation-240.scaffold", warmup: 300 },
+    ACCUMULATOR_640: { scaffold: "intermediates/accumulator/accumulator-640.scaffold", warmup: 3600 },
+    LDS_240: { scaffold: "intermediates/lds/lds-240.scaffold", warmup: 3600 },
     // the egg loop cannot start itself, so the egg machines are given eggs to begin with, as the game tests do
-    AGRICULTURAL_SCIENCE: {
-        scaffold: "science/agriculture-science/agriculture-science-scaffold.txt", warmup: 300,
+    AGRICULTURAL_SCIENCE_250: {
+        scaffold: "science/agricultural/agricultural-250.scaffold", warmup: 300,
         seed: [{ target: { recipe: "pentapod-egg" }, item: "pentapod-egg", count: 200 }],
     },
 };

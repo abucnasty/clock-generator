@@ -17,7 +17,7 @@
 "blocked output clock: blocked-output-turbo-stack-3": 23,
 "blocked output clock: blocked-output-turbo-stack-4": 4
 },
-"tests/game/builds/car-clock.game.test.ts": {
+"tests/game/builds/iron-plate-80-car-chest-clock.game.test.ts": {
 "car clock: car-derived": 11,
 "car clock: car-derived-takers-last": 11,
 "car clock: car-swings-1": 7,
@@ -87,10 +87,10 @@
 "tests/game/builds/grenade-clock.game.test.ts": {
 "grenade clock: generated-full-build": 10,
 "grenade clock: generated-one-copy": 7,
-"grenade clock: owner-full-build": 7,
-"grenade clock: owner-one-copy": 4
+"grenade clock: hand-made-full-build": 7,
+"grenade clock: hand-made-one-copy": 4
 },
-"tests/game/builds/lithium-silo-clock.game.test.ts": {
+"tests/game/builds/lithium-plate-80-silo-chest-clock.game.test.ts": {
 "lithium silo clock: lithium-silo-swings-1": 24,
 "lithium silo clock: lithium-silo-swings-3": 24,
 "lithium silo clock: lithium-silo-swings-3-fill-last": 24,
@@ -134,7 +134,7 @@
 "speed coverage: electromagnetic-turbo-underground-exit-backed": 16,
 "speed coverage: electromagnetic-turbo-underground-exit-moving": 15
 },
-"tests/game/builds/ore-voider-clock.game.test.ts": {
+"tests/game/builds/iron-ore-voider-400-clock.game.test.ts": {
 "ore voider clock: ore-voider-exact-speed": 30,
 "ore voider clock: ore-voider-overbeaconed": 29
 },
@@ -172,9 +172,9 @@
 "operating clock: over-hood-turbo-unmirrored-moving-different-items": 30,
 "operating clock: over-hood-turbo-unmirrored-moving-same-item": 23
 },
-"tests/game/builds/own-clock.game.test.ts": {
-"own clock: generated-three-copies": 35,
-"own clock: own-clock-three-copies": 7
+"tests/game/builds/inserter-crafting-240-shared-signal-clock.game.test.ts": {
+"inserter crafting clock: generated-three-copies": 35,
+"inserter crafting clock: hand-made-clock-three-copies": 7
 },
 "tests/game/builds/pickup-clock-cold-start.game.test.ts": {
 "clocked cold start: express-straight-belt-backed-l1": 8,
@@ -241,10 +241,10 @@
 "fully backed-up cold start: electromagnetic-normal-underground-exit-backed, offset 0": 7,
 "fully backed-up cold start: electromagnetic-normal-underground-exit-backed, offset 1287": 7
 },
-"tests/game/builds/productivity-chain-clock.game.test.ts": {
+"tests/game/builds/productivity-module-80-chest-chain-clock.game.test.ts": {
 "Productivity module chain clock: generated-one-copy": 471
 },
-"tests/game/builds/recycler-original-clock.game.test.ts": {
+"tests/game/builds/electromagnetic-science-240-recycler-belt-fed-clock.game.test.ts": {
 "original electromagnetic science scaffold, automatic clock: baseline-and-losses": 260,
 "original electromagnetic science scaffold, automatic clock: cold-start": 27,
 "original electromagnetic science scaffold, automatic clock: cold-start-reversed-phase13": 35
@@ -309,17 +309,17 @@
 "the selected clock holds the target rate in Factorio one copy of the utility science with processing units and low density structures on one belt (belts are backed up) build moves the expected output every clock period": 14,
 "the selected clock holds the target rate in Factorio one copy of the utility science with processing units and low density structures on one belt build moves the expected output every clock period": 14
 },
-"tests/game/builds/steel-wagon-clock.game.test.ts": {
+"tests/game/builds/steel-plate-26-wagon-chest-clock.game.test.ts": {
 "steel wagon clock: steel-wagon-belt-slack": 267,
 "steel wagon clock: steel-wagon-belt-slack-fill-last": 286,
 "steel wagon clock: steel-wagon-iron-ore-out-of-period": 172
 },
-"tests/game/builds/stupidfathobbit-cell02-clock.game.test.ts": {
-"Stupidfathobbit's cell 02 clock: generated-as-is": 51,
-"Stupidfathobbit's cell 02 clock: generated-backed-up": 41
+"tests/game/builds/processing-unit-80-circuit-export-clock.game.test.ts": {
+"processing unit circuit export clock: generated-as-is": 51,
+"processing unit circuit export clock: generated-backed-up": 41
 },
-"tests/game/builds/thaeln-cell09-clock.game.test.ts": {
-"Thaeln's cell 09 clock: generated-one-copy": 47
+"tests/game/builds/utility-science-480-lds-foundry-chain-clock.game.test.ts": {
+"utility science 480 clock: generated-one-copy": 47
 },
 "tests/game/mechanics/belt-drop-lane/lane.game.test.ts": {
 "belt drop lane: default": 2,

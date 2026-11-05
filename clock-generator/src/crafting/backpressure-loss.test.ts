@@ -100,10 +100,10 @@ describe("the losses a build whose items spoil is tried with", () => {
         expect(SPOIL_LIMIT_SHARE).toBe(0.75);
         const registryOf = async (file: string) => createEntityRegistryFromConfig(await loadConfigFromFile(file));
         // iron bacteria spoil in a minute, the nutrients burned in five
-        expect(lossLimitOf(await registryOf(ConfigPaths.IRON_BACTERIA_CULTIVATION))).toEqual({ ticks: 2700, item: "iron-bacteria" });
+        expect(lossLimitOf(await registryOf(ConfigPaths.IRON_BACTERIA_380_CULTIVATION))).toEqual({ ticks: 2700, item: "iron-bacteria" });
         // nutrients in five minutes, pentapod eggs in fifteen, the packs in an hour, bioflux in two
-        expect(lossLimitOf(await registryOf(ConfigPaths.AGRICULTURAL_SCIENCE))).toEqual({ ticks: 13500, item: "nutrients" });
-        expect(lossLimitOf(await registryOf(ConfigPaths.AUTOMATION_SCIENCE))).toBeNull();
+        expect(lossLimitOf(await registryOf(ConfigPaths.AGRICULTURAL_SCIENCE_250))).toEqual({ ticks: 13500, item: "nutrients" });
+        expect(lossLimitOf(await registryOf(ConfigPaths.AUTOMATION_SCIENCE_240))).toBeNull();
     });
 
     it("are named in the verdict, which no other build's has", () => {
@@ -167,7 +167,7 @@ describe("the losses a build can have", () => {
     let config: Config;
 
     beforeAll(async () => {
-        config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+        config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
     });
 
     it("are one for each item that comes off a belt and one for each that leaves on one, the product of the build among them", () => {

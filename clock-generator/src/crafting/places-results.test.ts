@@ -14,7 +14,7 @@ import { TickByHand } from './runner/tick-by-hand.fixture';
 // The exact-speed recycler cell of the ore voider benchmark (save F): a recycler at crafting speed 16.875 voids iron ore,
 // fed by four stack inserters from the ore supply, and places what it gives back into a car, which two stack inserters
 // empty back into it
-const FIXTURE = ConfigPaths.REAL_OWNER_ORE_VOIDER_EXACT_SPEED;
+const FIXTURE = ConfigPaths.IRON_ORE_VOIDER_400_EXACT_SPEED;
 
 const ORE = 'iron-ore';
 

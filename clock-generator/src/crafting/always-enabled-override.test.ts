@@ -27,7 +27,7 @@ describe("an inserter the config sets to always enabled", () => {
 
         beforeAll(async () => {
             // the sample is automatic; the plastic plant's input and two outputs are set to always enabled on this copy
-            const sample = await loadConfigFromFile(ConfigPaths.LOW_DENSITY_STRUCTURE);
+            const sample = await loadConfigFromFile(ConfigPaths.LDS_240);
             config = { ...sample, inserters: sample.inserters.map((it, index) => [4, 7, 10].includes(index) ? { ...it, overrides: { ...it.overrides, ...ALWAYS } } : it) };
             result = generateClockForConfig(config, { logger: quiet, verify_as_built: true });
         });
@@ -45,7 +45,7 @@ describe("an inserter the config sets to always enabled", () => {
 
     it("has no windows made from what it was seen doing either (observed windows)", async () => {
         // a cryogenic plant fills a rocket silo that six furnaces empty: its input from an infinity chest (inserter 1) and its output into the silo (4) are set to always enabled
-        const sample = await loadConfigFromFile(ConfigPaths.REAL_OWNER_LITHIUM_SILO);
+        const sample = await loadConfigFromFile(ConfigPaths.LITHIUM_PLATE_80_SILO_CHEST);
         const config: Config = { ...sample, inserters: sample.inserters.map((it, index) => [0, 3].includes(index) ? { ...it, overrides: { ...it.overrides, ...ALWAYS } } : it) };
         const result = observedWindowsClock(config, { logger: quiet, verify_as_built: true }, "always");
         expect(result.derived_clock_windows).toBeDefined();
@@ -69,7 +69,7 @@ describe("an inserter the config sets to always enabled", () => {
     });
 
     it("holds for a mining drill too", async () => {
-        const sample = await loadConfigFromFile(ConfigPaths.STONE_BRICKS_DIRECT_INSERT_2_1);
+        const sample = await loadConfigFromFile(ConfigPaths.STONE_BRICK_120_DRILL_DIRECT_INSERT);
         expect(Object.keys(generateClockForConfig(sample, { logger: quiet }).clock_windows)).toContain("drill:1");
 
         const config: Config = {
@@ -82,7 +82,7 @@ describe("an inserter the config sets to always enabled", () => {
     });
 
     it("holds for a drill into a chest, which otherwise gets windows from the inserters that empty the chest", async () => {
-        const sample = await loadConfigFromFile(ConfigPaths.REAL_OWNER_CAR);
+        const sample = await loadConfigFromFile(ConfigPaths.IRON_PLATE_80_CAR_CHEST);
         const clocked = generateClockForConfig(sample, { logger: quiet, verify_as_built: true });
         expect(Object.keys(clocked.clock_windows)).toContain("drill:1");
 

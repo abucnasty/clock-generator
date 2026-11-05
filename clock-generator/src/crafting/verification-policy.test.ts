@@ -13,7 +13,7 @@ const quiet = { log() {}, warn() {}, error() {}, debug() {} };
 describe("verification policy compatibility", () => {
     let config: Config, result: BlueprintGenerationResult;
     beforeAll(async () => {
-        const control = await loadConfigFromFile(ConfigPaths.REAL_OWNER_PINK_SCIENCE_ORIGINAL);
+        const control = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED);
         config = { ...control, overrides: undefined, inserters: control.inserters.map(inserter => ({ ...inserter, overrides: undefined })) };
         const artifact = constructPrimitiveGroupedHands(config);
         const attempt = artifact.attempts.find(attempt => attempt.result.kind === "constructed" && !attempt.options.share_windows)!;

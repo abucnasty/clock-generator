@@ -26,7 +26,7 @@ Every job goes through the guard (PROCESS.md section 1) when it is found (--guar
 environment a job needs (FACTORIO_PATH, FACTORIO_HARNESS_SAVE, CLOCK_RECORDING_CACHE_DIR) is passed on the command line,
 because the guard's systemd unit does not inherit yours; the rest comes from clock-generator/.env as for any game test.
 
-  file filter        only cases of the test files whose path contains one of these (e.g. car-clock, tests/game/mechanics/drills)
+  file filter        only cases of the test files whose path contains one of these (e.g. iron-plate-80-car-chest-clock, tests/game/mechanics/drills)
   -o, --out DIR      a new folder for the run (default .scratch/game-suite/<time>): list.json, jobs.tsv, json/ (vitest's
                      report per job), logs/, guard/, events/ (cache hits and misses), results.tsv, results.json,
                      durations.json (seconds per case seen in this run), lanes.log

@@ -14,7 +14,7 @@ import { feasibilityOfConfig, withTarget } from "./feasibility-test-helpers";
  * by inserters 6, 7, 8 and 9 from machine 2, a hand of 15 every 8 ticks each (pickup 1, two rotations of 3, drop 1).
  */
 describe("C1: a recipe's machines craft no faster than their inputs arrive", async () => {
-    const sample = withJellyHandsOf15(await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL) as Config);
+    const sample = withJellyHandsOf15(await loadConfigFromFile(ConfigPaths.ROCKET_FUEL_60) as Config);
 
     it("4 hands of 15 every 8 ticks bring 4 x 15 x 60 / 8 = 450 jelly a second; at 30 a craft that is 15 crafts a second; "
         + "a target of 60 rocket fuel at 4 a craft needs 60 / 4 = 15: it passes, exactly at the bound", () => {

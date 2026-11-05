@@ -42,11 +42,11 @@ const read_back: ReturnType<typeof expandStateTransitionHistory>["entities"] = [
 
 describe("a run's sealed state transition history, read back", () => {
     it.each([
-        ["a belt-fed build", ConfigPaths.AUTOMATION_SCIENCE, false],
-        ["a machine chain", ConfigPaths.LOGISTIC_SCIENCE, false],
-        ["drills", ConfigPaths.REAL_OWNER_GRENADE, false],
-        ["drills into a furnace", ConfigPaths.STONE_BRICKS_DIRECT_INSERT_2_1, false],
-        ["an inserter that does not move in some runs", ConfigPaths.UTILITY_SCIENCE, true],
+        ["a belt-fed build", ConfigPaths.AUTOMATION_SCIENCE_240, false],
+        ["a machine chain", ConfigPaths.LOGISTIC_SCIENCE_240, false],
+        ["drills", ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY, false],
+        ["drills into a furnace", ConfigPaths.STONE_BRICK_120_DRILL_DIRECT_INSERT, false],
+        ["an inserter that does not move in some runs", ConfigPaths.UTILITY_SCIENCE_120, true],
     ])("equals what was serialized before, for every run of the generation of %s", async (_, path, backed_up_belts) => {
         const config = await loadConfigFromFile(path);
         const recorded = recordedBothWays(() => generateClockAlternatives(
@@ -56,7 +56,7 @@ describe("a run's sealed state transition history, read back", () => {
     });
 
     it("equals what was serialized before over two periods, and without the game's states", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_AUTO);
+        const config = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_330);
         const recorded = recordedBothWays(() => {
             runBuild(config, { logger: quiet, simulate_periods: 2 });
             runBuild(config, { logger: quiet, factorio_states: false });

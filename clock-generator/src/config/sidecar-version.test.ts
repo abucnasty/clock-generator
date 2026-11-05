@@ -179,7 +179,8 @@ describe("a recycler in a capture before 0.15.0", () => {
     });
 
     it("is told nothing from the version that exports it, nor for a machine that places its results in its own output", () => {
-        expect(guidance("0.15.0", recycler)).toBeNull();
+        expect(guidance(LATEST_SIDECAR_VERSION, recycler)).toBeNull();
+        expect(guidance("0.15.0", recycler)).toContain("Nothing is missing from this import.");
         expect(guidance("0.14.0", [{ recipe: "iron-gear-wheel", prototype: "assembling-machine-3" }])).toContain("Nothing is missing from this import.");
     });
 });

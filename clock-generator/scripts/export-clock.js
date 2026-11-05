@@ -5,7 +5,7 @@
 // benchmark tools' library, factorio-benchmark-tools): no game is started. The generator is the built one (`npx tsc`
 // first), or the checkout CLOCK_GENERATOR_ROOT names.
 //
-//   <config>          a sample key of ConfigPaths (AUTOMATION_SCIENCE) or the path of a config JSON
+//   <config>          a sample key of ConfigPaths (AUTOMATION_SCIENCE_240) or the path of a config JSON
 //   --alternative     which of the generator's potential clocks: its id (as record-clock.js and the UI name it), `selected`
 //                     (the default) or `all`; several ids may be given with commas. Unstable ones are written too, with their
 //                     verdict, and place-clocks leaves a cell with one unclocked
@@ -13,7 +13,7 @@
 //                     selected clock switches is wired and never disabled
 //   --windows         hand-made windows, as record-clock.js reads them ({"period": 528, "output_swings": 2, "windows":
 //                     {"inserter:1": [{"start": 1, "end": 6}, ...]}}), written as one arm named --tag (default given-windows)
-//   --scaffold        the scaffold blueprint (default: <config name>-scaffold.txt beside the config); cells.json is made from it
+//   --scaffold        the scaffold blueprint (default: <config name>.scaffold beside the config); cells.json is made from it
 //   --backed-up-belts generate for backed-up belts (overrides.backed_up_belts), which is what a scaffold has
 //   --anchor          x,y of the copy's anchor in the scaffold's coordinates (default 0,0: the save has the scaffold where
 //                     the blueprint says); the offsets of cells.json are from it
@@ -38,6 +38,7 @@ if (positional.length !== 1 || arg("out") === null) {
 }
 const out_dir = path.resolve(arg("out"));
 const { dist, quiet, loadSample } = require("./lib");
+const { scaffoldOf } = require("./scaffold-of");
 const { ConfigPaths } = dist("config/config-paths.js");
 const { generateClockAlternatives, clockFromWindows } = dist("crafting/generate-blueprint.js");
 const { encodeBlueprintFile } = dist("blueprints/serde.js");
@@ -162,7 +163,7 @@ function armOf(alternative, clock, config_path, selected_id, always_on = false) 
     }
 
     if (!flag("no-cells")) {
-        const scaffold = arg("scaffold") !== null ? path.resolve(arg("scaffold")) : config_path.replace(/\.json$/, "-scaffold.txt");
+        const scaffold = arg("scaffold") !== null ? path.resolve(arg("scaffold")) : scaffoldOf(config_path);
         if (!fs.existsSync(scaffold)) {
             throw new Error(`No scaffold at ${scaffold}: give --scaffold=<blueprint file> or --no-cells`);
         }

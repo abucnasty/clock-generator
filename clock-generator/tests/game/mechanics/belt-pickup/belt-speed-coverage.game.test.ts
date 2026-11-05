@@ -64,7 +64,7 @@ for (const speed of CLOCK_TEST_SPEEDS) for (const geometry of ["straight-belt", 
                 input.source.pickup_layout = geometry === "straight-belt" ? "side-straight" : geometry === "underground-entrance" ? "side-entrance" : "side-exit";
                 const wanted = ingredient === "same-item" ? "accumulator" : ingredient;
                 input.filters = [wanted];
-                let blueprint = fs.readFileSync(path.join(fixture, `${geometry}-scaffold.txt`), "utf8");
+                let blueprint = fs.readFileSync(path.join(fixture, `${geometry}.scaffold`), "utf8");
                 if (ingredient === "same-item") {
                     blueprint = useAccumulatorsOnBothLanes(blueprint);
                     config.belts.find(b => b.id === input.source.id)!.lanes.forEach(lane => {lane.ingredient = wanted;});

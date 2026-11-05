@@ -22,7 +22,7 @@ describe("an inserter that picks up from a belt with two items", () => {
 
     /** The sample with belt 2 as given and inserter 2 nearest to the lane given, or not told which */
     const build = async (belt_2_lanes: [string, string], near_lane?: 1 | 2): Promise<Config> => {
-        const config: Config = structuredClone(await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE));
+        const config: Config = structuredClone(await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_120));
         config.belts[1].lanes = belt_2_lanes.map(ingredient => ({ ingredient, stack_size: 4 })) as typeof config.belts[1]["lanes"];
         config.inserters[1].filters = ["processing-unit", "low-density-structure"];
         config.inserters[1].source = { type: "belt", id: 2, ...(near_lane === undefined ? {} : { near_lane }) };
@@ -88,7 +88,7 @@ describe("a clock with more than one steady state", () => {
     };
 
     it("counts the wake-ups of each, by where in its period the clock starts", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE);
+        const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_120);
         const figures = simulatedWakeUpsByStart(config, windows, 672, 24).map(figure => figure.toFixed(1));
         // from the staged start, counted by the rule "kept-lists" of the new dispatch
         expect(figures[0]).toBe("107.1");
@@ -96,7 +96,7 @@ describe("a clock with more than one steady state", () => {
     });
 
     it("has none for a period that is not a whole number of ticks", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE);
+        const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_120);
         expect(simulatedWakeUpsByStart(config, windows, 672.5, 24)).toEqual([]);
     });
 });

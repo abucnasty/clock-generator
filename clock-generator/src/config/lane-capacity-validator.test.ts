@@ -258,11 +258,11 @@ describe('where it runs', () => {
     });
 
     it('refuses no sample with a lane over capacity in one unit', async () => {
-        for (const sample of [ConfigPaths.LOW_DENSITY_STRUCTURE, ConfigPaths.MILITARY_SCIENCE, ConfigPaths.LOGISTIC_SCIENCE_INSERTER_CRAFTING]) {
+        for (const sample of [ConfigPaths.LDS_240, ConfigPaths.MILITARY_SCIENCE_120, ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK]) {
             expect(laneCapacityIssues(await loadConfigFromFile(sample))).toEqual([]);
         }
-        expect(laneSharedByCopiesWarning(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE))).toContain(
+        expect(laneSharedByCopiesWarning(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250))).toContain(
             'If the 5 copies share lane 1 of belt 1, they take 1.50 times what it carries (5 × 36 = 180 a second, of 120).');
-        expect(laneSharedByCopiesWarning(await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT))).toBeNull();
+        expect(laneSharedByCopiesWarning(await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT_240))).toBeNull();
     });
 });

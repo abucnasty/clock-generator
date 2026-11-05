@@ -27,7 +27,7 @@ describe("the duty of a machine group", () => {
     });
 
     it("electric furnace: machine 2 (steel casting) is asked 25 crafts a second of the 925/16 = 57.8 its speed makes, a duty of 16/37 = 43%, well below 1", async () => {
-        const duties = dutiesOf(await sampleOf("ELECTRIC_FURNACE"));
+        const duties = dutiesOf(await sampleOf("ELECTRIC_FURNACE_20"));
         expect(duties).toContainEqual(["machine:casting-steel", [2], "25", "925/16", "16/37"]);
     });
 });
@@ -35,7 +35,7 @@ describe("the duty of a machine group", () => {
 /** The duty decides nothing: what is refused is what C1 to C7 and the traps refuse, with or without it */
 describe("the duty does not change what is refused", () => {
     it("rocket fuel with its jelly inserters at a hand of 15 at 61 a second is refused by C1 alone, as before, and records its duty", async () => {
-        const over = withTarget(withJellyHandsOf15(await sampleOf("GLEBA_ROCKET_FUEL")), 61);
+        const over = withTarget(withJellyHandsOf15(await sampleOf("ROCKET_FUEL_60")), 61);
         const { rules, duties } = feasibilityOfConfig(over);
         expect(rules).toEqual(["C1"]);
         expect(duties.map(it => it.group)).toContain("machine:rocket-fuel-from-jelly");

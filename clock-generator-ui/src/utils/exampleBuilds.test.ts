@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { exampleSummary, exampleTitle, readExampleManifest, type ExampleBuild } from './exampleBuilds';
 
 const logistic: ExampleBuild = { id: 'logistic-science', file: 'logistic-science.json', recipe: 'logistic-science-pack',
-    items_per_second: 240, copies: 11, machines: 1, inserters: 3, belts: 1, chests: 0 };
+    items_per_second: 240, copies: 11, machines: 1, inserters: 2, belts: 2, chests: 0 };
 /** A second example, `logistic` under another id with these Copies */
 const chemical = (copies: number): ExampleBuild => ({ ...logistic, id: 'chemical-science', copies });
 const { chests: _chests, ...missingChests } = logistic;
@@ -41,7 +41,7 @@ describe('exampleTitle', () => {
 
 describe('exampleSummary', () => {
     it.each([
-        { why: '11 copies, 1 machine and 3 inserters', example: logistic, summary: '240/s · 11 copies · 1 machine, 3 inserters' },
+        { why: '11 copies, 1 machine and 2 inserters', example: logistic, summary: '240/s · 11 copies · 1 machine, 2 inserters' },
         { why: '1 copy, 4 machines and 1 inserter', example: { ...logistic, items_per_second: 22.5, copies: 1, machines: 4, inserters: 1 },
             summary: '22.5/s · 1 copy · 4 machines, 1 inserter' },
     ])('gives the rate, the copies and what the build holds, in the singular or plural, for $why', ({ example, summary }) => {

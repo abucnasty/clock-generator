@@ -14,15 +14,15 @@ const PUBLIC = new URL('../public/', import.meta.url);
 // One build per science pack, simplest first, so a newcomer's first Generate is quick. Each is copied flat as
 // public/examples/<id>.json and listed in public/examples/index.json, which the examples dialog reads.
 const EXAMPLES = [
-    { id: 'logistic-science', path: 'science/logistic-science/logistic-science.json' },
-    { id: 'automation-science', path: 'science/automation-science/automation-science.json' },
-    { id: 'utility-science', path: 'science/utility-science/utility-science.json' },
-    { id: 'chemical-science', path: 'science/chemical-science/chemical-science-shared-foundry.json' },
-    { id: 'electromagnetic-science', path: 'science/electromagnetic-science/electromagnetic-science-auto.json' },
-    { id: 'military-science', path: 'science/military-science/military-science-1-inserter.json' },
-    { id: 'production-science', path: 'science/production-science/production-science.json' },
-    { id: 'metallurgic-science', path: 'science/metallurgic-science/metallurgic-science.json' },
-    { id: 'agriculture-science', path: 'science/agriculture-science/agriculture-science.json' },
+    { id: 'logistic-science', path: 'science/logistic/logistic-240.json' },
+    { id: 'automation-science', path: 'science/automation/automation-240.json' },
+    { id: 'utility-science', path: 'science/utility/utility-120.json' },
+    { id: 'chemical-science', path: 'science/chemical/chemical-240-shared-foundry.json' },
+    { id: 'electromagnetic-science', path: 'science/electromagnetic/electromagnetic-330.json' },
+    { id: 'military-science', path: 'science/military/military-120.json' },
+    { id: 'production-science', path: 'science/production/production-120-two-belts.json' },
+    { id: 'metallurgic-science', path: 'science/metallurgic/metallurgic-45.json' },
+    { id: 'agriculture-science', path: 'science/agricultural/agricultural-250.json' },
 ];
 
 /** The generator's files this copies, which the dev server watches */

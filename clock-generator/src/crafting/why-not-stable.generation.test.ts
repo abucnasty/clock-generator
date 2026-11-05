@@ -11,7 +11,7 @@ describe("why the selected clock does not meet goal 1, as a generation says it",
     // a hand of 2 every 8 ticks takes at most 15 packs a second out of a copy (the simulator's inserter, free-running, moves
     // exactly that), under the 21.82 a copy of the target: the feasibility pass refuses it before any clock is tried
     it("is not reached where the inserters' hands are too small for the target: the build is refused before any clock", async () => {
-        const sample = await loadConfigFromFile(ConfigPaths.SAMPLE_CONFIG);
+        const sample = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240);
         const config = { ...sample, inserters: sample.inserters.map(inserter => ({ ...inserter, stack_size: 2 })) };
         expect(() => generateClockAlternatives(config, { logger: quiet })).toThrow(FeasibilityError);
         expect(() => generateClockAlternatives(config, { logger: quiet })).toThrow("Inserter 2 can take at most 15 a second of logistic science "
@@ -39,7 +39,7 @@ describe("why the selected clock does not meet goal 1, as a generation says it",
     });
 
     it("is not said of a sample whose selected clock is stable", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
         const generated = generateClockAlternatives(config, { logger: quiet });
         expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
         expect(generated.alternatives[generated.selected_index].verdict).toBe("stable");

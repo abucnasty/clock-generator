@@ -10,7 +10,7 @@ import {compactFrontEntranceAtSpeed} from "./front-speed-fixtures";
 const decode = (text: string) => JSON.parse(zlib.inflateSync(Buffer.from(text.trim().slice(1), "base64")).toString());
 for (const speed of BELT_SPEEDS) for (const geometry of ["straight-belt", "underground-entrance", "underground-exit"])
     test(`reflects the entire wired ${speed.name} ${geometry} cell while retaining controls`, () => {
-        const text = ordinaryAtSpeed(fs.readFileSync(path.join(__dirname, `fixtures/different-items/${geometry}-scaffold.txt`), "utf8"), speed);
+        const text = ordinaryAtSpeed(fs.readFileSync(path.join(__dirname, `fixtures/different-items/${geometry}.scaffold`), "utf8"), speed);
         const before = decode(text), after = decode(reflectOrdinaryPickup(text));
         expect(after.blueprint.wires).toEqual(before.blueprint.wires);
         const entities = after.blueprint.entities;
@@ -33,7 +33,7 @@ for (const speed of BELT_SPEEDS) for (const geometry of ["straight-belt", "under
     });
 
 test("compact controls retain the supplied assembler, connected output and modules", () => {
-    const supplied = fs.readFileSync(path.join(__dirname, "fixtures/front-underground-entrance/compact-normal-scaffold.txt"), "utf8");
+    const supplied = fs.readFileSync(path.join(__dirname, "fixtures/front-underground-entrance/compact-normal.scaffold"), "utf8");
     const normal = BELT_SPEEDS.find(speed => speed.name === "normal")!;
     expect(decode(compactFrontEntranceAtSpeed(supplied, normal))).toEqual(decode(supplied));
     const entities = decode(supplied).blueprint.entities;

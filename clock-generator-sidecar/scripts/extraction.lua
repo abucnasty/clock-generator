@@ -757,10 +757,12 @@ function extraction.extract_all_entities(entities, force)
     -- the sole item when no selected inserter picks from this belt; no physical pickup lane is inferred.
     local inferred_belt_items = {} -- root unit number -> item-name set
     local belt_has_pickups = {} -- root unit number -> true
+    local pickup_pieces = {} -- unit_number of a belt piece an inserter picks up from -> true
     for _, inserter in pairs(entities) do
         local source = inserter.valid and inserter.type == "inserter" and inserter.pickup_target
         if source and source.valid and source.unit_number and pieces[source.unit_number] then
             belt_has_pickups[find(source.unit_number)] = true
+            pickup_pieces[source.unit_number] = true
         end
     end
     for _, inserter in pairs(entities) do
@@ -789,11 +791,20 @@ function extraction.extract_all_entities(entities, force)
     for _, root in ipairs(roots) do
         local belt_pieces = belts_pieces[root]
         local default_belt_stack_size = helpers.get_default_belt_stack_size(belt_pieces[1].force)
-        -- lanes 1 and 2 as the first piece that carries something on them says; every line counts for the items
+        -- lanes 1 and 2 as the first piece that carries something on them says, the pieces the selected inserters pick
+        -- up from before the others (what lies on a lane upstream of the pickup, or after a merge, is not what the
+        -- inserter takes); every line counts for the items
         local lane_ingredient = { nil, nil }
         local lane_stack_size = { default_belt_stack_size, default_belt_stack_size }
         local ingredient_set = {}
+        local reading_order = {}
         for _, piece in ipairs(belt_pieces) do
+            if pickup_pieces[piece.unit_number] then table.insert(reading_order, piece) end
+        end
+        for _, piece in ipairs(belt_pieces) do
+            if not pickup_pieces[piece.unit_number] then table.insert(reading_order, piece) end
+        end
+        for _, piece in ipairs(reading_order) do
             local max_lines = piece.get_max_transport_line_index()
             for line_index = 1, max_lines do
                 local ingredient, stack_size = helpers.get_lane_info(piece.get_transport_line(line_index), default_belt_stack_size)

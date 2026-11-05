@@ -89,7 +89,7 @@ describe("fuel clocks", () => {
 describe("by-product clocks", () => {
     // the rocket fuel build: jellynut-processing makes jelly for two machines and jellynut-seed at 2% on the side
     const registryOf = async () => {
-        const config = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
+        const config = await loadConfigFromFile(ConfigPaths.ROCKET_FUEL_60);
         return SimulationContext.fromConfig(config).entity_registry;
     };
 
@@ -190,18 +190,18 @@ describe("sharedFuelClockTicks", () => {
 
 describe("inserters of a loop of machines", () => {
     it("are the ones between machines that feed each other", async () => {
-        const registry = SimulationContext.fromConfig(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE)).entity_registry;
+        const registry = SimulationContext.fromConfig(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250)).entity_registry;
         expect(loopInserters(registry).map(inserter => inserter.entity_id.id).sort()).toEqual(["inserter:5", "inserter:8"]);
     });
 
     it("are left always enabled, as are the inserters taking eggs from the loop to the science machine", async () => {
-        const registry = SimulationContext.fromConfig(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE)).entity_registry;
+        const registry = SimulationContext.fromConfig(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250)).entity_registry;
         expect(alwaysEnabledInserters(registry).map(inserter => inserter.entity_id.number).sort((a, b) => a - b))
             .toEqual([5, 8, 9, 10]);
     });
 
     it("leave the clock of an inserter that takes from a machine outside the loop: nutrients for the egg machines", async () => {
-        const registry = SimulationContext.fromConfig(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE)).entity_registry;
+        const registry = SimulationContext.fromConfig(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250)).entity_registry;
         const always_enabled = alwaysEnabledInserters(registry).map(inserter => inserter.entity_id.id);
         for (const id of ["inserter:3", "inserter:4", "inserter:6", "inserter:7"]) {
             expect(always_enabled).not.toContain(id);
@@ -209,7 +209,7 @@ describe("inserters of a loop of machines", () => {
     });
 
     it("are none in a build without a loop", async () => {
-        const registry = SimulationContext.fromConfig(await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL)).entity_registry;
+        const registry = SimulationContext.fromConfig(await loadConfigFromFile(ConfigPaths.ROCKET_FUEL_60)).entity_registry;
         expect(alwaysEnabledInserters(registry)).toEqual([]);
         expect(loopInserters(registry)).toEqual([]);
     });

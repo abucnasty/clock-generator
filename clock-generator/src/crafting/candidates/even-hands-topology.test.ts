@@ -12,8 +12,8 @@ afterEach(() => vi.restoreAllMocks());
 describe("even-hands hard topology preflight", () => {
     let belt: Config, drill: Config;
     beforeAll(async () => {
-        belt = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
-        drill = await loadConfigFromFile(ConfigPaths.REAL_OWNER_GRENADE);
+        belt = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
+        drill = await loadConfigFromFile(ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY);
     });
     it("refuses belt sources using the existing source rule before any planning", () => {
         const plan = vi.spyOn(planning, "planRun").mockImplementation(() => { throw new Error("planning must not run"); });

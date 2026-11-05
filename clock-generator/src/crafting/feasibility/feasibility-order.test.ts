@@ -20,7 +20,7 @@ describe("the feasibility pass runs after the coverage check (D10)", async () =>
     // the refusal sample misses an inserter for its iron plates; at 1,000 accumulators a second its machine is far too slow too
     const uncovered = withTarget(await loadConfigFromFile(TestConfigPaths.BAD_ACCUMULATOR_CONFIG) as Config, 1000);
     // flying robot frames at 1,600 a second: covered, and its machine makes at most 3.44 crafts of 2 frames a second
-    const over = withTarget(await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME) as Config, 1600);
+    const over = withTarget(await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_160) as Config, 1600);
 
     it.each(CALL_SITES)("%s: a coverage gap and an over-target rate get the coverage error", (_site, run) => {
         expect(() => run(uncovered)).toThrow(InserterCoverageError);
@@ -40,7 +40,7 @@ describe("the feasibility pass runs after the coverage check (D10)", async () =>
 });
 
 describe("a refusal hands over its opening and each problem as the message is made of them", async () => {
-    const over = withTarget(await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME) as Config, 1600);
+    const over = withTarget(await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_160) as Config, 1600);
     const refusal = (() => { try { assertFeasible(over); } catch (error) { return error as FeasibilityError; } })()!;
 
     it("lists one text per issue, each the issue's own description", () => {

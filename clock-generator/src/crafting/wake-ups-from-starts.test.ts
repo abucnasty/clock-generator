@@ -33,8 +33,8 @@ describe("the wake-ups of a clock from the starts", () => {
 describe("a stock the clock does not set", () => {
     it("is a loop of machines or a machine that makes its own ingredient", async () => {
         const registryOf = async (path: string) => createEntityRegistryFromConfig(await loadConfigFromFile(path));
-        expect(hasStockTheClockDoesNotSet(await registryOf(ConfigPaths.AGRICULTURAL_SCIENCE))).toBe(true);
-        expect(hasStockTheClockDoesNotSet(await registryOf(ConfigPaths.IRON_BACTERIA_CULTIVATION))).toBe(true);
-        expect(hasStockTheClockDoesNotSet(await registryOf(ConfigPaths.ELECTRIC_FURNACE))).toBe(false);
+        expect(hasStockTheClockDoesNotSet(await registryOf(ConfigPaths.AGRICULTURAL_SCIENCE_250))).toBe(true);
+        expect(hasStockTheClockDoesNotSet(await registryOf(ConfigPaths.IRON_BACTERIA_380_CULTIVATION))).toBe(true);
+        expect(hasStockTheClockDoesNotSet(await registryOf(ConfigPaths.ELECTRIC_FURNACE_20))).toBe(false);
     });
 });

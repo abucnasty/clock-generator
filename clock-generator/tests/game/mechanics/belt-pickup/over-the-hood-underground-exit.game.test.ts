@@ -42,7 +42,7 @@ for (const compact of [false, true]) for (const speed of BELT_SPEEDS) for (const
             const fixture = GameFixturePaths.OVER_THE_HOOD_UNDERGROUND_EXIT;
             const capture = replayRoot ? {directory: path.resolve(replayRoot, name), cleanup() {}} : speedCapture(name);
             try {
-                const source = fs.readFileSync(path.join(fixture, "scaffold.txt"), "utf8");
+                const source = fs.readFileSync(path.join(fixture, "scaffold.scaffold"), "utf8");
                 const blueprint = overTheHoodExitAtSpeed(source, speed, {compactDestination: compact, mirrored, backedUp: backed, content, gated: true});
                 const config = await loadConfigFromFile(path.join(GameFixturePaths.FRONT_UNDERGROUND_EXIT, "config.json"));
                 configAtSpeed(config, speed);

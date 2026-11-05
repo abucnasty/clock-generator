@@ -6,12 +6,12 @@ import { copyGapNeededNote, describeDropRoom, describeDropSpacing, DROP_SPACING_
 import { LaneTraffic } from "../state/lane-traffic";
 
 /**
- * The grenade build (REAL_OWNER_GRENADE): seven copies 12 tiles apart drop onto a turbo belt of two lanes. Inserters 1 and 2
+ * The grenade build (GRENADE_240_FILLS_BELT_EXACTLY): seven copies 12 tiles apart drop onto a turbo belt of two lanes. Inserters 1 and 2
  * stand in one row 3 tiles apart on the north line, inserters 7 and 8 in the other row. A clock starts each inserter's hand
  * at the ticks given.
  */
 const grenade = async (change?: (config: Config) => void): Promise<Config> => {
-    const config = structuredClone(await loadConfigFromFile(ConfigPaths.REAL_OWNER_GRENADE));
+    const config = structuredClone(await loadConfigFromFile(ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY));
     change?.(config);
     return config;
 };

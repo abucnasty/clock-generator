@@ -24,7 +24,7 @@ function handsDifferingFromStock(replay: ReturnType<typeof recordSimulationTimel
 }
 
 it("replays the judged clock state after the measured warm-up, keeping stock indices relative", async () => {
-    const loaded = await loadConfigFromFile(ConfigPaths.REAL_STUPIDFATHOBBIT_CELL02);
+    const loaded = await loadConfigFromFile(ConfigPaths.PROCESSING_UNIT_80_CIRCUIT_EXPORT);
     const config = {...loaded, overrides: {...loaded.overrides, terminal_swing_count: 1, lcm: 1}};
     // Explicit native-pinned 24-tick plan, independent of candidate generation/ranking.
     const windows = Object.fromEntries([
@@ -58,7 +58,7 @@ it("names no judged clock tick for a clock of p/q ticks, whose replay by whole p
     const controls = JSON.parse(readFileSync(path.join(__dirname, "fixtures/metallurgic-subtick-controls.json"), "utf8")) as {
         lcm: number; terminal_swing_count: number; period: number; clock_windows: Record<string, {start: number; end: number}[]>;
     };
-    const sample = await loadConfigFromFile(ConfigPaths.METALLURGIC_SCIENCE_PACK);
+    const sample = await loadConfigFromFile(ConfigPaths.METALLURGIC_SCIENCE_45);
     const config = {...sample, overrides: {...sample.overrides, lcm: controls.lcm, terminal_swing_count: controls.terminal_swing_count}};
     const windows = new Map(Object.entries(controls.clock_windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))]));
     const run = runAsBuiltCheck(config, windows, controls.period, quiet);
@@ -91,7 +91,7 @@ it.each([false, true])("does not replay the successful unshifted recording for a
         "inserter:5": evenly(71, 4, 132),
         "inserter:2": evenly(10, 8, 24), "inserter:9": evenly(10, 8, 24),
     };
-    const sample = await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT);
+    const sample = await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT_240);
     const config = {...sample, overrides: {...sample.overrides, terminal_swing_count: 2}};
     vi.stubEnv("CLOCK_PROOF_PHASES", exhaustive ? "1" : "0");
     try {

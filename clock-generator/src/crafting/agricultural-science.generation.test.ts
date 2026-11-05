@@ -21,7 +21,7 @@ describe("generateClockForConfig", () => {
     // on: in the simulator it is back from the second period after a loss of nutrients and one to three hands short once,
     // 33 to 37 periods after it, which the game shows too (2026-10-24); from 2026-10-10 the 2-swing clock was selected.
     describe("agricultural science from two pentapod egg biochambers that feed each other", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
+        const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250);
         let alternatives: ClockAlternative[];
         let selected_index: number;
         let one_swing: ClockAlternative;
@@ -95,7 +95,7 @@ describe("generateClockForConfig", () => {
         // one clock. The build is generated here, from the same config, and not again for that test
         // (scaffold-recordings-clock.generation.test.ts).
         it("selects the clock the values of the scaffold recordings of this build were seen on", () => {
-            expectPinnedScaffoldClock("agricultural science", { config: ConfigPaths.AGRICULTURAL_SCIENCE, backed_up_belts: false }, alternatives[selected_index]);
+            expectPinnedScaffoldClock("agricultural science", { config: ConfigPaths.AGRICULTURAL_SCIENCE_250, backed_up_belts: false }, alternatives[selected_index]);
         });
 
         // Recorded in the game with 400 in every period; in the simulator the 1-swing clock holds the rate under both orders of

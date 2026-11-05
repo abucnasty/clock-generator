@@ -9,7 +9,7 @@ import { backlogAtLevel, binomialQuantile, excessAtLevel, excessLossOf, randomAm
 import { ConfigPaths } from "../config/config-paths";
 
 // the exact-speed recycler cell of the ore voider benchmark (save F), planned at 400 iron ore a second destroyed
-const FIXTURE = ConfigPaths.REAL_OWNER_ORE_VOIDER_EXACT_SPEED;
+const FIXTURE = ConfigPaths.IRON_ORE_VOIDER_400_EXACT_SPEED;
 
 async function marginsOf(windows: Map<string, OpenRange[]>) {
     const config = await loadConfigFromFile(FIXTURE);

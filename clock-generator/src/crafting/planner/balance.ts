@@ -28,7 +28,7 @@
  *
  * The demand walk this replaced eliminated every machine row at once. In exact fractions both give the same solution, and
  * on every sample and blast job they give the same fractions. They part, deliberately, where the walk's elimination grew
- * past what a fraction holds and was rounded: cell 02 with its machines listed in the other order, at 97/13 output swings,
+ * past what a fraction holds and was rounded: the circuit export build with its machines listed in the other order, at 97/13 output swings,
  * gave 184996821348687/9740259739640 hands of iron plate a cycle, where the rows solved loop by loop give 2716/143. Where
  * the exact figure itself does not fit a fraction (a denominator past 2^53, as an export's hands from a cycle of decimal
  * ticks can make), both are rounded, within a double's step of it.

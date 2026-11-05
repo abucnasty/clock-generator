@@ -81,7 +81,7 @@ describe("the advanced circuit build under evenly spaced windows of one hand", (
     const PERIODS = 12;
 
     beforeAll(async () => {
-        const sample = await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT);
+        const sample = await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT_240);
         config = { ...sample, overrides: { ...sample.overrides, terminal_swing_count: 2 } };
         run = simulateClockOnly(config, startingAfter(evenly_spaced, RECORDED_CLOCK_POSITION), PERIOD, PERIODS, quiet,
             { keep_output_buffers: true, warmup_periods: 0, start_stock: recorded_state });

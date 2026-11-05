@@ -39,7 +39,7 @@ function assertTranslated(canonical: Config, shifted: Config, period: number, of
 describe("shared main-clock phase composition", () => {
     let auto: Config, derived: Config, windows: Map<string, OpenRange[]>;
     beforeAll(async () => {
-        const control = await loadConfigFromFile(ConfigPaths.REAL_OWNER_PINK_SCIENCE_ORIGINAL);
+        const control = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED);
         auto = { ...control, overrides: undefined, inserters: control.inserters.map(inserter => ({ ...inserter, overrides: undefined })) };
         const construction = constructPrimitiveGroupedHands(auto);
         const compact = construction.attempts.find(attempt => !attempt.options.share_windows && attempt.options.feeder_offset === 1)!;
@@ -124,7 +124,7 @@ describe("shared main-clock phase composition", () => {
     });
 
     it("retains ordinary no-byproduct phase masks and keeps actual shifted configurations distinct in memo identity", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE);
+        const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240);
         const ranges = new Map(config.inserters.map((inserter, index) => [`inserter:${inserter.id ?? index + 1}`, [OpenRange.from(0, 3)]]));
         expect(unplannedInserterClocks(createEntityRegistryFromConfig(config), 40).size).toBe(0);
         const canonical = buildAsBuiltConfig(config, ranges, 40), shifted = buildAsBuiltConfig(config, ranges, 40, undefined, "built", 3);
@@ -134,7 +134,7 @@ describe("shared main-clock phase composition", () => {
     });
 
     it("shifts by a whole-tick start of a fractional period exactly, as rotating the windows does, with no float noise at the window's first tick", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE);
+        const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240);
         const period = 19200 / 83;
         const ranges = new Map(config.inserters.map((inserter, index) => [`inserter:${inserter.id ?? index + 1}`, [OpenRange.from(1, 34)]]));
         for (const offset of [197, 209, 212, 225]) {

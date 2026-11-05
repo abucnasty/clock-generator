@@ -26,8 +26,8 @@ describe("generateClockForConfig", () => {
     // The builds are generated in beforeAll hooks, not in the describe bodies: those all run when the file is collected,
     // so a run of one test by name would generate every build in the file first.
 
-    describe("STONE_BRICKS_DIRECT_INSERT_2_1 config", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.STONE_BRICKS_DIRECT_INSERT_2_1);
+    describe("STONE_BRICK_120_DRILL_DIRECT_INSERT config", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.STONE_BRICK_120_DRILL_DIRECT_INSERT);
         let result: BlueprintGenerationResult;
         let inserterId: EntityId;
         let drillId: EntityId;
@@ -81,8 +81,8 @@ describe("generateClockForConfig", () => {
         });
     });
 
-    describe("LOGISTIC_SCIENCE_SHARED_INSERTER config", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_SHARED_INSERTER);
+    describe("LOGISTIC_SCIENCE_240 config", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240);
         let result: BlueprintGenerationResult;
 
         beforeAll(() => {
@@ -138,8 +138,8 @@ describe("generateClockForConfig", () => {
         });
     });
 
-    describe("LOGISTIC_SCIENCE_DI config (two machines making the output)", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_DI);
+    describe("LOGISTIC_SCIENCE_240_DIRECT_INSERT config (two machines making the output)", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240_DIRECT_INSERT);
         let result: BlueprintGenerationResult;
 
         beforeAll(() => {
@@ -171,8 +171,8 @@ describe("generateClockForConfig", () => {
         });
     });
 
-    describe("PROCESSING_UNITS config (multi-ingredient chest input)", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.PROCESSING_UNITS);
+    describe("PROCESSING_UNIT_15_CHEST_FED config (multi-ingredient chest input)", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.PROCESSING_UNIT_15_CHEST_FED);
 
         it("records the input inserter transferring both required ingredient types", () => {
             const result = generateClockForConfig(config);
@@ -187,7 +187,7 @@ describe("generateClockForConfig", () => {
     });
 
     describe("belt used as a buffer between machines", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_BELTED_BUFFER);
+        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER);
 
         it("is stable, and clocks the inserters filling the belt for what is taken off it", () => {
             const result = generateClockForConfig(config);
@@ -201,7 +201,7 @@ describe("generateClockForConfig", () => {
     // second, so the window of its output inserter is all that holds it to 40. Recorded in Factorio 2.1.21: the clocks
     // with 1, 3 and 6 output swings each moved exactly their hands every period for 10 periods, from every furnace.
     describe("stone bricks from mining drills that drop into the furnaces", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.STONE_BRICKS_DIRECT_INSERT_2_1);
+        const config = await loadConfigFromFile(ConfigPaths.STONE_BRICK_120_DRILL_DIRECT_INSERT);
         let alternatives: ClockAlternative[];
         const alternative = (id: string) => alternatives.find(a => a.id === id)!;
         const outputWindows = (id: string) => alternative(id).result.clock_windows["inserter:1"].map(w => [w.start, w.end]);
@@ -241,7 +241,7 @@ describe("generateClockForConfig", () => {
 
     describe("validateConfig", () => {
         it("returns the transfer plan a generation uses, without generating", async () => {
-            const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME);
+            const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_160);
             const validation = validateConfig(config);
             const generated = generateClockForConfig(config);
 
@@ -252,7 +252,7 @@ describe("generateClockForConfig", () => {
 
         it("does not plan the inserter taking away a by-product nothing in the config uses", async () => {
             // jellynut-processing makes jellynut-seed at 2%; its inserter just clears it onto an export belt
-            const config = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
+            const config = await loadConfigFromFile(ConfigPaths.ROCKET_FUEL_60);
             const validation = validateConfig(config);
             const seed_inserters = validation.transfer_plan.entities
                 .filter(entity => entity.item_transfers.some(transfer => transfer.item_name === "jellynut-seed"));
@@ -265,7 +265,7 @@ describe("generateClockForConfig", () => {
         });
 
         it("uses the forced output swings and LCM of the config", async () => {
-            const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME);
+            const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_160);
             const validation = validateConfig({ ...config, overrides: { ...config.overrides, terminal_swing_count: 2 } });
             expect(validation).toMatchObject({ output_swings_per_cycle: 2, cycle_ticks: 288 });
         });
@@ -276,7 +276,7 @@ describe("generateClockForConfig", () => {
         });
 
         it("throws when the machines cannot reach the target rate: the feasibility pass first, the planner's assert behind it", async () => {
-            const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME);
+            const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_160);
             const over = { ...config, target_output: { ...config.target_output, items_per_second: 1600 } };
             expect(() => validateConfig(over)).toThrow(FeasibilityError);
             // the figures are for one of the 24 copies, and the message says so: 1600 / 24 = 66.67 frames a second a copy
@@ -290,7 +290,7 @@ describe("generateClockForConfig", () => {
 
     describe("config validation", () => {
         it("throw error if the current configuration cannot meet the target production rate", async () => {
-            const config = await loadConfigFromFile(ConfigPaths.STONE_BRICKS_DIRECT_INSERT_2_1);
+            const config = await loadConfigFromFile(ConfigPaths.STONE_BRICK_120_DRILL_DIRECT_INSERT);
             expect(config.target_output.items_per_second).toBe(120)
             expect(() => generateClockForConfig(config)).not.toThrowError();
             config.target_output.items_per_second = 240;
@@ -306,9 +306,9 @@ describe("generateClockForConfig", () => {
     // one item is always picked first and never blocked, starving the other item indefinitely.
     // That the sample's selected clock is stable at the target rate is checked with its alternatives in
     // backpressure-loss.test.ts.
-    describe("AUTOMATION_SCIENCE: issue #47 regression (multi-filter fractional per-item transfers)", async () => {
+    describe("AUTOMATION_SCIENCE_240: issue #47 regression (multi-filter fractional per-item transfers)", async () => {
         // The sample is fully automatic; the regression needs the forced single swing, so it is set on this copy
-        const config = structuredClone(await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE));
+        const config = structuredClone(await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240));
         config.overrides = { ...config.overrides, terminal_swing_count: 1 };
 
         it("generates a blueprint whose input inserter (1) transfers both copper-plate and iron-gear-wheel (not just one), and whose output inserter (2) transfers", () => {

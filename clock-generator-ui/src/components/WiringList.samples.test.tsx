@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { generateClockAlternatives, generateClockForConfig, type BlueprintGenerationResult, type Config } from 'clock-generator';
-import { ConfigPaths, isExpectedRefusal } from '../../../clock-generator/dist/config/config-paths.js';
+import { ConfigPaths } from '../../../clock-generator/dist/config/config-paths.js';
 import { loadConfigFromFile } from '../../../clock-generator/dist/config/loader.js';
 import { GameNamesContext } from '../hooks/useGameNames';
 import { installFactsOf, type ClockInstallFacts } from '../worker/installFacts';
@@ -30,7 +30,7 @@ function clockOf(config: Config): BlueprintGenerationResult {
         return generated.alternatives[generated.selected_index].result;
     }
 }
-const samples = Object.entries(ConfigPaths).filter(([key]) => !isExpectedRefusal(key));
+const samples = Object.entries(ConfigPaths);
 
 describe('the wiring list of every sample', () => {
     it.each(samples)('%s: every combinator has its line', async (_key, file) => {

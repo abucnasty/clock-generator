@@ -22,7 +22,7 @@ test("Sidecar classifies supported pickups, explains unclassified captures and e
     try {
         const result = await recordInFactorio({
             factorio: factorio!, save: save!,
-            blueprint: fs.readFileSync(path.join(GameFixturePaths.DIFFERENT_ITEMS, "straight-belt-scaffold.txt"), "utf8").trim(),
+            blueprint: fs.readFileSync(path.join(GameFixturePaths.DIFFERENT_ITEMS, "straight-belt.scaffold"), "utf8").trim(),
             out: path.join(scratch, "capture.json"), ticks: 60, warmup_ticks: 600, settle_ticks: 0,
             seed: [], unclocked: true, game_speed: 1000, watch: false, timeout_seconds: 180, log() {},
             lua: captureModules + `

@@ -11,7 +11,7 @@ import { feasibilityOfConfig, withTarget } from "./feasibility-test-helpers";
  * p / 4 x 22 / 16 swings of 8 ticks: at most 60 x 16 / 8 = 120 items a second of the two together.
  */
 describe("C4: an inserter that carries several items swings for one at a time", async () => {
-    const sample = await loadConfigFromFile(ConfigPaths.PROCESSING_UNITS) as Config;
+    const sample = await loadConfigFromFile(ConfigPaths.PROCESSING_UNIT_15_CHEST_FED) as Config;
 
     it("15 processing units a second take 75 + 7.5 = 82.5 circuits a second, 82.5 x 8 / (60 x 16) = 0.6875 of its swings", () => {
         const swings = feasibilityOfConfig(sample).cut("C4 inserter:1");

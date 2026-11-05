@@ -98,7 +98,7 @@ for (const speed of BELT_SPEEDS) for (const {name, swapped, leftMirrored, rightM
         const config = await loadConfigFromFile(path.join(fixture, "config.json"));
         const outputPriorities = [12, 20].map(id => unsetPriorities.includes(id) ? "none" : "right");
         configAtSpeed(config, speed);
-        const original = fs.readFileSync(path.join(fixture, "scaffold.txt"), "utf8").trim();
+        const original = fs.readFileSync(path.join(fixture, "scaffold.scaffold"), "utf8").trim();
         const decoded = JSON.parse(zlib.inflateSync(Buffer.from(original.slice(1), "base64")).toString());
         for (const id of unsetPriorities) {
             const splitter = decoded.blueprint.entities.find((e: {entity_number: number}) => e.entity_number === id);

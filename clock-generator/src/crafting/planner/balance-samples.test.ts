@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
-import { ConfigPaths, isExpectedRefusal } from "../../config/config-paths";
+import { ConfigPaths } from "../../config/config-paths";
 import { loadConfigFromFile } from "../../config/loader";
 import type { Config } from "../../config/schema";
 import { Duration } from "../../data-types/duration";
@@ -81,7 +81,7 @@ function casesOf(config: Config): Case[] {
     });
 }
 
-const samples = Object.entries(ConfigPaths).filter(([key]) => !isExpectedRefusal(key));
+const samples = Object.entries(ConfigPaths);
 
 /**
  * Demands a cycle of today's plan carries less of than the feasibility demand needs, by sample, as `demand: carried <
@@ -90,7 +90,7 @@ const samples = Object.entries(ConfigPaths).filter(([key]) => !isExpectedRefusal
  * steel furnace takes, and so the iron furnace half the ore it needs (the simulator judges the clock).
  */
 const KNOWN_SHORT: Record<string, readonly string[]> = {
-    STEEL_CARGO_WAGON: ["input:machine:iron-plate#iron-ore: 65/6 < 65/3"],
+    STEEL_PLATE_26_WAGON_CHEST: ["input:machine:iron-plate#iron-ore: 65/6 < 65/3"],
 };
 
 describe("the balance equations of a cycle", () => {

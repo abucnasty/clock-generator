@@ -190,7 +190,7 @@ describe('validateCopies on the config samples', () => {
     });
 
     it('does not refuse the advanced circuit sample: two cable casters, two circuit plants and one plastic plant', async () => {
-        const file = path.join(root, 'intermediates/advanced-circuit/advanced-circuit.json');
+        const file = path.join(root, 'intermediates/advanced-circuit/advanced-circuit-240.json');
         const sample = await parseConfig(fs.readFileSync(file, 'utf-8'));
         const found = findRepeatedUnits(sample);
         expect(found.units).toHaveLength(1); // the plastic plant feeds both circuit plants

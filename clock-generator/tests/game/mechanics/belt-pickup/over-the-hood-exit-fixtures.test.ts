@@ -8,8 +8,8 @@ import {overTheHoodExitAtSpeed, overTheHoodReplayRoot} from "./over-the-hood-exi
 
 test("the documented compact over-the-hood scaffold matches the captured normal control", () => {
     const fixture = GameFixturePaths.OVER_THE_HOOD_UNDERGROUND_EXIT;
-    const source = fs.readFileSync(path.join(fixture, "scaffold.txt"), "utf8");
-    const documented = fs.readFileSync(path.join(fixture, "compact-normal-scaffold.txt"), "utf8");
+    const source = fs.readFileSync(path.join(fixture, "scaffold.scaffold"), "utf8");
+    const documented = fs.readFileSync(path.join(fixture, "compact-normal.scaffold"), "utf8");
     const normal = BELT_SPEEDS.find(speed => speed.name === "normal")!;
     const decode = (text: string) => JSON.parse(zlib.inflateSync(Buffer.from(text.trim().slice(1), "base64")).toString());
     expect(decode(documented)).toEqual(decode(overTheHoodExitAtSpeed(source, normal, {compactDestination: true})));

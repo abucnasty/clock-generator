@@ -65,7 +65,7 @@ export function exampleTitle(example: Pick<ExampleBuild, 'recipe'>, name: (id: s
 
 const countOf = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-/** "240/s · 11 copies · 1 machine, 3 inserters"; "400/s destroyed · 1 copy · …" for a rate that counts the item destroyed */
+/** "240/s · 11 copies · 1 machine, 2 inserters"; "400/s destroyed · 1 copy · …" for a rate that counts the item destroyed */
 export function exampleSummary(example: ExampleBuild): string {
     return [
         `${formatNumberText(example.items_per_second)}/s${example.counts === 'destroyed' ? ' destroyed' : ''}`,

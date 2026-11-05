@@ -10,7 +10,7 @@ import { quiet } from "./generate-blueprint-test-helpers";
  * ticks, with the output window starting at `output_window_start`.
  */
 const runAsBuilt = async (output_window_start: number) => {
-    const config = await loadConfigFromFile(ConfigPaths.STONE_BRICKS_DIRECT_INSERT_2_1);
+    const config = await loadConfigFromFile(ConfigPaths.STONE_BRICK_120_DRILL_DIRECT_INSERT);
     const period = 72;
     const window = (start: number, end: number) => end < period
         ? [{ start, end }]

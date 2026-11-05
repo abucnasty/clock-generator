@@ -104,7 +104,7 @@ describe("splitRepeatingRanges", () => {
 });
 
 describe("combinator descriptions of the rocket fuel biochambers", async () => {
-    const result = generateClockForConfig(await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL), { logger: quiet });
+    const result = generateClockForConfig(await loadConfigFromFile(ConfigPaths.ROCKET_FUEL_60), { logger: quiet });
     const first_lines = (result.blueprint.entities ?? [])
         .map(entity => (entity.player_description ?? "").split("\n")[0])
         .filter(line => line.includes("(inserter") || / inserters/.test(line));
@@ -190,7 +190,7 @@ describe("the clock of a blueprint with fuel inserters", () => {
     };
 
     it("enables each fuel inserter for its window of every count of its fuel clock, and the others every period", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
+        const config = await loadConfigFromFile(ConfigPaths.ROCKET_FUEL_60);
         const result = generateClockForConfig(config, { logger: quiet, fuel_consumption_view: false });
         const period = result.simulation_duration.ticks;
         const fuel_clock = Object.values(result.unplanned_inserter_clocks!).find(clock => clock.own_clock)!;
@@ -231,7 +231,7 @@ describe("the clock of a blueprint with fuel inserters", () => {
     });
 
     it("keeps a clock per fuel interval, on a network of its own, when the period is not a whole number of ticks", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
+        const config = await loadConfigFromFile(ConfigPaths.ROCKET_FUEL_60);
         const slower = { ...config, target_output: { ...config.target_output, items_per_second: 54 } };
         const result = generateClockForConfig(slower, { logger: quiet, fuel_consumption_view: false });
 
@@ -249,7 +249,7 @@ describe("the clock of a blueprint with fuel inserters", () => {
 });
 
 describe("the target rate in a blueprint", async () => {
-    const rocket_fuel = generateClockForConfig(await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL), { logger: quiet }).blueprint;
+    const rocket_fuel = generateClockForConfig(await loadConfigFromFile(ConfigPaths.ROCKET_FUEL_60), { logger: quiet }).blueprint;
     const clockDescription = (blueprint: typeof rocket_fuel) =>
         (blueprint.entities ?? []).map(entity => entity.player_description ?? "").find(text => text.startsWith("Clock for"))!;
 
@@ -291,7 +291,7 @@ describe("the target rate in a blueprint", async () => {
     });
 
     it("gives the rate of all copies and of one", async () => {
-        const blueprint = generateClockForConfig(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE), { logger: quiet }).blueprint;
+        const blueprint = generateClockForConfig(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250), { logger: quiet }).blueprint;
         expect(blueprint.description?.split("\n")[0])
             .toBe("Target: 250 [item=agricultural-science-pack] per second over 5 copies (50 each)");
     });
@@ -313,9 +313,9 @@ describe("the count of a clock", async () => {
     const windowDeciders = (blueprint: Blueprint) => deciders(blueprint).filter(entity => !readsLock(entity));
     const numberOf = (entity: Entity) => entity.entity_number;
 
-    const rocket_fuel = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
+    const rocket_fuel = await loadConfigFromFile(ConfigPaths.ROCKET_FUEL_60);
     const blueprints: [string, Blueprint][] = [
-        ["agricultural science", generateClockForConfig(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE), { logger: quiet }).blueprint],
+        ["agricultural science", generateClockForConfig(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250), { logger: quiet }).blueprint],
         ["rocket fuel, one clock with the fuel clocks", generateClockForConfig(rocket_fuel, { logger: quiet, fuel_consumption_view: false }).blueprint],
         ["rocket fuel, subtick clock and fuel clocks of their own", generateClockForConfig(
             { ...rocket_fuel, target_output: { ...rocket_fuel.target_output, items_per_second: 54 } },

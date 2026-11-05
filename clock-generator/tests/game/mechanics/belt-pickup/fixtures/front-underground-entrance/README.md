@@ -3,7 +3,7 @@
 Question: which lane does an empty inserter choose when it stands directly east of an eastbound underground
 entrance, and how do mirroring and moving versus backed-up supply affect its first hand?
 
-The user-supplied `scaffold.txt` retains its ingredient drain loader: **the base fixture is moving supply**.
+The user-supplied `scaffold.scaffold` retains its ingredient drain loader: **the base fixture is moving supply**.
 The input inserter is west of the electromagnetic plant, facing west into the entrance. A separate upstream
 underground exit feeds that entrance directly. The ingredient belt continues beneath the plant to its drain.
 Lane 1 carries accumulators and lane 2 supercapacitors, in four-item stacks. The legendary input has no mirror
@@ -258,7 +258,7 @@ Test-name filters `-t 'express'` or `-t 'compact'` select one speed or the compa
 
 ### Supplied compact replacement
 
-The [compact normal scaffold](compact-normal-scaffold.txt) is the exact user-supplied replacement from
+The [compact normal scaffold](compact-normal.scaffold) is the exact user-supplied replacement from
 2026-10-19. It is authoritative: compact variants now derive directly from it, changing only transport tier,
 ingredient arrangement, mirroring, optional drain removal and gate release. The assembler's modules and
 geometry are preserved. The original electromagnetic-plant scaffold is unchanged.
@@ -279,7 +279,7 @@ and output smoke, 130 phase/swap controls) were not kept; the counts above are t
 BELT_SPEED_CAPTURE_DIR=.scratch/belt-speed-coverage/compact-output-new npm run test:game -- tests/game/mechanics/belt-pickup/compact-front-output.game.test.ts
 ```
 
-![Supplied compact normal-belt entrance scaffold with its connected circuit output](compact-normal-scaffold.jpg)
+![Supplied compact normal-belt entrance scaffold with its connected circuit output](compact-normal.jpg)
 
 The native JPEG matches the supplied replacement, including the connected output inserter. Refresh with
 `npm run screenshots -- --case=front-underground-entrance/compact-normal` when two Factorio process slots are

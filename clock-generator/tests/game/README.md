@@ -88,7 +88,7 @@ one build), and the length of the period must not decide how long a check runs. 
 A game test that asks for a recording the game already made does not start the game again. `recordInFactorio` keeps each
 recording under a key and reads it back when the key is the same; the test's own assertions run on it as on a fresh one.
 The key is a hash of everything the game is given: the game's executable and the names and sizes of its data files, the
-save, the mods the harness copies in (the recorder and the sidecar), the harness's own sources, a protocol number, and every
+save, the recorder mod, what the Sidecar made of the build (below), the harness's own sources, a protocol number, and every
 option of the run but where it writes to (scaffold, clock and its schedule, config, probe script with the helpers it
 composes, seeds, ticks, speed and the rest, so an option added later is in the key without being named). A game that makes
 several builds one after the other (`CachedHarnessSession`) keys each build on the builds before it. What cannot be read or
@@ -110,7 +110,17 @@ watched run is never read or kept, and a hit leaves no game log (`work_dir` gets
   `scripts/rule-count-game-check.js` do; `scripts/native/run-lane.sh` sets `CLOCK_RECORDING_CACHE=off` in record mode. A native
   check that proves a new clock in the game uses one of these.
 
-A change to the key's inputs makes a miss, which runs the game as before and stores the result. The harness's sources are
+The Sidecar's files are not in the key, what it made of the build is: the Sidecar turns what the game holds into the config's
+terms, and a recording is judged on that. The harness asks the game once to build the build and describe it, with nothing
+recorded (`HarnessSession.describeBuild`), hashes the facts that decide what is measured (the config's machines, belts and lanes,
+chests and drills, the inserters with their sources and sinks, near lane and pickup layout, what is tracked and what is left out;
+not the suggested target, the Sidecar's version or its player view) and keeps the hash in `descriptions/` of the store, under a key
+of the same inputs with the Sidecar's files. A change to the Sidecar costs that one run for each build the next time the build is
+asked for (a game start, the build and its warm-up, no recording); a build whose description came out the same keeps its key and
+its recording, and only the builds whose description changed record again. `CLOCK_RECORDING_CACHE=refresh` asks the game again
+for the description too.
+
+A change to the key's other inputs makes a miss, which runs the game as before and stores the result. The harness's sources are
 part of the key, so a change to `src/harness/` starts every recording again; the files outside it that the harness depends on
 are named in `HOST_SOURCES` (`factorio-harness.ts`), and a change elsewhere in the engine that alters what the harness
 does needs a bump of `RECORDING_CACHE_PROTOCOL`.
@@ -120,7 +130,7 @@ does needs a bump of `RECORDING_CACHE_PROTOCOL`.
 ```bash
 python3 scripts/game/run-suite.py                     # warm: recordings read from the cache where they exist
 python3 scripts/game/run-suite.py --cache off         # a cold pass over tests/game/builds (mechanics stay on the cache)
-python3 scripts/game/run-suite.py --plan car-clock    # the jobs and an estimate, nothing run
+python3 scripts/game/run-suite.py --plan iron-plate-80-car-chest-clock    # the jobs and an estimate, nothing run
 python3 scripts/game/run-suite.py tests/game/mechanics/drills grenade-clock    # only files whose path contains these
 ```
 

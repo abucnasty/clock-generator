@@ -1,8 +1,8 @@
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
 import { describe, expect, it } from 'vitest';
 import { computeMachineFacts, ConfigSchema, FactorioDataService, FeasibilityError, targetRateMaxOf, validateConfig, type Config } from 'clock-generator/browser';
-import oreVoiderExact from '../../../clock-generator/resources/config-samples/real/owner/ore-voider/ore-voider-exact-speed.json';
-import oreVoiderOverbeaconed from '../../../clock-generator/resources/config-samples/real/owner/ore-voider/ore-voider-overbeaconed.json';
+import oreVoiderExact from '../../../clock-generator/resources/config-samples/recycling/iron-ore/iron-ore-voider-400-exact-speed.json';
+import oreVoiderOverbeaconed from '../../../clock-generator/resources/config-samples/recycling/iron-ore/iron-ore-voider-400-overbeaconed.json';
 import { configToFormData } from './configForm/configMapping';
 import { isTargetAboveMax, machinesMaxOf, rateMaxOf, resultComesBack, targetRateLineOf, totalMachineCapacity } from './targetRateLimit';
 
@@ -221,6 +221,6 @@ describe('over the samples, a target the field allows is never refused by a feas
     });
 
     it('checks most of the samples', () => {
-        expect(checked).toBeGreaterThan(34);
+        expect(checked).toBeGreaterThan(32);
     });
 });

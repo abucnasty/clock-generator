@@ -17,7 +17,7 @@ function seriesOf(recording: ReturnType<StockRecorder["recording"]>): (string[] 
 
 describe("the stock recorder", () => {
     it("records the same series whether they are made for the ticks of the run or grown, however many ticks it records", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
         const context = SimulationContext.fromConfig(config);
         const machines = context.machines.map(it => it.machine_state);
         const inserters = context.inserters.map(it => ({ state: it.inserter_state, sink: it.sink_state }));
@@ -45,7 +45,7 @@ describe("the stock recorder", () => {
     });
 
     it("hands a run every series at the length of the run, with nothing missing, when it records the whole of its request", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
         const run = runBuild(config, { logger: quiet, machine_stock: true, factorio_states: false, simulate_periods: 2 });
         const stock = run.machine_stock!;
         expect(stock.ticks).toBe(run.recorded_duration.ticks);
@@ -56,7 +56,7 @@ describe("the stock recorder", () => {
     });
 
     it("records less of a run for a caller that reads less, and the series it keeps equal those of the full recording", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
         const context = SimulationContext.fromConfig(config);
         const machines = context.machines.map(it => it.machine_state);
         const inserters = context.inserters.map(it => ({ state: it.inserter_state, sink: it.sink_state }));

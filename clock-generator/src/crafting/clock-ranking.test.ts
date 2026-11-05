@@ -239,7 +239,7 @@ describe("a clock whose recovery could not be tried", () => {
     });
 });
 
-// Atlan cell 29: the 2,888-tick clock of a 2,888.666-tick period runs 0.02% fast, and held and recovered in the game (#332)
+// an iron gear wheel build at 9.97 a second: the 2,888-tick clock of a 2,888.666-tick period runs 0.02% fast, and held and recovered in the game (#332)
 describe("a clock rounded down to whole ticks", () => {
     const rounded = (id: string, ranking: Partial<ClockRanking> = {}) => clock(id, { runs_fast: 0.0002, ...ranking });
 

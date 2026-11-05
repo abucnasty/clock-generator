@@ -47,7 +47,7 @@ function turned([x, y], direction = 0) {
 function boxOf(entity) {
     let [w, h] = SIZES[entity.name] ?? [1, 1];
     const quarter = VEHICLES.has(entity.name) ? Math.round((entity.orientation ?? 0) * 4) % 2 === 1 : Math.round((entity.direction ?? 0) / 4) % 2 === 1;
-    if (entity.name === "splitter") [w, h] = [2, 1];
+    if (/splitter$/.test(entity.name)) [w, h] = [2, 1];
     if (/loader$/.test(entity.name)) [w, h] = [1, 2];
     if (quarter) [w, h] = [h, w];
     return [entity.position.x - w / 2, entity.position.y - h / 2, entity.position.x + w / 2, entity.position.y + h / 2];

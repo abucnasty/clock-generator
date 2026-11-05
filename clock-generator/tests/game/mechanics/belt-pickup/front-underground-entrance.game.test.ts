@@ -65,12 +65,12 @@ for (const compactDestination of [false, true]) for (const speed of BELT_SPEEDS)
             const source = config.inserters[1].source;
             if (source.type !== "belt") throw new Error("expected belt input");
             source.near_lane = preferred;
-            const originalSource = fs.readFileSync(path.join(fixture, "scaffold.txt"), "utf8");
+            const originalSource = fs.readFileSync(path.join(fixture, "scaffold.scaffold"), "utf8");
             const original = swapped ? swapElectromagneticIngredientFeeds(originalSource) : originalSource;
             const mirroredBlueprint = mirrored ? flipFrontUndergroundInput(original, "entrance") : original;
             const supplyBlueprint = backedUp ? backUpFrontUndergroundEntrance(mirroredBlueprint) : mirroredBlueprint;
             const routedBlueprint = compactDestination
-                ? compactFrontEntranceAtSpeed(fs.readFileSync(path.join(fixture, "compact-normal-scaffold.txt"), "utf8"), speed, {mirrored, backedUp, swapped})
+                ? compactFrontEntranceAtSpeed(fs.readFileSync(path.join(fixture, "compact-normal.scaffold"), "utf8"), speed, {mirrored, backedUp, swapped})
                 : blueprintAtSpeed(compactFrontUndergroundRouting(supplyBlueprint, "entrance", speed), speed);
             const blueprint = releaseDelay ? connectFrontPickupGate(routedBlueprint) : routedBlueprint;
             fs.writeFileSync(path.join(scratch, "scaffold.txt"), blueprint);

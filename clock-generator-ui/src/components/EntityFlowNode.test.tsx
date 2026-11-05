@@ -4,7 +4,7 @@ import { ReactFlowProvider, type Node, type NodeProps } from '@xyflow/react';
 import type { Config } from 'clock-generator/browser';
 import type { ReactElement } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import lithiumSilo from '../../../clock-generator/resources/config-samples/real/owner/lithium-silo/lithium-silo.json?raw';
+import lithiumSilo from '../../../clock-generator/resources/config-samples/smelting/lithium-plate/lithium-plate-80-silo-chest.json?raw';
 import { inserter, names, show } from '../test/fixtures';
 import { buildFlowGraph, type EntityNodeData, type InserterNodeData } from '../utils/buildFlowGraph';
 import { configToFormData } from '../utils/configForm/configMapping';

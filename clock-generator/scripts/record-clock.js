@@ -8,8 +8,8 @@
 // {"period": 528, "output_swings": 2, "windows": {"inserter:1": [{"start": 1, "end": 6}, ...], ...}}. They are built as
 // they are; output_swings is the output swings per cycle of the plan whose period they are of.
 //
-// <build> is one of the named builds below, or any config: a sample key of ConfigPaths (ADVANCED_CIRCUIT) or the path of a
-// config JSON. The scaffold of a config is the <config name>-scaffold.txt beside it (SCAFFOLD= names another), and the
+// <build> is one of the named builds below, or any config: a sample key of ConfigPaths (ADVANCED_CIRCUIT_240) or the path of a
+// config JSON. The scaffold of a config is the <config name>.scaffold beside it (else the longest prefix of its name that has one) (SCAFFOLD= names another), and the
 // warm-up ticks are those of its entry in tests/game/builds/scaffold-recordings.game.test.ts (WARMUP_TICKS= sets them, 3600
 // otherwise). A build that is seeded there (eggs, bacteria) needs SEED=<json>, such as
 // [{"target": {"recipe": "pentapod-egg"}, "item": "pentapod-egg", "count": 200}]. The alternative may be any id of the
@@ -36,6 +36,7 @@ const out_dir = path.resolve(out_arg ?? ".");
 const scaffold_arg = process.env.SCAFFOLD && path.resolve(process.env.SCAFFOLD);
 const given_windows = process.env.WINDOWS && path.resolve(process.env.WINDOWS);
 const { ROOT, dist, quiet, loadSample } = require("./lib");
+const { scaffoldOf } = require("./scaffold-of");
 const { ConfigPaths } = dist("config/config-paths.js");
 const { generateClockAlternatives, clockBeltLabel, clockFromWindows } = dist("crafting/generate-blueprint.js");
 const { encodeBlueprintFile } = dist("blueprints/serde.js");
@@ -50,16 +51,16 @@ const { parseRecording } = dist("verification/recording.js");
 const SAMPLES = path.join(ROOT, "resources", "config-samples");
 // as in tests/game/builds/scaffold-recordings.game.test.ts (the settle is the steady-state search of scripts/game-run.js)
 const BUILDS = {
-    "agricultural-science": { scaffold: "science/agriculture-science/agriculture-science-scaffold.txt", config: "AGRICULTURAL_SCIENCE", seed: [{ target: { recipe: "pentapod-egg" }, item: "pentapod-egg", count: 200 }], warmup_ticks: 300 },
-    "automation-science": { scaffold: "science/automation-science/automation-science-scaffold.txt", config: "AUTOMATION_SCIENCE", seed: [], warmup_ticks: 3600 },
-    "automation-science-belted-buffer": { scaffold: "science/automation-science/automation-science-belted-buffer-scaffold.txt", config: "AUTOMATION_SCIENCE_BELTED_BUFFER", seed: [], warmup_ticks: 3600 },
-    "low-density-structure": { scaffold: "intermediates/low-density-structure/low-density-structure-scaffold.txt", config: "LOW_DENSITY_STRUCTURE", seed: [], warmup_ticks: 3600 },
-    "advanced-circuit": { scaffold: "intermediates/advanced-circuit/advanced-circuit-scaffold.txt", config: "ADVANCED_CIRCUIT", seed: [], warmup_ticks: 3600 },
-    "utility-science": { scaffold: "science/utility-science/utility-science-scaffold.txt", config: "UTILITY_SCIENCE", seed: [], warmup_ticks: 3600 },
-    "utility-science-belted-blue-and-lds": { scaffold: "science/utility-science/utility-science-belted-combined-blue-and-lds-scaffold.txt", config: "UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS", seed: [], warmup_ticks: 3600 },
-    "accumulator": { scaffold: "intermediates/accumulator/accumulator-640-scaffold.txt", config: "ACCUMULATOR_640", seed: [], warmup_ticks: 3600 },
-    "productivity-chain": { scaffold: "real/owner/productivity-chain/productivity-chain-scaffold.txt", config: "REAL_OWNER_PRODUCTIVITY_CHAIN", seed: [], warmup_ticks: 3600 },
-    "iron-bacteria": { scaffold: "gleba/iron-bacteria-cultivation/iron-bacteria-cultivation-scaffold.txt", config: "IRON_BACTERIA_CULTIVATION", seed: [{ target: { recipe: "iron-bacteria-cultivation" }, item: "iron-bacteria", count: 50 }], warmup_ticks: 300 },
+    "agricultural-science": { scaffold: "science/agricultural/agricultural-250.scaffold", config: "AGRICULTURAL_SCIENCE_250", seed: [{ target: { recipe: "pentapod-egg" }, item: "pentapod-egg", count: 200 }], warmup_ticks: 300 },
+    "automation-science": { scaffold: "science/automation/automation-240.scaffold", config: "AUTOMATION_SCIENCE_240", seed: [], warmup_ticks: 3600 },
+    "automation-science-belted-buffer": { scaffold: "science/automation/automation-120-foundries-feed-belt-to-assembler.scaffold", config: "AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER", seed: [], warmup_ticks: 3600 },
+    "low-density-structure": { scaffold: "intermediates/lds/lds-240.scaffold", config: "LDS_240", seed: [], warmup_ticks: 3600 },
+    "advanced-circuit": { scaffold: "intermediates/advanced-circuit/advanced-circuit.scaffold", config: "ADVANCED_CIRCUIT_240", seed: [], warmup_ticks: 3600 },
+    "utility-science": { scaffold: "science/utility/utility-120.scaffold", config: "UTILITY_SCIENCE_120", seed: [], warmup_ticks: 3600 },
+    "utility-science-belted-blue-and-lds": { scaffold: "science/utility/utility-120-processing-unit-and-lds-on-one-belt.scaffold", config: "UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT", seed: [], warmup_ticks: 3600 },
+    "accumulator": { scaffold: "intermediates/accumulator/accumulator-640.scaffold", config: "ACCUMULATOR_640", seed: [], warmup_ticks: 3600 },
+    "productivity-module-80-chest-chain-clock": { scaffold: "intermediates/productivity-module/productivity-module-80-chest-chain.scaffold", config: "PRODUCTIVITY_MODULE_80_CHEST_CHAIN", seed: [], warmup_ticks: 3600 },
+    "iron-bacteria": { scaffold: "gleba/iron-bacteria/iron-bacteria-380-cultivation.scaffold", config: "IRON_BACTERIA_380_CULTIVATION", seed: [{ target: { recipe: "iron-bacteria-cultivation" }, item: "iron-bacteria", count: 50 }], warmup_ticks: 300 },
 };
 // the recording holds whole clock periods of at least this many ticks: the baseline's minute, or TICKS=<n> in the environment
 const RECORDED_TICKS = Number(process.env.TICKS ?? GAME_RUN.baseline);
@@ -75,7 +76,7 @@ function buildOfConfig(arg) {
     const key = Object.keys(ConfigPaths).find(it => ConfigPaths[it] === config_path);
     const block = fs.existsSync(TESTS) && key ? fs.readFileSync(TESTS, "utf-8").split(/^    \},?$/m).find(it => it.includes(`config: ConfigPaths.${key},`)) : undefined;
     const ticks = field => Number(new RegExp(`${field}: ([\\d_]+)`).exec(block ?? "")?.[1].replace(/_/g, ""));
-    const scaffold = scaffold_arg ?? config_path.replace(/\.json$/, "-scaffold.txt");
+    const scaffold = scaffold_arg ?? scaffoldOf(config_path);
     if (!fs.existsSync(scaffold)) {
         throw new Error(`No scaffold at ${scaffold}: SCAFFOLD=<blueprint file> names one`);
     }

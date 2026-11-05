@@ -6,7 +6,7 @@ its target. The source scaffold is shared with the belt drop-lane recording test
 
 ![Automation-science base scaffold used by the clock-wiring test](../images/automation-science.jpg)
 
-The [source blueprint](../../../../resources/config-samples/science/automation-science/automation-science-scaffold.txt)
+The [source blueprint](../../../../resources/config-samples/science/automation/automation-240.scaffold)
 is shown here after warm-up with its clock disabled. The test generates and attaches its clock at runtime; that
 clock and the test's modified conditions are not shown in this base-layout image.
 See the [screenshot guide](../../README.md#scaffold-screenshots).

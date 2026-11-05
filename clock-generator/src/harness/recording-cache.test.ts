@@ -4,8 +4,8 @@ import path from "path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { cacheEnvironmentOf, CachedHarnessSession, HarnessOptions, HarnessResult, recordInFactorio } from "./factorio-harness";
 import {
-    CacheEnvironment, canonicalJson, RECORDING_CACHE_DIR_VARIABLE, RECORDING_CACHE_MODE_VARIABLE, RECORDING_CACHE_PROTOCOL, recordingCacheDir,
-    recordingCacheKey, recordingCacheMode, restoreRecording, storeRecording,
+    buildFacts, CacheEnvironment, canonicalJson, describedRecordingKey, RECORDING_CACHE_DIR_VARIABLE, RECORDING_CACHE_MODE_VARIABLE, RECORDING_CACHE_PROTOCOL,
+    recordingCacheDir, recordingCacheKey, recordingCacheMode, restoreRecording, storeRecording,
 } from "./recording-cache";
 import { parseRecording } from "../verification/recording";
 
@@ -23,7 +23,7 @@ function write(relative: string, text: string): string {
     return file;
 }
 
-/** A game that is a script which fails when started, with data, a save, two mods and two source files */
+/** A game that is a script which fails when started, with data, a save, a mod, a transforming mod and two source files */
 function environment(): CacheEnvironment {
     const executable = write("game/bin/x64/factorio", "#!/bin/sh\nexit 3\n");
     fs.chmodSync(executable, 0o755);
@@ -40,7 +40,8 @@ function environment(): CacheEnvironment {
         executable,
         data_dir: path.join(root, "game/data"),
         save: path.join(root, "save.zip"),
-        mods: { recorder: path.join(root, "mods/recorder"), sidecar: path.join(root, "mods/sidecar") },
+        mods: { recorder: path.join(root, "mods/recorder") },
+        transforms: { sidecar: path.join(root, "mods/sidecar") },
         host_sources: [path.join(root, "src/harness.ts"), path.join(root, "src/rcon.ts")],
     };
 }
@@ -145,11 +146,21 @@ describe("the key of a recording", () => {
         write("mods/recorder/build.zip", "a package");
         expect((await recordingCacheKey(BASE, game)).key).toBe(base);
         for (const [file, text] of [["mods/recorder/control.lua", "recorder, changed"], ["mods/recorder/scripts/events.lua", "events, changed"],
-            ["mods/sidecar/control.lua", "sidecar, changed"], ["mods/sidecar/new.lua", "new"]]) {
+            ["mods/recorder/new.lua", "new"]]) {
             const before = (await recordingCacheKey(BASE, game)).key;
             write(file, text);
             expect((await recordingCacheKey(BASE, game)).key, file).not.toBe(before);
         }
+    });
+
+    it("takes no file of a transforming mod: only the description of the build moves the key", async () => {
+        const game = environment();
+        const base = (await recordingCacheKey(BASE, game)).key;
+        write("mods/sidecar/control.lua", "sidecar, changed");
+        write("mods/sidecar/new.lua", "new");
+        expect((await recordingCacheKey(BASE, game)).key).toBe(base);
+        expect((await recordingCacheKey(BASE, game, [], "one")).key).not.toBe(base);
+        expect((await recordingCacheKey(BASE, game, [], "one")).key).not.toBe((await recordingCacheKey(BASE, game, [], "two")).key);
     });
 
     it("changes with the harness's sources", async () => {
@@ -165,10 +176,111 @@ describe("the key of a recording", () => {
         await expect(recordingCacheKey(BASE, { ...game, executable: path.join(root, "missing") })).rejects.toThrow();
         await expect(recordingCacheKey(BASE, { ...game, data_dir: path.join(root, "missing") })).rejects.toThrow();
         await expect(recordingCacheKey(BASE, { ...game, mods: { missing: path.join(root, "missing") } })).rejects.toThrow();
+        await expect(describedRecordingKey(BASE, { ...game, transforms: { missing: path.join(root, "missing") } }, [], path.join(root, "store"), false, async () => DESCRIPTION)).rejects.toThrow();
         await expect(recordingCacheKey(BASE, { ...game, host_sources: [path.join(root, "missing.ts")] })).rejects.toThrow();
         await expect(recordingCacheKey({ ...BASE, config: { run() { } } as never }, game)).rejects.toThrow("function");
         await expect(recordingCacheKey({ ...BASE, config: new (class Odd { x = 1 })() as never }, game)).rejects.toThrow("Odd");
         await expect(recordingCacheKey({ ...BASE, ticks: NaN }, game)).rejects.toThrow("not finite");
+    });
+});
+
+/** What the game says of a build: the facts that decide what is measured, and what the Sidecar only offers or says of itself */
+const DESCRIPTION: Record<string, unknown> = {
+    config: {
+        sidecar_version: "0.15.0",
+        suggested_target: { items_per_second: 4, copies: 1 },
+        machines: [{ id: 1, recipe: "gear" }],
+        belts: [{ id: 1, lanes: [{ ingredient: "iron-plate" }] }],
+        inserters: [{ source: { type: "belt", id: 1, pickup_capture: { sidecar_version: "0.15.0", tiles: 2 } }, sink: { type: "machine", id: 1 }, near_lane: 1 }],
+    },
+    inserters: [{ id: 1, unit_number: 40, source: { type: "belt", id: 1, near_lane: 1, pickup_capture: { sidecar_version: "0.15.0", tiles: 2 } }, sink: { type: "machine", id: 1 } }],
+    machines: [{ id: 1, unit_number: 30, recipe: "gear" }],
+    drills: [],
+    left_out: [],
+    left_out_drills: [],
+    sidecar: { config: { sidecar_version: "0.15.0", suggested_target: { items_per_second: 4 } }, left_out: [] },
+    movers: { inserters: [{ unit_number: 40 }] },
+};
+
+describe("a key made from the description of the build", () => {
+    const store = () => path.join(root, "store");
+    /** The key, and how many times the game was asked to describe the build */
+    async function keyed(game: CacheEnvironment, described: Record<string, unknown>, options = BASE, refresh = false) {
+        let asked = 0;
+        const key = await describedRecordingKey(options, game, [], store(), refresh, async () => { asked++; return described; });
+        return { key: key.key, asked };
+    }
+
+    it("keeps the key when the files of the transforming mod change and the description comes out the same", async () => {
+        const game = environment();
+        const first = await keyed(game, DESCRIPTION);
+        expect(first.asked).toBe(1);
+        write("mods/sidecar/control.lua", "sidecar, fixed");
+        const config = DESCRIPTION.config as { inserters: { source: { pickup_capture: object } }[] };
+        const newer = JSON.parse(JSON.stringify({ ...DESCRIPTION, config: { ...config, sidecar_version: "0.15.1" } }).replace(/0\.15\.0/g, "0.15.1"));
+        const again = await keyed(game, newer);
+        expect(again).toEqual({ key: first.key, asked: 1 });
+        expect(JSON.stringify(buildFacts(DESCRIPTION))).not.toContain("0.15");
+    });
+
+    it("moves the key when the description changes, in a fact that decides what is measured", async () => {
+        const game = environment();
+        const first = await keyed(game, DESCRIPTION);
+        write("mods/sidecar/control.lua", "sidecar, fixed");
+        const config = DESCRIPTION.config as { belts: unknown[] };
+        const changes: Record<string, Record<string, unknown>> = {
+            "a belt lane's item": { config: { ...config, belts: [{ id: 1, lanes: [{ ingredient: "copper-plate" }] }] } },
+            "an inserter's source": { inserters: [{ id: 1, unit_number: 40, source: { type: "belt", id: 1, near_lane: 2 }, sink: { type: "machine", id: 1 } }] },
+            "a machine": { machines: [{ id: 1, unit_number: 31, recipe: "gear" }] },
+            "an inserter left out": { left_out: [{ unit_number: 41 }] },
+        };
+        for (const [what, change] of Object.entries(changes)) {
+            const key = await keyed(game, { ...DESCRIPTION, ...change });
+            expect(key.key, what).not.toBe(first.key);
+            write("mods/sidecar/control.lua", `sidecar, fixed for ${what}`);
+        }
+    });
+
+    it("leaves out what the Sidecar suggests and says of itself, and what is not its own: a new suggested target keeps the key", async () => {
+        const game = environment();
+        const first = await keyed(game, DESCRIPTION);
+        write("mods/sidecar/control.lua", "sidecar, suggests more");
+        const config = DESCRIPTION.config as object;
+        const suggested = await keyed(game, {
+            ...DESCRIPTION,
+            config: { ...config, suggested_target: { items_per_second: 12, copies: 3, copy_offset: { x: 0, y: 9 } } },
+            sidecar: { config: { suggested_target: { items_per_second: 12 } }, left_out: [{ unit_number: 1 }] },
+            movers: { inserters: [] },
+        });
+        expect(suggested.key).toBe(first.key);
+        expect(Object.keys(buildFacts(DESCRIPTION))).toEqual(["config", "inserters", "machines", "drills", "left_out", "left_out_drills"]);
+        expect(buildFacts(DESCRIPTION).config).not.toHaveProperty("suggested_target");
+        expect(buildFacts(DESCRIPTION).config).not.toHaveProperty("sidecar_version");
+    });
+
+    it("still moves with a change of the recorder mod, the options, or what the build is made after", async () => {
+        const game = environment();
+        const first = await keyed(game, DESCRIPTION);
+        write("mods/recorder/control.lua", "recorder, changed");
+        const recorder = await keyed(game, DESCRIPTION);
+        expect(recorder.key).not.toBe(first.key);
+        expect((await keyed(game, DESCRIPTION, { ...BASE, ticks: 601 })).key).not.toBe(recorder.key);
+    });
+
+    it("asks the game once for the same files, game, save and options, and again for any of them changed, or when asked to refresh", async () => {
+        const game = environment();
+        expect((await keyed(game, DESCRIPTION)).asked).toBe(1);
+        expect((await keyed(game, DESCRIPTION)).asked).toBe(0);
+        expect((await keyed(game, DESCRIPTION, { ...BASE, ticks: 601 })).asked).toBe(1);
+        write("save.zip", "another save");
+        expect((await keyed(game, DESCRIPTION)).asked).toBe(1);
+        expect((await keyed(game, DESCRIPTION, BASE, true)).asked).toBe(1);
+    });
+
+    it("is not made, so the game runs, when the game cannot describe the build", async () => {
+        const game = environment();
+        await expect(describedRecordingKey(BASE, game, [], store(), false, async () => { throw new Error("no build"); })).rejects.toThrow("no build");
+        expect(fs.existsSync(path.join(store(), "descriptions"))).toBe(false);
     });
 });
 
@@ -300,8 +412,14 @@ describe("a run through the store", () => {
         };
     }
 
+    /** The key of a run, with the description of its build kept as the game would have made it */
+    async function keyOf(run: Partial<HarnessOptions>, history: string[] = []) {
+        const game = environment();
+        return describedRecordingKey(run, await cacheEnvironmentOf(game.executable, game.save), history, process.env[RECORDING_CACHE_DIR_VARIABLE]!, false, async () => DESCRIPTION);
+    }
+
     async function keep(run: HarnessOptions): Promise<void> {
-        const key = await recordingCacheKey(run, await cacheEnvironmentOf(run.factorio, run.save));
+        const key = await keyOf(run);
         write("kept/recording.json", JSON.stringify(RECORDING));
         await storeRecording(process.env[RECORDING_CACHE_DIR_VARIABLE]!, key, { out: path.join(root, "kept/recording.json") },
             { recording_path: "", recording: parseRecording(RECORDING), build: { from: "store" }, start: {} }, ["from the store"]);
@@ -339,12 +457,11 @@ describe("a run through the store", () => {
     });
 
     it("answers a session's builds from the store, and starts the game when one is missing", async () => {
-        const game = environment();
         const first = options();
         const second = { ...first, out: path.join(root, "out/second.json") };
         // the second build is stored under the key of the first before it
-        const first_key = await recordingCacheKey(first, await cacheEnvironmentOf(game.executable, game.save));
-        const second_key = await recordingCacheKey({ ...second, ticks: 700 }, await cacheEnvironmentOf(game.executable, game.save), [first_key.key]);
+        const first_key = await keyOf(first);
+        const second_key = await keyOf({ ...second, ticks: 700 }, [first_key.key]);
         write("kept/recording.json", JSON.stringify(RECORDING));
         for (const key of [first_key, second_key]) {
             await storeRecording(process.env[RECORDING_CACHE_DIR_VARIABLE]!, key, { out: path.join(root, "kept/recording.json") },

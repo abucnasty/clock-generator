@@ -3,7 +3,7 @@
 This Factorio 2.1.21 scenario compares fixed and changing inputs to arithmetic and decider combinators. Their visible
 outputs stay equal: multiplication by zero stays zero, and the selected predicates stay true or false. A real inserter
 picks up 16 copper cable before its destination is filled with 4800 iron plates. Its period-8 enable condition then
-changes while the full hand remains carried. [The exact scaffold](fixtures/scaffold.txt), [layout](fixtures/layout.json)
+changes while the full hand remains carried. [The exact scaffold](fixtures/scaffold.scaffold), [layout](fixtures/layout.json)
 and existing screenshot catalog entry describe the same physical cell.
 
 ![Circuit and carried-hand layout](fixtures/scaffold.jpg)

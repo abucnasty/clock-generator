@@ -1,0 +1,115 @@
+import {createHash} from "crypto";
+import path from "path";
+import {beforeAll, describe, expect, test} from "vitest";
+import {ClockAlternativesResult, generateClockAlternatives} from "./generate-blueprint";
+import {clockIdentity} from "./clock-identity";
+import {backpressureLossVerdictOf} from "./trial";
+import {outputCapacityPerSecond} from "./alternatives";
+import {ConfigPaths} from "../config/config-paths";
+import {loadConfigFromFile} from "../config/loader";
+import type {Config} from "../config/schema";
+import {alwaysOnReasonProblemsOf} from "./generate-blueprint-test-helpers";
+import {carCases} from "../../tests/game/builds/iron-plate-80-car-chest-clock-fixtures";
+import {readControls, RunControls} from "../../tests/game/builds/clock-controls";
+import {expectRunAgreesWithSelection} from "../../tests/game/helpers/fixture-mechanics";
+
+// each clock pinned beside the in-game recording of it
+const controls = readControls<RunControls>("iron-plate-80-car-chest-clock-controls.json");
+const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
+let config: Config;
+let generated: ClockAlternativesResult;
+
+beforeAll(async () => {
+    config = await loadConfigFromFile(ConfigPaths.IRON_PLATE_80_CAR_CHEST);
+    generated = generateClockAlternatives(config, {logger: quiet});
+});
+
+test("car: every inserter and drill a clock leaves always on says why", () => {
+    expect(alwaysOnReasonProblemsOf(config, generated)).toEqual([]);
+});
+
+test("car: the observed-windows clock is selected, and the drill into the car is enabled the tick before the takers", () => {
+    const selected = generated.alternatives[generated.selected_index];
+    expect(selected.id).toBe("derived");
+    // 617 ore a tick against 256 a 288-tick period: a window of one tick, which drops what the drill holds
+    expect(selected.result.clock_windows["drill:1"]).toEqual([{start: 9, end: 9}]);
+    expect(selected.result.clock_windows["inserter:1"][0].start).toBe(10);
+    for (const alternative of generated.alternatives) {
+        // a clock that does not meet goal 1 with the drill's window is the one with the drill always enabled
+        expect(alternative.result.clock_windows["drill:1"]?.length ?? 0, alternative.id).toBe(alternative.verdict === "stable" ? 1 : 0);
+    }
+});
+
+// swings-2 (144 ticks) was the selected clock before the observed windows were searched past a stable clock, and swings-3
+// (72 ticks) before the generator counted a wake-up only while the inserter's arm is at home; their recordings stay, and
+// they find them still made
+for (const variant of carCases()) {
+    test(`car clock: ${variant.name}`, () => {
+        const {generation, native, known_differences} = controls.cases[variant.name];
+        const expected = generation!;
+        const chosen = generated.alternatives.find(alternative => alternative.id === variant.alternative)!;
+        const result = chosen.result;
+        const exported = result.subtick ?? result;
+        const clock = clockIdentity(exported);
+        expect(createHash("sha256").update(JSON.stringify(clock)).digest("hex"), "same windows and exported clock as the native control (its identity: no text or metadata)")
+            .toBe(expected.clock_sha256);
+        expect(result.subtick?.clock.period_ticks ?? result.simulation_duration.ticks).toBe(expected.period);
+        expect(chosen.verdict).toBe(expected.verdict);
+        expect({id: chosen.id, holds: chosen.assessment.holds, rate: chosen.assessment.items_per_second,
+            supply: chosen.belt?.kind ?? null}).toEqual(expected.selection);
+        expect(native.period).toBe(expected.period);
+        // the game holds the target over the baseline, and is back at it after the drill stopped until the car ran dry, the output
+        // blocked and the drill stopped again
+        expectRunAgreesWithSelection(variant.name, native, {verdict: chosen.verdict, holds: chosen.assessment.holds}, true, known_differences);
+    });
+}
+
+// the car's Sidecar export (iron-plate-80-car-chest.sidecar-export.json) as the web app pastes it, at the export's suggested target: the
+// furnaces' ceiling, 80.78015625, floored to 80.780/s (U11)
+describe("the car paste at 80.78/s", () => {
+    let paste_config: Config;
+    let paste: ClockAlternativesResult;
+    beforeAll(async () => {
+        paste_config = await loadConfigFromFile(path.join(__dirname, "fixtures", "car-paste-80.78.json"));
+        paste = generateClockAlternatives(paste_config, {logger: quiet});
+    });
+
+    // 5 swings is 356.524 ticks: no subtick clock (a scale above 1000), so its blueprint counts 356 ticks and takes 416
+    // plates of them
+    test("lists the clock of 356.524 ticks as the clock rounded to 356 it is, at its own rate, and does not select it", () => {
+        const five = paste.alternatives.find(alternative => alternative.id === "swings-5")!;
+        expect(five.result.simulation_duration.ticks).toBeCloseTo(356.524, 3);
+        expect(five.result.subtick).toBeUndefined();
+        // 0.15% fast: more than the 0.1% a rounded clock may run, so it is not tried on its own period
+        expect(five.label).toMatch(/\(clock rounded to 356 ticks, runs 0\.15% fast\)$/);
+        expect(five.assessment.items_per_second).toBeCloseTo(416 * 60 / 356, 6);
+        expect(five.rounded).toMatchObject({period_ticks: 356, tried_on_its_period: false});
+        expect(five.ranking).toMatchObject({meets_target_rate: false, recovery_untried: false});
+        expect(five.ranking.runs_fast).toBeUndefined();
+        expect(paste.alternatives.filter(alternative => alternative.id.startsWith("swings-5"))).toHaveLength(1);
+        expect(paste.alternatives[paste.selected_index].id).not.toBe("swings-5");
+    });
+
+    // the batched clock's 285.19 ticks have a subtick clock, so it is listed as that alone: rounded down to 285 ticks it
+    // would run 0.08% fast, but above the furnaces' 80.78015625/s, which a rounded clock may not
+    test("lists the batched clock as its subtick clock alone, whose rounding would run above what the furnaces make", () => {
+        expect(paste.alternatives.find(alternative => alternative.id === "planned-belt-slack")).toBeUndefined();
+        const subtick = paste.alternatives.find(alternative => alternative.id === "planned-belt-slack-subtick")!;
+        expect(subtick.rounded).toBeUndefined();
+        expect(Math.floor(subtick.result.simulation_duration.ticks)).toBe(285);
+        const rounded_rate = subtick.result.stability_check.expected_output_items * 60 / 285 * (paste_config.target_output.copies ?? 1);
+        expect(rounded_rate / paste_config.target_output.items_per_second - 1).toBeLessThan(0.001);
+        expect(rounded_rate).toBeGreaterThan(outputCapacityPerSecond(paste_config));
+    });
+
+    test("says why the recovery of a clock of 356.524 ticks cannot be tried, and the selected clock meets the target rate", () => {
+        const five = paste.alternatives.find(alternative => alternative.id === "swings-5")!;
+        expect(backpressureLossVerdictOf(paste_config, five.result, quiet)).toEqual({
+            backpressure_loss: null,
+            backpressure_loss_not_tried: "A clock of 356.524 ticks does not repeat in whole ticks, so its output cannot be counted by the period",
+        });
+        const selected = paste.alternatives[paste.selected_index];
+        expect(selected.assessment.items_per_second).toBeCloseTo(80.78, 6);
+        expect(selected.assessment.backpressure_loss).not.toBeNull();
+    });
+});

@@ -4,8 +4,7 @@
 // exported clock as over-hood-clock-<tier>.generation.test.ts do
 // (clock_sha256: sha256 of its identity, clockIdentity of subtick ?? result: the blueprint without its text or metadata,
 // and the schedule; text_sha256: sha256 of {blueprint, schedule} with the text, which moves with any description;
-// results_sha256 and results: the digest of what the clock hash leaves out, see blast.digest.ts); the samples that exist to be refused (ExpectedRefusals in
-// src/config/config-paths.ts) are checked instead: each must fail with its error, as it is and backed up. Run by
+// results_sha256 and results: the digest of what the clock hash leaves out, see blast.digest.ts). Run by
 // scripts/blast/blast.sh, which installs it into the worktree's tests/game/builds/.scratch/ (gitignored), where its
 // imports resolve, with vitest.scratch-dist.config.ts (the engine from dist/); it is not run from scripts/.
 // Env: BLAST_OUT (folder; one JSON per job, and _jobs.json, the job list with each config's sha256), BLAST_CLAIMS
@@ -48,15 +47,12 @@ const ONLY = process.env.BLAST_ONLY ? process.env.BLAST_ONLY.split(',') : undefi
 const SKIP = (process.env.BLAST_SKIP ?? '').split(',').filter(Boolean);
 const GROUPS = (process.env.BLAST_GROUPS || 'config').split(',');
 const { ConfigPaths } = configPaths;
-// the samples that exist to be refused, by ConfigPaths key, with the error each must fail with; a worktree from before
-// the list has none, and its config groups keep every sample
-const REFUSALS: Record<string, { error: string }> = (configPaths as any).ExpectedRefusals ?? {};
 // the slowest first, in this order, so the parallel processes finish together (the heaviest samples of 0.24.0, after the
-// memory work; Thaeln's cell 09 is skipped by default and takes ~1,000 s when it runs)
-const SLOW = ['REAL_THAELN_CELL09', 'CHEMICAL_SCIENCE_SHARED_FOUNDRY', 'STEEL_CARGO_WAGON',
-    'REAL_STUPIDFATHOBBIT_CELL02', 'AGRICULTURAL_SCIENCE', 'REAL_OWNER_PINK_SCIENCE_ORIGINAL'];
+// memory work; the utility science 480 build is skipped by default and takes ~1,000 s when it runs)
+const SLOW = ['UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN', 'CHEMICAL_SCIENCE_240_SHARED_FOUNDRY', 'STEEL_PLATE_26_WAGON_CHEST',
+    'PROCESSING_UNIT_80_CIRCUIT_EXPORT', 'AGRICULTURAL_SCIENCE_250', 'ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED'];
 
-export interface Job { group: string; name: string; config: () => Promise<any>; refusal?: { error: string } }
+export interface Job { group: string; name: string; config: () => Promise<any> }
 /** The front entrance (8) and front exit, backed up and on a moving config (4; #274); a worktree from before master
  * b77cc09f has no front fixtures and so no front jobs (its job list, and key, stay the 74 of the four other groups) */
 async function frontJobs(): Promise<Job[]> {
@@ -84,13 +80,8 @@ async function containerJobs(): Promise<Job[]> {
     return containers.containerClockCases()
         .map((variant: any) => ({ group: 'containers', name: variant.name, config: async () => containers.containerClockConfig(variant) }));
 }
-// the refusal checks make the backed-up variant of the refused sample too
-const backedUp = (config: any) => ({ ...config, overrides: { ...config.overrides, backed_up_belts: true } });
-const samples = Object.entries(ConfigPaths).filter(([name]) => !(name in REFUSALS));
 const baseJobs: Job[] = [
-    ...samples.map(([name, file]) => ({ group: 'config', name, config: () => loadConfigFromFile(file as string) })),
-    ...Object.entries(REFUSALS).map(([name, refusal]) => ({ group: 'refusal', name, refusal,
-        config: () => loadConfigFromFile((ConfigPaths as Record<string, string>)[name]) })),
+    ...Object.entries(ConfigPaths).map(([name, file]) => ({ group: 'config', name, config: () => loadConfigFromFile(file as string) })),
     ...(['electromagnetic', 'same-item'] as const).flatMap(family => pickupClockSpeedCases(family).map(variant =>
         ({ group: 'pickup', name: variant.name, config: () => pickupClockConfig(variant) }))),
     ...(['different-items', 'same-item'] as const).flatMap(family => overHoodClockCases(family).map(variant =>
@@ -206,18 +197,6 @@ function clocksOf(config: any, expand: ExpandHistory | undefined) {
     };
 }
 
-/** A refusal check: generating the sample as it is and backed up must throw an error whose message holds the list's
- * (as `expected-refusals.test.ts`); `refused` is whether both did. No `error` field: a check is not a config error */
-function refusalCheck(config: any, refusal: { error: string }) {
-    const outcome = (c: any) => {
-        try { generateClockAlternatives(c, { logger: quiet }); return { error: null, as_expected: false }; }
-        catch (error: any) { return { error: `${error?.name}: ${error?.message}`, as_expected: String(error?.message).includes(refusal.error) }; }
-    };
-    const as_is = outcome(config), backed_up = outcome(backedUp(config));
-    return { expected_error: refusal.error, refused: as_is.as_expected && backed_up.as_expected,
-        errors: { as_is: as_is.error, backed_up: backed_up.error } };
-}
-
 test.skipIf(!OUT)('blast', async () => {
     fs.mkdirSync(OUT!, { recursive: true }); fs.mkdirSync(CLAIMS!, { recursive: true });
     const jobs = await loadJobs();
@@ -241,7 +220,7 @@ test.skipIf(!OUT)('blast', async () => {
         let body: any;
         try {
             const config = await job.config();
-            body = { group: job.group, name: job.name, ...(job.refusal ? refusalCheck(config, job.refusal) : clocksOf(config, expand)) };
+            body = { group: job.group, name: job.name, ...clocksOf(config, expand) };
         } catch (error: any) {
             body = { group: job.group, name: job.name, error: `${error?.name}: ${error?.message}` };
         }

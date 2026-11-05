@@ -29,7 +29,7 @@ function refusalOf(config: Config, options: RunOptions = {}): ClockPeriodLimitEr
 describe('automatic whole-swing period eligibility', () => {
     let config: Config, refusal: ClockPeriodLimitError;
     beforeAll(async () => {
-        const control = await loadConfigFromFile(ConfigPaths.REAL_OWNER_PINK_SCIENCE_ORIGINAL);
+        const control = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED);
         config = { ...control, overrides: undefined, inserters: control.inserters.map(inserter => ({ ...inserter, overrides: undefined })) };
         refusal = refusalOf(config);
     });
@@ -225,7 +225,7 @@ describe('strict period limits and existing arithmetic policies', () => {
     });
 
     it('recomputes rounded burner fuel and honors ignored ingredients instead of scaling a previous period', async () => {
-        const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
+        const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250);
         config.overrides = { ignored_lcm_ingredients: ['nutrients'] };
         const registry = createEntityRegistryFromConfig(config), target = TargetProductionRate.fromConfig(config.target_output);
         const at = (count: number) => CraftingCyclePlan.create(target, registry, config, fraction(count));

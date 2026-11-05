@@ -19,7 +19,7 @@ describe("generateClockForConfig", () => {
         let jellynut_inserter_id: RocketFuelSample["jellynut_inserter_id"];
 
         beforeAll(async () => {
-            sample = await rocketFuelSample(withJellyHandsOf15(await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL)));
+            sample = await rocketFuelSample(withJellyHandsOf15(await loadConfigFromFile(ConfigPaths.ROCKET_FUEL_60)));
             ({ alternative, period, jelly_inserter_ids, jellynut_inserter_id } = sample);
         });
 

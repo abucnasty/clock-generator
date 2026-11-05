@@ -22,7 +22,7 @@ const period = 128, warmup = 10;
  * main clock's.
  */
 async function shiftedRocketFuel(): Promise<Config> {
-    const config = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
+    const config = await loadConfigFromFile(ConfigPaths.ROCKET_FUEL_60);
     const generated = generateClockForConfig(config, { logger, belt_pickup_slack: "always" });
     const clocks = unplannedInserterClocks(createEntityRegistryFromConfig(config), period);
     for (const [id, serialized] of Object.entries(generated.unplanned_inserter_clocks ?? {})) {

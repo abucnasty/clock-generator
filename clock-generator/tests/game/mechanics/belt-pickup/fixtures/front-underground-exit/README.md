@@ -4,7 +4,7 @@ Question: which exposed lane does an empty inserter collect from, and how does i
 directly in front of an underground exit, and does flipping the inserter change its lane choice?
 This fixture covers a northbound exit with the inserter directly north of it.
 
-`scaffold.txt` adapts the different-item electromagnetic scaffold. Its upstream ingredient feed is turned north,
+`scaffold.scaffold` adapts the different-item electromagnetic scaffold. Its upstream ingredient feed is turned north,
 ending in a northbound turbo underground exit. The input inserter stands one tile north of the exit and drops into
 the plant to its north. The base blueprint has `mirror: true`; the flipped case changes only the input inserter to
 `mirror: false`. The probe verifies the actual `mirroring` property against the host-supplied expectation.

@@ -29,7 +29,7 @@ for (const reflected of [false, true]) for (let delay = 0; delay < 8; delay++) {
             input.filters = ["accumulator"];
             config.belts.find(belt => belt.id === input.source.id)!.lanes.forEach(lane => {lane.ingredient = "accumulator";});
             let blueprint = ordinaryAtSpeed(useAccumulatorsOnBothLanes(fs.readFileSync(path.join(fixture,
-                "underground-entrance-scaffold.txt"), "utf8")), speed);
+                "underground-entrance.scaffold"), "utf8")), speed);
             if (reflected) blueprint = reflectOrdinaryPickup(blueprint);
             fs.writeFileSync(path.join(capture.directory, "blueprint.txt"), blueprint + "\n");
             fs.writeFileSync(path.join(capture.directory, "config.json"), JSON.stringify(config, null, 2) + "\n");

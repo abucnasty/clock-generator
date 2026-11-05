@@ -91,7 +91,7 @@ rate or stability.
 
 The code is `src/config/drop-spacing.ts` (PR #373; the choice among equal groupings by the places on the belt, PR #382). The recordings of the grenade
 build are `tests/game/builds/grenade-clock.game.test.ts` with `grenade-clock-controls.json`, and the sample's scaffolds are in
-`resources/config-samples/real/owner/grenade/`.
+`resources/config-samples/intermediates/grenade/`.
 
 ## Limits
 

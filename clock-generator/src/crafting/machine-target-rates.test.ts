@@ -5,7 +5,7 @@ import { ConfigPaths } from "../config/config-paths";
 
 // the exact-speed recycler cell of the ore voider benchmark (save F): 400 iron ore a second destroyed, a quarter of the
 // 1600/3 crafts a second given back into its car, which two inserters empty back into the recycler
-const FIXTURE = ConfigPaths.REAL_OWNER_ORE_VOIDER_EXACT_SPEED;
+const FIXTURE = ConfigPaths.IRON_ORE_VOIDER_400_EXACT_SPEED;
 
 describe("the at-target rates of a machine that places its results itself", () => {
     it("are what its plan takes out of the container it places them into, against what it can make", async () => {

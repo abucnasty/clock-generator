@@ -16,7 +16,7 @@ describe("generateClockForConfig", () => {
         let period: RocketFuelSample["period"];
 
         beforeAll(async () => {
-            sample = await rocketFuelSample(ConfigPaths.GLEBA_ROCKET_FUEL);
+            sample = await rocketFuelSample(ConfigPaths.ROCKET_FUEL_60);
             ({ alternative, moved, period } = sample);
         });
 

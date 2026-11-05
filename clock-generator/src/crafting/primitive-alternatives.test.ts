@@ -14,7 +14,7 @@ const options = { logger: quiet, verify_as_built: true, factorio_states: false, 
 describe("primitive primary integration and legacy sibling compatibility", () => {
     let config: Config, base: BlueprintGenerationResult;
     beforeAll(async () => {
-        config = await loadConfigFromFile(ConfigPaths.STONE_BRICKS_DIRECT_INSERT_2_1);
+        config = await loadConfigFromFile(ConfigPaths.STONE_BRICK_120_DRILL_DIRECT_INSERT);
         // A small in-budget clock supplies real export/result structure; candidate selection below is isolated by spies.
         base = generation.generateClockForConfig({ ...config, overrides: { ...config.overrides, terminal_swing_count: 1, lcm: 1 } }, options);
     });

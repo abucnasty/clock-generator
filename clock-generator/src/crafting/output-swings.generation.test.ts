@@ -14,7 +14,7 @@ describe("generateClockForConfig", () => {
 
     // the planner alone reaches 4 output swings on this build; the override asks for 2
     describe("forced output swing count", async () => {
-        const loaded = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_DI);
+        const loaded = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240_DIRECT_INSERT);
         const config = { ...loaded, overrides: { ...loaded.overrides, terminal_swing_count: 2 } };
         let alternatives: ClockAlternative[];
 
@@ -38,8 +38,8 @@ describe("generateClockForConfig", () => {
     describe("fractional swings", () => {
         // the production science sample with the pickups of its input belt made one inserter with two filters, and the
         // packs put onto that belt, so that the input inserter has 3/2 hands a cycle
-        describe("PRODUCTION_SCIENCE_JSON with one pickup for its two input items: the fractional swings alternative", async () => {
-            const config = productionScienceSharedPickup(await loadConfigFromFile(ConfigPaths.PRODUCTION_SCIENCE_JSON));
+        describe("PRODUCTION_SCIENCE_120_TWO_BELTS with one pickup for its two input items: the fractional swings alternative", async () => {
+            const config = productionScienceSharedPickup(await loadConfigFromFile(ConfigPaths.PRODUCTION_SCIENCE_120_TWO_BELTS));
 
             let result: BlueprintGenerationResult;
 
@@ -98,8 +98,8 @@ describe("generateClockForConfig", () => {
             });
         });
 
-        describe("PRODUCTION_SCIENCE_JSON with one pickup for its two input items: whole swings, the primary clock", async () => {
-            const config = productionScienceSharedPickup(await loadConfigFromFile(ConfigPaths.PRODUCTION_SCIENCE_JSON));
+        describe("PRODUCTION_SCIENCE_120_TWO_BELTS with one pickup for its two input items: whole swings, the primary clock", async () => {
+            const config = productionScienceSharedPickup(await loadConfigFromFile(ConfigPaths.PRODUCTION_SCIENCE_120_TWO_BELTS));
             let result: BlueprintGenerationResult;
 
             beforeAll(() => {
@@ -136,7 +136,7 @@ describe("generateClockForConfig", () => {
         });
 
         describe("Utility Science Belted with Combined Blue and LDS", async () => {
-            const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS);
+            const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT);
             let result: BlueprintGenerationResult;
 
             beforeAll(() => {
@@ -218,8 +218,8 @@ describe("generateClockForConfig", () => {
 
     // One machine, two output hands and nine input hands per 288 ticks. Clocks for it are easy to get to the
     // expected output in one simulated period without the build actually repeating that period.
-    describe("FLYING_ROBOT_FRAME clock-only check", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME);
+    describe("FLYING_ROBOT_FRAME_160 clock-only check", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_160);
 
         // the clock alternatives of the config, generated once for the describes below, which only read them: with
         // the searches, which batched swings being stable would leave out

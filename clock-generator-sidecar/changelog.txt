@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.15.1
+Date: 2026-11-04
+  Bugfixes:
+    - reads a belt lane's item where the inserters take from it, not from the first belt piece built
+---------------------------------------------------------------------------------------------------
 Version: 0.15.0
 Date: 2026-10-27
   Features:

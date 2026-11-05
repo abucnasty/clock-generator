@@ -55,6 +55,12 @@ export interface CacheEnvironment {
     save: string;
     /** The folders of the mods the harness copies in, by the name they are installed under; `.zip` files in them are not copied */
     mods: Record<string, string>;
+    /**
+     * The folders of the mods that turn what the game holds into the description of a build (the Sidecar), by the name they are
+     * installed under; copied in like `mods`. Their files are not part of the key of a recording, only what they produced for the
+     * build is (see describedRecordingKey): a change to them that leaves the description as it was keeps every recording.
+     */
+    transforms?: Record<string, string>;
     /** The source files of the harness that decide what the game is given and what is kept of what it answers */
     host_sources: string[];
 }
@@ -97,6 +103,9 @@ export function canonicalJson(value: unknown): string {
     }
     throw new Error(`A ${typeof value} cannot be part of a key`);
 }
+
+const gzip = promisify(zlib.gzip);
+const gunzip = promisify(zlib.gunzip);
 
 function sha256(...parts: (string | Buffer)[]): string {
     const hash = crypto.createHash("sha256");
@@ -169,14 +178,8 @@ export interface RecordingCacheKey {
     parts: Record<string, unknown>;
 }
 
-/**
- * The key of a recording: a hash of the game's executable and data, the save, the mods the harness copies in, the sources of
- * the harness, the protocol, and every option of the run that is not a place to write to (scaffold, clock and its schedule,
- * config, probe script, seeds, ticks and the rest, so an option added later is part of the key without being named). `history`
- * is the keys of the recordings made before this one in the same game, when a game makes more than one: what a build leaves
- * behind is what the next is built on. Throws when any of it cannot be read or told.
- */
-export async function recordingCacheKey(options: Partial<HarnessOptions>, environment: CacheEnvironment, history: string[] = []): Promise<RecordingCacheKey> {
+/** The parts of the key that do not depend on the mods that transform: all but `description` */
+async function baseParts(options: Partial<HarnessOptions>, environment: CacheEnvironment, history: string[]): Promise<Record<string, unknown>> {
     const mods: Record<string, string> = {};
     for (const [name, folder] of Object.entries(environment.mods)) {
         mods[name] = await modFingerprint(folder);
@@ -185,7 +188,7 @@ export async function recordingCacheKey(options: Partial<HarnessOptions>, enviro
     for (const file of environment.host_sources) {
         sources[path.basename(file)] = await fileSha256(file);
     }
-    const parts = {
+    return {
         protocol: environment.protocol,
         executable: await fileSha256(environment.executable),
         game_data: await dataFingerprint(environment.data_dir),
@@ -195,6 +198,93 @@ export async function recordingCacheKey(options: Partial<HarnessOptions>, enviro
         options: sha256(canonicalJson(inputsOfOptions(options))),
         history,
     };
+}
+
+/**
+ * The key of a recording: a hash of the game's executable and data, the save, the mods the harness copies in, the sources of
+ * the harness, the protocol, and every option of the run that is not a place to write to (scaffold, clock and its schedule,
+ * config, probe script, seeds, ticks and the rest, so an option added later is part of the key without being named). `history`
+ * is the keys of the recordings made before this one in the same game, when a game makes more than one: what a build leaves
+ * behind is what the next is built on. `description` is the hash of what the transforming mods produced for the build (see
+ * buildFacts), left out when the environment has none. Throws when any of it cannot be read or told.
+ */
+export async function recordingCacheKey(options: Partial<HarnessOptions>, environment: CacheEnvironment, history: string[] = [], description?: string): Promise<RecordingCacheKey> {
+    const parts: Record<string, unknown> = await baseParts(options, environment, history);
+    if (description !== undefined) {
+        parts.description = description;
+    }
+    return { key: sha256(canonicalJson(parts)), parts };
+}
+
+/**
+ * What the transforming mods (the Sidecar) made of a build, as far as it decides what a recording measures: which inserters the
+ * config's are matched to and wired as, and which entities get tracks, with their ids, sources and sinks, belts and lanes. The
+ * suggested target and the version of the mod (stamped on the config and on every pickup and drop capture) are what the Sidecar offers or says of itself and a person decides or reads: the
+ * target a recording is judged against reaches the key through the config and the clock. `sidecar` is the same export as a
+ * player gets it, `movers` is the game's own facts about the build: neither is left to this to hash.
+ */
+export function buildFacts(described: Record<string, unknown>): Record<string, unknown> {
+    const { suggested_target: _target, ...config } = (described.config ?? {}) as Record<string, unknown>;
+    return withoutVersions({
+        config,
+        inserters: described.inserters, machines: described.machines, drills: described.drills,
+        left_out: described.left_out, left_out_drills: described.left_out_drills,
+    }) as Record<string, unknown>;
+}
+
+/** The value without any `sidecar_version`: the Sidecar stamps its version on the config and on each pickup and drop capture */
+function withoutVersions(value: unknown): unknown {
+    if (Array.isArray(value)) {
+        return value.map(withoutVersions);
+    }
+    if (value !== null && typeof value === "object") {
+        return Object.fromEntries(Object.entries(value).filter(([name]) => name !== "sidecar_version").map(([name, item]) => [name, withoutVersions(item)]));
+    }
+    return value;
+}
+
+/** The hash of what the transforming mods made of a build (see buildFacts) */
+export function descriptionHash(described: Record<string, unknown>): string {
+    return sha256(canonicalJson(buildFacts(described)));
+}
+
+function descriptionFile(store: string, id: string): string {
+    return path.join(store, "descriptions", `${id}.json.gz`);
+}
+
+/**
+ * The key of a recording when the mods that transform are keyed on what they make of the build and not on their files. The
+ * description is asked of the game (`describe`, a run that builds and describes and records nothing) once for the same
+ * game, save, options and files of the transforming mods; the answer is kept under the store, in `descriptions`, and read back
+ * the next time. So a change to the transforming mods costs one such run per build, and a build whose description came out
+ * the same keeps its key and its recording. "refresh" asks the game again.
+ */
+export async function describedRecordingKey(
+    options: Partial<HarnessOptions>, environment: CacheEnvironment, history: string[], store: string, refresh: boolean,
+    describe: () => Promise<Record<string, unknown>>,
+): Promise<RecordingCacheKey> {
+    const base = await baseParts(options, environment, history);
+    const transforms: Record<string, string> = {};
+    for (const [name, folder] of Object.entries(environment.transforms ?? {})) {
+        transforms[name] = await modFingerprint(folder);
+    }
+    const file = descriptionFile(store, sha256(canonicalJson({ ...base, transforms })));
+    let hash: string | undefined;
+    if (!refresh) {
+        hash = await fs.readFile(file).then(gunzip).then(bytes => JSON.parse(bytes.toString("utf-8")).hash as string, () => undefined);
+        if (hash !== undefined) {
+            await fs.utimes(file, new Date(), new Date()).catch(() => { });
+        }
+    }
+    if (hash === undefined) {
+        const described = await describe();
+        hash = descriptionHash(described);
+        await fs.mkdir(path.dirname(file), { recursive: true });
+        const temporary = `${file}.${process.pid}.tmp`;
+        await fs.writeFile(temporary, await gzip(JSON.stringify({ hash, transforms, facts: buildFacts(described) }), { level: 1 }));
+        await fs.rename(temporary, file);
+    }
+    const parts = { ...base, description: hash };
     return { key: sha256(canonicalJson(parts)), parts };
 }
 
@@ -212,9 +302,6 @@ interface EntryMeta {
     /** The files of script-output that are the recording, which are restored from it */
     script_output_recording: string[];
 }
-
-const gzip = promisify(zlib.gzip);
-const gunzip = promisify(zlib.gunzip);
 
 function entryDir(store: string, key: string): string {
     return path.join(store, key);
@@ -315,6 +402,13 @@ export async function storeRecording(store: string, key: RecordingCacheKey, opti
 /** Removes the entries (and leftovers of writes that did not finish) nobody has used for KEEP_DAYS days */
 async function pruneStore(store: string): Promise<void> {
     const limit = Date.now() - KEEP_DAYS * 24 * 3600 * 1000;
+    for (const entry of await fs.readdir(path.join(store, "descriptions"), { withFileTypes: true }).catch(() => [])) {
+        const file = path.join(store, "descriptions", entry.name);
+        const used = await fs.stat(file).catch(() => null);
+        if (used && used.mtimeMs < limit) {
+            await fs.rm(file, { force: true }).catch(() => { });
+        }
+    }
     for (const entry of await fs.readdir(store, { withFileTypes: true }).catch(() => [])) {
         if (!entry.isDirectory() || !/^\.?[0-9a-f]{12,64}/.test(entry.name)) {
             continue;

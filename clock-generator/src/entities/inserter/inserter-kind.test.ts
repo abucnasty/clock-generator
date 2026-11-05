@@ -15,7 +15,7 @@ const OUTPUT = 1;
 
 /** The automation science sample with the given fields set on its inserters, the one at index `only` or all */
 async function sampleWith(fields: Record<string, unknown>, only?: number): Promise<Config> {
-    const config: Config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+    const config: Config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
     config.inserters = config.inserters.map((inserter, index) => {
         if (only !== undefined && index !== only) {
             return inserter;
@@ -38,7 +38,7 @@ function insertersOf(config: Config): Inserter[] {
 
 describe("an inserter that names its prototype and quality", () => {
     it("runs the legendary stack inserter and the configured hand when the config names neither", async () => {
-        const [belt_to_machine, machine_to_belt] = insertersOf(await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE));
+        const [belt_to_machine, machine_to_belt] = insertersOf(await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240));
         for (const inserter of [belt_to_machine, machine_to_belt]) {
             expect(inserter.metadata.type).toBe("stack-inserter");
             expect(inserter.metadata.quality).toBe("legendary");

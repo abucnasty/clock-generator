@@ -14,17 +14,17 @@ const sampleOf = async (key: keyof typeof ConfigPaths) => await loadConfigFromFi
 
 describe("the result windows' decision of a target that counts an item destroyed", () => {
     it("the ore voider: 5 hands of 16 ore last 12 ticks, and the hands it gives back come out whole: whole hands, the windows not asked", async () => {
-        const { plan } = await planOfSample(ConfigPaths.REAL_OWNER_ORE_VOIDER_EXACT_SPEED);
+        const { plan } = await planOfSample(ConfigPaths.IRON_ORE_VOIDER_400_EXACT_SPEED);
         expect(plan.result_windows).toMatchObject({ kind: "whole-hands", hands: 5,
             terms: { base_hands: 5, cycle_ticks: 12, whole_hands_fit: true, windows_feasible: null } });
     });
 
     it("a target that counts an item made has no such decision", async () => {
-        expect((await planOfSample(ConfigPaths.LOGISTIC_SCIENCE)).plan.result_windows).toBeNull();
+        expect((await planOfSample(ConfigPaths.LOGISTIC_SCIENCE_240)).plan.result_windows).toBeNull();
     });
 
     it("the cycle plan made with the decision is the one made without it", async () => {
-        for (const key of ["REAL_OWNER_ORE_VOIDER_EXACT_SPEED"] as const) {
+        for (const key of ["IRON_ORE_VOIDER_400_EXACT_SPEED"] as const) {
             const config = await sampleOf(key);
             const registry = createEntityRegistryFromConfig(config);
             const target = TargetProductionRate.fromConfig(config.target_output);
@@ -38,13 +38,13 @@ describe("the result windows' decision of a target that counts an item destroyed
 
 describe("the plan a generation reads", () => {
     it("is made once per config object, for a target that counts an item destroyed, and its decision is the plan's", async () => {
-        const config = await sampleOf("REAL_OWNER_ORE_VOIDER_EXACT_SPEED");
+        const config = await sampleOf("IRON_ORE_VOIDER_400_EXACT_SPEED");
         const registry = createEntityRegistryFromConfig(config);
         const plan = buildPlanOfConfig(config, registry);
         expect(buildPlanOfConfig(config, registry)).toBe(plan);
-        expect(plan!.result_windows).toEqual((await planOfSample(ConfigPaths.REAL_OWNER_ORE_VOIDER_EXACT_SPEED)).plan.result_windows);
+        expect(plan!.result_windows).toEqual((await planOfSample(ConfigPaths.IRON_ORE_VOIDER_400_EXACT_SPEED)).plan.result_windows);
         // nothing reads a made target's plan yet
-        const made = await sampleOf("LOGISTIC_SCIENCE");
+        const made = await sampleOf("LOGISTIC_SCIENCE_240");
         expect(buildPlanOfConfig(made, createEntityRegistryFromConfig(made))).toBeNull();
     });
 });

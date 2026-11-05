@@ -64,7 +64,7 @@ for (const speed of BELT_SPEEDS) for (const {name, swapped, mirrored, label} of 
         const preferredItem = mirrored ? line8Item : line7Item;
         const config = await loadConfigFromFile(path.join(fixture, "config.json"));
         configAtSpeed(config, speed);
-        const original = fs.readFileSync(path.join(fixture, "scaffold.txt"), "utf8").trim();
+        const original = fs.readFileSync(path.join(fixture, "scaffold.scaffold"), "utf8").trim();
         const decoded = JSON.parse(zlib.inflateSync(Buffer.from(original.slice(1), "base64")).toString());
         if (swapped) {
             const changed = [];

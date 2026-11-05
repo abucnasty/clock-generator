@@ -21,7 +21,7 @@ const WHY_SKIPPED = !FACTORIO ? "FACTORIO_PATH is not set to a Factorio executab
  * back into it; the Sidecar gives it a near lane too since 50e1a3e7 (it did so only at an underground exit before),
  * lane 1 because it is not mirrored, and that is the lane the coal is on.
  */
-const SCAFFOLD = path.join(SAMPLE_BUILDS_DIR, "real", "thaeln", "cell09", "thaeln-cell09-scaffold.txt");
+const SCAFFOLD = path.join(SAMPLE_BUILDS_DIR, "science", "utility", "utility-480-lds-foundry-chain.scaffold");
 
 let scratch: string | null = null;
 afterAll(() => {
@@ -39,7 +39,7 @@ describe("the recorded build's belts", () => {
             factorio: FACTORIO!,
             save: SAVE!,
             blueprint: fs.readFileSync(SCAFFOLD, "utf-8").trim(),
-            out: path.join(scratch, "thaeln-cell09-belts.json"),
+            out: path.join(scratch, "utility-science-480-lds-foundry-chain-belts.json"),
             ticks: 60,
             warmup_ticks: 1800,
             seed: [],

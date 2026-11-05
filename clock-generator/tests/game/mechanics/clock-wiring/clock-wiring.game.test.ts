@@ -19,7 +19,7 @@ const WHY_SKIPPED = !FACTORIO ? "FACTORIO_PATH is not set to a Factorio executab
     : !fs.existsSync(SAVE) ? `the save FACTORIO_HARNESS_SAVE names does not exist: ${SAVE}`
     : null;
 
-const SCAFFOLD = path.join(SAMPLE_BUILDS_DIR, "science", "automation-science", "automation-science-scaffold.txt");
+const SCAFFOLD = path.join(SAMPLE_BUILDS_DIR, "science", "automation", "automation-240.scaffold");
 /** Several clock periods of automation science after the warmup and settling */
 const RECORDED_TICKS = 7_200;
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
@@ -51,7 +51,7 @@ describe("the harness wires the clock to the build", () => {
         context.skip(WHY_SKIPPED !== null, WHY_SKIPPED ?? undefined);
         scratch ??= fs.mkdtempSync(path.join(os.tmpdir(), "clock-wiring-"));
 
-        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
         const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
         const selected = alternatives[selected_index];
         const subtick = selected.result.subtick;

@@ -76,7 +76,7 @@ export async function pickupClockConfig(variant: ClockCase): Promise<Config> {
 
 export function pickupClockScaffold(variant: ClockCase): string {
     const fixture = variant.family === "electromagnetic" ? GameFixturePaths.DIFFERENT_ITEMS : GameFixturePaths.SAME_ITEM;
-    let blueprint = fs.readFileSync(path.join(fixture, `${variant.geometry}-scaffold.txt`), "utf8");
+    let blueprint = fs.readFileSync(path.join(fixture, `${variant.geometry}.scaffold`), "utf8");
     if (variant.family === "electromagnetic") {
         if (variant.backed) blueprint = makeInputBeltBackedUp(blueprint);
         return ordinaryAtSpeed(blueprint, variant.speed, false);

@@ -63,7 +63,7 @@ const dropped = (status: Summary['status'], direct: Result['direct'], coverage: 
 const drillIntoChest = () => ({ ...form({ machines: 1, chests: 1 }, []), drills: { configs: [drillRow(1, { target: chest(1) })] } });
 
 const FIXTURES: Record<string, () => ConfigFormData> = {
-    // as logistic-science.json
+    // as the three-inserter logistic science example was before 0.27.1
     'belt in and out': () => form({ machines: 1, belts: 1 }, [
         inserter(1, belt(1), machine(1)), inserter(2, belt(1), machine(1)), inserter(3, machine(1), belt(1)),
     ]),
@@ -77,7 +77,7 @@ const FIXTURES: Record<string, () => ConfigFormData> = {
     'a drill feeding a machine with a belt output': () => form({ machines: 1, belts: 1, drills: [machine(1)] }, [inserter(1, machine(1), belt(1))]),
     'a recycler placing its results into a chest': () => recycler(chest(2)),
     'an unused belt': () => form({ machines: 1, belts: 2 }, [inserter(1, belt(1), machine(1))]),
-    // two biochambers that feed each other, fed by a belt and giving to a chest, as iron-bacteria-cultivation.json
+    // two biochambers that feed each other, fed by a belt and giving to a chest, as iron-bacteria-380-cultivation.json
     'a machine loop': () => form({ machines: 2, belts: 1, chests: 1 }, [
         inserter(1, machine(1), machine(2)), inserter(2, machine(2), machine(1)), inserter(3, belt(1), machine(1)),
         inserter(4, belt(1), machine(2)), inserter(5, machine(1), chest(1)), inserter(6, machine(2), chest(1)),

@@ -17,9 +17,9 @@ scaffolds. There is no clock in these blueprints.
 
 | Scaffold | Pickup | Matching config |
 | --- | --- | --- |
-| `straight-belt-scaffold.txt` | One exposed tile; control case | `straight-belt.json` |
-| `underground-entrance-scaffold.txt` | Half an exposed tile | `config.json` |
-| `underground-exit-scaffold.txt` | Half an exposed tile | `config.json` |
+| `straight-belt.scaffold` | One exposed tile; control case | `straight-belt.json` |
+| `underground-entrance.scaffold` | Half an exposed tile | `config.json` |
+| `underground-exit.scaffold` | Half an exposed tile | `config.json` |
 
 Input Inserter 2 stands beside the belt, with lane 1 nearest to it. Both configs explicitly specify the pickup
 length and nearest lane. Output Inserter 1 takes gears from Machine 1 into Chest 1.
@@ -87,14 +87,14 @@ they are not probe samples or evidence of pickup timing. The ingredient drain is
 
 Straight belt:
 
-![Straight-belt scaffold](straight-belt-scaffold.jpg)
+![Straight-belt scaffold](straight-belt.jpg)
 
 Underground entrance:
 
-![Underground-entrance scaffold](underground-entrance-scaffold.jpg)
+![Underground-entrance scaffold](underground-entrance.jpg)
 
 Underground exit:
 
-![Underground-exit scaffold](underground-exit-scaffold.jpg)
+![Underground-exit scaffold](underground-exit.jpg)
 
 See the [screenshot guide](../../../../README.md#scaffold-screenshots) for capture settings and regeneration.

@@ -26,7 +26,7 @@ describe("chestDrillReasons", () => {
 
 describe("alwaysOnReasons", () => {
     it("gives the strategy's reason first, then the drill's, the build's rule, a loop, and that nothing swung it", async () => {
-        const registry = createEntityRegistryFromConfig(await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_CULTIVATION));
+        const registry = createEntityRegistryFromConfig(await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_380_CULTIVATION));
         const everything = new Set(registry.getAll().map(it => it.entity_id.id));
         const reasons = alwaysOnReasons(registry, id => !["inserter:1", "inserter:7", "inserter:9", "inserter:10"].includes(id), {
             enable_rule: new Set(["inserter:9"]),
@@ -47,7 +47,7 @@ describe("alwaysOnReasons", () => {
 describe("the reasons a clock exports", () => {
     it("say that the build's enable rule keeps an inserter on", async () => {
         // a cryogenic plant fills a rocket silo that six furnaces empty: its input from an infinity chest (inserter 1) and its output into the silo (4) are set to always enabled
-        const loaded = await loadConfigFromFile(ConfigPaths.REAL_OWNER_LITHIUM_SILO);
+        const loaded = await loadConfigFromFile(ConfigPaths.LITHIUM_PLATE_80_SILO_CHEST);
         const sample = { ...loaded, inserters: loaded.inserters.map((it, index) => [0, 3].includes(index)
             ? { ...it, overrides: { ...it.overrides, enable_control: { mode: "ALWAYS" as const } } } : it) };
         const result = generateClockForConfig(sample, { logger: quiet });
@@ -56,13 +56,13 @@ describe("the reasons a clock exports", () => {
     });
 
     it("say that an inserter of a loop of machines is on to keep the loop running", async () => {
-        const sample = await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_CULTIVATION);
+        const sample = await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_380_CULTIVATION);
         const result = generateClockForConfig(sample, { logger: quiet });
         expect(result.always_on_reasons).toEqual({ "inserter:7": { kind: "loop" }, "inserter:8": { kind: "loop" } });
     });
 
     it("say that an inserter the run never swung has no window to read", async () => {
-        const sample = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME);
+        const sample = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_160);
         const result = generateClockForConfig({ ...sample, overrides: { ...sample.overrides, terminal_swing_count: 2 } }, { logger: quiet });
         expect(result.always_on_reasons).toEqual({ "inserter:2": { kind: "no-swing" } });
         // a clock whose windows come from a run that moved everything leaves nothing on

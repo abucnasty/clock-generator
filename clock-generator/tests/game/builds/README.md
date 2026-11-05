@@ -11,16 +11,16 @@ uses it. Setup, selective execution and artifact retention are in the [game veri
   underground entrance and exit, throughput and recovery.
 - `blocked-output-clock.game.test.ts`: a chest-fed machine whose output belt is blocked, at belt stack sizes 1–4.
 - `container-clock.game.test.ts`: a car, a tank or a cargo wagon between its supplies and a machine, with cuts that last until the container is empty.
-- `lithium-silo-clock.game.test.ts`: the lithium plate build, a rocket silo taken as a chest between two cryogenic plants and six furnaces.
-- `car-clock.game.test.ts`: the iron plate build, a car taken as a chest between a big mining drill and two furnaces.
-- `steel-wagon-clock.game.test.ts`: the steel build, a cargo wagon taken as a chest that a big mining drill and two furnaces fill and empty, the steel leaving through it.
-- `own-clock.game.test.ts`: the inserter build on three copies, once with the hand-made clock and once with the generated clock.
+- `lithium-plate-80-silo-chest-clock.game.test.ts`: the lithium plate build, a rocket silo taken as a chest between two cryogenic plants and six furnaces.
+- `iron-plate-80-car-chest-clock.game.test.ts`: the iron plate build, a car taken as a chest between a big mining drill and two furnaces.
+- `steel-plate-26-wagon-chest-clock.game.test.ts`: the steel build, a cargo wagon taken as a chest that a big mining drill and two furnaces fill and empty, the steel leaving through it.
+- `inserter-crafting-240-shared-signal-clock.game.test.ts`: the inserter build on three copies, once with the hand-made clock and once with the generated clock.
 - `grenade-clock.game.test.ts`: the grenade build on one copy and on its full build of seven, each with the hand-made clock and with the generated clock.
-- `stupidfathobbit-cell02-clock.game.test.ts`: cell 02 (processing units from two circuit machines and two advanced circuit machines, an export belt) on its throttled scaffold with the generated clock, as it is and with the belts backed up.
-- `thaeln-cell09-clock.game.test.ts`: Thaeln's cell 09 (a chain of machines with a coal inserter that moves 15/8 hands a cycle) with the generated clock.
-- `productivity-chain-clock.game.test.ts`: the productivity module chain (nine machines and three chests, 80 a second over 6 copies) with the generated clock.
-- `recycler-original-clock.game.test.ts`: the whole 211-entity blueprint of #100, both cells, under the clock the generator selects for the sample's automatic config (240/s over five copies): 3,600 periods at 96 science/s, nine losses with recovery, and two cold starts, with the science of each plant and its buffer closed at every period.
-- `ore-voider-clock.game.test.ts`: the ore voider's recycler cell, at exact speed and overbeaconed, 400 iron ore a second destroyed, an hour on the generated clock: what comes back is random, so the hour's mean is judged against the binomial's range, with the car never full, the target back after the ore is cut and after a backlog in the car, and the recycler's input watched while a stack of its result waits.
+- `processing-unit-80-circuit-export-clock.game.test.ts`: the circuit export build (processing units from two circuit machines and two advanced circuit machines, an export belt) on its throttled scaffold with the generated clock, as it is and with the belts backed up.
+- `utility-science-480-lds-foundry-chain-clock.game.test.ts`: the utility science 480 build (a chain of machines with a coal inserter that moves 15/8 hands a cycle) with the generated clock.
+- `productivity-module-80-chest-chain-clock.game.test.ts`: the productivity module chain (nine machines and three chests, 80 a second over 6 copies) with the generated clock.
+- `electromagnetic-science-240-recycler-belt-fed-clock.game.test.ts`: the whole 211-entity blueprint of #100, both cells, under the clock the generator selects for the sample's automatic config (240/s over five copies): 3,600 periods at 96 science/s, nine losses with recovery, and two cold starts, with the science of each plant and its buffer closed at every period.
+- `iron-ore-voider-400-clock.game.test.ts`: the ore voider's recycler cell, at exact speed and overbeaconed, 400 iron ore a second destroyed, an hour on the generated clock: what comes back is random, so the hour's mean is judged against the binomial's range, with the car never full, the target back after the ore is cut and after a backlog in the car, and the recycler's input watched while a stack of its result waits.
 
 From `clock-generator/`, select a file or case:
 
@@ -403,7 +403,7 @@ and after each restoration; it does not feed observations into the simulator.
 
 `front-pickup-clock.game.test.ts` enumerates 48 controls ([front-clock-fixtures.ts](front-clock-fixtures.ts)):
 
-- **Front entrance, 32:** the [compact scaffold](../mechanics/belt-pickup/fixtures/front-underground-entrance/compact-normal-scaffold.txt)
+- **Front entrance, 32:** the [compact scaffold](../mechanics/belt-pickup/fixtures/front-underground-entrance/compact-normal.scaffold)
   at four speeds, both mirroring states, moving/backed-up supply, electronic circuits from iron plate and copper
   cable and gears from iron on both lanes, at 6/s. Its assembler runs at crafting speed 50 (two legendary speed
   modules and four legendary beacons), productivity 0. Like the over-the-hood builds it keeps producing through the
@@ -502,58 +502,58 @@ BELT_SPEED_CAPTURE_DIR=.scratch/container-new BELT_CLOCK_CALIBRATE=1 \
 
 ## A rocket silo between two machines and six
 
-`lithium-silo-clock.game.test.ts` enumerates 4 controls ([lithium-silo-clock-fixtures.ts](lithium-silo-clock-fixtures.ts))
-on the lithium plate build (`REAL_OWNER_LITHIUM_SILO`, its README in the sample's folder): two cryogenic plants put
+`lithium-plate-80-silo-chest-clock.game.test.ts` enumerates 4 controls ([lithium-plate-80-silo-chest-clock-fixtures.ts](lithium-plate-80-silo-chest-clock-fixtures.ts))
+on the lithium plate build (`LITHIUM_PLATE_80_SILO_CHEST`, its README in the sample's folder): two cryogenic plants put
 lithium into a rocket silo, six furnaces take it out, 80 plates a second. The selected clock (3 output swings, 1080
 ticks) is recorded as built and with the two inserters that fill the silo built after the six that empty it; the clock
 with 1 output swing is a second check, and the clock with 7 output swings (7560 ticks) is the known limit below. The
-probe ([lithium-silo-clock-probe.lua](lithium-silo-clock-probe.lua)) counts the drops of the six output inserters per
+probe ([lithium-plate-80-silo-chest-clock-probe.lua](lithium-plate-80-silo-chest-clock-probe.lua)) counts the drops of the six output inserters per
 period. The protocol is the standard one: the holmium plates cut for 2 periods, the output blocked for 4, the holmium plates
 cut again. The silo holds at most 250 lithium, so each cut empties it. The warm-up of 3600 ticks without a clock fills the
 silo before the clock starts, though the config exports it empty.
 
-[lithium-silo-clock-controls.json](lithium-silo-clock-controls.json) holds the 4 native summaries, recorded on Factorio
+[lithium-plate-80-silo-chest-clock-controls.json](lithium-plate-80-silo-chest-clock-controls.json) holds the 4 native summaries, recorded on Factorio
 2.1.21 at commit `759e9a50`. **The selected clock, in both build orders, and the clock with 1 output swing meet exact
 baseline output (63 periods), drop to 0 in every disturbance and are exact in every judged period after each; the two
 build orders are equal in every period.** The clock with 7 output swings is stable in the simulator and short in the game,
 9,440 to 9,600 of 10,080 in every period: the output inserters of two furnaces drop onto underground entrances whose exits
 side-load onto the shared output belt, which the config describes as one belt with room for every drop
-([scope](../../../docs/game-data-and-scope.md)). `lithium-silo-clock.generation.test.ts` pins each clock and checks it
+([scope](../../../docs/game-data-and-scope.md)). `lithium-plate-80-silo-chest-clock.generation.test.ts` pins each clock and checks it
 against its native summary.
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/lithium-silo-new BELT_CLOCK_CALIBRATE=1 \
-  npm run test:game -- tests/game/builds/lithium-silo-clock.game.test.ts -t '^lithium silo clock: lithium-silo-swings-3$'
+  npm run test:game -- tests/game/builds/lithium-plate-80-silo-chest-clock.game.test.ts -t '^lithium silo clock: lithium-silo-swings-3$'
 ```
 
 ## A car between a mining drill and two furnaces
 
-`car-clock.game.test.ts` enumerates 3 controls ([car-clock-fixtures.ts](car-clock-fixtures.ts)) on the iron plate
-build (`REAL_OWNER_CAR`, its README in the sample's folder): a big mining drill drops iron ore into a car, two furnaces take
+`iron-plate-80-car-chest-clock.game.test.ts` enumerates 3 controls ([iron-plate-80-car-chest-clock-fixtures.ts](iron-plate-80-car-chest-clock-fixtures.ts)) on the iron plate
+build (`IRON_PLATE_80_CAR_CHEST`, its README in the sample's folder): a big mining drill drops iron ore into a car, two furnaces take
 it out, 80 plates a second. The harness puts the ore under the drill. The selected clock (3 output swings, 72 ticks) is
 recorded as built and with the two inserters that take from the car built after the output inserters; the clock with 1
 output swing is a second check. Each clock enables the drill one tick a period, the tick before the two inserters that take
-from the car; the harness wires it with its resource reading off. The probe ([car-clock-probe.lua](car-clock-probe.lua)) counts the drops of the two output
+from the car; the harness wires it with its resource reading off. The probe ([iron-plate-80-car-chest-clock-probe.lua](iron-plate-80-car-chest-clock-probe.lua)) counts the drops of the two output
 inserters per period. The car holds 4,000 ore, so the cuts are those of the container family: the drill is stopped
 (disabled by script) until the car has run dry (71 periods), the output blocked for 4, the drill stopped again, each
 followed for 40 periods, the first 6 after a release not judged. A drill is no supply that stops in the generator's
 checks; here it is stopped as the supply cut. Do not compare these recordings period for period with the 2-period
 families.
 
-[car-clock-controls.json](car-clock-controls.json) holds the 3 native summaries, recorded on Factorio 2.1.21 at commit
+[iron-plate-80-car-chest-clock-controls.json](iron-plate-80-car-chest-clock-controls.json) holds the 3 native summaries, recorded on Factorio 2.1.21 at commit
 `1571a1be`. **All 3 meet exact baseline output (63 periods), drop in every disturbance (to 0 with the drill stopped) and are
 exact in all 33 judged periods after each; the two build orders are equal in every period.**
-`car-clock.generation.test.ts` pins each clock and checks it against its native summary.
+`iron-plate-80-car-chest-clock.generation.test.ts` pins each clock and checks it against its native summary.
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/car-new BELT_CLOCK_CALIBRATE=1 \
-  npm run test:game -- tests/game/builds/car-clock.game.test.ts -t '^car clock: car-swings-3$'
+  npm run test:game -- tests/game/builds/iron-plate-80-car-chest-clock.game.test.ts -t '^car clock: car-swings-3$'
 ```
 
 ## A cargo wagon as the hub of a steel build
 
-`steel-wagon-clock.game.test.ts` enumerates 3 controls ([steel-wagon-clock-fixtures.ts](steel-wagon-clock-fixtures.ts)) on
-the steel build (`STEEL_CARGO_WAGON`, its README in the sample's folder): one cargo wagon is a hub that a big
+`steel-plate-26-wagon-chest-clock.game.test.ts` enumerates 3 controls ([steel-plate-26-wagon-chest-clock-fixtures.ts](steel-plate-26-wagon-chest-clock-fixtures.ts)) on
+the steel build (`STEEL_PLATE_26_WAGON_CHEST`, its README in the sample's folder): one cargo wagon is a hub that a big
 mining drill fills with iron ore, a furnace takes the ore from and puts plates back into, a second takes the plates from
 and puts steel back into, and one inserter empties of steel onto the output belt, 26 steel a second. The harness puts the
 ore under the drill and builds the wagon after its rails. The selected clock (planned with belt slack, a subtick clock of
@@ -561,7 +561,7 @@ ore under the drill and builds the wagon after its rails. The selected clock (pl
 other entity; the clock the config makes with iron ore out of its period (`ignored_lcm_ingredients`) is a second check,
 recorded as its subtick clock (3,840 ticks for 13 periods): the capture exports an alternative's subtick clock where it has one, so the clock rounded to 295
 ticks is not recorded. Each clock enables the drill a window of two positions a period, 1.08 ticks on average, before
-the inserter that takes the ore; the harness wires it with its resource reading off. The probe ([steel-wagon-clock-probe.lua](steel-wagon-clock-probe.lua)) counts the drops of the
+the inserter that takes the ore; the harness wires it with its resource reading off. The probe ([steel-plate-26-wagon-chest-clock-probe.lua](steel-plate-26-wagon-chest-clock-probe.lua)) counts the drops of the
 inserter from the wagon to the belt per period, and also keeps the wagon's contents at each period's start and each
 furnace's ticks with a full output. The wagon holds 1,000 ore, 500 plates and 500 steel, so the cuts are those of the
 container family: the drill is stopped (disabled by script) until the wagon has run dry of steel (9 and 10 periods), the
@@ -569,27 +569,27 @@ output blocked for 4, the drill stopped again, each followed for 40 periods, the
 drill is no supply that stops in the generator's checks; here it is stopped as the supply cut. Do not compare these
 recordings period for period with the 2-period families.
 
-[steel-wagon-clock-controls.json](steel-wagon-clock-controls.json) holds the 3 native summaries, recorded on Factorio
+[steel-plate-26-wagon-chest-clock-controls.json](steel-plate-26-wagon-chest-clock-controls.json) holds the 3 native summaries, recorded on Factorio
 2.1.21 at commit `1571a1be`. **All 3 meet exact baseline output (63 periods), drop in every disturbance (to 0 with the
 drill stopped) and are exact in all 33 judged periods after each; the two build orders are equal in every period.** A
 full plate or steel filter stops a furnace a few ticks a period in some states, with no steel lost (the sample's README).
-`steel-wagon-clock.generation.test.ts` pins each clock and checks it against its native summary.
+`steel-plate-26-wagon-chest-clock.generation.test.ts` pins each clock and checks it against its native summary.
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/steel-wagon-new BELT_CLOCK_CALIBRATE=1 \
-  npm run test:game -- tests/game/builds/steel-wagon-clock.game.test.ts -t '^steel wagon clock: steel-wagon-belt-slack$'
+  npm run test:game -- tests/game/builds/steel-plate-26-wagon-chest-clock.game.test.ts -t '^steel wagon clock: steel-wagon-belt-slack$'
 ```
 
 ## A clock the build came with: the inserter build on three copies
 
-`own-clock.game.test.ts` records the inserter build (`LOGISTIC_SCIENCE_INSERTER_CRAFTING`, 240 a second over three
-copies of 80, [own-clock-three-copies-scaffold.txt](own-clock-three-copies-scaffold.txt)) twice, with the protocol of the
+`inserter-crafting-240-shared-signal-clock.game.test.ts` records the inserter build (`INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK`, 240 a second over three
+copies of 80, [inserter-crafting-240-shared-signal-clock-three-copies.scaffold](inserter-crafting-240-shared-signal-clock-three-copies.scaffold)) twice, with the protocol of the
 families above: 63 untouched periods, the ore cut at periods 66-68, the output blocked at 84-88, the circuits cut at
 104-106, the first 6 periods after a release not judged. The three copies stand in a row; the ore lines run on past the last
 copy into loaders and void chests (drained and moving); the copies are not alike (the first two have a gear assembler at
 44.92, the first a fourth furnace at 91.875), and the config is the third.
 
-- `own-clock-three-copies`: the hand-made clock, kept. It is one clock for the three copies: a counter of the clock signal
+- `hand-made-clock-three-copies`: the hand-made clock, kept. It is one clock for the three copies: a counter of the clock signal
   that counts 0 to 215 (a period of 216 ticks), an iron plate window on ticks 1-33 and 109-138 for the 12 ore and 12 plate
   inserters, an iron gear wheel window on ticks 1-65 and 109-173 for the 3 gear inserters; the circuit and output inserters
   are not wired. The test names the clock to the harness (`built_clock`: the counter's entity number in the blueprint, its
@@ -603,7 +603,7 @@ copy into loaders and void chests (drained and moving); the copies are not alike
   share, do not join them) and matches each to the config by itself. The inserters the hand-made clock held run free while
   the build warms up, as an unclocked build's do, so the furnaces have their recipes when the build is matched.
 
-[own-clock-controls.json](own-clock-controls.json) holds the 2 native summaries, recorded on Factorio 2.1.21 at commit
+[inserter-crafting-240-shared-signal-clock-controls.json](inserter-crafting-240-shared-signal-clock-controls.json) holds the 2 native summaries, recorded on Factorio 2.1.21 at commit
 `e1c0aadb`. **The hand-made clock gives 864 (288 a copy) in each of 63 periods, as a separate probe measured it, and the
 same recoveries: the ore cut 528, 0, 96 then 864 from the first judged period; the output block 80, 0, 0, 232,
 808 then 864; the circuit cut 184, 0, 356 then 864. The generated clock gives 288 in each of 63 periods of 72 ticks and is
@@ -612,20 +612,20 @@ period (284).** The cuts are in periods of each clock, so they last 432 ticks fo
 generated one: do not compare the two recoveries tick for tick. Both builds are the three copies on drained lines,
 not the one-copy scaffold of `scaffold-recordings.game.test.ts`. A drop in the first tick of a recording is not seen by it, so
 the compact count of its first period is checked less that drop (the probe counts it).
-`src/crafting/own-clock.generation.test.ts` pins the generated clock and checks it against its native summary. The hand-made
+`src/crafting/inserter-crafting-240-shared-signal-clock.generation.test.ts` pins the generated clock and checks it against its native summary. The hand-made
 clock is tied to its recording by the hash of the clock in the blueprint (`recorded.clock_basis` `built`), and the generated
 one by its pin, as in the other families.
 
 ```bash
-BELT_SPEED_CAPTURE_DIR=.scratch/own-clock-new BELT_CLOCK_CALIBRATE=1 \
-  npm run test:game -- tests/game/builds/own-clock.game.test.ts
+BELT_SPEED_CAPTURE_DIR=.scratch/inserter-crafting-240-shared-signal-clock-new BELT_CLOCK_CALIBRATE=1 \
+  npm run test:game -- tests/game/builds/inserter-crafting-240-shared-signal-clock.game.test.ts
 ```
 
 ## The grenade build
 
-`grenade-clock.game.test.ts` records the grenade build (`REAL_OWNER_GRENADE`, 240 a second over 7 copies, the sample's
-README) four times: on one copy (`grenade-hand-clock-scaffold.txt`: the scaffold with the hand-made clock) and on the full build
-of seven (`grenade-full-build.txt`), each with the hand-made clock, kept (`built_clock`), and with the generator's selected clock
+`grenade-clock.game.test.ts` records the grenade build (`GRENADE_240_FILLS_BELT_EXACTLY`, 240 a second over 7 copies, the sample's
+README) four times: on one copy (`grenade-240-fills-belt-exactly-hand-clock.blueprint`: the scaffold with the hand-made clock) and on the full build
+of seven (`grenade-240-fills-belt-exactly-full-build.blueprint`), each with the hand-made clock, kept (`built_clock`), and with the generator's selected clock
 (`planned-belt-slack`, 112 ticks), wired to the inserters and drills of every copy (`copies`) with the hand-made clock's deciders taken
 out. The protocol is the family's with three losses the build has: the foundries stopped for 2 periods, the output loader taken
 away for 30 periods and rebuilt (a copy's belt takes 6 periods of grenades before it is full, so the family's 4 would change
@@ -641,9 +641,9 @@ BELT_SPEED_CAPTURE_DIR=.scratch/grenade-new BELT_CLOCK_CALIBRATE=1 \
   npm run test:game -- tests/game/builds/grenade-clock.game.test.ts
 ```
 
-## Thaeln's cell 09
+## the utility science 480 build
 
-`thaeln-cell09-clock.game.test.ts` records the generator's selected clock for `REAL_THAELN_CELL09` (480 utility science packs a second
+`utility-science-480-lds-foundry-chain-clock.game.test.ts` records the generator's selected clock for `UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN` (480 utility science packs a second
 over 3.5 copies; the scaffold is one copy, 137.14 a second, 384 packs in a period of 168 ticks) on the sample's scaffold. The clock is
 `planned-belt-slack`: the windows of `src/crafting/candidates/grouped-hands.ts` (hands rounded up where they are fractional, the
 order of the chain of machines), made without a search. The harness wires it to the inserters of the cell. The protocol is the
@@ -651,8 +651,8 @@ family's with the losses the cell has: 63 whole periods, then the coal cut for 6
 the two output loaders taken away for 4 periods and rebuilt, and the processing units cut for 2. The probe counts the drops of the
 eight output inserters per period.
 
-[thaeln-cell09-clock-controls.json](thaeln-cell09-clock-controls.json) holds the native summary and the pin of the clock
-(`src/crafting/thaeln-cell09.generation.test.ts` checks the pin): 384 in all 63 baseline periods, and 384 again after each loss.
+[utility-science-480-lds-foundry-chain-clock-controls.json](utility-science-480-lds-foundry-chain-clock-controls.json) holds the native summary and the pin of the clock
+(`src/crafting/utility-science-480-lds-foundry-chain.generation.test.ts` checks the pin): 384 in all 63 baseline periods, and 384 again after each loss.
 
 Thaeln's own clock for the build, given on 2026-10-23, was recorded on the same scaffold while the rule was written (it is a
 blueprint of five combinators with no wires to inserters, so the harness wired it): a counter of 0 to 335 (336 ticks, two cycles) and four
@@ -664,13 +664,13 @@ and the units (184.8 wake-ups a minute by the series' method, 211.8 in the simul
 a control of this family.
 
 ```bash
-BELT_SPEED_CAPTURE_DIR=.scratch/thaeln-cell09-new BELT_CLOCK_CALIBRATE=1 \
-  npm run test:game -- tests/game/builds/thaeln-cell09-clock.game.test.ts
+BELT_SPEED_CAPTURE_DIR=.scratch/utility-science-480-lds-foundry-chain-new BELT_CLOCK_CALIBRATE=1 \
+  npm run test:game -- tests/game/builds/utility-science-480-lds-foundry-chain-clock.game.test.ts
 ```
 
 ## The productivity module chain
 
-`productivity-chain-clock.game.test.ts` records the generator's selected clock for `REAL_OWNER_PRODUCTIVITY_CHAIN` (80 productivity
+`productivity-module-80-chest-chain-clock.game.test.ts` records the generator's selected clock for `PRODUCTIVITY_MODULE_80_CHEST_CHAIN` (80 productivity
 modules a second over 6 copies; the scaffold is one copy, 13.33 a second, 16 modules in a period of 72 ticks) on the sample's scaffold.
 The clock is `planned-belt-slack`: the windows of `src/crafting/candidates/grouped-hands.ts` (hands rounded up where they are fractional,
 the order of the chain of machines), made without a search. The harness wires it to the 14 inserters of the build. The protocol is the
@@ -680,14 +680,14 @@ about 33 periods in), the output loader taken away for 24 (the output belt takes
 rebuilt, and the two foundries casting iron stopped for 26 (the output falls short after about 13). The probe counts the drops of
 the output inserter per period.
 
-[productivity-chain-clock-controls.json](productivity-chain-clock-controls.json) holds the native summary and the pin of the clock
-(`src/crafting/productivity-chain.generation.test.ts` checks the pin): 16 in all 63 baseline periods, and 16 again after each loss.
+[productivity-module-80-chest-chain-clock-controls.json](productivity-module-80-chest-chain-clock-controls.json) holds the native summary and the pin of the clock
+(`src/crafting/productivity-module-80-chest-chain-clock.generation.test.ts` checks the pin): 16 in all 63 baseline periods, and 16 again after each loss.
 Recorded for 36,000 ticks after the warm-up and settle with `scripts/record-clock.js`, the same clock made 16 in all 499 periods,
 with 602.8 wake-ups a minute against the simulator's 575.6, and the simulator laid against the game entity by entity had no issues;
 the clock made for "Backed-up belts" did the same. The clock before the rule ranked its placements (staged, the first that held)
 had 858.5 in the game and 843.8 in the simulator.
 
 ```bash
-BELT_SPEED_CAPTURE_DIR=.scratch/productivity-chain-new BELT_CLOCK_CALIBRATE=1 \
-  npm run test:game -- tests/game/builds/productivity-chain-clock.game.test.ts
+BELT_SPEED_CAPTURE_DIR=.scratch/productivity-module-80-chest-chain-clock-new BELT_CLOCK_CALIBRATE=1 \
+  npm run test:game -- tests/game/builds/productivity-module-80-chest-chain-clock.game.test.ts
 ```

@@ -44,7 +44,7 @@ describe.sequential("backed-up pickup geometry", () => {
                     const input = config.inserters.find(inserter => inserter.source.type === "belt")!;
                     if (input.source.type !== "belt") throw new Error("expected belt input");
                     const pickup_length = input.source.pickup_length;
-                    const scaffold = fs.readFileSync(path.join(SAMPLE, `${name}-scaffold.txt`), "utf8");
+                    const scaffold = fs.readFileSync(path.join(SAMPLE, `${name}.scaffold`), "utf8");
                     const result = await recordInFactorio({
                         factorio: factorio!, save: save!, config, blueprint: makeInputBeltBackedUp(scaffold),
                         out: path.join(scratch, "recording.json"), work_dir: path.join(scratch, "game"),

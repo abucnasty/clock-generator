@@ -275,7 +275,7 @@ function checkRecording(file, expected_text, out) {
     }
     if (recordings_dir && recording_check) {
         const expected_text = fs.readFileSync(recording_check, "utf8");
-        for (const name of ["ADVANCED_CIRCUIT-unclocked.json", "ADVANCED_CIRCUIT-clocked.json"]) {
+        for (const name of ["ADVANCED_CIRCUIT_240-unclocked.json", "ADVANCED_CIRCUIT_240-clocked.json"]) {
             failures += checkRecording(path.join(recordings_dir, name), expected_text, out);
         }
     }

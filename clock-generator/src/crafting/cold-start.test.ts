@@ -17,7 +17,7 @@ describe("a clock-only run starts as the staged scaffold does", () => {
     let first_period: (start?: Parameters<typeof simulateClockOnly>[5]) => StockRecording;
 
     beforeAll(async () => {
-        config = await loadConfigFromFile(ConfigPaths.LOW_DENSITY_STRUCTURE);
+        config = await loadConfigFromFile(ConfigPaths.LDS_240);
         result = generateClockForConfig(config, { logger: quiet });
         first_period = start => simulateClockOnly(config, result.clock_windows, result.simulation_duration.ticks, 1, quiet, { warmup_periods: 0, ...start });
     });
@@ -46,7 +46,7 @@ describe("a clock-only run starts as the staged scaffold does", () => {
 describe("a recipe that makes its own ingredient", () => {
     // no windows: every inserter is always enabled, which is all the seed needs
     const eggs = async (overrides: Partial<NonNullable<Config["overrides"]>> = {}): Promise<number> => {
-        const sample = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
+        const sample = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250);
         const config = { ...sample, overrides: { ...sample.overrides, ...overrides } };
         const stock = simulateClockOnly(config, {}, 480, 1, quiet, { warmup_periods: 0 });
         return Math.max(...stock.machines.map(machine => machine.inputs["pentapod-egg"]?.[0] ?? 0));
@@ -75,11 +75,11 @@ describe("the seed a loop machine takes", () => {
     // Factorio 2.1.24, staged starts of the two samples' scaffolds asking the harness for 200: each egg machine took 84
     // (stack 20, insertion limit 7), each bacteria machine 114 (stack 50, insertion limit 28)
     it("is what the game takes: the larger of the stack and the insertion limit, + 64", async () => {
-        expect(await seeded(ConfigPaths.AGRICULTURAL_SCIENCE, DEFAULT_LOOP_SEED_ITEMS)).toEqual([84, 84]);
-        expect(await seeded(ConfigPaths.IRON_BACTERIA_CULTIVATION, DEFAULT_LOOP_SEED_ITEMS)).toEqual([114, 114]);
+        expect(await seeded(ConfigPaths.AGRICULTURAL_SCIENCE_250, DEFAULT_LOOP_SEED_ITEMS)).toEqual([84, 84]);
+        expect(await seeded(ConfigPaths.IRON_BACTERIA_380_CULTIVATION, DEFAULT_LOOP_SEED_ITEMS)).toEqual([114, 114]);
     });
 
     it("is what was asked where the machine takes it all", async () => {
-        expect(await seeded(ConfigPaths.AGRICULTURAL_SCIENCE, 50)).toEqual([50, 50]);
+        expect(await seeded(ConfigPaths.AGRICULTURAL_SCIENCE_250, 50)).toEqual([50, 50]);
     });
 });

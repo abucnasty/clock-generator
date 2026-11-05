@@ -40,7 +40,7 @@ async function main() {
         input.filters = [values.item];
         config.overrides = { ...config.overrides, backed_up_belts: true };
     }
-    const original = fs.readFileSync(path.join(fixture, `${values.geometry}-scaffold.txt`), "utf8");
+    const original = fs.readFileSync(path.join(fixture, `${values.geometry}.scaffold`), "utf8");
     const blueprint = backedUp ? makeInputBeltBackedUp(original) : original;
     const lua = composeProbeSource(path.join(fixture, backedUp ? "backed-up-probe.lua" : "probe.lua"), backedUp ? { item: values.item } : {});
     fs.mkdirSync(run, { recursive: true });

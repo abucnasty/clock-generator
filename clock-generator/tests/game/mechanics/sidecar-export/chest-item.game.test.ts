@@ -16,7 +16,7 @@ require = function(name) return assert(capture_modules[name], name) end
 }).join("");
 
 // any small build will do: the cases are built on their own ground
-const SCAFFOLD = path.join(path.dirname(ConfigPaths.REAL_OWNER_LITHIUM_SILO), "lithium-silo-scaffold.txt");
+const SCAFFOLD = path.join(path.dirname(ConfigPaths.LITHIUM_PLATE_80_SILO_CHEST), "lithium-plate-80-silo-chest.scaffold");
 
 /** Every case the lua chunk builds, with what the export gives for its chests, written as `case: result` lines */
 const EXPECTED_CASES: Record<string, string> = {

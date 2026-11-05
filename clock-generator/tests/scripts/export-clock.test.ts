@@ -10,9 +10,9 @@ import { ConfigPaths } from '../../src/config/config-paths';
 
 const root = path.resolve(__dirname, '../..');
 const script = (name: string) => path.join(root, 'scripts', name);
-const config = JSON.parse(fs.readFileSync(ConfigPaths.AUTOMATION_SCIENCE, 'utf-8'));
+const config = JSON.parse(fs.readFileSync(ConfigPaths.AUTOMATION_SCIENCE_240, 'utf-8'));
 const scaffold = JSON.parse(zlib.inflateSync(Buffer.from(
-    fs.readFileSync(ConfigPaths.AUTOMATION_SCIENCE.replace(/\.json$/, '-scaffold.txt'), 'utf-8').trim().slice(1), 'base64')).toString('utf-8')).blueprint;
+    fs.readFileSync(ConfigPaths.AUTOMATION_SCIENCE_240.replace(/\.json$/, '.scaffold'), 'utf-8').trim().slice(1), 'base64')).toString('utf-8')).blueprint;
 const decode = (text: string) => JSON.parse(zlib.inflateSync(Buffer.from(text.slice(1), 'base64')).toString('utf-8')).blueprint;
 const read = (...parts: string[]) => JSON.parse(fs.readFileSync(path.join(...parts), 'utf-8'));
 const tagOf = (entity: { tags?: Record<string, number[]> }) => entity.tags?.clock_generator_inserters;
@@ -21,7 +21,7 @@ let out: string;
 let run: ReturnType<typeof spawnSync>;
 beforeAll(() => {
     out = fs.mkdtempSync(path.join(os.tmpdir(), 'export-clock-'));
-    run = spawnSync('node', [script('export-clock.js'), 'AUTOMATION_SCIENCE', `--out=${out}`, '--alternative=selected', '--always-on'], { cwd: root, encoding: 'utf-8' });
+    run = spawnSync('node', [script('export-clock.js'), 'AUTOMATION_SCIENCE_240', `--out=${out}`, '--alternative=selected', '--always-on'], { cwd: root, encoding: 'utf-8' });
 }, 120_000);
 afterAll(() => fs.rmSync(out, { recursive: true, force: true }));
 
@@ -29,9 +29,9 @@ describe('export-clock.js on automation science', () => {
     it('writes the selected clock where place-clocks reads it, with the tag on each schedule combinator', () => {
         expect(run.status, String(run.stderr)).toBe(0);
         const arm = read(out, 'swings-2', 'arm.json');
-        expect(arm).toMatchObject({ alternative: { id: 'swings-2' }, selected: true, always_on: false, verdict: 'stable', holds: true, recovers: true, config: 'AUTOMATION_SCIENCE' });
+        expect(arm).toMatchObject({ alternative: { id: 'swings-2' }, selected: true, always_on: false, verdict: 'stable', holds: true, recovers: true, config: 'AUTOMATION_SCIENCE_240' });
         expect(arm.wake_ups_per_minute).toBeGreaterThan(0);
-        const clock = read(out, 'swings-2', 'automation-science.json');
+        const clock = read(out, 'swings-2', 'automation-240.json');
         expect(clock.selected).toMatchObject({ id: 'swings-2', verdict: 'stable' });
         expect(clock.period_ticks).toBe(arm.period_ticks);
         expect(clock.counted_ticks).toBeGreaterThan(0);
@@ -48,8 +48,8 @@ describe('export-clock.js on automation science', () => {
     });
 
     it('writes the always-on arm as one combinator wired to the same inserters', () => {
-        const clock = read(out, 'swings-2', 'automation-science.json');
-        const on = read(out, 'always-on', 'automation-science.json');
+        const clock = read(out, 'swings-2', 'automation-240.json');
+        const on = read(out, 'always-on', 'automation-240.json');
         const ids = clock.schedule.inserter_combinators.flatMap((it: { inserter_ids: number[] }) => it.inserter_ids).sort();
         expect(on.schedule.inserter_combinators).toHaveLength(1);
         expect([...on.schedule.inserter_combinators[0].inserter_ids].sort()).toEqual(ids);
@@ -64,7 +64,7 @@ describe('export-clock.js on automation science', () => {
         const { cells } = read(out, 'cells.json');
         expect(cells).toHaveLength(1);
         const [cell] = cells;
-        expect(cell).toMatchObject({ name: 'automation-science', config: 'automation-science.json', problems: [], instances: [[0, 0]] });
+        expect(cell).toMatchObject({ name: 'automation-240', config: 'automation-240.json', problems: [], instances: [[0, 0]] });
         expect(Object.keys(cell.inserters).map(Number).sort()).toEqual(config.inserters.map((_: unknown, index: number) => index + 1));
         const at = new Set<string>();
         for (const [id, inserter] of Object.entries<{ name: string; offset: number[]; wired: boolean; has_wire: boolean }>(cell.inserters)) {
@@ -79,7 +79,7 @@ describe('export-clock.js on automation science', () => {
     });
 
     it('refuses an alternative the generator does not have, and says which there are', () => {
-        const refused = spawnSync('node', [script('export-clock.js'), 'AUTOMATION_SCIENCE', `--out=${path.join(out, 'refused')}`, '--alternative=nothing', '--no-cells'], { cwd: root, encoding: 'utf-8' });
+        const refused = spawnSync('node', [script('export-clock.js'), 'AUTOMATION_SCIENCE_240', `--out=${path.join(out, 'refused')}`, '--alternative=nothing', '--no-cells'], { cwd: root, encoding: 'utf-8' });
         expect(refused.status).toBe(1);
         expect(String(refused.stderr)).toContain('No potential clock nothing');
         expect(read(out, 'refused', 'error.json').error).toContain('swings-2');
@@ -90,8 +90,8 @@ describe('the cells index of a scaffold with a car', () => {
     it('finds the inserters that take from a car and fill a furnace', () => {
         const code = `const { dist, loadSample } = require('./lib'); const { ConfigPaths } = dist('config/config-paths.js');
             const zlib = require('zlib'), fs = require('fs'); const { cellOf } = require('./scaffold-cells');
-            loadSample('REAL_OWNER_CAR').then(config => {
-                const text = fs.readFileSync(ConfigPaths.REAL_OWNER_CAR.replace(/\\.json$/, '-scaffold.txt'), 'utf-8').trim();
+            loadSample('IRON_PLATE_80_CAR_CHEST').then(config => {
+                const text = fs.readFileSync(ConfigPaths.IRON_PLATE_80_CAR_CHEST.replace(/\\.json$/, '.scaffold'), 'utf-8').trim();
                 const blueprint = JSON.parse(zlib.inflateSync(Buffer.from(text.slice(1), 'base64')).toString('utf-8'));
                 const { cell, matched } = cellOf({ blueprint, config, name: 'car', clock_file: 'car.json' });
                 console.log(JSON.stringify({ matched, count: config.inserters.length, problems: cell.problems, ids: Object.keys(cell.inserters) }));
@@ -99,5 +99,21 @@ describe('the cells index of a scaffold with a car', () => {
         const result = spawnSync('node', ['-e', code], { cwd: path.join(root, 'scripts'), encoding: 'utf-8' });
         expect(result.status, String(result.stderr)).toBe(0);
         expect(JSON.parse(result.stdout)).toEqual({ matched: 4, count: 4, problems: [], ids: ['1', '2', '3', '4'] });
+    });
+});
+
+describe('the cells index of a scaffold with a turbo splitter', () => {
+    it('follows the belt past the splitter, so the logistic science build (22 assemblers) gives both inserters of its config', () => {
+        const code = `const { dist, loadSample } = require('./lib'); const { ConfigPaths } = dist('config/config-paths.js');
+            const zlib = require('zlib'), fs = require('fs'); const { cellOf } = require('./scaffold-cells');
+            loadSample('LOGISTIC_SCIENCE_240').then(config => {
+                const text = fs.readFileSync(ConfigPaths.LOGISTIC_SCIENCE_240.replace(/\\.json$/, '.scaffold'), 'utf-8').trim();
+                const blueprint = JSON.parse(zlib.inflateSync(Buffer.from(text.slice(1), 'base64')).toString('utf-8'));
+                const { cell, matched } = cellOf({ blueprint, config, name: 'logistic', clock_file: 'logistic.json' });
+                console.log(JSON.stringify({ matched, count: config.inserters.length, problems: cell.problems, ids: Object.keys(cell.inserters) }));
+            });`;
+        const result = spawnSync('node', ['-e', code], { cwd: path.join(root, 'scripts'), encoding: 'utf-8' });
+        expect(result.status, String(result.stderr)).toBe(0);
+        expect(JSON.parse(result.stdout)).toEqual({ matched: 2, count: 2, problems: [], ids: ['1', '2'] });
     });
 });

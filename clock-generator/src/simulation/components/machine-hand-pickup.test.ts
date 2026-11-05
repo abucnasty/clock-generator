@@ -15,7 +15,7 @@ import { MachineHandPickup } from "./machine-hand-pickup";
  * clock of the game at `decider_build_order` in the order the clock's deciders are built
  */
 async function engineTaker(decider_build_order?: number) {
-    const context = SimulationContext.fromConfig(await loadConfigFromFile(ConfigPaths.CHEMICAL_SCIENCE_SHARED_FOUNDRY));
+    const context = SimulationContext.fromConfig(await loadConfigFromFile(ConfigPaths.CHEMICAL_SCIENCE_240_SHARED_FOUNDRY));
     const state = context.inserters.find(inserter => inserter.entity_id.number === 9)!.inserter_state;
     const source = context.state_registry.getStateByEntityIdOrThrow(state.inserter.source.entity_id);
     if (!EntityState.isMachine(source)) throw new Error("expected a machine source");
@@ -71,7 +71,7 @@ describe("a take from a machine in the first tick of a window", () => {
 
     // with same-tick rule 12: the port reads the order from the hand's Control, which a swap points at the new control
     it("marks it with where the decider of the control the inserter is on stands, after a control swap too", async () => {
-        const context = SimulationContext.fromConfig(await loadConfigFromFile(ConfigPaths.CHEMICAL_SCIENCE_SHARED_FOUNDRY));
+        const context = SimulationContext.fromConfig(await loadConfigFromFile(ConfigPaths.CHEMICAL_SCIENCE_240_SHARED_FOUNDRY));
         const taker = context.inserters.find(inserter => inserter.entity_id.number === 9)!;
         const source = context.state_registry.getStateByEntityIdOrThrow(taker.inserter_state.inserter.source.entity_id);
         if (!EntityState.isMachine(source)) throw new Error("expected a machine source");

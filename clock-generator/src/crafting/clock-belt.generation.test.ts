@@ -35,7 +35,7 @@ describe("the belt a clock is made for", () => {
         let problems: string[];
 
         beforeAll(async () => {
-            const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
+            const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250);
             const generated = generateClockAlternatives(backedUpBelts(config), { logger: quiet });
             problems = alwaysOnReasonProblemsOf(backedUpBelts(config), generated);
             selected = generated.alternatives[generated.selected_index];
@@ -71,7 +71,7 @@ describe("the belt a clock is made for", () => {
         // The values the scaffold recordings expect of this build with backed-up belts were seen on one clock. The build is
         // generated here, from the same config, and not again for that test (scaffold-recordings-clock.generation.test.ts).
         it("selects the clock the values of the scaffold recordings of this build were seen on", () => {
-            expectPinnedScaffoldClock("agricultural science (belts are backed up)", { config: ConfigPaths.AGRICULTURAL_SCIENCE, backed_up_belts: true }, selected);
+            expectPinnedScaffoldClock("agricultural science (belts are backed up)", { config: ConfigPaths.AGRICULTURAL_SCIENCE_250, backed_up_belts: true }, selected);
         });
 
         it("lengthens every window of those inserters by the fill of a hand of nutrients", () => {
@@ -86,7 +86,7 @@ describe("the belt a clock is made for", () => {
         let alternatives: ClockAlternative[];
 
         beforeAll(async () => {
-            const config = await loadConfigFromFile(ConfigPaths.PROCESSING_UNITS);
+            const config = await loadConfigFromFile(ConfigPaths.PROCESSING_UNIT_15_CHEST_FED);
             ({ alternatives } = generateClockAlternatives(config, { logger: quiet }));
         });
 

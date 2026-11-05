@@ -18,7 +18,7 @@ describe("what the generator calls stable", () => {
     let selected: ClockAlternative;
 
     beforeAll(async () => {
-        config = await loadConfigFromFile(ConfigPaths.MILITARY_SCIENCE);
+        config = await loadConfigFromFile(ConfigPaths.MILITARY_SCIENCE_120);
         const generated = generateClockAlternatives(config, { logger: quiet });
         alternatives = generated.alternatives;
         selected = alternatives[generated.selected_index];

@@ -96,7 +96,7 @@ import { generateClockForConfig, blueprintFileFor } from './crafting/generate-bl
 import { encodeBlueprintFile } from './blueprints/serde';
 
 async function main() {
-    const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_SHARED_INSERTER);
+    const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240);
     const result = generateClockForConfig(config);
     console.log(encodeBlueprintFile(blueprintFileFor(result)));
 }
@@ -115,7 +115,7 @@ npx tsc && node dist/<your file>.js
 ### Configuration Format
 
 Configuration files are JSON. The samples live in `resources/config-samples/`, grouped by what they make, one folder per
-build, each holding the config(s) of that build and, where one exists, its scaffold: a blueprint of one copy of the
+target item, each holding the config(s) of that item's builds and, where one exists, a build's scaffold (`<name>.scaffold`): a blueprint of one copy of the
 build without a clock, for recording it in the game.
 
 - `science/`: automation, logistic, chemical, production, utility, agriculture, metallurgic, electromagnetic and military science

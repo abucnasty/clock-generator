@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.27.1] - 2026-11-04
+
+### Changed
+- The fractional swings switch is removed; the generator offers fractional swings as an alternative on every build.
+- The Electromagnetic science example is now a configuration without forced swings or hand-made output conditions; its clock is the planner's own choice.
+- The Logistic science pack example is now a build of 1 machine and 2 inserters, so its clock can differ from before.
+
 ## [0.27.0] - 2026-11-04
 
 ### Removed

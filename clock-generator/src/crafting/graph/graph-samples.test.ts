@@ -37,10 +37,10 @@ function coverageIssuesOf(config: Config): InserterCoverageIssue[] {
  * The steel wagon carries ore one way and plates the other through one wagon: no loop on its item ports.
  */
 const LOOPS: Readonly<Record<string, readonly (readonly string[])[]>> = {
-    AGRICULTURAL_SCIENCE: [["machine:3", "machine:4"]],
-    IRON_BACTERIA_CULTIVATION: [["machine:1", "machine:2"]],
-    REAL_OWNER_ORE_VOIDER_EXACT_SPEED: [["machine:1", "chest:1#iron-ore"]],
-    REAL_OWNER_ORE_VOIDER_OVERBEACONED: [["machine:1", "chest:1#iron-ore"]],
+    AGRICULTURAL_SCIENCE_250: [["machine:3", "machine:4"]],
+    IRON_BACTERIA_380_CULTIVATION: [["machine:1", "machine:2"]],
+    IRON_ORE_VOIDER_400_EXACT_SPEED: [["machine:1", "chest:1#iron-ore"]],
+    IRON_ORE_VOIDER_400_OVERBEACONED: [["machine:1", "chest:1#iron-ore"]],
 };
 
 /**
@@ -50,40 +50,38 @@ const LOOPS: Readonly<Record<string, readonly (readonly string[])[]>> = {
  */
 const TERMINAL: Readonly<Record<string, number>> = {
     ACCUMULATOR_640: 2,
-    ADVANCED_CIRCUIT: 2,
+    ADVANCED_CIRCUIT_240: 2,
     ADVANCED_CIRCUIT_230: 2,
-    AGRICULTURAL_SCIENCE: 1,
-    AUTOMATION_SCIENCE: 1,
-    AUTOMATION_SCIENCE_BELTED_BUFFER: 1,
-    CHEMICAL_SCIENCE_SHARED_FOUNDRY: 4,
-    ELECTRIC_FURNACE: 1,
-    ELECTROMAGNETIC_SCIENCE_AUTO: 2,
-    FLYING_ROBOT_FRAME: 1,
-    GLEBA_ROCKET_FUEL: 3,
-    IRON_BACTERIA_CULTIVATION: 4,
-    LOGISTIC_SCIENCE: 1,
-    LOGISTIC_SCIENCE_DI: 2,
-    LOGISTIC_SCIENCE_INSERTER_CRAFTING: 1,
-    LOGISTIC_SCIENCE_SHARED_INSERTER: 1,
-    LOW_DENSITY_STRUCTURE: 4,
-    METALLURGIC_SCIENCE_PACK: 1,
-    MILITARY_SCIENCE: 1,
-    PROCESSING_UNITS: 1,
-    PRODUCTION_SCIENCE_JSON: 1,
-    REAL_OWNER_CAR: 2,
-    REAL_OWNER_GRENADE: 4,
-    REAL_OWNER_LITHIUM_SILO: 6,
-    REAL_OWNER_ORE_VOIDER_EXACT_SPEED: 4,
-    REAL_OWNER_ORE_VOIDER_OVERBEACONED: 4,
-    REAL_OWNER_PINK_SCIENCE_ORIGINAL: 3,
-    REAL_OWNER_PRODUCTIVITY_CHAIN: 1,
-    REAL_STUPIDFATHOBBIT_CELL02: 4,
-    REAL_THAELN_CELL09: 8,
-    SAMPLE_CONFIG: 1,
-    STEEL_CARGO_WAGON: 1,
-    STONE_BRICKS_DIRECT_INSERT_2_1: 1,
-    UTILITY_SCIENCE: 1,
-    UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS: 1,
+    AGRICULTURAL_SCIENCE_250: 1,
+    AUTOMATION_SCIENCE_240: 1,
+    AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER: 1,
+    CHEMICAL_SCIENCE_240_SHARED_FOUNDRY: 4,
+    ELECTRIC_FURNACE_20: 1,
+    ELECTROMAGNETIC_SCIENCE_330: 2,
+    FLYING_ROBOT_FRAME_160: 1,
+    ROCKET_FUEL_60: 3,
+    IRON_BACTERIA_380_CULTIVATION: 4,
+    LOGISTIC_SCIENCE_240: 1,
+    LOGISTIC_SCIENCE_240_DIRECT_INSERT: 2,
+    INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK: 1,
+    LDS_240: 4,
+    METALLURGIC_SCIENCE_45: 1,
+    MILITARY_SCIENCE_120: 1,
+    PROCESSING_UNIT_15_CHEST_FED: 1,
+    PRODUCTION_SCIENCE_120_TWO_BELTS: 1,
+    IRON_PLATE_80_CAR_CHEST: 2,
+    GRENADE_240_FILLS_BELT_EXACTLY: 4,
+    LITHIUM_PLATE_80_SILO_CHEST: 6,
+    IRON_ORE_VOIDER_400_EXACT_SPEED: 4,
+    IRON_ORE_VOIDER_400_OVERBEACONED: 4,
+    ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED: 3,
+    PRODUCTIVITY_MODULE_80_CHEST_CHAIN: 1,
+    PROCESSING_UNIT_80_CIRCUIT_EXPORT: 4,
+    UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN: 8,
+    STEEL_PLATE_26_WAGON_CHEST: 1,
+    STONE_BRICK_120_DRILL_DIRECT_INSERT: 1,
+    UTILITY_SCIENCE_120: 1,
+    UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT: 1,
 };
 
 describe("the planner graph", () => {
@@ -94,7 +92,7 @@ describe("the planner graph", () => {
             const json = graphSnapshotOf(graph, key);
             // deterministic: built again from the config read again, byte for byte the same
             expect(graphSnapshotOf((await graphOf(file)).graph, key)).toBe(json);
-            // small: a few hundred nodes and edges at most (P3 1.6 item 9); the largest, Thaeln's cell 09, is 24 kB
+            // small: a few hundred nodes and edges at most (P3 1.6 item 9); the largest, the utility science 480 build, is 24 kB
             expect(json.length).toBeLessThan(64 * 1024);
             await expect(json).toMatchFileSnapshot(path.join(SNAPSHOTS, `${key}.graph.json`));
         });
