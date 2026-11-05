@@ -48,6 +48,9 @@ bash scripts/blast/blast.sh record write <out>          # or the cache entry's k
 bash scripts/blast/blast.sh record check <out>          # the table of differences against the committed files; exit 1 on any
 ```
 
+CI runs the jobs in eight shards and joins them (`blast.sh run <worktree> <out> --shard i/8`, then `python3 scripts/blast/shard.py merge <whole> <shard folders>`;
+`shard.py plan` prints the split), then runs `record check` on the joined folder.
+
 A run that is cached (the key of the engine and the job list) writes the record in seconds. After a rename of jobs, `record check --map <renames.txt>`
 takes the blast's rename map (`old-job-key new-job-key` a line) and compares a renamed job with its new name.
 
@@ -76,3 +79,5 @@ such jobs and goes on).
 ## MOVES.md
 
 A pull request that changes any record file commits the new files and adds an entry to [MOVES.md](MOVES.md) naming each moved job and why.
+A selected clock that got worse than in the base fails the check unless its job is named in the lines the pull request adds (CONTRIBUTING.md,
+"The record of the blast jobs", defines worse from the fields above).

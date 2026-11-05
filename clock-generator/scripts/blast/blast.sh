@@ -13,6 +13,12 @@
 #   blast.sh run <worktree> <out> [-n N] [--no-store] [--no-build] [--full] [--base K]
 #                                           generates into <out> (resumable: done jobs stay, stale claims are freed);
 #                                           a complete run of a clean worktree is also stored in the cache
+#   blast.sh run <worktree> <out> --shard I/N [-n N] [--no-store] [--no-build]
+#                                           generates only shard I of N of the jobs (1-based; shard.py: the job list dealt out by each job's
+#                                           measured CI seconds, ci/record-durations.json, so that the shards finish together), the way CI
+#                                           runs the record check on N runners; never cached. <out> then holds the shard's job files, its
+#                                           _jobs.json and _shard.json; `shard.py merge <whole> <out of shard 1> ...` joins the N shards
+#                                           into the folder `record check` reads. `shard.py plan` prints the split
 #   blast.sh select <worktree> [--base K] [--no-build]
 #                                           builds, then says which jobs a run would rerun and why; generates nothing
 #   blast.sh store <worktree> <jobs-dir> --note <text> [--made-under NAME=VALUE ... | none]
@@ -82,7 +88,7 @@
 # other, and never carries jobs from an entry made under another setting. With none set the key is what it always was. Every
 # command that runs or stores refuses, naming the variable, when the environment holds a CLOCK_* variable that key.py has on no list.
 #
-# Env: BLAST_GROUPS, BLAST_SKIP (jobs to leave out; none by default), BLAST_ONLY (run only these jobs, by ConfigPaths name; never cached; the run is complete, and exits 0, when every listed job is done), BLAST_SETUP (comma list of setup files from
+# Env: BLAST_DURATIONS (the durations --shard deals out by, default ci/record-durations.json), BLAST_GROUPS, BLAST_SKIP (jobs to leave out; none by default), BLAST_ONLY (run only these jobs, by ConfigPaths name; never cached; the run is complete, and exits 0, when every listed job is done), BLAST_SETUP (comma list of setup files from
 # clock-generator/, e.g. a rule patch; such a run is never cached), BLAST_CACHE (default
 # <main checkout>/clock-generator/.scratch/blast-cache, shared by every worktree of the repository), BLAST_LOCK (the file
 # that lets one blast generate at a time on the machine, default <cache>/.generate.lock).
@@ -245,11 +251,12 @@ store_entry() { # $1 jobs dir, $2 source json
 }
 
 cmd=${1:-}; shift || true
-DRY=""; ALLOW=""; N=4; NSLOW=10; STORE=1; BUILD=1; NOTE=""; FULL=0; BASE=""; MAP=""; RDIR=""; SUMMARY=""; ARGS=(); MADE=()
+DRY=""; ALLOW=""; SHARD=""; N=4; NSLOW=10; STORE=1; BUILD=1; NOTE=""; FULL=0; BASE=""; MAP=""; RDIR=""; SUMMARY=""; ARGS=(); MADE=()
 while [ $# -gt 0 ]; do
   case "$1" in
     -n) N=$2; NSLOW=$2; shift ;;
     --no-store) STORE=0 ;;
+    --shard) [ $# -ge 2 ] || die "--shard takes I/N"; SHARD=$2; shift ;;
     --allow-unchecked) ALLOW=1 ;;
     --no-build) BUILD=0 ;;
     --note) NOTE=$2; shift ;;
@@ -298,6 +305,13 @@ case "$cmd" in
     worktree "${ARGS[0]:-}"; out=${ARGS[1]:-}; [ -n "$out" ] || die "run <worktree> <out>"
     mkdir -p "$out"; out=$(cd "$out" && pwd -P)
     compute_key
+    if [ -n "$SHARD" ]; then
+      # this shard's jobs, by name, as BLAST_ONLY takes them; every shard computes the whole split from the same two files
+      [ -z "${BLAST_ONLY:-}" ] || die "--shard and BLAST_ONLY both choose the jobs"
+      BLAST_ONLY=$(python3 "$HERE/shard.py" select "$KEYDIR/_jobs.json" "${BLAST_DURATIONS:-$HERE/../../ci/record-durations.json}" "$SHARD" --write "$out/_shard.json") || exit 1
+      export BLAST_ONLY
+      say "shard $SHARD: $(echo "$BLAST_ONLY" | tr ',' '\n' | wc -l) jobs"
+    fi
     generate "$out" "$N" "$BUILD" || die "the run is incomplete; rerun the same command to resume"
     if [ "$STORE" = 1 ] && [ -z "${BLAST_ONLY:-}" ] && [ -z "${BLAST_SETUP:-}" ]; then
       if [ -n "$DIRTY" ]; then say "not cached: uncommitted changes to the engine's paths"

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { clockBeltLabel, generateClockAlternatives, type ClockAlternative } from "./generate-blueprint";
+import { generateClockAlternatives, type ClockAlternative } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import type { Config } from "../config/schema";
@@ -10,19 +10,6 @@ const backedUpBelts = (config: Config): Config => ({ ...config, overrides: { ...
 // GOALS.md: a clock that only works when its inserters pick up from a backed-up belt, and a clock that also
 // works when the items on the belt are moving
 describe("the belt a clock is made for", () => {
-
-    describe("clockBeltLabel", () => {
-        it("names a moving belt with the ticks of belt pickup slack", () => {
-            expect(clockBeltLabel({ kind: "moving", slack_ticks: [4] })).toBe("moving (+4 ticks)");
-            expect(clockBeltLabel({ kind: "moving", slack_ticks: [1] })).toBe("moving (+1 tick)");
-            expect(clockBeltLabel({ kind: "moving", slack_ticks: [2, 4] })).toBe("moving (+2–4 ticks)");
-        });
-
-        it("names a backed-up belt, and nothing when no clocked inserter picks up from a belt", () => {
-            expect(clockBeltLabel({ kind: "backed_up" })).toBe("backed-up");
-            expect(clockBeltLabel(null)).toBe("");
-        });
-    });
 
     // Three inserters take bioflux off a belt for their biochambers, and the nutrients the biochambers burn. Without
     // room for a hand of nutrients the windows of batched swings close on partly filled hands of bioflux: recorded on

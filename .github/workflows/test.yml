@@ -2,7 +2,7 @@ name: Test
 
 # Pull requests run the unit tests, build the UI and generate a clock in it in a browser. Pull requests to master, which
 # are what gets released, and to an integration branch (feature/...), run the generation tests as well: they generate the clock alternatives of whole samples and
-# take minutes. Pull requests also generate every blast job and compare it with the committed record (clock-generator/record/).
+# take minutes. Pull requests also generate every blast job, in shards, and compare it with the committed record (clock-generator/record/).
 # Those pull requests run none of the test jobs when they change documentation only (see the `changes` job). "Run workflow" (or
 # `gh workflow run test.yml --ref <branch>`) runs them all on any branch (the record check runs on pull requests only).
 # release.yml and publish-sidecar.yml call this workflow and do nothing unless it passes; a release runs the generation
@@ -139,8 +139,8 @@ jobs:
     if: needs.changes.outputs.generation == 'true'
     runs-on: ubuntu-latest
     # the whole suite took 1,302 s on an Intel Xeon 8573C runner and 1,490 s on an AMD EPYC 7763 on 2026-10-24 (one
-    # runner, 3 workers); a shard has about an eighth of it, and no single file takes more than about 2 minutes (the
-    # slowest clock families are one file for each belt tier), bar the one test of container-output
+    # runner, 3 workers); a shard has about an eighth of it. One file, the productivity module chest chain, takes about
+    # 460 s on its own, which is the least a shard can take
     timeout-minutes: 25
     strategy:
       # every shard finishes, so that a pull request shows all its failures at once
@@ -226,18 +226,25 @@ jobs:
           fi
           echo "The generation tests passed in every shard." | tee -a "$GITHUB_STEP_SUMMARY"
 
-  # The record (clock-generator/record/): one small JSON per blast job, the selected clock and every alternative. The job
-  # generates all 86 jobs the way `blast.sh run` does (a process for each job, four at a time on the runner's 4 vCPUs) and
-  # compares what it made with the committed files field by field; a difference fails with a table of job, field, before and
-  # after (in the job summary too). Not a required check yet, and it runs on pull requests only, so that a release (which
-  # calls this workflow and does nothing unless it passes) does not wait for it: when it is required, it replaces the
-  # generation shards one by one.
-  record:
-    name: Record check
+  # The record (clock-generator/record/): one small JSON per blast job, the selected clock and every alternative. The jobs
+  # are generated the way `blast.sh run` does (a process for each job, four at a time on a runner's 4 vCPUs), in shards: the
+  # jobs are dealt out by the seconds each took on a runner (ci/record-durations.json, longest first onto the shard that is then
+  # estimated to finish first; scripts/blast/shard.py), so that the shards finish together, and the pull request waits for the
+  # slowest, which is never faster than its slowest job (the productivity module chest chain). Refresh the durations with
+  # clock-generator/scripts/ci/update-record-durations.js from the `record-jobs-<n>` artifacts of a run. The check named
+  # "Record check" is the job after the shards.
+  record-shards:
+    name: Record jobs (shard ${{ matrix.shard }} of ${{ strategy.job-total }})
     needs: changes
     if: ${{ github.event_name == 'pull_request' && needs.changes.outputs.generation == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # one runner took 24 minutes for all 86 jobs on 2026-11-05; a shard has about an eighth of them
+    timeout-minutes: 25
+    strategy:
+      # every shard finishes, so that a pull request shows all its failures at once
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     defaults:
       run:
         working-directory: clock-generator
@@ -258,12 +265,98 @@ jobs:
       - name: Runner CPU
         run: lscpu | grep -E '^(Model name|CPU\(s\)):'
 
-      # builds the engine, generates the 86 jobs into a folder (not cached: the runner starts empty)
-      - name: Generate the jobs
-        run: bash scripts/blast/blast.sh run .. "$RUNNER_TEMP/blast-jobs" --no-store
+      # builds the engine, generates this shard's jobs into a folder (not cached: the runner starts empty)
+      - name: Generate the jobs of the shard
+        run: bash scripts/blast/blast.sh run .. "$RUNNER_TEMP/blast-jobs" --no-store --shard ${{ matrix.shard }}/${{ strategy.job-total }}
+
+      # the job files (and the shard's list of jobs): the Record check joins them, and each holds the seconds its job took
+      - name: Job files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: record-jobs-${{ matrix.shard }}
+          path: |
+            ${{ runner.temp }}/blast-jobs/*.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # The check "Record check": one name for the shards, whatever their number. It joins the shards' job files and compares them with
+  # the committed record (field by field; a difference fails with a table of job, field, before and after, in the job summary too),
+  # then checks the properties of the jobs and that no selected clock got worse (below). It reports success when the pull request
+  # changes documentation only (the shards are skipped then), and fails when the changed files could not be read or a shard failed.
+  # It runs on pull requests to master and to feature/ branches, as the shards do, and not on a release (which calls this workflow
+  # and does nothing unless it passes). Its name is stable, so that it can be a required check.
+  record:
+    name: Record check
+    needs: [changes, record-shards]
+    # not skipped with the shards: it is the job that tells what became of them
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && (github.base_ref == 'master' || startsWith(github.base_ref, 'feature/')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: clock-generator
+    steps:
+      - name: Whether the record check is due
+        id: due
+        working-directory: .
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          GENERATION: ${{ needs.changes.outputs.generation }}
+          SHARDS: ${{ needs.record-shards.result }}
+        run: |
+          set -eu
+          if [ "$CHANGES" != "success" ]; then
+            echo "::error::The files the pull request changes could not be read ($CHANGES), so it is not known whether the record check was due."
+            exit 1
+          fi
+          if [ "$GENERATION" != "true" ]; then
+            echo "The record check was not due: the pull request changes documentation only." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "due=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$SHARDS" != "success" ]; then
+            echo "::error::The record jobs did not all finish: the shards ended $SHARDS."
+            exit 1
+          fi
+          echo "due=true" >> "$GITHUB_OUTPUT"
+
+      # the merge commit of the pull request: its first parent is the base, its second the head
+      - uses: actions/checkout@v4
+        if: steps.due.outputs.due == 'true'
+        with:
+          fetch-depth: 2
+
+      - name: Job files of the shards
+        if: steps.due.outputs.due == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: record-jobs-*
+          path: ${{ runner.temp }}/shards
+
+      - name: Join the shards
+        if: steps.due.outputs.due == 'true'
+        run: python3 scripts/blast/shard.py merge "$RUNNER_TEMP/blast-jobs" "$RUNNER_TEMP"/shards/record-jobs-* | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Check the record
+        if: steps.due.outputs.due == 'true'
         run: bash scripts/blast/blast.sh record check --summary "$GITHUB_STEP_SUMMARY" "$RUNNER_TEMP/blast-jobs"
+
+      # a selected clock that got worse than in the base fails unless record/MOVES.md names its job in the lines the pull request adds
+      - name: Never worse
+        if: steps.due.outputs.due == 'true' && !cancelled()
+        run: |
+          set -eu
+          if ! git rev-parse --verify --quiet HEAD^2 > /dev/null; then
+            echo "::error::The checkout is not a merge commit, so the base of the pull request is not known."
+            exit 1
+          fi
+          # paths from the root of the repository, whatever the folder of the step
+          root=$(git rev-parse --show-toplevel)
+          base=$(mktemp -d)
+          git -C "$root" archive HEAD^1 clock-generator/record | tar -x -C "$base"
+          git -C "$root" diff -U0 HEAD^1 HEAD -- clock-generator/record/MOVES.md | sed -n 's/^+\([^+].*\)$/\1/p' > "$RUNNER_TEMP/moves-added.txt"
+          python3 scripts/blast/record.py worse --base "$base/clock-generator/record" --moves "$RUNNER_TEMP/moves-added.txt" --summary "$GITHUB_STEP_SUMMARY"
 
   ui:
     name: UI build

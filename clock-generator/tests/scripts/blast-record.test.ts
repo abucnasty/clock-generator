@@ -15,10 +15,10 @@ afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 const sha = (c: string) => c.repeat(64);
 const run = (...args: string[]) => spawnSync('python3', [record, ...args], { encoding: 'utf8' });
 
-interface Edit { id?: string; verdict?: string; period?: number; wake_ups?: number; clock?: string; windows?: Record<string, { start: number; end: number }[]> }
+interface Edit { id?: string; verdict?: string; holds?: boolean; rate?: number; period?: number; wake_ups?: number; clock?: string; windows?: Record<string, { start: number; end: number }[]> }
 /** An alternative as the blast writes it (the fields the record reads, and the heavy ones it leaves out) */
 const alternative = (e: Edit = {}) => ({
-    id: e.id ?? 'even-hands', verdict: e.verdict ?? 'stable', holds: true, rate: 640, supply: null, period: e.period ?? 972,
+    id: e.id ?? 'even-hands', verdict: e.verdict ?? 'stable', holds: e.holds ?? true, rate: e.rate ?? 640, supply: null, period: e.period ?? 972,
     wake_ups: e.wake_ups ?? 889.0718254784936, clock_sha256: e.clock ?? sha('a'), text_sha256: sha('2'), descriptions_cut: 0,
     windows_sha256: sha('7'), windows: e.windows ?? { 'inserter:1': [{ start: 0, end: 10 }, { start: 54, end: 64 }], 'drill:1': [] },
     results_sha256: sha('3'), results: { label: sha('1'), assessment: sha('9') },
@@ -252,8 +252,94 @@ describe('record.py check --map', () => {
     });
 });
 
+describe('record.py worse (the never-worse rule)', () => {
+    const base = () => written({ A: jobFile('A'), B: jobFile('B') });
+    /** The change: the same two jobs, A with these alternatives, in a record folder of its own */
+    const change = (a: ReturnType<typeof alternative>, jobs: Record<string, ReturnType<typeof jobFile>> = {}) =>
+        written({ A: jobFile('A', [a, alternative({ id: 'plain', verdict: 'unstable', clock: sha('b') })]), B: jobFile('B'), ...jobs });
+    const moves = (text: string) => {
+        const file = path.join(tmp, `moves${count++}.md`);
+        fs.writeFileSync(file, text);
+        return file;
+    };
+    const worse = (before: string, after: string, text?: string, ...more: string[]) =>
+        run('worse', '--base', before, '--dir', after, ...(text === undefined ? [] : ['--moves', moves(text)]), ...more);
+
+    it('passes a change that moves no record, and one that moves a clock without making it worse', () => {
+        const dir = base();
+        expect(worse(dir, dir).status).toBe(0);
+        const better = worse(dir, change(alternative({ verdict: 'stable', rate: 700, wake_ups: 500, clock: sha('e') })));
+        expect(better.status, better.stdout).toBe(0);
+        expect(better.stdout).toContain('0 jobs worse');
+    });
+
+    it.each([
+        ['the verdict drops from stable to no recovery', { verdict: 'no recovery' }, 'verdict', 'stable', 'no recovery'],
+        ['the verdict drops from stable to unstable', { verdict: 'unstable' }, 'verdict', 'stable', 'unstable'],
+        ['the clock stops holding', { holds: false }, 'holds', 'true', 'false'],
+        ['the rate falls', { rate: 600 }, 'rate', '640', '600'],
+        ['the wake-ups a minute rise', { wake_ups: 890.5 }, 'wake_ups', '889.072', '890.5'],
+    ] as const)('fails when %s and the job is not named in MOVES.md, with a table', (_what, edit, field, before, after) => {
+        const done = worse(base(), change(alternative({ ...edit, clock: sha('e') })), '## Something else (#1)\n- config-B: faster\n');
+        expect(done.status, done.stdout).toBe(1);
+        const row = done.stdout.split('\n').find(line => line.startsWith('config-A'))!;
+        expect(row.split(/\s{2,}/)).toEqual(['config-A', field, before, after, 'NO']);
+        expect(done.stdout).toContain('1 jobs worse, 1 of them not named in MOVES.md');
+    });
+
+    it('passes the same change when the lines the pull request adds to MOVES.md name the job', () => {
+        const after = change(alternative({ verdict: 'no recovery', rate: 600, clock: sha('e') }));
+        const done = worse(base(), after, '## A clock gets worse (#2)\n- config-A: no recovery, rate 640 -> 600; accepted because the belt is shorter\n');
+        expect(done.status, done.stdout).toBe(0);
+        const rows = done.stdout.split('\n').filter(line => line.startsWith('config-A'));
+        expect(rows.map(r => r.split(/\s{2,}/).at(-1))).toEqual(['yes', 'yes']);
+    });
+
+    it('names a job as a word of its own: config-A is not named by config-A_BACKED_UP', () => {
+        const after = change(alternative({ holds: false, clock: sha('e') }));
+        expect(worse(base(), after, '- config-A_BACKED_UP: moved\n- xconfig-A: moved\n').status).toBe(1);
+        expect(worse(base(), after, '- `config-A`, config-B: moved\n').status).toBe(0);
+    });
+
+    it('fails when no MOVES text is given at all', () => {
+        expect(worse(base(), change(alternative({ holds: false, clock: sha('e') }))).status).toBe(1);
+    });
+
+    it('fails a job that generated and now fails to, and passes one that now generates', () => {
+        const dir = base();
+        const broken = written({ A: { group: 'config', name: 'A', error: 'Error: boom' } as unknown as ReturnType<typeof jobFile>, B: jobFile('B') });
+        const done = worse(dir, broken);
+        expect(done.status).toBe(1);
+        expect(done.stdout).toMatch(/config-A\s+error\s+generated\s+Error: boom\s+NO/);
+        expect(worse(broken, dir).status).toBe(0);
+    });
+
+    it('leaves a job in one record only, a rate within rounding and a rise of nothing', () => {
+        const dir = written({ A: jobFile('A'), OLD: jobFile('OLD', [alternative({ holds: true })]) });
+        const after = written({ A: jobFile('A', [alternative({ rate: 640 - 1e-12 }), alternative({ id: 'plain', verdict: 'unstable', clock: sha('b') })]), NEW: jobFile('NEW', [alternative({ holds: false, verdict: 'unstable' })]) });
+        expect(worse(dir, after).status).toBe(0);
+    });
+
+    it('appends the table to the summary file when a clock is not named', () => {
+        const summary = path.join(tmp, `summary${count++}.md`);
+        worse(base(), change(alternative({ holds: false, clock: sha('e') })), '', '--summary', summary);
+        expect(fs.readFileSync(summary, 'utf8')).toContain('### Never worse: 1 selected clocks got worse and are not named in MOVES.md');
+    });
+
+    it('refuses a missing base and a folder with no record', () => {
+        expect(run('worse', '--dir', base()).stderr).toContain('--base');
+        expect(run('worse', '--base', path.join(tmp, 'nothing'), '--dir', base()).status).not.toBe(0);
+    });
+});
+
 describe('the committed record', () => {
     const files = fs.existsSync(recordDir) ? fs.readdirSync(recordDir).filter(f => f.endsWith('.json')) : [];
+    it('has a CI duration for every job and for no other (ci/record-durations.json deals the jobs out to the shards)', () => {
+        const durations = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../ci/record-durations.json'), 'utf8')) as Record<string, number>;
+        expect(Object.keys(durations).sort()).toEqual(files.map(f => f.replace(/\.json$/, '')).sort());
+        for (const [job, seconds] of Object.entries(durations)) expect(seconds, job).toBeGreaterThan(0);
+    });
+
     it('has one well-formed record per file', () => {
         expect(files.length).toBeGreaterThan(0);
         for (const file of files) {

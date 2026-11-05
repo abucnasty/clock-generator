@@ -13,10 +13,25 @@ usage:
                                                     field; prints a table of job, field, before (the committed record) and
                                                     after (<jobs>); then the properties of <jobs> (below); exit 1 on any
                                                     difference, any property problem or when a side has no job
+  record.py worse --base <record folder> [--dir record/] [--moves file] [--summary file]
+                                                    the never-worse rule: the selected clock of each job in both folders (the record of
+                                                    the base, and <dir>, the record of the change), and every job whose selected clock got
+                                                    worse (below); exit 1 on any that the --moves text does not name
 
 --map: the blast's rename map (`old-job-key new-job-key` a line, '#' starts a comment): the committed record's jobs are
 renamed through it before the join, so a renamed job compares with its new name; the config hash of a renamed job is
 a field like another (a pure rename keeps it; a config_sha256 row says it did not). --summary: the table is also appended to this file (GITHUB_STEP_SUMMARY).
+
+The never-worse rule (`worse`): a change may move a selected clock, and a selected clock that gets worse fails unless the change says
+why. For each job in both records, the selected alternative of the base is set against the selected alternative of the change, and
+the job is worse when any of these holds (the record has no target, so "below the target" is the `holds` field and the rate):
+  - the job generated before and now fails to (`error`);
+  - the verdict ranks lower: stable, then no recovery (it holds and does not get back from some backpressure loss), then unstable;
+  - `holds` went from true to false;
+  - `rate` (items a second) is lower;
+  - `wake_ups` (inserter wake-ups a minute, to three decimals) is higher.
+A job is named when its key (the file name without `.json`, as in MOVES.md) is in the text of --moves: CI gives the lines the pull request
+adds to record/MOVES.md. A job in one record only (added or removed) is not compared. A job named but not worse is not an error.
 
 The properties: every job file the blast writes holds `properties`, what tests/game/builds/record-properties.ts found on the live
 results of the job (the five properties, on every alternative; the results are too big to keep). `check` fails, with a table of job,
@@ -273,12 +288,93 @@ def table(rows):
     return '\n'.join('  '.join(c[i].ljust(widths[i]) for i in range(4)).rstrip() for c in cells)
 
 
+VERDICT_RANK = {'stable': 2, 'no recovery': 1, 'unstable': 0}
+
+
+def selected_of(record):
+    """the selected alternative of a record, or None where the job failed to generate"""
+    if 'error' in record:
+        return None
+    for a in record['alternatives']:
+        if a['id'] == record['selected']:
+            return a
+    die(f"{record['job']}: the selected alternative {record['selected']!r} is not among its alternatives")
+
+
+def worse_reasons(before, after):
+    """[(field, before, after)] of how the selected clock of `after` is worse than that of `before`; empty when it is not"""
+    b, a = selected_of(before), selected_of(after)
+    if b is None:
+        return []
+    if a is None:
+        return [('error', 'generated', after['error'])]
+    reasons = []
+    for verdict in (b['verdict'], a['verdict']):
+        if verdict not in VERDICT_RANK:
+            die(f"{after['job']}: a verdict the rule does not rank: {verdict!r}")
+    if VERDICT_RANK[a['verdict']] < VERDICT_RANK[b['verdict']]:
+        reasons.append(('verdict', b['verdict'], a['verdict']))
+    if b['holds'] and not a['holds']:
+        reasons.append(('holds', b['holds'], a['holds']))
+    if a['rate'] < b['rate'] - 1e-9 * max(1, abs(b['rate'])):
+        reasons.append(('rate', b['rate'], a['rate']))
+    if a['wake_ups'] is not None and b['wake_ups'] is not None and a['wake_ups'] > b['wake_ups']:
+        reasons.append(('wake_ups', b['wake_ups'], a['wake_ups']))
+    return reasons
+
+
+def names_job(text, key):
+    """whether the text has the job key as a word of its own (config-A is not named by config-A_BACKED_UP)"""
+    return re.search(r'(?<![A-Za-z0-9_-])' + re.escape(key) + r'(?![A-Za-z0-9_-])', text) is not None
+
+
+def worse_jobs(base, change, moves):
+    """[(job, field, before, after, named)] for every job in both records whose selected clock got worse"""
+    rows = []
+    for key in sorted(set(base) & set(change)):
+        for field, b, a in worse_reasons(base[key], change[key]):
+            rows.append((key, field, b, a, names_job(moves, key)))
+    return rows
+
+
+def main_worse(opts):
+    base_dir = opts.get('base')
+    if not base_dir:
+        die('worse takes --base <the record folder of the base>')
+    directory = opts.get('dir') or os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'record')
+    base, change = load_record(base_dir), load_record(directory)
+    if not base or not change:
+        die(f'no records in {base_dir if not base else directory}')
+    moves = ''
+    if opts.get('moves'):
+        try:
+            moves = open(opts['moves']).read()
+        except OSError as e:
+            die(f'cannot read {opts["moves"]}: {e.strerror}')
+    rows = worse_jobs(base, change, moves)
+    unnamed = [r for r in rows if not r[4]]
+    compared = len(set(base) & set(change))
+    print(f'record.py: the selected clocks of {compared} jobs set against the base: {len({r[0] for r in rows})} jobs worse, '
+          f'{len({r[0] for r in unnamed})} of them not named in MOVES.md')
+    if rows:
+        cells = [('job', 'field', 'before (base)', 'after (change)', 'named in MOVES.md')] + [(j, f, show(b), show(a), 'yes' if n else 'NO') for j, f, b, a, n in rows]
+        widths = [max(len(c[i]) for c in cells) for i in range(5)]
+        text = '\n'.join('  '.join(c[i].ljust(widths[i]) for i in range(5)).rstrip() for c in cells)
+        print('\n' + text)
+        if unnamed:
+            print('\nrecord.py: name each of these jobs in the entry this pull request adds to clock-generator/record/MOVES.md, with why it is accepted')
+        if opts.get('summary') and unnamed:
+            with open(opts['summary'], 'a') as out:
+                out.write(f'### Never worse: {len({r[0] for r in unnamed})} selected clocks got worse and are not named in MOVES.md\n\n```\n{text}\n```\n')
+    return 1 if unnamed else 0
+
+
 def parse(argv):
     pos, opts, i = [], {}, 0
     while i < len(argv):
         if argv[i] == '--allow-unchecked':
             opts['allow-unchecked'] = True; i += 1
-        elif argv[i] in ('--dir', '--map', '--summary', '--module'):
+        elif argv[i] in ('--dir', '--map', '--summary', '--module', '--base', '--moves'):
             if i + 1 >= len(argv):
                 die(f'{argv[i]} takes an argument')
             opts[argv[i][2:]] = argv[i + 1]; i += 2
@@ -290,9 +386,13 @@ def parse(argv):
 
 
 def main(argv):
-    if not argv or argv[0] not in ('write', 'check'):
+    if not argv or argv[0] not in ('write', 'check', 'worse'):
         sys.exit(__doc__)
     pos, opts = parse(argv[1:])
+    if argv[0] == 'worse':
+        if pos:
+            die('worse takes no folder of job files: --base <record folder> [--dir <record folder>]')
+        return main_worse(opts)
     if len(pos) != 1:
         die(f'{argv[0]} takes one jobs folder or cache entry')
     directory = opts.get('dir') or os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'record')
