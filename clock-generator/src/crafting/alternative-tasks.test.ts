@@ -56,7 +56,8 @@ describe("output swing counts above the planned one", () => {
     // a cycle takes its output swings from a machine that holds the planned count when they start: the count three
     // above it held on no sample or fixture but as a multiple of the planned count (6 at 3)
     it("are tried up to two above it, and three above only where that is a multiple of it", async () => {
-        const units = planClockAlternatives(await loadConfigFromFile(ConfigPaths.PROCESSING_UNIT_15_CHEST_FED), options);
+        // PROCESSING_UNIT_15_CHEST_FED was the case of a planned 2 until its infinity chest gave the game's item first (#617): 1
+        const units = planClockAlternatives(await loadConfigFromFile(ConfigPaths.CHEMICAL_SCIENCE_240_SHARED_FOUNDRY), options);
         expect(units.context.planned_swings).toBe(2);
         expect(swingTasks(units)).toEqual(["swings-3", "swings-4", "swings-1"]);
         const utility = planClockAlternatives(await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT), options);

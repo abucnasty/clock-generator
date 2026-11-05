@@ -1,13 +1,15 @@
 import { HandNotifications } from "./hand-notifications";
-import { ItemName } from "../../data";
+import { FactorioDataService, ItemName } from "../../data";
 import { InserterStatus } from "../../state/entity-status";
 import type { InserterState } from "../../state/inserter-state";
 import { ContainerStorage, MixedStorage } from "./container-storage";
 import { CarriedItems, HandDropPort, HandPickupPort, HandReason, HandScratch, takeIntoHand } from "./hand";
 
 /**
- * A Container's pickup port, its storage, as one hand reaches it: a container of one item or of endless room gives the
- * hand's items in the hand's order (a container of mixed items is `MixedContainerHandPickup`). A pickup that finds
+ * A Container's pickup port, its storage, as one hand reaches it: a container of one item or of endless room (an infinity
+ * chest) gives the item the game sorts last of those the sink takes now, as an infinity chest keeps its slots in the
+ * game's inventory order and the hand takes the item of the last slot it may take (a container of mixed items is
+ * `MixedContainerHandPickup`). A pickup that finds
  * nothing to take sets the inserter idle itself, with no event (same-tick rule 11). The idle rule starts a pickup where
  * the container has any of the items the hand carries, whatever the hand holds.
  */
@@ -15,6 +17,12 @@ export class ContainerHandPickup implements HandPickupPort {
 
     /** The items the container gives that the hand's filter lets it take: whether there is anything to take */
     private readonly offered: readonly ItemName[];
+
+    /**
+     * The hand's items by their index, the one the game sorts last in an inventory first (`itemInventoryRankOrThrow`):
+     * the order in which an infinity chest's slots are tried, the last slot first
+     */
+    private readonly pick_order: readonly number[];
 
     constructor(
         protected readonly state: InserterState,
@@ -27,6 +35,11 @@ export class ContainerHandPickup implements HandPickupPort {
     ) {
         // what the container gives is its config's, the same in every tick
         this.offered = source.getItemFilters().filter(item => items.lets(item));
+        const indices = items.names.map((_, index) => index);
+        this.pick_order = indices.length < 2 ? indices : indices
+            .map(index => ({ index, rank: FactorioDataService.itemInventoryRankOrThrow(items.names[index]) }))
+            .sort((a, b) => b.rank - a.rank)
+            .map(it => it.index);
     }
 
     public enter(): void {
@@ -97,10 +110,16 @@ export class ContainerHandPickup implements HandPickupPort {
         source.take(item, pickup_quantity);
     }
 
-    /** The item the hand takes now: the first it carries that the container has and the sink takes now */
+    /**
+     * The item the hand takes now: of those it carries that the container has and the sink takes now, the one the game
+     * sorts last in an inventory (the game, Factorio 2.1.24: an advanced circuit build's inserter took electronic
+     * circuits, then cable, then plastic from an infinity chest of the three and processing units)
+     */
     protected nextItem(): ItemName | null {
         const names = this.items.names;
-        for (let index = 0; index < names.length; index++) {
+        const order = this.pick_order;
+        for (let at = 0; at < order.length; at++) {
+            const index = order[at];
             if (this.source.getCurrentQuantity(names[index]) > 0 && this.sink.takesAt(index)) {
                 return names[index];
             }
