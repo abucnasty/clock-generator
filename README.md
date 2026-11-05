@@ -64,7 +64,8 @@ section for the new version in `CHANGELOG.md`. Merging a new version to `master`
 The same workflow deploys the site. Vercel deploys nothing by itself, not `master` and not a pull request:
 `vercel.json` switches that off. The site players use is deployed when a version is released, from
 the commit of its tag and after its GitHub release exists, so `master` can run ahead of what players have. A fix
-reaches them with a version bump: a patch version and its changelog section in the same pull request as the fix.
+reaches them with a version bump: a patch version and its changelog section, in the pull request of the fix or in one
+that carries the bump for several (its Version slot says which; see [Pull requests](CONTRIBUTING.md#pull-requests)).
 Every merge to `master` is also deployed as a preview, with its address in the summary of the workflow run. The
 deployments need the secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`; the two ids are in
 `.vercel/repo.json` (or `.vercel/project.json`) after `vercel link`. Starting the workflow by hand deploys the current version again.

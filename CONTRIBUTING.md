@@ -1,6 +1,83 @@
 # Contributing
 
-Use descriptive branch names such as `fix/moving-belt-pickup` or `refactor/game-test-layout`.
+## Pull requests
+
+A pull request's title and body become its merge commit, so together they are the history of the repository. Write them
+for someone reading that history later. These rules hold for every pull request, whoever writes it.
+
+### Branch and type
+
+Name the branch `<type>/<slug>`, the slug at most five words in kebab-case and without the issue number (the title
+carries it): `fix/moving-belt-pickup`. An integration branch is `release/<slug>`. The type says what the change does for
+the user, the person generating clocks:
+
+| Type | The change | User changelog |
+| --- | --- | --- |
+| `feature` | adds, changes or removes something the user can do or see, samples included | Added, Changed, Removed |
+| `fix` | makes a result the user sees right where it was wrong | Fixed |
+| `perf` | keeps the results and makes them faster or smaller | Changed |
+| `refactor` | keeps the results and changes the code: a zero-change blast | none |
+| `test` | adds or changes tests, fixtures or game coverage only | none |
+| `docs` | changes documentation only | none |
+| `chore` | changes tooling, CI or scripts: nothing the user sees | none |
+| `release` | prepares, dates or integrates a version | dates its section |
+
+A pull request with an entry in a user changelog (`CHANGELOG.md` or the sidecar's) is a `feature`, `fix` or `perf`.
+Split a pull request that mixes types when its parts can merge apart; otherwise give it the type with the most user
+impact: `fix`, then `feature`, then `perf`.
+
+### Title
+
+`<type>: <what changed>`, at most 72 characters, with the issue number at the end when there is one:
+`fix: infinity chest gives up its last-sorted item first (#617)`.
+
+### Body
+
+Start from the type's template in `.github/PULL_REQUEST_TEMPLATE/`: copy it, fill it and pass it with
+`gh pr create --body-file <file>` (`--template` works only in an interactive terminal):
+
+| Template | Types |
+| --- | --- |
+| `change.md` | `feature`, `fix`, `perf` |
+| `refactor.md`, `test.md`, `docs.md`, `chore.md`, `release.md` | the type of the same name |
+
+Fill every slot; a `{…}` placeholder left in shows a rule was skipped. The visible body fits on one screen, about 25
+lines: put longer lists in a `<details>` block. The slots that carry a rule:
+
+- **Blast**: `zero-change`, `<N> jobs moved` with the jobs listed, `selective: <jobs>`, or `not run: <reason>`. The
+  Blast column of [Choose checks for the change](#choose-checks-for-the-change) says when one is needed; where it says
+  not needed, write `not run:` and the row. A pull request that says behavior is unchanged shows a zero-change blast:
+  CI cannot prove that.
+- **Evidence**: the best there is, each shown before → after: a game recording that agrees with the simulator, the test
+  that failed and now passes, the jobs the blast moved, a screenshot of the UI. Write `factorio: not run` when no game
+  ran: a skipped game test is not game verification.
+- **Impact**: the door (two-way, or one-way and what cannot be undone) and what it affects (whose builds, saved configs,
+  CI time, or none).
+- **Version**: the generator version, `sidecar <version>`, both, `bundled: #<pull request>` when another pull request
+  carries the bump (as under a [release hold](#release-hold-for-unreleased-merges)), or `none`. A fix reaches users
+  only with a version bump, in its own pull request or in the one that carries the bump.
+- **Changelog**: the file (`CHANGELOG.md` or `sidecar`) and the exact entry, or `none: no user impact`.
+- **Overview** (release): two to four lines on what the release changes for the user, by area, above the list of
+  pull requests it ships.
+
+### Changelogs
+
+Changelogs and pull requests say "user", never "player".
+
+- `CHANGELOG.md`, for the generator and its UI, is shown in the app. It lists only what a user notices, under the Keep a
+  Changelog headings, one entry per change: `<area>: <change>`, at most 15 words after the area and no full stop. Name
+  the build, item, field or result that changes; leave out field names, geometry, mechanisms and reasons. The areas:
+  - `simulation`: how the game is modelled
+  - `generation`: which potential clocks are found, and which becomes the selected clock
+  - `blueprint`: what the user takes into the game
+  - `ui`: everything else the user sees on the page
+
+  `- simulation: builds where several inserters share a single machine are now updated in the game's order`
+- `clock-generator-sidecar/changelog.txt` is shown on the mod portal and in the game's mod manager. The same rules hold
+  in Factorio's format: the categories `Features`, `Changes` and `Bugfixes` instead of areas, and the mod as the
+  subject: `- exports which way a belt runs under an inserter's drop`.
+- `clock-generator-recorder/changelog.txt` is a developer log: one line per change, which may name recording fields.
+  Recorder changes are `chore` or `test`.
 
 ## Where files belong
 
@@ -23,14 +100,15 @@ The [game verification guide](clock-generator/tests/game/README.md) explains set
 
 Run commands from the package they belong to. Engine commands below run from `clock-generator/`.
 
-| Change | Verification |
-| --- | --- |
-| Documentation only | Check changed links and command paths. Simulation and game runs are unnecessary. |
-| File moves, import paths, fixture catalog, test/build configuration | `npm run test:typecheck`, `npm run build`, `npm run lint`, `npm run knip`, and `npx vitest list --config vitest.game.config.ts --filesOnly`. Run affected simulator tests. |
-| Shared Lua capture or a probe | Type-check, run helper unit tests and affected mechanic game tests. Preserve observation/intervention ordering and capture windows. |
-| Simulator mechanic | Affected unit tests and a targeted game comparison when Factorio is available. Include generation tests when clock selection or windows change. |
-| Clock planning or selection | Affected generation tests and relevant clock throughput/recovery game cases when available. |
-| UI | UI lint/type checks and affected UI tests. Build when imports or package integration change. |
+| Change | Verification | Blast |
+| --- | --- | --- |
+| Documentation only | Check changed links and command paths. Simulation and game runs are unnecessary. | not needed |
+| File moves, import paths, fixture catalog, test/build configuration | `npm run test:typecheck`, `npm run build`, `npm run lint`, `npm run knip`, and `npx vitest list --config vitest.game.config.ts --filesOnly`. Run affected simulator tests. | engine files or import paths: yes, zero-change expected; catalog or configuration only: not needed |
+| Shared Lua capture or a probe | Type-check, run helper unit tests and affected mechanic game tests. Preserve observation/intervention ordering and capture windows. | not needed |
+| Simulator mechanic | Affected unit tests and a targeted game comparison when Factorio is available. Include generation tests when clock selection or windows change. | yes |
+| Clock planning or selection | Affected generation tests and relevant clock throughput/recovery game cases when available. | yes |
+| Samples or fixture configs | Affected generation tests and the samples' game cases when available. | selective: the jobs they feed |
+| UI | UI lint/type checks and affected UI tests. Build when imports or package integration change. | not needed |
 
 Use `npm test -- <file>` for unit/helper tests and `npm run test:generation -- <file>` for generation tests.
 Start with checks that cover the change; broaden them when failures or changes across several components justify it.
