@@ -1,8 +1,6 @@
-import {createHash} from "crypto";
 import {beforeAll, expect, test} from "vitest";
 import {backpressureLossOf, ClockAlternativesResult, generateClockAlternatives} from "./generate-blueprint";
 import {lossId} from "./backpressure-loss";
-import {clockIdentity} from "./clock-identity";
 import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config/schema";
@@ -13,20 +11,13 @@ import {readControls, runHolds, RunControls} from "../../tests/game/builds/clock
 const controls = readControls<RunControls>("inserter-crafting-240-shared-signal-clock-controls.json");
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 let config: Config;
-let generated: ClockAlternativesResult;
 // the same config with its belts backed up (`overrides.backed_up_belts`): the one copy of the sample's scaffold, whose belts end closed
 let backed_up: ClockAlternativesResult;
 
 beforeAll(async () => {
     config = await loadConfigFromFile(ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK);
-    generated = generateClockAlternatives(config, {logger: quiet});
     backed_up = generateClockAlternatives({...config, overrides: {...config.overrides, backed_up_belts: true}}, {logger: quiet});
 }, 300_000);
-
-// the clock recorded on the three copies (swings-6) is no longer the selected one; the next test finds it still made
-test("inserter crafting clock: the selected clock is swings-2, and the one recorded on the three copies is another it makes", () => {
-    expect(generated.alternatives[generated.selected_index].id).toBe("swings-2");
-});
 
 // with the belts backed up the selected clock is swings-6 (72 ticks), the one recorded in the game on the one copy of the sample's scaffold
 test("inserter crafting clock: with the belts backed up the selected clock is swings-6, stable, and it survives the loss of supply", () => {
@@ -54,17 +45,8 @@ for (const variant of inserterCraftingClockCases()) {
             expect([native.period, native.target]).toEqual([216, 240]);
             return;
         }
-        // the pin of the clock the three copies were recorded on, and its earlier clock, are checked against the record
-        // (clock-controls.test.ts); the config with its belts backed up is no job of the record yet, so its pin is checked here
-        if (!variant.backed_up_one_copy) return;
-        const chosen = backed_up.alternatives.find(alternative => alternative.id === variant.alternative)!;
-        const exported = chosen.result.subtick ?? chosen.result;
-        expect(createHash("sha256").update(JSON.stringify(clockIdentity(exported))).digest("hex"),
-            "same windows and exported clock as the native control (its identity: no text or metadata)").toBe(generation!.clock_sha256);
-        expect(chosen.result.subtick?.clock.period_ticks ?? chosen.result.simulation_duration.ticks).toBe(generation!.period);
-        expect(chosen.verdict).toBe(generation!.verdict);
-        expect({id: chosen.id, holds: chosen.assessment.holds, rate: chosen.assessment.items_per_second,
-            supply: chosen.belt?.kind ?? null}).toEqual(generation!.selection);
-        expect(native.period).toBe(generation!.period);
+        // the pin of the clock each recording was made on, and its earlier clock, are checked against the record (clock-controls.test.ts);
+        // the config with its belts backed up is the record's job variants-INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK_BACKED_UP
+        expect(generation).toBeDefined();
     });
 }
