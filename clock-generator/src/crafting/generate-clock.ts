@@ -5,7 +5,7 @@ import { defaultLogger } from "../common/logger";
 import { groupedHandsClock } from "./candidates/grouped-hands";
 import { observedWindowsClock } from "./candidates/observed-windows";
 import { resultWindowsClockOfPlan } from "./candidates/result-windows-clock";
-import { BlueprintGenerationResult, GenerateClockOptions, PlanRun, SwingAttemptResult, SwingBackoffReport, checkedClock, clockOfPlan, clockOfWindows, planRun } from "./plan/plan-run";
+import { BlueprintGenerationResult, GenerateClockOptions, PlanRun, SwingAttemptResult, SwingBackoffReport, checkedClock, clockOfPlan, clockOfWindows, planRun, slackInsideWindows } from "./plan/plan-run";
 import { ArithmeticWindowsNotApplicable, batchedSwingsWindowsByArithmetic } from "./plan/batched-arithmetic";
 import { sharedLaneShortened } from "./plan/shared-lane-guard";
 import { estimatedOutputSwings } from "./plan/output-swing-estimate";
@@ -64,8 +64,9 @@ export function generateClockForConfig(
         // beside a planned clock that holds as built, the windows made by arithmetic (decision 7). Not where it does not hold:
         // a clock that holds there would stop the searches whose clocks are selected on such builds (the blocked output
         // fixture of stack 3 lost its shifted swings, 25.0 wake-ups a minute, to the arithmetic's 37.5)
+        const primary = options.verify_as_built === true ? withSlackInside(plan, planned, options) : planned;
         const arithmetic = options.verify_as_built === true ? arithmeticWindowsOf(plan) : null;
-        return arithmetic === null ? planned : arithmeticBesidePlanned(plan, planned, arithmetic, options);
+        return arithmetic === null ? primary : arithmeticBesidePlanned(plan, primary, arithmetic, options);
     }
     const grouped = groupedHandsClock(plan, options);
     if (grouped !== null && grouped.stability_check.holds) {
@@ -144,6 +145,38 @@ function arithmeticBesidePlanned(plan: PlanRun, planned: BlueprintGenerationResu
     }
     plan.logger.log(`Windows by arithmetic: the primary clock (${made_wake_ups.toFixed(2)} against ${planned_wake_ups.toFixed(2)} wake-ups a minute)`);
     return made;
+}
+
+/**
+ * The planned clock, or the same windows with the belt pickup slack they hold already (`slackInsideWindows`) in place of
+ * the slack added after them, where every belt-fed window stays open the slack's ticks after its last pickup: the
+ * clock made so where it holds as built, wakes its inserters fewer times a minute and gets back from every backpressure
+ * loss the planned clock gets back from. The slack added after such a window lets the arm, back from its last drop,
+ * start a hand the plan does not have, and where that hand waits at its machine it costs a wake-up; and it can join two
+ * windows of a period into one (the logistic science sample's two pickup windows of 176 ticks, 20.57 wake-ups a minute
+ * either way it is made so, against 61.71 joined and 41.14 apart).
+ */
+function withSlackInside(plan: PlanRun, planned: BlueprintGenerationResult, options: GenerateClockOptions): BlueprintGenerationResult {
+    if (options.belt_pickup_slack !== "always" || planned.belt?.kind !== "moving" || slackInsideWindows(plan) === null) {
+        return planned;
+    }
+    // checked on a copy of the plan: the check writes the as-built result into the stability check of the plan it is given
+    const own: PlanRun = { ...plan, run: { ...plan.run, stability_check: { ...plan.run.stability_check, as_built: undefined } } };
+    const clock = clockOfPlan(own, { ...options, belt_pickup_slack: "inside" });
+    const inside = checkedClock(own, clock, clock.windows, options);
+    const wake_ups = (result: BlueprintGenerationResult) => result.stability_check.as_built?.wake_ups?.wake_ups_per_minute;
+    const inside_wake_ups = wake_ups(inside), planned_wake_ups = wake_ups(planned);
+    if (!(inside.stability_check.as_built?.holds ?? false) || inside_wake_ups === undefined || planned_wake_ups === undefined
+        || !(inside_wake_ups < planned_wake_ups)) {
+        return planned;
+    }
+    const survives = (result: BlueprintGenerationResult) => backpressureLossVerdictOf(plan.config, result, plan.logger).backpressure_loss?.survives === true;
+    if (!survives(inside) && survives(planned)) {
+        plan.logger.log("Belt pickup slack inside the windows: fewer wake-ups, but the clock does not get back from a loss the planned one gets back from");
+        return planned;
+    }
+    plan.logger.log(`Belt pickup slack inside the windows: the primary clock (${inside_wake_ups.toFixed(2)} against ${planned_wake_ups.toFixed(2)} wake-ups a minute)`);
+    return inside;
 }
 
 /**
