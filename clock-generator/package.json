@@ -39,6 +39,7 @@
     "docs:portal": "node scripts/docs/portal.js",
     "docs:fields": "tsc && node scripts/docs/configuration-file-fields.js",
     "docs:game-labels": "node scripts/docs/check-game-labels.js",
+    "docs:avoid-words": "node scripts/docs/avoid-words.js",
     "test:docs": "vitest run --project unit tests/docs"
   },
   "keywords": [
