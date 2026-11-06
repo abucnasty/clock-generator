@@ -2,12 +2,12 @@
  * The composition of a build's group periods into its one main period, as today makes it: the cycle's ticks times the
  * lcm of the denominators of every hand a cycle (`EntityTransferCountMap.lcm`), or the config's own lcm. A group's
  * period is the cycle's ticks times the lcm of its own edges' denominators, so the main period is the lcm of the group
- * periods. Over MAX_SIMULATION_TICKS today's swing backoff picks a lower count where it may.
+ * periods. Over SIMULATION_BUDGET_TICKS today's swing backoff picks a lower count where it may.
  */
 import type { Config } from "../../config";
 import type { OverLimitAction, PlanComposition } from "../../data-types/build-plan";
 import Fraction from "../../data-types/fraction";
-import { MAX_SIMULATION_TICKS } from "../plan/clock-period-limit";
+import { SIMULATION_BUDGET_TICKS } from "../plan/clock-period-limit";
 import { carriedItemsOf } from "../result-windows";
 import type { CraftingCyclePlan } from "../sequence/cycle/crafting-cycle";
 import { EntityTransferCountMap } from "../sequence/cycle/swing-counts";
@@ -76,14 +76,14 @@ export function compositionOf(periods: PlannedPeriods, groups: readonly GroupSha
     const { main, tried } = periods;
     const measure = main.measure;
     const first = tried[0];
-    const over = first.measure.main_period.toDecimal() >= MAX_SIMULATION_TICKS;
+    const over = first.measure.main_period.toDecimal() >= SIMULATION_BUDGET_TICKS;
     const terms = {
         requested_swings: first.swings,
-        limit_ticks: MAX_SIMULATION_TICKS,
+        limit_ticks: SIMULATION_BUDGET_TICKS,
         tried: tried.map(count => ({ swings: count.swings, period_ticks: count.measure.main_period.toDecimal() })),
     };
     const over_limit_action: OverLimitAction = !over ? { action: "none" }
-        : periods.can_back_off && measure.main_period.toDecimal() < MAX_SIMULATION_TICKS
+        : periods.can_back_off && measure.main_period.toDecimal() < SIMULATION_BUDGET_TICKS
             ? { action: "swing-backoff", rule: "P-limit", terms }
             : { action: "refused", rule: "P-limit", terms };
     return {

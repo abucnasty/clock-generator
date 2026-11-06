@@ -3,7 +3,7 @@ import path from "path";
 import { describe, expect, it } from "vitest";
 import { ConfigPaths } from "../../config/config-paths";
 import type { PlanComposition } from "../../data-types/build-plan";
-import { MAX_SIMULATION_TICKS } from "../plan/clock-period-limit";
+import { SIMULATION_BUDGET_TICKS } from "../plan/clock-period-limit";
 import { wholeSwingPeriodsBelow } from "../whole-swing-periods";
 import { planOfSample } from "./plan-test-helpers";
 import { planSnapshotOf } from "./snapshot";
@@ -48,8 +48,8 @@ describe("the build plan", () => {
             // a period over the limit backs off to the count today's whole-swing arithmetic finds
             if (composition.over_limit_action.action === "swing-backoff") {
                 const below = [...wholeSwingPeriodsBelow({ config_json: JSON.stringify(config), terminal_swing_count: composition.over_limit_action.terms.requested_swings },
-                    MAX_SIMULATION_TICKS)];
-                const found = below.find(period => period.period_ticks < MAX_SIMULATION_TICKS)!;
+                    SIMULATION_BUDGET_TICKS)];
+                const found = below.find(period => period.period_ticks < SIMULATION_BUDGET_TICKS)!;
                 expect([composition.swings, composition.main_period.ticks]).toEqual([found.terminal_swing_count, found.period_ticks]);
             }
         });

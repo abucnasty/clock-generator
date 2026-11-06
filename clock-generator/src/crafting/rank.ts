@@ -178,6 +178,19 @@ function costKey(ranking: Pick<ClockRanking, "wake_ups_per_minute">): number {
 }
 
 /**
+ * The dominance rule behind the skip of the searches at 0 wakeups: under today's ranking no search can beat a selected
+ * clock of 0 wakeups. The selection puts the fewest wakeups a minute (to a thousandth, as `costKey` compares) before
+ * the periods to get back from a loss and then the window count. 0 wakeups is the floor of the first key and 1 period
+ * the floor of the second, so a search can at best tie a clock of 0 wakeups on those. The window count is no floor: a
+ * search could in principle tie on both and have fewer windows. Lifting the skip on all 86 record jobs found no such
+ * clock (0 new; 1 duplicate of the selected clock), but that is a measure, not part of the rule. The rule is not a
+ * cost skip; it holds only while the ranking puts wakeups first among these keys. A cost not counted (null) is not 0.
+ */
+export function noSearchCanBeat(ranking: Pick<ClockRanking, "wake_ups_per_minute">): boolean {
+    return costKey(ranking) <= 0;
+}
+
+/**
  * The searches run where a clock made without one can already be selected as stable, in the order listed: the two that
  * found a clock with fewer wake-ups on a sample (measured on every sample as built and with backed-up belts, the four
  * searches run on every one: observed windows on 8 of 106 jobs, shifted swings on 3; uneven output swings and full-hand
@@ -196,8 +209,8 @@ export const IMPROVING_SEARCH_MAX_PERIOD_TICKS = 480;
 /**
  * The searches to run once the clocks made without one are in: every one where none of them can be selected as stable
  * (`searchesAreNeeded`); else those of SEARCHES_THAT_CAN_IMPROVE, where the clock the selection ends on so far has a cost
- * above 0 (none can beat a clock of no wake-ups) and the primary period is at most IMPROVING_SEARCH_MAX_PERIOD_TICKS;
- * else none.
+ * above 0 (`noSearchCanBeat`: none can beat a clock of no wakeups) and the primary period is at most
+ * IMPROVING_SEARCH_MAX_PERIOD_TICKS; else none.
  */
 export function searchesToRun<T, S extends { id: string }>(
     runs: (ClockAlternativeRun<T> | null)[],
@@ -210,7 +223,7 @@ export function searchesToRun<T, S extends { id: string }>(
     }
     const { alternatives, selected_index } = combineClockAlternativeRuns(runs, rankingOf);
     const selected = alternatives[selected_index];
-    if (selected === undefined || costKey(rankingOf(selected)) <= 0 || primary_period_ticks > IMPROVING_SEARCH_MAX_PERIOD_TICKS) {
+    if (selected === undefined || noSearchCanBeat(rankingOf(selected)) || primary_period_ticks > IMPROVING_SEARCH_MAX_PERIOD_TICKS) {
         return [];
     }
     return searches.filter(search => SEARCHES_THAT_CAN_IMPROVE.includes(search.id));

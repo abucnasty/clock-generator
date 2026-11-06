@@ -29,8 +29,11 @@ export function fractionalSwingsWholeAt(refusal: FractionalSwingsRefusedError, c
         + `number of times a cycle: the clock of ${swings}.`);
 }
 
-/** Practical upper limit when swings are effectively unlimited */
-const MAX_SWINGS_UNLIMITED = 100;
+/**
+ * Practical upper limit on the swings of one sub-cycle where the insertion limits set none: a simulator budget, not a
+ * proof. It is inert on every record job: the largest need is 26 swings, and no refusal at this limit occurs.
+ */
+const SWINGS_PER_SUBCYCLE_BUDGET = 100;
 
 /**
  * Represents the distribution of swings across multiple sub-cycles.
@@ -102,7 +105,7 @@ export function computeMaxSwingsPerSubCycle(constraints: SwingCapacityConstraint
     
     // If consumption per swing >= effective_stack_size, inventory never accumulates
     if (items_consumed_per_swing >= effective_stack_size) {
-        return MAX_SWINGS_UNLIMITED;
+        return SWINGS_PER_SUBCYCLE_BUDGET;
     }
 
     // Net inventory increase per swing after the first
@@ -240,7 +243,7 @@ function computeSwingDistributionForEntity(
         const distribution = createAlternatingDistribution(
             total_swings,
             cycle_multiplier,
-            MAX_SWINGS_UNLIMITED // No practical limit for drills
+            SWINGS_PER_SUBCYCLE_BUDGET // No practical limit for drills
         );
         
         return {
@@ -265,7 +268,7 @@ function computeSwingDistributionForEntity(
             // No practical limit for belts or chests
             // Belts could in theory have a constraint but that depends on eventually
             // modellling the spacing between belts appropriately or take into account the speed of the belt
-            MAX_SWINGS_UNLIMITED
+            SWINGS_PER_SUBCYCLE_BUDGET
         );
         
         return {
