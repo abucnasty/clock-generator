@@ -1,0 +1,17 @@
+# Labels of Factorio itself that the user topics (docs/user/) name in bold. CI cannot read the game, so the docs label
+# test (clock-generator/tests/docs/user-labels.test.ts) accepts the labels of this list. Each row: the label as the
+# topics write it, its key in the English locale of Factorio 2.1 (section.key, data/*/locale/en/*.cfg), and the
+# string the game has for that key. For a keyboard key, the game string is the name of its modifier key.
+# `npm run docs:game-labels` (from clock-generator/) checks the list against an installed game.
+label	locale_key	game_string
+Alt+E	control-keys.alt	Alt
+Ctrl+C	control-keys.control	Control
+Mods	gui-menu.mods	Mods
+Flip horizontal	controls.flip-horizontal	Flip horizontal
+Flip vertical	controls.flip-vertical	Flip vertical
+Enable if	gui-control-behavior-modes.enable-if	Enable if
+Clock	virtual-signal-name.signal-clock	Clock
+Lock	virtual-signal-name.signal-lock	Lock
+Signal A	virtual-signal-name.signal-A	Signal A
+Signal B	virtual-signal-name.signal-B	Signal B
+Signal T	virtual-signal-name.signal-T	Signal T
