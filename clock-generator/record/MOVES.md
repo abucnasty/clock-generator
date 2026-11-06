@@ -9,7 +9,7 @@ CI checks this file: the "Record check" fails when a selected clock got worse th
 request adds to this file.
 
 ## Fractional swings back off to a count the machine takes (#655)
-- config-ELECTROMAGNETIC_SCIENCE_330: selected swings-2 -> fractional, wake-ups 163.869 -> 158.748 a minute, period 704; fractional swings were refused at 16/3, 5, 4 and 3 output swings a cycle and are now planned at 2 (game: 100% on both scaffolds)
+- config-ELECTROMAGNETIC_SCIENCE_330: selected swings-2 -> fractional, wake-ups 163.869 -> 158.748 a minute, period 704; fractional swings were refused at 11/2 (the machine's own swings), 5, 4 and 3 output swings a cycle and are now planned at 2 (game: 100% on both scaffolds)
 - config-LITHIUM_PLATE_80_SILO_CHEST, config-UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT: a new fractional alternative, stable (620 and 118.209 wake-ups a minute), not selected; it was refused before
 - front-front-exit-turbo-mirrored-backed-different-items, front-front-exit-turbo-mirrored-moving-config-different-items, front-front-exit-turbo-unmirrored-backed-different-items, front-front-exit-turbo-unmirrored-moving-config-different-items, pickup-electromagnetic-turbo-straight-belt-backed, pickup-electromagnetic-turbo-straight-belt-moving, pickup-electromagnetic-turbo-underground-entrance-backed, pickup-electromagnetic-turbo-underground-entrance-moving, pickup-electromagnetic-turbo-underground-exit-backed, pickup-electromagnetic-turbo-underground-exit-moving: a new fractional alternative, stable (573.542 to 625.641 wake-ups a minute), not selected; it was refused before
 - config-AUTOMATION_SCIENCE_240, blocked-blocked-output-turbo-stack-3: a new fractional alternative, no recovery and unstable, not selected; it was refused before

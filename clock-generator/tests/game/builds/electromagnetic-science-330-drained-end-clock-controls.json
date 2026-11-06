@@ -3,7 +3,7 @@
   "cases": {
     "generated-moving-one-copy": {
       "recorded": {
-        "pr": 0,
+        "pr": 655,
         "commit": "be62b7f0a642dfa93cd4e9b520c14cc97f279feb",
         "frozen_head": "be62b7f0a642dfa93cd4e9b520c14cc97f279feb",
         "note": "recorded under the protocol in game ticks on the engine of this head with the tests of the branch that added it; pr is set when the PR is opened",

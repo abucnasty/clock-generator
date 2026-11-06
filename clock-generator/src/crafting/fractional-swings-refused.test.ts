@@ -75,7 +75,7 @@ describe('fractional swings the insertion limits refuse', () => {
         expect(countsTried(not_asked)).toEqual([undefined]);
     });
 
-    it('electromagnetic science 330/s: refused at 5, 4 and 3 output swings, the build plan lists them at 2, with its fractional inputs', async () => {
+    it('electromagnetic science 330/s: refused at 11/2, 5, 4 and 3 output swings, the build plan lists them at 2, with its fractional inputs', async () => {
         const { plan } = await planOfSample(ConfigPaths.ELECTROMAGNETIC_SCIENCE_330);
         expect(plan.groups[0].periods.find(choice => choice.listed_as === 'fractional'))
             .toMatchObject({ swings: 2, fractional: true, period_ticks: 704, kept: true });
