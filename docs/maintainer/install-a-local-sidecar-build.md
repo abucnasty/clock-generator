@@ -22,7 +22,7 @@ Make the zip file of the sidecar from your copy of the repository, and install i
    clock-generator-sidecar/build.sh --install
    ```
 
-   On Windows, type the command without `--install`. The script cannot find the mods folder on Windows.
+   On Windows, `--install` stops with an error. Type the command without `--install`.
 
    The script makes `clock-generator-sidecar/clock-generator-sidecar_<version>.zip`, with the version of
    `clock-generator-sidecar/info.json`. On Linux and macOS, it removes the previous zip files of the mod from the mods
