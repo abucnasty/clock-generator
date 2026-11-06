@@ -213,7 +213,8 @@ _Avoid_: machine duty, duty (bare)
 
 **Cold start**:
 A start of a build with every machine, belt buffer and hand empty and the supplies full. The clock starts at the first
-tick. An opt-in, advanced check: the generator judges clocks from the backpressure start. The code's `cold_start`.
+tick. The start the generator judges clocks from. Spike #689 measures whether the backpressure start should replace
+it. The code's `cold_start`.
 Control theory: a step response from rest (IEC 351-45-27; Janert p.82).
 _Avoid_: empty start, unloaded start, cold startup
 
@@ -221,7 +222,8 @@ _Avoid_: empty start, unloaded start, cold startup
 A start of a build in which every entity that can fill without the clock is full. The supply belts are saturated.
 The machines that inserters without a clock fill, and their outputs, are full. The machines that only clocked inserters
 fill are empty. A loop starts from its kick start. The clock starts at the first tick, when the **Clock
-lock** is set to off. The start that the generator judges clocks from: a user can always start a build this way.
+lock** is set to off. A user can always start a build this way. Planned as the judged start in place of the cold
+start, when spike #689 shows that it costs no more.
 Control theory has no single term: a step response from a saturated initial state (Janert p.28, p.101-103).
 _Avoid_: loaded start, warm start, full backpressure startup
 
