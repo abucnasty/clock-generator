@@ -382,7 +382,7 @@ export function ConfigImportExport({
                     await importConfigText(content, UNDO_IMPORT_MESSAGE);
                 }
             } catch (error) {
-                console.error('Open build file error:', error);
+                console.error('Open configuration file error:', error);
                 errorIdRef.current = notify({ severity: 'error', text: openFileProblem(error) });
             }
 
@@ -601,13 +601,13 @@ export function ConfigImportExport({
                     <ListItemIcon>
                         <Upload fontSize="small" />
                     </ListItemIcon>
-                    <ListItemText>Open build file…</ListItemText>
+                    <ListItemText>Open configuration file…</ListItemText>
                 </MenuItem>
                 <MenuItem onClick={handleMenuExport} disabled={!config}>
                     <ListItemIcon>
                         <Download fontSize="small" />
                     </ListItemIcon>
-                    <ListItemText>Save build file</ListItemText>
+                    <ListItemText>Save configuration file</ListItemText>
                 </MenuItem>
                 <MenuItem onClick={handleMenuShare} disabled={!config}>
                     <ListItemIcon>
@@ -670,7 +670,7 @@ export function ConfigImportExport({
                     <ListItemIcon sx={{ color: 'inherit' }}>
                         <RestartAlt fontSize="small" />
                     </ListItemIcon>
-                    <ListItemText>Reset build</ListItemText>
+                    <ListItemText>Reset configuration</ListItemText>
                 </MenuItem>
             </Menu>
 

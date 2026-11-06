@@ -1,24 +1,24 @@
 /**
- * Every string the Wake windows view shows, in the glossary's terms (1.12). The provisional wake-up definition
- * lives in glossary.ts, to be updated there after the strict-definition experiment.
+ * Every string the Enable windows view shows, in the glossary's terms (1.12). The wakeup definition lives in
+ * glossary.ts; only its switched-off case is provisional.
  */
 import type { AlwaysOnReason } from 'clock-generator/browser';
-import { PROVISIONAL_WAKE_UP_DEFINITION } from './glossary';
+import { WAKEUP_DEFINITION } from './glossary';
 import { formatNumberText } from './numberText';
 import type { OwnClock, WakeWindow, WakeWindowRow } from './wakeWindows';
 
 // ---- Definitions that can change ------------------------------------------------------------------------------------
 
-/** Glossary, "wake window" */
-const WAKE_WINDOW_DEFINITION = 'A stretch of ticks during which the clock switches an inserter or drill on. '
-    + 'Between its wake windows it is off, so the game has nothing to wake.';
+/** Glossary, "enable window" */
+const WAKE_WINDOW_DEFINITION = 'The ticks of the window cycle during which the clock switches an inserter or drill on. '
+    + 'Between its enable windows it is off, so the game has nothing to wake.';
 
-/** Glossary, "wake-up" (option (b), approved provisionally on 2026-10-14) */
-const WAKE_UP_DEFINITION = PROVISIONAL_WAKE_UP_DEFINITION;
+/** Glossary, "wakeup" */
+const WAKE_UP_DEFINITION = WAKEUP_DEFINITION;
 
 /** What the per-row figure is */
 const WAKE_UPS_COLUMN_HELP =
-    'Wake-ups a minute of this inserter, for one copy of the build, counted by the simulator over a long run of the clock '
+    'Wakeups a minute of this inserter, for one copy of the build, counted by the simulator over a long run of the clock '
     + 'from a cold start. The rows add up to the clock\'s figure in the clocks table, or, where that is an average of start '
     + 'points, to its figure from a cold start.';
 
@@ -37,59 +37,59 @@ const NOTE_WINDOWS = 4;
 
 // ---- Fixed text -----------------------------------------------------------------------------------------------------
 
-export const VIEW_HEADING = 'Wake windows';
-export const VIEW_INTRO = 'When the selected clock switches each inserter and drill on, over one clock period. '
+export const VIEW_HEADING = 'Enable windows';
+export const VIEW_INTRO = 'When the selected clock switches each inserter and drill on, over one window cycle. '
     + 'The rows share one axis in ticks, with seconds below.';
 export const TERMS = [
-    { term: 'Wake window', definition: WAKE_WINDOW_DEFINITION },
-    { term: 'Wake-up', definition: WAKE_UP_DEFINITION },
-    { term: 'Wake-ups/min', definition: WAKE_UPS_COLUMN_HELP },
+    { term: 'Enable window', definition: WAKE_WINDOW_DEFINITION },
+    { term: 'Wakeup', definition: WAKE_UP_DEFINITION },
+    { term: 'Wakeups/min', definition: WAKE_UPS_COLUMN_HELP },
 ] as const;
 
 export const LEGEND_LABEL = 'Legend';
-export const LEGEND_WINDOW = 'Wake window';
-export const LEGEND_SLACK = 'Belt slack at the end of a wake window';
-export const BELT_SLACK_EXPLANATION = 'Belt slack: “+N ticks” marks the hatched tail already included in each wake window, allowing a late pickup from a moving belt to finish.';
-export const LEGEND_SELECTED = 'Selected wake window';
-export const LEGEND_TRACK = 'One clock period';
+export const LEGEND_WINDOW = 'Enable window';
+export const LEGEND_SLACK = 'Belt slack at the end of an enable window';
+export const BELT_SLACK_EXPLANATION = 'Belt slack: “+N ticks” marks the hatched tail already included in each enable window, allowing a late pickup from a moving belt to finish.';
+export const LEGEND_SELECTED = 'Selected enable window';
+export const LEGEND_TRACK = 'One window cycle';
 
-export const KEYBOARD_HINT = 'Up and down arrow keys move between rows. Left and right arrow keys step through the wake windows '
-    + 'of a row. Click or tap a bar for details. Home and End jump to the first and last wake window, and Escape clears the selection.';
+export const KEYBOARD_HINT = 'Up and down arrow keys move between rows. Left and right arrow keys step through the enable windows '
+    + 'of a row. Click or tap a bar for details. Home and End jump to the first and last enable window, and Escape clears the selection.';
 export const SHOW_AS_TABLE = 'Show as table';
 
 /** A row the clock leaves always on, where the engine does not say why */
 const ALWAYS_ON_TEXT = 'Always on: not on the clock';
 const NEVER_TEXT = 'Never switched on';
-const WAKE_UPS_ROW_LABEL = 'Wake-ups/min';
+const WAKE_UPS_ROW_LABEL = 'Wakeups/min';
 const NOT_COUNTED = 'Not counted';
 const NOT_COUNTED_DRILL = 'Not counted for drills';
-export const NOT_COUNTED_NOTE = 'No wake-up count for this clock';
-export const NOT_COUNTED_REASON = 'This clock was not run long enough to count wake-ups. '
+export const NOT_COUNTED_NOTE = 'No wakeup count for this clock';
+export const NOT_COUNTED_REASON = 'This clock was not run long enough to count wakeups. '
     + 'The count needs a clock that holds its rate over a long run.';
 
-export const ROWS_TABLE_CAPTION = 'Wake windows by inserter and drill';
-export const ROWS_TABLE_LABEL = 'Wake windows by inserter and drill, scrolls sideways';
+export const ROWS_TABLE_CAPTION = 'Enable windows by inserter and drill';
+export const ROWS_TABLE_LABEL = 'Enable windows by inserter and drill, scrolls sideways';
 /** Table 1's wake-ups: each row is one inserter's share of the clock's figure */
-export const ROWS_TABLE_WAKE_UPS_HEADER = 'Wake-ups/min per inserter (1\u00a0copy)';
+export const ROWS_TABLE_WAKE_UPS_HEADER = 'Wakeups/min per inserter (1\u00a0copy)';
 export const ROWS_TABLE_HEADERS = {
     name: 'Name',
     moves: 'Moves',
-    onFor: 'On for (% of the clock period)',
-    windows: 'Wake windows (count)',
+    onFor: 'On for (% of the window cycle)',
+    windows: 'Enable windows (count)',
     notes: 'Notes',
 } as const;
-export const WINDOWS_TABLE_CAPTION = 'Every wake window';
-export const WINDOWS_TABLE_LABEL = 'Every wake window, scrolls sideways';
+export const WINDOWS_TABLE_CAPTION = 'Every enable window';
+export const WINDOWS_TABLE_LABEL = 'Every enable window, scrolls sideways';
 export const WINDOWS_TABLE_HEADERS = {
     name: 'Name',
-    window: 'Wake window (n of N)',
+    window: 'Enable window (n of N)',
     starts: 'Starts at tick',
     ends: 'Ends at tick',
     lengthTicks: 'Length (ticks)',
     lengthSeconds: 'Length (s)',
     slack: 'Belt slack (ticks)',
 } as const;
-export const NO_WINDOWS_TEXT = 'None of the inserters and drills of this clock has a wake window.';
+export const NO_WINDOWS_TEXT = 'None of the inserters and drills of this clock has an enable window.';
 
 // ---- Builders -------------------------------------------------------------------------------------------------------
 
@@ -154,9 +154,9 @@ function alwaysOnText(reason: AlwaysOnReason | undefined): string {
         case 'from-loop':
             return 'Always on: it takes from a machine in a loop, which the clock leaves running';
         case 'busy':
-            return `Always on: its swings fill the whole clock period (${ticksText(reason.period_ticks)}), so a wake window would never switch it off`;
+            return `Always on: its swings fill the whole window cycle (${ticksText(reason.period_ticks)}), so an enable window would never switch it off`;
         case 'no-swing':
-            return 'Always on: it made no swing in the run the wake windows are read from, so the clock has no window for it';
+            return 'Always on: it made no swing in the run the enable windows are read from, so the clock has no window for it';
         case 'chest-drill':
             return `Always on: ${chestDrillWhyText(reason.why)}`;
     }
@@ -172,21 +172,21 @@ function chestDrillWhyText(why: Extract<AlwaysOnReason, { kind: 'chest-drill' }>
         case 'no-taker':
             return 'no inserter takes its item out of its chest, so there is nothing to time it by';
         case 'taker-without-window':
-            return `inserter ${num(why.inserter_number)} takes its item out of its chest and has no wake window, so there is nothing to time it by`;
+            return `inserter ${num(why.inserter_number)} takes its item out of its chest and has no enable window, so there is nothing to time it by`;
         case 'no-take':
-            return 'no wake window takes its item out of its chest, so there is nothing to time it by';
+            return 'no enable window takes its item out of its chest, so there is nothing to time it by';
         case 'no-room':
             return 'its chest has no room for its item';
         case 'needs-whole-period':
-            return 'no wake windows shorter than the clock period keep the inserters that take from its chest supplied';
+            return 'no enable windows shorter than the window cycle keep the inserters that take from its chest supplied';
         case 'would-cover-period':
-            return 'its wake windows would cover the whole clock period';
+            return 'its enable windows would cover the whole window cycle';
         case 'fallback':
-            return 'the clock does not hold its rate with the fewest wake windows for it, nor with them a tick longer';
+            return 'the clock does not hold its rate with the fewest enable windows for it, nor with them a tick longer';
         case 'windows-did-not-hold':
-            return 'its wake windows did not hold the clock';
+            return 'its enable windows did not hold the clock';
         case 'no-window':
-            return 'its Clocked rule leaves no wake window inside the clock period';
+            return 'its Clocked rule leaves no enable window inside the window cycle';
     }
 }
 
@@ -234,17 +234,17 @@ export function windowCountText(row: Pick<WakeWindowRow, 'mode' | 'ownClock' | '
 
 /** "212–240"; a wrapped window "590–4 (next clock period)" */
 function windowTicksText(window: Pick<WakeWindow, 'start' | 'end' | 'wraps'>): string {
-    return `${num(window.start)}–${num(window.end)}${window.wraps ? ' (next clock period)' : ''}`;
+    return `${num(window.start)}–${num(window.end)}${window.wraps ? ' (next window cycle)' : ''}`;
 }
 
 /** The end of a window in the table: "240", or "4 (next clock period)" */
 export function windowEndText(window: Pick<WakeWindow, 'end' | 'wraps'>): string {
-    return `${num(window.end)}${window.wraps ? ' (next clock period)' : ''}`;
+    return `${num(window.end)}${window.wraps ? ' (next window cycle)' : ''}`;
 }
 
 /** "Wake window 2 of 3" */
 export function windowOrdinalText(index: number, count: number): string {
-    return `Wake window ${num(index + 1)} of ${num(count)}`;
+    return `Enable window ${num(index + 1)} of ${num(count)}`;
 }
 
 /**
@@ -257,9 +257,9 @@ export function summaryText(args: { periodTicks: number; inserters: number; dril
         : plural(args.inserters, 'inserter', 'inserters');
     // where the clock's figure is the average of its start points, these rows are of the cold start's run
     const wakeUps = args.wakeUps === null
-        ? 'Wake-ups not counted'
-        : `${formatNumberText(args.wakeUps, { maxDecimals: 0 })} wake-ups a minute for one copy${args.fromColdStart ? ' from a cold start' : ''}`;
-    return `Clock period ${periodText(args.periodTicks)} · ${counts} · ${wakeUps}`;
+        ? 'Wakeups not counted'
+        : `${formatNumberText(args.wakeUps, { maxDecimals: 0 })} wakeups a minute for one copy${args.fromColdStart ? ' from a cold start' : ''}`;
+    return `Window cycle time ${periodText(args.periodTicks)} · ${counts} · ${wakeUps}`;
 }
 
 /**
@@ -280,9 +280,9 @@ export function rowSummary(
         const ticks = listText(row.windows.map(windowTicksText), SUMMARY_WINDOWS);
         const slack = Math.max(0, ...row.windows.map(window => window.slackTicks));
         const slackText = slack > 0 ? `, the last ${ticksText(slack)} of each are belt slack` : '';
-        parts.push(`${plural(row.windows.length, 'wake window', 'wake windows')}: ticks ${ticks}${slackText}.`);
+        parts.push(`${plural(row.windows.length, 'enable window', 'enable windows')}: ticks ${ticks}${slackText}.`);
     }
-    parts.push(`On for ${percentText(row.onShare)} of the clock period of ${periodText(periodTicks)}.`);
+    parts.push(`On for ${percentText(row.onShare)} of the window cycle of ${periodText(periodTicks)}.`);
     parts.push(`${wakeUpsRowText(row)}.`);
     // the notes too, so a screen reader in focus mode hears them with the row
     for (const note of watchNotes(row, { periodTicks, mostWakeUpsId: ctx.mostWakeUpsId })) {
@@ -301,12 +301,12 @@ export function windowDetails(row: WakeWindowRow, index: number, periodTicks: nu
         return '';
     }
     const where = window.wraps
-        ? `ticks ${num(window.start)}–${num(window.end)}, past the end of the clock period of ${periodText(periodTicks)} and on from tick 0`
+        ? `ticks ${num(window.start)}–${num(window.end)}, past the end of the window cycle of ${periodText(periodTicks)} and on from tick 0`
         : `ticks ${num(window.start)}–${num(window.end)}`;
     const slack = window.slackTicks > 0
         ? `, of which the last ${ticksText(window.slackTicks)} ${window.slackTicks === 1 ? 'is' : 'are'} belt slack`
         : '';
-    const reacts = `The ${row.kind} reacts ${ticksText(CIRCUIT_LATENCY_TICKS)} after the wake window opens.`;
+    const reacts = `The ${row.kind} reacts ${ticksText(CIRCUIT_LATENCY_TICKS)} after the enable window opens.`;
     return `${windowOrdinalText(index, row.windows.length)}: ${where} (${lengthText(window.length)})${slack}. ${reacts}`;
 }
 
@@ -327,16 +327,16 @@ export function watchNotes(
         if (row.onShare >= MOSTLY_ON_SHARE) {
             notes.push({
                 id: 'mostly-on',
-                text: `On for ${percentText(row.onShare)} of the clock period, so the clock switches this one on almost all the time. `
+                text: `On for ${percentText(row.onShare)} of the window cycle, so the clock switches this one on almost all the time. `
                     // leans on the provisional wake-up definition: the first line to revisit when it changes
-                    + 'The wake-ups it saves are few.',
+                    + 'The wakeups it saves are few.',
             });
         }
         const slack = Math.max(0, ...row.windows.map(window => window.slackTicks));
         if (slack > 0) {
             notes.push({
                 id: 'slack',
-                text: `+${ticksText(slack)}: the last ${ticksText(slack)} of each wake window ${slack === 1 ? 'is' : 'are'} belt slack, `
+                text: `+${ticksText(slack)}: the last ${ticksText(slack)} of each enable window ${slack === 1 ? 'is' : 'are'} belt slack, `
                     + 'so a late pickup from a moving belt can still finish.',
             });
         }
@@ -347,27 +347,27 @@ export function watchNotes(
             const { window, index } = short[0];
             notes.push({
                 id: 'short',
-                text: `Wake window ${num(index + 1)} is only ${ticksText(window.length)} long. Very short wake windows are sensitive to timing.`,
+                text: `Enable window ${num(index + 1)} is only ${ticksText(window.length)} long. Very short enable windows are sensitive to timing.`,
             });
         } else if (short.length > 1) {
             const names = listText(short.map(({ index }) => num(index + 1)), NOTE_WINDOWS);
             notes.push({
                 id: 'short',
-                text: `Wake windows ${names} are ${ticksText(SHORT_WINDOW_TICKS)} long or shorter. Very short wake windows are sensitive to timing.`,
+                text: `Enable windows ${names} are ${ticksText(SHORT_WINDOW_TICKS)} long or shorter. Very short enable windows are sensitive to timing.`,
             });
         }
         const wrapped = row.windows.findIndex(window => window.wraps);
         if (wrapped >= 0) {
             notes.push({
                 id: 'wraps',
-                text: `Wake window ${num(wrapped + 1)} runs past the end of the clock period and carries on from tick 0.`,
+                text: `Enable window ${num(wrapped + 1)} runs past the end of the window cycle and carries on from tick 0.`,
             });
         }
     }
     if (row.kind === 'inserter' && row.wakeUpsPerMinute === 0 && row.onShare > 0) {
         notes.push({
             id: 'never-woken',
-            text: `On for ${percentText(row.onShare)} of the period but woken 0 times a minute: the simulator counts no wake-up for it while it is on.`,
+            text: `On for ${percentText(row.onShare)} of the period but woken 0 times a minute: the simulator counts no wakeup for it while it is on.`,
         });
     }
     if (ctx.mostWakeUpsId !== null && row.id === ctx.mostWakeUpsId) {

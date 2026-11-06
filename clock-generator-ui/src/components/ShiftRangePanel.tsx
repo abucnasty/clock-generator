@@ -46,7 +46,7 @@ function EdgeReasons({ title, edge }: { title: string; edge: ShiftRangeEdge }) {
             ))}
             {edge.is_search_limit && (
                 <Typography variant="body2" color="text.secondary">
-                    • Nothing further was tried: the moved wake windows would meet the same inserters' other wake windows.
+                    • Nothing further was tried: the moved enable windows would meet the same inserters' other enable windows.
                 </Typography>
             )}
             {edge.notes.length === 0 && !edge.is_search_limit && (

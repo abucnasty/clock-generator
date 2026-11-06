@@ -39,10 +39,10 @@ export const SUMMARY_COPY = {
     recoversNo: 'No',
     recoversNotTested: 'Not tested',
     recoversUnavailable: 'Unavailable',
-    recoversYesDetail: 'In the simulator, it gets back to its rate by itself after it is starved or jammed.',
+    recoversYesDetail: 'In the simulator, it gets back to its rate by itself after a supply stop or an output blockage.',
     recoversNoDetail: (losses: string, notTried = '') => losses
         ? `In the simulator, after ${losses} for a while, it does not get back to its rate by itself.${notTried}`
-        : 'In the simulator, after it is starved or jammed, it does not get back to its rate by itself.',
+        : 'In the simulator, after a supply stop or an output blockage, it does not get back to its rate by itself.',
     recoversNotTestedDetail: 'No usable recovery result is available for this clock.',
     recoversNotTriedDetail: (reason: string) => `Recovery could not be tried in the simulator: ${reason.replace(/\.$/, '')}.`,
     recoversBaselineUnavailableDetail: 'Recovery is unavailable: the undisturbed baseline for the loss trials did not hold its expected output.',
@@ -61,7 +61,7 @@ export const SUMMARY_COPY = {
     differsMoreWakeUps: (n: number) => `It wakes inserters ${n} more ${n === 1 ? 'time' : 'times'} a minute than the recommended clock.`,
     differsFewerWakeUps: (n: number) => `It wakes inserters ${n} fewer ${n === 1 ? 'time' : 'times'} a minute than the recommended clock.`,
     differsBelt: 'It is made for backed-up belts.',
-    differsNoRecovery: 'It does not recover after it is starved or jammed.',
+    differsNoRecovery: 'It does not get back to its rate after a supply stop or an output blockage.',
     differsUnstable: 'It does not hold its rate.',
     differsNothing: 'It is not the recommended clock.',
     // the compare table
@@ -159,7 +159,7 @@ export function clockTechnicalName(clock: Pick<SummaryClock, 'label'>): string {
     return clock.label;
 }
 
-/** Whether the build gets back to its rate by itself after it is starved or jammed: a word, an icon's kind and a sentence */
+/** Whether the build gets back to its rate by itself after a supply stop or an output blockage: a word, an icon's kind and a sentence */
 export function recoversOf(clock: Pick<SummaryClock, 'verdict' | 'assessment'>): {
     kind: 'yes' | 'no' | 'not-tested';
     value: string;

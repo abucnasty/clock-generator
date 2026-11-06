@@ -118,7 +118,7 @@ async function repairOutputFocusAt(browser, url) {
 
     const importBuild = async (name, value) => {
         await page.getByRole('button', { name: 'More options' }).click();
-        await page.getByRole('menuitem', { name: 'Open build file…' }).click();
+        await page.getByRole('menuitem', { name: 'Open configuration file…' }).click();
         await page.locator('input[type="file"]').setInputFiles({
             name,
             mimeType: 'application/json',

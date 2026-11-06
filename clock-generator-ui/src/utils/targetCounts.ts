@@ -55,7 +55,7 @@ export const HANDS_TEXT = {
     /** The compare table's column and its help */
     column: 'Hands brought in',
     columnHelp: 'Hands of the item brought into each machine that destroys it per crafting cycle, shared equally across the inserters '
-        + 'that bring it in. Per-inserter counts may be fractional. The clock repeats after a whole number of crafting cycles (the clock period).',
+        + 'that bring it in. Per-inserter counts may be fractional. The clock repeats after a whole number of crafting cycles (the window cycle).',
 } as const;
 
 /** Advanced's forced count of trips a crafting cycle: the output swings of an output machine, or the hands brought into a machine that destroys the item */

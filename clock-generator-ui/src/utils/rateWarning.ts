@@ -37,8 +37,8 @@ export function notTriedOf(alternative: Pick<ClockAlternativeView, 'assessment'>
 
 /**
  * What to tell whoever copies the blueprint of a clock: that it does not hold the target rate, as happens when no
- * clock does and the one nearest to it is selected; that it holds it and does not recover after the build is
- * starved or jammed; and that its build has a deadlock risk, with the two inserters that share an item. Null for a stable clock
+ * clock does and the one nearest to it is selected; that it holds it and does not recover after a supply
+ * stop or an output blockage; and that its build has a deadlock risk, with the two inserters that share an item. Null for a stable clock
  * at the target rate on a build without the risk.
  */
 export function rateWarningOf(

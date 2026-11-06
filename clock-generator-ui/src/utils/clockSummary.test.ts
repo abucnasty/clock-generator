@@ -102,13 +102,13 @@ describe('plainClockName', () => {
 
     // the names asked of each clock, by id
     it.each<[string, SummaryClock[], Record<string, string>]>([
-        ['names the clock with the fewest wake-ups among the contenders',
+        ['names the clock with the fewest wakeups among the contenders',
             [clock('a', { wake_ups_per_minute: 12 }), clock('b', { wake_ups_per_minute: 8 })], { b: fewestWakeUps }],
         ['gives tied clocks the same name',
             [clock('a', { wake_ups_per_minute: 8.0001 }), clock('b', { wake_ups_per_minute: 8 })], { a: fewestWakeUps, b: fewestWakeUps }],
-        ['names a clock with more wake-ups but the fewest windows "Fewest wake windows", not by the deciders every clock has as many of',
+        ['names a clock with more wakeups but the fewest windows "Fewest wake windows", not by the deciders every clock has as many of',
             [clock('a', { wake_ups_per_minute: 8, window_count: 6 }), clock('b', { wake_ups_per_minute: 12, window_count: 3 })], { b: fewestWakeWindows }],
-        ['names a clock with more wake-ups but the fewest deciders "Fewest deciders", before the windows',
+        ['names a clock with more wakeups but the fewest deciders "Fewest deciders", before the windows',
             [clock('a', { wake_ups_per_minute: 8, window_count: 6, deciders: 10 }), clock('b', { wake_ups_per_minute: 12, window_count: 3, deciders: 6 })],
             { b: fewestDeciders, a: fewestWakeUps }],
         ['does not name a clock Fewest deciders when it only ties the recommended clock, whose name it leaves to the windows', [
@@ -116,19 +116,19 @@ describe('plainClockName', () => {
             clock('b', { wake_ups_per_minute: 12, window_count: 6, deciders: 4 }),
             clock('c', { wake_ups_per_minute: 15, window_count: 3, deciders: 6 }),
         ], { a: fewestWakeUps, b: another, c: fewestWakeWindows }],
-        ['does not name a clock Fewest deciders when it only ties a clock tied for the fewest wake-ups', [
+        ['does not name a clock Fewest deciders when it only ties a clock tied for the fewest wakeups', [
             clock('a', { wake_ups_per_minute: 8.0001, window_count: 6, deciders: 8 }),
             clock('b', { wake_ups_per_minute: 8, window_count: 6, deciders: 4 }),
             clock('c', { wake_ups_per_minute: 15, window_count: 6, deciders: 4 }),
         ], { a: fewestWakeUps, b: fewestWakeUps, c: expect.not.stringContaining(fewestDeciders) }],
-        ['names a clock Fewest deciders when it has fewer than the recommended clock and every clock with the fewest wake-ups', [
+        ['names a clock Fewest deciders when it has fewer than the recommended clock and every clock with the fewest wakeups', [
             clock('a', { wake_ups_per_minute: 8, window_count: 6, deciders: 5 }),
             clock('b', { wake_ups_per_minute: 12, window_count: 6, deciders: 4 }),
             clock('c', { wake_ups_per_minute: 15, window_count: 6, deciders: 4 }),
         ], { b: fewestDeciders, c: fewestDeciders }],
-        ['falls through to the windows when the wake-ups were not counted',
+        ['falls through to the windows when the wakeups were not counted',
             [clock('a', { wake_ups_per_minute: null, window_count: 5 }), clock('b', { wake_ups_per_minute: null, window_count: 3 })], { b: fewestWakeWindows, a: another }],
-        ['names a clock that does not match the belt by its belt, even with the fewest wake-ups',
+        ['names a clock that does not match the belt by its belt, even with the fewest wakeups',
             [clock('a', { wake_ups_per_minute: 12 }), clock('b', { wake_ups_per_minute: 2, matches_belt_choice: false, beltLabel: 'backed-up' })],
             { b: SUMMARY_COPY.backedUpBelts, a: fewestWakeUps }],
         ['names a clock that does not recover, or does not hold its rate', [
@@ -259,7 +259,7 @@ describe('makesText and wakeUpsText', () => {
         expect(makesText(clock('a'), 1)).toEqual({ value: SUMMARY_COPY.makes('240'), sub: '' });
     });
 
-    it.each([0.0625, 0.9999, 1.0001])('keeps Copies %s exact while leaving the total rate and one-copy wake-ups unchanged', copies => {
+    it.each([0.0625, 0.9999, 1.0001])('keeps Copies %s exact while leaving the total rate and one-copy wakeups unchanged', copies => {
         const result = clock('a', { rate_off_target: -0.125, wake_ups_per_minute: 17.6 });
         expect(makesText(result, copies)).toEqual({ value: SUMMARY_COPY.makes('239.88'), sub: `all ${copies} copies` });
         // rounded as the table rounds them, for one copy
@@ -270,7 +270,7 @@ describe('makesText and wakeUpsText', () => {
         expect(makesText(clock('a', { rate_off_target: -0.123 }), 1).value).toBe(SUMMARY_COPY.makes('239.88'));
     });
 
-    it('says where the wake-ups are the average of the start points, and the cold start\'s figure where it is far off it', () => {
+    it('says where the wakeups are the average of the start points, and the cold start\'s figure where it is far off it', () => {
         const averaged = (cold: number, figures: number[]): SummaryClock => {
             const base = clock('a');
             const mean = [cold, ...figures].reduce((sum, it) => sum + it, 0) / (figures.length + 1);
@@ -323,10 +323,10 @@ describe('differenceFromRecommended', () => {
     it.each<[string, SummaryClock, string]>([
         ['says the rate first', clock('s', offRate), `${SUMMARY_COPY.differsRate('192', '240')} ${wakes('20 more times')}`],
         // one time, not one times
-        ['says one more wake-up', clock('s', { wake_ups_per_minute: 11 }), wakes('1 more time')],
-        ['says fewer wake-ups, then the belt', clock('s', { wake_ups_per_minute: 4, matches_belt_choice: false }), `${wakes('6 fewer times')} ${SUMMARY_COPY.differsBelt}`],
-        ['says nothing of wake-ups that round to the same', clock('s', { wake_ups_per_minute: 10.2 }), SUMMARY_COPY.differsNothing],
-        ['says nothing of uncounted wake-ups', clock('s', { wake_ups_per_minute: null }), SUMMARY_COPY.differsNothing],
+        ['says one more wakeup', clock('s', { wake_ups_per_minute: 11 }), wakes('1 more time')],
+        ['says fewer wakeups, then the belt', clock('s', { wake_ups_per_minute: 4, matches_belt_choice: false }), `${wakes('6 fewer times')} ${SUMMARY_COPY.differsBelt}`],
+        ['says nothing of wakeups that round to the same', clock('s', { wake_ups_per_minute: 10.2 }), SUMMARY_COPY.differsNothing],
+        ['says nothing of uncounted wakeups', clock('s', { wake_ups_per_minute: null }), SUMMARY_COPY.differsNothing],
         ['says when it does not recover', clock('s', { verdict: 'no recovery' }), SUMMARY_COPY.differsNoRecovery],
     ])('%s', (_, selected, expected) => {
         expect(differenceFromRecommended(selected, recommended)).toBe(expected);
@@ -369,9 +369,13 @@ describe('worksOf', () => {
 
 describe('SUMMARY_COPY', () => {
     it('uses the glossary words, not the old ones', () => {
-        const texts = Object.values(SUMMARY_COPY).map(it => typeof it === 'string' ? it : (it as (...args: unknown[]) => string)('2', '3'));
+        // the plain names and status lines that the 0.28.0 strategy names (step 4.1) replace keep their old words until then
+        const replacedByStrategyNames = new Set<string>(['fewestWakeUps', 'fewestWakeWindows', 'noRecovery']);
+        const texts = Object.entries(SUMMARY_COPY)
+            .filter(([key]) => !replacedByStrategyNames.has(key))
+            .map(([, it]) => typeof it === 'string' ? it : (it as (...args: unknown[]) => string)('2', '3'));
         for (const text of texts) {
-            expect(text).not.toMatch(/potential|backpressure|hands?\b|transfer/i);
+            expect(text).not.toMatch(/potential|backpressure|hands?\b|transfer|starved|jammed|wake window|wake-up/i);
             expect(text.length).toBeGreaterThan(0);
         }
     });

@@ -346,7 +346,7 @@ export function nextConflict(
 
 // ---- the words, in one place
 
-export const BUILDS_HEADING = 'Your builds';
+export const BUILDS_HEADING = 'Your configurations';
 export const CHANGED_ELSEWHERE_MESSAGE = 'This build was changed in another tab. Your next edit here will save over that change.';
 export const LOAD_OTHER_TAB_LABEL = "Load the other tab's version";
 export const LOADED_OTHER_TAB_MESSAGE = 'Loaded the version from the other tab.';

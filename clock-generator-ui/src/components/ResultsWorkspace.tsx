@@ -165,7 +165,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
     const clockLabel = (clock: ClockAlternativeView) => [
         clock.counts === 'destroyed' ? HANDS_TEXT.clock(clock.terminalSwingCount)
             : `${clock.terminalSwingCount} ${clock.terminalSwingCount === 1 ? 'swing' : 'swings'}`,
-        wakeUpsText(clock).value.replace(' a minute', ' wake-ups/min'),
+        wakeUpsText(clock).value.replace(' a minute', ' wakeups/min'),
         clock.beltLabel ? beltValue(props.pickRule, clock.beltLabel) : '',
     ].filter(Boolean).join(' · ');
     const rateWarning = rateWarningOf(selected);

@@ -237,13 +237,13 @@ describe('buildWakeWindowRows', () => {
         expect(row.ownClock).toBeUndefined();
     });
 
-    it('has a row for an id only the wake-ups or only the windows know', () => {
+    it('has a row for an id only the wakeups or only the windows know', () => {
         const rows = rowsOf({ clockWindows: { 'inserter:5': spans([0, 9]), 'drill:2': spans([100, 120]) }, asBuilt: asBuilt({ 'inserter:6': 3 }) });
         expect(rows.map(row => row.id)).toEqual(['inserter:5', 'inserter:6', 'drill:2']);
         expect(rows[0]).toMatchObject({ items: [], route: '' });
     });
 
-    it('takes the wake-ups by id, and has none for a drill or a clock without a count', () => {
+    it('takes the wakeups by id, and has none for a drill or a clock without a count', () => {
         const clockWindows = { 'inserter:1': spans([0, 9]), 'inserter:2': spans([20, 29]), 'drill:1': spans([0, 9]) };
         const wakeUps = (check: AsBuiltStabilityCheck | null) => rowsOf({ clockWindows, asBuilt: check }).map(row => row.wakeUpsPerMinute);
         expect(wakeUps(asBuilt({ 'inserter:1': 12.5, 'inserter:2': 3, 'drill:1': 99 }))).toEqual([12.5, 3, null]);

@@ -34,7 +34,7 @@ interface BlueprintOutputProps {
 /** Under the string */
 const STRING_CAPTION = 'Copy this string and import it in Factorio 2.1. Follow the installation steps above.';
 /** Before the clock's period over the string */
-const CLOCK_PERIOD_LABEL = 'Clock period:';
+const CLOCK_PERIOD_LABEL = 'Window cycle time:';
 
 /**
  * The selected clock's blueprint string, for reading or copying by hand. Its disclosure in Install names it, so it has

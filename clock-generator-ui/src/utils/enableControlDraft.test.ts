@@ -22,7 +22,7 @@ const conditionalDraft = enableControlDraftOf(conditional);
 const alwaysDraft = enableControlDraftOf({ mode: 'ALWAYS' });
 
 describe('enableControlDraftOf', () => {
-    it('starts from AUTO, one empty wake window, no period and the default rule set when there is no rule', () => {
+    it('starts from AUTO, one empty enable window, no period and the default rule set when there is no rule', () => {
         expect(enableControlDraftOf()).toEqual({
             mode: 'AUTO',
             ranges: [{ start: '', end: '' }],

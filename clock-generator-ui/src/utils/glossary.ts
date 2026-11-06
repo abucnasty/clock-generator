@@ -1,5 +1,5 @@
 /**
- * The words of the UI: one word per idea in every string a player reads, and what each means. The Terms popover (⋮ >
+ * The words of the UI: one word per idea in every string a user reads, and what each means. The Terms popover (⋮ >
  * Terms, and the (i) by the clock table's headers) lists these, so this file is the one source; new copy uses these
  * terms, and `insteadOf` lists the words they replace.
  *
@@ -24,13 +24,14 @@ export type GlossaryId =
     | 'swing'
     | 'swing-plan'
     | 'crafting-cycle'
-    | 'clock-period'
-    | 'wake-window'
-    | 'wake-up'
+    | 'window-cycle-time'
+    | 'enable-window'
+    | 'wakeup'
     | 'start-point'
     | 'copies'
     | 'build'
-    | 'your-builds'
+    | 'configuration'
+    | 'your-configurations'
     | 'share-link'
     | 'clock'
     | 'blueprint'
@@ -38,17 +39,23 @@ export type GlossaryId =
     | 'enable-rule'
     | 'assembling-machine'
     | 'holds-the-rate'
-    | 'starved'
-    | 'jammed'
-    | 'recovers'
+    | 'supply-stop'
+    | 'output-blockage'
+    | 'recovery'
     | 'belt-slack'
     | 'simulator'
     | 'hand'
     | 'lcm';
 
-/** Provisional: the strict definition is written after an experiment; edit it here, and only here. */
-export const PROVISIONAL_WAKE_UP_DEFINITION: string = 'One time the game wakes an inserter that is switched on and waiting, because a machine started a '
-    + 'craft (inputs), or finished a craft or paid out productivity (outputs). Each is a small check that moves little or nothing, so fewer wake-ups cost less UPS.';
+/**
+ * The glossary's wakeup, in the user's words (the repo glossary's alarm and sleep are maintainer words). Its case of a
+ * switched-off inserter is provisional; edit it here, and only here.
+ */
+export const WAKEUP_DEFINITION: string = 'One time the game checks an inserter that is waiting, because a machine it waits on started a '
+    + 'craft (inputs), or finished a craft or paid out productivity (outputs). Each is a small check that moves little or nothing, '
+    + 'so fewer wakeups cost less UPS. It counts also when the clock has switched the inserter off; the clock switching an '
+    + 'inserter on is not a wakeup. Only the switched-off case is provisional: seen on three builds in Factorio 2.1.24, its '
+    + 'cost not measured.';
 
 /** In the order the popover lists them; the expert terms last */
 export const GLOSSARY: readonly GlossaryEntry[] = [
@@ -72,60 +79,68 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
         insteadOf: 'cycle, output cycle',
     },
     {
-        id: 'clock-period',
-        term: 'clock period',
-        definition: 'How long until the clock repeats: a whole number of crafting cycles. Shown in ticks.',
-        insteadOf: 'period, LCM period',
+        id: 'window-cycle-time',
+        term: 'window cycle time',
+        definition: 'The time of one window cycle: one complete sequence of all the enable windows of a clock, after which '
+            + 'the sequence starts again. A whole number of crafting cycles, which can be a fraction of a tick. Shown in ticks.',
+        insteadOf: 'clock period, period, LCM period',
     },
     {
-        id: 'wake-window',
-        term: 'wake window',
-        definition: 'A stretch of ticks during which the clock switches an inserter on.',
-        insteadOf: 'window, clock window, inserter window, enable range',
+        id: 'enable-window',
+        term: 'enable window',
+        definition: 'The ticks of the window cycle during which the clock makes an inserter\'s Enable if condition true, so '
+            + 'that the inserter is switched on. A stretch that runs over the end of the window cycle is one enable window.',
+        insteadOf: 'wake window, window, clock window, inserter window, enable range',
     },
     {
-        id: 'wake-up',
-        term: 'wake-up',
-        definition: PROVISIONAL_WAKE_UP_DEFINITION,
-        insteadOf: '"one start of a wake window"',
+        id: 'wakeup',
+        term: 'wakeup',
+        definition: WAKEUP_DEFINITION,
+        insteadOf: 'wake-up, wake up (as a noun), "one start of an enable window"',
         provisional: true,
     },
     {
         id: 'start-point',
         term: 'start point',
-        definition: 'The place in the clock period where the clock starts.',
+        definition: 'The place in the window cycle where the clock starts.',
         insteadOf: '"one start of the clock"',
     },
     {
         id: 'copies',
         term: 'copies',
-        definition: 'How many identical units of your build you will place, including partial units such as 0.5 or 2.25. Describe one unit in the build.',
-        insteadOf: 'copy as any other noun ("Copy" stays a verb: "Copy blueprint")',
+        definition: 'How many identical builds you put in the game, including partial ones such as 0.5 or 2.25. Describe only one of them.',
+        insteadOf: 'units (as the count), copy as any other noun ("Copy" stays a verb: "Copy blueprint")',
     },
     {
         id: 'build',
         term: 'build',
-        definition: 'The machines, inserters, belts and chests you set up, which the clocks are made for. Saved as a build '
-            + 'file (Open build file…, Save build file, Reset build).',
-        insteadOf: 'configuration, config',
+        definition: 'A group of entities in the game, of any number, that together make a target output.',
+        insteadOf: 'setup, structure, "build" as a verb',
     },
     {
-        id: 'your-builds',
-        term: 'Your builds',
-        definition: 'The builds kept in this browser, one per name.',
-        insteadOf: 'library, saved configs',
+        id: 'configuration',
+        term: 'configuration',
+        definition: 'A build, with its target output, copies and enable rules: what the site saves and what clocks are made '
+            + 'for. Saved as a configuration file (Open configuration file…, Save configuration file, Reset configuration).',
+        insteadOf: 'config, build file, "build" for what the site saves',
+    },
+    {
+        id: 'your-configurations',
+        term: 'Your configurations',
+        definition: 'The configurations kept in this browser, one per name.',
+        insteadOf: 'Your builds, library, saved configs',
     },
     {
         id: 'share-link',
         term: 'share link',
-        definition: 'A link that carries a copy of a build; opening it adds the build to Your builds.',
+        definition: 'A link that carries a configuration; opening it adds the configuration to Your configurations.',
         insteadOf: 'permalink, URL',
     },
     {
         id: 'clock',
         term: 'clock',
-        definition: 'The set of combinators that switches your inserters and mining drills on in their wake windows and repeats every clock '
-            + 'period. The tool makes several and recommends one.',
+        definition: 'The set of combinators that switches your inserters and mining drills on in their enable windows and repeats every '
+            + 'window cycle. The tool makes several and recommends one.',
         insteadOf: 'potential clock',
     },
     {
@@ -137,8 +152,8 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     {
         id: 'check',
         term: 'check',
-        definition: 'Test that your build can be clocked, without making any clocks.',
-        insteadOf: 'validation, "run a simulation", "re-run the simulation" (in sentences)',
+        definition: 'A test of a configuration that shows whether it can be clocked, without making any clocks.',
+        insteadOf: 'check as a verb, validation, "run a simulation", "re-run the simulation" (in sentences)',
     },
     {
         id: 'enable-rule',
@@ -162,29 +177,29 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
         insteadOf: '"meets the target rate"',
     },
     {
-        id: 'starved',
-        term: 'starved',
-        definition: 'An input runs out.',
-        insteadOf: 'input loss',
+        id: 'supply-stop',
+        term: 'supply stop',
+        definition: 'A time when one item stops arriving from the belts or chests of a build.',
+        insteadOf: 'starved, input loss',
     },
     {
-        id: 'jammed',
-        term: 'jammed',
-        definition: 'The output is blocked and backs up.',
-        insteadOf: 'backpressure loss',
+        id: 'output-blockage',
+        term: 'output blockage',
+        definition: 'A time when one product of a build is not taken away.',
+        insteadOf: 'jammed, backpressure loss',
     },
     {
-        id: 'recovers',
-        term: 'recovers',
-        definition: 'In the simulator\'s evaluated loss trials, after the build is starved or jammed it gets back to its rate by itself. '
-            + 'A clock that fails one loss is not tried on the others. '
+        id: 'recovery',
+        term: 'recovery',
+        definition: 'In the simulator\'s evaluated loss trials, the clock goes back to its rate by itself after a supply stop '
+            + 'or an output blockage. A clock that fails one loss is not tried on the others. '
             + 'This is separate from holding the modeled rate and from checks of other sampled starts.',
-        insteadOf: 'survives backpressure loss, no recovery',
+        insteadOf: 'recovers, survives backpressure loss, gets back',
     },
     {
         id: 'belt-slack',
         term: 'belt slack',
-        definition: 'Extra ticks added to a wake window so a late pickup from a moving belt can still finish.',
+        definition: 'Extra ticks added to an enable window so a late pickup from a moving belt can still finish.',
         insteadOf: 'belt pickup slack',
     },
     {
@@ -203,7 +218,7 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
         id: 'lcm',
         term: 'LCM',
         // only in the Swing Plan and Advanced, glossed where it first appears
-        definition: 'The number of crafting cycles in one clock period.',
+        definition: 'The number of crafting cycles in one window cycle.',
         insteadOf: 'LCM cycles, LCM period',
         expert: true,
     },
@@ -220,6 +235,6 @@ export function glossaryWithFocus(focus: readonly GlossaryId[]): { related: Glos
 
 /** The terms the clock table's (i) buttons open the Terms with, first */
 export const TERMS_FOCUS = {
-    wakeUps: ['wake-up', 'wake-window'],
-    works: ['holds-the-rate', 'recovers', 'jammed', 'starved'],
+    wakeUps: ['wakeup', 'enable-window'],
+    works: ['holds-the-rate', 'recovery', 'output-blockage', 'supply-stop'],
 } as const satisfies Record<string, readonly GlossaryId[]>;

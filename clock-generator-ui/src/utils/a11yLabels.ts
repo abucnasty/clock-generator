@@ -28,12 +28,12 @@ export const BUTTON_NAMES = {
     closeFullscreen: 'Close fullscreen',
     removeCondition: 'Remove condition',
     removeStatusCheck: 'Remove status condition',
-    removeRange: 'Remove wake window',
+    removeRange: 'Remove enable window',
     close: 'Close',
     moreOptions: 'More options',
     fullscreen: 'Fullscreen',
     exitFullscreen: 'Exit fullscreen',
-    useClockWindows: "Use the clock's wake windows",
+    useClockWindows: "Use the clock's enable windows",
     replaceConditions: 'Replace conditions',
     useTemplate: 'Use template',
     replaceRule: 'Replace rule',
@@ -45,7 +45,7 @@ export const removeGroupName = (n: number) => `Remove group ${n}`;
 
 /** The rule editor's tick fields: "Start tick, wake window 1", which holds the visible label "Start tick" */
 export function windowFieldName(side: 'start' | 'end', n: number): string {
-    return `${side === 'start' ? 'Start tick' : 'End tick'}, wake window ${n}`;
+    return `${side === 'start' ? 'Start tick' : 'End tick'}, enable window ${n}`;
 }
 
 /** The names of the rule editor's toggle groups, which have no visible label */
@@ -108,7 +108,7 @@ export const CHART_NAMES = {
     /** "Machine 1 fuel level over the run" */
     fuelLevel: (machineLabel: string) => `${machineLabel} fuel level over the run`,
     /** "Inserter 2 fuel clock wake windows and swings" */
-    fuelClock: (inserterLabel: string) => `${inserterLabel} fuel clock wake windows and swings`,
+    fuelClock: (inserterLabel: string) => `${inserterLabel} fuel clock enable windows and swings`,
 } as const;
 
 /** Names of the row menu and selection checkbox. */
