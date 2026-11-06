@@ -1,40 +1,110 @@
 Export a Factorio build as text for the **Clock Generator** website: <https://clock-generator-self.vercel.app>
 
-The website works out a circuit clock for your inserters, so the build makes the rate you want while its inserters wake
-up as seldom as possible, and gives you a blueprint of the clock to place.
+## Export a build from Factorio
 
-## How to use it
+Use the sidecar mod to copy a build from Factorio to the clock generator site.
 
-1. Press Alt+E (or click the shortcut button) to pick up the selection tool.
-2. Drag over the machines, inserters, belts, chests, mining drills, cars, tanks, cargo wagons and rocket silos of one build.
-3. Click **Export**. The text is already selected: press Ctrl+C.
-4. Open <https://clock-generator-self.vercel.app> and click **Paste from Factorio**.
+### Before you start
 
-## What it copies
+- You have Factorio 2.1.
+- The mod **Clock Generator Sidecar** is installed and on. To install it, use the **Mods** menu of the game.
+- The build is assembled in the game, and each machine has a recipe.
+- The belts and chests that the inserters use have items on them or in them. The sidecar does not export an empty belt
+  or an empty chest.
 
-- machines and furnaces: recipe, crafting speed (with modules and beacons) and productivity (with research); for a recycler, also the machine or container it puts its results into
-- biochambers with their energy consumption bonus, and mining drills with their speed bonus and productivity
-- inserters: what each takes from and drops into, its kind, quality, stack size and filters (none when they are switched off; a blacklist, which the website refuses, is marked)
-- belts and the items on each lane, and chests with what they hold
-- cars, tanks, cargo wagons and rocket silos as chests: a wagon's quality, slot filters, what they hold, and a silo's recipe quality, crafting speed and productivity
-- belt pickup reach and preferred lane, including inline pickups downstream of underground entrances and exits, and upstream across an exit's hood, where flipping the inserter changes its preferred lane
-- a warning for each belt pickup it cannot describe, which the website then refuses: bends, splitters, belt tiles that another belt side-loads onto, and inline or other pickup geometry it does not support
-- a suggested target: the product that leaves your selection and how much of it the machines make at most per second
+### Procedure
 
-Inserters that take from or drop into something the text does not have are listed in the window with the text, with
-why, and left out of it.
+1. Press **Alt+E**, or click the **Clock Generator Sidecar** shortcut.
 
-## Notes
+   The selection tool is in your hand.
 
-- Needs Factorio 2.1.
-- Source and bug reports: <https://github.com/abucnasty/clock-generator>
+2. Drag to select an area that contains one unit of the build. Include all of its machines, inserters, belts, chests
+   and mining drills.
 
-### Pickup capture compatibility
+   The **Clock Generator Sidecar** window opens. It shows the number of entities and the suggested target.
 
-Belt-fed inserters include a persistent supported/unsupported classification, native source identity and a
-versioned model declaration where supported. The generator retains this information when saving a build.
-Old or unsupported captures require a fresh supported capture before generation; updating the mod alone
-does not update an earlier export or a saved build.
+3. Read the window. If it shows inserters or mining drills that are not in the export, read the cause for each one.
+   Correct the build, then do step 2 again.
 
-Splitters and side-loading are out of scope: an inserter that picks up from a splitter, or from a belt tile that
-another belt side-loads onto, is marked unsupported. The website refuses it.
+4. Click **Export**.
+
+   The **Export your build for the Clock Generator** window opens. The text in it is selected.
+
+5. Press **Ctrl+C**.
+
+   If you clicked in the window and the text is not selected, click **Select all**, then press **Ctrl+C**.
+
+6. On the clock generator site, click **Paste from Factorio**.
+
+   The **Confirm Import from Factorio** dialog opens.
+
+   If your browser does not let the site read the clipboard, the **Paste from Factorio** dialog opens. Paste the text
+   into **Paste the export here**, then click **Continue**.
+
+7. Make sure that each part you want is selected. Then click **Import Selected**.
+
+### Result
+
+The build is on the site. If the site had no target output before, the target output is the suggested target: the
+product of the build at the maximum rate of its machines. At the maximum rate, the clock has no time for recovery.
+To give the clock time for recovery, decrease the rate in **Target Output**.
+
+## Data in a sidecar export
+
+The sidecar exports the entities in your selection that the clock generator uses, and the data of each entity.
+
+### Entities and their data
+
+| Entity | Data in the export |
+|---|---|
+| Assembling machine, furnace | Recipe. Crafting speed, with the effect of modules and beacons. Productivity, with the effect of research. |
+| Recycler | The data of a machine, and the machine or container that it puts its results into. |
+| Biochamber | The data of a machine, and its energy consumption bonus. |
+| Mining drill | Speed bonus and productivity. |
+| Inserter | The entity from which it removes items, and the entity into which it puts them. Type, quality, stack size and filters. |
+| Belt | The items on each lane. |
+| Chest | The items in it. |
+| Car, tank, cargo wagon | The data of a chest. For a cargo wagon, also its quality and its slot filters. |
+| Rocket silo | The data of a chest, and the quality, crafting speed and productivity of its recipe. |
+
+If the filters of an inserter are off, the export has no filters for it. The export marks a blacklist filter. The site
+does not accept a blacklist filter.
+
+### Belt pickups
+
+For each inserter that removes items from a belt, the export has the pickup position and the lane that the inserter
+uses first. This includes:
+
+- Pickups in line with an underground belt entrance or exit, after it in the direction of the belt.
+- Pickups across an underground belt exit, from the belt before the exit. At these pickups, the first lane changes
+  after you use **Flip horizontal** or **Flip vertical** on the inserter.
+
+The export marks each belt pickup for which the sidecar cannot give data. The site does not accept these pickups:
+
+- A pickup from a belt bend.
+- A pickup from a splitter.
+- A pickup from a belt tile that has side-loading from a different belt.
+- A pickup in line with the belt, or a different pickup position that the site cannot use.
+
+### Suggested target
+
+The export gives a suggested target output: the product that goes out of your selection, and the maximum rate at
+which the machines can make it, in items each second.
+
+### Entities that are not in the export
+
+The export does not include an inserter if the entity that it uses is not in the export. The export window shows each
+such inserter, with the cause. This is also correct for a mining drill if the entity that it fills is not in the export.
+
+The sidecar does not export:
+
+- An empty belt.
+- An empty chest, if the items that go in and out do not show the item that it holds.
+- A machine that has no recipe, or a lab.
+
+### Exports from a previous sidecar version
+
+An export or a configuration from a previous version of the sidecar can have belt pickups that the site does not
+accept. Export the build again. An update of the mod does not change an export that you made before the update.
+
+Source and bug reports: <https://github.com/abucnasty/clock-generator>
