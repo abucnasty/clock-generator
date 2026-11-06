@@ -110,7 +110,8 @@ describe("request-local duplicate verification", () => {
         const logistic = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240);
         const plan = planClockAlternatives(logistic, {logger: quiet});
         const recovery = vi.spyOn(trial, "backpressureLossVerdictOf");
-        const duplicate = runClockAlternativeTask(logistic, plan.context, "fractional", {logger: quiet}, [plan.primary!.signature]);
+        // the plan leaves the fractional task out here, as one that makes the primary clock again: made anyway, it is that duplicate
+        const duplicate = runClockAlternativeTask(logistic, {...plan.context, fractional_is_primary: undefined}, "fractional", {logger: quiet}, [plan.primary!.signature]);
         expect(duplicate).toEqual({signature: plan.primary!.signature, alternatives: []});
         expect(recovery).not.toHaveBeenCalled();
         expect(plan.primary!.alternatives[0].assessment.backpressure_loss).not.toBeNull();
