@@ -238,6 +238,19 @@ describe("hands that fill the cycle", () => {
         for (const id of [1, 10]) expect(length(per_taker.windows, id)).toBe(length(every_taker.windows, id));
     });
 
+    it("leaves the takers into the machines it is told enabled as before: the remake for the processing unit machines (2, 3)", () => {
+        const plan = planRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false, lcm: 1, terminal_swing_count: 1 } }, { logger: quiet });
+        const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
+        const made = groupedHandsPlan(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, true,
+            { surplus_guard: false, per_taker_guard: true, unguarded_sinks: new Set(["machine:2", "machine:3"]), feeder_offset: 16, share_windows: false });
+        // the circuits into the processing unit machines keep their extra start, which leaves them busy all the time
+        expect(made.busy).toEqual(["inserter:3", "inserter:4", "inserter:7", "inserter:8"]);
+        // the iron and the cable into the circuit machines are guarded still: three hands of 8 in 18 ticks
+        for (const id of [5, 6, 13, 14, 15, 18, 19, 20]) {
+            expect(made.windows.get(`inserter:${id}`)!.reduce((sum, range) => sum + range.end_inclusive - range.start_inclusive + 1, 0)).toBe(18);
+        }
+    });
+
     it("gives the inserters that open on the same tick one window, the longest of them, where windows are shared", () => {
         const plan = planRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false, lcm: 1, terminal_swing_count: 1 } }, { logger: quiet });
         const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
