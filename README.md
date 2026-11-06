@@ -3,8 +3,8 @@
 A clock generator for Factorio builds. Describe a build (its machines, inserters, belts, chests and drills, and the
 rate it should make) and the generator simulates it tick by tick, works out when each inserter has to be enabled, and
 gives you a blueprint of decider combinators that clock the inserters, so the build makes exactly its target rate with
-as few inserter wake-ups as it can. It lists the clocks it could make, says which hold the rate and recover from a
-backpressure loss, and selects one.
+as few inserter wakeups as it can. It lists the clocks it could make, says which hold the rate and recover from a
+disturbance, and selects one.
 
 Use it on the site: <https://clock-generator-self.vercel.app>. The source is at
 <https://github.com/abucnasty/clock-generator>.
