@@ -165,12 +165,14 @@ reduction from scheduling changes; do not report a faster test from a less busy 
 
 [`clock-generator/record/`](clock-generator/record/README.md) holds one small JSON file for each of the 86 blast jobs: the clock the generator selects for the
 sample or fixture and every alternative it weighed (verdict, holds, rate, period, wake-ups, windows, clock hash). The check named "Record check" in CI
-generates the jobs in eight shards (`Record jobs (shard n of 8)`, dealt out by the seconds each job took on a runner,
+generates the jobs in six shards (`Record jobs (shard n of 6)`, dealt out by the seconds each job took on a runner,
 `clock-generator/ci/record-durations.json`), joins them and compares them with the committed files field by field; a difference fails with a table of job,
 field, before and after in the job summary. The check runs on every pull request to `master`, `feature/` or `release/` that changes more than documentation, and reports
 success on one that changes documentation only. Its name is stable so that it can be a required check. It is never faster than the slowest job
 (the productivity module chest chain). After a change to the jobs or the engine, refresh the durations with
-`node scripts/ci/update-record-durations.js <dir of the downloaded record-jobs-* artifacts of a run>`.
+`node scripts/ci/update-record-durations.js <dir of the downloaded record-jobs-* artifacts of a run>`. The same script prints the shard
+count the durations call for (`--shards` prints only that): the smallest count whose estimated slowest shard is the slowest job, which is 6
+today; set the `shard` list of the `record-shards` job in `.github/workflows/test.yml` to it when it changes.
 
 **A selected clock never gets worse unless MOVES.md says so.** The same check sets the selected clock of every job against the record of the pull
 request's base (the first parent of the merge commit CI tests) and fails when one got worse and its job key is not in the lines the pull request adds to
@@ -234,9 +236,16 @@ variant jobs); each is in `EXCEPTIONS` with `#626` in its reason, and the entrie
 | Check name | What it does | Runs |
 | --- | --- | --- |
 | Unit tests | knip, typecheck, build, lint, `npm test` (the units, `clock-controls.test.ts` among them) | every pull request that changes more than documentation |
-| Generation tests (shard n of 8), then Generation tests | the `*.generation.test.ts` files, dealt out by `ci/generation-durations.json` | pull requests to `master`, `feature/` or `release/` that change more than documentation, and releases |
-| Record jobs (shard n of 8), then Record check | the 86 jobs, joined, compared with `record/`, with the properties and the never-worse rule | pull requests to `master`, `feature/` or `release/` that change more than documentation |
+| Generation tests (shard n of 8), then Generation tests | the `*.generation.test.ts` files, dealt out by `ci/generation-durations.json` | ready pull requests to `master`, `feature/` or `release/` that change more than documentation, and releases; on a draft the shards do not run and the check fails (below) |
+| Record jobs (shard n of 6), then Record check | the 86 jobs, joined, compared with `record/`, with the properties and the never-worse rule | ready pull requests to `master`, `feature/` or `release/` that change more than documentation; on a draft the shards do not run and the check fails (below) |
 | UI build, UI tests of every sample, UI generate in a browser | the UI | every pull request that changes more than documentation |
+
+**Drafts.** GitHub's free plan runs 20 jobs at once and a pull request starts about 22, so the heavy suites (the generation shards and the
+record shards) do not run on a draft pull request; unit tests, the UI build, the UI samples and the browser job do. On a draft the checks
+"Generation tests" and "Record check" run and fail with "not run on a draft: mark the pull request ready, or run
+`gh workflow run test.yml --ref <branch>`": a skipped required check counts as passing, so they never skip or pass there. Marking the pull
+request ready (`ready_for_review`) runs everything, as does a push to a ready pull request, a run by hand (`gh workflow run test.yml --ref <branch>`)
+and a release or sidecar run that calls the workflow.
 
 The ruleset "Integration branches: CI before merge" (`feature/*`, `release/*`) lists `Record check` among its required checks, so a record
 that moved without a file, a property problem or an unnamed worse selected clock stops a merge into an integration branch. No ruleset
