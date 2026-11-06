@@ -113,7 +113,7 @@ export function generateClockWithSwingBackoff(
     const logger = options.logger ?? defaultLogger;
 
     const swing_count_forced = config.overrides?.terminal_swing_count !== undefined;
-    const can_prune_periods = !swing_count_forced && config.overrides?.use_fractional_swings !== true
+    const can_prune_periods = !swing_count_forced && options.fractional_swings !== true
         && config.target_output.counts !== "destroyed";
     const period_rejections: SwingPeriodRejection[] = [];
     let requested_initial_count: number | undefined;

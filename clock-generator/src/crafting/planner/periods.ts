@@ -200,7 +200,7 @@ export function plannedPeriodsOf(
     const { lower, higher } = swingCountsListed(listed_from, planned_from, forced, main.measure.main_period.toDecimal());
     const toggled = alternative(null, "fractional", true, () => {
         const exact = max_swings(true);
-        return planned(CraftingCyclePlan.create(target, registry, config, exact, { ...overrides, use_fractional_swings: true }),
+        return planned(CraftingCyclePlan.create(target, registry, config, exact, overrides, undefined, true),
             "fractional", true, exact);
     });
     const counts: ListedCount[] = [

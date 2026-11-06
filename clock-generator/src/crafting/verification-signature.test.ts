@@ -5,7 +5,7 @@ import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config";
 import {generateClockForConfig} from "./generate-clock";
 import {generateClockAlternatives, planClockAlternatives, runClockAlternativeTask} from "./alternatives";
-import {quiet} from "./generate-blueprint-test-helpers";
+import {plannedFractionally, quiet} from "./generate-blueprint-test-helpers";
 import * as trial from "./trial";
 
 const options = {logger: quiet, verify_as_built: false, fuel_consumption_view: false, factorio_states: false, modulo_blueprint: false};
@@ -23,8 +23,7 @@ describe("candidate verification identity", () => {
         const before = JSON.stringify({config, result});
         const reordered = {...result, clock_windows: Object.fromEntries(Object.entries(result.clock_windows).reverse())};
         expect(signature(config, reordered)).toBe(signature(config, result));
-        expect(signature({...config, overrides: {...config.overrides, use_fractional_swings: true}}, reordered))
-            .toBe(signature(config, result));
+        expect(signature(config, plannedFractionally(config, reordered))).toBe(signature(config, result));
         expect(JSON.stringify({config, result})).toBe(before);
     });
 
@@ -64,11 +63,12 @@ describe("candidate verification identity", () => {
         const fuel = await loadConfigFromFile(TestConfigPaths.BIOCHAMBER_FUEL);
         const built = generateClockForConfig(fuel, options);
         expect(Object.values(built.unplanned_inserter_clocks ?? {}).some(clock => clock.own_clock)).toBe(true);
-        expect(signature({...fuel, overrides: {...fuel.overrides, use_fractional_swings: true}}, built))
-            .not.toBe(signature(fuel, built));
-        const fractional_count = {...result, used_terminal_swing_count: 1.5};
-        expect(signature({...config, overrides: {...config.overrides, use_fractional_swings: true}}, fractional_count))
-            .not.toBe(signature(config, fractional_count));
+        const fractional = plannedFractionally(fuel, built);
+        // the same cycle, so that only planning it with fractional swings parts the two
+        expect(fractional.crafting_cycle_plan.total_duration.ticks).toBe(built.crafting_cycle_plan.total_duration.ticks);
+        expect(signature(fuel, fractional)).not.toBe(signature(fuel, built));
+        const fractional_count = {...plannedFractionally(config, result), used_terminal_swing_count: 1.5};
+        expect(signature(config, fractional_count)).not.toBe(signature(config, {...result, used_terminal_swing_count: 1.5}));
     });
 });
 
@@ -110,7 +110,8 @@ describe("request-local duplicate verification", () => {
         const logistic = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240);
         const plan = planClockAlternatives(logistic, {logger: quiet});
         const recovery = vi.spyOn(trial, "backpressureLossVerdictOf");
-        const duplicate = runClockAlternativeTask(logistic, plan.context, "fractional", {logger: quiet}, [plan.primary!.signature]);
+        // the plan leaves the fractional task out here, as one that makes the primary clock again: made anyway, it is that duplicate
+        const duplicate = runClockAlternativeTask(logistic, {...plan.context, fractional_is_primary: undefined}, "fractional", {logger: quiet}, [plan.primary!.signature]);
         expect(duplicate).toEqual({signature: plan.primary!.signature, alternatives: []});
         expect(recovery).not.toHaveBeenCalled();
         expect(plan.primary!.alternatives[0].assessment.backpressure_loss).not.toBeNull();

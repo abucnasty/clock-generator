@@ -101,9 +101,8 @@ describe("the balance with inserters that carry nothing", () => {
 
     const planOf = async (raw: unknown, fractional: boolean) => {
         const config = await parseConfig(JSON.stringify(raw)) as Config;
-        const run = fractional ? { ...config, overrides: { ...config.overrides, use_fractional_swings: true } } as Config : config;
         try {
-            const validation = validateConfig(run);
+            const validation = validateConfig(config, fractional ? { fractional_swings: true } : {});
             return {
                 lcm: validation.used_lcm,
                 period: validation.period_ticks,

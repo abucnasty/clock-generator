@@ -191,15 +191,15 @@ describe('verified primitive bootstrap orchestration', () => {
     });
 
     it.each([
-        ['explicit count', () => config({ terminal_swing_count: 602 })],
-        ['fractional swings', () => config({ use_fractional_swings: true })],
-        ['destroyed target', () => config(undefined, 'destroyed')],
-    ] as const)('does not bootstrap the %s path', (_name, makeConfig) => {
+        ['explicit count', () => config({ terminal_swing_count: 602 }), options],
+        ['fractional swings', () => config(), { ...options, fractional_swings: true as const }],
+        ['destroyed target', () => config(undefined, 'destroyed'), options],
+    ] as const)('does not bootstrap the %s path', (_name, makeConfig, asked) => {
         const candidate = makeConfig();
         const refusal = refusalFor(candidate);
         mocks.planRun.mockImplementation(() => { throw refusal; });
 
-        expect(() => generateClockWithSwingBackoff(candidate, options)).toThrow(refusal);
+        expect(() => generateClockWithSwingBackoff(candidate, asked)).toThrow(refusal);
         expect(mocks.verifiedPrimitiveGroupedClock).not.toHaveBeenCalled();
         expect(mocks.planRun).toHaveBeenCalledTimes(1);
     });
