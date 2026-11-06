@@ -8,6 +8,7 @@ import { resultWindowsClockOfPlan } from "./candidates/result-windows-clock";
 import { BlueprintGenerationResult, GenerateClockOptions, PlanRun, SwingAttemptResult, SwingBackoffReport, checkedClock, clockOfPlan, clockOfWindows, planRun } from "./plan/plan-run";
 import { ArithmeticWindowsNotApplicable, batchedSwingsWindowsByArithmetic } from "./plan/batched-arithmetic";
 import { sharedLaneShortened } from "./plan/shared-lane-guard";
+import { estimatedOutputSwings } from "./plan/output-swing-estimate";
 import { backpressureLossVerdictOf } from "./trial";
 import { OpenRange } from "../data-types";
 import { primitiveGroupedOptionsSupported, verifiedPrimitiveGroupedClock } from "./candidates/verified-primitive-grouped";
@@ -295,6 +296,17 @@ export function generateClockWithSwingBackoff(
         `Attempting backoff...`
     );
 
+    // the output swing estimate beside the counts it backs off through, for the batched clock (output-swing-estimate.ts):
+    // a shadow, logged and never used to skip a count, until it is shown to drop none that meets the rate
+    const estimate = generate === generateClockForConfig && options.fractional_swings !== true
+        ? estimatedOutputSwings(config, initial_swing_count) : null;
+    const estimated = (swings: number) => estimate?.above.find(it => it.swings === swings)?.verdict
+        ?? (estimate?.swings !== null && estimate?.swings !== undefined && swings <= estimate.swings ? "keeps up" : undefined);
+    if (estimate !== null) {
+        logger.log(`Output swing estimate (shadow): ${estimate.swings ?? "none"}`
+            + estimate.above.map(it => `; ${it.swings} ${it.verdict}${it.verdict === "no rule" ? ` (${it.reason})` : ""}`).join(""));
+    }
+
     const attempts: SwingAttemptResult[] = [];
     let stable_result: BlueprintGenerationResult | null = null;
     let stable_swing_count: number | null = null;
@@ -323,6 +335,7 @@ export function generateClockWithSwingBackoff(
             `swings=${swings}: actual=${attempt_result.stability_check.actual_output_items}, ` +
             `expected=${attempt_result.stability_check.expected_output_items}, ` +
             `stable=${attempt_result.stability_check.holds}`
+            + (estimated(swings) === undefined ? "" : `, estimate: ${estimated(swings)}`)
         );
 
         if (attempt_result.stability_check.holds) {
