@@ -6,18 +6,23 @@ id: glossary
 # Glossary
 
 The words of the clock generator, for its documentation, its site and its code. The clock generator plans circuit
-clocks for Factorio builds: when each inserter is enabled in a repeating window cycle, so that the build makes its target
-output with as few wakeups as possible.
+clocks for Factorio builds: when each inserter is enabled in a repeating window cycle, so that the build holds its
+setpoint with as few wakeups as possible.
 
-Each term is checked against two sources, in this order:
+Each term is checked against three sources, in this order:
 
 1. **Factorio 2.1.24**: the strings the player sees, the runtime API, the debug view and the engine's names.
-2. **ASD-STE100 Issue 9** (Simplified Technical English): the dictionary and its rules for technical nouns and
+2. **Control theory**: IEC 60050-351 (the International Electrotechnical Vocabulary, control technology), Åström and
+   Murray, *Feedback Systems* (2008), Janert, *Feedback Control for Computer Systems* (2013), and Wikipedia. The clock
+   generator is modelled as a control loop: the build is the controlled system, the setpoint is set by the user, and
+   the clock is the controller.
+3. **ASD-STE100 Issue 9** (Simplified Technical English): the dictionary and its rules for technical nouns and
    technical verbs.
 
-A term that is in the game and approved in STE is used as both define it. A term that is only in the game is the
-game's word, used as a technical noun (STE rule 1.6). Where the game uses the word for a different thing, or STE does
-not approve it, the entry says so. A term in neither source is the project's own technical noun.
+The first source that has the term gives it. A game word is used as a technical noun (STE rule 1.6); a control term
+keeps its standard meaning, and its entry gives the source as a number or a page. Where a source uses the word for a
+different thing, or STE does not approve it, the entry says so. A term in none of the sources is the project's own
+technical noun.
 
 _Avoid_ lists the words that the term replaces. Do not use them in documentation, on the site or in new code.
 
@@ -28,18 +33,22 @@ A person who makes clocks with the clock generator.
 _Avoid_: player
 
 **Build**:
-A group of entities in the game, of any number, that together make a target output. One build is one unit. A noun
-only (STE rule 1.7). The game uses "build" only as a verb. STE does not approve build (n), and its alternative,
-STRUCTURE, is the game's item **Low density structure**.
-_Avoid_: module (the game's module items), blueprint (for a build), setup, structure, cell, build (as a verb)
+A group of entities in the game, of any number, that together make one product. One build is one unit. A noun only
+(STE rule 1.7). The game uses "build" only as a verb. STE does not approve build (n), and its alternative, STRUCTURE,
+is the game's item **Low density structure**. Control theory: the controlled system (IEC 351-49-01).
+_Avoid_: module (the game's module items), blueprint (for a build), setup, structure, cell, build (as a verb), plant
+(the game's chemical plant), process
 
 **Entity**:
 One thing in the game: a machine, inserter, belt, chest or drill. The game's word.
 _Avoid_: object, piece
 
-**Target output**:
-The product a build must make and its rate in items per second. The site's **Target Output** panel.
-_Avoid_: target rate, goal
+**Setpoint**:
+The product a build must make and the rate it must hold, in items per second, for all copies. Set by the user; the
+clock never changes it. Control theory: the setpoint, or reference variable (IEC 351-48-02; Janert p.21-22, who uses it
+for rate targets). A setpoint at the maximum rate of the build leaves no time for recovery (Janert p.22). The
+site's **Target Output** panel shows it, until the site's next release names the panel **Setpoint**.
+_Avoid_: target output, target rate, goal, control frequency (that is the window cycle time)
 
 **Copies**:
 How many identical builds the user puts in the game; can be partial (0.5, 2.25). The site's **Copies** field. STE:
@@ -47,7 +56,7 @@ COPY (n), approved.
 _Avoid_: units (as the count)
 
 **Configuration**:
-A build, with its target output, copies and enable rules: what the generator works from, what the site saves, and what
+A build, with its setpoint and enable rules: what the generator works from, what the site saves, and what
 clocks are made for. Saved as a configuration file (**Open configuration file…**, **Save configuration file**). The
 game's word for a saved set of settings ("Server configuration").
 _Avoid_: config (bare), build file
@@ -68,8 +77,10 @@ _Avoid_: build (v), place (v)
 
 **Clock**:
 One set of combinators the generator made for a build and checked in the simulator. Its counter counts on the game's
-virtual signal **Clock**, a related use of the word.
-_Avoid_: potential clock, alternative, candidate, solution
+virtual signal **Clock**, a related use of the word. Control theory: the controller (IEC 351-49-02). The installed clock
+is open-loop control, and its method is pulse-width modulation.
+_Avoid_: potential clock, alternative, candidate, solution, controller (bare; the game's input controllers and
+**Ghost controller**)
 
 **Recommended clock**:
 The clock the generator ranks first for a build. While generation runs, the site calls it **Best so far**: the clock
@@ -118,7 +129,8 @@ source, its sink and its place in the graph.
 **Enable window**:
 The ticks of the window cycle during which the clock makes an inserter's **Enable if** condition true. A stretch that
 runs over the end of the window cycle is one enable window. **Enable if** is the game's name for the condition (2.1;
-2.0 called it **Enable/disable**).
+2.0 called it **Enable/disable**). Control theory: the manipulated variable (IEC 351-48-07), an on/off signal for each
+inserter.
 _Avoid_: wake window, active window, window (bare), enable range
 
 **Belt slack**:
@@ -156,6 +168,85 @@ The tick an enable window switches its inserter on.
 **Closing edge**:
 The tick an enable window switches its inserter off.
 _Avoid_: falling edge, switch-off edge
+
+## Control
+
+**Design loop**:
+The closed loop of the generator. The generator proposes clocks. The simulator measures how the build responds to
+each clock. The generator then ranks or changes the clocks. The loop runs offline, before a clock is installed. Control theory:
+closed-loop control (IEC 351-47-01), used for design; Janert p.125.
+
+**Open-loop control**:
+Control whose action is fixed before it starts and does not use a measurement of the output. The installed clock is
+open-loop control: it reads nothing from the build. Control theory: IEC 351-47-02; Janert p.15-16.
+_Avoid_: feedforward (for the clock; Janert's meaning is wider than the IEC's), "the clock reacts", "the clock adjusts"
+
+**Pulse-width modulation** (**PWM**):
+The method of the clock: it switches each inserter fully on and off in a fixed pattern that repeats every window
+cycle, so that the average work of each inserter meets the setpoint. Intended discrete control, set by the design loop.
+Control theory: pulse-width modulation (Wikipedia); Janert's split-time controller, p.110.
+
+**Duty cycle**:
+The share of the window cycle during which the clock enables an inserter: the sum of its enable windows, divided by the
+window cycle time. Not the utilization of a machine group.
+
+**Oscillation**:
+An unintended swing of the output or of a stock. The PWM pattern of the clock does not cause it: it repeats with a
+different period, or it grows. Control theory: Åström and Murray 1.5; Janert p.42.
+_Avoid_: "the clock oscillates" (for its normal switching)
+
+**Stable**:
+A clock is stable when it holds its setpoint at steady state. It also has recovery after every disturbance trial:
+the build goes back to its rate by itself. Control theory: asymptotic stability (Åström and Murray 4.3), tested by the
+disturbance trials, not proved. STE: STABLE (adj) approved; *stability* (n) is a technical noun.
+_Avoid_: survives backpressure loss
+
+**Utilization**:
+The crafts a machine group must make, divided by the crafts it can make, in the same time. 1 means that the machines
+never stop. The code calls it `duty` (`feasibility/duty.ts`). A technical noun (STE rule 1.6): STE does not approve
+utilization (n).
+_Avoid_: machine duty, duty (bare)
+
+## Starts
+
+**Cold start**:
+A start of a build with every machine, belt buffer and hand empty and the supplies full. The clock starts at the first
+tick. The code's `cold_start`. Control theory: a step response from rest (IEC 351-45-27; Janert p.82).
+_Avoid_: empty start, unloaded start, cold startup
+
+**Backpressure start**:
+A start of a build that is at backpressure: every belt is saturated and every machine output is full. The clock starts
+at the first tick. Control theory has no single term: a step response from a saturated initial state (Janert p.28,
+p.101-103).
+_Avoid_: loaded start, warm start, full backpressure startup
+
+**Backpressure**, at a belt pickup:
+The belt is fully saturated. The tile in front of the inserter is a belt that does not move. A moving belt has no
+backpressure: the inserter waits for items to arrive. The code calls such a belt **backed-up**.
+
+**Backpressure**, at a machine:
+When the inserter must pick up, the output slot of the machine holds a full hand. A pickup of part of a hand is not
+backpressure.
+
+**Steady state**:
+The condition after the startup period. The build repeats the same pattern in each window cycle, or in each whole
+number of window cycles. For an on/off clock it is a periodic steady state: the output repeats, it is not
+constant. Control theory: Åström and Murray 5.3; Janert p.29, p.42.
+_Avoid_: warm, warm state, settled (the game's *warm* is a temperature)
+
+**Startup period**:
+The time from a start (cold start or backpressure start) until steady state. Control theory: the initial transient;
+Janert p.8, p.103.
+_Avoid_: startup (bare; the game's mod **Startup** settings), initial transient, transient phase
+
+**Settling time**:
+The length of a startup period, in ticks or window cycles. Also the time to recovery after a disturbance. Control
+theory: IEC 351-45-37; Janert p.93.
+
+**Warm-up**:
+The window cycles that the simulator runs after a start and before it measures (`warmup_periods`). It must be at least
+as long as the startup period.
+_Avoid_: warm-up (for the startup period of the build)
 
 ## Wakeups
 
@@ -208,12 +299,20 @@ _Avoid_: jammed, jam, output loss
 
 **Recovery**:
 The clock goes back to its rate by itself after a supply stop or an output blockage. A noun only: write "the clock goes
-back to its rate", not "recovers" (STE does not approve recover (v)).
+back to its rate", not "recovers" (STE does not approve recover (v)). Control theory: the disturbance response
+(IEC 351-46-13).
 _Avoid_: recovers, recover, get back
 
-**Backpressure loss**:
-A supply stop or an output blockage, as the trials make them. A maintainer term: users never see it.
-_Avoid_: backpressure recovery, backpressure (bare)
+**Disturbance**:
+An input from outside that pushes the build away from its setpoint: a supply stop, an output blockage, or a
+productivity bonus. A maintainer term: users see supply stop, output blockage and recovery. Control theory:
+IEC 351-48-08; Janert p.113, p.278. Not the runtime API's segmented units that investigate "a disturbance".
+_Avoid_: backpressure loss
+
+**Disturbance trial**:
+A supply stop or an output blockage that the generator applies to each clock. The trials show whether the clock is
+stable. The code calls them backpressure losses (`backpressure_loss`).
+_Avoid_: backpressure loss trial
 
 ## Changes
 
