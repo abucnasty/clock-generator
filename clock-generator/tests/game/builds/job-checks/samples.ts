@@ -425,11 +425,12 @@ const utility120: JobCheck[] = [
 // The logistic science sample (LOGISTIC_SCIENCE_240): its belts move, so every clock is made for a moving belt, none for a backed-up belt
 const logistic: JobCheck[] = [
     {
-        name: 'makes batched swings for a moving belt, with 4 ticks of belt pickup slack',
+        name: 'makes batched swings for a moving belt, with 4 ticks of belt pickup slack inside its windows',
         run: ({ generated }) => {
             const batched = byId(generated, 'planned-belt-slack');
             expect(batched.label).toBe('Batched swings: 4 output swings per cycle');
-            expect(batched.belt).toEqual({ kind: 'moving', slack_ticks: [4] });
+            // its two pickup windows a window cycle stay open 5 ticks after their last pickup: none are added (#595)
+            expect(batched.belt).toEqual({ kind: 'moving', slack_ticks: [4], inside: true });
             expect(batched.description).toContain('Made for a moving belt: every inserter that picks up from a belt stays enabled 4 more ticks');
         },
     },
