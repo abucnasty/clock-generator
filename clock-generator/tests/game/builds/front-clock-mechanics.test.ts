@@ -111,7 +111,7 @@ describe("the recorded clock controls of the front fixtures", () => {
     });
 
     test("all 12 recordings hold their target and recover from every disturbance", () => {
-        for (const variant of variants) expect(runHolds(controls[variant.name].native), `${variant.name}: ${controls[variant.name].native.result}`).toBe(true);
+        for (const variant of variants) expect(runHolds(controls[variant.name].native, controls[variant.name].known_differences), `${variant.name}: ${controls[variant.name].native.result}`).toBe(true);
     });
 
     test("the generator judged every turbo clock stable, the moving-config exits included", () => {

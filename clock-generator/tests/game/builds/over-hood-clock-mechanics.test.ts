@@ -128,7 +128,7 @@ describe("the recorded clock controls of the over-the-hood fixtures", () => {
         // every fixture is judged stable, and its run holds the target and recovers from the three disturbances
         expect({native: native.generationVerdict, pinned: generation!.verdict, why: generation!.why_not_stable}).toEqual({native: "stable", pinned: "stable", why: undefined});
         expect(native.disturbances).toHaveLength(3);
-        expect(runHolds(native), native.result).toBe(true);
+        expect(runHolds(native, controls[name].known_differences), native.result).toBe(true);
         expect(generation!.selection).toMatchObject({holds: true, rate: 6});
     });
 
