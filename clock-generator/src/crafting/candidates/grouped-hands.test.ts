@@ -169,6 +169,15 @@ describe("hands in a chain of machines", () => {
         expect(made.windows.size).toBeGreaterThan(0);
         expect(made.turns).toEqual([]);
     });
+
+    it("keeps the extra start per taker where it leaves no taker busy: the plastic's four hands and a start are 34 of 168 ticks", () => {
+        const plan = planRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false, lcm: 1 } }, { logger: quiet });
+        const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
+        const windows = groupedHandsWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, true,
+            { surplus_guard: false, per_taker_guard: true, feeder_offset: 1, share_windows: false });
+        // the guard for every taker gives the plastic 26 ticks (above); per taker it is not busy with the fifth start, so it keeps it
+        for (const id of [10, 12, 19, 20]) expect(ranges(windows, `inserter:${id}`)).toEqual([[55, 88]]);
+    });
 });
 
 // Cell 02 (PROCESSING_UNIT_80_CIRCUIT_EXPORT): two processing unit machines (2, 3) are filled with circuits by four
@@ -202,6 +211,33 @@ describe("hands that fill the cycle", () => {
         // one tick for each hand out
         for (const id of [16, 17, 23, 24]) expect(ranges(windows, `inserter:${id}`)).toEqual([[0, 0]]);
     });
+    it("guards per taker only the takers the extra start leaves busy: the circuits, the iron and the cable into the circuit machines", () => {
+        const plan = planRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false, lcm: 1, terminal_swing_count: 1 } }, { logger: quiet });
+        const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
+        const made = (guard: { surplus_guard: boolean; per_taker_guard?: boolean }) => groupedHandsPlan(simulation_context.entity_registry,
+            swing_counts, recipe_lcm, duration.ticks, true, { ...guard, feeder_offset: 1, share_windows: false });
+        const length = (windows: Map<string, { start_inclusive: number; end_inclusive: number }[]>, id: number) =>
+            windows.get(`inserter:${id}`)!.reduce((sum, range) => sum + range.end_inclusive - range.start_inclusive + 1, 0);
+        const per_taker = made({ surplus_guard: false, per_taker_guard: true });
+        // three hands and a start (26 ticks) and the offset reach the 24-tick cycle; three hands alone are 18 ticks, so each gets a window
+        expect(per_taker.busy).toEqual([]);
+        for (const id of [3, 4, 5, 6, 7, 8, 13, 14, 15, 18, 19, 20]) expect(length(per_taker.windows, id)).toBe(18);
+        // the advanced circuits and the cable into the advanced circuit machines would keep a surplus hand but are not busy: they keep
+        // their start more (10 ticks), where the guard for every taker cuts them to one hand (2 ticks)
+        const every_taker = made({ surplus_guard: true });
+        for (const id of [2, 9, 11, 22]) {
+            expect(length(per_taker.windows, id)).toBe(10);
+            expect(length(every_taker.windows, id)).toBe(2);
+        }
+        // the circuits into the advanced circuit machines have room for a hand over theirs only (2): no surplus, no guard either way
+        for (const id of [12, 21]) {
+            expect(length(per_taker.windows, id)).toBe(10);
+            expect(length(every_taker.windows, id)).toBe(10);
+        }
+        // the plastic comes from a belt: never guarded (one hand of 11, a start more and the pickup slack)
+        for (const id of [1, 10]) expect(length(per_taker.windows, id)).toBe(length(every_taker.windows, id));
+    });
+
     it("gives the inserters that open on the same tick one window, the longest of them, where windows are shared", () => {
         const plan = planRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false, lcm: 1, terminal_swing_count: 1 } }, { logger: quiet });
         const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
