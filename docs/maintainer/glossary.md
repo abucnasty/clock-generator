@@ -122,8 +122,8 @@ runs over the end of the window cycle is one enable window. **Enable if** is the
 _Avoid_: wake window, active window, window (bare), enable range
 
 **Belt slack**:
-The ticks an inserter that picks up from a moving belt stays enabled after its last pickup, so that a pickup that
-starts late can still fill its hand. A project technical noun (STE rule 1.6): STE does not approve slack. The site shows
+The ticks that an inserter stays enabled after its last pickup from a moving belt. A pickup that starts late can then
+still fill its hand. A project technical noun (STE rule 1.6): STE does not approve slack. The site shows
 it as "+4 ticks belt slack".
 _Avoid_: belt pickup slack, pickup slack, slack (bare)
 
