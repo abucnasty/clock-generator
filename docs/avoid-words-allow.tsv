@@ -3,3 +3,6 @@ export		The Blueprint entry avoids it for a blueprint only: the sidecar export, 
 period	startup period	Startup period is a term of the glossary
 active	active (recipes?|voice)	The game's active recipes, and the active voice of STE
 goal	goal [0-9]	The numbered goals of clock-generator/GOALS.md
+idle	idle (rule|phase)	The idle rule and idle phase of the simulator's Hand (src/simulation/components/hand.ts)
+object	config object	A JavaScript object of the configuration
+cell	cell [0-9]	A cell number of a save, not a build
