@@ -7,12 +7,12 @@
   "job_results_sha256": "07a4041a0011143d0f4f4e865d8e9c24a000af0c78353cc35933f7a353e92a8a",
   "selected": "swings-1",
   "selected_windows": {
-    "inserter:7": "10-23,34-47,58-71,82-95,106-119,130-143,154-167,178-191,206-219,226-239,250-255,258-263",
-    "inserter:3": "10-23,34-47,58-71,82-95,106-119,130-143,154-167,178-191,206-219,226-239,250-255,258-263",
-    "inserter:9": "2-16,26-38,50-62,74-86,98-122,146-170,194-230,242-254",
-    "inserter:2": "2-16,26-38,50-62,74-86,98-122,146-170,194-230,242-254",
-    "inserter:6": "17-22,41-46,65-70,89-94,113-118,137-142,161-166,185-190,209-214,233-238,257-262",
-    "inserter:4": "17-22,41-46,65-70,89-94,113-118,137-142,161-166,185-190,209-214,233-238,257-262",
+    "inserter:7": "10-23,34-47,58-71,82-93,106-119,130-143,154-167,178-191,206-219,226-239,250-255,258-263",
+    "inserter:3": "10-23,34-47,58-71,82-93,106-119,130-143,154-167,178-191,206-219,226-239,250-255,258-263",
+    "inserter:9": "2-16,26-37,50-62,98-122,146-170,194-230,242-254",
+    "inserter:2": "2-16,26-37,50-62,98-122,146-170,194-230,242-254",
+    "inserter:6": "17-22,41-46,89-94,113-118,137-142,161-166,185-190,209-214,233-238,257-262",
+    "inserter:4": "17-22,41-46,89-94,113-118,137-142,161-166,185-190,209-214,233-238,257-262",
     "inserter:8": "15-23,39-47,63-71,87-95,111-119,135-143,159-167,183-191,255-261",
     "inserter:1": "15-23,39-47,63-71,87-95,111-119,135-143,159-167,183-191,255-261",
     "inserter:5": "67-86"
@@ -24,6 +24,6 @@
     {"id": "swings-5", "verdict": "unstable", "holds": false, "rate": 119.88516746411483, "supply": "backed_up", "period": 1320, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "ce836c44734d3c9050c838a44f875b3d5d6d98e7fd91fe665b068d8059d5f0ca", "windows_sha256": "b8f6421fa56765fcebbad54a7e62fa8c020450c707ea5b2cf411461b993106f4", "text_sha256": "0be3b0eefc4072e0f92e78818d13ed5dbb18b94edfbe7fc3c3a09c9b8514cef4", "results_sha256": "d8aae4801d35ca9597d094b7620090c91df96d4abef36e63fe20e7f2b81ba59e"},
     {"id": "swings-6", "verdict": "unstable", "holds": false, "rate": 127.95454545454544, "supply": "backed_up", "period": 1584, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "90e1abde961806ee97899950d7376299759aabab17a06e65decbce21c2468504", "windows_sha256": "0b211fd98e0196f8172fad13cd2df30480cac2db8cadbafa582f1e393bcf1154", "text_sha256": "a573a7a4263a7a433fa5093a7a2b7b4284582aa9c477bed7b36427a4bdc90937", "results_sha256": "64884aa2d8f1b1e68034651bc4350aba7c7b34e5af1352cc3a49ad8a4b7c9c47"},
     {"id": "swings-2", "verdict": "unstable", "holds": false, "rate": 222.68774703557315, "supply": "backed_up", "period": 528, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "2f70661508a92952e2206b914f18290b54bf63d1418214fd2d3499219809d28b", "windows_sha256": "996410008b59eecf51610bc00840b0de07719699209c171998cf24477dc404c1", "text_sha256": "40bbe4bead2f329f1c90d49e4e4bfdd2b9e778edf04540ad804e2e68c2e7edb5", "results_sha256": "e10839603b8541a695b8538be8680fdcc062bed4ff83ab86a33db87c8f50c4ba"},
-    {"id": "swings-1", "verdict": "stable", "holds": true, "rate": 240, "supply": "backed_up", "period": 264, "wake_ups": 1036.364, "descriptions_cut": 0, "clock_sha256": "4deda6470c96364aef5b24531ee0bfa00efcf6d2b274811144387dc72818ace8", "windows_sha256": "643637594ea924a26e0b7aeff98a2200dfa9f1790059a62359a3509d35fb4743", "text_sha256": "40eba41c93685847119a95771d0c853c5913086316cdbfb91d3946a2bf8e8a85", "results_sha256": "a75d570f03a653a3c0b47c23d409eb44f896214e125254b9a682cc3fec6e2efe"}
+    {"id": "swings-1", "verdict": "stable", "holds": true, "rate": 240, "supply": "backed_up", "period": 264, "wake_ups": 954.545, "descriptions_cut": 0, "clock_sha256": "02fabb17f31fb1cd5b118b0a9f05886ca331cce55fdbc98791016ed3d42c02d2", "windows_sha256": "61d79ebfbeed2ba3b60026fbfbc370e3b70f8d5a57cc670d14879da3ffd7b8db", "text_sha256": "7bd30fdc51bb1ee7a26833b01ce570365daaeee0a0d74f799cadc7f1d212c434", "results_sha256": "5c467b6b63f2d252b62049efbb6406a369c2db4841c25e70b3ac8edee705e489"}
   ]
 }

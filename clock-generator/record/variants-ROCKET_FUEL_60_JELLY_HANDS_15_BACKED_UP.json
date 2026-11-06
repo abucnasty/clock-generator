@@ -12,7 +12,7 @@
     "inserter:7": "1-55,58-64",
     "inserter:6": "1-55,58-64",
     "inserter:3": "1-15,49-57",
-    "inserter:4": "2-18,34-50",
+    "inserter:4": "2-13,34-45",
     "inserter:2": "2-18,34-50",
     "inserter:5": "8-16",
     "inserter:1": "8-16",
@@ -20,7 +20,7 @@
   },
   "alternatives": [
     {"id": "planned-belt-slack", "verdict": "stable", "holds": true, "rate": 60, "supply": "backed_up", "period": 64, "wake_ups": 920.391, "descriptions_cut": 0, "clock_sha256": "d150c41dd47113a13b21e7c31ffaf3cfccb0695e52c911dade9e00d16e829cf8", "windows_sha256": "9102bba1e1c7c93ab8d24dfb1df36ba8b0303d97fff76ccd5d0b8881782cac8a", "text_sha256": "c2c9d9d440c7fe2248890d2d93ae267487643a6bfcbe00664182284378fcde60", "results_sha256": "db57d298a9ac6299bfd2ce630911f8fcf0d77b481d2c6a80729a9f481ef6dd7c"},
-    {"id": "fractional", "verdict": "stable", "holds": true, "rate": 60, "supply": "backed_up", "period": 64, "wake_ups": 779.062, "descriptions_cut": 0, "clock_sha256": "5949fa64888aa29026206fe727007c6385b0637502285cb48e0105406017fd8a", "windows_sha256": "51b91edf2ab1f08ad14d00eae2bec86ab42afbe391dd2cecc79d2310ec36ec6a", "text_sha256": "77de86b0e82bc79e1ce9f74102efe7dbab2b9de25174cce99182d77738a795fd", "results_sha256": "f17bcb0f3e947a82f5ad4722e7d6ac79ee0e7481c51786d81d9bd1496c655a9e"},
+    {"id": "fractional", "verdict": "stable", "holds": true, "rate": 60, "supply": "backed_up", "period": 64, "wake_ups": 769.219, "descriptions_cut": 0, "clock_sha256": "272c4025dd98e9b34d975aecd736134719c26cf17a60d1c2e5e3977b73c9083b", "windows_sha256": "ed0e049c256ac232c2f6248cdb60b3de4779583a0fd71ede4521589679668949", "text_sha256": "4f5c2844963e4ae21a2c8899c967168e32d69fc30e47d14986c283b8e144130d", "results_sha256": "0a6fb342e9659b24b7406170745870eab8742c39648edec0f407afbc9561840d"},
     {"id": "derived", "verdict": "stable", "holds": true, "rate": 60, "supply": "backed_up", "period": 64, "wake_ups": 1562.344, "descriptions_cut": 0, "clock_sha256": "d938f86ce04a46bfbb05d9c45d70c9e7acd63edf886b491a85c42d920fd3f18e", "windows_sha256": "cf910fd42d6511a1efea6fe6320cb87d1e8893e94f2f5c881656fb85e86d87bd", "text_sha256": "74dfbbe3802485649d1fab2d6616458f8a11880b7672a2b28d0dc4aa55dd59e4", "results_sha256": "443a75a0312133d1459cdff80e40cab8d5d6af85147fdaf7db4c4b46a3f559d3"},
     {"id": "swings-2", "verdict": "unstable", "holds": false, "rate": 15, "supply": "backed_up", "period": 64, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "ad9ee6f11eb2b2a81f5c0b0112fc41e540e2c716892778d6c906c8d3201c6c76", "windows_sha256": "062fc34e613d3df0d8f69245fb565536c1c79881a08230c115be14cac0f184ac", "text_sha256": "82009cfd19680dfcc7577f990a10a521625e7c94c000e2551b465c8b35a2c574", "results_sha256": "60eb49521ad13210ffb171cdfca99af4ce47b086e1eb6e480b97070e34ac065d"},
     {"id": "swings-3", "verdict": "unstable", "holds": false, "rate": 20, "supply": "backed_up", "period": 192, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "af257f25936d774c834f7afb7f8bdcb4e34038387f24c754aa18b66c2a0e6efa", "windows_sha256": "7cfb4ec06f1a37de6ae356d0676b4769f3e863da52334220bcf683e0d195b83c", "text_sha256": "09536c2e794e361b337a33be47a01482a04dc2f61e52f1abc42af9d7cce6a398", "results_sha256": "d1cff7e675c4cb1a8fa2e3ba2afa685d21af6897bd4a953bd28956ed85f53c21"}
