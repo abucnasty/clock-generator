@@ -22,6 +22,7 @@ export const PROPERTIES = [
     'stable-holds-and-survives-loss',
     'counters-add-up',
     'fuel-never-dry',
+    'strategy-and-signals',
 ] as const;
 export type PropertyName = typeof PROPERTIES[number];
 
@@ -183,6 +184,37 @@ function fuelNeverDry(alternative: Alternative): string[] | null {
     return problems;
 }
 
+/**
+ * The strategy ids and the signals a minute agree with the clock: the output swings are the count it was made at, it is counted as
+ * output swings or as hands brought in and not both, a construction is named for the families made from batched swings and for no
+ * other, and signals are counted where wake-ups are, none where no decider switches anything.
+ */
+function strategyAndSignals(alternative: Alternative, destroyed: boolean): string[] {
+    const problems: string[] = [];
+    const { strategy, assessment } = alternative;
+    if (strategy.output_swings !== alternative.result.used_terminal_swing_count) {
+        problems.push(`strategy says ${strategy.output_swings} output swings, the clock was made at ${alternative.result.used_terminal_swing_count}`);
+    }
+    const counts = strategy.qualifiers.filter(it => it === 'output-swings' || it === 'hands-brought-in');
+    if (counts.length !== 1 || counts[0] !== (destroyed ? 'hands-brought-in' : 'output-swings')) {
+        problems.push(`strategy counts its swings as [${counts.join(', ')}]`);
+    }
+    const batched = ['takt-batches', 'round-robin-polling', 'euclidean-swings'].includes(strategy.family);
+    if (batched !== (strategy.construction !== undefined)) {
+        problems.push(`family ${strategy.family} with construction ${strategy.construction ?? 'none'}`);
+    }
+    if (new Set(strategy.qualifiers).size !== strategy.qualifiers.length) problems.push(`strategy repeats a qualifier: ${strategy.qualifiers.join(', ')}`);
+    const signals = assessment.signals_per_minute;
+    if ((signals === null) !== (assessment.wake_ups_per_minute === null)) {
+        problems.push(`signals ${signals} a minute against wake-ups ${assessment.wake_ups_per_minute}: counted on the same run, so null together`);
+    }
+    if (signals !== null && signals !== undefined && (signals < 0 || (alternative.deciders === 0 && signals !== 0))) {
+        problems.push(`${signals} signals a minute from ${alternative.deciders} window deciders`);
+    }
+    if (signals === undefined) problems.push('signals a minute not counted');
+    return problems;
+}
+
 /** The properties on every alternative of a job's result */
 export function checkProperties(job: string, config: Config, generated: Pick<ClockAlternativesResult, 'alternatives'>): PropertyReport {
     const checked = Object.fromEntries(PROPERTIES.map(name => [name, 0])) as Record<PropertyName, number>;
@@ -200,6 +232,7 @@ export function checkProperties(job: string, config: Config, generated: Pick<Clo
         note('stable-holds-and-survives-loss', alternative, stableMeans(alternative));
         note('counters-add-up', alternative, countersAddUp(alternative, copies));
         note('fuel-never-dry', alternative, fuelNeverDry(alternative));
+        note('strategy-and-signals', alternative, strategyAndSignals(alternative, config.target_output.counts === 'destroyed'));
     }
     const excusing = (it: PropertyProblem) => EXCEPTIONS[job]?.[it.property]?.alternatives.includes(it.alternative) === true;
     const excepted = found.filter(excusing).reduce<NonNullable<PropertyReport['excepted']>>((all, it) => {

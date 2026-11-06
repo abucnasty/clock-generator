@@ -45,7 +45,7 @@
 #                                           regenerates the records from <jobs> and compares them with the committed ones field by field:
 #                                           a table of job, field, before, after; exits 1 on any difference (--map: a rename map as in
 #                                           `compare`, applied to the committed records); then the properties of the run (the job files'
-#                                           `properties`, tests/game/builds/record-properties.ts: five properties on every alternative of every job,
+#                                           `properties`, tests/game/builds/record-properties.ts: six properties on every alternative of every job,
 #                                           judged where the results are made): a table of job, property, alternative and the values, exit 1 on any
 #                                           problem, and on a job with none of them (a run from before the module, or carried from one: --full
 #                                           reruns it; --allow-unchecked lists such jobs and goes on); then the per-job checks (the job files'
