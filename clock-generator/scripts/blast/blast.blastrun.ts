@@ -1,8 +1,8 @@
 // The blast radius: generate every sample config as it is (its belts moving or backed up as the config says; nothing makes
 // a copy with the other supply) and, when BLAST_GROUPS asks for them, every pickup, over-hood, front and blocked-output
 // fixture, every container config and every variant (a sample with the options a test or a game recording sets: belts backed up,
-// an ingredient left out of the period) (each has a generation test of its own that runs in CI), and hash every alternative's
-// exported clock as over-hood-clock-<tier>.generation.test.ts do
+// an ingredient left out of the period) (the record, clock-generator/record/, holds one file for each), and hash every alternative's
+// exported clock (the way the controls files of the game tests pin one)
 // (clock_sha256: sha256 of its identity, clockIdentity of subtick ?? result: the blueprint without its text or metadata,
 // and the schedule; text_sha256: sha256 of {blueprint, schedule} with the text, which moves with any description;
 // results_sha256 and results: the digest of what the clock hash leaves out, see blast.digest.ts). Run by

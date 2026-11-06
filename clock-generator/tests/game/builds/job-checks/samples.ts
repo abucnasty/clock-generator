@@ -12,6 +12,7 @@ import { excessLossOf } from '../../../../src/crafting/random-margins';
 import { clockIdentity } from '../../../../src/crafting/clock-identity';
 import { recordSimulationTimeline } from '../../../../src/crafting/record-timeline';
 import { EntityId } from '../../../../src/entities';
+import { GROUP_GAP_TILES } from '../../../../src/crafting/turn-groups';
 import { SEARCH_LABELS } from '../../../../src/crafting/generate-blueprint-test-helpers';
 import type { Config } from '../../../../src/config/schema';
 import { lithiumSiloCases } from '../lithium-plate-80-silo-chest-clock-fixtures';
@@ -315,6 +316,25 @@ const networks = (wires: number[][], green: boolean): string[] => {
     return Array.from(sets.values()).map(members => members.sort().join(',')).sort();
 };
 const grenade: JobCheck[] = [
+    {
+        name: 'the selected clock stands its combinators in two groups, a gap between them, each in the order of its turn',
+        run: ({ generated }) => {
+            const { blueprint } = selectedOf(generated).result;
+            const at = (kind: 'inserters' | 'drills', ids: number[]) => tagged(blueprint.entities, kind, ids).position.x;
+            // the machines of one row of the belt are a group: the output swings (1 and 2), the plate inserters (3 and 4), the coal drills (1 and 2)
+            const north = [at('inserters', [1, 2]), at('inserters', [3, 4]), at('drills', [1, 2])];
+            const south = [at('inserters', [7, 8]), at('inserters', [5, 6]), at('drills', [3, 4])];
+            expect(north).toEqual([north[0], north[0] + 1, north[0] + 2]);
+            expect(south).toEqual([south[0], south[0] + 1, south[0] + 2]);
+            // the empty tiles between the groups, and nothing else out of place along the row
+            expect(south[0] - north[2] - 1).toBe(GROUP_GAP_TILES);
+            // the clock, its lock and its filter stand before both
+            const row = blueprint.entities.filter(entity => entity.name === 'decider-combinator').map(entity => entity.position.x).sort((a, b) => a - b);
+            expect(row.slice(0, 2)).toEqual([0.5, 1.5]);
+            expect(row[2]).toBe(north[0]);
+            expect(new Set(row).size).toBe(row.length);
+        },
+    },
     {
         name: 'the first combinator of each group says which turn is its, and no other combinator does',
         run: ({ generated }) => {
