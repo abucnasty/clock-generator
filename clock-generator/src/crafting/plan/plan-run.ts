@@ -1,4 +1,4 @@
-import { ClockPeriodLimitError, MAX_SIMULATION_TICKS, type SwingPeriodPruning } from "./clock-period-limit";
+import { ClockPeriodLimitError, SIMULATION_BUDGET_TICKS, type SwingPeriodPruning } from "./clock-period-limit";
 import { assertOutputTransferGenerationSupported } from "../../config/output-transfer-generation";
 import assert from "../../common/assert";
 import type { NotMadeClock } from "../why-not-stable";
@@ -71,7 +71,7 @@ import { AlwaysOnReason, AlwaysOnReasons, alwaysOnReasons } from "../always-on-r
 import { RunMemo, currentRunMemo } from "./run-memo";
 import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, beltPickupSlackTrial, runAsBuiltCheck, runClockOnBuild, trialWithLoopWindows } from "../trial";
 
-export { MAX_SIMULATION_TICKS };
+export { SIMULATION_BUDGET_TICKS };
 
 /**
  * Maximum allowed deviation (in items) between actual and expected output transfers
@@ -654,7 +654,7 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
             && options.period_ticks === undefined && options.timeline_recording?.period_ticks === undefined;
         return new ClockPeriodLimitError({ terminal_swing_count, base_cycle_ticks: crafting_cycle_plan.total_duration_ticks.toDecimal(),
             computed_lcm: transfer_plan.computed_lcm, effective_lcm: transfer_plan.recipe_lcm,
-            period_ticks: period, limit_ticks: MAX_SIMULATION_TICKS }, whole_made
+            period_ticks: period, limit_ticks: SIMULATION_BUDGET_TICKS }, whole_made
             ? { config_json: JSON.stringify(config), terminal_swing_count } : undefined);
     });
 
@@ -1001,22 +1001,22 @@ interface RunPeriods {
     warmup_period: Duration;
 }
 
-/** The period of the plan and the warmup, shortened where a long period would take it past MAX_SIMULATION_TICKS */
+/** The period of the plan and the warmup, shortened where a long period would take it past SIMULATION_BUDGET_TICKS */
 function runPeriodsOf(crafting_cycle_plan: CraftingCyclePlan, recipe_lcm: number, options: RunOptions, logger: Logger,
     overLimit: (period_ticks: number) => ClockPeriodLimitError): RunPeriods {
     const duration: Duration = Duration.ofTicks(options.period_ticks ?? options.timeline_recording?.period_ticks ?? CraftingCyclePlan.ticksOfCycles(crafting_cycle_plan, recipe_lcm));
-    if (Number.isFinite(duration.ticks) && duration.ticks > 0 && duration.ticks >= MAX_SIMULATION_TICKS) throw overLimit(duration.ticks);
-    assert(Number.isFinite(duration.ticks) && duration.ticks > 0 && duration.ticks < MAX_SIMULATION_TICKS, `Clock period of ${duration.ticks} ticks exceeds maximum allowed ${MAX_SIMULATION_TICKS} ticks`);
+    if (Number.isFinite(duration.ticks) && duration.ticks > 0 && duration.ticks >= SIMULATION_BUDGET_TICKS) throw overLimit(duration.ticks);
+    assert(Number.isFinite(duration.ticks) && duration.ticks > 0 && duration.ticks < SIMULATION_BUDGET_TICKS, `Clock period of ${duration.ticks} ticks exceeds maximum allowed ${SIMULATION_BUDGET_TICKS} ticks`);
     // a recording of a settled period runs the build that long from its cold start, as the long run of the clock does
     const requested_warmup_periods = Math.max(options.warmup_periods ?? 10, options.timeline_recording?.settle_periods ?? 0);
     // long periods (large ingredient LCMs) get fewer warmup periods to stay under the tick budget
-    const warmup_periods = Math.min(requested_warmup_periods, Math.floor((MAX_SIMULATION_TICKS - 1) / duration.ticks));
+    const warmup_periods = Math.min(requested_warmup_periods, Math.floor((SIMULATION_BUDGET_TICKS - 1) / duration.ticks));
     const exact_ticks = options.timeline_recording?.settle_ticks;
     if (exact_ticks === undefined && warmup_periods < requested_warmup_periods) {
-        logger.log(`Warm up shortened to ${warmup_periods} periods to stay under ${MAX_SIMULATION_TICKS} ticks`);
+        logger.log(`Warm up shortened to ${warmup_periods} periods to stay under ${SIMULATION_BUDGET_TICKS} ticks`);
     }
     assert(exact_ticks === undefined || (Number.isInteger(exact_ticks) && exact_ticks >= 0), "The exact timeline start must be a nonnegative whole tick");
-    assert(exact_ticks === undefined || exact_ticks <= duration.ticks * Math.floor((MAX_SIMULATION_TICKS - 1) / duration.ticks),
+    assert(exact_ticks === undefined || exact_ticks <= duration.ticks * Math.floor((SIMULATION_BUDGET_TICKS - 1) / duration.ticks),
         "The exact timeline start exceeds the warm-up tick budget");
     const warmup_period: Duration = Duration.ofTicks(exact_ticks === undefined ? duration.ticks * warmup_periods
         : exact_ticks);
@@ -1320,7 +1320,7 @@ function checkOutput(
 
     // the simulated period can hit the expected output while the periods it alternates with fall short
     let repeat_output_items: number | undefined;
-    if (repeat_periods !== undefined && repeat_periods > 1 && duration.ticks * repeat_periods < MAX_SIMULATION_TICKS) {
+    if (repeat_periods !== undefined && repeat_periods > 1 && duration.ticks * repeat_periods < SIMULATION_BUDGET_TICKS) {
         state_transition_history.recording = false;
         new SimulateStep(simulation_context, Duration.ofTicks(duration.ticks * (repeat_periods - 1))).execute();
         repeat_output_items = 0;
@@ -2313,7 +2313,7 @@ export function provenRepeatBin(config: Config, period: number): { ticks: number
         return base;
     }
     const merged = mergedClockTicks(base.ticks, own_moduli);
-    if (merged === null || merged >= MAX_SIMULATION_TICKS) {
+    if (merged === null || merged >= SIMULATION_BUDGET_TICKS) {
         return null;
     }
     return { ticks: merged, periods: (merged / base.ticks) * base.periods };

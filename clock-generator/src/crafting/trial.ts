@@ -17,7 +17,7 @@ import type { SubtickPeriod } from "../common/subtick-period";
 import { canonicalKey, currentRunMemo } from "./plan/run-memo";
 import { wholeCounterOf } from "./plan/clock-period-limit";
 import { assessTargetProduction, TargetProduction } from "./target-production";
-import { BlueprintGenerationResult, BuildRun, FractionalSwings, LCM_STABILITY_TOLERANCE, MAX_SIMULATION_TICKS, RunOptions, fractionalSwingsOf, SimulationStabilityCheck, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, planRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
+import { BlueprintGenerationResult, BuildRun, FractionalSwings, LCM_STABILITY_TOLERANCE, SIMULATION_BUDGET_TICKS, RunOptions, fractionalSwingsOf, SimulationStabilityCheck, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, planRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
 import { SimulationTick } from "./runner/simulation-tick";
 import { simulationStateKey } from "./runner/steady-state";
 import { inLoopInserterWindows, loopInserterWindows } from "./candidates/loop-windows";
@@ -81,6 +81,11 @@ export interface ClockAssessment {
      * stays in the as-built check.
      */
     wake_ups_per_minute: number | null;
+    /**
+     * Signals a minute its window deciders send, beside the wake-ups (see `signalsPerMinuteOf`): one for each enable window of a
+     * decider that opens. Null when the clock had no long run; absent where it was not counted. Nothing ranks a clock by it.
+     */
+    signals_per_minute?: number | null;
     /**
      * The wake-ups of the clock from each start of wake-ups-from-starts.ts and their mean, which `wake_ups_per_minute`
      * is, on a build with a loop of machines or a machine that makes its own ingredient. Absent on any other build, and
@@ -412,7 +417,7 @@ const LONG_RUN_MAX_PERIODS = 120;
 
 /** Periods the long run of a clock of this period lasts when it is asked to cover `check_ticks` ticks (see longRunPeriods) */
 export function longRunPeriodsOf(period: number, check_ticks: number = FREE_RUNNING_CHECK_TICKS): number {
-    const max_periods = Math.floor((MAX_SIMULATION_TICKS - 1) / period);
+    const max_periods = Math.floor((SIMULATION_BUDGET_TICKS - 1) / period);
     // a longer check than the standard one is not cut short by the cap on periods, which short periods would hit first
     const wanted_periods = Math.ceil(check_ticks / period);
     return longRunPeriods(period, subtickClockForPeriod(period), Math.min(check_ticks > FREE_RUNNING_CHECK_TICKS ? wanted_periods : Math.min(LONG_RUN_MAX_PERIODS, wanted_periods), max_periods), max_periods);
@@ -519,7 +524,7 @@ function longRunOfFreeRunningBuild(
     // (LONG_RUN_MAX_TICKS), for its repeat: where the repeat is proven the amount is judged on it alone, so a start-up
     // loss inside the sampled span is not charged as rate; where it is not, the sample stands as it was judged.
     if (target_production !== undefined && !target_production.valid && run.state_repeat === undefined && target_production.shortfall <= hand) {
-        const longest = Math.min(Math.floor(LONG_RUN_MAX_TICKS / period), Math.floor((MAX_SIMULATION_TICKS - 1) / period));
+        const longest = Math.min(Math.floor(LONG_RUN_MAX_TICKS / period), Math.floor((SIMULATION_BUDGET_TICKS - 1) / period));
         if (longest > periods) {
             const longer = runOf(longest);
             logger.log(`Free running build short by ${target_production.shortfall} (a hand or less) over ${periods} periods: run on for ${longest}, `

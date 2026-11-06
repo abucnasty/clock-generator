@@ -26,7 +26,12 @@ export interface DerivedClockWindowsReport {
     full_hand_inserters?: string[];
 }
 
-/** End padding candidates, in order */
+/**
+ * End padding candidates, in order: ticks added to the end of every derived enable window. The list's length is a cost
+ * skip, kept until the pricing release, not a proof. A padding of 1 is the pick in 42 of 52 picked searches, but a
+ * search of that pad alone, measured on all 86 record jobs, would lose 10 clocks, 7 of them alternatives that met the
+ * rate, and the selected clock of one job.
+ */
 const DERIVED_WINDOW_END_PADDING_CANDIDATES = [0, 1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16];
 
 /** What deriving windows under given output windows yields */

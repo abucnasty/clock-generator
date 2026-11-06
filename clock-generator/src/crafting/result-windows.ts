@@ -36,8 +36,12 @@ import { rotateRanges } from "./clock";
  * their counts are negatively correlated and the sum spreads less than this assumes).
  */
 
-/** The longest period the windows are planned on: the simulator checks RESULT_WINDOWS_CHECK_PERIODS of them in its 500,000 ticks */
-export const RESULT_WINDOWS_LONGEST_PERIOD_TICKS = 24_000;
+/**
+ * The longest period the windows are planned on: a simulator budget, not a proof. 20 check periods x 24,000 ticks =
+ * 480,000 < 500,000 (SIMULATION_BUDGET_TICKS), so the simulator can check RESULT_WINDOWS_CHECK_PERIODS of them in its
+ * run. No record job reaches it.
+ */
+export const RESULT_WINDOWS_PERIOD_BUDGET_TICKS = 24_000;
 
 /** Periods the simulator runs the windows for after its warmup, to see each result taken out as it comes */
 export const RESULT_WINDOWS_CHECK_PERIODS = 20;
@@ -410,7 +414,7 @@ function longestCycles(input: ResultWindowsInput, measure: ContainerMeasure, gro
     const fits = (cycles: number) => worstHeld(input, measure, groups, cycles, level).at_level_units <= measure.capacity;
     assert(fits(1), `Machine ${input.machine.entity_id.number} places more into ${input.machine.result_target} in one cycle of ${input.cycle_ticks} ticks `
         + "than it holds in all but 1 in 740 cycles");
-    const longest = Math.max(1, Math.floor(RESULT_WINDOWS_LONGEST_PERIOD_TICKS / input.cycle_ticks));
+    const longest = Math.max(1, Math.floor(RESULT_WINDOWS_PERIOD_BUDGET_TICKS / input.cycle_ticks));
     // the longest that fits: doubled while it fits, then halved back into the last step (what it holds grows with the period)
     let low = 1;
     let high = 2;

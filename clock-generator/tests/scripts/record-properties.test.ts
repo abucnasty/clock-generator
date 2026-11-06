@@ -1,4 +1,4 @@
-// The property module of the record (tests/game/builds/record-properties.ts): five properties on every alternative of a job's result.
+// The property module of the record (tests/game/builds/record-properties.ts): six properties on every alternative of a job's result.
 // The results are made by hand here: a clean one passes, and one field broken in it fails the property that reads the field,
 // naming the property, the alternative and the values. No generation.
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -24,8 +24,10 @@ beforeAll(async () => {
 const made = (override: Record<string, any> = {}): any => {
     const alternative: any = {
         id: 'even-hands', verdict: 'stable', deciders: 2,
-        assessment: { holds: true, backpressure_loss: { survives: true } }, ranking: { meets_target_rate: true },
+        assessment: { holds: true, backpressure_loss: { survives: true }, wake_ups_per_minute: 3, signals_per_minute: 4 }, ranking: { meets_target_rate: true },
+        strategy: { family: 'time-division-slots', qualifiers: ['output-swings'], output_swings: 2 },
         result: {
+            used_terminal_swing_count: 2,
             clock_windows: {}, unplanned_inserter_clocks: {},
             always_on_reasons: Object.fromEntries(always_on.map(id => [id, 'a reason'])),
             schedule: { inserter_combinators: [] },
@@ -68,7 +70,7 @@ describe('the property module', () => {
         delete bare.result.schedule;
         const report = check(bare);
         expect(report.problems).toEqual([]);
-        expect(report.checked).toMatchObject({ 'always-on-reasons-named': 1, 'decider-build-order': 0, 'stable-holds-and-survives-loss': 1, 'counters-add-up': 0, 'fuel-never-dry': 0 });
+        expect(report.checked).toMatchObject({ 'always-on-reasons-named': 1, 'decider-build-order': 0, 'stable-holds-and-survives-loss': 1, 'counters-add-up': 0, 'fuel-never-dry': 0, 'strategy-and-signals': 1 });
     });
 
     describe('a result with one field broken fails the property that reads it, naming the alternative and the values', () => {
@@ -122,6 +124,21 @@ describe('the property module', () => {
                 switch_ons_per_minute: 0, switch_offs_per_minute: 0, switch_ons_at_rest_per_minute: 0, switch_ons_moving_per_minute: 0, swings_per_minute: 1, grabs_per_minute: 1 }] }));
             expect(report.problems.every(it => it.property === 'counters-add-up' && it.alternative === 'even-hands')).toBe(true);
             expect(report.problems.map(it => it.message)).toContain('inserter:1: input and output wake-ups 6 against its wake-ups 3');
+        });
+
+        it('strategy-and-signals: a batched family with no construction, signals counted where wake-ups are not, and a count of swings the clock was not made at', () => {
+            const messages = (override: Record<string, any>) => {
+                const found = check(made(override)).problems.filter(it => it.property === 'strategy-and-signals');
+                expect(found.every(it => it.alternative === 'even-hands')).toBe(true);
+                return found.map(it => it.message);
+            };
+            expect(messages({ 'strategy.family': 'takt-batches' })).toEqual(['family takt-batches with construction none']);
+            expect(messages({ 'strategy.construction': 'planning-run' })).toEqual(['family time-division-slots with construction planning-run']);
+            expect(messages({ 'assessment.wake_ups_per_minute': null })).toEqual(['signals 4 a minute against wake-ups null: counted on the same run, so null together']);
+            expect(messages({ 'strategy.output_swings': 3 })).toEqual(['strategy says 3 output swings, the clock was made at 2']);
+            expect(messages({ 'strategy.qualifiers': ['hands-brought-in'] })).toEqual(['strategy counts its swings as [hands-brought-in]']);
+            expect(messages({ deciders: 0 })).toEqual(expect.arrayContaining(['4 signals a minute from 0 window deciders']));
+            expect(messages({ 'assessment.signals_per_minute': undefined })).toEqual(expect.arrayContaining(['signals a minute not counted']));
         });
 
         it('fuel-never-dry: a machine with no fuel for 12 ticks', () => {

@@ -28,6 +28,13 @@ describe("military science: the shared windows keep the rate and recover where t
         expect(selected.deciders).toBe(4);
         const separate = generated.alternatives.find(it => it.id === "planned-belt-slack")!;
         expect(separate.verdict).toBe("no recovery");
+        // the strategy says which construction made each: the grouped hands rule's windows are round-robin polling, shared or not
+        expect(selected.strategy).toEqual({ family: "round-robin-polling", qualifiers: ["output-swings", "shared-enable-windows"], construction: "grouped-hands",
+            output_swings: selected.result.used_terminal_swing_count });
+        expect(separate.strategy).toMatchObject({ family: "round-robin-polling", construction: "grouped-hands" });
+        expect(separate.strategy.qualifiers).not.toContain("shared-enable-windows");
+        // signals a minute: one for each window of a decider, shared by the inserters on it, counted where the wake-ups are
+        expect(selected.assessment.signals_per_minute).toBeGreaterThan(0);
     });
 
 });

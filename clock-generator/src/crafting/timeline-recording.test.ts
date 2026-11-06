@@ -5,7 +5,7 @@ import { TestConfigPaths } from '../../tests/configs/paths';
 import type { Config } from '../config';
 import { SimulationContext } from './sequence/simulation-context';
 import { TimelineRecorder } from './timeline-recording';
-import { MAX_SIMULATION_TICKS, runBuild, trialRunOf } from './plan/plan-run';
+import { SIMULATION_BUDGET_TICKS, runBuild, trialRunOf } from './plan/plan-run';
 import { recordSimulationTimeline } from './record-timeline';
 import { quiet } from './generate-blueprint-test-helpers';
 import { expandStateTransitionHistory } from './sequence/compact-history';
@@ -15,7 +15,7 @@ beforeAll(async () => { config = await loadConfigFromFile(ConfigPaths.ELECTROMAG
 
 describe('optional timeline observer', () => {
     it('rejects an exact clock tick outside the existing warm-up budget instead of silently replaying an earlier tick', () => {
-        const period_ticks = Math.floor(MAX_SIMULATION_TICKS / 2) + 1;
+        const period_ticks = Math.floor(SIMULATION_BUDGET_TICKS / 2) + 1;
         // Below the absolute ceiling but past the one whole period the existing budget permits.
         expect(() => recordSimulationTimeline({config, mode: 'clock', period_ticks,
             terminal_swing_count: 2, windows: {}, settle_ticks: period_ticks + 1}))

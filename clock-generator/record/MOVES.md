@@ -29,6 +29,9 @@ Each window of the primary batched-swings clock whose closing edge left its inse
 - front-front-entrance-turbo-unmirrored-moving-different-items, overhood-over-hood-turbo-unmirrored-moving-different-items: selected derived -> planned-belt-slack, tied at 0 (planned-belt-slack no recovery -> stable); overhood-over-hood-turbo-mirrored-moving-different-items: selected derived -> planned-belt-slack, 18 -> 0
 - Alternatives only, the selection unchanged: config-AUTOMATION_SCIENCE_240 and variants-AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING fractional no recovery -> stable, 300.16 -> 0 (its job checks keep the old windows inline as a clock that breaks on a loss); config-LITHIUM_PLATE_80_SILO_CHEST planned-belt-slack and swings-1 to swings-7 (swings-5 no recovery -> stable); config-AGRICULTURAL_SCIENCE_250 swings-1, config-LDS_240 planned-belt-slack, config-LOGISTIC_SCIENCE_240 swings-3, config-ROCKET_FUEL_60 fractional, and swings-1 or fractional of the front-exit and electromagnetic pickup fixtures: fewer wake-ups a minute
 
+## Strategy ids and signals a minute on each alternative (#681)
+- All 86 jobs: results_sha256 only. The assessment gained signals_per_minute and the results digest hashes the strategy; no clock hash, selection, verdict, rate or wake-up count moves
+
 ## Belt pickup slack inside the enable windows (#595)
 - config-LOGISTIC_SCIENCE_240: selected swings-2 -> planned-belt-slack, wake-ups 41.379 -> 20.571 a minute, period 88 -> 176; its two pickup windows a window cycle (52-71, 76-95) keep the belt pickup slack inside them, where the 4 ticks added after them joined them into one (61.714) (game: 100% per row on the 22-copy scaffold, 20.45 a copy a minute)
 - config-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY: selected shifted-swings -> planned-belt-slack, wake-ups 286.635 -> 245.687 a minute, period 352; the slack inside the windows (game: 256 in every period on its scaffold)

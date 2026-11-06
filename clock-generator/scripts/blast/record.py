@@ -34,7 +34,7 @@ A job is named when its key (the file name without `.json`, as in MOVES.md) is i
 adds to record/MOVES.md. A job in one record only (added or removed) is not compared. A job named but not worse is not an error.
 
 The properties: every job file the blast writes holds `properties`, what tests/game/builds/record-properties.ts found on the live
-results of the job (the five properties, on every alternative; the results are too big to keep). `check` fails, with a table of job,
+results of the job (the six properties, on every alternative; the results are too big to keep). `check` fails, with a table of job,
 property, alternative and the values, on any problem; it also fails on a job file with no `properties`, one the module could not run
 on, or one judged by another version of the module than the checkout's (a run made before the module, or carried from one by a
 selective run): rerun with `blast.sh run --full`, or pass --allow-unchecked to list them and go on.

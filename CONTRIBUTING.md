@@ -220,7 +220,7 @@ A job file is never edited by hand: `record write` makes it, and `blast.sh recor
 
 ### The property module
 
-[`record-properties.ts`](clock-generator/tests/game/builds/record-properties.ts) holds the five properties
+[`record-properties.ts`](clock-generator/tests/game/builds/record-properties.ts) holds the six properties
 ([listed in `record/README.md`](clock-generator/record/README.md#the-properties)). To add one: name it in `PROPERTIES`, write its check in
 `checkProperties` so that it returns the problems it finds on an alternative (a message with the values) and applies only where the alternative
 has what it needs, then make a full blast, so that every job file carries the new module's hash (a job file from another version of the module

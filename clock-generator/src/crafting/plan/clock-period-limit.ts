@@ -1,25 +1,27 @@
 import { SubtickPeriod, subtickClockForPeriod } from "../../common/subtick-period";
 
 /**
- * The most ticks one simulated run goes on for. A guard, not a limit on test time: a config that passes validation
- * but deadlocks something in the simulator, or that it cannot simulate at all, must not keep it running for ever.
+ * The most ticks one simulated run goes on for: a simulator budget, not a proof. A guard, not a limit on test time: a
+ * config that passes validation but deadlocks something in the simulator, or that it cannot simulate at all, must not
+ * keep it running for ever. The P-limit rule of the period planner prunes the periods that reach it; nothing about the
+ * game makes a longer period wrong.
  */
-export const MAX_SIMULATION_TICKS = 500_000;
+export const SIMULATION_BUDGET_TICKS = 500_000;
 
 /**
  * The whole counter a clock of this period is checked over (p ticks, q periods), which one run must then hold: its p/q
- * where the period is fractional and p is under MAX_SIMULATION_TICKS. Null for a whole-tick period, and for a counter
+ * where the period is fractional and p is under SIMULATION_BUDGET_TICKS. Null for a whole-tick period, and for a counter
  * one run cannot hold (`counterOverLimitOf`), whose clock keeps the sampled checks of one period.
  */
 export function wholeCounterOf(period: number): SubtickPeriod | null {
     const counter = subtickClockForPeriod(period);
-    return counter !== null && counter.period_ticks < MAX_SIMULATION_TICKS ? counter : null;
+    return counter !== null && counter.period_ticks < SIMULATION_BUDGET_TICKS ? counter : null;
 }
 
 /** The ticks of a fractional period's counter where one run cannot hold it; else null */
 export function counterOverLimitOf(period: number): number | null {
     const counter = subtickClockForPeriod(period);
-    return counter !== null && counter.period_ticks >= MAX_SIMULATION_TICKS ? counter.period_ticks : null;
+    return counter !== null && counter.period_ticks >= SIMULATION_BUDGET_TICKS ? counter.period_ticks : null;
 }
 
 /** Arithmetic only: no inventories, controls, registry or other live simulation state. */
