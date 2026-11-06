@@ -1,3 +1,4 @@
+import type { InternalError } from '../utils/internalError';
 import type { ValidationDiagnostic } from '../utils/buildValidation';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { Config, ConfigValidation, DebugSteps, LogMessage, SerializableClockWindows, SerializableTransferHistory, PortableStateTransitionHistory, SwingBackoffReport, GenerationProgress } from 'clock-generator/browser';
@@ -30,7 +31,9 @@ export type ValidationState =
     | { status: 'valid'; config: Config; validation: ConfigValidation }
     /** `crashed`: the check's worker stopped, so the build was not judged; Generate checks again */
     | { status: 'invalid'; config: Config; message: string; crashed?: boolean; recovery?: RepeatedUnitsRecovery;
-        diagnostics?: ValidationDiagnostic[] };
+        diagnostics?: ValidationDiagnostic[];
+        /** An unexpected error in the check: the build was not judged, so `crashed` is set too and Generate checks again */
+        internal?: InternalError };
 
 interface UseSimulationWorkerResult {
     generationAssumptions: GenerationAssumptions | null;
@@ -500,7 +503,8 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 checkRunningRef.current = false;
                 setValidation(response.type === 'validated'
                     ? { status: 'valid', config: requested.config, validation: response.validation }
-                    : { status: 'invalid', config: requested.config, message: response.message, recovery: response.recovery, diagnostics: response.diagnostics });
+                    : { status: 'invalid', config: requested.config, message: response.message, recovery: response.recovery, diagnostics: response.diagnostics,
+                        ...(response.internal ? { crashed: true, internal: response.internal } : {}) });
                 pendingChecks.settle(response.requestId, response.type === 'validated'
                     ? { kind: 'valid', validation: response.validation }
                     : { kind: 'invalid', message: response.message, recovery: response.recovery });

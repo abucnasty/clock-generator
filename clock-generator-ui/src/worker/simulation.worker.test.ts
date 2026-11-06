@@ -278,6 +278,13 @@ describe('a captured inserter kind, quality and filter mode', () => {
         const checked = await send({ type: 'validate', requestId: 54, config }) as ValidationFailedResponse;
         expect(listed(await coverageOf(config), config.machines, { message: checked.message })).toHaveLength(1);
     });
+
+    it('Check shows the refused blacklist as a refusal, not as an internal error', async () => {
+        const config = await pastedSavedReloaded(exported({}, blacklist));
+        const checked = await send({ type: 'validate', requestId: 55, config }) as ValidationFailedResponse;
+        expect(checked.message).toContain('`filter_mode` "blacklist" is refused');
+        expect(checked.internal).toBeUndefined();
+    });
 });
 
 describe('live advice on a gear assembler, which does not block', () => {
@@ -409,3 +416,62 @@ it('posts the state transitions in columns with their own reasons, which a struc
     expect(expandStateTransitionHistory(received.primary!.alternatives[0].stateTransitionHistory)).toEqual(expanded);
     expect(alternative).not.toHaveProperty('clockOnlyStateTransitionHistory');
 }, 30_000);
+
+describe('an unexpected error in the check is not an engine refusal', () => {
+    const config = JSON.parse(militarySample) as Config;
+
+    it('refusals carry no internal error', async () => {
+        const response = await send({ type: 'validate', requestId: 31, config: { ...config, machines: 'none' as unknown as Config['machines'] } });
+        expect(response).toMatchObject({ type: 'validation-failed' });
+        expect((response as ValidationFailedResponse).internal).toBeUndefined();
+    });
+
+    it('an error the engine does not own is internal, with its stack', async () => {
+        const engine = await import('clock-generator/browser');
+        const spy = vi.spyOn(engine, 'validateConfig').mockImplementation(() => { throw new TypeError('Cannot convert undefined or null to object'); });
+        try {
+            const response = await send({ type: 'validate', requestId: 32, config }) as ValidationFailedResponse;
+            expect(response.type).toBe('validation-failed');
+            expect(response.internal).toMatchObject({ message: 'Cannot convert undefined or null to object', dataMismatch: false });
+            expect(response.internal?.stack).toContain('TypeError');
+        } finally {
+            spy.mockRestore();
+        }
+    });
+
+    it('a plain Error from a planning refusal is a refusal', async () => {
+        const engine = await import('clock-generator/browser');
+        const spy = vi.spyOn(engine, 'validateConfig').mockImplementation(() => { throw new Error('Machine 1: the target is not made'); });
+        try {
+            const response = await send({ type: 'validate', requestId: 34, config }) as ValidationFailedResponse;
+            expect(response).toMatchObject({ type: 'validation-failed', message: 'Machine 1: the target is not made' });
+            expect(response.internal).toBeUndefined();
+        } finally {
+            spy.mockRestore();
+        }
+    });
+
+    it('a thrown value that is not an Error is internal', async () => {
+        const engine = await import('clock-generator/browser');
+        const spy = vi.spyOn(engine, 'validateConfig').mockImplementation(() => { throw 'oops'; });
+        try {
+            expect((await send({ type: 'validate', requestId: 35, config }) as ValidationFailedResponse).internal).toMatchObject({ message: 'oops' });
+        } finally {
+            spy.mockRestore();
+        }
+    });
+
+    it('says the data does not match when the loaded game data lacks a section the engine reads', async () => {
+        const older = JSON.parse(factorioData);
+        delete older.quality_inventory;
+        expect(await send({ type: 'initialize', factorioData: JSON.stringify(older) })).toEqual({ type: 'initialized' });
+        const engine = await import('clock-generator/browser');
+        const spy = vi.spyOn(engine, 'validateConfig').mockImplementation(() => { throw new TypeError('x'); });
+        try {
+            const response = await send({ type: 'validate', requestId: 33, config }) as ValidationFailedResponse;
+            expect(response.internal).toMatchObject({ dataMismatch: true });
+        } finally {
+            spy.mockRestore();
+        }
+    });
+});

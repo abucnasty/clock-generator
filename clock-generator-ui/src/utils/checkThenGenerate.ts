@@ -25,6 +25,12 @@ export const CHECK_TEXT = {
     checkingProgress: 'Checking your build…',
     crashTitle: 'The check stopped unexpectedly',
     crashText: 'This was not caused by your build. Press Generate or Check only to try again.',
+    internalTitle: 'Something went wrong in the generator',
+    internalText: 'This is a bug in the generator or its setup, not a problem with your build. Press Generate or Check only to try again. If it happens again, copy the details below into a bug report.',
+    internalDataText: 'The game data this page loaded does not match this version of the generator, so the check could not run. This is not a problem with your build. Reload the page. If you run the page yourself, restart it so it copies the current game data, then try again.',
+    internalDetails: 'Details for a bug report',
+    internalCopy: 'Copy details',
+    internalCopied: 'Copied',
     generationCrashed: 'Making clocks stopped unexpectedly. This was not caused by your build. Press Generate to try again.',
 } as const;
 

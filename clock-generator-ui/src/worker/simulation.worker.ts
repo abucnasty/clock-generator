@@ -1,3 +1,4 @@
+import { missingDataSections, type InternalError } from '../utils/internalError';
 import { repeatedUnitsProblem } from '../utils/repeatedUnitsProblem';
 /**
  * Web Worker for running clock-generator simulation.
@@ -24,6 +25,8 @@ let liveCoverage: ReturnType<ClockGenerator['createInserterCoverageValidator']>;
 let gameNames: GameNames = NO_NAMES;
 /** The recipes the data marks hidden, which the pickers leave out */
 let hiddenRecipes: string[] = [];
+/** The sections the loaded game data lacks, for telling a data file of another version from a bug */
+let missingSections: string[] = [];
 
 const LOG_FLUSH_INTERVAL_MS = 100;
 
@@ -44,6 +47,7 @@ async function handleInitialize(factorioData: string): Promise<void> {
         const parsed = JSON.parse(factorioData);
         clockGenerator.FactorioDataService.initialize(parsed);
         liveCoverage = clockGenerator.createInserterCoverageValidator();
+        missingSections = missingDataSections(parsed);
         gameNames = parsed.names ?? NO_NAMES;
         hiddenRecipes = hiddenRecipeIds(parsed.recipe);
 
@@ -227,6 +231,7 @@ function handleValidate(requestId: number, config: Config): void {
             requestId,
             message,
             recovery,
+            internal: isEngineRefusal(error) ? undefined : internalErrorOf(error),
             diagnostics: error instanceof clockGenerator.InserterCoverageError
                 ? error.issues.map(issue => ({ kind: 'coverage' as const, issue }))
                 : error instanceof clockGenerator.ConfigValidationError
@@ -239,6 +244,32 @@ function handleValidate(requestId: number, config: Config): void {
                             : undefined,
         });
     }
+}
+
+/**
+ * Whether the engine refused the build with text for the user; anything else is an unexpected error.
+ *
+ * The engine's refusals are plain `Error`s today (the inserter-scope, planning and output-transfer refusals name the
+ * inserter, machine or target), next to its own classes. So an error is internal only when it is not an `Error` at all
+ * or is one of JavaScript's built-in subclasses, which the engine never throws on purpose: a bug or a data file of
+ * another version. A typed base class for every engine refusal would make this exact instead of by exclusion.
+ */
+function isEngineRefusal(error: unknown): boolean {
+    if (!(error instanceof Error)) return false;
+    if (error instanceof clockGenerator.ConfigValidationError
+        || error instanceof clockGenerator.InserterCoverageError
+        || error instanceof clockGenerator.CopiesError
+        || error instanceof clockGenerator.FeasibilityError
+        || error instanceof clockGenerator.LaneCapacityError
+        || error instanceof clockGenerator.AssertionError) return true;
+    return !BUILT_IN_ERRORS.some(builtIn => error instanceof builtIn);
+}
+
+const BUILT_IN_ERRORS = [TypeError, ReferenceError, RangeError, SyntaxError, EvalError, URIError];
+
+function internalErrorOf(error: unknown): InternalError {
+    return { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined,
+        dataMismatch: missingSections.length > 0 };
 }
 
 /** Planning and Check share the strict schema; editable persisted drafts do not bypass spatial constraints. */

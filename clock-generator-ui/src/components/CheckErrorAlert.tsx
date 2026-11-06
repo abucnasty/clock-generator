@@ -1,5 +1,6 @@
 import { Alert, AlertTitle, Box, Button, Typography } from '@mui/material';
-import { useId } from 'react';
+import { useId, useState } from 'react';
+import { bugReportText, type InternalError } from '../utils/internalError';
 import { checkErrorText } from '../utils/checkErrorText';
 import { CHECK_TEXT } from '../utils/checkThenGenerate';
 import { ELEMENT_IDS } from '../utils/firstProblem';
@@ -21,12 +22,26 @@ function recoveryText(recovery: RepeatedUnitsRecovery): string {
         + 'Items per Second stays the total for all copies. Your build has not changed.';
 }
 
+function InternalDetails({ error, copied, onCopied }: { error: InternalError; copied: boolean; onCopied: () => void }) {
+    const text = bugReportText(error, __APP_VERSION__);
+    return <Box component="details" sx={{ mt: 1 }}>
+        <Box component="summary" sx={{ cursor: 'pointer' }}>{CHECK_TEXT.internalDetails}</Box>
+        <Box component="pre" data-testid="internal-error-details" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 12, my: 1 }}>{text}</Box>
+        <Button size="small" variant="outlined" color="inherit"
+            onClick={() => { void navigator.clipboard?.writeText(text).then(onCopied, () => undefined); }}>
+            {copied ? CHECK_TEXT.internalCopied : CHECK_TEXT.internalCopy}
+        </Button>
+    </Box>;
+}
+
 /**
  * Engine refusal details inside Build validation, or a standalone operational failure when its worker crashed.
  * Not a live region: focusing the validation panel or the standalone failure reads the message once.
  */
-export function CheckErrorAlert({ message, crashed = false, recovery, machineCount, counts, conversionPending = false, onConvert, embedded = false }: {
-    message: string | null; crashed?: boolean; recovery?: RepeatedUnitsRecovery; machineCount?: number;
+export function CheckErrorAlert({ message, crashed = false, internal, recovery, machineCount, counts, conversionPending = false, onConvert, embedded = false }: {
+    message: string | null; crashed?: boolean;
+    /** An unexpected error rather than a refusal: shown as an internal error with details for a bug report */
+    internal?: InternalError; recovery?: RepeatedUnitsRecovery; machineCount?: number;
     /** What the target counts, which the words about the machines' capacity follow */
     counts?: TargetCounts;
     conversionPending?: boolean; onConvert?: () => void;
@@ -34,6 +49,7 @@ export function CheckErrorAlert({ message, crashed = false, recovery, machineCou
 }) {
     const titleId = useId();
     const messageId = useId();
+    const [copied, setCopied] = useState(false);
     if (message === null) {
         return null;
     }
@@ -42,7 +58,7 @@ export function CheckErrorAlert({ message, crashed = false, recovery, machineCou
         ? machineCount / conversion.multiplicity : null;
     const content = <>
             {/* a check whose worker stopped says it was not the build; the browser's words are in the Log */}
-            <AlertTitle id={titleId}>{crashed ? CHECK_TEXT.crashTitle : conversion ? 'Hold up, fellow engineer—trying to melt your CPU?' : CHECK_TEXT.errorTitle}</AlertTitle>
+            <AlertTitle id={titleId}>{internal ? CHECK_TEXT.internalTitle : crashed ? CHECK_TEXT.crashTitle : conversion ? 'Hold up, fellow engineer—trying to melt your CPU?' : CHECK_TEXT.errorTitle}</AlertTitle>
             <Box id={messageId}>
                 {conversion && recovery ? <>
                     <Typography variant="body2">Your build contains {conversion.multiplicity} identical groups of connected machines. Configure one group and use Copies for the rest.</Typography>
@@ -51,6 +67,9 @@ export function CheckErrorAlert({ message, crashed = false, recovery, machineCou
                         <span>Copies: {recovery.configuredCopies} → {conversion.copies}</span>
                     </Box>
                     <Typography variant="body2">The total target output stays the same. This changes the configuration here; your machines in Factorio are untouched. You can undo it.</Typography>
+                </> : internal ? <>
+                    <Typography variant="body2">{internal.dataMismatch ? CHECK_TEXT.internalDataText : CHECK_TEXT.internalText}</Typography>
+                    <InternalDetails error={internal} copied={copied} onCopied={() => setCopied(true)} />
                 </> : crashed ? CHECK_TEXT.crashText : recovery ? recoveryText(recovery) : checkErrorText(message, counts)}
             </Box>
             {!crashed && recovery?.conversion.kind === 'available' && onConvert && (
