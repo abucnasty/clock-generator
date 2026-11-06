@@ -93,6 +93,8 @@ Changelogs and pull requests say "user", never "player".
   - `replay/replay.sh`: the replay check of a change that must keep results identical: every blast job's selected clock run with no search (the as-built run, the planning run, a speed run and, with `--losses`, the supply losses), what every entity holds and shows hashed per period, and laid against a base recorded once on the parent commit (`record`, `check`, `explain`).
   - `native/run-lane.sh`: one Factorio lane over a list of game test cases, at most four harness Factorio processes on the machine; `native/expected-from-blast.py` and `native/check.cjs` check a capture's clocks against the blast's.
   - `classify/features.py` and `summarize.py`: the windows a native recording lifted from a full machine, by when the input's hand grew.
+  - `docs/`: the documentation generators and checks (`npm run docs:portal`, `docs:fields`, `docs:game-labels`; see
+    [docs/README.md](docs/README.md#checks)).
   - `worktree/setup.sh` gives a worktree its own `node_modules`; `worktree/orphans.sh` lists or stops a worktree's leftover vitest and harness Factorio processes.
 
 The [game verification guide](clock-generator/tests/game/README.md) explains setup, fixture conventions, capture commands and measured evidence.
@@ -103,7 +105,7 @@ Run commands from the package they belong to. Engine commands below run from `cl
 
 | Change | Verification | Blast |
 | --- | --- | --- |
-| Documentation only | Check changed links and command paths. Simulation and game runs are unnecessary. | not needed |
+| Documentation only | Check changed links and command paths; `npm run test:docs`, and `npm run docs:portal` after a change to an export topic ([docs checks](docs/README.md#checks)). Simulation and game runs are unnecessary. | not needed |
 | File moves, import paths, fixture catalog, test/build configuration | `npm run test:typecheck`, `npm run build`, `npm run lint`, `npm run knip`, and `npx vitest list --config vitest.game.config.ts --filesOnly`. Run affected simulator tests. | engine files or import paths: yes, zero-change expected; catalog or configuration only: not needed |
 | Shared Lua capture or a probe | Type-check, run helper unit tests and affected mechanic game tests. Preserve observation/intervention ordering and capture windows. | not needed |
 | Simulator mechanic | Affected unit tests and a targeted game comparison when Factorio is available. Include generation tests when clock selection or windows change. | yes |
@@ -255,6 +257,7 @@ is never loosened because a job fails it.
 | `Gen 1/2` and `Gen 2/2`, then `Gen summary` | the `*.generation.test.ts` files, dealt out by `ci/generation-durations.json` | ready pull requests to `master`, `feature/` or `release/` that change more than documentation, and releases; on a draft the shards do not run and the check fails (below) |
 | `Rec 1/6` to `Rec 6/6`, then `Rec summary` | the 86 jobs, joined, compared with `record/`, with the properties, the per-job checks and the never-worse rule | ready pull requests to `master`, `feature/` or `release/` that change more than documentation; on a draft the shards do not run and the check fails (below) |
 | `UI build`, `UI samples`, `UI browser` | the UI | every pull request that changes more than documentation |
+| `Docs checks` | PORTAL.md and the configuration file fields topic are current, and the bold labels of the user topics are strings of the site, the sidecar or the game ([docs/README.md](docs/README.md#checks)) | every pull request |
 
 **Drafts.** GitHub's free plan runs 20 jobs at once and a pull request starts about 22, so the heavy suites (the generation shards and the
 record shards) do not run on a draft pull request; unit tests, the UI build, the UI samples and the browser job do. On a draft the checks
