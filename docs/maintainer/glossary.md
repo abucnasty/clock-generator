@@ -226,8 +226,9 @@ Control theory has no single term: a step response from a saturated initial stat
 _Avoid_: loaded start, warm start, full backpressure startup
 
 **Kick start**:
-The items put into the machines of a loop before its clock starts, so that the loop can run: a loop cannot fill by
-itself. A noun only: give the loop its kick start. The configuration's `loop_seed_items`. Control theory: like integrator
+The items put into each machine whose recipe makes its own ingredient (pentapod eggs), before its clock starts, so
+that the loop can run: such a loop cannot fill by itself. A noun only: give the loop its kick start. A loop of
+machines that only feed each other gets no kick start, and the generator cannot start it. The configuration's `loop_seed_items`. Control theory: like integrator
 preloading (Janert p.103).
 _Avoid_: seed (the game's Yumako, Jellynut and Tree seed items, and the map seed), prime, bootstrap, kick-start (as a
 verb)
@@ -243,7 +244,8 @@ backpressure.
 **Steady state**:
 The condition after the startup period. The build repeats the same pattern in each window cycle, or in each whole
 number of window cycles. For an on/off clock it is a periodic steady state: the output repeats, it is not
-constant. Control theory: Åström and Murray 5.3; Janert p.29, p.42.
+constant. A build with a loop may never repeat exactly: the generator then judges it on a sample of window cycles, and
+does not prove the repeat. Control theory: Åström and Murray 5.3; Janert p.29, p.42.
 _Avoid_: warm, warm state, settled (the game's *warm* is a temperature)
 
 **Startup period**:
