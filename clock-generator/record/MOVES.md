@@ -14,6 +14,10 @@ request adds to this file.
 - front-front-exit-turbo-mirrored-backed-different-items, front-front-exit-turbo-mirrored-moving-config-different-items, front-front-exit-turbo-unmirrored-backed-different-items, front-front-exit-turbo-unmirrored-moving-config-different-items, pickup-electromagnetic-turbo-straight-belt-backed, pickup-electromagnetic-turbo-straight-belt-moving, pickup-electromagnetic-turbo-underground-entrance-backed, pickup-electromagnetic-turbo-underground-entrance-moving, pickup-electromagnetic-turbo-underground-exit-backed, pickup-electromagnetic-turbo-underground-exit-moving: a new fractional alternative, stable (573.542 to 625.641 wake-ups a minute), not selected; it was refused before
 - config-AUTOMATION_SCIENCE_240, blocked-blocked-output-turbo-stack-3: a new fractional alternative, no recovery and unstable, not selected; it was refused before
 
+## The surplus guard per taker (#654)
+- config-PROCESSING_UNIT_80_CIRCUIT_EXPORT: planned-belt-slack stays stable, wake-ups 7,393.125 -> 5,628.75 a minute; the iron and cable takers into the circuit machines get windows of their three hands, and the circuits into the processing unit machines stay enabled
+- variants-PROCESSING_UNIT_80_CIRCUIT_EXPORT_BACKED_UP: planned-belt-slack stays stable, wake-ups 7,331.25 -> 5,280 a minute; the same windows on backed-up belts
+
 ## Pinned variants become jobs (#600)
 - variants-AGRICULTURAL_SCIENCE_250_BACKED_UP, variants-INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK_BACKED_UP, variants-PROCESSING_UNIT_80_CIRCUIT_EXPORT_BACKED_UP, variants-STEEL_PLATE_26_WAGON_CHEST_IRON_ORE_OUT_OF_PERIOD: new jobs, the builds four game recordings are tied to (a sample with its belts backed up, or with iron ore left out of the period)
 - variants-ADVANCED_CIRCUIT_240_BACKED_UP, variants-AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING, variants-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY_BACKED_UP, variants-LOGISTIC_SCIENCE_240_DIRECT_INSERT_TWO_OUTPUT_SWINGS, variants-PRODUCTION_SCIENCE_120_TWO_BELTS_SHARED_PICKUP, variants-ROCKET_FUEL_60_JELLY_HANDS_15_BACKED_UP, variants-STEEL_HUB_26_CONTAINER_OUTPUT: new jobs, the builds generation tests pinned and the record now holds

@@ -239,6 +239,50 @@ export class InserterCoverageError extends Error {
 }
 
 // ============================================================================
+// Belt pickup into something other than a machine
+// ============================================================================
+
+/** One inserter that takes from a belt and drops into anything but a machine */
+export interface BeltPickupSinkInserter {
+    inserter_id: number;
+    belt_id: number;
+    /** What the inserter drops into: a chest, or a belt */
+    sink: { type: 'chest' | 'belt'; id: number };
+}
+
+/**
+ * A build has an inserter that takes from a belt and drops into anything but a machine, which the generator does not
+ * clock. Thrown before any simulation (config/inserter-scope.ts) and names every such inserter by its id.
+ */
+export class BeltPickupSinkError extends Error {
+    public readonly inserters: BeltPickupSinkInserter[];
+    /** The ids of the inserters, in the config's order */
+    public readonly inserter_ids: number[];
+
+    constructor(inserters: BeltPickupSinkInserter[]) {
+        super(BeltPickupSinkError.formatMessage(inserters));
+        this.name = 'BeltPickupSinkError';
+        this.inserters = inserters;
+        this.inserter_ids = inserters.map(it => it.inserter_id);
+    }
+
+    private static formatMessage(inserters: BeltPickupSinkInserter[]): string {
+        const route = (it: BeltPickupSinkInserter) =>
+            `takes from belt ${it.belt_id} and drops ${it.sink.type === 'belt' ? 'onto' : 'into'} ${it.sink.type} ${it.sink.id}`;
+        const rule = 'Taking from a belt into anything but a machine is not supported, so this build cannot be clocked.';
+        if (inserters.length === 1) {
+            return `Inserter ${inserters[0].inserter_id} ${route(inserters[0])}. ${rule} `
+                + 'Make that inserter drop into a machine, so that the machine is fed straight from the belt.';
+        }
+        const ids = inserters.map(it => String(it.inserter_id));
+        const list = `${ids.slice(0, -1).join(', ')} and ${ids[ids.length - 1]}`;
+        return `Inserters ${list} take from a belt and drop into something other than a machine: `
+            + `${inserters.map(it => `inserter ${it.inserter_id} ${route(it)}`).join('; ')}. ${rule} `
+            + 'Make each of them drop into a machine, so that the machine is fed straight from the belt.';
+    }
+}
+
+// ============================================================================
 // Copies Validation Types
 // ============================================================================
 

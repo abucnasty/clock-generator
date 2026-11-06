@@ -63,6 +63,8 @@ export type { ImportInput, ImportStep, ImportedMachine } from './config/import-p
 export { Option } from './data-types/option';
 
 export {
+    BeltPickupSinkError,
+    BeltPickupSinkInserter,
     ConfigValidationError,
     ConfigValidationIssue,
     CopiesError,
@@ -93,7 +95,7 @@ export {
     createInserterCoverageValidator,
     assertInserterCoverage,
 } from './config/inserter-coverage-validator';
-export { insertersScopeProblem } from './config/inserter-scope';
+export { insertersScopeProblem, beltPickupSinkRefusal } from './config/inserter-scope';
 export { uncalibratedBeltPickups, beltPickupNotTestedNote } from './config/pickup-calibration';
 export { laneCapacityIssues, lanesExactlyFullWarning, lanesSharedByCopies, laneSharedByCopiesWarning } from './config/lane-capacity-validator';
 export { copyGapNeededNote } from './config/drop-spacing';
