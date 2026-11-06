@@ -48,7 +48,8 @@ _Avoid_: units (as the count)
 
 **Configuration**:
 A build, with its target output, copies and enable rules: what the generator works from, what the site saves, and what
-clocks are made for. The game's word for a saved set of settings ("Server configuration").
+clocks are made for. Saved as a configuration file (**Open configuration file…**, **Save configuration file**). The
+game's word for a saved set of settings ("Server configuration").
 _Avoid_: config (bare), build file
 
 **Check**:
@@ -224,3 +225,11 @@ _Avoid_: blast radius, merge danger
 **Area**:
 The part of the clock generator a changelog entry is about: `simulation` (how the game is modelled), `generation`
 (which clocks are found and which is recommended), `blueprint`, or `ui` (everything else the user sees on the page).
+
+## Publishing
+
+**Job**:
+One unit of a GitHub Actions workflow, named under the workflow's `jobs:` key (`release`, `production`, `preview`,
+`publish-sidecar`, `tests`). A maintainer term. STE does not approve job (n) (WORK); the game uses "job" for
+construction robot work: not this meaning.
+_Avoid_: work (for a job)
