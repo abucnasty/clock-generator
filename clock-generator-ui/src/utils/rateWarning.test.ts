@@ -16,12 +16,12 @@ const clock = (itemsPerSecond: number, offTarget: number, meetsTarget = offTarge
 describe('copyBlueprintLabelOf', () => {
     // a row that leaves out stale or running has it false
     it.each<{ why: string; clock: Clock | undefined; stale?: boolean; running?: boolean; label: string }>([
-        { why: 'a clock short of the target', clock: clock(192, -48), label: 'Copy blueprint (192/s, below target)' },
+        { why: 'a clock short of the target', clock: clock(192, -48), label: 'Copy blueprint (192/s, below setpoint)' },
         // the rate as the warning sentence prints it
-        { why: 'a rate of 12.5/s', clock: clock(12.5, -2), label: 'Copy blueprint (12.5/s, below target)' },
-        { why: 'a rate of 0.333333/s', clock: clock(0.333333, -0.1), label: 'Copy blueprint (0.33/s, below target)' },
-        { why: 'a rate of 240/s, its zero kept', clock: clock(240, -10), label: 'Copy blueprint (240/s, below target)' },
-        { why: 'the smallest shortfall it prints', clock: clock(239.99, -0.01), label: 'Copy blueprint (239.99/s, below target)' },
+        { why: 'a rate of 12.5/s', clock: clock(12.5, -2), label: 'Copy blueprint (12.5/s, below setpoint)' },
+        { why: 'a rate of 0.333333/s', clock: clock(0.333333, -0.1), label: 'Copy blueprint (0.33/s, below setpoint)' },
+        { why: 'a rate of 240/s, its zero kept', clock: clock(240, -10), label: 'Copy blueprint (240/s, below setpoint)' },
+        { why: 'the smallest shortfall it prints', clock: clock(239.99, -0.01), label: 'Copy blueprint (239.99/s, below setpoint)' },
         { why: 'a shortfall too small to print', clock: clock(239.996, -0.004), label: 'Copy blueprint' },
         { why: 'no clock', clock: undefined, label: 'Copy blueprint' },
         { why: 'a clock at the target', clock: clock(240, 0, true), label: 'Copy blueprint' },
@@ -30,7 +30,7 @@ describe('copyBlueprintLabelOf', () => {
         // while a generation is still making clocks
         { why: 'the best so far, at the target', clock: clock(240, 0, true), running: true, label: 'Copy current best' },
         { why: 'no clock yet', clock: undefined, running: true, label: 'Copy current best' },
-        { why: 'the best so far, short of the target', clock: clock(192, -48), running: true, label: 'Copy current best (192/s, below target)' },
+        { why: 'the best so far, short of the target', clock: clock(192, -48), running: true, label: 'Copy current best (192/s, below setpoint)' },
         // the clocks are for an earlier build, which is said ahead of anything else
         { why: 'an old clock short of the target', clock: clock(192, -48), stale: true, label: STALE_COPY_LABEL },
         { why: 'old clocks, none selected', clock: undefined, stale: true, label: STALE_COPY_LABEL },
@@ -42,7 +42,7 @@ describe('copyBlueprintLabelOf', () => {
     it('agrees with the warning said when the blueprint is copied', () => {
         const short = clock(192, -48), atTarget = clock(240, 0, true);
         expect(rateWarningOf(short)).not.toBeNull();
-        expect(copyBlueprintLabelOf(short, false)).toBe('Copy blueprint (192/s, below target)');
+        expect(copyBlueprintLabelOf(short, false)).toBe('Copy blueprint (192/s, below setpoint)');
         expect(rateWarningOf(atTarget)).toBeNull();
         expect(copyBlueprintLabelOf(atTarget, false)).toBe('Copy blueprint');
     });
@@ -60,7 +60,7 @@ describe('a stable clock over the target, picked where none meets it', () => {
     it('says how far over the target it runs', () => {
         const result = clock(82.286, 1.86725, false);
         result.ranking.stable_above_target = true;
-        expect(rateWarningOf(result)).toBe('This clock runs over the target: 82.29/s for the 80.42/s requested, 2.32% over, in the simulator.');
+        expect(rateWarningOf(result)).toBe('This clock runs over the setpoint: 82.29/s for the 80.42/s requested, 2.32% over, in the simulator.');
     });
 });
 
@@ -68,7 +68,7 @@ describe('numerical output and actual hold checks', () => {
     it('does not turn the observed above-target numerical mismatch into a failed hold check', () => {
         const result = clock(216.061381, 0.061381, false);
         result.assessment.holds = true;
-        expect(rateWarningOf(result)).toContain('output rate differs from the target');
+        expect(rateWarningOf(result)).toContain('output rate differs from the setpoint');
         expect(rateWarningOf(result)).toContain('216.06/s; requested 216/s');
         expect(rateWarningOf(result)).not.toContain('does not hold');
         result.assessment.holds = false;

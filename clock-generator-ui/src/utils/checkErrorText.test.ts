@@ -6,13 +6,13 @@ const ENGINE = 'The current configuration cannot meet the target production rate
 
 describe('checkErrorText', () => {
     it('rounds the rates, says build, and gives a next step', () => {
-        expect(checkErrorText(ENGINE)).toBe("The build's machines can make at most 252.66/s, but the target is 400/s. "
-            + 'Lower the target, raise Copies, or add machines or crafting speed (modules, beacons or a faster machine).');
+        expect(checkErrorText(ENGINE)).toBe("The build's machines can make at most 252.66/s, but the setpoint is 400/s. "
+            + 'Lower the setpoint, raise Copies, or add machines or crafting speed (modules, beacons or a faster machine).');
     });
 
     it('says destroy for a target that counts the item destroyed', () => {
-        expect(checkErrorText(ENGINE, 'destroyed')).toBe("The build's machines can destroy at most 252.66/s, but the target is 400/s. "
-            + 'Lower the target, raise Copies, or add machines or crafting speed (modules, beacons or a faster machine).');
+        expect(checkErrorText(ENGINE, 'destroyed')).toBe("The build's machines can destroy at most 252.66/s, but the setpoint is 400/s. "
+            + 'Lower the setpoint, raise Copies, or add machines or crafting speed (modules, beacons or a faster machine).');
         expect(checkErrorText(ENGINE, 'made')).toBe(checkErrorText(ENGINE));
     });
 

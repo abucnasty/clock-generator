@@ -25,16 +25,17 @@ import type { ClockVerdict } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import { CLOCK_TABLE_NAME, CLOCK_TABLE_REGION, clockHelpName, termsHelpName } from '../utils/a11yLabels';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
-import { BELT_COPY } from '../utils/beltQuestion';
-import { SUMMARY_COPY, beltCellText, clockTechnicalName, foldedMakes, isStartDependent, plainClockName, recoversOf, wakeUpsAverageOf, worksOf } from '../utils/clockSummary';
-import { WAKEUP_DEFINITION, TERMS_FOCUS, type GlossaryId } from '../utils/glossary';
+import { SUMMARY_COPY, beltCellText, clockBadges, foldedMakes, isStartDependent, pickNameMeaning, recoversOf, wakeUpsAverageOf, worksOf } from '../utils/clockSummary';
+import { familyCopyOf, fullClockName, qualifierChipsOf, strategyNameOf } from '../utils/strategyNames';
+import { BadgeChips, QualifierChips } from './StrategyChips';
+import { SIGNAL_DEFINITION, WAKEUP_DEFINITION, TERMS_FOCUS, type GlossaryId } from '../utils/glossary';
 import { HelpButton } from './HelpButton';
 import { ScrollX } from './ScrollX';
 import { Panel } from './Panel';
 import { RecommendedChip } from './RecommendedChip';
 import { HANDS_TEXT } from '../utils/targetCounts';
 import { TermsList } from './TermsPopover';
-import { OUTPUT_PER_PERIOD_HEADER, WAKE_UPS_HEADER, formatNumberText, makesHeader, rateHeader } from '../utils/numberText';
+import { OUTPUT_PER_PERIOD_HEADER, SIGNALS_HEADER, WAKE_UPS_HEADER, formatNumberText, makesHeader, rateHeader } from '../utils/numberText';
 import { RECOMMENDED_COPY, disclosureRunLine, groupClockRowsByBelt, partitionClockRows, type BeltClockGroups, type ClockRow, type PickRule } from '../utils/recommendedClock';
 
 // fractional (subtick) periods are shown to 3 decimals
@@ -57,10 +58,11 @@ const COMPARE_COPY = {
         + 'open the ticks shown longer (belt slack), so a pickup that comes late on a moving belt can finish; a rule of '
         + 'thumb for late pickups. Pickup geometry models which moving stacks are within reach; straight belt is the default. Backed up: items '
         + 'stop between pickups and the belt refills the gaps; on a moving belt an inserter can be switched off holding a partial hand. A '
-        + 'subtick clock is always made for a backed-up belt, and is not ranked behind other clocks for it. Blank '
+        + 'subtick clock never has belt slack. It is not ranked behind other clocks for it. Blank '
         + 'when no clocked inserter picks up from a belt.',
     swingsHelp: 'Total output swings per crafting cycle of each output machine, shared equally across its output inserters. '
         + 'Per-inserter counts may be fractional. The clock repeats after a whole number of crafting cycles (the window cycle).',
+    signalsHelp: SIGNAL_DEFINITION + ' Counted per minute for one copy of the build, in the same run as the wakeups. No clock is ranked by signals.',
     decidersHelp: 'How many decider combinators the clock\'s blueprint has to switch inserters and drills on and off, not counting the clock itself. Each one is wired to the inserters and drills its description names, so fewer deciders is less wiring to do by hand.',
     windowsHelp: 'How many enable windows the clock has in all: stretches of ticks during which it switches an inserter on.',
     wakeUpsHelp: WAKEUP_DEFINITION + ' Counted per minute, summed over the inserters of one copy of the build '
@@ -68,16 +70,16 @@ const COMPARE_COPY = {
         + 'one start point, but on a build with a loop of machines: a clock there settles into another steady state from '
         + 'another start point, with another count, so its figure is the average over 12 start points, and the cell says so.',
     noneRecover: 'No clock qualifies as stable across its completed checks. Compare its modeled rate, recovery and sampled starts separately.',
-    noneHold: 'None of the clocks tried holds the target rate, so they are all listed.',
+    noneHold: 'None of the clocks tried holds the setpoint, so they are all listed.',
     deadlock: 'The tests that starve and jam the build do not see this, so on this build they do not decide which clock '
-        + 'is selected for you: the clocks that hold the target rate are ranked by their wakeups.',
+        + 'is selected for you: the clocks that hold the setpoint are ranked by their wakeups.',
     computing: (label: string) => `${label}: computing…`,
     showUnstable: (hidden: number) => `Show ${hidden} unstable clock${hidden === 1 ? '' : 's'} that ${hidden === 1 ? 'was' : 'were'} tried`,
     hideUnstable: (count: number) => `Hide ${count} unstable clock${count === 1 ? '' : 's'}`,
 };
 
 /** The full table's Status: the glossary's words for the verdict */
-const VERDICT_LABEL: Record<ClockVerdict, string> = { stable: 'Recovers', 'no recovery': 'Does not recover', unstable: 'Unstable' };
+const VERDICT_LABEL: Record<ClockVerdict, string> = { stable: 'Has recovery', 'no recovery': 'No recovery', unstable: 'Unstable' };
 const VERDICT_COLOR: Record<ClockVerdict, 'success' | 'warning' | 'error'> = { stable: 'success', 'no recovery': 'warning', unstable: 'error' };
 
 /** The icon beside the words of Works?: never the colour alone */
@@ -204,7 +206,7 @@ export function ClockAlternativesPanel({
     const copies = alternatives[0]?.copies ?? 1; // of the generation, so a stale table keeps its own number
     // a Makes column that says the same on every row is one line above the table instead
     const fold = allColumns ? null : foldedMakes([...stable, ...unstable].map(({ alternative }) => alternative));
-    const columnCount = allColumns ? 11 : fold === null ? 6 : 5;
+    const columnCount = allColumns ? 12 : fold === null ? 7 : 6;
 
     // the index is the one drawn in this render, so a click cannot land on a row that has since moved
     const renderRow = ({ alternative, index }: ClockRow<ClockAlternativeView>) => {
@@ -225,18 +227,21 @@ export function ClockAlternativesPanel({
                         value={index}
                         checked={index === selectedIndex}
                         onChange={() => onSelect(index)}
-                        slotProps={{ input: { 'aria-label': `${plainClockName(alternatives, index)}: ${alternative.label}` } }}
+                        slotProps={{ input: { 'aria-label': fullClockName(alternative) } }}
                         size="small"
                     />
                 </TableCell>
                 <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: 1, rowGap: 0.5 }}>
-                        <Box component="span" sx={{ fontWeight: 600 }}>{plainClockName(alternatives, index)}</Box>
+                        <Box component="span" sx={{ fontWeight: 600 }}>{strategyNameOf(alternative)}</Box>
+                        <QualifierChips clock={alternative} />
+                        <BadgeChips badges={clockBadges(alternatives, index)} meanings={badgeMeanings(alternatives, index, pickRule)} />
                         {index === recommendedIndex && <RecommendedChip isGenerating={isGenerating} />}
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary', typography: 'body2' }}>
-                        <span data-engine-name="">{clockTechnicalName(alternative)}</span>
-                        <HelpButton label={clockHelpName(alternative.label)}>
+                        <span data-strategy-line="">{familyCopyOf(alternative)?.line ?? alternative.label}</span>
+                        <HelpButton label={clockHelpName(fullClockName(alternative))}>
+                            <StrategyHelp clock={alternative} />
                             <Typography variant="subtitle2" component="p" sx={{ mb: 0.5 }}>{COMPARE_COPY.howMadeHeading}</Typography>
                             {sentencesOf(alternative.description).map(sentence => (
                                 <Typography key={sentence} variant="body2" sx={{ mb: 0.75 }}>{sentence}</Typography>
@@ -252,13 +257,7 @@ export function ClockAlternativesPanel({
                 {allColumns ? (
                     <>
                         <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                            {beltCellText(alternative.beltLabel)}
-                            {/* made without belt slack in a run for moving belts: ranked after those made for them */}
-                            {!alternative.ranking.matches_belt_choice && (
-                                <Typography variant="caption" component="div" color="text.secondary" sx={{ whiteSpace: 'normal', maxWidth: '16ch' }}>
-                                    {BELT_COPY.onlyIfBackedUp}
-                                </Typography>
-                            )}
+                            {beltCellText(alternative.beltLabel, pickRule)}
                         </TableCell>
                         <TableCell align="right">
                             {alternative.terminalSwingCount} per {formatTicks(alternative.cycleTicks)} ticks
@@ -267,6 +266,7 @@ export function ClockAlternativesPanel({
                         <TableCell align="right">{alternative.inserterWindowCount}</TableCell>
                         <TableCell align="right">{alternative.deciders}</TableCell>
                         <TableCell align="right">{wakeUpsCell(alternative)}</TableCell>
+                        <TableCell align="right">{signalsCell(alternative)}</TableCell>
                         <TableCell align="right">{alternative.assessment.items_per_second.toFixed(2)}</TableCell>
                         <TableCell align="right">
                             {alternative.asBuilt
@@ -296,6 +296,7 @@ export function ClockAlternativesPanel({
                             <TableCell align="right">{formatNumberText(alternative.assessment.items_per_second)}</TableCell>
                         )}
                         <TableCell align="right">{wakeUpsCell(alternative)}</TableCell>
+                        <TableCell align="right">{signalsCell(alternative)}</TableCell>
                         <TableCell align="right">{alternative.deciders}</TableCell>
                         <TableCell>
                             <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
@@ -390,6 +391,7 @@ export function ClockAlternativesPanel({
                                     <TableCell align="right"><HelpHeader label="Enable windows" help={COMPARE_COPY.windowsHelp} /></TableCell>
                                     <TableCell align="right"><HelpHeader label={DECIDERS_HEADER} help={COMPARE_COPY.decidersHelp} /></TableCell>
                                     <TableCell align="right"><HelpHeader label={WAKE_UPS_HEADER} help={COMPARE_COPY.wakeUpsHelp} /></TableCell>
+                                    <TableCell align="right"><HelpHeader label={SIGNALS_HEADER} help={COMPARE_COPY.signalsHelp} /></TableCell>
                                     <TableCell align="right">{rateHeader(copies)}</TableCell>
                                     <TableCell align="right">{OUTPUT_PER_PERIOD_HEADER}</TableCell>
                                     <TableCell><TermsHeader label={COMPARE_COPY.status} focus={TERMS_FOCUS.works} /></TableCell>
@@ -398,6 +400,7 @@ export function ClockAlternativesPanel({
                                 <>
                                     {fold === null && <TableCell align="right">{makesHeader(copies, alternatives[0]?.counts)}</TableCell>}
                                     <TableCell align="right"><TermsHeader label={WAKE_UPS_HEADER} focus={TERMS_FOCUS.wakeUps} /></TableCell>
+                                    <TableCell align="right"><TermsHeader label={SIGNALS_HEADER} focus={TERMS_FOCUS.signals} /></TableCell>
                                     <TableCell align="right"><HelpHeader label={DECIDERS_HEADER} help={COMPARE_COPY.decidersHelp} /></TableCell>
                                     <TableCell><TermsHeader label={COMPARE_COPY.works} focus={TERMS_FOCUS.works} /></TableCell>
                                 </>
@@ -412,7 +415,7 @@ export function ClockAlternativesPanel({
                         return <TableBody key={group} aria-labelledby={headingId}>
                             <TableRow><TableCell id={headingId} component="th" role="rowheader" scope="rowgroup" colSpan={columnCount}
                                 sx={{ fontWeight: 700, bgcolor: 'background.default' }}>
-                                {group === 'matches' ? 'Matches your belt setting' : 'Requires a different belt setting'}
+                                {group === 'matches' ? 'Matches your belt setting' : SUMMARY_COPY.noBeltSlack}
                             </TableCell></TableRow>
                             {stableRows.map(renderRow)}
                             {stableRows.length > 0 && otherRows.length > 0 && <TableRow><TableCell colSpan={columnCount} sx={{ color: 'text.secondary' }}>{RECOMMENDED_COPY.unstableDivider}</TableCell></TableRow>}
@@ -473,6 +476,34 @@ function wakeUpsCell(alternative: ClockAlternativeView): ReactNode {
                     {average.coldStart !== null && <><br />{SUMMARY_COPY.wakeUpsColdStart(Math.round(average.coldStart))}</>}
                 </Typography>
             )}
+        </>
+    );
+}
+
+/** The signals of one copy a minute, rounded; a dash when they were not counted */
+function signalsCell(alternative: ClockAlternativeView): ReactNode {
+    const perMinute = alternative.assessment.signals_per_minute;
+    return perMinute === null || perMinute === undefined ? '—' : `${Math.round(perMinute)}`;
+}
+
+/** What a chip means, by its text, for the chips whose words need a line: Fewest deciders */
+function badgeMeanings(alternatives: ClockAlternativeView[], index: number, pickRule: PickRule | null): Record<string, string> {
+    const meaning = pickNameMeaning(alternatives, index, pickRule);
+    return meaning ? { [SUMMARY_COPY.fewestDeciders]: meaning } : {};
+}
+
+/** The (i) of a clock: its strategy's definition and practice, then what each chip says */
+function StrategyHelp({ clock }: { clock: ClockAlternativeView }) {
+    const family = familyCopyOf(clock);
+    return (
+        <>
+            {family && <>
+                <Typography variant="body2" sx={{ mb: 0.75 }}>{family.definition}</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>{family.practice}</Typography>
+            </>}
+            {qualifierChipsOf(clock).map(chip => (
+                <Typography key={chip.id} variant="body2" sx={{ mb: 0.75 }}><strong>{chip.label}.</strong> {chip.line}</Typography>
+            ))}
         </>
     );
 }

@@ -16,7 +16,7 @@ function bar(failure?: Parameters<typeof buildValidationIssues>[0]['failure'], o
     const props = { view: 'configure' as const, onViewChange: vi.fn(), isLoading: false, generationFailed: false,
         progressStore: { get: () => null, set: vi.fn(), subscribe: () => () => undefined }, onGenerate, onCheckOnly: vi.fn(),
         primaryAction: 'generate' as const, busy: false, checking: null, checkStatus: failure ? 'invalid' as const : 'none' as const,
-        checkedForGenerate: true, chip: null, blueprintString: null, selectedLabel: null, selectedEngineName: null, selectedId: null,
+        checkedForGenerate: true, chip: null, blueprintString: null, selectedLabel: null, selectedLine: null, selectedId: null,
         selectionQuiet: false, rateWarning: null, copyLabel: 'Copy blueprint', staleFor: null, copied: false, onCopy: vi.fn(),
         problems, refused: isRefused(problems), note: null, startHere: false, onGoToProblem: vi.fn(), running: false, onCancel: vi.fn(),
         lastStop: null, restoredId: 0, pickGone: null, identity: null, entryAction: null, menu: null };

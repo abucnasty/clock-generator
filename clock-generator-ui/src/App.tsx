@@ -72,7 +72,7 @@ import { copyBlueprintLabelOf, rateWarningOf } from './utils/rateWarning';
 import { buildChangesText } from './utils/buildChanges';
 import { configKeyOf, isStale } from './utils/resultsStaleness';
 import { withDeeperSearch } from './utils/deeperSearch';
-import { clockTechnicalName, plainClockName } from './utils/clockSummary';
+import { familyCopyOf, fullClockName } from './utils/strategyNames';
 import { ANNOUNCEMENTS } from './utils/workflowAnnouncement';
 import { BELT_COPY, beltQuestionOf, backedUpBeltsFor, backedUpBeltsHint, withBeltAnswer, type BeltAnswer } from './utils/beltQuestion';
 import { PickupGeometrySummary } from './components/PickupGeometrySummary';
@@ -436,7 +436,7 @@ function App() {
 
     // the selected clock as the bar, the card and the announcements name it
     const selectedClock = alternatives[selectedAlternativeIndex];
-    const selectedName = selectedClock ? plainClockName(alternatives, selectedAlternativeIndex) : null;
+    const selectedName = selectedClock ? fullClockName(selectedClock) : null;
     const rateWarning = rateWarningOf(selectedClock);
     const [installOpen, setInstallOpen] = useState(false);
     const copyLabel = copyBlueprintLabelOf(selectedClock, resultsAreStale, isRunning);
@@ -1180,7 +1180,7 @@ function App() {
                                     chip={checkChipOf({ checkStatus, clocksAreForThisBuild: generatedFor !== null && !resultsAreStale })}
                                     blueprintString={blueprintString}
                                     selectedLabel={selectedName}
-                                    selectedEngineName={selectedClock ? clockTechnicalName(selectedClock) : null}
+                                    selectedLine={selectedClock ? familyCopyOf(selectedClock)?.line ?? null : null}
                                     selectedId={selectedClock?.id ?? null}
                                     selectionQuiet={selectionQuiet}
                                     rateWarning={rateWarning}

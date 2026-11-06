@@ -74,7 +74,7 @@ export function navigateToOutputRouteRepair(issue: Pick<InserterCoverageIssue, '
 
 /** The words of a config key as a player reads them: the form's labels where it has one, else the key with spaces */
 const FIELD_LABELS: Record<string, string> = {
-    target_output: 'Target Output', items_per_second: 'Items per Second', recipe: 'Recipe', copies: 'Copies',
+    target_output: 'Setpoint', items_per_second: 'Items per Second', recipe: 'Recipe', copies: 'Copies',
     overrides: 'Advanced settings',
 };
 const label = (key: string | number) => typeof key === 'number' ? String(key + 1) : FIELD_LABELS[key] ?? words(key);

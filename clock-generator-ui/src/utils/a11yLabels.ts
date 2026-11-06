@@ -115,7 +115,7 @@ export const CHART_NAMES = {
 export const rowActionsName = (label: string) => `More actions for ${label}`;
 export const selectRowName = (label: string) => `Select ${label}`;
 
-/** The name of a recipe field: "Recipe, Machine 2" (`owner` is the row's name, or "Target Output") */
+/** The name of a recipe field: "Recipe, Machine 2" (`owner` is the row's name, or "Setpoint") */
 export function recipeName(owner: string): string {
     return `Recipe, ${owner}`;
 }
@@ -124,7 +124,7 @@ export function recipeName(owner: string): string {
 export const changeMachineName = (owner: string) => `Change machine, ${owner}`;
 
 /** The name of the target's recipe field */
-export const TARGET_RECIPE_NAME = 'Recipe, Target Output';
+export const TARGET_RECIPE_NAME = 'Recipe, Setpoint';
 
 /** The name of the second lane's delete button, "Delete lane 2 of Belt 1" */
 export function deleteLaneName(beltLabel: string, lane: number): string {

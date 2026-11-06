@@ -15,8 +15,8 @@ const identity: LabelOf = (id) => id;
  * workflow bar and the problem chip all read from here, so the words are changed in one place.
  */
 export const PROBLEM_TEXT = {
-    noRecipe: 'Set the recipe in Target Output',
-    noRate: 'Set Items per Second in Target Output to more than 0',
+    noRecipe: 'Set the recipe in the Setpoint panel',
+    noRate: 'Set Items per Second in the Setpoint panel to more than 0',
     noCopies: COPIES_POSITIVE_PROBLEM,
     noMachines: 'Add a machine',
     rateAboveMax: (total: number, counts: TargetCounts = 'made', byMachines = true) =>

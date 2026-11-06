@@ -45,7 +45,11 @@ export type GlossaryId =
     | 'belt-slack'
     | 'simulator'
     | 'hand'
-    | 'lcm';
+    | 'lcm'
+    | 'setpoint'
+    | 'stable'
+    | 'steady-state'
+    | 'signal';
 
 /**
  * The glossary's wakeup, in the user's words (the repo glossary's alarm and sleep are maintainer words). Its case of a
@@ -56,6 +60,14 @@ export const WAKEUP_DEFINITION: string = 'One time the game checks an inserter t
     + 'so fewer wakeups cost less UPS. It counts also when the clock has switched the inserter off; the clock switching an '
     + 'inserter on is not a wakeup. Only the switched-off case is provisional: seen on three builds in Factorio 2.1.24, its '
     + 'cost not measured.';
+
+/**
+ * The signals a clock sends, in the user's words. A signal here is the game's: the output a decider combinator sends. It is
+ * counted once for each enable window that opens on a decider, as the engine counts it (`signalsPerMinuteOf`).
+ */
+export const SIGNAL_DEFINITION: string = 'A signal is the output a decider sends when one of its enable windows opens. It switches on every '
+    + 'inserter wired to that decider. Inserters that share a decider share its signals. Each signal costs the game time. '
+    + 'How a signal compares with a wakeup is not measured.';
 
 /** In the order the popover lists them; the expert terms last */
 export const GLOSSARY: readonly GlossaryEntry[] = [
@@ -114,13 +126,13 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     {
         id: 'build',
         term: 'build',
-        definition: 'A group of entities in the game, of any number, that together make a target output.',
+        definition: 'A group of entities in the game, of any number, that together make one product.',
         insteadOf: 'setup, structure, "build" as a verb',
     },
     {
         id: 'configuration',
         term: 'configuration',
-        definition: 'A build, with its target output, copies and enable rules: what the site saves and what clocks are made '
+        definition: 'A build, with its setpoint, copies and enable rules: what the site saves and what clocks are made '
             + 'for. Saved as a configuration file (Open configuration file…, Save configuration file, Reset configuration).',
         insteadOf: 'config, build file, "build" for what the site saves',
     },
@@ -174,7 +186,7 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
         term: 'holds the rate',
         definition: 'The clock holds its expected output in the modeled cold-start checks while supplies remain available. '
             + 'A start-dependent clock can hold here yet settle differently from other sampled starts and be ranked unstable.',
-        insteadOf: '"meets the target rate"',
+        insteadOf: '"meets the target rate", "holds the target rate" (say "holds the setpoint")',
     },
     {
         id: 'supply-stop',
@@ -215,6 +227,33 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
         insteadOf: 'hand for a swing',
     },
     {
+        id: 'setpoint',
+        term: 'setpoint',
+        definition: 'The product your build must make, and the rate it must hold, for all copies. The rate is in items per second. '
+            + 'You set it. The clock never changes it.',
+        insteadOf: 'target output, target rate, goal',
+    },
+    {
+        id: 'stable',
+        term: 'stable',
+        definition: 'A clock is stable when it holds your setpoint at steady state. After a supply stop or an output blockage, '
+            + 'the build also goes back to its rate by itself.',
+        insteadOf: 'survives backpressure loss',
+    },
+    {
+        id: 'steady-state',
+        term: 'steady state',
+        definition: 'The condition after the startup period. The build repeats the same pattern in each window cycle. '
+            + 'The output repeats. It is not constant.',
+        insteadOf: 'warm, warmed up, settled',
+    },
+    {
+        id: 'signal',
+        term: 'signal',
+        definition: SIGNAL_DEFINITION,
+        insteadOf: 'pulse, activation pulse',
+    },
+    {
         id: 'lcm',
         term: 'LCM',
         // only in the Swing Plan and Advanced, glossed where it first appears
@@ -236,5 +275,6 @@ export function glossaryWithFocus(focus: readonly GlossaryId[]): { related: Glos
 /** The terms the clock table's (i) buttons open the Terms with, first */
 export const TERMS_FOCUS = {
     wakeUps: ['wakeup', 'enable-window'],
+    signals: ['signal', 'wakeup', 'enable-window'],
     works: ['holds-the-rate', 'recovery', 'output-blockage', 'supply-stop'],
 } as const satisfies Record<string, readonly GlossaryId[]>;

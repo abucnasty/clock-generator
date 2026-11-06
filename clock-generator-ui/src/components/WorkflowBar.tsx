@@ -47,10 +47,10 @@ interface WorkflowBarProps {
     chip: { label: string; color: 'success' | 'error' } | null;
     /** Blueprint of the selected clock, once one is generated */
     blueprintString: string | null;
-    /** Name of the selected clock by what it is for ("Fewest wake-ups") */
+    /** Name of the selected clock, its strategy and its chips ("Takt batches · 2 output swings a cycle") */
     selectedLabel: string | null;
-    /** The engine's name of the selected clock, which says how it is made; shown when the name is pointed at */
-    selectedEngineName: string | null;
+    /** Where the strategy's name comes from, in a few words; shown when the name is pointed at */
+    selectedLine: string | null;
     /** Id of the selected clock, which tells apart two of the same name */
     selectedId: string | null;
     /** The selection last changed by the card's Back to recommended, whose focus on the name reads it: not announced */
@@ -110,7 +110,7 @@ export function WorkflowBar({
     chip,
     blueprintString,
     selectedLabel,
-    selectedEngineName,
+    selectedLine,
     selectedId,
     selectionQuiet,
     rateWarning,
@@ -370,7 +370,7 @@ export function WorkflowBar({
                                     variant="body2"
                                     color="text.secondary"
                                     noWrap
-                                    title={selectedEngineName ?? undefined}
+                                    title={selectedLine ?? undefined}
                                     sx={{ maxWidth: 320, minWidth: 0, flex: '1 1 0', display: { xs: 'none', md: 'block' } }}
                                     data-selected-clock
                                 >

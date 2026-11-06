@@ -19,16 +19,16 @@ const rates: MachineTargetRate = { machine_id: 7, output_rate_per_second: 0.4, c
 const itemNames = names({ 'electronic-circuit': 'Electronic circuit', 'advanced-circuit': 'Advanced circuit' });
 
 it.each([
-    { rate: 'its maximum', atTarget: false, targetRate: undefined, production: 'Maximum',
+    { rate: 'its maximum', atTarget: false, targetRate: undefined, production: 'Maximum production per machine',
         results: ['Electronic circuit: 0.5/s', 'Advanced circuit: 0.25/s expected'], notes: ['Expected'] },
-    { rate: 'its own at-target rate', atTarget: true, targetRate: rates, production: 'At-target',
+    { rate: 'its own rate at the setpoint', atTarget: true, targetRate: rates, production: 'Production per machine at the setpoint',
         results: ['Electronic circuit: 0.4/s', 'Advanced circuit: 0.2/s expected'], notes: ['Expected'] },
     // not a zero, nor a rate from an earlier target
-    { rate: 'capacity without at-target data', atTarget: true, targetRate: undefined, production: 'Maximum',
-        results: ['Electronic circuit: 0.5/s', 'Advanced circuit: 0.25/s expected'], notes: ['Capacity', 'Expected', 'Capacity', 'At-target rate unavailable'] },
+    { rate: 'capacity without data at the setpoint', atTarget: true, targetRate: undefined, production: 'Maximum production per machine',
+        results: ['Electronic circuit: 0.5/s', 'Advanced circuit: 0.25/s expected'], notes: ['Capacity', 'Expected', 'Capacity', 'Rate at the setpoint unavailable'] },
 ])('shows every result inline, a coproduct as expected, at $rate', ({ atTarget, targetRate, production, results, notes }) => {
     show(<MachineProductionSummary facts={facts} targetRate={targetRate} atTarget={atTarget} />, { names: itemNames });
-    const summary = within(screen.getByRole('group', { name: `${production} production per machine` }));
+    const summary = within(screen.getByRole('group', { name: production }));
     expect(summary.getAllByRole('img')).toEqual(results.map(name => summary.getByRole('img', { name })));
-    expect(screen.getAllByText(/^(Expected|Capacity|At-target rate unavailable)$/).map(note => note.textContent)).toEqual(notes);
+    expect(screen.getAllByText(/^(Expected|Capacity|Rate at the setpoint unavailable)$/).map(note => note.textContent)).toEqual(notes);
 });

@@ -122,12 +122,12 @@ describe('recommendationReason', () => {
     const { beltMoving, tieKindMoving, recoveryDoesNotDecide, mayFailOnMovingBelt } = RECOMMENDED_COPY;
     const { fewestWakeUps, wakeUpsNotCounted, tieOnWakeUps, tieOnWakeUpsUncounted, tieOnWindows } = RECOMMENDED_COPY;
     // the clocks a pick at 240/s is compared with: those that keep making it and recover, or with a deadlock risk those that hold it
-    const recovering = 'the clocks that keep making 240/s and recover';
+    const recovering = 'the clocks that keep making 240/s and have recovery';
     const holding = 'the clocks that hold 240/s';
     const others = [clock('b', { wake_ups_per_minute: 20 }), clock('c', { wake_ups_per_minute: 30 })];
     // the reason for the pick of [clock('a'), ...others], and with backed-up belts
-    const fewest = 'Fewest wakeups of the clocks that keep making 240/s and recover on a moving belt.';
-    const fewestBackedUp = 'Fewest wakeups of the clocks that keep making 240/s and recover with backed-up belts.';
+    const fewest = 'Fewest wakeups of the clocks that keep making 240/s and have recovery on a moving belt.';
+    const fewestBackedUp = 'Fewest wakeups of the clocks that keep making 240/s and have recovery with backed-up belts.';
 
     /** `text` is `expected`, in sentences one space apart */
     const sentences = (text: string, expected: string) => {
@@ -139,7 +139,7 @@ describe('recommendationReason', () => {
     const says = (_: string, clocks: Clock[], expected: string, rule?: PickRule | null) => sentences(reason(clocks, rule), expected);
 
     it.each<[string, Clock[], string, (PickRule | null)?]>([
-        ['says the pick has the fewest wakeups among the clocks that keep making the rate and recover on a moving belt', [clock('a'), ...others], fewest],
+        ['says the pick has the fewest wakeups among the clocks that keep making the rate and have recovery on a moving belt', [clock('a'), ...others], fewest],
         ['says "hold" only on a build with a deadlock risk, where a clock that holds the rate counts without recovering',
             [clock('a', { deadlock: true }), clock('b', { deadlock: true, wake_ups_per_minute: 20 })], fewestWakeUps(holding, beltMoving)],
         ['adds that the recovery trials do not decide for a clock that holds the rate without recovering',
@@ -161,7 +161,7 @@ describe('recommendationReason', () => {
             fewestBackedUp + tieOnWakeUps(1, ''), BACKED_UP],
         ['says the first listed was picked when the windows tie too', [clock('a'), clock('b'), ...others], fewest + tieOnWindows(1, tieKindMoving)],
         ['says when the pick is the only clock that holds the rate and recovers',
-            [short('b', 1), clock('a'), short('c', -1)], 'The only clock that holds 240/s and recovers on a moving belt.'],
+            [short('b', 1), clock('a'), short('c', -1)], 'The only clock that holds 240/s and has recovery on a moving belt.'],
         ['says when the pick is the only clock that holds the rate on a build with a deadlock risk',
             [clock('a', { deadlock: true }), short('b', 1)], 'The only clock that holds 240/s on a moving belt.'],
         ['goes by the windows when the wakeups were not counted',
@@ -172,7 +172,7 @@ describe('recommendationReason', () => {
         const backedUp = (id: string, options: ClockOptions = {}) =>
             clock(id, { matches_belt_choice: false, beltLabel: 'backed-up', ...options });
         const { backedUpOnly, backedUpFewestWakeUps } = RECOMMENDED_COPY;
-        const none = 'No clock made for a moving belt holds 240/s and recovers.';
+        const none = 'No clock with belt slack holds 240/s and has recovery.';
 
         it.each<[string, Clock[], string]>([
             ['says it is the only one when it is', [backedUp('slackless'), short('b', 1)], none + backedUpOnly + mayFailOnMovingBelt],
@@ -181,7 +181,7 @@ describe('recommendationReason', () => {
             ['says what broke a tie on wakeups', [backedUp('a', { window_count: 3 }), backedUp('b')],
                 none + backedUpFewestWakeUps + tieOnWakeUps(1, '') + mayFailOnMovingBelt],
             ['adds the recovery note on a build with a deadlock risk', [backedUp('a', { deadlock: true, verdict: 'no recovery' })],
-                'No clock made for a moving belt holds 240/s.' + backedUpOnly + mayFailOnMovingBelt + recoveryDoesNotDecide],
+                'No clock with belt slack holds 240/s.' + backedUpOnly + mayFailOnMovingBelt + recoveryDoesNotDecide],
         ])('%s', says);
     });
 
@@ -189,13 +189,13 @@ describe('recommendationReason', () => {
         const pick = clock('fast', { wake_ups_per_minute: 0, recovery_periods: 3, window_count: 9 });
         const slow = clock('slow', { wake_ups_per_minute: 0, recovery_periods: 33, window_count: 2 });
         sentences(recommendationReason([pick, slow], 0, MOVING, true, false),
-            'Fewest wakeups of the clocks that keep making 240/s and recover on a moving belt.'
+            'Fewest wakeups of the clocks that keep making 240/s and have recovery on a moving belt.'
             + RECOMMENDED_COPY.tieOnRecovery(1, RECOMMENDED_COPY.tieKindMoving));
     });
 
     describe('when no clock meets the rate', () => {
         const { nearest, nearestAt, nearestHolds } = RECOMMENDED_COPY;
-        const none = 'No clock holds 240/s and recovers.';
+        const none = 'No clock holds 240/s and has recovery.';
 
         it.each<[string, Clock[], string]>([
             ['says how near the pick runs', [short('far', -3), short('near', -0.5)], none + nearestAt('239.5')],
@@ -232,7 +232,7 @@ describe('recommendationReason', () => {
 
     it('prints the target rate as the rate warning does', () => {
         const at = (rate: number) => reason([{ ...clock('a'), assessment: { items_per_second: rate } }]);
-        expect([at(240), at(12.5), at(1 / 3)]).toEqual(['240', '12.5', '0.33'].map(rate => `The only clock that holds ${rate}/s and recovers on a moving belt.`));
+        expect([at(240), at(12.5), at(1 / 3)]).toEqual(['240', '12.5', '0.33'].map(rate => `The only clock that holds ${rate}/s and has recovery on a moving belt.`));
     });
 });
 

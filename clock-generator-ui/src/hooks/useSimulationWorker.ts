@@ -12,7 +12,7 @@ import { pickRuleOf, recommendedIndexOf, type PickRule } from '../utils/recommen
 import { planGenerationRun } from '../utils/deeperSearch';
 import { NO_NAMES, pickerIds, type GameNames } from '../utils/gameNames';
 import { NO_CRAFTING_MACHINES } from '../utils/machinePrototype';
-import { plainClockName } from '../utils/clockSummary';
+import { fullClockName, pendingClockName } from '../utils/strategyNames';
 import { afterCancel, keyToShow, selectionAfterRun, type DroppedResults, type KeptPick, type KeptResults, type RunStop, type ShownResults } from '../utils/resultsCache';
 import { openResultsStore, readShownMarker, writeShownMarker, type ResultsStore } from '../utils/resultsStore';
 import { busyWorkersOf, checkToResend, crashOutcome, replaceWorkers } from '../worker/pool';
@@ -125,7 +125,7 @@ interface UseSimulationWorkerResult {
     getRecipeInfo: (recipeName: string) => RecipeInfo | null;
 }
 
-const PRIMARY_STEP = 'Batched swings';
+const PRIMARY_STEP = 'First clock';
 
 export interface GenerationProgressStore {
     get: () => GenerationProgress | null;
@@ -204,7 +204,7 @@ type ResultsView = Pick<UseSimulationWorkerResult,
 
 /** The labels of the searches a generation did not run; a fallback that was not needed is not one of them */
 const skippedSearchesOf = (generation: Generation): string[] =>
-    generation.skipped.filter(task => !task.fallback).map(task => task.label);
+    generation.skipped.filter(task => !task.fallback).map(pendingClockName);
 
 const emptyResults = (): ResultsView => ({
     generationAssumptions: null, alternatives: [], selectedAlternativeIndex: 0, pendingAlternatives: [],
@@ -325,7 +325,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     }), []);
 
     const reportProgress = useCallback((generation: Generation) => {
-        const running = Array.from(generation.running.values(), task => task.label);
+        const running = Array.from(generation.running.values(), pendingClockName);
         if (generation.primaryPending) {
             running.unshift(PRIMARY_STEP);
         }
@@ -346,7 +346,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             generationAssumptions: generation.assumptions,
             alternatives: combined.alternatives,
             selectedAlternativeIndex: user_index >= 0 ? user_index : combined.selected_index,
-            pendingAlternatives: generation.tasks.filter(task => !generation.done.has(task.id) && !not_started.includes(task)).map(task => task.label),
+            pendingAlternatives: generation.tasks.filter(task => !generation.done.has(task.id) && !not_started.includes(task)).map(pendingClockName),
             skippedSearches: skippedSearchesOf(generation),
             notMade: generation.notMade.flat(),
         });
@@ -528,7 +528,8 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 setLogs(previous => [...previous, ...response.messages]);
                 break;
             case 'progress': {
-                const label = generation.running.get(worker)?.label;
+                const task = generation.running.get(worker);
+                const label = task ? pendingClockName(task) : undefined;
                 generation.detail = label ? `${label}: ${response.detail}` : response.detail;
                 reportProgress(generation);
                 break;
@@ -804,7 +805,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
 
     const selectAlternative = useCallback((index: number) => {
         const clock = alternatives[index];
-        keepPick(clock ? { id: clock.id, label: plainClockName(alternatives, index) } : null);
+        keepPick(clock ? { id: clock.id, label: fullClockName(clock) } : null);
         updateResults({ selectedAlternativeIndex: index });
     }, [alternatives, keepPick, updateResults]);
 
