@@ -25,7 +25,8 @@ jobs:
       generation: false
 
   publish-sidecar:
-    if: vars.RELEASE_HOLD != 'true'
+    # publish from master only: a dispatch from another branch would upload that branch's sidecar (#657)
+    if: vars.RELEASE_HOLD != 'true' && github.ref == 'refs/heads/master'
     needs: tests
     runs-on: ubuntu-latest
     # holds the FACTORIO_MOD_API_KEY secret, and can require approval before anything is published
