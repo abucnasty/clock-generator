@@ -46,6 +46,21 @@ describe("inserter counters", () => {
         expect(count.extra_grabs_per_minute).toBe(perMinute(1, 12));
     });
 
+    it("counts the hand held at the first counted tick as a grab, so that a swing it ends has a grab (#626)", () => {
+        //              0  1  2  3  4  5  6  7  8  9
+        const held =   [0, 0, 4, 4, 4, 0, 0, 3, 3, 0];
+        // counted from tick 3: the hand grabbed in tick 2 is held at its first tick, and falls to empty in tick 5
+        const { counters } = countersOfStock(stockOf(held.map(() => WORKING), held), [inserter()], 3, BUILD);
+        const count = counters.inserters[0];
+        // ticks 3 to 9 are counted (7 ticks): swings in ticks 5 and 9, the grab to 3 in tick 7, and the hand held at tick 3
+        expect(count.swings_per_minute).toBe(perMinute(2, 7));
+        expect(count.grabs_per_minute).toBe(perMinute(2, 7));
+        expect(count.grabs_per_minute).toBeGreaterThanOrEqual(count.swings_per_minute);
+        // the hand held at tick 3 was a full one of 4; the grab to 3 left with fewer
+        expect(count.part_hand_swings_per_minute).toBe(perMinute(1, 7));
+        expect(count.extra_grabs_per_minute).toBe(0);
+    });
+
     it("does not end a swing at a part hand dropped that stays above empty", () => {
         const held = [0, 0, 4, 4, 2, 2, 0, 0];
         const { counters } = of(stockOf(held.map(() => WORKING), held));
