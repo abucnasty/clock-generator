@@ -63,6 +63,8 @@ export type { ImportInput, ImportStep, ImportedMachine } from './config/import-p
 export { Option } from './data-types/option';
 
 export {
+    BeltPickupSinkError,
+    BeltPickupSinkInserter,
     ConfigValidationError,
     ConfigValidationIssue,
     CopiesError,
