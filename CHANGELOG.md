@@ -7,385 +7,517 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the tests, are in the git history.
-Entries added after 0.27.2 follow Changelogs in [Contributing](CONTRIBUTING.md#changelogs).
+Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#changelogs).
 
 ## [0.27.2] - 2026-11-05
 
 ### Fixed
-- Clocks for builds fed from an infinity chest with several items now follow the game's pick order: the inserter takes the item the chest sorts last first.
+- simulation: inserters taking several items from one infinity chest now pick them in the game's order
 
 ## [0.27.1] - 2026-11-04
 
 ### Changed
-- The fractional swings switch is removed; the generator offers fractional swings as an alternative on every build.
-- The Electromagnetic science example is now a configuration without forced swings or hand-made output conditions; its clock is the planner's own choice.
-- The Logistic science pack example is now a build of 1 machine and 2 inserters, so its clock can differ from before.
+- generation: fractional swings is now a potential clock on every build, replacing its switch
+- ui: the Electromagnetic science example no longer forces swings or hand-made output conditions
+- ui: the Logistic science pack example is now 1 machine and 2 inserters
 
 ## [0.27.0] - 2026-11-04
 
 ### Removed
-- The recycling scrap silo sample is removed until scrap recycling gets its own tested build.
+- ui: the recycling scrap silo sample is removed
 
 ### Changed
-- Inserters are now simulated in the order the game updates them, so many builds get a different clock; every changed clock recorded in the game makes its full target.
-- Wake-ups are counted as the game counts them, so the wake-ups shown for many builds go up.
-- A clock is called stable only when it makes the full target rate; one that falls short by even one item over a long run is not.
-- Moving express belts into electromagnetic plants, and front exits on them, now get a stable clock.
+- simulation: inserters now update in the order the game updates them
+- simulation: wake-ups shown for each clock now match the game's count, mostly going up
+- generation: a clock that falls one item short over a long run is no longer stable
+- generation: moving express belts into electromagnetic plants, and their front exits, now get a stable clock
 
 ## [0.26.0] - 2026-11-01
 
 ### Changed
-- Where a stable clock still has wake-ups, observed wake windows and shifted swings now look for one with fewer, on clock periods up to 480 ticks.
-- When clocks tie on wake-ups, the one that recovers sooner after inputs stop or outputs back up is picked.
-- Wake-ups are no longer counted for an inserter whose arm is still swinging back from its drop, which the game does not wake, so some builds get another clock.
-- When no clock holds the target rate, a stable clock that runs over it is picked before an unstable one nearer to it, and the page says how far over it runs.
+- generation: observed wake windows and shifted swings find fewer wake-ups on periods up to 480 ticks
+- generation: on a wake-up tie, the clock recovering sooner from stopped inputs or backed-up outputs wins
+- simulation: an inserter still swinging back from its drop no longer counts as woken
+- generation: a stable clock running over the target rate now beats a nearer unstable one
+- ui: the page says how far the selected clock runs over the target rate
 
 ### Removed
-- All results at once is no longer offered for a recycler's rare results: Results in turn, with fewer wake-ups, stays.
-- A clock with a subtick clock is no longer also listed rounded down to whole ticks.
-- The other output swing counts and fractional swings are no longer also listed with shared windows; batched swings keeps its shared-windows clock.
+- generation: All results at once is no longer offered for a recycler's rare results
+- generation: a subtick clock is no longer also listed rounded down to whole ticks
+- generation: other output swing counts and fractional swings are no longer also listed with shared windows
 
 ### Fixed
-- A clock for a recycler whose results come back into it is now also tried with a run of results above their mean, so a clock that would come up short in the game is no longer called stable.
-- The most the Items per Second field allows now counts the inserters, belts and hands as well as the machines' speed, so it no longer accepts a rate that Check then refuses.
+- generation: clocks for a recycler fed back its own results are no longer wrongly called stable
+- ui: the Items per Second field no longer accepts a rate that Check then refuses
 
 ## [0.25.0] - 2026-10-28
 
 ### Changed
-- The inserters that pass items between the machines of a loop, such as the egg inserters between the egg biochambers of agricultural science and the bacteria inserters of iron bacteria cultivation, get wake windows where the clock still holds and recovers with them, so these builds need fewer wake-ups.
-- On a build with a loop of machines, whose wake-ups depend on where its clock is when the build starts, clocks are compared by their average wake-ups over 12 start points, and the list says so.
-- A build that cannot reach its target rate is refused at once, before any clock is tried, naming the machines, inserters or belts that limit it.
-- When one inserter takes several of a recycler's results out of a chest, the refusal names the items and the chest as the game does.
+- generation: inserters between looped machines, as in agricultural science and iron bacteria cultivation, get wake windows
+- generation: on builds with a machine loop, clocks are ranked by average wake-ups over 12 starts
+- ui: the Potential Clocks panel says when its wake-ups are an average over 12 starts
+- ui: an unreachable target rate is refused at once, naming the limiting machines, inserters or belts
+- ui: a refusal for one inserter taking several recycler results names the items and chest
 
 ### Fixed
-- Screen readers name the copy spacing and side fields, and the transfer history's marks can be reached by keyboard.
-- A clock's items a second are no longer overstated on short clock periods, so the closest clock shown when none holds can change.
-- Productivity no longer applies to recipe results the game excludes from it, such as the chunks returned by asteroid crushing and barrel filling and emptying.
-- Only inserters that wait for a full hand in the game, such as the stack inserter, wait for one in the simulation.
-- Stone and steel furnaces, burner mining drills and captive biter spawners now use up fuel in the simulation, as in the game.
-- A mining drill's state shows when it is switched off by its circuit condition or waits to drop, as in the game.
-- A refused build lists each problem on its own, without internal field names, and Generate waits until the build is changed.
+- ui: screen readers now name the copy spacing and side fields
+- ui: the transfer history's marks can be reached by keyboard
+- generation: short clock periods no longer overstate items a second, which can change the closest clock
+- simulation: productivity skips results the game excludes, like returned asteroid chunks and barrel recipes
+- simulation: only inserters that wait for full hands in the game, like stack inserters, still do
+- simulation: stone and steel furnaces, burner mining drills and captive biter spawners now burn fuel
+- ui: a mining drill's state shows when it is disabled by circuit or waiting to drop
+- ui: a refused build lists each problem separately, without internal field names
+- ui: after a refusal, Generate waits until the build is changed
 
 ## [0.24.0] - 2026-10-27
 
 ### Changed
-- Large builds take less memory and generate faster.
-- Clocks are made only for the belts the build is set to: moving or backed up.
-- Backed-up belts at normal speed: clocks give each input window time for the belt to bring a whole hand, so pickups from an underground end get a stable clock.
+- generation: large builds take less memory and generate faster
+- generation: clocks are made only for the build's belt setting, moving or backed up
+- generation: pickups from an underground end on backed-up normal-speed belts now get a stable clock
 
 ## [0.23.0] - 2026-10-27
 
 ### Added
-- Recyclers: builds with a recycler now get a clock when its results go into a container (such as an ore voider; Target Output counts items made or destroyed), straight into another machine, or come by small chances (scrap into a rocket silo). Sidecar 0.15.0 exports where a recycler's results go.
-- Small batches: builds whose planned clock is too long to check (large buffer chests between machines) or where no planned clock holds get a clock that moves a few hands at a time.
-- Outputs into infinity chests that remove items are checked by their rate over the cycle, so builds without buffer chests before their sinks get a clock.
-- Clock inputs that pick up from supported belt bends.
-- Machine details: every recipe result with its rate and output routes, tabs, a compact inserter editor, and a repair that adds a missing output chest.
+- generation: builds whose recycler puts its results into a container or another machine get a clock
+- generation: recyclers with rare results, such as scrap into a rocket silo, now get a clock
+- ui: Target Output counts items made or destroyed, such as by an ore voider
+- ui: Sidecar 0.15.0 exports where a recycler's results go
+- generation: Small batches moves a few hands at a time where no planned clock holds
+- generation: builds outputting straight into item-removing infinity chests, with no buffer chest, now get a clock
+- generation: inputs picking up from supported belt bends now get a clock
+- ui: machine details list every recipe result with its rate and output routes
+- ui: machine details gain tabs and a compact inserter editor
+- ui: machine details offer a repair that adds a missing output chest
 
 ### Changed
-- Fewer deciders (inserters with the same windows share one) and fewer wake-ups on many builds (chains, loops, inserters taking turns at one machine).
-- Inserters that take from one machine are served in the game's order; a clock counts as stable only if it holds whichever the game serves first.
-- Recovery is checked as the game allows (losses shorter than spoil times; a clock that fails one loss is not tried on the rest) and shown as such.
-- Clearer results: why an inserter is always on, item names in losses, grouped combinators, Fewest deciders explained; long-period builds generate much faster.
-- Captures from before belt bends must be captured again where they pick up from a bend.
+- blueprint: clocks use fewer deciders, one shared by inserters with the same windows
+- generation: chains, loops and inserters taking turns at one machine get clocks with fewer wake-ups
+- simulation: inserters taking from one machine are served in the game's order
+- generation: a clock is stable only if it holds whichever inserter the game serves first
+- generation: recovery is tried only on losses shorter than spoil times, stopping at the first failure
+- ui: results say why an inserter is always on
+- ui: losses in the results name their items
+- ui: results group the combinators
+- ui: results explain Fewest deciders
+- generation: builds with long clock periods generate much faster
+- ui: older sidecar captures picking up from a belt bend must be captured again
 
 ### Removed
-- Clocks for a shorter period ("not in the period").
+- generation: clocks for a shorter period ("not in the period") are no longer offered
 
 ### Fixed
-- Buffered outputs no longer make a working clock look unstable; chance-only products are planned at their average; the timeline shows a settled period.
+- generation: buffered outputs no longer make a working clock look unstable
+- generation: chance-only products are planned at their average rate
+- ui: the timeline shows a settled period
 
 ## [0.22.0] - 2026-10-24
 
 ### Added
-- A build where several machines draw from one source, such as one foundry feeding four assemblers, now gets a clock that holds where the planned windows did not: each inserter gets one window long enough for all its hands, the machines a source cannot feed at once take turns in as few groups as its stock and output allow, and each output inserter swings once at the start of its group's turn. Where copies drop onto a shared belt, the machines are grouped so that their drops fit between each other.
-- A direct insertion build now gets a clock that holds and recovers: each inserter moves whole hands every cycle (a machine's input limit takes off any surplus), an inserter busy the whole cycle stays on, the inserters open in order from the output back to the raw inputs, and the clock is kept only if it holds from every start and still holds with its windows moved a tick. The slow search the generator used to fall back to is no longer needed.
-- The result says whether the drops of the copies onto a shared belt fit between each other or land on each other (give how far apart the copies stand), and a note says when the lanes of a belt are exactly full. It also lists the spacings of the copies and the distances between a copy's inserters at which the drops fit, or says why none can when the copies drop more hands than the belt has room for, and the editor says so before Generate.
+- generation: a foundry feeding four assemblers, and other shared sources, now get a clock that holds
+- generation: direct insertion builds now get a clock that holds and recovers
+- generation: direct insertion builds no longer fall back to the slow search
+- ui: the result says whether copies' drops onto a shared belt fit between each other
+- ui: a note says when a belt's lanes are exactly full
+- ui: the result lists copy spacings and inserter distances at which the drops fit
+- ui: the result and editor warn when copies drop more hands than the belt holds
 
 ### Changed
-- A clock that does not hold is listed by what it makes over a long run, not by one period, so the closest clock is the one that keeps making the most.
-- A clock is stable only if every export belt gets what its consumers take; one that gives a belt less is unstable, and the result card says which belt gets how much.
+- generation: clocks that do not hold are ranked by long-run output, not one period
+- generation: a clock is stable only if every output belt gets what its consumers take
+- ui: the result card says how much each output belt gets
 
 ### Fixed
-- The Diagram of a belt with the same item on both lanes no longer logs a duplicate-key error.
-- The Swing Plan of a build whose export belt carries the same item on both lanes no longer logs a duplicate-key error.
-- The clock timeline's header shows the rounded period of a rounded clock.
+- ui: Diagram and Swing Plan stop logging errors for belts with one item on both lanes
+- ui: the clock timeline's header shows a rounded clock's rounded period
 
 ## [0.21.1] - 2026-10-23
 
 ### Fixed
-- Generating a large build no longer fails with "Maximum call stack size exceeded" when its clock is turned into a blueprint.
+- blueprint: making a large build's blueprint no longer fails with "Maximum call stack size exceeded"
 
 ## [0.21.0] - 2026-10-23
 
 ### Added
-- Sidecar 0.13.0 marks a drop onto a belt that side-loads onto another belt, and the result names it as a known limit.
-- When no clock holds because an output chest fills up, the result names the chest.
+- ui: Sidecar 0.13.0 marks a drop onto a belt that side-loads onto another belt
+- ui: the result names a drop onto a side-loading belt as a known limit
+- ui: when no clock holds because an output chest fills up, the result names it
 
 ### Changed
-- The paste preview names each chest's type, says "Imported as one unit" only for an export of several copies, and describes the inserters in the game's words.
-- The wiring reference shows each combinator's first line as the game does, with the same icons, drills included.
-- The machine is picked as a recipe is (groups, search, icons), from the row's machine icon. A row says when its machine cannot make its recipe, and Crafting Speed shows the machine's own speed at its quality.
-- The results read in plain words: "Belt pickups: None" for a build with no belt pickups, a note on an inserter that is on for part of the period but woken 0 times, the first note of a clock that holds its rate no longer reads as a fault, and the details say how the clock was checked and how wake windows and swings differ.
+- ui: the paste preview names each chest's type
+- ui: the paste preview says "Imported as one unit" only for an export of several copies
+- ui: the paste preview describes the inserters in the game's words
+- blueprint: the wiring reference shows each combinator's first line and icons like the game, drills included
+- ui: machines are picked from the row's machine icon, with groups, search and icons like recipes
+- ui: a row says when its machine cannot make its recipe
+- ui: Crafting Speed shows the machine's own speed at its quality
+- ui: results show "Belt pickups: None" for a build without belt pickups
+- ui: results note an inserter that is on for part of the period but never woken
+- ui: a holding clock's first note no longer reads as a fault
+- ui: clock details say how the clock was checked and how wake windows and swings differ
 
 ## [0.20.0] - 2026-10-23
 
 ### Added
-- Cars, tanks, cargo wagons and rocket silos can be chests, with mixed items, filtered slots and slots by quality. Sidecar 0.12.0 exports them.
-- Slots filtered to No item or a Deconstruction planner stay blocked. The inventory editor can block every unfiltered slot at once.
-- A mining drill can drop into a chest, a car, a tank, a cargo wagon or a rocket silo.
-- A drill that drops into a chest is switched on just in time to keep the chest topped up, instead of always. Wire it with Read resources off.
-- A product can leave through the container its machine fills, and a container shared by several machines gets a clock.
-- Each clock names the generator version and site that made it.
-- A machine is picked by what it is and its quality, and its recipe picker lists only the recipes it can make.
+- ui: cars, tanks, cargo wagons and rocket silos can be chests
+- ui: car, tank, wagon and silo chests take mixed items, slot filters and quality
+- ui: Sidecar 0.12.0 exports cars, tanks, cargo wagons and rocket silos
+- simulation: slots filtered to No item or a Deconstruction planner stay blocked
+- ui: the inventory editor can block every unfiltered slot at once
+- ui: a mining drill can drop into a chest, car, tank, cargo wagon or rocket silo
+- generation: a drill dropping into a chest is switched on just in time, not always
+- blueprint: a drill dropping into a chest must be wired with Read resources off
+- generation: a product can leave through the container its machine fills
+- generation: a container shared by several machines gets a clock
+- blueprint: each clock names the generator version and site that made it
+- ui: a machine is picked by what it is and its quality
+- ui: a machine's recipe picker lists only the recipes it can make
 
 ### Changed
-- The Type setting (assembling machine, furnace, biochamber) is gone: the machine decides how it is simulated. Older configs and exports still load.
-- The clock's combinators describe what each one switches on in plain terms, with icons.
-- A one-tick window is one condition, clock = 28, instead of two.
-- Each mining drill has its own productivity, in place of one mining productivity level. Older configs and exports still load.
-- The mining speed bonus is entered in percent.
-- Cars, tanks, wagons and silos are named by what they are ("Car 1"), and the inventory grid draws filtered and blocked slots as the game does.
-- A paste whose target is the export's maximum warns you to lower it for headroom.
+- ui: the Type setting is gone, and older configs and exports still load
+- blueprint: the clock's combinators describe what each switches on in plain terms, with icons
+- blueprint: a one-tick window is now one combinator condition instead of two
+- ui: each mining drill sets its own productivity, and older single-level configs and exports still load
+- ui: the mining speed bonus is entered in percent
+- ui: cars, tanks, wagons and silos are named by what they are, such as "Car 1"
+- ui: the inventory grid draws filtered and blocked slots as the game does
+- ui: a paste whose target is the export's maximum warns to lower it
 
 ### Fixed
-- Mining drills mine as in the game, including slow drills and the tick each productivity bonus item appears.
-- A mining drill fills a machine up to the larger of a stack and the insertion limit, plus 64, as in the game.
-- The Diagram opens without freezing the page.
-- A clock rounded down to whole ticks shows the rate it really runs, and holds the target when it runs at most 0.1% fast.
-- A clock whose recovery could not be tried is no longer picked over clocks that recover.
+- simulation: mining drills mine as in the game, including slow drills and productivity bonus timing
+- simulation: a mining drill now fills a machine to the same limit as the game
+- ui: the Diagram opens without freezing the page
+- ui: a clock rounded down to whole ticks shows the rate it really runs
+- generation: a rounded-down clock holds the target when it runs at most 0.1% fast
+- generation: a clock whose recovery could not be tried is no longer selected over recovering clocks
 
 ## [0.19.0] - 2026-10-21
 
 ### Fixed
-- Belt pickups match the game at all four belt speeds (normal, fast, express and turbo), on moving and backed-up belts, in every supported pickup layout.
-- Backed-up belts run out of reachable stacks and refill at belt speed instead of supplying a stack every tick. The arm's reach between grabs is modelled too.
-- Inserters dropping onto a belt wait for real space on it, at all four speeds.
-- A belt-fed inserter takes its first stack in the same tick as in the game, both after waiting for room in its machine and when its window opens as the machine's products are taken.
-- Input windows close before their last return swing, so a belt-fed inserter no longer picks up an extra stack and over-produces.
-- Startup is predicted from placement: a clock enables nothing in its first two ticks, as in the game.
-- Stable verdicts are stricter. Long-run output and recovery after a loss are proven by an exact repeat of the simulated state, and moving input lanes are checked out of step as well as aligned.
-- Builds the game holds now get a stable clock where the generator missed one: the express moving undergrounds, the over-the-hood two-ingredient builds, and the normal backed-up undergrounds and front exit.
-- In Node, a config missing an inserter is refused with the missing inserters, instead of running until the simulation's tick limit.
-- Inserter kind, quality and filter mode are read from Sidecar 0.11.0 captures. Older captures ran every inserter as a legendary stack inserter, so they ask for a recapture.
+- simulation: belt pickups match the game for every belt speed, supply and supported pickup layout
+- simulation: backed-up belts run out of reachable stacks and refill at belt speed
+- simulation: an inserter arm's reach between grabs is now modelled
+- simulation: inserters dropping onto a belt wait for real space on it at every belt speed
+- simulation: a belt-fed inserter takes its first stack in the same tick as in the game
+- generation: a belt-fed inserter no longer picks up an extra stack and over-produces
+- simulation: a clock enables nothing in its first two ticks after placement, as in the game
+- generation: stable verdicts are stricter for long-run output and recovery after a loss
+- generation: moving input lanes are checked out of step as well as aligned
+- generation: express moving undergrounds, over-the-hood two-ingredient builds, normal backed-up undergrounds and front exits get stable clocks
+- ui: in Node, a config missing an inserter is refused, naming the missing inserters
+- ui: inserter kind, quality and filter mode are read from Sidecar 0.11.0 captures
+- ui: older captures, which ran every inserter as a legendary stack inserter, ask for a recapture
 
 ### Added
-- When no clock is stable, the result and the result card say why: the belt's lane phases, the losses it does not get back from, or the closest rate when nothing holds ([#288](https://github.com/abucnasty/clock-generator/pull/288)).
-- A warning for belt pickups whose timing is not tested in the game: belt stacks other than 4, or hands other than 16.
-- Underground pickup layouts are named: side entrance or exit, front entrance or exit, or over the exit's hood. Manual underground configs need a layout, and older Sidecar captures need a recapture.
-- Sidecar 0.11.0 captures pickups over an underground exit's hood and in front of an underground entrance, with their preferred lane and half-tile reach.
-- Each pickup keeps its capture status through import, saving and export; a capture that is unclassified or unsupported has to be recaptured before generating.
+- ui: the result says why no clock is stable: lane phases, unrecovered losses or closest rate ([#288](https://github.com/abucnasty/clock-generator/pull/288))
+- ui: belt pickups with stacks other than 4 or hands other than 16 are flagged untested
+- ui: underground pickups name their layout: side or front entrance or exit, or over the hood
+- ui: underground pickups entered by hand need a layout
+- ui: older Sidecar underground captures need a recapture
+- ui: Sidecar 0.11.0 captures pickups over an underground exit's hood and in front of an entrance
+- ui: each pickup keeps its capture status through import and saving
+- ui: an unclassified or unsupported capture must be recaptured before generating
 
 ### Changed
-- A config that asks one belt lane for more items a second than it carries is refused, with the numbers. Over capacity only when all copies are counted, it is a warning.
-- Belt pickups from a tile another belt side-loads onto are refused with the reason, as splitter pickups are. So are belt pickups by any inserter but the legendary stack inserter, and blacklist filters.
-- Generating clocks takes about a fifth less time than 0.18.0 overall; builds with moving belt pickups take longer ([#244](https://github.com/abucnasty/clock-generator/pull/244), thanks blousy).
-- The one-swing clock is checked first, so a verified clock can be inspected while the other alternatives run.
-- The metallurgic science example matches its build: the game's machine speeds, its inserters' lanes, and a pack chest that removes the packs.
+- ui: asking one belt lane for more than it carries is refused, showing the numbers
+- ui: a lane over capacity only when all copies are counted gets a warning instead
+- ui: belt pickups from a side-loaded tile are refused with the reason, like splitter pickups
+- ui: belt pickups by any inserter but the legendary stack inserter are refused
+- ui: inserter blacklist filters are refused with the reason
+- generation: generating takes about a fifth less time than 0.18.0, but longer with moving belt pickups ([#244](https://github.com/abucnasty/clock-generator/pull/244), thanks blousy)
+- ui: the one-swing clock can be inspected while the other potential clocks still run
+- ui: the metallurgic science example now matches its build's machine speeds, inserter lanes and pack chest
 
 ## [0.18.0] - 2026-10-18
 
 ### Fixed
-- Model moving belt pickups from the stacks within reach, including the shorter exposed length at underground entrances and exits. Try the nearest lane first and fall back to the other lane when it carries the same item. This corrects pickup timing and generated clocks on affected builds.
+- simulation: moving belt pickups take from the stacks within reach, shorter at underground entrances and exits
+- simulation: inserters fall back to the far lane when it carries the same item
 
 ### Added
-- Choose Straight belt or Underground belt for each belt-fed inserter in either editor. Sidecar 0.9.1 captures supported pickup geometry and identifies bends, splitters and inline pickups it cannot classify. Imports and saved results show pickup coverage and the assumptions used for that run.
+- ui: each belt-fed inserter can be set to Straight belt or Underground belt in either editor
+- ui: Sidecar 0.9.1 captures pickups and flags bends, splitters and inline pickups it cannot classify
+- ui: imports and saved results show pickup coverage and the assumptions used for that run
 
 ### Changed
-- Omitted pickup length defaults to a straight belt in the UI and engine. Underground pickups explicitly use half-tile reach.
-- Use Moving or Backed up consistently for input supply, independently of pickup geometry. The config setting is `overrides.backed_up_belts`; older `non_moving_belts` settings migrate on import. Editing either supply or geometry marks previous results out of date.
+- simulation: a pickup without a length is treated as a straight belt
+- simulation: underground pickups use a half-tile reach
+- ui: input supply is set as Moving or Backed up, independently of pickup geometry
+- ui: the older "Belts do not move" setting migrates on import
+- ui: editing supply or pickup geometry marks previous results out of date
 
 ## [0.17.0] - 2026-10-17
 
 ### Added
-- Keep several named builds in the browser: create, duplicate, rename, switch, and share build links. Undo edits, removals, and whole-build replacements.
-- Restore compatible saved results after a reload and remember each build's working views and page position. Cancel a run while retaining previous results or the clocks already found.
-- Start with an example, build by hand, or follow the Sidecar paste guide. Import previews show what will be replaced and offer a suggested target recipe, rate, and Copies.
-- Simplify verified repeated layouts into one complete group plus Copies, preserving total target output, with a preview and whole-build Undo.
-- Bulk-edit selected inserters' stack sizes, filters, and enable rules, including returning settings to Automatic.
-- Inspect the selected clock's wake windows, machine activity, inventories, crafting cycles, and item transfers. Replay recorded item flow on the build diagram, step through a selected route's transfers, and inspect connected entities.
-- Open the selected clock workspace fullscreen, switch clocks there, and use a dedicated installation guide and wiring reference.
-- Infinity chests support Remove unfiltered items, including empty chests that remove all incoming items. Sidecar 0.8.0 exports this setting and reads configured filters instead of current contents.
+- ui: several named builds can be kept in the browser, created, duplicated, renamed and switched
+- ui: builds can be shared by link
+- ui: edits, removals and whole-build replacements can be undone
+- ui: compatible saved results are restored after a reload
+- ui: each build's working views and page position are remembered
+- ui: a run can be cancelled, keeping previous results or the clocks already found
+- ui: a new build starts from an example, by hand, or from the Sidecar paste guide
+- ui: import previews show what will be replaced
+- ui: import previews suggest a target recipe, rate and Copies
+- ui: verified repeated layouts can be simplified into one group plus Copies, with preview and Undo
+- ui: selected inserters' stack sizes, filters and enable rules can be bulk-edited, including back to Automatic
+- ui: panels show the selected clock's wake windows, machine activity, inventories, crafting cycles and item transfers
+- ui: the build diagram replays recorded item flow and steps through a selected route's transfers
+- ui: connected entities can be inspected from the build diagram
+- ui: the selected clock workspace can open fullscreen and switch clocks there
+- blueprint: a dedicated installation guide and wiring reference are added
+- simulation: infinity chests support Remove unfiltered items, including empty ones removing everything
+- ui: Sidecar 0.8.0 exports Remove unfiltered items
+- ui: Sidecar 0.8.0 reads infinity chests' configured filters instead of current contents
 
 ### Changed
-- A fresh coat of factory paint: a reimagined Clock Generator experience. Configure uses one compact Build layout with category help and entity settings on demand. Machine rates can show maximum capacity or their share of the target output.
-- Results lead with the recommended clock, explain its selection and assumptions, and keep clock comparison, deeper searches, and developer details available when needed.
-- Generate checks the current build first; Check only inspects the plan without generating clocks. Validation points to the problem, shows machine capacity when the target is too high, and offers connection and chest repairs.
-- Warn when a final buffer chest can fill up, and offer conversion to an infinity chest or enabling disposal on an existing one. Chest and missing-connection problems share one validation flow.
-- Item and recipe pickers show searchable game names and icons; entity pickers group and filter by type. Enable-rule editing adds plain-language summaries, timing previews, context-aware templates, and confirmation before replacing or discarding drafts.
-- Mark results that belong to an earlier build, explain what changed, and confirm before copying their blueprint. Generate and Copy are highlighted as the next step in a responsive sticky toolbar; messages no longer cover the editor.
-- Add light and system theme choices under More options, with dark as the default. Diagrams use a shared tile grid; keyboard focus, accessible control names, chart patterns, and narrow-screen layouts are improved.
+- ui: the Clock Generator page has a fresh, reimagined design
+- ui: Configure uses one compact Build layout, with category help and entity settings on demand
+- ui: machine rates can show maximum capacity or their share of the target output
+- ui: results lead with the selected clock and explain its selection and assumptions
+- ui: clock comparison, deeper searches and developer details stay available on demand
+- ui: Generate checks the current build first
+- ui: Check only inspects the plan, without generating clocks
+- ui: validation points to the problem and shows machine capacity when the target is too high
+- ui: validation offers connection and chest repairs
+- ui: a final buffer chest that can fill up gets a warning
+- ui: the warning offers converting to an infinity chest or enabling an existing one's disposal
+- ui: chest and missing-connection problems share one validation flow
+- ui: item and recipe pickers show searchable game names and icons
+- ui: entity pickers group and filter by type
+- ui: enable-rule editing adds plain-language summaries, timing previews and context-aware templates
+- ui: enable-rule editing confirms before replacing or discarding drafts
+- ui: results from an earlier build are marked, with what changed
+- blueprint: copying the blueprint of an earlier build's results asks for confirmation
+- ui: Generate and Copy are highlighted as the next step in a responsive sticky toolbar
+- ui: messages no longer cover the editor
+- ui: light and system themes are added under More options, with dark as the default
+- ui: diagrams use a shared tile grid
+- ui: keyboard focus, accessible control names, chart patterns and narrow-screen layouts are improved
 
 ### Fixed
-- Each completed generation selects its new recommended clock, including after switching builds.
-- Empty infinity chests retain their inserter connections when imported from the sidecar.
-- Preserve custom enable rules, fractional Copies, and automatic inserter capacity through editing and imports; Backspace in an editor no longer deletes the selected inserter.
-- Diagram routes avoid node overlaps and separate shared paths. Selection and replay stepping follow connected routes consistently, with transfer quantities shown only at the recorded transfer tick.
-- Opening category pickers reveals the current selection. Fullscreen floating labels stay below the tabs, and the footer no longer hides page content.
+- ui: each finished generation shows its new selected clock, also after switching builds
+- ui: empty infinity chests keep their inserter connections on sidecar import
+- ui: custom enable rules, fractional Copies and automatic inserter capacity survive editing and imports
+- ui: Backspace in an editor no longer deletes the selected inserter
+- ui: diagram routes avoid node overlaps and separate shared paths
+- ui: selection and replay stepping follow connected routes consistently
+- ui: diagram transfer quantities show only at the recorded transfer tick
+- ui: opening a category picker reveals the current selection
+- ui: fullscreen floating labels stay below the tabs
+- ui: the footer no longer hides page content
 
 ## [0.16.0] - 2026-10-16
 
 ### Added
-- Where one ingredient alone lengthens the period, clocks with a shorter period are offered too, with that ingredient's inserters still clocked; Thaeln's cell now has a working clock at 480/s.
-- `check_start_dependence` override (config only): tries every clock from other starts and names the ones that reach the target from some starts only.
-- A belt sink may name the lane and position an inserter drops onto (`drop`), for a moving lane shared with other inserters.
+- generation: shorter-period clocks are offered where one ingredient lengthens the period, like Thaeln's cell at 480/s
+- generation: a config-only override names clocks that reach the target from some starts only
+- ui: an inserter dropping onto a shared moving lane can name its lane and position
 
 ### Changed
-- Clocks are judged from the start the game build has (belts full, machines empty), so some verdicts and selections change.
+- generation: clocks are judged from the game build's start, with belts full and machines empty
 
 ### Fixed
-- A belt-fed inserter whose window opens while its machine is full starts a tick later, a machine puts out held products as soon as there is room, and inserters taking from one machine take turns, as in the game; some results change.
+- simulation: a belt-fed inserter whose window opens on a full machine starts a tick later
+- simulation: a machine puts out held products as soon as there is room
+- simulation: inserters taking from one machine take turns, as in the game
 
 ## [0.15.2] - 2026-10-16
 
 ### Fixed
-- Belts carrying the same items on opposite lanes are exported as two belts (sidecar 0.7.1), so an inserter's nearest lane is read from its own belt; the generator asks for sidecar 0.7.1.
+- ui: sidecar 0.7.1 exports belts carrying the same items on opposite lanes as two belts
+- ui: the generator asks for sidecar 0.7.1
 
 ## [0.15.1] - 2026-10-16
 
 ### Fixed
-- Machine facts show the output block where a machine stops taking ingredients (146 for a cryogenic plastic plant, was 100).
-- Output feeders and `OUTPUT_BLOCK` conditions use that block when it is above a stack.
+- ui: machine facts show the right output block, such as 146 for a cryogenic plastic plant
+- generation: output feeders and output-block conditions use a machine's output block when it exceeds a stack
 
 ## [0.15.0] - 2026-10-15
 
 ### Changed
-- `copies` may be a fraction such as 5.5, for a build that holds part of a block.
-- The chemical science samples are replaced by one shared-foundry block at 5.5 copies.
+- ui: Copies may be a fraction, such as 5.5, for a partial block
+- ui: the chemical science samples are replaced by one shared-foundry block at 5.5 copies
 
 ## [0.14.0] - 2026-10-15
 
 ### Changed
-- Game data from Factorio 2.1.21; the calls header shows the game version.
-- Unsupported builds are refused with the reason and the roadmap item that adds them (docs/ROADMAP.md).
-- Inserters onto a belt or into a chest may filter any item.
-- Inserters can name their kind and quality (`prototype`, `quality`); `stack_size` is now optional. Belt timing for kinds other than the legendary stack inserter is not checked yet.
-- A config that repeats one unit several times is refused; describe one unit and set `copies`.
+- simulation: game data now comes from Factorio 2.1.21
+- ui: the calls header shows the game version
+- ui: unsupported builds are refused with the reason and the roadmap item that adds them
+- ui: inserters dropping onto a belt or into a chest may filter any item
+- ui: inserters can name their kind and quality
+- ui: an inserter's stack size is now optional
+- simulation: belt timing is not yet checked for inserters other than the legendary stack inserter
+- ui: a config repeating one unit several times is refused, asking for one unit and Copies
 
 ### Fixed
-- Long chains no longer fail with "Invalid input format".
+- generation: long chains no longer fail with "Invalid input format"
 
 ## [0.13.0] - 2026-10-15
 
 ### Changed
-- The wake-ups a clock is ranked and selected by now count an inserter waiting to put items into a machine as woken when the machine starts a craft, not when it finishes one or pays out a productivity bonus, which wakes no input. The inserters that take from a machine are still woken by its finished crafts and payouts. On builds with productivity the figures shown for every clock fall: on the advanced circuit build with its belts standing still, from 509.6 to 400.6 wake-ups a minute; on the low density structure build from 703.1 to 590.6; on agricultural science from 3,651 to 2,703. A few rise, where a machine stands idle between crafts and its start falls on another tick than its last finish: metallurgic science from 954 to 1,089. No build selects another clock. A recording of the game shows the same count, read from each machine's status and finished products, and says for each machine how far that reading has been checked: on biochambers it is known to miss, on machines never recorded it is not checked.
+- simulation: an inserter waiting to fill a machine now counts as woken when a craft starts
+- ui: wake-ups shown for builds with productivity mostly fall, without changing any selected clock
+- ui: game recordings show the same wake-up count, and how far each machine's reading is checked
 
 ## [0.12.1] - 2026-10-15
 
 ### Changed
-- The mechanism the clocking advice rests on, that a productivity payout does not wake an inserter waiting to put items into a machine, is now confirmed on a second design with the same kind of machine (the advanced circuit electromagnetic plant). Other kinds of machine are not tested. Text only: no clock, selection or call changes.
+- ui: the clocking advice is now also confirmed on the advanced circuit electromagnetic plant
 
 ## [0.12.0] - 2026-10-15
 
 ### Changed
-- The advice on which inserters are worth clocking counts wake-ups in true craft starts: an inserter waiting to put items into a machine counts as woken when the machine starts a craft, not when it pays out a productivity bonus, which wakes no input. The thresholds follow: below 53 wake-ups a minute leave unwired, from 158.6 clock, marginal between 53 and 175.7. The count 0.11.0 used, and its call, are still shown beside each group. On machines with productivity that count ran high: on the advanced circuit build at +175%, 1,164 wake-ups a minute where the game makes 625. Each group also says how far its count has been checked against the game. The thresholds are a prediction still to be judged on fresh saves, and the mechanism they rest on is measured on one build. No clock and no selection changes.
+- ui: clocking advice counts an input inserter as woken when its machine starts a craft
+- ui: clocking advice now leaves unwired below 53 wake-ups a minute, marginal between 53 and 175.7
+- ui: each group still shows the 0.11.0 count and call beside the new one
+- ui: each group says how far its wake-up count has been checked against the game
 
 ## [0.11.0] - 2026-10-14
 
 ### Added
-- Advice on which inserters are worth clocking, from the inserter cost benchmarks: each group of inserters of a build gets a call, "clock" or "leave unwired", firm or marginal, from the wake-ups a minute a clock removes from each of its inserters (below 63.5 leave unwired, from 158.6 clock, marginal between 63.5 and 207.6). It is worked out for a build's selected clock against the same build with every inserter always enabled, or from two recordings of the game, one unwired and one clocked. It is advice about update time only: it changes no clock and no selection, and is never a reason to drop a clock a build needs for its rate. The rule was measured on saves of 91,000 to 606,000 entities, and a call from the simulator was checked against the game on one build.
+- ui: each group of inserters gets update-time advice: "clock" or "leave unwired", firm or marginal
+- ui: the advice compares the selected clock with every inserter always enabled, or two game recordings
 
 ## [0.10.0] - 2026-10-14
 
 ### Added
-- A potential clock called "Even hands". Every inserter gets one window for each hand it moves in the clock period, spread evenly over the period, and each window is a tick shorter than the inserter's hand cycle, so it moves one hand whenever in it the source has the hand and the machine it puts into takes it. Inserters that move the same hands per period get the same windows and share one window decider: the two halves of a build that do the same thing open and close together, and two inserters that take from one machine at the same rate take from it on the same ticks. It is made straight from the plan, without a search, and is offered where every inserter takes from a machine or a chest and moves a whole number of hands per period, and the build has no mining drills, no loop of machines and no fuel or by-product inserters.
+- generation: the "Even hands" potential clock spreads one window per hand evenly over the period
+- blueprint: in Even hands, inserters moving the same hands per period share one window decider
+- generation: Even hands skips builds with mining drills, machine loops, or fuel or by-product inserters
 
 ### Fixed
-- The planning of fractional swings counted an inserter's hands into a machine as if the machine's stock had to stay at or under the insertion limit after each drop. In the game a machine takes a hand while its stock is under the limit, and the hand goes in whole. Fractional swings can now be planned on builds where it failed before with "maximum allowed is 2 due to insertion limits", and is listed there.
+- generation: fractional swings no longer fails with "maximum allowed is 2 due to insertion limits"
 
 ### Changed
-- Accumulators at 640 a second ([#152](https://github.com/abucnasty/clock-generator/issues/152)) select even hands: 602 wake-ups per minute against 2,907 for the clock 0.9.1 selected, with 5 window deciders, one for each thing the two halves do. Recorded in the game: 576 accumulators in every period. The searches are no longer run for this build.
-- Chemical science with belts moving selects fractional swings, at 10.1 wake-ups per minute against 20.4. Not checked in the game: that sample has no scaffold.
-- Utility science with direct-insert low density structures, with "Belts do not move" on, selects fractional swings, which is nearer the target rate than the clock it selected before. No clock holds the target rate on that build, as before.
+- generation: accumulators at 640 a second now select Even hands, with far fewer wake-ups ([#152](https://github.com/abucnasty/clock-generator/issues/152))
+- generation: chemical science with moving belts now selects fractional swings, halving its wake-ups
+- generation: utility science with direct-insert low density structures on still belts selects fractional swings
 
 ## [0.9.1] - 2026-10-14
 
 ### Fixed
-- A clock could hold the target rate in the simulator and fall short in the game on builds where machines feed machines directly, such as accumulators at 640 a second ([#152](https://github.com/abucnasty/clock-generator/issues/152)): the clock 0.9.0 selected for that build made 512 to 544 of its 576 accumulators a period in the game. The simulator now follows two rules of the game it had wrong. An inserter whose window opens in the tick another inserter takes the products of the machine it puts into takes its first items a tick later, unless that other inserter's window opened in the same tick. An inserter holding part of a hand from a machine takes no more while the machine it puts into is full at its output. Such a clock is now unstable, and the clock selected instead holds the rate in the game.
+- simulation: inserters between machines feeding each other directly now wait as in the game
+- generation: accumulators at 640 a second and similar direct-feed builds get a clock holding in-game ([#152](https://github.com/abucnasty/clock-generator/issues/152))
 
 ### Changed
-- Agricultural science selects batched swings (5 output swings per cycle) again, with fewer wake-ups than the 2-swing clock it selected since 0.6.0: under the corrected rules it gets back to its rate after the nutrients run out. The inserters that bring eggs to the science biochamber are no longer clocked in that build; they stay always enabled.
-- Other builds can get another selected clock or other wake-up figures. On the sample builds, utility science with direct-insert low density structures and the chain always on selects uneven output swings, since batched swings no longer gets back after the coal runs out.
+- generation: agricultural science selects batched swings again, with fewer wake-ups than its 2-swing clock
+- generation: agricultural science's egg inserters to the science biochamber are no longer clocked
+- generation: utility science with direct-insert low density structures, chain always on, selects uneven output swings
 
 ## [0.9.0] - 2026-10-14
 
 ### Changed
-- An imported config file is now checked. One whose structure is broken, or that is not a config, is refused with what is wrong with it. Something left to fix, such as an inserter end left unset after its machine, belt or chest was removed, or 0 items per second, still imports and is marked red in the form.
-- The browser tab says "Factorio Clock Generator".
-- The sidecar mod is at 0.7.0, and the generator asks for that version. An inserter that takes from or drops into something not in the JSON, such as an empty belt or chest, a lab or a machine outside the selection, is left out of the JSON. It used to point at machine, belt or chest 1, which is some other entity. The window with the JSON lists the inserters left out and why. Selecting an assembling machine without a recipe, or a lab, no longer crashes the game. A paste from 0.6.0 still imports, with a note that nothing in it is affected and that the mod can be updated to 0.7.0.
+- ui: a broken file imported as a config is refused, saying what is wrong
+- ui: an import with fixable problems, like an unset inserter end, loads with them marked red
+- ui: the browser tab says "Factorio Clock Generator"
+- ui: the generator asks for sidecar 0.7.0
+- ui: sidecar 0.7.0 leaves out an inserter whose source or target is not exported
+- ui: the sidecar's export window lists the inserters left out and why
+- ui: sidecar 0.7.0 no longer crashes the game on an assembling machine without recipe or lab
+- ui: a paste from sidecar 0.6.0 still imports, noting the mod can be updated
 
 ### Fixed
-- Removing a machine, belt or chest unsets the inserter ends and drill targets at it. They kept its id, which pointed at no entity, or at the next one added.
-- The id of a removed entity is no longer given to the next one added.
-- A saved configuration that cannot be loaded is no longer lost. It is kept in the browser's localStorage under `clock-generator-config.backup`, and the page says so.
-- The page shows an error when it cannot start, instead of staying on "Loading Factorio data..." for good.
+- ui: removing a machine, belt or chest unsets the inserter ends and drill targets at it
+- ui: a removed entity's id is no longer given to the next one added
+- ui: an unloadable saved configuration is kept as a browser backup, and the page says so
+- ui: the page shows an error when it cannot start, instead of loading forever
 
 ## [0.8.0] - 2026-10-12
 
 ### Added
-- "Search for fewer wake-ups" switch under Advanced Overrides (`overrides.search_for_fewer_wake_ups`, off by default). It runs the four searches (observed windows, uneven output swings, shifted swings, full-hand output swings) for every build and selects the clock with the fewest wake-ups among all of them, as earlier versions did.
+- generation: a "Search for fewer wake-ups" switch runs all four searches and selects the fewest wake-ups
 
 ### Changed
-- Generating is faster on most builds. The four searches now only run when no other potential clock is stable. A build that needs a search to get a stable clock still gets all four.
-- Where the searches are left out, the Potential Clocks panel says so. The selected clock is stable, and it can have more wake-ups than the one a search would have found. Turn on "Search for fewer wake-ups" to get the selection of earlier versions.
-- The Potential Clocks panel says that a clock's wake-ups are counted from one start of the clock. Another start can settle into a different figure.
+- generation: the four searches now run only when no other potential clock is stable, generating faster
+- ui: the Potential Clocks panel says when the searches were left out
+- ui: the Potential Clocks panel says a clock's wake-ups are counted from one start
 
 ## [0.7.0] - 2026-10-11
 
 ### Changed
-- Full-hand output swings are no longer ranked ahead of every other clock on a machine with spare speed. Among the stable clocks the one with the fewest wake-ups is selected, as for every other kind of clock.
-- When no clock holds the target rate and two are equally near it, the one that holds its expected output from a clean start is selected before one that drifts.
-- Observed windows, uneven output swings, shifted swings and full-hand output swings are now searched for in the same way: each candidate is tried from a dozen clock starts, one whose neighbours also pass is preferred, and the pick is confirmed with the long run. Some builds get a clock with fewer wake-ups, and some get a stable clock where none held before.
-- Generating takes about 15% longer, for the more thorough search.
+- generation: full-hand output swings are no longer ranked first on machines with spare speed
+- generation: of two equally near clocks, the one not drifting from a clean start is selected
+- generation: observed windows, uneven, shifted and full-hand output swings are now searched more thoroughly
+- generation: generating takes about 15% longer
 
 ## [0.6.1] - 2026-10-11
 
 ### Changed
-- The generator was restructured inside. The clocks it makes are the same as in 0.6.0: every sample build gets the same potential clocks, the same windows and the same selected clock.
-- The sidecar mod has a version of its own from now on and stays at 0.6.0. This release needs no update of the mod.
+- generation: every sample build still gets the same potential clocks, windows and selected clock as 0.6.0
+- ui: the sidecar mod now has its own version, staying at 0.6.0 with no update needed
 
 ## [0.6.0] - 2026-10-10
 
 ### Added
-- Biochambers, the first machine type that burns fuel: a fuel slot, nutrients burned only while crafting, and fuel use in the machine facts. Machine config gains an optional `energy_consumption_bonus` and `fuel`.
-- Fuel inserters run on a clock of their own, sized from how fast the machine burns fuel, so the inserter is enabled as seldom as is safe. A Fuel tab in the results shows burn rates, the fuel clocks and the fuel each machine held.
-- An item can be both an ingredient and the fuel of a machine, like nutrients in a pentapod egg biochamber. Validation reports a missing fuel inserter.
-- Recipes with more than one result, such as `jellynut-processing`. An inserter that only takes a by-product away gets a clock of its own.
-- Recipes that make their own ingredient, such as `pentapod-egg`, and builds where machines feed each other in a loop. The inserters of a loop stay always enabled, except one that feeds the machine the output is taken from, which is disabled while that machine is blocked where the clock still holds. The results warn that the loop must already hold the item and that the clock cannot restart it.
-- Wake-ups: each potential clock lists how often the machines wake its enabled, waiting inserters, per minute, and its insights break that down by inserter. Fewer is lighter on update time.
-- Belt column: each potential clock names the belt it is made for, "moving (+4 ticks)" with belt pickup slack or "non-moving" when its windows only fit a full belt that stands still. A subtick clock is always non-moving.
-- "Belts do not move" switch under Advanced Overrides (`overrides.non_moving_belts`, off by default): clocks are made without belt pickup slack and the one with the fewest wake-ups is selected. An inserter that also takes fuel off the belt gets room for a hand of fuel in its windows when the clock does not hold without it.
-- Nearest lane of a belt: an inserter that takes two items off one belt takes from the lane nearest to it first, as the game does. Set it with `near_lane` on the belt an inserter picks up from, or in the inserter's panel; the sidecar mod exports it. Without it the order of the filters is used, as before.
-- Backpressure loss: a clock that holds the target rate is also tried for an input that stops arriving and an output that is not taken away. A clock the build does not recover under is listed as "No recovery" with the losses that break it, and is only selected when no clock recovers. It is tried in the simulator only, fluids are not cut, and generating takes up to a fifth longer.
-- Deadlock risk: a build where two inserters bring the same item to a machine, and one of them brings another item too, can stop for good. The generator reads this off the config, names it above the potential clocks and warns when a blueprint is copied. On such a build the backpressure verdict is shown and does not decide the selection.
-- When no clock holds the target rate, the one nearest to it is selected, and copying its blueprint warns of the rate it runs at.
-- Every blueprint has a lock: a constant combinator under the clock, off by default. No inserter is enabled while it is on, and the clocks start again from the beginning when it is switched off.
-- Blueprints record their target rate in the description and on the clock combinator. Combinator descriptions name the recipes their inserter or drill works with, and what each modulo and subtick combinator is for.
-- Potential clocks show their output swings per cycle and the rate they achieved.
-- The timeline shows, under each row, the state the entity would show in Factorio, named as the game names it, with "no fuel" for a burner machine that has run out.
-- Pasting from an older sidecar mod says what that version does not export and asks once to update it.
+- simulation: biochambers are supported, with a fuel slot and nutrients burned only while crafting
+- ui: machine facts show fuel use
+- ui: a machine can set its energy consumption bonus and fuel
+- generation: fuel inserters get a clock of their own, enabled as seldom as is safe
+- ui: a Fuel results tab shows burn rates, fuel clocks and each machine's fuel held
+- simulation: an item can be both ingredient and fuel, like nutrients in a pentapod egg biochamber
+- ui: validation reports a missing fuel inserter
+- simulation: recipes with more than one result, such as jellynut processing, are supported
+- generation: an inserter that only takes a by-product away gets a clock of its own
+- simulation: recipes that make their own ingredient, like pentapod egg, and machine loops are supported
+- generation: loop inserters stay always enabled, except the one feeding the output machine
+- ui: results warn that a loop must already hold its item and cannot be restarted
+- ui: each potential clock lists its wake-ups a minute
+- ui: insights break each clock's wake-ups down by inserter
+- ui: a Belt column names whether each potential clock is for moving or non-moving belts
+- generation: a subtick clock is always made for non-moving belts
+- generation: a "Belts do not move" switch makes clocks without belt pickup slack
+- generation: an inserter taking fuel off the belt too gets window room for a fuel hand
+- simulation: an inserter taking two items off one belt takes from its nearest lane first
+- ui: a belt's nearest lane is set in the inserter's panel or exported by the sidecar
+- generation: clocks are tried against a stopped input and an output not taken away
+- ui: non-recovering clocks are listed "No recovery", with the losses that break them
+- generation: a "No recovery" clock is selected only when no clock recovers
+- generation: recovery checks make generating take up to a fifth longer
+- ui: a deadlock risk warning appears where one of two same-item inserters brings another item too
+- blueprint: copying a blueprint of a build at deadlock risk warns
+- generation: on a deadlock-risk build, the recovery verdict is shown but does not decide selection
+- generation: when no clock holds the target rate, the nearest one is selected
+- blueprint: copying an off-target clock's blueprint warns of the rate it runs at
+- blueprint: every blueprint has a lock combinator that holds all inserters off and restarts the clock
+- blueprint: blueprints record their target rate in the description and on the clock combinator
+- blueprint: combinator descriptions name their recipes and what each modulo and subtick combinator does
+- ui: potential clocks show their output swings per cycle and the rate they achieve
+- ui: the timeline shows each entity's state as Factorio names it, including "no fuel"
+- ui: a paste from an older sidecar names what it lacks and asks once to update
 
 ### Changed
-- The clock selected for you is the stable one with the fewest wake-ups a minute, where it was the one with the fewest windows. A clock without belt pickup slack is only selected for you when no clock with the slack holds the target rate.
-- "Planned + belt pickup slack (+4 ticks)" is now "Batched swings", and "Planned" is "Batched swings, non-moving belt". The ids `planned-belt-slack` and `planned` stay.
-- The clock counts from 1 to its period instead of from 0, so a switched-off clock enables nothing. Generated blueprints now need Factorio 2.1.
-- Every potential clock is confirmed with a long run, ten minutes of game time or 120 periods, whichever is shorter. It catches drift that a check of one period missed.
-- The simulator follows recordings of Factorio 2.1.21 more closely: the state an inserter shows, belt pickups into a machine that takes no more, the tick a clocked or a waiting inserter acts in, and an output block larger than a stack. The rules are in `GOALS.md`.
-- Full-hand output swings are searched for in more cases, and ranked first where a machine has at least 5% of spare speed.
-- More output swing counts are offered when batched swings backed off to a lower count.
-- Generating names the inserter that is missing from the transfer plan instead of failing with `No value found for key`.
-- Insights draw where the exported clock swings differently than the plan as a lane chart instead of lists of ticks.
+- generation: the selected clock is the stable one with the fewest wake-ups, not fewest windows
+- generation: a clock without belt pickup slack is selected only when none with slack holds
+- ui: "Planned + belt pickup slack" is now "Batched swings", and "Planned" "Batched swings, non-moving belt"
+- blueprint: a switched-off clock now enables nothing, counting from 1 instead of 0
+- blueprint: generated blueprints now need Factorio 2.1
+- generation: every potential clock is confirmed with a long run, catching drift a one-period check missed
+- simulation: inserter states, belt pickups into full machines and inserter timing now match Factorio 2.1.21
+- simulation: an output block larger than a stack now matches Factorio 2.1.21
+- generation: full-hand output swings are searched for in more cases
+- generation: full-hand output swings rank first where a machine has at least 5% spare speed
+- generation: more output swing counts are offered when batched swings backs off to a lower count
+- ui: a missing inserter in the transfer plan is named, not "No value found for key"
+- ui: insights show where the clock swings off-plan as a lane chart, not tick lists
 
 ### Fixed
-- An inserter or mining drill set to `ALWAYS` gets no combinator, and every clock is checked with it always enabled. It was given clock windows like any other.
-- A clock period that is a whole number of ticks is no longer offered as a subtick clock through a rounding error.
-- A craft starts whatever the output holds, the output block only stops inserters bringing more, and a full productivity bar pays out when a craft finishes.
-- The transfer plan is solved for all machines at once: an item needed at two levels of a chain is no longer counted twice, and an output machine with several output inserters is counted by all of them.
-- Inserters move at most what the item stacks to, take turns at a machine they wait on together, and keep a window for a hand that is in flight when the clock period starts.
-- Combinator descriptions are cut to the 500 bytes Factorio keeps.
+- blueprint: an always-enabled inserter or mining drill gets no combinator and is checked always on
+- generation: a whole-tick clock period is no longer offered as a subtick clock
+- simulation: a craft starts whatever its machine's output holds
+- simulation: the output block only stops inserters bringing more
+- simulation: a full productivity bar pays out when a craft finishes
+- generation: an item needed at two levels of a chain is no longer counted twice
+- generation: an output machine with several output inserters is counted by all of them
+- simulation: inserters move at most what the item stacks to
+- simulation: inserters waiting on one machine together take turns
+- generation: an inserter keeps a window for a hand in flight when the clock period starts
+- blueprint: combinator descriptions are cut to the 500 bytes Factorio keeps
 
 ### Removed
-- HOCON support. Configurations are JSON.
+- ui: HOCON configurations are no longer supported, only JSON
 
 ## [0.5.0] - 2026-10-05
 
