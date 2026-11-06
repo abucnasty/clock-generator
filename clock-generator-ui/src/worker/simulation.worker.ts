@@ -246,16 +246,26 @@ function handleValidate(requestId: number, config: Config): void {
     }
 }
 
-/** Whether the engine refused the build with text for the user; anything else is an unexpected error */
+/**
+ * Whether the engine refused the build with text for the user; anything else is an unexpected error.
+ *
+ * The engine's refusals are plain `Error`s today (the inserter-scope, planning and output-transfer refusals name the
+ * inserter, machine or target), next to its own classes. So an error is internal only when it is not an `Error` at all
+ * or is one of JavaScript's built-in subclasses, which the engine never throws on purpose: a bug or a data file of
+ * another version. A typed base class for every engine refusal would make this exact instead of by exclusion.
+ */
 function isEngineRefusal(error: unknown): boolean {
-    return error instanceof clockGenerator.ConfigValidationError
+    if (!(error instanceof Error)) return false;
+    if (error instanceof clockGenerator.ConfigValidationError
         || error instanceof clockGenerator.InserterCoverageError
         || error instanceof clockGenerator.CopiesError
         || error instanceof clockGenerator.FeasibilityError
         || error instanceof clockGenerator.LaneCapacityError
-        || error instanceof clockGenerator.AssertionError
-        || (error instanceof Error && error.message.startsWith('The current configuration cannot meet the target production rate.'));
+        || error instanceof clockGenerator.AssertionError) return true;
+    return !BUILT_IN_ERRORS.some(builtIn => error instanceof builtIn);
 }
+
+const BUILT_IN_ERRORS = [TypeError, ReferenceError, RangeError, SyntaxError, EvalError, URIError];
 
 function internalErrorOf(error: unknown): InternalError {
     return { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined,

@@ -279,9 +279,7 @@ describe('a captured inserter kind, quality and filter mode', () => {
         expect(listed(await coverageOf(config), config.machines, { message: checked.message })).toHaveLength(1);
     });
 
-    // The inserter-scope refusals are plain Errors until the engine gives them a class (#650); the worker does not match
-    // on their text. `it.fails` turns red when the class lands: then recognise it in isEngineRefusal and make this `it`.
-    it.fails('Check shows the refused blacklist as a refusal, not as an internal error', async () => {
+    it('Check shows the refused blacklist as a refusal, not as an internal error', async () => {
         const config = await pastedSavedReloaded(exported({}, blacklist));
         const checked = await send({ type: 'validate', requestId: 55, config }) as ValidationFailedResponse;
         expect(checked.message).toContain('`filter_mode` "blacklist" is refused');
@@ -436,6 +434,28 @@ describe('an unexpected error in the check is not an engine refusal', () => {
             expect(response.type).toBe('validation-failed');
             expect(response.internal).toMatchObject({ message: 'Cannot convert undefined or null to object', dataMismatch: false });
             expect(response.internal?.stack).toContain('TypeError');
+        } finally {
+            spy.mockRestore();
+        }
+    });
+
+    it('a plain Error from a planning refusal is a refusal', async () => {
+        const engine = await import('clock-generator/browser');
+        const spy = vi.spyOn(engine, 'validateConfig').mockImplementation(() => { throw new Error('Machine 1: the target is not made'); });
+        try {
+            const response = await send({ type: 'validate', requestId: 34, config }) as ValidationFailedResponse;
+            expect(response).toMatchObject({ type: 'validation-failed', message: 'Machine 1: the target is not made' });
+            expect(response.internal).toBeUndefined();
+        } finally {
+            spy.mockRestore();
+        }
+    });
+
+    it('a thrown value that is not an Error is internal', async () => {
+        const engine = await import('clock-generator/browser');
+        const spy = vi.spyOn(engine, 'validateConfig').mockImplementation(() => { throw 'oops'; });
+        try {
+            expect((await send({ type: 'validate', requestId: 35, config }) as ValidationFailedResponse).internal).toMatchObject({ message: 'oops' });
         } finally {
             spy.mockRestore();
         }
