@@ -269,6 +269,9 @@ describe("hands that fill the cycle", () => {
         }
         // every other window as it was
         for (const [id, window] of made.windows) if (!made.guarded.some(it => it.inserter_id === id)) expect(split.get(id)).toBe(window);
+        // a taker of one hand has nothing to split: its window stays
+        const one_hand = { ...made.guarded[0], hands: 1 };
+        expect(perHandWindows(made.windows, [one_hand], duration.ticks).get(one_hand.inserter_id)).toBe(made.windows.get(one_hand.inserter_id));
     });
 
     it("names no guarded taker where the windows are shared, or where the guard is one switch for every taker and leaves none busy", () => {

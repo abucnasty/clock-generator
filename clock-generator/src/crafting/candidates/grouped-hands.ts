@@ -895,11 +895,12 @@ export function groupedHandsClock(
 
 /**
  * The windows of a grouped hands clock with each guarded taker's one span (`guarded_takers`) split into a window of one tick at
- * each pick, `start + j x cycle` for j = 0 to hands - 1 (DESIGN 3.1, R-busy, the per-hand shape); every other window as it is
+ * each pick, `start + j x cycle` for j = 0 to hands - 1 (DESIGN 3.1, R-busy, the per-hand shape); every other window as it is. A
+ * taker of one hand has nothing to split: its window of two ticks stays.
  */
 export function perHandWindows(windows: ReadonlyMap<string, OpenRange[]>, guarded: readonly GuardedTaker[], period: number): Map<string, OpenRange[]> {
     const split = new Map(windows);
-    for (const taker of guarded) {
+    for (const taker of guarded.filter(it => it.hands > 1)) {
         const ticks = Array.from({ length: taker.hands }, (_, j) => (taker.start + j * taker.cycle_ticks) % period).sort((a, b) => a - b);
         split.set(taker.inserter_id, ticks.map(tick => OpenRange.from(tick, tick)));
     }
@@ -909,13 +910,13 @@ export function perHandWindows(windows: ReadonlyMap<string, OpenRange[]>, guarde
 /**
  * The per-hand variant of a grouped hands clock with guarded takers (`perHandWindows`), on the plan and with the options its clock
  * was made with, checked as the clock is: the margin of `holdsWithMargin`, then the clock-only runs from the start phases and the
- * long run. Null for a clock with no guarded takers or not made by `groupedHandsClock` here; throws where the windows do not hold
- * with their margin.
+ * long run. Null for a clock with no guarded taker of more than one hand, or not made by `groupedHandsClock` here; throws where the
+ * windows do not hold with their margin.
  */
 export function perHandWindowsClock(clock: BlueprintGenerationResult): BlueprintGenerationResult | null {
     const source = per_hand_sources.get(clock.clock_windows);
     const guarded = clock.grouped_hands?.guarded_takers;
-    if (source === undefined || guarded === undefined) return null;
+    if (source === undefined || guarded === undefined || !guarded.some(it => it.hands > 1)) return null;
     const { made, options, planned, left_open } = source;
     const period = made.run.duration.ticks;
     const windows = perHandWindows(planned.windows, guarded, period);
