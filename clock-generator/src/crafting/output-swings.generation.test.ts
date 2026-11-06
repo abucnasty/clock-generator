@@ -109,12 +109,13 @@ describe("generateClockForConfig", () => {
                 });
 
                 // inserter 1 and 3 windows end 3 ticks earlier since belt windows close before their last return swing,
-                // and inserter 3's last one more since its last hand after a craft start comes a tick sooner
-                it("batched swings for a moving belt add 4 ticks to the belt input inserters", () => {
+                // and inserter 3's last one more since its last hand after a craft start comes a tick sooner; they stay
+                // open the 4 ticks of belt pickup slack after their last pickup already, and none are added (#595)
+                it("batched swings for a moving belt keep the belt pickup slack inside the belt input inserters' windows", () => {
                     expect(windowsOf("planned-belt-slack")).toEqual({
                         "inserter:2": [{ start: 1, end: 49 }, { start: 169, end: 209 }],
-                        "inserter:3": [{ start: 13, end: 37 }, { start: 181, end: 205 }, { start: 214, end: 226 }],
-                        "inserter:1": [{ start: 206, end: 218 }],
+                        "inserter:3": [{ start: 13, end: 33 }, { start: 181, end: 201 }, { start: 214, end: 222 }],
+                        "inserter:1": [{ start: 206, end: 214 }],
                     });
                 });
 
@@ -342,7 +343,11 @@ describe("generateClockForConfig", () => {
             it("keeps the planned windows of the first cycle and the planned window lengths", () => {
                 const lengths = (windows: typeof shifted.result.clock_windows) => Object.fromEntries(
                     Object.entries(windows).map(([key, ranges]) => [key, ranges.map(range => range.end - range.start)]));
-                expect(lengths(shifted.result.clock_windows)).toEqual(lengths(primary.result.clock_windows));
+                // the primary keeps the belt pickup slack inside its windows (#595); the shifted clock adds it after them
+                expect(primary.result.belt).toEqual({ kind: "moving", slack_ticks: [4], inside: true });
+                const added = (key: string) => shifted.result.belt_pickup_slack_ticks[key] ?? 0;
+                expect(lengths(shifted.result.clock_windows)).toEqual(Object.fromEntries(Object.entries(lengths(primary.result.clock_windows))
+                    .map(([key, ranges]) => [key, ranges.map(length => length + added(key))])));
                 expect(shifted.inserter_window_count).toBe(primary.inserter_window_count);
             });
         });
