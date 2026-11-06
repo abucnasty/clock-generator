@@ -211,14 +211,24 @@ _Avoid_: machine duty, duty (bare)
 
 **Cold start**:
 A start of a build with every machine, belt buffer and hand empty and the supplies full. The clock starts at the first
-tick. The code's `cold_start`. Control theory: a step response from rest (IEC 351-45-27; Janert p.82).
+tick. An opt-in, advanced check: the generator judges clocks from the backpressure start. The code's `cold_start`.
+Control theory: a step response from rest (IEC 351-45-27; Janert p.82).
 _Avoid_: empty start, unloaded start, cold startup
 
 **Backpressure start**:
-A start of a build that is at backpressure: every belt is saturated and every machine output is full. The clock starts
-at the first tick. Control theory has no single term: a step response from a saturated initial state (Janert p.28,
-p.101-103).
+A start of a build in which every entity that can fill without the clock is full. The supply belts are saturated.
+The machines that inserters without a clock fill, and their outputs, are full. The machines that only clocked inserters
+fill are empty. A loop starts from its kick start. The clock starts at the first tick, when the **Clock
+lock** is set to off. The start that the generator judges clocks from: a user can always start a build this way.
+Control theory has no single term: a step response from a saturated initial state (Janert p.28, p.101-103).
 _Avoid_: loaded start, warm start, full backpressure startup
+
+**Kick start**:
+The items put into the machines of a loop before its clock starts, so that the loop can run: a loop cannot fill by
+itself. A noun only: give the loop its kick start. The configuration's `loop_seed_items`. Control theory: like integrator
+preloading (Janert p.103).
+_Avoid_: seed (the game's Yumako, Jellynut and Tree seed items, and the map seed), prime, bootstrap, kick-start (as a
+verb)
 
 **Backpressure**, at a belt pickup:
 The belt is fully saturated. The tile in front of the inserter is a belt that does not move. A moving belt has no
