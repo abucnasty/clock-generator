@@ -120,8 +120,8 @@ describe('field names', () => {
         expect(itemFieldName('release.0', 'left')).toBe('Item, release condition 1');
     });
 
-    it('names a tick field by its side and its wake window', () => {
-        expect([start(), end(2)]).toEqual(['Start tick, wake window 1', 'End tick, wake window 2']);
+    it('names a tick field by its side and its enable window', () => {
+        expect([start(), end(2)]).toEqual(['Start tick, enable window 1', 'End tick, enable window 2']);
     });
 });
 
@@ -134,9 +134,9 @@ describe('ruleProblemsOf, order', () => {
 });
 
 describe('ruleWarningsOf', () => {
-    it('warns of a "Repeat every" the clock period is not a whole number of', () => {
+    it('warns of a "Repeat every" the window cycle is not a whole number of', () => {
         expect(ruleWarningsOf(clockedDraft([['0', '5']], '100'), known)).toEqual([
-            '100 ticks doesn\'t fit a whole number of times into the 264-tick clock period, so the clock can\'t follow this rule exactly.',
+            '100 ticks doesn\'t fit a whole number of times into the 264-tick window cycle, so the clock can\'t follow this rule exactly.',
         ]);
         expect(ruleWarningsOf(clockedDraft([['0', '5']], '132'), known)).toEqual([]);
         expect(ruleWarningsOf(clockedDraft([['0', '5']], ''), known)).toEqual([]);

@@ -46,7 +46,7 @@ export function InstallClockDialog({ open, onClose, selected, blueprintString, s
         actions={blueprintString && <Button variant="contained" color={staleFor || warning ? 'warning' : 'secondary'} onClick={onCopy} startIcon={copied ? <Check /> : <ContentCopy />}>
             {copied ? 'Copied' : copyLabel}
         </Button>}>
-        <Typography variant="body2" sx={{ fontWeight: 600 }}>{selected.counts === 'destroyed' ? HANDS_TEXT.clock(selected.terminalSwingCount) : `${selected.terminalSwingCount} ${selected.terminalSwingCount === 1 ? 'swing' : 'swings'}`} · {wakeUpsText(selected).value.replace(' a minute', ' wake-ups/min')}{selected.beltLabel && ` · ${beltCellText(selected.beltLabel)}`}</Typography>
+        <Typography variant="body2" sx={{ fontWeight: 600 }}>{selected.counts === 'destroyed' ? HANDS_TEXT.clock(selected.terminalSwingCount) : `${selected.terminalSwingCount} ${selected.terminalSwingCount === 1 ? 'swing' : 'swings'}`} · {wakeUpsText(selected).value.replace(' a minute', ' wakeups/min')}{selected.beltLabel && ` · ${beltCellText(selected.beltLabel)}`}</Typography>
         <Typography variant="caption" color="text.secondary" component="p">{clockTechnicalName(selected)} · {REQUIRES_FACTORIO}</Typography>
         {warning && <Alert severity="warning" sx={{ mt: 1 }}>{warning}</Alert>}
         <Tabs value={tab} onChange={(_, value: 'guide' | 'wiring') => setTab(value)} aria-label="Installation help" sx={{ mt: 1, borderBottom: 1, borderColor: 'divider' }}>

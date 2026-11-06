@@ -95,7 +95,7 @@ export function OverridesForm({
                         slotProps={{ htmlInput: { min: 1 } }}
                         sx={{ width: 200 }}
                         size="small"
-                        helperText="Crafting cycles per clock period (overrides the calculated LCM). The swing plan below shows the calculated value."
+                        helperText="Crafting cycles per window cycle (overrides the calculated LCM). The swing plan below shows the calculated value."
                     />
                     <Box sx={{ width: 260, maxWidth: '100%' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -123,14 +123,14 @@ export function OverridesForm({
                                 control={<Switch id={searchId} checked={searchForFewerWakeUps ?? false} color="primary"
                                     slotProps={{ input: { role: 'switch', 'aria-describedby': `${searchId}-help` } }}
                                     onChange={e => onUpdate('search_for_fewer_wake_ups', e.target.checked ? true : undefined)} />}
-                                label="Search for fewer wake-ups"
+                                label="Search for fewer wakeups"
                                 sx={{ mr: 0 }}
                             />
-                            <HelpButton label="About Search for fewer wake-ups">
+                            <HelpButton label="About Search for fewer wakeups">
                                 <Typography variant="body2">
-                                    Runs the four searches for every build: observed wake windows, uneven output swings, shifted swings and full-hand output swings.
-                                    They take most of the time of a generation, so by default they only run when no clock made without a search is stable, except that observed wake windows and shifted swings also run on a short clock that still has wake-ups.
-                                    Where one is, a search can still find a stable clock with fewer wake-ups: turn this on to look for it.
+                                    Runs the four searches for every build: observed enable windows, uneven output swings, shifted swings and full-hand output swings.
+                                    They take most of the time of a generation, so by default they only run when no clock made without a search is stable, except that observed enable windows and shifted swings also run on a short clock that still has wakeups.
+                                    Where one is, a search can still find a stable clock with fewer wakeups: turn this on to look for it.
                                 </Typography>
                             </HelpButton>
                         </Box>

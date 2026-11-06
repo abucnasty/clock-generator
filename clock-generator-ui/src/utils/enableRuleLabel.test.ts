@@ -48,7 +48,7 @@ const DESCRIBED: [string, EnableControlOverride, string, string][] = [
     ['keeps one range and a count when two do not fit', clocked([[1000, 1450], [1740, 1890], [2000, 2100]]),
         'Clocked 1000–1450 +2 more', 'Clocked 1000–1450, 1740–1890, 2000–2100 ticks'],
     ['prints a range that ends before it starts as stored', clocked([[7, 0]]), 'Clocked 7–0', 'Clocked 7–0 ticks'],
-    ['reads an empty range list as no wake windows', clocked([]), 'Clocked, no wake windows', 'Clocked, no wake windows'],
+    ['reads an empty range list as no enable windows', clocked([]), 'Clocked, no enable windows', 'Clocked, no enable windows'],
     ['prints no period of 0', clocked([[0, 7]], 0), 'Clocked 0–7', 'Clocked 0–7 ticks'],
     ['counts the condition of a CONDITIONAL rule', conditional(ruleSet(condition())), 'Conditional: 1 condition', 'Conditional: 1 condition'],
     ['counts the conditions of a CONDITIONAL rule, nested ones included', conditional(nested), 'Conditional: 4 conditions', 'Conditional: 4 conditions'],

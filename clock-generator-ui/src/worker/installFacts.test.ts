@@ -72,17 +72,17 @@ describe('installFactsOf', () => {
             [[1], [2]], blueprint('Inserter 1 for x', 'Inserter 2 for y', 'Clock lock'), []],
     ])('%s', expectDrills);
 
-    describe('drills: the descriptions checked against the wake windows', () => {
+    describe('drills: the descriptions checked against the enable windows', () => {
         const on = [{ start: 1, end: 30 }];
 
         it.each<DrillCase>([
             ['agree: the descriptions say which drills share a combinator',
                 [], blueprint('Drills 1, 3 for [item=iron-ore]'), [[1, 3]], { 'drill:1': on, 'drill:3': on }],
-            ['no description names a clocked drill (their wording changed): the wake windows win, a row per drill',
+            ['no description names a clocked drill (their wording changed): the enable windows win, a row per drill',
                 [], blueprint('Clock for 600 ticks', 'Drill-o-matic 2 for stone'), [[2], [5]], { 'drill:2': on, 'drill:5': on, 'inserter:1': on }],
             ['a clocked drill the descriptions leave out is added; a described one is kept',
                 [[1]], blueprint('Drill 1 for stone'), [[1], [4]], { 'drill:1': on, 'drill:4': on }],
-            ['a drill with no wake windows (never switched on) gets no row', [[1]], empty, [], { 'drill:2': [] }],
+            ['a drill with no enable windows (never switched on) gets no row', [[1]], empty, [], { 'drill:2': [] }],
         ])('%s', expectDrills);
     });
 

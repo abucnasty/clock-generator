@@ -30,6 +30,6 @@ export function CraftingCycleNavigator({ cycles, index, periodTicks, swings, cou
             {' '}The clock repeats every {number(periodTicks)} ticks ({number(periodTicks / cycles.cycleTicks)} crafting cycles).
         </Typography>
         <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5 }}>{definition}</Typography>
-        <Typography variant="caption" color="text.secondary" component="p">Row percentages and wake-ups/min describe the whole clock period.</Typography>
+        <Typography variant="caption" color="text.secondary" component="p">Row percentages and wakeups/min describe the whole window cycle.</Typography>
     </Box>;
 }

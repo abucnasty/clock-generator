@@ -171,10 +171,10 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
     return <Box data-clock-inspection onKeyDown={onKeys}>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 1 }}>
             <TextField select size="small" label="Timeline view" value={inspection.view} onChange={event => patch({ view: event.target.value as TimelineInspection['view'] })} sx={{ display: { xs: 'block', sm: 'none' }, flex: '1 1 100%' }}>
-                <MenuItem value="windows">Wake windows</MenuItem><MenuItem value="activity">Activity</MenuItem><MenuItem value="cycles">Crafting cycles</MenuItem><MenuItem value="transfers">Item transfers</MenuItem><MenuItem value="flow">Flow replay</MenuItem>
+                <MenuItem value="windows">Enable windows</MenuItem><MenuItem value="activity">Activity</MenuItem><MenuItem value="cycles">Crafting cycles</MenuItem><MenuItem value="transfers">Item transfers</MenuItem><MenuItem value="flow">Flow replay</MenuItem>
             </TextField>
             <ToggleButtonGroup value={inspection.view} exclusive size="small" aria-label="Timeline view" onChange={(_, view: TimelineInspection['view'] | null) => { if (view) patch({ view }); }} sx={{ display: { xs: 'none', sm: 'flex' }, flexWrap: 'wrap' }}>
-                <ToggleButton value="windows">Wake windows</ToggleButton>
+                <ToggleButton value="windows">Enable windows</ToggleButton>
                 <ToggleButton value="activity">Activity</ToggleButton>
                 <ToggleButton value="cycles">Crafting cycles</ToggleButton>
                 <ToggleButton value="transfers">Item transfers</ToggleButton>

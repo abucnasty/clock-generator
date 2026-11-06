@@ -54,7 +54,7 @@ export function pastePreview(current: ConfigFormData, incoming: PastedEntities, 
     const spatialCrossing = crossings.find(crossing => crossing.ownerType === 'inserter'
         && inserters.some(inserter => inserter.id === crossing.ownerId && inserter.sink.type === 'belt' && inserter.sink.drop !== undefined));
     const geometryProblem = spatialCrossing
-        ? `Inserter ${spatialCrossing.ownerId} has an imported drop position tied to its route. Import its inserters and referenced entities together, or open a complete edited build file; this selection would reuse geometry with different entities.`
+        ? `Inserter ${spatialCrossing.ownerId} has an imported drop position tied to its route. Import its inserters and referenced entities together, or open a complete edited configuration file; this selection would reuse geometry with different entities.`
         : null;
     return { counts, crossings, geometryProblem };
 }

@@ -10,8 +10,8 @@ import { exampleTitle, type ExampleBuild } from './exampleBuilds';
 // the build is edited, another action offers Undo, or it is closed (decided 2026-10-14). The notice after it has one.
 const UNDO_NOTICE_DURATION_MS = 8_000;
 const UNDO_LABEL = 'Undo';
-export const UNDO_RESET_MESSAGE = 'Build reset.';
-export const UNDO_IMPORT_MESSAGE = 'Build file opened.';
+export const UNDO_RESET_MESSAGE = 'Configuration reset.';
+export const UNDO_IMPORT_MESSAGE = 'Configuration file opened.';
 /** Read out when an editing dialog opening takes the offer away */
 export const UNDO_WITHDRAWN_MESSAGE = 'Undo is no longer offered.';
 /** Read out after an Undo message: the key that undoes too, on a Mac and elsewhere */

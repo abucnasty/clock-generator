@@ -95,8 +95,8 @@ describe('itemsPerSecondHelper', () => {
 
 describe('the clocks table headers', () => {
     it('are the plan\'s words, with non-breaking spaces inside the brackets', () => {
-        expect(WAKE_UPS_HEADER).toBe('Wake-ups/min (1\u00a0copy)');
-        expect(OUTPUT_PER_PERIOD_HEADER).toBe('Output per clock period (1\u00a0copy)');
+        expect(WAKE_UPS_HEADER).toBe('Wakeups/min (1\u00a0copy)');
+        expect(OUTPUT_PER_PERIOD_HEADER).toBe('Output per window cycle (1\u00a0copy)');
     });
 
     it.each([

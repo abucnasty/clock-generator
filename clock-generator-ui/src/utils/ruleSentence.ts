@@ -29,15 +29,15 @@ export const RULE_COPY = {
     auto: 'Auto: the generator decides when it is on.',
     always: 'On all the time.',
     never: 'Never on.',
-    noWindows: 'No wake windows yet.',
-    noWindowsTyped: 'No wake windows yet: enter a start and an end tick.',
+    noWindows: 'No enable windows yet.',
+    noWindowsTyped: 'No enable windows yet: enter a start and an end tick.',
     leftOut: (numbers: number[]) =>
         numbers.length === 1
-            ? ` Wake window ${numbers[0]} is left out until its problem is fixed.`
-            : ` Wake windows ${joinList(numbers.map(String))} are left out until their problems are fixed.`,
+            ? ` Enable window ${numbers[0]} is left out until its problem is fixed.`
+            : ` Enable windows ${joinList(numbers.map(String))} are left out until their problems are fixed.`,
     blueprint: {
         [EnableControlMode.AUTO]: (entity: string) =>
-            `The generator finds this ${entity}'s wake windows, and the blueprint switches it on in them.`,
+            `The generator finds this ${entity}'s enable windows, and the blueprint switches it on in them.`,
         [EnableControlMode.ALWAYS]: () => 'Not wired to the clock: no combinator.',
         [EnableControlMode.NEVER]: () =>
             'The simulator keeps it off. The blueprint has no combinator for it, so keep it off in the game yourself.',
@@ -47,7 +47,7 @@ export const RULE_COPY = {
             `The blueprint holds no circuit condition from this rule. The simulator follows the rule while it plans the clock; the blueprint then switches the ${entity} on in the ticks it moved items.`,
     },
     periodUnknown:
-        'Run Check only or Generate to see the crafting cycle and the clock period. Until then the ticks can\'t be checked against them.',
+        'Run Check only or Generate to see the crafting cycle and the window cycle time. Until then the ticks can\'t be checked against them.',
     fromResults: ' From the clock on Results.',
     fromCheck: ' From your last check.',
     noItem: '(no item)',
@@ -179,8 +179,8 @@ export function periodLineOf(timing: RuleTiming): string {
     const source = from === 'results' ? RULE_COPY.fromResults : RULE_COPY.fromCheck;
     const cycle = `Crafting cycle: ${ticksText(cycleTicks)} ticks.`;
     if (!Number.isInteger(periodTicks)) {
-        return `${cycle} The clock period is ${ticksText(periodTicks)} ticks, not a whole number, so a Clocked rule can't repeat with it.${source}`;
+        return `${cycle} The window cycle time is ${ticksText(periodTicks)} ticks, not a whole number, so a Clocked rule can't repeat with it.${source}`;
     }
     const cycles = Math.round(periodTicks / cycleTicks);
-    return `${cycle} Clock period: ${periodTicks} ticks (${cycles} crafting ${cycles === 1 ? 'cycle' : 'cycles'}).${source}`;
+    return `${cycle} Window cycle time: ${periodTicks} ticks (${cycles} crafting ${cycles === 1 ? 'cycle' : 'cycles'}).${source}`;
 }

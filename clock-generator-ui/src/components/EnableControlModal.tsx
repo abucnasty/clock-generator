@@ -88,7 +88,7 @@ const MODE_DESCRIPTIONS: Record<EnableControlMode, string> = {
     [EnableControlMode.AUTO]: 'The generator decides when it is on (default).',
     [EnableControlMode.ALWAYS]: 'On all the time, with no combinator in the blueprint.',
     [EnableControlMode.NEVER]: 'Never switched on.',
-    [EnableControlMode.CLOCKED]: 'On only during the wake windows you set.',
+    [EnableControlMode.CLOCKED]: 'On only during the enable windows you set.',
     [EnableControlMode.CONDITIONAL]: 'On only while your conditions are true.',
 };
 
@@ -108,7 +108,7 @@ const REPEAT_HELPER = (cycleTicks: number | null) =>
         : `Leave empty to repeat every crafting cycle (${ticksText(cycleTicks)} ticks).`;
 const PLANNED_CAPTION = (label: string, ranges: { start: number; end: number }[]) =>
     `In the clock on Results, ${label} is on at ${ranges.length === 1 && ranges[0].start === ranges[0].end ? 'tick' : 'ticks'} ${joinRanges(ranges)}.`;
-const NO_PLANNED_CAPTION = (label: string) => `The clock on Results has no wake windows for ${label}.`;
+const NO_PLANNED_CAPTION = (label: string) => `The clock on Results has no enable windows for ${label}.`;
 const COPY_FROM_QUESTION = (label: string, summary: string) => `Replace this rule with ${label}'s (${summary})?`;
 const COPIED = (label: string) => `Rule copied from ${label}.`;
 const TEMPLATE_REPLACED = (name: string) => `Conditions replaced with the template ${name}.`;
@@ -471,7 +471,7 @@ export function EnableControlFormContent({
                 {mode === EnableControlMode.CLOCKED && (
                     <Box sx={{ mt: 3, pl: { xs: 0, sm: 4 } }}>
                         <Typography variant="subtitle2" component="h3" sx={{ mb: 1 }}>
-                            Wake windows
+                            Enable windows
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }} data-rule-period="">
                             {periodLineOf(timing)}
@@ -529,7 +529,7 @@ export function EnableControlFormContent({
                         })}
 
                         <Button color="inherit" startIcon={<Add />} onClick={handleAddRange} size="small">
-                            Add wake window
+                            Add enable window
                         </Button>
 
                         {planned ? (

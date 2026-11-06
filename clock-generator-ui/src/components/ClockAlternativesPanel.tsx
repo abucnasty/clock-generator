@@ -27,7 +27,7 @@ import { CLOCK_TABLE_NAME, CLOCK_TABLE_REGION, clockHelpName, termsHelpName } fr
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import { BELT_COPY } from '../utils/beltQuestion';
 import { SUMMARY_COPY, beltCellText, clockTechnicalName, foldedMakes, isStartDependent, plainClockName, recoversOf, wakeUpsAverageOf, worksOf } from '../utils/clockSummary';
-import { PROVISIONAL_WAKE_UP_DEFINITION, TERMS_FOCUS, type GlossaryId } from '../utils/glossary';
+import { WAKEUP_DEFINITION, TERMS_FOCUS, type GlossaryId } from '../utils/glossary';
 import { HelpButton } from './HelpButton';
 import { ScrollX } from './ScrollX';
 import { Panel } from './Panel';
@@ -53,24 +53,24 @@ const COMPARE_COPY = {
     status: 'Status',
     howMadeHeading: 'How it is made',
     worksHeading: 'Does it work?',
-    beltHelp: 'The belt the clock is made for. Moving: each wake window of an inserter that picks up from a belt stays '
+    beltHelp: 'The belt the clock is made for. Moving: each enable window of an inserter that picks up from a belt stays '
         + 'open the ticks shown longer (belt slack), so a pickup that comes late on a moving belt can finish; a rule of '
         + 'thumb for late pickups. Pickup geometry models which moving stacks are within reach; straight belt is the default. Backed up: items '
         + 'stop between pickups and the belt refills the gaps; on a moving belt an inserter can be switched off holding a partial hand. A '
         + 'subtick clock is always made for a backed-up belt, and is not ranked behind other clocks for it. Blank '
         + 'when no clocked inserter picks up from a belt.',
     swingsHelp: 'Total output swings per crafting cycle of each output machine, shared equally across its output inserters. '
-        + 'Per-inserter counts may be fractional. The clock repeats after a whole number of crafting cycles (the clock period).',
+        + 'Per-inserter counts may be fractional. The clock repeats after a whole number of crafting cycles (the window cycle).',
     decidersHelp: 'How many decider combinators the clock\'s blueprint has to switch inserters and drills on and off, not counting the clock itself. Each one is wired to the inserters and drills its description names, so fewer deciders is less wiring to do by hand.',
-    windowsHelp: 'How many wake windows the clock has in all: stretches of ticks during which it switches an inserter on.',
-    wakeUpsHelp: PROVISIONAL_WAKE_UP_DEFINITION + ' Counted per minute, summed over the inserters of one copy of the build '
+    windowsHelp: 'How many enable windows the clock has in all: stretches of ticks during which it switches an inserter on.',
+    wakeUpsHelp: WAKEUP_DEFINITION + ' Counted per minute, summed over the inserters of one copy of the build '
         + 'in a long run of this clock. Shown for clocks that were run long enough to count them. It is the count from '
         + 'one start point, but on a build with a loop of machines: a clock there settles into another steady state from '
         + 'another start point, with another count, so its figure is the average over 12 start points, and the cell says so.',
     noneRecover: 'No clock qualifies as stable across its completed checks. Compare its modeled rate, recovery and sampled starts separately.',
     noneHold: 'None of the clocks tried holds the target rate, so they are all listed.',
     deadlock: 'The tests that starve and jam the build do not see this, so on this build they do not decide which clock '
-        + 'is selected for you: the clocks that hold the target rate are ranked by their wake-ups.',
+        + 'is selected for you: the clocks that hold the target rate are ranked by their wakeups.',
     computing: (label: string) => `${label}: computing…`,
     showUnstable: (hidden: number) => `Show ${hidden} unstable clock${hidden === 1 ? '' : 's'} that ${hidden === 1 ? 'was' : 'were'} tried`,
     hideUnstable: (count: number) => `Hide ${count} unstable clock${count === 1 ? '' : 's'}`,
@@ -99,7 +99,7 @@ function statusDetail(alternative: ClockAlternativeView): string {
     if (check.repeat_periods === undefined || check.repeat_output_items === undefined) {
         return phases;
     }
-    return `${phases}. The build repeats every ${check.repeat_periods} clock periods, moving ${check.repeat_output_items} of `
+    return `${phases}. The build repeats every ${check.repeat_periods} window cycles, moving ${check.repeat_output_items} of `
         + `${alternative.expectedOutputItems * check.repeat_periods} items over them`;
 }
 
@@ -314,7 +314,7 @@ export function ClockAlternativesPanel({
             title={COMPARE_COPY.heading}
             help={{ label: COMPARE_COPY.terms, content: <>
                 <Typography variant="body2" sx={{ mb: 1 }}>
-                    Select a clock to compare its rate, recovery and wake-ups. Belt compatibility is a separate condition.
+                    Select a clock to compare its rate, recovery and wakeups. Belt compatibility is a separate condition.
                 </Typography>
                 <TermsList />
             </> }}
@@ -386,8 +386,8 @@ export function ClockAlternativesPanel({
                                     <TableCell align="right">{alternatives[0]?.counts === 'destroyed'
                                         ? <HelpHeader label={HANDS_TEXT.column} help={HANDS_TEXT.columnHelp} />
                                         : <HelpHeader label="Output swings" help={COMPARE_COPY.swingsHelp} />}</TableCell>
-                                    <TableCell align="right">Clock period</TableCell>
-                                    <TableCell align="right"><HelpHeader label="Wake windows" help={COMPARE_COPY.windowsHelp} /></TableCell>
+                                    <TableCell align="right">Window cycle time</TableCell>
+                                    <TableCell align="right"><HelpHeader label="Enable windows" help={COMPARE_COPY.windowsHelp} /></TableCell>
                                     <TableCell align="right"><HelpHeader label={DECIDERS_HEADER} help={COMPARE_COPY.decidersHelp} /></TableCell>
                                     <TableCell align="right"><HelpHeader label={WAKE_UPS_HEADER} help={COMPARE_COPY.wakeUpsHelp} /></TableCell>
                                     <TableCell align="right">{rateHeader(copies)}</TableCell>

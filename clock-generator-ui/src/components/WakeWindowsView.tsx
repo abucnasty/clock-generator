@@ -154,7 +154,7 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
     });
 
     return (
-        <BeltChartFrame id={viewId} title={cycleView ? 'Wake windows in this crafting cycle' : VIEW_HEADING} level={headingLevel} subtitle={summary} data-wake-view="">
+        <BeltChartFrame id={viewId} title={cycleView ? 'Enable windows in this crafting cycle' : VIEW_HEADING} level={headingLevel} subtitle={summary} data-wake-view="">
             {!counted && (
                 <Typography variant="body2" color="text.secondary" data-wake-not-counted>
                     {`${NOT_COUNTED_NOTE}. ${NOT_COUNTED_REASON}`}
@@ -187,7 +187,7 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
                         }}
                         data-wake-legend
                     >
-                        {rows.some(row => row.kind === 'drill') && <Typography component="li" variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><ChartSwatch color={BELT_CHART.entity.drill} />Drill wake window</Typography>}
+                        {rows.some(row => row.kind === 'drill') && <Typography component="li" variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><ChartSwatch color={BELT_CHART.entity.drill} />Drill enable window</Typography>}
                         {LEGEND.map(item => (
                             <Typography
                                 key={item.kind}
@@ -231,7 +231,7 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
                 )}
             </Box>
             <Disclosure summary="Reading this chart" sx={{ mt: 1.5 }}>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{cycleView ? 'The selected crafting cycle is one segment of the clock period. Wake windows are clipped to this segment; row percentages and wake-ups/min describe the whole clock period.' : VIEW_INTRO}</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{cycleView ? 'The selected crafting cycle is one segment of the window cycle. Enable windows are clipped to this segment; row percentages and wakeups/min describe the whole window cycle.' : VIEW_INTRO}</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{KEYBOARD_HINT}</Typography>
             <Box
                 component="dl"

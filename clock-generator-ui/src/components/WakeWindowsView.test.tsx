@@ -22,11 +22,11 @@ it.each([false, true])('places the legend before the first plotted row (cycle vi
 // ticks, runs 0.02% fast")
 it.each([
     { clock: 'a rounded clock', view: { ...alternative, simulationDurationTicks: 2880000 / 997, roundedPeriodTicks: 2888 }, periodTicks: 2888,
-        period: 'Clock period 2888 ticks (48.13 s)' },
-    { clock: 'any other clock', view: alternative, periodTicks: 480, period: 'Clock period 480 ticks (8 s)' },
+        period: 'Window cycle time 2888 ticks (48.13 s)' },
+    { clock: 'any other clock', view: alternative, periodTicks: 480, period: 'Window cycle time 480 ticks (8 s)' },
 ])('heads $clock with the period its blueprint counts', ({ view, periodTicks, period }) => {
     show(<WakeWindowsView alternative={view} asTable={false} onAsTableChange={() => {}} />);
-    const subtitle = screen.getByText(/^Clock period /).textContent!;
+    const subtitle = screen.getByText(/^Window cycle time /).textContent!;
     // one inserter, and no as-built run to count its wake-ups
     expect(subtitle).toBe(summaryText({ periodTicks, inserters: 1, drills: 0, wakeUps: null }));
     // the copy has no test of its own: the period reads in whole ticks and seconds, as the blueprint counts it

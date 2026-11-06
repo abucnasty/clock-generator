@@ -165,7 +165,7 @@ function InsertersFormComponent({
     const { cardRef, add: addRow, duplicate, remove } = useEntityRows(inserters, {
         labelOf: row => entityLabel('inserter', row.id), onRemove, onDuplicate,
         duplicateRefusal: (row, label) => row.sink.drop === undefined ? null
-            : `${label} cannot be duplicated: its imported drop position belongs to one inserter. Edit and reopen the build file to supply another position.`,
+            : `${label} cannot be duplicated: its imported drop position belongs to one inserter. Edit and reopen the configuration file to supply another position.`,
     });
     const [selecting, setSelecting] = useState(false);
     const [selection, setSelection] = useState<ReadonlySet<string>>(new Set());

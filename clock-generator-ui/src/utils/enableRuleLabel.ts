@@ -31,7 +31,7 @@ const RANGE_DASH = '–';
 const RANGE_SEPARATOR = ', ';
 const PERIOD_JOINER = ' of ';
 const TICKS_SUFFIX = ' ticks';
-const NO_RANGES = ', no wake windows';
+const NO_RANGES = ', no enable windows';
 const MORE_RANGES = (count: number) => ` +${count} more`;
 const CONDITION_COUNT_JOINER = ': ';
 const CONDITION_COUNT = (count: number) => (count === 0 ? 'no conditions' : `${count} ${count === 1 ? 'condition' : 'conditions'}`);

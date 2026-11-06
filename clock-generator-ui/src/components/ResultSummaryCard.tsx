@@ -31,8 +31,8 @@ import { useGameNames } from '../hooks/useGameNames';
 const CARD_COPY = {
     heading: 'Selected clock',
     makingFirst: 'Making the first clock…',
-    wakeUps: 'Wake-ups',
-    recovers: 'Recovers',
+    wakeUps: 'Wakeups',
+    recovers: 'Recovery',
     belt: 'Belt pickups',
     detailsHeading: 'How this was checked',
     staleLine: 'These clocks are for an earlier build. Generate again for a clock for the build you have now.',

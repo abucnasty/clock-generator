@@ -272,9 +272,9 @@ describe('the messages', () => {
         expect(describePaste(['Target Output', '1 machine'])).toBe('Imported Target Output, 1 machine from Factorio.');
     });
 
-    it('name a build file, a reset and an example in the words of the menu', () => {
-        expect(UNDO_IMPORT_MESSAGE).toBe('Build file opened.');
-        expect(UNDO_RESET_MESSAGE).toBe('Build reset.');
+    it('name a configuration file, a reset and an example in the words of the menu', () => {
+        expect(UNDO_IMPORT_MESSAGE).toBe('Configuration file opened.');
+        expect(UNDO_RESET_MESSAGE).toBe('Configuration reset.');
         expect(exampleUndoMessage({ recipe: 'logistic-science-pack' }, (id) => id)).toBe('Example loaded: Logistic science pack.');
     });
 });

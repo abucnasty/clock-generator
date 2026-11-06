@@ -68,8 +68,8 @@ export function RulePeriodStrip({ periodTicks, windows, reference }: RulePeriodS
     const inPeriod = (spans: Span[]) => spans.filter((span) => span.start <= span.end && span.end < periodTicks);
     return (
         <Box aria-hidden data-rule-strip="" sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mt: 2, maxWidth: 560 }}>
-            <Track label="Your wake windows" spans={inPeriod(windows)} periodTicks={periodTicks} outlined={false} />
-            {reference && <Track label="The clock's wake windows" spans={inPeriod(reference)} periodTicks={periodTicks} outlined />}
+            <Track label="Your enable windows" spans={inPeriod(windows)} periodTicks={periodTicks} outlined={false} />
+            {reference && <Track label="The clock's enable windows" spans={inPeriod(reference)} periodTicks={periodTicks} outlined />}
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                 <Typography variant="caption" color="text.secondary">0</Typography>
                 <Typography variant="caption" color="text.secondary">{periodTicks - 1}</Typography>

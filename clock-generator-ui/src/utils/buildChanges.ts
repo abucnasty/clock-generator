@@ -84,7 +84,7 @@ export function buildChangesOf(generated: Config, current: Config, recipeLabel: 
     const deeperBefore = generated.overrides?.search_for_fewer_wake_ups === true;
     const deeperAfter = current.overrides?.search_for_fewer_wake_ups === true;
     if (deeperBefore !== deeperAfter) {
-        changes.push(`Search for fewer wake-ups (${onOff(deeperBefore)} → ${onOff(deeperAfter)})`);
+        changes.push(`Search for fewer wakeups (${onOff(deeperBefore)} → ${onOff(deeperAfter)})`);
     }
     const otherOverrides = (config: Config) => Object.fromEntries(Object.entries(config.overrides ?? {})
         .filter(([key, value]) => value !== undefined && !OWN_OVERRIDES.includes(key)));
