@@ -196,13 +196,12 @@ const RECORD_LINKS: Record<string, RecordLink & {runs?: boolean}> = {
     "electromagnetic-science-330-drained-end-clock-controls.json": {jobOf: config("ELECTROMAGNETIC_SCIENCE_330")},
     "grenade-clock-controls.json": {jobOf: config("GRENADE_240_FILLS_BELT_EXACTLY")},
     "inserter-crafting-240-shared-signal-clock-controls.json": {
-        jobOf: name => name === "generated-backed-up-one-copy" ? variant("INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK_BACKED_UP") : "config-INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK",
-        offered: ["generated-three-copies"]},
+        jobOf: name => name === "generated-backed-up-one-copy" ? variant("INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK_BACKED_UP") : "config-INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK"},
     "iron-ore-voider-400-clock-controls.json": {
         jobOf: name => name === "ore-voider-exact-speed" ? "config-IRON_ORE_VOIDER_400_EXACT_SPEED" : "config-IRON_ORE_VOIDER_400_OVERBEACONED", runs: true},
     "iron-plate-80-car-chest-clock-controls.json": {
         jobOf: config("IRON_PLATE_80_CAR_CHEST"), runs: true,
-        offered: ["car-swings-1", "car-swings-2", "car-swings-2-takers-last", "car-swings-3", "car-swings-3-takers-last"]},
+        offered: ["car-derived", "car-derived-takers-last", "car-swings-1", "car-swings-3", "car-swings-3-takers-last"]},
     "lithium-plate-80-silo-chest-clock-controls.json": {
         jobOf: config("LITHIUM_PLATE_80_SILO_CHEST"), offered: ["lithium-silo-swings-1", "lithium-silo-swings-3", "lithium-silo-swings-3-fill-last", "lithium-silo-swings-7"]},
     // its game test records fractional swings, selected until #595 (batched swings with the slack inside its windows since)

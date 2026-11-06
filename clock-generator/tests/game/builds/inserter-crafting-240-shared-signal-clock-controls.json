@@ -70,10 +70,10 @@
     "generated-three-copies": {
       "recorded": {
         "pr": 0,
-        "commit": "038ed41a",
-        "frozen_head": "038ed41a",
-        "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
-        "clock_sha256": "f3f231b0f2d40b16883eb9d9f80f01898002867be8a67e0f4f444a6b8c1450ef",
+        "commit": "57c76634",
+        "frozen_head": "57c76634",
+        "note": "recorded under the protocol in game ticks on the engine of this head; pr is set when the PR is opened",
+        "clock_sha256": "2dd0a096b14293a595477fe6d94fb319d3f65126aafebbbf7c4892a2e2d00a27",
         "clock_basis": "capture"
       },
       "native": {
@@ -134,7 +134,7 @@
       },
       "generation": {
         "period": 72,
-        "expected": 288.0,
+        "expected": 288,
         "verdict": "stable",
         "selection": {
           "id": "swings-6",
@@ -142,7 +142,7 @@
           "rate": 240,
           "supply": "moving"
         },
-        "clock_sha256": "f3f231b0f2d40b16883eb9d9f80f01898002867be8a67e0f4f444a6b8c1450ef"
+        "clock_sha256": "2dd0a096b14293a595477fe6d94fb319d3f65126aafebbbf7c4892a2e2d00a27"
       },
       "previous": {
         "id": "swings-2",

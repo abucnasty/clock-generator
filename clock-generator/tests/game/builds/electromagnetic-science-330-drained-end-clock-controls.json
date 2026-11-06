@@ -3,11 +3,11 @@
   "cases": {
     "generated-moving-one-copy": {
       "recorded": {
-        "pr": 661,
-        "commit": "de574104",
-        "frozen_head": "de574104",
+        "pr": 0,
+        "commit": "57c76634",
+        "frozen_head": "57c76634",
         "note": "recorded under the protocol in game ticks on the engine of this head; pr is set when the PR is opened",
-        "clock_sha256": "eec2c968cf26d6b1ad5cdda8814bd14f0974a592ab8a40797a2db6a4714ec9a1",
+        "clock_sha256": "b1f96deee918099290042a287436c10af22d7a1a0eb027e436a4265790a80731",
         "clock_basis": "capture"
       },
       "native": {
@@ -30,8 +30,8 @@
             "ticks": 3520,
             "items": 1760,
             "expected": 1760,
-            "stock_start": 1,
-            "stock_end": 1,
+            "stock_start": 5,
+            "stock_end": 5,
             "net": 1760
           }
         },
@@ -54,7 +54,7 @@
           "rate": 330,
           "supply": "moving"
         },
-        "clock_sha256": "eec2c968cf26d6b1ad5cdda8814bd14f0974a592ab8a40797a2db6a4714ec9a1"
+        "clock_sha256": "b1f96deee918099290042a287436c10af22d7a1a0eb027e436a4265790a80731"
       }
     }
   }
