@@ -1131,6 +1131,10 @@ function simulate(
         .filter(recorder => recorder !== undefined);
     const simulate_step = new SimulateStep(simulation_context, recorded_duration, recorders, stop_early);
     withDebugFor(debug, debug_steps, RunnerStepType.SIMULATE, () => simulate_step.execute());
+    // the drills still enabled where the run ends have their last run recorded
+    for (const observer of build.history_observers) {
+        if (observer instanceof DrillTransferTracker) observer.endRun();
+    }
 
     const actual_duration = simulate_step.ticks_run < recorded_duration.ticks ? Duration.ofTicks(simulate_step.ticks_run) : recorded_duration;
     if (state_repeat !== undefined) {
