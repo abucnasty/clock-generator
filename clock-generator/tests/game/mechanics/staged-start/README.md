@@ -2,7 +2,7 @@
 
 The staged-start test uses the agricultural-science sample to check that ingredient lanes saturate before fresh
 cell inserters are placed in a single tick. It checks ascending and descending construction order, unit-number
-order, empty machines, and the configured loop seed. It does not infer startup timing from a screenshot.
+order, empty machines, and the configured kick start of the loop. It does not infer startup timing from a screenshot.
 
 ![Agricultural-science scaffold used by the staged-start construction test](../images/agriculture-science.jpg)
 

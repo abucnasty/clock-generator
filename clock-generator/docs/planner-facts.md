@@ -57,7 +57,7 @@ the fuel by edge and the lanes' exports. The target's own edges, which seed it, 
 same config (`sequence/cycle/cycle-transfers.ts`).
 
 Two traits of the catalogue are not in the facts: the inserter order (its decider build order is the clock's, not the
-config's) and the wake-up rule of a node (read by the wake-up count only). Neither the graph nor the feasibility pass
+config's) and the wakeup rule of a node (read by the wakeup count only). Neither the graph nor the feasibility pass
 reads them; they come with the planner that does.
 
 `machineFactsOf` (`src/entities/traits/machine-facts-of.ts`) gives a machine's facts for the UI and the insights from its
@@ -80,7 +80,7 @@ pass after the feasibility pass and before any simulation, over the facts, the g
 - **Main-period choices** per group: the output swing counts today's alternatives are listed for (the planned count, the
   counts it backs off through, the main one, the counts above and below it and fractional swings;
   `swingCountsListed` makes the lists for both), each with its cycle's ticks and the group's cycles, kept or pruned. Only
-  P-limit prunes: a period of 500,000 ticks or more. A count whose cycle the cycle plan refuses is listed with the
+  P-limit prunes: a window cycle time of 500,000 ticks or more. A count whose cycle the cycle plan refuses is listed with the
   plan's reason (`cycle-refused`), as today its run fails. The planned count is the planning run's (its prepare step);
   a count the simulator later finds unstable is not known here.
 - **Duty**: the duty of each machine group (`Feasibility.duties`) in the group that holds its machines.

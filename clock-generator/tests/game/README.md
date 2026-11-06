@@ -48,8 +48,8 @@ For verification appropriate to other changes, see the [contributor guide](../..
 
 ## How a run is timed
 
-A clock check in the game is timed in game minutes, never in clock periods: a clock's period can be very long (116,160 ticks for
-one build), and the length of the period must not decide how long a check runs. One minute is 3,600 ticks. The game side is
+A clock check in the game is timed in game minutes, never in window cycles: a clock's window cycle time can be very long (116,160 ticks for
+one build), and the window cycle time must not decide how long a check runs. One minute is 3,600 ticks. The game side is
 `helpers/lua/steady.lua`; every clock family and the scripts that start the game for a check use that one helper.
 
 - **Recording and judging are apart.** In the game, the helper only steers the run (when steady state is reached, when a
@@ -58,7 +58,7 @@ one build), and the length of the period must not decide how long a check runs. 
   at steady state, and at every step of the run. Whether the run passes is decided afterwards from that record, outside the game
   (`helpers/run-judgement.js`), so a change in how a run is judged needs no new recording.
 - **Steady state** is reached the first moment those machines have made the amount the target asks for over the last minute (the
-  target rate times 60 seconds) and that amount has stopped falling. Warming up and settling are not timed in periods either: the
+  target rate times 60 seconds) and that amount has stopped falling. Warming up and settling are not timed in window cycles either: the
   run goes on until that happens, and fails if it has not within ten minutes (36,000 ticks).
 - **Baseline:** the minute after steady state. It is judged over its whole clock cycles (from steady state to the last moment in
   the minute when the clock is back where it was then), by **net output**: what the machines made less what of it is still waiting
@@ -79,7 +79,7 @@ one build), and the length of the period must not decide how long a check runs. 
   recorded again only when the game binary changes.
 - **Scripts:** `scripts/record-clock.js`, `scripts/rule-count-game-check.js` and `scripts/capture-probe.js` follow the same rule
   (`capture-probe.js` records a mechanics probe of a fixed, short length). `record-clock.js` and `rule-count-game-check.js` wait for steady state, judge the baseline minute as above and then record at
-  least one more minute (whole clock periods, as the recorder does). They refuse a request over 36,000 ticks, or a recording that
+  least one more minute (whole window cycles, as the recorder does). They refuse a request over 36,000 ticks, or a recording that
   would be, unless they are run with `--long "<reason>"` (or `LONG_RUN=<reason>`):
   a long run is a deliberate choice for one particular build, the reason is printed, and routine checks never use it.
 

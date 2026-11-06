@@ -18,8 +18,8 @@ A field's name and meaning do not change; a new field or a changed meaning is a 
 | `config_sha256` | the hash of the job's config as the blast loads it: it says whether a moved result comes with a moved config |
 | `job_results_sha256` | the digest of what belongs to the job and no alternative: why it is not stable, the selected index, the alternatives' ids |
 | `selected` | the id of the selected alternative (one of `alternatives`) |
-| `selected_windows` | the selected clock's windows: for each inserter or drill, `start-end` pairs in ticks of the period (`0-10,54-64`: the opening edge and the closing edge of each window); empty when the machine has none |
-| `alternatives` | every alternative, in the generator's order, one per line. Only the selected clock's windows are written out; an alternative carries the hash of its windows (`windows_sha256`), since written out they would be four times the size of everything else (1.4 MB for 33 jobs) |
+| `selected_windows` | the recommended clock's windows: for each inserter or drill, `start-end` pairs in ticks of the window cycle (`0-10,54-64`: the opening edge and the closing edge of each window); empty when the machine has none |
+| `alternatives` | every alternative, in the generator's order, one per line. Only the recommended clock's windows are written out; an alternative carries the hash of its windows (`windows_sha256`), since written out they would be four times the size of everything else (1.4 MB for 33 jobs) |
 | `error` | instead of the fields from `job_results_sha256` on, when the config failed to generate: the error |
 
 An alternative:
@@ -31,8 +31,8 @@ An alternative:
 | `holds` | whether the clock holds the target |
 | `rate` | items a second it makes |
 | `supply` | the belt's kind the alternative was weighed with: `moving` or `backed_up`; null where the build has none |
-| `period` | the period in ticks |
-| `wake_ups` | inserter wake-ups a minute, to three decimals; null where the clock has none |
+| `period` | the window cycle time in ticks |
+| `wake_ups` | inserter wakeups a minute, to three decimals; null where the clock has none |
 | `descriptions_cut` | how many descriptions Factorio's 500-byte limit cut (0 in all but one alternative of the first record) |
 | `clock_sha256` | the hash of the exported clock's identity (the blueprint without its text, and the schedule): the hash a game recording is tied to |
 | `windows_sha256` | the hash of all this alternative's windows (the selected one's are in `selected_windows`) |
@@ -66,8 +66,8 @@ values. The five properties:
 | --- | --- |
 | `always-on-reasons-named` | every inserter and drill a clock leaves always on says why, and nothing that has a window has a reason |
 | `decider-build-order` | the order the check gives the window deciders is the order the exported blueprint builds them in |
-| `stable-holds-and-survives-loss` | a clock is tried for backpressure loss when it is not unstable; it is stable only when it survives; a clock that meets the target rate is stable |
-| `counters-add-up` | the per-inserter counters add up to the wake-ups, and the clock-level figures agree with the alternative |
+| `stable-holds-and-survives-loss` | a clock gets the disturbance trials when it is not unstable; it is stable only when it has recovery after every disturbance trial; a clock that meets the target rate is stable |
+| `counters-add-up` | the per-inserter counters add up to the wakeups, and the clock-level figures agree with the alternative |
 | `fuel-never-dry` | no machine that burns fuel runs out of it in the fuel consumption view |
 
 A property states what a result must satisfy; the record pins the values. A property that fails on a job is a finding about that job's
@@ -79,5 +79,5 @@ such jobs and goes on).
 ## MOVES.md
 
 A pull request that changes any record file commits the new files and adds an entry to [MOVES.md](MOVES.md) naming each moved job and why.
-A selected clock that got worse than in the base fails the check unless its job is named in the lines the pull request adds (CONTRIBUTING.md,
+A recommended clock that got worse than in the base fails the check unless its job is named in the lines the pull request adds (CONTRIBUTING.md,
 "The record of the blast jobs", defines worse from the fields above).

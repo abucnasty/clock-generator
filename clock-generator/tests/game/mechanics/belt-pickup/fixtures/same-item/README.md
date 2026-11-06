@@ -71,9 +71,9 @@ The broader investigation covered 78 captures and 5,268 uninterrupted hands, inc
 interrupted windows and staggered turbo lanes, with no mismatch for the two-lane rule. Restricting the replay to
 the first lane missed the timing of 1,078 hands; the simulator now implements the measured fallback.
 
-Six additional game tests generate the current default clocks, check every baseline period (at least 60 per
+Six additional game tests generate the current default clocks, check every baseline window cycle (at least 60 per
 scaffold), and test recovery after two ingredient cuts and a filled/restored output disposal chest. They require
-exact output after a six-period recovery allowance, without resetting the clock or machine. All six passed with
+exact output after a recovery allowance of six window cycles, without resetting the clock or machine. All six passed with
 the fallback implementation: 16 gears per 160 ticks (6/second), with a 26-tick input window on every geometry.
 The underground window was 28 ticks before the correction; since the belt window-end trim the input window is
 23 ticks, ending one rotation before the last return swing, re-recorded in #265. See

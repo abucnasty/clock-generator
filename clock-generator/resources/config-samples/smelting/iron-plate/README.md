@@ -2,7 +2,7 @@
 
 | Build | Credit | Source | Issues | Recorded in the game |
 |---|---|---|---|---|
-| `iron-plate-80-car-chest` | abucnasty | blueprint given on 2026-10-22 | #587 | Scaffold: yes (a blueprint given 2026-10-22). A big mining drill drops iron ore into a car taken as a chest and two furnaces empty it, all legendary, 80 plates a second; the harness puts the ore under the drill. The selected clock (3 output swings, 72 ticks) recorded 96 in every period, both build orders, and got back to it after the drill was stopped until the car ran dry, twice, and the output blocked; the clock with 1 output swing too. 200.0 wake-ups a minute in the simulator, 3.8 in the game, not yet explained. Known differences (#587): over the minute-long recording the furnaces finish 193.17 crafts and productivity bars a period in the game and 194.00 in the simulator (the build moves 96 in every period); and the car clock runs end below their baseline's lowest output stock after a final drill stop. Note: in `test:game`. |
+| `iron-plate-80-car-chest` | abucnasty | blueprint given on 2026-10-22 | #587 | Scaffold: yes (a blueprint given 2026-10-22). A big mining drill drops iron ore into a car taken as a chest and two furnaces empty it, all legendary, 80 plates a second; the harness puts the ore under the drill. The recommended clock (3 output swings, 72 ticks) recorded 96 in every window cycle, both build orders, and got back to it after the drill was stopped until the car ran dry, twice, and the output blocked; the clock with 1 output swing too. 200.0 wakeups a minute in the simulator, 3.8 in the game, not yet explained. Known differences (#587): over the minute-long recording the furnaces finish 193.17 crafts and productivity bars a window cycle in the game and 194.00 in the simulator (the build moves 96 in every window cycle); and the car clock runs end below their baseline's lowest output stock after a final drill stop. Note: in `test:game`. |
 
 The build: a big mining drill with 4 legendary speed modules 3 mines iron ore and drops it into a car, which is
 used as a chest. Two legendary stack inserters take the ore from the car into two legendary electric furnaces, each with
@@ -30,8 +30,8 @@ full while the drill runs.
 
 ## In the game
 
-The selected clock (3 output swings, 72 ticks) and the clock with 1 output swing move 96 plates in each of 63 periods in
-the game, and get back to it after the drill is stopped until the car has run dry (71 periods), the output is blocked for
+The recommended clock (3 output swings, 72 ticks) and the clock with 1 output swing move 96 plates in each of 63 window cycles in
+the game, and get back to it after the drill is stopped until the car has run dry (71 window cycles), the output is blocked for
 4 and the drill is stopped again (`tests/game/builds/iron-plate-80-car-chest-clock-controls.json`). Building the two inserters that take from
-the car after the output inserters changed nothing in any period. The simulator counts 200.0 wake-ups a minute for the
-selected clock from the scaffold's cold start, where the game's states give 3.8; the difference is not explained yet.
+the car after the output inserters changed nothing in any window cycle. The simulator counts 200.0 wakeups a minute for the
+recommended clock from the scaffold's cold start, where the game's states give 3.8; the difference is not explained yet.

@@ -129,7 +129,7 @@ cannot be built in this geometry; generated clocks, including those of a moving 
 
 The [front clock controls](../../../../builds/README.md#front-pickup-operating-clocks) run this fixture's generated
 clocks at all four speeds and both mirroring states, with the ordinary electromagnetic targets (30/s turbo to 7.5/s
-normal), 63 baseline periods and the three ordinary disturbances, on Factorio 2.1.21 (2026-10-20).
+normal), 63 baseline window cycles and the three ordinary disturbances, on Factorio 2.1.21 (2026-10-20).
 
 | Config | Turbo | Express | Fast | Normal |
 | --- | --- | --- | --- | --- |
@@ -138,7 +138,7 @@ normal), 63 baseline periods and the three ordinary disturbances, on Factorio 2.
 
 Both mirroring states agree in every cell. A moving config gets a clock made for moving belts; its express and
 normal verdicts come from moving lane-phase starts this exit cannot have, and on the backed-up exit every one of
-them holds its target in all 63 baseline periods and after every disturbance. **A moving config is safe on this
+them holds its target in all 63 baseline window cycles and after every disturbance. **A moving config is safe on this
 layout.** At normal it does better than the backed-up config's own clock, whose alternatives all fail.
 
 
