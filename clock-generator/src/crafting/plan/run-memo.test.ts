@@ -14,6 +14,7 @@ import { DrillTransferTracker } from "../../simulation/observers/drill-transfer-
 import { StateTransitionTracker } from "../../simulation/observers/state-transition-tracker";
 import { FactorioStateTracker } from "../../simulation/observers/factorio-state-tracker";
 import { RUN_MEMO_MIN_TICKS, RunMemo, canonicalKey, currentRunMemo, withRunMemo } from "./run-memo";
+import { plannedFractionally } from "../generate-blueprint-test-helpers";
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 
@@ -262,7 +263,7 @@ describe("the memo of the backpressure loss verdicts of a generation", () => {
             expect(first).toEqual(fresh);
             expect(backpressureLossVerdictOf(config, clock, quiet)).toBe(first);
             // the way an alternative reaches the same clock: planned with fractional swings, or with the cycles of its own
-            expect(backpressureLossVerdictOf({ ...config, overrides: { ...config.overrides, use_fractional_swings: true } }, clock, quiet)).toBe(first);
+            expect(backpressureLossVerdictOf(config, plannedFractionally(config, clock), quiet)).toBe(first);
             expect(backpressureLossVerdictOf({ ...config, overrides: { ...config.overrides, lcm: 7 } }, clock, quiet)).toBe(first);
             expect(memo.loss_hits).toBe(3);
         });

@@ -16,10 +16,10 @@ const shortened = (clock_windows, side) => Object.fromEntries(Object.entries(clo
     [entity_id, ranges.map(range => range.start === range.end ? range
         : side === "start" ? { start: range.start + 1, end: range.end } : { start: range.start, end: range.end - 1 })]));
 
-const holds = (config, clock_windows, period) => {
+const holds = (config, clock_windows, period, swings) => {
     const began = Date.now();
     try {
-        const check = clockFromWindows(config, clock_windows, period, quiet).stability_check;
+        const check = clockFromWindows(config, clock_windows, period, quiet, swings).stability_check;
         return { holds: check.as_built?.holds ?? check.holds, items: check.as_built?.actual_output_items ?? check.actual_output_items, seconds: (Date.now() - began) / 1000 };
     } catch (e) {
         return { error: String(e && e.message || e).slice(0, 300), seconds: (Date.now() - began) / 1000 };
@@ -44,16 +44,16 @@ const holds = (config, clock_windows, period) => {
             }
             tried.add(result.clock_windows);
             const period = result.simulation_duration.ticks;
-            // the config the clock was planned on: its output swings per cycle, and fractional swings on for the fractional alternative
-            const planned_on = { ...config, overrides: { ...config.overrides, terminal_swing_count: result.used_terminal_swing_count,
-                ...(alternative.id.startsWith("fractional") ? { use_fractional_swings: true } : {}) } };
+            // the config the clock was planned on: its output swings per cycle; fractional swings for the fractional alternative
+            const planned_on = { ...config, overrides: { ...config.overrides, terminal_swing_count: result.used_terminal_swing_count } };
+            const swings = alternative.id.startsWith("fractional") ? { fractional_swings: true } : {};
             row.clocks.push({
                 id: alternative.id, selected: alternative.id === row.selected, period, expected: result.stability_check.expected_output_items,
                 window_count: Object.values(result.clock_windows).reduce((sum, ranges) => sum + ranges.length, 0),
                 one_tick_windows: Object.values(result.clock_windows).reduce((sum, ranges) => sum + ranges.filter(r => r.start === r.end).length, 0),
-                unchanged: holds(planned_on, result.clock_windows, period),
-                shorter_at_start: holds(planned_on, shortened(result.clock_windows, "start"), period),
-                shorter_at_end: holds(planned_on, shortened(result.clock_windows, "end"), period),
+                unchanged: holds(planned_on, result.clock_windows, period, swings),
+                shorter_at_start: holds(planned_on, shortened(result.clock_windows, "start"), period, swings),
+                shorter_at_end: holds(planned_on, shortened(result.clock_windows, "end"), period, swings),
             });
         }
     } catch (e) {

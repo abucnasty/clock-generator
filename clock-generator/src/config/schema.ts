@@ -777,13 +777,6 @@ export const ConfigOverridesSchema = z.preprocess(dropFractionalSwingsOverride, 
      */
     terminal_swing_count: z.number().int().positive().optional(),
     /**
-     * Not part of the config format: a config that carries it loads without it (migrate-fractional-swings.ts). The
-     * generator sets it on its own copy of a config to plan the "Fractional swings" alternative: inserters with
-     * fractional swing counts (e.g., 3/2 swings per cycle) alternate between 1 and 2 swings over sub-cycles, with the
-     * swings back-loaded within automated_insertion_limit.
-     */
-    use_fractional_swings: z.boolean().optional(),
-    /**
      * Input supply is backed up at the pickup: items stop between grabs and upstream supply refills the gaps at belt
      * speed, so a hand takes the stacks in reach a tick each and then waits for the belt to bring the rest. Geometry is
      * retained independently of this rule.

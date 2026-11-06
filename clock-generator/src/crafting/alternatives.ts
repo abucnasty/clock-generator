@@ -28,7 +28,7 @@ import { primitiveGroupedOptionsSupported, verifiedPrimitiveGroupedClock } from 
 import { primitiveGroupedConfigSupported } from "./candidates/primitive-grouped-hands";
 import { MAX_OBSERVED_WINDOWS_PERIOD_TICKS, swingCountsListed } from "./planner/periods";
 import { SecondaryPlanningInvariantError, secondaryPlanningCountOf, withSecondaryPlanningProvenance, type SecondaryPlanningCount } from "./primitive-grouped-policy";
-import { BlueprintGenerationResult, GenerateClockOptions, SimulationStabilityCheck } from "./plan/plan-run";
+import { BlueprintGenerationResult, GenerateClockOptions, SimulationStabilityCheck, fractionalSwingsOf } from "./plan/plan-run";
 import { withRunMemo } from "./plan/run-memo";
 import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, ROUNDED_CLOCK_MAX_FAST, RoundedClock, roundedRateAllowed, searchesToRun, searchesAreNeeded } from "./rank";
 import { TargetProductionRate } from "./target-production-rate";
@@ -463,11 +463,11 @@ function alternativeDefinitionsFor(
             label: "Fractional swings",
             description: `${BATCHED_SWINGS_LABEL} with fractional swings turned on: an inserter that needs e.g. 3/2 swings per cycle alternates `
                 + "between 1 and 2 swings instead of rounding, which can need fewer or shorter windows.",
-            run: () => generateClockWithSwingBackoff(
-                { ...base_config, overrides: { ...base_config.overrides, use_fractional_swings: true } },
-                quiet
-            ),
-            planned_on: { ...config, overrides: { ...config.overrides, use_fractional_swings: true } },
+            // planned with fractional swings asked for: its clock's runs are planned so too, as its cycle plan says
+            run: () => generateClockWithSwingBackoff(base_config, { ...quiet, fractional_swings: true }),
+            // the config it is checked on is the alternatives' own, as with the other definitions, and stays so for its
+            // chest drill fallbacks, whose own configs would otherwise take its place (withChestDrillFallbacks)
+            planned_on: config,
             no_shared_windows: true,
         },
         {
@@ -853,7 +853,8 @@ function runAlternativeOf(
                 made = remembered !== undefined ? remembered : wakeUpsFromStartsOf(
                     { ...(used.planned_on ?? config), overrides: { ...(used.planned_on ?? config).overrides, terminal_swing_count: trial.result.used_terminal_swing_count } },
                     trial.result.clock_windows, trial.clock_period, expected_output_items,
-                    exact && trial.result.loop_windows !== undefined ? LOOP_WINDOW_CHECK_TICKS : FREE_RUNNING_CHECK_TICKS, logger);
+                    exact && trial.result.loop_windows !== undefined ? LOOP_WINDOW_CHECK_TICKS : FREE_RUNNING_CHECK_TICKS, logger,
+                    fractionalSwingsOf(trial.result.crafting_cycle_plan));
             } catch (error) {
                 logger.log(`Clock alternative "${label}" could not be started from other places: ${error instanceof Error ? error.message : String(error)}`);
                 made = null;

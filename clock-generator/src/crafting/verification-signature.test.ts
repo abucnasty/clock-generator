@@ -5,7 +5,7 @@ import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config";
 import {generateClockForConfig} from "./generate-clock";
 import {generateClockAlternatives, planClockAlternatives, runClockAlternativeTask} from "./alternatives";
-import {quiet} from "./generate-blueprint-test-helpers";
+import {plannedFractionally, quiet} from "./generate-blueprint-test-helpers";
 import * as trial from "./trial";
 
 const options = {logger: quiet, verify_as_built: false, fuel_consumption_view: false, factorio_states: false, modulo_blueprint: false};
@@ -23,8 +23,7 @@ describe("candidate verification identity", () => {
         const before = JSON.stringify({config, result});
         const reordered = {...result, clock_windows: Object.fromEntries(Object.entries(result.clock_windows).reverse())};
         expect(signature(config, reordered)).toBe(signature(config, result));
-        expect(signature({...config, overrides: {...config.overrides, use_fractional_swings: true}}, reordered))
-            .toBe(signature(config, result));
+        expect(signature(config, plannedFractionally(config, reordered))).toBe(signature(config, result));
         expect(JSON.stringify({config, result})).toBe(before);
     });
 
@@ -64,11 +63,12 @@ describe("candidate verification identity", () => {
         const fuel = await loadConfigFromFile(TestConfigPaths.BIOCHAMBER_FUEL);
         const built = generateClockForConfig(fuel, options);
         expect(Object.values(built.unplanned_inserter_clocks ?? {}).some(clock => clock.own_clock)).toBe(true);
-        expect(signature({...fuel, overrides: {...fuel.overrides, use_fractional_swings: true}}, built))
-            .not.toBe(signature(fuel, built));
-        const fractional_count = {...result, used_terminal_swing_count: 1.5};
-        expect(signature({...config, overrides: {...config.overrides, use_fractional_swings: true}}, fractional_count))
-            .not.toBe(signature(config, fractional_count));
+        const fractional = plannedFractionally(fuel, built);
+        // the same cycle, so that only planning it with fractional swings parts the two
+        expect(fractional.crafting_cycle_plan.total_duration.ticks).toBe(built.crafting_cycle_plan.total_duration.ticks);
+        expect(signature(fuel, fractional)).not.toBe(signature(fuel, built));
+        const fractional_count = {...plannedFractionally(config, result), used_terminal_swing_count: 1.5};
+        expect(signature(config, fractional_count)).not.toBe(signature(config, {...result, used_terminal_swing_count: 1.5}));
     });
 });
 

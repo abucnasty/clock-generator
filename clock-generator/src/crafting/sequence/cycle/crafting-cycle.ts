@@ -71,6 +71,17 @@ export function plannedTerminalSwingCount(plan: CraftingCyclePlan): number | und
     return planned_terminal_counts.get(plan);
 }
 
+// The plans made with fractional swings asked for, whether or not a swing came out fractional; no serialized field either
+const planned_with_fractional_swings = new WeakSet<CraftingCyclePlan>();
+
+/**
+ * Whether the plan was made with fractional swings asked for (the "Fractional swings" alternative): a run of its clock is
+ * planned so too. True also where every swing came out whole (`fractional_swings_enabled` false).
+ */
+export function plannedWithFractionalSwings(plan: CraftingCyclePlan): boolean {
+    return planned_with_fractional_swings.has(plan);
+}
+
 function withPlannedTerminalCount(plan: CraftingCyclePlan, count: Fraction): CraftingCyclePlan {
     planned_terminal_counts.set(plan, count.toDecimal());
     return plan;
@@ -120,7 +131,7 @@ function createDestroyedPlan(
 
 /**
  * The crafting cycle of a build: for a target that counts an item made, `max_possible_swings` output swings a cycle (whole
- * where fractional swings are off, as the config's overrides say); for one that counts an item destroyed, the hands its
+ * unless `fractional_swings` asks for the fraction itself); for one that counts an item destroyed, the hands its
  * arithmetic gives, and `result_windows` is the decision of its results' windows where the build plan has made it. The
  * transfers are the balance of the config's planner graph (cycle-transfers.ts); the registry is the one made from it.
  */
@@ -131,11 +142,28 @@ function createPlan(
     max_possible_swings: Fraction,
     config_overrides: Partial<ConfigOverrides> = {},
     result_windows?: ResultWindowsDecision,
+    /** The "Fractional swings" alternative's planning: swings a cycle as the fraction the machines make, alternated over sub-cycles */
+    fractional_swings: boolean = false,
 ): CraftingCyclePlan {
     assertMachineResultTargetsSupported(entity_registry);
     if (target_production_rate.counts === "destroyed") {
         return createDestroyedPlan(target_production_rate, entity_registry, config, config_overrides, result_windows);
     }
+    const plan = createMadePlan(target_production_rate, entity_registry, config, max_possible_swings, config_overrides, fractional_swings);
+    if (fractional_swings) {
+        planned_with_fractional_swings.add(plan);
+    }
+    return plan;
+}
+
+function createMadePlan(
+    target_production_rate: TargetProductionRate,
+    entity_registry: ReadableEntityRegistry,
+    config: Config,
+    max_possible_swings: Fraction,
+    config_overrides: Partial<ConfigOverrides>,
+    fractional_swings: boolean,
+): CraftingCyclePlan {
     const returned = returnedTargetRefusal({ item: target_production_rate.machine_production_rate.item, counts: "made" },
         target_production_rate.total_production_rate.amount_per_second.toDecimal(), entity_registry);
     if (returned !== null) {
@@ -185,12 +213,10 @@ function createPlan(
     
     const single_swing_period_ticks = fraction(output_stack_size).divide(per_machine_rate);
 
-    const use_fractional_swings = config_overrides.use_fractional_swings ?? false;
-    
     // Determine swings per cycle - either fractional or integer
     let swings_per_cycle: Fraction;
     
-    if (use_fractional_swings) { // fractional swing strategy
+    if (fractional_swings) { // fractional swing strategy
         // Fractional mode: use the raw fraction without rounding
         if (config_overrides.terminal_swing_count !== undefined) {
             swings_per_cycle = fraction(config_overrides.terminal_swing_count);
@@ -233,7 +259,7 @@ function createPlan(
     ), entity_registry)
 
     // Compute swing distributions if fractional swings are enabled
-    if (use_fractional_swings) {
+    if (fractional_swings) {
         const cycle_multiplier = EntityTransferCountMap.lcm(swing_counts);
         
         // Only compute distributions if there are actual fractional swings (LCM > 1)

@@ -17,8 +17,7 @@ export function* wholeSwingPeriodsBelow(
     limit_ticks: number,
 ): Generator<SwingPeriodRejection> {
     const config = JSON.parse(snapshot.config_json) as Config;
-    assert(config.target_output.counts !== 'destroyed' && config.overrides?.use_fractional_swings !== true,
-        'Whole-swing period arithmetic needs an item-made target with integer output swings.');
+    assert(config.target_output.counts !== 'destroyed', 'Whole-swing period arithmetic needs an item-made target with integer output swings.');
     assert(Number.isSafeInteger(snapshot.terminal_swing_count) && snapshot.terminal_swing_count >= 1,
         'Whole-swing period arithmetic needs a positive integer initial count.');
     const registry = createEntityRegistryFromConfig(config);
