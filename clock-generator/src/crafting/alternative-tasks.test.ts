@@ -4,7 +4,7 @@ import {ConfigPaths} from "../config/config-paths";
 import { TestConfigPaths } from "../../tests/configs/paths";
 import {loadConfigFromFile} from "../config/loader";
 import {EnableControlMode} from "../config/schema";
-import {planClockAlternatives} from "./alternatives";
+import {planClockAlternatives, runClockAlternativeTask} from "./alternatives";
 import {quiet} from "./generate-blueprint-test-helpers";
 
 const options = {logger: quiet, factorio_states: false, fuel_consumption_view: false};
@@ -67,5 +67,26 @@ describe("output swing counts above the planned one", () => {
         const grenade = planClockAlternatives(await loadConfigFromFile(ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY), options);
         expect(grenade.context.planned_swings).toBe(1);
         expect(swingTasks(grenade)).toEqual(["swings-2", "swings-3"]);
+    });
+});
+
+describe("the fractional swings task", () => {
+    const ids = (plan: ReturnType<typeof planClockAlternatives>) => plan.tasks.map(task => task.id);
+
+    // every inserter's hands a cycle come out whole at the primary's own count, which it held on its first plan
+    it("is left out where it would make the primary clock again, which made anyway it does", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240);
+        let signature = "";
+        const plan = planClockAlternatives(config, options, (_context, _tasks, primary) => { signature = primary; });
+        expect(plan.context.fractional_is_primary).toBe(true);
+        expect(ids(plan)).not.toContain("fractional");
+        const made = runClockAlternativeTask(config, { ...plan.context, fractional_is_primary: undefined }, "fractional", options, [signature]);
+        expect(made).toEqual({ signature, alternatives: [] });
+    });
+
+    it("is made where a swing of the first plan is fractional", async () => {
+        const plan = planClockAlternatives(await loadConfigFromFile(ConfigPaths.ELECTRIC_FURNACE_20), options);
+        expect(plan.context.fractional_is_primary).toBeUndefined();
+        expect(ids(plan)).toContain("fractional");
     });
 });

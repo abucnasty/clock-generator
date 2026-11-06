@@ -28,11 +28,12 @@ import { primitiveGroupedOptionsSupported, verifiedPrimitiveGroupedClock } from 
 import { primitiveGroupedConfigSupported } from "./candidates/primitive-grouped-hands";
 import { MAX_OBSERVED_WINDOWS_PERIOD_TICKS, swingCountsListed } from "./planner/periods";
 import { SecondaryPlanningInvariantError, secondaryPlanningCountOf, withSecondaryPlanningProvenance, type SecondaryPlanningCount } from "./primitive-grouped-policy";
-import { BlueprintGenerationResult, GenerateClockOptions, SimulationStabilityCheck, fractionalSwingsOf } from "./plan/plan-run";
+import { BlueprintGenerationResult, GenerateClockOptions, SimulationStabilityCheck, fractionalStartOf, fractionalSwingsOf } from "./plan/plan-run";
+import { EntityTransferCountMap } from "./sequence/cycle/swing-counts";
 import { withRunMemo } from "./plan/run-memo";
 import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, ROUNDED_CLOCK_MAX_FAST, RoundedClock, roundedRateAllowed, searchesToRun, searchesAreNeeded } from "./rank";
 import { TargetProductionRate } from "./target-production-rate";
-import { AsBuiltStabilityCheck, BackpressureLossAssessment, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, clockVerificationSignature, FREE_RUNNING_CHECK_TICKS, LOOP_WINDOW_CHECK_TICKS, roundedClockTrial, startDependenceVerdictOf, wakeUpsFromStartsOf, withSettledOutput } from "./trial";
+import { AsBuiltStabilityCheck, BackpressureLossAssessment, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, clockVerificationSignature, FREE_RUNNING_CHECK_TICKS, fractionalSwingsChangeChecksOf, LOOP_WINDOW_CHECK_TICKS, roundedClockTrial, startDependenceVerdictOf, wakeUpsFromStartsOf, withSettledOutput } from "./trial";
 import { WakeUpsFromStarts } from "./wake-ups-from-starts";
 import { START_DEPENDENCE_NOT_CHECKED, StartDependence, startDependenceNote } from "./start-dependence";
 import { NotMadeClock, notTriedSentence, WhyNotStable, whyNotStable, whyNotStableClockOf } from "./why-not-stable";
@@ -119,6 +120,8 @@ export interface ClockAlternativeContext {
     result_windows?: boolean;
     /** Small batches was tried for the primary alternative (its first plan's period too long): it is not offered again */
     primitive_tried?: boolean;
+    /** The "Fractional swings" alternative would make the primary clock again (see fractionalMakesThePrimary): it is not made */
+    fractional_is_primary?: true;
 }
 
 
@@ -458,7 +461,7 @@ function alternativeDefinitionsFor(
         }];
     }
     return [
-        {
+        ...(context.fractional_is_primary === true ? [] : [{
             id: "fractional",
             label: "Fractional swings",
             description: `${BATCHED_SWINGS_LABEL} with fractional swings turned on: an inserter that needs e.g. 3/2 swings per cycle alternates `
@@ -468,8 +471,8 @@ function alternativeDefinitionsFor(
             // the config it is checked on is the alternatives' own, as with the other definitions, and stays so for its
             // chest drill fallbacks, whose own configs would otherwise take its place (withChestDrillFallbacks)
             planned_on: config,
-            no_shared_windows: true,
-        },
+            no_shared_windows: true as const,
+        }]),
         {
             id: "even-hands",
             label: "Even hands",
@@ -1040,6 +1043,7 @@ function planPrimaryAndTasks(
         period_ticks: result.simulation_duration.ticks,
         ...((result.primitive_grouped !== undefined || result.swing_backoff_report?.primitive_grouped_attempt !== undefined) && { primitive_tried: true }),
         ...(result.result_windows !== undefined && { result_windows: true }),
+        ...(fractionalMakesThePrimary(config, definition, result) && { fractional_is_primary: true as const }),
     };
     const tasks = alternativeDefinitions(config, context, {})
         .map(definition => ({
@@ -1049,6 +1053,28 @@ function planPrimaryAndTasks(
     on_tasks?.(context, tasks, clockVerificationSignature(config, result));
     const primary_run = runAlternative(primary, config, logger, options.on_progress_detail, undefined, undefined, options.on_not_made);
     return { primary: primary_run, context, tasks };
+}
+
+/**
+ * Whether the "Fractional swings" alternative would make the primary clock again, and so the same run with nothing to
+ * add: its first plan starts where the machines' crafts put it, at the primary's own count, whole, with every inserter's
+ * hands a cycle whole, so that it is the primary's plan; the primary held on that first plan, with nothing tried after
+ * it (no lower count, no period limit, no room for fuel, no loop windows, no chest drill windows to fall back from), so
+ * the alternative's run, which keeps belt pickup slack where the clock holds with it, makes the same clock; and its
+ * checks are those of the primary's, which planning them with fractional swings does not change. Then its clock is the
+ * primary's, and is merged into it.
+ */
+function fractionalMakesThePrimary(config: Config, primary: AlternativeDefinition, result: BlueprintGenerationResult): boolean {
+    const start = fractionalStartOf(result.crafting_cycle_plan)?.toDecimal();
+    const report = result.swing_backoff_report;
+    return primary.id === "planned-belt-slack" && holds(result) && config.target_output.counts !== "destroyed"
+        && config.overrides?.terminal_swing_count === undefined
+        && report !== undefined && !report.triggered && report.period_limit_pruning === undefined && report.primitive_grouped_attempt === undefined
+        && !(config.overrides?.backed_up_belts === true && takesFuelOffABelt(config))
+        && result.loop_windows === undefined && !hasPlannedChestDrill(config)
+        && start !== undefined && Number.isInteger(start) && start === result.used_terminal_swing_count
+        && EntityTransferCountMap.lcm(result.crafting_cycle_plan.entity_transfer_map) === 1
+        && !fractionalSwingsChangeChecksOf(config, result);
 }
 
 /**

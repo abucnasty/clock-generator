@@ -1909,13 +1909,24 @@ function verificationConfigOf(config: Config, result: BlueprintGenerationResult)
         [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const verification_config = buildAsBuiltConfig({ ...config, overrides: { ...config.overrides,
         derive_clock_windows: false, terminal_swing_count: verificationTerminalCountOf(result) } }, windows, result.simulation_duration.ticks);
+    const fractional_swings = fractionalSwingsChangeChecksOn(verification_config, result) && plannedWithFractionalSwings(result.crafting_cycle_plan);
+    return { config: verification_config, fractional_swings };
+}
+
+/**
+ * Whether planning a clock's runs with fractional swings can change them: at a forced whole swing count, fractional mode
+ * changes only the AUTO swing distribution, which clocked, always and never controls do not use, so it can where the
+ * count is not whole or an own-clock fuel inserter still needs AUTO. `verification_config` is the clock built as built.
+ */
+function fractionalSwingsChangeChecksOn(verification_config: Config, result: BlueprintGenerationResult): boolean {
     const fully_controlled = verification_config.inserters.every(inserter => inserter.overrides?.enable_control?.mode !== "AUTO")
         && (verification_config.drills?.configs.every(drill => drill.overrides?.enable_control?.mode !== "AUTO") ?? true);
-    // At a forced whole swing count, fractional mode changes only the AUTO swing distribution. Clocked/always/never
-    // controls do not use that distribution. Keep fractional swings when any own-clock fuel inserter still needs AUTO.
-    const fractional_swings = fully_controlled && Number.isInteger(verificationTerminalCountOf(result))
-        ? false : plannedWithFractionalSwings(result.crafting_cycle_plan);
-    return { config: verification_config, fractional_swings };
+    return !(fully_controlled && Number.isInteger(verificationTerminalCountOf(result)));
+}
+
+/** Whether planning the checks of a clock with fractional swings can change them (`fractionalSwingsChangeChecksOn`) */
+export function fractionalSwingsChangeChecksOf(planned_on: Config, result: BlueprintGenerationResult): boolean {
+    return fractionalSwingsChangeChecksOn(verificationConfigOf(planned_on, result).config, result);
 }
 
 /**

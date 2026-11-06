@@ -401,6 +401,18 @@ export function fractionalSwingsOf(crafting_cycle_plan: CraftingCyclePlan): Frac
     return plannedWithFractionalSwings(crafting_cycle_plan) ? { fractional_swings: true } : {};
 }
 
+// The output swings a cycle the machines of a plan's run make, as fractional swings plan them; no serialized field
+const fractional_starts = new WeakMap<CraftingCyclePlan, Fraction>();
+
+/**
+ * The output swings a cycle the output machines of the run a plan was made in make before they block, before any count
+ * is forced or made whole and without the belts backed up: where the "Fractional swings" alternative's first plan of
+ * the build starts. Undefined for a plan made in no run (a target that counts an item destroyed, or arithmetic alone).
+ */
+export function fractionalStartOf(crafting_cycle_plan: CraftingCyclePlan): Fraction | undefined {
+    return fractional_starts.get(crafting_cycle_plan);
+}
+
 /**
  * How a build is run: the start it is given, how long it runs, and what is recorded. Shared by the planning run and
  * the trial of a clock (`runBuild`).
@@ -2455,33 +2467,45 @@ function maxSwingsPossibleOf(
         `Mismatch between output machines (${output_machine_states.length}) and output inserters (${output_inserters.length})`
     );
 
-    const output_item_name = output_machine_states[0].machine.output.item_name;
     const crafts_with_belts_backed_up = craftsWithBeltsBackedUp(config, fractional_swings);
-    
-    // Compute max swings possible for each output machine and use the minimum
-    let max_swings_possible: Fraction | null = null;
-    
-    for (let i = 0; i < output_machine_states.length; i++) {
-        const machine_state = output_machine_states[i];
-        const inserter = output_inserters[i];
-        const output_machine = machine_state.machine;
-        const crafts = crafts_with_belts_backed_up?.get(output_machine.entity_id.id) ?? machine_state.craftCount;
-        const output_crafted = crafts * output_machine.output.amount_per_craft.toDecimal();
-        logger.log(`Output machine ${output_machine.entity_id.id} crafted ${output_crafted} ${output_item_name}`
-            + (crafts_with_belts_backed_up === null ? "" : " with its belts backed up"));
-        
-        const machine_max_swings = fraction(output_crafted).divide(handSizeFor(inserter, output_item_name));
-        
-        if (max_swings_possible === null || machine_max_swings.toDecimal() < max_swings_possible.toDecimal()) {
-            max_swings_possible = machine_max_swings;
-        }
-    }
+    let max_swings_possible: Fraction | null = swingsMadeOf(output_machine_states, output_inserters, crafts_with_belts_backed_up, logger);
 
     if (config.overrides?.terminal_swing_count !== undefined) {
         max_swings_possible = fraction(config.overrides.terminal_swing_count);
         logger.log(`Overriding max swings possible to ${max_swings_possible} due to config override`);
     }
     return max_swings_possible!;
+}
+
+/**
+ * The output swings a cycle the output machines make before they block, the fewest of them: what each crafted over its
+ * output inserter's hand, by the crafts with the belts backed up where they are given (`craftsWithBeltsBackedUp`), else
+ * by what the prepare step crafted. Logged where a logger is given.
+ */
+function swingsMadeOf(
+    output_machine_states: MachineState[],
+    output_inserters: Inserter[],
+    crafts_with_belts_backed_up: Map<string, number> | null,
+    logger?: Logger,
+): Fraction {
+    const output_item_name = output_machine_states[0].machine.output.item_name;
+    let fewest: Fraction | null = null;
+    for (let i = 0; i < output_machine_states.length; i++) {
+        const machine_state = output_machine_states[i];
+        const inserter = output_inserters[i];
+        const output_machine = machine_state.machine;
+        const crafts = crafts_with_belts_backed_up?.get(output_machine.entity_id.id) ?? machine_state.craftCount;
+        const output_crafted = crafts * output_machine.output.amount_per_craft.toDecimal();
+        logger?.log(`Output machine ${output_machine.entity_id.id} crafted ${output_crafted} ${output_item_name}`
+            + (crafts_with_belts_backed_up === null ? "" : " with its belts backed up"));
+
+        const machine_max_swings = fraction(output_crafted).divide(handSizeFor(inserter, output_item_name));
+
+        if (fewest === null || machine_max_swings.toDecimal() < fewest.toDecimal()) {
+            fewest = machine_max_swings;
+        }
+    }
+    return fewest!;
 }
 
 /**
@@ -2512,7 +2536,9 @@ function computeCraftingCyclePlan(
         return CraftingCyclePlan.create(target_production_rate, entity_registry, config, fraction(1), config.overrides ?? {}, result_windows);
     }
     const max_swings_possible = maxSwingsPossibleOf(output_machine_states, output_inserters, config, logger, fractional_swings);
-    return CraftingCyclePlan.create(target_production_rate, entity_registry, config, max_swings_possible, config.overrides ?? {}, undefined, fractional_swings);
+    const plan = CraftingCyclePlan.create(target_production_rate, entity_registry, config, max_swings_possible, config.overrides ?? {}, undefined, fractional_swings);
+    fractional_starts.set(plan, swingsMadeOf(output_machine_states, output_inserters, null));
+    return plan;
 }
 
 /**
