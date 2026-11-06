@@ -12,7 +12,7 @@ import { buildPlanOfConfig } from "../planner/plan-build";
 import { assertLaneCapacity } from "../../config/lane-capacity-validator";
 import { DebugObserverFactory } from "../sequence/debug/debug-observer-factory";
 import { DebugSettingsProvider, MutableDebugSettingsProvider } from "../sequence/debug/debug-settings-provider";
-import { InserterClock, byProductOnlyInserters, clockWindowsOverPeriod, fuelOnlyInserters, isByProductOnlyInserter, alwaysEnabledInserters, unplannedInserterClocks } from "../sequence/unplanned-inserter-clock";
+import { InserterClock, byProductOnlyInserters, clockWindowsOverPeriod, fuelOnlyInserters, isByProductOnlyInserter, alwaysEnabledInserters, loopInserters, unplannedInserterClocks } from "../sequence/unplanned-inserter-clock";
 import { createEntityRegistryFromConfig, MovingPickupPhases, SimulationContext } from "../sequence/simulation-context";
 import { Duration, OpenRange } from "../../data-types";
 import { Entity, EntityId, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from "../../entities";
@@ -38,6 +38,7 @@ import { EnableControlFactory } from "../sequence/interceptors/inserter-enable-c
 import { ConfigurableEnableControlFactory, EntityEnableControlOverrideMap } from "../sequence/interceptors/configurable-enable-control-factory";
 import { CraftingCyclePlan, plannedTerminalSwingCount, plannedWithFractionalSwings } from "../sequence/cycle/crafting-cycle";
 import { PrepareStep } from "../runner/steps/prepare-step";
+import { BackpressureFillStep, backpressureFillTally } from "../runner/steps/backpressure-fill-step";
 import { DEFAULT_LOOP_SEED_ITEMS, seedLoopingRecipes } from "../runner/cold-start";
 import { DEFAULT_TAKER_ORDER, TakerOrder } from "../../simulation/competing-takers";
 import { DeciderOrder } from "../decider-order";
@@ -633,8 +634,9 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
 
     const swing_counts = crafting_cycle_plan.entity_transfer_map;
     const transfer_plan = planTransfers(config, crafting_cycle_plan, simulation_context, logger);
-    // a staged scaffold starts with nothing in its machines: the plan stands, the build is made anew and seeded
-    const build = options.cold_start ? coldBuildOf(config, options, debug, logger) : planned_build;
+    // a clock-only run starts from the backpressure start: the plan stands, the build is made anew, filled with its clocks
+    // off and its loops given their kick start (see backpressureBuildOf)
+    const build = options.cold_start ? backpressureBuildOf(config, options, crafting_cycle_plan, transfer_plan.recipe_lcm, debug, logger) : planned_build;
     const controlled = withEnableControls(config, build, crafting_cycle_plan, transfer_plan.recipe_lcm, logger,
         options.counter_runs_through === true);
     const { duration, warmup_period } = runPeriodsOf(crafting_cycle_plan, transfer_plan.recipe_lcm, options, logger, period => {
@@ -782,6 +784,43 @@ function recordedBuildOf(config: Config, options: RunOptions, debug: MutableDebu
 function coldBuildOf(config: Config, options: RunOptions, debug: MutableDebugSettingsProvider, logger: Logger): RecordedBuild {
     const build = recordedBuildOf(config, options, debug, logger);
     seedLoopingRecipes(build.simulation_context, config.overrides?.loop_seed_items ?? DEFAULT_LOOP_SEED_ITEMS);
+    return build;
+}
+
+/**
+ * The backpressure start (docs/maintainer/glossary.md): every entity that does not depend on a clocked entity is full,
+ * the machines that only clocked inserters fill are empty, and a loop holds its kick start. Made as a user makes it with
+ * the Clock lock on: the build anew, run with every clocked inserter and drill off until nothing moves
+ * (`BackpressureFillStep`), then every machine that makes its own ingredient is given `overrides.loop_seed_items` of it.
+ * The inserters on fuel clocks of their own stay on (a burner is fuelled while the build fills). The clock starts after.
+ */
+function backpressureBuildOf(config: Config, options: RunOptions, crafting_cycle_plan: CraftingCyclePlan, recipe_lcm: number,
+    debug: MutableDebugSettingsProvider, logger: Logger): RecordedBuild {
+    const build = recordedBuildOf(config, options, debug, logger);
+    const { simulation_context } = build;
+    const registry = simulation_context.entity_registry;
+    const fuel = new Set(Array.from(unplannedInserterClocks(registry, CraftingCyclePlan.ticksOfCycles(crafting_cycle_plan, recipe_lcm),
+        undefined, undefined, alwaysEnabledByConfig(config))).filter(([, clock]) => clock.own_clock).map(([id]) => id));
+    const off = new Set<string>(loopInserters(registry).map(inserter => inserter.entity_id.id));
+    config.inserters.forEach((inserter, index) => {
+        const id = EntityId.forInserter(inserter.id ?? index + 1).id;
+        const mode = inserter.overrides?.enable_control?.mode;
+        if (!fuel.has(id) && (mode === "CLOCKED" || mode === "NEVER")) off.add(id);
+    });
+    for (const drill of config.drills?.configs ?? []) {
+        const mode = drill.overrides?.enable_control?.mode;
+        if (mode === "CLOCKED" || mode === "NEVER") off.add(EntityId.forDrill(drill.id).id);
+    }
+    const fill = new BackpressureFillStep(simulation_context, off).execute();
+    backpressureFillTally.fills++;
+    backpressureFillTally.ticks += fill.ticks;
+    if (!fill.quiet) {
+        backpressureFillTally.not_quiet++;
+        if (typeof process !== "undefined") process.stderr.write(`BACKPRESSURE_FILL_NOT_QUIET ticks=${fill.ticks}\n`);
+    }
+    seedLoopingRecipes(simulation_context, config.overrides?.loop_seed_items ?? DEFAULT_LOOP_SEED_ITEMS);
+    build.inventory_transfer_history.clear();
+    build.relative_tick.start = simulation_context.tick_provider.getCurrentTick();
     return build;
 }
 
