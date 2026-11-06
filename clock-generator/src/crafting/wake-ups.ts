@@ -8,8 +8,11 @@ import type { StockRecording } from "./machine-stock";
  * inserters that put into it when it starts a craft, and the inserters that take from it when it finishes a craft or
  * pays out a productivity bar (`wakeUps` below). A woken inserter looks for something to move, finds nothing or a
  * little, and goes back to sleep: with the debug option `show-wakeup-lists` the yellow line from the
- * inserter to the machine flickers. An inserter its clock has disabled is on no list and is never woken, once it has
- * been updated disabled (one switched off while asleep stays on its list until woken: the rule "kept-lists", `countKeptLists`). A wake-up
+ * inserter to the machine flickers. An inserter that the game updates while the clock has switched it off goes on no
+ * list (once a full hand is dropped and its arm is back), and no alarm reaches it until the clock switches it on. But a
+ * switch-off sends no alarm: an inserter that the clock switches off while it is in sleep stays on its wakeup list, and
+ * the next alarm still gives it a wakeup, in which it finds that it is disabled (a ghost wakeup, which the rule
+ * "kept-lists" counts: `countKeptLists`). A wake-up
  * is one such waking, and what a clock is there to spare a build.
  *
  * The game does not let a mod read its wake-up lists, so they are worked out here from what it does show: the state
