@@ -33,6 +33,10 @@ export interface BuildValidationIssue extends Problem {
     inserters?: number[];
 }
 
+/** The ids of the inserters the engine's refusal names, whose rows are outlined for as long as it stands: none once the build no longer has the problem */
+export const refusedInserterIdsOf = (issues: readonly Pick<BuildValidationIssue, 'blocksGeneration' | 'inserters'>[]): ReadonlySet<number> =>
+    new Set(issues.filter(issue => issue.blocksGeneration).flatMap(issue => issue.inserters ?? []));
+
 /** Whether the engine refuses the build as it stands: the issues come from the last check only while it is for this build */
 export const isRefused = (issues: readonly Pick<BuildValidationIssue, 'source'>[]) => issues.some(issue => issue.source === 'refusal');
 export const validationIssueElementId = (id: string) => `validation-issue-${id}`;

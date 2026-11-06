@@ -49,7 +49,7 @@ import { RenameBuildDialog } from './components/RenameBuildDialog';
 import { OpenSharedBuildDialog } from './components/OpenSharedBuildDialog';
 import { BuildValidationPanel } from './components/BuildValidationPanel';
 import { outputChestIssues } from './utils/outputChestIssues';
-import { buildValidationIssues, isRefused, navigateToOutputRouteRepair } from './utils/buildValidation';
+import { buildValidationIssues, isRefused, navigateToOutputRouteRepair, refusedInserterIdsOf } from './utils/buildValidation';
 import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 import { BuildPanel, type BuildView } from './components/BuildPanel';
 import { PanelSection } from './components/Panel';
@@ -550,6 +550,8 @@ function App() {
             : error && errorRecovery?.sourceConfigKey === configKey ? { message: error } : undefined,
     }), [config.target_output, config.machines, config.chests, config.inserters, config.belts, checkedCoverage, chestIssues, machinesMax, gameNames, validation, checkStatus, error, errorRecovery, configKey, outputGenerationIssues]);
     const problems = useMemo(() => validationIssues.filter(issue => issue.blocksGeneration), [validationIssues]);
+    // the inserters the engine's refusal names, live or from the last check: their rows are outlined while it stands
+    const refusedInserterIds = useMemo(() => refusedInserterIdsOf(problems), [problems]);
     // the engine's refusal is for the build as the last check saw it: any change to the build takes it away
     const refused = isRefused(problems);
 
@@ -1319,6 +1321,7 @@ function App() {
                                             key={library.currentId}
                                             focusRequest={inserterFocusRequest}
                                             onFocusHandled={finishInserterFocus}
+                                            refusedIds={refusedInserterIds}
                                             inserters={config.inserters}
                                             machines={config.machines}
                                             belts={config.belts}

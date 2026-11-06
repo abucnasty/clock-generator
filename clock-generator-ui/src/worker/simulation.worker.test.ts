@@ -8,7 +8,7 @@ import { readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigFor
 import { configToFormData, formDataToConfig } from '../utils/configForm/configMapping';
 import { createDefaultConfig } from '../utils/configForm/formData';
 import { applyPaste } from '../utils/pastePreview';
-import { buildValidationIssues, type ValidationDiagnostic } from '../utils/buildValidation';
+import { buildValidationIssues, refusedInserterIdsOf, type ValidationDiagnostic } from '../utils/buildValidation';
 
 /** Every response the worker posted in this test, in order */
 let posted: WorkerResponse[];
@@ -318,6 +318,16 @@ describe('inserters that take from a belt into chests (#650)', () => {
         const blocking = listed(live, config.machines).filter(issue => issue.blocksGeneration);
         expect(blocking).toHaveLength(1);
         expect(blocking[0]).toMatchObject({ source: 'engine', id: 'inserter-scope', inserters: [3, 5], text: expect.stringContaining(says) });
+    });
+
+    it('outlines rows 3 and 5 only while they take from a belt into a chest: none once they drop into a machine', async () => {
+        const outlined = async (build: Config) => [...refusedInserterIdsOf(listed(await coverageOf(build), build.machines))];
+        expect(await outlined(config)).toEqual([3, 5]);
+        const fixed = { ...config, inserters: config.inserters.map(inserter => inserter.id === 3 || inserter.id === 5
+            ? { ...inserter, sink: { type: 'machine', id: 1 } } : inserter) } as Config;
+        expect(await outlined(fixed)).toEqual([]);
+        // an advisory or a problem that names no inserter outlines nothing
+        expect([...refusedInserterIdsOf([{ blocksGeneration: false, inserters: [3] }, { blocksGeneration: true }])]).toEqual([]);
     });
 
     it('Check refuses it as a refusal that names them, once beside the live one', async () => {
