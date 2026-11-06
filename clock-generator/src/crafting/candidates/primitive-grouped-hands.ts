@@ -11,7 +11,7 @@ import { EntityTransferCountMap, outputPathOf, type SerializableTransferPlan } f
 import { createEntityRegistryFromConfig } from "../sequence/simulation-context";
 import { alwaysEnabledInserters, unplannedInserterClocks } from "../sequence/unplanned-inserter-clock";
 import { canonicalVerificationJson } from "../verification-signature";
-import { MAX_SIMULATION_TICKS } from "../plan/plan-run";
+import { SIMULATION_BUDGET_TICKS } from "../plan/plan-run";
 import { ClockPeriodLimitError } from "../plan/clock-period-limit";
 import { groupedHandsCycles, groupedHandsPlan, GroupedHandsNotApplicable, type GroupedHandsComposition, type GroupedHandsOptions } from "./grouped-hands";
 
@@ -103,10 +103,10 @@ export function constructPrimitiveGroupedHands(config: Config): PrimitiveGrouped
     const grouped_cycles = groupedHandsCycles(registry, cycle.entity_transfer_map, route_facts);
     if (grouped_cycles === null) throw new GroupedHandsNotApplicable("the plan has no output hands");
     const period_ticks = CraftingCyclePlan.ticksOfCycles(cycle, grouped_cycles);
-    if (Number.isFinite(period_ticks) && period_ticks > 0 && period_ticks >= MAX_SIMULATION_TICKS) {
+    if (Number.isFinite(period_ticks) && period_ticks > 0 && period_ticks >= SIMULATION_BUDGET_TICKS) {
         throw new ClockPeriodLimitError({ terminal_swing_count: plannedTerminalSwingCount(cycle)!,
             base_cycle_ticks: cycle.total_duration_ticks.toDecimal(), computed_lcm: EntityTransferCountMap.lcm(cycle.entity_transfer_map),
-            effective_lcm: grouped_cycles, period_ticks, limit_ticks: MAX_SIMULATION_TICKS });
+            effective_lcm: grouped_cycles, period_ticks, limit_ticks: SIMULATION_BUDGET_TICKS });
     }
     assert(Number.isFinite(period_ticks) && period_ticks > 0, `Clock period must be positive and finite, got ${period_ticks}`);
     if (!Number.isInteger(period_ticks)) throw new GroupedHandsNotApplicable(`the period is ${period_ticks} ticks, not a whole number`);

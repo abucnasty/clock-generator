@@ -3,7 +3,7 @@ import { EntityId } from "../entities";
 import { OpenRange } from "../data-types";
 import { Logger } from "../common/logger";
 import { SerializableClockWindows } from "./clock";
-import { MAX_SIMULATION_TICKS, runBuild, SerializableInserterClock } from "./plan/plan-run";
+import { SIMULATION_BUDGET_TICKS, runBuild, SerializableInserterClock } from "./plan/plan-run";
 import { runClockOnBuild } from "./trial";
 import { TimelineRecording } from "./timeline-recording";
 import { InserterClock } from "./sequence/unplanned-inserter-clock";
@@ -31,12 +31,12 @@ export interface RecordTimelineRequest {
 
 /** Replay the saved build, never the form being edited. This is independent of generation and its assessment. */
 export function recordSimulationTimeline(request: RecordTimelineRequest): TimelineRecording {
-    if (!Number.isFinite(request.period_ticks) || request.period_ticks <= 0 || request.period_ticks >= MAX_SIMULATION_TICKS) {
+    if (!Number.isFinite(request.period_ticks) || request.period_ticks <= 0 || request.period_ticks >= SIMULATION_BUDGET_TICKS) {
         throw new Error("This clock period cannot be recorded safely.");
     }
     if (request.mode === "clock" && request.settle_ticks !== undefined
         && (!Number.isInteger(request.settle_ticks) || request.settle_ticks < 0
-            || request.settle_ticks > request.period_ticks * Math.floor((MAX_SIMULATION_TICKS - 1) / request.period_ticks))) {
+            || request.settle_ticks > request.period_ticks * Math.floor((SIMULATION_BUDGET_TICKS - 1) / request.period_ticks))) {
         throw new Error("This clock period cannot be recorded safely.");
     }
     const config = { ...request.config, overrides: { ...request.config.overrides, terminal_swing_count: request.terminal_swing_count, derive_clock_windows: false } };

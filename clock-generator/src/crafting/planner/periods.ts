@@ -1,7 +1,7 @@
 /**
  * The main-period choices of a build: the output swing counts today's alternatives are listed for (the planned count,
  * the counts above and below the main one, and fractional swings), each with its period, kept or
- * pruned by arithmetic before any simulation. The one rule that prunes is P-limit: a period of MAX_SIMULATION_TICKS or
+ * pruned by arithmetic before any simulation. The one rule that prunes is P-limit: a period of SIMULATION_BUDGET_TICKS or
  * more cannot be simulated, nor, under whole-counter checks, a fractional period whose whole counter
  * is that long (`counterOverLimitOf`). Each count's hands come from today's cycle plan (`CraftingCyclePlan.create`), never
  * worked out again here; an alternative's count that the cycle plan refuses is listed as refused, with the plan's reason,
@@ -15,7 +15,7 @@ import type { PeriodChoice, PeriodListing, ResultWindowsDecision } from "../../d
 import Fraction, { fraction } from "../../data-types/fraction";
 import { Entity, type ReadableEntityRegistry } from "../../entities";
 import { targetInsertersOf, targetMachinesOf, type TargetItem } from "../sequence/cycle/target-ends";
-import { MAX_SIMULATION_TICKS, counterOverLimitOf } from "../plan/clock-period-limit";
+import { SIMULATION_BUDGET_TICKS, counterOverLimitOf } from "../plan/clock-period-limit";
 import { CraftingCyclePlan, plannedTerminalSwingCount } from "../sequence/cycle/crafting-cycle";
 import { FractionalSwingsRefusedError, fractionalSwingsWholeAt } from "../sequence/cycle/swing-distribution";
 import { TargetProductionRate } from "../target-production-rate";
@@ -25,7 +25,11 @@ import type { GroupShape } from "./groups";
 /** Observed windows re-simulate the build hundreds of times; above this period (a high LCM) that takes minutes */
 export const MAX_OBSERVED_WINDOWS_PERIOD_TICKS = 2400;
 
-/** Output swing counts above the planned one offered as alternatives, also when the plan backed off to a lower count */
+/**
+ * Output swing counts above the planned one offered as alternatives, also when the plan backed off to a lower count.
+ * A cost skip, kept until the pricing release, not a proof: no fixed number says a longer cycle cannot work. Measured
+ * on all 86 record jobs, listing up to 3 counts further (416 counts) found 10 alternatives that met the rate, in 3 jobs.
+ */
 const EXTENDED_SWING_COUNTS = 3;
 
 /**
@@ -109,12 +113,12 @@ function choiceOf(count: ListedCount, group: number): PeriodChoice {
     const cycles = count.measure.override_lcm ?? count.measure.group_cycles[group];
     const period_ticks = count.measure.cycle_ticks.multiply(cycles).toDecimal();
     const base = { ...head, cycle_ticks: ratioOf(count.measure.cycle_ticks), cycles, period_ticks };
-    if (period_ticks >= MAX_SIMULATION_TICKS) {
-        return { ...base, pruned: { rule: "P-limit", terms: { period_ticks, limit_ticks: MAX_SIMULATION_TICKS } } };
+    if (period_ticks >= SIMULATION_BUDGET_TICKS) {
+        return { ...base, pruned: { rule: "P-limit", terms: { period_ticks, limit_ticks: SIMULATION_BUDGET_TICKS } } };
     }
     const counter_ticks = counterOverLimitOf(period_ticks);
     return counter_ticks !== null
-        ? { ...base, pruned: { rule: "P-limit", terms: { period_ticks, limit_ticks: MAX_SIMULATION_TICKS, counter_ticks } } }
+        ? { ...base, pruned: { rule: "P-limit", terms: { period_ticks, limit_ticks: SIMULATION_BUDGET_TICKS, counter_ticks } } }
         : { ...base, kept: true };
 }
 
@@ -171,7 +175,7 @@ export function plannedPeriodsOf(
     const max_swings = input.max_swings;
     const atCount = (count: number, listed_as: PeriodListing) => planned(CraftingCyclePlan.create(target, registry, config, fraction(count),
         { ...overrides, terminal_swing_count: count }), listed_as);
-    const under = (count: PlannedCount) => count.measure.main_period.toDecimal() < MAX_SIMULATION_TICKS;
+    const under = (count: PlannedCount) => count.measure.main_period.toDecimal() < SIMULATION_BUDGET_TICKS;
 
     // the planning run's count, then today's swing backoff while the period is over the limit; the main clock's count
     // is the first under it, or the planned one where there is none

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { combineClockAlternativeRuns, rankingOf, searchesAreNeeded, type ClockAlternative, type ClockAlternativeRun, type ClockRanking } from "./generate-blueprint";
 import { clockVerdictOf, windowsRoundedTo, type ClockAssessment } from "./trial";
-import { searchesToRun, type RoundedClock } from "./rank";
+import { noSearchCanBeat, searchesToRun, type RoundedClock } from "./rank";
 import type { Config } from "../config";
 
 type Ranked = ClockRanking & { id: string };
@@ -354,5 +354,26 @@ describe("searchesToRun", () => {
 
     it("judges the clock the selection ends on so far, not another stable one", () => {
         expect(toRun([clock("more", { wake_ups_per_minute: 30 }), clock("none", { wake_ups_per_minute: 0 })], 144)).toEqual([]);
+    });
+});
+
+describe("noSearchCanBeat", () => {
+    it("holds for a cost of no wakeups, also one that rounds to none at a thousandth", () => {
+        expect(noSearchCanBeat({ wake_ups_per_minute: 0 })).toBe(true);
+        expect(noSearchCanBeat({ wake_ups_per_minute: 0.0004 })).toBe(true);
+    });
+
+    it("does not hold for any cost a thousandth or more, nor for a cost not counted", () => {
+        expect(noSearchCanBeat({ wake_ups_per_minute: 0.001 })).toBe(false);
+        expect(noSearchCanBeat({ wake_ups_per_minute: 197.5 })).toBe(false);
+        expect(noSearchCanBeat({ wake_ups_per_minute: null })).toBe(false);
+    });
+
+    // the rule reads wakeups alone: the windows and the periods to get back from a loss of the selected clock do not enter
+    it("is the condition that ends the searches, whatever the other keys of the selected clock", () => {
+        const SEARCHES = [{ id: "derived" }, { id: "shifted-swings" }];
+        const toRun = (selected: Ranked) => searchesToRun([{ signature: selected.id, alternatives: [selected] }], it => it, SEARCHES, 144).map(it => it.id);
+        expect(toRun(clock("none", { wake_ups_per_minute: 0, window_count: 40 }))).toEqual([]);
+        expect(toRun(clock("some", { wake_ups_per_minute: 0.001, window_count: 1 }))).toEqual(["derived", "shifted-swings"]);
     });
 });
