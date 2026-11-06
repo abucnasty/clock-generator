@@ -4,7 +4,7 @@
   "group": "config",
   "name": "AUTOMATION_SCIENCE_240",
   "config_sha256": "7cf27ba6241e9f3a2b03969c1e8978880160fa8795d14d7fd5425ed154ca2697",
-  "job_results_sha256": "9f5b75caeaf02c9cb19e977e131a7eaf83c441f826b75a639450da4ad23a8aff",
+  "job_results_sha256": "63f0309a32bb2d3237134c8fd3a082a1b97912dea526013ad8dfbaebe2972536",
   "selected": "swings-2",
   "selected_windows": {
     "inserter:2": "1-13",
@@ -12,6 +12,7 @@
   },
   "alternatives": [
     {"id": "planned-belt-slack", "verdict": "stable", "holds": true, "rate": 240, "supply": "moving", "period": 216, "wake_ups": 192.111, "descriptions_cut": 0, "clock_sha256": "4cc378b0763baa57c172322cb4591c8e275c84203feacba68179fb055480dcbd", "windows_sha256": "e8a0a04bf29b6b59216cfa80e67af6cdd64897c4c53ef8daf97f9fa9614e8be9", "text_sha256": "80b4696a558deb7e9240c56285cf8eebc1e8ec9306bfa86bf2711e0008c40303", "results_sha256": "6016d58cfab0b4f704d10077c98d1082f1ef297fcd7df08f1902090d350ce2ef"},
+    {"id": "fractional", "verdict": "no recovery", "holds": true, "rate": 240, "supply": "backed_up", "period": 72, "wake_ups": 300.16, "descriptions_cut": 0, "clock_sha256": "c9b76cb3f70ace9d3178f6e80af5096e94eedb356cfed2a0dbd9b39b69df9040", "windows_sha256": "8e33a9c24005d11bf79af3449d9fd18aeb26173db40f42dfb052b03ff3c80654", "text_sha256": "1feae3f7537a914e24c48a9cd8ec46682cef52221c8b5a003b77f68f5eba7a7b", "results_sha256": "fa497d67b139139eaa8cfce574f19ba693810a0d19c67b6f57ee534d054adeef"},
     {"id": "derived", "verdict": "stable", "holds": true, "rate": 240, "supply": "moving", "period": 216, "wake_ups": 300.696, "descriptions_cut": 0, "clock_sha256": "b1490c9f2c499d0b7a510ce5be68b711d43c46deab3269f76a152eb79262bd1e", "windows_sha256": "61e9d5925d1f9b4de5560de0177e4e3534ff7619fd9f905cfb83d5851ae23c6c", "text_sha256": "937051204990146218414fcd9e809ac8bec3035f70e469eb79937c036fed789e", "results_sha256": "2c8eaf279defa84b3911c323707fb42989bf16d5d8c5e66e58f8e5cd5c3463b4"},
     {"id": "swings-4", "verdict": "unstable", "holds": false, "rate": 180, "supply": "moving", "period": 144, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "e8eea5e195b5606e6aa84ef786d7f5114567be89f4c551c5e75c9f146008078b", "windows_sha256": "57ca2b19e2fe2e5e8617626a0f270fdd54006cd8ca0315c997c72aa4d74a6e88", "text_sha256": "e38a3dbd4bdafb4dc57b3ec5306cf391f62223ae41f33205b6bd84dd02453d60", "results_sha256": "fd1a74ad15ef5f64d2578b687686ca09a0bf0a1c0cb35ea0bf63be798be95a03"},
     {"id": "swings-5", "verdict": "unstable", "holds": false, "rate": 192, "supply": "moving", "period": 360, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "c71131553f22d9f27a960d05a12e63abcd587b0d2d36299d618fa79f7dd93804", "windows_sha256": "d6b6c4e17464668a30ee5aef5e610d8c5408ad612cf47f584a8f1c80cede7fca", "text_sha256": "492a8c8fa94ef08273fc74888a698fc1749934d51bf924a287fb3fce63f4f0bf", "results_sha256": "69f4c4da80e811549e01fa27d6edfa7c4bf41d7de160b62137a878636213d5ae"},

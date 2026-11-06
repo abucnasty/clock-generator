@@ -4,10 +4,10 @@
     "generated-moving-one-copy": {
       "recorded": {
         "pr": 0,
-        "commit": "052a4129bb7dc2bb1ee24bd3d0a092cd36ba6891",
-        "frozen_head": "052a4129bb7dc2bb1ee24bd3d0a092cd36ba6891",
+        "commit": "be62b7f0a642dfa93cd4e9b520c14cc97f279feb",
+        "frozen_head": "be62b7f0a642dfa93cd4e9b520c14cc97f279feb",
         "note": "recorded under the protocol in game ticks on the engine of this head with the tests of the branch that added it; pr is set when the PR is opened",
-        "clock_sha256": "492f1635c9f8360ce90840c139e39ccba1b00b781ce001b89a74439aae1a0600",
+        "clock_sha256": "11f9af32db535db2df84f5960976658620db06ee478fd9e133fb4c37535a93e9",
         "clock_basis": "capture"
       },
       "native": {
@@ -49,12 +49,12 @@
         "expected": 352.0,
         "verdict": "stable",
         "selection": {
-          "id": "swings-2",
+          "id": "fractional",
           "holds": true,
           "rate": 330,
           "supply": "moving"
         },
-        "clock_sha256": "492f1635c9f8360ce90840c139e39ccba1b00b781ce001b89a74439aae1a0600"
+        "clock_sha256": "11f9af32db535db2df84f5960976658620db06ee478fd9e133fb4c37535a93e9"
       }
     }
   }
