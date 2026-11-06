@@ -35,7 +35,11 @@
     "lint": "eslint .",
     "test:typecheck": "tsc -p tsconfig.tests.json",
     "probe": "npm run build && node scripts/capture-probe.js",
-    "screenshots": "npm run build && node scripts/capture-mechanics-screenshots.js"
+    "screenshots": "npm run build && node scripts/capture-mechanics-screenshots.js",
+    "docs:portal": "node scripts/docs/portal.js",
+    "docs:fields": "tsc && node scripts/docs/build-file-fields.js",
+    "docs:game-labels": "node scripts/docs/check-game-labels.js",
+    "test:docs": "vitest run --project unit tests/docs"
   },
   "keywords": [
     "factorio",

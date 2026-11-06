@@ -3,4 +3,5 @@
 <map>
   <title>Clock generator: maintainer guide</title>
   <topicref href="glossary.md" format="mdita" type="reference"/>
+  <topicref href="build-file-fields.md" format="mdita" type="reference"/>
 </map>

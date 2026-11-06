@@ -3,7 +3,8 @@ name: Test
 # Pull requests run the unit tests, build the UI and generate a clock in it in a browser. Pull requests to master, which
 # are what gets released, and to an integration branch (feature/... or release/...), run the generation tests as well: they generate the clock alternatives of whole samples and
 # take minutes. Pull requests also generate every blast job, in shards, and compare it with the committed record (clock-generator/record/).
-# Those pull requests run none of the test jobs when they change documentation only (see the `changes` job). "Run workflow" (or
+# Those pull requests run none of the test jobs when they change documentation only (see the `changes` job), except the
+# docs checks, which run on every pull request (the `docs` job). "Run workflow" (or
 # `gh workflow run test.yml --ref <branch>`) runs them all on any branch (the record check runs on pull requests only).
 # The two heavy suites, the generation shards and the record shards, do not run on a draft pull request (GitHub's free plan runs
 # 20 jobs at once, and a pull request starts about 22): the checks "Gen summary" and "Rec summary" run and fail there, with the
@@ -73,6 +74,38 @@ jobs:
       # the game-backed tests need a Factorio install and are not part of this: `npm run test:game`
       - name: Unit tests
         run: npm test -- --reporter=default
+
+  # The documentation checks: the generated files are what their sources give (the sidecar's PORTAL.md from the user
+  # topics on exporting a build, docs/maintainer/build-file-fields.md from the engine's ConfigSchema), and every bold label
+  # of the user topics is a string of the site, of the sidecar or of docs/game-labels.tsv. They run on every pull request
+  # and every call, documentation only or not: a change to a topic, to the schema or to a label can break them.
+  docs:
+    name: Docs checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: clock-generator
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: clock-generator/package-lock.json
+
+      - run: npm ci
+
+      - name: PORTAL.md is current
+        run: npm run docs:portal -- --check
+
+      # builds the engine first: the generator reads the schema from dist/
+      - name: Build file fields topic is current
+        run: npm run docs:fields -- --check
+
+      - name: Bold labels of the user topics
+        run: npm run test:docs -- --reporter=default
 
   # Whether the tests have anything to test: not when a pull request to master, to a feature/ or to a release/ branch changes
   # documentation only. The output is called `generation` for the generation tests it first decided; the unit and UI jobs

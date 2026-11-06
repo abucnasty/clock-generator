@@ -76,7 +76,9 @@ The `clock-generator-sidecar` mod has a version of its own and is only released 
 to the mod's folder to `master` publishes a version the Factorio mod portal does not have yet
 (`.github/workflows/publish-sidecar.yml`, which needs the `FACTORIO_MOD_API_KEY` secret and can also be started by
 hand). A release of the generator does not publish the mod. The upload sends only the zip: the long description on
-the mod's portal page is `clock-generator-sidecar/PORTAL.md`, pasted there by hand (Edit) after a release.
+the mod's portal page is `clock-generator-sidecar/PORTAL.md`, pasted there by hand (Edit) after a release. PORTAL.md is
+generated from the user topics `docs/user/export-a-build.md` and `docs/user/sidecar-export-contents.md`: edit those, then
+run `npm run docs:portal` in `clock-generator/` (CI fails when PORTAL.md is not current).
 
 For an **unreleased merge to master**, set the repository Actions variable `RELEASE_HOLD` to `true` before
 merging. The release job, production deployment and Sidecar upload all honor it on pushes and manual runs;
