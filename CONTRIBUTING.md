@@ -231,9 +231,7 @@ bash scripts/blast/blast.sh record check <out>        # the problems, by job, pr
 
 A property is never loosened because a job fails it: the failure is a finding. When a job fails one for a reason of its own, name it in
 `EXCEPTIONS` (job key, property, the alternative ids, the reason with the issue number), file the issue, and say so in the pull request;
-`record check` lists what each exception found. #626 is the example: `counters-add-up` finds an inserter's swings a minute above its grabs a
-minute on five alternatives (`config-ADVANCED_CIRCUIT_230`, `config-PRODUCTIVITY_MODULE_80_CHEST_CHAIN`, `config-STEEL_PLATE_26_WAGON_CHEST` and two
-variant jobs); each is in `EXCEPTIONS` with `#626` in its reason, and the entries go when #626 is fixed.
+`record check` lists what each exception found.
 
 ### Per-job checks
 

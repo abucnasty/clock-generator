@@ -51,7 +51,10 @@ export interface InserterCount {
     /** Ticks a minute it was enabled and waiting for space in its destination, at its sink */
     waiting_for_space: WaitAtEnd;
 
-    /** Ticks a minute in which its hand grew */
+    /**
+     * Ticks a minute in which its hand grew, and the hand already held at the first counted tick, which the range begins
+     * in the middle of: a swing the range counts always has a grab it counts
+     */
     grabs_per_minute: number;
     /**
      * Times a minute its hand fell to empty: one drop that empties the hand is one swing (a part hand dropped, which
@@ -208,7 +211,8 @@ export function countersOfStock(stock: StockRecording, counted: readonly Counted
         let switch_ons = 0;
         let switch_offs = 0;
         let ons_at_rest = 0;
-        let grabs = 0;
+        // a hand held at the first counted tick was grabbed before the range: it is counted as a grab, the swing it ends being counted
+        let grabs = (held[first - 1] ?? 0) > 0 ? 1 : 0;
         let swings = 0;
         let part_hand_swings = 0;
         let extra_grabs = 0;
