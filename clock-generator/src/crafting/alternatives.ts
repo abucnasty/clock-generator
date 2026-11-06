@@ -317,6 +317,13 @@ function beltNote(config: Config, result: BlueprintGenerationResult): string {
     if (belt === null) {
         return "";
     }
+    if (belt.kind === "moving" && belt.inside === true) {
+        // the windows of the planning run that hold the slack already (slackInsideWindows): none added after them
+        const [first, last] = [belt.slack_ticks[0], belt.slack_ticks[belt.slack_ticks.length - 1]];
+        const ticks = first === last ? `${first} tick${first === 1 ? "" : "s"}` : `${first}–${last} ticks`;
+        return ` Made for a moving belt: each enable window of an inserter that picks up from a belt already stays open at least ${ticks} `
+            + "after its last pickup (belt pickup slack), long enough for one more full hand at one belt stack a tick, so none are added after it.";
+    }
     if (belt.kind === "moving") {
         const [first, last] = [belt.slack_ticks[0], belt.slack_ticks[belt.slack_ticks.length - 1]];
         const ticks = first === last ? `${first} more tick${first === 1 ? "" : "s"}` : `${first}–${last} more ticks`;
