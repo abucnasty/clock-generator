@@ -4,21 +4,21 @@
   "group": "config",
   "name": "ELECTRIC_FURNACE_20",
   "config_sha256": "de387cbeb787110dc3884c122734654053093123d7b3932bd3eaea0890aa3593",
-  "job_results_sha256": "0d68b6f6ec5e8d6eb7b2f29ef8f2a706ca49e8362014fb1d4cb90864295bb50b",
-  "selected": "fractional",
+  "job_results_sha256": "4d20ff67e302fba1bb6591df24db0192f3c525d08f68f30a61be0a614f7c6ecc",
+  "selected": "planned-belt-slack",
   "selected_windows": {
-    "inserter:1": "1-5,44-100,134-190,235-291,332-388,422-478,523-579,620-676,710-766,811-856",
-    "drill:3": "2-3,168-171,322-325,487-490,641-644,806-809",
-    "drill:1": "2-4,168-171,322-325,487-490,641-644,806-809",
-    "drill:2": "2-4,168-171,322-325,487-490,641-644,806-809",
-    "inserter:6": "2-14,98-110,194-206,290-302,386-398,482-494,578-590,674-686,770-782",
-    "inserter:2": "8-96,104-192,200-272,337-377,392-480,488-576,584-672,680-768,776-864",
-    "inserter:5": "71-92,167-188,254-283,359-380,455-476,542-571,647-668,743-764,830-859",
-    "inserter:4": "71-92,167-188,254-283,359-380,455-476,542-571,647-668,743-764,830-859",
-    "inserter:3": "71-92,167-188,254-283,359-380,455-476,542-571,647-668,743-764,830-859"
+    "drill:1": "1-3,97-100,193-195,289-291,385-388,481-483,577-579,673-676,769-771",
+    "drill:2": "1-3,97-100,193-195,289-291,385-388,481-483,577-579,673-676,769-771",
+    "drill:3": "1-3,97-98,193-195,289-291,385-386,481-483,577-579,673-676,769-771",
+    "inserter:6": "1-20,97-116,193-212,289-308,385-404,481-500,577-596,673-692,769-788",
+    "inserter:2": "16-96,112-192,208-288,304-384,400-480,496-576,592-672,688-768,784-864",
+    "inserter:1": "17-69,113-165,209-261,305-357,401-453,497-549,593-645,689-741,785-837",
+    "inserter:5": "27-48,112-141,208-229,315-336,400-429,496-517,603-624,688-717,784-805",
+    "inserter:4": "27-48,112-141,208-229,315-336,400-429,496-517,603-624,688-717,784-805",
+    "inserter:3": "27-48,112-141,208-229,315-336,400-429,496-517,603-624,688-717,784-805"
   },
   "alternatives": [
-    {"id": "planned-belt-slack", "verdict": "stable", "holds": true, "rate": 20, "supply": "moving", "period": 864, "wake_ups": 162.5, "descriptions_cut": 0, "clock_sha256": "08f2e1b492ed6324c110e1a5e0fbc382928d3736415db57c5a92086096410d44", "windows_sha256": "3624732cffeb151730758b71427abf15fd76e680088e7ba763055aca1c88fe11", "text_sha256": "762844401d3bd36cfc68a0eec1792a30f3752ef7f44edb54252c6351aa0ee756", "results_sha256": "d7be0d9e52015b8999a5561fc43f2e55e53ef3b9a59e8b24c368b4cd67c309be"},
+    {"id": "planned-belt-slack", "verdict": "stable", "holds": true, "rate": 20, "supply": "moving", "period": 864, "wake_ups": 100, "descriptions_cut": 0, "clock_sha256": "ca316ad08cd5e33604f8e8199435e3fc95f0cbec211bd34067373d622926bd27", "windows_sha256": "341a241fb410cc5069a47b2e7ba63060179c5f435280bec916645dce11584ff3", "text_sha256": "283f97409e1380e06f7cdb49bf591e12c238add6cdf881487eab514d28405230", "results_sha256": "737ce5fe413682e3b4815f73acbb530f6214a96b9f50ede27320ab029c07cb0b"},
     {"id": "fractional", "verdict": "stable", "holds": true, "rate": 20, "supply": "moving", "period": 864, "wake_ups": 112.5, "descriptions_cut": 0, "clock_sha256": "19dbc227d520bd5907b1e04785db60a07d46b0eb11f0969b4c4166bdb9873932", "windows_sha256": "4d58ffa8fc785f3c5d646a457f6601ad60c3cdeebee2e4b0b0939be8a302c3a3", "text_sha256": "b55d5d5cb239410550f8ba859c98c9582dfad475feaa3b628eb90c5bca6b0b14", "results_sha256": "e3aa0655a4b3ed0f29054aa93012676be5cda9987d20cc0fe8f0535496604427"},
     {"id": "swings-2", "verdict": "unstable", "holds": false, "rate": 11.11111111111111, "supply": "moving", "period": 1728, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "4f8b3dd093d672e0965dc1006149d1ab68b1da7775845980f0b00fa8bfc4cd24", "windows_sha256": "adcddb80790d5c2b85d6e0c205da864613eae258ebb6ff7f66e8c76201de5a2a", "text_sha256": "b20e32f78897e9d9b2c498aec060f5bbd10a6a0de73e939353c301df5e2c512f", "results_sha256": "d7636599eab28be51058971134336320a5127642eaea8ff199c66e4a202a9a81"},
     {"id": "swings-3", "verdict": "unstable", "holds": false, "rate": 8.88888888888889, "supply": "moving", "period": 864, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "ecc9fc29942ea1f712285972df98043e8ebef4d534b5a262e721b8c45bfc6df6", "windows_sha256": "a727cc51c8e043046c04e18cd818005092a5e277b4d42c747d1269f3ad976d6b", "text_sha256": "a692b43720a74d85c88e38f9ae2aa1c6aa75a456eb279b145227321318dc5a62", "results_sha256": "5ef9ba9dfbc3dce02dc8fbf3015d80fb6a712b8c6936b740bbeaf644bf000cf6"}

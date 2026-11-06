@@ -17,10 +17,10 @@ describe("the searches only run when they are needed", () => {
         it("runs the searches when the config asks for them, and keeps the batched clock that beats them", () => {
             // #527 runs observed and shifted searches past a stable short clock; only the other two need the override.
             expect(searched.skipped_searches).toEqual([]);
-            // the other three searches find no clock for this build
-            expect(idsOf(searched).filter(id => SEARCH_IDS.includes(id))).toEqual(["derived"]);
+            // the other two searches find no clock for this build; full-hand output swings finds one on the 4-swing plan
+            expect(idsOf(searched).filter(id => SEARCH_IDS.includes(id))).toEqual(["derived", "full-hand"]);
             // the 4-swing clock, its two pickup windows a window cycle with the belt pickup slack inside them (#595), wakes
-            // 20.6 a minute, fewer than the derived clock the search finds (102.9): the searches run, and it keeps winning
+            // 20.6 a minute, no more than any clock the searches find (derived 102.9): the searches run, and it keeps winning
             const selected = selectedOf(searched);
             expect(selected.id).toBe("planned-belt-slack");
             expect(selected.verdict).toBe("stable");

@@ -8,6 +8,15 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
+## Belt pickup slack inside the enable windows (#595)
+- config-LOGISTIC_SCIENCE_240: selected swings-2 -> planned-belt-slack, wake-ups 41.379 -> 20.571 a minute, period 88 -> 176; its two pickup windows a window cycle (52-71, 76-95) keep the belt pickup slack inside them, where the 4 ticks added after them joined them into one (61.714) (game: 100% per row on the 22-copy scaffold, 20.45 a copy a minute)
+- config-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY: selected shifted-swings -> planned-belt-slack, wake-ups 286.635 -> 245.687 a minute, period 352; the slack inside the windows (game: 256 in every period on its scaffold)
+- config-ELECTRIC_FURNACE_20: selected fractional -> planned-belt-slack, wake-ups 112.5 -> 100 a minute, period 864; the slack inside the windows (game: 100% on its scaffold)
+- config-LOGISTIC_SCIENCE_240_DIRECT_INSERT: selected fractional -> planned-belt-slack, wake-ups 250 -> 237.582 a minute, period 96 -> 576; the slack inside the windows (game: 100% on its scaffold)
+- config-AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER: planned-belt-slack stays selected, wake-ups 50.07 -> 25.035 a minute; the slack inside the windows (game: 100% on its scaffold)
+- config-UTILITY_SCIENCE_120: planned-belt-slack stays selected, wake-ups 107.303 -> 64.382 a minute; the slack inside the windows (no scaffold)
+- config-LDS_240, config-UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT, variants-LOGISTIC_SCIENCE_240_DIRECT_INSERT_TWO_OUTPUT_SWINGS: planned-belt-slack, not selected, wake-ups 2,292.615 -> 2,217.55, 118.209 -> 64.478 and 325.226 -> 250.174 a minute; the selection is unchanged
+
 ## A window a swing for the takers the surplus guard gates (#638)
 - config-PROCESSING_UNIT_80_CIRCUIT_EXPORT: selected planned-belt-slack -> planned-belt-slack-per-hand, wake-ups 5,628.75 -> 3,502.5 a minute, stable, period 24; the iron and cable takers into the circuit machines open for a tick at each of their three swings
 - variants-PROCESSING_UNIT_80_CIRCUIT_EXPORT_BACKED_UP: selected planned-belt-slack -> planned-belt-slack-per-hand, wake-ups 5,280 -> 3,444.375 a minute, stable; the same windows on backed-up belts

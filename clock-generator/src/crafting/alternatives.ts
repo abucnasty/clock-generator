@@ -1130,7 +1130,9 @@ function planPrimaryAndTasks(
  * it (no lower count, no period limit, no room for fuel, no loop windows, no chest drill windows to fall back from), so
  * the alternative's run, which keeps belt pickup slack where the clock holds with it, makes the same clock; and its
  * checks are those of the primary's, which planning them with fractional swings does not change. Then its clock is the
- * primary's, and is merged into it.
+ * primary's, and is merged into it. Where the primary keeps the slack inside its windows (`withSlackInside`), the
+ * alternative's run makes the same windows with the slack added after them, which the primary beats on wake-ups: it is
+ * left out as well.
  */
 function fractionalMakesThePrimary(config: Config, primary: AlternativeDefinition, result: BlueprintGenerationResult): boolean {
     const start = fractionalStartOf(result.crafting_cycle_plan)?.toDecimal();

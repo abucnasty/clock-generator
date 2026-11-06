@@ -74,8 +74,10 @@ describe("the fractional swings task", () => {
     const ids = (plan: ReturnType<typeof planClockAlternatives>) => plan.tasks.map(task => task.id);
 
     // every inserter's hands a cycle come out whole at the primary's own count, which it held on its first plan
+    // on logistic science it is left out as well, where the primary keeps the belt pickup slack inside its windows (#595)
+    // and the run of fractional swings, which adds the slack, makes the same windows with it: a clock the primary beats
     it("is left out where it would make the primary clock again, which made anyway it does", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240);
+        const config = await loadConfigFromFile(ConfigPaths.MILITARY_SCIENCE_120);
         let signature = "";
         const plan = planClockAlternatives(config, options, (_context, _tasks, primary) => { signature = primary; });
         expect(plan.context.fractional_is_primary).toBe(true);

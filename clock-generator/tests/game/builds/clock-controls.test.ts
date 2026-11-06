@@ -205,7 +205,8 @@ const RECORD_LINKS: Record<string, RecordLink & {runs?: boolean}> = {
         offered: ["car-swings-1", "car-swings-2", "car-swings-2-takers-last", "car-swings-3", "car-swings-3-takers-last"]},
     "lithium-plate-80-silo-chest-clock-controls.json": {
         jobOf: config("LITHIUM_PLATE_80_SILO_CHEST"), offered: ["lithium-silo-swings-1", "lithium-silo-swings-3", "lithium-silo-swings-3-fill-last", "lithium-silo-swings-7"]},
-    "logistic-science-240-direct-insert-clock-controls.json": {jobOf: config("LOGISTIC_SCIENCE_240_DIRECT_INSERT")},
+    // its game test records fractional swings, selected until #595 (batched swings with the slack inside its windows since)
+    "logistic-science-240-direct-insert-clock-controls.json": {jobOf: config("LOGISTIC_SCIENCE_240_DIRECT_INSERT"), offered: ["generated-one-copy"]},
     "processing-unit-80-circuit-export-clock-controls.json": {
         jobOf: name => name === "generated-backed-up" ? variant("PROCESSING_UNIT_80_CIRCUIT_EXPORT_BACKED_UP") : "config-PROCESSING_UNIT_80_CIRCUIT_EXPORT"},
     "productivity-module-80-chest-chain-clock-controls.json": {jobOf: config("PRODUCTIVITY_MODULE_80_CHEST_CHAIN")},
