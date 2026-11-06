@@ -339,3 +339,10 @@ describe('belt grouping after global eligibility', () => {
         expect(rows.hiddenCount).toBe(1);
     });
 });
+
+describe('RECOMMENDED_COPY.intro', () => {
+    it('names the card a row is shown in by its heading, Selected clock (#658)', () => {
+        expect(RECOMMENDED_COPY.intro).toContain('show it in Selected clock above');
+        expect(RECOMMENDED_COPY.intro).not.toContain('Your clock');
+    });
+});

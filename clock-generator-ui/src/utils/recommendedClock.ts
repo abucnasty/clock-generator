@@ -28,7 +28,7 @@ export interface ClockRow<T> {
 export const RECOMMENDED_COPY = {
     chip: 'Recommended',
     chipWhileGenerating: 'Best so far',
-    intro: 'Each clock was tested in the simulator. Select a row to show it in Your clock above. Fewer wakeups are '
+    intro: 'Each clock was tested in the simulator. Select a row to show it in Selected clock above. Fewer wakeups are '
         + 'better: each one costs a little UPS.',
     backToRecommended: 'Back to recommended',
     backWhileGenerating: 'Back to best so far',
