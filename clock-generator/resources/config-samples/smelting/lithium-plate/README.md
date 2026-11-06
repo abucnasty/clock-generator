@@ -35,7 +35,7 @@ cryogenic plants 2 × 53.122 / 20 × 5 × 3 = 79.7 lithium a second, of which 80
 ## In the game
 
 The recommended clock (3 output swings, 1080 ticks) and the clock with 1 output swing move 1440 plates in each of 63
-window cycles in the game, and get back to it after the holmium plates are cut for 2 window cycles, the output is blocked for 4 and
+window cycles in the game, and go back to it after the holmium plates are cut for 2 window cycles, the output is blocked for 4 and
 the holmium plates are cut again (`tests/game/builds/lithium-plate-80-silo-chest-clock-controls.json`). The recording starts with a
 filled silo: the harness warms the build up for 3600 ticks without a clock before the clock starts, so the silo holds
 218 lithium then, whatever the config says. Each cut empties it. Building the two inserters that fill the silo after

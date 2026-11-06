@@ -124,7 +124,7 @@ its timing is not tested. Measuring them is follow-up F7.
 | Occupied output: landing cutoff, stack size 4 | Tested | Tested | Tested | Tested |
 | Blocked output behind a belt drop, chest-fed: throughput and recovery, stack sizes 1–4 | Tested | Tested | Tested | Tested |
 
-The mismatches: the express moving side underground entrance and exit hold and recover in the game, where the generator says "no recovery" from lane phase [1,5], which the capture cannot set up (#269); the front exit on a moving config holds and recovers in the game at express and normal, where the generator says "no recovery" and "unstable" from lane phases of a moving belt, which the exit's backed-up belt does not have (#274). Each verdict is the cautious side.
+The mismatches: the express moving side underground entrance and exit hold and have recovery in the game, where the generator says "no recovery" from lane phase [1,5], which the capture cannot set up (#269); the front exit on a moving config holds and has recovery in the game at express and normal, where the generator says "no recovery" and "unstable" from lane phases of a moving belt, which the exit's backed-up belt does not have (#274). Each verdict is the cautious side.
 
 The ordinary clocks are verified on **48 configurations** across all four speeds
 (`tests/game/builds/pickup-clock-controls.json`, each entry with the PR that recorded it): the recapture after the belt
@@ -139,12 +139,12 @@ phases shows the game never settling from it or from four other phases, the exit
 it cycles at 143 a window cycle against 176 (`tests/game/builds/lane-phase-controls.json`, #266).
 The two normal backed-up underground defaults are a stable clock for backed-up belts, every belt-fed window as long as a
 hand takes from the lanes at rest (#456, recorded in #479): 176 in every baseline window cycle and after every disturbance, as the clock
-planned with the belts moving and given belt pickup slack did that #275 recorded. A backed-up belt
+planned with the belts moving and given belt slack did that #275 recorded. A backed-up belt
 at normal speed refills the pickup slower than a stack a tick, so every clock planned for backed-up supply then closed
-some windows before a hand that starts in them is full; the fractional clock selected before missed natively (128, 128,
+some windows before a hand that starts in them is full; the subtick clock selected before missed natively (128, 128,
 96 against 176), matching its holds false. Since #456 each belt-fed window of a backed-up clock lasts as long as a hand
 takes from the lanes at rest, and these fixtures select a stable clock for backed-up belts, which the game holds (#479). The
-generator no longer makes the clock planned with the belts moving for a backed-up config. Their fully jammed cold-start controls alternate 144/208 items at offset 1287 as fixed-window simulator
+generator no longer makes the clock planned with the belts moving for a backed-up config. Their fully backed-up cold-start controls alternate 144/208 items at offset 1287 as fixed-window simulator
 checks. The two express moving underground defaults are
 observed windows at 3 output swings, made for moving supply (#269): exact baseline and recovery in the game, while the
 generator says "no recovery", its disturbance trials failing from lane phase [1,5] alone, which the capture cannot set up
@@ -158,14 +158,14 @@ The front clocks are verified on **48 configurations** (`tests/game/builds/front
 front entrance on the compact assembler scaffold (32: both families, mirroring states and supplies) and the
 front exit on the electromagnetic plant, backed up (8) and on a moving config (8). All 48 are exact in baseline and
 recovery. All 32 entrance clocks are stable. The backed-up exit's are stable at every tier; at normal, in both
-mirroring states, every clock planned for backed-up supply fails (the fractional clock selected before, holds false,
+mirroring states, every clock planned for backed-up supply fails (the subtick clock selected before, holds false,
 missed natively, 128, 128, 96 repeating against 176, the generator's own as-built repeat), and the selection recorded
 was the clock planned with the belts moving and checked on the backed-up belts (#275), the same clock the moving config
 gets, which moves 176 in every window cycle. Since #456 the backed-up config selects a stable clock for backed-up belts of its
 own, every belt-fed window as long as a hand takes from the lanes at rest; recorded again in #479, it moves 176 in every
 window cycle as well and gets back after every cut. **A moving config on
 the front exit is safe on this layout:** the input stands on the exit's output tile, so the belt is backed up in the
-game whatever the config says, and the clock made for moving belts holds and recovers exactly at every tier. That
+game whatever the config says, and the clock made for moving belts holds exactly and has recovery at every tier. That
 includes the express clocks the generator calls "no recovery" and the normal ones it calls "unstable", both judged
 from moving lane-phase starts ([1,5] or [5,1]; [0,3]) this exit cannot have; at normal it moves the 176 the
 backed-up config's own clock misses.
@@ -187,7 +187,7 @@ output within a few window cycles (the game 0 to 5 window cycles after the windo
 first), and every window cycle the captures judge, from 6 or 10 window cycles after the release, is the same number in game and
 simulator in all 120 (the four that miss there miss alike). The generator's own disturbance trials, run with a belt that
 fills to an outlet 10 or 25 tiles past the drop (a scratch rule patch), change no recommended clock, selection, or verdict
-of any alternative in the 208 sample and fixture jobs of the blast, nor in these 16 configurations: no verdict depends
+of any clock in the 208 sample and fixture jobs of the blast, nor in these 16 configurations: no verdict depends
 on the instant hold, and the simulator keeps it ([simulator](../simulator.md#a-stack-inserter-dropping-onto-a-moving-lane)).
 
 ## Tick-pattern matrix
@@ -287,7 +287,7 @@ The backed-up stock comparison below also checks lane positions, counts and item
 Twelve automated demand controls preserve the existing rule: eligible near stock 13 wins over absent far stock;
 at near stock 14, selection switches to the far ingredient. No demand-ranking rule was needed.
 
-**Implemented ordinary backed-up rule.** Advance a jammed queue at actual belt speed, stop its head at the endpoint,
+**Implemented ordinary backed-up rule.** Advance a backed-up queue at actual belt speed, stop its head at the endpoint,
 maintain quarter-tile spacing, and withdraw the upstream-most reachable matching stack. Preserve holes across
 hands. Seeded once at the closed gate, the production queue matches all exposed stock and held counts across
 **59,328 transitions / 4,568 hand starts** in 48 side-pickup captures, including both physical near sides. That comparison
@@ -319,7 +319,7 @@ with two overlapping detailed window cycles of the recorder. Electromagnetic tar
 | Fast undergrounds | false | Stable | 176 / 704 ticks | 176 throughout | Historical shortfall resolved |
 | Normal straight | true | Stable | 176 / 1,408 ticks | 176 throughout | Historical shortfall resolved |
 | Normal straight | false | Stable | 176 / 1,408 ticks | 176 throughout | Historical shortfall resolved |
-| Normal undergrounds | false | Stable | 176 / 1,408 ticks | 176 throughout; fully jammed cold offset 1287 (fixed windows): 144/208 | Stable clock for backed-up belts, every belt-fed window as long as a hand takes from the lanes at rest (#456, #479); every clock planned for backed-up supply before it missed |
+| Normal undergrounds | false | Stable | 176 / 1,408 ticks | 176 throughout; fully backed-up cold offset 1287 (fixed windows): 144/208 | Stable clock for backed-up belts, every belt-fed window as long as a hand takes from the lanes at rest (#456, #479); every clock planned for backed-up supply before it missed |
 | Normal undergrounds | true | Unstable | 176 / 1,408 ticks | Steady state: 176 throughout | Historical recovery alternation resolved; rejected from cold lane phase [3,0], where the game never settles either (#266) |
 
 All 24 gear configurations hold 16 gears / 160 ticks through their baseline and recovery windows. Forty-four
@@ -337,7 +337,7 @@ interruption, in both mirroring states. After one ingredient is interrupted, rec
 one window cycle of 48 items among four of 64 items, despite the generator's stable verdict.
 The [bounded native trace](../../tests/game/builds/lane-phase-controls.json) shows the interrupted
 lane shift by half a stack interval while the other lane keeps its phase. The existing pickup kernel reproduces
-this output pattern with separate lane phases. The mirrored express default similarly recovers to 96/112
+this output pattern with separate lane phases. The mirrored express default similarly goes back to 96/112
 rather than 112 items per 1,120 ticks. Clock verification now varies lane phases for both output and recovery.
 The [32 operating controls](../../tests/game/builds/over-hood-clock-history-controls.json) (#254) cover all four speeds, both
 mirroring states and supplies, and same/different ingredients: 21 meet exact baseline and recovery output,
@@ -349,13 +349,13 @@ The [replacement controls](../../tests/game/builds/over-hood-clock-history-contr
 clock at **32 circuits / 320 ticks** in both mirroring states. Unmirrored recovery holds target throughout the
 assessed windows; mirrored recovery takes seven window cycles after the final interruption, then holds 32 for the
 remaining 18 window cycles. That transient differs from the old clock's persistent shortfall. In #255 express kept its
-original clock but was marked **no recovery**, and a changed fast candidate stayed unstable and missed the
+original clock but was marked **no recovery**, and a changed fast clock stayed unstable and missed the
 target in native window cycles; all 16 mixed-item builds are stable since #269 and #272. This fixes the three false-stable verdicts without changing the pickup timing rule.
 
 Since #269 an observed-windows clock holds when its own windows hold, not when the run they were observed in does, and
 nine mixed-item selections change to observed windows; six had no stable default (fast in both mirroring states and
 supplies, normal mirrored at both supplies, among them the fast unmirrored backed pick that repeated every 16,160
-ticks). All nine hold their baseline natively and get back to target after every disturbance, the normal mirrored
+ticks). All nine hold their baseline natively and go back to their rate after every disturbance, the normal mirrored
 moving one after two short window cycles following the last
 ([controls](../../tests/game/builds/over-hood-clock-controls.json), recorded in #269).
 
@@ -397,7 +397,7 @@ start's model `held[i]` is sample `i + 4` and its lane phase the native one minu
 of each tier's preflight run is exact at a shift of 4 and nowhere else). The clock's start: no window reaches an
 inserter in the first two ticks after the clock starts, which matters where the latency carries a window that ends at
 the window cycle's end (or a start inside a window) into ticks 0-1; in the 11 such runs the game follows the rule, the
-simulator without it in none. A near-lane-2 crafting cell needs its plant mirrored as well as the reflection
+simulator without it in none. A near-lane-2 crafting build needs its machine mirrored as well as the reflection
 (`reflectOrdinaryPickup` turns it half a turn, leaving its fluid inputs off the pipes). The 57 clocked runs are pinned
 by `pickup-clock-cold-start-mechanics.test.ts` (the simulator from placement, the stored windows against the recorded clock) against `tests/game/builds/pickup-clock-start-controls.json` (`cold_start`).
 

@@ -12,18 +12,18 @@ When the generator refuses a config because it does not model something yet, the
 |---|---|---|---|
 | M0 | Ship what is built | Release 0.13.0: clocks are ranked by wakeups counted at the start of a craft, which is when an inserter waiting to fill a machine is woken, not at a productivity payout. | Released as 0.13.0 |
 | M0.5 | Foundations | Release 0.14.0: Factorio 2.1.21 game data, refusals that say why, filters on belts and chests, long chains that no longer overflow, a check of copies, and inserter kind and quality. | Released as 0.14.0 |
-| M1 | Calibration | Cells farmed from real bases are placed in the game with the generator's best clock. The generator's rate model is compared with what machines really finish, and cells whose fluid input is dropped are checked. The result is a verdict per cell and a written finding. It is a finding, not a release. | Done (#189): five real cells are samples with their scaffolds |
+| M1 | Calibration | Cells farmed from real bases are placed in the game with the generator's best clock. The generator's rate model is compared with what machines really finish, and cells whose fluid input is dropped are checked. The result is a verdict per build and a written finding. It is a finding, not a release. | Done (#189): five real cells are samples with their scaffolds |
 | M2 | Containers | Phase 1: cars, tanks and cargo wagons as chests, holding mixed items in slots that can be filtered, with wagon slots by quality taken from the game data; a rocket silo as a chest, its rocket inventory filled by weight and its rocket part ingredients held to the insertion limit, with no craft run. Phase 2: a rocket silo that crafts and launches, recorded in the game first; whether it is then a machine or something new is open. Checked on cells farmed from real bases. | Phase 1 in 0.20.0; phase 2 open, when ready |
 | M3 | Recyclers and quality tiers | Machines that drop their output directly in front of them, recycler recipes with expected amounts, and a progress bar per quality tier for quality drills and recyclers, scaled by productivity. | Recyclers in 0.23.0 ([CHANGELOG.md](../../CHANGELOG.md)): a recycler that puts its results into a container, such as an ore voider, or straight into another machine gets a clock, a target can count the items it destroys, and results that come by small chances, such as scrap into a rocket silo, get one window a window cycle for each result. After it: quality tiers, and a target that accepts several of a recycler's results |
 | M4 | Stability on real cells | Whatever M1 finds: the rate model fixed, or the search extended, so multi-machine Space Age cells and moving belts are clocked at their as-built rate in the game. | In progress: 0.19.0 did it for belt pickups 0.22.0 for cells whose machines draw from one source or from each other, and 0.23.0 for biochamber loops, builds whose items spoil, recyclers and the original electromagnetic science scaffold ([CHANGELOG.md](../../CHANGELOG.md)); the gaps left are in [0.25.0](roadmap/0.25.0.md), [0.26.0](roadmap/0.26.0.md) and the open issues on the [Real Boy board](https://github.com/users/abucnasty/projects/2) |
-| M5 | Backpressure rule | Finding out why single-foundry cells do not recover after backpressure, then keeping, changing or dropping the rule with game recordings as evidence. | In progress: since 0.19.0 recovery is proven by an exact repeat of the simulated state and belt builds are checked in the game after three disturbances, and since 0.23.0 a build whose items spoil is tried with losses shorter than three quarters of its spoil time; the gaps left are open issues on the [Real Boy board](https://github.com/users/abucnasty/projects/2) |
+| M5 | Backpressure rule | Finding out why single-foundry builds have no recovery after backpressure, then keeping, changing or dropping the rule with game recordings as evidence. | In progress: since 0.19.0 recovery is proven by an exact repeat of the simulated state and belt builds are checked in the game after three disturbances, and since 0.23.0 a build whose items spoil is tried with losses shorter than three quarters of its spoil time; the gaps left are open issues on the [Real Boy board](https://github.com/users/abucnasty/projects/2) |
 
 The tools that build the test scaffolds live in a separate repository and are not part of this roadmap.
 
 ### What release 0.14.0 changed
 
 - The game data is Factorio 2.1.21.
-- Refusals say why a cell is not supported and where it is on this page.
+- Refusals say why a build is not supported and where it is on this page.
 - An inserter dropping onto a belt or into a chest may be filtered to any item of the game.
 - Long chains no longer overflow.
 - A config holding several copies of one unit is checked.
@@ -43,7 +43,7 @@ Each follow-up becomes a GitHub issue. Until then, it is listed here.
 
 - F1: machines whose only product is a fluid, paced by the rate downstream.
 - F2: item byproducts that come out beside a fluid.
-- F3: a game recording of products finished and productivity payouts for fluid products, made before any such cell is scored.
+- F3: a game recording of products finished and productivity payouts for fluid products, made before any such build is scored.
 - F4: quality upcycling loops.
 - F6: spoilage-removal inserters clocked from the spoil time. It ships when ready.
 - F7: belt pickup and drop timing for inserters other than the legendary stack inserter. Until it is measured, a belt pickup by another kind or quality is refused, and a belt drop by one is "not checked". With it, belt pickup at belt stack sizes 1–3 and with hands other than 16, which the generator warns about until then. If it is chosen, it ships when ready; the samples and scaffolds are [#501](https://github.com/abucnasty/clock-generator/issues/501).

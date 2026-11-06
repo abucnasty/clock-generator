@@ -77,7 +77,7 @@ The current game regressions record at least 60 complete window cycles per run a
 on all three scaffolds, with moving supply and with the ingredient drain removed to back up the input belt.
 Recovery runs withhold each ingredient in turn and block/restore output disposal, without resetting the clock or
 machine. Moving checks allow six window cycles for recovery. Backed-up checks settle for ten window cycles before measurement and
-allow ten window cycles to recover; every later complete window cycle must meet the target.
+allow ten window cycles for recovery; every later complete window cycle must meet the target.
 
 ```bash
 # From clock-generator/, with Factorio and the staging save configured in .env:
@@ -111,7 +111,7 @@ The original local probes left filtering disabled, so their "supercapacitor" lab
 behavior. The regression above verifies both actual ingredients.
 
 The clock tests in `moving-pickup.game.test.ts` also use explicitly backed-up configs with their pickup geometry
-retained. All three geometries must hold the setpoint and recover after the same ingredient/output cuts as
+retained. All three geometries must hold the setpoint and have recovery after the same ingredient/output cuts as
 the moving cases, without resetting the clock or machine.
 
 ```bash
@@ -236,7 +236,7 @@ simulator change or publication is included in this phase sweep.
 
 ## Reflected same-item controls
 
-`ordinary-reflection.game.test.ts` reflects the entire speed-routed cell, preserving feeder contents, inserter
+`ordinary-reflection.game.test.ts` reflects the entire speed-routed build, preserving feeder contents, inserter
 mirroring, gate release 64 and circuit connections. The input now sits north of the plant and its physical near
 supply is **lane 2**. The native probe checks ingredient tunnel pairing and transport tiers; gated observations
 verify full four-item stacks and actual moving or backed-up stock. Sidecar exports `near_lane: 2` at both reaches.

@@ -1,6 +1,6 @@
 ## Goals of this Algorithm
 
-1. match the target rate of the recipe chosen exactly
+1. match the setpoint exactly
 2. reduce the update time the build costs the game (UPS)
 
 The goals above are listed in priority order.
@@ -9,15 +9,15 @@ Both are worked toward arithmetic first (decided 2026-10-23): what plain arithme
 
 Goal 2 was first written as "minimize active inserter windows whenever possible to reduce update time in factorio". Its aim is the update time itself (decided 2026-10-15: "The specific goal is to reduce UPS. Goal as stated is outdated."). The selection does not measure update time yet: it ranks clocks by their wakeups ("Wake-ups, the measure for goal 2"), which stand in for it. The wakeups stay the measure until a plan to measure update time replaces them.
 
-### Goal 1: match the target rate exactly
+### Goal 1: match the setpoint exactly
 
-> A clock must always recover. When any item of a build stops arriving for a while, or its output stops being taken, the machines run dry or fill up, and when the item comes back the build has to return to its target rate under the same clock by itself. Nobody should have to restart a build because one input ran out.
+> A clock must always have recovery. When any item of a build stops arriving for a while, or its output stops being taken, the machines run dry or fill up, and when the item comes back the build has to go back to its rate under the same clock by itself. Nobody should have to restart a build because one input ran out.
 >
-> A clock that does this has recovery after every disturbance trial, and one that does not is not stable. This is what "stable" has meant in this project: a stable clock is one that has recovery after every disturbance trial. A clock that only makes its target rate from a clean start, with every machine full of ingredients and emptied of products, does not meet goal 1.
+> A clock that does this has recovery after every disturbance trial, and one that does not is not stable. This is what "stable" has meant in this project: a stable clock is one that has recovery after every disturbance trial. A clock that only holds its setpoint from a clean start, with every machine full of ingredients and emptied of products, does not meet goal 1.
 
-"Exactly" allows one thing: a clock whose window cycle time is not a whole number of ticks and whose blueprint counts it rounded down to whole ticks (where no subtick clock gives the exact window cycle time) meets goal 1 when it runs at most 0.1% faster than the target and within what the machines can make, tried on its own whole-tick window cycle like any other clock. It is labelled with how much it runs fast, and a clock at exactly the target rate comes first (decided 2026-10-23: an iron gear wheel build at 9.97 a second's 2,888-tick clock of a 2,888.666-tick window cycle runs 0.02% fast, and held and recovered in the game, #332).
+"Exactly" allows one thing: a clock whose window cycle time is not a whole number of ticks and whose blueprint counts it rounded down to whole ticks (where no subtick clock gives the exact window cycle time) meets goal 1 when it runs at most 0.1% faster than the target and within what the machines can make, tried on its own whole-tick window cycle like any other clock. It is labelled with how much it runs fast, and a clock at exactly the setpoint comes first (decided 2026-10-23: an iron gear wheel build at 9.97 a second's 2,888-tick clock of a 2,888.666-tick window cycle runs 0.02% fast, and held and recovered in the game, #332).
 
-A config does not determine which inserter takes first when several take one product from one machine (decided 2026-10-25: "Hold under every order"). A clock meets goal 1 only if it holds and recovers whichever of them is served first. Where one machine feeds two or more machines of one recipe, the plan asks by arithmetic first whether the machine can give all their takers' hands in one window together; where it can, they may share the window, and where it cannot, they take turns, so that the order cannot tell ([docs/stability.md](docs/stability.md), "How a clock is started").
+A config does not determine which inserter takes first when several take one product from one machine (decided 2026-10-25: "Hold under every order"). A clock meets goal 1 only if it holds and has recovery whichever of them is served first. Where one machine feeds two or more machines of one recipe, the plan asks by arithmetic first whether the machine can give all their takers' hands in one window together; where it can, they may share the window, and where it cannot, they take turns, so that the order cannot tell ([docs/stability.md](docs/stability.md), "How a clock is started").
 
 The detail is in [docs/stability.md](docs/stability.md).
 
@@ -27,7 +27,7 @@ The detail is in [docs/stability.md](docs/stability.md).
 
 On a build with a loop of machines, or a machine that makes its own ingredient, goal 2 is measured on a clock's mean wakeups over a fixed set of starts: the config's cold start with the clock at twelve evenly spaced places in its window cycle, the loop given its kick start as the config says (decided 2026-10-24: with windows on its loop the iron bacteria sample's wakeups move 2 to 5 times with the start). Every other build keeps the one figure of its cold start for now (decided 2026-10-24: in the simulator their wakeups depend on where the clock stands too, and in the game less so).
 
-Among clocks in the same target-rate and belt-supply ranks, wakeups are compared to the nearest 0.001 per minute. Equal counts prefer fewer window cycles simulated for recovery, then fewer windows; remaining ties keep the first clock listed. This tie-break does not change the priority of goal 1.
+Among clocks in the same setpoint and belt-supply ranks, wakeups are compared to the nearest 0.001 per minute. Equal counts prefer fewer window cycles simulated for recovery, then fewer windows; remaining ties keep the first clock listed. This tie-break does not change the priority of goal 1.
 
 The detail is in [docs/wake-ups.md](docs/wake-ups.md).
 

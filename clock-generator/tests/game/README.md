@@ -58,7 +58,7 @@ one build), and the window cycle time must not decide how long a check runs. One
   at steady state, and at every step of the run. Whether the run passes is decided afterwards from that record, outside the game
   (`helpers/run-judgement.js`), so a change in how a run is judged needs no new recording.
 - **Steady state** is reached the first moment those machines have made the amount the target asks for over the last minute (the
-  target rate times 60 seconds) and that amount has stopped falling. Warming up and settling are not timed in window cycles either: the
+  setpoint times 60 seconds) and that amount has stopped falling. Warming up and settling are not timed in window cycles either: the
   run goes on until that happens, and fails if it has not within ten minutes (36,000 ticks).
 - **Baseline:** the minute after steady state. It is judged over its whole clock cycles (from steady state to the last moment in
   the minute when the clock is back where it was then), by **net output**: what the machines made less what of it is still waiting

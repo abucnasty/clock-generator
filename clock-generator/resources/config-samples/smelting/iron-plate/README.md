@@ -31,7 +31,7 @@ full while the drill runs.
 ## In the game
 
 The recommended clock (3 output swings, 72 ticks) and the clock with 1 output swing move 96 plates in each of 63 window cycles in
-the game, and get back to it after the drill is stopped until the car has run dry (71 window cycles), the output is blocked for
+the game, and go back to it after the drill is stopped until the car has run dry (71 window cycles), the output is blocked for
 4 and the drill is stopped again (`tests/game/builds/iron-plate-80-car-chest-clock-controls.json`). Building the two inserters that take from
 the car after the output inserters changed nothing in any window cycle. The simulator counts 200.0 wakeups a minute for the
 recommended clock from the scaffold's cold start, where the game's states give 3.8; the difference is not explained yet.

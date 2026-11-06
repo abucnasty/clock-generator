@@ -138,7 +138,7 @@ refused.
 
 ### Configuration Example (JSON)
 
-Here is a complete configuration for a utility science pack setup. Recipe names are Factorio recipe names; a machine's crafting speed comes from hovering it in Factorio and running `/c game.print(game.player.selected.crafting_speed)`, or from the sidecar mod.
+Here is a complete configuration for a utility science pack build. Recipe names are Factorio recipe names; a machine's crafting speed comes from hovering it in Factorio and running `/c game.print(game.player.selected.crafting_speed)`, or from the sidecar mod.
 
 ```json
 {
@@ -384,7 +384,7 @@ source, 1 or 2 by its place in the belt's `lanes`:
 }
 ```
 
-The sidecar mod exports it for an inserter beside a straight piece of belt, and the inserter's panel in the UI has a
+The sidecar mod exports it for an inserter beside a straight belt, and the inserter's panel in the UI has a
 field for it. Without it the items are taken in the order of the inserter's `filters`, or of the machine's
 ingredients when it has none.
 
@@ -489,16 +489,16 @@ The simulator assumes saturated input supply. Moving supply times the stacks wit
 
 Every clock names the belt it is made for:
 
-- **moving**: each window of an inserter that picks up from a belt stays open a few ticks longer, long enough for one more full hand at one belt stack a tick (`+4 ticks` for a hand of 16 from stacks of 4). This is belt pickup slack: extra margin for late pickups on top of the simulated reachable-stack timing. Sparse upstream supply is not simulated.
+- **moving**: each window of an inserter that picks up from a belt stays open a few ticks longer, long enough for one more full hand at one belt stack a tick (`+4 ticks` for a hand of 16 from stacks of 4). This is belt slack: extra margin for late pickups on top of the simulated reachable-stack timing. Sparse upstream supply is not simulated.
 - **backed-up belt**: the belt inserters get only the windows they need with backed-up supply at the pickup. A clock made for moving belts drops the slack when it does not hold the expected output with it, and is then listed as made for a backed-up belt. A clock with a window cycle time that is not a whole number of ticks (a subtick clock) never gets the slack, and is not ranked behind other clocks for it.
 
-Clocks are made only for the belts the build is set to. By default (moving) a clock without the slack is only selected for you when no clock with the slack holds the target rate; no clock is made for backed-up belts as well. Set `backed_up_belts: true` (the Belts section's "Backed up" answer in the UI) when your belts are backed up: each clock is made without the slack, and the one with the fewest wakeups is selected. A clock that does not hold the expected output that way is first made again with room for a hand of fuel: each window of an inserter that takes fuel off the belt as well as an ingredient stays open the ticks a hand of fuel takes to fill (`+4 ticks` for a hand of 16 from stacks of 4), because the fuel slot asks for a hand at any tick, ahead of the hands the window is planned for. That is still a backed-up belt clock, and its description names the inserters. A clock that does not hold with the room either, or has no such inserter, is listed as unstable: it is not made again with the slack. Of the samples, agricultural science selects its batched swings with room for a hand of fuel.
+Clocks are made only for the belts the build is set to. By default (moving) a clock without the slack is only selected for you when no clock with the slack holds the setpoint; no clock is made for backed-up belts as well. Set `backed_up_belts: true` (the Belts section's "Backed up" answer in the UI) when your belts are backed up: each clock is made without the slack, and the one with the fewest wakeups is selected. A clock that does not hold the expected output that way is first made again with room for a hand of fuel: each window of an inserter that takes fuel off the belt as well as an ingredient stays open the ticks a hand of fuel takes to fill (`+4 ticks` for a hand of 16 from stacks of 4), because the fuel slot asks for a hand at any tick, ahead of the hands the window is planned for. That is still a backed-up belt clock, and its description names the inserters. A clock that does not hold with the room either, or has no such inserter, is listed as unstable: it is not made again with the slack. Of the samples, agricultural science selects its batched swings with room for a hand of fuel.
 
 #### Searching for fewer wakeups
 
 Four of the clocks are found by a search, which tries many clocks in the simulator: observed windows, uneven output swings, shifted swings and full-hand output swings. Together they take most of the time of a generation. The other clocks are made straight from the plan: batched swings, fractional swings and the other output swing counts.
 
-By default the searches only run when none of the clocks made without one can be selected as stable: one that holds the target rate, gets back to it after a disturbance and is made for the belt the config asks for. Then a search is the only way left to a stable clock, and all four run. Where a clock made without a search is stable, two of them (observed windows and shifted swings) still run when that clock has wakeups and the primary clock's window cycle time is at most 480 ticks; the others are left out, and the generator says which. Uneven output swings and full-hand output found no clock with fewer wakeups past a stable one on any sample, with every search run on every sample as built and backed up (0.26.0).
+By default the searches only run when none of the clocks made without one can be selected as stable: one that holds the setpoint, goes back to it after a disturbance and is made for the belt the config asks for. Then a search is the only way left to a stable clock, and all four run. Where a clock made without a search is stable, two of them (observed windows and shifted swings) still run when that clock has wakeups and the primary clock's window cycle time is at most 480 ticks; the others are left out, and the generator says which. Uneven output swings and full-hand output found no clock with fewer wakeups past a stable one on any sample, with every search run on every sample as built and backed up (0.26.0).
 
 A search can still find a stable clock with fewer wakeups than the one selected. Set `search_for_fewer_wake_ups: true` ("Search for fewer wake-ups" in the UI) to run the searches for every build and have the clock with the fewest wakeups selected among all of them.
 
@@ -509,7 +509,7 @@ A search can still find a stable clock with fewer wakeups than the one selected.
 **Issue**: Generated blueprint doesn't work in-game
 - Verify your crafting speed and productivity match in-game values exactly
 - Check that stack inserter capacity bonuses are correct
-- Ensure belt configuration matches your actual setup
+- Ensure belt configuration matches your actual build
 
 **Issue**: Simulation takes too long
 - Reduce the number of machines in your configuration
@@ -572,7 +572,7 @@ npm run test:generation  # the generation tests: the clock alternatives of whole
 npm run test:all         # both
 ```
 
-The generation tests are the files named `*.generation.test.ts`. They generate every clock alternative of a sample and check what is selected, so they take as long as the slowest sample (most of it one test of agricultural science). They run the engine as tsc builds it into `dist/`, which `npm run test:generation` and `npm run test:all` build first: run from the TypeScript as Vite transforms it for the tests, they take 1.8 times as long. A run of `npx vitest` on a generation test stops and asks for `npm run build` when `dist/` is older than `src/`. Pull requests run the unit tests; pull requests to master run the generation tests too (`.github/workflows/test.yml`). Run `npm run test:all` before opening one.
+The generation tests are the files named `*.generation.test.ts`. They generate every clock of a sample and check what is selected, so they take as long as the slowest sample (most of it one test of agricultural science). They run the engine as tsc builds it into `dist/`, which `npm run test:generation` and `npm run test:all` build first: run from the TypeScript as Vite transforms it for the tests, they take 1.8 times as long. A run of `npx vitest` on a generation test stops and asks for `npm run build` when `dist/` is older than `src/`. Pull requests run the unit tests; pull requests to master run the generation tests too (`.github/workflows/test.yml`). Run `npm run test:all` before opening one.
 
 ### Recording a Build in Factorio
 

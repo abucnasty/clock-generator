@@ -88,9 +88,9 @@ Changelogs and pull requests say "user", never "player".
 - Simulator regressions stay near their implementation. They may read game fixtures without launching Factorio.
 - Full raw recordings and generated probe sources belong in the ignored `clock-generator/.scratch/<topic>/<run>/`, rather than beside committed fixtures.
 - `clock-generator/scripts/`: sweeps and capture helpers, and the tools for checking an engine change, each with its usage in its header:
-  - `blast/blast.sh`: the blast radius: every sample and fixture generated, every alternative's exported clock hashed, cached by a key of the engine's content and of the environment variables that change what it generates (none today; a `CLOCK_*` variable no list in `key.py` knows stops the command) (`blast.sh key`, `before`, `run`, `select`, `compare`, `record`); a run reruns only the jobs a change of the engine reaches, per the functions each job ran (see the header of `blast.sh`).
-  - `blast/record.py` (through `blast.sh record write|check`): the record in `clock-generator/record/`, one small JSON per blast job (the selected clock and every alternative), written from a blast run and checked against one in CI. See [`record/README.md`](clock-generator/record/README.md).
-  - `replay/replay.sh`: the replay check of a change that must keep results identical: every blast job's selected clock run with no search (the as-built run, the planning run, a speed run and, with `--losses`, the supply losses), what every entity holds and shows hashed per period, and laid against a base recorded once on the parent commit (`record`, `check`, `explain`).
+  - `blast/blast.sh`: the blast: every sample and fixture generated, every clock exported and hashed, cached by a key of the engine's content and of the environment variables that change what it generates (none today; a `CLOCK_*` variable no list in `key.py` knows stops the command) (`blast.sh key`, `before`, `run`, `select`, `compare`, `record`); a run reruns only the jobs a change of the engine reaches, per the functions each job ran (see the header of `blast.sh`).
+  - `blast/record.py` (through `blast.sh record write|check`): the record in `clock-generator/record/`, one small JSON per blast job (the selected clock and every other clock it weighed), written from a blast run and checked against one in CI. See [`record/README.md`](clock-generator/record/README.md).
+  - `replay/replay.sh`: the replay check of a change that must keep results identical: every blast job's selected clock run with no search (the as-built run, the planning run, a speed run and, with `--losses`, the supply losses), what every entity holds and shows hashed per window cycle, and laid against a base recorded once on the parent commit (`record`, `check`, `explain`).
   - `native/run-lane.sh`: one Factorio lane over a list of game test cases, at most four harness Factorio processes on the machine; `native/expected-from-blast.py` and `native/check.cjs` check a capture's clocks against the blast's.
   - `classify/features.py` and `summarize.py`: the windows a native recording lifted from a full machine, by when the input's hand grew.
   - `docs/`: the documentation generators and checks (`npm run docs:portal`, `docs:fields`, `docs:game-labels`; see
@@ -123,7 +123,7 @@ game test is not game verification.
 
 ## Generation test runtime
 
-See [clock candidate strategies](clock-generator/docs/clock-candidates.md) for the purpose and removal evidence of
+See [clock strategies](clock-generator/docs/clock-candidates.md) for the purpose and removal evidence of
 each strategy. Duplicate verification is shared within a generation; input-starvation and output-blockage recovery
 remain required. A matching window count alone is not evidence that two candidates have the same behavior.
 
@@ -137,7 +137,7 @@ that generates it, and
 keep a test in the first file that the other still makes it. A game-tied pin of a selection that is a job of the record
 (`clock-generator/record/`) is checked against the record by `clock-controls.test.ts`, with no generation of its own. A
 property that must hold of every job's result (not a value) belongs in `clock-generator/tests/game/builds/record-properties.ts`,
-which the blast runs on every alternative of every job and `blast.sh record check` reports; do not write it again as a test of
+which the blast runs on every clock of every job and `blast.sh record check` reports; do not write it again as a test of
 one build. A build that is a job of the record is generated once, by the record: what a test of it checked on the result and the record does not
 hold (a text, a decider's description, the always-on reasons, the fuel view, the losses the simulator tries) is a per-job check
 (`clock-generator/tests/game/builds/record-job-checks.ts` and `job-checks/`), run on the result the job already generated; see
@@ -169,7 +169,7 @@ reduction from scheduling changes; do not report a faster test from a less busy 
 ## The record of the blast jobs
 
 [`clock-generator/record/`](clock-generator/record/README.md) holds one small JSON file for each of the 86 blast jobs: the clock the generator selects for the
-sample or fixture and every alternative it weighed (verdict, holds, rate, period, wake-ups, windows, clock hash). The check named "Rec summary" in CI
+sample or fixture and every clock it weighed (verdict, holds, rate, window cycle time, wakeups, windows, clock hash). The check named "Rec summary" in CI
 generates the jobs in six shards (`Rec 1/6` to `Rec 6/6`, dealt out by the seconds each job took on a runner,
 `clock-generator/ci/record-durations.json`), joins them and compares them with the committed files field by field; a difference fails with a table of job,
 field, before and after in the job summary. The check runs on every pull request to `master`, `feature/` or `release/` that changes more than documentation, and reports
@@ -181,7 +181,7 @@ today; set the `shard` list of the `record-shards` job in `.github/workflows/tes
 
 **A selected clock never gets worse unless MOVES.md says so.** The same check sets the selected clock of every job against the record of the pull
 request's base (the first parent of the merge commit CI tests) and fails when one got worse and its job key is not in the lines the pull request adds to
-[`record/MOVES.md`](clock-generator/record/MOVES.md). The record has no target, so worse is defined by its fields, on the selected alternative:
+[`record/MOVES.md`](clock-generator/record/MOVES.md). The record has no target, so worse is defined by its fields, on the selected clock:
 
 - the job generated before and now fails to (`error`);
 - the verdict ranks lower: `stable`, then `no recovery`, then `unstable`;
@@ -208,9 +208,9 @@ A pull request that moves no record changes no file in `record/`. A rename of jo
 
 | The check | It goes in | Why |
 | --- | --- | --- |
-| What the generator selects or computes for a sample or fixture as it is (verdict, rate, period, wake-ups, windows, clock hash) | nothing: the record holds it | a moved value is a changed file in `record/` and a MOVES.md entry, not a hand-edited assertion |
-| The same for a sample with an option set (belts backed up, an ingredient out of the period) that a game recording is tied to or a test pins | a job of the `variants` group: an entry in [`variant-jobs.ts`](clock-generator/tests/game/builds/variant-jobs.ts) naming the recording or test that qualifies it | the job gets the record and every property; the generation test goes |
-| Something that must be true of every job's result, whatever the build | a property of `record-properties.ts` (below) | one definition, run on every alternative of every job |
+| What the generator selects or computes for a sample or fixture as it is (verdict, rate, window cycle time, wakeups, windows, clock hash) | nothing: the record holds it | a moved value is a changed file in `record/` and a MOVES.md entry, not a hand-edited assertion |
+| The same for a sample with an option set (belts backed up, an ingredient out of the window cycle) that a game recording is tied to or a test pins | a job of the `variants` group: an entry in [`variant-jobs.ts`](clock-generator/tests/game/builds/variant-jobs.ts) naming the recording or test that qualifies it | the job gets the record and every property; the generation test goes |
+| Something that must be true of every job's result, whatever the build | a property of `record-properties.ts` (below) | one definition, run on every clock of every job |
 | A game recording's clock | its `*-clock-controls.json` entry; `clock-controls.test.ts` checks the hash against the record | no generation of its own |
 | What a test of a build that is a job checked on the result, and the record does not hold: an expected text, a decider's description, the always-on reasons, the fuel view, a relation between fields | a per-job check ([`job-checks/`](clock-generator/tests/game/builds/job-checks/), above) | it runs in the record shard on the result the job already generated: a generation test of the same build would generate it a second time |
 | An option or search the record does not run (a changed config, an explicit search, a start-dependence override, a ranking such as the speed-80 agricultural one), or a check of a hand-made clock or a direct call | a generation test (`*.generation.test.ts`), one generation shared in the file (above) | a job would be one more generation for a check no recording needs; add a variant job only when a recording or a pin does |
@@ -222,17 +222,17 @@ A job file is never edited by hand: `record write` makes it, and `blast.sh recor
 
 [`record-properties.ts`](clock-generator/tests/game/builds/record-properties.ts) holds the five properties
 ([listed in `record/README.md`](clock-generator/record/README.md#the-properties)). To add one: name it in `PROPERTIES`, write its check in
-`checkProperties` so that it returns the problems it finds on an alternative (a message with the values) and applies only where the alternative
+`checkProperties` so that it returns the problems it finds on a clock (a message with the values) and applies only where the clock
 has what it needs, then make a full blast, so that every job file carries the new module's hash (a job file from another version of the module
 fails `record check`):
 
 ```bash
 BLAST_GROUPS=config,pickup,overhood,front,blocked,containers,variants bash scripts/blast/blast.sh run .. <out> --full
-bash scripts/blast/blast.sh record check <out>        # the problems, by job, property and alternative
+bash scripts/blast/blast.sh record check <out>        # the problems, by job, property and clock
 ```
 
 A property is never loosened because a job fails it: the failure is a finding. When a job fails one for a reason of its own, name it in
-`EXCEPTIONS` (job key, property, the alternative ids, the reason with the issue number), file the issue, and say so in the pull request;
+`EXCEPTIONS` (job key, property, the clock ids, the reason with the issue number), file the issue, and say so in the pull request;
 `record check` lists what each exception found.
 
 ### Per-job checks
@@ -243,7 +243,7 @@ the result is not what it states; `blast.blastrun.ts` runs a job's checks right 
 simulate again from it, a loss or a clock-only run, but never generates), and writes the names that ran and the failures into the job file as `checks`.
 `blast.sh record check` fails on any failure, naming the job, the check and the expected and actual values (in the job summary of "Rec summary" too), and on a job file with no `checks` or
 judged by another version of the module, as it does for the properties. A check never repeats what the record pins (selected id, verdict, holds, rate,
-period, wake-ups, windows, clock hash, and the hashes of the label, description, insights and assessment): a moved value is a changed file in `record/`.
+window cycle time, wakeups, windows, clock hash, and the hashes of the label, description, insights and assessment): a moved value is a changed file in `record/`.
 What a check holds is what the record cannot: the expected text of a label, a description or an insight, a decider's description, the
 always-on reasons, the fuel view, a field of the result that is not in the exported clock, or a relation between them. To add one: write it in the file
 of its group (`samples.ts` for a sample as it is, `variants.ts`, `fixtures.ts`) under the job's key, and run the job (`BLAST_ONLY=<name> BLAST_GROUPS=<group> blast.sh run .. <out> --no-store`, then `blast.sh record check <out>`). A check
