@@ -8,6 +8,11 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
+## A window a swing for the takers the surplus guard gates (#638)
+- config-PROCESSING_UNIT_80_CIRCUIT_EXPORT: selected planned-belt-slack -> planned-belt-slack-per-hand, wake-ups 5,628.75 -> 3,502.5 a minute, stable, period 24; the iron and cable takers into the circuit machines open for a tick at each of their three swings
+- variants-PROCESSING_UNIT_80_CIRCUIT_EXPORT_BACKED_UP: selected planned-belt-slack -> planned-belt-slack-per-hand, wake-ups 5,280 -> 3,444.375 a minute, stable; the same windows on backed-up belts
+- config-ACCUMULATOR_640, config-INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK, config-LDS_240, config-MILITARY_SCIENCE_120, config-UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN, variants-INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK_BACKED_UP: a new per-hand alternative after a grouped hands clock with guarded takers, stable, not selected; the selection is unchanged
+
 ## Batched swings' windows by arithmetic and the stock walk (#661)
 - config-LOGISTIC_SCIENCE_240: selected planned-belt-slack -> swings-2, wake-ups 61.714 -> 41.379 a minute, period 176 -> 88; the windows by arithmetic open the belt pickup for its hands only (game: 100% on the 22-copy scaffold)
 - config-ELECTROMAGNETIC_SCIENCE_330: selected fractional -> swings-2, wake-ups 158.748 -> 138.265 a minute, period 704; swings-2 by arithmetic 163.869 -> 138.265 (game: 100% on both scaffolds)
