@@ -38,6 +38,12 @@ vi.mock('./candidates/observed-windows', async importOriginal => {
     return { ...actual, observedWindowsClock: mocks.observedWindowsClock };
 });
 
+// the plans here are mocks, with no build for the windows by arithmetic to be made from: the arithmetic refuses them
+vi.mock('./plan/batched-arithmetic', async importOriginal => {
+    const actual = await importOriginal<typeof import('./plan/batched-arithmetic')>();
+    return { ...actual, batchedSwingsWindowsByArithmetic: () => { throw new actual.ArithmeticWindowsNotApplicable('a mocked plan'); } };
+});
+
 vi.mock('./candidates/result-windows-clock', async importOriginal => {
     const actual = await importOriginal<typeof import('./candidates/result-windows-clock')>();
     return { ...actual, resultWindowsClockOfPlan: mocks.resultWindowsClockOfPlan };
@@ -80,7 +86,7 @@ function report(outcome: 'inapplicable' | 'failed', reason: string): PrimitiveGr
 }
 
 function preparedPlan(candidate: Config): PlanRun {
-    return { config: candidate, run: { crafting_cycle_plan: { result_windows: undefined } } } as unknown as PlanRun;
+    return { config: candidate, logger: quiet, run: { crafting_cycle_plan: { result_windows: undefined }, simulation_context: {}, duration: {} } } as unknown as PlanRun;
 }
 
 function prepareOrdinaryRun(candidate: Config): void {

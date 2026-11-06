@@ -13,26 +13,27 @@ import { parseRecording } from "../verification/recording";
 import { ruleCountInputOfRecording } from "../verification/recording-rule-count";
 import { quiet } from "./generate-blueprint-test-helpers";
 
-// The logistic science sample: one machine, two inserters, a clock of 176 ticks. The 4-swing clock wins on its
-// 61.7 wake-ups a minute, against the stable 2-swing clock's 82.8 (the 1-swing clock, made for a backed-up belt, wakes as often, and recovers in 2 periods against their 3).
+// The logistic science sample: one machine, two inserters. The figures are of its 4-swing clock of 176 ticks
+// (planned-belt-slack), stable at 61.7 wake-ups a minute; the selected clock is the 2-swing clock of 88 ticks, its windows
+// made by arithmetic, at 41.4.
 describe("the rule count of a simulated run", () => {
     let config: Config;
     let clock: ReturnType<typeof generateClockAlternatives>["alternatives"][number];
+    let selected: ReturnType<typeof generateClockAlternatives>["alternatives"][number];
 
     beforeAll(async () => {
         config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240);
         const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
-        clock = alternatives[selected_index];
-        const other = alternatives.find(alternative => alternative.id === "swings-2")!;
-        expect(other.verdict).toBe("stable");
-        expect(other.ranking.recovery_periods).toBe(3);
+        selected = alternatives[selected_index];
+        clock = alternatives.find(alternative => alternative.id === "planned-belt-slack")!;
+        expect(selected.id).toBe("swings-2");
         expect(clock.verdict).toBe("stable");
         expect(clock.ranking.recovery_periods).toBe(3);
-        expect(clock.ranking.wake_ups_per_minute).toBeLessThan(other.ranking.wake_ups_per_minute!);
+        expect(selected.ranking.wake_ups_per_minute).toBeLessThan(clock.ranking.wake_ups_per_minute!);
     });
 
     it("generates the clock itself when ruleCallsOfSample is not given the alternatives, and finds the same calls", () => {
-        const given = ruleCallsOfClock(config, clock);
+        const given = ruleCallsOfClock(config, selected);
         const generated = ruleCallsOfSample(config, { logger: quiet });
         expect(generated.clock.id).toBe(given.clock.id);
         expect(generated.removal.w_removed_pooled).toBe(given.removal.w_removed_pooled);
@@ -42,8 +43,8 @@ describe("the rule count of a simulated run", () => {
         { ...config, overrides: { ...config.overrides, terminal_swing_count: clock.result.used_terminal_swing_count } },
         clock.result.clock_windows, clock.result.simulation_duration.ticks, periods, quiet);
 
-    // The simulator counts the crafts a machine starts; it reads them nowhere. These figures use the selected clock
-    // from the staged start (empty machines), over 40 periods; the fewest wake-ups pick the 4-swing clock.
+    // The simulator counts the crafts a machine starts; it reads them nowhere. These figures use the 4-swing clock
+    // from the staged start (empty machines), over 40 periods.
     it("records the crafts a machine starts without changing the run", () => {
         expect(clock.id).toBe("planned-belt-slack");
         const stock = stockOf(40);

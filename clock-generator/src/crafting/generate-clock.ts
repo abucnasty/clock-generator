@@ -5,7 +5,11 @@ import { defaultLogger } from "../common/logger";
 import { groupedHandsClock } from "./candidates/grouped-hands";
 import { observedWindowsClock } from "./candidates/observed-windows";
 import { resultWindowsClockOfPlan } from "./candidates/result-windows-clock";
-import { BlueprintGenerationResult, GenerateClockOptions, PlanRun, SwingAttemptResult, SwingBackoffReport, checkedClock, clockOfPlan, planRun } from "./plan/plan-run";
+import { BlueprintGenerationResult, GenerateClockOptions, PlanRun, SwingAttemptResult, SwingBackoffReport, checkedClock, clockOfPlan, clockOfWindows, planRun } from "./plan/plan-run";
+import { ArithmeticWindowsNotApplicable, batchedSwingsWindowsByArithmetic } from "./plan/batched-arithmetic";
+import { sharedLaneShortened } from "./plan/shared-lane-guard";
+import { backpressureLossVerdictOf } from "./trial";
+import { OpenRange } from "../data-types";
 import { primitiveGroupedOptionsSupported, verifiedPrimitiveGroupedClock } from "./candidates/verified-primitive-grouped";
 import type { PrimitiveGroupedAttemptReport } from "./primitive-grouped-policy";
 import { FractionalSwingsRefusedError, fractionalSwingsWholeAt } from "./sequence/cycle/swing-distribution";
@@ -56,13 +60,89 @@ export function generateClockForConfig(
     const planned = checkedClock(plan, clock, clock.windows, options);
     // where the planned windows do not hold, windows made from the hands and the sources take their place, if they do
     if (options.verify_as_built !== true || (planned.stability_check.as_built?.holds ?? planned.stability_check.holds)) {
-        return planned;
+        // beside a planned clock that holds as built, the windows made by arithmetic (decision 7). Not where it does not hold:
+        // a clock that holds there would stop the searches whose clocks are selected on such builds (the blocked output
+        // fixture of stack 3 lost its shifted swings, 25.0 wake-ups a minute, to the arithmetic's 37.5)
+        const arithmetic = options.verify_as_built === true ? arithmeticWindowsOf(plan) : null;
+        return arithmetic === null ? planned : arithmeticBesidePlanned(plan, planned, arithmetic, options);
     }
     const grouped = groupedHandsClock(plan, options);
     if (grouped !== null && grouped.stability_check.holds) {
         return grouped;
     }
     return clockWithPickupsFromTheirEntry(plan, options) ?? planned;
+}
+
+/**
+ * The batched-swings windows of the plan made by arithmetic (batched-arithmetic.ts), where the arithmetic has a rule for
+ * the build, they are not the planning run's own and the copies do not share a belt they shorten (shared-lane-guard.ts);
+ * null elsewhere, the reason logged
+ */
+function arithmeticWindowsOf(plan: PlanRun): Map<string, OpenRange[]> | null {
+    const { run } = plan;
+    try {
+        const { windows } = batchedSwingsWindowsByArithmetic({ entity_registry: run.simulation_context.entity_registry,
+            crafting_cycle_plan: run.crafting_cycle_plan, period_ticks: run.duration.ticks, recipe_lcm: run.recipe_lcm,
+            always_enabled_by_config: run.always_enabled_by_config });
+        if (sameWindows(windows, plan.unslacked_windows)) {
+            plan.logger.log("Windows by arithmetic: the planning run's own");
+            return null;
+        }
+        const shared = sharedLaneShortened(plan.config, windows, plan.unslacked_windows);
+        if (shared !== null) {
+            plan.logger.log(`Windows by arithmetic: not used, ${shared}`);
+            return null;
+        }
+        return windows;
+    } catch (error) {
+        if (!(error instanceof ArithmeticWindowsNotApplicable)) throw error;
+        plan.logger.log(`Windows by arithmetic: none (${error.message})`);
+        return null;
+    }
+}
+
+function sameWindows(a: ReadonlyMap<string, OpenRange[]>, b: ReadonlyMap<string, OpenRange[]>): boolean {
+    const text = (windows: ReadonlyMap<string, OpenRange[]>) => Array.from(windows).filter(([, ranges]) => ranges.length > 0)
+        .sort(([x], [y]) => x < y ? -1 : x > y ? 1 : 0)
+        .map(([key, ranges]) => `${key}:${ranges.map(range => `${range.start_inclusive}-${range.end_inclusive}`).join(",")}`).join(" ");
+    return text(a) === text(b);
+}
+
+/**
+ * The clock of the windows made by arithmetic, checked as the planned clock is (the clock-only check from every start
+ * phase): on a plan of its own whose stability check is the arithmetic clock's alone, not the planning run's
+ */
+function checkedArithmeticClock(plan: PlanRun, windows: Map<string, OpenRange[]>, options: GenerateClockOptions): BlueprintGenerationResult {
+    const own: PlanRun = { ...plan, run: { ...plan.run, stability_check: { ...plan.run.stability_check, holds: true, as_built: undefined } } };
+    const clock = clockOfWindows(own, windows, options);
+    const checked = checkedClock(own, clock, clock.windows, options);
+    const as_built = checked.stability_check.as_built;
+    plan.logger.log(`Windows by arithmetic: the clock ${as_built?.holds ? "holds" : "does not hold"} as built`
+        + (as_built?.wake_ups === undefined ? "" : `, ${as_built.wake_ups.wake_ups_per_minute.toFixed(2)} wake-ups a minute`));
+    return { ...checked, window_maker: "arithmetic" };
+}
+
+/**
+ * Which of the two clocks of a plan whose planned clock holds as built is the primary (decision 7: the arithmetic maker
+ * beside the planning run), decided by what both are checked to do: the clock made by arithmetic where it holds as built,
+ * wakes its inserters fewer times a minute, and gets back from every backpressure loss the planned clock gets back from;
+ * the planned clock everywhere else
+ */
+function arithmeticBesidePlanned(plan: PlanRun, planned: BlueprintGenerationResult, windows: Map<string, OpenRange[]>,
+    options: GenerateClockOptions): BlueprintGenerationResult {
+    const made = checkedArithmeticClock(plan, windows, options);
+    const wake_ups = (result: BlueprintGenerationResult) => result.stability_check.as_built?.wake_ups?.wake_ups_per_minute;
+    const made_wake_ups = wake_ups(made), planned_wake_ups = wake_ups(planned);
+    if (!made.stability_check.holds || made_wake_ups === undefined || planned_wake_ups === undefined || !(made_wake_ups < planned_wake_ups)) {
+        return planned;
+    }
+    const survives = (result: BlueprintGenerationResult) => backpressureLossVerdictOf(plan.config, result, plan.logger).backpressure_loss?.survives === true;
+    if (!survives(made) && survives(planned)) {
+        plan.logger.log("Windows by arithmetic: fewer wake-ups, but the clock does not get back from a loss the planned one gets back from");
+        return planned;
+    }
+    plan.logger.log(`Windows by arithmetic: the primary clock (${made_wake_ups.toFixed(2)} against ${planned_wake_ups.toFixed(2)} wake-ups a minute)`);
+    return made;
 }
 
 /**
