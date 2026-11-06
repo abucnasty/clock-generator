@@ -367,7 +367,7 @@ export function watchNotes(
     if (row.kind === 'inserter' && row.wakeUpsPerMinute === 0 && row.onShare > 0) {
         notes.push({
             id: 'never-woken',
-            text: `On for ${percentText(row.onShare)} of the period but woken 0 times a minute: the simulator counts no wakeup for it while it is on.`,
+            text: `On for ${percentText(row.onShare)} of the window cycle but woken 0 times a minute: the simulator counts no wakeup for it while it is on.`,
         });
     }
     if (ctx.mostWakeUpsId !== null && row.id === ctx.mostWakeUpsId) {

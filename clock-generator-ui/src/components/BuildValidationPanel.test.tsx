@@ -36,7 +36,7 @@ it('renders one named validation panel with one chest error, preserving the repa
     const { user, onEnableRemoval } = panel([infinityChest(7, { remove_unfiltered_items: undefined })],
         [inserter(2, { sink: { type: 'chest', id: 7 } })]);
     const row = screen.getByRole('group', { name: 'Chest 7 needs output removal enabled' });
-    expect(screen.getByRole('region', { name: 'Build validation' }).contains(row)).toBe(true);
+    expect(screen.getByRole('region', { name: 'Build check' }).contains(row)).toBe(true);
     expect(screen.getByText('1 error')).toBeDefined();
     expect(screen.getAllByText('Chest 7 needs output removal enabled')).toHaveLength(1);
     expect(document.getElementById('validation-issue-chest:7:removal-disabled')).toBe(row);
@@ -101,7 +101,7 @@ it('shows a refusal of two problems as two errors, opened once and with no confi
             diagnostics: [{ kind: 'refusal', opening, problems: [machineLimit, inserterLimit] }] } });
     show(<BuildValidationPanel issues={issues} machines={[]} belts={[]} chests={[]} inserters={[]}
         onApplyFix={vi.fn()} onSwitchType={vi.fn()} onEnableRemoval={vi.fn()} onReview={vi.fn()} />);
-    const panel = screen.getByRole('region', { name: 'Build validation' });
+    const panel = screen.getByRole('region', { name: 'Build check' });
     expect(within(panel).getByText('2 errors')).toBeDefined();
     expect(within(panel).getAllByText(opening)).toHaveLength(1);
     const items = within(panel).getAllByRole('group');

@@ -36,8 +36,8 @@ it('keeps finite chest advice outside the error count and removes repaired chest
     expect(collect([bufferChest(7, { item_filter: 'iron-gear-wheel' })])[0]).toMatchObject({ severity: 'warning', blocksGeneration: false });
     expect(collect([{ ...empty, remove_unfiltered_items: true }])).toEqual([]);
     expect(collect([{ ...empty, item_filter: [{ item_name: 'iron-gear-wheel', request_count: 100 }] }])).toEqual([]);
-    expect(validationCountLabel(1)).toBe('1 validation error');
-    expect(validationCountLabel(2)).toBe('2 validation errors');
+    expect(validationCountLabel(1)).toBe('1 check error');
+    expect(validationCountLabel(2)).toBe('2 check errors');
 });
 
 it('retains real missing connections and their repair options while deduplicating check results', () => {

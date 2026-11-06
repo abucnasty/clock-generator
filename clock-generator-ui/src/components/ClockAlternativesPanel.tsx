@@ -71,7 +71,7 @@ const COMPARE_COPY = {
         + 'another start point, with another count, so its figure is the average over 12 start points, and the cell says so.',
     noneRecover: 'No clock qualifies as stable across its completed checks. Compare its modeled rate, recovery and sampled starts separately.',
     noneHold: 'None of the clocks tried holds the setpoint, so they are all listed.',
-    deadlock: 'The tests that starve and jam the build do not see this, so on this build they do not decide which clock '
+    deadlock: 'The tests that stop a supply or block an output do not see this, so on this build they do not decide which clock '
         + 'is selected for you: the clocks that hold the setpoint are ranked by their wakeups.',
     computing: (label: string) => `${label}: computing…`,
     showUnstable: (hidden: number) => `Show ${hidden} unstable clock${hidden === 1 ? '' : 's'} that ${hidden === 1 ? 'was' : 'were'} tried`,

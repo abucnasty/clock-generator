@@ -55,9 +55,9 @@ export type GlossaryId =
  * The glossary's wakeup, in the user's words (the repo glossary's alarm and sleep are maintainer words). Its case of a
  * switched-off inserter is provisional; edit it here, and only here.
  */
-export const WAKEUP_DEFINITION: string = 'One time the game checks an inserter that is waiting, because a machine it waits on started a '
-    + 'craft (inputs), or finished a craft or paid out productivity (outputs). Each is a small check that moves little or nothing, '
-    + 'so fewer wakeups cost less UPS. It counts also when the clock has switched the inserter off; the clock switching an '
+export const WAKEUP_DEFINITION: string = 'One time the game checks an inserter that is waiting. This happens because a machine it waits on started a '
+    + 'craft (inputs), or finished a craft or paid out productivity (outputs). Each is a small check that moves little or nothing. '
+    + 'Fewer wakeups cost less UPS. It counts also when the clock has switched the inserter off. The clock switching an '
     + 'inserter on is not a wakeup. Only the switched-off case is provisional: seen on three builds in Factorio 2.1.24, its '
     + 'cost not measured.';
 
@@ -93,15 +93,16 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     {
         id: 'window-cycle-time',
         term: 'window cycle time',
-        definition: 'The time of one window cycle: one complete sequence of all the enable windows of a clock, after which '
-            + 'the sequence starts again. A whole number of crafting cycles, which can be a fraction of a tick. Shown in ticks.',
+        definition: 'The time of one window cycle, in ticks. A window cycle is one complete sequence of all the enable windows '
+            + 'of a clock, after which the sequence starts again. The time is a whole number of crafting cycles, and can be a '
+            + 'fraction of a tick.',
         insteadOf: 'clock period, period, LCM period',
     },
     {
         id: 'enable-window',
         term: 'enable window',
-        definition: 'The ticks of the window cycle during which the clock makes an inserter\'s Enable if condition true, so '
-            + 'that the inserter is switched on. A stretch that runs over the end of the window cycle is one enable window.',
+        definition: 'The ticks of the window cycle in which the clock makes the Enable if condition of an inserter true. '
+            + 'The inserter is then switched on. A stretch that runs over the end of the window cycle is one enable window.',
         insteadOf: 'wake window, window, clock window, inserter window, enable range',
     },
     {
@@ -120,14 +121,14 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     {
         id: 'copies',
         term: 'copies',
-        definition: 'How many identical builds you put in the game, including partial ones such as 0.5 or 2.25. Describe only one of them.',
+        definition: 'How many identical builds you put in the game. It can be partial, such as 0.5 or 2.25. Describe only one of them.',
         insteadOf: 'units (as the count), copy as any other noun ("Copy" stays a verb: "Copy blueprint")',
     },
     {
         id: 'build',
         term: 'build',
         definition: 'A group of entities in the game, of any number, that together make one product.',
-        insteadOf: 'setup, structure, "build" as a verb',
+        insteadOf: 'setup, structure, cell, "build" as a verb',
     },
     {
         id: 'configuration',
@@ -151,9 +152,9 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     {
         id: 'clock',
         term: 'clock',
-        definition: 'The set of combinators that switches your inserters and mining drills on in their enable windows and repeats every '
-            + 'window cycle. The tool makes several and recommends one.',
-        insteadOf: 'potential clock',
+        definition: 'The set of combinators that switches your inserters and mining drills on in their enable windows. It repeats '
+            + 'every window cycle. The tool makes several and recommends one.',
+        insteadOf: 'potential clock, alternative, candidate, solution',
     },
     {
         id: 'blueprint',
@@ -164,7 +165,7 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     {
         id: 'check',
         term: 'check',
-        definition: 'A test of a configuration that shows whether it can be clocked, without making any clocks.',
+        definition: 'A test of a configuration that shows whether it can be clocked. It makes no clocks.',
         insteadOf: 'check as a verb, validation, "run a simulation", "re-run the simulation" (in sentences)',
     },
     {
@@ -185,34 +186,34 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
         id: 'holds-the-rate',
         term: 'holds the rate',
         definition: 'The clock holds its expected output in the modeled cold-start checks while supplies remain available. '
-            + 'A start-dependent clock can hold here yet settle differently from other sampled starts and be ranked unstable.',
+            + 'A start-dependent clock can hold here. It can still settle differently from other sampled starts, and be ranked unstable.',
         insteadOf: '"meets the target rate", "holds the target rate" (say "holds the setpoint")',
     },
     {
         id: 'supply-stop',
         term: 'supply stop',
         definition: 'A time when one item stops arriving from the belts or chests of a build.',
-        insteadOf: 'starved, input loss',
+        insteadOf: 'starved, starvation, input loss',
     },
     {
         id: 'output-blockage',
         term: 'output blockage',
         definition: 'A time when one product of a build is not taken away.',
-        insteadOf: 'jammed, backpressure loss',
+        insteadOf: 'jammed, jam, output loss',
     },
     {
         id: 'recovery',
         term: 'recovery',
-        definition: 'In the simulator\'s evaluated loss trials, the clock goes back to its rate by itself after a supply stop '
-            + 'or an output blockage. A clock that fails one loss is not tried on the others. '
+        definition: 'In the simulator\'s loss trials, the clock goes back to its rate by itself. The trials are a supply stop '
+            + 'and an output blockage. A clock that fails one loss is not tried on the others. '
             + 'This is separate from holding the modeled rate and from checks of other sampled starts.',
-        insteadOf: 'recovers, survives backpressure loss, gets back',
+        insteadOf: 'recovers, recover, gets back',
     },
     {
         id: 'belt-slack',
         term: 'belt slack',
-        definition: 'Extra ticks added to an enable window so a late pickup from a moving belt can still finish.',
-        insteadOf: 'belt pickup slack',
+        definition: 'Extra ticks added to an enable window. A late pickup from a moving belt can then still finish.',
+        insteadOf: 'belt pickup slack, pickup slack, slack on its own',
     },
     {
         id: 'simulator',
@@ -236,8 +237,8 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     {
         id: 'stable',
         term: 'stable',
-        definition: 'A clock is stable when it holds your setpoint at steady state. After a supply stop or an output blockage, '
-            + 'the build also goes back to its rate by itself.',
+        definition: 'A clock is stable when it holds your setpoint at steady state. The build also goes back to its '
+            + 'rate by itself after a supply stop or an output blockage.',
         insteadOf: 'survives backpressure loss',
     },
     {

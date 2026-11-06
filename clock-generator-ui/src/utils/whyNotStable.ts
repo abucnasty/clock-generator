@@ -9,7 +9,7 @@ export const WHY_NOT_STABLE_TITLE: Record<WhyNotStableCause, string> = {
     'output chest full': 'Why no clock is stable: an output chest fills up',
     'export belt short': 'Why no clock is stable: an export belt gets too little',
     'results not taken out': 'Why no clock is stable: its results are not all taken out',
-    'no recovery': 'Why no clock is stable: it does not recover',
+    'no recovery': 'Why no clock is stable: it has no recovery',
     'nothing holds': 'Why no clock is stable: nothing holds the rate',
 };
 

@@ -199,7 +199,7 @@ describe('recoversOf', () => {
         const notTried = ' Not tried, since one failure is enough: iron plate stops arriving, iron gear wheel is not taken away.';
         const stopped = clock('a', { verdict: 'no recovery', loss: { broken_by: ['coal stops arriving'], not_tried: ['iron plate stops arriving', 'iron gear wheel is not taken away'] } });
         expect(recoversOf(stopped).detail).toBe(`${SUMMARY_COPY.recoversNoDetail('coal stops arriving')}${notTried}`);
-        expect(rateWarningOf(stopped)).toContain(`after coal stops arriving for a while, the build does not get back to its rate by itself in the simulator.${notTried}`);
+        expect(rateWarningOf(stopped)).toContain(`after coal stops arriving for a while, the build does not go back to its rate by itself in the simulator.${notTried}`);
         // all tried: nothing is said
         expect(recoversOf(clock('b', { verdict: 'no recovery', loss: { broken_by: ['coal stops arriving'] } })).detail).not.toContain('Not tried');
     });

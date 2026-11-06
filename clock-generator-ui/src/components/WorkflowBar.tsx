@@ -65,7 +65,7 @@ interface WorkflowBarProps {
     copied: boolean;
     /** Copies the blueprint, or asks first for the clock of an earlier build (the copy every Copy button shares) */
     onCopy: () => void;
-    /** Blocking validation errors, shared with the Build validation panel. */
+    /** Blocking validation errors, shared with the Build check panel. */
     problems: Problem[];
     /** The engine refused the build as it stands now: Generate is off until the build changes */
     refused: boolean;
@@ -408,8 +408,8 @@ export function WorkflowBar({
                             color="error"
                             id={!note ? ELEMENT_IDS.blockReason : undefined}
                             label={validationCountLabel(problems.length)}
-                            onClick={() => onGoToProblem({ text: 'Build validation', target: { kind: 'validation-panel' } })}
-                            aria-label={`${validationCountLabel(problems.length)}. Show build validation.`}
+                            onClick={() => onGoToProblem({ text: 'Build check', target: { kind: 'validation-panel' } })}
+                            aria-label={`${validationCountLabel(problems.length)}. Show the build check.`}
                             // outlined as "Check failed" is, which takes the same place: one look for red in the bar. A
                             // tint under the red would take its words under 4.5:1; hovered, they are underlined
                             sx={{

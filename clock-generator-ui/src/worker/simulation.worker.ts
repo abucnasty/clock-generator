@@ -226,7 +226,7 @@ function handleValidate(requestId: number, config: Config): void {
         requireValidConfig(config);
         postResponse({ type: 'validated', requestId, validation: clockGenerator.validateConfig(config) });
     } catch (error) {
-        const { message, recovery } = failureOf(error, config, 'Validation failed');
+        const { message, recovery } = failureOf(error, config, 'Check failed');
         postResponse({
             type: 'validation-failed',
             requestId,
@@ -300,7 +300,7 @@ function checkRepeatedUnitConversion(config: Config): CheckedRepeatedUnitConvers
             && !(error instanceof clockGenerator.FeasibilityError)
             && !(error instanceof clockGenerator.AssertionError)) throw error;
         return { kind: 'unavailable', stage: 'check', reason: { code: 'candidate-check-failed',
-            message: error instanceof Error ? error.message : 'The candidate Check failed.' }, repeatedGroups: repeatedGroups() };
+            message: error instanceof Error ? error.message : 'The check failed.' }, repeatedGroups: repeatedGroups() };
     }
 }
 

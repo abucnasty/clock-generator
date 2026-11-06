@@ -37,10 +37,10 @@ export const RECOMMENDED_COPY = {
     disclosure: [
         'The simulator checks exported enable windows from a modeled cold start, including clock-phase checks where available. '
             + 'Extended sampled-start checks are separate and optional; Model and tested starts reports what actually ran. '
-            + 'Clocks that hold are also assessed for recovery after inputs stop or outputs back up; an unavailable result is not a pass.',
-        'The clock picked for you is the one that holds the rate and recovers with the fewest wakeups; on a build '
+            + 'Clocks that hold are also assessed for recovery after a supply stop or an output blockage; an unavailable result is not a pass.',
+        'The clock picked for you is the one that holds the rate and has recovery, with the fewest wakeups; on a build '
             + 'with a deadlock risk, the one '
-            + 'with the fewest wakeups of the clocks that hold the rate. If clocks tie, the one that recovers sooner, then the '
+            + 'with the fewest wakeups of the clocks that hold the rate. If clocks tie, the one that goes back to its rate sooner, then the '
             + 'one with fewer enable windows. If none qualifies, the stable clock that runs nearest over the setpoint. If there is none, the one '
             + 'that runs nearest to the setpoint. On a build with a loop of machines, '
             + 'whose wakeups depend on where its clock is when the build starts, their average over 12 start points is compared.',
@@ -51,7 +51,7 @@ export const RECOMMENDED_COPY = {
     runMovingBelts: 'This run assumed moving belts.',
     runBackedUpBelts: 'This run assumed backed-up belts.',
     runSearched: 'The slower searches for fewer wakeups were run.',
-    runSearchedWhenNeeded: 'The slower searches were only run if no other clock held the rate and recovered, apart from the two that can still find fewer wakeups on a short clock.',
+    runSearchedWhenNeeded: 'The slower searches were only run if no other clock held the rate and had recovery, apart from the two that can still find fewer wakeups on a short clock.',
     provisional: 'More clocks are still being made, so this may change. ',
     stopped: 'You stopped this run early, so a better clock may not have been made yet. ',
     beltBackedUp: ' with backed-up belts',
@@ -74,7 +74,7 @@ export const RECOMMENDED_COPY = {
         ` ${othersText(others, kind)} on wakeups, so the one with fewer enable windows was picked, not counting the `
         + 'extra enable windows that only cut wakeups.',
     tieOnRecovery: (others: number, kind: string) =>
-        ` ${othersText(others, kind)} on wakeups, so the one that recovers sooner after inputs stop or outputs back up was picked.`,
+        ` ${othersText(others, kind)} on wakeups, so the one that goes back to its rate sooner after a supply stop or an output blockage was picked.`,
     tieOnWindows: (others: number, kind: string) =>
         ` ${othersText(others, kind)} on wakeups and enable windows, so the first one in the list is shown.`,
     tieKindMoving: ' for a moving belt',
