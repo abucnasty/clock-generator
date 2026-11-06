@@ -252,6 +252,7 @@ function isEngineRefusal(error: unknown): boolean {
         || error instanceof clockGenerator.InserterCoverageError
         || error instanceof clockGenerator.CopiesError
         || error instanceof clockGenerator.FeasibilityError
+        || error instanceof clockGenerator.LaneCapacityError
         || error instanceof clockGenerator.AssertionError
         || (error instanceof Error && error.message.startsWith('The current configuration cannot meet the target production rate.'));
 }

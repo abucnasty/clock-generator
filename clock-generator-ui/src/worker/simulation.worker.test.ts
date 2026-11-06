@@ -278,6 +278,15 @@ describe('a captured inserter kind, quality and filter mode', () => {
         const checked = await send({ type: 'validate', requestId: 54, config }) as ValidationFailedResponse;
         expect(listed(await coverageOf(config), config.machines, { message: checked.message })).toHaveLength(1);
     });
+
+    // The inserter-scope refusals are plain Errors until the engine gives them a class (#650); the worker does not match
+    // on their text. `it.fails` turns red when the class lands: then recognise it in isEngineRefusal and make this `it`.
+    it.fails('Check shows the refused blacklist as a refusal, not as an internal error', async () => {
+        const config = await pastedSavedReloaded(exported({}, blacklist));
+        const checked = await send({ type: 'validate', requestId: 55, config }) as ValidationFailedResponse;
+        expect(checked.message).toContain('`filter_mode` "blacklist" is refused');
+        expect(checked.internal).toBeUndefined();
+    });
 });
 
 describe('live advice on a gear assembler, which does not block', () => {
