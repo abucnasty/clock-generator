@@ -8,7 +8,7 @@ import { Entity, handSizeFor, ReadableEntityRegistry } from "../../../entities";
 import { ConfigOverrides } from "../../../config";
 import type { Config } from "../../../config/schema";
 import { destroyedTargetBalance, madeTargetBalance, transfersOfBalance } from "./cycle-transfers";
-import { SwingDistribution, SwingDistributionMap } from "./swing-distribution";
+import { FractionalSwingsRefusedError, SwingDistribution, SwingDistributionMap } from "./swing-distribution";
 import { returnedTargetRefusal } from "./target-ends";
 import type { ResultWindowsPlan } from "../../result-windows";
 import type { ResultWindowsDecision } from "../../../data-types/build-plan";
@@ -264,11 +264,11 @@ function createMadePlan(
         
         // Only compute distributions if there are actual fractional swings (LCM > 1)
         if (cycle_multiplier > 1) {
-            const swing_distribution = SwingDistribution.computeSwingDistributions(
+            const swing_distribution = distributionsAt(swings_per_cycle, () => SwingDistribution.computeSwingDistributions(
                 swing_counts,
                 entity_registry,
                 cycle_multiplier
-            );
+            ));
 
             return withPlannedTerminalCount({
                 total_duration: final_period_duration,
@@ -291,6 +291,18 @@ function createMadePlan(
         fractional_swings_enabled: false,
         terminal_swing_count_overridden: config_overrides.terminal_swing_count !== undefined
     }, swings_per_cycle);
+}
+
+/** The swing distributions, a refusal of the insertion limits rethrown with the output swings a cycle it was planned at */
+function distributionsAt(swings_per_cycle: Fraction, distributions: () => SwingDistributionMap): SwingDistributionMap {
+    try {
+        return distributions();
+    } catch (error) {
+        if (error instanceof FractionalSwingsRefusedError) {
+            throw new FractionalSwingsRefusedError(error.message, swings_per_cycle);
+        }
+        throw error;
+    }
 }
 
 function print(plan: CraftingCyclePlan): void {

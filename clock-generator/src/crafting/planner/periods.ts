@@ -4,8 +4,10 @@
  * pruned by arithmetic before any simulation. The one rule that prunes is P-limit: a period of MAX_SIMULATION_TICKS or
  * more cannot be simulated, nor, under whole-counter checks, a fractional period whose whole counter
  * is that long (`counterOverLimitOf`). Each count's hands come from today's cycle plan (`CraftingCyclePlan.create`), never
- * worked out again here; an alternative's count that the cycle plan refuses (fractional swings an inserter cannot make
- * within its insertion limits) is listed as refused, with the plan's reason, as today its run fails.
+ * worked out again here; an alternative's count that the cycle plan refuses is listed as refused, with the plan's reason,
+ * as its run fails. Fractional swings an inserter cannot make within its insertion limits are listed, as their run makes
+ * them, at the first whole count below that the cycle plan accepts, unless the config forces a count; refused where none is,
+ * or where every inserter's swings are whole at it.
  */
 import assert from "../../common/assert";
 import type { Config } from "../../config";
@@ -15,6 +17,7 @@ import { Entity, type ReadableEntityRegistry } from "../../entities";
 import { targetInsertersOf, targetMachinesOf, type TargetItem } from "../sequence/cycle/target-ends";
 import { MAX_SIMULATION_TICKS, counterOverLimitOf } from "../plan/clock-period-limit";
 import { CraftingCyclePlan, plannedTerminalSwingCount } from "../sequence/cycle/crafting-cycle";
+import { FractionalSwingsRefusedError, fractionalSwingsWholeAt } from "../sequence/cycle/swing-distribution";
 import { TargetProductionRate } from "../target-production-rate";
 import { CycleMeasure, cycleMeasureOf } from "./composition";
 import type { GroupShape } from "./groups";
@@ -198,10 +201,29 @@ export function plannedPeriodsOf(
     const listed_from = main_at === 0 ? outputSwingsOf(main.cycle, registry, item) : main.swings;
     const planned_from = main_at === 0 ? listed_from : first.swings;
     const { lower, higher } = swingCountsListed(listed_from, planned_from, forced, main.measure.main_period.toDecimal());
+    const fractionalAt = (swings: Fraction, count_overrides: typeof overrides) => CraftingCyclePlan.create(target, registry, config, swings,
+        count_overrides, undefined, true);
     const toggled = alternative(null, "fractional", true, () => {
         const exact = max_swings(true);
-        return planned(CraftingCyclePlan.create(target, registry, config, exact, overrides, undefined, true),
-            "fractional", true, exact);
+        try {
+            return planned(fractionalAt(exact, overrides), "fractional", true, exact);
+        } catch (error) {
+            if (forced || !(error instanceof FractionalSwingsRefusedError) || error.swings_per_cycle === undefined) throw error;
+            // as the run backs off (generateClockWithSwingBackoff): the first whole count below that the cycle plan accepts
+            const refused = error.swings_per_cycle;
+            for (let count = Math.ceil(refused.getNumerator / refused.getDenominator) - 1; count >= 1; count--) {
+                let cycle: CraftingCyclePlan;
+                try {
+                    cycle = fractionalAt(fraction(count), { ...overrides, terminal_swing_count: count });
+                } catch (lower) {
+                    if (lower instanceof FractionalSwingsRefusedError) continue;
+                    throw lower;
+                }
+                if (!cycle.fractional_swings_enabled) throw fractionalSwingsWholeAt(error, count);
+                return planned(cycle, "fractional", true, fraction(count));
+            }
+            throw error;
+        }
     });
     const counts: ListedCount[] = [
         ...tried,

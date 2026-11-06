@@ -61,7 +61,7 @@
         {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":216,"denominator":1},"cycles":5,"period_ticks":1080,"kept":true},
         {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":144,"denominator":1},"cycles":15,"period_ticks":2160,"kept":true},
         {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":72,"denominator":1},"cycles":15,"period_ticks":1080,"kept":true},
-        {"swings":null,"fractional":true,"listed_as":"fractional","pruned":{"rule":"cycle-refused","terms":{"reason":"Cannot satisfy fractional swing constraint: sub-cycle 0 requires 4 swings, but maximum allowed is 2 due to insertion limits. Total swings: 170, cycle multiplier: 40."}}}
+        {"swings":3,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":216,"denominator":1},"cycles":5,"period_ticks":1080,"kept":true}
       ],
       "duty": [
         {
