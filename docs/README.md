@@ -39,7 +39,7 @@ The "Docs checks" job of CI runs these, from `clock-generator/`:
   `npm run docs:game-labels` checks the list against an installed Factorio 2.1.
 - `npm run docs:portal`: the sidecar's mod portal page, `clock-generator-sidecar/PORTAL.md`, is generated from
   [Export a build from Factorio](user/export-a-build.md) and [Data in a sidecar export](user/sidecar-export-contents.md).
-- `npm run docs:fields`: [Build file fields](maintainer/build-file-fields.md) is generated from the engine's
+- `npm run docs:fields`: [Configuration file fields](maintainer/configuration-file-fields.md) is generated from the engine's
   `ConfigSchema`.
 
 Do not edit a generated file. Change its source, run its command and commit the result; with `-- --check`, the command

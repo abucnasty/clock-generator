@@ -1,11 +1,11 @@
 ---
 $schema: urn:oasis:names:tc:dita:xsd:reference.xsd
-id: build-file-fields
+id: configuration-file-fields
 ---
 
-# Build file fields
+# Configuration file fields
 
-The fields of a build file, as the engine reads it. This topic is generated from `ConfigSchema` in
+The fields of a configuration file, as the engine reads it. This topic is generated from `ConfigSchema` in
 `clock-generator/src/config/schema.ts`: do not edit it. To change a field or its description, change the schema, then
 run `npm run docs:fields` in `clock-generator/`. CI fails when this topic is not current.
 
@@ -17,7 +17,7 @@ There is one table for each top-level field. A field below another has the path 
 
 The type comes from the JSON Schema that zod makes of `ConfigSchema`. The type of a field that JSON Schema cannot
 show, such as a custom check or a transform, is "any, see schema.ts". "Required" is yes when the field must be in its object
-after the engine reads the file: a field with a default is required, but a build file can leave it out.
+after the engine reads the file: a field with a default is required, but a configuration file can leave it out.
 
 ## target_output
 

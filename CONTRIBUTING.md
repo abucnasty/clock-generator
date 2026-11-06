@@ -257,7 +257,7 @@ is never loosened because a job fails it.
 | `Gen 1/2` and `Gen 2/2`, then `Gen summary` | the `*.generation.test.ts` files, dealt out by `ci/generation-durations.json` | ready pull requests to `master`, `feature/` or `release/` that change more than documentation, and releases; on a draft the shards do not run and the check fails (below) |
 | `Rec 1/6` to `Rec 6/6`, then `Rec summary` | the 86 jobs, joined, compared with `record/`, with the properties, the per-job checks and the never-worse rule | ready pull requests to `master`, `feature/` or `release/` that change more than documentation; on a draft the shards do not run and the check fails (below) |
 | `UI build`, `UI samples`, `UI browser` | the UI | every pull request that changes more than documentation |
-| `Docs checks` | PORTAL.md and the build file fields topic are current, and the bold labels of the user topics are strings of the site, the sidecar or the game ([docs/README.md](docs/README.md#checks)) | every pull request |
+| `Docs checks` | PORTAL.md and the configuration file fields topic are current, and the bold labels of the user topics are strings of the site, the sidecar or the game ([docs/README.md](docs/README.md#checks)) | every pull request |
 
 **Drafts.** GitHub's free plan runs 20 jobs at once and a pull request starts about 22, so the heavy suites (the generation shards and the
 record shards) do not run on a draft pull request; unit tests, the UI build, the UI samples and the browser job do. On a draft the checks

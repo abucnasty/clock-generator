@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Generates docs/maintainer/build-file-fields.md, the maintainer reference of the fields of a build file, from the
+// Generates docs/maintainer/configuration-file-fields.md, the maintainer reference of the fields of a configuration file, from the
 // engine's ConfigSchema (src/config/schema.ts) as zod gives it in JSON Schema. Reads the build (dist/): from
 // clock-generator/,
 //   npm run docs:fields              builds, then writes the topic
@@ -10,7 +10,7 @@
 const path = require("node:path");
 const { writeOrCheck } = require("./generated-file");
 
-const TOPIC = "docs/maintainer/build-file-fields.md";
+const TOPIC = "docs/maintainer/configuration-file-fields.md";
 const ANY = "any, see schema.ts";
 // zod gives an integer this maximum when the schema sets none
 const SAFE_INTEGER = Number.MAX_SAFE_INTEGER;
@@ -140,12 +140,12 @@ for (const [name, child] of Object.entries(schema.properties)) {
 
 const topic = `---
 $schema: urn:oasis:names:tc:dita:xsd:reference.xsd
-id: build-file-fields
+id: configuration-file-fields
 ---
 
-# Build file fields
+# Configuration file fields
 
-The fields of a build file, as the engine reads it. This topic is generated from \`ConfigSchema\` in
+The fields of a configuration file, as the engine reads it. This topic is generated from \`ConfigSchema\` in
 \`clock-generator/src/config/schema.ts\`: do not edit it. To change a field or its description, change the schema, then
 run \`npm run docs:fields\` in \`clock-generator/\`. CI fails when this topic is not current.
 
@@ -157,7 +157,7 @@ There is one table for each top-level field. A field below another has the path 
 
 The type comes from the JSON Schema that zod makes of \`ConfigSchema\`. The type of a field that JSON Schema cannot
 show, such as a custom check or a transform, is "${ANY}". "Required" is yes when the field must be in its object
-after the engine reads the file: a field with a default is required, but a build file can leave it out.
+after the engine reads the file: a field with a default is required, but a configuration file can leave it out.
 
 ${sections.join("\n\n")}
 `;
