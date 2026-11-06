@@ -1,7 +1,7 @@
 name: Test
 
 # Pull requests run the unit tests, build the UI and generate a clock in it in a browser. Pull requests to master, which
-# are what gets released, and to an integration branch (feature/...), run the generation tests as well: they generate the clock alternatives of whole samples and
+# are what gets released, and to an integration branch (feature/... or release/...), run the generation tests as well: they generate the clock alternatives of whole samples and
 # take minutes. Pull requests also generate every blast job, in shards, and compare it with the committed record (clock-generator/record/).
 # Those pull requests run none of the test jobs when they change documentation only (see the `changes` job). "Run workflow" (or
 # `gh workflow run test.yml --ref <branch>`) runs them all on any branch (the record check runs on pull requests only).
@@ -70,7 +70,7 @@ jobs:
       - name: Unit tests
         run: npm test -- --reporter=default
 
-  # Whether the tests have anything to test: not when a pull request to master or to a feature/ branch changes
+  # Whether the tests have anything to test: not when a pull request to master, to a feature/ or to a release/ branch changes
   # documentation only. The output is called `generation` for the generation tests it first decided; the unit and UI jobs
   # follow it too, and only a `false` skips them.
   # Decided by the files the pull request changes, never by its branch name. A run asked for the generation tests (by
@@ -79,7 +79,7 @@ jobs:
   changes:
     name: Changed files
     # the input rather than the event, since a called run has the event of its caller: a push or a run by hand
-    if: inputs.generation || github.base_ref == 'master' || startsWith(github.base_ref, 'feature/')
+    if: inputs.generation || github.base_ref == 'master' || startsWith(github.base_ref, 'feature/') || startsWith(github.base_ref, 'release/')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -201,7 +201,7 @@ jobs:
     name: Generation tests
     needs: [changes, generation-shards]
     # not skipped with the shards: it is the job that tells what became of them
-    if: ${{ !cancelled() && (inputs.generation || github.base_ref == 'master' || startsWith(github.base_ref, 'feature/')) }}
+    if: ${{ !cancelled() && (inputs.generation || github.base_ref == 'master' || startsWith(github.base_ref, 'feature/') || startsWith(github.base_ref, 'release/')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -284,13 +284,13 @@ jobs:
   # the committed record (field by field; a difference fails with a table of job, field, before and after, in the job summary too),
   # then checks the properties of the jobs and that no selected clock got worse (below). It reports success when the pull request
   # changes documentation only (the shards are skipped then), and fails when the changed files could not be read or a shard failed.
-  # It runs on pull requests to master and to feature/ branches, as the shards do, and not on a release (which calls this workflow
+  # It runs on pull requests to master and to feature/ and release/ branches, as the shards do, and not on a release (which calls this workflow
   # and does nothing unless it passes). Its name is stable, so that it can be a required check.
   record:
     name: Record check
     needs: [changes, record-shards]
     # not skipped with the shards: it is the job that tells what became of them
-    if: ${{ !cancelled() && github.event_name == 'pull_request' && (github.base_ref == 'master' || startsWith(github.base_ref, 'feature/')) }}
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && (github.base_ref == 'master' || startsWith(github.base_ref, 'feature/') || startsWith(github.base_ref, 'release/')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
