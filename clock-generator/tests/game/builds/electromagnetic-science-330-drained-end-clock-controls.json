@@ -3,11 +3,11 @@
   "cases": {
     "generated-moving-one-copy": {
       "recorded": {
-        "pr": 655,
-        "commit": "be62b7f0a642dfa93cd4e9b520c14cc97f279feb",
-        "frozen_head": "be62b7f0a642dfa93cd4e9b520c14cc97f279feb",
-        "note": "recorded under the protocol in game ticks on the engine of this head with the tests of the branch that added it; pr is set when the PR is opened",
-        "clock_sha256": "11f9af32db535db2df84f5960976658620db06ee478fd9e133fb4c37535a93e9",
+        "pr": 661,
+        "commit": "de574104",
+        "frozen_head": "de574104",
+        "note": "recorded under the protocol in game ticks on the engine of this head; pr is set when the PR is opened",
+        "clock_sha256": "eec2c968cf26d6b1ad5cdda8814bd14f0974a592ab8a40797a2db6a4714ec9a1",
         "clock_basis": "capture"
       },
       "native": {
@@ -17,7 +17,7 @@
         "period": 704,
         "window": 3600,
         "expected": 1800,
-        "steady": 7121,
+        "steady": 7120,
         "baseline": {
           "ticks": 3600,
           "total": 1800,
@@ -38,23 +38,23 @@
         "disturbances": [],
         "stock": {
           "lowest": 0,
-          "end": 10,
+          "end": 9,
           "holds": true
         },
         "result": "holds",
-        "ended": 10721
+        "ended": 10720
       },
       "generation": {
         "period": 704,
         "expected": 352.0,
         "verdict": "stable",
         "selection": {
-          "id": "fractional",
+          "id": "swings-2",
           "holds": true,
           "rate": 330,
           "supply": "moving"
         },
-        "clock_sha256": "11f9af32db535db2df84f5960976658620db06ee478fd9e133fb4c37535a93e9"
+        "clock_sha256": "eec2c968cf26d6b1ad5cdda8814bd14f0974a592ab8a40797a2db6a4714ec9a1"
       }
     }
   }
