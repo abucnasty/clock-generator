@@ -27,6 +27,13 @@ import { StockWalk, WalkHand, WalkSwing, WINDOW_LATENCY_TICKS, walkMachineStock 
 /** Why the arithmetic has no windows for a build: the clock keeps the windows of the planning run */
 export class ArithmeticWindowsNotApplicable extends Error { }
 
+/**
+ * The refusal of a build whose output machine does not make a cycle's hands in the batch the arithmetic gives them, its
+ * window lengthened to the hands the stock walk saw come late `MAX_BATCH_PASSES` times: the output swing estimate
+ * (output-swing-estimate.ts) reads it as a count the batched windows fall behind at
+ */
+export class ArithmeticBatchesFallBehind extends ArithmeticWindowsNotApplicable { }
+
 function refuse(reason: string): never {
     throw new ArithmeticWindowsNotApplicable(reason);
 }
@@ -124,7 +131,7 @@ function walkWithBatches(
             lengthened = true;
         }
         if (!lengthened) return walk;
-        if (pass + 1 >= MAX_BATCH_PASSES) refuse(`the output of ${machine_id} does not keep up with its batches`);
+        if (pass + 1 >= MAX_BATCH_PASSES) throw new ArithmeticBatchesFallBehind(`the output of ${machine_id} does not keep up with its batches`);
     }
 }
 
