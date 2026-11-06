@@ -17,11 +17,12 @@ import type { SubtickPeriod } from "../common/subtick-period";
 import { canonicalKey, currentRunMemo } from "./plan/run-memo";
 import { wholeCounterOf } from "./plan/clock-period-limit";
 import { assessTargetProduction, TargetProduction } from "./target-production";
-import { BlueprintGenerationResult, BuildRun, LCM_STABILITY_TOLERANCE, MAX_SIMULATION_TICKS, RunOptions, SimulationStabilityCheck, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, planRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
+import { BlueprintGenerationResult, BuildRun, FractionalSwings, LCM_STABILITY_TOLERANCE, MAX_SIMULATION_TICKS, RunOptions, fractionalSwingsOf, SimulationStabilityCheck, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, planRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
 import { SimulationTick } from "./runner/simulation-tick";
 import { simulationStateKey } from "./runner/steady-state";
 import { inLoopInserterWindows, loopInserterWindows } from "./candidates/loop-windows";
 import { CLOCK_STARTS, ClockStart, StartDependence, StartOutcome, cycleOf, startVerdictOf, startsReachingTarget } from "./start-dependence";
+import { plannedWithFractionalSwings } from "./sequence/cycle/crafting-cycle";
 import { movingPickupPhaseStarts } from "./moving-pickup-phase-starts";
 import { canonicalVerificationJson } from "./verification-signature";
 import { DeciderOrder, deciderBuildOrder, reversedDeciderOrder } from "./decider-order";
@@ -439,7 +440,7 @@ function longRunOfFreeRunningBuild(
     logger: Logger,
     check_ticks: number = FREE_RUNNING_CHECK_TICKS,
     /** How the run starts; the cold start of the staged scaffold with the default orders by default */
-    start: Pick<ClockTrialOptions, "competing_takers_order" | "decider_order" | "main_clock_shift"> = {},
+    start: Pick<ClockTrialOptions, "competing_takers_order" | "decider_order" | "main_clock_shift" | "fractional_swings"> = {},
     /** What the caller reads of the stock: the stock it gets is recorded in no more detail */
     stock_detail: StockDetail = "full",
 ): {
@@ -631,8 +632,10 @@ export function clockFromWindows(
     clock_windows: SerializableClockWindows,
     period_ticks: number,
     logger: Logger = defaultLogger,
+    /** Plan it with fractional swings, as the "Fractional swings" alternative plans its clocks */
+    swings: FractionalSwings = {},
 ): BlueprintGenerationResult {
-    const plan = planRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, { logger });
+    const plan = planRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, { logger, ...swings });
     // the windows are built as they are: nothing is added to them, so the clock goes without belt pickup slack, and the
     // inserters of a loop without windows stay always enabled
     const clock = clockOfPlan(plan, { belt_pickup_slack: "never" });
@@ -668,12 +671,15 @@ export function backpressureLossOf(
     options_for?: (loss: BackpressureLoss) => Partial<BackpressureLossOptions>,
     /** The excesses of results that come by chance the clock is tried with too, after the losses (randomExcessLossesOf) */
     excesses: readonly ExcessLoss[] = [],
+    /** How the clock's runs plan, as the clock was planned (`fractionalSwingsOf`) */
+    swings: FractionalSwings = {},
 ): BackpressureLossReport {
     const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const check_config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     // each loss on a run of its own, so that a clock one loss breaks is not broken for the next
     const outcomeOf = (loss: BackpressureLossOptions["loss"], phases?: MovingPickupPhases, order?: TakerOrder): LossOutcome => runClockOnBuild(check_config, windows, period_ticks, logger, {
+        ...swings,
         factorio_states: false,
         moving_pickup_phases: phases,
         ...(order !== undefined && { competing_takers_order: order }),
@@ -759,6 +765,8 @@ export function startDependenceOf(
     cold_holds: boolean,
     logger: Logger,
     starts: readonly ClockStart[] = CLOCK_STARTS,
+    /** How the clock's runs plan, as the clock was planned (`fractionalSwingsOf`) */
+    swings: FractionalSwings = {},
 ): StartDependence {
     const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
@@ -767,7 +775,7 @@ export function startDependenceOf(
     const tried = starts.filter(start => start.clock_shift === 0 || Number.isInteger(period));
     const runs = tried.map(start => {
         // A start changes the shared counter's position, including computed by-product predicates on that counter.
-        const order = { competing_takers_order: start.competing_takers_order, decider_order: start.decider_order,
+        const order = { ...swings, competing_takers_order: start.competing_takers_order, decider_order: start.decider_order,
             main_clock_shift: start.clock_shift === 0 ? 0 : period - start.clock_shift % period };
         const long_run = longRunOfFreeRunningBuild(check_config, windows, period, expected_output_items, logger, FREE_RUNNING_CHECK_TICKS, order, "hands");
         const keeps_up = long_run !== null
@@ -809,6 +817,8 @@ export function wakeUpsFromStartsOf(
     expected_output_items: number,
     long_run_ticks: number,
     logger: Logger,
+    /** How the clock's runs plan, as the clock was planned (`fractionalSwingsOf`) */
+    swings: FractionalSwings = {},
 ): WakeUpsFromStarts | null {
     const check_config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     if (!hasStockTheClockDoesNotSet(createEntityRegistryFromConfig(check_config))) {
@@ -823,7 +833,7 @@ export function wakeUpsFromStartsOf(
     const figureAt = (place: number): number | null => {
         const standing = place === 0 ? windows
             : new Map(Array.from(windows, ([key, ranges]) => [key, rotateRanges(ranges, place, period)] as const));
-        const long_run = longRunOfFreeRunningBuild(check_config, standing, period, expected_output_items, quiet, long_run_ticks, {}, "wake-ups");
+        const long_run = longRunOfFreeRunningBuild(check_config, standing, period, expected_output_items, quiet, long_run_ticks, swings, "wake-ups");
         if (long_run === null) {
             return null;
         }
@@ -898,6 +908,8 @@ export function exhaustiveStartPhases(
     period: number,
     logger: Logger,
     report?: (checked: number, total: number) => void,
+    /** How the clock's runs plan, as the clock was planned (`fractionalSwingsOf`) */
+    swings: FractionalSwings = {},
 ): ExhaustiveStartPhasesOutcome | null {
     // under whole-counter checks a p/q-tick period's phases are those of its counter's p ticks
     const counter_ticks = wholeCounterOf(period)?.period_ticks ?? period;
@@ -912,7 +924,7 @@ export function exhaustiveStartPhases(
     const quiet = quietLogger(logger);
     // one run with the full machinery gives the crafting cycle plan, the expected output and the output inserters,
     // which rotating the windows changes nothing of; every phase's cold build reuses them
-    const base = runBuild(as_built, { logger: quiet, cold_start: true, factorio_states: false });
+    const base = runBuild(as_built, { ...swings, logger: quiet, cold_start: true, factorio_states: false });
     const stride_periods = proof_bin.ticks / period;
     // the belts with a consumption rate are held to what their consumers take, in the bins the output is
     const exported = exportedItemsOf(base.simulation_context.entity_registry, base.output_inserter_ids);
@@ -1117,6 +1129,8 @@ export function runAsBuiltCheck(
      * wake-ups and not the stock.
      */
     stock_detail: StockDetail = "loop-windows",
+    /** How the clock's runs plan, as the clock was planned (`fractionalSwingsOf`) */
+    swings: FractionalSwings = {},
 ): AsBuiltRun {
     // the drills into chests run on the windows made from their takers' in these windows, as the export gives them
     decider_windows = withChestDrillWindows(config, decider_windows, period);
@@ -1125,7 +1139,7 @@ export function runAsBuiltCheck(
     // the count the progress is reported against: as it always was where no whole counter is checked
     const total = counter === null ? Math.min(start_phases, Math.floor((period - 1) / Math.max(1, Math.floor(period / start_phases))) + 1)
         : start_shifts.length + 1;
-    const result = passed !== undefined ? passed.run.result : firstClockSpan(config, decider_windows, period, logger);
+    const result = passed !== undefined ? passed.run.result : firstClockSpan(config, decider_windows, period, logger, swings);
     const check: AsBuiltStabilityCheck = {
         holds: result.stability_check.holds,
         actual_output_items: result.stability_check.actual_output_items,
@@ -1152,7 +1166,7 @@ export function runAsBuiltCheck(
             continue;
         }
         const shifted = firstClockSpan(config, decider_windows, period, logger,
-            {moving_pickup_phases: phases, factorio_states: false, ...(pickup_phase_cycles && {backpressure_loss:
+            {...swings, moving_pickup_phases: phases, factorio_states: false, ...(pickup_phase_cycles && {backpressure_loss:
                 {loss: {kind: "none"}, period_ticks: period, expected_output_items: result.stability_check.expected_output_items}})});
         check.pickup_phase_starts_checked = (check.pickup_phase_starts_checked ?? 0) + 1;
         const judged = overItsCycle(shifted);
@@ -1195,7 +1209,7 @@ export function runAsBuiltCheck(
             }
         } else {
             // no long run when none is asked for (a quick trial of a search)
-            const long_run = long_run_ticks > 0 ? longRunOfFreeRunningBuild(config, decider_windows, period, result.stability_check.expected_output_items, logger, long_run_ticks, {}, stock_detail) : null;
+            const long_run = long_run_ticks > 0 ? longRunOfFreeRunningBuild(config, decider_windows, period, result.stability_check.expected_output_items, logger, long_run_ticks, swings, stock_detail) : null;
             stock = stock_detail === "hands" ? undefined : long_run?.stock;
             if (long_run && stock) {
                 // judged as the long run is: the proven cycle, or what follows the start-up of a sampled run
@@ -1240,7 +1254,7 @@ export function runAsBuiltCheck(
     }
     if (check.holds) {
         heldUnderOtherTakerOrders(config, decider_windows, period, logger, check, result.stability_check.expected_output_items, long_run_ticks,
-            passed?.long_run_ticks === long_run_ticks ? passed.run.check : undefined);
+            passed?.long_run_ticks === long_run_ticks ? passed.run.check : undefined, swings);
     }
     if (!check.holds) {
         check.failed_start_offset = 0;
@@ -1248,7 +1262,7 @@ export function runAsBuiltCheck(
     }
 
     if (typeof process !== "undefined" && process.env?.CLOCK_PROOF_PHASES === "1") {
-        const exhaustive = exhaustiveStartPhases(config, decider_windows, period, logger, report);
+        const exhaustive = exhaustiveStartPhases(config, decider_windows, period, logger, report, swings);
         if (exhaustive !== null) {
             check.start_phases_checked = exhaustive.phases_checked;
             check.start_phases_proven = exhaustive.proven;
@@ -1275,7 +1289,7 @@ export function runAsBuiltCheck(
     }
     for (const offset of start_shifts) {
         // only its output count is read
-        const shifted = firstClockSpan(config, decider_windows, period, logger, { factorio_states: false, main_clock_shift: offset });
+        const shifted = firstClockSpan(config, decider_windows, period, logger, { ...swings, factorio_states: false, main_clock_shift: offset });
         check.start_phases_checked++;
         report?.(check.start_phases_checked, total);
         const amount = strict ? measuredAmountOf(shifted.stability_check) : null;
@@ -1354,6 +1368,7 @@ function heldUnderOtherTakerOrders(
     expected_output_items: number,
     long_run_ticks: number,
     passed: AsBuiltStabilityCheck | undefined,
+    swings: FractionalSwings,
 ): void {
     if (long_run_ticks === 0) return;
     const orders = otherTakerOrdersOf(config, decider_windows, period);
@@ -1367,12 +1382,12 @@ function heldUnderOtherTakerOrders(
     check.competing_takers = competingTakersOf(config);
     for (const order of orders) {
         check.taker_orders_checked++;
-        const run = firstClockSpan(config, decider_windows, period, logger, { factorio_states: false, competing_takers_order: order });
+        const run = firstClockSpan(config, decider_windows, period, logger, { ...swings, factorio_states: false, competing_takers_order: order });
         let failed: { actual_output_items: number; full_output_chests?: FullOutputChest[]; export_shortfalls?: ExportShortfall[];
             repeat_periods?: number; repeat_output_items?: number } | null = run.stability_check.holds ? null : run.stability_check;
         let amount: ReturnType<typeof measuredAmountOf> | null = null;
         if (failed === null && long_run_ticks > 0) {
-            const long_run = longRunOfFreeRunningBuild(config, decider_windows, period, expected_output_items, logger, long_run_ticks, { competing_takers_order: order }, "hands");
+            const long_run = longRunOfFreeRunningBuild(config, decider_windows, period, expected_output_items, logger, long_run_ticks, { ...swings, competing_takers_order: order }, "hands");
             if (long_run !== null && !long_run.keeps_up) {
                 failed = { actual_output_items: long_run.output_items_per_period, full_output_chests: long_run.full_output_chests, export_shortfalls: long_run.export_shortfalls };
                 if (long_run.target_production !== undefined) {
@@ -1427,6 +1442,8 @@ export function trialWithLoopWindows(
     pickup_phase_cycles: boolean = false,
     /** Whether the inserters of the loop itself are given windows too */
     in_loop: boolean = true,
+    /** How the clock's runs plan, as the clock was planned (`fractionalSwingsOf`) */
+    swings: FractionalSwings = {},
 ): {
     result: TrialRun;
     check: AsBuiltStabilityCheck;
@@ -1443,7 +1460,7 @@ export function trialWithLoopWindows(
     const passesAsBefore = (check: AsBuiltStabilityCheck) => check.holds && check.failed_start_offset === undefined
         && (!run.check.holds || check.start_phases_checked === run.check.start_phases_checked);
     const checkOf = (candidate: Map<string, OpenRange[]>, what: string) => runAsBuiltCheck(config, candidate, period, logger, start_phases,
-        (n, total) => report?.(`Checking the windows ${what}, clock start ${n}/${total}`), LOOP_WINDOW_CHECK_TICKS, undefined, pickup_phase_cycles, "wake-ups");
+        (n, total) => report?.(`Checking the windows ${what}, clock start ${n}/${total}`), LOOP_WINDOW_CHECK_TICKS, undefined, pickup_phase_cycles, "wake-ups", swings);
     let kept: (AsBuiltRun & { windows: Map<string, OpenRange[]>; item_names: Map<string, string>; in_loop_ids: string[] }) | null = null;
     const out_of_loop = loopInserterWindows(config, period, run.stock, logger);
     if (out_of_loop.size > 0) {
@@ -1469,7 +1486,7 @@ export function trialWithLoopWindows(
             }
             const own_run = checkOf(with_own, "of the loop");
             const why = !passesAsBefore(own_run.check) ? "the as-built check with them does not pass as without"
-                : loopWindowsMargin(config, with_own, [...own.keys(), ...(kept?.item_names.keys() ?? [])], period, logger, pickup_phase_cycles);
+                : loopWindowsMargin(config, with_own, [...own.keys(), ...(kept?.item_names.keys() ?? [])], period, logger, pickup_phase_cycles, swings);
             logger.log(`Loop windows of the loop's own inserters: ${why === null ? "kept" : `dropped, ${why}`}`);
             if (why === null) {
                 kept = { ...own_run, windows: with_own, in_loop_ids: Array.from(own.keys()),
@@ -1508,13 +1525,15 @@ export function loopWindowsMargin(
     period: number,
     logger: Logger,
     pickup_phase_cycles: boolean = false,
+    /** How the clock's runs plan, as the clock was planned (`fractionalSwingsOf`) */
+    swings: FractionalSwings = {},
 ): string | null {
     // the alternatives that make the same clock more than once judge its windows once
     const memo = currentRunMemo();
-    const key = memo === undefined ? null : canonicalKey([config, period, pickup_phase_cycles, inserter_ids,
+    const key = memo === undefined ? null : canonicalKey([config, swings.fractional_swings === true, period, pickup_phase_cycles, inserter_ids,
         Array.from(windows, ([id, ranges]) => [id, ranges.map(range => [range.start_inclusive, range.end_inclusive])])]);
-    return memo === undefined || key === null ? marginOfLoopWindows(config, windows, inserter_ids, period, logger, pickup_phase_cycles)
-        : memo.judgement(key, () => marginOfLoopWindows(config, windows, inserter_ids, period, logger, pickup_phase_cycles));
+    return memo === undefined || key === null ? marginOfLoopWindows(config, windows, inserter_ids, period, logger, pickup_phase_cycles, swings)
+        : memo.judgement(key, () => marginOfLoopWindows(config, windows, inserter_ids, period, logger, pickup_phase_cycles, swings));
 }
 
 function marginOfLoopWindows(
@@ -1524,6 +1543,7 @@ function marginOfLoopWindows(
     period: number,
     logger: Logger,
     pickup_phase_cycles: boolean,
+    swings: FractionalSwings,
 ): string | null {
     const span = Number.isInteger(period) ? period : Math.ceil(period);
     const groups = new Map<string, string[]>();
@@ -1545,7 +1565,7 @@ function marginOfLoopWindows(
                     return last < span ? [OpenRange.from(first, last)] : [OpenRange.from(first, span - 1), OpenRange.from(0, last - span)];
                 })));
             }
-            const check = runAsBuiltCheck(config, moved, period, logger, AS_BUILT_START_PHASES, undefined, FREE_RUNNING_CHECK_TICKS, undefined, pickup_phase_cycles, "hands").check;
+            const check = runAsBuiltCheck(config, moved, period, logger, AS_BUILT_START_PHASES, undefined, FREE_RUNNING_CHECK_TICKS, undefined, pickup_phase_cycles, "hands", swings).check;
             if (!check.holds || check.failed_start_offset !== undefined) {
                 return `the windows of ${ids.join(", ")} do not hold moved ${ticks > 0 ? "+" : ""}${ticks} tick`;
             }
@@ -1586,17 +1606,21 @@ export function beltPickupSlackTrial(
     period: number,
     expected_output: number,
     logger: Logger,
+    /** How the clock's runs plan, as the clock was planned (`fractionalSwingsOf`) */
+    swings: FractionalSwings = {},
 ): BeltPickupSlackDecision {
     if (Array.from(slack.values()).every(ticks => ticks === 0) || !Number.isInteger(period)) {
         return { helps: true, verified: null };
     }
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     const slacked = withBeltPickupSlack(windows, slack, period);
-    const with_slack = runAsBuiltCheck(base_config, slacked, period, logger);
+    const check = (checked: Map<string, OpenRange[]>) => runAsBuiltCheck(base_config, checked, period, logger, AS_BUILT_START_PHASES, undefined,
+        FREE_RUNNING_CHECK_TICKS, undefined, false, "loop-windows", swings);
+    const with_slack = check(slacked);
     if (with_slack.check.holds) {
         return { helps: true, verified: { windows: slacked, run: with_slack } };
     }
-    const without_slack = runAsBuiltCheck(base_config, windows, period, logger).check;
+    const without_slack = check(windows).check;
     logger.log(`Belt pickup slack: clock-only actual with=${with_slack.check.actual_output_items} without=${without_slack.actual_output_items} expected=${expected_output}`);
     if (without_slack.holds) {
         return { helps: false, verified: null };
@@ -1699,7 +1723,8 @@ export function startDependenceVerdictOf(
     const quiet: Logger = { log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } };
     try {
         report?.("Trying other starts");
-        return startDependenceOf(config, result.clock_windows, result.simulation_duration.ticks, result.stability_check.expected_output_items, cold_holds, quiet);
+        return startDependenceOf(config, result.clock_windows, result.simulation_duration.ticks, result.stability_check.expected_output_items, cold_holds, quiet,
+            CLOCK_STARTS, fractionalSwingsOf(result.crafting_cycle_plan));
     } catch (error) {
         if (errors === "throw") throw error;
         logger.log(`Start dependence could not be tried: ${error instanceof Error ? error.message : error}`);
@@ -1752,7 +1777,8 @@ function triedBackpressureLoss(
     try {
         return { backpressure_loss: verdictOf(backpressureLossOf(config, result.clock_windows, result.simulation_duration.ticks,
             result.stability_check.expected_output_items, quiet, {}, (_loss, index, total) => report?.(`Trying backpressure loss ${index + 1}/${total}`),
-            result.result_windows === undefined ? undefined : resultLossOptionsOf(result.result_windows.plans), excess === null ? [] : [excess])) };
+            result.result_windows === undefined ? undefined : resultLossOptionsOf(result.result_windows.plans), excess === null ? [] : [excess],
+            fractionalSwingsOf(result.crafting_cycle_plan))) };
     } catch (error) {
         if (errors === "throw") throw error;
         const reason = error instanceof Error ? error.message : String(error);
@@ -1819,7 +1845,8 @@ export function roundedClockTrial(
     const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const as_built = runAsBuiltCheck(config, windows, period_ticks, quietLogger(logger), AS_BUILT_START_PHASES,
-        (n, total) => report?.(`Checking the clock rounded to ${period_ticks} ticks, clock start ${n}/${total}`));
+        (n, total) => report?.(`Checking the clock rounded to ${period_ticks} ticks, clock start ${n}/${total}`), FREE_RUNNING_CHECK_TICKS,
+        undefined, false, "loop-windows", fractionalSwingsOf(result.crafting_cycle_plan));
     const rounded: BlueprintGenerationResult = {
         ...result,
         clock_windows,
@@ -1859,9 +1886,10 @@ export function withSettledOutput(
     try {
         const planning = verificationPlanningConfigOf(planned_on, result);
         const config = { ...planning, overrides: { ...planning.overrides, derive_clock_windows: false } };
+        const swings = fractionalSwingsOf(result.crafting_cycle_plan);
         const windows = withChestDrillWindows(config, new Map(Object.entries(result.clock_windows).map(([entity_id, ranges]) =>
             [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const)), period);
-        const long_run = longRunOfFreeRunningBuild(config, windows, period, result.stability_check.expected_output_items, quietLogger(logger), FREE_RUNNING_CHECK_TICKS, {}, "hands");
+        const long_run = longRunOfFreeRunningBuild(config, windows, period, result.stability_check.expected_output_items, quietLogger(logger), FREE_RUNNING_CHECK_TICKS, swings, "hands");
         return reported(long_run === null ? one_period
             : { ...as_built, actual_output_items: long_run.output_items_per_period, output_basis: "long-run mean" });
     } catch (error) {
@@ -1873,21 +1901,32 @@ export function withSettledOutput(
 /**
  * The config a clock is verified on: the one it was planned on with its output swings per cycle and without the derivation
  * of windows, built as the clock is (`buildAsBuiltConfig`). All physical config, including supply, geometry, seeds, entity
- * order and overrides, stays in it.
+ * order and overrides, stays in it. With it, whether its runs plan with fractional swings where that changes them.
  */
-function verificationConfigOf(config: Config, result: BlueprintGenerationResult): Config {
+function verificationConfigOf(config: Config, result: BlueprintGenerationResult): { config: Config; fractional_swings: boolean } {
     config = verificationPlanningConfigOf(config, result);
     const windows = new Map(Object.entries(result.clock_windows).map(([id, ranges]) =>
         [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const verification_config = buildAsBuiltConfig({ ...config, overrides: { ...config.overrides,
         derive_clock_windows: false, terminal_swing_count: verificationTerminalCountOf(result) } }, windows, result.simulation_duration.ticks);
+    const fractional_swings = fractionalSwingsChangeChecksOn(verification_config, result) && plannedWithFractionalSwings(result.crafting_cycle_plan);
+    return { config: verification_config, fractional_swings };
+}
+
+/**
+ * Whether planning a clock's runs with fractional swings can change them: at a forced whole swing count, fractional mode
+ * changes only the AUTO swing distribution, which clocked, always and never controls do not use, so it can where the
+ * count is not whole or an own-clock fuel inserter still needs AUTO. `verification_config` is the clock built as built.
+ */
+function fractionalSwingsChangeChecksOn(verification_config: Config, result: BlueprintGenerationResult): boolean {
     const fully_controlled = verification_config.inserters.every(inserter => inserter.overrides?.enable_control?.mode !== "AUTO")
         && (verification_config.drills?.configs.every(drill => drill.overrides?.enable_control?.mode !== "AUTO") ?? true);
-    // At a forced whole swing count, fractional mode changes only the AUTO swing distribution. Clocked/always/never
-    // controls do not use that distribution. Keep the flag when any own-clock fuel inserter still needs AUTO.
-    verification_config.overrides!.use_fractional_swings = fully_controlled && Number.isInteger(verificationTerminalCountOf(result))
-        ? false : config.overrides?.use_fractional_swings === true;
-    return verification_config;
+    return !(fully_controlled && Number.isInteger(verificationTerminalCountOf(result)));
+}
+
+/** Whether planning the checks of a clock with fractional swings can change them (`fractionalSwingsChangeChecksOn`) */
+export function fractionalSwingsChangeChecksOf(planned_on: Config, result: BlueprintGenerationResult): boolean {
+    return fractionalSwingsChangeChecksOn(verificationConfigOf(planned_on, result).config, result);
 }
 
 /**
@@ -1896,7 +1935,8 @@ function verificationConfigOf(config: Config, result: BlueprintGenerationResult)
  * supply, geometry, seeds, entity order and overrides, stays in the key, along with the observed clock-only check.
  */
 export function clockVerificationSignature(config: Config, result: BlueprintGenerationResult): string {
-    return canonicalVerificationJson({ config: verificationConfigOf(config, result), period: result.simulation_duration.ticks, windows: result.clock_windows,
+    const verification = verificationConfigOf(config, result);
+    return canonicalVerificationJson({ config: verification.config, fractional_swings: verification.fractional_swings, period: result.simulation_duration.ticks, windows: result.clock_windows,
         belt_kind: result.belt?.kind ?? null, belt_pickup_slack_left_out: result.belt_pickup_slack_left_out,
         expected_output: result.stability_check.expected_output_items,
         base_cycle_ticks: result.crafting_cycle_plan.total_duration.ticks,
@@ -1913,12 +1953,12 @@ export function clockVerificationSignature(config: Config, result: BlueprintGene
  */
 export function backpressureLossKey(planned_on: Config, result: BlueprintGenerationResult): string {
     const period = result.simulation_duration.ticks;
-    const verification_config = verificationConfigOf(planned_on, result);
+    const { config: verification_config, fractional_swings } = verificationConfigOf(planned_on, result);
     const cycles_set_nothing = Number.isInteger(period)
         && unplannedInserterClocks(createEntityRegistryFromConfig(verification_config), period, new Map(), new Map(), alwaysEnabledByConfig(verification_config)).size === 0;
     const config = cycles_set_nothing ? { ...verification_config, overrides: { ...verification_config.overrides, lcm: undefined } } : verification_config;
     // the excess trial is of the margins: two clocks of the same windows are tried alike only with the same one
     const excess = result.random_margins === undefined ? null : excessLossOf(result.random_margins.crafting);
-    return canonicalVerificationJson({ config, period, windows: result.clock_windows, expected_output: result.stability_check.expected_output_items,
+    return canonicalVerificationJson({ config, fractional_swings, period, windows: result.clock_windows, expected_output: result.stability_check.expected_output_items,
         ...(excess !== null && { excess }) });
 }

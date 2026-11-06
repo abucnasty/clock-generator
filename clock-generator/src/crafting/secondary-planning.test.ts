@@ -36,9 +36,8 @@ describe("count-only secondary planning provenance", () => {
 
         const explicitCount = { ...config, overrides: { ...config.overrides, terminal_swing_count: 2 } };
         const explicitLcm = { ...config, overrides: { ...config.overrides, lcm: 3 } };
-        const fractional = { ...config, overrides: { ...config.overrides, use_fractional_swings: true } };
         const destroyed = { ...config, target_output: { ...config.target_output, counts: "destroyed" as const } };
-        for (const optedOut of [explicitCount, explicitLcm, fractional, destroyed]) {
+        for (const optedOut of [explicitCount, explicitLcm, destroyed]) {
             expect(secondaryPlanningCountOf(optedOut, context)).toBeUndefined();
         }
         expect(config).toEqual(untouched);
@@ -78,10 +77,10 @@ describe("count-only secondary planning provenance", () => {
         runClockAlternativeTask(config, context, "fractional", options);
 
         expect(generated).toHaveBeenCalledOnce();
-        const [planned] = generated.mock.calls[0];
+        const [planned, asked] = generated.mock.calls[0];
         expect(planned.overrides?.terminal_swing_count).toBe(1);
         expect(planned.overrides?.lcm).toBeUndefined();
-        expect(planned.overrides?.use_fractional_swings).toBe(true);
+        expect(asked?.fractional_swings).toBe(true);
         expect(config).toEqual(untouched);
     });
 

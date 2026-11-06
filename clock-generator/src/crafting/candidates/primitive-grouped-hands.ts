@@ -65,7 +65,7 @@ export function assertAcyclicGroupedDependencies(registry: Pick<ReadableEntityRe
 /** Whether a config leaves the made item's counts and every control to the generator, as primitive construction needs */
 export function primitiveGroupedConfigSupported(config: Config): boolean {
     return !(config.target_output.counts === "destroyed" || config.overrides?.terminal_swing_count !== undefined
-        || config.overrides?.lcm !== undefined || config.overrides?.use_fractional_swings === true
+        || config.overrides?.lcm !== undefined
         || config.inserters.some(it => it.overrides?.enable_control !== undefined && it.overrides.enable_control.mode !== "AUTO")
         || (config.drills?.configs ?? []).some(it => it.overrides?.enable_control !== undefined && it.overrides.enable_control.mode !== "AUTO"));
 }

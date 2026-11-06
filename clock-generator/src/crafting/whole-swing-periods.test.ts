@@ -165,10 +165,10 @@ describe('automatic whole-swing period eligibility', () => {
     it.each(['explicit', 'fractional', 'destroyed'] as const)('does not prune the %s path', kind => {
         const candidate = structuredClone(config);
         if (kind === 'explicit') candidate.overrides = { terminal_swing_count: 602 };
-        if (kind === 'fractional') candidate.overrides = { use_fractional_swings: true };
         if (kind === 'destroyed') candidate.target_output.counts = 'destroyed';
         const generate = vi.fn(() => { throw refusal; });
-        expect(() => generateClockWithSwingBackoff(candidate, { logger: quiet }, generate)).toThrow(refusal);
+        const options: GenerateClockOptions = { logger: quiet, ...(kind === 'fractional' && { fractional_swings: true as const }) };
+        expect(() => generateClockWithSwingBackoff(candidate, options, generate)).toThrow(refusal);
         expect(generate).toHaveBeenCalledTimes(1);
     });
 

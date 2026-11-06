@@ -3,7 +3,7 @@ import { Entity, EntityId, handSizeFor, Inserter, isNeverBlockingSink, Machine, 
 import { DRILL_ITEMS_PER_SWING } from "../planner/balance";
 import { EntityTransferCountMap, type OutputPath } from "../sequence/cycle/swing-counts";
 import { SwingDistribution } from "../sequence/cycle/swing-distribution";
-import { BlueprintGenerationResult, GenerateClockOptions, PlanRun, checkedClock, clockOfPlan, planRun } from "../plan/plan-run";
+import { BlueprintGenerationResult, GenerateClockOptions, PlanRun, checkedClock, clockOfPlan, fractionalSwingsOf, planRun } from "../plan/plan-run";
 import { alwaysEnabledInserters, isByProductOnlyInserter, unplannedInserterClocks, type InserterClock } from "../sequence/unplanned-inserter-clock";
 import { ClockBelt, beltPickupSlackTicks } from "../clock";
 import { backpressureLossVerdictOf, runClockOnBuild } from "../trial";
@@ -638,7 +638,8 @@ export function groupedHandsPlan(
  * A clock that holds at one placement and not next to it is not offered (working rule 3). The reason it is not, or null.
  */
 export function holdsWithMargin(plan: PlanRun, windows: Map<string, OpenRange[]>, period: number): string | null {
-    if (!runClockOnBuild(plan.config, windows, period, plan.logger).stability_check.holds) return "the windows do not hold";
+    const swings = fractionalSwingsOf(plan.run.crafting_cycle_plan);
+    if (!runClockOnBuild(plan.config, windows, period, plan.logger, swings).stability_check.holds) return "the windows do not hold";
     const groups = new Map<string, string[]>();
     for (const [id, ranges] of windows) {
         const key = ranges.map(range => `${range.start_inclusive}-${range.end_inclusive}`).join(",");
@@ -648,7 +649,7 @@ export function holdsWithMargin(plan: PlanRun, windows: Map<string, OpenRange[]>
         for (const ticks of [-MARGIN_SHIFT_TICKS, MARGIN_SHIFT_TICKS]) {
             const moved = new Map(windows);
             for (const id of ids) moved.set(id, shiftedWindows(windows.get(id)!, ticks, period));
-            if (!runClockOnBuild(plan.config, moved, period, plan.logger).stability_check.holds) {
+            if (!runClockOnBuild(plan.config, moved, period, plan.logger, swings).stability_check.holds) {
                 return `the windows ${key} (${ids.join(", ")}) do not hold ${ticks > 0 ? "+" : ""}${ticks} tick`;
             }
         }
