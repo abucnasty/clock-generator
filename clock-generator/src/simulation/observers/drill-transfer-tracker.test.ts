@@ -28,7 +28,12 @@ function recorder() {
         tracker.onStatusChange(from, to);
     };
     const ranges = () => (history.getAllTransfers().get(drill.entity_id) ?? []).map(it => [it.tick_range.start_inclusive, it.tick_range.end_inclusive]);
-    return { at, disabled, working, ranges };
+    /** The recorded run ends at this tick */
+    const endRun = (tick: number) => {
+        ticks.setCurrentTick(tick);
+        tracker.endRun();
+    };
+    return { at, disabled, working, ranges, endRun };
 }
 
 describe('the windows a drill into a machine records in the planning run', () => {
@@ -39,10 +44,9 @@ describe('the windows a drill into a machine records in the planning run', () =>
         expect(ranges()).toEqual([[10, 14]]);
     });
 
-    // Found, not changed: the tracker has no clamp at the warm-up's end, as the inserters' has. The recorded ticks start
-    // again at 0 there, so a drill enabled across it records a reversed range. No exported clock has one: the 609 drill
-    // ranges of the 238 blast jobs at 7ef358c0 all run forward. A fix is an item of its own, with its own blast.
-    it.fails('start at 0 when the drill was enabled before the warm-up ended', () => {
+    // The recorded ticks start again at 0 when the warm-up ends, so a tick read in the warm-up is larger than the run's
+    // current one. As the inserters' tracker does, a drill enabled before that counts from the run's first tick.
+    it('start at 0 when the drill was enabled before the warm-up ended', () => {
         const { at, disabled, working, ranges } = recorder();
         at(500, disabled, working);
         // the warm-up ends: the recorded ticks start again
@@ -50,11 +54,33 @@ describe('the windows a drill into a machine records in the planning run', () =>
         expect(ranges()).toEqual([[0, 10]]);
     });
 
-    // Found, not changed: a drill still enabled when the run ends records nothing of its last run (no wrap to the
-    // period's end). The same: a separate item.
-    it.fails('end at the run when the drill is still enabled there', () => {
-        const { at, disabled, working, ranges } = recorder();
+    it('end at the run\'s end when the drill is still enabled there', () => {
+        const { at, disabled, working, ranges, endRun } = recorder();
         at(100, disabled, working);
+        endRun(144);
         expect(ranges()).toEqual([[100, 144]]);
+    });
+
+    it('are the whole run when the drill was enabled before the warm-up ended and is still enabled at the end', () => {
+        const { at, disabled, working, ranges, endRun } = recorder();
+        at(500, disabled, working);
+        endRun(144);
+        expect(ranges()).toEqual([[0, 144]]);
+    });
+
+    it('have no window at the end of a run in which the drill is disabled', () => {
+        const { at, disabled, working, ranges, endRun } = recorder();
+        at(10, disabled, working);
+        at(14, working, disabled);
+        endRun(144);
+        expect(ranges()).toEqual([[10, 14]]);
+    });
+
+    it('go on from the end of the run when the drill is still enabled there and is disabled after', () => {
+        const { at, disabled, working, ranges, endRun } = recorder();
+        at(100, disabled, working);
+        endRun(144);
+        at(150, working, disabled);
+        expect(ranges()).toEqual([[100, 144], [144, 150]]);
     });
 });
