@@ -311,6 +311,7 @@ jobs:
     steps:
       - name: Not run on a draft
         if: github.event.pull_request.draft == true
+        working-directory: .
         run: |
           echo "::error::Not run on a draft: mark the pull request ready, or run \`gh workflow run test.yml --ref <branch>\`."
           echo 'not run on a draft: mark the pull request ready, or run `gh workflow run test.yml --ref <branch>`' >> "$GITHUB_STEP_SUMMARY"
