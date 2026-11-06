@@ -21,6 +21,7 @@ import { chestDrillReasons } from "./always-on-reasons";
 import { ClockBelt, clockBeltLabel, fuelHandRoomTicks } from "./clock";
 import { evenHandsClock } from "./candidates/even-hands";
 import { fullHandClock } from "./candidates/full-hand";
+import { perHandWindowsClock } from "./candidates/grouped-hands";
 import { observedWindowsClock } from "./candidates/observed-windows";
 import { shiftedSwingsClock } from "./candidates/shifted-swings";
 import { generateClockForConfig, generateClockWithSwingBackoff, terminalCountForAlternativePlanning } from "./generate-clock";
@@ -232,6 +233,11 @@ export function windowDeciderCount(blueprint: FactorioBlueprint): number {
 const SHARED_WINDOWS_NOTE = "Inserters that take into their machines at the same moment share one wake window, as long as the longest of them needs, "
     + "so they share one decider combinator. An inserter that needs fewer hands than that window stays enabled longer than it must, "
     + "so it can wake more often. It is only listed when it keeps the rate and recovers after being starved or jammed.";
+
+/** What a clock with a window at each swing says about itself, after how its alternative is made */
+const PER_HAND_WINDOWS_NOTE = "Inserters whose machines have room for more than the hands they need are enabled for one tick at the start of "
+    + "each of their swings instead of one window for all of them, so they never start a swing the machine does not need. "
+    + "It is only listed when it keeps the rate and recovers after being starved or jammed.";
 
 /** The alternative every run starts with, and the one the others are described against */
 const BATCHED_SWINGS_LABEL = "Batched swings";
@@ -649,8 +655,8 @@ function plannedChestDrillWindows(result: BlueprintGenerationResult): boolean {
 }
 
 /**
- * A run of the alternative and, where its clock is the grouped hands rule's, the run of the same alternative with shared
- * windows (`also`) when that holds the rate and recovers and is another clock than the separate one.
+ * A run of the alternative and, where its clock is the grouped hands rule's, the runs of its variants listed after it (`also`):
+ * the per-hand windows of its guarded takers (`perHandRun`), then the same alternative with shared windows (`sharedRun`).
  */
 function runAlternative(
     definition: AlternativeDefinition,
@@ -663,7 +669,62 @@ function runAlternative(
     settle_unstable?: boolean,
 ): ClockAlternativeRun | null {
     const run = runAlternativeOf(definition, config, logger, report, assessed, verification_cache, on_not_made, settle_unstable);
-    if (run === null || definition.shared_windows === undefined || !run.alternatives.some(it => it.result.grouped_hands !== undefined
+    if (run === null) return run;
+    const per_hand = perHandRun(definition, run, config, logger, report, assessed, verification_cache, settle_unstable);
+    const with_per_hand = per_hand === null ? run : { ...run, also: [...(run.also ?? []), per_hand] };
+    return sharedRun(definition, with_per_hand, config, logger, report, assessed, verification_cache, settle_unstable);
+}
+
+/**
+ * The run of a grouped hands clock with guarded takers made with a window of a tick at each of their swings (`perHandWindowsClock`),
+ * listed right after the clock it varies (`also`) when it holds the rate and recovers and is another clock; null elsewhere
+ */
+function perHandRun(
+    definition: AlternativeDefinition,
+    run: ClockAlternativeRun,
+    config: Config,
+    logger: Logger,
+    report?: (detail: string) => void,
+    assessed?: ReadonlySet<string>,
+    verification_cache?: Map<string, VerificationAssessment>,
+    settle_unstable?: boolean,
+): ClockAlternativeRun | null {
+    const varied = run.alternatives.find(it => it.result.grouped_hands?.guarded_takers !== undefined && it.result.primitive_grouped === undefined);
+    if (varied === undefined) return null;
+    const per_hand = runAlternativeOf({
+        ...definition,
+        run: () => {
+            const made = perHandWindowsClock(varied.result);
+            if (made === null) throw new Error("no per-hand windows");
+            return made;
+        },
+        id: `${definition.id}-per-hand`,
+        label: `${definition.label}, a window a swing`,
+        description: `${definition.description} ${PER_HAND_WINDOWS_NOTE}`,
+        chest_drill_fallbacks: undefined,
+        shared_windows: undefined,
+        without_loop_windows: undefined,
+        without_in_loop_windows: undefined,
+    }, config, logger, report, new Set([...(assessed ?? []), run.signature]), verification_cache, undefined, settle_unstable);
+    const listed = per_hand?.alternatives.filter(it => it.verdict === "stable") ?? [];
+    return per_hand === null || listed.length === 0 ? null : { ...per_hand, alternatives: listed };
+}
+
+/**
+ * The run of the alternative with shared windows (`also`), where its clock is the grouped hands rule's, when that holds the rate and
+ * recovers and is another clock than the separate one; the run as it is elsewhere
+ */
+function sharedRun(
+    definition: AlternativeDefinition,
+    run: ClockAlternativeRun,
+    config: Config,
+    logger: Logger,
+    report?: (detail: string) => void,
+    assessed?: ReadonlySet<string>,
+    verification_cache?: Map<string, VerificationAssessment>,
+    settle_unstable?: boolean,
+): ClockAlternativeRun {
+    if (definition.shared_windows === undefined || !run.alternatives.some(it => it.result.grouped_hands !== undefined
         && it.result.primitive_grouped === undefined)) {
         return run;
     }

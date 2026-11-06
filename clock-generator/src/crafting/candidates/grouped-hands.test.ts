@@ -5,7 +5,7 @@ import type { Config } from "../../config/schema";
 import { quiet } from "../generate-blueprint-test-helpers";
 import { planRun } from "../plan/plan-run";
 import { dropSpacing, dropTieBreak } from "../../config/drop-spacing";
-import { GroupedHandsNotApplicable, groupedHandsCycles, groupedHandsPlan, groupedHandsWindows, heldAtTurn, roomAtTurn, TurnWithoutRoom } from "./grouped-hands";
+import { GroupedHandsNotApplicable, groupedHandsCycles, groupedHandsPlan, groupedHandsWindows, heldAtTurn, perHandWindows, roomAtTurn, TurnWithoutRoom } from "./grouped-hands";
 import { outputAtWindow } from "./taker-turns";
 import { EntityId, Machine } from "../../entities";
 
@@ -248,6 +248,40 @@ describe("hands that fill the cycle", () => {
         // the iron and the cable into the circuit machines are guarded still: three hands of 8 in 18 ticks
         for (const id of [5, 6, 13, 14, 15, 18, 19, 20]) {
             expect(made.windows.get(`inserter:${id}`)!.reduce((sum, range) => sum + range.end_inclusive - range.start_inclusive + 1, 0)).toBe(18);
+        }
+    });
+
+    it("names the guarded takers with the tick their window opens, and splits each into a tick at each of its three picks", () => {
+        const plan = planRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false, lcm: 1, terminal_swing_count: 1 } }, { logger: quiet });
+        const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
+        const made = groupedHandsPlan(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, true,
+            { surplus_guard: false, per_taker_guard: true, unguarded_sinks: new Set(["machine:2", "machine:3"]), feeder_offset: 16, share_windows: false });
+        // the iron and the cable into the circuit machines: three hands of 8 ticks; the circuits into the processing unit machines are not
+        // guarded (busy), nor the takers that keep their start more
+        expect(made.guarded.map(it => it.inserter_id).sort()).toEqual([5, 6, 13, 14, 15, 18, 19, 20].map(id => `inserter:${id}`).sort());
+        for (const taker of made.guarded) {
+            expect(taker).toMatchObject({ hands: 3, cycle_ticks: 8 });
+            expect(made.windows.get(taker.inserter_id)!.some(range => range.start_inclusive === taker.start)).toBe(true);
+        }
+        const split = perHandWindows(made.windows, made.guarded, duration.ticks);
+        for (const taker of made.guarded) {
+            expect(ranges(split, taker.inserter_id)).toEqual([0, 1, 2].map(j => (taker.start + j * 8) % 24).sort((a, b) => a - b).map(tick => [tick, tick]));
+        }
+        // every other window as it was
+        for (const [id, window] of made.windows) if (!made.guarded.some(it => it.inserter_id === id)) expect(split.get(id)).toBe(window);
+    });
+
+    it("names no guarded taker where the windows are shared, or where the guard is one switch for every taker and leaves none busy", () => {
+        const plan = planRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false, lcm: 1, terminal_swing_count: 1 } }, { logger: quiet });
+        const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
+        const made = (options: { surplus_guard: boolean; per_taker_guard?: boolean; share_windows: boolean }) => groupedHandsPlan(
+            simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, true, { ...options, feeder_offset: 1 });
+        expect(made({ surplus_guard: false, share_windows: false }).guarded).toEqual([]);
+        // the guard for every taker: the ones it gives a window of their hands alone are named; shared windows run longer than their hands
+        expect(made({ surplus_guard: true, share_windows: false }).guarded.length).toBeGreaterThan(0);
+        const shared = made({ surplus_guard: false, per_taker_guard: true, share_windows: true });
+        for (const taker of shared.guarded) {
+            expect(shared.windows.get(taker.inserter_id)!.reduce((sum, range) => sum + range.end_inclusive - range.start_inclusive + 1, 0)).toBe(2 * 8 + 2);
         }
     });
 

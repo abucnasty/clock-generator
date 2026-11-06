@@ -195,6 +195,17 @@ export interface SwingBackoffReport {
 }
 
 
+/** A taker the surplus guard gave a window for its hands alone (see `grouped_hands` of BlueprintGenerationResult) */
+export interface GuardedTaker {
+    inserter_id: string;
+    /** The tick its window opens */
+    start: number;
+    /** The hands it moves a period, each started inside the window */
+    hands: number;
+    /** Ticks of one swing of the inserter */
+    cycle_ticks: number;
+}
+
 export interface BlueprintGenerationResult {
     /**
      * "arithmetic" where the batched-swings windows were made by arithmetic from the plan's hands and the stock walk
@@ -294,8 +305,12 @@ export interface BlueprintGenerationResult {
      * leaves none on. An entity that is on with no reason here is one the planner does not say why of.
      */
     always_on_reasons?: AlwaysOnReasons;
-    /** The windows are the grouped hands rule's (see groupedHandsClock), and whether its inserters share windows; absent for any other clock */
-    grouped_hands?: { shared_windows: boolean };
+    /**
+     * The windows are the grouped hands rule's (see groupedHandsClock), and whether its inserters share windows; absent for any
+     * other clock. `guarded_takers`: the takers the surplus guard gave a window for their hands alone, one span from `start`
+     * (`(hands - 1) x cycle_ticks + 2` ticks), which the per-hand variant splits into a tick at each pick; absent where none is.
+     */
+    grouped_hands?: { shared_windows: boolean; guarded_takers?: GuardedTaker[] };
     /**
      * Where results come by chance (a target that counts an item destroyed by a recycler): the room of the windows that
      * carry each result, and of each machine's crafting, against the spread of the game's amounts (random-margins.ts).
