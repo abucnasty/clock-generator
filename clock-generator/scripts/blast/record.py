@@ -39,6 +39,12 @@ property, alternative and the values, on any problem; it also fails on a job fil
 on, or one judged by another version of the module than the checkout's (a run made before the module, or carried from one by a
 selective run): rerun with `blast.sh run --full`, or pass --allow-unchecked to list them and go on.
 
+The per-job checks: every job file the blast writes also holds `checks`, what tests/game/builds/record-job-checks.ts (and the files of
+tests/game/builds/job-checks/) found on the live result of the job: the checks a test of that build used to make and the record does not
+hold (expected texts, deciders, always-on reasons, the fuel view). `check` fails, with a table of job, check and expected and actual, on any
+that failed; it fails on a job file with no `checks`, one the module could not run on, or one judged by another version of the module, as it
+does for the properties (--allow-unchecked lists them and goes on).
+
 The format (clock-record-1) is documented in clock-generator/record/README.md. Field names are stable: a new field is a new
 format number.
 """
@@ -130,6 +136,72 @@ def load_properties(path):
         if 'error' not in body:
             out[os.path.basename(f)[:-5]] = body.get('properties')
     return out
+
+
+CHECKS_MODULE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'tests', 'game', 'builds', 'record-job-checks.ts')
+
+
+def load_job_checks(path):
+    """the `checks` of each job file of a jobs folder or cache entry, {job key: checks, or None where the file has none}; a job
+    that failed to generate has none to have"""
+    d = jobs_dir(path)
+    out = {}
+    for f in sorted(glob.glob(os.path.join(d, '*.json'))):
+        if os.path.basename(f).startswith('_'):
+            continue
+        body = json.load(open(f))
+        if 'error' not in body:
+            out[os.path.basename(f)[:-5]] = body.get('checks')
+    return out
+
+
+def checks_module_sha256(module):
+    """the hash record-job-checks.ts's moduleSha256 makes: the module's file and the .ts files of job-checks/ beside it by name, each as
+    its path from the module's folder, a NUL and its bytes"""
+    folder = os.path.dirname(os.path.abspath(module))
+    inner = os.path.join(folder, 'job-checks')
+    digest = hashlib.sha256()
+    try:
+        files = [os.path.abspath(module)] + [os.path.join(inner, n) for n in sorted(os.listdir(inner)) if n.endswith('.ts')]
+        for f in files:
+            digest.update(os.path.relpath(f, folder).replace(os.sep, '/').encode() + b'\x00' + open(f, 'rb').read())
+    except OSError as e:
+        die(f'cannot read the job checks module {module}: {e.strerror}')
+    return digest.hexdigest()
+
+
+def job_check_rows(checks, module):
+    """(rows, unchecked, totals): the rows (job, check, found) of the checks that failed, the jobs with no usable result of them (and why),
+    and what ran: [jobs, checks run, seconds]"""
+    rows, unchecked = [], []
+    jobs = ran = 0
+    seconds = 0.0
+    current = checks_module_sha256(module)
+    for key in sorted(checks):
+        c = checks[key]
+        if c is None:
+            unchecked.append((key, 'no checks in the job file (made before the per-job checks, or carried from such a run)'))
+        elif 'error' in c:
+            rows.append((key, '(module)', c['error']))
+        elif c.get('module_sha256') != current:
+            unchecked.append((key, f"judged by another version of the per-job checks ({str(c.get('module_sha256'))[:12]}.. against {current[:12]}..)"))
+        else:
+            jobs += 1
+            ran += len(c['ran'])
+            seconds += c.get('seconds', 0)
+            for f in c['failures']:
+                if 'expected' in f and 'actual' in f:
+                    found = f"expected {f['expected']}, actual {f['actual']}"
+                else:
+                    found = f['message']
+                rows.append((key, f['check'], ' '.join(found.split())))
+    return rows, unchecked, [jobs, ran, seconds]
+
+
+def job_check_table(rows):
+    cells = [('job', 'check', 'found')] + rows
+    widths = [max(len(c[i]) for c in cells) for i in range(2)]
+    return '\n'.join('  '.join(c[i].ljust(widths[i]) for i in range(2)) + '  ' + c[2] for c in cells)
 
 
 def module_sha256(module):
@@ -374,7 +446,7 @@ def parse(argv):
     while i < len(argv):
         if argv[i] == '--allow-unchecked':
             opts['allow-unchecked'] = True; i += 1
-        elif argv[i] in ('--dir', '--map', '--summary', '--module', '--base', '--moves'):
+        elif argv[i] in ('--dir', '--map', '--summary', '--module', '--checks-module', '--base', '--moves'):
             if i + 1 >= len(argv):
                 die(f'{argv[i]} takes an argument')
             opts[argv[i][2:]] = argv[i + 1]; i += 2
@@ -428,7 +500,7 @@ def main(argv):
         print(text)
         if opts.get('summary'):
             with open(opts['summary'], 'a') as out:
-                out.write(f'### Record check: {len(rows)} differences in {jobs_moved} jobs\n\n```\n{text}\n```\n')
+                out.write(f'### Rec summary: {len(rows)} differences in {jobs_moved} jobs\n\n```\n{text}\n```\n')
     # the properties of the run's results, on every alternative of every job
     allowed = opts.get('allow-unchecked', False)
     found, unchecked, (jobs, checked, seconds), excepted = property_rows(load_properties(pos[0]), opts.get('module') or MODULE, allowed)
@@ -448,6 +520,22 @@ def main(argv):
         failed = failed or not allowed
     if unchecked and not allowed:
         print('record.py: the properties were not checked on these jobs: rerun them (blast.sh run --full), or pass --allow-unchecked')
+    # the per-job checks, on the same results
+    failing, not_checked, (check_jobs, ran, check_seconds) = job_check_rows(load_job_checks(pos[0]), opts.get('checks-module') or CHECKS_MODULE)
+    print(f'\nrecord.py: per-job checks: {ran} checks on {check_jobs} jobs ({check_seconds:.1f} s): {len(failing)} failed'
+          + (f', {len(not_checked)} jobs with no result of them' if not_checked else ''))
+    if failing:
+        failed = True
+        text = job_check_table(failing)
+        print('\n' + text)
+        if opts.get('summary'):
+            with open(opts['summary'], 'a') as out:
+                out.write(f'### Job checks: {len(failing)} failed in {len({r[0] for r in failing})} jobs\n\n```\n{text}\n```\n')
+    for key, why in not_checked:
+        print(f'  {key}: {why}')
+        failed = failed or not allowed
+    if not_checked and not allowed:
+        print('record.py: the per-job checks did not run on these jobs: rerun them (blast.sh run --full), or pass --allow-unchecked')
     return 1 if failed else 0
 
 

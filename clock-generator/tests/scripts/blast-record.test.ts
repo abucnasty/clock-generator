@@ -6,6 +6,7 @@ import path from 'path';
 import { spawnSync } from 'child_process';
 import { afterAll, describe, expect, it } from 'vitest';
 import { moduleSha256 } from '../game/builds/record-properties';
+import { moduleSha256 as checksSha256 } from '../game/builds/record-job-checks';
 
 const record = path.resolve(__dirname, '../../scripts/blast/record.py');
 const recordDir = path.resolve(__dirname, '../../record');
@@ -28,9 +29,11 @@ const clean = () => ({
     module_sha256: moduleSha256(), seconds: 0.5, problems: [] as { property: string; alternative: string; message: string }[],
     checked: { 'always-on-reasons-named': 2, 'decider-build-order': 2, 'stable-holds-and-survives-loss': 2, 'counters-add-up': 1, 'fuel-never-dry': 0 },
 });
-const jobFile = (name: string, alternatives = [alternative(), alternative({ id: 'plain', verdict: 'unstable', clock: sha('b') })], group = 'config', properties: object | null = clean()) => ({
+/** What the per-job checks module writes into a job file of a result it found nothing wrong with */
+const cleanChecks = () => ({ module_sha256: checksSha256(), seconds: 0.25, ran: ['says what it must', 'and the other'], failures: [] as { check: string; message: string; expected?: string; actual?: string }[] });
+const jobFile = (name: string, alternatives = [alternative(), alternative({ id: 'plain', verdict: 'unstable', clock: sha('b') })], group = 'config', properties: object | null = clean(), checks: object | null = cleanChecks()) => ({
     group, name, selected_index: 0, results_sha256: sha('4'), job_results: { results_sha256: sha('5'), results: { ids: sha('6') } },
-    selected: alternatives[0], alternatives, seconds: 12.5, ...(properties !== null && { properties }),
+    selected: alternatives[0], alternatives, seconds: 12.5, ...(properties !== null && { properties }), ...(checks !== null && { checks }),
 });
 
 let count = 0;
@@ -224,6 +227,68 @@ describe('record.py check: the properties of the run', () => {
         const done = run('check', '--dir', dir, side({ A: errored as any }));
         expect(done.stdout).toContain('properties checked on 0 jobs');
         expect(done.stdout).not.toContain('no properties in the job file');
+    });
+});
+
+describe('record.py check: the per-job checks of the run', () => {
+    const dirOf = () => written({ A: jobFile('A'), B: jobFile('B') });
+    const failing = (failures: { check: string; message: string; expected?: string; actual?: string }[]) => ({ ...cleanChecks(), failures });
+
+    it('says what ran and how long it took, and passes a run with no failure', () => {
+        const done = run('check', '--dir', dirOf(), side({ A: jobFile('A'), B: jobFile('B') }));
+        expect(done.status, done.stdout).toBe(0);
+        expect(done.stdout).toContain('per-job checks: 4 checks on 2 jobs (0.5 s): 0 failed');
+    });
+
+    it('fails on one failed check with a table of job, check and the expected and actual values, though the record has no difference', () => {
+        const broken = jobFile('B', undefined, 'config', clean(), failing([{ check: 'says what it must', message: 'expected 71 to be 72', expected: '72', actual: '71' }]));
+        const done = run('check', '--dir', dirOf(), side({ A: jobFile('A'), B: broken }));
+        expect(done.status).toBe(1);
+        expect(done.stdout).toContain('no difference from the record');
+        expect(done.stdout).toContain('1 failed');
+        const rows = done.stdout.split('\n').filter(line => line.startsWith('config-B'));
+        expect(rows).toHaveLength(1);
+        expect(rows[0].split(/\s{2,}/)).toEqual(['config-B', 'says what it must', 'expected 72, actual 71']);
+    });
+
+    it('shows the message of a failure that has no values', () => {
+        const broken = jobFile('A', undefined, 'config', clean(), failing([{ check: 'and the other', message: 'the text is\nnot there' }]));
+        const done = run('check', '--dir', dirOf(), side({ A: broken, B: jobFile('B') }));
+        expect(done.status).toBe(1);
+        expect(done.stdout).toContain('config-A  and the other  the text is not there');
+    });
+
+    it('appends the failures to the summary file', () => {
+        const summary = path.join(tmp, `summary${count++}.md`);
+        const broken = jobFile('A', undefined, 'config', clean(), failing([{ check: 'says what it must', message: 'm', expected: '"a"', actual: '"b"' }]));
+        const done = run('check', '--dir', dirOf(), '--summary', summary, side({ A: broken, B: jobFile('B') }));
+        expect(done.status).toBe(1);
+        expect(fs.readFileSync(summary, 'utf8')).toContain('### Job checks: 1 failed in 1 jobs');
+        expect(fs.readFileSync(summary, 'utf8')).toContain('config-A  says what it must  expected "a", actual "b"');
+    });
+
+    it('fails on a job file with no checks, on one the module failed on and on one judged by another version of the module; --allow-unchecked lists them and goes on', () => {
+        const none = jobFile('A', undefined, 'config', clean(), null);
+        const failed = jobFile('B', undefined, 'config', clean(), { module_sha256: checksSha256(), error: 'TypeError: x is undefined' });
+        const older = jobFile('C', undefined, 'config', clean(), { ...cleanChecks(), module_sha256: sha('9') });
+        const dir = written({ A: jobFile('A'), B: jobFile('B'), C: jobFile('C') });
+        const jobs = side({ A: none, B: failed, C: older });
+        const done = run('check', '--dir', dir, jobs);
+        expect(done.status).toBe(1);
+        expect(done.stdout).toContain('config-A: no checks in the job file');
+        expect(done.stdout).toMatch(/config-B\s+\(module\)\s+TypeError: x is undefined/);
+        expect(done.stdout).toContain('config-C: judged by another version of the per-job checks (999999999999..');
+        const only = run('check', '--dir', dir, '--allow-unchecked', side({ A: none, B: jobFile('B'), C: older }));
+        expect(only.status, only.stdout).toBe(0);
+        expect(only.stdout).toContain('2 jobs with no result of them');
+    });
+
+    it('leaves a job that failed to generate to the record: it has no checks to have', () => {
+        const dir = written({ A: jobFile('A') });
+        const errored = { group: 'config', name: 'A', error: 'Error: no feasible clock', seconds: 1 };
+        const done = run('check', '--dir', dir, side({ A: errored as any }));
+        expect(done.stdout).toContain('per-job checks: 0 checks on 0 jobs');
+        expect(done.stdout).not.toContain('no checks in the job file');
     });
 });
 

@@ -2,7 +2,7 @@
 // recording sets on it, built here in code (the samples carry no overrides, so a build with belts backed up, or with an ingredient
 // left out of the period, is a sample plus the option). Each is one job of the record, so that its result is pinned there and
 // the property module runs on it; the test or the recording that qualifies it is named beside it. A variant is a job only
-// because a game recording is tied to its clock or a test pins it; the speed-80 agricultural ranking config is a plain test.
+// because a game recording is tied to its clock, a test pins it or a per-job check reads it; the speed-80 agricultural ranking config is a plain test.
 //
 // Loaded by blast.blastrun.ts by path where this file exists (a worktree from before it has no variant jobs).
 import type { Config } from '../../../src/config/schema';
@@ -35,7 +35,7 @@ export function variantJobs(): VariantJob[] {
             config: () => steelWagonConfig(steelWagonCases().find(it => it.ignored_lcm_ingredients !== undefined)!),
             qualifies: 'game recording steel-wagon-iron-ore-out-of-period (steel-plate-26-wagon-chest-clock-controls.json)' },
         { name: 'AGRICULTURAL_SCIENCE_250_BACKED_UP', config: sample(ConfigPaths.AGRICULTURAL_SCIENCE_250, backedUp),
-            qualifies: 'scaffold recordings "agricultural science (belts are backed up)"; clock-belt.generation.test.ts' },
+            qualifies: 'scaffold recordings "agricultural science (belts are backed up)"; per-job checks (job-checks/variants.ts)' },
         // tests
         { name: 'ADVANCED_CIRCUIT_240_BACKED_UP', config: sample(ConfigPaths.ADVANCED_CIRCUIT_240, backedUp),
             qualifies: 'small-batches-fallback.generation.test.ts' },
@@ -45,12 +45,12 @@ export function variantJobs(): VariantJob[] {
             qualifies: 'decider-order.generation.test.ts (fuel clocks of their own). The decider-order test also ran ACCUMULATOR_640 and IRON_BACTERIA_380_CULTIVATION with belts backed up: their samples already are, so their config jobs hold the same clocks' },
         { name: 'AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING',
             config: sample(ConfigPaths.AUTOMATION_SCIENCE_240, config => ({ ...config, overrides: { ...config.overrides, terminal_swing_count: 1 } })),
-            qualifies: 'automation-science.generation.test.ts (the sample no longer forces one output swing a cycle; no clock made without a search is stable with it)' },
+            qualifies: 'per-job checks (job-checks/variants.ts): the sample no longer forces one output swing a cycle; no clock made without a search is stable with it' },
         { name: 'LOGISTIC_SCIENCE_240_DIRECT_INSERT_TWO_OUTPUT_SWINGS',
             config: sample(ConfigPaths.LOGISTIC_SCIENCE_240_DIRECT_INSERT, config => ({ ...config, overrides: { ...config.overrides, terminal_swing_count: 2 } })),
-            qualifies: 'output-swings.generation.test.ts (forced output swing count)' },
+            qualifies: 'per-job checks (job-checks/variants.ts): forced output swing count' },
         { name: 'PRODUCTION_SCIENCE_120_TWO_BELTS_SHARED_PICKUP', config: sample(ConfigPaths.PRODUCTION_SCIENCE_120_TWO_BELTS, productionScienceSharedPickup),
-            qualifies: 'output-swings.generation.test.ts (one pickup for the two input items: fractional and whole swings)' },
+            qualifies: 'per-job checks (job-checks/variants.ts): one pickup for the two input items, the fractional swings alternative' },
         { name: 'STEEL_HUB_26_CONTAINER_OUTPUT', config: async () => steelHub(),
             qualifies: 'container-output.generation.test.ts (a product that leaves through a container)' },
     ];

@@ -5,7 +5,7 @@ import { loadConfigFromFile } from "../config/loader";
 
 // Clocks of the grouped hands rule are also offered with the windows of the takers that open together made one, as an
 // alternative of their own that ranking picks or leaves; every clock says how many deciders it has. The productivity chain
-// is generated once, in productivity-module-80-chest-chain-clock.generation.test.ts, which asserts on it too.
+// is generated once, as the record job config-PRODUCTIVITY_MODULE_80_CHEST_CHAIN, which has per-job checks on it too (tests/game/builds/job-checks/samples.ts).
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 
 /**

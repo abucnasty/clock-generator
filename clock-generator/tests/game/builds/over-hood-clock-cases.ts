@@ -1,6 +1,6 @@
 /**
  * The over-the-hood fixtures (`over-hood-clock-fixtures.ts`: 2 families x the turbo tier x 2 mirroring states x moving/backed
- * up) whose clock the generation test still generates end to end; the other 4 of the 8 are checked without generating,
+ * up) whose clock the record generates (job `overhood-<name>`; that every always-on inserter and drill says why is a property of every job, `always-on-reasons-named`); the other 4 of the 8 are checked without generating,
  * by over-hood-clock-mechanics.test.ts (the recorded first hands against the simulator's, and the recorded controls
  * against the fixture configs). Same-item mirrored and unmirrored cases pin one and the same clock, so only unmirrored
  * ones are generated. Each is the one case of a path through the generator that no sample takes:

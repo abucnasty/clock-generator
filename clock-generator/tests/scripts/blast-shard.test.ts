@@ -5,6 +5,7 @@ import os from 'os';
 import path from 'path';
 import { spawnSync } from 'child_process';
 import { afterAll, describe, expect, it } from 'vitest';
+import { moduleSha256 as checksSha256 } from '../game/builds/record-job-checks';
 
 const shardPy = path.resolve(__dirname, '../../scripts/blast/shard.py');
 const recordPy = path.resolve(__dirname, '../../scripts/blast/record.py');
@@ -107,6 +108,7 @@ const jobFile = (name: string, rate?: number) => ({
     group: key(name).split('-')[0], name, selected_index: 0, results_sha256: sha('4'), job_results: { results_sha256: sha('5'), results: {} },
     selected: alternative(rate), alternatives: [alternative(rate)], seconds: SECONDS[name],
     properties: { module_sha256: spawnSync('sha256sum', [path.resolve(__dirname, '../game/builds/record-properties.ts')], { encoding: 'utf8' }).stdout.split(' ')[0], seconds: 0.1, problems: [], checked: { 'always-on-reasons-named': 1 } },
+    checks: { module_sha256: checksSha256(), seconds: 0.1, ran: [], failures: [] },
 });
 
 /** What `blast.sh run --shard i/count` leaves in a folder: the shard's job files, its job list and its record of the split */

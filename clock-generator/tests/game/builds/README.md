@@ -164,7 +164,7 @@ startup timing or over-the-hood operating clocks.
 the generator's verifier fails the two normal moving underground clocks from, [3,0], with the game's output from
 that start.
 
-The portable `belt-pickup-clock.generation.test.ts` checks the selected periods, verdicts and supply against
+The record (`pickup-*` jobs, checked against these controls by `clock-controls.test.ts`) holds the selected periods, verdicts and supply, and the per-job checks (`job-checks/fixtures.ts`) set them against
 these native controls for the nine fixtures of `belt-pickup-clock-cases.ts`, each the only one to take its path through
 the generator; `belt-pickup-clock-mechanics.test.ts` checks the recorded figures of all 48 against the simulator without
 generating. A build whose warm recording holds while the generator finds a failing cold lane phase has
@@ -271,7 +271,7 @@ and metadata, and the schedule), `recorded.clock_basis` says how it is known (`c
 equals `native`; `history`: the pin has not changed since the commit that recorded `native`; `regenerated`: the clock
 generated on the engine of that commit; `built`: a hand-made clock, which no selection makes, so it has no pin and the
 hash is `builtClockIdentity` of the build's blueprint, recomputed by `clock-controls.test.ts`), and `generation.clock_sha256` is the clock the selection makes today, checked by
-`clock-controls.test.ts` against the record's alternative of the same id, for a build that is a job of the record (`clock-generator/record/`), or the family's `*.generation.test.ts` (pull requests to master) for one that is not.
+`clock-controls.test.ts` against the record's alternative of the same id, for a build that is a job of the record (`clock-generator/record/`), or the family's `*.generation.test.ts` (ready pull requests) for one that is not.
 
 - `clock-controls.test.ts` runs with the unit tests and reads the files only: it fails where the pin and the recording
   name different clocks, which is what editing a pin to follow a moved selection leaves behind: record the entry
@@ -360,7 +360,7 @@ native recording of that clock. The lane-phase audit's three changed clocks keep
 fast-unmirrored-backed-different-items had no recording: its fractional selection repeated every 16,160 ticks, more
 than a 63-period recording fits under the harness's 72,000-tick cap, and moved 6.95 a second against 6 with holds
 false. Its observed windows at 800 ticks hold 80 a period, in the game too.
-The portable `over-hood-clock.generation.test.ts` checks these selections, exact clock hashes and the final
+The portable record (`overhood-*` jobs, checked against these controls by `clock-controls.test.ts`) holds these selections, exact clock hashes and the final
 untouched final native recovery windows for clocks marked stable (at least eight periods for moving supply,
 five for backed-up supply, whose assessment starts later), for the nine fixtures of `over-hood-clock-cases.ts`, each the
 only one to take its path through the generator. `over-hood-clock-mechanics.test.ts` checks the recorded first hands and
@@ -428,7 +428,7 @@ longer made; it is the moving config's). All eight moving-config exit clocks hol
 the express ones the generator calls "no recovery" and the normal ones it calls "unstable": both verdicts come
 from moving lane-phase starts ([1,5] or [5,1]; [0,3]) that this exit cannot have.
 
-The portable `front-pickup-clock.generation.test.ts` pins each selection and its exact exported clock (each entry's
+The portable record (`front-*` jobs, checked by `clock-controls.test.ts`, with the per-job checks of `job-checks/fixtures.ts`) pins each selection and its exact exported clock (each entry's
 `generation`) for the nine fixtures of `front-clock-cases.ts`, each the only one to take its path through the generator,
 and checks it against its native summary beside it: a baseline miss under the selection's own supply needs holds false;
 a stable clock needs an exact baseline and its last recovery periods at target. `front-clock-mechanics.test.ts` checks the
@@ -519,7 +519,7 @@ baseline output (63 periods), drop to 0 in every disturbance and are exact in ev
 build orders are equal in every period.** The clock with 7 output swings is stable in the simulator and short in the game,
 9,440 to 9,600 of 10,080 in every period: the output inserters of two furnaces drop onto underground entrances whose exits
 side-load onto the shared output belt, which the config describes as one belt with room for every drop
-([scope](../../../docs/game-data-and-scope.md)). `lithium-plate-80-silo-chest-clock.generation.test.ts` pins each clock and checks it
+([scope](../../../docs/game-data-and-scope.md)). `clock-controls.test.ts` pins each clock against the record and `game-runs-hold.test.ts` checks it
 against its native summary.
 
 ```bash
@@ -574,7 +574,7 @@ recordings period for period with the 2-period families.
 2.1.21 at commit `1571a1be`. **All 3 meet exact baseline output (63 periods), drop in every disturbance (to 0 with the
 drill stopped) and are exact in all 33 judged periods after each; the two build orders are equal in every period.** A
 full plate or steel filter stops a furnace a few ticks a period in some states, with no steel lost (the sample's README).
-`steel-plate-26-wagon-chest-clock.generation.test.ts` pins each clock and checks it against its native summary.
+`clock-controls.test.ts` pins each clock against the record and checks it against its native summary.
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/steel-wagon-new BELT_CLOCK_CALIBRATE=1 \
@@ -613,7 +613,7 @@ period (284).** The cuts are in periods of each clock, so they last 432 ticks fo
 generated one: do not compare the two recoveries tick for tick. Both builds are the three copies on drained lines,
 not the one-copy scaffold of `scaffold-recordings.game.test.ts`. A drop in the first tick of a recording is not seen by it, so
 the compact count of its first period is checked less that drop (the probe counts it).
-`src/crafting/inserter-crafting-240-shared-signal-clock.generation.test.ts` pins the generated clock and checks it against its native summary. The hand-made
+`clock-controls.test.ts` pins the generated clock against the record, and `game-runs-hold.test.ts` checks it against its native summary. The hand-made
 clock is tied to its recording by the hash of the clock in the blueprint (`recorded.clock_basis` `built`), and the generated
 one by its pin, as in the other families.
 
@@ -633,8 +633,8 @@ away for 30 periods and rebuilt (a copy's belt takes 6 periods of grenades befor
 nothing), and the drills stopped for 2. The probe counts the drops of the output inserters per period and per inserter and the
 ticks each waits for room on the belt.
 
-[grenade-clock-controls.json](grenade-clock-controls.json) holds the 4 native summaries; `src/crafting/grenade-clock.generation.test.ts`
-pins the generated clock and checks the hand-made clock in the simulator. All four hold their target in every baseline period
+[grenade-clock-controls.json](grenade-clock-controls.json) holds the 4 native summaries; `clock-controls.test.ts`
+pins the generated clock, `game-runs-hold.test.ts` checks the runs, and `src/crafting/grenade-clock.generation.test.ts` checks the hand-made clock in the simulator. All four hold their target in every baseline period
 (64 on a copy, 448 on seven) with no wait for the belt, and get back after every loss.
 
 ```bash
@@ -653,7 +653,7 @@ the two output loaders taken away for 4 periods and rebuilt, and the processing 
 eight output inserters per period.
 
 [utility-science-480-lds-foundry-chain-clock-controls.json](utility-science-480-lds-foundry-chain-clock-controls.json) holds the native summary and the pin of the clock
-(`src/crafting/utility-science-480-lds-foundry-chain.generation.test.ts` checks the pin): 384 in all 63 baseline periods, and 384 again after each loss.
+(`clock-controls.test.ts` checks the pin, `game-runs-hold.test.ts` the run): 384 in all 63 baseline periods, and 384 again after each loss.
 
 Thaeln's own clock for the build, given on 2026-10-23, was recorded on the same scaffold while the rule was written (it is a
 blueprint of five combinators with no wires to inserters, so the harness wired it): a counter of 0 to 335 (336 ticks, two cycles) and four
@@ -682,7 +682,7 @@ rebuilt, and the two foundries casting iron stopped for 26 (the output falls sho
 the output inserter per period.
 
 [productivity-module-80-chest-chain-clock-controls.json](productivity-module-80-chest-chain-clock-controls.json) holds the native summary and the pin of the clock
-(`src/crafting/productivity-module-80-chest-chain-clock.generation.test.ts` checks the pin): 16 in all 63 baseline periods, and 16 again after each loss.
+(`clock-controls.test.ts` checks the pin, `game-runs-hold.test.ts` the run): 16 in all 63 baseline periods, and 16 again after each loss.
 Recorded for 36,000 ticks after the warm-up and settle with `scripts/record-clock.js`, the same clock made 16 in all 499 periods,
 with 602.8 wake-ups a minute against the simulator's 575.6, and the simulator laid against the game entity by entity had no issues;
 the clock made for "Backed-up belts" did the same. The clock before the rule ranked its placements (staged, the first that held)
