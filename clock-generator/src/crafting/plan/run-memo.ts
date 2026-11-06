@@ -166,9 +166,10 @@ export class RunMemo {
 
     /** The run of this config and these options: the one kept, or the one `simulate` makes (kept when it is long enough) */
     run(config: Config, options: RunOptions, simulate: () => BuildRun): BuildRun {
-        // the logger writes about the run and changes nothing in it; the options that would are all in the key
-        const { logger, debug, debug_steps, ...read } = options;
-        const key = canonicalKey([config, read]);
+        // the logger writes about the run and changes nothing in it; the options that would are all in the key, fractional
+        // swings apart, so that where the options name it among them does not part two keys of the same run
+        const { logger, debug, debug_steps, fractional_swings, ...read } = options;
+        const key = canonicalKey([config, read, fractional_swings === true]);
         const kept = key === null ? undefined : this.kept.get(key);
         if (kept !== undefined) {
             this.hits++;

@@ -39,7 +39,7 @@ export interface ConfigValidation {
  * A generation can still end up with another plan than this one: it lowers the output swings when the planned
  * count is unstable, and offers other counts as potential clocks.
  */
-export function validateConfig(config: Config, options: { logger?: Logger } = {}): ConfigValidation {
+export function validateConfig(config: Config, options: { logger?: Logger; fractional_swings?: true } = {}): ConfigValidation {
     const logger = options.logger ?? { log: () => { }, warn: () => { }, error: () => { }, debug: () => { } };
     assertOutputTransferGenerationSupported(config);
     assertInserterCoverage(config);
@@ -52,7 +52,7 @@ export function validateConfig(config: Config, options: { logger?: Logger } = {}
         new PrepareStep(simulation_context).execute();
     }
 
-    const { crafting_cycle_plan, output_inserters, all_output_inserters } = planCraftingCycle(config, simulation_context, logger);
+    const { crafting_cycle_plan, output_inserters, all_output_inserters } = planCraftingCycle(config, simulation_context, logger, options.fractional_swings === true);
     // the planner has accepted the target: now no belt lane may be asked for more than it carries
     assertLaneCapacity(config);
     const { recipe_lcm, serializable_transfer_plan } = transferPlanOf(config, crafting_cycle_plan, simulation_context);

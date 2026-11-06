@@ -23,7 +23,7 @@ export class SecondaryPlanningInvariantError extends Error {
 export function secondaryPlanningCountOf(config: Config, context: { secondary_planning?: SecondaryPlanningCount }): SecondaryPlanningCount | undefined {
     // A stale context cannot replace an explicit caller policy. Internal family overrides are applied afterwards.
     const policy = config.overrides?.terminal_swing_count === undefined && config.overrides?.lcm === undefined
-        && config.overrides?.use_fractional_swings !== true && config.target_output.counts !== "destroyed"
+        && config.target_output.counts !== "destroyed"
         ? context.secondary_planning : undefined;
     if (policy !== undefined && (policy.source !== "primitive-primary" || !Number.isFinite(policy.terminal_swing_count) || policy.terminal_swing_count <= 0)) {
         throw new SecondaryPlanningInvariantError("secondary context has no valid derived count");

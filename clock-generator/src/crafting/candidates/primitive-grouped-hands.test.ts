@@ -159,7 +159,7 @@ describe("pure primitive grouped construction", () => {
         expect(() => constructPrimitiveGroupedHands(unsupported)).toThrow(/takes none|several results/);
     });
 
-    it.each([{ terminal_swing_count: 1 }, { lcm: 1 }, { use_fractional_swings: true }])("does not replace an explicit scheduling policy %j", overrides => {
+    it.each([{ terminal_swing_count: 1 }, { lcm: 1 }])("does not replace an explicit scheduling policy %j", overrides => {
         expect(() => constructPrimitiveGroupedHands({ ...config, overrides })).toThrow(/requires automatic/);
     });
 

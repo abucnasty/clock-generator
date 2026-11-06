@@ -156,11 +156,14 @@ function chestDrillsOf(config: Config): ChestDrillConfig[] {
 /**
  * The items each inserter moves a tick at the target, by inserter id and item: the plan's hands a cycle over the
  * cycle's ticks. The plan is made without a run of the build (one output swing a cycle fixes its units, and the rate is
- * the same for any count), as the at-target rates of the machines are.
+ * the same for any count), as the at-target rates of the machines are. A count the config forces that is not whole (a
+ * clock planned with fractional swings) is planned as the fraction it is, which gives the same rate.
  */
 function takerRates(config: Config, registry: ReadableEntityRegistry): Map<string, Map<string, Fraction>> {
     const rates = new Map<string, Map<string, Fraction>>();
-    const cycle = CraftingCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), registry, config, fraction(1), config.overrides);
+    const forced = config.overrides?.terminal_swing_count;
+    const cycle = CraftingCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), registry, config, fraction(1), config.overrides,
+        undefined, forced !== undefined && !Number.isInteger(forced));
     for (const transfer of cycle.entity_transfer_map.values()) {
         if (!Entity.isInserter(transfer.entity)) {
             continue;

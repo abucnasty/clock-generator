@@ -27,7 +27,7 @@ export function primitiveGroupedOptionsSupported(config: Config, options: Genera
     return options.verify_as_built === true && options.shared_windows !== true
         && options.belt_pickup_slack !== "never" && options.fuel_hand_room !== true
         && config.overrides?.derive_clock_windows !== true && config.overrides?.lcm === undefined
-        && config.overrides?.terminal_swing_count === undefined && config.overrides?.use_fractional_swings !== true
+        && config.overrides?.terminal_swing_count === undefined && options.fractional_swings !== true
         && config.target_output.counts !== "destroyed";
 }
 

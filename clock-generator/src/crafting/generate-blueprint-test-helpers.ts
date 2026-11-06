@@ -3,6 +3,9 @@ import type { Config } from "../config/schema";
 import { Entity, EntityId } from "../entities";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { generateClockAlternatives, type BlueprintGenerationResult, type ClockAlternative, type ClockAlternativesResult } from "./generate-blueprint";
+import { CraftingCyclePlan } from "./sequence/cycle/crafting-cycle";
+import { TargetProductionRate } from "./target-production-rate";
+import { fraction } from "../data-types/fraction";
 
 /** A logger for the generations whose log the test does not read */
 export const quiet = { log() { }, warn() { }, error() { }, debug() { } };
@@ -18,6 +21,17 @@ export const selectedAlternativeOf = (generated: ClockAlternativesResult) => gen
  */
 export const withSearches = (config: Config): Config =>
     ({ ...config, overrides: { ...config.overrides, search_for_fewer_wake_ups: true } });
+
+/**
+ * The clock as the "Fractional swings" alternative would have made it: its cycle plan made again at its output swings
+ * a cycle with fractional swings asked for, which the checks of the clock read (`fractionalSwingsOf`)
+ */
+export function plannedFractionally(planned_on: Config, made: BlueprintGenerationResult): BlueprintGenerationResult {
+    const count = made.used_terminal_swing_count;
+    const crafting_cycle_plan = CraftingCyclePlan.create(TargetProductionRate.fromConfig(planned_on.target_output),
+        createEntityRegistryFromConfig(planned_on), planned_on, fraction(count), { ...planned_on.overrides, terminal_swing_count: count }, undefined, true);
+    return { ...made, crafting_cycle_plan };
+}
 
 /**
  * The production science sample with the two pickups of its input belt made one inserter with two filters, and the packs

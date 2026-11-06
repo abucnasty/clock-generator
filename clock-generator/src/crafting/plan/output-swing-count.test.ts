@@ -25,8 +25,7 @@ describe("output swings per cycle of a build on moving belts", () => {
     });
 
     it("keeps the build's own count for fractional swings, which are that count rather than capped by it", () => {
-        const fractional: Config = { ...moving, overrides: { ...moving.overrides, use_fractional_swings: true } };
-        expect(validateConfig(fractional, { logger: quiet }).output_swings_per_cycle).toBe(2.75);
+        expect(validateConfig(moving, { logger: quiet, fractional_swings: true }).output_swings_per_cycle).toBe(2.75);
     });
 });
 

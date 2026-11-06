@@ -8,7 +8,7 @@ describe('advancedSetCount', () => {
         expect(advancedSetCount({ backed_up_belts: true })).toBe(0);
         expect(advancedSetCount({ ignored_lcm_ingredients: [] })).toBe(0);
         // a saved build from when the switch existed: the engine drops the field, and it is not counted
-        expect(advancedSetCount({ use_fractional_swings: true })).toBe(0);
+        expect(advancedSetCount({ use_fractional_swings: true } as Parameters<typeof advancedSetCount>[0])).toBe(0);
     });
 
     it('counts each setting in use, and the LCM exclusions as one', () => {
