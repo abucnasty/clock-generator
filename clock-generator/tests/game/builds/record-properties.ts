@@ -54,14 +54,7 @@ export interface PropertyException {
  * The alternatives of jobs that a property does not hold on, by job and property: each is a finding the pull request lists, and
  * `record check` shows what it found on them. A property that fails on a job is not loosened for every job to pass.
  */
-export const EXCEPTIONS: Record<string, Partial<Record<PropertyName, PropertyException>>> = {
-    // found by the module on jobs it never ran on (#600), tracked in #626: on these alternatives an inserter's counters have it swing more often than it grabs, by 0.04% to 0.18%
-    'config-ADVANCED_CIRCUIT_230': { 'counters-add-up': { alternatives: ['full-hand-subtick'], reason: '#626: swings a minute exceed grabs a minute on inserter:1 and inserter:2 (209.2315 against 209.0830)' } },
-    'config-PRODUCTIVITY_MODULE_80_CHEST_CHAIN': { 'counters-add-up': { alternatives: ['derived'], reason: '#626: swings a minute exceed grabs a minute on inserter:3 (242.4587 against 242.3554)' } },
-    'variants-STEEL_PLATE_26_WAGON_CHEST_IRON_ORE_OUT_OF_PERIOD': { 'counters-add-up': { alternatives: ['swings-3-subtick'], reason: '#626: swings a minute exceed grabs a minute on inserter:5 (81.2980 against 81.1494)' } },
-    'variants-STEEL_HUB_26_CONTAINER_OUTPUT': { 'counters-add-up': { alternatives: ['planned-belt-slack-subtick'], reason: '#626: swings a minute exceed grabs a minute on inserter:5 (81.2980 against 81.1494)' } },
-    'config-STEEL_PLATE_26_WAGON_CHEST': { 'counters-add-up': { alternatives: ['planned-belt-slack-subtick'], reason: '#626: swings a minute exceed grabs a minute on inserter:5 (81.2980 against 81.1494)' } },
-};
+export const EXCEPTIONS: Record<string, Partial<Record<PropertyName, PropertyException>>> = {};
 
 /** The most problems kept for one property of one job: the first ones say what is wrong, and a build with hundreds is as broken as one with twenty */
 const MOST_PROBLEMS = 20;
