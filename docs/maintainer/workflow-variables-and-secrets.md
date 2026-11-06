@@ -11,7 +11,7 @@ The variables, secrets and inputs that the workflows in `.github/workflows/` rea
 
 | Name | Type | Read by | Values that have an effect | When it is not set |
 | --- | --- | --- | --- | --- |
-| `RELEASE_HOLD` | Actions variable of the repository | `release.yml`: `release`, `production`. `publish-sidecar.yml`: `publish-sidecar` | `true`: these three jobs do not start, after a push or a start by hand. A different value, for example `yes` or `1`, does not hold releases. The `tests` and `preview` jobs continue. | No hold: the jobs start. |
+| `RELEASE_HOLD` | Actions variable of the repository | `release.yml`: `release`, `production`. `publish-sidecar.yml`: `publish-sidecar` | `true`, with each letter case (`true`, `True`, `TRUE`): these three jobs do not start, after a push or a start by hand. GitHub ignores the letter case when it compares text ([Expressions](https://docs.github.com/en/actions/reference/workflows-and-actions/expressions), Operators). A different value, for example `yes` or `1`, does not hold releases. The `tests` and `preview` jobs continue. | No hold: the jobs start. An empty variable also does not hold releases. |
 | `VERCEL_TOKEN` | Secret: a token of the Vercel account | `release.yml`: `production`, `preview` | None | `production` stops with an error. `preview` shows a warning, does not deploy and does not show an error. |
 | `VERCEL_ORG_ID` | Secret: from `.vercel/repo.json` or `.vercel/project.json` after `vercel link` | `release.yml`: `production`, `preview` | None | The same as `VERCEL_TOKEN`. |
 | `VERCEL_PROJECT_ID` | Secret: from `.vercel/repo.json` or `.vercel/project.json` after `vercel link` | `release.yml`: `production`, `preview` | None | The same as `VERCEL_TOKEN`. |

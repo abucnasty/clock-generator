@@ -17,7 +17,9 @@ to production and do not upload the sidecar. The tests and the preview deploymen
 
 ## Procedure
 
-1. Set the repository Actions variable `RELEASE_HOLD` to `true`. Only the value `true` holds releases.
+1. Set the repository Actions variable `RELEASE_HOLD` to `true`. GitHub ignores the letter case. Thus `True` and
+   `TRUE` also hold releases. A different value, for example `yes` or `1`, does not hold releases. An empty variable
+   or a variable that is not set also does not hold releases.
 
    ```bash
    gh variable set RELEASE_HOLD --body true
@@ -42,7 +44,7 @@ to production and do not upload the sidecar. The tests and the preview deploymen
 The held work is on `master` and in the preview deployments. Users do not get it before the release. The released
 versions and their GitHub release notes do not change.
 
-The hold is not a rollback. When `RELEASE_HOLD` is not `true`, the next run of a workflow can release the versions on
+The hold is not a rollback. When `RELEASE_HOLD` is not `true`, `True` or `TRUE`, the next run of a workflow can release the versions on
 `master`.
 
 ## Related information

@@ -10,7 +10,7 @@ before its end.
 
 ## Before you start
 
-- `RELEASE_HOLD` is not `true`. If it is `true`, the `production` job does not start.
+- `RELEASE_HOLD` is not `true`, `True` or `TRUE`. If it is, the `production` job does not start.
 - The secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` are set.
 - The version in `package.json` on `master` is the version to deploy. You cannot deploy a previous version: rollback
   is not available.

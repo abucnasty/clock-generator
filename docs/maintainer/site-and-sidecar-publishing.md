@@ -48,8 +48,8 @@ deploy `master` or a pull request. Only `release.yml` deploys the site.
 
 ## The release hold
 
-When the repository variable `RELEASE_HOLD` is `true`, the workflows do not release, deploy to production or upload the
-sidecar. The tests and the preview deployments continue. See [Hold releases](hold-releases.md).
+When the repository variable `RELEASE_HOLD` is `true` (GitHub ignores the letter case), the workflows do not release,
+deploy to production or upload the sidecar. The tests and the preview deployments continue. See [Hold releases](hold-releases.md).
 
 ## No rollback
 
