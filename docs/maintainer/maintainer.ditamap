@@ -5,7 +5,7 @@
   <topicref href="glossary.md" format="mdita" type="reference"/>
   <topicref href="site-and-sidecar-publishing.md" format="mdita" type="concept"/>
   <topicref href="run-the-ui-locally.md" format="mdita" type="task"/>
-  <topicref href="install-a-local-sidecar-build.md" format="mdita" type="task"/>
+  <topicref href="install-the-sidecar-from-a-local-zip-file.md" format="mdita" type="task"/>
   <topicref href="hold-releases.md" format="mdita" type="task"/>
   <topicref href="release-held-work.md" format="mdita" type="task"/>
   <topicref href="redeploy-the-site-by-hand.md" format="mdita" type="task"/>

@@ -1,11 +1,12 @@
 ---
 $schema: urn:oasis:names:tc:dita:xsd:task.xsd
-id: install-a-local-sidecar-build
+id: install-the-sidecar-from-a-local-zip-file
 ---
 
-# Install a local sidecar build
+# Install the sidecar from a local zip file
 
-Make the zip file of the sidecar from your copy of the repository, and install it in Factorio.
+Make the zip file of the sidecar from your copy of the repository with `clock-generator-sidecar/build.sh`. Then install
+the zip file in Factorio.
 
 ## Before you start
 
@@ -24,7 +25,7 @@ Make the zip file of the sidecar from your copy of the repository, and install i
 
    On Windows, `--install` stops with an error. Type the command without `--install`.
 
-   The script makes `clock-generator-sidecar/clock-generator-sidecar_<version>.zip`, with the version of
+   `build.sh` makes the zip file `clock-generator-sidecar/clock-generator-sidecar_<version>.zip`, with the version of
    `clock-generator-sidecar/info.json`. On Linux and macOS, it removes the previous zip files of the mod from the mods
    folder. Then it copies the new zip file into the folder:
 

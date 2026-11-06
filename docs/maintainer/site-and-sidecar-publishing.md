@@ -24,7 +24,7 @@ with an error.
 When a push to `master` has a version that has no GitHub release, `release.yml` does these steps:
 
 1. The `release` job makes the GitHub release `v<version>` and its tag, at the commit of the push. The release notes
-   are the section of the version in `CHANGELOG.md`. If that section is not there, the job stops with an error.
+   are the section of the version in `CHANGELOG.md`. If that section is not there, the `release` job stops with an error.
 2. The `production` job deploys the commit of the tag to production: the site of the users.
 
 A push that does not change the version does not release and does not deploy to production. Thus `master` can have
