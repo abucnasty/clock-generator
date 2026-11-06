@@ -40,9 +40,11 @@ const circuitExportBackedUp: JobCheck[] = [
         },
     },
     {
-        name: 'Selection: the 12 inserters with no window are the ones whose hands take all 24 ticks of the period',
+        // the guard per taker gates the 12 takers whose hands and a start more take the 24-tick period; that clock does not get back
+        // from every loss, so it is remade once with the takers into the target machines (the processing unit machines 2 and 3) unguarded
+        name: 'Selection: the 4 inserters with no window are the circuits into the processing unit machines, which the remake leaves unguarded',
         run: ({ generated }) => {
-            expect(selectedOf(generated).result.always_on_reasons).toEqual(Object.fromEntries([3, 4, 5, 6, 7, 8, 13, 14, 15, 18, 19, 20]
+            expect(selectedOf(generated).result.always_on_reasons).toEqual(Object.fromEntries([3, 4, 7, 8]
                 .map(number => [`inserter:${number}`, { kind: 'busy', period_ticks: 24 }])));
         },
     },
