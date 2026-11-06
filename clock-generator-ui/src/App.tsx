@@ -49,7 +49,7 @@ import { RenameBuildDialog } from './components/RenameBuildDialog';
 import { OpenSharedBuildDialog } from './components/OpenSharedBuildDialog';
 import { BuildValidationPanel } from './components/BuildValidationPanel';
 import { outputChestIssues } from './utils/outputChestIssues';
-import { buildValidationIssues, isRefused, navigateToOutputRouteRepair } from './utils/buildValidation';
+import { buildValidationIssues, isRefused, navigateToOutputRouteRepair, refusedInserterIdsOf } from './utils/buildValidation';
 import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 import { BuildPanel, type BuildView } from './components/BuildPanel';
 import { PanelSection } from './components/Panel';
@@ -540,7 +540,7 @@ function App() {
             machinesMax,
         }).concat(outputGenerationIssues.map(issue => ({ text: issue.message,
                     target: { kind: 'machine-result-target', machineId: issue.machine_id } as FocusTarget }))),
-        coverage: checkedCoverage?.issues ?? [], scopeRefusal: checkedCoverage?.refusal, pickupNotTested: checkedCoverage?.pickupNotTested, laneSharedByCopies: checkedCoverage?.laneSharedByCopies,
+        coverage: checkedCoverage?.issues ?? [], scopeRefusal: checkedCoverage?.refusal, scopeRefusalInserters: checkedCoverage?.refusal_inserters, pickupNotTested: checkedCoverage?.pickupNotTested, laneSharedByCopies: checkedCoverage?.laneSharedByCopies,
         sideLoadedDrop: checkedCoverage?.sideLoadedDrop, lanesExactlyFull: checkedCoverage?.lanesExactlyFull, copyGapNeeded: checkedCoverage?.copyGapNeeded,
         machinePrototypes: checkedCoverage?.machinePrototypes?.map(issue => ({ ...issue, message: nameIdsInText(gameNames, issue.message) })), chests: config.chests, inserters: config.inserters, machines: config.machines, belts: config.belts, chestIssues,
         coverageText: issue => (issue.kind === 'missing_input_inserter' ? PROBLEM_TEXT.missingInput : PROBLEM_TEXT.missingOutput)(
@@ -550,6 +550,8 @@ function App() {
             : error && errorRecovery?.sourceConfigKey === configKey ? { message: error } : undefined,
     }), [config.target_output, config.machines, config.chests, config.inserters, config.belts, checkedCoverage, chestIssues, machinesMax, gameNames, validation, checkStatus, error, errorRecovery, configKey, outputGenerationIssues]);
     const problems = useMemo(() => validationIssues.filter(issue => issue.blocksGeneration), [validationIssues]);
+    // the inserters the engine's refusal names, live or from the last check: their rows are outlined while it stands
+    const refusedInserterIds = useMemo(() => refusedInserterIdsOf(problems), [problems]);
     // the engine's refusal is for the build as the last check saw it: any change to the build takes it away
     const refused = isRefused(problems);
 
@@ -1264,7 +1266,7 @@ function App() {
                                 <PickupGeometrySummary build={config} onEdit={reviewPickup} busy={busy} />
                                 <BuildValidationPanel issues={validationIssues} machines={config.machines} belts={config.belts} chests={config.chests} inserters={config.inserters} outputTransfers={outputTransfers}
                                     onApplyFix={handleInserterFix} fixUnavailable={fixUnavailable} onSwitchType={undoable.switchChestType} onEnableRemoval={undoable.enableChestRemoval}
-                                    onReview={goToTarget} recovery={conversionRecovery} conversionPending={conversionPending} onConvert={handleConvertRepeatedUnit} counts={targetCounts} />
+                                    onReview={goToTarget} onReviewInserter={editOutputInserter} recovery={conversionRecovery} conversionPending={conversionPending} onConvert={handleConvertRepeatedUnit} counts={targetCounts} />
                                 {/* in the order a row's sources are made in: an inserter's machines, belts and chests are above it */}
                                 {configView === 'list' ? (
                                     <>
@@ -1319,6 +1321,7 @@ function App() {
                                             key={library.currentId}
                                             focusRequest={inserterFocusRequest}
                                             onFocusHandled={finishInserterFocus}
+                                            refusedIds={refusedInserterIds}
                                             inserters={config.inserters}
                                             machines={config.machines}
                                             belts={config.belts}
@@ -1587,7 +1590,7 @@ function App() {
                     <Box sx={{ px: 2, pt: 1, flexShrink: 0 }}>
                         <BuildValidationPanel issues={validationIssues} machines={config.machines} belts={config.belts} chests={config.chests} inserters={config.inserters} outputTransfers={outputTransfers}
                             onApplyFix={handleInserterFix} fixUnavailable={fixUnavailable} onSwitchType={undoable.switchChestType} onEnableRemoval={undoable.enableChestRemoval}
-                            onReview={target => { setDiagramFullscreen(false); goToTarget(target); }} recovery={conversionRecovery} conversionPending={conversionPending} onConvert={handleConvertRepeatedUnit} counts={targetCounts} focusTargets={false} />
+                            onReview={target => { setDiagramFullscreen(false); goToTarget(target); }} onReviewInserter={editOutputInserter} recovery={conversionRecovery} conversionPending={conversionPending} onConvert={handleConvertRepeatedUnit} counts={targetCounts} focusTargets={false} />
                     </Box>
                     <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
                         <ConfigFlowDiagram

@@ -234,6 +234,9 @@ function handleValidate(requestId: number, config: Config): void {
             internal: isEngineRefusal(error) ? undefined : internalErrorOf(error),
             diagnostics: error instanceof clockGenerator.InserterCoverageError
                 ? error.issues.map(issue => ({ kind: 'coverage' as const, issue }))
+                // inserters that take from a belt into anything but a machine: the text once, and the inserters it names
+                : error instanceof clockGenerator.BeltPickupSinkError
+                    ? [{ kind: 'inserters' as const, ids: error.inserter_ids, message: error.message }]
                 : error instanceof clockGenerator.ConfigValidationError
                     ? error.zodError.issues.map(issue => ({ kind: 'field' as const, path: issue.path as (string | number)[], message: issue.message }))
                     // a build no clock can hold: its opening once, and each problem the engine found on its own
@@ -425,7 +428,8 @@ function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
             const copyGapNeeded = clockGenerator.copyGapNeededNote(query.config);
             const dropRoom = clockGenerator.dropRoomNote(query.config);
             const machinePrototypes = clockGenerator.machinePrototypeIssues(query.config);
-            return { issues: refusal === null ? liveCoverage(query.config) : [], refusal, pickupNotTested, laneSharedByCopies, sideLoadedDrop, lanesExactlyFull, copyGapNeeded, dropRoom, machinePrototypes };
+            const refusal_inserters = clockGenerator.beltPickupSinkRefusal(query.config)?.inserter_ids ?? [];
+            return { issues: refusal === null ? liveCoverage(query.config) : [], refusal, refusal_inserters, pickupNotTested, laneSharedByCopies, sideLoadedDrop, lanesExactlyFull, copyGapNeeded, dropRoom, machinePrototypes };
         }
         case 'machine-target-rates':
             return clockGenerator.computeMachineTargetRates(query.config);

@@ -120,3 +120,18 @@ it('names a schema error by the field the player sees and keeps its button to th
     await user.click(screen.getByRole('button', { name: 'Review setting' }));
     expect(onReview).toHaveBeenCalledExactlyOnceWith({ kind: 'target-rate' });
 });
+
+it('points at each inserter the engine refuses (#650): one button per named inserter, to its row', async () => {
+    const message = 'Inserters 3 and 5 take from a belt and drop into something other than a machine: inserter 3 takes from belt 4 and drops into chest 2; '
+        + 'inserter 5 takes from belt 3 and drops into chest 1. Taking from a belt into anything but a machine is not supported, so this build cannot be clocked. '
+        + 'Make each of them drop into a machine, so that the machine is fed straight from the belt.';
+    const issues = buildValidationIssues({ fieldProblems: [], coverage: [], chests: [], inserters: [], machines: [{ id: 1 }], chestIssues: [],
+        coverageText: () => '', scopeRefusal: message, scopeRefusalInserters: [3, 5] });
+    const onReviewInserter = vi.fn();
+    const { user } = show(<BuildValidationPanel issues={issues} machines={[]} belts={[]} chests={[]} inserters={[]}
+        onApplyFix={vi.fn()} onSwitchType={vi.fn()} onEnableRemoval={vi.fn()} onReview={vi.fn()} onReviewInserter={onReviewInserter} />);
+    expect(screen.getAllByText(message)).toHaveLength(1);
+    await user.click(screen.getByRole('button', { name: 'Review inserter 5' }));
+    expect(onReviewInserter).toHaveBeenCalledExactlyOnceWith(5);
+    expect(screen.getByRole('button', { name: 'Review inserter 3' })).toBeDefined();
+});

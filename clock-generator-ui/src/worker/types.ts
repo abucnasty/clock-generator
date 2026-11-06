@@ -456,6 +456,8 @@ export type EngineQuery =
 export interface LiveCoverage {
     issues: InserterCoverageIssue[];
     refusal: string | null;
+    /** The ids of the inserters `refusal` names, when it is the one for inserters that take from a belt into anything but a machine; else empty */
+    refusal_inserters: number[];
     /** The engine's warning for belt pickups outside 16-item hands on 4-item belt stacks, which does not block generation */
     pickupNotTested: string | null;
     /** The engine's warning for belt lanes that the copies, summed, would ask for more than they carry; it does not block */
