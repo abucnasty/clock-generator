@@ -12,7 +12,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 ## [Unreleased]
 
 ### Added
-- generation: a clock that enables inserters for one tick a swing, where their machines have room to spare
+- generation: a new clock that enables some inserters for one tick at each swing
 
 ### Changed
 - generation: fractional swings now falls back to fewer output swings where the machine cannot take them

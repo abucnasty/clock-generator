@@ -236,7 +236,7 @@ const SHARED_WINDOWS_NOTE = "Inserters that take into their machines at the same
 
 /** What a clock with a window at each swing says about itself, after how its alternative is made */
 const PER_HAND_WINDOWS_NOTE = "Inserters whose machines have room for more than the hands they need are enabled for one tick at the start of "
-    + "each of their swings instead of one window for all of them, so they never start a swing the machine does not need. "
+    + "each of their swings instead of one window for all of them, so they are woken fewer times while they wait between swings. "
     + "It is only listed when it keeps the rate and recovers after being starved or jammed.";
 
 /** The alternative every run starts with, and the one the others are described against */
