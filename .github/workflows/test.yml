@@ -5,10 +5,14 @@ name: Test
 # take minutes. Pull requests also generate every blast job, in shards, and compare it with the committed record (clock-generator/record/).
 # Those pull requests run none of the test jobs when they change documentation only (see the `changes` job). "Run workflow" (or
 # `gh workflow run test.yml --ref <branch>`) runs them all on any branch (the record check runs on pull requests only).
+# The two heavy suites, the generation shards and the record shards, do not run on a draft pull request (GitHub's free plan runs
+# 20 jobs at once, and a pull request starts about 22): the checks "Generation tests" and "Record check" run and fail there, with the
+# way to run them, rather than pass or skip, which a required check counts as passing. Marking the pull request ready runs everything.
 # release.yml and publish-sidecar.yml call this workflow and do nothing unless it passes; a release runs the generation
 # tests too, publishing the sidecar does not.
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
     inputs:
       generation:
@@ -136,7 +140,7 @@ jobs:
   generation-shards:
     name: Generation tests (shard ${{ matrix.shard }} of ${{ strategy.job-total }})
     needs: changes
-    if: needs.changes.outputs.generation == 'true'
+    if: needs.changes.outputs.generation == 'true' && github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     # the whole suite took 1,302 s on an Intel Xeon 8573C runner and 1,490 s on an AMD EPYC 7763 on 2026-10-24 (one
     # runner, 3 workers); a shard has about an eighth of it. One file, the productivity module chest chain, takes about
@@ -205,6 +209,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Not run on a draft
+        if: github.event.pull_request.draft == true
+        run: |
+          echo "::error::Not run on a draft: mark the pull request ready, or run \`gh workflow run test.yml --ref <branch>\`."
+          echo 'not run on a draft: mark the pull request ready, or run `gh workflow run test.yml --ref <branch>`' >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+
       - name: Result of the generation tests
         env:
           CHANGES: ${{ needs.changes.result }}
@@ -236,15 +247,16 @@ jobs:
   record-shards:
     name: Record jobs (shard ${{ matrix.shard }} of ${{ strategy.job-total }})
     needs: changes
-    if: ${{ github.event_name == 'pull_request' && needs.changes.outputs.generation == 'true' }}
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft != true && needs.changes.outputs.generation == 'true' }}
     runs-on: ubuntu-latest
-    # one runner took 24 minutes for all 86 jobs on 2026-11-05; a shard has about an eighth of them
+    # one runner took 24 minutes for all 86 jobs on 2026-11-05; a shard has about a sixth of them
     timeout-minutes: 25
     strategy:
       # every shard finishes, so that a pull request shows all its failures at once
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+        # the smallest count whose estimated slowest shard is the slowest job: `node scripts/ci/update-record-durations.js --shards`
+        shard: [1, 2, 3, 4, 5, 6]
     defaults:
       run:
         working-directory: clock-generator
@@ -297,6 +309,13 @@ jobs:
       run:
         working-directory: clock-generator
     steps:
+      - name: Not run on a draft
+        if: github.event.pull_request.draft == true
+        run: |
+          echo "::error::Not run on a draft: mark the pull request ready, or run \`gh workflow run test.yml --ref <branch>\`."
+          echo 'not run on a draft: mark the pull request ready, or run `gh workflow run test.yml --ref <branch>`' >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+
       - name: Whether the record check is due
         id: due
         working-directory: .

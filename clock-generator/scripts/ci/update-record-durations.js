@@ -3,6 +3,11 @@
 // (scripts/blast/shard.py), from the job files of a run: the record-jobs-<n> artifacts of the Test workflow
 // (`gh run download <run> -p 'record-jobs-*'`), each job file holding the seconds its job took. Usage:
 //   node scripts/ci/update-record-durations.js <directory with the downloaded artifacts> [more directories, of other runs]
+//   node scripts/ci/update-record-durations.js --shards     only prints the shard count the durations call for
+// Either way it prints the record shard count (the `record-shards` matrix of .github/workflows/test.yml): the smallest count whose estimated
+// slowest shard is the slowest job, so that more shards would not make the pull request wait less. A shard is estimated as the seconds of
+// its jobs, dealt longest first onto the shard with the fewest seconds so far (the dealing of scripts/blast/shard.py, which also weighs
+// the four jobs a runner takes at a time: this is the more cautious of the two). Set the matrix to the count it prints.
 // A job in several runs gets their median (one run on a slow runner is not to set the figure). A job that is in no run keeps its old
 // figure if it is still in the record; a job no longer in the record (record/<job>.json) is dropped.
 const fs = require('node:fs');
@@ -11,8 +16,24 @@ const path = require('node:path');
 const packageDir = path.resolve(__dirname, '..', '..');
 const target = path.join(packageDir, 'ci', 'record-durations.json');
 const dirs = process.argv.slice(2);
+
+// the smallest shard count whose slowest shard is estimated no slower than the slowest job (which no count can beat)
+const shardCount = durations => {
+    const seconds = Object.values(durations).sort((a, b) => b - a);
+    if (seconds.length === 0) return 1;
+    for (let count = 1; ; count++) {
+        const load = new Array(count).fill(0);
+        for (const s of seconds) load[load.indexOf(Math.min(...load))] += s;
+        if (Math.max(...load) <= seconds[0]) return count;
+    }
+};
+const reportShardCount = durations => console.log(`Record shards: ${shardCount(durations)} (the smallest count whose estimated slowest shard is the slowest job, ${Math.max(...Object.values(durations))} s); set the matrix of record-shards in .github/workflows/test.yml to it`);
+if (dirs[0] === '--shards') {
+    reportShardCount(JSON.parse(fs.readFileSync(target, 'utf8')));
+    process.exit(0);
+}
 if (dirs.length === 0) {
-    console.error('Usage: node scripts/ci/update-record-durations.js <directory with the record-jobs-<n> artifacts> [...]');
+    console.error('Usage: node scripts/ci/update-record-durations.js <directory with the record-jobs-<n> artifacts> [...] | --shards');
     process.exit(2);
 }
 
@@ -45,3 +66,4 @@ for (const [job, times] of Object.entries(measured)) durations[job] = Math.round
 const kept = Object.fromEntries(Object.entries(durations).filter(([job]) => fs.existsSync(path.join(packageDir, 'record', `${job}.json`))).sort(([a], [b]) => (a < b ? -1 : 1)));
 fs.writeFileSync(target, JSON.stringify(kept, null, 1) + '\n');
 console.log(`${Object.keys(kept).length} jobs from ${files.length} job files, written to ${target}`);
+reportShardCount(kept);
