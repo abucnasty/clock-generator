@@ -4,11 +4,11 @@
   "group": "pickup",
   "name": "electromagnetic-turbo-underground-exit-moving",
   "config_sha256": "2203c208ae67f172ecdeee42851ad20eec0595a3c3a7d0fd3e4ff806a90a7d29",
-  "job_results_sha256": "08d6a54fcbca1c5d882227dd607e06b5ce1652c85d7ea4deb9d0937e02f542ad",
-  "selected": "planned-belt-slack",
+  "job_results_sha256": "7692fc3347fd5bde05328197ea2bb5ab8c383bb4589658182c55dda41ce2bf0c",
+  "selected": "swings-1",
   "selected_windows": {
-    "inserter:1": "1-37,97-133,193-229,289-325,385-421,481-517,577-613,673-709,769-805,865-901,961-997",
-    "inserter:2": "25-49,121-145,217-243,313-337,347-361,409-423,435-449,505-516,523-549,610-635,697-723,793-819,889-915,985-1011"
+    "inserter:1": "1-13,33-45,65-77,97-109,129-141,161-173,193-205,225-237,257-269,289-301,321-333",
+    "inserter:2": "31-36,63-68,127-132,159-164,191-196,255-260,287-292,319-324"
   },
   "alternatives": [
     {"id": "planned-belt-slack", "verdict": "stable", "holds": true, "rate": 30, "supply": "moving", "period": 1056, "wake_ups": 197.915, "descriptions_cut": 0, "clock_sha256": "fd1c93d860cfb292670810c26315ac93834819c634d492a0a0a0566fe4d247a0", "windows_sha256": "0221194dfb95d4cf2d7384e14563509e8a34b7474447f05d077d757866eafa4f", "text_sha256": "225d408eb5b5ed58988da344621b0faa43cd32f4a63a972b65a8ef4df7a665e2", "results_sha256": "7d4db5f41d8bbd17470a408b85ae739bb8adb440ed724d86fa53a1110777ca1f"},
@@ -18,6 +18,6 @@
     {"id": "swings-6", "verdict": "unstable", "holds": false, "rate": 20.90909090909091, "supply": "moving", "period": 2112, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "1ce4eea81a77a934819bffc3015a270402ab585034b308f691996a1a9e4a04cc", "windows_sha256": "34a9cef257a68a26aab8300788b56641b7d50c8591b409d8786a3f71e0bc26b9", "text_sha256": "6ca4f22e691ee35daabfc68e5daeae3a499a1d19e98b0cbc4c0ad1c1f02d5b49", "results_sha256": "2800f3acdc080192dd2f2b7672c28b75331d655a8e387ec09e5d887fb3918d02"},
     {"id": "swings-7", "verdict": "unstable", "holds": false, "rate": 21.428571428571427, "supply": "moving", "period": 2464, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "2445f0947715ca9d662de0c9cf3f97220accbccc429b5cf9967750a5176341a1", "windows_sha256": "a81fbb36f551845642d77ab957780f50364a147206318e94d2bf3e7c913b930e", "text_sha256": "bc56132aa232f3f4168055b05c315e544d9a27e967c570c874a5804612e4bda4", "results_sha256": "39811d4a20b9e7965fb4349ee7366e2e9883c8d576189495f4e3cf5e5aa81508"},
     {"id": "swings-2", "verdict": "stable", "holds": true, "rate": 30, "supply": "moving", "period": 704, "wake_ups": 302.134, "descriptions_cut": 0, "clock_sha256": "b06c6627dd045f971550360672a9ee148361360a4776861d57e248e5ff1a8b85", "windows_sha256": "1fc1c37c0adcfc3483e52a0ea87b1b05c8e3d2049b2383fad7d2843e1872a66e", "text_sha256": "fde5c16200f4aa285b7e202cd3c2978f6bf7f2c89c915b94ceb7e6c86d1e4514", "results_sha256": "cc5bdc276e055abac79f400be1df20d88a1e25c9ee044e5c2639b2079e74fcbf"},
-    {"id": "swings-1", "verdict": "stable", "holds": true, "rate": 30, "supply": "moving", "period": 352, "wake_ups": 584.615, "descriptions_cut": 0, "clock_sha256": "c241b97080b4faa94ccffcc43a9d1af2f49d9be336323a529f6ae0f1f61a3a0b", "windows_sha256": "195b802c45cabd40979e1fab5789b8b255ba473857320b5741c250ac0e151b16", "text_sha256": "34465e57d83caebd548b93522aa561c368d26160cfed330bda17069559a4a4cb", "results_sha256": "f2f402d58b33bbafabb93a526a2b82e5af66b26efb4ed3bc3028af3697e4b53a"}
+    {"id": "swings-1", "verdict": "stable", "holds": true, "rate": 30, "supply": "moving", "period": 352, "wake_ups": 112.821, "descriptions_cut": 0, "clock_sha256": "c9c84d5975c4eb5a376d767eb533b1aacbb0682d3d47acc66667fadef0700ed5", "windows_sha256": "1cf5e76fde7086895fa0d4949ac1553c5e3474c7177dc62128efd6aeb980038e", "text_sha256": "9a350e2e87c72171d01042373378719ddb458a72353ae87becd2fb9be29e177b", "results_sha256": "5af2d433bbc4dc149322d49f92653dffc13eb21b1bd43796c24ea1db546ca5f6"}
   ]
 }
