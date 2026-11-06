@@ -9,7 +9,9 @@ export type ValidationDiagnostic =
     | { kind: 'coverage'; issue: InserterCoverageIssue }
     | { kind: 'field'; path: (string | number)[]; message: string }
     /** The engine refuses the build as a whole: its opening sentence, once, and each problem it found in its own words */
-    | { kind: 'refusal'; opening?: string; problems: string[] };
+    | { kind: 'refusal'; opening?: string; problems: string[] }
+    /** The engine refuses the inserters it names, by id, in the text it gives */
+    | { kind: 'inserters'; ids: number[]; message: string };
 
 export interface BuildValidationIssue extends Problem {
     id: string;
@@ -27,6 +29,8 @@ export interface BuildValidationIssue extends Problem {
     lead?: string;
     coverage?: InserterCoverageIssue;
     chest?: OutputChestIssue;
+    /** The inserters the engine's refusal names, which the panel points at */
+    inserters?: number[];
 }
 
 /** Whether the engine refuses the build as it stands: the issues come from the last check only while it is for this build */
@@ -110,6 +114,8 @@ interface Input {
     coverageText: (issue: InserterCoverageIssue) => string;
     /** The live refusal of an inserter that is out of scope, shown in place of its coverage */
     scopeRefusal?: string | null;
+    /** The ids of the inserters the live refusal names, if it names any */
+    scopeRefusalInserters?: readonly number[];
     /** The live warning for belt pickups outside 16-item hands on 4-item belt stacks: advice, never blocking */
     pickupNotTested?: string | null;
     /** The live warning for lanes the copies would ask too much of if they shared them: advice, never blocking */
@@ -145,11 +151,18 @@ export function buildValidationIssues(input: Input): BuildValidationIssue[] {
     };
     if (input.scopeRefusal) {
         add({ id: 'inserter-scope', text: input.scopeRefusal, severity: 'error', blocksGeneration: true, source: 'engine',
+            inserters: input.scopeRefusalInserters?.length ? [...input.scopeRefusalInserters] : undefined,
             target: { kind: 'validation-issue', id: 'inserter-scope' } });
     }
     input.coverage.forEach(addCoverage);
     for (const diagnostic of input.failure?.diagnostics ?? []) {
         if (diagnostic.kind === 'coverage') { addCoverage(diagnostic.issue); continue; }
+        if (diagnostic.kind === 'inserters') {
+            // the same issue as the live refusal when it says the same, which keeps the first
+            add({ id: 'inserter-scope', text: diagnostic.message, severity: 'error', blocksGeneration: true, source: 'engine',
+                inserters: diagnostic.ids, target: { kind: 'validation-issue', id: 'inserter-scope' } });
+            continue;
+        }
         if (diagnostic.kind === 'refusal') {
             // each problem counts and is listed on its own; none has a field of its own to point at
             diagnostic.problems.forEach((text, position) => {

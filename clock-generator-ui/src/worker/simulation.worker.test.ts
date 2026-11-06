@@ -8,7 +8,7 @@ import { readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigFor
 import { configToFormData, formDataToConfig } from '../utils/configForm/configMapping';
 import { createDefaultConfig } from '../utils/configForm/formData';
 import { applyPaste } from '../utils/pastePreview';
-import { buildValidationIssues } from '../utils/buildValidation';
+import { buildValidationIssues, type ValidationDiagnostic } from '../utils/buildValidation';
 
 /** Every response the worker posted in this test, in order */
 let posted: WorkerResponse[];
@@ -38,13 +38,13 @@ async function ask<K extends EngineQuery['kind']>(query: Extract<EngineQuery, { 
 const coverageOf = (config: Config) => ask({ kind: 'inserter-coverage', config });
 
 /** A live answer with nothing to say */
-const nothingLive: LiveCoverage = { issues: [], refusal: null, pickupNotTested: null, laneSharedByCopies: null, sideLoadedDrop: null,
+const nothingLive: LiveCoverage = { issues: [], refusal: null, refusal_inserters: [], pickupNotTested: null, laneSharedByCopies: null, sideLoadedDrop: null,
     lanesExactlyFull: null, copyGapNeeded: null, dropRoom: null, machinePrototypes: [] };
 
 /** The issues the App lists for a live answer, folded in as App.tsx does it, for a build with no field problems or chest issues */
-const listed = (live: LiveCoverage, machines: { id: number }[], failure?: { message: string }) => buildValidationIssues({
+const listed = (live: LiveCoverage, machines: { id: number }[], failure?: { message: string; diagnostics?: ValidationDiagnostic[] }) => buildValidationIssues({
     fieldProblems: [], chests: [], inserters: [], chestIssues: [], machines, failure,
-    coverage: live.issues, scopeRefusal: live.refusal, pickupNotTested: live.pickupNotTested, laneSharedByCopies: live.laneSharedByCopies,
+    coverage: live.issues, scopeRefusal: live.refusal, scopeRefusalInserters: live.refusal_inserters, pickupNotTested: live.pickupNotTested, laneSharedByCopies: live.laneSharedByCopies,
     sideLoadedDrop: live.sideLoadedDrop, lanesExactlyFull: live.lanesExactlyFull, copyGapNeeded: live.copyGapNeeded,
     machinePrototypes: live.machinePrototypes, coverageText: issue => `${issue.kind} ${issue.item_name}`,
 });
@@ -284,6 +284,51 @@ describe('a captured inserter kind, quality and filter mode', () => {
         const checked = await send({ type: 'validate', requestId: 55, config }) as ValidationFailedResponse;
         expect(checked.message).toContain('`filter_mode` "blacklist" is refused');
         expect(checked.internal).toBeUndefined();
+    });
+});
+
+describe('inserters that take from a belt into chests (#650)', () => {
+    // the shape of the build in the issue: belts fill two chests by inserter (3 and 5), and a machine takes from one of them
+    const config = {
+        target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+        machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],
+        inserters: [
+            { id: 1, source: { type: 'belt', id: 1, pickup_length: 1 }, sink: { type: 'machine', id: 1 } },
+            { id: 2, source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 } },
+            { id: 3, source: { type: 'belt', id: 2, pickup_length: 1 }, sink: { type: 'chest', id: 2 } },
+            { id: 4, source: { type: 'chest', id: 2 }, sink: { type: 'machine', id: 1 } },
+            { id: 5, source: { type: 'belt', id: 3, pickup_length: 1 }, sink: { type: 'chest', id: 3 } },
+        ],
+        belts: [
+            { id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }] },
+            { id: 2, type: 'turbo-transport-belt', lanes: [{ ingredient: 'steel-plate', stack_size: 4 }] },
+            { id: 3, type: 'turbo-transport-belt', lanes: [{ ingredient: 'stone', stack_size: 4 }] },
+        ],
+        chests: [
+            { id: 1, type: 'infinity-chest', item_filter: [], remove_unfiltered_items: true },
+            { id: 2, type: 'buffer-chest', storage_size: 1, item_filter: 'steel-plate', prototype: 'wooden-chest' },
+            { id: 3, type: 'buffer-chest', storage_size: 1, item_filter: 'stone', prototype: 'wooden-chest' },
+        ],
+    } as unknown as Config;
+    const says = 'Inserters 3 and 5 take from a belt and drop into something other than a machine';
+
+    it('names inserters 3 and 5 live, in the one error the Build validation lists', async () => {
+        const live = await coverageOf(config);
+        expect(live).toMatchObject({ refusal: expect.stringContaining(says), refusal_inserters: [3, 5], issues: [] });
+        const blocking = listed(live, config.machines).filter(issue => issue.blocksGeneration);
+        expect(blocking).toHaveLength(1);
+        expect(blocking[0]).toMatchObject({ source: 'engine', id: 'inserter-scope', inserters: [3, 5], text: expect.stringContaining(says) });
+    });
+
+    it('Check refuses it as a refusal that names them, once beside the live one', async () => {
+        const checked = await send({ type: 'validate', requestId: 56, config }) as ValidationFailedResponse;
+        expect(checked.message).toContain(says);
+        expect(checked.internal).toBeUndefined();
+        expect(checked.diagnostics).toEqual([{ kind: 'inserters', ids: [3, 5], message: checked.message }]);
+        const withCheck = listed(await coverageOf(config), config.machines, { message: checked.message, diagnostics: checked.diagnostics });
+        expect(withCheck).toHaveLength(1);
+        // a Check without the live answer lists the same issue from the diagnostic alone
+        expect(listed(nothingLive, config.machines, { message: checked.message, diagnostics: checked.diagnostics })[0]).toMatchObject({ id: 'inserter-scope', inserters: [3, 5] });
     });
 });
 
