@@ -5,19 +5,19 @@ import { OUT_OF_SCOPE, sideLoadedPickupRefusal } from "./errors";
 /** A positive model declaration is required before imported pickup data can drive a simulation. */
 export const BeltPickupCaptureSchema = z.discriminatedUnion("status", [
     z.object({
-        status: z.literal("supported"),
-        model: z.literal("belt"),
-        model_version: z.union([z.literal(1), z.literal(2), z.literal(3)]),
-        entity_type: z.enum(["transport-belt", "underground-belt"]),
-        entity_name: z.string().optional(),
-        sidecar_version: z.string().optional(),
+        status: z.literal("supported").describe("The sidecar supports this pickup."),
+        model: z.literal("belt").describe("The model of the pickup: belt."),
+        model_version: z.union([z.literal(1), z.literal(2), z.literal(3)]).describe("The version of the pickup model."),
+        entity_type: z.enum(["transport-belt", "underground-belt"]).describe("The type of the belt at the pickup."),
+        entity_name: z.string().optional().describe("The prototype name of the belt at the pickup."),
+        sidecar_version: z.string().optional().describe("The version of the sidecar that recorded the pickup."),
     }),
     z.object({
-        status: z.enum(["unsupported", "unclassified"]),
-        entity_type: z.string().optional(),
-        entity_name: z.string().optional(),
-        sidecar_version: z.string().optional(),
-        reason: z.string(),
+        status: z.enum(["unsupported", "unclassified"]).describe("The sidecar does not support this pickup, or did not classify it."),
+        entity_type: z.string().optional().describe("The type of the entity at the pickup."),
+        entity_name: z.string().optional().describe("The prototype name of the entity at the pickup."),
+        sidecar_version: z.string().optional().describe("The version of the sidecar that recorded the pickup."),
+        reason: z.string().describe("Why the sidecar does not support the pickup."),
     }),
 ]);
 

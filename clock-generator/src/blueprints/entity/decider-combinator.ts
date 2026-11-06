@@ -80,16 +80,17 @@ class DeciderCombinatorEntityBuilder {
 
 
 /**
- * The counter of a clock that counts 1 to `period` on the clock signal, wired from its output back to its input:
- * while the count is below the period and the lock signal is off, it outputs the count plus 1; at the period, or
- * with the lock on, it outputs 1 (the else outputs). So the count is never 0, which is what a decider reads with
- * the clock switched off, and with the lock on it waits at 1.
+ * The counter of a clock that counts 1 to `wraparoundValue` on the clock signal, wired from its output back to its
+ * input: while the count is below the wraparound value and the lock signal is off, it outputs the count plus 1; at the
+ * wraparound value, or with the lock on, it outputs 1 (the else outputs). So the count is never 0, which is what a
+ * decider reads with the clock switched off, and with the lock on it waits at 1.
  *
  * The signals in `derived` are counted from 1 as well: a modulo of the count adds a position to the network, and the
  * decider adds the 1 to it, in its outputs and its else outputs alike.
  */
 function clock(
-    period: number,
+    /** The wraparound value: the N in the counter's condition `signal-clock < N`; the counter counts 1 to N, then starts again at 1 */
+    wraparoundValue: number,
     /** The signal the clock counts on */
     clockSignalId: SignalId = SignalId.clock,
     /** The signals on the clock's network that count from 1 but are not counted by this combinator, such as modulos of the count */
@@ -99,7 +100,7 @@ function clock(
     const conditions = [
         new DeciderCombinatorConditionBuilder(clockSignalId)
             .setComparator(ComparatorString.LESS_THAN)
-            .setConstant(period)
+            .setConstant(wraparoundValue)
             .build(),
         lockIsOff(CompareType.AND),
     ]
