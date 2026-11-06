@@ -56,9 +56,9 @@ function clockWarningOf(
 ): string | null {
     const warnings: string[] = [];
     if (alternative.assessment.start_dependence?.verdict === 'start-dependent') {
-        warnings.push('This clock depends on how it is started: it reaches the target from some sampled starts and settles differently from others. See Model and tested starts.');
+        warnings.push('This clock depends on how it is started: it reaches the setpoint from some sampled starts and settles differently from others. See Model and tested starts.');
     } else if (alternative.assessment.start_dependence?.verdict === 'unstable') {
-        warnings.push('This clock did not reach the target from any sampled start.');
+        warnings.push('This clock did not reach the setpoint from any sampled start.');
     }
     if (alternative.assessment.backpressure_loss?.survives === false || alternative.verdict === 'no recovery') {
         const losses = lossesOf(alternative);
@@ -77,10 +77,10 @@ function clockWarningOf(
             + 'within the 0.1% a rounded clock may run and what the machines can make.');
     } else if (alternative.ranking.stable_above_target === true) {
         const target = items_per_second - alternative.ranking.rate_off_target;
-        warnings.push(`This clock runs over the target: ${figure(items_per_second)}/s for the ${figure(target)}/s requested, `
+        warnings.push(`This clock runs over the setpoint: ${figure(items_per_second)}/s for the ${figure(target)}/s requested, `
             + `${fastPercent(alternative.ranking.rate_off_target / target)} over, in the simulator.`);
     } else if (Math.abs(alternative.ranking.rate_off_target) >= MIN_SHORTFALL) {
-        warnings.push(`This clock’s output rate differs from the target: it runs at ${figure(items_per_second)}/s; requested `
+        warnings.push(`This clock’s output rate differs from the setpoint: it runs at ${figure(items_per_second)}/s; requested `
             + `${figure(items_per_second - alternative.ranking.rate_off_target)}/s in the simulator.`);
     }
     if (alternative.assessment.holds === false) {
@@ -112,7 +112,7 @@ export function copyBlueprintLabelOf(
     }
     const label = running ? COPY_CURRENT_BEST_LABEL : COPY_BLUEPRINT_LABEL;
     if (alternative && isBelowTarget(alternative)) {
-        return `${label} (${figure(alternative.assessment.items_per_second)}/s, below target)`;
+        return `${label} (${figure(alternative.assessment.items_per_second)}/s, below setpoint)`;
     }
     return label;
 }

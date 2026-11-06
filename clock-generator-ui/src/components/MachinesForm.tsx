@@ -138,7 +138,7 @@ function MachinesFormComponent({
             )}
         >
             {rateView === 'target' && targetRates.error && <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                At-target rates unavailable: {targetRates.error}
+                Rates at the setpoint unavailable: {targetRates.error}
             </Typography>}
             <SortableList itemKeys={machines.map((m) => m._uuid)} onReorder={onReorder}>
                 {machines.map((machine, index) => <MachineRow
@@ -263,7 +263,7 @@ function MachineRow({ machine, index, recipeNames, build, getRecipeInfo, atTarge
                 : updating || (atTarget && targetUpdating)
                     ? <Typography variant="body2">Updating production…</Typography>
                     : atTarget && !targetRate
-                        ? <Typography variant="body2">At-target rates unavailable for this build.</Typography>
+                        ? <Typography variant="body2">Rates at the setpoint unavailable for this build.</Typography>
                 : <MachineFactsAccordion inline machineId={machine.id} facts={facts} error={error} targetRate={atTarget ? targetRate : undefined} /> }]} summary={openTab =>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 2, rowGap: 0.75, justifyContent: 'space-between' }}>
                     {updating

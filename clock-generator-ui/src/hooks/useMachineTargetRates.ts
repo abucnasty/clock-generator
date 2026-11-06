@@ -19,7 +19,7 @@ export function useMachineTargetRates(config: Config, enabled: boolean) {
         const timer = setTimeout(() => {
             askEngine({ kind: 'machine-target-rates', config: JSON.parse(key) as Config }).then(
                 rates => { if (current) setResult({ key, rates, error: null }); },
-                error => { if (current) setResult({ key, rates: null, error: error instanceof Error ? error.message : 'Could not calculate target rates.' }); },
+                error => { if (current) setResult({ key, rates: null, error: error instanceof Error ? error.message : 'Could not calculate rates at the setpoint.' }); },
             );
         }, 180);
         return () => { current = false; clearTimeout(timer); };

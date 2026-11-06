@@ -61,7 +61,7 @@ export function TargetOutputForm({
             <Box sx={{ display: 'grid', gap: 1.5, alignItems: 'start', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
                 '@container target-output (min-width: 820px)': { gridTemplateColumns: 'auto minmax(0, 1fr) 160px 200px 110px', alignItems: 'center' } }}>
                 <Typography component="h2" variant="subtitle1" id={TARGET_OUTPUT_HEADING_ID} tabIndex={-1}
-                    sx={{ fontWeight: 600, gridColumn: '1 / -1', '@container target-output (min-width: 820px)': { gridColumn: 'auto' } }}>Target Output</Typography>
+                    sx={{ fontWeight: 600, gridColumn: '1 / -1', '@container target-output (min-width: 820px)': { gridColumn: 'auto' } }}>Setpoint</Typography>
                 <ItemSelector
                     // an item destroyed is no recipe's product (scrap is mined): it is chosen from what the machines take in
                     kind={counts === 'destroyed' ? 'item' : 'recipe'}

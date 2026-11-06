@@ -104,6 +104,8 @@ const NBSP = ' ';
 
 /** Clocks table header of the wake-ups, which are counted on one copy */
 export const WAKE_UPS_HEADER = `Wakeups/min (1${NBSP}copy)`;
+/** Clocks table header of the signals, which are counted on one copy like the wakeups */
+export const SIGNALS_HEADER = `Signals/min (1${NBSP}copy)`;
 /** Clocks table header of what one copy's clock-only run moved in a clock period */
 export const OUTPUT_PER_PERIOD_HEADER = `Output per window cycle (1${NBSP}copy)`;
 

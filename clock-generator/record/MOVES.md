@@ -8,6 +8,12 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
+## Strategy marks for pickups counted from entry and a harmonic window cycle (#683)
+- 22 jobs, 44 alternatives: results_sha256 only. A clock made with its belt pickups counted from their entry (`pickups_from_entry`) or whose inserters had a hand count rounded up by rule F (`grouped_hands.harmonic_window_cycle`) carries a mark, and the results digest hashes it; no clock hash, selection, verdict, rate or wake-up count moves
+- config-ACCUMULATOR_640, config-ADVANCED_CIRCUIT_240, config-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY, config-INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK, config-LDS_240, config-LITHIUM_PLATE_80_SILO_CHEST, config-LOGISTIC_SCIENCE_240_DIRECT_INSERT, config-MILITARY_SCIENCE_120, config-PROCESSING_UNIT_80_CIRCUIT_EXPORT, config-PRODUCTIVITY_MODULE_80_CHEST_CHAIN, config-UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN
+- front-front-exit-turbo-mirrored-backed-different-items, front-front-exit-turbo-unmirrored-backed-different-items, pickup-electromagnetic-turbo-straight-belt-backed, pickup-electromagnetic-turbo-straight-belt-moving, pickup-electromagnetic-turbo-underground-entrance-backed, pickup-electromagnetic-turbo-underground-exit-backed
+- variants-ADVANCED_CIRCUIT_240_BACKED_UP, variants-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY_BACKED_UP, variants-INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK_BACKED_UP, variants-LOGISTIC_SCIENCE_240_DIRECT_INSERT_TWO_OUTPUT_SWINGS, variants-PROCESSING_UNIT_80_CIRCUIT_EXPORT_BACKED_UP
+
 ## Strategy ids and signals a minute on each alternative (#681)
 - All 86 jobs: results_sha256 only. The assessment gained signals_per_minute and the results digest hashes the strategy; no clock hash, selection, verdict, rate or wake-up count moves
 

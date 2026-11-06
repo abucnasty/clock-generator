@@ -22,6 +22,7 @@ import type {
     ClockAlternativeContext,
     ClockAlternativeRun,
     ClockAlternativeTask,
+    ClockStrategy,
     NotMadeClock,
     ComputeMachineFactsParams,
     Config,
@@ -176,6 +177,10 @@ export interface ClockAlternativeView {
      * missing for any other clock, and from clocks kept before it was carried
      */
     roundedPeriodTicks?: number;
+    /** How much faster than the setpoint a clock rounded down to whole ticks runs, as a share; missing like `roundedPeriodTicks` */
+    roundedRunsFast?: number;
+    /** Which way of making a clock this is, as ids (family, qualifiers, output swings); missing from clocks kept before it was carried */
+    strategy?: ClockStrategy;
     swingBackoffReport: SwingBackoffReport | null;
     /** Exact independent inserter clocks exported with this alternative, including measured fuel clocks. */
     inserterClocks?: RecordTimelineRequest['inserter_clocks'];

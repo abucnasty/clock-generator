@@ -28,7 +28,8 @@ import { DeveloperToolsPanel } from './DeveloperToolsPanel';
 import { ResultSummaryCard } from './ResultSummaryCard';
 import { StaleResultsBanner } from './StaleResultsBanner';
 import { RunNotes } from './RunNotes';
-import { beltValue, clockTechnicalName, wakeUpsText } from '../utils/clockSummary';
+import { SUMMARY_COPY, beltValue, wakeUpsText } from '../utils/clockSummary';
+import { fullClockName } from '../utils/strategyNames';
 import { rateWarningOf } from '../utils/rateWarning';
 import { whyNotStableOf } from '../utils/whyNotStable';
 import type { GeneratedFor } from '../utils/resultsStaleness';
@@ -275,7 +276,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                                     {clockLabel(clock)}{index === props.recommendedIndex ? ' · Recommended' : clock.verdict !== 'stable' ? ' · Not stable' : ''}
                                 </Typography>
                                 <Typography variant="caption" component="p" color="text.secondary">
-                                    {clockTechnicalName(clock)}{!clock.ranking.matches_belt_choice ? ' · Requires a different belt setting' : ''}
+                                    {fullClockName(clock)}{!clock.ranking.matches_belt_choice ? ` · ${SUMMARY_COPY.noBeltSlack}` : ''}
                                 </Typography>
                             </MenuItem>)}
                         </TextField>}
@@ -299,7 +300,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
 
             {selected && <InstallClockDialog open={props.installOpen} onClose={props.onInstallClose}
                 selected={selected} blueprintString={props.blueprintString} staleFor={props.staleFor}
-                copyLabel={props.copyLabel} copied={props.copied} onCopy={props.onCopy} />}
+                copyLabel={props.copyLabel} copied={props.copied} onCopy={props.onCopy} pickRule={props.pickRule} />}
 
             {/* Debug logging remains opt-in; timelines are available in the normal workspace. */}
             {props.developerTools && (

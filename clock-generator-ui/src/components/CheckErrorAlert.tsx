@@ -66,7 +66,7 @@ export function CheckErrorAlert({ message, crashed = false, internal, recovery, 
                         {reducedMachines !== null && <span>Machines shown: {machineCount} → {reducedMachines}</span>}
                         <span>Copies: {recovery.configuredCopies} → {conversion.copies}</span>
                     </Box>
-                    <Typography variant="body2">The total target output stays the same. This changes the configuration here; your machines in Factorio are untouched. You can undo it.</Typography>
+                    <Typography variant="body2">The total setpoint stays the same. This changes the configuration here; your machines in Factorio are untouched. You can undo it.</Typography>
                 </> : internal ? <>
                     <Typography variant="body2">{internal.dataMismatch ? CHECK_TEXT.internalDataText : CHECK_TEXT.internalText}</Typography>
                     <InternalDetails error={internal} copied={copied} onCopied={() => setCopied(true)} />
