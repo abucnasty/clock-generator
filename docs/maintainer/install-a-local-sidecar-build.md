@@ -1,0 +1,47 @@
+---
+$schema: urn:oasis:names:tc:dita:xsd:task.xsd
+id: install-a-local-sidecar-build
+---
+
+# Install a local sidecar build
+
+Make the zip file of the sidecar from your copy of the repository, and install it in Factorio.
+
+## Before you start
+
+- You have a Bash shell and the `zip` command.
+- Factorio started on this computer one time or more. Thus its mods folder is there.
+
+## Procedure
+
+1. Go to the root folder of the repository.
+
+2. Make the zip file and install it.
+
+   ```bash
+   clock-generator-sidecar/build.sh --install
+   ```
+
+   On Windows, type the command without `--install`. The script cannot find the mods folder on Windows.
+
+   The script makes `clock-generator-sidecar/clock-generator-sidecar_<version>.zip`, with the version of
+   `clock-generator-sidecar/info.json`. On Linux and macOS, it removes the previous zip files of the mod from the mods
+   folder. Then it copies the new zip file into the folder:
+
+   - Linux: `~/.factorio/mods/`
+   - macOS: `~/Library/Application Support/factorio/mods/`
+
+   If the mods folder is not there, the script stops with the message "Mods folder not found".
+
+3. On Windows only, copy the zip file into `%APPDATA%\Factorio\mods\`. Remove the previous zip files of the mod from
+   that folder.
+
+4. Start Factorio. In the **Mods** menu, make sure that **Clock Generator Sidecar** is on.
+
+## Result
+
+Factorio uses the sidecar of your copy of the repository.
+
+## Related information
+
+- [Export a build from Factorio](../user/export-a-build.md)
