@@ -8,6 +8,27 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
+## Enable windows shaped against ghost wakeups (#641)
+Each window of the primary batched-swings clock whose closing edge left its inserter asleep on a machine's list closes before the inserter went to sleep or took the hand it held, or is dropped where that leaves it nothing; kept where the clock holds, wakes fewer and gets back from every loss the primary gets back from. Game figures: wakeups (ghost wakeups) a period of one copy on its one-copy scaffold, before -> after, output 100% in every period both sides.
+- config-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY, variants-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY_BACKED_UP: planned-belt-slack stays selected, wake-ups 245.687 -> 163.791 a minute (game: 24 (16) -> 16 (8))
+- config-ELECTRIC_FURNACE_20: planned-belt-slack stays selected, wake-ups 100 -> 62.5 a minute (game: 33 (12) -> 15 (6))
+- config-ELECTROMAGNETIC_SCIENCE_330: swings-2 stays selected, wake-ups 138.265 -> 92.176 a minute (game: 27 (9) -> 18 (0))
+- config-LOGISTIC_SCIENCE_240_DIRECT_INSERT: planned-belt-slack stays selected, wake-ups 237.582 -> 200.069 a minute (game: 38 (6) -> 32 (0))
+- config-UTILITY_SCIENCE_120: planned-belt-slack stays selected, wake-ups 64.382 -> 42.921 a minute (game: 12 (4) -> 8 (0))
+- config-AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER: planned-belt-slack stays selected, wake-ups 25.035 -> 0 a minute (game: 1 (1) -> 0)
+- config-ADVANCED_CIRCUIT_240: planned-belt-slack stays selected, wake-ups 443.182 -> 429.545 a minute (game: 75 (17) -> 75 (17), no change in the game)
+- config-PRODUCTION_SCIENCE_120_TWO_BELTS, variants-PRODUCTION_SCIENCE_120_TWO_BELTS_SHARED_PICKUP: fractional stays selected, wake-ups 85.714 -> 53.571 a minute (game: 8 (5) -> 5 (3))
+- config-IRON_PLATE_80_CAR_CHEST: selected derived -> swings-2, wake-ups 200 -> 158.75 a minute, period 288 -> 144 (game: 48 (0) a period of 288 -> 7 (0.33) a period of 144)
+- config-UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT: selected derived -> planned-belt-slack, wake-ups 53.731 -> 42.985 a minute (game: 5 (2) -> 4 (0))
+- config-INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK: selected swings-2 -> swings-6, wake-ups 526.875 -> 450 a minute, period 72; swings-6 shaped 585 -> 450. In the game swings-2 wakes 250 a minute on the one-copy scaffold (the simulator counts 450 for its inserter 5 where the game has 150) and swings-6 450 (game: 4.96 (0) -> 9 (1)); on the three-copy scaffold both make 288 in every period
+- variants-ADVANCED_CIRCUIT_240_BACKED_UP: swings-1 stays selected, wake-ups 1,036.364 -> 954.545 a minute; variants-ROCKET_FUEL_60_JELLY_HANDS_15_BACKED_UP: fractional stays selected, 779.062 -> 769.219
+- blocked-blocked-output-turbo-stack-1, blocked-blocked-output-turbo-stack-2, blocked-blocked-output-turbo-stack-4: planned-belt-slack stays selected, wake-ups 18.848 -> 0 a minute; the derived alternative is no longer made (a clock made without a search is stable)
+- containers-container-wagon-filtered, containers-container-wagon-legendary, containers-container-wagon-normal: planned-belt-slack stays selected, wake-ups 18.75 -> 0 a minute
+- front-front-entrance-turbo-mirrored-backed-different-items, overhood-over-hood-turbo-mirrored-backed-different-items: planned-belt-slack, 3.217 -> 0; front-front-entrance-turbo-mirrored-moving-different-items: planned-belt-slack, 11.285 -> 0
+- front-front-entrance-turbo-unmirrored-backed-different-items, overhood-over-hood-turbo-unmirrored-backed-different-items: selected planned-belt-slack -> fractional, 3.754 -> 0
+- front-front-entrance-turbo-unmirrored-moving-different-items, overhood-over-hood-turbo-unmirrored-moving-different-items: selected derived -> planned-belt-slack, tied at 0 (planned-belt-slack no recovery -> stable); overhood-over-hood-turbo-mirrored-moving-different-items: selected derived -> planned-belt-slack, 18 -> 0
+- Alternatives only, the selection unchanged: config-AUTOMATION_SCIENCE_240 and variants-AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING fractional no recovery -> stable, 300.16 -> 0 (its job checks keep the old windows inline as a clock that breaks on a loss); config-LITHIUM_PLATE_80_SILO_CHEST planned-belt-slack and swings-1 to swings-7 (swings-5 no recovery -> stable); config-AGRICULTURAL_SCIENCE_250 swings-1, config-LDS_240 planned-belt-slack, config-LOGISTIC_SCIENCE_240 swings-3, config-ROCKET_FUEL_60 fractional, and swings-1 or fractional of the front-exit and electromagnetic pickup fixtures: fewer wake-ups a minute
+
 ## Belt pickup slack inside the enable windows (#595)
 - config-LOGISTIC_SCIENCE_240: selected swings-2 -> planned-belt-slack, wake-ups 41.379 -> 20.571 a minute, period 88 -> 176; its two pickup windows a window cycle (52-71, 76-95) keep the belt pickup slack inside them, where the 4 ticks added after them joined them into one (61.714) (game: 100% per row on the 22-copy scaffold, 20.45 a copy a minute)
 - config-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY: selected shifted-swings -> planned-belt-slack, wake-ups 286.635 -> 245.687 a minute, period 352; the slack inside the windows (game: 256 in every period on its scaffold)
