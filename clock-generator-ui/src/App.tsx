@@ -1231,7 +1231,7 @@ function App() {
                                     {error}
                                 </Alert>
                             )}
-                            <CheckErrorAlert message={validation.status === 'invalid' && checkStatus === 'invalid' && validation.crashed ? validation.message : null} crashed />
+                            <CheckErrorAlert message={validation.status === 'invalid' && checkStatus === 'invalid' && validation.crashed ? validation.message : null} crashed internal={validation.status === 'invalid' ? validation.internal : undefined} />
 
                             {introVisible && (
                                 <IntroCard

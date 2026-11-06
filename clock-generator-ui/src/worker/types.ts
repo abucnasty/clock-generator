@@ -1,3 +1,4 @@
+import type { InternalError } from '../utils/internalError';
 import type { ValidationDiagnostic } from '../utils/buildValidation';
 import type { z } from 'zod';
 import type {
@@ -274,6 +275,8 @@ export interface ValidationFailedResponse {
     message: string;
     recovery?: RepeatedUnitsRecovery;
     diagnostics?: ValidationDiagnostic[];
+    /** Set when the error was not an engine refusal: the build was not judged */
+    internal?: InternalError;
 }
 
 export interface LogResponse {
