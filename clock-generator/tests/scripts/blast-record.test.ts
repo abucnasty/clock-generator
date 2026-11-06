@@ -27,7 +27,7 @@ const alternative = (e: Edit = {}) => ({
 /** What the property module writes into a job file of a result it found nothing wrong with */
 const clean = () => ({
     module_sha256: moduleSha256(), seconds: 0.5, problems: [] as { property: string; alternative: string; message: string }[],
-    checked: { 'always-on-reasons-named': 2, 'decider-build-order': 2, 'stable-holds-and-survives-loss': 2, 'counters-add-up': 1, 'fuel-never-dry': 0 },
+    checked: { 'always-on-reasons-named': 2, 'decider-build-order': 2, 'stable-holds-and-survives-loss': 2, 'counters-add-up': 1, 'fuel-never-dry': 0, 'strategy-and-signals': 2 },
 });
 /** What the per-job checks module writes into a job file of a result it found nothing wrong with */
 const cleanChecks = () => ({ module_sha256: checksSha256(), seconds: 0.25, ran: ['says what it must', 'and the other'], failures: [] as { check: string; message: string; expected?: string; actual?: string }[] });
@@ -174,7 +174,7 @@ describe('record.py check: the properties of the run', () => {
     it('says what it checked and how long it took, and passes a run with no problem', () => {
         const done = run('check', '--dir', dirOf(), side({ A: jobFile('A'), B: jobFile('B') }));
         expect(done.status, done.stdout).toBe(0);
-        expect(done.stdout).toContain('properties checked on 2 jobs (14 alternative checks, 1.0 s of the module): 0 problems');
+        expect(done.stdout).toContain('properties checked on 2 jobs (18 alternative checks, 1.0 s of the module): 0 problems');
     });
 
     it('fails on one problem with a table of job, property, alternative and the values, though the record has no difference', () => {

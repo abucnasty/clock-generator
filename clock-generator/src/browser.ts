@@ -110,6 +110,7 @@ export type { MachinePrototypeIssue } from './config/machine-prototype';
 // Blueprint Generation
 // ============================================================================
 
+export type { ClockStrategy, StrategyFamily, StrategyQualifier, StrategyConstruction } from "./crafting/clock-strategy";
 export {
     generateClockForConfig,
     validateConfig,

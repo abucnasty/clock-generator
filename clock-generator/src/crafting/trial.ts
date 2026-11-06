@@ -82,6 +82,11 @@ export interface ClockAssessment {
      */
     wake_ups_per_minute: number | null;
     /**
+     * Signals a minute its window deciders send, beside the wake-ups (see `signalsPerMinuteOf`): one for each enable window of a
+     * decider that opens. Null when the clock had no long run; absent where it was not counted. Nothing ranks a clock by it.
+     */
+    signals_per_minute?: number | null;
+    /**
      * The wake-ups of the clock from each start of wake-ups-from-starts.ts and their mean, which `wake_ups_per_minute`
      * is, on a build with a loop of machines or a machine that makes its own ingredient. Absent on any other build, and
      * on a clock that does not meet the target rate, whose wake-ups do not decide the selection and keep the cold
