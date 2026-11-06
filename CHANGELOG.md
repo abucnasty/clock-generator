@@ -18,7 +18,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - generation: fractional swings now falls back to fewer output swings where the machine cannot take them
 - generation: several builds now select clocks with fewer wake-ups, among them logistic and electromagnetic science
 - ui: the site's terms follow the glossary: enable window, wakeup, window cycle time, recovery, configuration
-- generation: logistic science, chemical science, electric furnace and three other builds select clocks with fewer wakeups
+- generation: logistic science, chemical science, electric furnace and three other builds recommend clocks with fewer wakeups
 
 ## [0.27.2] - 2026-11-05
 

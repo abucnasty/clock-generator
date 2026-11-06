@@ -10,8 +10,8 @@ describe("clockBeltLabel", () => {
         expect(clockBeltLabel({ kind: "moving", slack_ticks: [2, 4] })).toBe("moving (+2–4 ticks)");
     });
 
-    it("names a moving belt whose windows hold the slack after their last pickup already, with none added", () => {
-        expect(clockBeltLabel({ kind: "moving", slack_ticks: [4], inside: true })).toBe("moving (4 ticks inside)");
+    it("names a moving belt whose windows hold the slack after their last pickup already as one with the slack added", () => {
+        expect(clockBeltLabel({ kind: "moving", slack_ticks: [4], inside: true })).toBe("moving (+4 ticks)");
     });
 
     it("names a backed-up belt, and nothing when no clocked inserter picks up from a belt", () => {

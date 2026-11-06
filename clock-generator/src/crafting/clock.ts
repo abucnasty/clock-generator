@@ -211,7 +211,7 @@ export type ClockBelt =
     /** Its belt-fed inserters have the windows they need on a backed-up belt */
     | { kind: "backed_up" };
 
-/** "moving (+4 ticks)", "moving (4 ticks inside)" or "backed-up"; empty when no inserter with windows picks up from a belt */
+/** "moving (+4 ticks)" or "backed-up"; empty when no inserter with windows picks up from a belt */
 export function clockBeltLabel(belt: ClockBelt | null): string {
     if (belt === null) {
         return "";
@@ -220,6 +220,6 @@ export function clockBeltLabel(belt: ClockBelt | null): string {
         return "backed-up";
     }
     const [first, last] = [belt.slack_ticks[0], belt.slack_ticks[belt.slack_ticks.length - 1]];
-    const ticks = `${first === last ? first : `${first}–${last}`} tick${last === 1 ? "" : "s"}`;
-    return belt.inside === true ? `moving (${ticks} inside)` : `moving (+${ticks})`;
+    // a clock with the slack inside its windows shows the same: the ticks it stays enabled after its last pickup
+    return `moving (+${first === last ? first : `${first}–${last}`} tick${last === 1 ? "" : "s"})`;
 }

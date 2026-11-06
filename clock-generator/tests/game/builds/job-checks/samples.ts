@@ -431,7 +431,7 @@ const logistic: JobCheck[] = [
             expect(batched.label).toBe('Batched swings: 4 output swings per cycle');
             // its two pickup windows a window cycle stay open 5 ticks after their last pickup: none are added (#595)
             expect(batched.belt).toEqual({ kind: 'moving', slack_ticks: [4], inside: true });
-            expect(batched.description).toContain('Made for a moving belt: each enable window of an inserter that picks up from a belt already stays open at least 4 ticks after its last pickup');
+            expect(batched.description).toContain('Made for a moving belt. After its last pickup from the belt, an inserter stays enabled for 4 more ticks. These ticks are the belt slack.');
         },
     },
     {
