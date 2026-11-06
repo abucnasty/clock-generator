@@ -12,7 +12,7 @@ import {pickupClockConfig, pickupClockSpeedCases} from "./pickup-clock-speed-cov
  * The belt pickup family (`pickup-clock-speed-coverage.ts`: 2 families x the turbo tier x 3 geometries x moving/backed up),
  * checked against what the game recorded without generating a clock: the simulator's first hand at each tier and geometry
  * against the hands the belt speed coverage recorded (speed-expectations.json), and the recorded clock controls against
- * the fixture configs. The generation test (belt-pickup-clock.generation.test.ts) generates only the cases of
+ * the fixture configs. The per-job check of the record jobs (job-checks/fixtures.ts) covers only the cases of
  * belt-pickup-clock-cases.ts. The documented mechanic is docs/belt-pickup/timing.md "Side pickups" and docs/simulator.md.
  */
 

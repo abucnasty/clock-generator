@@ -1,5 +1,5 @@
 /**
- * The front pickup fixtures (`front-clock-fixtures.ts`) whose clock the generation test still generates end to end (turbo only); the
+ * The front pickup fixtures (`front-clock-fixtures.ts`) whose record job (`front-<name>`) has a per-job check, beside the in-game recording of its clock (turbo only); the
  * other 9 of the 12 are checked without generating, by front-clock-mechanics.test.ts (the recorded figures against the
  * simulator's, and the recorded controls against the fixture configs). Each is the one case of a path through the
  * generator (the selection of the control, its supply and verdict) that no sample takes. The two exit cases on a moving config are not generated: the exit's belt is backed up in the

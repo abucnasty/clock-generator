@@ -9,8 +9,7 @@ import {ClockHistory, readControls, runHolds, RunControls} from "./clock-control
  * The over-the-hood family (`over-hood-clock-fixtures.ts`: 2 families x the turbo tier x 2 mirroring states x moving/backed
  * up), checked against what the game recorded without generating a clock: the simulator's first hand of each fixture
  * against the compact controls of the over-the-hood exit (expectations.json), the documented hand families per tier, and
- * the recorded clock controls against the fixture configs. The generation test (over-hood-clock.generation.test.ts)
- * generates only the cases of over-hood-clock-cases.ts. The documented mechanic is docs/belt-pickup/timing.md "Front-facing
+ * the recorded clock controls against the fixture configs. The clock of each fixture is a job of the record (`overhood-<name>`). The documented mechanic is docs/belt-pickup/timing.md "Front-facing
  * and over-the-hood pickups" and experiments.md; the figures are in the over-the-hood-underground-exit fixture README.
  */
 

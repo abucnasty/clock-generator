@@ -9,7 +9,7 @@ import {readControls, runHolds, RunControls} from "./clock-controls";
  * The front underground entrance and exit family (`front-clock-fixtures.ts`, turbo: 8 entrance clocks and 4 exit clocks),
  * checked against what the game recorded without generating a clock: the simulator's first hand at each tier against the
  * hands in the fixture folders' READMEs and docs/belt-pickup/timing.md, and the recorded clock controls against the fixture
- * configs. The generation test (front-pickup-clock.generation.test.ts) generates only the cases of front-clock-cases.ts.
+ * configs. The per-job check of the record jobs (job-checks/fixtures.ts) covers only the cases of front-clock-cases.ts.
  */
 
 const BACKED_FIRST_HAND = {turbo: "0,1,2,3", express: "0,1,2,3", fast: "0,1,2,5", normal: "0,1,2,9"} as const;
