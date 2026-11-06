@@ -122,12 +122,12 @@ describe('recommendationReason', () => {
     const { beltMoving, tieKindMoving, recoveryDoesNotDecide, mayFailOnMovingBelt } = RECOMMENDED_COPY;
     const { fewestWakeUps, wakeUpsNotCounted, tieOnWakeUps, tieOnWakeUpsUncounted, tieOnWindows } = RECOMMENDED_COPY;
     // the clocks a pick at 240/s is compared with: those that keep making it and recover, or with a deadlock risk those that hold it
-    const recovering = 'the clocks that keep making 240/s and have recovery';
+    const recovering = 'the clocks that keep making 240/s and go back to it after a stop';
     const holding = 'the clocks that hold 240/s';
     const others = [clock('b', { wake_ups_per_minute: 20 }), clock('c', { wake_ups_per_minute: 30 })];
     // the reason for the pick of [clock('a'), ...others], and with backed-up belts
-    const fewest = 'Fewest wakeups of the clocks that keep making 240/s and have recovery on a moving belt.';
-    const fewestBackedUp = 'Fewest wakeups of the clocks that keep making 240/s and have recovery with backed-up belts.';
+    const fewest = 'Fewest wakeups of the clocks that keep making 240/s and go back to it after a stop on a moving belt.';
+    const fewestBackedUp = 'Fewest wakeups of the clocks that keep making 240/s and go back to it after a stop with backed-up belts.';
 
     /** `text` is `expected`, in sentences one space apart */
     const sentences = (text: string, expected: string) => {
@@ -139,7 +139,7 @@ describe('recommendationReason', () => {
     const says = (_: string, clocks: Clock[], expected: string, rule?: PickRule | null) => sentences(reason(clocks, rule), expected);
 
     it.each<[string, Clock[], string, (PickRule | null)?]>([
-        ['says the pick has the fewest wakeups among the clocks that keep making the rate and have recovery on a moving belt', [clock('a'), ...others], fewest],
+        ['says the pick has the fewest wakeups among the clocks that keep making the rate and go back to it after a stop on a moving belt', [clock('a'), ...others], fewest],
         ['says "hold" only on a build with a deadlock risk, where a clock that holds the rate counts without recovering',
             [clock('a', { deadlock: true }), clock('b', { deadlock: true, wake_ups_per_minute: 20 })], fewestWakeUps(holding, beltMoving)],
         ['adds that the recovery trials do not decide for a clock that holds the rate without recovering',
@@ -189,7 +189,7 @@ describe('recommendationReason', () => {
         const pick = clock('fast', { wake_ups_per_minute: 0, recovery_periods: 3, window_count: 9 });
         const slow = clock('slow', { wake_ups_per_minute: 0, recovery_periods: 33, window_count: 2 });
         sentences(recommendationReason([pick, slow], 0, MOVING, true, false),
-            'Fewest wakeups of the clocks that keep making 240/s and have recovery on a moving belt.'
+            'Fewest wakeups of the clocks that keep making 240/s and go back to it after a stop on a moving belt.'
             + RECOMMENDED_COPY.tieOnRecovery(1, RECOMMENDED_COPY.tieKindMoving));
     });
 

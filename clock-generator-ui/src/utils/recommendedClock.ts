@@ -61,7 +61,7 @@ export const RECOMMENDED_COPY = {
      * those that hold the rate (the glossary's words, not the table's old "Stable")
      */
     contenders: (rate: string, deadlock: boolean, counts?: TargetCounts) =>
-        deadlock ? `the clocks that hold ${rate}/s` : `the clocks that keep ${rateVerbs(counts).ing} ${rate}/s and have recovery`,
+        deadlock ? `the clocks that hold ${rate}/s` : `the clocks that keep ${rateVerbs(counts).ing} ${rate}/s and go back to it after a stop`,
     fewestWakeUps: (contenders: string, belt: string) => `Fewest wakeups of ${contenders}${belt}.`,
     fewestDeciders: (contenders: string, belt: string) => `Fewest deciders of ${contenders}${belt}. This is the least wiring to do by hand.`,
     onlyContender: (rate: string, belt: string, deadlock: boolean) =>

@@ -161,7 +161,7 @@ describe('pickNameMeaning', () => {
     /** The pick's reason for the clock with the fewest deciders of these contenders, on a moving belt unless told otherwise */
     const reason = (contenders: string, belt = RECOMMENDED_COPY.beltMoving) =>
         `Fewest deciders of the clocks that ${contenders}${belt}. This is the least wiring to do by hand.`;
-    const recover = 'keep making 240/s and have recovery';
+    const recover = 'keep making 240/s and go back to it after a stop';
 
     // what is said of clock b
     it.each<[string, SummaryClock[], PickRule | null, string]>([
