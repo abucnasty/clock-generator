@@ -124,9 +124,9 @@ function sharedWindows(windows: Map<string, OpenRange[]>, takers: Taker[], perio
  * turns are returned, each in the order of its turns, for the check that every turn has room (`turnsWithoutRoom`).
  */
 function chainTurns(entity_registry: ReadableEntityRegistry, windows: Map<string, OpenRange[]>, takers: readonly Taker[], period: number,
-    hands_out: readonly Inserter[] = []): TurnedTakers[] {
+    hands_out: readonly Inserter[] = [], log?: (line: string) => void): TurnedTakers[] {
     const turned: TurnedTakers[] = [];
-    const contested = new Map<string, { machine: Machine; item: string; takers: Taker[] }>();
+    const contested = new Map<string, { machine: Machine; item: string; recipe: string; takers: Taker[] }>();
     for (const taker of takers) {
         if (taker.drain === true || !EntityId.isMachine(taker.source) || !EntityId.isMachine(taker.sink) || !windows.has(taker.inserter.entity_id.id)) continue;
         const machine = entity_registry.getEntityByIdOrThrow(taker.source) as Machine;
@@ -134,13 +134,13 @@ function chainTurns(entity_registry: ReadableEntityRegistry, windows: Map<string
         for (const item of taker.inserter.filtered_items) {
             if (!machine.outputs.some(output => output.item_name === item)) continue;
             const key = `${taker.source.id}|${item}|${recipe}`;
-            const known = contested.get(key) ?? { machine, item, takers: [] };
+            const known = contested.get(key) ?? { machine, item, recipe, takers: [] };
             known.takers.push(taker);
             contested.set(key, known);
         }
     }
     const byNumber = (a: EntityId, b: EntityId) => a.number - b.number;
-    for (const { machine, item, takers: group } of contested.values()) {
+    for (const { machine, item, recipe, takers: group } of contested.values()) {
         if (group.length < 2) continue;
         const ranges = group.map(taker => windows.get(taker.inserter.entity_id.id)!);
         const enabled = new Uint8Array(period);
@@ -156,7 +156,13 @@ function chainTurns(entity_registry: ReadableEntityRegistry, windows: Map<string
         if (!together) continue;
         // each taker is a turn of its own, in the order of the machines they fill; a window a period, the longest of them
         const ordered = [...group].sort((a, b) => byNumber(a.sink, b.sink) || byNumber(a.inserter.entity_id, b.inserter.entity_id));
-        const offsets = turnOffsets(machine, item, ordered.map(taker => [taker.inserter]), period, Math.max(...group.map(taker => taker.window_ticks)));
+        const other_draw = log === undefined ? undefined : {
+            per_tick: takers.filter(it => it.drain !== true && it.source.id === machine.entity_id.id && EntityId.isMachine(it.sink)
+                && (entity_registry.getEntityByIdOrThrow(it.sink) as Machine).metadata.recipe.name !== recipe)
+                .reduce((sum, it) => sum + (it.items_of.get(item) ?? 0), 0) / period,
+            log,
+        };
+        const offsets = turnOffsets(machine, item, ordered.map(taker => [taker.inserter]), period, Math.max(...group.map(taker => taker.window_ticks)), other_draw);
         if (offsets === null) continue;
         const first = windows.get(ordered[0].inserter.entity_id.id)![0].start_inclusive;
         const moved = new Set<string>();
@@ -261,6 +267,8 @@ interface Taker {
     sink: EntityId;
     /** Items the taker moves a period */
     items: number;
+    /** Of them, the items of each item it carries */
+    items_of: ReadonlyMap<string, number>;
     window_ticks: number;
     /** Takes a machine's product into a chest that others take from: a taker of that machine, whose hand the machine does not hold ready */
     drain?: boolean;
@@ -385,6 +393,8 @@ export function groupedHandsPlan(
     options: GroupedHandsOptions = DEFAULT_OPTIONS,
     drop_tie_break: DropTieBreak | null = null,
     composition?: GroupedHandsComposition,
+    /** Where the turn rule reports what the takers into other recipes take (`turnOffsets`); not reported without it */
+    log?: (line: string) => void,
 ): GroupedHandsPlan {
     if (!Number.isInteger(period)) refuse(`the period is ${period} ticks, not a whole number`);
     const entities = entity_registry.getAll();
@@ -447,6 +457,7 @@ export function groupedHandsPlan(
             const cycle = inserter.animation.total.ticks;
             let count = 0;
             let items = 0;
+            const items_of = new Map<string, number>();
             let more_room_than_a_hand_over = false;
             for (const item of carried) {
                 const input = machine.getInsertableInput(item.item_name);
@@ -467,6 +478,7 @@ export function groupedHandsPlan(
                 if (room > hands + 1) more_room_than_a_hand_over = true;
                 count += hands;
                 items += hands * hand;
+                items_of.set(item.item_name, (items_of.get(item.item_name) ?? 0) + hands * hand);
             }
             const slack = EntityId.isBelt(source.entity_id) ? belt_slack.get(inserter.entity_id.id) ?? 0 : 0;
             const surplus_kept = more_room_than_a_hand_over && !EntityId.isBelt(source.entity_id);
@@ -475,14 +487,14 @@ export function groupedHandsPlan(
             const guarded = surplus_kept && (options.surplus_guard
                 || (options.per_taker_guard === true && busy_with_extra_start && options.unguarded_sinks?.has(sink.entity_id.id) !== true));
             const starts = guarded ? count : count + 1;
-            takers.push({ inserter, source: source.entity_id, sink: sink.entity_id, items, window_ticks: (starts - 1) * cycle + WINDOW_MARGIN_TICKS + slack,
+            takers.push({ inserter, source: source.entity_id, sink: sink.entity_id, items, items_of, window_ticks: (starts - 1) * cycle + WINDOW_MARGIN_TICKS + slack,
                 ...(guarded && { guarded_hands: count }) });
         } else if (EntityId.isMachine(source.entity_id) && EntityId.isChest(sink.entity_id) && chests_taken_from.has(sink.entity_id.id)) {
             // it takes what the machine made, and the chest takes every hand: one swing more than the hands, and the draw is not tested
             const carried = transfers.get(inserter.entity_id.id)?.item_transfers ?? [];
             if (carried.length === 0) refuse(`${inserter.entity_id.id} carries nothing in the plan`);
             const hands = carried.reduce((sum, item) => sum + wholeHands(item.transfer_count.toDecimal(), recipe_lcm), 0);
-            takers.push({ inserter, source: source.entity_id, sink: sink.entity_id, items: 0, drain: true,
+            takers.push({ inserter, source: source.entity_id, sink: sink.entity_id, items: 0, items_of: new Map(), drain: true,
                 window_ticks: hands * inserter.animation.total.ticks + WINDOW_MARGIN_TICKS });
         } else {
             if (!sinks.has(source.entity_id.id)) refuse(`${inserter.entity_id.id} takes ${source.entity_id.id}, which nothing is put into, to ${sink.entity_id.id}`);
@@ -622,7 +634,7 @@ export function groupedHandsPlan(
             ...outputs.map(it => [it, outputHands(it)] as const),
             ...drains.map(it => [it.inserter, (it.window_ticks - WINDOW_MARGIN_TICKS) / it.inserter.animation.total.ticks] as const),
         ]);
-        const turned = chainTurns(entity_registry, windows, takers, period, [...hands_out.keys()]);
+        const turned = chainTurns(entity_registry, windows, takers, period, [...hands_out.keys()], log);
         if (options.share_windows) sharedWindows(windows, gated, period);
         const made = leaveOpen(windows);
         const without_room = turnsWithoutRoom(entity_registry, made.windows, turned, hands_out, period);
@@ -836,7 +848,7 @@ export function groupedHandsClock(
             let planned: GroupedHandsPlan;
             try {
                 planned = groupedHandsPlan(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks,
-                    made.config.overrides?.backed_up_belts !== true, way, drops);
+                    made.config.overrides?.backed_up_belts !== true, way, drops, undefined, line => plan.logger.log(`Grouped hands: ${line}`));
             } catch (error) {
                 // a turn without room is this way's: another way may place the turns with room
                 if (!(error instanceof TurnWithoutRoom)) throw error;

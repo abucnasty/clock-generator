@@ -390,3 +390,25 @@ describe("takers of one machine that it cannot serve together", () => {
         }
     });
 });
+
+// The accumulator build (ACCUMULATOR_640): the iron foundry (3) fills the accumulator plants (1, 2) through inserters 3 and 4 and the
+// battery plants (4, 5) through inserters 5 and 7, a hand of 16 each. In its batched swings clock of 54 ticks each pair has a window
+// of 18 ticks a period.
+describe("the takers of a machine into machines of other recipes", () => {
+    it("are reported beside the turn decision, which they do not change", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.ACCUMULATOR_640);
+        const plan = planRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, { logger: quiet });
+        const registry = plan.run.simulation_context.entity_registry;
+        const foundry = registry.getEntityByIdOrThrow(EntityId.forMachine(3)) as Machine;
+        const [into_1, into_2] = [3, 4].map(id => registry.getEntityByIdOrThrow(EntityId.forInserter(id)) as Inserter);
+        const lines: string[] = [];
+        // the battery plants' two hands of 16 every 27 ticks: 1.19 plates a tick
+        const offsets = turnOffsets(foundry, "iron-plate", [[into_1], [into_2]], 54, 18, { per_tick: 32 / 27, log: line => lines.push(line) });
+        // 93.52 plates against two hands of 16: together, as without the report
+        expect(offsets).toBeNull();
+        expect(turnOffsets(foundry, "iron-plate", [[into_1], [into_2]], 54, 18)).toBeNull();
+        expect(lines).toEqual(["Turns at machine:3 (iron-plate, 2 turns, a window of 18 ticks every 54): 32 against 93.52 it can give, together; "
+            + "29.52 with the 1.19 a tick the takers into other recipes take, in turns (the decision would flip; reported only)"]);
+    });
+});
+
