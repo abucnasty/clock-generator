@@ -196,6 +196,11 @@ export interface SwingBackoffReport {
 
 
 export interface BlueprintGenerationResult {
+    /**
+     * "arithmetic" where the batched-swings windows were made by arithmetic from the plan's hands and the stock walk
+     * (batched-arithmetic.ts) in place of being read off the planning run; absent where the planning run's were kept
+     */
+    window_maker?: "arithmetic";
     /** Actual final count/cycles of a secondary offered after a derived primitive primary. */
     secondary_planning?: import("../primitive-grouped-policy").SecondaryPlanningProvenance;
     /** Internal AUTO scheduling provenance; never an imported or saved user override. */
@@ -1495,7 +1500,19 @@ interface PlannedClock {
  * asked for. The belt the clock is made for is read off that.
  */
 export function clockOfPlan(plan: PlanRun, options: Pick<GenerateClockOptions, "belt_pickup_slack" | "fuel_hand_room"> = {}): PlannedClock {
-    const { config, logger, unslacked_windows, run: { simulation_context, duration, total_expected_output } } = plan;
+    return clockOfWindows(plan, plan.unslacked_windows, options);
+}
+
+/**
+ * The clock of windows made for a plan, with the room a clock gets (see `clockOfPlan`): the windows read off the planning
+ * run, or windows made for its plan another way (by arithmetic, batched-arithmetic.ts)
+ */
+export function clockOfWindows(
+    plan: PlanRun,
+    unslacked_windows: Map<string, OpenRange[]>,
+    options: Pick<GenerateClockOptions, "belt_pickup_slack" | "fuel_hand_room"> = {},
+): PlannedClock {
+    const { config, logger, run: { simulation_context, duration, total_expected_output } } = plan;
     const full_belt_pickup_slack = beltPickupSlackTicks(simulation_context.entity_registry);
     // on backed-up belts a clock is made without the slack, whatever the alternative asks for
     const backed_up_belts = config.overrides?.backed_up_belts === true;
