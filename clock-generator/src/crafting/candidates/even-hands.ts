@@ -1,7 +1,7 @@
 import assert from "../../common/assert";
 import { Config } from "../../config";
 import { OpenRange } from "../../data-types";
-import { Entity, EntityId, Inserter, Machine, ReadableEntityRegistry } from "../../entities";
+import { Entity, EntityId, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from "../../entities";
 import { BlueprintGenerationResult, GenerateClockOptions, checkedClock, clockOfPlan, planRun, withRoomForRandomAmounts } from "../plan/plan-run";
 import { EntityTransferCountMap } from "../sequence/cycle/swing-counts";
 import { alwaysEnabledInserters } from "../sequence/unplanned-inserter-clock";
@@ -48,6 +48,8 @@ export function evenHandsWindows(
     swing_counts: EntityTransferCountMap,
     recipe_lcm: number,
     period: number,
+    /** Where the turn rule reports what the takers into other recipes take (`turnOffsets`); not reported without it */
+    log?: (line: string) => void,
 ): Map<string, OpenRange[]> {
     assert(Number.isInteger(period), `even hands need a period of whole ticks, not ${period}`);
     const inserters = entity_registry.getAll().filter(Entity.isInserter);
@@ -62,7 +64,7 @@ export function evenHandsWindows(
         const hands = Math.round(exact);
         assert(hands > 0 && Math.abs(exact - hands) < 1e-9, `${inserter.entity_id.id} moves ${exact} hands a period, not a whole number`);
         assert(inserter.animation.total.ticks >= 2 && hands * inserter.animation.total.ticks <= period, `${hands} hands of ${inserter.entity_id.id} do not fit in ${period} ticks`);
-        windows.set(inserter.entity_id.id, evenWindows(hands, inserter.animation.total.ticks, period, evenTurnOffset(entity_registry, inserter, hands, transfers, recipe_lcm, period)));
+        windows.set(inserter.entity_id.id, evenWindows(hands, inserter.animation.total.ticks, period, evenTurnOffset(entity_registry, inserter, hands, transfers, recipe_lcm, period, log)));
     }
     return windows;
 }
@@ -81,6 +83,7 @@ function evenTurnOffset(
     transfers: ReadonlyMap<string, { total_transfer_count: { toDecimal(): number } }>,
     recipe_lcm: number,
     period: number,
+    log?: (line: string) => void,
 ): number {
     if (!EntityId.isMachine(inserter.source.entity_id) || !EntityId.isMachine(inserter.sink.entity_id)) return 0;
     const source = entity_registry.getEntityByIdOrThrow(inserter.source.entity_id) as Machine;
@@ -88,11 +91,16 @@ function evenTurnOffset(
     const handsOf = (it: Inserter) => Math.round((transfers.get(it.entity_id.id)?.total_transfer_count.toDecimal() ?? 0) * recipe_lcm);
     const item = Array.from(inserter.filtered_items).find(name => source.outputs.some(output => output.item_name === name));
     if (item === undefined) return 0;
-    const takers = entity_registry.getAll().filter(Entity.isInserter).filter(it => it.source.entity_id.id === source.entity_id.id
-        && EntityId.isMachine(it.sink.entity_id) && it.filtered_items.has(item) && handsOf(it) === hands && recipe_of(it) === recipe_of(inserter));
+    const of_item = entity_registry.getAll().filter(Entity.isInserter).filter(it => it.source.entity_id.id === source.entity_id.id
+        && EntityId.isMachine(it.sink.entity_id) && it.filtered_items.has(item));
+    const takers = of_item.filter(it => handsOf(it) === hands && recipe_of(it) === recipe_of(inserter));
+    const other_draw = log === undefined ? undefined : {
+        per_tick: of_item.filter(it => recipe_of(it) !== recipe_of(inserter)).reduce((sum, it) => sum + handsOf(it) * handSizeFor(it, item), 0) / period,
+        log,
+    };
     const sinks = Array.from(new Set(takers.map(it => it.sink.entity_id.id))).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
     const turns = sinks.map(sink => takers.filter(it => it.sink.entity_id.id === sink));
-    const offsets = turnOffsets(source, item, turns, period / hands, inserter.animation.total.ticks - 1);
+    const offsets = turnOffsets(source, item, turns, period / hands, inserter.animation.total.ticks - 1, other_draw);
     return offsets === null ? 0 : offsets[sinks.indexOf(inserter.sink.entity_id.id)];
 }
 
@@ -127,7 +135,8 @@ export function evenHandsClock(config: Config, options: GenerateClockOptions = {
     assert(always_enabled_by_config.size === 0 && inserter_clocks.size === 0 && alwaysEnabledInserters(simulation_context.entity_registry).length === 0,
         "even hands are not made for a build with inserters outside the plan");
     // a window that carries a result that comes by chance gets room for its spread, as the plan's do
-    const room = withRoomForRandomAmounts(plan, evenHandsWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks));
+    const room = withRoomForRandomAmounts(plan, evenHandsWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks,
+        line => plan.logger.log(`Even hands: ${line}`)));
     const windows = room.windows;
     const planned = clockOfPlan(plan, { ...options, belt_pickup_slack: "never" });
     const clock = { ...planned, random_margins: room.random_margins };
