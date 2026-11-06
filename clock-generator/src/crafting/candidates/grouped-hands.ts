@@ -13,6 +13,7 @@ import type { AlwaysOnReason } from "../always-on-reasons";
 import { sharedItemDeadlockRisks } from "../deadlock-risk";
 import { rankingWindowCount } from "../rank";
 import { outputAtWindow } from "./taker-turns";
+import { targetItemOf, targetMachinesOf } from "../sequence/cycle/target-ends";
 
 /** Ticks added to the shortest window that starts the last hand: one for the tick a combinator takes, one of margin */
 const WINDOW_MARGIN_TICKS = 2;
@@ -32,6 +33,19 @@ export interface GroupedHandsOptions {
      * for its hands and no more; without this every window has the extra start that the limit of a machine refuses
      */
     surplus_guard: boolean;
+    /**
+     * The surplus guard decided per taker (DESIGN 3.1, R-busy), where `surplus_guard` is one switch for every taker: only an
+     * inserter that would keep a surplus hand, takes from a machine or a chest, and whose window with the extra start would leave
+     * it enabled all period (busy) gets the window for its hands, `(hands - 1) x cycle + 2` ticks, and is gated; every other
+     * inserter keeps the extra start
+     */
+    per_taker_guard?: boolean;
+    /**
+     * With `per_taker_guard`: the machines whose takers keep the extra start all the same (and so stay enabled all period where it
+     * leaves them busy). The remake of a guarded clock that holds and does not get back from every loss (`groupedHandsClock`)
+     * names the machines the target is counted at
+     */
+    unguarded_sinks?: ReadonlySet<string>;
     /** Ticks after a taker's window opens that the window of an inserter filling the machine it takes from opens */
     feeder_offset: number;
     /** The takers whose windows open on the same tick share one window: the longest any of them needs */
@@ -300,7 +314,9 @@ export function groupedHandsCycles(entity_registry: ReadableEntityRegistry, swin
  *   its first hand starts. The window is long enough to start every hand the machine can take, `S` of them, and no
  *   longer: `(S - 1) x cycle + 2` ticks (the last hand starts inside it, and a combinator takes a tick), and the belt
  *   pickup slack more where it picks up from a belt. `S` is `h + 1` where the machine's limit refuses another hand after
- *   `h` (room for at most `h + 1`), and `h` where it would take it (more room than that: another hand is a surplus);
+ *   `h` (room for at most `h + 1`), and `h` where it would take it (more room than that: another hand is a surplus) and
+ *   the surplus guard is on for it: for every such inserter that takes from a machine or a chest (`surplus_guard`), or only
+ *   for those the extra start would leave busy all the time (`per_taker_guard`);
  * - rule F: an inserter that fills a machine and moves a fraction of a hand per cycle (15/8) is planned at the next whole
  *   number of hands, which makes its count whole in one cycle. The machine's limit refuses the surplus, so it moves the
  *   fraction on average. The period is the cycles in which the inserters that take the output out move whole hands
@@ -449,8 +465,13 @@ export function groupedHandsPlan(
                 count += hands;
                 items += hands * hand;
             }
-            const starts = options.surplus_guard && more_room_than_a_hand_over && !EntityId.isBelt(source.entity_id) ? count : count + 1;
             const slack = EntityId.isBelt(source.entity_id) ? belt_slack.get(inserter.entity_id.id) ?? 0 : 0;
+            const surplus_kept = more_room_than_a_hand_over && !EntityId.isBelt(source.entity_id);
+            // per taker, the guard is for a taker the extra start would leave busy all period (`open_all_period`, below)
+            const busy_with_extra_start = count * cycle + WINDOW_MARGIN_TICKS + slack + INPUT_OFFSET_TICKS >= period;
+            const guarded = surplus_kept && (options.surplus_guard
+                || (options.per_taker_guard === true && busy_with_extra_start && options.unguarded_sinks?.has(sink.entity_id.id) !== true));
+            const starts = guarded ? count : count + 1;
             takers.push({ inserter, source: source.entity_id, sink: sink.entity_id, items, window_ticks: (starts - 1) * cycle + WINDOW_MARGIN_TICKS + slack });
         } else if (EntityId.isMachine(source.entity_id) && EntityId.isChest(sink.entity_id) && chests_taken_from.has(sink.entity_id.id)) {
             // it takes what the machine made, and the chest takes every hand: one swing more than the hands, and the draw is not tested
@@ -658,12 +679,16 @@ export function holdsWithMargin(plan: PlanRun, windows: Map<string, OpenRange[]>
 }
 
 /**
- * The ways the windows are placed: a window for every start the limit refuses, or for the hands only where a surplus hand
- * would be kept; each with the feeders of a chain staged or compact. Each is the only one that holds on some build. A tie
- * in the ranking of their clocks goes to the first in this order.
+ * The ways the windows are placed: a window for every start the limit refuses, for the hands only where a surplus hand
+ * would be kept, or for the hands only where a surplus hand would be kept and the extra start would leave the taker busy
+ * all period (the guard per taker); each with the feeders of a chain staged or compact. A tie in the ranking of their clocks
+ * goes to the first in this order; a way that makes the same windows as one before it is not tried again.
  */
-const SEPARATE_TRIES: GroupedHandsOptions[] = FEEDER_OFFSETS_TICKS.flatMap(feeder_offset =>
-    [false, true].map(surplus_guard => ({ surplus_guard, feeder_offset, share_windows: false })));
+const SEPARATE_TRIES: GroupedHandsOptions[] = FEEDER_OFFSETS_TICKS.flatMap(feeder_offset => [
+    { surplus_guard: false, feeder_offset, share_windows: false },
+    { surplus_guard: true, feeder_offset, share_windows: false },
+    { surplus_guard: false, per_taker_guard: true, feeder_offset, share_windows: false },
+]);
 
 /** The same ways with the windows of the takers that open together made one */
 const SHARED_TRIES: GroupedHandsOptions[] = SEPARATE_TRIES.map(way => ({ ...way, share_windows: true }));
@@ -706,7 +731,10 @@ function bestHolding(made: PlanRun, holding: HoldingWay[], shared: boolean): Hol
 
 /** How a way is named in the planning log */
 function wayName(way: GroupedHandsOptions): string {
-    return `${way.feeder_offset === FEEDER_OFFSETS_TICKS[0] ? "staged" : "compact"}${way.surplus_guard ? " with the surplus guard" : ""}`;
+    const guard = way.surplus_guard ? " with the surplus guard"
+        : way.per_taker_guard !== true ? ""
+        : ` with the surplus guard per taker${way.unguarded_sinks === undefined ? "" : ", the takers into the target machines unguarded"}`;
+    return `${way.feeder_offset === FEEDER_OFFSETS_TICKS[0] ? "staged" : "compact"}${guard}`;
 }
 
 /**
@@ -744,7 +772,9 @@ export function finishedClock(
  * clock-only runs from the start phases and the long run, and by the margin of `holdsWithMargin`. The plan is made again
  * for the cycles of `groupedHandsCycles` where those are not its own and the config does not set them. The windows are
  * made in every way of SEPARATE_TRIES, or of SHARED_TRIES where `options.shared_windows` asks for the windows to be
- * shared (those that make the same windows are one), and of those that hold with their margin and from every start
+ * shared (those that make the same windows are one; a way with the guard per taker that holds and does not get back from a
+ * loss is made once more, next, with the takers into the machines the target is counted at unguarded), and of those that hold
+ * with their margin and from every start
  * phase the clock is the one `bestHolding` ranks first; where none holds from every start, the first that holds with its
  * margin. Null where the rule does not apply to the build. It holds when its own windows hold, not when the planning run
  * of the plan does.
@@ -768,7 +798,12 @@ export function groupedHandsClock(
         const { simulation_context, swing_counts, recipe_lcm, duration } = made.run;
         const tried = new Set<string>();
         const drops = dropTieBreak(made.config, duration.ticks);
-        for (const way of options.shared_windows === true ? SHARED_TRIES : SEPARATE_TRIES) {
+        const losses_decide = options.shared_windows === true || sharedItemDeadlockRisks(simulation_context.entity_registry).length === 0;
+        const target_machines = new Set(targetMachinesOf(targetItemOf(made.config.target_output), simulation_context.entity_registry)
+            .map(machine => machine.entity_id.id));
+        const ways = [...(options.shared_windows === true ? SHARED_TRIES : SEPARATE_TRIES)];
+        for (let index = 0; index < ways.length; index++) {
+            const way = ways[index];
             let planned: GroupedHandsPlan;
             try {
                 planned = groupedHandsPlan(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks,
@@ -788,7 +823,16 @@ export function groupedHandsClock(
             if (unmoved !== null) { reasons.push(unmoved); continue; }
             // the margin runs start from the cold start only: the clock has to hold from the other start phases too
             const clock_of_windows = finishedClock(made, windows, turns, options, left_open);
-            if (clock_of_windows.stability_check.holds) { holding.push({ way, clock: clock_of_windows }); continue; }
+            if (clock_of_windows.stability_check.holds) {
+                holding.push({ way, clock: clock_of_windows });
+                // the guard per taker that holds and does not get back from a loss is remade once, right after it, with the takers into
+                // the machines the target is counted at enabled as before; no other remake and no search (DESIGN 3.1, R-busy)
+                if (way.per_taker_guard === true && way.unguarded_sinks === undefined && losses_decide
+                    && backpressureLossVerdictOf(made.config, clock_of_windows, made.logger).backpressure_loss?.survives === false) {
+                    ways.splice(index + 1, 0, { ...way, unguarded_sinks: target_machines });
+                }
+                continue;
+            }
             reasons.push(`the ${way.share_windows ? "shared " : ""}windows ${key} do not hold from every start`);
             // shared windows are kept only if they hold
             if (!way.share_windows) finished ??= clock_of_windows;

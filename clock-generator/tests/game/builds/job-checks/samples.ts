@@ -128,9 +128,11 @@ const circuitExport: JobCheck[] = [
         },
     },
     {
-        name: 'Selection: the 12 inserters with no window are the ones whose hands take all 24 ticks of the period',
+        // the guard per taker gates the 12 takers whose hands and a start more take the 24-tick period; that clock does not get back
+        // from every loss, so it is remade once with the takers into the target machines (the processing unit machines 2 and 3) unguarded
+        name: 'Selection: the 4 inserters with no window are the circuits into the processing unit machines, which the remake leaves unguarded',
         run: ({ generated }) => {
-            expect(selectedOf(generated).result.always_on_reasons).toEqual(Object.fromEntries([3, 4, 5, 6, 7, 8, 13, 14, 15, 18, 19, 20]
+            expect(selectedOf(generated).result.always_on_reasons).toEqual(Object.fromEntries([3, 4, 7, 8]
                 .map(number => [`inserter:${number}`, { kind: 'busy', period_ticks: 24 }])));
         },
     },
@@ -159,8 +161,9 @@ const circuitExport: JobCheck[] = [
         },
     },
     {
-        // the replay from the warm-up inventory is the build stalled for its first 42 ticks (every machine full, nothing moves); the
-        // long run judges stock from index 960, after 240 warm-up ticks; replaying clock tick 1200 shows the inserters at work
+        // the replay from the warm-up inventory is the build stalled in part (the iron into circuit machine 6, inserter 6, picks up
+        // nothing in the period recorded); the long run judges stock from index 960, after 240 warm-up ticks; replaying clock tick 1200
+        // shows the inserters at work
         name: 'records a settled period from the clock tick the long run judges, not the stalled first one',
         run: ({ config, generated }) => {
             const selected = selectedOf(generated);
@@ -174,7 +177,7 @@ const circuitExport: JobCheck[] = [
                 inserter_clocks: selected.result.unplanned_inserter_clocks ?? {},
             };
             const swings = (recording: ReturnType<typeof recordSimulationTimeline>) => recording.events
-                .filter(event => event.entity_id === 'inserter:13' && event.kind === 'pickup').length;
+                .filter(event => event.entity_id === 'inserter:6' && event.kind === 'pickup').length;
             const cold = recordSimulationTimeline(request);
             const settled = recordSimulationTimeline({ ...request, settle_ticks: judged_clock_tick });
             expect(cold.ticks_before_recording).toBe(240);
