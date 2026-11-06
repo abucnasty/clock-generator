@@ -8,6 +8,7 @@ import { resultWindowsClockOfPlan } from "./candidates/result-windows-clock";
 import { BlueprintGenerationResult, GenerateClockOptions, PlanRun, SwingAttemptResult, SwingBackoffReport, checkedClock, clockOfPlan, planRun } from "./plan/plan-run";
 import { primitiveGroupedOptionsSupported, verifiedPrimitiveGroupedClock } from "./candidates/verified-primitive-grouped";
 import type { PrimitiveGroupedAttemptReport } from "./primitive-grouped-policy";
+import { FractionalSwingsRefusedError, fractionalSwingsWholeAt } from "./sequence/cycle/swing-distribution";
 
 /** New budget-pruned results retain planner-unit requests separately from legacy final-taker aggregate reporting. */
 export function terminalCountForAlternativePlanning(result: Pick<BlueprintGenerationResult, 'used_terminal_swing_count' | 'swing_backoff_report' | 'primitive_grouped' | 'secondary_planning'>): number {
@@ -95,6 +96,11 @@ function clockWithPickupsFromTheirEntry(plan: PlanRun, options: GenerateClockOpt
  *
  * Backoff is skipped when `config.overrides.terminal_swing_count` is set: that count is forced as-is.
  *
+ * Fractional swings (`options.fractional_swings`) that the insertion limits refuse at a count
+ * (FractionalSwingsRefusedError) are planned at the whole counts below it, the first the cycle plan accepts; a
+ * forced count is not. Where the first plan is refused and the count it is made at has every inserter's swings whole,
+ * no clock is made: it would be the clock of that many whole output swings, which is offered on its own.
+ *
  * A `swing_backoff_report` is always attached to the returned result describing what
  * happened (triggered / not triggered, which swing counts were tried, which was stable).
  *
@@ -121,6 +127,8 @@ export function generateClockWithSwingBackoff(
     let period_frontier: Generator<SwingPeriodRejection> | undefined;
     let generated_count: number | undefined;
     let primitive_attempt: PrimitiveGroupedAttemptReport | undefined;
+    const can_lower_refused_fractions = !swing_count_forced && options.fractional_swings === true;
+    let first_fractional_refusal: FractionalSwingsRefusedError | undefined;
     const withCount = (count: number): Config => ({ ...config, overrides: { ...config.overrides, terminal_swing_count: count } });
     const generateWithinBudget = (candidate: Config): BlueprintGenerationResult | null => {
         let attempted = candidate;
@@ -141,6 +149,13 @@ export function generateClockWithSwingBackoff(
             generated_count = attempted.overrides?.terminal_swing_count;
             return generated;
         } catch (error) {
+            if (can_lower_refused_fractions && error instanceof FractionalSwingsRefusedError && error.swings_per_cycle !== undefined) {
+                first_fractional_refusal ??= error;
+                // the first whole count below the swings refused: 5 below 5 1/3, 4 below 5
+                const refused = error.swings_per_cycle;
+                const below = Math.ceil(refused.getNumerator / refused.getDenominator) - 1;
+                return below < 1 ? null : generateWithinBudget(withCount(below));
+            }
             if (!can_prune_periods || !(error instanceof ClockPeriodLimitError) || error.arithmetic === undefined) throw error;
             const initial_refusal = first_period_refusal === undefined && attempted === config;
             first_period_refusal ??= error;
@@ -164,7 +179,10 @@ export function generateClockWithSwingBackoff(
         requested_terminal_swing_count: requested_initial_count!, rejections: period_rejections,
     } }) });
     const initial_result = generateWithinBudget(config);
-    if (initial_result === null) throw first_period_refusal!;
+    if (initial_result === null) throw first_period_refusal ?? first_fractional_refusal!;
+    if (first_fractional_refusal !== undefined && !initial_result.crafting_cycle_plan.fractional_swings_enabled) {
+        throw fractionalSwingsWholeAt(first_fractional_refusal, initial_result.used_terminal_swing_count);
+    }
     const initial_swing_count = period_frontier !== undefined && generated_count !== undefined
         ? generated_count : initial_result.used_terminal_swing_count;
     requested_initial_count ??= initial_swing_count;
@@ -212,7 +230,7 @@ export function generateClockWithSwingBackoff(
         logger.log(`Attempting terminal_swing_count=${swings}...`);
         const attempt_result = generateWithinBudget(withCount(swings));
         if (attempt_result === null) break;
-        if (period_frontier !== undefined && generated_count !== undefined) swings = generated_count;
+        if ((period_frontier !== undefined || first_fractional_refusal !== undefined) && generated_count !== undefined) swings = generated_count;
 
         attempts.push({
             terminal_swing_count: swings,

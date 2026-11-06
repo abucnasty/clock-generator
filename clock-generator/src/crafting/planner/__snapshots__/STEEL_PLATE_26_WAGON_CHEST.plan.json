@@ -69,7 +69,7 @@
         {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":1440,"denominator":13},"cycles":8,"period_ticks":886.1538461538462,"kept":true},
         {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":960,"denominator":13},"cycles":12,"period_ticks":886.1538461538462,"kept":true},
         {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":480,"denominator":13},"cycles":24,"period_ticks":886.1538461538462,"kept":true},
-        {"swings":null,"fractional":true,"listed_as":"fractional","pruned":{"rule":"cycle-refused","terms":{"reason":"Cannot satisfy fractional swing constraint: sub-cycle 0 requires 47 swings, but maximum allowed is 4 due to insertion limits. Total swings: 1530, cycle multiplier: 32."}}}
+        {"swings":null,"fractional":true,"listed_as":"fractional","pruned":{"rule":"cycle-refused","terms":{"reason":"Cannot satisfy fractional swing constraint: sub-cycle 0 requires 47 swings, but maximum allowed is 4 due to insertion limits. Total swings: 1530, cycle multiplier: 32. At 24 output swings a cycle, the most the insertion limits allow, every inserter swings a whole number of times a cycle: the clock of 24 output swings."}}}
       ],
       "duty": [
         {
