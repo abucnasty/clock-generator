@@ -16,6 +16,7 @@ request adds to this file.
 - config-AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER: planned-belt-slack stays selected, wake-ups 50.07 -> 25.035 a minute; the slack inside the windows (game: 100% on its scaffold)
 - config-UTILITY_SCIENCE_120: planned-belt-slack stays selected, wake-ups 107.303 -> 64.382 a minute; the slack inside the windows (no scaffold)
 - config-LDS_240, config-UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT, variants-LOGISTIC_SCIENCE_240_DIRECT_INSERT_TWO_OUTPUT_SWINGS: planned-belt-slack, not selected, wake-ups 2,292.615 -> 2,217.55, 118.209 -> 64.478 and 325.226 -> 250.174 a minute; the selection is unchanged
+- The 65 jobs with a clock whose inserters pick up from a belt: results_sha256 only; the belt note's new words (belt slack), no clock changes
 
 ## A window a swing for the takers the surplus guard gates (#638)
 - config-PROCESSING_UNIT_80_CIRCUIT_EXPORT: selected planned-belt-slack -> planned-belt-slack-per-hand, wake-ups 5,628.75 -> 3,502.5 a minute, stable, period 24; the iron and cable takers into the circuit machines open for a tick at each of their three swings
