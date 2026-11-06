@@ -44,6 +44,13 @@ describe("strategyOf", () => {
         expect(strategyOf("euclidean-swings", result(), findings()).construction).toBe("planning-run");
     });
 
+    test("pickups counted from their entry and the rounded-up hands of rule F leave a mark each", () => {
+        expect(strategyOf("batched-swings", result({ pickups_from_entry: true }), findings()).qualifiers).toEqual(["output-swings", "pickups-from-entry"]);
+        const harmonic = strategyOf("batched-swings", result({ grouped_hands: { shared_windows: false, harmonic_window_cycle: true } }), findings());
+        expect(harmonic).toMatchObject({ family: "round-robin-polling", qualifiers: ["output-swings", "harmonic-window-cycle"] });
+        expect(strategyOf("batched-swings", result({ grouped_hands: { shared_windows: false } }), findings()).qualifiers).toEqual(["output-swings"]);
+    });
+
     test("a target that counts an item destroyed brings in hands instead of output swings", () => {
         expect(strategyOf("time-division-slots", result(), findings({ destroyed_target: true })).qualifiers).toEqual(["hands-brought-in"]);
     });
