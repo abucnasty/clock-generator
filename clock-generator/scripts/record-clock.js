@@ -2,7 +2,8 @@
 // Records a potential clock of a scaffolded build in Factorio (the selected one unless an id is given) and checks it
 // as the game tests do: what it moved in every period, the wake-ups against the simulator's, and the simulator laid
 // against the game entity by entity. <on|off> is "Backed-up belts". A recording that is already in the directory is
-// read instead of made again.
+// read instead of made again. The simulator's wake-ups a minute are those of the run scripts/sim-game-check.js judges, seeded from
+// the recording (scripts/seeded-run.js), with the cold start's on a line of its own.
 //
 // To record windows of your own, such as a clock tightened by hand: WINDOWS=<json file> holding
 // {"period": 528, "output_swings": 2, "windows": {"inserter:1": [{"start": 1, "end": 6}, ...], ...}}. They are built as
@@ -44,6 +45,7 @@ const { recordInFactorio, recordedTicks } = dist("harness/factorio-harness.js");
 const { outputPerPeriod, recipesMaking, clockPeriods } = dist("harness/recording-output.js");
 const { matchRecordingToConfig } = dist("verification/entity-matching.js");
 const { wakeUpsOfRecording } = dist("verification/recording-wake-ups.js");
+const { judgedWakeUps } = require("./seeded-run");
 const { compareRecordings } = dist("verification/compare-recordings.js");
 const { matchOfSimulatedRecording, simulateRecording } = dist("verification/simulated-recording.js");
 const { parseRecording } = dist("verification/recording.js");
@@ -163,14 +165,19 @@ function buildOfConfig(arg) {
     const match = matchRecordingToConfig(recording, config);
     const simulated = simulateRecording(config, result.clock_windows, period, recording.sample_count * 1.5, clock_ticks);
     const simulated_match = matchOfSimulatedRecording(simulated);
-    // both sides by the rule "kept-lists" on a recording, as scripts/sim-game-check.js counts them: the game's whole recording, and the
-    // simulator's whole periods after its first third (the settled run the scaffold tests and the comparison below judge). The run
-    // starts cold, as sim-game-check's "cold" run does; sim-game-check judges its run seeded from the recording, whose count differs
-    // where a build's states do not repeat within the recording (#603)
+    // both sides by the rule "kept-lists", as scripts/sim-game-check.js counts them. The simulator's figure is the run sim-game-check
+    // judges (seeded-run.js): seeded from the recording, whose machines the game warmed up and the simulator does not, where the
+    // recording gives a complete seed, else cold; the game's is its whole recording. The cold start is the simulator's whole periods
+    // after its first third (the settled run the scaffold tests and the comparison below judge), whose count differs from the seeded
+    // run's where a build's states do not repeat within the recording (#603)
     const settled = clockPeriods(simulated.clock.values).filter(it => it.start >= Math.floor(simulated.sample_count / 3));
     const simulated_wake_ups = settled.length === 0 ? undefined
         : wakeUpsOfRecording(simulated, simulated_match, settled[0].start, settled[settled.length - 1].end, config);
-    console.log(`  wake-ups a minute, rule "kept-lists" on the recording: simulator (cold start) ${simulated_wake_ups?.wake_ups_per_minute.toFixed(1) ?? "-"}, game ${wakeUpsOfRecording(recording, match, 0, recording.sample_count, config).wake_ups_per_minute.toFixed(1)}`);
+    const judged = judgedWakeUps(await loadSample(process.env.CONFIG ?? build.config, belts === "on"), recording, match, { windows: result.clock_windows, period, clock_ticks });
+    const judged_label = judged.judged_run === "seeded" ? `seeded from sample ${judged.seed.sample}, judged by sim-game-check`
+        : `cold start, judged by sim-game-check: ${judged.seed.applied ? "the seed is incomplete" : "no seed"}`;
+    console.log(`  wake-ups a minute, rule "kept-lists" on the recording: simulator (${judged_label}) ${judged.wake_ups_per_minute?.toFixed(1) ?? "-"}, game ${wakeUpsOfRecording(recording, match, 0, recording.sample_count, config).wake_ups_per_minute.toFixed(1)}`);
+    console.log(`  wake-ups a minute, rule "kept-lists" on the recording: simulator (cold start) ${simulated_wake_ups?.wake_ups_per_minute.toFixed(1) ?? "-"}`);
     const compared = compareRecordings(
         { recording, match },
         { recording: simulated, match: simulated_match, from_sample: Math.floor(simulated.sample_count / 3) },
