@@ -75,6 +75,16 @@ const reportOf = (config: Config, alternative: ClockAlternative): BackpressureLo
     }
     return reports.get(alternative)!;
 };
+/**
+ * The fractional swings clock of AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING as it was made before its enable windows were shaped against
+ * ghost wakeups (#641): it gets back from none of the build's three losses. Since then no clock of the job breaks on a loss.
+ */
+const BROKEN_AUTOMATION_WINDOWS = { "inserter:1": [{ start: 1, end: 20 }], "inserter:2": [{ start: 1, end: 21 }, { start: 37, end: 56 }, { start: 73, end: 73 }] };
+const brokenReportOf = (config: Config, generated: ClockAlternativesResult): BackpressureLossReport => {
+    const fractional = byId(generated, 'fractional');
+    return backpressureLossOf(config, BROKEN_AUTOMATION_WINDOWS, fractional.result.simulation_duration.ticks,
+        fractional.result.stability_check.expected_output_items, quiet);
+};
 const automation: JobCheck[] = [
     // No machine of the sample burns fuel: its selected clock has no fuel plan and no fuel consumption view
     {
@@ -144,12 +154,10 @@ const automation: JobCheck[] = [
         },
     },
     {
-        // automation science has clocks that get back from none of its three losses
+        // automation science has a clock that gets back from none of its three losses
         name: 'a clock that does not get back from a loss is tried on the first loss that breaks it only, and the others are not tried',
         run: ({ config, generated }) => {
-            const broken = generated.alternatives.find(a => a.verdict === 'no recovery')!;
-            expect(broken).toBeDefined();
-            const report = reportOf(config, broken);
+            const report = brokenReportOf(config, generated);
             expect(report.losses.map(outcome => lossId(outcome.loss))).toEqual(['supply:copper-plate']);
             expect(report.not_tried.map(lossId)).toEqual(['supply:iron-gear-wheel', 'output:automation-science-pack']);
             expect(verdictOf(report)).toMatchObject({
@@ -157,13 +165,12 @@ const automation: JobCheck[] = [
                 broken_by: ['copper plate stops arriving'],
                 not_tried: ['iron gear wheel stops arriving', 'automation science pack is not taken away'],
             });
-            expect(broken.assessment.backpressure_loss).toEqual(verdictOf(report));
         },
     },
     {
         name: 'runs the trials of that loss up to the first that does not get back, and no further',
         run: ({ config, generated }) => {
-            const trials = reportOf(config, generated.alternatives.find(a => a.verdict === 'no recovery')!).losses[0].trials;
+            const trials = brokenReportOf(config, generated).losses[0].trials;
             expect(trials.length).toBeLessThanOrEqual(16);
             expect(trials.slice(0, -1).every(trial => trial.recovers)).toBe(true);
             expect(trials[trials.length - 1].recovers).toBe(false);

@@ -295,7 +295,10 @@ function withoutGhostWakeUps(made: MadeClocks, primary: BlueprintGenerationResul
         return primary;
     }
     plan.logger.log(`Windows shaped against ghost wakeups (${textOf(moved)}): the primary clock (${wake_ups(best)!.toFixed(2)} against ${wake_ups(primary)!.toFixed(2)} wake-ups a minute)`);
-    return primary.window_maker === undefined ? best : { ...best, window_maker: primary.window_maker };
+    const range = (it: OpenRange) => ({ start: it.start_inclusive, end: it.end_inclusive });
+    return { ...best, ...(primary.window_maker !== undefined && { window_maker: primary.window_maker }),
+        ghost_wakeup_windows: moved.map(it => ({ inserter_id: it.inserter_id, window: range(it.window), shaped: it.shaped === null ? null : range(it.shaped),
+            ghost_wake_ups: it.ghost_wake_ups })) };
 }
 
 /**

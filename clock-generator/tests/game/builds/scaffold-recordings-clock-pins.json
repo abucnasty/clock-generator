@@ -14,11 +14,11 @@
     "chemical science with a shared foundry": {
       "config": "CHEMICAL_SCIENCE_240_SHARED_FOUNDRY",
       "backed_up_belts": false,
-      "clock_sha256": "4d4d98272bf026f307d91c27d712411a8aa005f4c73cda4d7e120483f8fc02cb",
+      "clock_sha256": "5e983fe1e245427f9b4a2976c539123ef79336ecc98a69a208c31efb1da38c7d",
       "previous": {
-        "id": "shifted-swings",
-        "clock_sha256": "73cef131a8c006b4066206f5f56300bff59812c4f348781dc20ba8658b405239",
-        "why": "Since #595 batched swings keeps the belt pickup slack inside its enable windows (none added after them) and wakes 245.7 a minute against shifted swings' 286.6; shifted swings stays offered and stable. The new clock made 256 in every period on this scaffold in the game, 2026-11-06."
+        "id": "planned-belt-slack",
+        "clock_sha256": "4d4d98272bf026f307d91c27d712411a8aa005f4c73cda4d7e120483f8fc02cb",
+        "why": "Since #641 the enable windows of batched swings close before the hand that left an inserter asleep on its machine's list at the switch-off: 163.8 wakeups a minute against 245.7. The new clock made 256 in every period on this scaffold in the game, 2026-11-06."
       }
     }
   }

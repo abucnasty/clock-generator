@@ -208,6 +208,12 @@ export interface GuardedTaker {
 
 export interface BlueprintGenerationResult {
     /**
+     * The enable windows closed earlier or dropped against ghost wakeups (generate-clock.ts, plan/ghost-windows.ts), each
+     * as it was and as it is (null where dropped), with the ghost wakeups after it in the run of the clock before; absent
+     * where none was
+     */
+    ghost_wakeup_windows?: { inserter_id: string; window: { start: number; end: number }; shaped: { start: number; end: number } | null; ghost_wake_ups: number }[];
+    /**
      * "arithmetic" where the batched-swings windows were made by arithmetic from the plan's hands and the stock walk
      * (batched-arithmetic.ts) in place of being read off the planning run; absent where the planning run's were kept
      */
