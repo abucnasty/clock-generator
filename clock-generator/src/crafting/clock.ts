@@ -203,8 +203,11 @@ export function shiftRangesForCircuitLatency(ranges: OpenRange[], period: number
  * Moving clocks add slack for late pickups (see "Wake-ups, the measure for goal 2" in GOALS.md).
  */
 export type ClockBelt =
-    /** Belt pickup slack lengthened the windows of its belt-fed inserters, by these ticks (each value once, ascending) */
-    | { kind: "moving"; slack_ticks: number[] }
+    /**
+     * Belt pickup slack lengthened the windows of its belt-fed inserters, by these ticks (each value once, ascending); with
+     * `inside`, the windows stay open these ticks after their last pickup already and none were added (slackInsideWindows)
+     */
+    | { kind: "moving"; slack_ticks: number[]; inside?: true }
     /** Its belt-fed inserters have the windows they need on a backed-up belt */
     | { kind: "backed_up" };
 
@@ -217,5 +220,6 @@ export function clockBeltLabel(belt: ClockBelt | null): string {
         return "backed-up";
     }
     const [first, last] = [belt.slack_ticks[0], belt.slack_ticks[belt.slack_ticks.length - 1]];
+    // a clock with the slack inside its windows shows the same: the ticks it stays enabled after its last pickup
     return `moving (+${first === last ? first : `${first}–${last}`} tick${last === 1 ? "" : "s"})`;
 }

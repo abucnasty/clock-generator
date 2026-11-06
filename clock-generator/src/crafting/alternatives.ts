@@ -318,18 +318,17 @@ function beltNote(config: Config, result: BlueprintGenerationResult): string {
         return "";
     }
     if (belt.kind === "moving") {
+        // the slack is the ticks after the last pickup: added after the window, or inside it already (slackInsideWindows)
         const [first, last] = [belt.slack_ticks[0], belt.slack_ticks[belt.slack_ticks.length - 1]];
         const ticks = first === last ? `${first} more tick${first === 1 ? "" : "s"}` : `${first}–${last} more ticks`;
         const pickup = " Reachable moving stacks are timed using the pickup geometry (straight belt by default). "
             + "The remaining slack is margin for late starts and gaps; sparse upstream supply is not simulated.";
-        const moving = ` Made for a moving belt: every inserter that picks up from a belt stays enabled ${ticks} after each window `
-            + "(belt pickup slack), long enough for one more full hand at one belt stack a tick. On a moving belt, and more so on "
-            + "one with gaps, a pickup can come late; the extra ticks let it finish instead of the inserter being switched off "
-            + `holding a partial hand.${pickup}`;
-        return moving;
+        return ` Made for a moving belt. After its last pickup from the belt, an inserter stays enabled for ${ticks}. `
+            + "These ticks are the belt slack. On a moving belt, a pickup can start after the usual tick. The belt slack lets the "
+            + `inserter fill its hand.${pickup}`;
     }
     const backed_up = " Made for a backed-up belt: its belt inserters get only the windows they need with backed-up supply at the pickup, "
-        + "without belt pickup slack. On a moving belt an inserter can be switched off holding a partial hand.";
+        + "without belt slack. On a moving belt an inserter can be switched off holding a partial hand.";
     if (config.overrides?.backed_up_belts === true) {
         const room = Object.entries(result.fuel_hand_room_ticks);
         const config_ids = config.inserters.map((inserter, index) => inserter.id ?? index + 1);
@@ -1123,7 +1122,9 @@ function planPrimaryAndTasks(
  * it (no lower count, no period limit, no room for fuel, no loop windows, no chest drill windows to fall back from), so
  * the alternative's run, which keeps belt pickup slack where the clock holds with it, makes the same clock; and its
  * checks are those of the primary's, which planning them with fractional swings does not change. Then its clock is the
- * primary's, and is merged into it.
+ * primary's, and is merged into it. Where the primary keeps the slack inside its windows (`withSlackInside`), the
+ * alternative's run makes the same windows with the slack added after them, which the primary beats on wake-ups: it is
+ * left out as well.
  */
 function fractionalMakesThePrimary(config: Config, primary: AlternativeDefinition, result: BlueprintGenerationResult): boolean {
     const start = fractionalStartOf(result.crafting_cycle_plan)?.toDecimal();

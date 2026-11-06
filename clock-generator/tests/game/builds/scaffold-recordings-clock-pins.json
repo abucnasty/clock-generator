@@ -14,11 +14,11 @@
     "chemical science with a shared foundry": {
       "config": "CHEMICAL_SCIENCE_240_SHARED_FOUNDRY",
       "backed_up_belts": false,
-      "clock_sha256": "73cef131a8c006b4066206f5f56300bff59812c4f348781dc20ba8658b405239",
+      "clock_sha256": "4d4d98272bf026f307d91c27d712411a8aa005f4c73cda4d7e120483f8fc02cb",
       "previous": {
-        "id": "swings-1",
-        "clock_sha256": "f852f5b4f5f5605f9a739bcd9b1713a539a1b71e79004bcb9540f75e65f5d9e8",
-        "why": "Targeted shifted search now runs past a stable short clock; equal wake-ups and recovery, 36 ranked windows instead of 48. Both exact clocks remain stable. The shifted clock passed fresh Factorio 2.1.21 scaffold and three-disturbance checks on 2026-11-01."
+        "id": "shifted-swings",
+        "clock_sha256": "73cef131a8c006b4066206f5f56300bff59812c4f348781dc20ba8658b405239",
+        "why": "Since #595 batched swings keeps the belt pickup slack inside its enable windows (none added after them) and wakes 245.7 a minute against shifted swings' 286.6; shifted swings stays offered and stable. The new clock made 256 in every period on this scaffold in the game, 2026-11-06."
       }
     }
   }

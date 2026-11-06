@@ -89,21 +89,23 @@ describe("request-local duplicate verification", () => {
         const generated = generateClockAlternatives(logistic, {logger: quiet});
         const keys = recovery.mock.calls.map(([config, result]) => signature(config, result));
         expect(keys.length).toBeGreaterThan(1);
-        // the clock of the windows made by arithmetic is tried while its windows are chosen (generate-clock.ts), before the
-        // alternative is assessed; the run memo serves the second ask, so that clock's is the one key asked twice
+        // the clocks of the windows made by arithmetic and of the planned windows with the belt pickup slack inside them
+        // are tried while the primary windows are chosen (generate-clock.ts), before the alternative is assessed; the run
+        // memo serves the second ask, so theirs are the keys asked twice
         const repeated = keys.filter((key, index) => keys.indexOf(key) !== index);
-        const arithmetic = recovery.mock.calls.filter(([, result]) => result.window_maker === "arithmetic").map(([config, result]) => signature(config, result));
-        expect(repeated).toHaveLength(1);
-        expect(arithmetic).toContain(repeated[0]);
-        // Both clocks are stable; swings-2 is selected on its fewer wake-ups although swings-1 recovers in 2 periods
-        // rather than 5. Sharing the verification must preserve that choice.
+        const chosen = recovery.mock.calls.filter(([, result]) => result.window_maker === "arithmetic" || (result.belt?.kind === "moving" && result.belt.inside === true))
+            .map(([config, result]) => signature(config, result));
+        expect(repeated).toHaveLength(2);
+        expect(chosen).toEqual(expect.arrayContaining(repeated));
+        // Both clocks are stable; batched swings is selected on its fewer wake-ups although swings-1 recovers in 2 periods
+        // rather than 3. Sharing the verification must preserve that choice.
         const other = generated.alternatives.find(clock => clock.id === "swings-1")!;
         const selected = generated.alternatives[generated.selected_index];
         expect(other.verdict).toBe("stable");
         expect(other.ranking.recovery_periods).toBe(2);
-        expect(selected.id).toBe("swings-2");
+        expect(selected.id).toBe("planned-belt-slack");
         expect(selected.verdict).toBe("stable");
-        expect(selected.ranking.recovery_periods).toBe(5);
+        expect(selected.ranking.recovery_periods).toBe(3);
         expect(selected.ranking.wake_ups_per_minute).toBeLessThan(other.ranking.wake_ups_per_minute!);
         // A later request must make its own checks, rather than inherit a verdict from this generation.
         const first_count = recovery.mock.calls.length;
@@ -112,13 +114,20 @@ describe("request-local duplicate verification", () => {
     });
 
     it("lets the worker API skip recovery of a matching primary without changing its completed assessment", async () => {
-        const logistic = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240);
-        const plan = planClockAlternatives(logistic, {logger: quiet});
+        // military science: logistic science's primary keeps the belt pickup slack inside its windows, which a run of
+        // fractional swings does not make (alternatives.ts, fractionalMakesThePrimary)
+        const military = await loadConfigFromFile(ConfigPaths.MILITARY_SCIENCE_120);
+        const plan = planClockAlternatives(military, {logger: quiet});
         const recovery = vi.spyOn(trial, "backpressureLossVerdictOf");
         // the plan leaves the fractional task out here, as one that makes the primary clock again: made anyway, it is that duplicate
-        const duplicate = runClockAlternativeTask(logistic, {...plan.context, fractional_is_primary: undefined}, "fractional", {logger: quiet}, [plan.primary!.signature]);
+        const duplicate = runClockAlternativeTask(military, {...plan.context, fractional_is_primary: undefined}, "fractional", {logger: quiet}, [plan.primary!.signature]);
         expect(duplicate).toEqual({signature: plan.primary!.signature, alternatives: []});
-        expect(recovery).not.toHaveBeenCalled();
+        // its run tries the clocks it chooses its windows between (generate-clock.ts), the primary's among them on this
+        // build; the assessment of the duplicate is what it skips, so it tries fewer than the same task not told of the primary
+        const skipping = recovery.mock.calls.length;
+        recovery.mockClear();
+        runClockAlternativeTask(military, {...plan.context, fractional_is_primary: undefined}, "fractional", {logger: quiet}, []);
+        expect(skipping).toBeLessThan(recovery.mock.calls.length);
         expect(plan.primary!.alternatives[0].assessment.backpressure_loss).not.toBeNull();
     });
 });
