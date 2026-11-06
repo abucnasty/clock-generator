@@ -7,6 +7,7 @@ import { observedWindowsClock } from "./candidates/observed-windows";
 import { resultWindowsClockOfPlan } from "./candidates/result-windows-clock";
 import { BlueprintGenerationResult, GenerateClockOptions, PlanRun, SwingAttemptResult, SwingBackoffReport, checkedClock, clockOfPlan, clockOfWindows, planRun } from "./plan/plan-run";
 import { ArithmeticWindowsNotApplicable, batchedSwingsWindowsByArithmetic } from "./plan/batched-arithmetic";
+import { sharedLaneShortened } from "./plan/shared-lane-guard";
 import { backpressureLossVerdictOf } from "./trial";
 import { OpenRange } from "../data-types";
 import { primitiveGroupedOptionsSupported, verifiedPrimitiveGroupedClock } from "./candidates/verified-primitive-grouped";
@@ -74,7 +75,8 @@ export function generateClockForConfig(
 
 /**
  * The batched-swings windows of the plan made by arithmetic (batched-arithmetic.ts), where the arithmetic has a rule for
- * the build and they are not the planning run's own; null elsewhere, the reason logged
+ * the build, they are not the planning run's own and the copies do not share a belt they shorten (shared-lane-guard.ts);
+ * null elsewhere, the reason logged
  */
 function arithmeticWindowsOf(plan: PlanRun): Map<string, OpenRange[]> | null {
     const { run } = plan;
@@ -84,6 +86,11 @@ function arithmeticWindowsOf(plan: PlanRun): Map<string, OpenRange[]> | null {
             always_enabled_by_config: run.always_enabled_by_config });
         if (sameWindows(windows, plan.unslacked_windows)) {
             plan.logger.log("Windows by arithmetic: the planning run's own");
+            return null;
+        }
+        const shared = sharedLaneShortened(plan.config, windows, plan.unslacked_windows);
+        if (shared !== null) {
+            plan.logger.log(`Windows by arithmetic: not used, ${shared}`);
             return null;
         }
         return windows;
