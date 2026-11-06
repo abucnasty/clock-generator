@@ -6,8 +6,8 @@ import { quiet } from "../generate-blueprint-test-helpers";
 import { planRun } from "../plan/plan-run";
 import { dropSpacing, dropTieBreak } from "../../config/drop-spacing";
 import { GroupedHandsNotApplicable, groupedHandsCycles, groupedHandsPlan, groupedHandsWindows, heldAtTurn, perHandWindows, roomAtTurn, TurnWithoutRoom } from "./grouped-hands";
-import { outputAtWindow } from "./taker-turns";
-import { EntityId, Machine } from "../../entities";
+import { outputAtWindow, turnOffsets } from "./taker-turns";
+import { EntityId, Inserter, Machine } from "../../entities";
 
 // The grenade build (GRENADE_240_FILLS_BELT_EXACTLY), one copy: a foundry (3) fills four assembling machines (1, 2, 4, 5) with iron
 // plates through inserters 4, 3, 6 and 5, five hands of 16 a period each; a drill into each machine brings the coal; inserters 1,
@@ -345,6 +345,19 @@ describe("takers of one machine that it cannot serve together", () => {
             expect(ranges(windows, "inserter:3")).toEqual([[20, 20]]);
             for (const id of [5, 8]) expect(ranges(windows, `inserter:${id}`)).toEqual([[2, 18]]);
         }
+    });
+
+    it("takes turns by the turn rule: a share of the slot apart where the plant cannot give both hands in one window", () => {
+        const plan = planRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, { logger: quiet });
+        const registry = plan.run.simulation_context.entity_registry;
+        const plant = registry.getEntityByIdOrThrow(EntityId.forMachine(3)) as Machine;
+        const [into_1, into_2] = [7, 6].map(id => registry.getEntityByIdOrThrow(EntityId.forInserter(id)) as Inserter);
+        // 11.69 supercapacitors at a window of 10 ticks a slot of 40, against two hands of 16: turns 20 ticks apart
+        expect(turnOffsets(plant, "supercapacitor", [[into_1], [into_2]], 40, 10)).toEqual([0, 20]);
+        // one machine filled by both is one turn: nothing to take turns with
+        expect(turnOffsets(plant, "supercapacitor", [[into_1, into_2]], 40, 10)).toBeNull();
+        // turns 20 ticks apart would meet windows of 21 ticks
+        expect(turnOffsets(plant, "supercapacitor", [[into_1], [into_2]], 40, 21)).toBeNull();
     });
 
     it("gives each science plant room when its turn opens: what it made since its hand out started is under its block less one pack", () => {

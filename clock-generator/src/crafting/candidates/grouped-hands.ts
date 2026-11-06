@@ -12,7 +12,7 @@ import { TurnGroup } from "../turn-groups";
 import type { AlwaysOnReason } from "../always-on-reasons";
 import { sharedItemDeadlockRisks } from "../deadlock-risk";
 import { rankingWindowCount } from "../rank";
-import { outputAtWindow } from "./taker-turns";
+import { turnOffsets } from "./taker-turns";
 import { targetItemOf, targetMachinesOf } from "../sequence/cycle/target-ends";
 
 /** Ticks added to the shortest window that starts the last hand: one for the tick a combinator takes, one of margin */
@@ -111,13 +111,10 @@ function sharedWindows(windows: Map<string, OpenRange[]>, takers: Taker[], perio
 }
 
 /**
- * The takers of one machine's product that fill machines of one recipe and are enabled in the same ticks take turns where
- * the machine cannot give all their hands in one window (`outputAtWindow`: what it made since their window a period
- * before, up to its output block, and what it makes in the window, against one hand of each): then the game serves the
- * first in its order with what the machine holds and the next with the rest, so one machine would be fed before the other
- * by an order a config does not tell. In the order of their sinks, the windows of the second open a share of the period
- * after the first's, and so on, each the length it was given. Turns that would meet one another leave the windows as they
- * are; the clock-only check judges both.
+ * The turns of a chain (the turn rule, `turnOffsets`): the takers of one machine's product that fill machines of one recipe
+ * and are enabled in some same tick, each a turn of its own in the order of their sinks, with a window a period, the longest
+ * any of them has. Where they take turns, the windows of the second open a share of the period after the first's, and so on,
+ * each the length it was given.
  *
  * The inserters that hand a turned machine's product on (`hands_out`: into a chest or onto a belt) move with its turn, so
  * every machine filled in turn is emptied at the same point of its own turn. Left where they were, one turn would fall
@@ -126,7 +123,7 @@ function sharedWindows(windows: Map<string, OpenRange[]>, takers: Taker[], perio
  * period (Factorio 2.1.21, the original #100 scaffold: 93 against 94 supercapacitors in 16 periods). The groups that take
  * turns are returned, each in the order of its turns, for the check that every turn has room (`turnsWithoutRoom`).
  */
-function takeTurns(entity_registry: ReadableEntityRegistry, windows: Map<string, OpenRange[]>, takers: readonly Taker[], period: number,
+function chainTurns(entity_registry: ReadableEntityRegistry, windows: Map<string, OpenRange[]>, takers: readonly Taker[], period: number,
     hands_out: readonly Inserter[] = []): TurnedTakers[] {
     const turned: TurnedTakers[] = [];
     const contested = new Map<string, { machine: Machine; item: string; takers: Taker[] }>();
@@ -157,18 +154,17 @@ function takeTurns(entity_registry: ReadableEntityRegistry, windows: Map<string,
             }
         }
         if (!together) continue;
-        const width = Math.max(...group.map(taker => taker.window_ticks));
-        if (period / group.length < width) continue;
-        const draw = group.reduce((sum, taker) => sum + handSizeFor(taker.inserter, item), 0);
-        if (draw <= outputAtWindow(machine, item, period - width, width)) continue;
+        // each taker is a turn of its own, in the order of the machines they fill; a window a period, the longest of them
         const ordered = [...group].sort((a, b) => byNumber(a.sink, b.sink) || byNumber(a.inserter.entity_id, b.inserter.entity_id));
+        const offsets = turnOffsets(machine, item, ordered.map(taker => [taker.inserter]), period, Math.max(...group.map(taker => taker.window_ticks)));
+        if (offsets === null) continue;
         const first = windows.get(ordered[0].inserter.entity_id.id)![0].start_inclusive;
         const moved = new Set<string>();
         ordered.forEach((taker, turn) => {
             if (turn === 0) return;
             const id = taker.inserter.entity_id.id;
-            const shift = first + Math.round(turn * period / ordered.length) - windows.get(id)![0].start_inclusive;
-            windows.set(id, windowFrom(first + Math.round(turn * period / ordered.length), taker.window_ticks, period));
+            const shift = first + offsets[turn] - windows.get(id)![0].start_inclusive;
+            windows.set(id, windowFrom(first + offsets[turn], taker.window_ticks, period));
             if (moved.has(taker.sink.id)) return;
             moved.add(taker.sink.id);
             for (const out of hands_out) {
@@ -212,7 +208,7 @@ export function roomAtTurn(machine: Machine, held: number): boolean {
 }
 
 /**
- * The machines filled in turn (`turned`, from takeTurns) that would hold their product at the block when their turn opens,
+ * The machines filled in turn (`turned`, from chainTurns) that would hold their product at the block when their turn opens,
  * as a player reads it; empty where every turn has room. A machine whose product is handed on in no window (an inserter
  * enabled all the time, or placed straight into the next machine) holds none of it.
  */
@@ -341,7 +337,7 @@ export function groupedHandsCycles(entity_registry: ReadableEntityRegistry, swin
  *   when the previous one's window ends, and the inserters that fill a source machine a tick after the one that takes
  *   from it, so the machine is emptied before it is filled. One group serves such a chain (the draw against a source's
  *   block and rate is not the test there; the clock-only runs are). Takers of one machine that it cannot serve together
- *   take turns (`takeTurns`), and every machine filled in turn must have room when its turn opens: what it made since the
+ *   take turns (`turnOffsets`), and every machine filled in turn must have room when its turn opens: what it made since the
  *   last hand out of it started, below its ingredient block less one payout (`heldAtTurn`, `roomAtTurn`).
  *
  * Throws GroupedHandsNotApplicable where the build does not fit this, or the hands do not follow each other under the limit,
@@ -626,7 +622,7 @@ export function groupedHandsPlan(
             ...outputs.map(it => [it, outputHands(it)] as const),
             ...drains.map(it => [it.inserter, (it.window_ticks - WINDOW_MARGIN_TICKS) / it.inserter.animation.total.ticks] as const),
         ]);
-        const turned = takeTurns(entity_registry, windows, takers, period, [...hands_out.keys()]);
+        const turned = chainTurns(entity_registry, windows, takers, period, [...hands_out.keys()]);
         if (options.share_windows) sharedWindows(windows, gated, period);
         const made = leaveOpen(windows);
         const without_room = turnsWithoutRoom(entity_registry, made.windows, turned, hands_out, period);
