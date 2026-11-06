@@ -136,15 +136,18 @@ keep a test in the first file that the other still makes it. A game-tied pin of 
 (`clock-generator/record/`) is checked against the record by `clock-controls.test.ts`, with no generation of its own. A
 property that must hold of every job's result (not a value) belongs in `clock-generator/tests/game/builds/record-properties.ts`,
 which the blast runs on every alternative of every job and `blast.sh record check` reports; do not write it again as a test of
-one build.
+one build. A build that is a job of the record is generated once, by the record: what a test of it checked on the result and the record does not
+hold (a text, a decider's description, the always-on reasons, the fuel view, the losses the simulator tries) is a per-job check
+(`clock-generator/tests/game/builds/record-job-checks.ts` and `job-checks/`), run on the result the job already generated; see
+[the record](#the-record-of-the-blast-jobs).
 
 Prioritize reducing repeated generation and simulation work; adding workers is not a substitute, especially
 on CI runners with limited CPU capacity. Preserve every case, phase, clock offset and recovery check.
-CI runs the generation tests in eight shards (`vitest --shard`, files shared out by their measured CI seconds in
+CI runs the generation tests in two shards (`Gen 1/2`, `Gen 2/2`: `vitest --shard`, files shared out by their measured CI seconds in
 `clock-generator/ci/generation-durations.json`; the count is the `shard` list of the `generation-shards` job in
 `.github/workflows/test.yml`), so a pull request waits for the slowest shard. A file is never split between shards, so the slowest file sets a floor under that time however many
 shards there are.
-The check named "Generation tests" is the job after the shards. A pull request to master that changes only Markdown,
+The check named "Gen summary" is the job after the shards. A pull request to master that changes only Markdown,
 `docs/` or `clock-generator/docs/` skips the shards, and the check reports success; a run by hand and a release run
 them. CI uploads `generation-test-results-<shard>` with JSON test outcomes and a JUnit report, including when assertions
 fail. Use the JUnit suite durations to include shared `beforeAll` work; individual test durations alone omit it.
@@ -164,8 +167,8 @@ reduction from scheduling changes; do not report a faster test from a less busy 
 ## The record of the blast jobs
 
 [`clock-generator/record/`](clock-generator/record/README.md) holds one small JSON file for each of the 86 blast jobs: the clock the generator selects for the
-sample or fixture and every alternative it weighed (verdict, holds, rate, period, wake-ups, windows, clock hash). The check named "Record check" in CI
-generates the jobs in six shards (`Record jobs (shard n of 6)`, dealt out by the seconds each job took on a runner,
+sample or fixture and every alternative it weighed (verdict, holds, rate, period, wake-ups, windows, clock hash). The check named "Rec summary" in CI
+generates the jobs in six shards (`Rec 1/6` to `Rec 6/6`, dealt out by the seconds each job took on a runner,
 `clock-generator/ci/record-durations.json`), joins them and compares them with the committed files field by field; a difference fails with a table of job,
 field, before and after in the job summary. The check runs on every pull request to `master`, `feature/` or `release/` that changes more than documentation, and reports
 success on one that changes documentation only. Its name is stable so that it can be a required check. It is never faster than the slowest job
@@ -207,6 +210,7 @@ A pull request that moves no record changes no file in `record/`. A rename of jo
 | The same for a sample with an option set (belts backed up, an ingredient out of the period) that a game recording is tied to or a test pins | a job of the `variants` group: an entry in [`variant-jobs.ts`](clock-generator/tests/game/builds/variant-jobs.ts) naming the recording or test that qualifies it | the job gets the record and every property; the generation test goes |
 | Something that must be true of every job's result, whatever the build | a property of `record-properties.ts` (below) | one definition, run on every alternative of every job |
 | A game recording's clock | its `*-clock-controls.json` entry; `clock-controls.test.ts` checks the hash against the record | no generation of its own |
+| What a test of a build that is a job checked on the result, and the record does not hold: an expected text, a decider's description, the always-on reasons, the fuel view, a relation between fields | a per-job check ([`job-checks/`](clock-generator/tests/game/builds/job-checks/), above) | it runs in the record shard on the result the job already generated: a generation test of the same build would generate it a second time |
 | An option or search the record does not run (a changed config, an explicit search, a start-dependence override, a ranking such as the speed-80 agricultural one), or a check of a hand-made clock or a direct call | a generation test (`*.generation.test.ts`), one generation shared in the file (above) | a job would be one more generation for a check no recording needs; add a variant job only when a recording or a pin does |
 | A function or rule that needs no generation | a unit test (`npm test`) | runs on every pull request, in seconds |
 
@@ -231,23 +235,37 @@ A property is never loosened because a job fails it: the failure is a finding. W
 minute on five alternatives (`config-ADVANCED_CIRCUIT_230`, `config-PRODUCTIVITY_MODULE_80_CHEST_CHAIN`, `config-STEEL_PLATE_26_WAGON_CHEST` and two
 variant jobs); each is in `EXCEPTIONS` with `#626` in its reason, and the entries go when #626 is fixed.
 
+### Per-job checks
+
+A job of the record can carry named checks on its own result: [`record-job-checks.ts`](clock-generator/tests/game/builds/record-job-checks.ts) lists them by job
+key in the files of [`job-checks/`](clock-generator/tests/game/builds/job-checks/). A check is a function that throws (vitest's `expect`) when
+the result is not what it states; `blast.blastrun.ts` runs a job's checks right after the property module, on the result the job already generated (a check may
+simulate again from it, a loss or a clock-only run, but never generates), and writes the names that ran and the failures into the job file as `checks`.
+`blast.sh record check` fails on any failure, naming the job, the check and the expected and actual values (in the job summary of "Rec summary" too), and on a job file with no `checks` or
+judged by another version of the module, as it does for the properties. A check never repeats what the record pins (selected id, verdict, holds, rate,
+period, wake-ups, windows, clock hash, and the hashes of the label, description, insights and assessment): a moved value is a changed file in `record/`.
+What a check holds is what the record cannot: the expected text of a label, a description or an insight, a decider's description, the
+always-on reasons, the fuel view, a field of the result that is not in the exported clock, or a relation between them. To add one: write it in the file
+of its group (`samples.ts` for a sample as it is, `variants.ts`, `fixtures.ts`) under the job's key, and run the job (`BLAST_ONLY=<name> BLAST_GROUPS=<group> blast.sh run .. <out> --no-store`, then `blast.sh record check <out>`). A check
+is never loosened because a job fails it.
+
 ### The CI jobs
 
 | Check name | What it does | Runs |
 | --- | --- | --- |
 | Unit tests | knip, typecheck, build, lint, `npm test` (the units, `clock-controls.test.ts` among them) | every pull request that changes more than documentation |
-| Generation tests (shard n of 8), then Generation tests | the `*.generation.test.ts` files, dealt out by `ci/generation-durations.json` | ready pull requests to `master`, `feature/` or `release/` that change more than documentation, and releases; on a draft the shards do not run and the check fails (below) |
-| Record jobs (shard n of 6), then Record check | the 86 jobs, joined, compared with `record/`, with the properties and the never-worse rule | ready pull requests to `master`, `feature/` or `release/` that change more than documentation; on a draft the shards do not run and the check fails (below) |
-| UI build, UI tests of every sample, UI generate in a browser | the UI | every pull request that changes more than documentation |
+| `Gen 1/2` and `Gen 2/2`, then `Gen summary` | the `*.generation.test.ts` files, dealt out by `ci/generation-durations.json` | ready pull requests to `master`, `feature/` or `release/` that change more than documentation, and releases; on a draft the shards do not run and the check fails (below) |
+| `Rec 1/6` to `Rec 6/6`, then `Rec summary` | the 86 jobs, joined, compared with `record/`, with the properties, the per-job checks and the never-worse rule | ready pull requests to `master`, `feature/` or `release/` that change more than documentation; on a draft the shards do not run and the check fails (below) |
+| `UI build`, `UI samples`, `UI browser` | the UI | every pull request that changes more than documentation |
 
 **Drafts.** GitHub's free plan runs 20 jobs at once and a pull request starts about 22, so the heavy suites (the generation shards and the
 record shards) do not run on a draft pull request; unit tests, the UI build, the UI samples and the browser job do. On a draft the checks
-"Generation tests" and "Record check" run and fail with "not run on a draft: mark the pull request ready, or run
+"Gen summary" and "Rec summary" run and fail with "not run on a draft: mark the pull request ready, or run
 `gh workflow run test.yml --ref <branch>`": a skipped required check counts as passing, so they never skip or pass there. Marking the pull
 request ready (`ready_for_review`) runs everything, as does a push to a ready pull request, a run by hand (`gh workflow run test.yml --ref <branch>`)
 and a release or sidecar run that calls the workflow.
 
-The ruleset "Integration branches: CI before merge" (`feature/*`, `release/*`) lists `Record check` among its required checks, so a record
+The ruleset "Integration branches: CI before merge" (`feature/*`, `release/*`) lists `Rec summary` among its required checks, so a record
 that moved without a file, a property problem or an unnamed worse selected clock stops a merge into an integration branch. No ruleset
 covers `master` today. After a change to the jobs, refresh `ci/record-durations.json` (above); after a change to the generation tests,
 `node scripts/ci/update-generation-durations.js <dir of the downloaded generation-test-results-* artifacts of a run>` (a median of several runs is

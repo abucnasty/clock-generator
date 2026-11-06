@@ -6,7 +6,7 @@ name: Test
 # Those pull requests run none of the test jobs when they change documentation only (see the `changes` job). "Run workflow" (or
 # `gh workflow run test.yml --ref <branch>`) runs them all on any branch (the record check runs on pull requests only).
 # The two heavy suites, the generation shards and the record shards, do not run on a draft pull request (GitHub's free plan runs
-# 20 jobs at once, and a pull request starts about 22): the checks "Generation tests" and "Record check" run and fail there, with the
+# 20 jobs at once, and a pull request starts about 22): the checks "Gen summary" and "Rec summary" run and fail there, with the
 # way to run them, rather than pass or skip, which a required check counts as passing. Marking the pull request ready runs everything.
 # release.yml and publish-sidecar.yml call this workflow and do nothing unless it passes; a release runs the generation
 # tests too, publishing the sidecar does not.
@@ -136,21 +136,20 @@ jobs:
   # which put the two slowest files in one shard. Every shard computes the whole split and takes its part, so no file
   # is missed or run twice, and a new or renamed file still runs, counted as the median file. Refresh the durations with
   # clock-generator/scripts/ci/update-generation-durations.js from the reports of a run. Each shard is a runner of its
-  # own (4 vCPUs) and tests with all of it. The check that is named "Generation tests" is the job after the shards.
+  # own (4 vCPUs) and tests with all of it. The check that is named "Gen summary" is the job after the shards.
   generation-shards:
-    name: Generation tests (shard ${{ matrix.shard }} of ${{ strategy.job-total }})
+    name: Gen ${{ matrix.shard }}/${{ strategy.job-total }}
     needs: changes
     if: needs.changes.outputs.generation == 'true' && github.event.pull_request.draft != true
     runs-on: ubuntu-latest
-    # the whole suite took 1,302 s on an Intel Xeon 8573C runner and 1,490 s on an AMD EPYC 7763 on 2026-10-24 (one
-    # runner, 3 workers); a shard has about an eighth of it. One file, the productivity module chest chain, takes about
-    # 460 s on its own, which is the least a shard can take
+    # the builds that are jobs of the record are checked there (tests/game/builds/job-checks/), so the generation tests are the
+    # options and searches the record does not run: about 700 s of runner time on 2026-11-05, half of it in a shard
     timeout-minutes: 25
     strategy:
       # every shard finishes, so that a pull request shows all its failures at once
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+        shard: [1, 2]
     defaults:
       run:
         working-directory: clock-generator
@@ -198,11 +197,11 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-  # The check "Generation tests": one name for the shards, whatever their number. It reports success when the pull
+  # The check "Gen summary": one name for the shards, whatever their number. It reports success when the pull
   # request changes documentation only (the shards are skipped then), and fails when the changed files could not be read or a
   # shard failed. It is skipped, as the generation tests always were, where they are not asked for.
   generation:
-    name: Generation tests
+    name: Gen summary
     needs: [changes, generation-shards]
     # not skipped with the shards: it is the job that tells what became of them
     if: ${{ !cancelled() && (inputs.generation || github.base_ref == 'master' || startsWith(github.base_ref, 'feature/') || startsWith(github.base_ref, 'release/')) }}
@@ -243,9 +242,9 @@ jobs:
   # estimated to finish first; scripts/blast/shard.py), so that the shards finish together, and the pull request waits for the
   # slowest, which is never faster than its slowest job (the productivity module chest chain). Refresh the durations with
   # clock-generator/scripts/ci/update-record-durations.js from the `record-jobs-<n>` artifacts of a run. The check named
-  # "Record check" is the job after the shards.
+  # "Rec summary" is the job after the shards.
   record-shards:
-    name: Record jobs (shard ${{ matrix.shard }} of ${{ strategy.job-total }})
+    name: Rec ${{ matrix.shard }}/${{ strategy.job-total }}
     needs: changes
     if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft != true && needs.changes.outputs.generation == 'true' }}
     runs-on: ubuntu-latest
@@ -281,7 +280,7 @@ jobs:
       - name: Generate the jobs of the shard
         run: bash scripts/blast/blast.sh run .. "$RUNNER_TEMP/blast-jobs" --no-store --shard ${{ matrix.shard }}/${{ strategy.job-total }}
 
-      # the job files (and the shard's list of jobs): the Record check joins them, and each holds the seconds its job took
+      # the job files (and the shard's list of jobs): the Rec summary joins them, and each holds the seconds its job took
       - name: Job files
         if: always()
         uses: actions/upload-artifact@v4
@@ -292,14 +291,14 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-  # The check "Record check": one name for the shards, whatever their number. It joins the shards' job files and compares them with
+  # The check "Rec summary": one name for the shards, whatever their number. It joins the shards' job files and compares them with
   # the committed record (field by field; a difference fails with a table of job, field, before and after, in the job summary too),
   # then checks the properties of the jobs and that no selected clock got worse (below). It reports success when the pull request
   # changes documentation only (the shards are skipped then), and fails when the changed files could not be read or a shard failed.
   # It runs on pull requests to master and to feature/ and release/ branches, as the shards do, and not on a release (which calls this workflow
   # and does nothing unless it passes). Its name is stable, so that it can be a required check.
   record:
-    name: Record check
+    name: Rec summary
     needs: [changes, record-shards]
     # not skipped with the shards: it is the job that tells what became of them
     if: ${{ !cancelled() && github.event_name == 'pull_request' && (github.base_ref == 'master' || startsWith(github.base_ref, 'feature/') || startsWith(github.base_ref, 'release/')) }}
@@ -421,7 +420,7 @@ jobs:
   # The UI tests that generate the clock of every sample (about a minute for the original pink science sample alone),
   # beside the UI build instead of in it: they need the engine built and the UI's modules, nothing of the UI build.
   ui-samples:
-    name: UI tests of every sample
+    name: UI samples
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.generation != 'false' }}
     runs-on: ubuntu-latest
@@ -455,7 +454,7 @@ jobs:
   # process.env in the engine, which the browser's worker does not have: every Generate on the dev server failed with
   # "process is not defined" while every check passed.
   browser:
-    name: UI generate in a browser
+    name: UI browser
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.generation != 'false' }}
     runs-on: ubuntu-latest
