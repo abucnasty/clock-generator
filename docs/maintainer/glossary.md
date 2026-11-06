@@ -121,6 +121,12 @@ runs over the end of the window cycle is one enable window. **Enable if** is the
 2.0 called it **Enable/disable**).
 _Avoid_: wake window, active window, window (bare), enable range
 
+**Belt slack**:
+The ticks an inserter that picks up from a moving belt stays enabled after its last pickup, so that a pickup that
+starts late can still fill its hand. A project technical noun (STE rule 1.6): STE does not approve slack. The site shows
+it as "+4 ticks belt slack".
+_Avoid_: belt pickup slack, pickup slack, slack (bare)
+
 **Window cycle**:
 One complete sequence of all enable windows of a clock, after which the sequence starts again. STE: CYCLE (n), approved.
 _Avoid_: periodicity, clock period, period (bare), cycle (bare)
