@@ -211,9 +211,21 @@ The clock goes back to its rate by itself after a supply stop or an output block
 back to its rate", not "recovers" (STE does not approve recover (v)).
 _Avoid_: recovers, recover, get back
 
+**Backpressure**:
+The condition of a build in which all belts, chests and machines are full. The build then stops, because no item is
+removed from its output. A user can let a build get to backpressure before the clocks are enabled. A project technical
+noun (STE rule 1.6).
+_Avoid_: warm start, warm, free run
+
+**Empty start**:
+The clocks are enabled while the build fills. STE: EMPTY (adj), START (n), approved.
+
+**Backpressure start**:
+The clocks are enabled after the build gets to backpressure. A project technical noun (STE rule 1.6).
+
 **Backpressure loss**:
 A supply stop or an output blockage, as the trials make them. A maintainer term: users never see it.
-_Avoid_: backpressure recovery, backpressure (bare)
+_Avoid_: backpressure recovery
 
 ## Changes
 
