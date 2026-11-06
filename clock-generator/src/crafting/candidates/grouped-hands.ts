@@ -3,7 +3,7 @@ import { Entity, EntityId, handSizeFor, Inserter, isNeverBlockingSink, Machine, 
 import { DRILL_ITEMS_PER_SWING } from "../planner/balance";
 import { EntityTransferCountMap, type OutputPath } from "../sequence/cycle/swing-counts";
 import { SwingDistribution } from "../sequence/cycle/swing-distribution";
-import { BlueprintGenerationResult, GenerateClockOptions, PlanRun, checkedClock, clockOfPlan, fractionalSwingsOf, planRun } from "../plan/plan-run";
+import { BlueprintGenerationResult, GenerateClockOptions, GuardedTaker, PlanRun, checkedClock, clockOfPlan, fractionalSwingsOf, planRun } from "../plan/plan-run";
 import { alwaysEnabledInserters, isByProductOnlyInserter, unplannedInserterClocks, type InserterClock } from "../sequence/unplanned-inserter-clock";
 import { ClockBelt, beltPickupSlackTicks } from "../clock";
 import { backpressureLossVerdictOf, runClockOnBuild } from "../trial";
@@ -268,6 +268,8 @@ interface Taker {
     window_ticks: number;
     /** Takes a machine's product into a chest that others take from: a taker of that machine, whose hand the machine does not hold ready */
     drain?: boolean;
+    /** The hands of a taker the surplus guard is on for: its window starts them and no extra one */
+    guarded_hands?: number;
 }
 
 /** Whole hands a period of an item moved `count` hands a cycle over `cycles` cycles: the next whole number (rule F) */
@@ -370,6 +372,11 @@ export interface GroupedHandsPlan {
     turns: TurnGroup[];
     /** The ids of the takers busy all the time, whose hands take the whole period: they have no window */
     busy: string[];
+    /**
+     * The takers the surplus guard is on for that have a window of their hands alone (not shared with a longer one), each with
+     * the tick it opens: what the per-hand variant splits (`perHandWindowsClock`)
+     */
+    guarded: GuardedTaker[];
 }
 
 /** The windows of `groupedHandsWindows`, with the groups whose turns they are */
@@ -472,7 +479,8 @@ export function groupedHandsPlan(
             const guarded = surplus_kept && (options.surplus_guard
                 || (options.per_taker_guard === true && busy_with_extra_start && options.unguarded_sinks?.has(sink.entity_id.id) !== true));
             const starts = guarded ? count : count + 1;
-            takers.push({ inserter, source: source.entity_id, sink: sink.entity_id, items, window_ticks: (starts - 1) * cycle + WINDOW_MARGIN_TICKS + slack });
+            takers.push({ inserter, source: source.entity_id, sink: sink.entity_id, items, window_ticks: (starts - 1) * cycle + WINDOW_MARGIN_TICKS + slack,
+                ...(guarded && { guarded_hands: count }) });
         } else if (EntityId.isMachine(source.entity_id) && EntityId.isChest(sink.entity_id) && chests_taken_from.has(sink.entity_id.id)) {
             // it takes what the machine made, and the chest takes every hand: one swing more than the hands, and the draw is not tested
             const carried = transfers.get(inserter.entity_id.id)?.item_transfers ?? [];
@@ -500,10 +508,17 @@ export function groupedHandsPlan(
     const gated = takers.filter(it => !open_all_period(it));
     if (gated.length === 0) refuse(`every taker is busy the whole period of ${period} ticks`);
     const longest = Math.max(...gated.map(it => it.window_ticks));
-    const leaveOpen = (made: Map<string, OpenRange[]>): Pick<GroupedHandsPlan, "windows" | "busy"> => {
+    const leaveOpen = (made: Map<string, OpenRange[]>): Pick<GroupedHandsPlan, "windows" | "busy" | "guarded"> => {
         const busy = takers.filter(open_all_period).map(taker => taker.inserter.entity_id.id);
         for (const id of busy) made.delete(id);
-        return { windows: made, busy };
+        const guarded = takers.flatMap(taker => {
+            const ranges = made.get(taker.inserter.entity_id.id);
+            if (taker.guarded_hands === undefined || ranges === undefined
+                || ranges.reduce((sum, range) => sum + range.end_inclusive - range.start_inclusive + 1, 0) !== taker.window_ticks) return [];
+            return [{ inserter_id: taker.inserter.entity_id.id, start: openingTick(ranges, period), hands: taker.guarded_hands,
+                cycle_ticks: taker.inserter.animation.total.ticks }];
+        });
+        return { windows: made, busy, guarded };
     };
 
     // the machines, in the order of their ids, and the fewest groups every source can serve
@@ -697,7 +712,24 @@ const SHARED_TRIES: GroupedHandsOptions[] = SEPARATE_TRIES.map(way => ({ ...way,
 interface HoldingWay {
     way: GroupedHandsOptions;
     clock: BlueprintGenerationResult;
+    /** The plan of the windows, and the takers left open with them: what the per-hand variant is made from */
+    planned: GroupedHandsPlan;
+    left_open: ReadonlyMap<string, AlwaysOnReason>;
 }
+
+/** What a grouped hands clock with guarded takers was made from, for its per-hand variant (`perHandWindowsClock`) */
+interface PerHandSource {
+    made: PlanRun;
+    options: GenerateClockOptions;
+    planned: GroupedHandsPlan;
+    left_open: ReadonlyMap<string, AlwaysOnReason>;
+}
+
+/**
+ * The clocks of the grouped hands with guarded takers, by the windows object of the result (spreads of a result keep it), and what
+ * each was made from: the variant is made on the plan and with the options of its clock, not on a plan made again. No serialized field.
+ */
+const per_hand_sources = new WeakMap<object, PerHandSource>();
 
 /**
  * Of the clocks of the ways that hold, the one the selection ranks first (`combineClockAlternativeRuns`): one that gets
@@ -785,6 +817,7 @@ export function groupedHandsClock(
 ): BlueprintGenerationResult | null {
     let made = plan;
     let finished: BlueprintGenerationResult | null = null;
+    let kept: HoldingWay | null = null;
     const holding: HoldingWay[] = [];
     const reasons: string[] = [];
     try {
@@ -824,7 +857,7 @@ export function groupedHandsClock(
             // the margin runs start from the cold start only: the clock has to hold from the other start phases too
             const clock_of_windows = finishedClock(made, windows, turns, options, left_open);
             if (clock_of_windows.stability_check.holds) {
-                holding.push({ way, clock: clock_of_windows });
+                holding.push({ way, clock: clock_of_windows, planned, left_open });
                 // the guard per taker that holds and does not get back from a loss is remade once, right after it, with the takers into
                 // the machines the target is counted at enabled as before; no other remake and no search (DESIGN 3.1, R-busy)
                 if (way.per_taker_guard === true && way.unguarded_sinks === undefined && losses_decide
@@ -841,6 +874,7 @@ export function groupedHandsClock(
             const best = bestHolding(made, holding, options.shared_windows === true);
             plan.logger.log(`Grouped hands: ${holding.map(it => `${wayName(it.way)} holds at ${it.clock.stability_check.as_built?.wake_ups?.wake_ups_per_minute ?? "?"} wake-ups a minute`).join(", ")}; `
                 + (best === null ? "none gets back from every loss" : `kept ${wayName(best.way)}`));
+            kept = best;
             finished = best?.clock ?? finished;
             if (finished === null) reasons.push("no shared windows that hold get back from every loss");
         }
@@ -852,5 +886,44 @@ export function groupedHandsClock(
         }
         throw error;
     }
-    return { ...finished!, grouped_hands: { shared_windows: options.shared_windows === true } };
+    const guarded_takers = options.shared_windows === true ? [] : kept?.planned.guarded ?? [];
+    const result: BlueprintGenerationResult = { ...finished!, grouped_hands: { shared_windows: options.shared_windows === true,
+        ...(guarded_takers.length > 0 && { guarded_takers }) } };
+    if (guarded_takers.length > 0) per_hand_sources.set(result.clock_windows, { made, options, planned: kept!.planned, left_open: kept!.left_open });
+    return result;
+}
+
+/**
+ * The windows of a grouped hands clock with each guarded taker's one span (`guarded_takers`) split into a window of one tick at
+ * each pick, `start + j x cycle` for j = 0 to hands - 1 (DESIGN 3.1, R-busy, the per-hand shape); every other window as it is. A
+ * taker of one hand has nothing to split: its window of two ticks stays.
+ */
+export function perHandWindows(windows: ReadonlyMap<string, OpenRange[]>, guarded: readonly GuardedTaker[], period: number): Map<string, OpenRange[]> {
+    const split = new Map(windows);
+    for (const taker of guarded.filter(it => it.hands > 1)) {
+        const ticks = Array.from({ length: taker.hands }, (_, j) => (taker.start + j * taker.cycle_ticks) % period).sort((a, b) => a - b);
+        split.set(taker.inserter_id, ticks.map(tick => OpenRange.from(tick, tick)));
+    }
+    return split;
+}
+
+/**
+ * The per-hand variant of a grouped hands clock with guarded takers (`perHandWindows`), on the plan and with the options its clock
+ * was made with, checked as the clock is: the margin of `holdsWithMargin`, then the clock-only runs from the start phases and the
+ * long run. Null for a clock with no guarded taker of more than one hand, or not made by `groupedHandsClock` here; throws where the
+ * windows do not hold with their margin.
+ */
+export function perHandWindowsClock(clock: BlueprintGenerationResult): BlueprintGenerationResult | null {
+    const source = per_hand_sources.get(clock.clock_windows);
+    const guarded = clock.grouped_hands?.guarded_takers;
+    if (source === undefined || guarded === undefined || !guarded.some(it => it.hands > 1)) return null;
+    const { made, options, planned, left_open } = source;
+    const period = made.run.duration.ticks;
+    const windows = perHandWindows(planned.windows, guarded, period);
+    const unmoved = holdsWithMargin(made, windows, period);
+    if (unmoved !== null) throw new GroupedHandsNotApplicable(`the per-hand windows: ${unmoved}`);
+    const per_hand = finishedClock(made, windows, planned.turns, options, left_open);
+    made.logger.log(`Grouped hands, per hand: ${per_hand.stability_check.holds ? "holds" : "does not hold"} at `
+        + `${per_hand.stability_check.as_built?.wake_ups?.wake_ups_per_minute ?? "?"} wake-ups a minute`);
+    return { ...per_hand, grouped_hands: { shared_windows: false } };
 }

@@ -4,7 +4,7 @@
   "group": "config",
   "name": "MILITARY_SCIENCE_120",
   "config_sha256": "81b10b3845f0f9f50cecabac4a881aa5fbadb4f26ef1896eef754f61674a4a0b",
-  "job_results_sha256": "9f98bf21378c5796f50d7b01a653e10db2d1dd21a1e6acd00da50ed815964707",
+  "job_results_sha256": "dec26de15df34c4abd9ba550e9b29f4c0c982fe15a485a2651b8d1f902b66843",
   "selected": "planned-belt-slack",
   "selected_windows": {
     "inserter:1": "0-48",
@@ -22,6 +22,7 @@
     {"id": "swings-6", "verdict": "unstable", "holds": false, "rate": 80, "supply": "moving", "period": 480, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "73caa13b3790d8029ba073a8107ad0b7a2936dfb1c1ac37d231f51bedac25348", "windows_sha256": "39f28a208069de666aec08dd485b04714d614aa2b70d11d183d303a339ab3ffe", "text_sha256": "7d90f4d2039c6d8223677319e6a731f1ff0e5066311d50703e005cf7aaec59f0", "results_sha256": "4f923b2ce9e6a84d029d24d93cccabc50b46b1042cb67ae980256e7d53af32f0"},
     {"id": "swings-3", "verdict": "unstable", "holds": false, "rate": 80, "supply": "moving", "period": 480, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "83893d44d2d596d7ea54649edc160d051b39e71ff25c51e8c41071c160966fc1", "windows_sha256": "3c325c1a732c95e3aaa8d4555a31ca9cfbeda3b01adc1d865c1f5f2a857b175a", "text_sha256": "f602018d478fcaa6ca3b96e09e33c46a2daa6c5e10503639d42f15ff1c83c41b", "results_sha256": "dd1409af27e11267c37cffee5ea8c55402a936c42e68de79bb58d725385c8cb3"},
     {"id": "swings-2", "verdict": "unstable", "holds": false, "rate": 60, "supply": "moving", "period": 160, "wake_ups": 226.415, "descriptions_cut": 0, "clock_sha256": "c71dd9f212c89b46a820512a0b31392b9b1b7541bbc0d2a71dc65af720e9b4ed", "windows_sha256": "d088760c41a8d3788bcf490961ca23ea43c42d529c7635e0be400761a19230f9", "text_sha256": "fe72cc4bf91cfa461c61006d1e5d27acbd517b5937463224abef3b2d9c12d720", "results_sha256": "db8d07de42a5b1e62a14c3c73b7ca0cf3b5b594f10200e8d84d107856572dcf8"},
-    {"id": "swings-1", "verdict": "stable", "holds": true, "rate": 120, "supply": "moving", "period": 40, "wake_ups": 731.25, "descriptions_cut": 0, "clock_sha256": "6a473118305c653901d1d20507f63de610d096fcbce9938f4b8a690ee28bf833", "windows_sha256": "ffa98d9e6d9f97bbf058ccbdbf40fbb1fb8d2bde93bcc58b56aa531628b1935d", "text_sha256": "523f5cd63a21f5b91f3f30739d34060e856d88c75d28a4204a8e478766e800e7", "results_sha256": "8980353c7a9d9aa35b69e0d7f988f70b88a5014a2ff300cd70beb991fff81200"}
+    {"id": "swings-1", "verdict": "stable", "holds": true, "rate": 120, "supply": "moving", "period": 40, "wake_ups": 731.25, "descriptions_cut": 0, "clock_sha256": "6a473118305c653901d1d20507f63de610d096fcbce9938f4b8a690ee28bf833", "windows_sha256": "ffa98d9e6d9f97bbf058ccbdbf40fbb1fb8d2bde93bcc58b56aa531628b1935d", "text_sha256": "523f5cd63a21f5b91f3f30739d34060e856d88c75d28a4204a8e478766e800e7", "results_sha256": "8980353c7a9d9aa35b69e0d7f988f70b88a5014a2ff300cd70beb991fff81200"},
+    {"id": "swings-1-per-hand", "verdict": "stable", "holds": true, "rate": 120, "supply": "moving", "period": 40, "wake_ups": 731.25, "descriptions_cut": 0, "clock_sha256": "055591609763446525c79d3d87363108d76c10e2f65394205cffd9660ab200f8", "windows_sha256": "849345e32d43e12d04adedffdfea2e356c3e359f5cb63a2d6d34ab70c1c8c9f6", "text_sha256": "fa0b5cf6194539716b8f56fb10ce0c8d277e3a8a5551bdf3c7f29bd5a0369727", "results_sha256": "870d729e707c47e407947a8c678dce944b34380e1a9c900acb9eb7847ab482a4"}
   ]
 }

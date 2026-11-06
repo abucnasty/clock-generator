@@ -161,7 +161,7 @@ const circuitExport: JobCheck[] = [
         },
     },
     {
-        // the replay from the warm-up inventory is the build stalled in part (the iron into circuit machine 6, inserter 6, picks up
+        // the replay from the warm-up inventory is the build stalled in part (the plastic off the belt, inserter 1, picks up
         // nothing in the period recorded); the long run judges stock from index 960, after 240 warm-up ticks; replaying clock tick 1200
         // shows the inserters at work
         name: 'records a settled period from the clock tick the long run judges, not the stalled first one',
@@ -177,7 +177,7 @@ const circuitExport: JobCheck[] = [
                 inserter_clocks: selected.result.unplanned_inserter_clocks ?? {},
             };
             const swings = (recording: ReturnType<typeof recordSimulationTimeline>) => recording.events
-                .filter(event => event.entity_id === 'inserter:6' && event.kind === 'pickup').length;
+                .filter(event => event.entity_id === 'inserter:1' && event.kind === 'pickup').length;
             const cold = recordSimulationTimeline(request);
             const settled = recordSimulationTimeline({ ...request, settle_ticks: judged_clock_tick });
             expect(cold.ticks_before_recording).toBe(240);

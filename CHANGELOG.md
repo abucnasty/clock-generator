@@ -11,6 +11,9 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ## [Unreleased]
 
+### Added
+- generation: a new clock that enables some inserters for one tick at each swing
+
 ### Changed
 - generation: fractional swings now falls back to fewer output swings where the machine cannot take them
 - generation: several builds now select clocks with fewer wake-ups, among them logistic and electromagnetic science

@@ -3,11 +3,11 @@
  "cases": {
   "generated-as-is": {
    "recorded": {
-    "pr": 654,
-    "commit": "a4a77fed",
-    "frozen_head": "a4a77fed",
-    "note": "recorded under the protocol in game ticks on the per-taker guard's clock (#638)",
-    "clock_sha256": "46ff6c909862ca63c85c7185aae00dd4057094b232f9a5d368f98a212e15e487",
+    "pr": 668,
+    "commit": "f659fb4b",
+    "frozen_head": "f659fb4b",
+    "note": "recorded under the protocol in game ticks on the per-hand windows' clock (#638)",
+    "clock_sha256": "7de289c785c103b91b175bb4d83d8bb2414d7081f9d1c1c41dc3a6e359485037",
     "clock_basis": "capture"
    },
    "native": {
@@ -48,37 +48,37 @@
       "start": 15234,
       "drop": 15285,
       "release": 15285,
-      "recovered": 18906
+      "recovered": 18920
      }
     ],
     "stock": {
      "lowest": 2,
-     "end": 24,
+     "end": 8,
      "holds": true
     },
     "result": "holds",
-    "ended": 18906
+    "ended": 18920
    },
    "generation": {
     "period": 24,
     "expected": 32,
     "verdict": "stable",
     "selection": {
-     "id": "planned-belt-slack",
+     "id": "planned-belt-slack-per-hand",
      "holds": true,
      "rate": 80,
      "supply": "moving"
     },
-    "clock_sha256": "46ff6c909862ca63c85c7185aae00dd4057094b232f9a5d368f98a212e15e487"
+    "clock_sha256": "7de289c785c103b91b175bb4d83d8bb2414d7081f9d1c1c41dc3a6e359485037"
    }
   },
   "generated-backed-up": {
    "recorded": {
-    "pr": 654,
-    "commit": "a4a77fed",
-    "frozen_head": "a4a77fed",
-    "note": "recorded under the protocol in game ticks on the per-taker guard's clock (#638)",
-    "clock_sha256": "ab032c4c23f46959e94ee1113c4c53ae7ce02b78c0808de2967d6965eda5fecf",
+    "pr": 668,
+    "commit": "f659fb4b",
+    "frozen_head": "f659fb4b",
+    "note": "recorded under the protocol in game ticks on the per-hand windows' clock (#638)",
+    "clock_sha256": "33b1106a1400e708c0f571652e586c92366d44be45e9af309cde41333d6feb23",
     "clock_basis": "capture"
    },
    "native": {
@@ -135,12 +135,12 @@
     "expected": 32,
     "verdict": "stable",
     "selection": {
-     "id": "planned-belt-slack",
+     "id": "planned-belt-slack-per-hand",
      "holds": true,
      "rate": 80,
      "supply": "backed_up"
     },
-    "clock_sha256": "ab032c4c23f46959e94ee1113c4c53ae7ce02b78c0808de2967d6965eda5fecf"
+    "clock_sha256": "33b1106a1400e708c0f571652e586c92366d44be45e9af309cde41333d6feb23"
    }
   }
  }
