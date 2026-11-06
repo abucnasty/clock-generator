@@ -12,14 +12,14 @@ setpoint with as few wakeups as possible.
 Each term is checked against three sources, in this order:
 
 1. **Factorio 2.1.24**: the strings the player sees, the runtime API, the debug view and the engine's names.
-2. **Control theory**: IEC 60050-351 (the International Electrotechnical Vocabulary, control technology), Åström and
-   Murray, *Feedback Systems* (2008), Janert, *Feedback Control for Computer Systems* (2013), and Wikipedia. The clock
+2. **Control theory**: IEC 60050-351, the International Electrotechnical Vocabulary for control technology. Also
+   Åström and Murray, *Feedback Systems* (2008), Janert, *Feedback Control for Computer Systems* (2013), and Wikipedia. The clock
    generator is modelled as a control loop: the build is the controlled system, the setpoint is set by the user, and
    the clock is the controller.
 3. **ASD-STE100 Issue 9** (Simplified Technical English): the dictionary and its rules for technical nouns and
    technical verbs.
 
-The first source that has the term gives it. A game word is used as a technical noun (STE rule 1.6); a control term
+The first source that has the term gives it. A game word is used as a technical noun (STE rule 1.6). A control term
 keeps its standard meaning, and its entry gives the source as a number or a page. Where a source uses the word for a
 different thing, or STE does not approve it, the entry says so. A term in none of the sources is the project's own
 technical noun.
@@ -45,9 +45,11 @@ _Avoid_: object, piece
 
 **Setpoint**:
 The product a build must make and the rate it must hold, in items per second, for all copies. Set by the user; the
-clock never changes it. Control theory: the setpoint, or reference variable (IEC 351-48-02; Janert p.21-22, who uses it
-for rate targets). A setpoint at the maximum rate of the build leaves no time for recovery (Janert p.22). The
-site's **Target Output** panel shows it, until the site's next release names the panel **Setpoint**.
+clock never changes it. Control theory: the setpoint (Janert p.21-22, who uses it for rate targets). In IEC terms it is
+the command variable (IEC 351-48-09): it comes from outside, and the control does not change it. IEC's reference
+variable (351-48-02) is the input of a comparing element in closed-loop control, so the open-loop clock has none. A
+setpoint at the maximum rate of the build leaves no time for recovery (Janert p.22). The site's **Target Output**
+panel shows it, until the site's next release names the panel **Setpoint**.
 _Avoid_: target output, target rate, goal, control frequency (that is the window cycle time)
 
 **Copies**:
@@ -77,7 +79,7 @@ _Avoid_: build (v), place (v)
 
 **Clock**:
 One set of combinators the generator made for a build and checked in the simulator. Its counter counts on the game's
-virtual signal **Clock**, a related use of the word. Control theory: the controller (IEC 351-49-02). The installed clock
+virtual signal **Clock**, a related use of the word. Control theory: the controlling system (IEC 351-49-02). The installed clock
 is open-loop control, and its method is pulse-width modulation.
 _Avoid_: potential clock, alternative, candidate, solution, controller (bare; the game's input controllers and
 **Ghost controller**)
@@ -121,8 +123,8 @@ A machine two or more inserters take from, whose output their enable windows mus
 ## Strategies
 
 **Strategy**:
-The rule an inserter's enable windows are placed by, chosen for that inserter among the strategies that apply to its
-source, its sink and its place in the graph.
+The rule that places an inserter's enable windows. The generator chooses it for each inserter, from the strategies
+that apply to the inserter's source, its sink and its place in the graph.
 
 ## Windows
 
@@ -182,8 +184,8 @@ open-loop control: it reads nothing from the build. Control theory: IEC 351-47-0
 _Avoid_: feedforward (for the clock; Janert's meaning is wider than the IEC's), "the clock reacts", "the clock adjusts"
 
 **Pulse-width modulation** (**PWM**):
-The method of the clock: it switches each inserter fully on and off in a fixed pattern that repeats every window
-cycle, so that the average work of each inserter meets the setpoint. Intended discrete control, set by the design loop.
+The method of the clock. It switches each inserter fully on and off in a fixed pattern that repeats every window
+cycle. The average work of each inserter then meets the setpoint. Intended discrete control, set by the design loop.
 Control theory: pulse-width modulation (Wikipedia); Janert's split-time controller, p.110.
 
 **Duty cycle**:
@@ -211,7 +213,8 @@ _Avoid_: machine duty, duty (bare)
 
 **Cold start**:
 A start of a build with every machine, belt buffer and hand empty and the supplies full. The clock starts at the first
-tick. An opt-in, advanced check: the generator judges clocks from the backpressure start. The code's `cold_start`.
+tick. The start the generator judges clocks from. Spike #689 measures whether the backpressure start should replace
+it. The code's `cold_start`.
 Control theory: a step response from rest (IEC 351-45-27; Janert p.82).
 _Avoid_: empty start, unloaded start, cold startup
 
@@ -219,13 +222,15 @@ _Avoid_: empty start, unloaded start, cold startup
 A start of a build in which every entity that can fill without the clock is full. The supply belts are saturated.
 The machines that inserters without a clock fill, and their outputs, are full. The machines that only clocked inserters
 fill are empty. A loop starts from its kick start. The clock starts at the first tick, when the **Clock
-lock** is set to off. The start that the generator judges clocks from: a user can always start a build this way.
+lock** is set to off. A user can always start a build this way. Planned as the judged start in place of the cold
+start, when spike #689 shows that it costs no more.
 Control theory has no single term: a step response from a saturated initial state (Janert p.28, p.101-103).
 _Avoid_: loaded start, warm start, full backpressure startup
 
 **Kick start**:
-The items put into the machines of a loop before its clock starts, so that the loop can run: a loop cannot fill by
-itself. A noun only: give the loop its kick start. The configuration's `loop_seed_items`. Control theory: like integrator
+The items put into each machine whose recipe makes its own ingredient (pentapod eggs), before its clock starts, so
+that the loop can run: such a loop cannot fill by itself. A noun only: give the loop its kick start. A loop of
+machines that only feed each other gets no kick start, and the generator cannot start it. The configuration's `loop_seed_items`. Control theory: like integrator
 preloading (Janert p.103).
 _Avoid_: seed (the game's Yumako, Jellynut and Tree seed items, and the map seed), prime, bootstrap, kick-start (as a
 verb)
@@ -241,7 +246,8 @@ backpressure.
 **Steady state**:
 The condition after the startup period. The build repeats the same pattern in each window cycle, or in each whole
 number of window cycles. For an on/off clock it is a periodic steady state: the output repeats, it is not
-constant. Control theory: Åström and Murray 5.3; Janert p.29, p.42.
+constant. A build with a loop may never repeat exactly: the generator then judges it on a sample of window cycles, and
+does not prove the repeat. Control theory: Åström and Murray 5.3; Janert p.29, p.42.
 _Avoid_: warm, warm state, settled (the game's *warm* is a temperature)
 
 **Startup period**:
@@ -286,14 +292,14 @@ The signal an entity sends to the inserters on its wakeup list. The engine's wor
 programmable speaker's **Alarms** or the virtual signal **Alarm**.
 
 **Wakeup**:
-One time an alarm reaches an inserter in sleep, so that the game checks whether it can do something, also when the clock
-has switched the inserter off. The clock switching an inserter on is not a wakeup.
+One time an alarm reaches an inserter in sleep. The game then checks whether the inserter can do something. This is
+also true when the clock has switched the inserter off. The clock switching an inserter on is not a wakeup.
 _Provisional_ (the switched-off case): observed on three builds in Factorio 2.1.24; cost not measured.
 _Avoid_: wake-up, wake up (as a noun)
 
 **Ghost wakeup**:
-A wakeup that does nothing: the clock switched the inserter off while it was in sleep on a machine's wakeup list, so the
-machine's next alarm reaches it only for the inserter to find that it is disabled and go to sleep again.
+A wakeup that does nothing. The clock switched the inserter off while it was in sleep on a machine's wakeup list. The
+machine's next alarm reaches it, the inserter finds that it is disabled, and it goes to sleep again.
 _Provisional_: observed on three builds in Factorio 2.1.24; cost not measured. Name kept until that is measured.
 _Avoid_: ghost wake-up
 
