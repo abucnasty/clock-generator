@@ -631,6 +631,12 @@ export interface InserterEnds {
  * and in the machines' outputs where the stock recorded them (`StockRecorder`, "wake-ups").
  */
 export function wakeUpsOfStock(stock: StockRecording, ends: readonly InserterEnds[], from_tick: number, on_wake?: WakeListener): WakeUps {
+    const { inserters, machines } = watchedOfStock(stock, ends);
+    return wakeUps(inserters, machines, from_tick, stock.ticks, on_wake);
+}
+
+/** The inserters and machines of a simulated run as the rule "kept-lists" reads them */
+function watchedOfStock(stock: StockRecording, ends: readonly InserterEnds[]): { inserters: WatchingInserter[]; machines: WatchedMachine[] } {
     const recorded = new Map(stock.inserters.map(series => [series.inserter_id, series]));
     const inserters = ends.flatMap(end => {
         const series = recorded.get(end.inserter_id);
@@ -649,5 +655,55 @@ export function wakeUpsOfStock(stock: StockRecording, ends: readonly InserterEnd
         ...(machine.fuel_taken !== undefined && { fuel_taken: rises(machine.fuel_taken) }),
         ...(machine.fuel_put_in !== undefined && { fuel_put_in: rises(machine.fuel_put_in) }),
     }));
-    return wakeUps(inserters, machines, from_tick, stock.ticks, on_wake);
+    return { inserters, machines };
+}
+
+/**
+ * A ghost wakeup of a run: an alarm that woke an inserter the clock had switched off while it was asleep on a machine's
+ * list (a switch-off sends no alarm, so it kept the list; see `countKeptLists`). The update the alarm brings finds the
+ * inserter disabled and does nothing else.
+ */
+export interface GhostWakeUp {
+    inserter_id: string;
+    /** The tick of the wakeup */
+    tick: number;
+    /** The end whose machine woke it */
+    end: WatchedEnd;
+    /** The first tick the inserter showed disabled, of the switch-off before the wakeup: its update in that tick was its last enabled one */
+    switched_off: number;
+    /** The tick it went to sleep on the list, in its own update, before the switch-off */
+    asleep_from: number;
+}
+
+/**
+ * The ghost wakeups of a simulated run, from the tick `from_tick` to its end (`ghostWakeUps`)
+ */
+export function ghostWakeUpsOfStock(stock: StockRecording, ends: readonly InserterEnds[], from_tick: number): GhostWakeUp[] {
+    const { inserters, machines } = watchedOfStock(stock, ends);
+    return ghostWakeUps(inserters, machines, from_tick, stock.ticks);
+}
+
+/**
+ * The ghost wakeups of a run over the ticks `from_tick` (inclusive) to `to_tick` (exclusive): the wake-ups of the rule
+ * "kept-lists" (`wakeUps`) whose inserter showed disabled after the tick before
+ */
+export function ghostWakeUps(inserters: readonly WatchingInserter[], machines: readonly WatchedMachine[], from_tick: number, to_tick: number): GhostWakeUp[] {
+    const OFF = FactorioInserterState.DISABLED_BY_CONTROL_BEHAVIOR;
+    const first = Math.max(1, from_tick);
+    const kept_alarms = keptListsAlarmsInOrder(inserters, machines, to_tick);
+    return inserters.flatMap(inserter => {
+        const { states } = inserter;
+        const ghosts: GhostWakeUp[] = [];
+        let asleep_from = -1, lists_before = 0;
+        countKeptLists(inserter, kept_alarms, first, to_tick, (inserter_id, tick, end) => {
+            if (states[tick - 1] !== OFF) return;
+            let switched_off = tick - 1;
+            while (switched_off > 0 && states[switched_off - 1] === OFF) switched_off--;
+            ghosts.push({ inserter_id, tick, end, switched_off, asleep_from });
+        }, (tick, lists) => {
+            if (lists !== 0 && lists_before === 0) asleep_from = tick;
+            lists_before = lists;
+        });
+        return ghosts;
+    });
 }

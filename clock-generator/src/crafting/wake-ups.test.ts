@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
-import { returnTicksOf, wakeUps, WatchedMachine, WatchingInserter } from "./wake-ups";
+import { ghostWakeUps, returnTicksOf, wakeUps, WatchedMachine, WatchingInserter } from "./wake-ups";
 
 const WORKING = "working";
 const SOURCE = "waiting_for_source_items";
@@ -367,6 +367,15 @@ describe("the rule \"kept-lists\"", () => {
         // switched off while working: on no list
         const working = wakeUps([inserter([WORKING, OFF, OFF, OFF, OFF, OFF])], [plant], 0, 6);
         expect(working.inserters[0].wake_ups_per_minute).toBe(0);
+    });
+
+    it("names that wakeup a ghost wakeup, with the tick it went to sleep and the tick it was switched off", () => {
+        const plant = machine("machine:1", 7, [4, 6]);
+        // asleep waiting in tick 1, switched off from tick 2, woken by the result in tick 4
+        const ghosts = ghostWakeUps([inserter([WORKING, SOURCE, OFF, OFF, OFF, OFF, OFF])], [plant], 0, 7);
+        expect(ghosts).toEqual([{ inserter_id: "inserter:1", tick: 4, end: "source", switched_off: 2, asleep_from: 1 }]);
+        // a wakeup while enabled is none
+        expect(ghostWakeUps([inserter([WORKING, SOURCE, SOURCE, SOURCE, SOURCE, SOURCE, SOURCE])], [plant], 0, 7)).toEqual([]);
     });
 });
 

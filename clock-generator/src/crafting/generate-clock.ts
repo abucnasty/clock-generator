@@ -5,7 +5,13 @@ import { defaultLogger } from "../common/logger";
 import { groupedHandsClock } from "./candidates/grouped-hands";
 import { observedWindowsClock } from "./candidates/observed-windows";
 import { resultWindowsClockOfPlan } from "./candidates/result-windows-clock";
-import { BlueprintGenerationResult, GenerateClockOptions, PlanRun, SwingAttemptResult, SwingBackoffReport, checkedClock, clockOfPlan, clockOfWindows, planRun, slackInsideWindows } from "./plan/plan-run";
+import { BlueprintGenerationResult, GenerateClockOptions, PlanRun, PlannedClock, SwingAttemptResult, SwingBackoffReport, checkedClock, clockOfPlan, clockOfWindows, planRun, slackInsideWindows } from "./plan/plan-run";
+import { type GhostWindow, windowsWithoutGhostWakeUps } from "./plan/ghost-windows";
+import { ghostWakeUpsOfStock } from "./wake-ups";
+import { inserterEnds } from "./inserter-counters";
+import { LONG_RUN_SETTLE_SHARE } from "./long-run";
+import { beltPickupSlackTicks } from "./clock";
+import type { AsBuiltRun } from "./trial";
 import { ArithmeticWindowsNotApplicable, batchedSwingsWindowsByArithmetic } from "./plan/batched-arithmetic";
 import { sharedLaneShortened } from "./plan/shared-lane-guard";
 import { estimatedOutputSwings } from "./plan/output-swing-estimate";
@@ -57,23 +63,29 @@ export function generateClockForConfig(
         const unchecked = checkedClock(plan, unmade, unmade.windows, { ...options, verify_as_built: false, modulo_blueprint: false, fuel_consumption_view: false });
         return { ...unchecked, stability_check: { ...unchecked.stability_check, holds: false } };
     }
+    // what each clock below was made and checked on, for the shaping of the primary against ghost wakeups
+    const made: MadeClocks = new Map();
     const clock = clockOfPlan(plan, options);
-    const planned = checkedClock(plan, clock, clock.windows, options);
+    const planned = checkedAndKept(made, plan, clock, clock.windows, options);
     // where the planned windows do not hold, windows made from the hands and the sources take their place, if they do
     if (options.verify_as_built !== true || (planned.stability_check.as_built?.holds ?? planned.stability_check.holds)) {
         // beside a planned clock that holds as built, the windows made by arithmetic (decision 7). Not where it does not hold:
         // a clock that holds there would stop the searches whose clocks are selected on such builds (the blocked output
         // fixture of stack 3 lost its shifted swings, 25.0 wake-ups a minute, to the arithmetic's 37.5)
         const arithmetic = options.verify_as_built === true ? arithmeticWindowsOf(plan) : null;
-        const primary = arithmetic === null ? planned : arithmeticBesidePlanned(plan, planned, arithmetic, options);
+        const primary = arithmetic === null ? planned : arithmeticBesidePlanned(made, plan, planned, arithmetic, options);
+        if (options.verify_as_built !== true) return primary;
         // then the planning run's windows with the slack they hold already, where they wake fewer than that
-        return options.verify_as_built === true ? withSlackInside(plan, planned, primary, options) : primary;
+        const inside = withSlackInside(made, plan, planned, primary, options);
+        // and last its windows shaped against ghost wakeups, where that wakes fewer
+        return withoutGhostWakeUps(made, inside, options);
     }
     const grouped = groupedHandsClock(plan, options);
     if (grouped !== null && grouped.stability_check.holds) {
         return grouped;
     }
-    return clockWithPickupsFromTheirEntry(plan, options) ?? planned;
+    const from_entry = clockWithPickupsFromTheirEntry(made, plan, options);
+    return from_entry === null ? planned : withoutGhostWakeUps(made, from_entry, options);
 }
 
 /**
@@ -115,14 +127,17 @@ function sameWindows(a: ReadonlyMap<string, OpenRange[]>, b: ReadonlyMap<string,
  * The clock of the windows made by arithmetic, checked as the planned clock is (the clock-only check from every start
  * phase): on a plan of its own whose stability check is the arithmetic clock's alone, not the planning run's
  */
-function checkedArithmeticClock(plan: PlanRun, windows: Map<string, OpenRange[]>, options: GenerateClockOptions): BlueprintGenerationResult {
+function checkedArithmeticClock(made: MadeClocks, plan: PlanRun, windows: Map<string, OpenRange[]>, options: GenerateClockOptions): BlueprintGenerationResult {
     const own: PlanRun = { ...plan, run: { ...plan.run, stability_check: { ...plan.run.stability_check, holds: true, as_built: undefined } } };
     const clock = clockOfWindows(own, windows, options);
-    const checked = checkedClock(own, clock, clock.windows, options);
+    const checked = checkedAndKept(made, own, clock, clock.windows, options);
     const as_built = checked.stability_check.as_built;
     plan.logger.log(`Windows by arithmetic: the clock ${as_built?.holds ? "holds" : "does not hold"} as built`
         + (as_built?.wake_ups === undefined ? "" : `, ${as_built.wake_ups.wake_ups_per_minute.toFixed(2)} wake-ups a minute`));
-    return { ...checked, window_maker: "arithmetic" };
+    const result: BlueprintGenerationResult = { ...checked, window_maker: "arithmetic" };
+    const kept = made.get(checked);
+    if (kept !== undefined) made.set(result, kept);
+    return result;
 }
 
 /**
@@ -131,9 +146,9 @@ function checkedArithmeticClock(plan: PlanRun, windows: Map<string, OpenRange[]>
  * wakes its inserters fewer times a minute, and gets back from every backpressure loss the planned clock gets back from;
  * the planned clock everywhere else
  */
-function arithmeticBesidePlanned(plan: PlanRun, planned: BlueprintGenerationResult, windows: Map<string, OpenRange[]>,
+function arithmeticBesidePlanned(clocks: MadeClocks, plan: PlanRun, planned: BlueprintGenerationResult, windows: Map<string, OpenRange[]>,
     options: GenerateClockOptions): BlueprintGenerationResult {
-    const made = checkedArithmeticClock(plan, windows, options);
+    const made = checkedArithmeticClock(clocks, plan, windows, options);
     const wake_ups = (result: BlueprintGenerationResult) => result.stability_check.as_built?.wake_ups?.wake_ups_per_minute;
     const made_wake_ups = wake_ups(made), planned_wake_ups = wake_ups(planned);
     if (!made.stability_check.holds || made_wake_ups === undefined || planned_wake_ups === undefined || !(made_wake_ups < planned_wake_ups)) {
@@ -158,7 +173,7 @@ function arithmeticBesidePlanned(plan: PlanRun, planned: BlueprintGenerationResu
  * windows of a period into one (the logistic science sample's two pickup windows of 176 ticks: 20.57 wake-ups a minute
  * with the slack inside, 61.71 joined by the slack added; docs/wake-ups.md).
  */
-function withSlackInside(plan: PlanRun, planned: BlueprintGenerationResult, primary: BlueprintGenerationResult,
+function withSlackInside(made: MadeClocks, plan: PlanRun, planned: BlueprintGenerationResult, primary: BlueprintGenerationResult,
     options: GenerateClockOptions): BlueprintGenerationResult {
     if (options.belt_pickup_slack !== "always" || planned.belt?.kind !== "moving" || slackInsideWindows(plan) === null) {
         return primary;
@@ -166,7 +181,7 @@ function withSlackInside(plan: PlanRun, planned: BlueprintGenerationResult, prim
     // checked on a copy of the plan: the check writes the as-built result into the stability check of the plan it is given
     const own: PlanRun = { ...plan, run: { ...plan.run, stability_check: { ...plan.run.stability_check, as_built: undefined } } };
     const clock = clockOfPlan(own, { ...options, belt_pickup_slack: "inside" });
-    const inside = checkedClock(own, clock, clock.windows, options);
+    const inside = checkedAndKept(made, own, clock, clock.windows, options);
     const wake_ups = (result: BlueprintGenerationResult) => result.stability_check.as_built?.wake_ups?.wake_ups_per_minute;
     const inside_wake_ups = wake_ups(inside), primary_wake_ups = wake_ups(primary);
     if (!(inside.stability_check.as_built?.holds ?? false) || inside_wake_ups === undefined || primary_wake_ups === undefined
@@ -182,6 +197,107 @@ function withSlackInside(plan: PlanRun, planned: BlueprintGenerationResult, prim
     return inside;
 }
 
+/** A clock checked as built, with the plan, clock and windows it was checked on and the check's run (see `checkedAndKept`) */
+interface MadeClock {
+    plan: PlanRun;
+    clock: PlannedClock;
+    windows: Map<string, OpenRange[]>;
+    run: AsBuiltRun | undefined;
+}
+type MadeClocks = Map<BlueprintGenerationResult, MadeClock>;
+
+/** `checkedClock`, keeping in `made` what the result was made and checked on */
+function checkedAndKept(made: MadeClocks, plan: PlanRun, clock: PlannedClock, windows: Map<string, OpenRange[]>,
+    options: GenerateClockOptions): BlueprintGenerationResult {
+    let run: AsBuiltRun | undefined;
+    const result = checkedClock(plan, clock, windows, options, { on_as_built: checked => { run = checked; } });
+    made.set(result, { plan, clock, windows, run });
+    return result;
+}
+
+/**
+ * The primary clock, or its windows shaped against ghost wakeups (`windowsWithoutGhostWakeUps`, #641): each window
+ * whose switch-off left its inserter asleep on a machine's list in the primary's clock-only run closes before the
+ * inserter went to sleep or took the hand it held, or is dropped where that leaves it nothing. The clock made so where it
+ * holds as built, wakes its inserters fewer times a minute than the primary and gets back from every backpressure loss
+ * the primary gets back from. The windows of an inserter that picks up from a moving belt keep their belt pickup slack,
+ * and the windows of a loop are left as they are.
+ */
+function withoutGhostWakeUps(made: MadeClocks, primary: BlueprintGenerationResult, options: GenerateClockOptions): BlueprintGenerationResult {
+    const kept = made.get(primary);
+    const stock = kept?.run?.stock;
+    if (kept === undefined || stock === undefined || !(primary.stability_check.as_built?.holds ?? false)) {
+        return primary;
+    }
+    const { plan, clock, windows, run } = kept;
+    const check = run!.check;
+    // the part of the run its wake-ups are counted on (trial.ts)
+    const from = check.long_run_proven ? check.first_judged_tick ?? 0 : Math.floor(stock.ticks / LONG_RUN_SETTLE_SHARE);
+    const ghosts = ghostWakeUpsOfStock(stock, inserterEnds(plan.config), from);
+    if (ghosts.length === 0) {
+        return primary;
+    }
+    const fixed = new Set([
+        ...(clock.belt?.kind === "moving" ? beltPickupSlackTicks(plan.run.simulation_context.entity_registry).keys() : []),
+        ...clock.fuel_hand_room.keys(),
+        ...primary.loop_windows?.inserter_ids ?? [],
+    ]);
+    const left: string[] = [];
+    const offset = check.clock_tick_at_first_judged === undefined || check.first_judged_tick === undefined ? undefined
+        : check.first_judged_tick - check.clock_tick_at_first_judged;
+    const shaped = windowsWithoutGhostWakeUps(windows, plan.run.duration.ticks, stock, ghosts, fixed, offset, (id, why) => left.push(`${id}: ${why}`));
+    if (left.length > 0) {
+        plan.logger.log(`Ghost wakeups: windows left as they are (${left.join("; ")})`);
+    }
+    if (shaped === null) {
+        return primary;
+    }
+    const wake_ups = (it: BlueprintGenerationResult) => it.stability_check.as_built?.wake_ups?.wake_ups_per_minute;
+    const textOf = (moved: readonly GhostWindow[]) => moved.map(it => `${it.inserter_id} ${it.window.start_inclusive}-${it.window.end_inclusive}`
+        + ` -> ${it.shaped === null ? "dropped" : `${it.shaped.start_inclusive}-${it.shaped.end_inclusive}`}`).join(", ");
+    // checked on a copy of the plan: the check writes the as-built result into the stability check of the plan it is given
+    const checked = (shaped_windows: Map<string, OpenRange[]>) => checkedClock(
+        { ...plan, run: { ...plan.run, stability_check: { ...plan.run.stability_check, as_built: undefined } } }, clock, shaped_windows, options);
+    const fewer = (it: BlueprintGenerationResult, than: BlueprintGenerationResult) => (it.stability_check.as_built?.holds ?? false)
+        && wake_ups(it) !== undefined && wake_ups(than) !== undefined && wake_ups(it)! < wake_ups(than)!;
+    // every window shaped at once; where that does not hold or wake fewer, the windows of one inserter at a time, kept
+    // where they wake fewer than what is kept so far
+    let best = primary, best_windows = windows;
+    const moved: GhostWindow[] = [];
+    const all = checked(shaped.windows);
+    const inserters = Array.from(new Set(shaped.shaped.map(it => it.inserter_id)));
+    if (fewer(all, primary)) {
+        best = all;
+        moved.push(...shaped.shaped);
+    } else {
+        plan.logger.log(`Windows shaped against ${ghosts.length} ghost wakeups (${textOf(shaped.shaped)}): not used, `
+            + (all.stability_check.as_built?.holds ? `${wake_ups(all)?.toFixed(2)} against ${wake_ups(primary)?.toFixed(2)} wake-ups a minute` : "it does not hold as built"));
+        if (inserters.length > 1) for (const id of inserters) {
+            const own = new Map(best_windows);
+            own.set(id, shaped.windows.get(id)!);
+            const one = checked(own);
+            const shaped_of = shaped.shaped.filter(it => it.inserter_id === id);
+            if (fewer(one, best)) {
+                best = one;
+                best_windows = own;
+                moved.push(...shaped_of);
+            } else {
+                plan.logger.log(`Windows of ${id} shaped against ghost wakeups (${textOf(shaped_of)}): not used`);
+            }
+        }
+    }
+    if (best === primary) {
+        return primary;
+    }
+    const survives = (it: BlueprintGenerationResult) => backpressureLossVerdictOf(plan.config, it, plan.logger).backpressure_loss?.survives === true;
+    if (!survives(best) && survives(primary)) {
+        plan.logger.log(`Windows shaped against ghost wakeups (${textOf(moved)}): fewer wake-ups, but the clock does not get back from a loss the primary one gets back from`);
+        return primary;
+    }
+    plan.logger.log(`Windows shaped against ghost wakeups (${textOf(moved)}): the primary clock (${wake_ups(best)!.toFixed(2)} against ${wake_ups(primary)!.toFixed(2)} wake-ups a minute)`);
+    return primary.window_maker === undefined ? best : { ...best, window_maker: primary.window_maker };
+}
+
 /**
  * The clock of the same planning run with every pickup recorded from its entry, where neither the
  * plan's clock nor the grouped hands' holds as built: kept where it holds, else null. The plan's belt-fed pickups after a wait at their
@@ -190,13 +306,13 @@ function withSlackInside(plan: PlanRun, planned: BlueprintGenerationResult, prim
  * tick before the plan did. Both starts are the plan's; the as-built check decides. Null where no pickup of the
  * planning run was counted from a take.
  */
-function clockWithPickupsFromTheirEntry(plan: PlanRun, options: GenerateClockOptions): BlueprintGenerationResult | null {
+function clockWithPickupsFromTheirEntry(made: MadeClocks, plan: PlanRun, options: GenerateClockOptions): BlueprintGenerationResult | null {
     if (!(plan.run.pickups_from_the_take > 0)) {
         return null;
     }
     const from_entry = planRun(plan.config, { ...options, pickup_start: "entry" });
     const clock = clockOfPlan(from_entry, options);
-    const checked = checkedClock(from_entry, clock, clock.windows, options);
+    const checked = checkedAndKept(made, from_entry, clock, clock.windows, options);
     const holds = checked.stability_check.as_built?.holds ?? checked.stability_check.holds;
     plan.logger.log(`Pickups counted from their entry, not from the take that freed them: the clock ${holds ? "holds, kept" : "does not hold either"}`);
     return holds ? checked : null;

@@ -1494,7 +1494,7 @@ export function planRun(config: Config, options: PlanRunOptions = {}): PlanRun {
 }
 
 /** The clock of a plan: the plan's windows with the room they get, and the belt that makes it for */
-interface PlannedClock {
+export interface PlannedClock {
     windows: Map<string, OpenRange[]>;
     /** The belt the clock is made for; null when no inserter with windows picks up from a belt */
     belt: ClockBelt | null;
@@ -1889,6 +1889,8 @@ export function checkedClock(
     extras: Pick<ClockExportExtras, "search" | "left_open"> & {
         /** A search's confirmation that passed on exactly `windows`, whose early stages the check here takes over */
         verified?: { windows: Map<string, OpenRange[]>; run: AsBuiltRun };
+        /** Given the clock-only check the verdict is of, with the windows it ran on (the loop's added where it has them) */
+        on_as_built?: (run: AsBuiltRun, windows: Map<string, OpenRange[]>) => void;
     } = {},
 ): BlueprintGenerationResult {
     const { config, logger, run: { stability_check, total_expected_output, duration, crafting_cycle_plan } } = plan;
@@ -1923,6 +1925,7 @@ export function checkedClock(
             }
         }
         stability_check.as_built = kept_run.check;
+        extras.on_as_built?.(kept_run, windows);
         clock_only_run = clockOnlyRunOf(kept_run.result);
         stability_check.holds = stability_check.holds && stability_check.as_built.holds;
         logger.log(`As-built check (clock windows only, ${stability_check.as_built.start_phases_checked} start phases): actual=${stability_check.as_built.actual_output_items} expected=${total_expected_output} stable=${stability_check.as_built.holds}`);
