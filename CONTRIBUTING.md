@@ -167,7 +167,7 @@ reduction from scheduling changes; do not report a faster test from a less busy 
 sample or fixture and every alternative it weighed (verdict, holds, rate, period, wake-ups, windows, clock hash). The check named "Record check" in CI
 generates the jobs in eight shards (`Record jobs (shard n of 8)`, dealt out by the seconds each job took on a runner,
 `clock-generator/ci/record-durations.json`), joins them and compares them with the committed files field by field; a difference fails with a table of job,
-field, before and after in the job summary. The check runs on every pull request to `master` or `feature/` that changes more than documentation, and reports
+field, before and after in the job summary. The check runs on every pull request to `master`, `feature/` or `release/` that changes more than documentation, and reports
 success on one that changes documentation only. Its name is stable so that it can be a required check. It is never faster than the slowest job
 (the productivity module chest chain). After a change to the jobs or the engine, refresh the durations with
 `node scripts/ci/update-record-durations.js <dir of the downloaded record-jobs-* artifacts of a run>`.
@@ -234,8 +234,8 @@ variant jobs); each is in `EXCEPTIONS` with `#626` in its reason, and the entrie
 | Check name | What it does | Runs |
 | --- | --- | --- |
 | Unit tests | knip, typecheck, build, lint, `npm test` (the units, `clock-controls.test.ts` among them) | every pull request that changes more than documentation |
-| Generation tests (shard n of 8), then Generation tests | the `*.generation.test.ts` files, dealt out by `ci/generation-durations.json` | pull requests to `master` or `feature/` that change more than documentation, and releases |
-| Record jobs (shard n of 8), then Record check | the 86 jobs, joined, compared with `record/`, with the properties and the never-worse rule | pull requests to `master` or `feature/` that change more than documentation |
+| Generation tests (shard n of 8), then Generation tests | the `*.generation.test.ts` files, dealt out by `ci/generation-durations.json` | pull requests to `master`, `feature/` or `release/` that change more than documentation, and releases |
+| Record jobs (shard n of 8), then Record check | the 86 jobs, joined, compared with `record/`, with the properties and the never-worse rule | pull requests to `master`, `feature/` or `release/` that change more than documentation |
 | UI build, UI tests of every sample, UI generate in a browser | the UI | every pull request that changes more than documentation |
 
 The ruleset "Integration branches: CI before merge" (`feature/*`, `release/*`) lists `Record check` among its required checks, so a record
