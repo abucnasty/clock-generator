@@ -48,7 +48,9 @@
 #                                           `properties`, tests/game/builds/record-properties.ts: five properties on every alternative of every job,
 #                                           judged where the results are made): a table of job, property, alternative and the values, exit 1 on any
 #                                           problem, and on a job with none of them (a run from before the module, or carried from one: --full
-#                                           reruns it; --allow-unchecked lists such jobs and goes on)
+#                                           reruns it; --allow-unchecked lists such jobs and goes on); then the per-job checks (the job files'
+#                                           `checks`, tests/game/builds/record-job-checks.ts: what a test of the build used to check on the result and
+#                                           the record does not hold): a table of job, check and the expected and actual values, exit 1 on any failure, judged and carried like the properties
 #   blast.sh list                           the cache's entries
 #
 # The worktree may be another checkout than this script's: blast.blastrun.ts, blast.digest.ts, blast.recorder.ts and the two vitest configs beside this

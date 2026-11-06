@@ -8,6 +8,8 @@
 // results_sha256 and results: the digest of what the clock hash leaves out, see blast.digest.ts). Run by
 // scripts/blast/blast.sh, which installs it into the worktree's tests/game/builds/.scratch/ (gitignored), where its
 // imports resolve, with vitest.scratch-dist.config.ts (the engine from dist/); it is not run from scripts/.
+// Every job file also holds `properties` (tests/game/builds/record-properties.ts) and `checks` (tests/game/builds/record-job-checks.ts): what the two
+// modules found on the result the job generated.
 // Env: BLAST_OUT (folder; one JSON per job, and _jobs.json, the job list with each config's sha256), BLAST_CLAIMS
 // (folder shared by parallel processes, default <BLAST_OUT>/.claims: a job is claimed by creating <claims>/<job>),
 // BLAST_MODE (generate, the default, or jobs: write _jobs.json only), BLAST_ONLY (comma list of job names),
@@ -194,8 +196,16 @@ async function propertyModule(): Promise<{ checkProperties: (job: string, config
     return fs.existsSync(file) ? import(file) : undefined;
 }
 
-/** Every alternative of a config, each exported clock hashed, and the selected one; with the properties of the result, where the module is there */
-function clocksOf(config: any, expand: ExpandHistory | undefined, key: string, properties: Awaited<ReturnType<typeof propertyModule>>) {
+/** The per-job checks (tests/game/builds/record-job-checks.ts), where the build has them: a worktree from before them leaves `checks` out of its
+ * job files. A path, as above */
+async function jobChecksModule(): Promise<{ runJobChecks: (job: string, config: any, generated: any) => unknown } | undefined> {
+    const file = path.join(__dirname, '..', 'record-job-checks.ts');
+    return fs.existsSync(file) ? import(file) : undefined;
+}
+
+/** Every alternative of a config, each exported clock hashed, and the selected one; with the properties and the per-job checks of the result, where the modules are there */
+function clocksOf(config: any, expand: ExpandHistory | undefined, key: string, properties: Awaited<ReturnType<typeof propertyModule>>,
+    jobChecks: Awaited<ReturnType<typeof jobChecksModule>>) {
     const generated = generateClockAlternatives(config, { logger: quiet });
     const summary = (a: any) => {
         const exported = a.result.subtick ?? a.result;
@@ -217,9 +227,15 @@ function clocksOf(config: any, expand: ExpandHistory | undefined, key: string, p
     let checked: unknown;
     try { checked = properties?.checkProperties(key, config, generated); }
     catch (error: any) { checked = { error: `${error?.name}: ${error?.message}` }; }
+    // the checks of the job on the same result (never a second generation); the seconds likewise
+    const checks_started = Date.now();
+    let job_checks: unknown;
+    try { job_checks = jobChecks?.runJobChecks(key, config, generated); }
+    catch (error: any) { job_checks = { error: `${error?.name}: ${error?.message}` }; }
     return {
         selected_index: generated.selected_index, results_sha256, job_results,
-        ...(checked !== undefined && { properties: { ...checked as object, seconds: (Date.now() - started) / 1000 } }),
+        ...(checked !== undefined && { properties: { ...checked as object, seconds: (checks_started - started) / 1000 } }),
+        ...(job_checks !== undefined && { checks: { ...job_checks as object, seconds: (Date.now() - checks_started) / 1000 } }),
         selected: alternatives[generated.selected_index], alternatives,
     };
 }
@@ -232,6 +248,7 @@ test.skipIf(!OUT)('blast', async () => {
     if (MODE === 'jobs') return;
     const expand = await historyExpander();
     const properties = await propertyModule();
+    const jobChecks = await jobChecksModule();
     const recorder = functionRecorder();
     if (recorder) {
         // what ran before the first job: the engine loading and the job list. Every job depends on it, so it is a record of its own
@@ -248,7 +265,7 @@ test.skipIf(!OUT)('blast', async () => {
         let body: any;
         try {
             const config = await job.config();
-            body = { group: job.group, name: job.name, ...clocksOf(config, expand, key, properties) };
+            body = { group: job.group, name: job.name, ...clocksOf(config, expand, key, properties, jobChecks) };
         } catch (error: any) {
             body = { group: job.group, name: job.name, error: `${error?.name}: ${error?.message}` };
         }
