@@ -8,6 +8,15 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
+## Batched swings' windows by arithmetic and the stock walk (#661)
+- config-LOGISTIC_SCIENCE_240: selected planned-belt-slack -> swings-2, wake-ups 61.714 -> 41.379 a minute, period 176 -> 88; the windows by arithmetic open the belt pickup for its hands only (game: 100% on the 22-copy scaffold)
+- config-ELECTROMAGNETIC_SCIENCE_330: selected fractional -> swings-2, wake-ups 158.748 -> 138.265 a minute, period 704; swings-2 by arithmetic 163.869 -> 138.265 (game: 100% on both scaffolds)
+- front-front-exit-turbo-mirrored-moving-config-different-items, front-front-exit-turbo-unmirrored-moving-config-different-items, pickup-electromagnetic-turbo-straight-belt-moving, pickup-electromagnetic-turbo-underground-entrance-moving, pickup-electromagnetic-turbo-underground-exit-moving: selected planned-belt-slack -> swings-1, wake-ups 197.915 (218.389 on the straight belt) -> 112.821 a minute, period 1056 -> 352; swings-1 by arithmetic (game: 100% with recovery; the six cold starts recorded again on the new clock)
+- pickup-same-item-turbo-straight-belt-moving, pickup-same-item-turbo-underground-entrance-moving, pickup-same-item-turbo-underground-exit-moving: selected derived -> planned-belt-slack, wake-ups 45.283 -> 22.642 a minute, period 160; planned-belt-slack by arithmetic (game: 100% with recovery)
+- blocked-blocked-output-turbo-stack-1: selected even-hands -> planned-belt-slack, tied at 18.848 wake-ups a minute, period 192; planned-belt-slack by arithmetic 37.696 -> 18.848 (game: 100% with recovery)
+- config-AUTOMATION_SCIENCE_240: swings-1, not selected, stays no recovery, wake-ups 277.071 -> 123.448 a minute; the selection is unchanged
+- config-INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK: unchanged; its copies take 160 ore a second of 240 from each ore belt, and the windows by arithmetic (6 ticks) left the third copy of the 3-copy build at 3,600 of 4,800 in the game, so the planning run's windows stay (#660)
+
 ## Fractional swings back off to a count the machine takes (#655)
 - config-ELECTROMAGNETIC_SCIENCE_330: selected swings-2 -> fractional, wake-ups 163.869 -> 158.748 a minute, period 704; fractional swings were refused at 11/2 (the machine's own swings), 5, 4 and 3 output swings a cycle and are now planned at 2 (game: 100% on both scaffolds)
 - config-LITHIUM_PLATE_80_SILO_CHEST, config-UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT: a new fractional alternative, stable (620 and 118.209 wake-ups a minute), not selected; it was refused before
