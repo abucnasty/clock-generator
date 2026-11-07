@@ -39,7 +39,7 @@ import { TargetProductionRate } from "./target-production-rate";
 import { loopStockBoundOf } from "./candidates/loop-stock-bound";
 import { AsBuiltStabilityCheck, BackpressureLossAssessment, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, clockVerificationSignature, FREE_RUNNING_CHECK_TICKS, fractionalSwingsChangeChecksOf, LOOP_WINDOW_CHECK_TICKS, roundedClockTrial, startDependenceVerdictOf, wakeUpsFromStartsOf, withSettledOutput } from "./trial";
 import { WakeUpsFromStarts } from "./wake-ups-from-starts";
-import { ChestDrillFallbackKind, ClockStrategy, DefinitionFamily, StrategyQualifier, strategyOf } from "./clock-strategy";
+import { ChestDrillFallbackKind, ClockStrategy, DefinitionFamily, StrategyQualifier, strategyListedAs, strategyOf } from "./clock-strategy";
 import { signalsPerMinuteOf } from "./clock-signals";
 import { START_DEPENDENCE_NOT_CHECKED, StartDependence, startDependenceNote } from "./start-dependence";
 import { NotMadeClock, notTriedSentence, WhyNotStable, whyNotStable, whyNotStableClockOf } from "./why-not-stable";
@@ -1040,7 +1040,7 @@ function runAlternativeOf(
             start_dependence: trial.start_dependence, ...loopStockBoundOf(config, row.result, trial.clock_period) };
         const clock = { id: row.id, label: row.label, description, result: row.result, ...(row.rounded && { rounded: row.rounded }),
             inserter_window_count, deciders: windowDeciderCount(row.result.blueprint), ranking_window_count, assessment, verdict: clockVerdictOf(assessment), deadlock_risks, belt, insights,
-            strategy: { ...strategy, qualifiers: [...strategy.qualifiers, ...(row.qualifiers ?? [])] } };
+            strategy: strategyListedAs(strategy, row) };
         const ranking = rankingOf(clock, config);
         // where its wake-ups decide the selection, a clock of a build with a loop, whose wake-ups depend on how it starts, is ranked by their mean
         // over the starts; the clock of a trial that is neither the exact one nor the rounded one tried meets no target

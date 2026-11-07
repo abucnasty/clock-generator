@@ -1,9 +1,11 @@
 import { describe, expect, test } from "vitest";
-import { constructionOf, strategyOf, StrategyFindings } from "./clock-strategy";
+import { constructionOf, strategyListedAs, strategyOf, StrategyFindings } from "./clock-strategy";
+import type { ClockSettings } from "./strategy-catalog";
 
 // The strategy of a clock is read off what the run made, as ids. Hand-made result stubs here; no generation (the grouped hands and
 // shared windows cases on real builds are in shared-windows.generation.test.ts, every job of the record in record-properties.ts).
 const result = (extra: Record<string, unknown> = {}) => ({ fuel_hand_room_ticks: {}, used_terminal_swing_count: 2, ...extra }) as Parameters<typeof strategyOf>[1];
+const plain: ClockSettings = { output_count: { kind: "output_swings", count: 2 }, window_cycle: [], belt_pickups: [] };
 const findings = (extra: Partial<StrategyFindings> = {}): StrategyFindings => ({ definition_qualifiers: [], destroyed_target: false, ...extra });
 
 describe("constructionOf", () => {
@@ -22,25 +24,29 @@ describe("constructionOf", () => {
 
 describe("strategyOf", () => {
     test("batched swings are takt batches from the planning run and from arithmetic, round-robin polling from the grouped hands", () => {
-        expect(strategyOf("batched-swings", result(), findings())).toEqual({ family: "takt-batches", qualifiers: ["output-swings"], construction: "planning-run", output_swings: 2, routing: { router: "direct" } });
+        expect(strategyOf("batched-swings", result(), findings())).toEqual({ family: "takt-batches", qualifiers: ["output-swings"], settings: plain, construction: "planning-run", output_swings: 2, routing: { router: "direct" } });
         expect(strategyOf("batched-swings", result({ window_maker: "arithmetic" }), findings()).construction).toBe("arithmetic");
         const grouped = strategyOf("batched-swings", result({ grouped_hands: { shared_windows: false } }), findings());
         expect(grouped).toMatchObject({ family: "round-robin-polling", construction: "grouped-hands" });
     });
 
-    test("shared windows are read off the result, and the definition's qualifiers follow", () => {
-        const shared = strategyOf("batched-swings", result({ grouped_hands: { shared_windows: true } }), findings({ definition_qualifiers: ["window-a-swing"] }));
-        expect(shared.qualifiers).toEqual(["output-swings", "shared-enable-windows", "window-a-swing"]);
+    test("shared windows are read off the result, and a window a swing from the definition (the per-hand clock's result shares none)", () => {
+        const shared = strategyOf("batched-swings", result({ grouped_hands: { shared_windows: true } }), findings());
+        expect(shared.qualifiers).toEqual(["output-swings", "shared-enable-windows"]);
+        expect(shared.settings.shared_windows).toBe("shared_enable_windows");
+        const a_swing = strategyOf("batched-swings", result({ grouped_hands: { shared_windows: false } }), findings({ definition_qualifiers: ["shorter-window-cycle", "window-a-swing"] }));
+        expect(a_swing.qualifiers).toEqual(["output-swings", "shorter-window-cycle", "window-a-swing"]);
+        expect(a_swing.settings).toEqual({ ...plain, window_cycle: [{ kind: "shorter_window_cycle" }], shared_windows: "window_a_swing" });
     });
 
     test("small batches are round-robin polling with a shorter window cycle", () => {
         const small = strategyOf("round-robin-polling", result({ primitive_grouped: {} }), findings({ definition_qualifiers: ["shorter-window-cycle"] }));
-        expect(small).toEqual({ family: "round-robin-polling", qualifiers: ["output-swings", "shorter-window-cycle"], construction: "grouped-hands", output_swings: 2, routing: { router: "direct" } });
+        expect(small).toEqual({ family: "round-robin-polling", qualifiers: ["output-swings", "shorter-window-cycle"], settings: { ...plain, window_cycle: [{ kind: "shorter_window_cycle" }] }, construction: "grouped-hands", output_swings: 2, routing: { router: "direct" } });
     });
 
     test("a family of its own has no construction, and a search says so", () => {
         const searched = strategyOf("signal-offset", result({ window_maker: "arithmetic" }), findings({ definition_qualifiers: ["found-by-search"] }));
-        expect(searched).toEqual({ family: "signal-offset", qualifiers: ["output-swings", "found-by-search"], output_swings: 2, routing: { router: "direct" } });
+        expect(searched).toEqual({ family: "signal-offset", qualifiers: ["output-swings", "found-by-search"], settings: plain, output_swings: 2, routing: { router: "direct" } });
         expect(strategyOf("euclidean-swings", result(), findings()).construction).toBe("planning-run");
     });
 
@@ -77,5 +83,32 @@ describe("the router of a strategy", () => {
         const sources = [{ source: "machine:1", entities: { "inserter:1": { kind: "strategy" as const, family: "exhaust" as const } } }];
         expect(strategyOf("per-branch", result({ per_branch: { parts: { "machine:1": "exhaust" }, sources } }), findings()).routing)
             .toEqual({ router: "coordinated_sources", sources });
+    });
+});
+
+describe("the settings of a strategy", () => {
+    test("hold the output count as the clock was made, and found by search and drills left always enabled are not settings", () => {
+        expect(strategyOf("time-division-slots", result(), findings({ destroyed_target: true })).settings.output_count).toEqual({ kind: "hands_brought_in", count: 2 });
+        const searched = strategyOf("signal-offset", result(), findings({ definition_qualifiers: ["found-by-search"], chest_drill_fallback: "always-on" }));
+        expect(searched.settings).toEqual(plain);
+        expect(searched.qualifiers).toEqual(["output-swings", "found-by-search", "drills-always-on"]);
+    });
+
+    test("read loops, the drill windows and the belt pickups off what the run kept; the belt pickups can both be set", () => {
+        const kept = strategyOf("batched-swings", result({ pickups_from_entry: true, fuel_hand_room_ticks: { "inserter:3": 4 },
+            loop_windows: { inserter_ids: ["a"], window_count_without_loop_windows: 1 } }), findings({ chest_drill_fallback: "tick-longer" }));
+        expect(kept.settings).toEqual({ ...plain, loops: "loop_exits_only", drill_windows: "a_tick_longer", belt_pickups: ["counted_from_entry", "room_for_a_hand_of_fuel"] });
+        expect(kept.qualifiers).toEqual(["output-swings", "pickups-from-entry", "loop-exits-only", "drill-windows-longer", "fuel-hand-room"]);
+    });
+
+    test("add what the listing of a clock adds to the window cycle, which can follow a harmonic or shorter one", () => {
+        const harmonic = strategyOf("batched-swings", result({ grouped_hands: { shared_windows: false, harmonic_window_cycle: true } }), findings());
+        const subtick = strategyListedAs(harmonic, { qualifiers: ["phase-accumulator"] });
+        expect(subtick.settings.window_cycle).toEqual([{ kind: "harmonic_window_cycle" }, { kind: "subtick_clock" }]);
+        expect(subtick.qualifiers).toEqual(["output-swings", "harmonic-window-cycle", "phase-accumulator"]);
+        const rounded = strategyListedAs(harmonic, { qualifiers: ["rounded-clock"], rounded: { period_ticks: 1199, runs_fast: 0.0008 } });
+        expect(rounded.settings.window_cycle).toEqual([{ kind: "harmonic_window_cycle" }, { kind: "rounded_clock", period_ticks: 1199, runs_fast: 0.0008 }]);
+        expect(() => strategyListedAs(harmonic, { qualifiers: ["rounded-clock"] })).toThrow("rounded");
+        expect(strategyListedAs(harmonic, {})).toEqual(harmonic);
     });
 });
