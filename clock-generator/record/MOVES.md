@@ -115,7 +115,7 @@ Each window of the primary batched-swings clock whose closing edge left its inse
 ```
 ## <title> (#<number>)
 - config-NAME: selected even-hands -> cut-hands, wake-ups 889 -> 640 a minute; the new hands cost fewer wake-ups
-- pickup-A, pickup-B: period 972 -> 1944; the window now waits for the second hand
+- pickup-A, pickup-B: window cycle time 972 -> 1944; the window now waits for the second hand
 ```
 
 ## The first record (#600)

@@ -18,16 +18,12 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - generation: a new router, Coordinated Sources, gives each source's inserters the strategy that fits them
 
 ### Changed
-- generation: accumulator, processing unit, advanced circuit and nine other builds recommend clocks with fewer wakeups
-- generation: chemical science, electric furnace and nine other builds recommend clocks with fewer wakeups
+- generation: 24 builds recommend clocks with fewer wakeups, among them accumulator, processing unit and chemical science
 - generation: Euclidean Swings now falls back to fewer output swings where the machine cannot take them
-- generation: several builds now select clocks with fewer wakeups, among them logistic and electromagnetic science
 - ui: the site's terms follow the glossary: enable window, wakeup, window cycle time, recovery, configuration
 - generation: inserters from a belt into a chest are named when the build is refused
-- generation: the processing unit circuit export build's clock now wakes inserters about a quarter less
 - ui: clocks are named for the practice they follow, and the table shows signals a minute
-- generation: logistic science, chemical science, electric furnace and three other builds recommend clocks with fewer wakeups
-- ui: period_duration_ticks is now window_cycle_ticks; files and links with the old name still load
+- ui: the Clocked override's window cycle time is renamed; older files and links still load
 
 ### Fixed
 - ui: an unexpected error in the check now says the generator failed, not your build
