@@ -835,7 +835,7 @@ function setUpTheStart(
     // Clear final output machine buffers to prevent OUTPUT_FULL during simulation start
     // This is especially important for fractional swing scenarios where the machine
     // produces slightly more than what gets cleared per sub-cycle
-    logger.log("Clearing final output machine buffers before the startup period...");
+    logger.log("Clearing final output machine buffers before the warm-up...");
     output_machine_state_machines.filter(() => !options.keep_output_buffers).forEach(machine_sm => {
         const machine_state = machine_sm.machine_state;
         const output_item = machine_state.machine.output.item_name;
@@ -1021,7 +1021,7 @@ function runWindowCyclesOf(output_cycle_plan: OutputCyclePlan, recipe_lcm: numbe
     const warmup_window_cycles = Math.min(requested_warmup_window_cycles, Math.floor((SIMULATION_BUDGET_TICKS - 1) / duration.ticks));
     const exact_ticks = options.timeline_recording?.settle_ticks;
     if (exact_ticks === undefined && warmup_window_cycles < requested_warmup_window_cycles) {
-        logger.log(`Startup period shortened to ${warmup_window_cycles} window cycles to stay under ${SIMULATION_BUDGET_TICKS} ticks`);
+        logger.log(`Warm-up shortened to ${warmup_window_cycles} window cycles to stay under ${SIMULATION_BUDGET_TICKS} ticks`);
     }
     assert(exact_ticks === undefined || (Number.isInteger(exact_ticks) && exact_ticks >= 0), "The exact timeline start must be a nonnegative whole tick");
     assert(exact_ticks === undefined || exact_ticks <= duration.ticks * Math.floor((SIMULATION_BUDGET_TICKS - 1) / duration.ticks),
@@ -1030,7 +1030,7 @@ function runWindowCyclesOf(output_cycle_plan: OutputCyclePlan, recipe_lcm: numbe
         : exact_ticks);
 
     logger.log(`Base Cycle Ticks: ${output_cycle_plan.total_duration.ticks}`);
-    logger.log(`Startup period: ${warmup_window_cycle.ticks} ticks`);
+    logger.log(`Warm-up: ${warmup_window_cycle.ticks} ticks`);
     logger.log(`Window cycle time: ${duration.ticks} ticks`);
     return { duration, warmup_window_cycle };
 }
@@ -1051,7 +1051,7 @@ function warmUp(
 ): { repeat_window_cycles: number | undefined; ticks_run: number } {
     const { simulation_context } = build;
     const { resettable_registry } = controlled;
-    logger.log("Simulating the startup period...");
+    logger.log("Running the warm-up...");
     logger.log("Executing Warmup Step");
     // the clocks start here, on a cold build at its tick 0
     resettable_registry.resetAll(true);
@@ -1062,7 +1062,7 @@ function warmUp(
                 : undefined);
         warmup_step.execute();
         if (warmup_step.ticks_run < warmup_window_cycle.ticks) {
-            logger.log(`Startup period reached a repeating state after ${warmup_step.ticks_run} ticks`);
+            logger.log(`Warm-up reached a repeating state after ${warmup_step.ticks_run} ticks`);
         }
         return { repeat_window_cycles: warmup_step.repeat_window_cycles, ticks_run: warmup_step.ticks_run };
     });

@@ -24,8 +24,8 @@ after the engine reads the file: a field with a default is required, but a confi
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `setpoint` | object | yes | The setpoint: the product that the build must make, and the rate it must hold. The clock never changes it. |
-| `setpoint.recipe` | string | yes | The name of the item that the target output counts. |
-| `setpoint.items_per_second` | number > 0 | yes | The rate of the target output for all copies together, in items per second. |
+| `setpoint.recipe` | string | yes | The name of the item that the setpoint counts. |
+| `setpoint.items_per_second` | number > 0 | yes | The rate of the setpoint for all copies together, in items per second. |
 | `setpoint.copies` | number > 0 | yes | The number of identical builds in the game, which can be partial, for example 2.25. |
 | `setpoint.copy_offset` | object | no | The distance from this build to the next copy, in tiles. |
 | `setpoint.copy_offset.x` | number | yes | The x coordinate, in tiles. |
@@ -68,11 +68,11 @@ after the engine reads the file: a field with a default is required, but a confi
 | `drills.configs[].target{type=machine}.id` | integer > 0 | yes | The id of the machine. |
 | `drills.configs[].target{type=chest}.id` | integer > 0 | yes | The id of the chest. |
 | `drills.configs[].overrides` | object | no | Settings that replace what the generator chooses for this drill. |
-| `drills.configs[].overrides.enable_control` | one of 5 objects, by `mode`: `AUTO`, `ALWAYS`, `NEVER`, `CLOCKED`, `CONDITIONAL` | no | The enable rule of the drill. |
+| `drills.configs[].overrides.enable_control` | one of 5 objects, by `mode`: `AUTO`, `ALWAYS`, `NEVER`, `CLOCKED`, `CONDITIONAL` | no | The Enable Control Strategy override of the drill. |
 | `drills.configs[].overrides.enable_control{mode=CLOCKED}.ranges` | array (at least 1) of objects | yes | The enable windows of the entity, as tick ranges of the window cycle. |
 | `drills.configs[].overrides.enable_control{mode=CLOCKED}.ranges[].start` | integer ≥ 0 | yes | The tick of the window cycle at which the enable window starts. |
 | `drills.configs[].overrides.enable_control{mode=CLOCKED}.ranges[].end` | integer > 0 | yes | The tick of the window cycle at which the enable window ends. |
-| `drills.configs[].overrides.enable_control{mode=CLOCKED}.period_duration_ticks` | integer > 0 | no | The window cycle time of these enable windows, in ticks; the default is the time of the planned crafting cycles. |
+| `drills.configs[].overrides.enable_control{mode=CLOCKED}.period_duration_ticks` | integer > 0 | no | The window cycle time of these enable windows, in ticks; the default is the time of the planned output cycles. |
 | `drills.configs[].overrides.enable_control{mode=CLOCKED}.decider_build_order` | integer ≥ 0 | no | The position, from 0, of the decider combinator for these enable windows in the order of the clock's blueprint. |
 | `drills.configs[].overrides.enable_control{mode=CLOCKED}.latency_ticks` | integer ≥ 0 | no | The circuit latency of these enable windows, in ticks. |
 | `drills.configs[].overrides.enable_control{mode=CONDITIONAL}.rule_set` | object | yes | The rule set that enables the entity when it is true. |
@@ -161,11 +161,11 @@ after the engine reads the file: a field with a default is required, but a confi
 | `inserters[].overrides` | object | no | Settings that replace what the generator chooses for this inserter. |
 | `inserters[].overrides.animation` | object | no | Settings that replace the movement times of the inserter. |
 | `inserters[].overrides.animation.pickup_duration_ticks` | integer > 0 | no | The number of ticks that the inserter takes to pick up items. |
-| `inserters[].overrides.enable_control` | one of 5 objects, by `mode`: `AUTO`, `ALWAYS`, `NEVER`, `CLOCKED`, `CONDITIONAL` | no | The enable rule of the inserter. |
+| `inserters[].overrides.enable_control` | one of 5 objects, by `mode`: `AUTO`, `ALWAYS`, `NEVER`, `CLOCKED`, `CONDITIONAL` | no | The Enable Control Strategy override of the inserter. |
 | `inserters[].overrides.enable_control{mode=CLOCKED}.ranges` | array (at least 1) of objects | yes | The enable windows of the entity, as tick ranges of the window cycle. |
 | `inserters[].overrides.enable_control{mode=CLOCKED}.ranges[].start` | integer ≥ 0 | yes | The tick of the window cycle at which the enable window starts. |
 | `inserters[].overrides.enable_control{mode=CLOCKED}.ranges[].end` | integer > 0 | yes | The tick of the window cycle at which the enable window ends. |
-| `inserters[].overrides.enable_control{mode=CLOCKED}.period_duration_ticks` | integer > 0 | no | The window cycle time of these enable windows, in ticks; the default is the time of the planned crafting cycles. |
+| `inserters[].overrides.enable_control{mode=CLOCKED}.period_duration_ticks` | integer > 0 | no | The window cycle time of these enable windows, in ticks; the default is the time of the planned output cycles. |
 | `inserters[].overrides.enable_control{mode=CLOCKED}.decider_build_order` | integer ≥ 0 | no | The position, from 0, of the decider combinator for these enable windows in the order of the clock's blueprint. |
 | `inserters[].overrides.enable_control{mode=CLOCKED}.latency_ticks` | integer ≥ 0 | no | The circuit latency of these enable windows, in ticks. |
 | `inserters[].overrides.enable_control{mode=CONDITIONAL}.rule_set` | the same as `drills.configs[].overrides.enable_control{mode=CONDITIONAL}.rule_set` | yes | The rule set that enables the entity when it is true. |
@@ -288,9 +288,9 @@ after the engine reads the file: a field with a default is required, but a confi
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `overrides` | object | no | Settings that replace what the generator chooses for the configuration. |
-| `overrides.lcm` | integer > 0 | no | The number of crafting cycles in one window cycle; without it, the generator calculates the number. |
-| `overrides.terminal_swing_count` | integer > 0 | no | The number of output swings in each crafting cycle; without it, the generator chooses the number. |
-| `overrides.backed_up_belts` | boolean | no | Whether the input belts are backed up at the pickup, so that the clocks have no belt pickup slack. |
+| `overrides.lcm` | integer > 0 | no | The number of output cycles in one window cycle; without it, the generator calculates the number. |
+| `overrides.terminal_swing_count` | integer > 0 | no | The number of output swings in each output cycle; without it, the generator chooses the number. |
+| `overrides.backed_up_belts` | boolean | no | Whether the input belts are backed up at the pickup, so that the clocks have no belt slack. |
 | `overrides.search_for_fewer_wake_ups` | boolean | no | Whether the generator always does the four searches, to find a clock with fewer wakeups. |
 | `overrides.check_start_dependence` | boolean | no | Whether the generator tests each clock from more starts than the cold start. |
 | `overrides.kick_start_items` | integer ≥ 0 | no | The kick start: the number of its own product that a machine gets before its clock starts, when its recipe uses that product. |
