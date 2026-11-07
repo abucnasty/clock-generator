@@ -15,8 +15,8 @@ const identity: LabelOf = (id) => id;
  * workflow bar and the problem chip all read from here, so the words are changed in one place.
  */
 export const PROBLEM_TEXT = {
-    noRecipe: 'Set the recipe in Target Output',
-    noRate: 'Set Items per Second in Target Output to more than 0',
+    noRecipe: 'Set the recipe in the Setpoint panel',
+    noRate: 'Set Items per Second in the Setpoint panel to more than 0',
     noCopies: COPIES_POSITIVE_PROBLEM,
     noMachines: 'Add a machine',
     rateAboveMax: (total: number, counts: TargetCounts = 'made', byMachines = true) =>
@@ -82,7 +82,7 @@ export interface Problem {
 }
 
 interface ProblemsInput {
-    targetOutput: { recipe: string; items_per_second: number; copies: number; counts?: TargetCounts };
+    setpoint: { recipe: string; items_per_second: number; copies: number; counts?: TargetCounts };
     machines: { id: number; recipe: string }[];
     /** The most the machines making (or, for a target that counts the item destroyed, destroying) the target item can make; null or left out while it is not known */
     machinesMax?: MachinesMax | null;
@@ -93,15 +93,15 @@ interface ProblemsInput {
  * make (which their recipes change). Coverage is collected separately by buildValidationIssues.
  * Empty when these field checks pass.
  */
-export function problemsOf({ targetOutput, machines, machinesMax = null }: ProblemsInput): Problem[] {
+export function problemsOf({ setpoint, machines, machinesMax = null }: ProblemsInput): Problem[] {
     const problems: Problem[] = [];
-    if (!targetOutput.recipe) {
+    if (!setpoint.recipe) {
         problems.push({ text: PROBLEM_TEXT.noRecipe, target: { kind: 'target-recipe' } });
     }
-    if (!(targetOutput.items_per_second > 0)) {
+    if (!(setpoint.items_per_second > 0)) {
         problems.push({ text: PROBLEM_TEXT.noRate, target: { kind: 'target-rate' } });
     }
-    const copiesIssue = copiesProblem(targetOutput.copies);
+    const copiesIssue = copiesProblem(setpoint.copies);
     if (copiesIssue) {
         problems.push({ text: copiesIssue, target: { kind: 'target-copies' } });
     }
@@ -117,10 +117,10 @@ export function problemsOf({ targetOutput, machines, machinesMax = null }: Probl
         }
     }
     // the engine's check refuses such a target too; said here, the player is sent to the field instead of a failed check
-    const capacity = machinesMax ? totalMachineCapacity(machinesMax, targetOutput.copies) : null;
-    if (capacity !== null && targetOutput.recipe && isTargetAboveMax(targetOutput.items_per_second, targetOutput.copies, machinesMax)) {
+    const capacity = machinesMax ? totalMachineCapacity(machinesMax, setpoint.copies) : null;
+    if (capacity !== null && setpoint.recipe && isTargetAboveMax(setpoint.items_per_second, setpoint.copies, machinesMax)) {
         problems.push({
-            text: PROBLEM_TEXT.rateAboveMax(capacity, countsOf(targetOutput), machinesMax?.otherLimit === undefined),
+            text: PROBLEM_TEXT.rateAboveMax(capacity, countsOf(setpoint), machinesMax?.otherLimit === undefined),
             target: { kind: 'target-rate' },
         });
     }

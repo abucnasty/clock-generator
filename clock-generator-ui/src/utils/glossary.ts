@@ -1,11 +1,10 @@
 /**
- * The words of the UI: one word per idea in every string a player reads, and what each means. The Terms popover (⋮ >
+ * The words of the UI: one word per idea in every string a user reads, and what each means. The Terms popover (⋮ >
  * Terms, and the (i) by the clock table's headers) lists these, so this file is the one source; new copy uses these
  * terms, and `insteadOf` lists the words they replace.
  *
  * Kept as they are: tick, UPS, combinator, insertion limit, Sidecar mod, Configure and Results, Generate, Stack size and
- * "Copy old clock…". The engine's own text (the clocks' names and descriptions, the Insights prose) is shown as it comes
- * and is not covered yet.
+ * "Copy old clock…".
  */
 
 export interface GlossaryEntry {
@@ -24,13 +23,23 @@ export type GlossaryId =
     | 'swing'
     | 'swing-plan'
     | 'crafting-cycle'
-    | 'clock-period'
-    | 'wake-window'
-    | 'wake-up'
+    | 'strategy'
+    | 'enable_control_strategy'
+    | 'belt_strategy'
+    | 'router'
+    | 'direct'
+    | 'coordinated_sources'
+    | 'tuning_method'
+    | 'selection'
+    | 'unclocked_run'
+    | 'window-cycle-time'
+    | 'enable-window'
+    | 'wakeup'
     | 'start-point'
     | 'copies'
     | 'build'
-    | 'your-builds'
+    | 'configuration'
+    | 'your-configurations'
     | 'share-link'
     | 'clock'
     | 'blueprint'
@@ -38,17 +47,35 @@ export type GlossaryId =
     | 'enable-rule'
     | 'assembling-machine'
     | 'holds-the-rate'
-    | 'starved'
-    | 'jammed'
-    | 'recovers'
+    | 'supply-stop'
+    | 'output-blockage'
+    | 'recovery'
     | 'belt-slack'
     | 'simulator'
     | 'hand'
-    | 'lcm';
+    | 'lcm'
+    | 'setpoint'
+    | 'stable'
+    | 'steady-state'
+    | 'signal';
 
-/** Provisional: the strict definition is written after an experiment; edit it here, and only here. */
-export const PROVISIONAL_WAKE_UP_DEFINITION: string = 'One time the game wakes an inserter that is switched on and waiting, because a machine started a '
-    + 'craft (inputs), or finished a craft or paid out productivity (outputs). Each is a small check that moves little or nothing, so fewer wake-ups cost less UPS.';
+/**
+ * The glossary's wakeup, in the user's words (the repo glossary's alarm and sleep are maintainer words). Its case of a
+ * switched-off inserter is provisional; edit it here, and only here.
+ */
+export const WAKEUP_DEFINITION: string = 'One time the game checks an inserter that is waiting. This happens because a machine it waits on started a '
+    + 'craft (inputs), or finished a craft or paid out productivity (outputs). Each is a small check that moves little or nothing. '
+    + 'Fewer wakeups cost less UPS. It counts also when the clock has switched the inserter off. The clock switching an '
+    + 'inserter on is not a wakeup. Only the switched-off case is provisional: seen on three builds in Factorio 2.1.24, its '
+    + 'cost not measured.';
+
+/**
+ * The signals a clock sends, in the user's words. A signal here is the game's: the output a decider combinator sends. It is
+ * counted once for each enable window that opens on a decider, as the engine counts it (`signalsPerMinuteOf`).
+ */
+export const SIGNAL_DEFINITION: string = 'A signal is the output a decider sends when one of its enable windows opens. It switches on every '
+    + 'inserter wired to that decider. Inserters that share a decider share its signals. Each signal costs the game time. '
+    + 'How a signal compares with a wakeup is not measured.';
 
 /** In the order the popover lists them; the expert terms last */
 export const GLOSSARY: readonly GlossaryEntry[] = [
@@ -61,72 +88,81 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     {
         id: 'swing-plan',
         term: 'swing plan',
-        definition: 'How many swings each inserter makes per crafting cycle.',
+        definition: 'How many swings each inserter makes each output cycle.',
         insteadOf: 'transfer plan',
     },
     {
         id: 'crafting-cycle',
-        term: 'crafting cycle',
-        definition: 'The short stretch of time the plan is built around. In one crafting cycle each output inserter makes a '
-            + 'set number of swings.',
-        insteadOf: 'cycle, output cycle',
+        term: 'output cycle',
+        definition: 'The time in which each output inserter makes its set number of swings at your setpoint. A window cycle is '
+            + 'a whole number of output cycles.',
+        insteadOf: 'crafting cycle, cycle',
     },
     {
-        id: 'clock-period',
-        term: 'clock period',
-        definition: 'How long until the clock repeats: a whole number of crafting cycles. Shown in ticks.',
-        insteadOf: 'period, LCM period',
+        id: 'window-cycle-time',
+        term: 'window cycle time',
+        definition: 'The time of one window cycle, in ticks. A window cycle is one complete sequence of all the enable windows '
+            + 'of a clock, after which the sequence starts again. The time is a whole number of output cycles, and can be a '
+            + 'fraction of a tick.',
+        insteadOf: 'clock period, period, LCM period',
     },
     {
-        id: 'wake-window',
-        term: 'wake window',
-        definition: 'A stretch of ticks during which the clock switches an inserter on.',
-        insteadOf: 'window, clock window, inserter window, enable range',
+        id: 'enable-window',
+        term: 'enable window',
+        definition: 'The ticks of the window cycle in which the clock makes the Enable if condition of an inserter true. '
+            + 'The inserter is then switched on. A stretch that runs over the end of the window cycle is one enable window.',
+        insteadOf: 'wake window, window, clock window, inserter window, enable range',
     },
     {
-        id: 'wake-up',
-        term: 'wake-up',
-        definition: PROVISIONAL_WAKE_UP_DEFINITION,
-        insteadOf: '"one start of a wake window"',
+        id: 'wakeup',
+        term: 'wakeup',
+        definition: WAKEUP_DEFINITION,
+        insteadOf: 'wake-up, wake up (as a noun), "one start of an enable window"',
         provisional: true,
     },
     {
         id: 'start-point',
         term: 'start point',
-        definition: 'The place in the clock period where the clock starts.',
+        definition: 'The place in the window cycle where the clock starts.',
         insteadOf: '"one start of the clock"',
     },
     {
         id: 'copies',
         term: 'copies',
-        definition: 'How many identical units of your build you will place, including partial units such as 0.5 or 2.25. Describe one unit in the build.',
-        insteadOf: 'copy as any other noun ("Copy" stays a verb: "Copy blueprint")',
+        definition: 'How many identical builds you put in the game. It can be partial, such as 0.5 or 2.25. Describe only one of them.',
+        insteadOf: 'units (as the count), copy as any other noun ("Copy" stays a verb: "Copy blueprint")',
     },
     {
         id: 'build',
         term: 'build',
-        definition: 'The machines, inserters, belts and chests you set up, which the clocks are made for. Saved as a build '
-            + 'file (Open build file…, Save build file, Reset build).',
-        insteadOf: 'configuration, config',
+        definition: 'A group of entities in the game, of any number, that together make one product.',
+        insteadOf: 'setup, structure, cell, "build" as a verb',
     },
     {
-        id: 'your-builds',
-        term: 'Your builds',
-        definition: 'The builds kept in this browser, one per name.',
-        insteadOf: 'library, saved configs',
+        id: 'configuration',
+        term: 'configuration',
+        definition: 'A build, with its setpoint, copies and overrides: what the site saves and what clocks are made '
+            + 'for. Saved as a configuration file (Open configuration file…, Save configuration file, Reset configuration).',
+        insteadOf: 'config, build file, "build" for what the site saves',
+    },
+    {
+        id: 'your-configurations',
+        term: 'Your configurations',
+        definition: 'The configurations kept in this browser, one per name.',
+        insteadOf: 'Your builds, library, saved configs',
     },
     {
         id: 'share-link',
         term: 'share link',
-        definition: 'A link that carries a copy of a build; opening it adds the build to Your builds.',
+        definition: 'A link that carries a configuration; opening it adds the configuration to Your configurations.',
         insteadOf: 'permalink, URL',
     },
     {
         id: 'clock',
         term: 'clock',
-        definition: 'The set of combinators that switches your inserters and mining drills on in their wake windows and repeats every clock '
-            + 'period. The tool makes several and recommends one.',
-        insteadOf: 'potential clock',
+        definition: 'The set of combinators that switches your inserters and mining drills on in their enable windows. It repeats '
+            + 'every window cycle. The tool makes several and recommends one.',
+        insteadOf: 'potential clock, alternative, candidate, solution',
     },
     {
         id: 'blueprint',
@@ -137,15 +173,15 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     {
         id: 'check',
         term: 'check',
-        definition: 'Test that your build can be clocked, without making any clocks.',
-        insteadOf: 'validation, "run a simulation", "re-run the simulation" (in sentences)',
+        definition: 'A test of a configuration that shows whether it can be clocked. It makes no clocks.',
+        insteadOf: 'check as a verb, validation, "run a simulation", "re-run the simulation" (in sentences)',
     },
     {
         id: 'enable-rule',
-        term: 'enable rule ("rule" for short)',
-        definition: 'The rule that says when an inserter or drill is switched on. Modes: Auto, Always on, Never on, '
-            + 'Clocked, Conditional.',
-        insteadOf: 'enable control, override (only the Advanced section keeps "override"), AUTO, ALWAYS, NEVER, CLOCKED, CONDITIONAL',
+        term: 'Enable Control Strategy override ("override" for short)',
+        definition: 'The setting that overrides the Enable Control Strategy of one inserter or drill. Auto lets the generator '
+            + 'choose the strategy. Always on, Never on, Clocked and Conditional decide the control instead.',
+        insteadOf: 'enable rule, rule, enable control, AUTO, ALWAYS, NEVER, CLOCKED, CONDITIONAL',
     },
     {
         id: 'assembling-machine',
@@ -158,34 +194,34 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
         id: 'holds-the-rate',
         term: 'holds the rate',
         definition: 'The clock holds its expected output in the modeled cold-start checks while supplies remain available. '
-            + 'A start-dependent clock can hold here yet settle differently from other sampled starts and be ranked unstable.',
-        insteadOf: '"meets the target rate"',
+            + 'A start-dependent clock can hold here. It can still settle differently from other sampled starts, and be ranked unstable.',
+        insteadOf: '"meets the target rate", "holds the target rate" (say "holds the setpoint")',
     },
     {
-        id: 'starved',
-        term: 'starved',
-        definition: 'An input runs out.',
-        insteadOf: 'input loss',
+        id: 'supply-stop',
+        term: 'supply stop',
+        definition: 'A time when one item stops arriving from the belts or chests of a build.',
+        insteadOf: 'starved, starvation, input loss',
     },
     {
-        id: 'jammed',
-        term: 'jammed',
-        definition: 'The output is blocked and backs up.',
-        insteadOf: 'backpressure loss',
+        id: 'output-blockage',
+        term: 'output blockage',
+        definition: 'A time when one product of a build is not taken away.',
+        insteadOf: 'jammed, jam, output loss',
     },
     {
-        id: 'recovers',
-        term: 'recovers',
-        definition: 'In the simulator\'s evaluated loss trials, after the build is starved or jammed it gets back to its rate by itself. '
-            + 'A clock that fails one loss is not tried on the others. '
+        id: 'recovery',
+        term: 'recovery',
+        definition: 'In the simulator\'s loss trials, the clock goes back to its rate by itself. The trials are a supply stop '
+            + 'and an output blockage. A clock that fails one loss is not tried on the others. '
             + 'This is separate from holding the modeled rate and from checks of other sampled starts.',
-        insteadOf: 'survives backpressure loss, no recovery',
+        insteadOf: 'recovers, recover, gets back',
     },
     {
         id: 'belt-slack',
         term: 'belt slack',
-        definition: 'Extra ticks added to a wake window so a late pickup from a moving belt can still finish.',
-        insteadOf: 'belt pickup slack',
+        definition: 'Extra ticks added to an enable window. A late pickup from a moving belt can then still finish.',
+        insteadOf: 'belt pickup slack, pickup slack, slack on its own',
     },
     {
         id: 'simulator',
@@ -200,10 +236,96 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
         insteadOf: 'hand for a swing',
     },
     {
+        id: 'setpoint',
+        term: 'setpoint',
+        definition: 'The product your build must make, and the rate it must hold, for all copies. The rate is in items per second. '
+            + 'You set it. The clock never changes it.',
+        insteadOf: 'target output, target rate, goal',
+    },
+    {
+        id: 'stable',
+        term: 'stable',
+        definition: 'A clock is stable when it holds your setpoint at steady state. The build also goes back to its '
+            + 'rate by itself after a supply stop or an output blockage.',
+        insteadOf: 'survives backpressure loss',
+    },
+    {
+        id: 'steady-state',
+        term: 'steady state',
+        definition: 'The condition after the startup period. The build repeats the same pattern in each window cycle. '
+            + 'The output repeats. It is not constant.',
+        insteadOf: 'warm, warmed up, settled',
+    },
+    {
+        id: 'strategy',
+        term: 'strategy',
+        definition: 'One of several ways to do a job. The generator chooses the one that fits your build. The full form names '
+            + 'the job, for example enable control strategy.',
+        insteadOf: 'algorithm, clock type',
+    },
+    {
+        id: 'enable_control_strategy',
+        term: 'Enable Control Strategy',
+        definition: 'How the clock controls one inserter or mining drill: the rule that places its enable windows. Each strategy '
+            + 'is named after a practice with a similar timing problem. A router gives each entity its strategy. The site shows '
+            + 'a strategy by its name, its tuning method and its selection.',
+        insteadOf: 'clocking strategy',
+    },
+    {
+        id: 'belt_strategy',
+        term: 'belt strategy',
+        definition: 'How a belt works in the simulator: Normal or Export. It is not an enable control strategy.',
+    },
+    {
+        id: 'router',
+        term: 'Enable Control Strategy Router ("router" for short)',
+        definition: 'The rule above the strategies. It gives each inserter and mining drill of the clock an Enable Control Strategy. '
+            + 'Or it gives the reason the entity stays always enabled. There are two: Direct and Coordinated Sources. '
+            + 'An override other than Auto decides the entity\'s control before any strategy.',
+    },
+    {
+        id: 'direct',
+        term: 'Direct',
+        definition: 'The router that gives every inserter and mining drill of the clock the one chosen strategy. An entity the '
+            + 'strategy does not control stays always enabled, with its reason.',
+    },
+    {
+        id: 'coordinated_sources',
+        term: 'Coordinated Sources',
+        definition: 'A source is a machine, belt or chest that inserters take from. The inserters of one source use the enable '
+            + 'windows of another clock of the build. All sources use the window cycle of the recommended clock. The generator '
+            + 'sets the sources one at a time, from the output upstream. It keeps the setting with the smallest number of '
+            + 'wakeups for the full clock.',
+    },
+    {
+        id: 'tuning_method',
+        term: 'tuning method',
+        definition: 'How the generator finds the enable windows. Calculated: from the numbers of your build. Observed: around an '
+            + 'unclocked run of your build.',
+    },
+    {
+        id: 'selection',
+        term: 'selection',
+        definition: 'How the generator gets the clock of a strategy. One version: it makes one clock. Best of N versions: it makes '
+            + 'N clocks. It keeps the one with the fewest wakeups that holds the rate. Found by search: it moves the windows '
+            + 'through many placements in the simulator. It keeps the best one that holds the rate.',
+    },
+    {
+        id: 'unclocked_run',
+        term: 'unclocked run',
+        definition: 'A run of your build with no clock: all inserters and mining drills stay on. The generator watches what they do.',
+    },
+    {
+        id: 'signal',
+        term: 'signal',
+        definition: SIGNAL_DEFINITION,
+        insteadOf: 'pulse, activation pulse',
+    },
+    {
         id: 'lcm',
         term: 'LCM',
         // only in the Swing Plan and Advanced, glossed where it first appears
-        definition: 'The number of crafting cycles in one clock period.',
+        definition: 'The number of output cycles in one window cycle.',
         insteadOf: 'LCM cycles, LCM period',
         expert: true,
     },
@@ -220,6 +342,7 @@ export function glossaryWithFocus(focus: readonly GlossaryId[]): { related: Glos
 
 /** The terms the clock table's (i) buttons open the Terms with, first */
 export const TERMS_FOCUS = {
-    wakeUps: ['wake-up', 'wake-window'],
-    works: ['holds-the-rate', 'recovers', 'jammed', 'starved'],
+    wakeUps: ['wakeup', 'enable-window'],
+    signals: ['signal', 'wakeup', 'enable-window'],
+    works: ['holds-the-rate', 'recovery', 'output-blockage', 'supply-stop'],
 } as const satisfies Record<string, readonly GlossaryId[]>;

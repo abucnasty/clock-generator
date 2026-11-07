@@ -14,7 +14,7 @@ describe("a run that starts from a recording's first sample", () => {
     let result: BlueprintGenerationResult;
     let waiting: string;
     const run = (start: Parameters<typeof simulateClockOnly>[5]): StockRecording =>
-        simulateClockOnly(config, result.clock_windows, result.simulation_duration.ticks, 1, quiet, { warmup_periods: 0, keep_output_buffers: true, ...start });
+        simulateClockOnly(config, result.clock_windows, result.simulation_duration.ticks, 1, quiet, { warmup_window_cycles: 0, keep_output_buffers: true, ...start });
     const hand = (stock: StockRecording, id: string) => stock.inserters.find(it => it.inserter_id === id)!.held;
 
     beforeAll(async () => {

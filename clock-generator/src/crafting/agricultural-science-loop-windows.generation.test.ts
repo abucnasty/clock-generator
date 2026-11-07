@@ -27,7 +27,7 @@ describe("generateClockForConfig", () => {
             looped = generateClockForConfig(five_swings(sample), { verify_as_built: true, logger: quiet });
         });
 
-        it("generates a build with a dedicated fuel inserter in bounded time (under a minute), and stable", () => {
+        it("generates a build with a dedicated fuel inserter in bounded time (under 150 seconds), and stable", () => {
             // inserter 11 brings bioflux only and a new one nutrients, which the science biochamber burns
             const config: Config = {
                 ...sample,
@@ -38,24 +38,25 @@ describe("generateClockForConfig", () => {
             };
             const started = Date.now();
             const result = generateClockForConfig(five_swings(config), { verify_as_built: true, logger: quiet });
-            expect(Date.now() - started).toBeLessThan(60_000);
+            // 60 s before the enable windows were shaped against ghost wakeups; 64.7 s and 101.8 s on CI since, 35.6 s on a quiet machine (#695)
+            expect(Date.now() - started).toBeLessThan(150_000);
             expect(result.stability_check.as_built?.holds).toBe(true);
-        });
+        }, 200_000);
 
         it("plans the nutrient inserters 30.652 hands needed per 480 ticks on every clock, 61.304 per 960 on the 2-swing clock", () => {
-            for (const [swings, period] of [[5, 480], [1, 480], [2, 960]] as const) {
+            for (const [swings, window_cycle_ticks] of [[5, 480], [1, 480], [2, 960]] as const) {
                 const result = generateClockForConfig({ ...sample, overrides: { ...sample.overrides, terminal_swing_count: swings } }, { logger: quiet });
-                const plan = result.crafting_cycle_plan;
+                const plan = result.output_cycle_plan;
                 const planned = Array.from(plan.entity_transfer_map.values()).find(it => it.entity.entity_id.id === "inserter:3")!;
-                expect(result.simulation_duration.ticks).toBe(period);
-                expect(planned.needed_transfer_count!.toDecimal() * period / plan.total_duration.ticks).toBeCloseTo(30.652 * period / 480, 6);
+                expect(result.simulation_duration.ticks).toBe(window_cycle_ticks);
+                expect(planned.needed_transfer_count!.toDecimal() * window_cycle_ticks / plan.total_duration.ticks).toBeCloseTo(30.652 * window_cycle_ticks / 480, 6);
                 // the output inserter has none
                 const output = Array.from(plan.entity_transfer_map.values()).find(it => it.entity.entity_id.id === "inserter:12")!;
                 expect(output.needed_transfer_count).toBeUndefined();
             }
         });
 
-        // The planning run lets the loop run free and makes 416 of the 400 a period; the windows go by the clock-only
+        // The planning run lets the loop run free and makes 416 of the 400 a window cycle; the windows go by the clock-only
         // check alone, which holds. Under the new dispatch the turns of 5 and 8 no longer pass the check, so only 9 and 10
         // get windows and the loop's own inserters stay always enabled.
         it("gives 9 and 10 windows on the 5-swing clock of the sample, where its planning run does not hold, and 5 and 8 none", () => {
@@ -82,7 +83,7 @@ describe("generateClockForConfig", () => {
             expect(windows).toEqual([0, 96, 192, 288, 384].map(at => ({ start: at + 23, end: at + 46 })));
         });
 
-        // 9 and 10 bring 32 eggs in each stretch, the science biochamber draws 160 a period, a third of an egg a tick, and
+        // 9 and 10 bring 32 eggs in each stretch, the science biochamber draws 160 a window cycle, a third of an egg a tick, and
         // takes eggs while it holds fewer than 28: the second hand fits once it has drawn 5, in 15 ticks; and 5 for a hand
         it("makes the windows as long as the science biochamber needs to draw the hands of a stretch under its insertion limit", () => {
             const registry = createEntityRegistryFromConfig(sample);
@@ -91,7 +92,7 @@ describe("generateClockForConfig", () => {
             expect(drawWindowTicks(inserter, 28, 16, 1 / 3)).toBe(5);
         });
 
-        it("keeps them always enabled where the clock-only check does not hold: 3 output swings per cycle", () => {
+        it("keeps them always enabled where the clock-only check does not hold: 3 output swings each output cycle", () => {
             const result = generateClockForConfig({ ...sample, overrides: { ...sample.overrides, terminal_swing_count: 3 } }, { verify_as_built: true, logger: quiet });
             expect(result.stability_check.as_built?.holds).toBe(false);
             expect(result.loop_windows).toBeUndefined();

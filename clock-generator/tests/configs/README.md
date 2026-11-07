@@ -17,8 +17,8 @@ take them. `paths.ts` names the ones unit tests load by sample-style keys (`Test
   by infinity chests that remove all and its final takers removed, so the science plants' drains are terminal outputs into
   sinks that never fill. `src/crafting/terminal-rate.test.ts` takes its sink detection from it.
 - `nutrients-from-yumako-mash-fuel-bonus.json` (`BIOCHAMBER_FUEL`): one biochamber making nutrients from yumako mash at a
-  duty of exactly 1 (0.5 of the 0.5 crafts a second it makes), with its fuel inserters and a burn bonus. Twelve unit
-  tests take their duty-1, fuel-inserter, burner-inventory and fuel-view cases from it (`feasibility/duty`,
+  utilization of exactly 1 (0.5 of the 0.5 crafts a second it makes), with its fuel inserters and a burn bonus. Twelve unit
+  tests take their utilization-1, fuel-inserter, burner-inventory and fuel-view cases from it (`feasibility/utilization`,
   `feasibility-samples`, `alternative-tasks`, `always-enabled-override`, `always-on-reasons`, `main-clock-phase`,
   `plan/run-memo`, `rocket-fuel`, `sequence/unplanned-inserter-clock`, `timeline-recording`, `verification-signature`,
   `verification/compare-unplanned`).

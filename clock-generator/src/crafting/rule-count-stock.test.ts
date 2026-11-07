@@ -13,39 +13,39 @@ import { parseRecording } from "../verification/recording";
 import { ruleCountInputOfRecording } from "../verification/recording-rule-count";
 import { quiet } from "./generate-blueprint-test-helpers";
 
-// The logistic science sample: one machine, two inserters, a clock of 176 ticks. The 4-swing clock wins on its
-// 61.7 wake-ups a minute, against the stable 2-swing clock's 82.8 (the 1-swing clock, made for a backed-up belt, wakes as often, and recovers in 2 periods against their 3).
+// The logistic science sample: one machine, two inserters. The figures are of its 4-swing clock of 176 ticks
+// (planned-belt-slack), the selected clock, stable at 20.6 wake-ups a minute: two pickup windows a window cycle with the
+// belt pickup slack inside them (#595).
 describe("the rule count of a simulated run", () => {
     let config: Config;
     let clock: ReturnType<typeof generateClockAlternatives>["alternatives"][number];
+    let selected: ReturnType<typeof generateClockAlternatives>["alternatives"][number];
 
     beforeAll(async () => {
         config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240);
         const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
-        clock = alternatives[selected_index];
-        const other = alternatives.find(alternative => alternative.id === "swings-2")!;
-        expect(other.verdict).toBe("stable");
-        expect(other.ranking.recovery_periods).toBe(3);
+        selected = alternatives[selected_index];
+        clock = alternatives.find(alternative => alternative.maker === "planned-belt-slack")!;
+        expect(selected.maker).toBe("planned-belt-slack");
         expect(clock.verdict).toBe("stable");
-        expect(clock.ranking.recovery_periods).toBe(3);
-        expect(clock.ranking.wake_ups_per_minute).toBeLessThan(other.ranking.wake_ups_per_minute!);
+        expect(clock.ranking.recovery_window_cycles).toBe(3);
     });
 
     it("generates the clock itself when ruleCallsOfSample is not given the alternatives, and finds the same calls", () => {
-        const given = ruleCallsOfClock(config, clock);
+        const given = ruleCallsOfClock(config, selected);
         const generated = ruleCallsOfSample(config, { logger: quiet });
         expect(generated.clock.id).toBe(given.clock.id);
         expect(generated.removal.w_removed_pooled).toBe(given.removal.w_removed_pooled);
     });
 
-    const stockOf = (periods: number) => simulateClockOnly(
+    const stockOf = (window_cycles: number) => simulateClockOnly(
         { ...config, overrides: { ...config.overrides, terminal_swing_count: clock.result.used_terminal_swing_count } },
-        clock.result.clock_windows, clock.result.simulation_duration.ticks, periods, quiet);
+        clock.result.clock_windows, clock.result.simulation_duration.ticks, window_cycles, quiet);
 
-    // The simulator counts the crafts a machine starts; it reads them nowhere. These figures use the selected clock
-    // from the staged start (empty machines), over 40 periods; the fewest wake-ups pick the 4-swing clock.
+    // The simulator counts the crafts a machine starts; it reads them nowhere. These figures use the 4-swing clock
+    // from the staged start (empty machines), over 40 window cycles.
     it("records the crafts a machine starts without changing the run", () => {
-        expect(clock.id).toBe("planned-belt-slack");
+        expect(clock.maker).toBe("planned-belt-slack");
         const stock = stockOf(40);
         expect(stock.ticks).toBe(7040);
         const machine = stock.machines[0];
@@ -56,7 +56,7 @@ describe("the rule count of a simulated run", () => {
         expect(machine.crafts_started.every((count, tick) => tick === 0 || count >= machine.crafts_started[tick - 1])).toBe(true);
         // the long run repeats from its first bin, so the wake-ups are the exact eternal rate over the one-period cycle
         expect(clock.result.stability_check.as_built!.long_run_proven).toBe(true);
-        expect(clock.result.stability_check.as_built!.wake_ups!.wake_ups_per_minute).toBeCloseTo(61.7, 1);
+        expect(clock.result.stability_check.as_built!.wake_ups!.wake_ups_per_minute).toBeCloseTo(20.6, 1);
     });
 
     it("turns a stock and the config's entities into the rule count's input", () => {
@@ -91,7 +91,7 @@ describe("the rule count of a simulated run", () => {
     it("works out the removal and the calls of a clock, over the ticks of its long run", () => {
         const calls = ruleCallsOfClock(config, clock);
         // the long run of this clock repeats from its first bin, so the judged window is the one-period cycle
-        // (from tick 1, as the wake-ups count it), no longer the last two thirds of 120 periods
+        // (from tick 1, as the wake-ups count it), no longer the last two thirds of 120 window cycles
         expect(calls.from_tick).toBe(1);
         expect(calls.to_tick).toBe(176);
         // the clocked run is the long run again: goal 2's count of it is the generator's own
@@ -100,7 +100,7 @@ describe("the rule count of a simulated run", () => {
         expect(calls.unwired_run.groups.every(group => group.wired === 0)).toBe(true);
         expect(calls.clocked_run.groups.reduce((sum, group) => sum + group.wired, 0)).toBe(2);
         expect(calls.removal.newly_wired_inserters).toBe(2);
-        expect(calls.removal.w_removed_pooled).toBeCloseTo(524.6, 1);
+        expect(calls.removal.w_removed_pooled).toBeCloseTo(545.1, 1);
         expect(calls.removal.call).toMatchObject({ call: "clock", firm: true, region: "above 175.7", count: "true starts" });
         expect(calls.removal.groups.map(group => group.status)).toEqual(["newly wired", "newly wired"]);
         // its sinks are fed from belts at +0%: the true starts are the inferred ones, and the two counts agree

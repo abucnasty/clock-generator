@@ -32,19 +32,19 @@ describe('targetToFill', () => {
     });
 });
 
-describe('the words of the Target Output row', () => {
+describe('the words of the Setpoint row', () => {
     const name = (id: string) => (id === 'logistic-science-pack' ? 'Logistic science pack' : id);
 
     it('names the target as a ceiling', () => {
         expect(targetRowLabel({ recipe: 'logistic-science-pack', items_per_second: 22.968, copies: 1 }, name))
-            .toBe('Target Output: Logistic science pack, up to 22.968/s, 1 copy');
+            .toBe('Setpoint: Logistic science pack, up to 22.968/s, 1 copy');
         expect(targetRowLabel({ recipe: 'iron-gear-wheel', items_per_second: 240, copies: 11 }, name))
-            .toBe('Target Output: iron-gear-wheel, up to 240/s, 11 copies');
+            .toBe('Setpoint: iron-gear-wheel, up to 240/s, 11 copies');
     });
 
     it('explains the maximum rate and that it can be lowered after import', () => {
         expect(targetRowCaption('mod')).toMatch(/^From the Factorio export\. .*maximum output; .*lower the rate after importing\./);
-        expect(targetRowCaption('inferred')).toMatch(/^Estimated maximum output of the imported machines\. .*lower the rate in Target Output after importing\./);
+        expect(targetRowCaption('inferred')).toMatch(/^Estimated maximum output of the imported machines\. .*lower the rate in the Setpoint panel after importing\./);
     });
 
     it('says which target it replaces', () => {
@@ -53,13 +53,13 @@ describe('the words of the Target Output row', () => {
     });
 
     it('says what to do when it could not tell', () => {
-        expect(NO_TARGET_NOTE).toBe('Could not tell what the build makes. Set Target Output after importing.');
+        expect(NO_TARGET_NOTE).toBe('Could not tell what the build makes. Set the setpoint after importing.');
     });
 });
 
 describe('the note on a target at the maximum', () => {
     it('shows when the target the paste fills is the export\'s suggested maximum, and not for an estimate', () => {
-        expect(maximumTargetNote('mod')).toBe('At the maximum the clock has no slack to recover from a disturbance; lower the rate for headroom.');
+        expect(maximumTargetNote('mod')).toBe('At the maximum the clock has no room to go back to its rate after a supply stop or an output blockage; lower the rate for headroom.');
         expect(maximumTargetNote('inferred')).toBeNull();
     });
 });

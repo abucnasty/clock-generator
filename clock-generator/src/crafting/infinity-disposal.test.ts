@@ -23,12 +23,12 @@ async function disposalConfig(explicit = false): Promise<Config> {
 
 it.each([false, true])('accepts output with explicit filters=%s, records deliveries, and never accumulates discarded items', async explicit => {
     const config = await disposalConfig(explicit);
-    expect(validateConfig(config).period_ticks).toBeGreaterThan(0);
+    expect(validateConfig(config).window_cycle_ticks).toBeGreaterThan(0);
     const context = SimulationContext.fromConfig(config);
     const chest = context.state_registry.getAllStates().find(ContainerStorage.isConstant)!;
     const output = context.inserters.find(inserter => inserter.inserter_state.inserter.sink.entity_id.id === chest.entity_id.id)!.inserter_state;
     expect([...output.inserter.filtered_items]).toEqual([item]);
-    const recorder = new TimelineRecorder(context, { period_ticks: 6_000 });
+    const recorder = new TimelineRecorder(context, { window_cycle_ticks: 6_000 });
     const tick = new TickByHand(context);
     const advance = () => { for (let i = 0; i < 1_000; i++) { tick.executeForTick(); recorder.record(); } };
     advance();

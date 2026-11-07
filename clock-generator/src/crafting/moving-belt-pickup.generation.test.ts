@@ -12,6 +12,6 @@ it("selects a moving clock with reachable stacks and offers no clock for a backe
     expect(selected.verdict).toBe("stable");
     expect(selected.belt?.kind).toBe("moving");
     expect(selected.assessment.items_per_second).toBe(30);
-    expect(selected.assessment.backpressure_loss).toMatchObject({ survives: true });
+    expect(selected.assessment.disturbance_trial).toMatchObject({ survives: true });
     expect(generated.alternatives.some(a => a.id === "planned")).toBe(false);
 });

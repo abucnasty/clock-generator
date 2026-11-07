@@ -1,6 +1,6 @@
 // The results digest of a blast job: what the clock hash leaves out. clock_sha256 hashes the exported clock's identity; the
-// results digest hashes the rest of what an alternative shows a player (its label, description, insights, verdict and
-// assessment), what the simulation recorded (the transfer and state transition histories, the clock-only run, the fuel
+// results digest hashes the rest of what an alternative shows a player (its label, description, insights, verdict, assessment
+// and strategy), what the simulation recorded (the transfer and state transition histories, the clock-only run, the fuel
 // view) and, for the job, why_not_stable, the selected index and the alternatives' ids. Each component is hashed on its own,
 // so that a difference names what moved; results_sha256 is the sha256 of all the component lines.
 //
@@ -119,6 +119,8 @@ export function digestAlternative(alternative: any, expand: ExpandHistory | unde
         insights: alternative.insights,
         verdict: alternative.verdict,
         assessment: alternative.assessment,
+        // absent from a build from before it (undefined hashes the same on both sides of a before and after)
+        strategy: alternative.strategy,
         transfer_history: run.serializable_transfer_history,
         state_transition_history: expandedLazily(run.serializable_state_transition_history, expand),
         clock_only_run: run.clock_only_run && {

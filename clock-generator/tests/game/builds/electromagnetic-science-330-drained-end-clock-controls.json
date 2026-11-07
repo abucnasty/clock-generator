@@ -4,10 +4,10 @@
     "generated-moving-one-copy": {
       "recorded": {
         "pr": 0,
-        "commit": "052a4129bb7dc2bb1ee24bd3d0a092cd36ba6891",
-        "frozen_head": "052a4129bb7dc2bb1ee24bd3d0a092cd36ba6891",
-        "note": "recorded under the protocol in game ticks on the engine of this head with the tests of the branch that added it; pr is set when the PR is opened",
-        "clock_sha256": "492f1635c9f8360ce90840c139e39ccba1b00b781ce001b89a74439aae1a0600",
+        "commit": "57c76634",
+        "frozen_head": "57c76634",
+        "note": "recorded under the protocol in game ticks on the engine of this head; pr is set when the PR is opened",
+        "clock_sha256": "b1f96deee918099290042a287436c10af22d7a1a0eb027e436a4265790a80731",
         "clock_basis": "capture"
       },
       "native": {
@@ -17,7 +17,7 @@
         "period": 704,
         "window": 3600,
         "expected": 1800,
-        "steady": 7121,
+        "steady": 7120,
         "baseline": {
           "ticks": 3600,
           "total": 1800,
@@ -30,31 +30,31 @@
             "ticks": 3520,
             "items": 1760,
             "expected": 1760,
-            "stock_start": 1,
-            "stock_end": 1,
+            "stock_start": 5,
+            "stock_end": 5,
             "net": 1760
           }
         },
         "disturbances": [],
         "stock": {
           "lowest": 0,
-          "end": 10,
+          "end": 9,
           "holds": true
         },
         "result": "holds",
-        "ended": 10721
+        "ended": 10720
       },
       "generation": {
         "period": 704,
         "expected": 352.0,
         "verdict": "stable",
         "selection": {
-          "id": "swings-2",
+          "id": "takt_batches_swings_2",
           "holds": true,
           "rate": 330,
           "supply": "moving"
         },
-        "clock_sha256": "492f1635c9f8360ce90840c139e39ccba1b00b781ce001b89a74439aae1a0600"
+        "clock_sha256": "b1f96deee918099290042a287436c10af22d7a1a0eb027e436a4265790a80731"
       }
     }
   }

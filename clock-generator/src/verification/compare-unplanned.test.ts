@@ -22,7 +22,7 @@ beforeAll(() => {
 async function recordFuelBiochamber(options: { swing_offset?: number; later_swing_offset?: number; burn_factor?: number; out_of_fuel_from?: number } = {}) {
     const config = await loadConfigFromFile(TestConfigPaths.BIOCHAMBER_FUEL);
     const result = generateClockForConfig(config, { logger: quiet });
-    const period = result.simulation_duration.ticks;
+    const window_cycle_ticks = result.simulation_duration.ticks;
     const clock_of_fuel_inserter = result.unplanned_inserter_clocks!["inserter:3"];
     const { modulus, window } = clock_of_fuel_inserter;
 
@@ -30,7 +30,7 @@ async function recordFuelBiochamber(options: { swing_offset?: number; later_swin
     const fuel_value_mj = machine.fuel_slot!.fuel.fuel_value_mj;
     const power_mj_per_tick = machine.fuel_consumption!.rate_per_tick * fuel_value_mj * (options.burn_factor ?? 1);
 
-    const sample_count = period * 2;
+    const sample_count = window_cycle_ticks * 2;
     const swing_offset = options.swing_offset ?? 2;
     const held_count: number[] = new Array(sample_count).fill(0);
     const slot: number[] = [];
@@ -69,14 +69,14 @@ async function recordFuelBiochamber(options: { swing_offset?: number; later_swin
     return {
         config,
         result,
-        period,
+        window_cycle_ticks,
         recording: parseRecording({
             format: "clock-generator-recording",
             version: 1,
             start_game_tick: 0,
             sample_count,
-            // recorded as the game shows it, counting 1 to the period
-            clock: { values: Array.from({ length: sample_count }, (_, i) => i % period + 1) },
+            // recorded as the game shows it, counting 1 to the window cycle
+            clock: { values: Array.from({ length: sample_count }, (_, i) => i % window_cycle_ticks + 1) },
             config: {
                 inserters: [
                     { source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 } },

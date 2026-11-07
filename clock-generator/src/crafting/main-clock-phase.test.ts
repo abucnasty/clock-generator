@@ -6,8 +6,8 @@ import type { Config } from "../config/schema";
 import { Duration, OpenRange } from "../data-types";
 import { TickProvider } from "../simulation/current-tick-provider";
 import { EnableControl } from "../simulation/controls/enable-control";
-import * as planning from "./plan/plan-run";
-import { constructPrimitiveGroupedHands } from "./candidates/primitive-grouped-hands";
+import * as planning from "./plan/unclocked-run";
+import { constructPrimitiveRoundRobinPolling } from "./candidates/round-robin-polling-primitive";
 import { rotateRanges } from "./clock";
 import { buildAsBuiltConfig, exhaustiveCrossingKey, exhaustiveStartPhases, runAsBuiltCheck, runClockOnBuild, startDependenceOf } from "./trial";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
@@ -23,14 +23,14 @@ function clocked(config: Config, id: number) {
     if (control?.mode !== "CLOCKED") throw new Error(`Expected inserter${id} clocked`);
     return control;
 }
-function mask(config: Config, id: number, tick: number, period: number): boolean {
-    const position = ((tick % period) + period) % period;
+function mask(config: Config, id: number, tick: number, window_cycle_ticks: number): boolean {
+    const position = ((tick % window_cycle_ticks) + window_cycle_ticks) % window_cycle_ticks;
     return clocked(config, id).ranges.some(range => position >= range.start && position <= range.end);
 }
-function assertTranslated(canonical: Config, shifted: Config, period: number, offset: number) {
+function assertTranslated(canonical: Config, shifted: Config, window_cycle_ticks: number, offset: number) {
     for (const { id, control } of controlsOf(canonical)) {
         if (control?.mode !== "CLOCKED") continue;
-        for (let tick = 0; tick < period; tick++) expect(mask(shifted, id, tick, period)).toBe(mask(canonical, id, tick - offset, period));
+        for (let tick = 0; tick < window_cycle_ticks; tick++) expect(mask(shifted, id, tick, window_cycle_ticks)).toBe(mask(canonical, id, tick - offset, window_cycle_ticks));
         expect(clocked(shifted, id).latency_ticks).toBe(control.latency_ticks);
         expect(clocked(shifted, id).decider_build_order).toBe(control.decider_build_order);
     }
@@ -41,7 +41,7 @@ describe("shared main-clock phase composition", () => {
     beforeAll(async () => {
         const control = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED);
         auto = { ...control, overrides: undefined, inserters: control.inserters.map(inserter => ({ ...inserter, overrides: undefined })) };
-        const construction = constructPrimitiveGroupedHands(auto);
+        const construction = constructPrimitiveRoundRobinPolling(auto);
         const compact = construction.attempts.find(attempt => !attempt.options.share_windows && attempt.options.feeder_offset === 1)!;
         if (compact.result.kind !== "constructed") throw new Error(compact.result.reason);
         windows = new Map(Object.entries(compact.result.planned_windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))]));
@@ -59,15 +59,15 @@ describe("shared main-clock phase composition", () => {
     });
 
     it("moves every repeated byproduct opening when its modulus strictly divides the main period", () => {
-        const period = 1200;
-        const clocks = unplannedInserterClocks(createEntityRegistryFromConfig(auto), period);
+        const window_cycle_ticks = 1200;
+        const clocks = unplannedInserterClocks(createEntityRegistryFromConfig(auto), window_cycle_ticks);
         const red = clocks.get("inserter:9")!;
         expect(red.own_clock).toBe(false);
-        expect(red.modulus).toBeLessThan(period);
-        expect(period % red.modulus).toBe(0);
-        const canonical = buildAsBuiltConfig(auto, windows, period);
-        const shifted = buildAsBuiltConfig(auto, windows, period, undefined, "built", 3);
-        assertTranslated(canonical, shifted, period, 3);
+        expect(red.modulus).toBeLessThan(window_cycle_ticks);
+        expect(window_cycle_ticks % red.modulus).toBe(0);
+        const canonical = buildAsBuiltConfig(auto, windows, window_cycle_ticks);
+        const shifted = buildAsBuiltConfig(auto, windows, window_cycle_ticks, undefined, "built", 3);
+        assertTranslated(canonical, shifted, window_cycle_ticks, 3);
     });
 
     it("aligns future shared predicates at phase crossings rather than merging equal enabled bits at different phases", () => {
@@ -102,7 +102,7 @@ describe("shared main-clock phase composition", () => {
         const control = clocked(buildAsBuiltConfig(auto, wrap, 40), 10);
         expect(control.ranges).toEqual([{ start: 0, end: 1 }]);
         const tick = TickProvider.mutable(0);
-        const clock = EnableControl.clocked({ periodDuration: Duration.ofTicks(40),
+        const clock = EnableControl.clocked({ windowCycleDuration: Duration.ofTicks(40),
             enabledRanges: control.ranges.map(range => OpenRange.from(range.start, range.end)), tickProvider: tick,
             is_game_clock: true, start_latency_ticks: control.latency_ticks });
         clock.reset(true);
@@ -135,12 +135,12 @@ describe("shared main-clock phase composition", () => {
 
     it("shifts by a whole-tick start of a fractional period exactly, as rotating the windows does, with no float noise at the window's first tick", async () => {
         const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240);
-        const period = 19200 / 83;
+        const window_cycle_ticks = 19200 / 83;
         const ranges = new Map(config.inserters.map((inserter, index) => [`inserter:${inserter.id ?? index + 1}`, [OpenRange.from(1, 34)]]));
         for (const offset of [197, 209, 212, 225]) {
-            const rotated = new Map(Array.from(ranges, ([key, windows]) => [key, rotateRanges(windows, offset, period)] as const));
-            const shifted = buildAsBuiltConfig(config, ranges, period, undefined, "built", offset);
-            const rotatedFirst = buildAsBuiltConfig(config, rotated, period);
+            const rotated = new Map(Array.from(ranges, ([key, windows]) => [key, rotateRanges(windows, offset, window_cycle_ticks)] as const));
+            const shifted = buildAsBuiltConfig(config, ranges, window_cycle_ticks, undefined, "built", offset);
+            const rotatedFirst = buildAsBuiltConfig(config, rotated, window_cycle_ticks);
             for (const { id } of controlsOf(shifted)) {
                 expect(clocked(shifted, id).ranges, `offset ${offset}, inserter ${id}`).toEqual(clocked(rotatedFirst, id).ranges);
             }

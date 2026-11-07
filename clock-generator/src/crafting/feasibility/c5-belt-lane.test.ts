@@ -11,7 +11,7 @@ import { belt, feasibilityOfConfig, infinityChest, inserter, lane, withTarget } 
  * of stack 4: its two sides carry 2 x 120 = 240 items a second. The three takers could take 3 x 16 x 60 / 11 = 261.82.
  */
 const science: Config = {
-    target_output: { recipe: "automation-science-pack", items_per_second: 240, copies: 1 },
+    setpoint: { recipe: "automation-science-pack", items_per_second: 240, copies: 1 },
     machines: [
         { id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1000 },
         { id: 2, recipe: "automation-science-pack", productivity: 0, crafting_speed: 10000 },

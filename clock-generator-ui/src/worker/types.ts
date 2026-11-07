@@ -1,6 +1,8 @@
+import type { InternalError } from '../utils/internalError';
 import type { ValidationDiagnostic } from '../utils/buildValidation';
 import type { z } from 'zod';
 import type {
+    CoordinatedSourcesInput,
     AlwaysOnReasons,
     AsBuiltStabilityCheck,
     BeltConfigSchema,
@@ -21,6 +23,7 @@ import type {
     ClockAlternativeContext,
     ClockAlternativeRun,
     ClockAlternativeTask,
+    ClockStrategy,
     NotMadeClock,
     ComputeMachineFactsParams,
     Config,
@@ -53,10 +56,10 @@ export interface FuelSwing {
     amount: number;
 }
 
-/** The exported clock run over several periods, long enough to show the burner machines being refilled */
+/** The exported clock run over several window cycles, long enough to show the burner machines being refilled */
 export interface FuelRunView {
-    /** Periods of the clock the run covers; the clock itself stays one period */
-    periods: number;
+    /** Window cycles of the clock the run covers; the clock itself stays one window cycle */
+    window_cycles: number;
     durationTicks: number;
     /** Whether a fuel inserter swung in the run; false when none did even over the longest run tried */
     fuelSwingsRecorded: boolean;
@@ -74,14 +77,14 @@ export interface FuelViewData {
     run: FuelRunView | null;
 }
 
-/** One place tried for a moved crafting cycle or output swing, in ticks from its planned start (negative is earlier) */
+/** One place tried for a moved output cycle or output swing, in ticks from its planned start (negative is earlier) */
 export interface CheckedShift {
     shift_ticks: number;
     /** Passed the quick trial; only the shift that is used is confirmed from more clock start phases */
     holds: boolean;
 }
 
-/** Every place tried for one crafting cycle or output swing (1-based `index`), in shift order */
+/** Every place tried for one output cycle or output swing (1-based `index`), in shift order */
 export interface CheckedShiftRow {
     index: number;
     shifts: CheckedShift[];
@@ -90,7 +93,7 @@ export interface CheckedShiftRow {
 /** One end of the unbroken range of shifts that work around the shift in use */
 export interface ShiftRangeEdge {
     shift_ticks: number;
-    /** No place further out was tried: the moved windows would meet the same inserters' other windows or the end of the period */
+    /** No place further out was tried: the moved windows would meet the same inserters' other windows or the end of the window cycle */
     is_search_limit: boolean;
     /** What the inserters and machines are waiting on at this shift, the limits that stop the swings from going further */
     notes: string[];
@@ -149,7 +152,7 @@ export interface ClockAlternativeView {
     asBuilt: AsBuiltStabilityCheck | null;
     expectedOutputItems: number;
     terminalSwingCount: number;
-    /** Length of one crafting cycle; the clock period is a whole number of them */
+    /** Length of one output cycle; the window cycle is a whole number of them */
     cycleTicks: number;
     blueprintString: string;
     /** What installing the blueprint takes: whether it is a book, and which inserters each combinator is wired to */
@@ -167,14 +170,18 @@ export interface ClockAlternativeView {
     beltPickupSlackTicks: Record<string, number>;
     /** What the simulation found that is worth explaining about the build and this clock */
     insights: ClockInsight[];
-    /** Null unless this clock moved a crafting cycle or an output swing */
+    /** Null unless this clock moved a output cycle or an output swing */
     shiftOptions: ShiftOptionsView | null;
     simulationDurationTicks: number;
     /**
-     * The ticks the blueprint counts when the period is not a whole number of ticks and the clock runs it rounded down;
+     * The ticks the blueprint counts when the window cycle is not a whole number of ticks and the clock runs it rounded down;
      * missing for any other clock, and from clocks kept before it was carried
      */
-    roundedPeriodTicks?: number;
+    roundedWindowCycleTicks?: number;
+    /** How much faster than the setpoint a clock rounded down to whole ticks runs, as a share; missing like `roundedWindowCycleTicks` */
+    roundedRunsFast?: number;
+    /** Which strategy the clock follows, its tuning method and settings, and its router, as ids; missing from clocks kept before it was carried */
+    strategy?: ClockStrategy;
     swingBackoffReport: SwingBackoffReport | null;
     /** Exact independent inserter clocks exported with this alternative, including measured fuel clocks. */
     inserterClocks?: RecordTimelineRequest['inserter_clocks'];
@@ -183,7 +190,7 @@ export interface ClockAlternativeView {
 }
 
 export interface ClockModelAssumptions {
-    loopSeeds: { machineId: string; item: string; items: number }[];
+    kickStarts: { machineId: string; item: string; items: number }[];
     outputDrops: { beltId: number; inserterIds: number[]; mode: 'shared-lanes' | 'free-lane' }[];
     overrides: Config['overrides'];
     machineFuel: { machineId: number; fuel: string }[];
@@ -240,6 +247,8 @@ export interface TaskRequest {
     taskId: string;
     /** Signatures of clocks other runs assess (see PlannedResponse.primarySignature) */
     assessedSignatures?: string[];
+    /** For the per-branch clock's task: the parts of every run before it and the clock they recommend */
+    coordinatedSources?: CoordinatedSourcesInput;
 }
 
 /**
@@ -274,6 +283,8 @@ export interface ValidationFailedResponse {
     message: string;
     recovery?: RepeatedUnitsRecovery;
     diagnostics?: ValidationDiagnostic[];
+    /** Set when the error was not an engine refusal: the build was not judged */
+    internal?: InternalError;
 }
 
 export interface LogResponse {
@@ -453,6 +464,8 @@ export type EngineQuery =
 export interface LiveCoverage {
     issues: InserterCoverageIssue[];
     refusal: string | null;
+    /** The ids of the inserters `refusal` names, when it is the one for inserters that take from a belt into anything but a machine; else empty */
+    refusal_inserters: number[];
     /** The engine's warning for belt pickups outside 16-item hands on 4-item belt stacks, which does not block generation */
     pickupNotTested: string | null;
     /** The engine's warning for belt lanes that the copies, summed, would ask for more than they carry; it does not block */
@@ -463,7 +476,7 @@ export interface LiveCoverage {
     lanesExactlyFull: string | null;
     /** The engine's note that the copies' gap is needed to check their drops onto a belt, which does not block */
     copyGapNeeded: string | null;
-    /** The engine's note on whether the copies' drops fit between each other at the period estimated from the settings, shown under the gap between copies */
+    /** The engine's note on whether the copies' drops fit between each other at the window cycle estimated from the settings, shown under the gap between copies */
     dropRoom: string | null;
     /** The engine's warnings for machines whose prototype disagrees with their type or cannot make their recipe; they do not block */
     machinePrototypes: MachinePrototypeIssue[];

@@ -4,7 +4,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import type { Config, PortableStateTransitionHistory, SerializableClockWindows, SerializableTransferHistory, TimelineEntity } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
 import type { TimelineViewContext } from '../utils/buildViewContext';
-import { settledPeriodLabel, timelineRequestFor } from '../utils/timelineRequest';
+import { settledWindowCycleLabel, timelineRequestFor } from '../utils/timelineRequest';
 import { useTimelineRecording } from '../hooks/useTimelineRecording';
 import { useGameNames } from '../hooks/useGameNames';
 import { DEFAULT_INSPECTION, validInspection, resolveTimelineEntity, timelineEntityName, clampTimelineRange, panTimeline, relevantTimelineEvents, relatedTimelineEntities, upperBound, zoomTimeline, type TimelineInspection, type TimelineRange } from '../utils/timelineInspection';
@@ -20,8 +20,8 @@ import { configToFormData } from '../utils/configForm/configMapping';
 import { chestConfigItems } from '../utils/configForm/formData';
 import { entityOptionsOf } from '../utils/inserterOptions';
 import { entityLabelIn } from '../utils/entityLabel';
-import { craftingCycles, craftingCycleAt, craftingCycleIndex, craftingCycleRange } from '../utils/craftingCycles';
-import { CraftingCycleNavigator } from './CraftingCycleNavigator';
+import { outputCycles, outputCycleAt, outputCycleIndex, outputCycleRange } from '../utils/outputCycles';
+import { OutputCycleNavigator } from './OutputCycleNavigator';
 
 const FlowReplay = lazy(() => import('./FlowReplay').then(module => ({ default: module.FlowReplay })));
 const EvidenceChart = lazy(() => import('./TimelineEvidenceChart').then(module => ({ default: module.TimelineEvidenceChart })));
@@ -113,7 +113,7 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
     const request = useMemo(() => recordingWanted ? timelineRequestFor(props.config, props.selected, inspection.run) : null, [props.config, props.selected, inspection.run, recordingWanted]);
     const primary = useTimelineRecording(request, retry);
     const recording = primary.data;
-    const settledLabel = settledPeriodLabel(request, recording);
+    const settledLabel = settledWindowCycleLabel(request, recording);
     const selected = useMemo(() => resolveTimelineEntity(recording?.entities ?? options, inspection.entityId), [recording, options, inspection.entityId]);
     const selectedId = selected?.id ?? null;
     const effectiveInspection = useMemo(() => ({ ...inspection, entityId: selectedId }), [inspection, selectedId]);
@@ -123,11 +123,11 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
     const domain = !recordingWanted ? 'windows' : inspection.run;
     const savedRange = inspection.ranges[domain];
     const tick = Math.max(0, Math.min(Math.floor(duration), inspection.tick));
-    const cycles = useMemo(() => craftingCycles(props.selected.cycleTicks, duration), [props.selected.cycleTicks, duration]);
-    const cycleIndex = Math.min((cycles?.count ?? 1) - 1, inspection.cycleIndex ?? craftingCycleIndex(cycles, tick));
+    const cycles = useMemo(() => outputCycles(props.selected.cycleTicks, duration), [props.selected.cycleTicks, duration]);
+    const cycleIndex = Math.min((cycles?.count ?? 1) - 1, inspection.cycleIndex ?? outputCycleIndex(cycles, tick));
     const range = useMemo(() => {
-        const cycle = inspection.view === 'cycles' ? craftingCycleAt(cycles, cycleIndex) : null;
-        return cycle ? craftingCycleRange(cycle, duration) : clampTimelineRange(savedRange, duration);
+        const cycle = inspection.view === 'cycles' ? outputCycleAt(cycles, cycleIndex) : null;
+        return cycle ? outputCycleRange(cycle, duration) : clampTimelineRange(savedRange, duration);
     }, [inspection.view, cycles, cycleIndex, savedRange, duration]);
     const current = useRef({ inspection, duration, domain, range });
     useEffect(() => { current.current = { inspection, duration, domain, range }; }, [inspection, duration, domain, range]);
@@ -136,14 +136,14 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
         patch({ ranges: { ...previous.ranges, [key]: clampTimelineRange(next, end) } });
     }, [patch]);
     const selectCycle = useCallback((index: number) => {
-        const cycle = craftingCycleAt(cycles, index);
+        const cycle = outputCycleAt(cycles, index);
         if (!cycle) return;
         patch({ cycleIndex: index, tick: Math.ceil(cycle.start) });
     }, [cycles, patch]);
     const setTick = useCallback((value: number) => {
         const { duration: end, range: window, inspection: previous } = current.current;
         const next = Math.max(0, Math.min(Math.floor(end), Math.round(value)));
-        patch({ tick: next, ...(previous.view === 'cycles' ? { cycleIndex: craftingCycleIndex(cycles, next) } : {}) });
+        patch({ tick: next, ...(previous.view === 'cycles' ? { cycleIndex: outputCycleIndex(cycles, next) } : {}) });
         if (previous.view !== 'cycles' && (next < window.start || next > window.end)) {
             const half = (window.end - window.start) / 2;
             setRange({ start: next - half, end: next + half });
@@ -151,7 +151,7 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
     }, [patch, setRange, cycles]);
     const zoom = useCallback((factor: number, cursor: number) => setRange(zoomTimeline(current.current.range, factor, cursor, current.current.duration)), [setRange]);
     const inspect = useCallback((entityId: string, at: number) => {
-        patch({ entityId, tick: Math.round(at), ...(current.current.inspection.view === 'cycles' ? { cycleIndex: craftingCycleIndex(cycles, at) } : {}) });
+        patch({ entityId, tick: Math.round(at), ...(current.current.inspection.view === 'cycles' ? { cycleIndex: outputCycleIndex(cycles, at) } : {}) });
         const { range: window, duration: end } = current.current;
         if (current.current.inspection.view !== 'cycles' && (at < window.start || at > window.end)) { const half = (window.end - window.start) / 2; setRange(clampTimelineRange({ start: at - half, end: at + half }, end)); }
     }, [patch, setRange, cycles]);
@@ -171,17 +171,17 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
     return <Box data-clock-inspection onKeyDown={onKeys}>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 1 }}>
             <TextField select size="small" label="Timeline view" value={inspection.view} onChange={event => patch({ view: event.target.value as TimelineInspection['view'] })} sx={{ display: { xs: 'block', sm: 'none' }, flex: '1 1 100%' }}>
-                <MenuItem value="windows">Wake windows</MenuItem><MenuItem value="activity">Activity</MenuItem><MenuItem value="cycles">Crafting cycles</MenuItem><MenuItem value="transfers">Item transfers</MenuItem><MenuItem value="flow">Flow replay</MenuItem>
+                <MenuItem value="windows">Enable windows</MenuItem><MenuItem value="activity">Activity</MenuItem><MenuItem value="cycles">Output cycles</MenuItem><MenuItem value="transfers">Item swings</MenuItem><MenuItem value="flow">Flow replay</MenuItem>
             </TextField>
             <ToggleButtonGroup value={inspection.view} exclusive size="small" aria-label="Timeline view" onChange={(_, view: TimelineInspection['view'] | null) => { if (view) patch({ view }); }} sx={{ display: { xs: 'none', sm: 'flex' }, flexWrap: 'wrap' }}>
-                <ToggleButton value="windows">Wake windows</ToggleButton>
+                <ToggleButton value="windows">Enable windows</ToggleButton>
                 <ToggleButton value="activity">Activity</ToggleButton>
-                <ToggleButton value="cycles">Crafting cycles</ToggleButton>
-                <ToggleButton value="transfers">Item transfers</ToggleButton>
+                <ToggleButton value="cycles">Output cycles</ToggleButton>
+                <ToggleButton value="transfers">Item swings</ToggleButton>
                 <ToggleButton value="flow">Flow replay</ToggleButton>
             </ToggleButtonGroup>
             {recordingWanted && <ToggleButtonGroup value={inspection.run} exclusive size="small" aria-label="Simulation shown in the timelines" onChange={(_, run: 'clock' | 'plan' | null) => { if (run) patch({ run }); }}>
-                <ToggleButton value="clock">Exported clock</ToggleButton><ToggleButton value="plan">Plan</ToggleButton>
+                <ToggleButton value="clock">Blueprint clock</ToggleButton><ToggleButton value="plan">Plan</ToggleButton>
             </ToggleButtonGroup>}
         </Box>
         {inspection.view !== 'cycles' && <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', mb: 1 }}>
@@ -200,9 +200,9 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
         {recordingWanted && !isFlow && selected?.type === 'belt' && <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Showing connected inserters. Physical belt contents are not recorded.</Typography>}
         {recordingWanted && !isFlow && selected?.type !== 'belt' && <FormControlLabel sx={{ mb: 0.5 }} label="Show connected entities" control={<Checkbox size="small" checked={inspection.showConnections === true} onChange={(_, showConnections) => patch({ showConnections })} />} />}
         {inspection.view === 'activity' && <TimelineSignals signals={inspection.signals} onChange={signals => patch({ signals })} />}
-        {inspection.view === 'cycles' && <CraftingCycleNavigator cycles={cycles} index={cycleIndex} periodTicks={props.selected.simulationDurationTicks} swings={props.selected.terminalSwingCount} counts={props.selected.counts} onSelect={selectCycle} />}
+        {inspection.view === 'cycles' && <OutputCycleNavigator cycles={cycles} index={cycleIndex} windowCycleTicks={props.selected.simulationDurationTicks} swings={props.selected.terminalSwingCount} counts={props.selected.counts} onSelect={selectCycle} />}
         {recordingWanted && <Typography variant="body2" sx={{ mb: 1 }}>
-            {props.selected.ranking.meets_target_rate ? `This clock meets ${number(props.selected.assessment.items_per_second)} items/s across all copies. Pauses can be part of that pattern.`
+            {props.selected.ranking.meets_target_rate ? `This clock holds the setpoint of ${number(props.selected.assessment.items_per_second)} items/s across all copies. Pauses can be part of that pattern.`
                 : 'Explore the recorded activity alongside this clock’s assessed output.'}
         </Typography>}
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', lg: recordingWanted ? 'minmax(0,1fr) 245px' : 'minmax(0,1fr)' }, gap: 1.5, alignItems: 'start' }}>
@@ -229,7 +229,7 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
                     <Typography variant="caption" sx={{ minWidth: 55 }}>{number(tick / 60)} s</Typography>
                 </Box>
                 {settledLabel && <Typography variant="caption" component="p" sx={{ mt: 1, fontWeight: 600 }}>{settledLabel}</Typography>}
-                {recording && <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>One modelled unit · {inspection.run === 'clock' ? 'exported clock, including circuit latency' : 'planning controls'} · tick 0 is the baseline after preparation/warm-up ({number(recording.ticks_before_recording)} ticks excluded); controls restart at phase 0 with that inventory. Full input supplies; delivery rates exclude events before tick 0. This replay does not change the clock assessment.</Typography>}
+                {recording && <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>One modelled copy · {inspection.run === 'clock' ? 'blueprint clock, including circuit latency' : 'planning controls'} · tick 0 is the baseline after preparation and the run to steady state ({number(recording.ticks_before_recording)} ticks excluded); controls restart at phase 0 with that inventory. Full input supplies; delivery rates exclude events before tick 0. This replay does not change the clock assessment.</Typography>}
             </Box>
             {recordingWanted && selected && recording && <TimelineTickInspector recording={recording} entity={selected} inspection={effectiveInspection} tick={tick} events={tickEvents} connected={connected} onEntityChange={entityId => patch({ entityId, ...(isFlow ? { replayFocus: true, replayTransferScope: 'selection' } as const : {}) })} />}
 
@@ -258,7 +258,7 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
 function LegacyHistories({ props }: { props: ClockTimelineWorkspaceProps }) {
     const [open, setOpen] = useState(false);
     return <Box sx={{ mt: 1 }}>
-        <Typography variant="body2">Planning transfer ranges are merged and adjusted to derive clock windows; their endpoints are not exact delivery times.</Typography>
+        <Typography variant="body2">Planning swing ranges are merged and adjusted to derive enable windows; their endpoints are not exact delivery times.</Typography>
         <Button color="inherit" size="small" onClick={() => setOpen(!open)}>{open ? 'Hide full histories' : 'Load full histories'}</Button>
         {open && <Suspense fallback={<Typography>Loading full histories…</Typography>}>
             {props.stateTransitionHistory && <OriginalStates fullscreen={props.fullscreen} options={props.timeline} onOptionsChange={props.onTimelineChange} stateTransitionHistory={props.stateTransitionHistory} clockWindows={props.clockWindows ?? undefined} />}

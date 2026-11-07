@@ -90,7 +90,7 @@ export function expectRunIsConsistent(native: NativeRunSummary, pin: {period: nu
     expect(native.protocol).toBe("trailing-minute");
     expect(native.period, "the game was recorded on the pinned period").toBe(pin.period);
     expect(native.target, "the target's share the build is asked for").toBe(targetItemsPerSecond);
-    // the run keeps its target to a millionth (34.285714 for 240/7): its output a period is the pin's to a thousandth
+    // the run keeps its target to a millionth (34.285714 for 240/7): its output a window cycle is the pin's to a thousandth
     expect(Math.round(native.target * native.period / 60 * 1e3) / 1e3, "the pinned output per period is the target's").toBe(Math.round(pin.expected * 1e3) / 1e3);
     expect(native.window).toBe(RUN_BOUNDS.window);
     expect(native.expected, "the window holds the target rate over it").toBe(Math.round(native.target * native.window / 60 * 1e6) / 1e6);

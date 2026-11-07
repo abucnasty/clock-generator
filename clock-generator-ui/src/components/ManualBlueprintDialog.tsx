@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 import { AppDialog } from './AppDialog';
 import type { BlueprintCopyFailure } from '../hooks/useCopyBlueprint';
 import { useGameNames } from '../hooks/useGameNames';
-import { TARGET_OUTPUT_HEADING_ID } from '../utils/introCard';
+import { SETPOINT_HEADING_ID } from '../utils/introCard';
 import { generatedForText, madeAtText } from '../utils/resultsStaleness';
 
 /** A failed attempt's exact snapshot; selecting text never writes to the clipboard or pins a clock. */
@@ -23,7 +23,7 @@ export function ManualBlueprintDialog({ failure, onClose }: { failure: Blueprint
             const selected = document.querySelector('[data-focus-fallback] [aria-pressed="true"]');
             if (usable(selected) && !selected.matches(':disabled, [aria-disabled="true"]')) selected.focus();
             else {
-                const heading = document.getElementById(TARGET_OUTPUT_HEADING_ID);
+                const heading = document.getElementById(SETPOINT_HEADING_ID);
                 if (usable(heading)) heading.focus();
             }
         });

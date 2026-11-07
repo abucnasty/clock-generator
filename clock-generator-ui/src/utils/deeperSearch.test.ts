@@ -17,7 +17,7 @@ import {
 
 /** A form that can be turned into a config: a recipe, a rate and one machine */
 const form = (): ConfigFormData => build({
-    target_output: { recipe: 'electronic-circuit', items_per_second: 240, copies: 1 },
+    setpoint: { recipe: 'electronic-circuit', items_per_second: 240, copies: 1 },
     machines: [machine(1, { recipe: 'electronic-circuit' })],
 });
 
@@ -103,13 +103,13 @@ describe('deeperSearchNoticeOf', () => {
 
 describe('the notice\'s words', () => {
     it('offers in the plan\'s sentence', () => {
-        expect(DEEPER_SEARCH_OFFER).toBe('We stopped once we found a working clock. A deeper, slower search might find one with fewer wake-ups.');
+        expect(DEEPER_SEARCH_OFFER).toBe('We stopped once we found a working clock. A deeper, slower search might find one with fewer wakeups.');
     });
 
     const pick = 'Shifted swings: 2 output swings per cycle';
     it.each([
         ['for this run', deeperSearchDoneOnce, 'We searched deeper for this run. These clocks include the slower searches.', ''],
-        ['kept on', deeperSearchDoneKept, 'Deeper search is on for this build.', ' To stop it, turn off "Search for fewer wake-ups" under Advanced.'],
+        ['kept on', deeperSearchDoneKept, 'Deeper search is on for this build.', ' To stop it, turn off "Search for fewer wakeups" under Advanced.'],
     ])('after a deeper search %s, names the new pick, and leaves it out when there is none', (_, done, start, end) => {
         expect(done(pick)).toBe(`${start} Recommended is now ${pick}.${end}`);
         expect(done(null)).toBe(`${start}${end}`);

@@ -13,13 +13,13 @@ import { outputPathOf } from "../sequence/cycle/swing-counts";
 import { createEntityRegistryFromConfig } from "../sequence/simulation-context";
 import { validateConfig } from "../plan/validate-config";
 import { TargetProductionRate } from "../target-production-rate";
-import { balanceBuildOf, balanceOf, LOOP_USES_ALL, periodCyclesOf } from "./balance";
+import { balanceBuildOf, balanceOf, LOOP_USES_ALL, windowCycleCyclesOf } from "./balance";
 
 /** The balance of a sample at so many output swings a cycle, with the cycle's exact ticks */
 async function balanceAt(file: string, swings: number) {
     const config = await loadConfigFromFile(file) as Config;
     const registry = createEntityRegistryFromConfig(config);
-    const target = TargetProductionRate.fromConfig(config.target_output);
+    const target = TargetProductionRate.fromConfig(config.setpoint);
     const machines = registry.getAll().filter(Entity.isMachine).filter(it => it.output.item_name === target.machine_production_rate.item);
     const ticks = fraction(16).divide(target.machine_production_rate.amount_per_tick.divide(machines.length)).multiply(swings);
     return { config, machines, ticks, balance: madeTargetBalance(machines, registry, config, fraction(swings), 16, ticks.toDecimal()) };
@@ -31,7 +31,7 @@ describe("the balance equations of accumulator 640", () => {
     it("give the smallest period of whole hands: 486 ticks, 288 accumulators, hands of 9, 12, 30, 10 and 10", async () => {
         const { ticks, balance } = await balanceAt(ConfigPaths.ACCUMULATOR_640, 1);
         expect(ticks.toString()).toBe("54");
-        const cycles = periodCyclesOf(balance.transfers);
+        const cycles = windowCycleCyclesOf(balance.transfers);
         expect(ticks.multiply(cycles).toString()).toBe("486");
         const hands = Object.fromEntries(balance.transfers.map(it => [it.entity, it.total.multiply(cycles).toString()]));
         expect(hands).toEqual({
@@ -45,7 +45,7 @@ describe("the balance equations of accumulator 640", () => {
         // 9 hands of 16 out of each plant
         const made = ["machine:1", "machine:2"].reduce((sum, machine) => sum.add(balance.made.get(machine)!), fraction(0));
         expect(made.multiply(cycles).toString()).toBe("288");
-        // every hand of a period is whole; the crafts need not be: 4/3 of the battery plants' a cycle at +200% productivity
+        // every hand of a window cycle is whole; the crafts need not be: 4/3 of the battery plants' a cycle at +200% productivity
         expect(balance.transfers.every(it => it.items.every(item => item.hands.multiply(cycles).getDenominator === 1))).toBe(true);
     });
 });
@@ -101,12 +101,11 @@ describe("the balance with inserters that carry nothing", () => {
 
     const planOf = async (raw: unknown, fractional: boolean) => {
         const config = await parseConfig(JSON.stringify(raw)) as Config;
-        const run = fractional ? { ...config, overrides: { ...config.overrides, use_fractional_swings: true } } as Config : config;
         try {
-            const validation = validateConfig(run);
+            const validation = validateConfig(config, fractional ? { fractional_swings: true } : {});
             return {
                 lcm: validation.used_lcm,
-                period: validation.period_ticks,
+                window_cycle_ticks: validation.window_cycle_ticks,
                 transfers: validation.transfer_plan.entities.map(entity =>
                     `${entity.entity_id} ${entity.item_transfers.map(it => `${it.item_name} ${it.numerator}/${it.denominator}`).join(", ")}`),
             };
@@ -117,10 +116,10 @@ describe("the balance with inserters that carry nothing", () => {
 
     it("an empty output inserter takes its share of the output swings, in its own hand", async () => {
         expect(await planOf(FIXTURES.stone_bricks_and_an_empty_taker(), false)).toEqual({
-            lcm: 1, period: 144, transfers: ["inserter:1 stone-brick 3/1", "inserter:2 stone-brick 3/1", "drill:1 stone 8/1"],
+            lcm: 1, window_cycle_ticks: 144, transfers: ["inserter:1 stone-brick 3/1", "inserter:2 stone-brick 3/1", "drill:1 stone 8/1"],
         });
         expect(await planOf(FIXTURES.stone_bricks_and_an_empty_taker(), true)).toEqual({
-            lcm: 16, period: 2448, transfers: ["inserter:1 stone-brick 51/16", "inserter:2 stone-brick 51/16", "drill:1 stone 17/2"],
+            lcm: 16, window_cycle_ticks: 2448, transfers: ["inserter:1 stone-brick 51/16", "inserter:2 stone-brick 51/16", "drill:1 stone 17/2"],
         });
     });
 
@@ -131,7 +130,7 @@ describe("the balance with inserters that carry nothing", () => {
             transfers: ["inserter:3 steel-plate 38/1", "inserter:2 steel-plate 38/1", "inserter:1 iron-plate 95/2",
                 "inserter:4 iron-plate 95/6", "inserter:5 iron-ore 95/9"],
         });
-        expect((plan as { period: number }).period).toBeCloseTo(25255.384615384617, 6);
+        expect((plan as { window_cycle_ticks: number }).window_cycle_ticks).toBeCloseTo(25255.384615384617, 6);
         expect(await planOf(FIXTURES.steel_wagon_and_an_empty_filler(), true)).toEqual({
             refused: "Cannot satisfy fractional swing constraint: sub-cycle 0 requires 47 swings, but maximum allowed is 4 due to insertion limits. "
                 + "Total swings: 765, cycle multiplier: 16.",
@@ -151,7 +150,7 @@ describe("the balance's machine rows, solved loop by loop", () => {
         if (reversed) raw.machines.reverse();
         const config = await parseConfig(JSON.stringify(raw)) as Config;
         const registry = createEntityRegistryFromConfig(config);
-        const target = TargetProductionRate.fromConfig(config.target_output);
+        const target = TargetProductionRate.fromConfig(config.setpoint);
         const machines = registry.getAll().filter(Entity.isMachine).filter(it => it.output.item_name === target.machine_production_rate.item);
         const ticks = fraction(16).divide(target.machine_production_rate.amount_per_tick.divide(machines.length)).multiply(swings);
         const balance = madeTargetBalance(machines, registry, config, swings, 16, Duration.ofTicks(ticks.toDecimal()).ticks);

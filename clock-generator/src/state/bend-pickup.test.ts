@@ -17,7 +17,7 @@ const native = JSON.parse(fs.readFileSync(path.join(__dirname,
 
 function config(item: string) {
     return ConfigSchema.parse({
-        target_output: {recipe: "supercapacitor", items_per_second: 1, copies: 1},
+        setpoint: {recipe: "supercapacitor", items_per_second: 1, copies: 1},
         machines: [{id: 1, recipe: "supercapacitor", crafting_speed: 89.625, productivity: 175}],
         inserters: [{id: 1, prototype: "stack-inserter", quality: "legendary", stack_size: 16,
             source: {type: "belt", id: 1, pickup_layout: "bend-right-upstream", near_lane: 1},

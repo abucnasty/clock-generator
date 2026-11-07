@@ -39,6 +39,8 @@ import { describeEnableRule } from '../utils/enableRuleLabel';
 interface InsertersFormProps {
     focusRequest?: { id: number; filters: boolean; pickup?: boolean } | null;
     onFocusHandled?: () => void;
+    /** The ids of the inserters the engine's refusal names: their rows carry an outline for as long as it stands */
+    refusedIds?: ReadonlySet<number>;
     inserters: InserterFormData[];
     machines: MachineFormData[];
     belts: BeltFormData[];
@@ -57,8 +59,9 @@ interface InsertersFormProps {
 
 type RuleCopySource = CopyFromOption & { uuid: string };
 
-const InserterRow = memo(function InserterRow({ fullMetadata, focusRequest, value, index, onUpdate, onRemove, ruleCopySources, count, onDuplicate, onReorder, selecting, checked, onSelect, ...editor }: Omit<InserterEditorProps, 'layout' | 'label' | 'onChange' | 'rowActions'> & {
+const InserterRow = memo(function InserterRow({ fullMetadata, focusRequest, refused, value, index, onUpdate, onRemove, ruleCopySources, count, onDuplicate, onReorder, selecting, checked, onSelect, ...editor }: Omit<InserterEditorProps, 'layout' | 'label' | 'onChange' | 'rowActions'> & {
     focusRequest?: InsertersFormProps['focusRequest'];
+    refused: boolean;
     fullMetadata: string;
     index: number;
     count: number;
@@ -79,9 +82,17 @@ const InserterRow = memo(function InserterRow({ fullMetadata, focusRequest, valu
     const detailsRequest = useMemo(() => focusRequest?.pickup ? { tab: 'General' } : undefined, [focusRequest]);
     const selectedRow = selecting && checked;
     const filterItems = usesAutomaticFilters(value.filters) ? inferInserterItems(value, editor.machines, editor.belts, editor.chests, editor.getRecipeInfo, editor.inserters, craftingMachines, editor.drills) : value.filters?.filter(Boolean) ?? [];
-    return <EntityRow kind="inserter" row={value} label={label} icon={<InserterIcon value={value} size={28} />} data-selected={selectedRow ? 'true' : undefined}
+    return <EntityRow kind="inserter" row={value} label={label} icon={<InserterIcon value={value} size={28} />} data-selected={selectedRow ? 'true' : undefined} data-refused={refused ? 'true' : undefined}
         // its editor lays out its own lines, and the closed details after them take no room
-        sx={[{ rowGap: 0 }, selectedRow && {
+        sx={[{ rowGap: 0 }, refused && {
+            // the red of the alert that names it; in forced colors the system text colour, drawn double so it still stands out.
+            // `&&&&` out-weighs the light theme's own 1px row outline (theme.ts), which would otherwise draw over it
+            '&&&&': {
+                outline: (theme: Theme) => `2px solid ${theme.palette.error.main}`,
+                outlineOffset: 0,
+                '@media (forced-colors: active)': { outline: '3px double CanvasText' },
+            },
+        }, selectedRow && {
             bgcolor: (theme: Theme) => themeTokens(theme).hover.row,
             boxShadow: (theme: Theme) => `inset 0 0 0 1px ${themeTokens(theme).control.border}, inset 4px 0 0 ${themeTokens(theme).text.secondary}`,
         }]}>
@@ -101,7 +112,7 @@ const InserterRow = memo(function InserterRow({ fullMetadata, focusRequest, valu
                 </>}
                 routeActions={<EntityRowActions kind="inserter" id={value.id} label={label} index={index} count={count} onDuplicate={onDuplicate} onDelete={onRemove} />}
                 rowSettings={fields => <EntitySettings actionContainerId={settingsSlotId('inserter', value.id)} label={label} request={detailsRequest}
-                tabs={[{ label: 'Enable control', content:
+                tabs={[{ label: 'Enable control override', content:
                     <EnableControlFormContent key={ruleRevision + JSON.stringify(value.overrides?.enable_control)} entityType="inserter" entityId={value.id}
                         currentOverride={value.overrides?.enable_control} sourceType={value.source.type} sinkType={value.sink.type}
                         availableItems={itemsAround(value, editor.machines, editor.belts, editor.chests, editor.getRecipeInfo, editor.inserters, craftingMachines, editor.drills)}
@@ -122,6 +133,7 @@ const InserterRow = memo(function InserterRow({ fullMetadata, focusRequest, valu
 function InsertersFormComponent({
     focusRequest,
     onFocusHandled,
+    refusedIds,
     inserters,
     machines,
     belts,
@@ -153,7 +165,7 @@ function InsertersFormComponent({
     const { cardRef, add: addRow, duplicate, remove } = useEntityRows(inserters, {
         labelOf: row => entityLabel('inserter', row.id), onRemove, onDuplicate,
         duplicateRefusal: (row, label) => row.sink.drop === undefined ? null
-            : `${label} cannot be duplicated: its imported drop position belongs to one inserter. Edit and reopen the build file to supply another position.`,
+            : `${label} cannot be duplicated: its imported drop position belongs to one inserter. Edit and reopen the configuration file to supply another position.`,
     });
     const [selecting, setSelecting] = useState(false);
     const [selection, setSelection] = useState<ReadonlySet<string>>(new Set());
@@ -238,7 +250,7 @@ function InsertersFormComponent({
                 onSelectAll={() => setSelection(new Set(inserters.map(row => row._uuid)))} onClear={clearSelection} onDone={finishBulkEdit} onReturnFocus={returnSelectionFocus} onApply={apply} />}
             <SortableList itemKeys={itemKeys} onReorder={onReorder}>
             {inserters.map((inserter, index) => (
-                <InserterRow key={inserter._uuid} focusRequest={focusRequest?.id === inserter.id ? focusRequest : null} fullMetadata={`${typeText(inserter)} · ${qualityText(inserter)}`} value={inserter} index={index} inserters={inserters} machines={machines} belts={belts} chests={chests} drills={drills} itemNames={itemNames} getRecipeInfo={getRecipeInfo} options={options} onUpdate={onUpdate} onRemove={remove} ruleCopySources={ruleCopySources}
+                <InserterRow key={inserter._uuid} refused={refusedIds?.has(inserter.id) ?? false} focusRequest={focusRequest?.id === inserter.id ? focusRequest : null} fullMetadata={`${typeText(inserter)} · ${qualityText(inserter)}`} value={inserter} index={index} inserters={inserters} machines={machines} belts={belts} chests={chests} drills={drills} itemNames={itemNames} getRecipeInfo={getRecipeInfo} options={options} onUpdate={onUpdate} onRemove={remove} ruleCopySources={ruleCopySources}
                     count={inserters.length} onDuplicate={duplicate} onReorder={onReorder}
                     selecting={selecting} checked={selected.has(inserter._uuid)} onSelect={selectRow} />
             ))}

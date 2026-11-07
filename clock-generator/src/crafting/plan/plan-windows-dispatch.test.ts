@@ -5,7 +5,7 @@ import {loadConfigFromFile} from "../../config/loader";
 import {ACTIVATION_ORDER, InserterDispatch} from "../../simulation/dispatch";
 import {SimulationContext} from "../sequence/simulation-context";
 import {generateClockForConfig} from "../generate-clock";
-import {planRun} from "./plan-run";
+import {unclockedRun} from "./unclocked-run";
 
 /** What `make` returns with every run it makes under `dispatch` */
 function underDispatch<T>(dispatch: InserterDispatch, make: () => T): T {
@@ -24,7 +24,7 @@ function underDispatch<T>(dispatch: InserterDispatch, make: () => T): T {
 
 /** The windows the planning run reads off a build, every run of it made under `dispatch` */
 function plannedWindows(config: Config, dispatch: InserterDispatch): Record<string, string[]> {
-    const windows = underDispatch(dispatch, () => planRun(config).unslacked_windows);
+    const windows = underDispatch(dispatch, () => unclockedRun(config).unslacked_windows);
     return Object.fromEntries([...windows].sort(([a], [b]) => a.localeCompare(b))
         .map(([id, ranges]) => [id, ranges.map(range => `${range.start_inclusive}-${range.end_inclusive}`)]));
 }
@@ -36,7 +36,7 @@ const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
  * 30 a second, with 3 output hands a cycle (the build of the turbo pickup and front-exit samples).
  */
 const ELECTROMAGNETIC_TURBO_BACKED: Config = {
-    target_output: { recipe: "electromagnetic-science-pack", items_per_second: 30, copies: 1 },
+    setpoint: { recipe: "electromagnetic-science-pack", items_per_second: 30, copies: 1 },
     machines: [{ id: 1, recipe: "electromagnetic-science-pack", productivity: 175, crafting_speed: 109.475, prototype: "electromagnetic-plant" }],
     inserters: [
         { id: 1, source: { type: "machine", id: 1 }, sink: { type: "belt", id: 1 }, stack_size: 16 },
@@ -54,7 +54,7 @@ const ELECTROMAGNETIC_TURBO_BACKED: Config = {
  * The windows planned under the order the game updates inserters in, which are those the planning run had read under the
  * configured order before it. A belt-fed hand that waited at its machine's output block takes its first stack a tick after
  * another inserter took the products down, and its window opens at the take (utility science: 37 and 6923 within the
- * period, not 38); a control swap at the plan's start puts the hands on the list without waking them, so the belt hand
+ * window cycle, not 38); a control swap at the plan's start puts the hands on the list without waking them, so the belt hand
  * asleep at its full assembler takes its first stack when it did under the configured order (automation science).
  */
 describe("planned windows", () => {

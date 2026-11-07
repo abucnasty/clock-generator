@@ -5,7 +5,7 @@ import { ConfigPaths } from "../config/config-paths";
 import { TestConfigPaths } from "../../tests/configs/paths";
 import { EntityId } from "../entities";
 import { FeasibilityError } from "../config/errors";
-import { planCraftingCycle } from "./plan/plan-run";
+import { planOutputCycle } from "./plan/unclocked-run";
 import { SimulationContext } from "./sequence/simulation-context";
 import { alwaysOnReasonProblems, alwaysOnReasonProblemsOf, withSearches } from "./generate-blueprint-test-helpers";
 
@@ -36,7 +36,7 @@ describe("generateClockForConfig", () => {
             result = generateClockForConfig(config);
 
             // Get the actual EntityId instances from the map keys
-            const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
+            const keys = Array.from(result.output_cycle_plan.entity_transfer_map.keys());
             inserterId = keys.find(k => k.id === "inserter:1")!;
             drillId = keys.find(k => k.id === "drill:1")!;
         });
@@ -47,13 +47,13 @@ describe("generateClockForConfig", () => {
 
         it("generates a blueprint, a crafting cycle plan of 144 ticks for stone bricks and a simulation duration", () => {
             expect(result.blueprint).toBeDefined();
-            expect(result.crafting_cycle_plan.total_duration.ticks).toBe(144);
-            expect(result.crafting_cycle_plan.production_rate.machine_production_rate.item).toBe("stone-brick");
+            expect(result.output_cycle_plan.total_duration.ticks).toBe(144);
+            expect(result.output_cycle_plan.production_rate.machine_production_rate.item).toBe("stone-brick");
             expect(result.simulation_duration.ticks).toBeGreaterThan(0);
         });
 
         it("plans 6 transfers of stone bricks, in hands of 16, for the output inserter (inserter:1)", () => {
-            const transferCounts = result.crafting_cycle_plan.entity_transfer_map.getOrThrow(inserterId);
+            const transferCounts = result.output_cycle_plan.entity_transfer_map.getOrThrow(inserterId);
             expect(transferCounts.total_transfer_count.toDecimal()).toBe(6);
             expect(transferCounts.item_transfers.length).toBe(1);
             expect(transferCounts.item_transfers[0].item_name).toBe("stone-brick");
@@ -62,7 +62,7 @@ describe("generateClockForConfig", () => {
         });
 
         it("plans transfers of stone for the drill (drill:1)", () => {
-            const transferCounts = result.crafting_cycle_plan.entity_transfer_map.getOrThrow(drillId);
+            const transferCounts = result.output_cycle_plan.entity_transfer_map.getOrThrow(drillId);
             expect(transferCounts.total_transfer_count.toDecimal()).toBeGreaterThan(0);
             expect(transferCounts.item_transfers.length).toBe(1);
             expect(transferCounts.item_transfers[0].item_name).toBe("stone");
@@ -100,7 +100,7 @@ describe("generateClockForConfig", () => {
         // window trim, which ended 4 ticks later than these; the build has no scaffold, so these were not recorded
         describe("clock alternatives", () => {
             let alternatives: ClockAlternative[];
-            const windowsOf = (id: string) => alternatives.find(a => a.id === id)?.result.clock_windows;
+            const windowsOf = (id: string) => alternatives.find(a => a.maker === id)?.result.clock_windows;
 
             beforeAll(() => {
                 // batched swings is stable, so observed windows are only made when they are asked for
@@ -112,15 +112,15 @@ describe("generateClockForConfig", () => {
             });
 
             it.each(["planned-belt-slack", "derived"])("%s is stable", (id) => {
-                expect(alternatives.find(a => a.id === id)?.verdict).toBe("stable");
+                expect(alternatives.find(a => a.maker === id)?.verdict).toBe("stable");
             });
 
-            // inserter 1's windows end 3 ticks earlier since belt windows close before their last return swing, and
-            // one more since its hands after a craft start come a tick sooner
-            it("batched swings for a moving belt add 4 ticks to the belt input inserter", () => {
+            // inserter 1's two windows close a rotation before their last return swing, 5 ticks after their last pickup:
+            // the 4 ticks of belt pickup slack are inside them, and none are added, which would join them (#595)
+            it("batched swings for a moving belt keep the belt input inserter's two windows, the slack inside them", () => {
                 expect(windowsOf("planned-belt-slack")).toEqual({
                     "inserter:2": [{ start: 1, end: 49 }],
-                    "inserter:1": [{ start: 52, end: 99 }],
+                    "inserter:1": [{ start: 52, end: 71 }, { start: 76, end: 95 }],
                 });
             });
 
@@ -132,8 +132,8 @@ describe("generateClockForConfig", () => {
             });
 
             it("has no uneven output swings to offer with one output window per period, and no swings to shift with one round of swings", () => {
-                expect(alternatives.find(a => a.id === "uneven-output")).toBeUndefined();
-                expect(alternatives.find(a => a.id === "shifted-swings")).toBeUndefined();
+                expect(alternatives.find(a => a.maker === "uneven-output")).toBeUndefined();
+                expect(alternatives.find(a => a.maker === "shifted-swings")).toBeUndefined();
             });
         });
     });
@@ -147,15 +147,15 @@ describe("generateClockForConfig", () => {
         });
 
         it("plans logistic science packs in a cycle of 192 ticks (48 ticks per swing × 4 swings), with 4 transfers for each output inserter", () => {
-            expect(result.crafting_cycle_plan.production_rate.machine_production_rate.item).toBe("logistic-science-pack");
+            expect(result.output_cycle_plan.production_rate.machine_production_rate.item).toBe("logistic-science-pack");
             // With 2 output machines and a target rate of 240 items/sec over 6 copies,
             // each machine produces at 1/3 items/tick (240/6/60/2).
             // A stack of 16 items takes 48 ticks per machine.
             // With 4 swings per cycle, total duration = 192 ticks.
-            expect(result.crafting_cycle_plan.total_duration.ticks).toBe(192);
-            const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
+            expect(result.output_cycle_plan.total_duration.ticks).toBe(192);
+            const keys = Array.from(result.output_cycle_plan.entity_transfer_map.keys());
             for (const inserter of [1, 7]) {
-                const transferCounts = result.crafting_cycle_plan.entity_transfer_map.getOrThrow(keys.find(k => k.id === EntityId.forInserter(inserter).id)!);
+                const transferCounts = result.output_cycle_plan.entity_transfer_map.getOrThrow(keys.find(k => k.id === EntityId.forInserter(inserter).id)!);
                 expect(transferCounts.total_transfer_count.toDecimal()).toBe(4);
             }
         });
@@ -165,9 +165,9 @@ describe("generateClockForConfig", () => {
             // - Modified: 480 items/sec, 12 copies → per-machine rate = 480/12/60/2 = 1/3 items/tick
             const modifiedResult = generateClockForConfig({
                 ...config,
-                target_output: { ...config.target_output, items_per_second: config.target_output.items_per_second * 2, copies: config.target_output.copies * 2 },
+                setpoint: { ...config.setpoint, items_per_second: config.setpoint.items_per_second * 2, copies: config.setpoint.copies * 2 },
             });
-            expect(modifiedResult.crafting_cycle_plan.total_duration.ticks).toBe(result.crafting_cycle_plan.total_duration.ticks);
+            expect(modifiedResult.output_cycle_plan.total_duration.ticks).toBe(result.output_cycle_plan.total_duration.ticks);
         });
     });
 
@@ -177,7 +177,7 @@ describe("generateClockForConfig", () => {
         it("records the input inserter transferring both required ingredient types", () => {
             const result = generateClockForConfig(config);
             expect(alwaysOnReasonProblems(config, result, "planned")).toEqual([]);
-            const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
+            const keys = Array.from(result.output_cycle_plan.entity_transfer_map.keys());
             const inserterTransfers = result.transfer_history.getOrThrow(keys.find(k => k.id === EntityId.forInserter(1).id)!);
             expect(inserterTransfers.length).toBeGreaterThan(0);
             const transferredItems = new Set(inserterTransfers.map(t => t.item_name));
@@ -199,11 +199,11 @@ describe("generateClockForConfig", () => {
 
     // Three furnaces fed by mining drills that drop straight into them, 40 bricks a second each. A furnace makes 43 a
     // second, so the window of its output inserter is all that holds it to 40. Recorded in Factorio 2.1.21: the clocks
-    // with 1, 3 and 6 output swings each moved exactly their hands every period for 10 periods, from every furnace.
+    // with 1, 3 and 6 output swings each moved exactly their hands every window cycle for 10 window cycles, from every furnace.
     describe("stone bricks from mining drills that drop into the furnaces", async () => {
         const config = await loadConfigFromFile(ConfigPaths.STONE_BRICK_120_DRILL_DIRECT_INSERT);
         let alternatives: ClockAlternative[];
-        const alternative = (id: string) => alternatives.find(a => a.id === id)!;
+        const alternative = (id: string) => alternatives.find(a => a.maker === id)!;
         const outputWindows = (id: string) => alternative(id).result.clock_windows["inserter:1"].map(w => [w.start, w.end]);
 
         beforeAll(() => {
@@ -218,9 +218,9 @@ describe("generateClockForConfig", () => {
             ["swings-1", 72, 48, [[1, 10], [25, 34], [49, 58]]],
             ["fractional", 72, 48, [[1, 34]]],
             ["planned-belt-slack", 144, 96, [[1, 70]]],
-        ] as const)("%s is stable as built with the windows that ran in game", (id, period, bricks, windows) => {
+        ] as const)("%s is stable as built with the windows that ran in game", (id, window_cycle_ticks, bricks, windows) => {
             const result = alternative(id).result;
-            expect(result.simulation_duration.ticks).toBe(period);
+            expect(result.simulation_duration.ticks).toBe(window_cycle_ticks);
             expect(outputWindows(id)).toEqual(windows);
             expect(alternative(id).verdict).toBe("stable");
             expect(result.stability_check.as_built).toMatchObject({ holds: true, actual_output_items: bricks });
@@ -247,7 +247,7 @@ describe("generateClockForConfig", () => {
 
             expect(alwaysOnReasonProblems(config, generated, "planned")).toEqual([]);
             expect(validation.transfer_plan).toEqual(generated.serializable_transfer_plan);
-            expect(validation).toMatchObject({ used_lcm: 2, output_swings_per_cycle: 1, cycle_ticks: 144, period_ticks: 288 });
+            expect(validation).toMatchObject({ used_lcm: 2, output_swings_per_cycle: 1, cycle_ticks: 144, window_cycle_ticks: 288 });
         });
 
         it("does not plan the inserter taking away a by-product nothing in the config uses", async () => {
@@ -277,23 +277,23 @@ describe("generateClockForConfig", () => {
 
         it("throws when the machines cannot reach the target rate: the feasibility pass first, the planner's assert behind it", async () => {
             const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_160);
-            const over = { ...config, target_output: { ...config.target_output, items_per_second: 1600 } };
+            const over = { ...config, setpoint: { ...config.setpoint, items_per_second: 1600 } };
             expect(() => validateConfig(over)).toThrow(FeasibilityError);
             // the figures are for one of the 24 copies, and the message says so: 1600 / 24 = 66.67 frames a second a copy
-            expect(() => validateConfig(over)).toThrow("No clock can hold this build's target of 1600 a second over 24 copies (every figure here is "
+            expect(() => validateConfig(over)).toThrow("No clock can hold this build's setpoint of 1600 a second over 24 copies (every figure here is "
                 + "for one copy): Machine 1 (flying robot frame) crafts at most 3.44 a second. The target needs 33.33 crafts a second of it (66.67 a "
                 + "second of flying robot frame at 2 a craft).");
             const quiet = { log: () => { }, warn: () => { }, error: () => { }, debug: () => { } };
-            expect(() => planCraftingCycle(over, SimulationContext.fromConfig(over), quiet)).toThrow("cannot meet the target production rate");
+            expect(() => planOutputCycle(over, SimulationContext.fromConfig(over), quiet)).toThrow("cannot meet the setpoint");
         });
     });
 
     describe("config validation", () => {
-        it("throw error if the current configuration cannot meet the target production rate", async () => {
+        it("throw error if the current configuration cannot meet the setpoint", async () => {
             const config = await loadConfigFromFile(ConfigPaths.STONE_BRICK_120_DRILL_DIRECT_INSERT);
-            expect(config.target_output.items_per_second).toBe(120)
+            expect(config.setpoint.items_per_second).toBe(120)
             expect(() => generateClockForConfig(config)).not.toThrowError();
-            config.target_output.items_per_second = 240;
+            config.setpoint.items_per_second = 240;
             expect(() => generateClockForConfig(config)).toThrowError();
         })
     })
@@ -305,7 +305,7 @@ describe("generateClockForConfig", () => {
     // constraint locks the inserter to 1 swing/cycle. Since stack_size(16) < automated_insertion_limit(18),
     // one item is always picked first and never blocked, starving the other item indefinitely.
     // That the sample's selected clock is stable at the target rate is checked with its alternatives in
-    // backpressure-loss.test.ts.
+    // disturbance-trial.test.ts.
     describe("AUTOMATION_SCIENCE_240: issue #47 regression (multi-filter fractional per-item transfers)", async () => {
         // The sample is fully automatic; the regression needs the forced single swing, so it is set on this copy
         const config = structuredClone(await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240));
@@ -314,7 +314,7 @@ describe("generateClockForConfig", () => {
         it("generates a blueprint whose input inserter (1) transfers both copper-plate and iron-gear-wheel (not just one), and whose output inserter (2) transfers", () => {
             const result = generateClockForConfig(config);
             expect(result.blueprint).toBeDefined();
-            const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
+            const keys = Array.from(result.output_cycle_plan.entity_transfer_map.keys());
             // inserter:1 = belt→machine (copper-plate + iron-gear-wheel), no explicit id in config → index+1
             const input_transfers = result.transfer_history.getOrThrow(keys.find(k => k.id === EntityId.forInserter(1).id)!);
             // inserter:2 = machine→belt (automation-science-pack)

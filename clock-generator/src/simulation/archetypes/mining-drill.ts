@@ -129,7 +129,7 @@ export class MiningDrillArchetype implements StatusChangeReason<DrillStatusCode>
 
     /**
      * The drill's key (see simulationStateKey): its components' keys in a fixed order, "|" between them: what it holds
-     * (its held Storage), its status as its code, and both bars (its Mining). Two equal keys one clock period apart mean
+     * (its held Storage), its status as its code, and both bars (its Mining). Two equal keys one window cycle apart mean
      * the drill repeats. Its Placement holds a running total and its Control is the same in every tick of a run, so
      * neither is keyed; observers only watch. The state it shows in the game (working, disabled, or waiting to drop) is
      * made from what is keyed: its status and what it holds.

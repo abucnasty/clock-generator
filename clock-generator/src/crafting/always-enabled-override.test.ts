@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { generateClockForConfig, observedWindowsClock, type BlueprintGenerationResult } from "./generate-blueprint";
+import { generateClockForConfig, timeStudyWindowsClock, type BlueprintGenerationResult } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { TestConfigPaths } from "../../tests/configs/paths";
@@ -47,7 +47,7 @@ describe("an inserter the config sets to always enabled", () => {
         // a cryogenic plant fills a rocket silo that six furnaces empty: its input from an infinity chest (inserter 1) and its output into the silo (4) are set to always enabled
         const sample = await loadConfigFromFile(ConfigPaths.LITHIUM_PLATE_80_SILO_CHEST);
         const config: Config = { ...sample, inserters: sample.inserters.map((it, index) => [0, 3].includes(index) ? { ...it, overrides: { ...it.overrides, ...ALWAYS } } : it) };
-        const result = observedWindowsClock(config, { logger: quiet, verify_as_built: true }, "always");
+        const result = timeStudyWindowsClock(config, { logger: quiet, verify_as_built: true }, "always");
         expect(result.derived_clock_windows).toBeDefined();
         expect(alwaysEnabled(config).length).toBeGreaterThan(0);
         for (const id of alwaysEnabled(config)) {
@@ -92,7 +92,7 @@ describe("an inserter the config sets to always enabled", () => {
         expect(result.blueprint.entities.filter(entity => (entity.player_description ?? "").startsWith("Drill"))).toHaveLength(0);
         expect(result.chest_drills).toEqual([{ drill_id: 1, chest_id: 1, chest_type: "car", item: "iron-ore", planned: false, enabled_ticks: null, window_count: 0,
             always_enabled_because: { kind: "config" } }]);
-        expect(result.always_on_reasons).toEqual({ "drill:1": { kind: "enable-rule" } });
+        expect(result.always_on_reasons).toEqual({ "drill:1": { kind: "override" } });
         // the inserters' windows are the same either way: the drill's are made after them
         const { "drill:1": _drill, ...inserters } = clocked.clock_windows;
         expect(result.clock_windows).toEqual(inserters);

@@ -28,7 +28,7 @@ inserters, so the question is only whether the hands of one window cycle, wrappe
 
 ![One lane of the belt as a loop of 14 slots in a window cycle: the first inserters of the 7 copies on the even slots, the second inserters on the odd slots, every slot once](images/drop-spacing-loop.svg)
 
-Copy `k` of a build stands `k * pitch` from the first (`target_output.copy_offset`), and the inserters of a copy stand at their own
+Copy `k` of a build stands `k * pitch` from the first (`setpoint.copy_offset`), and the inserters of a copy stand at their own
 places, so the hands of one line (the output inserters of one side of the belt, in one row) are at `p = copy * pitch + place of the inserter`.
 
 ## Why the rate, the pitch and the offset matter

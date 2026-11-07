@@ -39,13 +39,13 @@
         "inserter:5/electric-furnace",
         "placement:drill:1/stone"
       ],
-      "periods": [
-        {"swings":1,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":56,"denominator":1},"cycles":6,"period_ticks":336,"kept":true},
-        {"swings":2,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":112,"denominator":1},"cycles":3,"period_ticks":336,"kept":true},
-        {"swings":3,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":168,"denominator":1},"cycles":2,"period_ticks":336,"kept":true},
-        {"swings":1.5,"swings_exact":{"numerator":3,"denominator":2},"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":84,"denominator":1},"cycles":4,"period_ticks":336,"kept":true}
+      "window_cycles": [
+        {"swings":1,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":56,"denominator":1},"cycles":6,"window_cycle_ticks":336,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":112,"denominator":1},"cycles":3,"window_cycle_ticks":336,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":168,"denominator":1},"cycles":2,"window_cycle_ticks":336,"kept":true},
+        {"swings":1.5,"swings_exact":{"numerator":3,"denominator":2},"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":84,"denominator":1},"cycles":4,"window_cycle_ticks":336,"kept":true}
       ],
-      "duty": [
+      "utilization": [
         {
           "producer": "machine:production-science-pack",
           "members": [
@@ -59,7 +59,7 @@
             "numerator": 2100260416666667,
             "denominator": 700000000000000
           },
-          "duty": {
+          "utilization": {
             "numerator": 2000000000000000,
             "denominator": 2100260416666667
           }
@@ -77,7 +77,7 @@
             "numerator": 2995,
             "denominator": 32
           },
-          "duty": {
+          "utilization": {
             "numerator": 1920,
             "denominator": 4193
           }
@@ -95,7 +95,7 @@
             "numerator": 1225,
             "denominator": 32
           },
-          "duty": {
+          "utilization": {
             "numerator": 96,
             "denominator": 343
           }
@@ -113,7 +113,7 @@
             "numerator": 133,
             "denominator": 2
           },
-          "duty": {
+          "utilization": {
             "numerator": 60,
             "denominator": 931
           }
@@ -131,7 +131,7 @@
             "numerator": 4919400000000001,
             "denominator": 1000000000000000
           },
-          "duty": {
+          "utilization": {
             "numerator": 6817332699,
             "denominator": 626731761866
           }
@@ -147,7 +147,7 @@
       "planned": 1,
       "higher_up_to_ticks": 2400
     },
-    "main_period": {
+    "main_window_cycle": {
       "ticks": 336,
       "exact": {
         "numerator": 336,
@@ -174,5 +174,5 @@
       "action": "none"
     }
   },
-  "result_windows": null
+  "exhaust": null
 }

@@ -646,7 +646,7 @@ BELT_SPEED_CAPTURE_DIR=.scratch/grenade-new BELT_CLOCK_CALIBRATE=1 \
 
 `utility-science-480-lds-foundry-chain-clock.game.test.ts` records the generator's recommended clock for `UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN` (480 utility science packs a second
 over 3.5 copies; the scaffold is one copy, 137.14 a second, 384 packs in a window cycle of 168 ticks) on the sample's scaffold. The clock is
-`planned-belt-slack`: the windows of `src/crafting/candidates/grouped-hands.ts` (hands rounded up where they are fractional, the
+`planned-belt-slack`: the windows of `src/crafting/candidates/round-robin-polling.ts` (hands rounded up where they are fractional, the
 order of the chain of machines), made without a search. The harness wires it to the inserters of the build. The protocol is the
 family's with the losses the build has: 63 whole window cycles, then the coal cut for 6 window cycles (the build holds about two window cycles of it),
 the two output loaders taken away for 4 window cycles and rebuilt, and the processing units cut for 2. The probe counts the drops of the
@@ -673,7 +673,7 @@ BELT_SPEED_CAPTURE_DIR=.scratch/utility-science-480-lds-foundry-chain-new BELT_C
 
 `productivity-module-80-chest-chain-clock.game.test.ts` records the generator's recommended clock for `PRODUCTIVITY_MODULE_80_CHEST_CHAIN` (80 productivity
 modules a second over 6 copies; the scaffold is one copy, 13.33 a second, 16 modules in a window cycle of 72 ticks) on the sample's scaffold.
-The clock is `planned-belt-slack`: the windows of `src/crafting/candidates/grouped-hands.ts` (hands rounded up where they are fractional,
+The clock is `planned-belt-slack`: the windows of `src/crafting/candidates/round-robin-polling.ts` (hands rounded up where they are fractional,
 the order of the chain of machines), made without a search. The harness wires it to the 14 inserters of the build. The protocol is the
 family's with the losses the build has, each long enough to be felt, since the build holds stock: 63 whole window cycles, then the coal
 cut for 40 window cycles (the inserter that puts the coal on the belt is switched off and the belt emptied; the output first falls short

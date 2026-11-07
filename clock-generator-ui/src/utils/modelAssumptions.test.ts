@@ -21,8 +21,8 @@ describe('the model texts', () => {
             + 'stretch of empty belt; two that share a belt in the game could get in each other\'s way.');
     });
 
-    it('says how many other places in its period the clock was tried from', () => {
-        expect(phaseChecksText(12)).toBe('The clock was also tried from 12 other places in its period. More starting states can be sampled separately.');
-        expect(phaseChecksText(undefined)).toBe('How many other places in its period the clock was tried from is unavailable.');
+    it('says how many other places in its window cycle the clock was tried from', () => {
+        expect(phaseChecksText(12)).toBe('The clock was also tried from 12 other places in its window cycle. More starting states can be sampled separately.');
+        expect(phaseChecksText(undefined)).toBe('How many other places in its window cycle the clock was tried from is unavailable.');
     });
 });

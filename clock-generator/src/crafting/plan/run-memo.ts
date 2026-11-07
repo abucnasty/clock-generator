@@ -1,16 +1,16 @@
-import type { BuildRun, RunOptions } from "./plan-run";
+import type { BuildRun, RunOptions } from "./unclocked-run";
 import type { Config } from "../../config";
-import type { BackpressureLossAssessment } from "../trial";
+import type { DisturbanceTrialAssessment } from "../trial";
 
 /**
  * A run shorter than this is simulated again rather than kept. A run of 100,000 ticks takes seconds; a shorter one
- * costs less to make again than the memory of its histories, so a generation of builds with short periods keeps none.
+ * costs less to make again than the memory of its histories, so a generation of builds with short window cycles keeps none.
  */
 export const RUN_MEMO_MIN_TICKS = 100_000;
 
 /**
  * The most ticks of runs the memo keeps at once; the run used longest ago goes first. A kept run holds its histories,
- * and on the processing-unit export sample (periods of 116,160 ticks) a memo without a limit took the generation past a
+ * and on the processing-unit export sample (window cycles of 116,160 ticks) a memo without a limit took the generation past a
  * heap of 3,000 MB, where it ran 77 s without one.
  */
 export const RUN_MEMO_MAX_TICKS = 4_000_000;
@@ -96,7 +96,7 @@ function writeObject(value: object | null, out: string[], depth: number): boolea
  * generation meets the runs of another, and a change of the game data or of the engine between two of them cannot
  * leave a run behind.
  *
- * It also keeps what the backpressure loss trials of a clock found (`backpressureLoss`): the trials are many short runs
+ * It also keeps what the backpressure loss trials of a clock found (`disturbanceTrial`): the trials are many short runs
  * of the build, each too short to be kept above, and a clock is tried by the alternative that picks its windows and by
  * the one that assesses it.
  */
@@ -113,8 +113,8 @@ export class RunMemo {
         return this.kept.size;
     }
 
-    /** What the backpressure loss trials of a clock found, by what they are a function of (see `backpressureLoss`) */
-    private readonly losses = new Map<string, BackpressureLossAssessment>();
+    /** What the backpressure loss trials of a clock found, by what they are a function of (see `disturbanceTrial`) */
+    private readonly losses = new Map<string, DisturbanceTrialAssessment>();
     /** Verdicts handed out again */
     loss_hits = 0;
 
@@ -142,14 +142,14 @@ export class RunMemo {
      * The verdict of the loss trials of a clock: the one kept, or the one `tried` makes. A clock that cannot be tried
      * is tried again, so that what is logged about it is logged by each.
      */
-    backpressureLoss(key: string, tried: () => BackpressureLossAssessment): BackpressureLossAssessment {
+    disturbanceTrial(key: string, tried: () => DisturbanceTrialAssessment): DisturbanceTrialAssessment {
         const kept = this.losses.get(key);
         if (kept !== undefined) {
             this.loss_hits++;
             return kept;
         }
         const verdict = tried();
-        if (verdict.backpressure_loss !== null) {
+        if (verdict.disturbance_trial !== null) {
             this.losses.set(key, verdict);
         }
         return verdict;
@@ -166,9 +166,10 @@ export class RunMemo {
 
     /** The run of this config and these options: the one kept, or the one `simulate` makes (kept when it is long enough) */
     run(config: Config, options: RunOptions, simulate: () => BuildRun): BuildRun {
-        // the logger writes about the run and changes nothing in it; the options that would are all in the key
-        const { logger, debug, debug_steps, ...read } = options;
-        const key = canonicalKey([config, read]);
+        // the logger writes about the run and changes nothing in it; the options that would are all in the key, fractional
+        // swings apart, so that where the options name it among them does not part two keys of the same run
+        const { logger, debug, debug_steps, fractional_swings, ...read } = options;
+        const key = canonicalKey([config, read, fractional_swings === true]);
         const kept = key === null ? undefined : this.kept.get(key);
         if (kept !== undefined) {
             this.hits++;

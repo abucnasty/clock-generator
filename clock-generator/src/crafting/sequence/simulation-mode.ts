@@ -1,5 +1,5 @@
 import assert from "../../common/assert";
-import { EntityId, fullResearchHandSize, handSizeFor, Inserter, Machine } from "../../entities";
+import { EntityId, handSizeFor, Inserter, Machine } from "../../entities";
 import { EntityTransferCount } from "./cycle/swing-counts";
 
 export const SimulationMode = {
@@ -20,9 +20,10 @@ export function simulationModeForInput(
     const is_input_inserter = inserter.sink.entity_id.id === sink_machine.entity_id.id;
     assert(is_input_inserter, `Inserter ${inserter.entity_id} is not an input inserter for machine ${sink_machine.entity_id}`)
 
+    // a limit under the hand the inserter moves of that item (its Hand trait's `by_item`, as handSizeFor reads it)
     const any_filtered_item_has_low_insertion_limit = machine_inputs
         .filter(it => filtered_items.has(it.item_name))
-        .some(it => it.automated_insertion_limit.quantity < fullResearchHandSize(inserter.metadata.type))
+        .some(it => it.automated_insertion_limit.quantity < handSizeFor(inserter, it.item_name))
 
     if (any_filtered_item_has_low_insertion_limit) {
         return SimulationMode.LOW_INSERTION_LIMITS;

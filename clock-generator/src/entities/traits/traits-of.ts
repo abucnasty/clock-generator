@@ -27,7 +27,7 @@ export function traitsOf(config: Config): ConfigTraits {
 export function traitsOfMachine(traits: ConfigTraits, entity_id: string): MachineTraits {
     const node = traits[entity_id];
     if (node?.kind !== "machine") {
-        throw new Error(`${entity_id} is no machine of the config`);
+        throw new Error(`${entity_id} is no machine of the configuration`);
     }
     return node;
 }
@@ -52,7 +52,7 @@ export function mainProductRateOf(traits: ConfigTraits, machine_id: string): Fra
 export function handOfItem(traits: ConfigTraits, inserter_id: string, item: string): number {
     const node = traits[inserter_id];
     if (node?.kind !== "inserter") {
-        throw new Error(`${inserter_id} is no inserter of the config`);
+        throw new Error(`${inserter_id} is no inserter of the configuration`);
     }
     return node.hand.by_item.find(hand => hand.item === item)?.hand ?? node.hand.nominal;
 }

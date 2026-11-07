@@ -6,15 +6,15 @@ import type { StockRecording } from "../machine-stock";
 import { inLoopInserterWindows } from "./loop-windows";
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
-const every = (period: number, count: number, start: number, end: number) =>
-    Array.from({ length: count }, (_, k) => OpenRange.from(start + k * period / count, end + k * period / count));
+const every = (window_cycle_ticks: number, count: number, start: number, end: number) =>
+    Array.from({ length: count }, (_, k) => OpenRange.from(start + k * window_cycle_ticks / count, end + k * window_cycle_ticks / count));
 const plain = (ranges: OpenRange[] | undefined) => ranges?.map(range => [range.start_inclusive, range.end_inclusive]);
 const noStock: StockRecording = { ticks: 0, machines: [], inserters: [] };
 
-/** A run in which each named inserter drops a hand of 16 `hands` times a period, evenly */
-function stockOf(inserter_ids: string[], period: number, hands: number, periods: number): StockRecording {
-    const ticks = Math.floor(period * periods);
-    const drops = new Set(Array.from({ length: Math.floor(periods * hands) }, (_, k) => Math.round(k * period / hands) + 5));
+/** A run in which each named inserter drops a hand of 16 `hands` times a window cycle, evenly */
+function stockOf(inserter_ids: string[], window_cycle_ticks: number, hands: number, window_cycles: number): StockRecording {
+    const ticks = Math.floor(window_cycle_ticks * window_cycles);
+    const drops = new Set(Array.from({ length: Math.floor(window_cycles * hands) }, (_, k) => Math.round(k * window_cycle_ticks / hands) + 5));
     const held = Array.from({ length: ticks }, (_, tick) => drops.has(tick) ? 0 : 16);
     return {
         ticks, machines: [],
@@ -41,7 +41,7 @@ describe("inLoopInserterWindows", () => {
 
     it("anchors the turns on the output windows where they outnumber the windows out of the loop", async () => {
         const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250);
-        // a clock of 600 ticks that takes the output 25 times a period and the eggs 5 times
+        // a clock of 600 ticks that takes the output 25 times a window cycle and the eggs 5 times
         const windows = new Map<string, OpenRange[]>([
             ["inserter:9", every(600, 5, 23, 50)], ["inserter:10", every(600, 5, 23, 50)], ["inserter:12", every(600, 25, 0, 4)],
         ]);
@@ -61,13 +61,13 @@ describe("inLoopInserterWindows", () => {
     // which holds a hand of 16, and its output block of 112 is over a stack of 50
     it("gives the inserters of a loop whose machines hold a hand under their limit a window of a swing and a tick for each hand", async () => {
         const config = await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_380_CULTIVATION);
-        const period = 1728 / 19;
+        const window_cycle_ticks = 1728 / 19;
         // the output inserters of each biochamber (1 and 3, 4 and 6), as the 6-swing subtick clock has them
         const windows = new Map<string, OpenRange[]>(["inserter:1", "inserter:3", "inserter:4", "inserter:6"].map(id =>
             [id, [OpenRange.from(0, 20), OpenRange.from(30, 50), OpenRange.from(60, 80)]]));
-        const got = inLoopInserterWindows(config, period, windows, new Set(), stockOf(["inserter:7", "inserter:8"], period, 2, 60), quiet);
+        const got = inLoopInserterWindows(config, window_cycle_ticks, windows, new Set(), stockOf(["inserter:7", "inserter:8"], window_cycle_ticks, 2, 60), quiet);
         expect(got.get("inserter:7")?.rule).toBe("hands");
-        // 2 hands a period of 90.95 ticks, from midway between the openings of the first two output windows (15)
+        // 2 hands a window cycle of 90.95 ticks, from midway between the openings of the first two output windows (15)
         expect(plain(got.get("inserter:7")?.windows)).toEqual([[15, 23], [60, 68]]);
         expect(plain(got.get("inserter:8")?.windows)).toEqual([[15, 23], [60, 68]]);
     });

@@ -31,7 +31,7 @@ describe("C7: a destroyed target is at most what the machines destroy and what i
 
     it("812 over 2 copies is 406 a copy: the opening says the figures are for one copy, and the target's figure says it no more", () => {
         const { issues } = feasibilityOfConfig(withTarget(exact, 812, 2));
-        expect(new FeasibilityError([...issues], { items_per_second: 812, copies: 2 }).message).toMatchInlineSnapshot(`"No clock can hold this build's target of 812 a second over 2 copies (every figure here is for one copy): Machine 1 (iron ore recycling) can destroy at most 405 a second of iron ore: it crafts at most 540 a second, and a craft uses 1 and gives back 0.25. The target is 406 a second. Lower the target, or add machines or make them faster."`);
+        expect(new FeasibilityError([...issues], { items_per_second: 812, copies: 2 }).message).toMatchInlineSnapshot(`"No clock can hold this build's setpoint of 812 a second over 2 copies (every figure here is for one copy): Machine 1 (iron ore recycling) can destroy at most 405 a second of iron ore: it crafts at most 540 a second, and a craft uses 1 and gives back 0.25. The target is 406 a second. Lower the target, or add machines or make them faster."`);
     });
 
     it("the overbeaconed recycler destroys 639.23 a second; the inserters bring 480: a target of 480 passes, 481 is refused", () => {

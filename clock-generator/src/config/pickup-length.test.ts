@@ -6,7 +6,7 @@ describe("belt pickup geometry defaults", () => {
     it.each([undefined, 1, 0.5] as const)("normalizes length %s independently of the backed-up setting", async length => {
         for (const backed_up_belts of [false, true]) {
             const config = await parseConfig(JSON.stringify({
-                target_output: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+                setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
                 machines: [], belts: [],
                 inserters: [{ source: { type: "belt", id: 1, pickup_length: length, ...(length === 0.5 && {pickup_layout: "side-entrance"}) }, sink: { type: "machine", id: 1 } }],
                 overrides: { backed_up_belts },

@@ -98,7 +98,7 @@ const LEGEND: { kind: 'window' | 'slack' | 'selected' | 'track'; text: string }[
 ];
 
 /**
- * When the selected clock switches each inserter and drill on, over one clock period: a chart (or two tables) of
+ * When the selected clock switches each inserter and drill on, over one window cycle: a chart (or two tables) of
  * every wake window, with the wake-ups the engine counted for each inserter. Assumes no layout around it.
  */
 function WakeWindowsViewComponent({ alternative, config, cycleView = false, headingLevel = 'h3', asTable, onAsTableChange: setAsTable, inspection }: WakeWindowsViewProps) {
@@ -136,7 +136,7 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
         return null;
     }
 
-    const periodTicks = alternative.simulationDurationTicks;
+    const windowCycleTicks = alternative.simulationDurationTicks;
     // a selection belongs to the clock it was made on, so another clock starts with none
     const selectedRow = selection !== null && selection.alternative === alternative
         ? rows.find(row => row.id === selection.rowId && selection.windowIndex < row.windows.length)
@@ -145,8 +145,8 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
     const counted = wakeUpsCounted(alternative);
     const mostWakeUpsId = mostWokenRowId(rows);
     const summary = summaryText({
-        // a rounded clock's period is the one its blueprint counts, as its label says
-        periodTicks: alternative.roundedPeriodTicks ?? periodTicks,
+        // a rounded clock's window cycle is the one its blueprint counts, as its label says
+        windowCycleTicks: alternative.roundedWindowCycleTicks ?? windowCycleTicks,
         inserters: rows.filter(row => row.kind === 'inserter').length,
         drills: rows.filter(row => row.kind === 'drill').length,
         wakeUps: counted ? alternative.asBuilt?.wake_ups?.wake_ups_per_minute ?? sumWakeUps(rows) : null,
@@ -154,7 +154,7 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
     });
 
     return (
-        <BeltChartFrame id={viewId} title={cycleView ? 'Wake windows in this crafting cycle' : VIEW_HEADING} level={headingLevel} subtitle={summary} data-wake-view="">
+        <BeltChartFrame id={viewId} title={cycleView ? 'Enable windows in this output cycle' : VIEW_HEADING} level={headingLevel} subtitle={summary} data-wake-view="">
             {!counted && (
                 <Typography variant="body2" color="text.secondary" data-wake-not-counted>
                     {`${NOT_COUNTED_NOTE}. ${NOT_COUNTED_REASON}`}
@@ -187,7 +187,7 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
                         }}
                         data-wake-legend
                     >
-                        {rows.some(row => row.kind === 'drill') && <Typography component="li" variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><ChartSwatch color={BELT_CHART.entity.drill} />Drill wake window</Typography>}
+                        {rows.some(row => row.kind === 'drill') && <Typography component="li" variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><ChartSwatch color={BELT_CHART.entity.drill} />Drill enable window</Typography>}
                         {LEGEND.map(item => (
                             <Typography
                                 key={item.kind}
@@ -197,7 +197,7 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
                                 sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                             >
                                 <LegendSwatch kind={item.kind} />
-                                {cycleView && item.kind === 'track' ? 'One crafting cycle' : item.text}
+                                {cycleView && item.kind === 'track' ? 'One output cycle' : item.text}
                             </Typography>
                         ))}
                     </Box>
@@ -207,11 +207,11 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
 
             <Box sx={{ mt: 2 }}>
                 {asTable ? (
-                    <WakeWindowsTable rows={rows} periodTicks={periodTicks} mostWakeUpsId={mostWakeUpsId} />
+                    <WakeWindowsTable rows={rows} windowCycleTicks={windowCycleTicks} mostWakeUpsId={mostWakeUpsId} />
                 ) : (
                     <>
                         <Typography id={hintId} variant="caption" color="text.secondary" component="p" sx={{ mb: 1 }}>
-                            Select a window for details. Use ↑ ↓ to change rows and ← → to step through windows.
+                            Select an enable window for details. Use ↑ ↓ to change rows and ← → to step through enable windows.
                         </Typography>
                         {rows.some(row => row.windows.some(window => window.slackTicks > 0)) && <Typography variant="caption" color="text.secondary" component="p" sx={{ mb: 1 }}>
                             {BELT_SLACK_EXPLANATION}
@@ -220,7 +220,7 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
                             range={inspection?.range}
                             tick={inspection?.tick}
                             rows={rows}
-                            periodTicks={periodTicks}
+                            windowCycleTicks={windowCycleTicks}
                             selected={selected}
                             onSelect={onSelect}
                             mostWakeUpsId={mostWakeUpsId}
@@ -231,7 +231,7 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
                 )}
             </Box>
             <Disclosure summary="Reading this chart" sx={{ mt: 1.5 }}>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{cycleView ? 'The selected crafting cycle is one segment of the clock period. Wake windows are clipped to this segment; row percentages and wake-ups/min describe the whole clock period.' : VIEW_INTRO}</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{cycleView ? 'The selected output cycle is one segment of the window cycle. Enable windows are clipped to this segment; row percentages and wakeups/min describe the whole window cycle.' : VIEW_INTRO}</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{KEYBOARD_HINT}</Typography>
             <Box
                 component="dl"

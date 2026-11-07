@@ -28,7 +28,8 @@ import { DeveloperToolsPanel } from './DeveloperToolsPanel';
 import { ResultSummaryCard } from './ResultSummaryCard';
 import { StaleResultsBanner } from './StaleResultsBanner';
 import { RunNotes } from './RunNotes';
-import { beltValue, clockTechnicalName, wakeUpsText } from '../utils/clockSummary';
+import { SUMMARY_COPY, beltValue, wakeUpsText } from '../utils/clockSummary';
+import { fullClockName } from '../utils/strategyNames';
 import { rateWarningOf } from '../utils/rateWarning';
 import { whyNotStableOf } from '../utils/whyNotStable';
 import type { GeneratedFor } from '../utils/resultsStaleness';
@@ -165,7 +166,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
     const clockLabel = (clock: ClockAlternativeView) => [
         clock.counts === 'destroyed' ? HANDS_TEXT.clock(clock.terminalSwingCount)
             : `${clock.terminalSwingCount} ${clock.terminalSwingCount === 1 ? 'swing' : 'swings'}`,
-        wakeUpsText(clock).value.replace(' a minute', ' wake-ups/min'),
+        wakeUpsText(clock).value.replace(' a minute', ' wakeups/min'),
         clock.beltLabel ? beltValue(props.pickRule, clock.beltLabel) : '',
     ].filter(Boolean).join(' · ');
     const rateWarning = rateWarningOf(selected);
@@ -225,8 +226,8 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 </Button></Box>}
                 runAssumptions={selected && <Box data-result-assumptions sx={{ overflowWrap: 'anywhere' }}>
                     <Typography variant="body2">
-                        {saved ? `Made for ${saved.target_output.copies} ${saved.target_output.copies === 1 ? 'copy' : 'copies'} of your build${selected.beltLabel === '' ? '' : `, with the input belts ${saved.overrides?.backed_up_belts ? 'backed up' : 'moving'}`}.` : 'These results are for a saved build whose metadata is unavailable.'}
-                        {selected.assumptions?.loopSeeds.length ? ` ${selected.assumptions.loopSeeds.length} modeled loop seed(s).` : ''}
+                        {saved ? `Made for ${saved.setpoint.copies} ${saved.setpoint.copies === 1 ? 'copy' : 'copies'} of your build${selected.beltLabel === '' ? '' : `, with the input belts ${saved.overrides?.backed_up_belts ? 'backed up' : 'moving'}`}.` : 'These results are for a saved build whose metadata is unavailable.'}
+                        {selected.assumptions?.kickStarts.length ? ` ${selected.assumptions.kickStarts.length} modeled kick start(s).` : ''}
                         {selected.assumptions?.outputDrops.some(drop => drop.mode === 'shared-lanes') ? ' The drop positions you gave are used to space the output drops on the belt.' : ''}
                         {freeLaneBelts.length > 0 ? ` ${freeLaneDropText(freeLaneBelts.map(id => entityLabel('belt', id)).join(' and '))}` : ''}
                         {selected.assumptions?.machineFuel.length ? ' Imported machine fuel is in Why.' : ''}
@@ -275,7 +276,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                                     {clockLabel(clock)}{index === props.recommendedIndex ? ' · Recommended' : clock.verdict !== 'stable' ? ' · Not stable' : ''}
                                 </Typography>
                                 <Typography variant="caption" component="p" color="text.secondary">
-                                    {clockTechnicalName(clock)}{!clock.ranking.matches_belt_choice ? ' · Requires a different belt setting' : ''}
+                                    {fullClockName(clock)}{!clock.ranking.matches_belt_choice ? ` · ${SUMMARY_COPY.noBeltSlack}` : ''}
                                 </Typography>
                             </MenuItem>)}
                         </TextField>}
@@ -299,7 +300,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
 
             {selected && <InstallClockDialog open={props.installOpen} onClose={props.onInstallClose}
                 selected={selected} blueprintString={props.blueprintString} staleFor={props.staleFor}
-                copyLabel={props.copyLabel} copied={props.copied} onCopy={props.onCopy} />}
+                copyLabel={props.copyLabel} copied={props.copied} onCopy={props.onCopy} pickRule={props.pickRule} />}
 
             {/* Debug logging remains opt-in; timelines are available in the normal workspace. */}
             {props.developerTools && (

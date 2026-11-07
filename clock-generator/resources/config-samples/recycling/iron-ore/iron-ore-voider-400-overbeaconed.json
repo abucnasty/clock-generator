@@ -1,5 +1,5 @@
 {
-  "target_output": {
+  "setpoint": {
     "recipe": "iron-ore",
     "items_per_second": 400,
     "copies": 1,

@@ -18,7 +18,7 @@ const speeds = {normal: 15, fast: 30, express: 45, turbo: 60} as const;
 export function compareOutputStock(clip: OutputClip) {
     const differences: {tick: number; field: string; expected: number | readonly number[]; actual: number | readonly number[]}[] = [];
     const config = ConfigSchema.parse({
-        target_output: {recipe: "iron-gear-wheel", items_per_second: 1, copies: 1}, machines: [],
+        setpoint: {recipe: "iron-gear-wheel", items_per_second: 1, copies: 1}, machines: [],
         chests: [{id: 1, type: "buffer-chest", storage_size: 1, item_filter: "iron-plate"}],
         belts: [{id: 1, type: clip.speed === "normal" ? "transport-belt" : `${clip.speed}-transport-belt`,
             lanes: [{ingredient: "iron-plate", stack_size: clip.stack_size}, {ingredient: "", stack_size: clip.stack_size}]}],

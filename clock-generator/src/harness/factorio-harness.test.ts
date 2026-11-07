@@ -288,18 +288,18 @@ describe("the most ticks one run in Factorio records", () => {
         expect(recordedTicks(36_000, 90)).toBe(36_000);
         expect(recordedTicks(600, 100_000)).toBe(100_000);
         expect(recordedTicks(600, null)).toBe(600);
-        // the game tests ask for 36,000 ticks: 21 periods of the iron bacteria clock
+        // the game tests ask for 36,000 ticks: 21 window cycles of the iron bacteria clock
         expect(() => assertRecordableTicks(36_000, 1728)).not.toThrow();
     });
 
     it("refuses a request whose whole periods pass the limit, and names the most that fits", () => {
-        // 72,000 ticks on a clock of 1728 would record 42 periods, 72,576 ticks
+        // 72,000 ticks on a clock of 1728 would record 42 window cycles, 72,576 ticks
         expect(() => assertRecordableTicks(72_000, 1728)).toThrow(
             "A request for 72000 ticks records 72576: whole periods of the clock, which counts 1728 ticks. "
             + "That is over the limit of 72000 ticks (20 minutes of game time) for one run in Factorio. The most that fits is 70848 ticks (41 periods).");
         expect(() => assertRecordableTicks(70_848, 1728)).not.toThrow();
         expect(() => assertRecordableTicks(70_849, 1728)).toThrow("records 72576");
-        // a clock longer than the limit records one period however little is asked for
+        // a clock longer than the limit records one window cycle however little is asked for
         expect(() => assertRecordableTicks(600, 100_000)).toThrow("A request for 600 ticks records 100000");
         expect(() => assertRecordableTicks(600, 100_000)).toThrow("Not one period of this clock fits.");
         // without a clock the request is what is recorded
@@ -338,7 +338,7 @@ describe("the most ticks one run in Factorio records", () => {
 describe("the resource the harness puts under a blueprint's drills", () => {
     const drills = (...mined: string[]) => ({ drills: { configs: mined.map((mined_item_name, index) => ({
         id: index + 1, type: "big-mining-drill" as const, mined_item_name, speed_bonus: 0, productivity: 10, target: { type: "chest" as const, id: 1 } })) } });
-    const config = (...mined: string[]) => ({ target_output: { recipe: "iron-plate", items_per_second: 1, copies: 1 }, machines: [], inserters: [], belts: [], ...drills(...mined) });
+    const config = (...mined: string[]) => ({ setpoint: { recipe: "iron-plate", items_per_second: 1, copies: 1 }, machines: [], inserters: [], belts: [], ...drills(...mined) });
 
     it("is what the config's drills mine, or what is asked", () => {
         expect(drillResourceOf({ config: config("iron-ore", "iron-ore") })).toBe("iron-ore");
@@ -559,7 +559,7 @@ describe("a clock placed first in a staged start", () => {
         expect(() => assertClockPriming(to13, 13, 40)).not.toThrow();
         // phase 0: the inserters are wired in the tick it is placed in, before it has counted
         expect(() => assertClockPriming(readings(500, [0]), 0, 40)).not.toThrow();
-        // a counter that wraps reads the phase in its second period
+        // a counter that wraps reads the phase in its second window cycle
         expect(() => assertClockPriming(readings(500, [0, 38, 39, 40, 1, 2]), 2, 40)).not.toThrow();
     });
 

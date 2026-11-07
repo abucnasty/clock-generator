@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { loadConfigFromFile } from "../config/loader";
 import { OpenRange } from "../data-types";
 import { fraction } from "../data-types/fraction";
-import { CraftingCyclePlan } from "./sequence/cycle/crafting-cycle";
+import { OutputCyclePlan } from "./sequence/cycle/output-cycle";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { TargetProductionRate } from "./target-production-rate";
 import { backlogAtLevel, binomialQuantile, excessAtLevel, excessLossOf, randomAmountMargins } from "./random-margins";
@@ -14,7 +14,7 @@ const FIXTURE = ConfigPaths.IRON_ORE_VOIDER_400_EXACT_SPEED;
 async function marginsOf(windows: Map<string, OpenRange[]>) {
     const config = await loadConfigFromFile(FIXTURE);
     const registry = createEntityRegistryFromConfig(config);
-    const plan = CraftingCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), registry, config, fraction(1));
+    const plan = OutputCyclePlan.create(TargetProductionRate.fromConfig(config.setpoint), registry, config, fraction(1));
     // 12 cycles of 12 ticks
     return randomAmountMargins(plan, registry, windows, 144, 12);
 }
@@ -23,7 +23,7 @@ const feeders = (ranges: OpenRange[]) => new Map(["inserter:3", "inserter:4", "i
 
 describe("the room of the windows that carry a result that comes by chance", () => {
     it("is counted against the spread of a period's returns: 320 ore on average, 15.5 of standard deviation", async () => {
-        // two windows each that fit 8 hands of 8 ticks: 16 a period against the 10 planned
+        // two windows each that fit 8 hands of 8 ticks: 16 a window cycle against the 10 planned
         const windows = new Map([...feeders([OpenRange.from(0, 119)]),
             ["inserter:1", [OpenRange.from(0, 56), OpenRange.from(72, 128)]], ["inserter:2", [OpenRange.from(0, 56), OpenRange.from(72, 128)]]]);
         const { margins, crafting, windows: lengthened } = await marginsOf(windows);
@@ -38,7 +38,7 @@ describe("the room of the windows that carry a result that comes by chance", () 
         expect(ore.room_items).toBe(2 * 6 * 16);
         expect(ore.added_hands).toBe(0);
         expect(lengthened.get("inserter:1")).toBe(windows.get("inserter:1"));
-        // the recycler: 1296 crafts a period against 1280, one standard deviation; its spare covers what comes back over
+        // the recycler: 1296 crafts a window cycle against 1280, one standard deviation; its spare covers what comes back over
         // the mean in 1233 ticks (137 crafts against the 137 over the mean of a binomial of 10,960 rolls at 1/4)
         expect(crafting).toEqual([{ machine_id: 1, crafts: 1280, capacity: 1296, sigma_crafts: ore.sigma_items,
             sigmas: expect.closeTo(1.0328, 4), ticks_to_cover: 1233, backlog: [{ item: "iron-ore", items: 67 }] }]);

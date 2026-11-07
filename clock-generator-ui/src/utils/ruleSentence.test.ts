@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Condition, EnableControlOverride, RuleSet, ValueReference } from './configForm/formData';
-import { RULE_COPY, blueprintNoteOf, periodLineOf, ruleSentenceOf } from './ruleSentence';
+import { RULE_COPY, blueprintNoteOf, windowCycleLineOf, ruleSentenceOf } from './ruleSentence';
 import { NO_TIMING, type RuleTiming } from './ruleTiming';
 
 const identity = (id: string) => id;
@@ -8,10 +8,10 @@ const names: Record<string, string> = { 'electromagnetic-science-pack': 'Electro
 const named = (id: string) => names[id] ?? id;
 const ctx = { itemLabel: named, cycleTicks: 132 };
 
-const clocked = (ranges: { start: number; end: number }[], period?: number): EnableControlOverride => ({
+const clocked = (ranges: { start: number; end: number }[], window_cycle_ticks?: number): EnableControlOverride => ({
     mode: 'CLOCKED',
     ranges,
-    ...(period !== undefined && { period_duration_ticks: period }),
+    ...(window_cycle_ticks !== undefined && { period_duration_ticks: window_cycle_ticks }),
 });
 
 /** The electromagnetic-science sample's Inserter 2 */
@@ -54,13 +54,13 @@ describe('ruleSentenceOf', () => {
         ['lists several Clocked windows with the period', clocked([range, { start: 80, end: 95 }, { start: 120, end: 130 }], 264), {},
             'On at ticks 12–20, 80–95 and 120–130 of every 264 ticks.'],
         ['lists a one-tick window as its tick', clocked([{ start: 12, end: 12 }], 264), {}, 'On at tick 12 of every 264 ticks.'],
-        ['repeats every crafting cycle without a period, with its length when known', clocked([range]), {}, 'On at ticks 12–20 of every crafting cycle (132 ticks).'],
-        ['repeats every crafting cycle without a period, without its length when unknown', clocked([range]), { cycleTicks: null },
-            'On at ticks 12–20 of every crafting cycle.'],
+        ['repeats every output cycle without a period, with its length when known', clocked([range]), {}, 'On at ticks 12–20 of every output cycle (132 ticks).'],
+        ['repeats every output cycle without a period, without its length when unknown', clocked([range]), { cycleTicks: null },
+            'On at ticks 12–20 of every output cycle.'],
         ['says which window is left out for a problem', clocked([range], 264), { invalidWindows: [2] },
-            'On at ticks 12–20 of every 264 ticks. Wake window 2 is left out until its problem is fixed.'],
+            'On at ticks 12–20 of every 264 ticks. Enable window 2 is left out until its problem is fixed.'],
         ['says which windows are left out when every one has a problem', clocked([], 264), { invalidWindows: [1, 2] },
-            'No wake windows yet. Wake windows 1 and 2 are left out until their problems are fixed.'],
+            'No enable windows yet. Enable windows 1 and 2 are left out until their problems are fixed.'],
         ['asks for ticks when no window has anything typed in it', clocked([]), {}, RULE_COPY.noWindowsTyped],
     ])('%s', (_, rule, change, sentence) => {
         expect(ruleSentenceOf(rule, { ...ctx, ...change })).toBe(sentence);
@@ -115,7 +115,7 @@ describe('ruleSentenceOf', () => {
 
 describe('blueprintNoteOf', () => {
     it.each([
-        ['AUTO', 'The generator finds this inserter\'s wake windows, and the blueprint switches it on in them.', 'The generator finds this mining drill\'s wake windows, and the blueprint switches it on in them.'],
+        ['AUTO', 'The generator finds this inserter\'s enable windows, and the blueprint switches it on in them.', 'The generator finds this mining drill\'s enable windows, and the blueprint switches it on in them.'],
         ['ALWAYS', 'Not wired to the clock: no combinator.', 'Not wired to the clock: no combinator.'],
         ['NEVER', 'The simulator keeps it off. The blueprint has no combinator for it, so keep it off in the game yourself.', 'The simulator keeps it off. The blueprint has no combinator for it, so keep it off in the game yourself.'],
         ['CLOCKED', 'These ticks are not copied into the blueprint. The simulator switches the inserter on in them while it plans the clock; the blueprint then switches it on in the ticks it moved items, which can be fewer.', 'These ticks are not copied into the blueprint. The simulator switches the mining drill on in them while it plans the clock; the blueprint then switches it on in the ticks it moved items, which can be fewer.'],
@@ -128,14 +128,14 @@ describe('blueprintNoteOf', () => {
 
 describe('periodLineOf', () => {
     it.each<[string, RuleTiming, string]>([
-        ['names the cycle, the period and the clock on Results', { cycleTicks: 132, periodTicks: 264, from: 'results', windows: {} },
-            `Crafting cycle: 132 ticks. Clock period: 264 ticks (2 crafting cycles).${RULE_COPY.fromResults}`],
-        ['names one crafting cycle and the last check', { cycleTicks: 132, periodTicks: 132, from: 'check', windows: null },
-            `Crafting cycle: 132 ticks. Clock period: 132 ticks (1 crafting cycle).${RULE_COPY.fromCheck}`],
-        ['asks for a check when nothing is known', NO_TIMING, RULE_COPY.periodUnknown],
-        ['says a fractional period can\'t be repeated by a rule', { cycleTicks: 137.739, periodTicks: 550.957, from: 'results', windows: {} },
-            `Crafting cycle: 137.739 ticks. The clock period is 550.957 ticks, not a whole number, so a Clocked rule can't repeat with it.${RULE_COPY.fromResults}`],
+        ['names the cycle, the period and the clock on Results', { cycleTicks: 132, windowCycleTicks: 264, from: 'results', windows: {} },
+            `Output cycle: 132 ticks. Window cycle time: 264 ticks (2 output cycles).${RULE_COPY.fromResults}`],
+        ['names one output cycle and the last check', { cycleTicks: 132, windowCycleTicks: 132, from: 'check', windows: null },
+            `Output cycle: 132 ticks. Window cycle time: 132 ticks (1 output cycle).${RULE_COPY.fromCheck}`],
+        ['asks for a check when nothing is known', NO_TIMING, RULE_COPY.windowCycleUnknown],
+        ['says a fractional period can\'t be repeated by a rule', { cycleTicks: 137.739, windowCycleTicks: 550.957, from: 'results', windows: {} },
+            `Output cycle: 137.739 ticks. The window cycle time is 550.957 ticks, not a whole number, so a Clocked rule can't repeat with it.${RULE_COPY.fromResults}`],
     ])('%s', (_, timing, line) => {
-        expect(periodLineOf(timing)).toBe(line);
+        expect(windowCycleLineOf(timing)).toBe(line);
     });
 });

@@ -16,7 +16,7 @@ import {pickupClockConfig, pickupClockScaffold, pickupClockSpeedCases} from "./p
 import {overHoodClockCases, overHoodClockConfig, overHoodClockScaffold} from "./over-hood-clock-fixtures";
 import {clockHash, readControls} from "./clock-controls";
 import {recipesMaking} from "../../../src/harness/recording-output";
-import {COLD_START_CAP_TICKS, perPeriod} from "./pickup-clock-cold-start-runs";
+import {COLD_START_CAP_TICKS, perWindowCycle} from "./pickup-clock-cold-start-runs";
 import {reversedDeciders} from "./reversed-deciders";
 
 interface Run {
@@ -68,9 +68,9 @@ async function fixtureOf(name: string): Promise<{config: Config; scaffold: strin
 
 // The clocked cold starts the generation test lays the simulator against (src/crafting/pickup-clock-cold-start.
 // generation.test.ts; tests/game/builds/README.md, "Clocked cold starts"), recorded again: the staged start, the
-// generator's selected clock (or the same windows started inside the period, with the deciders or the inserters built
+// generator's selected clock (or the same windows started inside the window cycle, with the deciders or the inserters built
 // in reverse, or the build moved), nothing written to a belt. The game has to stand where it stood: the same lane phase
-// at placement, every period on that lattice, and what both clocked inserters held in every tick.
+// at placement, every window cycle on that lattice, and what both clocked inserters held in every tick.
 for (const [name, run] of Object.entries(controls.runs)) test(`clocked cold start: ${name}`, async context => {
     const factorio = process.env.FACTORIO_PATH, save = process.env.FACTORIO_HARNESS_SAVE;
     context.skip(!factorio || !save || !fs.existsSync(save), "Factorio harness is not configured");
@@ -106,8 +106,8 @@ for (const [name, run] of Object.entries(controls.runs)) test(`clocked cold star
             out: path.join(capture.directory, "recording.json"), work_dir: path.join(capture.directory, "game"),
             ticks: COLD_START_CAP_TICKS, warmup_ticks: 0, staged_start: {saturation_ticks: backed ? 1200 : 30, ...(run.build_order && {build_order: run.build_order})},
             seed: [], lua: composeProbeSource(path.join(__dirname, "pickup-clock-cold-start-probe.lua"), {ticks: COLD_START_CAP_TICKS, period: P, units,
-                window: 3600, expected: config.target_output.items_per_second * 60, recipes: [...recipesMaking(config, config.target_output.recipe)],
-                item: config.target_output.recipe}),
+                window: 3600, expected: config.setpoint.items_per_second * 60, recipes: [...recipesMaking(config, config.setpoint.recipe)],
+                item: config.setpoint.recipe}),
             unclocked: false, game_speed: 1000, watch: false, timeout_seconds: 1500, log() {}, ...(run.position && {position: run.position}),
         })).recording;
         const report = JSON.parse(fs.readFileSync(path.join(capture.directory, "game/script-output/clock-cold-start.json"), "utf8")) as Report;
@@ -132,7 +132,7 @@ for (const [name, run] of Object.entries(controls.runs)) test(`clocked cold star
         const held = (inserter: any) => inserter.samples.held_count.slice(controls.frame_offset, ticks) as number[];
         const output = held(recording.inserters.find((it: any) => it.source.type === "machine"));
         const input = held(recording.inserters.find((it: any) => it.sink.type === "machine"));
-        const counted = {steady: report.steady, ticks, output: perPeriod(output, P).drops, pickups: perPeriod(input, P).pickups,
+        const counted = {steady: report.steady, ticks, output: perWindowCycle(output, P).drops, pickups: perWindowCycle(input, P).pickups,
             output_held_sha256: sha(output), input_held_sha256: sha(input), native_phases: report.phases, ...(selection && {selection})};
         fs.writeFileSync(path.join(capture.directory, "run.json"), JSON.stringify(counted) + "\n");
         if (process.env.BELT_CLOCK_CALIBRATE === "1") return;

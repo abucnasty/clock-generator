@@ -29,15 +29,15 @@ export const RULE_COPY = {
     auto: 'Auto: the generator decides when it is on.',
     always: 'On all the time.',
     never: 'Never on.',
-    noWindows: 'No wake windows yet.',
-    noWindowsTyped: 'No wake windows yet: enter a start and an end tick.',
+    noWindows: 'No enable windows yet.',
+    noWindowsTyped: 'No enable windows yet: enter a start and an end tick.',
     leftOut: (numbers: number[]) =>
         numbers.length === 1
-            ? ` Wake window ${numbers[0]} is left out until its problem is fixed.`
-            : ` Wake windows ${joinList(numbers.map(String))} are left out until their problems are fixed.`,
+            ? ` Enable window ${numbers[0]} is left out until its problem is fixed.`
+            : ` Enable windows ${joinList(numbers.map(String))} are left out until their problems are fixed.`,
     blueprint: {
         [EnableControlMode.AUTO]: (entity: string) =>
-            `The generator finds this ${entity}'s wake windows, and the blueprint switches it on in them.`,
+            `The generator finds this ${entity}'s enable windows, and the blueprint switches it on in them.`,
         [EnableControlMode.ALWAYS]: () => 'Not wired to the clock: no combinator.',
         [EnableControlMode.NEVER]: () =>
             'The simulator keeps it off. The blueprint has no combinator for it, so keep it off in the game yourself.',
@@ -46,8 +46,8 @@ export const RULE_COPY = {
         [EnableControlMode.CONDITIONAL]: (entity: string) =>
             `The blueprint holds no circuit condition from this rule. The simulator follows the rule while it plans the clock; the blueprint then switches the ${entity} on in the ticks it moved items.`,
     },
-    periodUnknown:
-        'Run Check only or Generate to see the crafting cycle and the clock period. Until then the ticks can\'t be checked against them.',
+    windowCycleUnknown:
+        'Run Check only or Generate to see the output cycle and the window cycle time. Until then the ticks can\'t be checked against them.',
     fromResults: ' From the clock on Results.',
     fromCheck: ' From your last check.',
     noItem: '(no item)',
@@ -130,7 +130,7 @@ function windowsText(ranges: readonly { start: number; end: number }[]): string 
 
 interface SentenceContext {
     itemLabel: ItemLabel;
-    /** The crafting cycle, which a Clocked rule with no "Repeat every" repeats with */
+    /** The output cycle, which a Clocked rule with no "Repeat every" repeats with */
     cycleTicks: number | null;
     /** Numbers (from 1) of the wake windows left out of the rule for a problem; a window with nothing typed in it is not one */
     invalidWindows?: number[];
@@ -148,8 +148,8 @@ export function ruleSentenceOf(override: EnableControlOverride | undefined, ctx:
             const every = clocked.period_duration_ticks !== undefined
                 ? `${clocked.period_duration_ticks} ticks`
                 : ctx.cycleTicks !== null
-                    ? `crafting cycle (${ticksText(ctx.cycleTicks)} ticks)`
-                    : 'crafting cycle';
+                    ? `output cycle (${ticksText(ctx.cycleTicks)} ticks)`
+                    : 'output cycle';
             const invalid = ctx.invalidWindows ?? [];
             if (clocked.ranges.length === 0 && invalid.length === 0) return RULE_COPY.noWindowsTyped;
             const on = clocked.ranges.length > 0 ? `On at ${windowsText(clocked.ranges)} of every ${every}.` : RULE_COPY.noWindows;
@@ -172,15 +172,15 @@ export function blueprintNoteOf(mode: EnableControlMode, entityType: EntityType)
     return RULE_COPY.blueprint[mode](entityNoun(entityType));
 }
 
-/** The crafting cycle and the clock period the editor checks the ticks against, and where they come from */
-export function periodLineOf(timing: RuleTiming): string {
-    const { cycleTicks, periodTicks, from } = timing;
-    if (from === null || cycleTicks === null || periodTicks === null) return RULE_COPY.periodUnknown;
+/** The output cycle and the window cycle the editor checks the ticks against, and where they come from */
+export function windowCycleLineOf(timing: RuleTiming): string {
+    const { cycleTicks, windowCycleTicks, from } = timing;
+    if (from === null || cycleTicks === null || windowCycleTicks === null) return RULE_COPY.windowCycleUnknown;
     const source = from === 'results' ? RULE_COPY.fromResults : RULE_COPY.fromCheck;
-    const cycle = `Crafting cycle: ${ticksText(cycleTicks)} ticks.`;
-    if (!Number.isInteger(periodTicks)) {
-        return `${cycle} The clock period is ${ticksText(periodTicks)} ticks, not a whole number, so a Clocked rule can't repeat with it.${source}`;
+    const cycle = `Output cycle: ${ticksText(cycleTicks)} ticks.`;
+    if (!Number.isInteger(windowCycleTicks)) {
+        return `${cycle} The window cycle time is ${ticksText(windowCycleTicks)} ticks, not a whole number, so a Clocked rule can't repeat with it.${source}`;
     }
-    const cycles = Math.round(periodTicks / cycleTicks);
-    return `${cycle} Clock period: ${periodTicks} ticks (${cycles} crafting ${cycles === 1 ? 'cycle' : 'cycles'}).${source}`;
+    const cycles = Math.round(windowCycleTicks / cycleTicks);
+    return `${cycle} Window cycle time: ${windowCycleTicks} ticks (${cycles} output ${cycles === 1 ? 'cycle' : 'cycles'}).${source}`;
 }

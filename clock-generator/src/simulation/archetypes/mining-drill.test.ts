@@ -17,7 +17,7 @@ import { MiningDrillArchetype } from "./mining-drill";
  * the recording and act before the drill in a tick, as in the game; every other number is the game's.
  */
 
-const idle = { target_output: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+const idle = { setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
     machines: [{ id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0 }], belts: [], inserters: [] };
 
 /** A drill on iron ore into a car whose first `filtered` slots are filtered to copper plates */
@@ -35,7 +35,7 @@ function carBuild(productivity: number, speed_bonus: number, filtered: number) {
 
 /** A drill on stone into an assembling machine on rail (which never crafts here: nothing else feeds it) */
 function machineBuild(productivity: number, enable_control?: EnableControl) {
-    const config = ConfigSchema.parse({ target_output: { recipe: "rail", items_per_second: 0.1, copies: 1 }, belts: [], inserters: [],
+    const config = ConfigSchema.parse({ setpoint: { recipe: "rail", items_per_second: 0.1, copies: 1 }, belts: [], inserters: [],
         machines: [{ id: 1, recipe: "rail", crafting_speed: 0.5, productivity: 0 }],
         drills: { configs: [{ id: 1, type: "big-mining-drill", mined_item_name: "stone", speed_bonus: 5, productivity, target: { type: "machine", id: 1 } }] } });
     const context = SimulationContext.fromConfig(config);

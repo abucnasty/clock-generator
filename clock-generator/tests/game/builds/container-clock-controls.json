@@ -71,7 +71,7 @@
         "expected": 32,
         "verdict": "stable",
         "selection": {
-          "id": "planned-belt-slack",
+          "id": "takt_batches_observed",
           "holds": true,
           "rate": 5,
           "supply": null
@@ -149,7 +149,7 @@
         "expected": 32,
         "verdict": "stable",
         "selection": {
-          "id": "planned-belt-slack",
+          "id": "takt_batches_observed",
           "holds": true,
           "rate": 5,
           "supply": null
@@ -160,10 +160,10 @@
     "container-wagon-filtered": {
       "recorded": {
         "pr": 0,
-        "commit": "038ed41a",
-        "frozen_head": "038ed41a",
-        "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
-        "clock_sha256": "8b46fa6614f1dce9d1a5e55999767fd8a8ac6c4c92f64c2312bf4d9a862ab4d5",
+        "commit": "57c76634",
+        "frozen_head": "57c76634",
+        "note": "recorded under the protocol in game ticks on the engine of this head; pr is set when the PR is opened",
+        "clock_sha256": "8f2876cb937d8d4c656c02744984034dc96392929fedd7740832c108d5bb0b14",
         "clock_basis": "capture"
       },
       "native": {
@@ -186,8 +186,8 @@
             "ticks": 3456,
             "items": 288,
             "expected": 288,
-            "stock_start": 14,
-            "stock_end": 14,
+            "stock_start": 22,
+            "stock_end": 22,
             "net": 288
           }
         },
@@ -215,8 +215,8 @@
           }
         ],
         "stock": {
-          "lowest": 0,
-          "end": 12,
+          "lowest": 8,
+          "end": 20,
           "holds": true
         },
         "result": "holds",
@@ -227,15 +227,15 @@
         "expected": 16,
         "verdict": "stable",
         "selection": {
-          "id": "planned-belt-slack",
+          "id": "takt_batches_observed",
           "holds": true,
           "rate": 5,
           "supply": null
         },
-        "clock_sha256": "8b46fa6614f1dce9d1a5e55999767fd8a8ac6c4c92f64c2312bf4d9a862ab4d5"
+        "clock_sha256": "8f2876cb937d8d4c656c02744984034dc96392929fedd7740832c108d5bb0b14"
       },
       "previous": {
-        "id": "even-hands",
+        "id": "time_division_windows",
         "clock_sha256": "043fabae947152aa1078ccf8f508bdf01a46f9ce171ebd89c336fb070a77a349"
       },
       "second_cut_held_simulated": 33
@@ -243,10 +243,10 @@
     "container-wagon-legendary": {
       "recorded": {
         "pr": 0,
-        "commit": "038ed41a",
-        "frozen_head": "038ed41a",
-        "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
-        "clock_sha256": "8b46fa6614f1dce9d1a5e55999767fd8a8ac6c4c92f64c2312bf4d9a862ab4d5",
+        "commit": "57c76634",
+        "frozen_head": "57c76634",
+        "note": "recorded under the protocol in game ticks on the engine of this head; pr is set when the PR is opened",
+        "clock_sha256": "8f2876cb937d8d4c656c02744984034dc96392929fedd7740832c108d5bb0b14",
         "clock_basis": "capture"
       },
       "native": {
@@ -269,8 +269,8 @@
             "ticks": 3456,
             "items": 288,
             "expected": 288,
-            "stock_start": 14,
-            "stock_end": 14,
+            "stock_start": 22,
+            "stock_end": 22,
             "net": 288
           }
         },
@@ -298,8 +298,8 @@
           }
         ],
         "stock": {
-          "lowest": 0,
-          "end": 12,
+          "lowest": 8,
+          "end": 20,
           "holds": true
         },
         "result": "holds",
@@ -310,15 +310,15 @@
         "expected": 16,
         "verdict": "stable",
         "selection": {
-          "id": "planned-belt-slack",
+          "id": "takt_batches_observed",
           "holds": true,
           "rate": 5,
           "supply": null
         },
-        "clock_sha256": "8b46fa6614f1dce9d1a5e55999767fd8a8ac6c4c92f64c2312bf4d9a862ab4d5"
+        "clock_sha256": "8f2876cb937d8d4c656c02744984034dc96392929fedd7740832c108d5bb0b14"
       },
       "previous": {
-        "id": "even-hands",
+        "id": "time_division_windows",
         "clock_sha256": "043fabae947152aa1078ccf8f508bdf01a46f9ce171ebd89c336fb070a77a349"
       },
       "second_cut_held_simulated": 47
@@ -393,7 +393,7 @@
         "expected": 32,
         "verdict": "stable",
         "selection": {
-          "id": "planned-belt-slack",
+          "id": "takt_batches_observed",
           "holds": true,
           "rate": 5,
           "supply": null
@@ -404,10 +404,10 @@
     "container-wagon-normal": {
       "recorded": {
         "pr": 0,
-        "commit": "038ed41a",
-        "frozen_head": "038ed41a",
-        "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
-        "clock_sha256": "8b46fa6614f1dce9d1a5e55999767fd8a8ac6c4c92f64c2312bf4d9a862ab4d5",
+        "commit": "57c76634",
+        "frozen_head": "57c76634",
+        "note": "recorded under the protocol in game ticks on the engine of this head; pr is set when the PR is opened",
+        "clock_sha256": "8f2876cb937d8d4c656c02744984034dc96392929fedd7740832c108d5bb0b14",
         "clock_basis": "capture"
       },
       "native": {
@@ -430,8 +430,8 @@
             "ticks": 3456,
             "items": 288,
             "expected": 288,
-            "stock_start": 14,
-            "stock_end": 14,
+            "stock_start": 22,
+            "stock_end": 22,
             "net": 288
           }
         },
@@ -459,8 +459,8 @@
           }
         ],
         "stock": {
-          "lowest": 0,
-          "end": 12,
+          "lowest": 8,
+          "end": 20,
           "holds": true
         },
         "result": "holds",
@@ -471,15 +471,15 @@
         "expected": 16,
         "verdict": "stable",
         "selection": {
-          "id": "planned-belt-slack",
+          "id": "takt_batches_observed",
           "holds": true,
           "rate": 5,
           "supply": null
         },
-        "clock_sha256": "8b46fa6614f1dce9d1a5e55999767fd8a8ac6c4c92f64c2312bf4d9a862ab4d5"
+        "clock_sha256": "8f2876cb937d8d4c656c02744984034dc96392929fedd7740832c108d5bb0b14"
       },
       "previous": {
-        "id": "even-hands",
+        "id": "time_division_windows",
         "clock_sha256": "043fabae947152aa1078ccf8f508bdf01a46f9ce171ebd89c336fb070a77a349"
       },
       "second_cut_held_simulated": 47

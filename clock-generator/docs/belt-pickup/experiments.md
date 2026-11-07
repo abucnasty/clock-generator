@@ -106,7 +106,7 @@ were measured at stack sizes 1–4 ([below](#generated-clocks-and-drops)); picku
 The same-item probes' 8- and 12-item hands ([calibration](../simulator.md#picking-up-from-moving-belts-and-underground-endpoints))
 matched subsequent grabs when seeded with the observed first grab, on moving turbo and express belts of four-item
 stacks; they cover no other speed, no backed-up supply and no clock, so these rows stay Not tested. A config with
-such a pickup is generated, not refused: the log, the clocks' insights and the web form's Build validation warn that
+such a pickup is generated, not refused: the log, the clocks' insights and the web form's Build check warn that
 its timing is not tested. Measuring them is follow-up F7.
 
 ### Generated clocks and drops

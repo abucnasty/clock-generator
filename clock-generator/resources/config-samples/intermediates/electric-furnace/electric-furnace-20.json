@@ -1,5 +1,5 @@
 {
-  "target_output": {
+  "setpoint": {
     "recipe": "electric-furnace",
     "items_per_second": 20,
     "copies": 2

@@ -1,0 +1,35 @@
+import { Box, Button, TextField, Typography } from '@mui/material';
+import { ChevronLeft, ChevronRight } from '@mui/icons-material';
+import { outputCycleAt, type OutputCycles } from '../utils/outputCycles';
+import { GLOSSARY } from '../utils/glossary';
+import { formatNumberText } from '../utils/numberText';
+import { HANDS_TEXT, type TargetCounts } from '../utils/targetCounts';
+
+const definition = GLOSSARY.find(entry => entry.id === 'crafting-cycle')!.definition;
+
+export function OutputCycleNavigator({ cycles, index, windowCycleTicks, swings, counts, onSelect }: {
+    cycles: OutputCycles | null; index: number; windowCycleTicks: number; swings: number; counts?: TargetCounts; onSelect(index: number): void;
+}) {
+    const cycle = outputCycleAt(cycles, index);
+    const number = (n: number) => formatNumberText(n, { maxDecimals: 3 });
+    if (!cycles || !cycle) return <Typography variant="body2" sx={{ mb: 1 }}>This saved result does not include a valid output cycle length. Generate again to explore its planned cycles.</Typography>;
+    return <Box component="section" aria-label="Output cycle navigation" sx={{ border: 1, borderColor: 'divider', p: 1.5, mb: 1.5 }}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+            <Button color="inherit" size="small" startIcon={<ChevronLeft />} disabled={index === 0} onClick={() => onSelect(index - 1)}>Previous output cycle</Button>
+            <TextField type="number" label="Output cycle" size="small" value={index + 1} onChange={event => {
+                const value = Number(event.target.value);
+                if (Number.isInteger(value) && value >= 1 && value <= cycles.count) onSelect(value - 1);
+            }} slotProps={{ htmlInput: { min: 1, max: cycles.count, step: 1 } }} sx={{ width: 125 }} />
+            <Typography variant="body2">of {cycles.count}</Typography>
+            <Button color="inherit" size="small" endIcon={<ChevronRight />} disabled={index + 1 === cycles.count} onClick={() => onSelect(index + 1)}>Next output cycle</Button>
+        </Box>
+        <Typography variant="body2" sx={{ mt: 1 }}>
+            {number(cycle.start)}–{number(cycle.end)} ticks · {number(cycles.cycleTicks)} ticks each output cycle{cycle.partial ? ' · final segment is partial' : ''}.
+            {' '}{counts === 'destroyed' ? HANDS_TEXT.navigator(swings, number(swings))
+                : `Each output machine has ${number(swings)} total output ${swings === 1 ? 'swing' : 'swings'} each output cycle.`}
+            {' '}The clock repeats every {number(windowCycleTicks)} ticks ({number(windowCycleTicks / cycles.cycleTicks)} output cycles).
+        </Typography>
+        <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5 }}>{definition}</Typography>
+        <Typography variant="caption" color="text.secondary" component="p">Row percentages and wakeups/min describe the whole window cycle.</Typography>
+    </Box>;
+}

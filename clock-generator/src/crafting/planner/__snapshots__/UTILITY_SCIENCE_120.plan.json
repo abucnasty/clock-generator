@@ -41,16 +41,16 @@
         "inserter:2/processing-unit",
         "inserter:3/utility-science-pack"
       ],
-      "periods": [
-        {"swings":3,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":168,"denominator":1},"cycles":4,"period_ticks":672,"kept":true},
-        {"swings":4,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":224,"denominator":1},"cycles":3,"period_ticks":672,"kept":true},
-        {"swings":5,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":280,"denominator":1},"cycles":12,"period_ticks":3360,"kept":true},
-        {"swings":6,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":336,"denominator":1},"cycles":2,"period_ticks":672,"kept":true},
-        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":112,"denominator":1},"cycles":6,"period_ticks":672,"kept":true},
-        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":56,"denominator":1},"cycles":12,"period_ticks":672,"kept":true},
-        {"swings":3,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":168,"denominator":1},"cycles":4,"period_ticks":672,"kept":true}
+      "window_cycles": [
+        {"swings":3,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":168,"denominator":1},"cycles":4,"window_cycle_ticks":672,"kept":true},
+        {"swings":4,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":224,"denominator":1},"cycles":3,"window_cycle_ticks":672,"kept":true},
+        {"swings":5,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":280,"denominator":1},"cycles":12,"window_cycle_ticks":3360,"kept":true},
+        {"swings":6,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":336,"denominator":1},"cycles":2,"window_cycle_ticks":672,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":112,"denominator":1},"cycles":6,"window_cycle_ticks":672,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":56,"denominator":1},"cycles":12,"window_cycle_ticks":672,"kept":true},
+        {"swings":3,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":168,"denominator":1},"cycles":4,"window_cycle_ticks":672,"kept":true}
       ],
-      "duty": [
+      "utilization": [
         {
           "producer": "machine:utility-science-pack",
           "members": [
@@ -64,7 +64,7 @@
             "numerator": 4409,
             "denominator": 1344
           },
-          "duty": {
+          "utilization": {
             "numerator": 3840,
             "denominator": 4409
           }
@@ -80,7 +80,7 @@
       "planned": 3,
       "higher_up_to_ticks": 2400
     },
-    "main_period": {
+    "main_window_cycle": {
       "ticks": 672,
       "exact": {
         "numerator": 672,
@@ -107,5 +107,5 @@
       "action": "none"
     }
   },
-  "result_windows": null
+  "exhaust": null
 }

@@ -67,7 +67,7 @@ interface UseConfigFormResult {
     updateInserters: (uuids: readonly string[], updates: Partial<InserterFormData>) => void;
 
     // Target output
-    updateTargetOutput: (field: keyof ConfigFormData['target_output'], value: string | number | { x: number; y: number } | undefined) => void;
+    updateSetpoint: (field: keyof ConfigFormData['setpoint'], value: string | number | { x: number; y: number } | undefined) => void;
     
     // Machines
     addMachine: () => void;
@@ -132,7 +132,7 @@ export function useConfigForm(): UseConfigFormResult {
         return {
             duplicateEntity: edit(formEdits.duplicateEntity),
             updateInserters: edit(formEdits.updateInserters),
-            updateTargetOutput: edit(formEdits.updateTargetOutput),
+            updateSetpoint: edit(formEdits.updateSetpoint),
             addMachine: edit(formEdits.addMachine),
             updateMachine: edit(formEdits.updateMachine),
             patchMachine: edit(formEdits.patchMachine),

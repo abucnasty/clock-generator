@@ -39,6 +39,14 @@ A clock in `alternatives`:
 | `text_sha256` | the hash of the exported blueprint with its text, which moves with any description |
 | `results_sha256` | the digest of what the clock hash leaves out: label, description, insights, verdict, assessment, the simulation's histories, the clock-only run, the fuel view |
 
+## Clock ids
+
+A clock's `id` is derived from the strategy and the settings of the clock (`takt_batches_observed`, `round_robin_polling_per_hand`,
+`takt_batches_swings_6`, `coordinated_sources`). The blast writes the slot that made each clock into its job file as `maker` (the id it had
+before the ids were derived); the record does not hold it, so its format stays `clock-record-1`. `record check` reads an id of the committed
+record that is a maker of the run, and not an id of it, as the id the run gave that maker's clock, so a pure rename of the ids is no
+difference. A pin of a game test (`selection.id`) is of the record's ids: its clock is the one with the pin's `clock_sha256`.
+
 ## Regenerating it
 
 ```bash
@@ -60,7 +68,7 @@ What must be true of the result of every job, whatever the build, is checked on 
 [`tests/game/builds/record-properties.ts`](../tests/game/builds/record-properties.ts). It runs in the blast, on the live results (the simulation's
 histories are too big to keep), and writes what it found into the job file as `properties` (not into the record): the clocks each
 property applied to, and the problems. `blast.sh record check` fails on any problem with a table of job, property, clock and the
-values. The five properties:
+values. The six properties:
 
 | Property | It says |
 | --- | --- |
@@ -69,6 +77,7 @@ values. The five properties:
 | `stable-holds-and-survives-loss` | a clock gets the disturbance trials when it is not unstable; it is stable only when it has recovery after every disturbance trial; a clock that meets the setpoint is stable |
 | `counters-add-up` | the per-inserter counters add up to the wakeups, and the clock-level figures agree with the clock |
 | `fuel-never-dry` | no machine that burns fuel runs out of it in the fuel consumption view |
+| `strategy-and-signals` | the strategy's output swings are the count the clock was made at, counted as output swings or as hands brought in, a construction named for the families made from batched swings only; signals a minute counted where wake-ups are, none from a clock with no window decider |
 
 A property states what a result must satisfy; the record pins the values. A property that fails on a job is a finding about that job's
 result, and is not loosened to pass: a job that cannot satisfy one for a reason of its own goes in `EXCEPTIONS` of the module, with the

@@ -51,7 +51,7 @@ for (const compact of [false, true]) for (const speed of BELT_SPEEDS) for (const
                 if (content === "swapped") lanes.reverse();
                 if (content === "same-item") lanes.forEach(lane => {lane.ingredient = "accumulator";});
                 if (compact) {
-                    config.target_output.recipe = "electronic-circuit";
+                    config.setpoint.recipe = "electronic-circuit";
                     config.machines[0] = {...config.machines[0], recipe: "electronic-circuit", productivity: 0, crafting_speed: 70.765625};
                     config.belts.find(belt => belt.id === 1)!.lanes[0].ingredient = "electronic-circuit";
                     lanes.forEach(lane => {lane.ingredient = lane.ingredient === "accumulator" ? "iron-plate" : "copper-cable";});

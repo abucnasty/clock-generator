@@ -3,9 +3,9 @@
   "job": "config-IRON_ORE_VOIDER_400_OVERBEACONED",
   "group": "config",
   "name": "IRON_ORE_VOIDER_400_OVERBEACONED",
-  "config_sha256": "59ec58d561b4d6313a7a9966e505351fd8967fe3edd9671d93d91974662ba1ff",
-  "job_results_sha256": "c95db12c726fa1c9c24043596797395fd36aa25f03b7e18c8da6edc01cb5321d",
-  "selected": "planned-belt-slack",
+  "config_sha256": "3da23dd858f56d5088047abfaa7a3723cd7213a09b15ea8c89f7d5eb2361b3ca",
+  "job_results_sha256": "76d72185568213e0007bbe632293414f02850cf646e8ff69db81cda07428b032",
+  "selected": "takt_batches_observed",
   "selected_windows": {
     "inserter:6": "1-38,49-86,97-134",
     "inserter:5": "1-38,49-86,97-134",
@@ -15,7 +15,7 @@
     "inserter:1": "1-47,56-99,105-135"
   },
   "alternatives": [
-    {"id": "planned-belt-slack", "verdict": "stable", "holds": true, "rate": 400, "supply": null, "period": 144, "wake_ups": 0, "descriptions_cut": 0, "clock_sha256": "d540d9e19d7e0a96c8109a0922d9a9d1dac1ff4c51cc0ea42b07a2bd6a52c49f", "windows_sha256": "fa65d5183d0a64f9a1f8a9b6b3a712bc31115ebbffc6640b8040ad717610b7b1", "text_sha256": "7f6f075565bafa8f5ae27781dc9448c171b5bf076c3f1457b8be7d4639a1852d", "results_sha256": "ab34760a644de9a90b5256b5a9153fc091bb3f07a8660cc401dbb836deae7fce"},
-    {"id": "even-hands", "verdict": "stable", "holds": true, "rate": 400, "supply": null, "period": 144, "wake_ups": 0, "descriptions_cut": 0, "clock_sha256": "719cfc482830f08461177b8cd086e39d44271fdf480c4767780adfc0a7d90d61", "windows_sha256": "697ceea34661a16ef20eaa11b3ae4aa41730c0ee363ba5c8dbfe5af1bb73a944", "text_sha256": "1eaf39c580746330cecf267c7da6e5a67458bf5f30a54d664d67a4194bdbb4bf", "results_sha256": "4d31c07c22b284ada47defe98e442ad1e474308bbf4af65953860e17fe830b17"}
+    {"id": "takt_batches_observed", "verdict": "stable", "holds": true, "rate": 400, "supply": null, "period": 144, "wake_ups": 0, "descriptions_cut": 0, "clock_sha256": "d540d9e19d7e0a96c8109a0922d9a9d1dac1ff4c51cc0ea42b07a2bd6a52c49f", "windows_sha256": "fa65d5183d0a64f9a1f8a9b6b3a712bc31115ebbffc6640b8040ad717610b7b1", "text_sha256": "4540bc3cb4a50746e160147200569dfd9d9add3106fb755defc55369483e38b3", "results_sha256": "cfd76bca393c0601724474d6bcd55fce78b9a2844520fb43543b81793abd0ca8"},
+    {"id": "time_division_windows", "verdict": "stable", "holds": true, "rate": 400, "supply": null, "period": 144, "wake_ups": 0, "descriptions_cut": 0, "clock_sha256": "719cfc482830f08461177b8cd086e39d44271fdf480c4767780adfc0a7d90d61", "windows_sha256": "697ceea34661a16ef20eaa11b3ae4aa41730c0ee363ba5c8dbfe5af1bb73a944", "text_sha256": "e17f6c7c666c51500991f817cae0942266c1e858e76eec96dd2118071aa3f567", "results_sha256": "7d636c30415a24b78635f4ea4a04285f087b393678fdb7b160ef5faf0ff7f889"}
   ]
 }

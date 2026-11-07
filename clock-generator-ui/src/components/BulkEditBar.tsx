@@ -119,7 +119,7 @@ export function BulkEditBar({ selected, filtersOnly = false, total, priorityIds,
             setFilterDraftEdited(false);
             setFiltersAnchor(event.currentTarget);
         }} aria-haspopup="dialog" aria-expanded={filtersAnchor !== null} aria-controls={filtersAnchor ? filtersId : undefined}>Filters…</Button>
-        <Button variant="outlined" color="inherit" size="small" onClick={() => setRuleOpen(true)}>Enable rule…</Button>
+        <Button variant="outlined" color="inherit" size="small" onClick={() => setRuleOpen(true)}>Enable control override…</Button>
         </>}
         </Box>
         <Popover open={filtersAnchor !== null} anchorEl={filtersAnchor} onClose={closeFilters}

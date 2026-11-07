@@ -19,7 +19,7 @@ export const BELT_COPY = {
     movingLine: 'Items continuously pass the pickup. Timing accounts for the stacks within reach; straight belt is the default pickup type. '
         + 'Clocks also leave a few extra ticks (belt slack) for late pickups.',
     backedUp: 'Backed up',
-    backedUpLine: 'Items stop between pickups. Upstream supply refills the gaps, so a stack is available each pickup tick. Clocks omit moving-belt slack.',
+    backedUpLine: 'Items stop between pickups. Upstream supply refills the gaps, so a stack is available each pickup tick. Clocks omit belt slack.',
     help: 'Not sure? Leave it on Moving.',
     /** The heading of the question's card under the diagram */
     diagramHeading: 'Belts',
@@ -28,9 +28,7 @@ export const BELT_COPY = {
     resultsBackedUp: 'This run used your Backed up belt setting.',
     actionBackedUp: 'My belts move. Generate again',
     hint: (backedUp: number, moving: number) =>
-        `On backed-up belts, this build may do with ${backedUp} wake-ups a minute instead of ${moving}; fewer is better, as each one costs a little UPS.`,
-    /** Under the Belt column of a clock made without belt slack, in a run for moving belts */
-    onlyIfBackedUp: 'Designed for backed-up supply',
+        `Your belts may be backed up. This build may then do with ${backedUp} wakeups a minute, not ${moving}. Fewer is better: each wakeup costs some UPS.`,
 } as const;
 
 /** The parts of a build the question is asked of: the form, or the config a generation ran with */

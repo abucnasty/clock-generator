@@ -51,7 +51,7 @@ function fakeStorage(entries: Record<string, string> = {}, { full = false } = {}
     return { storage, map, writes };
 }
 
-const savedForm = (recipe: string) => JSON.stringify(build({ target_output: { recipe, items_per_second: 1, copies: 1 } }));
+const savedForm = (recipe: string) => JSON.stringify(build({ setpoint: { recipe, items_per_second: 1, copies: 1 } }));
 
 const meta = (id: string, more: Partial<BuildMeta> = {}): BuildMeta => ({ id, name: null, recipe: '', createdAt: 1, openedAt: 1, ...more });
 const indexOf = (...builds: BuildMeta[]): LibraryIndex => ({ version: 1, builds });

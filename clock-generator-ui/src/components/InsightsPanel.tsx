@@ -21,7 +21,7 @@ import { ExactTicks, SwingComparison } from './SwingComparison';
 const INSIGHTS_COPY = {
     clockHeading: 'Notes on this clock',
     clockIntro: 'What is particular to the clock shown at the top.',
-    nothing: 'Nothing stands out: this clock swings as planned and holds the target rate.',
+    nothing: 'Nothing stands out: this clock swings as planned and holds the setpoint.',
     buildHeading: 'About this build: what every clock has to work within',
     what: 'What',
     why: 'Why',

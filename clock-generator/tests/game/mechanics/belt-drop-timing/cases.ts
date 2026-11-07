@@ -39,7 +39,7 @@ export const FLOWING: Approach[] = ["left", "right", "back", "entrance-left", "e
     "entrance-from-upstream", "entrance-from-downstream", "exit-from-upstream"];
 export const DEAD_ENDS: Approach[] = ["front", "exit-from-downstream"];
 
-/** Traffic on the receiving lane, as stacks a period of the belt's quarter-tile stack spacing (2 ticks on turbo) */
+/** Traffic on the receiving lane, as stacks a window cycle of the belt's quarter-tile stack spacing (2 ticks on turbo) */
 export const DENSITIES = {
     d25: {ticks: [0], period: 8, phases: [0, 1, 2, 3, 4, 5, 6, 7]},
     d50: {ticks: [0], period: 4, phases: [0, 1, 2, 3]},

@@ -1,5 +1,5 @@
 // check.cjs <expected-hashes.txt> <capture root or generation dir>...
-// Prints per case: hash check, selection, and (for a capture) baseline misses and recovered periods.
+// Prints per case: hash check, selection, and (for a capture) baseline misses and recovered window cycles.
 // expected-hashes.txt: "<case name> <first 12 hex of sha256 of the clock's identity>" per line (clockIdentity: the
 // blueprint without its text or metadata, and the schedule; the engine's dist/ must be built), e.g. from a preflight
 // (run-lane.sh -m generate) on the frozen head, checked against the blast's selected clocks before any native run.

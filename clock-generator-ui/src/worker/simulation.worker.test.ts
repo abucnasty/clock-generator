@@ -8,7 +8,7 @@ import { readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigFor
 import { configToFormData, formDataToConfig } from '../utils/configForm/configMapping';
 import { createDefaultConfig } from '../utils/configForm/formData';
 import { applyPaste } from '../utils/pastePreview';
-import { buildValidationIssues } from '../utils/buildValidation';
+import { buildValidationIssues, refusedInserterIdsOf, type ValidationDiagnostic } from '../utils/buildValidation';
 
 /** Every response the worker posted in this test, in order */
 let posted: WorkerResponse[];
@@ -38,13 +38,13 @@ async function ask<K extends EngineQuery['kind']>(query: Extract<EngineQuery, { 
 const coverageOf = (config: Config) => ask({ kind: 'inserter-coverage', config });
 
 /** A live answer with nothing to say */
-const nothingLive: LiveCoverage = { issues: [], refusal: null, pickupNotTested: null, laneSharedByCopies: null, sideLoadedDrop: null,
+const nothingLive: LiveCoverage = { issues: [], refusal: null, refusal_inserters: [], pickupNotTested: null, laneSharedByCopies: null, sideLoadedDrop: null,
     lanesExactlyFull: null, copyGapNeeded: null, dropRoom: null, machinePrototypes: [] };
 
 /** The issues the App lists for a live answer, folded in as App.tsx does it, for a build with no field problems or chest issues */
-const listed = (live: LiveCoverage, machines: { id: number }[], failure?: { message: string }) => buildValidationIssues({
+const listed = (live: LiveCoverage, machines: { id: number }[], failure?: { message: string; diagnostics?: ValidationDiagnostic[] }) => buildValidationIssues({
     fieldProblems: [], chests: [], inserters: [], chestIssues: [], machines, failure,
-    coverage: live.issues, scopeRefusal: live.refusal, pickupNotTested: live.pickupNotTested, laneSharedByCopies: live.laneSharedByCopies,
+    coverage: live.issues, scopeRefusal: live.refusal, scopeRefusalInserters: live.refusal_inserters, pickupNotTested: live.pickupNotTested, laneSharedByCopies: live.laneSharedByCopies,
     sideLoadedDrop: live.sideLoadedDrop, lanesExactlyFull: live.lanesExactlyFull, copyGapNeeded: live.copyGapNeeded,
     machinePrototypes: live.machinePrototypes, coverageText: issue => `${issue.kind} ${issue.item_name}`,
 });
@@ -64,7 +64,7 @@ async function primaryOf(config: Config, streamLogs = false) {
 
 it('answers output-transfer queries from the engine for both recycler products and their actual separate routes', async () => {
     const config: Config = {
-        target_output: { recipe: 'supercapacitor', items_per_second: 1, copies: 1 },
+        setpoint: { recipe: 'supercapacitor', items_per_second: 1, copies: 1 },
         machines: [
             { id: 1, recipe: 'processing-unit-recycling', crafting_speed: 1, productivity: 0, prototype: 'recycler', result_target: { type: 'machine', id: 2 } },
             { id: 2, recipe: 'supercapacitor', crafting_speed: 1, productivity: 0, prototype: 'electromagnetic-plant' },
@@ -104,7 +104,7 @@ it.each(['blocked', 'markers'] as const)('keeps blocked container slots through 
         ],
     });
     const config = formDataToConfig(pastedAndSaved(pasted));
-    config.target_output = { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 };
+    config.setpoint = { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 };
     expect(config.chests![0]).toEqual({ id: 1, type: 'car',
         slot_filters: [{ slot: 1, item: 'iron-plate' }, ...Array.from({ length: 79 }, (_, i) => ({ slot: i + 2, blocked: true }))] });
     expect(await send({ type: 'validate', requestId: 201, config })).toMatchObject({ type: 'validated' });
@@ -142,7 +142,7 @@ it('keeps an out-of-order recycler machine target, byproduct belt, and bend capt
 describe('repeated units: the real engine separates Check and generation recovery, the recomputed conversion and query failure', () => {
     /** Eight gear assemblers between the same two belts, eight repeated units set as half a copy */
     const source: Config = {
-        target_output: { recipe: 'iron-gear-wheel', items_per_second: 4, copies: 0.5 },
+        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 4, copies: 0.5 },
         machines: Array.from({ length: 8 }, (_, i) => ({ id: i + 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 })),
         inserters: Array.from({ length: 8 }, (_, i) => [
             { id: 2 * i + 1, source: { type: 'belt' as const, id: 1 }, sink: { type: 'machine' as const, id: i + 1 }, stack_size: 1, filters: ['iron-plate'] },
@@ -153,7 +153,7 @@ describe('repeated units: the real engine separates Check and generation recover
             { id: 2, type: 'transport-belt', lanes: [{ ingredient: 'iron-gear-wheel', stack_size: 1 }] },
         ], chests: [],
     } as Config;
-    const excessive: Config = { ...source, target_output: { ...source.target_output, items_per_second: 100 } };
+    const excessive: Config = { ...source, setpoint: { ...source.setpoint, items_per_second: 100 } };
     /** Each output inserter drops at a set place on its lane */
     const unsupported: Config = { ...source, inserters: source.inserters.map((inserter, i) => i % 2 === 1
         ? { ...inserter, sink: { type: 'belt', id: 2, drop: { lane: 1, position: 0 } } } : inserter) };
@@ -188,9 +188,9 @@ describe('repeated units: the real engine separates Check and generation recover
 
     it.each([
         { why: 'gives 4 copies of one unit', config: source, response: { type: 'answer', answer: { kind: 'available',
-            plan: { copies: 4, candidate: { machines: [source.machines[0]], target_output: { ...source.target_output, copies: 4 } } } } } },
+            plan: { copies: 4, candidate: { machines: [source.machines[0]], setpoint: { ...source.setpoint, copies: 4 } } } } } },
         { why: 'is refused at Check for a high target', config: excessive, response: { type: 'answer', answer: { kind: 'unavailable',
-            stage: 'check', repeatedGroups: 8, reason: { code: 'candidate-check-failed', message: expect.stringContaining("No clock can hold this build's target") } } } },
+            stage: 'check', repeatedGroups: 8, reason: { code: 'candidate-check-failed', message: expect.stringContaining("No clock can hold this build's setpoint") } } } },
         { why: 'is refused at the proof for lane drops', config: unsupported, response: { type: 'answer',
             answer: { kind: 'unavailable', stage: 'proof', repeatedGroups: 8, reason: { code: 'unsupported-boundary' } } } },
         // The engine uses untyped errors for an unknown recipe; the worker must not misdiagnose one as a proved candidate refusal.
@@ -204,11 +204,11 @@ describe('repeated units: the real engine separates Check and generation recover
 
     // a target no clock can hold is a refusal of the build: the engine's opening once and each problem in its own words
     it('Check hands over the opening and each problem when no clock can hold the target', async () => {
-        const unheld: Config = { ...source, target_output: { ...source.target_output, items_per_second: 100, copies: 1 }, machines: [source.machines[0]], inserters: source.inserters.slice(0, 2) };
-        const noClock = expect.stringContaining("No clock can hold this build's target");
+        const unheld: Config = { ...source, setpoint: { ...source.setpoint, items_per_second: 100, copies: 1 }, machines: [source.machines[0]], inserters: source.inserters.slice(0, 2) };
+        const noClock = expect.stringContaining("No clock can hold this build's setpoint");
         const response = await send({ type: 'validate', requestId: 9, config: unheld });
         expect(response).toMatchObject({ type: 'validation-failed', message: noClock,
-            diagnostics: [{ kind: 'refusal', opening: "No clock can hold this build's target:", problems: expect.any(Array) }] });
+            diagnostics: [{ kind: 'refusal', opening: "No clock can hold this build's setpoint:", problems: expect.any(Array) }] });
         const [refusal] = (response as { diagnostics: { opening: string; problems: string[] }[] }).diagnostics;
         expect(refusal.problems.length).toBeGreaterThan(0);
         expect((response as { message: string }).message).toBe(`${refusal.opening} ${refusal.problems.join(' ')}`);
@@ -217,7 +217,7 @@ describe('repeated units: the real engine separates Check and generation recover
 
 it('replays detailed activity through the real worker query without changing the saved config', async () => {
     const config = {
-        target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
         machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],
         inserters: [
             { source: { type: 'belt', id: 1 }, sink: { type: 'machine', id: 1 }, stack_size: 1 },
@@ -226,7 +226,7 @@ it('replays detailed activity through the real worker query without changing the
         chests: [{ id: 1, type: 'infinity-chest', item_filter: [{ item_name: 'iron-gear-wheel', request_count: 1 }] }],
     } as Config;
     const before = JSON.stringify(config);
-    expect(await send({ type: 'query', requestId: 40, query: { kind: 'timeline-recording', request: { config, mode: 'plan', period_ticks: 240, terminal_swing_count: 1, windows: {} } } }))
+    expect(await send({ type: 'query', requestId: 40, query: { kind: 'timeline-recording', request: { config, mode: 'plan', window_cycle_ticks: 240, terminal_swing_count: 1, windows: {} } } }))
         .toMatchObject({ type: 'answer', requestId: 40, answer: { mode: 'plan', start_tick: 0, end_tick: 240, entities: expect.arrayContaining([expect.objectContaining({ id: 'machine:1', recipe: 'iron-gear-wheel' })]) } });
     expect(JSON.stringify(config)).toBe(before);
 });
@@ -251,7 +251,7 @@ describe('a captured inserter kind, quality and filter mode', () => {
         expect(pasted.guidance).toMatchObject({ _tag: 'None' });
         const saved = formDataToConfig(pastedAndSaved(pasted));
         expect((await ask({ kind: 'saved-config', config: saved })).problem).toBeNull();
-        return { ...formDataToConfig(configToFormData(saved)), target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 } } as Config;
+        return { ...formDataToConfig(configToFormData(saved)), setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 } } as Config;
     };
     // read as a whitelist, the blacklist would leave the gears without an output inserter and offer a new belt for them
     const blacklist = { filters: ['iron-plate'], filter_mode: 'blacklist' };
@@ -278,12 +278,74 @@ describe('a captured inserter kind, quality and filter mode', () => {
         const checked = await send({ type: 'validate', requestId: 54, config }) as ValidationFailedResponse;
         expect(listed(await coverageOf(config), config.machines, { message: checked.message })).toHaveLength(1);
     });
+
+    it('Check shows the refused blacklist as a refusal, not as an internal error', async () => {
+        const config = await pastedSavedReloaded(exported({}, blacklist));
+        const checked = await send({ type: 'validate', requestId: 55, config }) as ValidationFailedResponse;
+        expect(checked.message).toContain('`filter_mode` "blacklist" is refused');
+        expect(checked.internal).toBeUndefined();
+    });
+});
+
+describe('inserters that take from a belt into chests (#650)', () => {
+    // the shape of the build in the issue: belts fill two chests by inserter (3 and 5), and a machine takes from one of them
+    const config = {
+        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+        machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],
+        inserters: [
+            { id: 1, source: { type: 'belt', id: 1, pickup_length: 1 }, sink: { type: 'machine', id: 1 } },
+            { id: 2, source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 } },
+            { id: 3, source: { type: 'belt', id: 2, pickup_length: 1 }, sink: { type: 'chest', id: 2 } },
+            { id: 4, source: { type: 'chest', id: 2 }, sink: { type: 'machine', id: 1 } },
+            { id: 5, source: { type: 'belt', id: 3, pickup_length: 1 }, sink: { type: 'chest', id: 3 } },
+        ],
+        belts: [
+            { id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }] },
+            { id: 2, type: 'turbo-transport-belt', lanes: [{ ingredient: 'steel-plate', stack_size: 4 }] },
+            { id: 3, type: 'turbo-transport-belt', lanes: [{ ingredient: 'stone', stack_size: 4 }] },
+        ],
+        chests: [
+            { id: 1, type: 'infinity-chest', item_filter: [], remove_unfiltered_items: true },
+            { id: 2, type: 'buffer-chest', storage_size: 1, item_filter: 'steel-plate', prototype: 'wooden-chest' },
+            { id: 3, type: 'buffer-chest', storage_size: 1, item_filter: 'stone', prototype: 'wooden-chest' },
+        ],
+    } as unknown as Config;
+    const says = 'Inserters 3 and 5 take from a belt and drop into something other than a machine';
+
+    it('names inserters 3 and 5 live, in the one error the Build validation lists', async () => {
+        const live = await coverageOf(config);
+        expect(live).toMatchObject({ refusal: expect.stringContaining(says), refusal_inserters: [3, 5], issues: [] });
+        const blocking = listed(live, config.machines).filter(issue => issue.blocksGeneration);
+        expect(blocking).toHaveLength(1);
+        expect(blocking[0]).toMatchObject({ source: 'engine', id: 'inserter-scope', inserters: [3, 5], text: expect.stringContaining(says) });
+    });
+
+    it('outlines rows 3 and 5 only while they take from a belt into a chest: none once they drop into a machine', async () => {
+        const outlined = async (build: Config) => [...refusedInserterIdsOf(listed(await coverageOf(build), build.machines))];
+        expect(await outlined(config)).toEqual([3, 5]);
+        const fixed = { ...config, inserters: config.inserters.map(inserter => inserter.id === 3 || inserter.id === 5
+            ? { ...inserter, sink: { type: 'machine', id: 1 } } : inserter) } as Config;
+        expect(await outlined(fixed)).toEqual([]);
+        // an advisory or a problem that names no inserter outlines nothing
+        expect([...refusedInserterIdsOf([{ blocksGeneration: false, inserters: [3] }, { blocksGeneration: true }])]).toEqual([]);
+    });
+
+    it('Check refuses it as a refusal that names them, once beside the live one', async () => {
+        const checked = await send({ type: 'validate', requestId: 56, config }) as ValidationFailedResponse;
+        expect(checked.message).toContain(says);
+        expect(checked.internal).toBeUndefined();
+        expect(checked.diagnostics).toEqual([{ kind: 'inserters', ids: [3, 5], message: checked.message }]);
+        const withCheck = listed(await coverageOf(config), config.machines, { message: checked.message, diagnostics: checked.diagnostics });
+        expect(withCheck).toHaveLength(1);
+        // a Check without the live answer lists the same issue from the diagnostic alone
+        expect(listed(nothingLive, config.machines, { message: checked.message, diagnostics: checked.diagnostics })[0]).toMatchObject({ id: 'inserter-scope', inserters: [3, 5] });
+    });
 });
 
 describe('live advice on a gear assembler, which does not block', () => {
     /** A gear assembler fed by a legendary stack inserter with its full hand, from a belt of the given stack size */
-    const gears = ({ stack_size = 4, ...target }: { stack_size?: number } & Partial<Config['target_output']> = {}) => ({
-        target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1, ...target },
+    const gears = ({ stack_size = 4, ...target }: { stack_size?: number } & Partial<Config['setpoint']> = {}) => ({
+        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1, ...target },
         machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],
         inserters: [
             { id: 1, source: { type: 'belt', id: 1, pickup_length: 1 }, sink: { type: 'machine', id: 1 } },
@@ -304,7 +366,7 @@ describe('live advice on a gear assembler, which does not block', () => {
         { name: 'a lane the copies ask too much of', config: gears({ items_per_second: 75, copies: 100 }),
             field: 'laneSharedByCopies', source: 'lanes',
             warning: 'If the 100 copies share lane 1 of belt 1, they take 1.25 times what it carries (100 × 1.5 = 150 a second, of 120). '
-                + 'The config cannot say yet whether its copies share these lanes, so this is only a warning: a build whose copies have '
+                + 'The configuration cannot say yet whether its copies share these lanes, so this is only a warning: a build whose copies have '
                 + 'belts of their own is not affected.' },
     ] as const)('warns live of $name, and Check goes on', async ({ config, field, source, warning }) => {
         const live = await coverageOf(config);
@@ -335,7 +397,7 @@ describe('live advice on a gear assembler, which does not block', () => {
 
 it('loads an imported build file that carries the former Fractional swings override, without it', async () => {
     const config = {
-        target_output: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
+        setpoint: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
         machines: [{ id: 1, recipe: 'iron-plate', crafting_speed: 2, productivity: 0, prototype: 'electric-furnace' }],
         inserters: [], belts: [],
     };
@@ -352,7 +414,7 @@ it("gives the crafting machines, fills a prototype's rule on import and paste, a
 
     const furnace = { id: 1, recipe: 'iron-plate', crafting_speed: 2, productivity: 0, prototype: 'electric-furnace' };
     const config = {
-        target_output: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
+        setpoint: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
         machines: [furnace], inserters: [], belts: [],
     };
     // a former type is read as the machine, in a build file, a saved build and a paste from an older Sidecar
@@ -375,9 +437,9 @@ it("gives the crafting machines, fills a prototype's rule on import and paste, a
 it('says live whether the copies\' drops fit at the gap given, for the period estimated from the settings', async () => {
     const live = (copy_offset: { x: number; y: number } | undefined) => {
         const grenade = JSON.parse(grenadeSample) as Config;
-        return coverageOf({ ...grenade, target_output: { ...grenade.target_output, copy_offset } });
+        return coverageOf({ ...grenade, setpoint: { ...grenade.setpoint, copy_offset } });
     };
-    const lead = "At about 112 ticks a period (estimated from the target rate: one output hand at the machine's rate), the hands of the 7 copies";
+    const lead = "At about 112 ticks a window cycle (estimated from the setpoint: one output hand at the machine's rate), the hands of the 7 copies";
     expect((await live({ x: 12, y: 0 })).dropRoom).toBe(`${lead} fit between each other on belt 1, if the inserters of a copy start together. `
         + 'They would also fit with the copies 16, 18, 20, 22 or 24 tiles apart, and at any of these plus 14. This assumes every copy drops onto the belt the way this one does.');
     expect((await live({ x: 13, y: 0 })).dropRoom).toBe(`${lead} land on each other on belt 1, if the inserters of a copy start together, and some of them wait for room. `
@@ -390,8 +452,8 @@ it('says live whether the copies\' drops fit at the gap given, for the period es
 // A real plan of five copies: about 2 s alone, over vitest's 5 s default on a loaded CI runner. Fewer copies make no shared-windows clock.
 it('passes on the clock made with shared windows after the clock it shares, with each clock\'s decider count', async () => {
     const { primary } = await primaryOf(JSON.parse(militarySample) as Config);
-    expect(primary?.alternatives.map(it => [it.id, it.deciders])).toEqual([['planned-belt-slack', 5]]);
-    expect(primary?.also?.flatMap(run => run.alternatives.map(it => [it.id, it.deciders, it.verdict]))).toEqual([['planned-belt-slack-shared', 4, 'stable']]);
+    expect(primary?.alternatives.map(it => [it.id, it.deciders])).toEqual([['round_robin_polling', 5]]);
+    expect(primary?.also?.flatMap(run => run.alternatives.map(it => [it.id, it.deciders, it.verdict]))).toEqual([['round_robin_polling_shared', 4, 'stable']]);
 }, 30_000);
 
 it('posts the state transitions in columns with their own reasons, which a structured clone carries and which read back the same', async () => {
@@ -409,3 +471,62 @@ it('posts the state transitions in columns with their own reasons, which a struc
     expect(expandStateTransitionHistory(received.primary!.alternatives[0].stateTransitionHistory)).toEqual(expanded);
     expect(alternative).not.toHaveProperty('clockOnlyStateTransitionHistory');
 }, 30_000);
+
+describe('an unexpected error in the check is not an engine refusal', () => {
+    const config = JSON.parse(militarySample) as Config;
+
+    it('refusals carry no internal error', async () => {
+        const response = await send({ type: 'validate', requestId: 31, config: { ...config, machines: 'none' as unknown as Config['machines'] } });
+        expect(response).toMatchObject({ type: 'validation-failed' });
+        expect((response as ValidationFailedResponse).internal).toBeUndefined();
+    });
+
+    it('an error the engine does not own is internal, with its stack', async () => {
+        const engine = await import('clock-generator/browser');
+        const spy = vi.spyOn(engine, 'validateConfig').mockImplementation(() => { throw new TypeError('Cannot convert undefined or null to object'); });
+        try {
+            const response = await send({ type: 'validate', requestId: 32, config }) as ValidationFailedResponse;
+            expect(response.type).toBe('validation-failed');
+            expect(response.internal).toMatchObject({ message: 'Cannot convert undefined or null to object', dataMismatch: false });
+            expect(response.internal?.stack).toContain('TypeError');
+        } finally {
+            spy.mockRestore();
+        }
+    });
+
+    it('a plain Error from a planning refusal is a refusal', async () => {
+        const engine = await import('clock-generator/browser');
+        const spy = vi.spyOn(engine, 'validateConfig').mockImplementation(() => { throw new Error('Machine 1: the target is not made'); });
+        try {
+            const response = await send({ type: 'validate', requestId: 34, config }) as ValidationFailedResponse;
+            expect(response).toMatchObject({ type: 'validation-failed', message: 'Machine 1: the target is not made' });
+            expect(response.internal).toBeUndefined();
+        } finally {
+            spy.mockRestore();
+        }
+    });
+
+    it('a thrown value that is not an Error is internal', async () => {
+        const engine = await import('clock-generator/browser');
+        const spy = vi.spyOn(engine, 'validateConfig').mockImplementation(() => { throw 'oops'; });
+        try {
+            expect((await send({ type: 'validate', requestId: 35, config }) as ValidationFailedResponse).internal).toMatchObject({ message: 'oops' });
+        } finally {
+            spy.mockRestore();
+        }
+    });
+
+    it('says the data does not match when the loaded game data lacks a section the engine reads', async () => {
+        const older = JSON.parse(factorioData);
+        delete older.quality_inventory;
+        expect(await send({ type: 'initialize', factorioData: JSON.stringify(older) })).toEqual({ type: 'initialized' });
+        const engine = await import('clock-generator/browser');
+        const spy = vi.spyOn(engine, 'validateConfig').mockImplementation(() => { throw new TypeError('x'); });
+        try {
+            const response = await send({ type: 'validate', requestId: 33, config }) as ValidationFailedResponse;
+            expect(response.internal).toMatchObject({ dataMismatch: true });
+        } finally {
+            spy.mockRestore();
+        }
+    });
+});

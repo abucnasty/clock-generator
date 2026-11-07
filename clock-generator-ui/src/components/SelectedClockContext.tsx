@@ -40,7 +40,7 @@ export function SelectedClockContext({ selected, detail, onDetailChange, timelin
         <TabBody prefix="result-context" tab="overview" shown={detail === 'overview'}>
             <Typography component="h3" variant="subtitle1" sx={{ fontWeight: 600 }}>Why this clock</Typography>
             <Typography variant="body2" sx={{ my: 1, overflowWrap: 'anywhere' }}>{selected.description}</Typography>
-            <Typography variant="body2">The clock repeats every {formatNumberText(selected.simulationDurationTicks, { maxDecimals: 3 })} ticks ({formatNumberText(selected.simulationDurationTicks / 60, { maxDecimals: 2 })} s). In each repeat, each inserter is switched on in its own wake windows: {selected.inserterWindowCount} in all. A wake window can hold several swings, and a swing can finish in a later window, so the number of wake windows and the number of swings need not match.</Typography>
+            <Typography variant="body2">The clock repeats every {formatNumberText(selected.simulationDurationTicks, { maxDecimals: 3 })} ticks ({formatNumberText(selected.simulationDurationTicks / 60, { maxDecimals: 2 })} s). In each repeat, each inserter is switched on in its own enable windows: {selected.inserterWindowCount} in all. An enable window can hold several swings, and a swing can finish in a later window, so the number of enable windows and the number of swings need not match.</Typography>
             <Typography variant="body2" sx={{ mt: 1 }}>{[recoversOf(selected).detail, lossLimitText(selected, itemLabel)].filter(Boolean).join(' ')}</Typography>
             <Disclosure summary="Model and tested starts" open={assumptionsOpen} onToggle={setAssumptionsOpen} sx={{ mt: 1, overflowWrap: 'anywhere' }} data-model-assumptions="">
                 <Typography variant="body2" sx={{ mt: 1 }}>{MODELED_START}</Typography>
@@ -48,7 +48,7 @@ export function SelectedClockContext({ selected, detail, onDetailChange, timelin
                 {modeledDetails(selected, itemLabel).map(line => <Typography key={line} variant="body2" sx={{ mt: 1 }}>{line}</Typography>)}
                 <Typography variant="body2" sx={{ mt: 1 }}>{phaseChecksText(selected.asBuilt?.start_phases_checked)}</Typography>
                 {selected.assessment.start_dependence?.starts.map(start => <Typography key={start.id} variant="body2" sx={{ mt: 0.5 }}>
-                    {start.label}: {start.reaches_target ? 'reaches target' : 'does not reach target'}{start.output_items_per_period === null ? '; settled rate unavailable' : `; ${formatNumberText(start.output_items_per_period)} items per period`}.
+                    {start.label}: {start.reaches_target ? 'reaches target' : 'does not reach target'}{start.output_items_per_window_cycle === null ? '; steady-state rate unavailable' : `; ${formatNumberText(start.output_items_per_window_cycle)} items per window cycle`}.
                 </Typography>)}
                 <Typography variant="body2" sx={{ mt: 1 }}>{START_LIMITS}</Typography>
                 {assumptions}

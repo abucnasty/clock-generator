@@ -10,7 +10,7 @@ FactorioDataService.findRecipeOrThrow("iron-gear-wheel");
 /** A machine making gears with one inserter taking `filters` off it onto the sink */
 const inserterWithFilters = (filters: string[], sink: { type: "belt" } | { type: "chest" } | { type: "machine" }) => {
     const config = {
-        target_output: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+        setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
         machines: [
             { id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1 },
             ...(sink.type === "machine" ? [{ id: 2, recipe: "transport-belt", productivity: 0, crafting_speed: 1 }] : []),

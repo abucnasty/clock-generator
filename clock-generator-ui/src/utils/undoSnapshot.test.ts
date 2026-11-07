@@ -18,7 +18,7 @@ import {
 /** Three machines, a belt, two chests, two drills, inserters between them, one with a rule and one forced on */
 function form(): ConfigFormData {
     let config = createDefaultConfig();
-    config = edits.updateTargetOutput(config, 'recipe', 'electronic-circuit');
+    config = edits.updateSetpoint(config, 'recipe', 'electronic-circuit');
     config = edits.addMachine(edits.addMachine(config));
     config = edits.updateMachine(config, 0, 'recipe', 'copper-cable');
     config = edits.addBelt(config);
@@ -94,8 +94,8 @@ describe('Undo', () => {
         const original = form();
         const incoming = { ...otherConfig, chests: [], drills: [], guidance: Option.none(), suggested_target: Option.none() };
         const selections = { target: true, machines: true, drills: true, inserters: true, belts: true, chests: true };
-        const { after, entry } = act(original, config => applyPaste(config, incoming, selections, otherConfig.target_output));
-        expect(after.target_output).toEqual(otherConfig.target_output);
+        const { after, entry } = act(original, config => applyPaste(config, incoming, selections, otherConfig.setpoint));
+        expect(after.setpoint).toEqual(otherConfig.setpoint);
         expect(after.machines[0].recipe).toBe('iron-gear-wheel');
         expect(after.inserters).toBe(original.inserters);
         expect(after.drills).toBe(original.drills);
@@ -145,7 +145,7 @@ describe('Undo', () => {
         const plan = { computed_lcm: 1, entities: [] } as unknown as SerializableTransferPlan;
         const issue: InserterCoverageIssue = { kind: 'missing_input_inserter', machine_id: 2, recipe: 'electronic-circuit', item_name: 'copper-cable', fix_options: [] };
         const all: ((config: ConfigFormData) => unknown)[] = [
-            (c) => edits.updateTargetOutput(c, 'items_per_second', 3),
+            (c) => edits.updateSetpoint(c, 'items_per_second', 3),
             (c) => edits.addMachine(c), (c) => edits.updateMachine(c, 0, 'productivity', 10), (c) => edits.removeMachine(c, 0),
             (c) => edits.reorderMachines(c, 0, 2),
             (c) => edits.addInserter(c), (c) => edits.updateInserter(c, 0, { stack_size: 4 }), (c) => edits.removeInserter(c, 0),
@@ -184,7 +184,7 @@ describe('settleUndoEntry', () => {
         { why: 'keeps an entry whose action has not shown yet as it is', entry: unsettled, now: unsettled.before, kept: unsettled },
         { why: 'keeps it as it is for an equal copy of the form', entry: unsettled, now: structuredClone(unsettled.before), kept: unsettled },
         { why: 'keeps a settled entry while the form stays equal to what the action made', entry: settled, now: structuredClone(settled.after!), kept: settled },
-        { why: 'withdraws it once the form is edited after the action', entry: settled, now: edits.updateTargetOutput(settled.after!, 'items_per_second', 9), kept: null },
+        { why: 'withdraws it once the form is edited after the action', entry: settled, now: edits.updateSetpoint(settled.after!, 'items_per_second', 9), kept: null },
         { why: 'keeps no entry as none', entry: null, now: form(), kept: null },
         { why: 'keeps an entry without Undo whose action has not shown yet as it is', entry: unsettledWithoutUndo, now: unsettledWithoutUndo.before, kept: unsettledWithoutUndo },
         { why: 'withdraws an entry without Undo once the form is edited after its action', entry: settledWithoutUndo, now: edits.addMachine(settledWithoutUndo.after!), kept: null },
@@ -272,9 +272,9 @@ describe('the messages', () => {
         expect(describePaste(['Target Output', '1 machine'])).toBe('Imported Target Output, 1 machine from Factorio.');
     });
 
-    it('name a build file, a reset and an example in the words of the menu', () => {
-        expect(UNDO_IMPORT_MESSAGE).toBe('Build file opened.');
-        expect(UNDO_RESET_MESSAGE).toBe('Build reset.');
+    it('name a configuration file, a reset and an example in the words of the menu', () => {
+        expect(UNDO_IMPORT_MESSAGE).toBe('Configuration file opened.');
+        expect(UNDO_RESET_MESSAGE).toBe('Configuration reset.');
         expect(exampleUndoMessage({ recipe: 'logistic-science-pack' }, (id) => id)).toBe('Example loaded: Logistic science pack.');
     });
 });

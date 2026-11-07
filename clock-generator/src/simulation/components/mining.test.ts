@@ -171,7 +171,7 @@ describe("a drill's bonus bar near a whole item", () => {
 describe("a drill's bars in the game's units", () => {
     /** A big mining drill with 4 legendary speed modules 3 (0.25 a tick) on `resource`, at `productivity` percent */
     function progressOn(resource: string, productivity: number) {
-        const config = ConfigSchema.parse({ target_output: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+        const config = ConfigSchema.parse({ setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
             machines: [{ id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0 }], belts: [], inserters: [],
             drills: { configs: [{ id: 1, type: "big-mining-drill", mined_item_name: resource, speed_bonus: 5, productivity, target: { type: "chest", id: 1 } }] },
             chests: [{ type: "car", id: 1 }] });
@@ -199,7 +199,7 @@ describe("a drill's bars in the game's units", () => {
 
 describe("a drill's Mining", () => {
     function miningOf(productivity: number) {
-        const config = ConfigSchema.parse({ target_output: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+        const config = ConfigSchema.parse({ setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
             machines: [{ id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0 }], belts: [], inserters: [],
             drills: { configs: [{ id: 1, type: "big-mining-drill", mined_item_name: "iron-ore", speed_bonus: 5, productivity, target: { type: "chest", id: 1 } }] },
             chests: [{ type: "car", id: 1 }] });

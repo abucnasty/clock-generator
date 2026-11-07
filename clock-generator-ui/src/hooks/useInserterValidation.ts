@@ -11,7 +11,7 @@ import type { LiveCoverage } from '../worker/types';
  */
 function coverageKey(config: Config): string {
     return JSON.stringify({
-        target: config.target_output,
+        target: config.setpoint,
         machines: config.machines.map(({ id, recipe, fuel, productivity, prototype, result_target }) => [id, recipe, fuel, productivity, prototype,
             result_target?.type ?? null, result_target?.id ?? null]),
         belts: config.belts.map(({ id, type, lanes }) => [id, type, lanes.map(lane => [lane.ingredient, lane.stack_size,
@@ -44,7 +44,7 @@ export function useInserterValidation(
                 found => {
                     if (current) setResult(previous => previous?.key === key && JSON.stringify(previous.coverage) === JSON.stringify(found) ? previous : { key, coverage: found });
                 },
-                error => { if (current) console.error('Failed to validate inserter coverage:', error); },
+                error => { if (current) console.error('Failed to check inserter coverage:', error); },
             );
         }, 200);
         return () => { current = false; clearTimeout(timer); };

@@ -5,7 +5,7 @@ import { ConfigSchema } from "./schema";
 // buffer chest's prototype, and where inserters, drills, machines and chests stand (Sidecar 0.12.0 exports them)
 describe("labels and positions in a config", () => {
     const base = {
-        target_output: { recipe: "iron-plate", items_per_second: 1, copies: 1 },
+        setpoint: { recipe: "iron-plate", items_per_second: 1, copies: 1 },
         belts: [],
     };
     const at = { x: 3.5, y: -2.5 };

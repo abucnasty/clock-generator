@@ -8,8 +8,11 @@ import type { StockRecording } from "./machine-stock";
  * inserters that put into it when it starts a craft, and the inserters that take from it when it finishes a craft or
  * pays out a productivity bar (`wakeUps` below). A woken inserter looks for something to move, finds nothing or a
  * little, and goes back to sleep: with the debug option `show-wakeup-lists` the yellow line from the
- * inserter to the machine flickers. An inserter its clock has disabled is on no list and is never woken, once it has
- * been updated disabled (one switched off while asleep stays on its list until woken: the rule "kept-lists", `countKeptLists`). A wake-up
+ * inserter to the machine flickers. An inserter that the game updates while the clock has switched it off goes on no
+ * list (once a full hand is dropped and its arm is back), and no alarm reaches it until the clock switches it on. But a
+ * switch-off sends no alarm: an inserter that the clock switches off while it is in sleep stays on its wakeup list, and
+ * the next alarm still gives it a wakeup, in which it finds that it is disabled (a ghost wakeup, which the rule
+ * "kept-lists" counts: `countKeptLists`). A wake-up
  * is one such waking, and what a clock is there to spare a build.
  *
  * The game does not let a mod read its wake-up lists, so they are worked out here from what it does show: the state
@@ -314,7 +317,7 @@ function keptListsAlarmsInOrder(inserters: readonly WatchingInserter[], machines
  * what was read in the running game (Factorio 2.1.24, three builds:
  * a stack inserter taking from an electromagnetic plant onto a belt, the sample electromagnetic science build, the
  * sample agricultural science build; it gives the game's wake-ups by a machine tick for tick on the first two, and on
- * the third all of them and 7 more in ten periods, `wake-ups.test.ts`):
+ * the third all of them and 7 more in ten window cycles, `wake-ups.test.ts`):
  * - **A sleep.** An inserter on the update list goes to sleep in its own update when it finds nothing to do: waiting
  *   for room in a machine, on that machine's input list; waiting for items, on the list of the machine it takes from,
  *   and, from a machine into a machine, also on the input list of the one it puts into when its hand took part of a
@@ -628,6 +631,12 @@ export interface InserterEnds {
  * and in the machines' outputs where the stock recorded them (`StockRecorder`, "wake-ups").
  */
 export function wakeUpsOfStock(stock: StockRecording, ends: readonly InserterEnds[], from_tick: number, on_wake?: WakeListener): WakeUps {
+    const { inserters, machines } = watchedOfStock(stock, ends);
+    return wakeUps(inserters, machines, from_tick, stock.ticks, on_wake);
+}
+
+/** The inserters and machines of a simulated run as the rule "kept-lists" reads them */
+function watchedOfStock(stock: StockRecording, ends: readonly InserterEnds[]): { inserters: WatchingInserter[]; machines: WatchedMachine[] } {
     const recorded = new Map(stock.inserters.map(series => [series.inserter_id, series]));
     const inserters = ends.flatMap(end => {
         const series = recorded.get(end.inserter_id);
@@ -646,5 +655,55 @@ export function wakeUpsOfStock(stock: StockRecording, ends: readonly InserterEnd
         ...(machine.fuel_taken !== undefined && { fuel_taken: rises(machine.fuel_taken) }),
         ...(machine.fuel_put_in !== undefined && { fuel_put_in: rises(machine.fuel_put_in) }),
     }));
-    return wakeUps(inserters, machines, from_tick, stock.ticks, on_wake);
+    return { inserters, machines };
+}
+
+/**
+ * A ghost wakeup of a run: an alarm that woke an inserter the clock had switched off while it was asleep on a machine's
+ * list (a switch-off sends no alarm, so it kept the list; see `countKeptLists`). The update the alarm brings finds the
+ * inserter disabled and does nothing else.
+ */
+export interface GhostWakeUp {
+    inserter_id: string;
+    /** The tick of the wakeup */
+    tick: number;
+    /** The end whose machine woke it */
+    end: WatchedEnd;
+    /** The first tick the inserter showed disabled, of the switch-off before the wakeup: its update in that tick was its last enabled one */
+    switched_off: number;
+    /** The tick it went to sleep on the list, in its own update, before the switch-off */
+    asleep_from: number;
+}
+
+/**
+ * The ghost wakeups of a simulated run, from the tick `from_tick` to its end (`ghostWakeUps`)
+ */
+export function ghostWakeUpsOfStock(stock: StockRecording, ends: readonly InserterEnds[], from_tick: number): GhostWakeUp[] {
+    const { inserters, machines } = watchedOfStock(stock, ends);
+    return ghostWakeUps(inserters, machines, from_tick, stock.ticks);
+}
+
+/**
+ * The ghost wakeups of a run over the ticks `from_tick` (inclusive) to `to_tick` (exclusive): the wake-ups of the rule
+ * "kept-lists" (`wakeUps`) whose inserter showed disabled after the tick before
+ */
+export function ghostWakeUps(inserters: readonly WatchingInserter[], machines: readonly WatchedMachine[], from_tick: number, to_tick: number): GhostWakeUp[] {
+    const OFF = FactorioInserterState.DISABLED_BY_CONTROL_BEHAVIOR;
+    const first = Math.max(1, from_tick);
+    const kept_alarms = keptListsAlarmsInOrder(inserters, machines, to_tick);
+    return inserters.flatMap(inserter => {
+        const { states } = inserter;
+        const ghosts: GhostWakeUp[] = [];
+        let asleep_from = -1, lists_before = 0;
+        countKeptLists(inserter, kept_alarms, first, to_tick, (inserter_id, tick, end) => {
+            if (states[tick - 1] !== OFF) return;
+            let switched_off = tick - 1;
+            while (switched_off > 0 && states[switched_off - 1] === OFF) switched_off--;
+            ghosts.push({ inserter_id, tick, end, switched_off, asleep_from });
+        }, (tick, lists) => {
+            if (lists !== 0 && lists_before === 0) asleep_from = tick;
+            lists_before = lists;
+        });
+        return ghosts;
+    });
 }

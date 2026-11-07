@@ -71,7 +71,7 @@
         "expected": 384.0,
         "verdict": "stable",
         "selection": {
-          "id": "derived",
+          "id": "time_study_windows",
           "holds": true,
           "rate": 80,
           "supply": null
@@ -152,7 +152,7 @@
         "expected": 384.0,
         "verdict": "stable",
         "selection": {
-          "id": "derived",
+          "id": "time_study_windows",
           "holds": true,
           "rate": 80,
           "supply": null
@@ -166,10 +166,10 @@
     "car-swings-2": {
       "recorded": {
         "pr": 0,
-        "commit": "038ed41a",
-        "frozen_head": "038ed41a",
-        "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
-        "clock_sha256": "007d0402aaa07a6ed5a91cb1e775e28bf39596cf0ddfac734428aaa18ef03efe",
+        "commit": "57c76634",
+        "frozen_head": "57c76634",
+        "note": "recorded under the protocol in game ticks on the engine of this head; pr is set when the PR is opened",
+        "clock_sha256": "c034828da0e279f66be23750884f519b8b467b5313a2da0b5c07daa789e3f0bb",
         "clock_basis": "capture"
       },
       "native": {
@@ -201,8 +201,8 @@
           {
             "kind": "stop drill",
             "start": 10801,
-            "drop": 10886,
-            "release": 10886,
+            "drop": 10850,
+            "release": 10850,
             "recovered": 14535
           },
           {
@@ -222,32 +222,35 @@
         ],
         "stock": {
           "lowest": 90,
-          "end": 102,
-          "holds": true
+          "end": 86,
+          "holds": false
         },
         "result": "holds",
         "ended": 14539
       },
       "generation": {
         "period": 144,
-        "expected": 192.0,
+        "expected": 192,
         "verdict": "stable",
         "selection": {
-          "id": "swings-2",
+          "id": "takt_batches_observed_swings_2",
           "holds": true,
           "rate": 80,
           "supply": null
         },
-        "clock_sha256": "007d0402aaa07a6ed5a91cb1e775e28bf39596cf0ddfac734428aaa18ef03efe"
+        "clock_sha256": "c034828da0e279f66be23750884f519b8b467b5313a2da0b5c07daa789e3f0bb"
+      },
+      "known_differences": {
+        "stock_guard": "#587: a final drill stop leaves the furnaces' output stock at a lower, steady level, below the baseline's lowest; net output, steady state and every recovery hold"
       }
     },
     "car-swings-2-takers-last": {
       "recorded": {
         "pr": 0,
-        "commit": "038ed41a",
-        "frozen_head": "038ed41a",
-        "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
-        "clock_sha256": "007d0402aaa07a6ed5a91cb1e775e28bf39596cf0ddfac734428aaa18ef03efe",
+        "commit": "57c76634",
+        "frozen_head": "57c76634",
+        "note": "recorded under the protocol in game ticks on the engine of this head; pr is set when the PR is opened",
+        "clock_sha256": "c034828da0e279f66be23750884f519b8b467b5313a2da0b5c07daa789e3f0bb",
         "clock_basis": "capture"
       },
       "native": {
@@ -279,8 +282,8 @@
           {
             "kind": "stop drill",
             "start": 10801,
-            "drop": 10886,
-            "release": 10886,
+            "drop": 10850,
+            "release": 10850,
             "recovered": 14535
           },
           {
@@ -300,23 +303,26 @@
         ],
         "stock": {
           "lowest": 90,
-          "end": 102,
-          "holds": true
+          "end": 86,
+          "holds": false
         },
         "result": "holds",
         "ended": 14539
       },
       "generation": {
         "period": 144,
-        "expected": 192.0,
+        "expected": 192,
         "verdict": "stable",
         "selection": {
-          "id": "swings-2",
+          "id": "takt_batches_observed_swings_2",
           "holds": true,
           "rate": 80,
           "supply": null
         },
-        "clock_sha256": "007d0402aaa07a6ed5a91cb1e775e28bf39596cf0ddfac734428aaa18ef03efe"
+        "clock_sha256": "c034828da0e279f66be23750884f519b8b467b5313a2da0b5c07daa789e3f0bb"
+      },
+      "known_differences": {
+        "stock_guard": "#587: a final drill stop leaves the furnaces' output stock at a lower, steady level, below the baseline's lowest; net output, steady state and every recovery hold"
       }
     },
     "car-swings-3": {
@@ -389,7 +395,7 @@
         "expected": 96.0,
         "verdict": "stable",
         "selection": {
-          "id": "swings-3",
+          "id": "takt_batches_observed_swings_3",
           "holds": true,
           "rate": 80,
           "supply": null
@@ -470,7 +476,7 @@
         "expected": 96.0,
         "verdict": "stable",
         "selection": {
-          "id": "swings-3",
+          "id": "takt_batches_observed_swings_3",
           "holds": true,
           "rate": 80,
           "supply": null
@@ -551,7 +557,7 @@
         "expected": 96.0,
         "verdict": "stable",
         "selection": {
-          "id": "swings-1",
+          "id": "takt_batches_observed_swings_1",
           "holds": true,
           "rate": 80,
           "supply": null

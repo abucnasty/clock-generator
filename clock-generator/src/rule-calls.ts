@@ -160,7 +160,7 @@ async function main() {
         const config = await loadConfigFromFile(config_path);
         const calls = ruleCallsOfSample(config);
         console.log(header);
-        console.log(`${config_path}: ${calls.clock.label} (${calls.clock.id}, ${calls.clock.verdict}), period ${calls.clock.period_ticks}, ticks ${calls.from_tick} to ${calls.to_tick}`);
+        console.log(`${config_path}: ${calls.clock.label} (${calls.clock.id}, ${calls.clock.verdict}), period ${calls.clock.window_cycle_ticks}, ticks ${calls.from_tick} to ${calls.to_tick}`);
         console.log("");
         print(calls.removal, calls.removal_original, { unwired: calls.unwired_run, clocked: calls.clocked_run }, [SIMULATOR_NOTE], true);
         if (json_at) {

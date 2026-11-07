@@ -11,7 +11,7 @@ describe("parseConfig", () => {
                 "belts": [],
                 "inserters": [],
                 "machines": [],
-                "target_output": {
+                "setpoint": {
                     "copies": 2,
                     "items_per_second": 1.5,
                     "recipe": "electronic-circuit"
@@ -20,9 +20,9 @@ describe("parseConfig", () => {
 
             const config = await parseConfig(json);
 
-            expect(config.target_output.recipe).toBe("electronic-circuit");
-            expect(config.target_output.items_per_second).toBe(1.5);
-            expect(config.target_output.copies).toBe(2);
+            expect(config.setpoint.recipe).toBe("electronic-circuit");
+            expect(config.setpoint.items_per_second).toBe(1.5);
+            expect(config.setpoint.copies).toBe(2);
             expect(config.machines).toEqual([]);
             expect(config.inserters).toEqual([]);
             expect(config.belts).toEqual([]);
@@ -44,7 +44,7 @@ describe("parseConfig", () => {
                         "type": "machine"
                     }
                 ],
-                "target_output": {
+                "setpoint": {
                     "copies": 1,
                     "items_per_second": 2,
                     "recipe": "iron-gear-wheel"
@@ -81,7 +81,7 @@ describe("parseConfig", () => {
                     }
                 ],
                 "machines": [],
-                "target_output": {
+                "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
                     "recipe": "electronic-circuit"
@@ -122,7 +122,7 @@ describe("parseConfig", () => {
                     }
                 ],
                 "machines": [],
-                "target_output": {
+                "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
                     "recipe": "electronic-circuit"
@@ -153,7 +153,7 @@ describe("parseConfig", () => {
                 ],
                 "inserters": [],
                 "machines": [],
-                "target_output": {
+                "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
                     "recipe": "electronic-circuit"
@@ -189,7 +189,7 @@ describe("parseConfig", () => {
                 ],
                 "inserters": [],
                 "machines": [],
-                "target_output": {
+                "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
                     "recipe": "electronic-circuit"
@@ -222,7 +222,7 @@ describe("parseConfig", () => {
                 },
                 "inserters": [],
                 "machines": [],
-                "target_output": {
+                "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
                     "recipe": "iron-plate"
@@ -252,7 +252,7 @@ describe("parseConfig", () => {
                     "lcm": 120,
                     "terminal_swing_count": 10
                 },
-                "target_output": {
+                "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
                     "recipe": "electronic-circuit"
@@ -287,7 +287,7 @@ describe("parseConfig", () => {
                     }
                 ],
                 "machines": [],
-                "target_output": {
+                "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
                     "recipe": "test"
@@ -322,7 +322,7 @@ describe("parseConfig", () => {
                     }
                 ],
                 "machines": [],
-                "target_output": {
+                "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
                     "recipe": "test"
@@ -356,7 +356,7 @@ describe("parseConfig", () => {
                     }
                 ],
                 "machines": [],
-                "target_output": {
+                "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
                     "recipe": "test"
@@ -401,7 +401,7 @@ describe("parseConfig", () => {
                     }
                 ],
                 "machines": [],
-                "target_output": {
+                "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
                     "recipe": "test"
@@ -448,7 +448,7 @@ describe("parseConfig", () => {
                     }
                 ],
                 "machines": [],
-                "target_output": {
+                "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
                     "recipe": "test"
@@ -490,7 +490,7 @@ describe("parseConfig", () => {
                     }
                 ],
                 "machines": [],
-                "target_output": {
+                "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
                     "recipe": "test"
@@ -528,7 +528,7 @@ describe("parseConfig", () => {
                 },
                 "inserters": [],
                 "machines": [],
-                "target_output": {
+                "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
                     "recipe": "test"
@@ -571,7 +571,7 @@ describe("parseConfig", () => {
                 },
                 "inserters": [],
                 "machines": [],
-                "target_output": {
+                "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
                     "recipe": "test"
@@ -607,7 +607,7 @@ describe("parseConfig", () => {
                 ],
                 "inserters": [],
                 "machines": [],
-                "target_output": {
+                "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
                     "recipe": "test"
@@ -641,7 +641,7 @@ describe("parseConfig", () => {
                 },
                 "inserters": [],
                 "machines": [],
-                "target_output": {
+                "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
                     "recipe": "test"
@@ -660,7 +660,7 @@ describe("parseConfig", () => {
                 "belts": [],
                 "inserters": [],
                 "machines": [],
-                "target_output": {
+                "setpoint": {
                     "recipe": "electronic-circuit"
                 }
             }`;
@@ -673,7 +673,7 @@ describe("parseConfig", () => {
                 "belts": [],
                 "inserters": [],
                 "machines": [],
-                "target_output": {
+                "setpoint": {
                     "copies": 1,
                     "items_per_second": "not a number",
                     "recipe": "electronic-circuit"
@@ -699,7 +699,7 @@ describe("parseConfig", () => {
                 ],
                 "inserters": [],
                 "machines": [],
-                "target_output": {
+                "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
                     "recipe": "test"
@@ -729,7 +729,7 @@ describe("parseConfig", () => {
                 },
                 "inserters": [],
                 "machines": [],
-                "target_output": {
+                "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
                     "recipe": "test"
@@ -756,7 +756,7 @@ describe("parseConfig", () => {
                     }
                 ],
                 "machines": [],
-                "target_output": {
+                "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
                     "recipe": "test"
@@ -771,7 +771,7 @@ describe("parseConfig", () => {
                 "belts": [],
                 "inserters": [],
                 "machines": [],
-                "target_output": {
+                "setpoint": {
                     "copies": 1,
                     "items_per_second": -1,
                     "recipe": "electronic-circuit"
@@ -794,7 +794,7 @@ describe("parseConfig", () => {
                 "belts": [],
                 "inserters": [],
                 "machines": "not an array",
-                "target_output": {
+                "setpoint": {
                     "items_per_second": "invalid",
                     "machines": -1,
                     "recipe": 123
@@ -818,7 +818,7 @@ describe("parseConfig", () => {
                 "belts": [],
                 "inserters": [],
                 "machines": [],
-                "target_output": {
+                "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
                     "recipe": "test"
@@ -843,7 +843,7 @@ describe("parseConfig", () => {
                         "recipe": "test"
                     }
                 ],
-                "target_output": {
+                "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
                     "recipe": "test"
@@ -883,7 +883,7 @@ describe("parseConfig", () => {
                         "recipe": "test"
                     }
                 ],
-                "target_output": {
+                "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
                     "recipe": "test"
@@ -904,7 +904,7 @@ describe("parseConfigSafe", () => {
                 "belts": [],
                 "inserters": [],
                 "machines": [],
-                "target_output": {
+                "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
                     "recipe": "test"
@@ -915,14 +915,14 @@ describe("parseConfigSafe", () => {
 
         expect(result.success).toBe(true);
         if (result.success) {
-            expect(result.config.target_output.recipe).toBe("test");
+            expect(result.config.setpoint.recipe).toBe("test");
         }
     });
 
     it("should return failure result for invalid config", async () => {
         const json = `{
                 "machines": [],
-                "target_output": {
+                "setpoint": {
                     "recipe": "test"
                 }
             }`;
@@ -943,7 +943,7 @@ describe("ConfigValidationError", () => {
                 "belts": [],
                 "inserters": [],
                 "machines": [],
-                "target_output": {
+                "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
                     "recipe": 123
@@ -962,7 +962,7 @@ describe("ConfigValidationError", () => {
     it("should provide getFormattedIssues method", async () => {
         const json = `{
                 "machines": [],
-                "target_output": {
+                "setpoint": {
                     "recipe": "test"
                 }
             }`;
@@ -986,7 +986,7 @@ describe("a drop spot on a belt", () => {
         belts: [{ id: 3, type: "turbo-transport-belt", lanes: [{ ingredient: "utility-science-pack", stack_size: 4 }] }],
         inserters,
         machines: [],
-        target_output: { copies: 1, items_per_second: 1, recipe: "utility-science-pack" }
+        setpoint: { copies: 1, items_per_second: 1, recipe: "utility-science-pack" }
     });
     const drop = (position: number) => ({ type: "belt", id: 3, drop: { lane: 1, position } });
 

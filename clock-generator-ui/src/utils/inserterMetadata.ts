@@ -37,8 +37,8 @@ export function inserterStackSizeHelp(inserter: Pick<InserterFormData, 'prototyp
 export const INSERTER_TIMING_ASSUMPTION = 'When missing, type defaults to Stack inserter and quality to Legendary. '
     + 'Sidecar exports omit these details and use this timing assumption.';
 
-export const DROP_ROUTE_READ_ONLY = 'Imported geometry: route read-only. Edit and reopen the build file to change it.';
-export const DROP_BELT_READ_ONLY = 'Imported drop positions: belt type and lane layout are read-only. Edit and reopen the build file to change them.';
+export const DROP_ROUTE_READ_ONLY = 'Imported geometry: route read-only. Edit and reopen the configuration file to change it.';
+export const DROP_BELT_READ_ONLY = 'Imported drop positions: belt type and lane layout are read-only. Edit and reopen the configuration file to change them.';
 
 export function hasImportedBeltDrops(inserters: readonly Pick<InserterFormData, 'sink'>[], beltId: number): boolean {
     return inserters.some(inserter => inserter.sink.type === 'belt' && inserter.sink.id === beltId && inserter.sink.drop !== undefined);

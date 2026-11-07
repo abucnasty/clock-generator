@@ -14,7 +14,7 @@ import { belt, feasibilityOfConfig, infinityChest, inserter, lane } from "./feas
  * chest 4, so the machine itself is not held back.
  */
 const exporting = (consumed: number): Config => ({
-    target_output: { recipe: "iron-gear-wheel", items_per_second: 10, copies: 1 },
+    setpoint: { recipe: "iron-gear-wheel", items_per_second: 10, copies: 1 },
     machines: [
         { id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1000 },
         { id: 2, recipe: "iron-stick", productivity: 0, crafting_speed: 1000 },
@@ -63,7 +63,7 @@ describe("C6: an export belt gets at most what its fillers put onto it", () => {
  */
 describe("C6: an export an output inserter fills is not judged", () => {
     const byProduct = (): Config => ({
-        target_output: { recipe: "jelly", items_per_second: 16, copies: 1 },
+        setpoint: { recipe: "jelly", items_per_second: 16, copies: 1 },
         machines: [{ id: 1, recipe: "jellynut-processing", productivity: 0, crafting_speed: 5 }],
         belts: [
             belt(1, [lane("jellynut")]),

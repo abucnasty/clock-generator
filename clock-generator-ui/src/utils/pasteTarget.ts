@@ -33,22 +33,22 @@ const copiesText = (copies: number) => `${copies} ${copies === 1 ? 'copy' : 'cop
  * science pack, up to 22.968/s, 1 copy"
  */
 export function targetRowLabel(target: TargetValues, name: (id: string) => string): string {
-    return `Target Output: ${name(target.recipe)}, up to ${formatNumberText(target.items_per_second, { maxDecimals: TARGET_DECIMALS })}/s, ${copiesText(target.copies)}`;
+    return `Setpoint: ${name(target.recipe)}, up to ${formatNumberText(target.items_per_second, { maxDecimals: TARGET_DECIMALS })}/s, ${copiesText(target.copies)}`;
 }
 
 /** Where the suggestion came from, and that it is a ceiling */
 export function targetRowCaption(source: SuggestedTarget['source']): string {
     return source === 'mod'
         ? 'From the Factorio export. This is the maximum output; you can lower the rate after importing.'
-        : 'Estimated maximum output of the imported machines. You can lower the rate in Target Output after importing.';
+        : 'Estimated maximum output of the imported machines. You can lower the rate in the Setpoint panel after importing.';
 }
 
 /**
  * Said under the row when the target it fills is the export's suggested maximum: a clock at the machines' maximum has no
- * slack to recover from a disturbance. Null for an estimate of the imported machines, which says it is one.
+ * room to go back to its rate after a supply stop or an output blockage. Null for an estimate of the imported machines, which says it is one.
  */
 export function maximumTargetNote(source: SuggestedTarget['source']): string | null {
-    return source === 'mod' ? 'At the maximum the clock has no slack to recover from a disturbance; lower the rate for headroom.' : null;
+    return source === 'mod' ? 'At the maximum the clock has no room to go back to its rate after a supply stop or an output blockage; lower the rate for headroom.' : null;
 }
 
 /** Said under the row when Target Output is already set, so the row starts unticked */
@@ -56,4 +56,4 @@ export function replacesTargetNote(current: TargetValues, name: (id: string) => 
     return `Tick to replace your current target (${name(current.recipe)} at ${formatNumberText(current.items_per_second)}/s).`;
 }
 
-export const NO_TARGET_NOTE = 'Could not tell what the build makes. Set Target Output after importing.';
+export const NO_TARGET_NOTE = 'Could not tell what the build makes. Set the setpoint after importing.';

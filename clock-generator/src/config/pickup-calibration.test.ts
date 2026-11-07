@@ -7,7 +7,7 @@ import { beltPickupNotTestedNote, describeUncalibratedPickup, uncalibratedBeltPi
 
 /** A gear assembler fed from a belt by inserter 1, emptied into a chest by inserter 2 */
 const gears = (fields: { lanes?: object[]; feeder?: object; output?: object } = {}): Config => ConfigSchema.parse({
-    target_output: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+    setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
     machines: [{ id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0 }],
     inserters: [
         { id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, ...fields.feeder },
@@ -43,7 +43,7 @@ describe("belt pickups outside 16-item hands on 4-item belt stacks", () => {
     it("read the hand the simulator picks up with: an item that stacks to less than 16 cuts it", () => {
         const barrels = ConfigSchema.parse({
             ...gears(),
-            target_output: { recipe: "empty-water-barrel", items_per_second: 1, copies: 1 },
+            setpoint: { recipe: "empty-water-barrel", items_per_second: 1, copies: 1 },
             machines: [{ id: 1, recipe: "empty-water-barrel", crafting_speed: 1, productivity: 0 }],
             belts: [{ id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "water-barrel", stack_size: 4 }] }],
         });
@@ -78,7 +78,7 @@ describe("belt pickups outside 16-item hands on 4-item belt stacks", () => {
 
     it("include a burner machine's fuel taken off a belt", () => {
         const fuel = ConfigSchema.parse({
-            target_output: { recipe: "yumako-processing", items_per_second: 1, copies: 1 },
+            setpoint: { recipe: "yumako-processing", items_per_second: 1, copies: 1 },
             machines: [{ id: 1, type: "biochamber", recipe: "yumako-processing", crafting_speed: 1, productivity: 0 }],
             inserters: [
                 { id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 } },
@@ -143,7 +143,7 @@ describe("a generation with a belt pickup outside the calibration", () => {
                 what: "Inserter 1 picks up iron-plate from belt 1 in 2-item belt stacks.",
                 why: "Belt pickup timing is calibrated with 16-item hands on 4-item belt stacks only. At other belt stack sizes and "
                     + "hand sizes the simulator's pickup timing has not been compared with the game.",
-                explanation: "The clock may not match the game: its rate, stability and wake-ups are worked out from pickup timing "
+                explanation: "The clock may not match the game: its rate, stability and wakeups are worked out from pickup timing "
                     + "never checked there.",
             }]);
         }

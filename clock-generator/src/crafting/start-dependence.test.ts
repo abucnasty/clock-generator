@@ -8,14 +8,14 @@ import { startDependenceSummary } from "./alternatives";
 import { startDependenceInsight } from "./insights";
 import type { Config } from "../config";
 
-const outcome = (id: string, reaches_target: boolean, output_items_per_period: number | null = null, cycle: number[] | null = null, off_bins: StartOutcome["off_bins"] = null, span_items: number | null = null, long_run_keeps_up: boolean | null = null): StartOutcome =>
-    ({ id, label: id, reaches_target, output_items_per_period, cycle, off_bins, span_items, long_run_keeps_up });
+const outcome = (id: string, reaches_target: boolean, output_items_per_window_cycle: number | null = null, cycle: number[] | null = null, off_bins: StartOutcome["off_bins"] = null, span_items: number | null = null, long_run_keeps_up: boolean | null = null): StartOutcome =>
+    ({ id, label: id, reaches_target, output_items_per_window_cycle, cycle, off_bins, span_items, long_run_keeps_up });
 
 describe("the starts a clock is tried from", () => {
     it("describes actual samples and unavailable checks without prescribing a filled or free-running start", () => {
         const starts = [outcome("cold", true), outcome("ascending", false)];
         const dependence: StartDependence = { verdict: "start-dependent", starts, expected_output_items: 240 };
-        const assessment: ClockAssessment = { holds: true, backpressure_loss: null, items_per_second: 240, wake_ups_per_minute: 1, start_dependence: dependence };
+        const assessment: ClockAssessment = { holds: true, disturbance_trial: null, items_per_second: 240, wake_ups_per_minute: 1, start_dependence: dependence };
         const config = { overrides: { check_start_dependence: true } } as Config;
         const sampled = { id: "sampled", assessment };
         const summary = startDependenceSummary(config, [sampled]);
@@ -57,12 +57,12 @@ describe("the verdict of a clock tried from several starts", () => {
 
     it("lists a clock that depends on the start as unstable among the verdicts of a clock, and a stable one as it was", () => {
         const assessment = (start_dependence: StartDependence | null): ClockAssessment =>
-            ({ holds: true, backpressure_loss: null, items_per_second: 480, wake_ups_per_minute: 100, start_dependence });
+            ({ holds: true, disturbance_trial: null, items_per_second: 480, wake_ups_per_minute: 100, start_dependence });
         const dependence = (verdict: StartDependence["verdict"]): StartDependence => ({ verdict, starts: [], expected_output_items: 3072 });
         expect(clockVerdictOf(assessment(null))).toBe("stable");
         expect(clockVerdictOf(assessment(dependence("stable")))).toBe("stable");
         expect(clockVerdictOf(assessment(dependence("start-dependent")))).toBe("unstable");
-        expect(clockVerdictOf({ ...assessment(dependence("stable")), backpressure_loss: { survives: false, broken_by: ["coal stops arriving"], recovered_after_periods: null } })).toBe("no recovery");
+        expect(clockVerdictOf({ ...assessment(dependence("stable")), disturbance_trial: { survives: false, broken_by: ["coal stops arriving"], recovered_after_window_cycles: null } })).toBe("no recovery");
     });
 });
 
@@ -116,22 +116,22 @@ describe("the line that says where a clock depends on the start", () => {
             outcome("cold+30", true, 3072, [3072]),
             outcome("ascending", false, 2880, [2784, 2944, 2912]),
         ), per_second);
-        expect(note).toBe("start-dependent: reaches 480/s from cold, cold+30; settles at 2880 a period (450.0/s, cycle 2784/2944/2912) from ascending.");
+        expect(note).toBe("start-dependent: reaches 480/s from cold, cold+30; settles at 2880 a window cycle (450.0/s, cycle 2784/2944/2912) from ascending.");
     });
 
     it("gives the rate alone for a flat run and says so when no long run was made", () => {
         expect(startDependenceNote(dependence(outcome("cold", true), outcome("random-1", false, 2560, [2560]), outcome("ascending", false)), per_second))
-            .toBe("start-dependent: reaches 480/s from cold; settles at 2560 a period (400.0/s) from random-1; has no long run from ascending.");
+            .toBe("start-dependent: reaches 480/s from cold; settles at 2560 a window cycle (400.0/s) from random-1; has no long run from ascending.");
     });
 
     it("says how many periods are off the target where the mean is at it", () => {
         expect(startDependenceNote(dependence(outcome("cold", true), outcome("random-1", false, 3072, [3072], { count: 3, of: 80 })), per_second))
-            .toBe("start-dependent: reaches 480/s from cold; settles at 3072 a period (480.0/s, 3 of 80 periods more than a hand off it) from random-1.");
+            .toBe("start-dependent: reaches 480/s from cold; settles at 3072 a window cycle (480.0/s, 3 of 80 window cycles more than a hand off it) from random-1.");
     });
 
     it("says by how many items the judged part is under the target where no period is far off it", () => {
         expect(startDependenceNote(dependence(outcome("cold", true), outcome("random-1", false, 3072, [3072], { count: 0, of: 80 }, -40, false)), per_second))
-            .toBe("start-dependent: reaches 480/s from cold; settles at 3072 a period (480.0/s, 40 items under the judged periods as a whole) from random-1.");
+            .toBe("start-dependent: reaches 480/s from cold; settles at 3072 a window cycle (480.0/s, 40 items under the judged window cycles as a whole) from random-1.");
     });
 
     it("is null for a clock that is stable or unstable", () => {

@@ -27,7 +27,7 @@ function outputWithPhases(window: NativeControl["windows"][number]): number[] {
         [id, ranges.map(range => OpenRange.from(range.start, range.end))]));
     const run = runClockOnBuild({...native.config, overrides: {...native.config.overrides,
         terminal_swing_count: native.terminal_swings}}, windows, native.period, quiet, {
-        cold_start: true, warmup_periods: 10, simulate_periods: 10, machine_stock: true, factorio_states: false,
+        cold_start: true, warmup_window_cycles: 10, simulate_window_cycles: 10, machine_stock: true, factorio_states: false,
         moving_pickup_phases: new Map([["inserter:2", phases]]),
     });
     expect(run.machine_stock!.ticks).toBe(native.period * 10);

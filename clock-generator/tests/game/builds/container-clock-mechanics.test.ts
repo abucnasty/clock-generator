@@ -2,7 +2,7 @@ import {describe, expect, test} from "vitest";
 import {FactorioDataService} from "../../../src/data";
 import {CONTAINER_GENERATED} from "./container-clock-cases";
 import {
-    CONTAINER_TARGET, containerClockCases, containerClockConfig, containerDrainPeriods,
+    CONTAINER_TARGET, containerClockCases, containerClockConfig, containerDrainWindowCycles,
 } from "./container-clock-fixtures";
 import {readControls, runHolds, RunControls} from "./clock-controls";
 import {expectRunIsConsistent, unclockedContainerStock} from "../helpers/fixture-mechanics";
@@ -19,7 +19,7 @@ import {expectRunIsConsistent, unclockedContainerStock} from "../helpers/fixture
 interface Expected {
     /** Slots of the container, from the game data (README: a wagon 40, legendary 100; a car and a tank 80) */
     slots: number;
-    /** Per cut input: the most the container holds of it (its free and filtered slots times the stack size) and the periods that stock lasts at the target */
+    /** Per cut input: the most the container holds of it (its free and filtered slots times the stack size) and the window cycles that stock lasts at the target */
     stock: Record<string, {items: number; periods: number}>;
 }
 
@@ -61,13 +61,13 @@ describe("the stock each cut has to use up", () => {
     for (const variant of variants) {
         test(`${variant.name}: the periods the stock lasts at the target`, () => {
             const expected = EXPECTED[variant.name];
-            const period = controls[variant.name].generation!.period;
+            const window_cycle_ticks = controls[variant.name].generation!.period;
             const [cut1, cut2] = variant.recipe === "iron-gear-wheel" ? ["iron-plate", "iron-plate"] : ["iron-plate", "copper-cable"];
             for (const item of new Set([cut1, cut2])) {
                 const perCraft = variant.recipe === "iron-gear-wheel" ? 2 : item === "iron-plate" ? 1 : 3;
-                // stock over what the machine takes of it in a period at the target
-                expect(containerDrainPeriods(variant, item), item).toBe(expected.stock[item].periods);
-                expect(Math.ceil(expected.stock[item].items / (CONTAINER_TARGET * period / 60 * perCraft)), item).toBe(expected.stock[item].periods);
+                // stock over what the machine takes of it in a window cycle at the target
+                expect(containerDrainWindowCycles(variant, item), item).toBe(expected.stock[item].periods);
+                expect(Math.ceil(expected.stock[item].items / (CONTAINER_TARGET * window_cycle_ticks / 60 * perCraft)), item).toBe(expected.stock[item].periods);
             }
         });
     }
@@ -85,7 +85,7 @@ describe("the recorded clock controls of the container fixtures", () => {
 
     test.each(recorded.map(({variant}) => variant.name))("%s: the game was recorded at the target over the pinned period, held it and recovered", name => {
         const {variant, native, generation} = recorded.find(it => it.variant.name === name)!;
-        expectRunIsConsistent(native, generation, containerClockConfig(variant).target_output.items_per_second);
+        expectRunIsConsistent(native, generation, containerClockConfig(variant).setpoint.items_per_second);
         expect(native.target).toBe(CONTAINER_TARGET);
         expect(generation.verdict).toBe("stable");
         expect(native.disturbances.map(disturbance => disturbance.kind)).toEqual(["cut iron-plate", "block output",
@@ -100,8 +100,8 @@ describe("the recorded clock controls of the container fixtures", () => {
             expect(new Set(family.map(control => control.generation!.selection.id)).size, recipe).toBe(1);
             expect(new Set(family.map(control => control.generation!.period)).size, recipe).toBe(1);
         }
-        expect(variants.filter(variant => variant.recipe === "iron-gear-wheel").map(variant => controls[variant.name].generation!.selection.id)[0]).toBe("planned-belt-slack");
-        expect(variants.filter(variant => variant.recipe === "electronic-circuit").map(variant => controls[variant.name].generation!.selection.id)[0]).toBe("planned-belt-slack");
+        expect(variants.filter(variant => variant.recipe === "iron-gear-wheel").map(variant => controls[variant.name].generation!.selection.id)[0]).toBe("takt_batches_observed");
+        expect(variants.filter(variant => variant.recipe === "electronic-circuit").map(variant => controls[variant.name].generation!.selection.id)[0]).toBe("takt_batches_observed");
     });
 
     test("the generated cases are fixtures of the family, one a recipe, and the path each takes is stated", () => {

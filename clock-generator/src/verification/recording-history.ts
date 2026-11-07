@@ -1,10 +1,10 @@
-import { CLOCK_TO_WINDOW_TICKS, expandChangeList, RecordedInserter, Recording, recordedClockPeriod } from "./recording";
+import { CLOCK_TO_WINDOW_TICKS, expandChangeList, RecordedInserter, Recording, recordedClockWindowCycle } from "./recording";
 
 export interface RecordedTransfer {
     item_name: string;
     /** Sample index of the first tick the hand held items */
     start_index: number;
-    /** Sample index where the final pickup burst began (later than start_index when a partial stack was held across a disabled period) */
+    /** Sample index where the final pickup burst began (later than start_index when a partial stack was held across a disabled window cycle) */
     pickup_index: number;
     /** Sample index of the first tick the hand was empty again */
     end_index: number;
@@ -24,17 +24,17 @@ function clockValues(recording: Recording): number[] {
 }
 
 /**
- * Position per sample in the period of the windows of the generator: the clock position of the sample less the ticks
- * the combinators of the windows are behind the clock (CLOCK_TO_WINDOW_TICKS), around the period. A swing at the
+ * Position per sample in the window cycle of the windows of the generator: the clock position of the sample less the ticks
+ * the combinators of the windows are behind the clock (CLOCK_TO_WINDOW_TICKS), around the window cycle. A swing at the
  * position a window opens in is at the tick that window enables its inserter. The sample index without a clock.
  */
 export function windowPositions(recording: Recording): number[] {
     const positions = clockValues(recording);
-    const period = recordedClockPeriod(recording);
-    if (period === null) {
+    const window_cycle_ticks = recordedClockWindowCycle(recording);
+    if (window_cycle_ticks === null) {
         return positions;
     }
-    return positions.map(position => ((position - CLOCK_TO_WINDOW_TICKS) % period + period) % period);
+    return positions.map(position => ((position - CLOCK_TO_WINDOW_TICKS) % window_cycle_ticks + window_cycle_ticks) % window_cycle_ticks);
 }
 
 /** Max ticks between hand count increases that still belong to the same pickup (belt pickups fill over several ticks) */

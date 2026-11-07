@@ -15,20 +15,20 @@ it.each([false, true])('places the legend before the first plotted row (cycle vi
     const legend = screen.getByRole('list', { name: LEGEND_LABEL });
     expect(legend.compareDocumentPosition(screen.getByRole('group', { name: /^Inserter 1\b/ })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(legend).getAllByRole('listitem').map(item => item.textContent))
-        .toEqual([LEGEND_WINDOW, LEGEND_SLACK, LEGEND_SELECTED, cycleView ? 'One crafting cycle' : LEGEND_TRACK]);
+        .toEqual([LEGEND_WINDOW, LEGEND_SLACK, LEGEND_SELECTED, cycleView ? 'One output cycle' : LEGEND_TRACK]);
 });
 
-// an iron gear wheel build at 9.97 a second's selected clock: its period is 2880000/997 ticks, and its blueprint counts 2888 ("clock rounded to 2888
+// an iron gear wheel build at 9.97 a second's selected clock: its window cycle is 2880000/997 ticks, and its blueprint counts 2888 ("clock rounded to 2888
 // ticks, runs 0.02% fast")
 it.each([
-    { clock: 'a rounded clock', view: { ...alternative, simulationDurationTicks: 2880000 / 997, roundedPeriodTicks: 2888 }, periodTicks: 2888,
-        period: 'Clock period 2888 ticks (48.13 s)' },
-    { clock: 'any other clock', view: alternative, periodTicks: 480, period: 'Clock period 480 ticks (8 s)' },
-])('heads $clock with the period its blueprint counts', ({ view, periodTicks, period }) => {
+    { clock: 'a rounded clock', view: { ...alternative, simulationDurationTicks: 2880000 / 997, roundedWindowCycleTicks: 2888 }, windowCycleTicks: 2888,
+        window_cycle: 'Window cycle time 2888 ticks (48.13 s)' },
+    { clock: 'any other clock', view: alternative, windowCycleTicks: 480, window_cycle: 'Window cycle time 480 ticks (8 s)' },
+])('heads $clock with the period its blueprint counts', ({ view, windowCycleTicks, window_cycle }) => {
     show(<WakeWindowsView alternative={view} asTable={false} onAsTableChange={() => {}} />);
-    const subtitle = screen.getByText(/^Clock period /).textContent!;
+    const subtitle = screen.getByText(/^Window cycle time /).textContent!;
     // one inserter, and no as-built run to count its wake-ups
-    expect(subtitle).toBe(summaryText({ periodTicks, inserters: 1, drills: 0, wakeUps: null }));
-    // the copy has no test of its own: the period reads in whole ticks and seconds, as the blueprint counts it
-    expect(subtitle.split(' · ')[0]).toBe(period);
+    expect(subtitle).toBe(summaryText({ windowCycleTicks, inserters: 1, drills: 0, wakeUps: null }));
+    // the copy has no test of its own: the window cycle reads in whole ticks and seconds, as the blueprint counts it
+    expect(subtitle.split(' · ')[0]).toBe(window_cycle);
 });

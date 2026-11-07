@@ -1,7 +1,7 @@
 import { Close, ContentPaste, ExpandMore } from '@mui/icons-material';
 import { Box, Button, IconButton, Link, Typography } from '@mui/material';
 import { useId, useLayoutEffect, useRef, useState } from 'react';
-import { focusTargetOutputHeading } from '../utils/introCard';
+import { focusSetpointHeading } from '../utils/introCard';
 import {
     INTRO_BUTTONS,
     INTRO_HEADING,
@@ -58,7 +58,7 @@ export function IntroCard({ onPaste, onTryExample, onBuildByHand, onDismiss }: I
         const root = rootRef.current;
         return () => {
             if (root?.contains(document.activeElement)) {
-                focusTargetOutputHeading();
+                focusSetpointHeading();
             }
         };
     }, []);

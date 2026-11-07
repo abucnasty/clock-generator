@@ -3,18 +3,18 @@ import { ConfigPaths } from "../config/config-paths";
 import { TestConfigPaths } from "../../tests/configs/paths";
 import { loadConfigFromFile } from "../config/loader";
 import { Entity } from "../entities";
-import { judgeRecovery, runsOn } from "./backpressure-loss";
+import { judgeRecovery, runsOn } from "./disturbance-trial";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { buildOutputInsertersOf, type EntityTransferCountMap } from "./sequence/cycle/swing-counts";
 import { targetItemOf } from "./sequence/cycle/target-ends";
 import { atRateFrom, branchesScaledTo, cycleAtRate, firstBinAtRate, neverBlockingBranchesOf, type BranchBins } from "./terminal-rate";
 import { traitsOf } from "../entities/traits/traits-of";
 
-/** The branches of a sample, with every terminal output planned to move one hand of 16 a period */
+/** The branches of a sample, with every terminal output planned to move one hand of 16 a window cycle */
 async function branchesOf(path: string) {
     const config = await loadConfigFromFile(path);
     const registry = createEntityRegistryFromConfig(config);
-    const target = targetItemOf(config.target_output);
+    const target = targetItemOf(config.setpoint);
     const outputs = registry.getAll().filter(Entity.isMachine).filter(machine => machine.output.item_name === target.item)
         .flatMap(machine => buildOutputInsertersOf(machine, registry));
     const swing_counts = { entries: () => outputs.map(inserter => [inserter.entity_id,
@@ -25,8 +25,8 @@ async function branchesOf(path: string) {
 describe("the branches of the terminal outputs into sinks that never block", () => {
     it("are the science plants' drains where they drop into infinity chests that remove all", async () => {
         expect(await branchesOf(TestConfigPaths.ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED_NO_BUFFERS)).toEqual([
-            { source_id: "machine:1", inserter_ids: ["inserter:4"], share_per_period: 16, hand: 16 },
-            { source_id: "machine:2", inserter_ids: ["inserter:3"], share_per_period: 16, hand: 16 },
+            { source_id: "machine:1", inserter_ids: ["inserter:4"], share_per_window_cycle: 16, hand: 16 },
+            { source_id: "machine:2", inserter_ids: ["inserter:3"], share_per_window_cycle: 16, hand: 16 },
         ]);
     });
 
@@ -35,8 +35,8 @@ describe("the branches of the terminal outputs into sinks that never block", () 
     });
 
     it("keep each branch's part when judged on another count than the plan's", () => {
-        const branches = [{ source_id: "a", inserter_ids: ["1"], share_per_period: 16, hand: 16 }, { source_id: "b", inserter_ids: ["2"], share_per_period: 48, hand: 16 }];
-        expect(branchesScaledTo(branches, 32).map(branch => branch.share_per_period)).toEqual([8, 24]);
+        const branches = [{ source_id: "a", inserter_ids: ["1"], share_per_window_cycle: 16, hand: 16 }, { source_id: "b", inserter_ids: ["2"], share_per_window_cycle: 48, hand: 16 }];
+        expect(branchesScaledTo(branches, 32).map(branch => branch.share_per_window_cycle)).toEqual([8, 24]);
         expect(branchesScaledTo(branches, 64)).toEqual(branches);
     });
 });
@@ -98,7 +98,7 @@ describe("recovery where every terminal output drops into a sink that never bloc
     });
 
     it("is back where a science plant makes a little more than its share and its drain hands the surplus on", () => {
-        // a hand over its share every 14 periods, for the longest a trial runs on: 14 hands ahead by its end
+        // a hand over its share every 14 window cycles, for the longest a trial runs on: 14 hands ahead by its end
         const ahead = Array.from({ length: 200 }, (_, at) => at % 14 === 13 ? 32 : 16);
         expect(judgeRecovery(ahead.map(items => items * 2), 32, null, 40, branches(ahead, ahead)).recovers).toBe(true);
     });

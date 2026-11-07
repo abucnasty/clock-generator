@@ -2,13 +2,13 @@ import type { Config } from 'clock-generator/browser';
 import { generatedForOf, type GeneratedFor } from './resultsStaleness';
 
 /** The offer under the clock table when the slower searches were left out */
-export const DEEPER_SEARCH_OFFER = 'We stopped once we found a working clock. A deeper, slower search might find one with fewer wake-ups.';
+export const DEEPER_SEARCH_OFFER = 'We stopped once we found a working clock. A deeper, slower search might find one with fewer wakeups.';
 
 export const DEEPER_SEARCH_BUTTON = 'Search deeper';
 
 export const DEEPER_SEARCH_KEEP_ON = 'Always search deeper for this build';
 
-export const DEEPER_SEARCH_KEEP_ON_NOTE = 'With Search deeper, also turns on "Search for fewer wake-ups" in Advanced.';
+export const DEEPER_SEARCH_KEEP_ON_NOTE = 'With Search deeper, also turns on "Search for fewer wakeups" in Advanced.';
 
 /** Said while a run that searches deeper goes */
 export const DEEPER_SEARCH_SEARCHING = 'Searching deeper… this can take several times longer.';
@@ -22,7 +22,7 @@ export const deeperSearchDoneOnce = (label: string | null) =>
 
 /** Said after every run while "Search for fewer wake-ups" is on */
 export const deeperSearchDoneKept = (label: string | null) =>
-    `Deeper search is on for this build.${recommendedNow(label)} To stop it, turn off "Search for fewer wake-ups" under Advanced.`;
+    `Deeper search is on for this build.${recommendedNow(label)} To stop it, turn off "Search for fewer wakeups" under Advanced.`;
 
 /**
  * What the notice under the clock table says: nothing, the offer, that a run searching deeper is going, or that the

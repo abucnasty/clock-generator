@@ -39,12 +39,12 @@ import {
     modeFieldId,
     REPEAT_LABEL,
     ruleFieldId,
-    rulePeriodOf,
+    ruleWindowCycleOf,
     ruleProblemsOf,
     ruleWarningsOf,
     type RuleProblem,
 } from '../utils/ruleProblems';
-import { blueprintNoteOf, periodLineOf, RULE_COPY, ruleSentenceOf } from '../utils/ruleSentence';
+import { blueprintNoteOf, windowCycleLineOf, RULE_COPY, ruleSentenceOf } from '../utils/ruleSentence';
 import { entityKey, plannedWindowsOf, ticksText } from '../utils/ruleTiming';
 import { DiscardChangesDialog } from './DiscardChangesDialog';
 import { RuleSetEditor } from './RuleSetEditor';
@@ -52,7 +52,7 @@ import { createDefaultRuleSet } from './ruleSetUtils';
 import { FullscreenProvider } from './FullscreenContext';
 import { LatchConfigEditor } from './LatchConfigEditor';
 import { QuickTemplateSelect } from './QuickTemplateSelect';
-import { RulePeriodStrip } from './RulePeriodStrip';
+import { RuleWindowCycleStrip } from './RuleWindowCycleStrip';
 import { useRuleTiming } from './RuleTimingContext';
 
 export interface CopyFromOption {
@@ -88,7 +88,7 @@ const MODE_DESCRIPTIONS: Record<EnableControlMode, string> = {
     [EnableControlMode.AUTO]: 'The generator decides when it is on (default).',
     [EnableControlMode.ALWAYS]: 'On all the time, with no combinator in the blueprint.',
     [EnableControlMode.NEVER]: 'Never switched on.',
-    [EnableControlMode.CLOCKED]: 'On only during the wake windows you set.',
+    [EnableControlMode.CLOCKED]: 'On only during the enable windows you set.',
     [EnableControlMode.CONDITIONAL]: 'On only while your conditions are true.',
 };
 
@@ -104,11 +104,11 @@ const DRILL_NO_CONDITIONAL = "Not available for mining drills: conditions read a
 const DRILL_NO_NEVER = 'Not available for a drill into a container: it would fill nothing.';
 const REPEAT_HELPER = (cycleTicks: number | null) =>
     cycleTicks === null
-        ? 'Leave empty to repeat every crafting cycle.'
-        : `Leave empty to repeat every crafting cycle (${ticksText(cycleTicks)} ticks).`;
+        ? 'Leave empty to repeat every output cycle.'
+        : `Leave empty to repeat every output cycle (${ticksText(cycleTicks)} ticks).`;
 const PLANNED_CAPTION = (label: string, ranges: { start: number; end: number }[]) =>
     `In the clock on Results, ${label} is on at ${ranges.length === 1 && ranges[0].start === ranges[0].end ? 'tick' : 'ticks'} ${joinRanges(ranges)}.`;
-const NO_PLANNED_CAPTION = (label: string) => `The clock on Results has no wake windows for ${label}.`;
+const NO_PLANNED_CAPTION = (label: string) => `The clock on Results has no enable windows for ${label}.`;
 const COPY_FROM_QUESTION = (label: string, summary: string) => `Replace this rule with ${label}'s (${summary})?`;
 const COPIED = (label: string) => `Rule copied from ${label}.`;
 const TEMPLATE_REPLACED = (name: string) => `Conditions replaced with the template ${name}.`;
@@ -181,12 +181,12 @@ export function EnableControlFormContent({
     // Initialize state from currentOverride, once: what the form was opened with. A rule that is not Clocked starts its
     // Clocked fields from the clock's wake windows for this entity, when Results are for this build
     const [initial] = useState(() =>
-        enableControlDraftOf(currentOverride, planned && timing.periodTicks !== null ? { ranges: planned, periodTicks: timing.periodTicks } : null),
+        enableControlDraftOf(currentOverride, planned && timing.windowCycleTicks !== null ? { ranges: planned, windowCycleTicks: timing.windowCycleTicks } : null),
     );
 
     const [mode, setMode] = useState<EnableControlMode>(initial.mode);
     const [ranges, setRanges] = useState<DraftWindow[]>(initial.ranges);
-    const [periodDuration, setPeriodDuration] = useState<string>(initial.periodDuration);
+    const [windowCycleDuration, setWindowCycleDuration] = useState<string>(initial.windowCycleDuration);
     const [ruleSet, setRuleSet] = useState<RuleSet>(initial.ruleSet);
     const [latchEnabled, setLatchEnabled] = useState<boolean>(initial.latchEnabled);
     const [releaseCondition, setReleaseCondition] = useState<RuleSet | undefined>(initial.releaseCondition);
@@ -200,8 +200,8 @@ export function EnableControlFormContent({
 
     // the rule the form would save, and whether it differs from the one it was opened with
     const draft = useMemo(
-        () => ({ mode, ranges, periodDuration, ruleSet, latchEnabled, releaseCondition }),
-        [mode, ranges, periodDuration, ruleSet, latchEnabled, releaseCondition],
+        () => ({ mode, ranges, windowCycleDuration, ruleSet, latchEnabled, releaseCondition }),
+        [mode, ranges, windowCycleDuration, ruleSet, latchEnabled, releaseCondition],
     );
     const override = useMemo(() => buildEnableControlOverride(draft), [draft]);
     const changed = useMemo(() => enableControlDraftChanged(draft, initial), [draft, initial]);
@@ -286,9 +286,9 @@ export function EnableControlFormContent({
     };
 
     const handleUseClockWindows = () => {
-        if (!planned || timing.periodTicks === null) return;
+        if (!planned || timing.windowCycleTicks === null) return;
         setRanges(draftWindowsOf(planned));
-        setPeriodDuration(`${timing.periodTicks}`);
+        setWindowCycleDuration(`${timing.windowCycleTicks}`);
     };
 
     const handleSave = () => {
@@ -320,7 +320,7 @@ export function EnableControlFormContent({
         setMode(copied.mode);
         if (copied.mode === EnableControlMode.CLOCKED) {
             setRanges(copied.ranges.length > 0 ? draftWindowsOf(copied.ranges) : [{ ...EMPTY_WINDOW }]);
-            setPeriodDuration(copied.period_duration_ticks?.toString() || '');
+            setWindowCycleDuration(copied.period_duration_ticks?.toString() || '');
         } else if (copied.mode === EnableControlMode.CONDITIONAL) {
             setRuleSet(copied.rule_set || createDefaultRuleSet());
             setLatchEnabled(!!copied.latch);
@@ -351,8 +351,8 @@ export function EnableControlFormContent({
     const neverOff = intoContainer && currentOverride?.mode !== EnableControlMode.NEVER;
     const modeProblems: Partial<Record<EnableControlMode, RuleProblem>> = { [EnableControlMode.CONDITIONAL]: shownProblems.get(modeId), [EnableControlMode.NEVER]: shownProblems.get(neverId) };
 
-    const rulePeriod = mode === EnableControlMode.CLOCKED ? rulePeriodOf(draft, timing) : null;
-    const reference = planned && rulePeriod === timing.periodTicks ? planned : null;
+    const ruleWindowCycle = mode === EnableControlMode.CLOCKED ? ruleWindowCycleOf(draft, timing) : null;
+    const reference = planned && ruleWindowCycle === timing.windowCycleTicks ? planned : null;
     const stripWindows = override?.mode === EnableControlMode.CLOCKED
         ? ranges
             .map((window, i) => ({ window, i }))
@@ -471,10 +471,10 @@ export function EnableControlFormContent({
                 {mode === EnableControlMode.CLOCKED && (
                     <Box sx={{ mt: 3, pl: { xs: 0, sm: 4 } }}>
                         <Typography variant="subtitle2" component="h3" sx={{ mb: 1 }}>
-                            Wake windows
+                            Enable windows
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }} data-rule-period="">
-                            {periodLineOf(timing)}
+                            {windowCycleLineOf(timing)}
                         </Typography>
 
                         {ranges.map((range, index) => {
@@ -529,7 +529,7 @@ export function EnableControlFormContent({
                         })}
 
                         <Button color="inherit" startIcon={<Add />} onClick={handleAddRange} size="small">
-                            Add wake window
+                            Add enable window
                         </Button>
 
                         {planned ? (
@@ -541,14 +541,14 @@ export function EnableControlFormContent({
                                     {PLANNED_CAPTION(entityName, planned)}
                                 </Typography>
                             </Box>
-                        ) : timing.from === 'results' && timing.periodTicks !== null && Number.isInteger(timing.periodTicks) ? (
+                        ) : timing.from === 'results' && timing.windowCycleTicks !== null && Number.isInteger(timing.windowCycleTicks) ? (
                             <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }} data-rule-planned="">
                                 {NO_PLANNED_CAPTION(entityName)}
                             </Typography>
                         ) : null}
 
-                        {rulePeriod !== null && (
-                            <RulePeriodStrip periodTicks={rulePeriod} windows={stripWindows} reference={reference} />
+                        {ruleWindowCycle !== null && (
+                            <RuleWindowCycleStrip windowCycleTicks={ruleWindowCycle} windows={stripWindows} reference={reference} />
                         )}
 
                         <Box sx={{ mt: 3 }}>
@@ -556,8 +556,8 @@ export function EnableControlFormContent({
                                 id={ruleFieldId(idPrefix, 'repeat')}
                                 label={REPEAT_LABEL}
                                 type="number"
-                                value={periodDuration}
-                                onChange={(e) => setPeriodDuration(e.target.value)}
+                                value={windowCycleDuration}
+                                onChange={(e) => setWindowCycleDuration(e.target.value)}
                                 size="small"
                                 sx={{ width: 240, maxWidth: '100%' }}
                                 error={repeatProblem !== undefined}
@@ -700,12 +700,12 @@ function EnableControlModalContent({
                 maxWidth={isFullscreen ? false : 'md'}
                 fullWidth
                 fullScreen={isFullscreen}
-                // named by the heading and the entity, not by the title bar with its buttons: "Enable rule Inserter 1"
+                // named by the heading and the entity, not by the title bar with its buttons: "Enable control override Inserter 1"
                 aria-labelledby="enable-control-title enable-control-entity"
             >
                 <DialogTitle component="div" id="enable-control-bar" sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Box>
-                        <Typography variant="h6" component="h2" id="enable-control-title">Enable rule</Typography>
+                        <Typography variant="h6" component="h2" id="enable-control-title">Enable control override</Typography>
                         <Typography variant="body2" color="text.secondary" id="enable-control-entity">{entityLabel}</Typography>
                     </Box>
                     <Box sx={{ display: 'flex', flexShrink: 0 }}>

@@ -107,7 +107,7 @@ describe('estimateKeptBytes and leanResults', () => {
         expect(estimateKeptBytes(fakeResults('k', { clocks: [fakeClock('a', { blueprint: 10_000 })] }))).toBeGreaterThan(small);
     });
 
-    it('empties the histories, keeps the wake windows, blueprints and fuel, and fits a big record under the cap', () => {
+    it('empties the histories, keeps the enable windows, blueprints and fuel, and fits a big record under the cap', () => {
         // 45 000 entries in each of two histories, 100 bytes each: about 9 MB per clock
         const big = fakeResults('k', { clocks: [fakeClock('a', { entries: 45_000 }), fakeClock('b', { entries: 45_000 })] });
         expect(estimateKeptBytes(big)).toBeGreaterThan(RECORD_BYTES_CAP);

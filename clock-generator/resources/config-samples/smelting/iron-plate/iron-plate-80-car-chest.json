@@ -1,5 +1,5 @@
 {
-  "target_output": {
+  "setpoint": {
     "recipe": "iron-plate",
     "items_per_second": 80,
     "copies": 1

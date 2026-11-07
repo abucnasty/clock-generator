@@ -15,7 +15,7 @@ import { looksLikeSidecarExport, readSidecarExport } from '../utils/sidecarExpor
 import { INTRO_BUTTONS, invalidExportPrompt, openFileProblem, PASTE_PROMPTS, type PastePrompt } from '../utils/sidecarGuide';
 import { maximumTargetNote, NO_TARGET_NOTE, replacesTargetNote, targetRowCaption, targetRowLabel, targetToFill, type TargetValues } from '../utils/pasteTarget';
 import type { ExampleBuild } from '../utils/exampleBuilds';
-import { focusTargetOutputHeading } from '../utils/introCard';
+import { focusSetpointHeading } from '../utils/introCard';
 import type { ConfigFormData } from '../utils/configForm/formData';
 import { applyPaste, pastePreview, type ImportSelections, type PasteReferenceWarning } from '../utils/pastePreview';
 import { InserterDetails } from './InserterDetails';
@@ -203,7 +203,7 @@ export function ConfigImportExport({
         const base = formDataToConfig(currentForm);
         simplificationConfig = {
             ...base,
-            target_output: prospectiveTarget,
+            setpoint: prospectiveTarget,
             machines: pendingImport.machines,
             inserters: pendingImport.inserters,
             belts: pendingImport.belts,
@@ -382,7 +382,7 @@ export function ConfigImportExport({
                     await importConfigText(content, UNDO_IMPORT_MESSAGE);
                 }
             } catch (error) {
-                console.error('Open build file error:', error);
+                console.error('Open configuration file error:', error);
                 errorIdRef.current = notify({ severity: 'error', text: openFileProblem(error) });
             }
 
@@ -460,7 +460,7 @@ export function ConfigImportExport({
         const fill = importSelections.target ? pendingImport.fill : null;
         const parts = currentPreview.counts.filter(row => row.replacing)
             .map(row => countOf(row.incoming, row.category.slice(0, -1), row.category));
-        if (fill !== null) parts.unshift('Target Output');
+        if (fill !== null) parts.unshift('Setpoint');
         const next = applyPaste(currentForm, pendingImport, importSelections, fill?.values);
 
         resetPasteFlow();
@@ -481,7 +481,7 @@ export function ConfigImportExport({
         if (opener instanceof HTMLElement && opener.isConnected) {
             opener.focus();
         } else {
-            focusTargetOutputHeading();
+            focusSetpointHeading();
         }
     }, []);
 
@@ -601,13 +601,13 @@ export function ConfigImportExport({
                     <ListItemIcon>
                         <Upload fontSize="small" />
                     </ListItemIcon>
-                    <ListItemText>Open build file…</ListItemText>
+                    <ListItemText>Open configuration file…</ListItemText>
                 </MenuItem>
                 <MenuItem onClick={handleMenuExport} disabled={!config}>
                     <ListItemIcon>
                         <Download fontSize="small" />
                     </ListItemIcon>
-                    <ListItemText>Save build file</ListItemText>
+                    <ListItemText>Save configuration file</ListItemText>
                 </MenuItem>
                 <MenuItem onClick={handleMenuShare} disabled={!config}>
                     <ListItemIcon>
@@ -670,7 +670,7 @@ export function ConfigImportExport({
                     <ListItemIcon sx={{ color: 'inherit' }}>
                         <RestartAlt fontSize="small" />
                     </ListItemIcon>
-                    <ListItemText>Reset build</ListItemText>
+                    <ListItemText>Reset configuration</ListItemText>
                 </MenuItem>
             </Menu>
 
@@ -724,7 +724,7 @@ export function ConfigImportExport({
                             belts: candidate.belts,
                             chests: candidate.chests ?? [],
                             drills: candidate.drills?.configs ?? [],
-                            fill: { values: candidate.target_output, source: pendingImport.fill!.source },
+                            fill: { values: candidate.setpoint, source: pendingImport.fill!.source },
                         });
                         // The explicit simplify action also accepts its displayed Copies change.
                         setImportSelections(current => ({ ...current, target: true }));

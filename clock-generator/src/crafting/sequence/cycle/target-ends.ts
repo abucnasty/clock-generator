@@ -30,9 +30,9 @@ export function targetInsertersOf(machine: Machine, target: TargetItem, registry
     return target.counts === "made" ? buildOutputInsertersOf(machine, registry) : insertersBringingIn(machine, target.item, registry);
 }
 
-/** The target of a config's `target_output` */
-export function targetItemOf(target_output: { recipe: ItemName; counts?: TargetCounts }): TargetItem {
-    return { item: target_output.recipe, counts: target_output.counts ?? "made" };
+/** The target of a config's `setpoint` */
+export function targetItemOf(setpoint: { recipe: ItemName; counts?: TargetCounts }): TargetItem {
+    return { item: setpoint.recipe, counts: setpoint.counts ?? "made" };
 }
 
 /**
@@ -57,7 +57,7 @@ export function returnedTargetRefusal(target: TargetItem, items_per_second: numb
         const destroyed = Number((items_per_second * (used - back) / back).toFixed(6));
         return `Machine ${machine.entity_id.number} places the ${target.item} of the target into ${machine.result_target}, and the build takes `
             + "all of it back into the machine: none leaves the build, so it is not made. A machine that destroys an item it is brought "
-            + `is planned on what it destroys: set \`target_output.counts\` to "destroyed" and \`items_per_second\` to the ${target.item} it is `
+            + `is planned on what it destroys: set \`setpoint.counts\` to "destroyed" and \`items_per_second\` to the ${target.item} it is `
             + `brought from outside, ${destroyed} for the ${Number(items_per_second.toFixed(6))} a second it gives back.`;
     }
     return null;

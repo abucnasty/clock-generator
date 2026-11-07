@@ -16,7 +16,7 @@ function OutputTransferSection({ control, children, collapsible, count, missing,
 }) {
     const [expanded, setExpanded] = useState(false);
     const detailsId = useId();
-    return <PanelSection level={4} title="Output transfer">
+    return <PanelSection level={4} title="Output routes">
         {control}
         {generationIssues.map(issue => <Alert key={`${issue.machine_id}:${issue.target_machine_id}:${issue.code}`} severity="warning" sx={{ mb: 1 }}>{issue.message}</Alert>)}
         {collapsible && <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: 1 }}>
@@ -102,7 +102,7 @@ export function OutputTransferPanel({ summary, chests, facts, targetRate, atTarg
                             ? `${fact.stochastic ? 'Expected capacity' : 'Capacity'}: ${formatNumberText(fact.rate_per_second)}/s`
                             : `${fact.stochastic ? 'Expected at target' : 'At target'}: ${formatNumberText(atTargetRate)}/s`}
                     </Typography>}
-                    {atTarget && fact && atTargetRate === undefined && <Typography variant="caption" color="text.secondary" component="div">At-target rate unavailable</Typography>}
+                    {atTarget && fact && atTargetRate === undefined && <Typography variant="caption" color="text.secondary" component="div">Rate at the setpoint unavailable</Typography>}
                     {direct && <Typography variant="body2" color="text.secondary">{direct}</Typography>}
                     {result.direct === 'accepted' && result.inserters.length > 0 && <Typography variant="caption" color="text.secondary" component="div">
                         The target takes this item directly. Inserters can take what remains in the machine output.

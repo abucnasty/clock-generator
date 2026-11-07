@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the tests, are in the git history.
 Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#changelogs).
 
+## [Unreleased]
+
+## [0.28.0] - 2026-11-07
+
+### Added
+- generation: a new clock that enables some inserters for one tick at each swing
+- generation: a new router, Coordinated Sources, gives each source's inserters the strategy that fits them
+
+### Changed
+- generation: accumulator, processing unit, advanced circuit and nine other builds recommend clocks with fewer wakeups
+- generation: chemical science, electric furnace and nine other builds recommend clocks with fewer wakeups
+- generation: Euclidean Swings now falls back to fewer output swings where the machine cannot take them
+- generation: several builds now select clocks with fewer wakeups, among them logistic and electromagnetic science
+- ui: the site's terms follow the glossary: enable window, wakeup, window cycle time, recovery, configuration
+- generation: inserters from a belt into a chest are named when the build is refused
+- generation: the processing unit circuit export build's clock now wakes inserters about a quarter less
+- ui: clocks are named for the practice they follow, and the table shows signals a minute
+- generation: logistic science, chemical science, electric furnace and three other builds recommend clocks with fewer wakeups
+
+### Fixed
+- ui: an unexpected error in the check now says the generator failed, not your build
+- ui: the install guide says Enable if, and the site's words follow the glossary
+- simulation: belt slack and low insertion limits honor the item's stack size during a swing
+
 ## [0.27.2] - 2026-11-05
 
 ### Fixed

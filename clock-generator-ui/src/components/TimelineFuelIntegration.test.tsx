@@ -21,7 +21,7 @@ it('reveals nutrient stock and burning energy from a real agricultural-science r
     const engine = await import('clock-generator/browser');
     engine.FactorioDataService.initialize(JSON.parse(factorioData));
     const config = engine.parseConfigFromJson(agricultureConfig);
-    const recording = engine.recordSimulationTimeline({ config, mode: 'plan', period_ticks: 600, terminal_swing_count: 1, windows: {} });
+    const recording = engine.recordSimulationTimeline({ config, mode: 'plan', window_cycle_ticks: 600, terminal_swing_count: 1, windows: {} });
     const machine = recording.entities.find(entity => entity.recipe === 'agricultural-science-pack')!;
     expect(machine).toBeDefined();
     const fuel = machine.signals.find(signal => signal.id === 'fuel')!;

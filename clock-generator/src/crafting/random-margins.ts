@@ -1,18 +1,18 @@
 import { amountVariance, EntityId, Inserter, Machine, ReadableEntityRegistry, yieldOf } from "../entities";
-import type { ExcessLoss } from "./backpressure-loss";
+import type { ExcessLoss } from "./disturbance-trial";
 import type { Ingredient } from "../data";
 import { OpenRange } from "../data-types";
 import { fraction } from "../data-types/fraction";
 import { rotateRanges } from "./clock";
-import { CraftingCyclePlan } from "./sequence/cycle/crafting-cycle";
+import { OutputCyclePlan } from "./sequence/cycle/output-cycle";
 import { destroyedTargetCrafts, resultTakersOf } from "./sequence/cycle/swing-counts";
 import { targetInsertersOf, targetMachinesOf } from "./sequence/cycle/target-ends";
 
 /**
- * The share of periods whose amount the room of every window that carries a random amount covers: the simulator runs a
- * result that comes by chance at its expected amount, and the game's amount of a period spreads around it as a binomial
- * of the period's rolls (recorded on the recycler: returns a second from 43 to 80 around 60.2). The room is the
- * binomial's own quantile at this share less the mean, so that a period comes out over it about once in 740 periods,
+ * The share of window cycles whose amount the room of every window that carries a random amount covers: the simulator runs a
+ * result that comes by chance at its expected amount, and the game's amount of a window cycle spreads around it as a binomial
+ * of the window cycle's rolls (recorded on the recycler: returns a second from 43 to 80 around 60.2). The room is the
+ * binomial's own quantile at this share less the mean, so that a window cycle comes out over it about once in 740 window cycles,
  * whatever the count, and the container the results wait in takes that up. It is the share 3 standard deviations cover
  * of a normal amount; for a small count the binomial's tail is the heavier one (recorded on a recycler on scrap: holmium
  * ore crossed the 3-sigma line about 4 times as often as 3 sigma says).
@@ -122,7 +122,7 @@ export function countDistribution(result: Ingredient, rolls: number): { counts: 
 }
 
 /**
- * What `rolls` rolls of a result give over their mean in all but the share 1 - `level` of the periods. Its amount a
+ * What `rolls` rolls of a result give over their mean in all but the share 1 - `level` of the window cycles. Its amount a
  * roll is 0 or its amount with its chance, and one more at its extra count fraction when it comes; that sum is a
  * binomial whenever the amount is 0 (one item at chance x extra), the chance is 1 (the amount every roll, and a binomial
  * of extras) or there is no extra (the amount times a binomial of chances), and its quantile is the binomial's. Every
@@ -150,38 +150,38 @@ export interface RandomAmountMargin {
     item: string;
     /** The inserters that take it out, by entity id */
     inserter_ids: string[];
-    /** Crafts of the machine a period of the clock */
+    /** Crafts of the machine a window cycle of the clock */
     crafts: number;
-    /** What a period gives of it on average, the amount the plan moves */
+    /** What a window cycle gives of it on average, the amount the plan moves */
     expected_items: number;
-    /** The standard deviation of what a period gives of it, from its own chance */
+    /** The standard deviation of what a window cycle gives of it, from its own chance */
     sigma_items: number;
     /**
-     * Items over `expected_items` that a period gives at most in all but 1 in 740 periods (RANDOM_MARGIN_LEVEL): the
+     * Items over `expected_items` that a window cycle gives at most in all but 1 in 740 window cycles (RANDOM_MARGIN_LEVEL): the
      * binomial's own quantile less the mean; the room the windows need
      */
     needed_items: number;
-    /** Items the windows can move beyond the expected in a period, in the whole hands that fit in them */
+    /** Items the windows can move beyond the expected in a window cycle, in the whole hands that fit in them */
     room_items: number;
     /** `room_items` in standard deviations */
     sigmas: number;
     /**
      * Hands of room added to each of the inserters where the room was under `needed_items`, a swing longer on as many of
-     * its windows, spread over the period; 0 where it was not
+     * its windows, spread over the window cycle; 0 where it was not
      */
     added_hands: number;
 }
 
-/** The room of a machine's crafting against the spread of what comes back into it: spare crafts a period */
+/** The room of a machine's crafting against the spread of what comes back into it: spare crafts a window cycle */
 export interface CraftingMargin {
     machine_id: number;
-    /** Crafts a period at the target */
+    /** Crafts a window cycle at the target */
     crafts: number;
-    /** The most it can craft in a period */
+    /** The most it can craft in a window cycle */
     capacity: number;
-    /** The standard deviation of the crafts a period needs: what comes back into it spreads */
+    /** The standard deviation of the crafts a window cycle needs: what comes back into it spreads */
     sigma_crafts: number;
-    /** `capacity - crafts` in standard deviations, a period */
+    /** `capacity - crafts` in standard deviations, a window cycle */
     sigmas: number;
     /**
      * Ticks over which its spare crafts cover what comes back over its expected amount in all but 1 in 740 such spans
@@ -190,7 +190,7 @@ export interface CraftingMargin {
      */
     ticks_to_cover: number | null;
     /**
-     * What waits of what comes back, by item, in all but 1 in 740 periods (RANDOM_MARGIN_LEVEL): the backlog the
+     * What waits of what comes back, by item, in all but 1 in 740 window cycles (RANDOM_MARGIN_LEVEL): the backlog the
      * container it places into takes up while the spare crafts work it off (backlogAtLevel), shared out by the items'
      * expected amounts. Empty where nothing comes back by chance, or where it has no spare crafts to work it off.
      * The excess trial of the clock places it at once (excessLossOf).
@@ -199,14 +199,14 @@ export interface CraftingMargin {
 }
 
 /**
- * What waits of what comes back into a machine in all but the share 1 - `level` of the periods. While some waits, the
- * machine crafts at its capacity, and each period the backlog moves by what comes back over the mean less the spare
+ * What waits of what comes back into a machine in all but the share 1 - `level` of the window cycles. While some waits, the
+ * machine crafts at its capacity, and each window cycle the backlog moves by what comes back over the mean less the spare
  * crafts it has, of which what they give back comes again: a random walk that drifts down by `spare_crafts` x (1 -
- * `back_per_craft`) a period and spreads by `sigma_crafts` a period, held at 0 from below. Such a walk is over `a` in a
- * share exp(-2 x drift x a / sigma^2) of the periods (the Brownian approximation of a queue in heavy traffic), so the
+ * `back_per_craft`) a window cycle and spreads by `sigma_crafts` a window cycle, held at 0 from below. Such a walk is over `a` in a
+ * share exp(-2 x drift x a / sigma^2) of the window cycles (the Brownian approximation of a queue in heavy traffic), so the
  * backlog at `level` is sigma^2 x ln(1 / (1 - level)) / (2 x drift), in whole items. Recorded on the recycler that
  * voids iron ore at exact speed (16 spare crafts, a quarter given back, sigma 15.5): 67 ore, where the game lost a hand
- * of its input in 5 of 1,900 periods on a clock whose input it pushes over its insertion limit from 56 ore up. Null
+ * of its input in 5 of 1,900 window cycles on a clock whose input it pushes over its insertion limit from 56 ore up. Null
  * where the machine has no spare crafts, or gives back all of them.
  */
 export function backlogAtLevel(sigma_crafts: number, spare_crafts: number, back_per_craft: number, level: number = RANDOM_MARGIN_LEVEL): number | null {
@@ -218,7 +218,7 @@ export function backlogAtLevel(sigma_crafts: number, spare_crafts: number, back_
 }
 
 /**
- * The excess trial of a clock (an ExcessLoss of backpressure-loss.ts): every machine's backlog of what comes back, placed
+ * The excess trial of a clock (an ExcessLoss of disturbance-trial.ts): every machine's backlog of what comes back, placed
  * at once; null where no machine has one
  */
 export function excessLossOf(crafting: readonly Pick<CraftingMargin, "machine_id" | "backlog">[]): ExcessLoss | null {
@@ -267,14 +267,14 @@ function ticksToCover(back: Ingredient[], rolls_per_tick: number, spare_per_tick
 
 /**
  * Hands an inserter starts in a window: it acts in every tick of the window, so a window of W ticks starts
- * floor((W - 1) / swing) + 1 hands where its source has them (inserters.md section 9 of the mechanics docs; see even-hands.ts)
+ * floor((W - 1) / swing) + 1 hands where its source has them (inserters.md section 9 of the mechanics docs; see time-division-windows.ts)
  */
 function handsThatFit(window: OpenRange, swing_ticks: number): number {
     return Math.floor((window.end_inclusive - window.start_inclusive) / swing_ticks) + 1;
 }
 
-/** Crafts a period of a machine that destroys the target item: what its plan brings in, over what a craft keeps of it */
-function craftsPerPeriod(plan: CraftingCyclePlan, machine: Machine, registry: Pick<ReadableEntityRegistry, "getAll">, cycles: number): number {
+/** Crafts a window cycle of a machine that destroys the target item: what its plan brings in, over what a craft keeps of it */
+function craftsPerWindowCycle(plan: OutputCyclePlan, machine: Machine, registry: Pick<ReadableEntityRegistry, "getAll">, cycles: number): number {
     const target = { item: plan.production_rate.machine_production_rate.item, counts: plan.production_rate.counts };
     const brought = targetInsertersOf(machine, target, registry)
         .map(inserter => plan.entity_transfer_map.get(inserter.entity_id))
@@ -286,15 +286,15 @@ function craftsPerPeriod(plan: CraftingCyclePlan, machine: Machine, registry: Pi
 /**
  * The margins of a plan whose target counts an item destroyed (the only plan with results that come by chance in it):
  * for every result each machine places into its result target, the room the windows of the inserters that take it out
- * have over its expected amount a period, against what a period gives over it at `level` (excessAtLevel); where it is
+ * have over its expected amount a window cycle, against what a window cycle gives over it at `level` (excessAtLevel); where it is
  * under that, every window of each of them is lengthened by whole swings until it is not. And the room of each machine's
  * crafting against the spread of what comes back into it, which no window of an inserter holds.
  */
 export function randomAmountMargins(
-    plan: CraftingCyclePlan,
+    plan: OutputCyclePlan,
     registry: Pick<ReadableEntityRegistry, "getAll">,
     windows: ReadonlyMap<string, OpenRange[]>,
-    period: number,
+    window_cycle_ticks: number,
     cycles: number,
     level: number = RANDOM_MARGIN_LEVEL,
 ): { margins: RandomAmountMargin[]; crafting: CraftingMargin[]; windows: Map<string, OpenRange[]> } {
@@ -306,7 +306,7 @@ export function randomAmountMargins(
     }
     const target = { item: plan.production_rate.machine_production_rate.item, counts: plan.production_rate.counts };
     for (const machine of targetMachinesOf(target, registry)) {
-        const crafts = craftsPerPeriod(plan, machine, registry, cycles);
+        const crafts = craftsPerWindowCycle(plan, machine, registry, cycles);
         const rolls = crafts * rollsPerCraft(machine);
         let variance_back = 0;
         const back: Ingredient[] = [];
@@ -335,7 +335,7 @@ export function randomAmountMargins(
                 for (const taker of takers) {
                     const ranges = windows.get(taker.entity_id.id);
                     if (ranges !== undefined) {
-                        lengthened.set(taker.entity_id.id, lengthenedWindows(ranges, added, taker.animation.total.ticks, period));
+                        lengthened.set(taker.entity_id.id, lengthenedWindows(ranges, added, taker.animation.total.ticks, window_cycle_ticks));
                     }
                 }
             }
@@ -345,15 +345,15 @@ export function randomAmountMargins(
                 crafts, expected_items: expected, sigma_items: sigma, needed_items: needed, room_items: room, sigmas: room / sigma, added_hands: added,
             });
         }
-        const capacity = machine.crafting_rate.crafts_per_tick * period;
+        const capacity = machine.crafting_rate.crafts_per_tick * window_cycle_ticks;
         const sigma_crafts = Math.sqrt(variance_back);
-        const spare_per_tick = (capacity - crafts) / period;
+        const spare_per_tick = (capacity - crafts) / window_cycle_ticks;
         const back_total = [...back_per_craft.values()].reduce((sum, it) => sum + it, 0);
         const waiting = sigma_crafts > 0 ? backlogAtLevel(sigma_crafts, capacity - crafts, back_total, level) : null;
         crafting.push({
             machine_id: machine.entity_id.number, crafts, capacity, sigma_crafts,
             sigmas: sigma_crafts > 0 ? (capacity - crafts) / sigma_crafts : Infinity,
-            ticks_to_cover: ticksToCover(back, rolls / period, spare_per_tick, level),
+            ticks_to_cover: ticksToCover(back, rolls / window_cycle_ticks, spare_per_tick, level),
             backlog: waiting === null ? [] : [...back_per_craft].map(([item, per_craft]) => ({ item, items: Math.ceil(waiting * per_craft / back_total - 1e-9) })),
         });
     }
@@ -362,22 +362,22 @@ export function randomAmountMargins(
 
 /**
  * An inserter's windows with `hands` more hands of room: a swing longer at the end of that many of them, spread evenly
- * over its windows (every window, and then more, where it has fewer windows than hands), as far as the period lets them
+ * over its windows (every window, and then more, where it has fewer windows than hands), as far as the window cycle lets them
  */
-function lengthenedWindows(ranges: OpenRange[], hands: number, swing_ticks: number, period: number): OpenRange[] {
+function lengthenedWindows(ranges: OpenRange[], hands: number, swing_ticks: number, window_cycle_ticks: number): OpenRange[] {
     const sorted = [...ranges].sort((a, b) => a.start_inclusive - b.start_inclusive);
     const extra = sorted.map(() => 0);
     for (let index = 0; index < hands; index++) {
         extra[Math.floor(index * sorted.length / hands) % sorted.length] += swing_ticks;
     }
     return OpenRange.reduceRanges(sorted.flatMap((range, index) => {
-        const length = Math.min(range.end_inclusive - range.start_inclusive + extra[index], period - 1);
-        return rotateRanges([OpenRange.from(0, length)], range.start_inclusive, period);
+        const length = Math.min(range.end_inclusive - range.start_inclusive + extra[index], window_cycle_ticks - 1);
+        return rotateRanges([OpenRange.from(0, length)], range.start_inclusive, window_cycle_ticks);
     }));
 }
 
-/** Items the takers' windows can move a period beyond their planned hands, in whole hands */
-function roomOf(takers: Inserter[], item: string, windows: ReadonlyMap<string, OpenRange[]>, plan: CraftingCyclePlan, cycles: number): number {
+/** Items the takers' windows can move a window cycle beyond their planned hands, in whole hands */
+function roomOf(takers: Inserter[], item: string, windows: ReadonlyMap<string, OpenRange[]>, plan: OutputCyclePlan, cycles: number): number {
     let room = 0;
     for (const taker of takers) {
         const planned = plan.entity_transfer_map.get(taker.entity_id);

@@ -16,7 +16,7 @@ const WHY_SKIPPED = !FACTORIO ? "FACTORIO_PATH is not set to a Factorio executab
 /**
  * Two east-running belts that carry the same two items on opposite lanes: processing units on the left lane of the
  * north belt, with its inserters north of it, and on the right lane of the south belt, with its inserters south of it.
- * Every one of the eight inserters is nearest to the lane of processing units (the game takes them first, 25 periods
+ * Every one of the eight inserters is nearest to the lane of processing units (the game takes them first, 25 window cycles
  * of 25 in the recording of the cell). A ninth inserter stands east of the coal belt's underground entrance and faces
  * back into it; the Sidecar gives it a near lane too since 50e1a3e7 (it did so only at an underground exit before),
  * lane 1 because it is not mirrored, and that is the lane the coal is on.

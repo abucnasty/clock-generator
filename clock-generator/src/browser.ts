@@ -63,6 +63,8 @@ export type { ImportInput, ImportStep, ImportedMachine } from './config/import-p
 export { Option } from './data-types/option';
 
 export {
+    BeltPickupSinkError,
+    BeltPickupSinkInserter,
     ConfigValidationError,
     ConfigValidationIssue,
     CopiesError,
@@ -93,7 +95,7 @@ export {
     createInserterCoverageValidator,
     assertInserterCoverage,
 } from './config/inserter-coverage-validator';
-export { insertersScopeProblem } from './config/inserter-scope';
+export { insertersScopeProblem, beltPickupSinkRefusal } from './config/inserter-scope';
 export { uncalibratedBeltPickups, beltPickupNotTestedNote } from './config/pickup-calibration';
 export { laneCapacityIssues, lanesExactlyFullWarning, lanesSharedByCopies, laneSharedByCopiesWarning } from './config/lane-capacity-validator';
 export { copyGapNeededNote } from './config/drop-spacing';
@@ -108,6 +110,9 @@ export type { MachinePrototypeIssue } from './config/machine-prototype';
 // Blueprint Generation
 // ============================================================================
 
+export type { ClockStrategy, StrategyId, StrategyRef } from "./crafting/clock-strategy";
+export { catalogRowOf, routerRowOf, settingChipsOf, strategyRowOf } from "./crafting/strategy-catalog";
+export type { StrategyCatalogRow, TuningMethod, Selection, EnableControlStrategyRouter, EnableControl, SourceControl, ClockRouting, ClockSettings, SettingChip, OutputCountSetting, WindowCycleSetting, SharedWindowsSetting, LoopsSetting, DrillWindowsSetting, BeltPickupSetting } from "./crafting/strategy-catalog";
 export {
     generateClockForConfig,
     validateConfig,
@@ -116,6 +121,10 @@ export {
     blueprintFileFor,
     planClockAlternatives,
     runClockAlternativeTask,
+    runCoordinatedSourcesTask,
+    COORDINATED_SOURCES_MAKER,
+    CoordinatedSourcesInput,
+    CoordinatedSourcesPart,
     combineClockAlternativeRuns,
     searchesAreNeeded,
     clockBeltLabel,
@@ -320,12 +329,12 @@ export type { MachineTargetRate } from './crafting/machine-target-rates';
 export { targetRateMaxOf } from './crafting/feasibility/max-rate';
 export type { TargetRateMax } from './crafting/feasibility/max-rate';
 export type { ClockInsight, MachineFactsEntry, SwingComparison } from './crafting/insights';
-export type { BackpressureLossVerdict } from './crafting/backpressure-loss';
+export type { DisturbanceTrialVerdict } from './crafting/disturbance-trial';
 export { whyNotStable, whyNotStableClockOf } from './crafting/why-not-stable';
 export type { NotMadeClock, SpareTime, WhyNotStable, WhyNotStableBuild, WhyNotStableCause, WhyNotStableClock } from './crafting/why-not-stable';
 export { deadlockRiskNote } from './crafting/deadlock-risk';
 export type { SharedItemDeadlockRisk } from './crafting/deadlock-risk';
-export { DEFAULT_LOOP_SEED_ITEMS } from './crafting/runner/cold-start';
+export { DEFAULT_KICK_START_ITEMS } from './crafting/runner/cold-start';
 
 export { sidecarPickupInserters } from "./config/pickup-capture";
 

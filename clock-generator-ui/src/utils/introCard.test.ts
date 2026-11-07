@@ -9,7 +9,7 @@ describe('isBlankBuild', () => {
 
     it('is false once a target recipe or a machine recipe is set', () => {
         const config = createDefaultConfig();
-        expect(isBlankBuild({ ...config, target_output: { ...config.target_output, recipe: 'iron-gear-wheel' } })).toBe(false);
+        expect(isBlankBuild({ ...config, setpoint: { ...config.setpoint, recipe: 'iron-gear-wheel' } })).toBe(false);
         expect(isBlankBuild({ ...config, machines: [{ ...config.machines[0], recipe: 'iron-gear-wheel' }] })).toBe(false);
     });
 

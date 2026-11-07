@@ -4,7 +4,7 @@ import {assertInserterCoverage, validateInserterCoverage} from '../config/insert
 import {directMachineInsertionLimit} from '../entities/drill/mining-drill-ext';
 import {MachineStatus} from '../state';
 import {SimulationContext} from './sequence/simulation-context';
-import {CraftingCyclePlan} from './sequence/cycle/crafting-cycle';
+import {OutputCyclePlan} from './sequence/cycle/output-cycle';
 import {TargetProductionRate} from './target-production-rate';
 import {fraction} from '../data-types/fraction';
 import {PrepareStep} from './runner/steps/prepare-step';
@@ -15,7 +15,7 @@ import { TickByHand } from './runner/tick-by-hand.fixture';
 
 function cell(): Config {
     return ConfigSchema.parse({
-        target_output: {recipe: 'supercapacitor', items_per_second: 0.1, copies: 1},
+        setpoint: {recipe: 'supercapacitor', items_per_second: 0.1, copies: 1},
         machines: [
             {id: 1, recipe: 'processing-unit-recycling', prototype: 'recycler', crafting_speed: 1, productivity: 0, result_target: {type: 'machine', id: 2}},
             {id: 2, recipe: 'supercapacitor', prototype: 'electromagnetic-plant', crafting_speed: 1, productivity: 50},
@@ -59,7 +59,7 @@ describe('a recycler placing results into a machine', () => {
     });
     it('plans the recycler feed and target rate from the circuits its target needs', () => {
         const config = cell(), context = SimulationContext.fromConfig(config);
-        const cycle = CraftingCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), context.entity_registry, config, fraction(1));
+        const cycle = OutputCyclePlan.create(TargetProductionRate.fromConfig(config.setpoint), context.entity_registry, config, fraction(1));
         const feed = [...cycle.entity_transfer_map.values()].find(entry => entry.entity.entity_id.number === 1)!;
         const output = [...cycle.entity_transfer_map.values()].find(entry => entry.entity.entity_id.number === 4)!;
         expect(feed.total_transfer_count.toDecimal() / output.total_transfer_count.toDecimal()).toBeCloseTo(4 / 5 / 1.5);

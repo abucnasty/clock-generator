@@ -188,7 +188,7 @@ export const TRAIT_BASIS: Readonly<Record<TraitFieldPath, Basis>> = {
     "spoilage.items.spoil_ticks": { standing: "game-data" },
     "spoilage.items.quality_affects_spoil_ticks": { standing: "game-data" },
     "spoilage.items.spoil_result": { standing: "game-data" },
-    "spoilage.loss_limit_share": { standing: "assumed", audit: "A26", note: "the losses a build is tried with stay under it (backpressure-loss.ts)" },
+    "spoilage.loss_limit_share": { standing: "assumed", audit: "A26", note: "the losses a build is tried with stay under it (disturbance-trial.ts)" },
 
     "hand.prototype": { standing: "config" },
     "hand.quality": { standing: "config" },

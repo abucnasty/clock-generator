@@ -6,7 +6,7 @@ import { describeSideLoadedDrop, sideLoadedDropNote, sideLoadedDrops, sideLoaded
 
 /** A gear assembler filled from a chest by inserter 1 and emptied onto a belt by inserter 2, which may be marked */
 const gears = (mark?: object): Config => ConfigSchema.parse({
-    target_output: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+    setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
     machines: [{ id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0 }],
     inserters: [
         { id: 1, source: { type: "chest", id: 1 }, sink: { type: "machine", id: 1 } },

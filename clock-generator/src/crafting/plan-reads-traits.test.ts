@@ -18,7 +18,7 @@ import { handOfItem, machinesInOrder, mainProductRateOf, neverRefuses, traitsOf,
 import { outputCapacityPerSecond } from "./alternatives";
 import { beltPickupSlackTicks, fuelHandRoomTicks } from "./clock";
 import { computeMachineTargetRates, MachineTargetRate } from "./machine-target-rates";
-import { CraftingCyclePlan } from "./sequence/cycle/crafting-cycle";
+import { OutputCyclePlan } from "./sequence/cycle/output-cycle";
 import type { EntityTransferCountMap } from "./sequence/cycle/swing-counts";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { TargetProductionRate } from "./target-production-rate";
@@ -47,22 +47,22 @@ const oldMainProductRate = (machine: Machine): Fraction => machine.output.produc
 
 /** alternatives.ts outputCapacityPerSecond before R21: a registry built to read the machines */
 function oldOutputCapacityPerSecond(config: Config): number {
-    const item = TargetProductionRate.fromConfig(config.target_output).machine_production_rate.item;
+    const item = TargetProductionRate.fromConfig(config.setpoint).machine_production_rate.item;
     return createEntityRegistryFromConfig(config).getAll().filter(Entity.isMachine)
         .filter(machine => machine.output.item_name === item)
-        .reduce((sum, machine) => sum + machine.output.production_rate.amount_per_second.toDecimal(), 0) * (config.target_output.copies ?? 1);
+        .reduce((sum, machine) => sum + machine.output.production_rate.amount_per_second.toDecimal(), 0) * (config.setpoint.copies ?? 1);
 }
 
 /** machine-target-rates.ts computeMachineTargetRates before R21, line for line */
 function oldComputeMachineTargetRates(config: Config): MachineTargetRate[] {
     assertOutputTransferGenerationSupported(config);
     validateCopies(config);
-    assert(Number.isFinite(config.target_output.items_per_second) && config.target_output.items_per_second > 0,
+    assert(Number.isFinite(config.setpoint.items_per_second) && config.setpoint.items_per_second > 0,
         "Set a positive target output rate to see at-target rates.");
     assertInserterCoverage(config);
     const registry = createEntityRegistryFromConfig(config);
-    const target = TargetProductionRate.fromConfig(config.target_output);
-    const cycle = CraftingCyclePlan.create(target, registry, config, fraction(1));
+    const target = TargetProductionRate.fromConfig(config.setpoint);
+    const cycle = OutputCyclePlan.create(target, registry, config, fraction(1));
     const seconds = cycle.total_duration_ticks.divide(60);
     const taken = new Map<string, number>();
     const placing = new Map(registry.getAll().filter(Entity.isMachine).flatMap(machine =>
@@ -130,9 +130,9 @@ function oldNeverBlockingBranchesOf(
     for (const inserter of outputs) {
         const id = inserter.entity_id.id;
         const source_id = inserter.source.entity_id.id;
-        const branch = branches.get(source_id) ?? { source_id, inserter_ids: [], share_per_period: 0, hand: 0 };
+        const branch = branches.get(source_id) ?? { source_id, inserter_ids: [], share_per_window_cycle: 0, hand: 0 };
         branch.inserter_ids.push(id);
-        branch.share_per_period += planned.get(id)!.share;
+        branch.share_per_window_cycle += planned.get(id)!.share;
         branch.hand += planned.get(id)!.hand;
         branches.set(source_id, branch);
     }
@@ -161,7 +161,10 @@ function oldFuelHandRoomTicks(entity_registry: ReadableEntityRegistry): Map<stri
     return room;
 }
 
-/** clock.ts beltPickupSlackTicks before R21 */
+/**
+ * clock.ts beltPickupSlackTicks before R21, of the nominal hand. It reads each item's hand since; on every config here
+ * the belt-fed inserters' hands equal their nominal hand, so the two agree (the per-item case: rules-of-the-game.test.ts)
+ */
 function oldBeltPickupSlackTicks(entity_registry: ReadableEntityRegistry): Map<string, number> {
     const slack = new Map<string, number>();
     for (const entity of entity_registry.getAll()) {
@@ -210,13 +213,13 @@ function checkOutputCapacity(config: Config, registry: ReadableEntityRegistry, t
             expect(decimalOf(results[index].per_second), `${id} ${output.item_name} rate a second`).toBe(output.production_rate.amount_per_second.toDecimal());
         });
     }
-    const target = TargetProductionRate.fromConfig(config.target_output);
+    const target = TargetProductionRate.fromConfig(config.setpoint);
     const makers = machines.filter(machine => machine.output.item_name === target.machine_production_rate.item);
     checked.targets += 1;
     // plan-run (made) and primitive-grouped-hands: the exact sum, times the copies
     const sum = (rates: Fraction[]) => rates.reduce((a, b) => a.add(b), fraction(0));
-    expect(sum(makers.map(machine => mainProductRateOf(traits, machine.entity_id.id))).multiply(fraction(config.target_output.copies)), "capacity")
-        .toStrictEqual(sum(makers.map(oldMainProductRate)).multiply(fraction(config.target_output.copies)));
+    expect(sum(makers.map(machine => mainProductRateOf(traits, machine.entity_id.id))).multiply(fraction(config.setpoint.copies)), "capacity")
+        .toStrictEqual(sum(makers.map(oldMainProductRate)).multiply(fraction(config.setpoint.copies)));
     expect(sum(makers.map(machine => mainProductRateOf(traits, machine.entity_id.id))).multiply(target.copies), "capacity of the primitive plan")
         .toStrictEqual(sum(makers.map(oldMainProductRate)).multiply(target.copies));
     // alternatives: the decimals added up in order
@@ -270,7 +273,7 @@ function checkSinks(registry: ReadableEntityRegistry, traits: ConfigTraits): voi
 
 /**
  * The sinks that never refuse a hand: each inserter alone as a terminal output, then all of them, each planned to move
- * one hand of 16 a period (the branches are the same whatever the hands)
+ * one hand of 16 a window cycle (the branches are the same whatever the hands)
  */
 function checkTerminalBranches(registry: ReadableEntityRegistry, traits: ConfigTraits): void {
     const inserters = registry.getAll().filter(Entity.isInserter);
@@ -307,7 +310,7 @@ function checkConfig(config: Config): void {
 function derivedConfigsOf(config: Config): Config[] {
     return [
         { ...config, overrides: { ...config.overrides, backed_up_belts: config.overrides?.backed_up_belts !== true } },
-        { ...config, target_output: { ...config.target_output, copies: (config.target_output.copies ?? 1) + 1 } },
+        { ...config, setpoint: { ...config.setpoint, copies: (config.setpoint.copies ?? 1) + 1 } },
     ];
 }
 

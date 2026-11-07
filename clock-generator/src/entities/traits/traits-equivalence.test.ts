@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { parseConfig } from "../../config/loader";
 import { Config } from "../../config/schema";
 import { BeltHandPickup } from "../../simulation/components/belt-hand-pickup";
-import { lossLimitOf } from "../../crafting/backpressure-loss";
+import { lossLimitOf } from "../../crafting/disturbance-trial";
 import { SimulationContext } from "../../crafting/sequence/simulation-context";
 import { laneItemsPerSecond, laneStackFor } from "../belt/belt";
 import { Chest } from "../chest/chest";
@@ -278,7 +278,7 @@ describe("the traits of every sample", () => {
             checkInserters(context, traits);
             checkLanes(config, registry, traits);
             checkChests(registry, traits);
-            // the spoilage of the machines and inserters gives the loss limit backpressure-loss.ts works out
+            // the spoilage of the machines and inserters gives the loss limit disturbance-trial.ts works out
             const spoilage = Object.values(traits).flatMap(node => node.kind === "machine" || node.kind === "inserter" ? [node.spoilage] : []);
             const spoil_ticks = spoilage.flatMap(trait => trait.items.map(item => item.spoil_ticks * trait.loss_limit_share));
             same(spoil_ticks.length === 0 ? null : Math.min(...spoil_ticks), lossLimitOf(registry)?.ticks ?? null, `${file} loss limit`);

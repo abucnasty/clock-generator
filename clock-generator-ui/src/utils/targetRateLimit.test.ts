@@ -14,7 +14,7 @@ const two: MachinesMax = { machineIds: [1, 2], perCopy: 30 };
 const line = (itemsPerSecond: number, copies: number, max: MachinesMax | null, counts?: TargetCounts) =>
     targetRateLineOf({ itemsPerSecond, copies, max, counts, locale: 'en-US' });
 /** The line under the rate, from the most on: what makes it, then what to do */
-const atMost = (most: string) => `At most ${most}. Lower the rate or raise Copies. Describe one unit in the build.`;
+const atMost = (most: string) => `At most ${most}. Lower the rate or raise Copies. Describe only one copy of the build.`;
 const facts = (output_item: string, output_rate_per_second: number) => ({ output_item, output_rate_per_second });
 /** A machine making gear wheels at `rate` a second, `exact` being its exact rate */
 const gears = (id: number, rate: number, exact?: { numerator: number; denominator: number }) =>

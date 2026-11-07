@@ -49,7 +49,7 @@ describe('a machine row and its machine', () => {
             .toBe('Cryogenic plant (Legendary), from Sidecar');
         expect(machineIconText(row({ prototype: 'cryogenic-plant', _prototype_source: 'hand' }), name)).toBe('Cryogenic plant, chosen by hand');
         expect(machineIconText(row({ prototype: 'cryogenic-plant', _prototype_source: 'recipe' }), name)).toBe('Cryogenic plant, picked for its recipe');
-        expect(machineIconText(row({ prototype: 'cryogenic-plant' }), name)).toBe('Cryogenic plant, from the config');
+        expect(machineIconText(row({ prototype: 'cryogenic-plant' }), name)).toBe('Cryogenic plant, from the configuration');
         expect(machineIconText(row({}), name)).toBe('No machine set: simulated as an assembling machine');
     });
 
@@ -59,7 +59,7 @@ describe('a machine row and its machine', () => {
 });
 
 describe('where a machine came from', () => {
-    const imported = { target_output: { recipe: 'lithium-plate', items_per_second: 1, copies: 1 }, inserters: [], belts: [],
+    const imported = { setpoint: { recipe: 'lithium-plate', items_per_second: 1, copies: 1 }, inserters: [], belts: [],
         machines: [{ id: 1, recipe: 'lithium-plate', productivity: 0, crafting_speed: 1, prototype: 'electric-furnace' },
             { id: 2, recipe: 'lithium', productivity: 0, crafting_speed: 1 }] };
 

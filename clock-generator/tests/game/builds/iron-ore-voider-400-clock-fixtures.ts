@@ -21,12 +21,12 @@ import {RUN_PROTOCOL, runSummary} from "./pickup-clock-capture";
  * by script). What comes back is random in the game and at its expected amount in the simulator, so beside the protocol the
  * baseline is judged on the ore destroyed against the binomial's range, the share of crafts that gave ore back, and on the car
  * never being full and the recycler never waiting for room. Dropped with the hour (owner's protocol, 2026-11-03): the mean of
- * the ore brought in per period, which the baseline's whole clock cycles now judge, and the backlog of 2000 ore put into the car.
+ * the ore brought in per window cycle, which the baseline's whole clock cycles now judge, and the backlog of 2000 ore put into the car.
  */
 export interface OreVoiderCase {
     name: string;
     sample: "IRON_ORE_VOIDER_400_EXACT_SPEED" | "IRON_ORE_VOIDER_400_OVERBEACONED";
-    /** The alternative recorded, in place of the selected one */
+    /** The id of the alternative recorded, in place of the selected one */
     alternative?: string;
 }
 
@@ -67,7 +67,7 @@ export interface OreVoiderObserved {
     baseline: {
         ticks: number; periods: number;
         crafts: number; placed: number;
-        /** Ore destroyed over the baseline (each craft destroys the ore it takes, less what it gives back), its expectation at the target, and the range of 3 standard deviations of the returns over the periods */
+        /** Ore destroyed over the baseline (each craft destroys the ore it takes, less what it gives back), its expectation at the target, and the range of 3 standard deviations of the returns over the window cycles */
         destroyed: number; destroyed_expected: number; destroyed_range: number;
         returned_share: number; returned_range: number;
         car_max: number; car_capacity: number; full_ticks: number;
@@ -101,10 +101,10 @@ function sum(values: number[]): number {
 }
 
 /** The run's summary under the protocol, with the baseline's figures for the checks a clock for a random output has to meet */
-export function summarize(report: OreVoiderReport, config: Config, clock: OreVoiderObserved["clock"], sigma_period: number, chance: number): OreVoiderRun {
-    const run = runSummary(report.protocol, {generationVerdict: clock.verdict, target: config.target_output.items_per_second, period: clock.period});
+export function summarize(report: OreVoiderReport, config: Config, clock: OreVoiderObserved["clock"], sigma_window_cycle: number, chance: number): OreVoiderRun {
+    const run = runSummary(report.protocol, {generationVerdict: clock.verdict, target: config.setpoint.items_per_second, period: clock.period});
     const b = report.baseline;
-    const periods = b.ticks / clock.period;
+    const window_cycles = b.ticks / clock.period;
     // each craft destroys the ore it takes, less what it gives back
     const destroyed = b.crafts - b.placed;
     return {
@@ -112,8 +112,8 @@ export function summarize(report: OreVoiderReport, config: Config, clock: OreVoi
         observed: {
             clock,
             baseline: {
-                ticks: b.ticks, periods, crafts: b.crafts, placed: b.placed,
-                destroyed, destroyed_expected: config.target_output.items_per_second * b.ticks / 60, destroyed_range: 3 * sigma_period * Math.sqrt(periods),
+                ticks: b.ticks, periods: window_cycles, crafts: b.crafts, placed: b.placed,
+                destroyed, destroyed_expected: config.setpoint.items_per_second * b.ticks / 60, destroyed_range: 3 * sigma_window_cycle * Math.sqrt(window_cycles),
                 returned_share: b.crafts > 0 ? b.placed / b.crafts : 0,
                 returned_range: b.crafts > 0 ? 3 * Math.sqrt(b.crafts * chance * (1 - chance)) / b.crafts : 0,
                 car_max: b.car_max, car_capacity: report.initial.capacity, full_ticks: b.full_ticks,
@@ -146,11 +146,11 @@ export async function captureOreVoider(variant: OreVoiderCase): Promise<OreVoide
             : generated.alternatives.find(alternative => alternative.id === variant.alternative);
         if (!selected) throw new Error(`No alternative ${variant.alternative} for ${variant.name}`);
         const exported = selected.result.subtick ?? selected.result;
-        const period = selected.result.simulation_duration.ticks;
+        const window_cycle_ticks = selected.result.simulation_duration.ticks;
         const margin = selected.result.random_margins!.windows[0];
         const takers = new Set(margin.inserter_ids);
         const per_inserter = selected.result.stability_check.as_built?.wake_ups?.inserters ?? [];
-        const clock = {id: selected.id, period, expected: config.target_output.items_per_second * period / 60, verdict: selected.verdict,
+        const clock = {id: selected.id, period: window_cycle_ticks, expected: config.setpoint.items_per_second * window_cycle_ticks / 60, verdict: selected.verdict,
             wake_ups_per_minute: selected.assessment.wake_ups_per_minute ?? 0,
             taker_wake_ups_per_minute: sum(per_inserter.filter(it => takers.has(it.inserter_id)).map(it => it.wake_ups_per_minute))};
         const sha = clockHash(exported);
@@ -160,15 +160,15 @@ export async function captureOreVoider(variant: OreVoiderCase): Promise<OreVoide
             expect(sha, `the clock ${variant.name} runs is not the one its summary in iron-ore-voider-400-clock-controls.json was recorded on: record it again`).toBe(recorded);
         }
         fs.writeFileSync(path.join(capture.directory, "clock.json"), JSON.stringify({...clock, sha256: sha}) + "\n");
-        // the baseline is the protocol's minute: the clock's cycle is its period, which a minute holds whole
-        expect(RUN_PROTOCOL.baseline % period, "a whole number of the clock's periods in the baseline").toBe(0);
-        const expectedPerWindow = Math.round(config.target_output.items_per_second * RUN_PROTOCOL.window / 60 * 1e6) / 1e6;
+        // the baseline is the protocol's minute: the clock's cycle is its window cycle, which a minute holds whole
+        expect(RUN_PROTOCOL.baseline % window_cycle_ticks, "a whole number of the clock's periods in the baseline").toBe(0);
+        const expectedPerWindow = Math.round(config.setpoint.items_per_second * RUN_PROTOCOL.window / 60 * 1e6) / 1e6;
         const {recording} = await recordInFactorio({factorio: process.env.FACTORIO_PATH!, save: process.env.FACTORIO_HARNESS_SAVE!, config,
             clock: {blueprint: encodeBlueprintFile({blueprint: exported.blueprint}), schedule: exported.schedule}, blueprint: scaffoldOf(config_path),
             out: path.join(capture.directory, "recording.json"), work_dir: path.join(capture.directory, "game"),
             ticks: 3600, record_at_once: true, warmup_ticks: 600, settle_ticks: RUN_PROTOCOL.cap + 1, seed: [], unclocked: false,
             lua: composeProbeSource(path.join(__dirname, "iron-ore-voider-400-clock-probe.lua"),
-                {period, window: RUN_PROTOCOL.window, expected: expectedPerWindow, baseline: RUN_PROTOCOL.baseline, cap: RUN_PROTOCOL.cap}),
+                {period: window_cycle_ticks, window: RUN_PROTOCOL.window, expected: expectedPerWindow, baseline: RUN_PROTOCOL.baseline, cap: RUN_PROTOCOL.cap}),
             game_speed: 1000, watch: false, timeout_seconds: 900, log() {}});
         // the build as Sidecar exports it: the recycler puts its results into the car
         const exported_config = recording.config as {machines?: {result_target?: unknown}[]; chests?: {type: string; id: number}[]};

@@ -54,9 +54,9 @@ describe('flow replay', () => {
     });
 });
 
-it('uses the exact clock period for fractional crafting cycles, including truncated excerpts', () => {
-    expect(flowReplayCycles(50.087, { period_ticks: 50.087 * 11, end_tick: 551 })?.count).toBe(11);
-    expect(flowReplayCycles(50.087, { period_ticks: 50.087 * 11, end_tick: 120 })?.count).toBe(3);
+it('uses the exact window cycle time for fractional output cycles, including truncated excerpts', () => {
+    expect(flowReplayCycles(50.087, { window_cycle_ticks: 50.087 * 11, end_tick: 551 })?.count).toBe(11);
+    expect(flowReplayCycles(50.087, { window_cycle_ticks: 50.087 * 11, end_tick: 120 })?.count).toBe(3);
 });
 
 describe('route-aware transfers', () => {

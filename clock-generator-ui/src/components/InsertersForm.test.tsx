@@ -85,3 +85,17 @@ it('retains unavailable endpoint identities in the editable route', () => {
     expect(screen.getByText('Chest 98 is unavailable.')).toBeDefined();
     expect(useAutomatic()).not.toBeNull();
 });
+
+it('outlines the rows of the inserters the engine refuses (#650), in the theme error colour, and no other', () => {
+    const rows = [inserter(2), inserter(3), inserter(4), inserter(5)];
+    show(<InsertersForm inserters={rows} refusedIds={new Set([3, 5])} machines={[machine()]}
+        belts={[mixedBelt]} chests={[infinityChest()]} itemNames={['iron-plate']} getRecipeInfo={() => null}
+        onAdd={vi.fn()} onUpdate={vi.fn()} onRemove={vi.fn()} onReorder={vi.fn()} onDuplicate={vi.fn()} onBulkUpdate={vi.fn()} />);
+    const row = (id: number) => document.getElementById(`entity-inserter-${id}`)!;
+    expect([2, 3, 4, 5].map(id => row(id).getAttribute('data-refused'))).toEqual([null, 'true', null, 'true']);
+    // the error token of the theme, not a colour written in the row
+    const outline = (id: number) => getComputedStyle(row(id)).outline;
+    expect(outline(3)).toBe(outline(5));
+    expect(outline(3)).toMatch(/solid.*2px|2px.*solid/);
+    expect(outline(2)).not.toMatch(/2px/);
+});

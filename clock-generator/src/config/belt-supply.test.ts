@@ -6,7 +6,7 @@ import { loadConfigFromFile, parseConfig } from "./loader";
 describe("backed-up belt configuration", () => {
     it.each([false, true])("migrates the former setting %s to the canonical config name", async value => {
         const input = {
-            target_output: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+            setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
             machines: [], inserters: [], belts: [], overrides: { non_moving_belts: value },
         };
         for (const config of [ConfigSchema.parse(input), await parseConfig(JSON.stringify(input))]) {

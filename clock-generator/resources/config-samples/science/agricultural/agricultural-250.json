@@ -1,5 +1,5 @@
 {
-  "target_output": {
+  "setpoint": {
     "recipe": "agricultural-science-pack",
     "items_per_second": 250,
     "copies": 5

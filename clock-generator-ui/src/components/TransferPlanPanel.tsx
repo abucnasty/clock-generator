@@ -82,7 +82,7 @@ function TransferPlanPanelComponent({
             <AccordionDetails sx={{ p: 0 }}>
                 {/* here, not in the title: the title is a button, and a focusable chip in a button cannot be reached or named */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1 }}>
-                    <Tooltip title="LCM: the number of crafting cycles in one clock period (the least common multiple of every inserter's swings per cycle)." describeChild slotProps={tooltipSlots}>
+                    <Tooltip title="LCM: the number of output cycles in one window cycle (the least common multiple of every inserter's swings each output cycle)." describeChild slotProps={tooltipSlots}>
                         <Chip
                             tabIndex={0}
                             label={`LCM: ${computed_lcm}`}
@@ -120,7 +120,7 @@ function TransferPlanPanelComponent({
                         <TableRow>
                             <TableCell sx={{ width: { sm: '30%' } }}>Entity</TableCell>
                             <TableCell>Item</TableCell>
-                            <TableCell align="right" sx={{ width: { sm: '120px' } }}>Swings / cycle</TableCell>
+                            <TableCell align="right" sx={{ width: { sm: '120px' } }}>Swings / output cycle</TableCell>
                             <TableCell align="center" sx={{ width: { sm: '110px' } }}>Exclude from LCM</TableCell>
                         </TableRow>
                     </TableHead>
@@ -214,7 +214,7 @@ function TransferPlanPanelComponent({
                 </ScrollX>
                 <Box sx={{ px: 2, py: 1, borderTop: 1, borderColor: 'divider' }}>
                     <Typography variant="caption" color="text.secondary">
-                        Swings per cycle can be fractions. The clock period is the number of crafting cycles (the LCM)
+                        Swings each output cycle can be fractions. The window cycle is the number of output cycles (the LCM)
                         after which they all come out whole. Excluded ingredients are left out of that calculation, and an
                         inserter whose items are all excluded is forced to <strong>{ALWAYS_ON}</strong>, unless you gave
                         it an enable rule of your own, which stays.

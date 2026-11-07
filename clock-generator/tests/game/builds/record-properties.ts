@@ -22,6 +22,7 @@ export const PROPERTIES = [
     'stable-holds-and-survives-loss',
     'counters-add-up',
     'fuel-never-dry',
+    'strategy-and-signals',
 ] as const;
 export type PropertyName = typeof PROPERTIES[number];
 
@@ -72,7 +73,7 @@ function alwaysOnReasons(config: Config, alternative: Alternative): string[] {
 
 /**
  * The order the check of a clock gives its deciders is the order the exported blueprint builds them in: of two inserters, the one
- * whose decider has the higher entity number stands later; a fuel inserter on a clock of its own has no window of the period and its
+ * whose decider has the higher entity number stands later; a fuel inserter on a clock of its own has no window of the window cycle and its
  * decider comes after them all (it decides which of two windows that open together the game updates first, #268).
  * Null where the alternative has no schedule of deciders.
  */
@@ -112,13 +113,13 @@ function deciderOrder(registry: ReturnType<typeof createEntityRegistryFromConfig
 function stableMeans(alternative: Alternative): string[] {
     const problems: string[] = [];
     const { verdict, assessment, ranking } = alternative;
-    const tried = assessment.backpressure_loss !== null;
+    const tried = assessment.disturbance_trial !== null;
     if (tried !== (verdict !== 'unstable')) {
-        problems.push(`verdict ${verdict} and backpressure_loss ${tried ? 'tried' : 'not tried'}: a clock is tried for the loss when it is not unstable, and not otherwise`);
+        problems.push(`verdict ${verdict} and disturbance_trial ${tried ? 'tried' : 'not tried'}: a clock is tried for the loss when it is not unstable, and not otherwise`);
     }
-    const survives = verdict !== 'unstable' && assessment.backpressure_loss?.survives === true;
+    const survives = verdict !== 'unstable' && assessment.disturbance_trial?.survives === true;
     if ((verdict === 'stable') !== survives) {
-        problems.push(`verdict ${verdict} against survives ${assessment.backpressure_loss?.survives}: stable only when it is not unstable and survives`);
+        problems.push(`verdict ${verdict} against survives ${assessment.disturbance_trial?.survives}: stable only when it is not unstable and survives`);
     }
     if (ranking.meets_target_rate && verdict !== 'stable') {
         problems.push(`meets the target rate with verdict ${verdict}`);
@@ -183,23 +184,55 @@ function fuelNeverDry(alternative: Alternative): string[] | null {
     return problems;
 }
 
+/**
+ * The strategy ids and the signals a minute agree with the clock: the output swings are the count it was made at, it is counted as
+ * output swings or as hands brought in and not both, a Coordinated Sources clock has no strategy of its own and every other clock has
+ * a strategy and its tuning method, the alternative's id is not another alternative's of the job, and signals are counted where
+ * wake-ups are, none where no decider switches anything.
+ */
+function strategyAndSignals(alternative: Alternative, destroyed: boolean, ids_before: ReadonlySet<string>): string[] {
+    const problems: string[] = [];
+    const { strategy, assessment } = alternative;
+    if (strategy.output_swings !== alternative.result.used_terminal_swing_count) {
+        problems.push(`strategy says ${strategy.output_swings} output swings, the clock was made at ${alternative.result.used_terminal_swing_count}`);
+    }
+    const count_kind = strategy.settings.output_count.kind;
+    if (count_kind !== (destroyed ? 'hands_brought_in' : 'output_swings')) problems.push(`strategy counts its swings as ${count_kind}`);
+    if ((strategy.id === null) !== (strategy.routing.router === 'coordinated_sources') || (strategy.id === null) !== (strategy.tuning_method === null)) {
+        problems.push(`strategy ${strategy.id ?? 'none'} with tuning method ${strategy.tuning_method ?? 'none'} and router ${strategy.routing.router}`);
+    }
+    if (ids_before.has(alternative.id)) problems.push(`id ${alternative.id} is another alternative's of the job as well`);
+    const signals = assessment.signals_per_minute;
+    if ((signals === null) !== (assessment.wake_ups_per_minute === null)) {
+        problems.push(`signals ${signals} a minute against wake-ups ${assessment.wake_ups_per_minute}: counted on the same run, so null together`);
+    }
+    if (signals !== null && signals !== undefined && (signals < 0 || (alternative.deciders === 0 && signals !== 0))) {
+        problems.push(`${signals} signals a minute from ${alternative.deciders} window deciders`);
+    }
+    if (signals === undefined) problems.push('signals a minute not counted');
+    return problems;
+}
+
 /** The properties on every alternative of a job's result */
 export function checkProperties(job: string, config: Config, generated: Pick<ClockAlternativesResult, 'alternatives'>): PropertyReport {
     const checked = Object.fromEntries(PROPERTIES.map(name => [name, 0])) as Record<PropertyName, number>;
     const found: PropertyProblem[] = [];
     const registry = createEntityRegistryFromConfig(config);
-    const copies = config.target_output.copies ?? 1;
+    const copies = config.setpoint.copies ?? 1;
     const note = (property: PropertyName, alternative: Alternative, problems: string[] | null) => {
         if (problems === null) return;
         checked[property]++;
         for (const message of problems) found.push({ property, alternative: alternative.id, message });
     };
+    const ids_before = new Set<string>();
     for (const alternative of generated.alternatives) {
         note('always-on-reasons-named', alternative, alwaysOnReasons(config, alternative));
         note('decider-build-order', alternative, deciderOrder(registry, alternative));
         note('stable-holds-and-survives-loss', alternative, stableMeans(alternative));
         note('counters-add-up', alternative, countersAddUp(alternative, copies));
         note('fuel-never-dry', alternative, fuelNeverDry(alternative));
+        note('strategy-and-signals', alternative, strategyAndSignals(alternative, config.setpoint.counts === 'destroyed', ids_before));
+        ids_before.add(alternative.id);
     }
     const excusing = (it: PropertyProblem) => EXCEPTIONS[job]?.[it.property]?.alternatives.includes(it.alternative) === true;
     const excepted = found.filter(excusing).reduce<NonNullable<PropertyReport['excepted']>>((all, it) => {
