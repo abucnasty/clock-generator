@@ -26,7 +26,7 @@ import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import { CLOCK_TABLE_NAME, CLOCK_TABLE_REGION, clockHelpName, termsHelpName } from '../utils/a11yLabels';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import { SUMMARY_COPY, beltCellText, clockBadges, foldedMakes, isStartDependent, pickNameMeaning, recoversOf, wakeUpsAverageOf, worksOf } from '../utils/clockSummary';
-import { familyCopyOf, fullClockName, qualifierChipsOf, strategyNameOf } from '../utils/strategyNames';
+import { familyCopyOf, fullClockName, qualifierChipsOf, sourceLinesOf, strategyNameOf } from '../utils/strategyNames';
 import { BadgeChips, QualifierChips } from './StrategyChips';
 import { SIGNAL_DEFINITION, WAKEUP_DEFINITION, TERMS_FOCUS, type GlossaryId } from '../utils/glossary';
 import { HelpButton } from './HelpButton';
@@ -492,15 +492,19 @@ function badgeMeanings(alternatives: ClockAlternativeView[], index: number, pick
     return meaning ? { [SUMMARY_COPY.fewestDeciders]: meaning } : {};
 }
 
-/** The (i) of a clock: its strategy's definition and practice, then what each chip says */
+/** The (i) of a clock: its strategy's definition and practice, for Coordinated Sources what each source was given, then what each chip says */
 function StrategyHelp({ clock }: { clock: ClockAlternativeView }) {
     const family = familyCopyOf(clock);
+    const sources = sourceLinesOf(clock);
     return (
         <>
             {family && <>
                 <Typography variant="body2" sx={{ mb: 0.75 }}>{family.definition}</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>{family.practice}</Typography>
             </>}
+            {sources.map(line => (
+                <Typography key={line} variant="body2" sx={{ mb: 0.75 }} data-source-line="">{line}</Typography>
+            ))}
             {qualifierChipsOf(clock).map(chip => (
                 <Typography key={chip.id} variant="body2" sx={{ mb: 0.75 }}><strong>{chip.label}.</strong> {chip.line}</Typography>
             ))}

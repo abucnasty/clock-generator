@@ -263,7 +263,7 @@ describe('tasks alongside the primary alternative', () => {
         expect(latest().alternatives.map(a => a.id)).toEqual(['swings-1']);
         expect(latest().isRunning).toBe(true);
         expect(latest().generationAssumptions?.complete).toBe(false);
-        expect(latest().pendingAlternatives).toEqual(['Euclidean swings', '2 output swings a cycle']);
+        expect(latest().pendingAlternatives).toEqual(['Euclidean Swings', '2 output swings a cycle']);
         expect(worker.requests('task').at(-1)?.taskId).toBe('fractional');
 
         finishTask(runId, 'fractional', { signature: 'fractional', alternatives: [selectionClock('fractional', 1)] });
@@ -344,7 +344,7 @@ describe('tasks alongside the primary alternative', () => {
             expect(requested()).not.toContain('planned-moving-belt');
             expect(done.isRunning).toBe(false);
             expect(done.pendingAlternatives).toEqual([]);
-            expect(done.skippedSearches).toEqual(['Time-study windows']);
+            expect(done.skippedSearches).toEqual(['Time-Study Windows']);
         });
 
         it('waits for the searches the config runs on every build, and is left out when one of them is stable', async () => {
@@ -382,7 +382,7 @@ describe('tasks alongside the primary alternative', () => {
             finishTask(runId, 'per-branch', { signature: 'per-branch', alternatives: [selectionClock('per-branch', 1)] });
             const done = latest();
             expect(done.isRunning).toBe(false);
-            expect(done.skippedSearches).not.toContain('Coordinated signal system');
+            expect(done.skippedSearches).not.toContain('Coordinated Sources');
             expect(done.alternatives.map(it => it.id)).toEqual(['one', 'per-branch']);
             expect(done.alternatives[done.selectedAlternativeIndex].id).toBe('per-branch');
         });

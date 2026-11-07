@@ -1,9 +1,14 @@
-import type { ClockStrategy, StrategyFamily, StrategyQualifier } from 'clock-generator/browser';
+import { catalogRowOf, routerRowOf } from 'clock-generator/light';
+import type {
+    AlwaysOnReason, ClockRouting, ClockStrategy, EnableControl, Selection, StrategyCatalogRow, StrategyQualifier, TuningMethod,
+} from 'clock-generator/browser';
+import { entityLabel, type LabelKind } from './entityLabel';
+import { modeText } from './wakeWindowCopy';
 
 /**
  * The names of the ways to make a clock (the strategies), as the user reads them: each takes its name from a real
- * practice with a similar timing problem. The engine carries ids only (`ClockStrategy`); every word is here. The
- * wording was approved with the strategy names (0.28.0), and uses the glossary's words.
+ * practice with a similar timing problem. The engine's strategy catalog holds the words of every strategy and router
+ * (name, line, definition, practice); this file reads them (`catalogRowOf`, `routerRowOf`) and words the chips.
  */
 
 /** What a clock needs to be named: the engine's label is the name of a clock kept before its strategy was carried */
@@ -15,106 +20,17 @@ export interface NamedClock {
     roundedRunsFast?: number;
 }
 
-interface FamilyCopy {
-    /** The name */
-    name: string;
-    /** The line under the name: where the name comes from, in a few words */
-    line: string;
-    /** The definition, first in the (i) */
-    definition: string;
-    /** The practice, its meaning here and its source, in the (i) */
-    practice: string;
+/** The strategy as the clock carries it: its routing is set by the engine, and missing from clocks kept before it was carried */
+type RoutedStrategy = ClockStrategy & { routing?: ClockRouting };
+
+/** The catalog row of a clock's strategy: the router's for Coordinated Sources, the family's for the rest */
+function rowOfStrategy(strategy: RoutedStrategy): StrategyCatalogRow {
+    return strategy.routing?.router === 'coordinated_sources' ? routerRowOf('coordinated_sources') : catalogRowOf(strategy);
 }
 
-export const FAMILY_COPY: Record<StrategyFamily, FamilyCopy> = {
-    'takt-batches': {
-        name: 'Takt batches',
-        line: 'Named after takt time: one batch of swings each crafting cycle.',
-        definition: 'Each inserter gets one enable window each crafting cycle. The window is long enough for the swings the inserter makes in that cycle. '
-            + 'The windows are read off a test run of the build at your setpoint.',
-        practice: 'Takt time is the available production time divided by customer demand. Lean production uses it to set how fast work moves. '
-            + 'Here the setpoint sets the crafting cycle. The work comes in one batch each cycle. '
-            + 'Source: Lean Enterprise Institute, Lean Lexicon, "Takt time" (https://www.lean.org/lexicon-terms/takt-time/).',
-    },
-    'round-robin-polling': {
-        name: 'Round-robin polling',
-        line: 'Named after polling systems: groups of machines take their hands in turn.',
-        definition: 'The machines that take from one source are divided into groups. The groups take their hands one after another. '
-            + 'So the source is never asked for more than it holds.',
-        practice: 'In a polling system, one server visits several queues in a fixed order. Here the source is the server and the groups are the queues. '
-            + 'Each visit takes at most what the source holds. Source: Wikipedia, "Polling system".',
-    },
-    'euclidean-swings': {
-        name: 'Euclidean swings',
-        line: 'Named after Euclidean rhythms: whole swings take turns, so the average equals the plan.',
-        definition: 'An inserter needs 3/2 swings each crafting cycle. It makes 1, 2, 1, 2 swings in turn. Its average is then 3/2.',
-        practice: 'A Euclidean rhythm spreads its beats as evenly as possible, using the Euclidean algorithm. '
-            + 'Source: G. Toussaint, "The Euclidean Algorithm Generates Traditional Musical Rhythms", Bridges 2005. '
-            + 'In control, the same average is made by the split-time controller: it makes a fractional control value from whole outputs. '
-            + 'It switches between the two neighbouring values in proportion. Source: P. K. Janert, Feedback Control for Computer Systems, pp. 110-111.',
-    },
-    'time-division-slots': {
-        name: 'Time-division slots',
-        line: 'Named after time-division multiple access: each inserter has its own slots.',
-        definition: 'Each inserter gets one short enable window for every hand it moves. The windows are spread evenly over the window cycle. '
-            + 'Inserters that move the same hands share enable windows.',
-        practice: 'In time-division multiple access, each station sends in its own slot of a repeating frame. '
-            + 'Source: Wikipedia, "Time-division multiple access".',
-    },
-    'time-study-windows': {
-        name: 'Time-study windows',
-        line: 'Named after time study: enable windows set by watching the work.',
-        definition: 'The generator runs the build with only the output inserters on a clock. Every other inserter then gets an enable window. '
-            + 'It covers the ticks the inserter was seen moving items. A few ticks of padding are added.',
-        practice: 'A time study is the timed observation of a task to set a work standard. F. W. Taylor was an early user. '
-            + 'Source: Wikipedia, "Time and motion study".',
-    },
-    'moved-output-swing': {
-        name: 'Moved output swing',
-        line: 'Time-study windows with one output swing moved.',
-        definition: 'Time-study windows, with one output swing started earlier or later than even spacing. '
-            + 'The machine holds the difference in its output slot.',
-        practice: 'This name is plain. No real practice fits it.',
-    },
-    'signal-offset': {
-        name: 'Signal offset',
-        line: 'Named after offset in traffic signal timing: one set of swings moved in time.',
-        definition: 'Takt batches with one set of swings moved to another place in the window cycle. '
-            + 'The set is an output swing and the input swings planned with it. The limits of the machine set how far it can move.',
-        practice: 'Traffic signals along a road work together. The offset is the timing difference between their phases. '
-            + 'Source: FHWA, Traffic Signal Timing Manual, section 6.3.4 (https://ops.fhwa.dot.gov/publications/fhwahop08024/chapter6.htm).',
-    },
-    'pitch-pickups': {
-        name: 'Pitch pickups',
-        line: 'Named after pitch in lean production: one full hand at a time.',
-        definition: 'Each output inserter swings once each enable window. The window is timed so the machine holds a full hand when the inserter arrives.',
-        practice: 'Pitch is the time needed in a production area to make one container of products. Here the container is a full hand. '
-            + 'Source: Lean Enterprise Institute, Lean Lexicon, "Pitch" (https://www.lean.org/lexicon-terms/pitch/).',
-    },
-    'per-branch': {
-        name: 'Coordinated signal system',
-        line: 'The inserters of each source get their own enable windows, on one shared window cycle.',
-        definition: 'A source is a machine, belt or chest that inserters take from. The inserters of one source use the enable windows of one other clock made for the build. '
-            + 'All sources use the window cycle of the recommended clock. The generator sets the sources one at a time, from the output upstream. '
-            + 'It keeps the setting with the smallest number of wakeups for the full clock.',
-        practice: 'Traffic signals along a road work together in a coordination plan. All signals of the plan use the same cycle length. '
-            + 'The split and the offset are set for each intersection. '
-            + 'Source: FHWA, Traffic Signal Timing Manual (https://ops.fhwa.dot.gov/publications/fhwahop08024/chapter6.htm).',
-    },
-    'exhaust': {
-        name: 'Exhaust',
-        line: 'Clears byproducts out of the machine that makes them.',
-        definition: 'Clears the byproducts the build no longer needs out of the machine that makes them. '
-            + 'Each inserter that takes one away gets one enable window a window cycle. The windows come one after another. '
-            + 'Each window is long enough for the hands the machine gives. This holds in all but 1 window cycle in 740.',
-        practice: 'Set the window cycle so the container can hold its results at the worst time. That time is just before an enable window opens. '
-            + 'Like exhaustive service in a polling system, it tries to empty the container. Its enable window has a fixed length. '
-            + 'The length is chosen to empty the container in almost every window cycle. Source: Wikipedia, "Polling system".',
-    },
-};
-
+/** A chip after the name: the tuning method and the selection of the strategy, then what qualifies the clock */
 interface QualifierChip {
-    id: StrategyQualifier;
+    id: StrategyQualifier | 'tuning_method' | 'selection';
     /** What the chip says; the name and the chips are joined by " · " */
     label: string;
     /** The line in its hover and its (i) */
@@ -128,7 +44,7 @@ const fastPercent = (share: number) => share * 100 < 0.005 ? 'under 0.01%' : `${
 
 type QualifierCopy = (clock: NamedClock) => Omit<QualifierChip, 'id'>;
 
-const QUALIFIER_COPY: Record<StrategyQualifier, QualifierCopy> = {
+const QUALIFIER_COPY: Record<Exclude<StrategyQualifier, 'found-by-search'>, QualifierCopy> = {
     'output-swings': clock => ({
         label: `${plural(clock.strategy?.output_swings ?? 0, 'output swing', 'output swings')} a cycle`,
         line: 'The output inserter makes this many swings each crafting cycle.',
@@ -150,7 +66,7 @@ const QUALIFIER_COPY: Record<StrategyQualifier, QualifierCopy> = {
         line: 'Made from fewer swings each crafting cycle, so the whole window cycle is shorter.',
     }),
     'phase-accumulator': () => ({
-        label: 'phase accumulator (subtick clock)',
+        label: 'subtick clock',
         line: 'The clock counts the window cycle in fractions of a tick. The build then runs at exactly your rate. '
             + 'Source: Wikipedia, "Direct digital synthesis" (the phase accumulator).',
     }),
@@ -180,10 +96,6 @@ const QUALIFIER_COPY: Record<StrategyQualifier, QualifierCopy> = {
         label: 'room for a hand of fuel',
         line: 'An inserter takes fuel off a belt. It has room in its enable window for one more hand.',
     }),
-    'found-by-search': () => ({
-        label: 'found by search',
-        line: 'Found by trying placements in the simulator. It is not worked out from the numbers of the build.',
-    }),
     'pickups-from-entry': () => ({
         label: 'pickups counted from entry',
         line: 'Belt pickups are counted from the time the inserter reaches the belt.',
@@ -198,17 +110,42 @@ const QUALIFIER_COPY: Record<StrategyQualifier, QualifierCopy> = {
 
 /** The name of the clock's strategy; the engine's label for a clock kept before the strategy was carried */
 export function strategyNameOf(clock: NamedClock): string {
-    return clock.strategy ? FAMILY_COPY[clock.strategy.family].name : clock.label;
+    return clock.strategy ? rowOfStrategy(clock.strategy).name : clock.label;
 }
 
-/** The copy of the clock's family; null for a clock kept before the strategy was carried */
-export function familyCopyOf(clock: NamedClock): FamilyCopy | null {
-    return clock.strategy ? FAMILY_COPY[clock.strategy.family] : null;
+/** The catalog row of the clock's strategy (name, line, definition, practice); null for a clock kept before the strategy was carried */
+export function familyCopyOf(clock: NamedClock): StrategyCatalogRow | null {
+    return clock.strategy ? rowOfStrategy(clock.strategy) : null;
 }
 
-/** The chips after the name, in the order the engine lists the qualifiers */
+const TUNING_METHOD_COPY: Record<TuningMethod, Omit<QualifierChip, 'id'>> = {
+    calculated: { label: 'calculated', line: 'Windows calculated from the build\'s numbers.' },
+    observed: { label: 'observed', line: 'Windows drawn around an unclocked run of the build.' },
+};
+
+const SELECTION_COPY: Record<Selection, Omit<QualifierChip, 'id'>> = {
+    one_version: { label: 'one version', line: 'One clock is made.' },
+    // the engine does not carry how many versions were made, so the chip says several
+    best_of_versions: {
+        label: 'best of several versions',
+        line: 'Several clocks are made. The simulation keeps the one with the fewest wakeups that holds.',
+    },
+    found_by_search: {
+        label: 'found by search',
+        line: 'Windows are moved through many placements in the simulator; the best that holds is kept.',
+    },
+};
+
+/** The chips after the name: the tuning method (none for Coordinated Sources) and the selection, then the qualifiers in the order the engine lists them */
 export function qualifierChipsOf(clock: NamedClock): QualifierChip[] {
-    return (clock.strategy?.qualifiers ?? []).map(id => ({ id, ...QUALIFIER_COPY[id](clock) }));
+    if (!clock.strategy) return [];
+    const row = rowOfStrategy(clock.strategy);
+    const qualifiers = clock.strategy.qualifiers.filter((id): id is Exclude<StrategyQualifier, 'found-by-search'> => id !== 'found-by-search');
+    return [
+        ...(row.tuning_method === null ? [] : [{ id: 'tuning_method' as const, ...TUNING_METHOD_COPY[row.tuning_method] }]),
+        { id: 'selection' as const, ...SELECTION_COPY[row.selection] },
+        ...qualifiers.map(id => ({ id, ...QUALIFIER_COPY[id](clock) })),
+    ];
 }
 
 /** The separator between a name and its chips */
@@ -216,29 +153,61 @@ export const CHIP_SEPARATOR = ' · ';
 
 /**
  * The whole name in one string, for a radio's label, an announcement, the install dialog, the saved pick:
- * "Takt batches · 2 output swings a cycle · shared enable windows"
+ * "Takt Batches · calculated · one version · 2 output swings a cycle · shared enable windows"
  */
 export function fullClockName(clock: NamedClock): string {
     return [strategyNameOf(clock), ...qualifierChipsOf(clock).map(chip => chip.label)].join(CHIP_SEPARATOR);
 }
 
 /**
- * The name of a clock still being made, from its task: the families are known from the task's id, a count of output
- * swings (`swings-6`) only by its number, as a takt batches or a round-robin polling clock is known only after the run.
+ * The name of a clock still being made, from its task: the strategies are known from the task's id, a count of output
+ * swings (`swings-6`) only by its number, as a Takt Batches or a Round-Robin Polling clock is known only after the run.
  */
 export function pendingClockName(task: { id: string; label: string }): string {
-    const names: Record<string, StrategyFamily> = {
-        'fractional': 'euclidean-swings',
-        'even-hands': 'time-division-slots',
-        'derived': 'time-study-windows',
-        'uneven-output': 'moved-output-swing',
-        'shifted-swings': 'signal-offset',
-        'full-hand': 'pitch-pickups',
-        'primitive-grouped': 'round-robin-polling',
-        'per-branch': 'per-branch',
+    const names: Record<string, Pick<ClockStrategy, 'family' | 'construction'>> = {
+        'fractional': { family: 'euclidean-swings' },
+        'even-hands': { family: 'time-division-slots' },
+        'derived': { family: 'time-study-windows' },
+        'uneven-output': { family: 'moved-output-swing' },
+        'shifted-swings': { family: 'signal-offset' },
+        'full-hand': { family: 'pitch-pickups' },
+        'primitive-grouped': { family: 'round-robin-polling', construction: 'grouped-hands' },
     };
-    const family = names[task.id];
-    if (family) return FAMILY_COPY[family].name;
+    if (task.id === 'per-branch') return routerRowOf('coordinated_sources').name;
+    const known = names[task.id];
+    if (known) return catalogRowOf(known).name;
     const swings = /^swings-(\d+)$/.exec(task.id);
     return swings ? `${plural(Number(swings[1]), 'output swing', 'output swings')} a cycle` : task.label;
+}
+
+/** The lines of the (i) of a Coordinated Sources clock: each source and what the router gave its entities; none for any other clock */
+export function sourceLinesOf(clock: NamedClock): string[] {
+    const sources = (clock.strategy as RoutedStrategy | undefined)?.routing?.sources ?? [];
+    return sources.map(({ source, entities }) => {
+        const gave = Object.entries(entities).map(([entity, control]) => ({ entity, text: controlText(control) }));
+        const texts = new Set(gave.map(({ text }) => text));
+        // one text for every entity of the source is said once; else each entity says its own
+        const what = texts.size === 1 ? [...texts][0] : gave.map(({ entity, text }) => `${idLabel(entity)}: ${text}`).join('; ');
+        return `${idLabel(source)} \u2192 ${what}`;
+    });
+}
+
+/** "machine:2" as the views name it, "Machine 2" */
+function idLabel(id: string): string {
+    const [kind, number] = id.split(':');
+    return kind in ENTITY_KINDS && /^\d+$/.test(number ?? '') ? entityLabel(kind as LabelKind, Number(number)) : id;
+}
+
+const ENTITY_KINDS: Record<LabelKind, true> = { machine: true, inserter: true, belt: true, chest: true, drill: true };
+
+/** What the router gave one entity: the name of its strategy and its tuning method, or "always enabled: <reason>" */
+function controlText(control: EnableControl): string {
+    if (control.kind === 'always_on') return alwaysEnabledText(control.reason);
+    const row = catalogRowOf({ family: control.family, construction: control.construction });
+    return row.tuning_method === null ? row.name : `${row.name}${CHIP_SEPARATOR}${row.tuning_method}`;
+}
+
+/** The reason in the words the Enable windows view uses, with its "Always on:" said "always enabled:" */
+function alwaysEnabledText(reason: AlwaysOnReason): string {
+    return (modeText({ mode: 'always-on', ownClock: undefined, alwaysOnReason: reason }) ?? '').replace(/^Always on: /, 'always enabled: ');
 }
