@@ -179,8 +179,8 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     {
         id: 'enable-rule',
         term: 'Enable Control Strategy override ("override" for short)',
-        definition: 'The setting that says when an inserter or drill is switched on. Modes: Auto, Always on, Never on, '
-            + 'Clocked, Conditional.',
+        definition: 'The setting that overrides the Enable Control Strategy of one inserter or drill. Auto lets the generator '
+            + 'choose the strategy. Always on, Never on, Clocked and Conditional decide the control instead.',
         insteadOf: 'enable rule, rule, enable control, AUTO, ALWAYS, NEVER, CLOCKED, CONDITIONAL',
     },
     {
