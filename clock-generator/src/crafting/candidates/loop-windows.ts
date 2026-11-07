@@ -1,9 +1,10 @@
 import { Config } from "../../config";
 import { LOOP_WINDOW_MIN_SWINGS, underBlockMap, underBlockStretches, underBlockWindows } from "../sequence/under-block-windows";
-import { alwaysEnabledInserters, loopInserters } from "../sequence/unplanned-inserter-clock";
+import { alwaysEnabledInserters } from "../sequence/unplanned-inserter-clock";
 import { createEntityRegistryFromConfig } from "../sequence/simulation-context";
 import { OpenRange } from "../../data-types";
-import { Entity, handSizeFor, Inserter } from "../../entities";
+import { Entity, handSizeFor, Inserter, ReadableEntityRegistry } from "../../entities";
+import { graphOf } from "../feasibility/assert-feasible";
 import { Logger } from "../../common/logger";
 import { StockRecording } from "../machine-stock";
 import { alwaysEnabledByConfig } from "../plan/plan-run";
@@ -14,6 +15,54 @@ import { alwaysEnabledByConfig } from "../plan/plan-run";
  */
 export function anyFeederCarriesFuel(sink_feeders: readonly Inserter[], fuel_item: string | undefined): boolean {
     return fuel_item !== undefined && sink_feeders.some(it => it.filtered_items.has(fuel_item));
+}
+
+/**
+ * A loop of machines of a build: a composite node of its planner graph (`graph.components`) with an inside edge between two
+ * of its machines. `own`: the inserters of those inside edges, the loop's own; `out`: the inserters of its out edges into a
+ * machine, which take from one of its machines into a machine outside it. Each by entity id, in the order of the build.
+ */
+interface MachineLoop {
+    readonly own: readonly string[];
+    readonly out: readonly string[];
+}
+
+const loops_of = new WeakMap<Config, readonly MachineLoop[]>();
+
+/**
+ * The loops of machines of a config (`MachineLoop`), read from its planner graph once per config object; none where the
+ * graph cannot be built (the config is refused elsewhere). A loop through a container port alone (the ore voiders' machine
+ * and chest) has no inside edge between two machines and is none: its inserters keep the windows of the plan.
+ */
+function machineLoopsOf(config: Config): readonly MachineLoop[] {
+    let loops = loops_of.get(config);
+    if (loops === undefined) {
+        const graph = graphOf(config)?.graph;
+        const machines = new Set(graph?.nodes.filter(node => node.kind === "machine").map(node => node.key) ?? []);
+        const edge = new Map(graph?.edges.map(it => [it.key, it]) ?? []);
+        const entitiesOf = (keys: readonly string[], keep: (to: string, from: string) => boolean) => Array.from(new Set(keys
+            .map(key => edge.get(key)!).filter(it => it.via === "inserter" && keep(it.to, it.from)).map(it => it.entity)));
+        loops = (graph?.components ?? [])
+            .map(component => ({
+                own: entitiesOf(component.inside, (to, from) => machines.has(to) && machines.has(from)),
+                out: entitiesOf(component.out, to => machines.has(to)),
+            }))
+            .filter(loop => loop.own.length > 0);
+        loops_of.set(config, loops);
+    }
+    return loops;
+}
+
+/**
+ * The loops of machines of a config with their inserters as the registry has them (see `machineLoopsOf`), each list in the
+ * registry's order: only those the plan leaves always enabled (`alwaysEnabledInserters`), the inserters these windows are for
+ */
+function loopsWithInserters(config: Config, registry: ReadableEntityRegistry): { own: Inserter[]; out: Inserter[] }[] {
+    const always_enabled = alwaysEnabledInserters(registry);
+    return machineLoopsOf(config).map(loop => ({
+        own: always_enabled.filter(it => loop.own.includes(it.entity_id.id)),
+        out: always_enabled.filter(it => loop.out.includes(it.entity_id.id) && !loop.own.includes(it.entity_id.id)),
+    }));
 }
 
 /**
@@ -46,7 +95,8 @@ function droppedPerTick(stock: StockRecording, inserter_ids: ReadonlySet<string>
 
 /**
  * Windows for the inserters that take from a loop of machines into a machine outside it (the eggs for the science
- * biochamber), which the loop leaves always enabled (`alwaysEnabledInserters`), from a long run of the clock (`stock`):
+ * biochamber; the out edges of its composite node into a machine, `machineLoopsOf`), which the loop leaves always enabled
+ * (`alwaysEnabledInserters`), from a long run of the clock (`stock`):
  * each is enabled in every stretch in which the machine it puts into was under its output block, for as many ticks as
  * the machine needs to draw the hands of the stretch under its insertion limit (`drawWindowTicks`), and disabled in the
  * rest, where the machine could take nothing from it or has what it needs (see `underBlockWindows`). Where the
@@ -76,9 +126,10 @@ export function loopInserterWindows(
     }
     const registry = createEntityRegistryFromConfig(config);
     const always_enabled_by_config = alwaysEnabledByConfig(config);
-    const in_a_loop = new Set(loopInserters(registry).map(it => it.entity_id.id));
-    const inserters = alwaysEnabledInserters(registry)
-        .filter(it => !always_enabled_by_config.has(it.entity_id.id) && !in_a_loop.has(it.entity_id.id));
+    // the out edges of the loops' composite nodes into a machine, in the registry's order
+    const takers_out = new Set(loopsWithInserters(config, registry).flatMap(loop => loop.out.map(it => it.entity_id.id)));
+    const inserters = registry.getAll().filter(Entity.isInserter)
+        .filter(it => takers_out.has(it.entity_id.id) && !always_enabled_by_config.has(it.entity_id.id));
     const all_inserters = registry.getAll().filter(Entity.isInserter);
     for (const sink_id of new Set(inserters.map(it => it.sink.entity_id.id))) {
         const sink = registry.getEntityByIdOrThrow(inserters.find(it => it.sink.entity_id.id === sink_id)!.sink.entity_id);
@@ -163,7 +214,8 @@ function handsPerPeriod(stock: StockRecording, inserter_id: string, period: numb
 }
 
 /**
- * Windows for the inserters of a loop of machines itself, which `loopInserterWindows` leaves always enabled, placed by
+ * Windows for the inserters of a loop of machines itself (the inside edges of its composite node between two machines,
+ * `machineLoopsOf`), which `loopInserterWindows` leaves always enabled, placed by
  * arithmetic from the clock's own windows (`windows`, with the windows out of the loop that were kept) and, for
  * "hands", the hands a period each moved in the run of the clock with the loop always enabled (`stock`); no window is
  * read from a run. By the kind of the machine it puts into (see `InLoopRule`):
@@ -198,20 +250,14 @@ export function inLoopInserterWindows(
     const result = new Map<string, { windows: OpenRange[]; item_name: string; rule: InLoopRule }>();
     const registry = createEntityRegistryFromConfig(config);
     const always_enabled_by_config = alwaysEnabledByConfig(config);
-    const in_a_loop = loopInserters(registry);
-    const loop_ids = new Set(in_a_loop.map(it => it.entity_id.id));
+    // the loops: the composite nodes of the planner graph, each with its own inserters in the order of the build
+    const loops = loopsWithInserters(config, registry).map(loop => loop.own);
+    const loop_ids = new Set(loops.flat().map(it => it.entity_id.id));
     const all_inserters = registry.getAll().filter(Entity.isInserter);
+    const in_a_loop = all_inserters.filter(it => loop_ids.has(it.entity_id.id));
     const machine_ids = new Set(registry.getAll().filter(Entity.isMachine).map(it => it.entity_id.id));
     const outputWindowsOf = (machine_id: string) => windowsOf(windows, all_inserters
         .filter(it => it.source.entity_id.id === machine_id && !machine_ids.has(it.sink.entity_id.id)).map(it => it.entity_id.id));
-    // the loops: machines joined by the inserters of a loop, each loop's inserters in the order of the build
-    const loop_of = new Map<string, string>();
-    const root = (id: string): string => loop_of.has(id) && loop_of.get(id) !== id ? root(loop_of.get(id)!) : id;
-    for (const it of in_a_loop) {
-        const [a, b] = [root(it.source.entity_id.id), root(it.sink.entity_id.id)];
-        loop_of.set(a, a);
-        loop_of.set(b, a);
-    }
     const span = positionsOf(period);
     for (const inserter of in_a_loop) {
         const id = inserter.entity_id.id;
@@ -234,7 +280,7 @@ export function inLoopInserterWindows(
         if (rule === null) {
             continue;
         }
-        const loop = in_a_loop.filter(it => root(it.source.entity_id.id) === root(inserter.source.entity_id.id));
+        const loop = loops.find(it => it.some(own => own.entity_id.id === id))!;
         const n = loop.length, j = loop.indexOf(inserter);
         const swing = inserter.animation.total.ticks;
         let placed: OpenRange[];
