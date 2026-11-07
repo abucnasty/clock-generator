@@ -110,9 +110,10 @@ const fastPercent = (share: number): string => share * 100 < 0.005 ? "under 0.01
 export function settingChipsOf(settings: ClockSettings): SettingChip[] {
     const chips: SettingChip[] = [];
     const { output_count } = settings;
-    // TEXT TO APPROVE (manager, 2026-11-07): "output swings N" / "hands brought in N" are CATALOG.md's words; the chips read "N output swings a cycle" today
+    const { count } = output_count;
     chips.push({ field: "output_count", value: output_count.kind,
-        label: `${output_count.kind === "output_swings" ? "output swings" : "hands brought in"} ${output_count.count}` });
+        label: output_count.kind === "output_swings" ? `${count} output ${count === 1 ? "swing" : "swings"} each output cycle`
+            : `${count} ${count === 1 ? "hand" : "hands"} brought in each output cycle` });
     for (const cycle of settings.window_cycle) {
         const label = cycle.kind === "subtick_clock" ? "subtick clock"
             : cycle.kind === "rounded_clock" ? `rounded to ${cycle.window_cycle_ticks} ticks, ${fastPercent(cycle.runs_fast)} fast`
@@ -156,15 +157,15 @@ export function routerRowOf(router: EnableControlStrategyRouter): StrategyCatalo
 }
 
 const TAKT_PRACTICE = "Takt time is the available production time divided by customer demand. Lean production uses it to set how fast work moves. "
-    + "Here the setpoint sets the crafting cycle. The work comes in one batch each cycle. "
+    + "Here the setpoint sets the output cycle. The work comes in one batch each output cycle. "
     + "Source: Lean Enterprise Institute, Lean Lexicon, \"Takt time\" (https://www.lean.org/lexicon-terms/takt-time/).";
 
 const TAKT_BATCHES_OBSERVED: StrategyCatalogRow = {
     name: "Takt Batches",
     tuning_method: "observed",
     selection: "one_version",
-    line: "Named after takt time: one batch of swings each crafting cycle.",
-    definition: "Each inserter gets one enable window each crafting cycle. The window is long enough for the swings the inserter makes in that cycle. "
+    line: "Named after takt time: one batch of swings each output cycle.",
+    definition: "Each inserter gets one enable window each output cycle. The window is long enough for the swings the inserter makes in that output cycle. "
         + "The windows are read off a test run of the build at your setpoint.",
     practice: TAKT_PRACTICE,
 };
@@ -174,10 +175,9 @@ const STRATEGY_ROWS: Record<StrategyId, StrategyCatalogRow> = {
         name: "Takt Batches",
         tuning_method: "calculated",
         selection: "one_version",
-        line: "Named after takt time: one batch of swings each crafting cycle.",
-        // TEXT TO APPROVE (manager, 2026-11-07): the calculated half's last sentence
-        definition: "Each inserter gets one enable window each crafting cycle. The window is long enough for the swings the inserter makes in that cycle. "
-            + "The windows are calculated from the hands, the crafting cycle and the stock each machine holds.",
+        line: "Named after takt time: one batch of swings each output cycle.",
+        definition: "Each inserter gets one enable window each output cycle. The window is long enough for the swings the inserter makes in that output cycle. "
+            + "The windows are calculated from the hands, the output cycle and the stock each machine holds.",
         practice: TAKT_PRACTICE,
     },
     round_robin_polling: {
@@ -195,7 +195,7 @@ const STRATEGY_ROWS: Record<StrategyId, StrategyCatalogRow> = {
         tuning_method: "observed",
         selection: "one_version",
         line: "Named after Euclidean rhythms: whole swings take turns, so the average equals the plan.",
-        definition: "An inserter needs 3/2 swings each crafting cycle. It makes 1, 2, 1, 2 swings in turn. Its average is then 3/2.",
+        definition: "An inserter needs 3/2 swings each output cycle. It makes 1, 2, 1, 2 swings in turn. Its average is then 3/2.",
         practice: "A Euclidean rhythm spreads its beats as evenly as possible, using the Euclidean algorithm. "
             + "Source: G. Toussaint, \"The Euclidean Algorithm Generates Traditional Musical Rhythms\", Bridges 2005. "
             + "In control, the same average is made by the split-time controller: it makes a fractional control value from whole outputs. "
@@ -279,13 +279,12 @@ const COORDINATED_SOURCES_ROW: StrategyCatalogRow = {
 };
 
 const ROUTER_ROWS: Record<EnableControlStrategyRouter, StrategyCatalogRow> = {
-    // TEXT TO APPROVE (manager, 2026-11-07): Direct's line and definition
     direct: {
         name: "Direct",
         tuning_method: null,
         selection: "one_version",
-        line: "Every inserter follows one strategy.",
-        definition: "Every inserter and mining drill the clock enables follows the one strategy of the clock, or stays always enabled for a reason.",
+        line: "Every inserter and mining drill follows one strategy.",
+        definition: "The router that gives every inserter and mining drill of the clock the one chosen strategy. An entity the strategy does not control stays always enabled, with its reason.",
         practice: "This name is plain. No real practice fits it.",
     },
     coordinated_sources: COORDINATED_SOURCES_ROW,

@@ -130,12 +130,12 @@ export function sourceControlsOf(
         const entities: Record<string, EnableControl> = {};
         for (const id of group.inserters) {
             if (choice.windows[id] !== null && choice.windows[id] !== undefined) {
-                if (part.strategy === undefined) { logger.debug(`Per-branch clock, ${build}: ${id} left out of the sources, the part ${partName(part)} has no strategy`); continue; }
+                if (part.strategy === undefined) { logger.debug(`Coordinated Sources, ${build}: ${id} left out of the sources, the clock ${partName(part)} has no strategy`); continue; }
                 entities[id] = { kind: "strategy", id: part.strategy.id, tuning_method: part.strategy.tuning_method };
                 continue;
             }
             const reason = choice.parts.map(it => it.always_on?.[id]).find(it => it !== undefined) ?? always_on_reasons[id];
-            if (reason === undefined) { logger.debug(`Per-branch clock, ${build}: ${id} left out of the sources, it is always enabled with no reason known`); continue; }
+            if (reason === undefined) { logger.debug(`Coordinated Sources, ${build}: ${id} left out of the sources, it is always enabled with no reason known`); continue; }
             entities[id] = { kind: "always_on", reason };
         }
         return { source: group.source, entities };
@@ -181,9 +181,9 @@ function sharedPlan(config: Config, recommended: CoordinatedSourcesPart): Uncloc
 export function coordinatedSourcesClock(config: Config, input: CoordinatedSourcesInput, options: GenerateClockOptions = {}): BlueprintGenerationResult {
     const logger = options.logger ?? defaultLogger;
     const recommended = input.parts.find(part => part.alternative_id === input.recommended_id);
-    if (recommended === undefined) refuse(`the recommended clock ${input.recommended_id} is not among the parts`);
+    if (recommended === undefined) refuse(`the recommended clock ${input.recommended_id} is not among the clocks made for the build`);
     const shared_ticks = recommended.window_cycle_ticks;
-    if (!Number.isInteger(shared_ticks)) refuse(`the recommended clock's period of ${shared_ticks} ticks is not whole`);
+    if (!Number.isInteger(shared_ticks)) refuse(`the window cycle time of the recommended clock, ${shared_ticks} ticks, is not a whole number of ticks`);
     const made = sharedPlan(config, recommended);
     const registry = made.run.simulation_context.entity_registry;
     const inserters: GroupedInserter[] = registry.getAll().filter(Entity.isInserter)
@@ -223,10 +223,10 @@ export function coordinatedSourcesClock(config: Config, input: CoordinatedSource
     });
     const groups = partGroups(inserters, [recommended, ...admitted], shared_ticks);
     const choosing = groups.filter(group => group.choices.length > 1);
-    logger.log(`Per-branch clock: the parts ${[recommended, ...admitted].map(part => `${partName(part)} (${part.window_cycle_ticks} ticks)`).join(", ")}`);
-    logger.log(`Per-branch clock: ${admitted.length + 1} parts on ${shared_ticks} ticks (${counted_here} counted here), ${groups.length} groups, `
+    logger.log(`Coordinated Sources: the clocks ${[recommended, ...admitted].map(part => `${partName(part)} (${part.window_cycle_ticks} ticks)`).join(", ")}`);
+    logger.log(`Coordinated Sources: ${admitted.length + 1} clocks on ${shared_ticks} ticks (${counted_here} counted here), ${groups.length} groups of inserters, `
         + `${choosing.length} with a choice: ${choosing.map(group => `${group.source} ${group.choices.length}`).join(", ") || "none"}`);
-    if (choosing.length === 0) refuse("no group of inserters has another choice than the recommended clock's");
+    if (choosing.length === 0) refuse("no source has another choice than the recommended clock's");
 
     // the windows the clock has beside its inserters' (drills), from the recommended clock
     const fixed = Object.fromEntries(Object.entries(tiledWindows(recommended.windows, recommended.window_cycle_ticks, shared_ticks))
@@ -286,7 +286,7 @@ export function coordinatedSourcesClock(config: Config, input: CoordinatedSource
             if (taken !== undefined && taken !== at) {
                 current.set(group.source, taken);
                 changed = true;
-                logger.log(`Per-branch clock, pass ${pass + 1}: ${group.source} takes ${partName(group.choices[taken].parts[0])} `
+                logger.log(`Coordinated Sources, pass ${pass + 1}: ${group.source} takes ${partName(group.choices[taken].parts[0])} `
                     + `(${tried[taken].trial.wake_ups} wakeups a minute)`);
             }
         }
@@ -299,7 +299,7 @@ export function coordinatedSourcesClock(config: Config, input: CoordinatedSource
     const margin = marginOf(trialOf(windows, left_open));
     if (margin !== null) refuse(`the composed clock: ${margin}`);
     const map = new Map(Object.entries(windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
-    logger.log(`Per-branch clock: ${groups.map(group => `${group.source} from ${partName(group.choices[current.get(group.source)!].parts[0])}`).join(", ")}; `
+    logger.log(`Coordinated Sources: ${groups.map(group => `${group.source} from ${partName(group.choices[current.get(group.source)!].parts[0])}`).join(", ")}; `
         + `${trials.size} clocks simulated`);
     const result = finishedClock(made, map, [], { ...options, loop_windows: false }, left_open);
     return { ...result, coordinated_sources: { parts: Object.fromEntries(groups.map(group => [group.source, partName(group.choices[current.get(group.source)!].parts[0])])),
