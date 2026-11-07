@@ -816,6 +816,8 @@ export function finishedClock(
     left_open: ReadonlyMap<string, AlwaysOnReason>,
     /** A constructed schedule's margins belong to its windows, never to the planning history's windows. */
     constructed?: Pick<BlueprintGenerationResult, "random_margins">,
+    /** How far the clock-only check goes, and who is given it (see checkedClock); the whole check by default */
+    check: Pick<NonNullable<Parameters<typeof checkedClock>[4]>, "through" | "on_as_built"> = {},
 ): BlueprintGenerationResult {
     // the windows carry the belt pickup slack themselves (on a moving belt); the clock names the belt they are made for
     const exported = clockOfPlan(made, { ...options, belt_pickup_slack: "always" });
@@ -827,7 +829,7 @@ export function finishedClock(
     const named = { ...exported, ...(constructed === undefined ? {} : { random_margins: constructed.random_margins }),
         belt, belt_pickup_slack_left_out: false, turns,
         applied_belt_pickup_slack: moving ? Object.fromEntries(belt_fed.map(id => [id, slack.get(id)!])) : {} };
-    const result = checkedClock(made, named, windows, { ...options, verify_as_built: true }, { left_open });
+    const result = checkedClock(made, named, windows, { ...options, verify_as_built: true }, { left_open, ...check });
     // the check of the plan's run is the same object for every clock made from the plan, and the next clock's check
     // overwrites it: this clock keeps a copy of its own
     return { ...result, stability_check: { ...result.stability_check, holds: result.stability_check.as_built?.holds ?? false } };
