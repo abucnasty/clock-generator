@@ -9,11 +9,20 @@ import {
     TextField,
     Typography,
 } from '@mui/material';
+import { catalogRowOf } from 'clock-generator/light';
 import { useId, type ReactNode } from 'react';
 import { HelpButton } from './HelpButton';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import type { ConfigFormData } from '../utils/configForm/formData';
 import { FORCE_TEXT, type TargetCounts } from '../utils/targetCounts';
+
+/** The names of the searches that "Search for fewer wakeups" runs, read from the strategy catalog */
+const SEARCH_NAMES = {
+    time_study: catalogRowOf({ id: 'time_study_windows', tuning_method: 'observed' }).name,
+    moved_output: catalogRowOf({ id: 'moved_output_swing', tuning_method: 'observed' }).name,
+    phase_shifted: catalogRowOf({ id: 'phase_shifted_batch', tuning_method: 'observed' }).name,
+    pitch: catalogRowOf({ id: 'pitch_pickups', tuning_method: 'observed' }).name,
+};
 
 interface OverridesFormProps {
     importedChecks?: ConfigFormData['overrides'];
@@ -95,7 +104,7 @@ export function OverridesForm({
                         slotProps={{ htmlInput: { min: 1 } }}
                         sx={{ width: 200 }}
                         size="small"
-                        helperText="Crafting cycles per window cycle (overrides the calculated LCM). The swing plan below shows the calculated value."
+                        helperText="Output cycles per window cycle (overrides the calculated LCM). The swing plan below shows the calculated value."
                     />
                     <Box sx={{ width: 260, maxWidth: '100%' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -128,8 +137,8 @@ export function OverridesForm({
                             />
                             <HelpButton label="About Search for fewer wakeups">
                                 <Typography variant="body2">
-                                    Runs the four searches for every build: observed enable windows, uneven output swings, shifted swings and full-hand output swings.
-                                    They take most of the time of a generation, so by default they only run when no clock made without a search is stable, except that observed enable windows and shifted swings also run on a short clock that still has wakeups.
+                                    Runs the four searches for every build: {SEARCH_NAMES.time_study}, {SEARCH_NAMES.moved_output}, {SEARCH_NAMES.phase_shifted} and {SEARCH_NAMES.pitch}.
+                                    They take most of the time of a generation, so by default they only run when no clock made without a search is stable, except that {SEARCH_NAMES.time_study} and {SEARCH_NAMES.phase_shifted} also run on a short clock that still has wakeups.
                                     Where one is, a search can still find a stable clock with fewer wakeups: turn this on to look for it.
                                 </Typography>
                             </HelpButton>

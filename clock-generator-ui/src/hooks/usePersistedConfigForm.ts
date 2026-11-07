@@ -436,7 +436,7 @@ export function usePersistedConfigForm() {
             }),
             (e) => complete(() => {
                 console.warn('Failed to check the config from localStorage:', e);
-                setLoadError(e instanceof Error ? e.message : 'Failed to check the saved config');
+                setLoadError(e instanceof Error ? e.message : 'Failed to check the saved configuration');
             }),
         );
         return () => {

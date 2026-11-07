@@ -112,7 +112,7 @@ const InserterRow = memo(function InserterRow({ fullMetadata, focusRequest, refu
                 </>}
                 routeActions={<EntityRowActions kind="inserter" id={value.id} label={label} index={index} count={count} onDuplicate={onDuplicate} onDelete={onRemove} />}
                 rowSettings={fields => <EntitySettings actionContainerId={settingsSlotId('inserter', value.id)} label={label} request={detailsRequest}
-                tabs={[{ label: 'Enable control', content:
+                tabs={[{ label: 'Enable control override', content:
                     <EnableControlFormContent key={ruleRevision + JSON.stringify(value.overrides?.enable_control)} entityType="inserter" entityId={value.id}
                         currentOverride={value.overrides?.enable_control} sourceType={value.source.type} sinkType={value.sink.type}
                         availableItems={itemsAround(value, editor.machines, editor.belts, editor.chests, editor.getRecipeInfo, editor.inserters, craftingMachines, editor.drills)}

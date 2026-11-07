@@ -16,7 +16,7 @@ function OutputTransferSection({ control, children, collapsible, count, missing,
 }) {
     const [expanded, setExpanded] = useState(false);
     const detailsId = useId();
-    return <PanelSection level={4} title="Output transfer">
+    return <PanelSection level={4} title="Output routes">
         {control}
         {generationIssues.map(issue => <Alert key={`${issue.machine_id}:${issue.target_machine_id}:${issue.code}`} severity="warning" sx={{ mb: 1 }}>{issue.message}</Alert>)}
         {collapsible && <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: 1 }}>

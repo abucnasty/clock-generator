@@ -55,7 +55,7 @@ function ReplayNode({ data }: NodeProps<Node<ReplayData>>) {
                 <Typography variant="subtitle2" sx={{ fontSize: compact ? 17 : 13, whiteSpace: 'nowrap', color: ins ? tokens.text.primary : flowNodeTitleColor(tokens, role) }}>{label}</Typography>
             </Box>
             <Typography variant="caption" noWrap component="div" sx={{ height: 15, lineHeight: 1.25, visibility: compact ? 'hidden' : 'visible' }}>
-                {entity?.machineParams?.recipe ? recipeLabel(entity.machineParams.recipe) : entity?.sublabel ?? entity?.filterIcons?.map(itemLabel).join(', ') ?? (drill?.minedItem ? itemLabel(drill.minedItem) : 'Recorded transfers')}
+                {entity?.machineParams?.recipe ? recipeLabel(entity.machineParams.recipe) : entity?.sublabel ?? entity?.filterIcons?.map(itemLabel).join(', ') ?? (drill?.minedItem ? itemLabel(drill.minedItem) : 'Recorded swings')}
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'start', gap: 0.5, height: 30 }}>
                 {stateStyle && <Box aria-hidden sx={{ width: 12, height: 12, mt: 0.5, flexShrink: 0, border: `1px solid ${tokens.control.border}`, background: patternBackground(stateStyle) }} />}
@@ -173,7 +173,7 @@ function ReplayContent({ config, recording, tick, inspection, cycleTicks, onTick
         const route = `${from.replace(':', ' ')} to ${to.replace(':', ' ')}`;
         const description = active
             ? `${action} at tick ${tick}: ${amounts.map(value => `${number(value.amount)} ${value.item ? itemLabel(value.item) : 'items'}`).join(', ')}; ${route}`
-            : trail ? `Recent transfer on ${route} between ticks ${frame.recentStart} and ${tick - 1}; no transfer at tick ${tick}` : route;
+            : trail ? `Recent swing on ${route} between ticks ${frame.recentStart} and ${tick - 1}; no swing at tick ${tick}` : route;
         const style = flowRouteStyle(tokens, active ? 'transfer' : trail ? 'recent' : highlighted ? 'selected' : 'neutral');
         return { ...edge, type: 'transfer', label: undefined, ariaLabel: description, data: { amounts, description, flowRoute: routes.get(edge.id) },
             markerEnd: { ...(edge.markerEnd as EdgeMarker), color: style.stroke }, style };
@@ -193,33 +193,33 @@ function ReplayContent({ config, recording, tick, inspection, cycleTicks, onTick
             }}>{playing ? 'Pause' : 'Play'}</Button>
             <Button color="inherit" size="small" onClick={() => seek(Math.max(firstTick, tick - 1))} disabled={tick <= firstTick}>−1 tick</Button>
             <Button color="inherit" size="small" onClick={() => seek(Math.min(lastTick, tick + 1))} disabled={tick >= lastTick}>+1 tick</Button>
-            <TextField select label="Transfer scope" size="small" value={transferScope} onChange={event => {
+            <TextField select label="Swing scope" size="small" value={transferScope} onChange={event => {
                 setPlayingRecording(null);
                 onChange(event.target.value === 'selection' ? { replayTransferScope: 'selection', replayFocus: true } : { replayTransferScope: 'all' });
             }} sx={{ minWidth: 165 }}>
                 <MenuItem value="selection" disabled={!selectedEntity}>{selectionLabel}</MenuItem>
                 <MenuItem value="all">Whole build</MenuItem>
             </TextField>
-            <Button color="inherit" size="small" startIcon={<SkipPrevious />} disabled={previous === null} onClick={() => previous !== null && seek(previous)}>Previous transfer</Button>
-            <Button color="inherit" size="small" endIcon={<SkipNext />} disabled={next === null} onClick={() => next !== null && seek(next)}>Next transfer</Button>
+            <Button color="inherit" size="small" startIcon={<SkipPrevious />} disabled={previous === null} onClick={() => previous !== null && seek(previous)}>Previous swing</Button>
+            <Button color="inherit" size="small" endIcon={<SkipNext />} disabled={next === null} onClick={() => next !== null && seek(next)}>Next swing</Button>
             <TextField select label="Playback speed" size="small" value={speed} onChange={event => onChange({ replaySpeed: Number(event.target.value) })} sx={{ minWidth: 130 }}>
                 {[0.25, 0.5, 1, 2, 4, 8].map(value => <MenuItem key={value} value={value}>{value}×</MenuItem>)}
             </TextField>
             <Button color="inherit" size="small" onClick={() => { setPlayingRecording(null); onInspectActivity(); }}>Inspect activity</Button>
             {inspection.replayFocus && <Button color="inherit" size="small" onClick={showAllRoutes}>Show all routes</Button>}
         </Box>
-        {transferScope === 'selection' && transferTicks.length === 0 && <Typography variant="caption" component="p" sx={{ mb: 1 }}>No transfers were recorded for these routes. Choose Whole build to step through other transfers.</Typography>}
+        {transferScope === 'selection' && transferTicks.length === 0 && <Typography variant="caption" component="p" sx={{ mb: 1 }}>No swings were recorded for these routes. Choose Whole build to step through other swings.</Typography>}
         <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mb: 1 }}>
-            <FormControlLabel label="Play one crafting cycle" control={<Checkbox size="small" disabled={!cycles} checked={inspection.replayCycleOnly === true && Boolean(cycles)} onChange={(_, checked) => { setPlayingRecording(null); onChange({ replayCycleOnly: checked }); }} />} />
+            <FormControlLabel label="Play one output cycle" control={<Checkbox size="small" disabled={!cycles} checked={inspection.replayCycleOnly === true && Boolean(cycles)} onChange={(_, checked) => { setPlayingRecording(null); onChange({ replayCycleOnly: checked }); }} />} />
             {cycle && <>
-                <Button size="small" color="inherit" disabled={cycle.start === 0} onClick={() => { const target = outputCycleAt(cycles, outputCycleIndex(cycles, tick) - 1); if (target) seek(Math.ceil(target.start)); }}>Previous cycle</Button>
-                <Typography variant="caption">Crafting cycle {outputCycleIndex(cycles, tick) + 1} of {cycles?.count} · {number(cycle.start)}–{number(cycle.end)} ticks</Typography>
-                <Button size="small" color="inherit" disabled={outputCycleIndex(cycles, tick) + 1 === cycles?.count} onClick={() => { const target = outputCycleAt(cycles, outputCycleIndex(cycles, tick) + 1); if (target) seek(Math.ceil(target.start)); }}>Next cycle</Button>
+                <Button size="small" color="inherit" disabled={cycle.start === 0} onClick={() => { const target = outputCycleAt(cycles, outputCycleIndex(cycles, tick) - 1); if (target) seek(Math.ceil(target.start)); }}>Previous output cycle</Button>
+                <Typography variant="caption">Output cycle {outputCycleIndex(cycles, tick) + 1} of {cycles?.count} · {number(cycle.start)}–{number(cycle.end)} ticks</Typography>
+                <Button size="small" color="inherit" disabled={outputCycleIndex(cycles, tick) + 1 === cycles?.count} onClick={() => { const target = outputCycleAt(cycles, outputCycleIndex(cycles, tick) + 1); if (target) seek(Math.ceil(target.start)); }}>Next output cycle</Button>
             </>}
         </Box>
         <Box component="ul" aria-label="Connection legend" sx={{ m: 0, mb: 0.5, p: 0, display: 'flex', gap: 2, flexWrap: 'wrap', listStyle: 'none' }}>
             <Box component="li" sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}><Box aria-hidden sx={{ width: 28, borderTop: `3px dashed ${tokens.role.orange.main}` }} /><Typography variant="caption">Selected or hovered route</Typography></Box>
-            <Box component="li" sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}><Box aria-hidden sx={{ width: 28, borderTop: `4px solid ${tokens.role.green.main}` }} /><Typography variant="caption">Transfer at this tick · item and quantity</Typography></Box>
+            <Box component="li" sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}><Box aria-hidden sx={{ width: 28, borderTop: `4px solid ${tokens.role.green.main}` }} /><Typography variant="caption">Swing at this tick · item and quantity</Typography></Box>
             <Box component="li" sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}><Box aria-hidden sx={{ width: 28, borderTop: `2px dotted ${tokens.role.green.main}` }} /><Typography variant="caption">Recent activity · no quantity</Typography></Box>
             <Box component="li" sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}><Box aria-hidden sx={{ width: 12, height: 10, border: `1px solid ${tokens.control.border}`, outline: `2px solid ${tokens.role.orange.main}`, outlineOffset: 2, mr: 0.25 }} /><Typography variant="caption">Selected entity outline</Typography></Box>
         </Box>
@@ -227,7 +227,7 @@ function ReplayContent({ config, recording, tick, inspection, cycleTicks, onTick
         <Box component="ul" aria-label="Flow replay legend" sx={{ m: 0, mb: 1, p: 0, display: 'flex', gap: 1.5, flexWrap: 'wrap', listStyle: 'none' }}>
             {states.map(state => <Box component="li" key={state} sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}><ChartSwatch {...timelineStateStyle(state)} sx={{ width: 18, height: 10 }} /><Typography variant="caption">{timelineStateLabel(state)}</Typography></Box>)}
         </Box>
-        <Typography variant="caption" component="p" sx={{ mb: 1 }}>Transfer quantities show tick {tick}. ↑ pickup · ↓ delivery. {tick > 0 ? `Dotted trails show recent activity (ticks ${frame.recentStart}–${tick - 1}).` : 'No earlier activity at tick 0.'} Belts show routes, not physical item positions.</Typography>
+        <Typography variant="caption" component="p" sx={{ mb: 1 }}>Swing quantities show tick {tick}. ↑ pickup · ↓ delivery. {tick > 0 ? `Dotted trails show recent activity (ticks ${frame.recentStart}–${tick - 1}).` : 'No earlier activity at tick 0.'} Belts show routes, not physical item positions.</Typography>
         <Box sx={{ height: fullscreen ? 'max(450px, calc(100vh - 440px))' : 600, minHeight: 400, bgcolor: tokens.surface.inset, border: 1, borderColor: 'divider',
             '--xy-node-color': tokens.text.primary, '--xy-handle-background-color': tokens.control.border,
             '& .react-flow__node.selected > div:first-of-type': { outline: `2px solid ${tokens.role.orange.main}`, outlineOffset: 3 },
@@ -245,6 +245,6 @@ function ReplayContent({ config, recording, tick, inspection, cycleTicks, onTick
                 <FlowTileBackground /><Controls showInteractive={false} showFitView={false}><FlowFitButton onFit={fitGraph} /></Controls>
             </ReactFlow>
         </Box>
-        <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5 }}>Node values describe one modelled copy at the selected tick. Production totals start at tick 0. Transfers are schematic, without simulated arm or belt positions. Playback stops at the recorded endpoint.</Typography>
+        <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5 }}>Node values describe one modelled copy at the selected tick. Production totals start at tick 0. Swings are schematic, without simulated arm or belt positions. Playback stops at the recorded endpoint.</Typography>
     </Box>;
 }

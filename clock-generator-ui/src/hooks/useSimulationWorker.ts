@@ -621,7 +621,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             unusableWorkersRef.current.add(worker);
             worker.terminate();
         }
-        setLogs(previous => [...previous, { level: 'error', message: `A simulation worker stopped: ${detail}`, timestamp: Date.now() }]);
+        setLogs(previous => [...previous, { level: 'error', message: `The simulator stopped: ${detail}`, timestamp: Date.now() }]);
         console.error('Simulation worker stopped:', detail);
         const check = validationRef.current;
         const outcome = crashOutcome({
@@ -667,7 +667,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             };
             worker.onerror = (event) => {
                 if (!current()) return;
-                const message = event.message || 'The simulation worker stopped unexpectedly';
+                const message = event.message || 'The simulator stopped unexpectedly';
                 if (!started) {
                     reject(new Error(message));
                     return;

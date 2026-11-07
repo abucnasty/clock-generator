@@ -56,7 +56,7 @@ function clockWarningOf(
 ): string | null {
     const warnings: string[] = [];
     if (alternative.assessment.start_dependence?.verdict === 'start-dependent') {
-        warnings.push('This clock depends on how it is started: it reaches the setpoint from some sampled starts and settles differently from others. See Model and tested starts.');
+        warnings.push('This clock depends on how it is started: it reaches the setpoint from some sampled starts and reaches a different steady state from others. See Model and tested starts.');
     } else if (alternative.assessment.start_dependence?.verdict === 'unstable') {
         warnings.push('This clock did not reach the setpoint from any sampled start.');
     }

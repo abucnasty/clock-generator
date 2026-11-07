@@ -115,7 +115,7 @@ export function GenerationProgressStatus({ store }: { store: GenerationProgressS
             <Typography variant="body2" sx={{ mt: 1 }}>
                 {progress
                     ? `${progress.total ? `${progress.completed} of ${progress.total} clocks done, running: ` : ''}${progress.step}`
-                    : 'Starting simulation...'}
+                    : 'Starting the simulator...'}
             </Typography>
             {progress?.detail && (
                 <Typography variant="caption" color="text.secondary">

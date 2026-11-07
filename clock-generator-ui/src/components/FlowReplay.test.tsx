@@ -26,7 +26,7 @@ it('renders replay controls using an agricultural build with recorded fuel and m
     expect(screen.getByRole('list', { name: 'Flow replay legend' })).toBeDefined();
     expect(screen.getByRole('combobox', { name: 'Transfer scope' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'Previous transfer' })).toBeDefined();
-    expect(screen.getByRole('checkbox', { name: 'Play one crafting cycle' })).toBeDefined();
+    expect(screen.getByRole('checkbox', { name: 'Play one output cycle' })).toBeDefined();
     expect(screen.getByText(/Belts show routes, not physical item positions\.$/)).toBeDefined();
     expect(screen.queryByText(/Highlights cover ticks/)).toBeNull();
     // a replay, not an editor

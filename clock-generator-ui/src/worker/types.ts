@@ -77,14 +77,14 @@ export interface FuelViewData {
     run: FuelRunView | null;
 }
 
-/** One place tried for a moved crafting cycle or output swing, in ticks from its planned start (negative is earlier) */
+/** One place tried for a moved output cycle or output swing, in ticks from its planned start (negative is earlier) */
 export interface CheckedShift {
     shift_ticks: number;
     /** Passed the quick trial; only the shift that is used is confirmed from more clock start phases */
     holds: boolean;
 }
 
-/** Every place tried for one crafting cycle or output swing (1-based `index`), in shift order */
+/** Every place tried for one output cycle or output swing (1-based `index`), in shift order */
 export interface CheckedShiftRow {
     index: number;
     shifts: CheckedShift[];
@@ -152,7 +152,7 @@ export interface ClockAlternativeView {
     asBuilt: AsBuiltStabilityCheck | null;
     expectedOutputItems: number;
     terminalSwingCount: number;
-    /** Length of one crafting cycle; the window cycle is a whole number of them */
+    /** Length of one output cycle; the window cycle is a whole number of them */
     cycleTicks: number;
     blueprintString: string;
     /** What installing the blueprint takes: whether it is a book, and which inserters each combinator is wired to */
@@ -170,7 +170,7 @@ export interface ClockAlternativeView {
     beltPickupSlackTicks: Record<string, number>;
     /** What the simulation found that is worth explaining about the build and this clock */
     insights: ClockInsight[];
-    /** Null unless this clock moved a crafting cycle or an output swing */
+    /** Null unless this clock moved a output cycle or an output swing */
     shiftOptions: ShiftOptionsView | null;
     simulationDurationTicks: number;
     /**

@@ -97,7 +97,7 @@ export function itemsPerSecondHelper(itemsPerSecond: number, copies: number, loc
 }
 
 /** Under Copies */
-export const COPIES_HELPER = "Describe one identical unit. Copies may include a partial unit, such as 0.5 or 2.25.";
+export const COPIES_HELPER = "Describe only one copy. Copies may be partial, such as 0.5 or 2.25.";
 
 /** A non-breaking space: the headers below wrap before their brackets, never inside them */
 const NBSP = ' ';

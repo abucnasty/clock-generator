@@ -21,7 +21,7 @@ export function TimelinePauses({ recording, entityId, targetMet, onExplore }: {
     return <Disclosure summary="Explore pauses" data-timeline-pauses="">
         <Typography variant="body2" sx={{ mt: 1 }}>
             Pauses are normal when a clock batches work or runs below maximum capacity.
-            {targetMet ? ' This clock meets the assessed target despite its pauses.' : ' A pause by itself does not explain a missed target.'}
+            {targetMet ? ' This clock holds the assessed setpoint despite its pauses.' : ' A pause by itself does not explain a missed target.'}
         </Typography>
         <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5 }}>
             Recorded time in this replay: {stateSummary || 'No state history available'}.

@@ -68,7 +68,7 @@ interface ProblemContext {
 }
 
 /**
- * The window cycle the wake windows must fit in: "Repeat every" when it is valid, else the crafting cycle. None when neither
+ * The window cycle the wake windows must fit in: "Repeat every" when it is valid, else the output cycle. None when neither
  * is known, or the cycle is not a whole number of ticks: the engine places a fractional window cycle's ticks itself
  * (`clockPosition` in `enable-control.ts`), so no window can be said to be past its end
  */

@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { outputCycles, outputCycleAt, outputCycleIndex, outputCycleRange } from './outputCycles';
 
-it('uses the Swing Plan definition: five 96-tick crafting cycles in a 480-tick clock', () => {
+it('uses the Swing Plan definition: five 96-tick output cycles in a 480-tick clock', () => {
     const cycles = outputCycles(96, 480)!;
     expect(cycles.count).toBe(5);
     expect(outputCycleAt(cycles, 0)).toEqual({ start: 0, end: 96, partial: false });

@@ -102,7 +102,7 @@ export const CHIP_SEPARATOR = ' · ';
 
 /**
  * The whole name in one string, for a radio's label, an announcement, the install dialog, the saved pick:
- * "Takt Batches · calculated · one version · 2 output swings a cycle · shared enable windows"
+ * "Takt Batches · calculated · one version · 2 output swings each output cycle · shared enable windows"
  */
 export function fullClockName(clock: NamedClock): string {
     return [strategyNameOf(clock), ...clockChipsOf(clock).map(chip => chip.label)].join(CHIP_SEPARATOR);
@@ -126,7 +126,7 @@ export function pendingClockName(task: { id: string; label: string }): string {
     const known = names[task.id];
     if (known) return catalogRowOf(known).name;
     const swings = /^swings-(\d+)$/.exec(task.id);
-    return swings ? `${plural(Number(swings[1]), 'output swing', 'output swings')} a cycle` : task.label;
+    return swings ? `${plural(Number(swings[1]), 'output swing', 'output swings')} each output cycle` : task.label;
 }
 
 /** The router of a clock that follows one strategy, Direct, with its definition; null for any other clock */

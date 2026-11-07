@@ -60,8 +60,8 @@ const COMPARE_COPY = {
         + 'stop between pickups and the belt refills the gaps; on a moving belt an inserter can be switched off holding a partial hand. A '
         + 'subtick clock never has belt slack. It is not ranked behind other clocks for it. Blank '
         + 'when no clocked inserter picks up from a belt.',
-    swingsHelp: 'Total output swings per crafting cycle of each output machine, shared equally across its output inserters. '
-        + 'Per-inserter counts may be fractional. The clock repeats after a whole number of crafting cycles (the window cycle).',
+    swingsHelp: 'Total output swings each output cycle of each output machine, shared equally across its output inserters. '
+        + 'Per-inserter counts may be fractional. The clock repeats after a whole number of output cycles (the window cycle).',
     signalsHelp: SIGNAL_DEFINITION + ' Counted per minute for one copy of the build, in the same run as the wakeups. No clock is ranked by signals.',
     decidersHelp: 'How many decider combinators the clock\'s blueprint has to switch inserters and drills on and off, not counting the clock itself. Each one is wired to the inserters and drills its description names, so fewer deciders is less wiring to do by hand.',
     windowsHelp: 'How many enable windows the clock has in all: stretches of ticks during which it switches an inserter on.',

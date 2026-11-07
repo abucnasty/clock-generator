@@ -92,7 +92,7 @@ function EntityRow({ entity, totalDuration, rowHeight, colorMap }: EntityRowProp
 
     return (
         <HistoricalTimelineRow variant="transfer" entity={entity} items={transferredItems} count={totalAmount} duration={totalDuration} height={rowHeight}
-            details={<Typography variant="caption" display="block">Total transferred: {totalAmount}</Typography>}>
+            details={<Typography variant="caption" display="block">Total moved: {totalAmount}</Typography>}>
             {entity.transfers.map((transfer, idx) => (
                 <TransferBar
                     key={`${entity.entity_id}-${idx}`}
@@ -191,7 +191,7 @@ function TransferHistoryVisualizationComponent({ transferHistory, fullscreen = f
         </>
     );
 
-    return <BeltChartFrame title="Item transfers" subtitle={`${totalDuration.toLocaleString()} ticks · ${(totalDuration / 60).toFixed(1)} s · ${allItems.length} items`}>
+    return <BeltChartFrame title="Item swings" subtitle={`${totalDuration.toLocaleString()} ticks · ${(totalDuration / 60).toFixed(1)} s · ${allItems.length} items`}>
         {timelineContent(fullscreen)}
     </BeltChartFrame>;
 }

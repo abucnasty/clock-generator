@@ -47,7 +47,7 @@ interface WorkflowBarProps {
     chip: { label: string; color: 'success' | 'error' } | null;
     /** Blueprint of the selected clock, once one is generated */
     blueprintString: string | null;
-    /** Name of the selected clock, its strategy and its chips ("Takt batches · 2 output swings a cycle") */
+    /** Name of the selected clock, its strategy and its chips ("Takt Batches · 2 output swings each output cycle") */
     selectedLabel: string | null;
     /** Where the strategy's name comes from, in a few words; shown when the name is pointed at */
     selectedLine: string | null;

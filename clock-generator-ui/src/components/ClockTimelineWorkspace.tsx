@@ -171,17 +171,17 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
     return <Box data-clock-inspection onKeyDown={onKeys}>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 1 }}>
             <TextField select size="small" label="Timeline view" value={inspection.view} onChange={event => patch({ view: event.target.value as TimelineInspection['view'] })} sx={{ display: { xs: 'block', sm: 'none' }, flex: '1 1 100%' }}>
-                <MenuItem value="windows">Enable windows</MenuItem><MenuItem value="activity">Activity</MenuItem><MenuItem value="cycles">Crafting cycles</MenuItem><MenuItem value="transfers">Item transfers</MenuItem><MenuItem value="flow">Flow replay</MenuItem>
+                <MenuItem value="windows">Enable windows</MenuItem><MenuItem value="activity">Activity</MenuItem><MenuItem value="cycles">Output cycles</MenuItem><MenuItem value="transfers">Item swings</MenuItem><MenuItem value="flow">Flow replay</MenuItem>
             </TextField>
             <ToggleButtonGroup value={inspection.view} exclusive size="small" aria-label="Timeline view" onChange={(_, view: TimelineInspection['view'] | null) => { if (view) patch({ view }); }} sx={{ display: { xs: 'none', sm: 'flex' }, flexWrap: 'wrap' }}>
                 <ToggleButton value="windows">Enable windows</ToggleButton>
                 <ToggleButton value="activity">Activity</ToggleButton>
-                <ToggleButton value="cycles">Crafting cycles</ToggleButton>
-                <ToggleButton value="transfers">Item transfers</ToggleButton>
+                <ToggleButton value="cycles">Output cycles</ToggleButton>
+                <ToggleButton value="transfers">Item swings</ToggleButton>
                 <ToggleButton value="flow">Flow replay</ToggleButton>
             </ToggleButtonGroup>
             {recordingWanted && <ToggleButtonGroup value={inspection.run} exclusive size="small" aria-label="Simulation shown in the timelines" onChange={(_, run: 'clock' | 'plan' | null) => { if (run) patch({ run }); }}>
-                <ToggleButton value="clock">Exported clock</ToggleButton><ToggleButton value="plan">Plan</ToggleButton>
+                <ToggleButton value="clock">Blueprint clock</ToggleButton><ToggleButton value="plan">Plan</ToggleButton>
             </ToggleButtonGroup>}
         </Box>
         {inspection.view !== 'cycles' && <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', mb: 1 }}>
@@ -202,7 +202,7 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
         {inspection.view === 'activity' && <TimelineSignals signals={inspection.signals} onChange={signals => patch({ signals })} />}
         {inspection.view === 'cycles' && <OutputCycleNavigator cycles={cycles} index={cycleIndex} windowCycleTicks={props.selected.simulationDurationTicks} swings={props.selected.terminalSwingCount} counts={props.selected.counts} onSelect={selectCycle} />}
         {recordingWanted && <Typography variant="body2" sx={{ mb: 1 }}>
-            {props.selected.ranking.meets_target_rate ? `This clock meets ${number(props.selected.assessment.items_per_second)} items/s across all copies. Pauses can be part of that pattern.`
+            {props.selected.ranking.meets_target_rate ? `This clock holds the setpoint of ${number(props.selected.assessment.items_per_second)} items/s across all copies. Pauses can be part of that pattern.`
                 : 'Explore the recorded activity alongside this clock’s assessed output.'}
         </Typography>}
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', lg: recordingWanted ? 'minmax(0,1fr) 245px' : 'minmax(0,1fr)' }, gap: 1.5, alignItems: 'start' }}>
@@ -229,7 +229,7 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
                     <Typography variant="caption" sx={{ minWidth: 55 }}>{number(tick / 60)} s</Typography>
                 </Box>
                 {settledLabel && <Typography variant="caption" component="p" sx={{ mt: 1, fontWeight: 600 }}>{settledLabel}</Typography>}
-                {recording && <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>One modelled unit · {inspection.run === 'clock' ? 'exported clock, including circuit latency' : 'planning controls'} · tick 0 is the baseline after preparation/warm-up ({number(recording.ticks_before_recording)} ticks excluded); controls restart at phase 0 with that inventory. Full input supplies; delivery rates exclude events before tick 0. This replay does not change the clock assessment.</Typography>}
+                {recording && <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>One modelled copy · {inspection.run === 'clock' ? 'blueprint clock, including circuit latency' : 'planning controls'} · tick 0 is the baseline after preparation and the run to steady state ({number(recording.ticks_before_recording)} ticks excluded); controls restart at phase 0 with that inventory. Full input supplies; delivery rates exclude events before tick 0. This replay does not change the clock assessment.</Typography>}
             </Box>
             {recordingWanted && selected && recording && <TimelineTickInspector recording={recording} entity={selected} inspection={effectiveInspection} tick={tick} events={tickEvents} connected={connected} onEntityChange={entityId => patch({ entityId, ...(isFlow ? { replayFocus: true, replayTransferScope: 'selection' } as const : {}) })} />}
 
@@ -258,7 +258,7 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
 function LegacyHistories({ props }: { props: ClockTimelineWorkspaceProps }) {
     const [open, setOpen] = useState(false);
     return <Box sx={{ mt: 1 }}>
-        <Typography variant="body2">Planning transfer ranges are merged and adjusted to derive clock windows; their endpoints are not exact delivery times.</Typography>
+        <Typography variant="body2">Planning swing ranges are merged and adjusted to derive enable windows; their endpoints are not exact delivery times.</Typography>
         <Button color="inherit" size="small" onClick={() => setOpen(!open)}>{open ? 'Hide full histories' : 'Load full histories'}</Button>
         {open && <Suspense fallback={<Typography>Loading full histories…</Typography>}>
             {props.stateTransitionHistory && <OriginalStates fullscreen={props.fullscreen} options={props.timeline} onOptionsChange={props.onTimelineChange} stateTransitionHistory={props.stateTransitionHistory} clockWindows={props.clockWindows ?? undefined} />}

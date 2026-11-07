@@ -372,7 +372,7 @@ function FuelPanelComponent({ fuel }: FuelPanelProps) {
             {run && (
                 <Panel title="Fuel timeline" level={3} sx={{ mb: 0 }}>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        The exported clock run for {run.window_cycles} window cycles: {durationText(run.durationTicks)}.
+                        The blueprint clock run for {run.window_cycles} window cycles: {durationText(run.durationTicks)}.
                         The dashed line is the fuel slot's limit.
                     </Typography>
                     <FuelTimeline fuel={fuel} run={run} />

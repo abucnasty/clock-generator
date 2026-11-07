@@ -19,7 +19,7 @@ export const BELT_COPY = {
     movingLine: 'Items continuously pass the pickup. Timing accounts for the stacks within reach; straight belt is the default pickup type. '
         + 'Clocks also leave a few extra ticks (belt slack) for late pickups.',
     backedUp: 'Backed up',
-    backedUpLine: 'Items stop between pickups. Upstream supply refills the gaps, so a stack is available each pickup tick. Clocks omit moving-belt slack.',
+    backedUpLine: 'Items stop between pickups. Upstream supply refills the gaps, so a stack is available each pickup tick. Clocks omit belt slack.',
     help: 'Not sure? Leave it on Moving.',
     /** The heading of the question's card under the diagram */
     diagramHeading: 'Belts',

@@ -172,7 +172,7 @@ export function InserterConfigPanel({
             >
                 {/* a tab with unsaved edits is marked "•" (its chip still shows the saved rule) */}
                 <Tab
-                    label={<TabLabel text="Config" unsaved={configDirty} />}
+                    label={<TabLabel text="Settings" unsaved={configDirty} />}
                     id={`${id}-tab-0`}
                     aria-controls={`${id}-tabpanel-0`}
                 />

@@ -154,7 +154,7 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
     });
 
     return (
-        <BeltChartFrame id={viewId} title={cycleView ? 'Enable windows in this crafting cycle' : VIEW_HEADING} level={headingLevel} subtitle={summary} data-wake-view="">
+        <BeltChartFrame id={viewId} title={cycleView ? 'Enable windows in this output cycle' : VIEW_HEADING} level={headingLevel} subtitle={summary} data-wake-view="">
             {!counted && (
                 <Typography variant="body2" color="text.secondary" data-wake-not-counted>
                     {`${NOT_COUNTED_NOTE}. ${NOT_COUNTED_REASON}`}
@@ -197,7 +197,7 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
                                 sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                             >
                                 <LegendSwatch kind={item.kind} />
-                                {cycleView && item.kind === 'track' ? 'One crafting cycle' : item.text}
+                                {cycleView && item.kind === 'track' ? 'One output cycle' : item.text}
                             </Typography>
                         ))}
                     </Box>
@@ -211,7 +211,7 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
                 ) : (
                     <>
                         <Typography id={hintId} variant="caption" color="text.secondary" component="p" sx={{ mb: 1 }}>
-                            Select a window for details. Use ↑ ↓ to change rows and ← → to step through windows.
+                            Select an enable window for details. Use ↑ ↓ to change rows and ← → to step through enable windows.
                         </Typography>
                         {rows.some(row => row.windows.some(window => window.slackTicks > 0)) && <Typography variant="caption" color="text.secondary" component="p" sx={{ mb: 1 }}>
                             {BELT_SLACK_EXPLANATION}
@@ -231,7 +231,7 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
                 )}
             </Box>
             <Disclosure summary="Reading this chart" sx={{ mt: 1.5 }}>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{cycleView ? 'The selected crafting cycle is one segment of the window cycle. Enable windows are clipped to this segment; row percentages and wakeups/min describe the whole window cycle.' : VIEW_INTRO}</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{cycleView ? 'The selected output cycle is one segment of the window cycle. Enable windows are clipped to this segment; row percentages and wakeups/min describe the whole window cycle.' : VIEW_INTRO}</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{KEYBOARD_HINT}</Typography>
             <Box
                 component="dl"

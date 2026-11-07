@@ -118,8 +118,8 @@ export function importedAsOneUnitText(checked: UnavailableConversion, config: Co
     const because = cannotSplitBecause(checked, config);
     return {
         what: because === null
-            ? `This export holds ${checked.repeatedGroups} groups that look alike. We couldn't prove they are identical, so it comes in as one unit.`
-            : `This export holds ${checked.repeatedGroups} identical copies of a build. They can't be split into copies yet ${because}, so it comes in as one unit.`,
+            ? `This export holds ${checked.repeatedGroups} groups that look alike. We couldn't prove they are identical, so it comes in as one build.`
+            : `This export holds ${checked.repeatedGroups} identical copies of a build. They can't be split into copies yet ${because}, so it comes in as one build.`,
         next: `Check will not run on it like this. Select one complete group in Factorio, export it again, and set Copies to ${checked.repeatedGroups}.`,
     };
 }
