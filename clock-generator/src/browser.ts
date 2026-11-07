@@ -111,8 +111,8 @@ export type { MachinePrototypeIssue } from './config/machine-prototype';
 // ============================================================================
 
 export type { ClockStrategy, StrategyFamily, StrategyQualifier, StrategyConstruction } from "./crafting/clock-strategy";
-export { catalogRowOf, routerRowOf } from "./crafting/strategy-catalog";
-export type { StrategyCatalogRow, TuningMethod, Selection, EnableControlStrategyRouter, EnableControl, SourceControl, ClockRouting } from "./crafting/strategy-catalog";
+export { catalogRowOf, routerRowOf, settingChipsOf } from "./crafting/strategy-catalog";
+export type { StrategyCatalogRow, TuningMethod, Selection, EnableControlStrategyRouter, EnableControl, SourceControl, ClockRouting, ClockSettings, SettingChip, OutputCountSetting, WindowCycleSetting, SharedWindowsSetting, LoopsSetting, DrillWindowsSetting, BeltPickupSetting } from "./crafting/strategy-catalog";
 export {
     generateClockForConfig,
     validateConfig,

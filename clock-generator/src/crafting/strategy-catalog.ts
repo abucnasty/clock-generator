@@ -52,6 +52,88 @@ export interface ClockRouting {
     sources?: SourceControl[];
 }
 
+/** How many swings the output inserter makes each crafting cycle; for a target that counts an item destroyed, how many hands the inserters bring in */
+export type OutputCountSetting = { kind: "output_swings"; count: number } | { kind: "hands_brought_in"; count: number };
+
+/** What sets the window cycle of a clock apart from the plain one */
+export type WindowCycleSetting =
+    /** A window cycle that is not a whole number of ticks is counted in fractions of a tick */
+    | { kind: "subtick_clock" }
+    /** The window cycle is rounded down to whole ticks and runs fast by `runs_fast`, as a share (0.0002 for 0.02%) */
+    | { kind: "rounded_clock"; period_ticks: number; runs_fast: number }
+    /** The window cycle is cut to the crafting cycles after which the output inserters move whole hands */
+    | { kind: "harmonic_window_cycle" }
+    /** The same construction at the generator's own swing count, so the whole window cycle is shorter */
+    | { kind: "shorter_window_cycle" };
+
+/** Which inserters share enable windows, or get one window a swing */
+export type SharedWindowsSetting = "shared_enable_windows" | "window_a_swing";
+
+/** Which entities of a loop of machines have enable windows */
+export type LoopsSetting = "loop_windows" | "loop_exits_only";
+
+/** The windows of the drills that fill a chest were made a tick longer than planned (a drill left always enabled is an `AlwaysOnReason`, not a setting) */
+export type DrillWindowsSetting = "a_tick_longer";
+
+/** How the windows of the inserters that take off a belt are counted */
+export type BeltPickupSetting = "counted_from_entry" | "room_for_a_hand_of_fuel";
+
+/**
+ * The settings of a clock beyond its strategy: what the makers set on it. A field holds one value only where the makers never set two
+ * together (`output_count`, `shared_windows`, `loops`, `drill_windows`); `window_cycle` and `belt_pickups` are lists, since a clock can
+ * have a shorter or harmonic window cycle and also a subtick or rounded one, and counted-from-entry pickups with room for a hand of fuel.
+ * Found by search is the strategy's selection, not a setting.
+ */
+export interface ClockSettings {
+    output_count: OutputCountSetting;
+    window_cycle: WindowCycleSetting[];
+    shared_windows?: SharedWindowsSetting;
+    loops?: LoopsSetting;
+    drill_windows?: DrillWindowsSetting;
+    belt_pickups: BeltPickupSetting[];
+}
+
+/** One chip of a clock's settings: the field and the value it shows, and its words (lower case) */
+export interface SettingChip {
+    field: keyof ClockSettings;
+    /** The value's own id: the `kind` of an object value, else the value */
+    value: string;
+    label: string;
+}
+
+/** A share the way the engine's labels print it: "2.32%", "under 0.01%" */
+const fastPercent = (share: number): string => share * 100 < 0.005 ? "under 0.01%" : `${Number((share * 100).toFixed(2))}%`;
+
+/**
+ * The chip words of the settings of a clock, in the order of the fields. A clock with the whole window cycle and no other setting has
+ * the output count only. The words are CATALOG.md's "Clock settings".
+ */
+export function settingChipsOf(settings: ClockSettings): SettingChip[] {
+    const chips: SettingChip[] = [];
+    const { output_count } = settings;
+    // TEXT TO APPROVE (manager, 2026-11-07): "output swings N" / "hands brought in N" are CATALOG.md's words; the chips read "N output swings a cycle" today
+    chips.push({ field: "output_count", value: output_count.kind,
+        label: `${output_count.kind === "output_swings" ? "output swings" : "hands brought in"} ${output_count.count}` });
+    for (const cycle of settings.window_cycle) {
+        const label = cycle.kind === "subtick_clock" ? "subtick clock"
+            : cycle.kind === "rounded_clock" ? `rounded to ${cycle.period_ticks} ticks, ${fastPercent(cycle.runs_fast)} fast`
+            : cycle.kind === "harmonic_window_cycle" ? "harmonic window cycle" : "shorter window cycle";
+        chips.push({ field: "window_cycle", value: cycle.kind, label });
+    }
+    if (settings.shared_windows !== undefined) {
+        chips.push({ field: "shared_windows", value: settings.shared_windows,
+            label: settings.shared_windows === "shared_enable_windows" ? "shared enable windows" : "one enable window a swing" });
+    }
+    if (settings.loops !== undefined) {
+        chips.push({ field: "loops", value: settings.loops, label: settings.loops === "loop_windows" ? "kanban pull: loop windows" : "kanban pull: loop exits only" });
+    }
+    if (settings.drill_windows !== undefined) chips.push({ field: "drill_windows", value: settings.drill_windows, label: "drill windows a tick longer" });
+    for (const pickup of settings.belt_pickups) {
+        chips.push({ field: "belt_pickups", value: pickup, label: pickup === "counted_from_entry" ? "pickups counted from entry" : "room for a hand of fuel" });
+    }
+    return chips;
+}
+
 /** The words of a strategy: by its family, then its construction (the two Takt Batches) */
 export function catalogRowOf(strategy: Pick<ClockStrategy, "family" | "construction">): StrategyCatalogRow {
     if (strategy.family === "takt-batches" && strategy.construction === "planning-run") return TAKT_BATCHES_OBSERVED;
