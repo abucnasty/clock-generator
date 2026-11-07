@@ -43,7 +43,8 @@ jobs:
       generation: true
 
   release:
-    if: vars.RELEASE_HOLD != 'true'
+    # publish from master only: a dispatch from another branch would release that branch's version (#657)
+    if: vars.RELEASE_HOLD != 'true' && github.ref == 'refs/heads/master'
     needs: tests
     runs-on: ubuntu-latest
     permissions:
@@ -88,7 +89,7 @@ jobs:
     # The site players use: only a released version, and only after its release exists
     name: Deploy to production
     needs: release
-    if: vars.RELEASE_HOLD != 'true' && (needs.release.outputs.released == 'true' || github.event_name == 'workflow_dispatch')
+    if: vars.RELEASE_HOLD != 'true' && github.ref == 'refs/heads/master' && (needs.release.outputs.released == 'true' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

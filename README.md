@@ -2,7 +2,7 @@
 
 A clock generator for Factorio builds. Describe a build (its machines, inserters, belts, chests and drills, and the
 rate it should make) and the generator simulates it tick by tick, works out when each inserter has to be enabled, and
-gives you a blueprint of decider combinators that clock the inserters, so the build makes exactly its setpoint with
+gives you a blueprint of decider combinators that clock the inserters, so the build holds exactly its setpoint with
 as few inserter wakeups as it can. It lists the clocks it could make, says which hold the rate and go back to it by themselves after a
 supply stop or an output blockage, and selects one.
 

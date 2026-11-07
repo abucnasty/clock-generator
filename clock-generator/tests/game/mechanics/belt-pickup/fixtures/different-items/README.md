@@ -69,15 +69,15 @@ and supercapacitors on lane 2. The input inserter's nearest lane is 1. The belt 
 piece's actual one-tile reach. A hand collects one ingredient at a time, so the other lane cannot fill its gaps.
 
 The earlier always-full pickup assumption selected a 1,056-tick clock targeting 528 packs. In Factorio 2.1.21 it
-missed that target in 30 of 35 periods on each underground endpoint, producing 480–528. The reachable-stack model
+missed that target in 30 of 35 window cycles on each underground endpoint, producing 480–528. The reachable-stack model
 detects the shortfall and selects two output swings per cycle: 352 packs per 704 ticks, or 30 packs/second.
-The initial verification held that rate in all 52 recorded periods on each geometry.
+The initial verification held that rate in all 52 recorded window cycles on each geometry.
 
-The current game regressions record at least 60 complete periods per run and check the selected default clock
+The current game regressions record at least 60 complete window cycles per run and check the recommended default clock
 on all three scaffolds, with moving supply and with the ingredient drain removed to back up the input belt.
 Recovery runs withhold each ingredient in turn and block/restore output disposal, without resetting the clock or
-machine. Moving checks allow six recovery periods. Backed-up checks settle for ten periods before measurement and
-allow ten periods to recover; every later complete period must meet the target.
+machine. Moving checks allow six window cycles for recovery. Backed-up checks settle for ten window cycles before measurement and
+allow ten window cycles for recovery; every later complete window cycle must meet the target.
 
 ```bash
 # From clock-generator/, with Factorio and the staging save configured in .env:
@@ -111,7 +111,7 @@ The original local probes left filtering disabled, so their "supercapacitor" lab
 behavior. The regression above verifies both actual ingredients.
 
 The clock tests in `moving-pickup.game.test.ts` also use explicitly backed-up configs with their pickup geometry
-retained. All three geometries must hold the target output and recover after the same ingredient/output cuts as
+retained. All three geometries must hold the setpoint and have recovery after the same ingredient/output cuts as
 the moving cases, without resetting the clock or machine.
 
 ```bash
@@ -236,7 +236,7 @@ simulator change or publication is included in this phase sweep.
 
 ## Reflected same-item controls
 
-`ordinary-reflection.game.test.ts` reflects the entire speed-routed cell, preserving feeder contents, inserter
+`ordinary-reflection.game.test.ts` reflects the entire speed-routed build, preserving feeder contents, inserter
 mirroring, gate release 64 and circuit connections. The input now sits north of the plant and its physical near
 supply is **lane 2**. The native probe checks ingredient tunnel pairing and transport tiers; gated observations
 verify full four-item stacks and actual moving or backed-up stock. Sidecar exports `near_lane: 2` at both reaches.

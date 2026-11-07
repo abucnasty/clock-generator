@@ -2,8 +2,8 @@
 
 | Build | Credit | Source | Issues | Recorded in the game |
 |---|---|---|---|---|
-| `electromagnetic-240-recycler-belt-fed` | warbaque | the blueprint of #100 (211 entities); config from a Sidecar 0.15.0 export of its left cell | #100 | See "The config is automatic" below: 3,600 periods after settling, nine losses and two cold starts in the game |
-| `electromagnetic-330` | none recorded | none recorded | #388 | Scaffold: yes (2026-10-16, 12 legendary beacons). `electromagnetic-330.json`, a config without overrides (until 2026-11-04 a second config forced 2 terminal swings and lcm 11 and latched both output inserters by a hand-written condition). Selected clock exact: 352 in every period of 704 ticks (fractional swings at 2 output swings per cycle, 158.7 wake-ups a minute; 30.0 a second a copy, 330 over 11 copies), recorded 2026-11-06 on the test's start (until then 2 whole output swings per cycle, 163.9 wake-ups a minute). Unclocked the scaffold makes 30.1 a second a copy. The config's crafting speed is 109.475, what 12 beacons give in the game. Drained-end scaffold (2026-11-05, #458, the owner's build of one plant, `tests/game/builds/electromagnetic-science-330-drained-end.scaffold`; the input line ends in a loader and a void chest, so it moves): the selected clock (fractional swings, 704 ticks, moving belts; 2026-11-06) made 1,760 of the 1,760 packs of the baseline's whole cycles (30 a second, 100%). Note: in `test:game`; fluids from infinity pipes, the belt's accumulators and supercapacitors from infinity chests. |
+| `electromagnetic-240-recycler-belt-fed` | warbaque | the blueprint of #100 (211 entities); config from a Sidecar 0.15.0 export of its left copy | #100 | See "The config is automatic" below: 3,600 window cycles after settling, nine losses and two cold starts in the game |
+| `electromagnetic-330` | none recorded | none recorded | #388 | Scaffold: yes (2026-10-16, 12 legendary beacons). `electromagnetic-330.json`, a config without overrides (until 2026-11-04 a second config forced 2 terminal swings and lcm 11 and latched both output inserters by a hand-written condition). Recommended clock exact: 352 in every window cycle of 704 ticks (fractional swings at 2 output swings per cycle, 158.7 wakeups a minute; 30.0 a second a copy, 330 over 11 copies), recorded 2026-11-06 on the test's start (until then 2 whole output swings per cycle, 163.9 wake-ups a minute). Unclocked the scaffold makes 30.1 a second a copy. The config's crafting speed is 109.475, what 12 beacons give in the game. Drained-end scaffold (2026-11-05, #458, abucnasty's build of one plant, `tests/game/builds/electromagnetic-science-330-drained-end.scaffold`; the input line ends in a loader and a void chest, so it moves): the recommended clock (fractional swings, 704 ticks, moving belts; 2026-11-06) made 1,760 of the 1,760 packs of the baseline's whole cycles (30 a second, 100%). Note: in `test:game`; fluids from infinity pipes, the belt's accumulators and supercapacitors from infinity chests. |
 
 `electromagnetic-330` is one plant that takes accumulators and supercapacitors from one belt, 330 science packs a
 second over 11 copies, with 12 legendary beacons; its config has no overrides.
@@ -18,37 +18,37 @@ and advanced-circuit outlet belts leading to the existing disposal loader and in
 `electromagnetic-240-recycler-belt-fed.scaffold` is the byte-identical full blueprint. Its target is 96 science packs a
 second, equivalent to 240/s across 2.5 full-scaffold copies.
 
-The config describes one repeated cell at 48/s and sets Copies to 5, following the existing one-unit config rule.
-Its clock's blueprint and schedule wire both science cells of this blueprint, one set of controls for each. The config
-comes from a fresh Sidecar 0.15.0 export of the left cell of the original blueprint, with its real pickup captures.
+The config describes one build at 48/s and sets Copies to 5, following the existing one-unit config rule.
+Its clock's blueprint and schedule wire both copies in this blueprint, one set of controls for each. The config
+comes from a fresh Sidecar 0.15.0 export of the left copy in the original blueprint, with its real pickup captures.
 No source or outlet is replaced with a chest. Empty unused belt lanes remain in the config so lane numbers still identify
 the same physical lane. The curved input has the measured `bend-right-upstream` layout with version 3 capture; existing
 files marked unsupported bend must be captured again, since changing a saved warning is not a capture.
 
 ## The config is automatic
 
-`electromagnetic-240-recycler-belt-fed.json` is what the clock generator's own import makes of a fresh Sidecar export of the left cell
+`electromagnetic-240-recycler-belt-fed.json` is what the clock generator's own import makes of a fresh Sidecar export of the left copy
 of this blueprint, with only Target Output's rate and copies set: no inserter is set to Always enabled, and no
 swing count or LCM is fixed. Generate picks the clock for all twelve inserters. It is a 40-tick clock in which the two
 arms that carry supercapacitors to the science plants take turns (each science plant's drain into its steel buffer moves
-with that plant's turn), 1,040.6 wake-ups a minute, no inserter left always on, and every loss the check tries is
-survived.
+with that plant's turn), 1,040.6 wakeups a minute, no inserter left always on, and it has recovery after every disturbance
+trial that the check tries.
 
 The supercapacitor plants run at 99.56% of their capacity at this rate, so the margin is thin: the clock keeps both
 plants filled and emptied at the same points of their turns, which is what the game run below checks.
 
 `tests/game/builds/electromagnetic-science-240-recycler-belt-fed-clock.game.test.ts` generates that clock from this config and runs it on the
-whole blueprint, both cells, in the game, with the clock's blueprint and schedule wiring both copies. The physical
+whole blueprint, both copies, in the game, with the clock's blueprint and schedule wiring both copies. The physical
 blueprint is unchanged; losses use script disable flags and restore the original supplies and outlets.
 
-- 3,600 periods after settling: every final taker delivers exactly 16 in every period (96 science/s), and the science
+- 3,600 window cycles after settling: every final taker delivers exactly 16 in every window cycle (96 science/s), and the science
   held in each plant, its steel buffer and the arms between them grows rather than drains.
-- Nine losses, each recovered within its allowance and held for 726 exact periods: each of five solid supplies
+- Nine losses, each recovered within its allowance and held for 726 exact window cycles: each of five solid supplies
   (accumulator, processing unit, battery, holmium plate, superconductor) cut at a different phase, science not removed,
   the advanced-circuit disposal blocked, and the battery supply cut at the first tick after each supercapacitor turn.
   At least one restoration resumes a partly filled hand.
-- Two cold starts, 600 periods each: the clock is placed first and its counter read, then the arms of both copies are
+- Two cold starts, 600 window cycles each: the clock is placed first and its counter read, then the arms of both copies are
   built in ascending order at phase 0, and in descending order at phase 13, and wired to that same clock.
 
-The test also checks that the clock selected for this config holds and recovers in the simulator, is stable, takes turns,
+The test also checks that the clock selected for this config holds and has recovery in the simulator, is stable, takes turns,
 and leaves no inserter always on.

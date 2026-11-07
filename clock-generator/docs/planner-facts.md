@@ -44,12 +44,12 @@ light entry, and each sample's facts are kept in `src/crafting/facts/__snapshots
 - **Read-only.** A node's trait fields are the objects of the traits built for that call.
 
 **The planner reads the same traits** where it works a figure out of a build (`traitsOf(config)`,
-`src/entities/traits/traits-of.ts`: `buildTraits` once per config object, kept with it; a candidate's or a trial's
+`src/entities/traits/traits-of.ts`: `buildTraits` once per config object, kept with it; a clock's or a trial's
 config is a new object and gets its own): the output capacity of the machines that make the target (`yield` of each,
 its main product's exact rate), the machines' rates at the target (`yield`, `production`, `placement` and the takers'
 `hand`), the sinks whose terminal outputs are judged as a rate or get room for one more output swing
 (`storage.never_refuses`). The lane check reads what a
-lane carries off the Lane traits of the belt it checks, and the belt pickup slack and the room for a hand of fuel count
+lane carries off the Lane traits of the belt it checks, and the belt slack and the room for a hand of fuel count
 a hand as the timing floor does, one belt stack a tick, each with the hand it reads (the nominal one and the hand of the
 fuel). The cycle plan's transfers are the balance equations over the facts and the graph (`planner/balance.ts`): what a
 craft takes and makes of each item (`production.inputs`, the exact `yield.results[].per_craft`), the hands of the edges,
@@ -57,7 +57,7 @@ the fuel by edge and the lanes' exports. The target's own edges, which seed it, 
 same config (`sequence/cycle/cycle-transfers.ts`).
 
 Two traits of the catalogue are not in the facts: the inserter order (its decider build order is the clock's, not the
-config's) and the wake-up rule of a node (read by the wake-up count only). Neither the graph nor the feasibility pass
+config's) and the wakeup rule of a node (read by the wakeup count only). Neither the graph nor the feasibility pass
 reads them; they come with the planner that does.
 
 `machineFactsOf` (`src/entities/traits/machine-facts-of.ts`) gives a machine's facts for the UI and the insights from its
@@ -80,7 +80,7 @@ pass after the feasibility pass and before any simulation, over the facts, the g
 - **Main-period choices** per group: the output swing counts today's alternatives are listed for (the planned count, the
   counts it backs off through, the main one, the counts above and below it and fractional swings;
   `swingCountsListed` makes the lists for both), each with its cycle's ticks and the group's cycles, kept or pruned. Only
-  P-limit prunes: a period of 500,000 ticks or more. A count whose cycle the cycle plan refuses is listed with the
+  P-limit prunes: a window cycle time of 500,000 ticks or more. A count whose cycle the cycle plan refuses is listed with the
   plan's reason (`cycle-refused`), as today its run fails. The planned count is the planning run's (its prepare step);
   a count the simulator later finds unstable is not known here.
 - **Duty**: the utilization of each machine group (`Feasibility.utilizations`) in the group that holds its machines.

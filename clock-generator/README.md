@@ -138,7 +138,7 @@ refused.
 
 ### Configuration Example (JSON)
 
-Here is a complete configuration for a utility science pack setup. Recipe names are Factorio recipe names; a machine's crafting speed comes from hovering it in Factorio and running `/c game.print(game.player.selected.crafting_speed)`, or from the sidecar mod.
+Here is a complete configuration for a utility science pack build. Recipe names are Factorio recipe names; a machine's crafting speed comes from hovering it in Factorio and running `/c game.print(game.player.selected.crafting_speed)`, or from the sidecar mod.
 
 ```json
 {
@@ -384,7 +384,7 @@ source, 1 or 2 by its place in the belt's `lanes`:
 }
 ```
 
-The sidecar mod exports it for an inserter beside a straight piece of belt, and the inserter's panel in the UI has a
+The sidecar mod exports it for an inserter beside a straight belt, and the inserter's panel in the UI has a
 field for it. Without it the items are taken in the order of the inserter's `filters`, or of the machine's
 ingredients when it has none.
 
@@ -447,14 +447,14 @@ Both overrides are optional; `period_duration_ticks` defaults to the crafting cy
 
 **AUTO (default)**: The simulation determines optimal enable windows automatically. This is the recommended mode for most setups.
 
-**ALWAYS**: The entity is always enabled. Use this when you want the entity to operate freely without clock control. It gets no clock windows and no combinator in the blueprint, also when it only fills a fuel slot or takes a by-product away, and every clock is checked with it always enabled. An always-enabled inserter is woken at every craft of the machine it waits on, which shows in the wake-ups of the clock.
+**ALWAYS**: The entity is always enabled. Use this when you want the entity to operate freely without clock control. It gets no clock windows and no combinator in the blueprint, also when it only fills a fuel slot or takes a by-product away, and every clock is checked with it always enabled. An always-enabled inserter is woken at every craft of the machine it waits on, which shows in the wakeups of the clock.
 
 **NEVER**: The entity is never enabled. Useful for debugging or temporarily disabling an entity.
 
-**CLOCKED**: The entity is enabled only during specified tick ranges within the period. Each range has:
+**CLOCKED**: The entity is enabled only during specified tick ranges within the window cycle. Each range has:
 - `start`: The tick when the entity becomes enabled (inclusive)
 - `end`: The tick when the entity becomes disabled (inclusive)
-- `period_duration_ticks` (optional): The period length in ticks. If not specified, uses the crafting cycle duration.
+- `period_duration_ticks` (optional): The window cycle time in ticks. If not specified, uses the output cycle duration.
 
 For a moving belt input, set `pickup_length` on the inserter's `source`: `1` for the exposed line on a straight
 belt or `0.5` at either underground endpoint. Sidecar 0.9.0 exports this automatically for inserters beside those
@@ -468,7 +468,7 @@ timing; `overrides.backed_up_belts: true` selects backed-up supply independently
 - `backed_up_belts`: items back up at the input pickups and upstream supply refills the gaps, making one stack available each pickup tick (default false)
 - `search_for_fewer_wake_ups`: run the four searches for every build (default false)
 - `check_start_dependence`: try every clock from other starts than the cold start too, and name the clocks that reach their target from some starts only (default false; see `docs/stability.md`, "Start dependence")
-- `kick_start_items`: items a machine that makes its own ingredient (pentapod eggs) is given once when a clock starts (default 200, as the harness seeds)
+- `kick_start_items`: items a machine that makes its own ingredient (pentapod eggs) is given once when a clock starts (default 200, the same kick start as the harness gives)
 
 `src/config/schema.ts` (`ConfigOverridesSchema`) lists the others. Older files using `non_moving_belts` migrate to
 `backed_up_belts` on import; if both are present, `backed_up_belts` takes precedence. New configs and exports use
@@ -487,20 +487,20 @@ only `backed_up_belts`.
 
 The simulator assumes saturated input supply. Moving supply times the stacks within reach; backed-up supply makes one stack available each eligible pickup tick. An inserter changes its tick timing when the items on the belt are moving, and more so when the belt has gaps, so a clock that is exact on a backed-up belt can switch an inserter off holding a partial hand on a moving one.
 
-Every potential clock names the belt it is made for:
+Every clock names the belt it is made for:
 
-- **moving**: each window of an inserter that picks up from a belt stays open a few ticks longer, long enough for one more full hand at one belt stack a tick (`+4 ticks` for a hand of 16 from stacks of 4). This is belt pickup slack: extra margin for late pickups on top of the simulated reachable-stack timing. Sparse upstream supply is not simulated.
-- **backed-up belt**: the belt inserters get only the windows they need with backed-up supply at the pickup. A clock made for moving belts drops the slack when it does not hold the expected output with it, and is then listed as made for a backed-up belt. A clock with a period that is not a whole number of ticks (a subtick clock) never gets the slack, and is not ranked behind other clocks for it.
+- **moving**: each window of an inserter that picks up from a belt stays open a few ticks longer, long enough for one more full hand at one belt stack a tick (`+4 ticks` for a hand of 16 from stacks of 4). This is belt slack: extra margin for late pickups on top of the simulated reachable-stack timing. Sparse upstream supply is not simulated.
+- **backed-up belt**: the belt inserters get only the windows they need with backed-up supply at the pickup. A clock made for moving belts drops the slack when it does not hold the expected output with it, and is then listed as made for a backed-up belt. A clock with a window cycle time that is not a whole number of ticks (a subtick clock) never gets the slack, and is not ranked behind other clocks for it.
 
-Clocks are made only for the belts the build is set to. By default (moving) a clock without the slack is only selected for you when no clock with the slack holds the target rate; no clock is made for backed-up belts as well. Set `backed_up_belts: true` (the Belts section's "Backed up" answer in the UI) when your belts are backed up: each clock is made without the slack, and the one with the fewest wake-ups is selected. A clock that does not hold the expected output that way is first made again with room for a hand of fuel: each window of an inserter that takes fuel off the belt as well as an ingredient stays open the ticks a hand of fuel takes to fill (`+4 ticks` for a hand of 16 from stacks of 4), because the fuel slot asks for a hand at any tick, ahead of the hands the window is planned for. That is still a backed-up belt clock, and its description names the inserters. A clock that does not hold with the room either, or has no such inserter, is listed as unstable: it is not made again with the slack. Of the samples, agricultural science selects its batched swings with room for a hand of fuel.
+Clocks are made only for the belts the build is set to. By default (moving) a clock without the slack is only selected for you when no clock with the slack holds the setpoint; no clock is made for backed-up belts as well. Set `backed_up_belts: true` (the Belts section's "Backed up" answer in the UI) when your belts are backed up: each clock is made without the slack, and the one with the fewest wakeups is selected. A clock that does not hold the expected output that way is first made again with room for a hand of fuel: each window of an inserter that takes fuel off the belt as well as an ingredient stays open the ticks a hand of fuel takes to fill (`+4 ticks` for a hand of 16 from stacks of 4), because the fuel slot asks for a hand at any tick, ahead of the hands the window is planned for. That is still a backed-up belt clock, and its description names the inserters. A clock that does not hold with the room either, or has no such inserter, is listed as unstable: it is not made again with the slack. Of the samples, agricultural science selects its batched swings with room for a hand of fuel.
 
-#### Searching for fewer wake-ups
+#### Searching for fewer wakeups
 
-Four of the potential clocks are found by a search, which tries many clocks in the simulator: observed windows, uneven output swings, shifted swings and full-hand output swings. Together they take most of the time of a generation. The other potential clocks are made straight from the plan: batched swings, fractional swings and the other output swing counts.
+Four of the clocks are found by a search, which tries many clocks in the simulator: observed windows, uneven output swings, shifted swings and full-hand output swings. Together they take most of the time of a generation. The other clocks are made straight from the plan: batched swings, fractional swings and the other output swing counts.
 
-By default the searches only run when none of the clocks made without one can be selected as stable: one that holds the target rate, gets back to it after a backpressure loss and is made for the belt the config asks for. Then a search is the only way left to a stable clock, and all four run. Where a clock made without a search is stable, two of them (observed windows and shifted swings) still run when that clock has wake-ups and the primary clock's period is at most 480 ticks; the others are left out, and the generator says which. Uneven output swings and full-hand output found no clock with fewer wake-ups past a stable one on any sample, with every search run on every sample as built and backed up (0.26.0).
+By default the searches only run when none of the clocks made without one can be selected as stable: one that holds the setpoint, goes back to it after a disturbance and is made for the belt the config asks for. Then a search is the only way left to a stable clock, and all four run. Where a clock made without a search is stable, two of them (observed windows and shifted swings) still run when that clock has wakeups and the primary clock's window cycle time is at most 480 ticks; the others are left out, and the generator says which. Uneven output swings and full-hand output found no clock with fewer wakeups past a stable one on any sample, with every search run on every sample as built and backed up (0.26.0).
 
-A search can still find a stable clock with fewer wake-ups than the one selected. Set `search_for_fewer_wake_ups: true` ("Search for fewer wake-ups" in the UI) to run the searches for every build and have the clock with the fewest wake-ups selected among all of them.
+A search can still find a stable clock with fewer wakeups than the one selected. Set `search_for_fewer_wake_ups: true` ("Search for fewer wake-ups" in the UI) to run the searches for every build and have the clock with the fewest wakeups selected among all of them.
 
 ## Troubleshooting
 
@@ -509,7 +509,7 @@ A search can still find a stable clock with fewer wake-ups than the one selected
 **Issue**: Generated blueprint doesn't work in-game
 - Verify your crafting speed and productivity match in-game values exactly
 - Check that stack inserter capacity bonuses are correct
-- Ensure belt configuration matches your actual setup
+- Ensure belt configuration matches your actual build
 
 **Issue**: Simulation takes too long
 - Reduce the number of machines in your configuration
@@ -572,7 +572,7 @@ npm run test:generation  # the generation tests: the clock alternatives of whole
 npm run test:all         # both
 ```
 
-The generation tests are the files named `*.generation.test.ts`. They generate every clock alternative of a sample and check what is selected, so they take as long as the slowest sample (most of it one test of agricultural science). They run the engine as tsc builds it into `dist/`, which `npm run test:generation` and `npm run test:all` build first: run from the TypeScript as Vite transforms it for the tests, they take 1.8 times as long. A run of `npx vitest` on a generation test stops and asks for `npm run build` when `dist/` is older than `src/`. Pull requests run the unit tests; pull requests to master run the generation tests too (`.github/workflows/test.yml`). Run `npm run test:all` before opening one.
+The generation tests are the files named `*.generation.test.ts`. They generate every clock of a sample and check what is selected, so they take as long as the slowest sample (most of it one test of agricultural science). They run the engine as tsc builds it into `dist/`, which `npm run test:generation` and `npm run test:all` build first: run from the TypeScript as Vite transforms it for the tests, they take 1.8 times as long. A run of `npx vitest` on a generation test stops and asks for `npm run build` when `dist/` is older than `src/`. Pull requests run the unit tests; pull requests to master run the generation tests too (`.github/workflows/test.yml`). Run `npm run test:all` before opening one.
 
 ### Recording a Build in Factorio
 
@@ -591,7 +591,7 @@ npm run record -- --blueprint=build.txt --out=recording.json --ticks=3600 --warm
 - `--unclocked` removes the build's clock and lets its inserters run freely. Without either, the build is recorded as it is.
 - `--settle` runs the build for a number of ticks on its new clock and seeds before the recording starts, so its start-up is not counted.
 - `--lua` runs a Lua chunk right before the recording starts, called with `(entities, surface, area)`, for anything a seed cannot express.
-- `--watch` also opens the game with graphics, joined to the run as a spectator over the build. The game then runs at speed 1 unless `--speed` says otherwise, and the run ends when that window is closed. Whoever watches is an admin of the game, with alt mode on, and the game shows the FPS/UPS counter and the wake-up lists (`show-fps` and `show-wakeup-lists`, set to always, so debug mode need not be on).
+- `--watch` also opens the game with graphics, joined to the run as a spectator over the build. The game then runs at speed 1 unless `--speed` says otherwise, and the run ends when that window is closed. Whoever watches is an admin of the game, with alt mode on, and the game shows the FPS/UPS counter and the wakeup lists (`show-fps` and `show-wakeup-lists`, set to always, so debug mode need not be on).
 
 The save is never written to; Factorio gets a temporary write-data folder (`--work-dir` keeps it). The save needs a place where the blueprint can be built and powered, such as an editor map with a global electric network. Run `npm run record` without arguments for all options.
 
@@ -615,10 +615,10 @@ Copy `.env.example` to `.env` and set `FACTORIO_PATH` to your Factorio executabl
 npm run verify -- --config=config.json --recording=recording.json [--alternative=planned-belt-slack]
 ```
 
-- `--alternative` names the clock that was recorded, by its id, label or index in the list of potential clocks. Without it, the clock the generator selects is taken.
+- `--alternative` names the clock that was recorded, by its id, label or index in the list of clocks. Without it, the clock the generator selects is taken.
 - `--overrides` merges config overrides (JSON) into the config, e.g. the swing count of the clock that was built; `--items-tolerance` and `--state-agreement` set how close the two have to be. Run `npm run verify` without arguments for the defaults.
-- The report gives, game against simulator: the output of every clock period, the wake-ups a minute, what every inserter moved and every machine finished in a period, and how much of the time each showed the same state at the same place in the period. A build that takes several periods to repeat, or a loop of machines the clock does not hold to a place in the period, shows other states at the same place without being any different, so that figure comes with how alike the two are wherever in the period.
-- It exits with 1 when the two moved something else: a clock period off the expected output, an inserter or a machine that moves another amount in a period, or a recorded clock that is not the clock of the config. States that differ are listed and do not fail it.
+- The report gives, game against simulator: the output of every window cycle, the wakeups a minute, what every inserter moved and every machine finished in a window cycle, and how much of the time each showed the same state at the same place in the window cycle. A build that takes several window cycles to repeat, or a loop of machines the clock does not hold to a place in the window cycle, shows other states at the same place without being any different, so that figure comes with how alike the two are wherever in the window cycle.
+- It exits with 1 when the two moved something else: a window cycle off the expected output, an inserter or a machine that moves another amount in a window cycle, or a recorded clock that is not the clock of the config. States that differ are listed and do not fail it.
 - A build with fuel is also checked for the fuel its machines burned against the energy consumption of the config, and its fuel inserters against their fuel clocks.
 
 `npm run test:game` makes the same comparison for every scaffold it records.

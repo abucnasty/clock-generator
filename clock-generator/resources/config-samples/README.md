@@ -16,9 +16,9 @@ clock the generator made (the combinator described as "Clock for ..." and the co
 build with something on a machine of the config that the config does not have, since no clock would hold it: an
 inserter, whatever is at its other end, a further machine of one of the config's recipes, or a loader.
 `npm run test:game` does this for the builds listed in `tests/game/builds/scaffold-recordings.game.test.ts` and checks
-that the selected clock moves the expected output every period. One run records at most 72,000 ticks, 20 minutes of
-game time. A clocked recording is whole periods of its clock, at least the ticks asked for, so a request whose whole
-periods pass the limit is refused with the most that fits (warm-up and settle do not count). A recording is the only thing that settles a
+that the recommended clock moves the expected output every window cycle. One run records at most 72,000 ticks, 20 minutes of
+game time. A clocked recording is whole window cycles of its clock, at least the ticks asked for, so a request whose whole
+window cycles pass the limit is refused with the most that fits (warm-up and settle do not count). A recording is the only thing that settles a
 disagreement between the simulator and the game: on 2026-10-08 the agricultural science recordings found two inserter
 rules the simulator was missing, and the automation science ones found that the generator was selecting a clock that
 over-produces.
@@ -62,35 +62,35 @@ was recorded in the game for each build, its credit, source and issues are in th
 | AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER | `science/automation/automation-120-foundries-feed-belt-to-assembler` | `automation-science-pack` 120/s over 9 copies | Game: a foundry-fed belt in front of the assembler | AUTOMATION_SCIENCE_BELTED_BUFFER |
 | AUTOMATION_SCIENCE_240 | `science/automation/automation-240` | `automation-science-pack` 240/s over 9 copies | Game both ways; belt-lanes and clock-wiring mechanics; a generation file; per-job checks of the one-output-swing variant; about 25 unit tests | AUTOMATION_SCIENCE |
 | CHEMICAL_SCIENCE_240_SHARED_FOUNDRY | `science/chemical/chemical-240-shared-foundry` | `chemical-science-pack` 240/s over 5.5 copies | Game: one foundry shared by four machines; decider-order variant job (belts backed up); blast SLOW job | CHEMICAL_SCIENCE_SHARED_FOUNDRY |
-| ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED | `science/electromagnetic/electromagnetic-240-recycler-belt-fed` | `electromagnetic-science-pack` 240/s over 5 copies | Game (`recycler-original-clock`): the whole #100 blueprint, curved pickups; also the `recycler-sidecar-export` scaffold; final buffer takers judged over a long run (buffered-output-check) and one supercapacitor plant serving two science plants in turns (grouped-hands), both moved from a dropped cut-out cell | REAL_OWNER_PINK_SCIENCE_ORIGINAL |
+| ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED | `science/electromagnetic/electromagnetic-240-recycler-belt-fed` | `electromagnetic-science-pack` 240/s over 5 copies | Game (`recycler-original-clock`): the whole #100 blueprint, curved pickups; also the `recycler-sidecar-export` scaffold; final buffer takers judged over a long run (buffered-output-check) and one supercapacitor plant serving two science plants in turns (grouped-hands), both moved from a dropped cut-out build | REAL_OWNER_PINK_SCIENCE_ORIGINAL |
 | ELECTROMAGNETIC_SCIENCE_330 | `science/electromagnetic/electromagnetic-330` | `electromagnetic-science-pack` 330/s over 11 copies | Fully automatic, no overrides; game (scaffold-recordings), sim-game-check, UI example; state-transition-history, taker-orders, timeline-recording units | ELECTROMAGNETIC_SCIENCE_AUTO (with its overrides removed). The former key ELECTROMAGNETIC_SCIENCE meant a different config, with forced overrides, which was dropped; its tests and the UI example moved to this config |
-| LOGISTIC_SCIENCE_240 | `science/logistic/logistic-240` | `logistic-science-pack` 240/s over 11 copies | Default example and default sample; game (`scaffold-recordings`, on the owner's whole build: 22 assemblers in two rows of 11, each row judged against 240/s and the build against 480/s, the bottom row a mirror of the top); the feasibility refusal at hand size 2 (`why-not-stable`); unit pins of the selected clock (rule count, verification signature, traits, rules of the game) | LOGISTIC_SCIENCE, which once named the old three-inserter config (this build replaced it). Also replaced LOGISTIC_SCIENCE_SHARED_INSERTER and SAMPLE_CONFIG, both dropped |
+| LOGISTIC_SCIENCE_240 | `science/logistic/logistic-240` | `logistic-science-pack` 240/s over 11 copies | Default example and default sample; game (`scaffold-recordings`, on abucnasty's whole build: 22 assemblers in two rows of 11, each row judged against 240/s and the build against 480/s, the bottom row a mirror of the top); the feasibility refusal at hand size 2 (`why-not-stable`); unit pins of the recommended clock (rule count, verification signature, traits, rules of the game) | LOGISTIC_SCIENCE, which once named the old three-inserter config (this build replaced it). Also replaced LOGISTIC_SCIENCE_SHARED_INSERTER and SAMPLE_CONFIG, both dropped |
 | LOGISTIC_SCIENCE_240_DIRECT_INSERT | `science/logistic/logistic-240-direct-insert` | `logistic-science-pack` 240/s over 6 copies | Game both ways; output-swings forced-count generation | LOGISTIC_SCIENCE_DI |
 | METALLURGIC_SCIENCE_45 | `science/metallurgic/metallurgic-45` | `metallurgic-science-pack` 45/s over 1 copy | Not in `test:game` (the game moves a hand more in about 1 period in 11); generation and wake-capture units; UI example | METALLURGIC_SCIENCE_PACK |
-| MILITARY_SCIENCE_120 | `science/military/military-120` | `military-science-pack` 120/s over 5 copies | Game (`scaffold-recordings`, on the owner's build); the shared-windows generation file (on the speeds before the build's own the pick is `planned-belt-slack-shared`, set inline; on its own it is `planned-belt-slack`); UI example | MILITARY_SCIENCE |
-| PRODUCTION_SCIENCE_120_TWO_BELTS | `science/production/production-120-two-belts` | `production-science-pack` 120/s over 7 copies | Game (`scaffold-recordings`, on the owner's build); UI example; derived clock windows generation; inline, one inserter picking two items (from the merged shared-pickup config): fractional per-item swing counts in output-swings generation and periods (figures recomputed on 2.1) | PRODUCTION_SCIENCE_JSON. It absorbed PRODUCTION_SCIENCE_SHARED_JSON, the same build with fractional swings |
+| MILITARY_SCIENCE_120 | `science/military/military-120` | `military-science-pack` 120/s over 5 copies | Game (`scaffold-recordings`, on abucnasty's build); the shared-windows generation file (on the speeds before the build's own, the recommended clock is `planned-belt-slack-shared`, set inline; on its own it is `planned-belt-slack`); UI example | MILITARY_SCIENCE |
+| PRODUCTION_SCIENCE_120_TWO_BELTS | `science/production/production-120-two-belts` | `production-science-pack` 120/s over 7 copies | Game (`scaffold-recordings`, on abucnasty's build); UI example; derived clock windows generation; inline, one inserter picking two items (from the merged shared-pickup config): fractional per-item swing counts in output-swings generation and periods (figures recomputed on 2.1) | PRODUCTION_SCIENCE_JSON. It absorbed PRODUCTION_SCIENCE_SHARED_JSON, the same build with fractional swings |
 | UTILITY_SCIENCE_120 | `science/utility/utility-120` | `utility-science-pack` 120/s over 7 copies | Game both ways; generation; belt-near-lane and deadlock-risk units; UI example | UTILITY_SCIENCE |
 | UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT | `science/utility/utility-120-processing-unit-and-lds-on-one-belt` | `utility-science-pack` 120/s over 7 copies | Game both ways; output-swings generation; 2 output swings is stable without a search | UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS |
 | UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN | `science/utility/utility-480-lds-foundry-chain` | `utility-science-pack` 480/s over 3.5 copies | Game (3.5 copies, losses of coal, outputs and units); the 15/8-hand coal inserter; source-order and near-lane mechanics; blast SLOW job | REAL_THAELN_CELL09 |
-| ACCUMULATOR_640 | `intermediates/accumulator/accumulator-640` | `accumulator` 640/s over 18 copies | Game: the build where the observed-windows clock first held 576 a period; decider order checked by the record's property module; even-hands and swing-distribution units | ACCUMULATOR_640 (unchanged) |
+| ACCUMULATOR_640 | `intermediates/accumulator/accumulator-640` | `accumulator` 640/s over 18 copies | Game: the build where the observed-windows clock first held 576 a window cycle; decider order checked by the record's property module; even-hands and swing-distribution units | ACCUMULATOR_640 (unchanged) |
 | ADVANCED_CIRCUIT_230 | `intermediates/advanced-circuit/advanced-circuit-230` | `advanced-circuit` 230/s over 3 copies | Game: the first clock of this sample that holds (found by the one search of 2026-10-11); the only `ignored_lcm_ingredients` case | ADVANCED_CIRCUIT_230 (unchanged) |
 | ADVANCED_CIRCUIT_240 | `intermediates/advanced-circuit/advanced-circuit-240` | `advanced-circuit` 240/s over 3 copies | Game; small-batches fallback variant job (belts backed up); rules-of-the-game and rule-calls | ADVANCED_CIRCUIT (the same build; the key now carries the rate) |
-| ELECTRIC_FURNACE_20 | `intermediates/electric-furnace/electric-furnace-20` | `electric-furnace` 20/s over 2 copies | Game (`scaffold-recordings`, on the owner's build); units: stone-brick furnaces fed by drills (utilization, steady-state, wake-ups from starts). Origin: the furnace supply of a production science design, rated to fit 120/s of production science (240/s with more copies) | ELECTRIC_FURNACE |
-| FLYING_ROBOT_FRAME_160 | `intermediates/flying-robot-frame/flying-robot-frame-160` | `flying-robot-frame` 160/s over 24 copies | Game (`scaffold-recordings`, on the owner's build); output-swings clock-only check (on the lanes before the build's own, set inline: with them the planned clock is unstable); rocket-fuel and feasibility units | FLYING_ROBOT_FRAME |
+| ELECTRIC_FURNACE_20 | `intermediates/electric-furnace/electric-furnace-20` | `electric-furnace` 20/s over 2 copies | Game (`scaffold-recordings`, on abucnasty's build); units: stone-brick furnaces fed by drills (utilization, steady-state, wakeups from starts). Origin: the furnace supply of a production science design, rated to fit 120/s of production science (240/s with more copies) | ELECTRIC_FURNACE |
+| FLYING_ROBOT_FRAME_160 | `intermediates/flying-robot-frame/flying-robot-frame-160` | `flying-robot-frame` 160/s over 24 copies | Game (`scaffold-recordings`, on abucnasty's build); output-swings clock-only check (on the lanes before the build's own, set inline: with them the planned clock is unstable); rocket-fuel and feasibility units | FLYING_ROBOT_FRAME |
 | GRENADE_240_FILLS_BELT_EXACTLY | `intermediates/grenade/grenade-240-fills-belt-exactly` | `grenade` 240/s over 7 copies | Purpose: output inserters dropping onto the same lanes of one belt, which the simulator must model so the belt fills exactly. Game: one copy and the full build of 7, hand-made and generated clock; the rule for hands in groups; drop-spacing | REAL_OWNER_GRENADE |
 | INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK | `intermediates/inserter-crafting/inserter-crafting-240-shared-signal-clock` | `inserter` 240/s over 3 copies | Purpose: how the furnaces' inputs are clocked; its hand-made clock shares one signal between several inserters. Game both ways plus its own game test (three copies, hand-made and generated clock); open gaps #586 and G2 | LOGISTIC_SCIENCE_INSERTER_CRAFTING |
-| LDS_240 | `intermediates/lds/lds-240` | `low-density-structure` 240/s over 1 copy | Game: selected clock with 6 output swings; start-hands and cold-start units | LOW_DENSITY_STRUCTURE |
-| PROCESSING_UNIT_15_CHEST_FED | `intermediates/processing-unit/processing-unit-15-chest-fed` | `processing-unit` 15/s over 1 copy | Game (`scaffold-recordings`, on the owner's build): an inserter taking two items from an infinity chest, the one the chest's inventory order puts last first (#617); units: clock-belt generation, run-memo, shared swings | PROCESSING_UNITS |
+| LDS_240 | `intermediates/lds/lds-240` | `low-density-structure` 240/s over 1 copy | Game: recommended clock with 6 output swings; start-hands and cold-start units | LOW_DENSITY_STRUCTURE |
+| PROCESSING_UNIT_15_CHEST_FED | `intermediates/processing-unit/processing-unit-15-chest-fed` | `processing-unit` 15/s over 1 copy | Game (`scaffold-recordings`, on abucnasty's build): an inserter taking two items from an infinity chest, the one the chest's inventory order puts last first (#617); units: clock-belt generation, run-memo, shared swings | PROCESSING_UNITS |
 | PROCESSING_UNIT_80_CIRCUIT_EXPORT | `intermediates/processing-unit/processing-unit-80-circuit-export` | `processing-unit` 80/s over 1 copy | Game as is and backed up; per-job checks of both; sim-game-check; blast SLOW job; UI test; also the export lane consumed outside the config and the output-onto-a-belt terminal rate (repointed from a dropped 40/s build) | REAL_STUPIDFATHOBBIT_CELL02 |
 | PRODUCTIVITY_MODULE_80_CHEST_CHAIN | `intermediates/productivity-module/productivity-module-80-chest-chain` | `productivity-module` 80/s over 6 copies | Game and generation: a chain of 9 machines; 1.3% spare, so every window must hold | REAL_OWNER_PRODUCTIVITY_CHAIN |
 | IRON_PLATE_80_CAR_CHEST | `smelting/iron-plate/iron-plate-80-car-chest` | `iron-plate` 80/s over 1 copy | Game: a car as a chest; sidecar-export mechanics; known differences #587 | REAL_OWNER_CAR |
 | LITHIUM_PLATE_80_SILO_CHEST | `smelting/lithium-plate/lithium-plate-80-silo-chest` | `lithium-plate` 80/s over 1 copy | Game: a rocket silo as a chest; side-loaded output; three sidecar-export mechanics tests; an always-on override honoured and reported, set inline (from a dropped buffer-chest build) | REAL_OWNER_LITHIUM_SILO |
 | STEEL_PLATE_26_WAGON_CHEST | `smelting/steel-plate/steel-plate-26-wagon-chest` | `steel-plate` 26/s over 1 copy | Game: a cargo wagon as a hub; sidecar-export mechanics; blast SLOW job | STEEL_CARGO_WAGON |
-| STONE_BRICK_120_DRILL_DIRECT_INSERT | `smelting/stone-brick/stone-brick-120-drill-direct-insert` | `stone-brick` 120/s over 3 copies | Game (`scaffold-recordings`, on the owner's build and its own export); units: always-enabled override, primitive alternatives, output count | STONE_BRICKS_DIRECT_INSERT_2_1 |
+| STONE_BRICK_120_DRILL_DIRECT_INSERT | `smelting/stone-brick/stone-brick-120-drill-direct-insert` | `stone-brick` 120/s over 3 copies | Game (`scaffold-recordings`, on abucnasty's build and its own export); units: always-enabled override, primitive alternatives, output count | STONE_BRICKS_DIRECT_INSERT_2_1 |
 | IRON_BACTERIA_380_CULTIVATION | `gleba/iron-bacteria/iron-bacteria-380-cultivation` | `iron-bacteria` 380/s over 1 copy | Game: the loop with a timed belt end; loop-windows units | IRON_BACTERIA_CULTIVATION |
-| ROCKET_FUEL_60 | `gleba/rocket-fuel/rocket-fuel-60` | `rocket-fuel` 60/s over 1 copy | Game (`scaffold-recordings`, on the owner's build); rocket-fuel generation and many units; fuel clocks (from the merged seed-belt config: fuel-clock blueprint, clock-period-with-lock); hand size 15 against 16 set inline (from the merged stack-15 config: its generation file, decider-order, feasibility); taker orders of the four jelly inserters and the seed by-product take-off (from the merged by-product config) | GLEBA_ROCKET_FUEL. It absorbed three configs: GLEBA_ROCKET_FUEL_JELLY_STACK_15, JELLYNUT_PROCESSING_ROCKET_FUEL and JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS |
-| IRON_ORE_VOIDER_400_EXACT_SPEED | `recycling/iron-ore/iron-ore-voider-400-exact-speed` | `iron-ore` 400/s destroyed over 1 copy | Game (an hour, binomial range) and generation: the `counts: "destroyed"` target; two cells with different margins (batched vs even hands) | REAL_OWNER_ORE_VOIDER_EXACT_SPEED |
-| IRON_ORE_VOIDER_400_OVERBEACONED | `recycling/iron-ore/iron-ore-voider-400-overbeaconed` | `iron-ore` 400/s destroyed over 1 copy | As IRON_ORE_VOIDER_400_EXACT_SPEED: the same cell with 6 beacons on the recycler (crafting speed 26.634) | REAL_OWNER_ORE_VOIDER_OVERBEACONED |
+| ROCKET_FUEL_60 | `gleba/rocket-fuel/rocket-fuel-60` | `rocket-fuel` 60/s over 1 copy | Game (`scaffold-recordings`, on abucnasty's build); rocket-fuel generation and many units; fuel clocks (from the merged seed-belt config: fuel-clock blueprint, clock-period-with-lock); hand size 15 against 16 set inline (from the merged stack-15 config: its generation file, decider-order, feasibility); taker orders of the four jelly inserters and the seed by-product take-off (from the merged by-product config) | GLEBA_ROCKET_FUEL. It absorbed three configs: GLEBA_ROCKET_FUEL_JELLY_STACK_15, JELLYNUT_PROCESSING_ROCKET_FUEL and JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS |
+| IRON_ORE_VOIDER_400_EXACT_SPEED | `recycling/iron-ore/iron-ore-voider-400-exact-speed` | `iron-ore` 400/s destroyed over 1 copy | Game (an hour, binomial range) and generation: the `counts: "destroyed"` target; two builds with different margins (batched vs even hands) | REAL_OWNER_ORE_VOIDER_EXACT_SPEED |
+| IRON_ORE_VOIDER_400_OVERBEACONED | `recycling/iron-ore/iron-ore-voider-400-overbeaconed` | `iron-ore` 400/s destroyed over 1 copy | As IRON_ORE_VOIDER_400_EXACT_SPEED: the same build with 6 beacons on the recycler (crafting speed 26.634) | REAL_OWNER_ORE_VOIDER_OVERBEACONED |
 
 The old logistic configs `logistic-science`, `logistic-science-shared-inserter` and `logistic-science-sample` (the folder
 `science/logistic-science/`) were replaced by LOGISTIC_SCIENCE_240 in 0.27.1.
@@ -100,32 +100,32 @@ The old logistic configs `logistic-science`, `logistic-science-shared-inserter` 
 Builds without a scaffold have labels and selections that only the simulator vouches for. Most of them moved on
 2026-10-08 when the belt pickup rules and the long-run stability check changed, so each needs a recording before its
 label is trusted. One copy each, in the build's item folder, named `<stem>.scaffold`; then add it to
-`tests/game/builds/scaffold-recordings.game.test.ts` with its seeds, if any, and the warm-up and settle it needs.
+`tests/game/builds/scaffold-recordings.game.test.ts` with its kick start, if any, and the warm-up and settle it needs.
 
 No build is left on the list.
 
-Not on the list any more: **LOGISTIC_SCIENCE_240** (2026-11-04). Its scaffold is the owner's whole build, 22 assemblers, not one copy;
+Not on the list any more: **LOGISTIC_SCIENCE_240** (2026-11-04). Its scaffold is abucnasty's whole build, 22 assemblers, not one copy;
 the test names the copies (`copies: 22`).
 
-Also not on the list any more (2026-11-04, the owner's builds): **ROCKET_FUEL_60** and **STONE_BRICK_120_DRILL_DIRECT_INSERT**, each with the
-owner's scaffold and a game check of the selected clock; and (2026-11-05) **PRODUCTION_SCIENCE_120_TWO_BELTS**, **PROCESSING_UNIT_15_CHEST_FED**,
+Also not on the list any more (2026-11-04, abucnasty's builds): **ROCKET_FUEL_60** and **STONE_BRICK_120_DRILL_DIRECT_INSERT**, each with
+abucnasty's scaffold and a game check of the recommended clock; and (2026-11-05) **PRODUCTION_SCIENCE_120_TWO_BELTS**, **PROCESSING_UNIT_15_CHEST_FED**,
 **MILITARY_SCIENCE_120**, **FLYING_ROBOT_FRAME_160** and **ELECTRIC_FURNACE_20**, all five in `test:game` holding their target;
 PROCESSING_UNIT_15_CHEST_FED since 0.27.2, when the simulator took the infinity chest's items in the game's order (see its README, #617).
 
-## Backpressure loss
+## Disturbance trials
 
-Since 2026-10-10 a clock is stable when it holds its expected output and gets back to it after every backpressure
-loss of its build (GOALS.md, "Backpressure Loss"). Every clock that holds is tried for it, in the simulator only.
+Since 2026-10-10 a clock is stable when it holds its expected output and gets back to it after every disturbance
+trial on its build (GOALS.md, "Backpressure Loss"). Every clock that holds is tried for it, in the simulator only.
 `scripts/sweep.sh` writes the verdict of every clock, and `scripts/backpressure-sweep.sh` every trial.
 
 What it changed on the samples, against the sweep before it (`gates-off` and `gates-on`):
 
 | Sample | Before | Now |
 |---|---|---|
-| Military science | full-hand output swings, 67.5 wake-ups a minute | batched swings without belt pickup slack, 0 wake-ups: the only clock of seven that gets back from a loss of coal. With "Backed-up belts" on, batched swings too |
-| Agricultural science | batched swings, 5 output swings per cycle, 2,543 wake-ups a minute | 2 output swings per cycle, 3,950 (4,127 with the switch on): the 5-swing clock does not get back from a loss of nutrients; the 2- and the 1-swing clock do |
-| Utility science, "Backed-up belts" on | batched swings, 0 wake-ups | batched swings, as before: by the trials alone it was uneven output swings (5.4), which deadlocks in the game; the build has a deadlock risk, so the verdict does not decide (below) |
-| Metallurgic science | full-hand output swings on a subtick clock | the same clock, as one with no recovery: it does not get back from a loss of tungsten ore, and it is the only clock of the build that holds |
+| Military science | full-hand output swings, 67.5 wakeups a minute | batched swings without belt slack, 0 wakeups: the only clock of seven that goes back to its rate after a supply stop of coal. With "Backed-up belts" on, batched swings too |
+| Agricultural science | batched swings, 5 output swings per cycle, 2,543 wakeups a minute | 2 output swings per cycle, 3,950 (4,127 with the switch on): the 5-swing clock does not go back to its rate after a supply stop of nutrients; the 2- and the 1-swing clock do |
+| Utility science, "Backed-up belts" on | batched swings, 0 wakeups | batched swings, as before: by the trials alone it was uneven output swings (5.4), which deadlocks in the game; the build has a deadlock risk, so the verdict does not decide (below) |
+| Metallurgic science | full-hand output swings on a subtick clock | the same clock, as one with no recovery: it does not go back to its rate after a supply stop of tungsten ore, and it is the only clock of the build that holds |
 
 Clocks that were not selected and are no longer stable: observed windows on jellynut processing with rocket fuel
 (bioflux; that config is now merged into ROCKET_FUEL_60), observed windows and uneven output swings on shared production
@@ -137,7 +137,7 @@ switch off and 23% longer with it on, on a machine that was busy with other work
 Recorded in the game on 2026-10-10 after the change, 12 builds, 10 as before:
 
 - **Utility science (UTILITY_SCIENCE_120) with "Backed-up belts" on moved nothing under uneven output swings**, the clock the trials had
-  moved its selection to: 0 of 192 in each of 53 periods, where the simulator has it stable at 192 from every start
+  moved its selection to: 0 of 192 in each of 53 window cycles, where the simulator has it stable at 192 from every start
   and back from every loss. It is the deadlock of two inserters that bring the same item (GOALS.md, a rule of the
   game from the user's own testing), and a risk of the build, not of that clock alone. The generator now reads the
   risk off the config: inserters 1 and 2 both bring low density structures to machine 1, and each brings another
@@ -147,23 +147,23 @@ Recorded in the game on 2026-10-10 after the change, 12 builds, 10 as before:
   brings the frames holds 12 low density structures and waits for more: it cannot put them into a machine that is
   full of them, and it brings no frame while it holds them. Started in that state the simulator stays in it for the
   2,016 ticks tried, as the game does, so the simulator has the deadlock; neither the start the generator gives a
-  clock nor any trial for backpressure loss gets the build into it. Under batched swings the game made 192 in each
-  of 53 periods. How the build gets there under uneven output swings is not traced, by decision: it is a known risk
+  clock nor any disturbance trial gets the build into it. Under batched swings the game made 192 in each
+  of 53 window cycles. How the build gets there under uneven output swings is not traced, by decision: it is a known risk
   of the build. The recording is `.scratch/recordings/utility-science-backpressure-uneven-output-on.json`.
-- **Agricultural science (AGRICULTURAL_SCIENCE_250) with "Backed-up belts" on**: the 2-swing clock moved its 800 packs in every period. The
-  four inserters that bring nutrients to the egg biochambers moved 979.89 nutrients a period in the game and 980.85
+- **Agricultural science (AGRICULTURAL_SCIENCE_250) with "Backed-up belts" on**: the 2-swing clock moved its 800 packs in every window cycle. The
+  four inserters that bring nutrients to the egg biochambers moved 979.89 nutrients a window cycle in the game and 980.85
   in the simulator, a difference the game test of the build left open; the game test of 2026-10-24 found none in any
-  inserter or machine. Since a loss trial short only late in its 40 periods runs on, batched swings is selected with
-  or without the switch, and the game test of 2026-10-24 on it finds 400 in every period and no difference. With the
+  inserter or machine. Since a disturbance trial short only late in its 40 window cycles runs on, batched swings is selected with
+  or without the switch, and the game test of 2026-10-24 on it finds 400 in every window cycle and no difference. With the
   inserters that take eggs out of the loop on windows (later that day) it finds the same, 400 in every one of 74
-  periods with and without the switch, and the game test leaves the wake-ups open: the game counts 134.3 a minute for
+  window cycles with and without the switch, and the game test leaves the wakeups open: the game counts 134.3 a minute for
   each inserter that brings nutrients to an egg biochamber, the simulator 36.6 (a wake in the tick after the window
   opens, where the nutrient biochamber puts out the products it holds), 1,791.4 a minute in all against 1,257.8. With
-  the two inserters between the egg biochambers on windows too (the same day), 400 in every one of 74 periods both ways
+  the two inserters between the egg biochambers on windows too (the same day), 400 in every one of 74 window cycles both ways
   and no difference, 1,361.9 a minute in the game against 880.8 (1,383.2 backed up); with the family's cuts, back at 400
-  from the first or second period after each. Iron bacteria with windows on its two loop inserters: 10,944 in every
+  from the first or second window cycle after each. Iron bacteria with windows on its two loop inserters: 10,944 in every
   repeat and no difference in what any inserter or machine moved, back from the first repeat after each cut; the game
-  counts 1,499.8 wake-ups a minute against the simulator's 516.4, every inserter about three times, and the game test
+  counts 1,499.8 wakeups a minute against the simulator's 516.4, every inserter about three times, and the game test
   leaves them open.
 
 Known gaps of the trials:
@@ -184,14 +184,14 @@ sample with a belt export (since dropped):
 
 - 132 stable clocks on 34 samples; one could not be built again from its windows (fractional swings on biochamber
   fuel). Of the other 131, 81 hold both ways and 50 hold neither way. No clock holds one way only.
-- The selected clock holds both ways on 21 samples and neither way on 12: advanced circuit, chemical science with
+- The recommended clock holds both ways on 21 samples and neither way on 12: advanced circuit, chemical science with
   direct-insert engines, chemical science engines, electric furnace, flying robot frame, logistic science with a
   shared inserter, the four production science samples, the sample config, and utility science with direct-insert
   low density structures and its chain always on. On 7 of them no stable clock holds both ways.
 - It does catch the advanced circuit clock with evenly spaced windows of 4 ticks (352 of 704 either way), which the
-  trials for backpressure loss do not. It also fails the clock its reporter tightened by hand (608 of 704 either
+  disturbance trials do not. It also fails the clock its reporter tightened by hand (608 of 704 either
   way) and the clock selected for that build (864 of 1056), and both of those were recorded in the game at their
-  full output in every period. A clock whose windows are as long as its hands loses a hand with a tick less, whether
+  full output in every window cycle. A clock whose windows are as long as its hands loses a hand with a tick less, whether
   it is a good clock or not.
 - The trials cost a tenth of the time generating takes.
 
@@ -201,8 +201,8 @@ It is not wired into anything.
 
 A second diagnostic of 2026-10-10, not a check the generator makes, tried and removed. `clockStartOf` let the build run
 for 3,600 ticks with every inserter always enabled, the warm-up a scaffold gets in the game, then started the clock at
-each of the four places in its period the loss trials use, each on a run of its own, and wanted exactly the expected
-output within 40 periods, and for good. The clock was cut off from what it enables through a switch in the enable
+each of the four places in its window cycle the disturbance trials use, each on a run of its own, and wanted exactly the expected
+output within 40 window cycles, and for good. The clock was cut off from what it enables through a switch in the enable
 controls (`GameClockWires`), as an "unclocked" kind of loss. `scripts/clock-start-sweep.sh` tried every stable clock
 that way and `clock-start-table.py` printed the table below. Without its clock a build does run faster in the
 simulator: advanced circuit makes 1,210 where its clock expects 1,056, utility science 224 for 192.
@@ -213,76 +213,76 @@ build comes from a start short of ingredients or from the state the game was rec
 does not reach; what that gap needs is a start state handed to the run (`start_stock`), which stays.
 
 - It fails no clock. With "Backed-up belts" off 131 of 132 stable clocks get to their output, the slowest within
-  19 periods, and with it on 106 of 107; the one left over is fractional swings on biochamber fuel, which cannot be
+  19 window cycles, and with it on 106 of 107; the one left over is fractional swings on biochamber fuel, which cannot be
   built again from its windows. The trials cost 3% of the time generating takes.
 - It catches none of the three cases it was held against. The utility science clock that deadlocks in the game
-  (uneven output swings, backed-up belts) is at 192 within 2 periods from all four places. The advanced
+  (uneven output swings, backed-up belts) is at 192 within 2 window cycles from all four places. The advanced
   circuit clock with windows of 4 ticks is at 704 within 3, and the clock tightened by hand within 6. The nearest
   clock of the sample at 230 a second, which the generator's own check has at 216.9, makes its full 16,192 in the
-  second of two repeats of 23 periods from all four places; that is judged on one repeat, and it is not known here
+  second of two repeats of 23 window cycles from all four places; that is judged on one repeat, and it is not known here
   what the game made of that clock.
 
 It was never wired into anything.
 
 ## Iron bacteria
 
-IRON_BACTERIA_380_CULTIVATION. Recorded on 2026-10-09 in Factorio 2.1.21, with 50 bacteria seeded into each machine (the recipe makes bacteria from
-bacteria) and 3,600 ticks to settle. The selected clock is 6 output swings per cycle on a subtick clock of 90.947
+IRON_BACTERIA_380_CULTIVATION. Recorded on 2026-10-09 in Factorio 2.1.21, with a kick start of 50 bacteria in each machine (the recipe makes bacteria from
+bacteria) and 3,600 ticks to settle. The recommended clock is 6 output swings per cycle on a subtick clock of 90.947
 ticks, with the belt inserters enabled 17 ticks in every 30.3. Over 72,576 ticks it moves 10,944 bacteria in each of
-the 42 repeats of 1728 ticks its clock counts, and 576 in each of their 798 periods when a repeat is cut into its 19:
+the 42 repeats of 1728 ticks its clock counts, and 576 in each of their 798 window cycles when a repeat is cut into its 19:
 380 a second for 20 minutes. Without a clock the build makes 406.7 a second, all its machines can.
 
 What kept the generator from selecting any clock for this build on 2026-10-08 was its own long run, which counted a
-period of 90.947 ticks in bins of 90: neither the belt pickup rules nor the nutrient inserters' windows. The simulator
-and the game agree on this build hand for hand (3,384, 752 and 869 hands in 376 periods of the clock rounded to 90
-ticks), and within a thousandth on the long-run rate of every alternative but the 5-swing one, which makes more than
+window cycle of 90.947 ticks in bins of 90: neither the belt pickup rules nor the nutrient inserters' windows. The simulator
+and the game agree on this build hand for hand (3,384, 752 and 869 hands in 376 window cycles of the clock rounded to 90
+ticks), and within a thousandth on the long-run rate of every clock but the 5-swing one, which makes more than
 the target in both: 402.7 a second in game, 394.4 in the simulator.
 
-Open, and harmless for the selected clock: after a belt inserter has waited for the machine to take bioflux again,
+Open, and harmless for the recommended clock: after a belt inserter has waited for the machine to take bioflux again,
 the game has the first stack in its hand one tick after the machine's bioflux falls to 27, the simulator two ticks
 after (352 and 349 waits measured). Whether that is the deciding tick after a wait or the order in which machines and
 inserters are updated was not settled.
 
-Open in the long run itself, reached by no sample: a fractional period whose repeat is more than half the judged
-periods (41 to 79 of them in the usual run) is judged as that one repeat; and where not even one repeat fits, the
-judged periods are compared as one span, which can pass a clock that is short by just under two hands of every
+Open in the long run itself, reached by no sample: a fractional window cycle whose repeat is more than half the judged
+window cycles (41 to 79 of them in the usual run) is judged as that one repeat; and where not even one repeat fits, the
+judged window cycles are compared as one span, which can pass a clock that is short by just under two hands of every
 output inserter over it.
 
 Open, fitted: `MACHINE_HANDS_SURPLUS` (1.43, the windows of an inserter between machines) is a number found with the
-game on the agricultural science build on 2026-10-09; the simulator passes 1.30, which starved two of its clocks in the
-game. To be replaced by a value derived per build, or by a setting the user controls. Neither is done.
+game on the agricultural science build on 2026-10-09; the simulator passes 1.30, which left two of its clocks short of items in
+the game. To be replaced by a value derived per build, or by a setting the user controls. Neither is done.
 
 ## Utility science
 
 Closed on 2026-10-10. The three builds (the plain build is UTILITY_SCIENCE_120, the belted one
 UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT; the third, the direct-insert LDS chain, is since dropped) had been recorded short of their target under clocks the simulator calls
-stable (144 of 192 a period, 64 or 80 of 96, 32 or 160 of 192), which read as a rule of the game the simulator was
+stable (144 of 192 a window cycle, 64 or 80 of 96, 32 or 160 of 192), which read as a rule of the game the simulator was
 missing. There were two causes, and one of them was not in the simulator:
 
 - The scaffolds were not the builds the configs describe. In both belt-fed scaffolds the inserter that brings
   processing units and low density structures was set to a stack size of 12, and the configs say 16. With 12 in the
   config the simulator made what the game made (80 and 64 in turn on the belted build), and with 16 in the scaffold the
-  belted build made its 96 in every period. The scaffolds now have 16. With 12 the generator finds no clock for the
+  belted build made its 96 in every window cycle. The scaffolds now have 16. With 12 the generator finds no clock for the
   plain build at all.
 - An inserter takes from the lane of its belt nearest to it first (GOALS.md, "What an inserter takes off a belt
   first"). The simulator took the first of its filters, which on the plain build was the processing units where the
-  game takes the low density structures. Under batched swings with slack both made 192 a period, with 64 and 128
+  game takes the low density structures. Under batched swings with slack both made 192 a window cycle, with 64 and 128
   items through the two inserters in the game and 96 and 96 in the simulator; under the clock that was selected for
   backed-up belts the game made 96 where the simulator made 192. With the lanes of that belt swapped in a copy
   of the scaffold the game took the processing units first, and the simulator matched it as it was. The configs of
   every scaffolded build now name the nearest lane.
 
-With both, the selected clocks of the plain and the belted build hold their rate in the game with "Belts do not
+With both, the recommended clocks of the plain and the belted build hold their rate in the game with "Belts do not
 move" off and on, and the simulator moves what the game moved through every inserter.
 
 Open:
-- **Direct-insert LDS** has no clock that holds 240 a second: the selected one alternates 32 and 160 of 192 a period
+- **Direct-insert LDS** has no clock that holds 240 a second: the recommended one alternates 32 and 160 of 192 a window cycle
   in the game and in the simulator alike. The simulator is right about it; a clock for the build is still to be found.
-- Batched swings on the plain build has three steady states at 192 a period, with 10.7, 26.8 and 32.1 wake-ups a
-  minute by where the clock starts. The generator's run counts 10.7; the game settled into 26.8. The potential clocks
+- Batched swings on the plain build has three steady states at 192 a window cycle, with 10.7, 26.8 and 32.1 wakeups a
+  minute by where the clock starts. The generator's run counts 10.7; the game settled into 26.8. The clocks
   list the figure of the generator's own run.
-- With 2 and with 1 output swings per cycle the plain build only holds its rate with belt pickup slack (the 2-swing
-  clock was recorded with it at 192 in each of 53 periods). With "Backed-up belts" on they are listed as unstable:
+- With 2 and with 1 output swings per cycle the plain build only holds its rate with belt slack (the 2-swing
+  clock was recorded with it at 192 in each of 53 window cycles). With "Backed-up belts" on they are listed as unstable:
   they were the last two clocks of any sample that were made again with the slack there, neither was selected, and
   that fallback was removed on 2026-10-10.
 
@@ -295,7 +295,7 @@ foundries cast the iron and the copper (150%), all from infinity pipes. The conf
 also has "Search for fewer wake-ups" on, which selects the same clock, since no clock made without a search is stable.
 
 The clock 0.9.0 selected (observed windows, 2 output swings per cycle) was stable in the simulator and made 528, 544,
-544, 544, 544, 528 and 512 of its 576 a period in the game, that cycle over and over. Started in the state the game
+544, 544, 544, 528 and 512 of its 576 a window cycle in the game, that cycle over and over. Started in the state the game
 was in (`.scratch/issue-152/` on the machine the work was done on), the simulator parted from the game at two rules,
 now in GOALS.md, "When a waiting inserter acts": an inserter whose window opens in the tick another inserter takes the
 products of the machine it puts into takes its first items a tick later, unless that other inserter's window opened in
@@ -303,21 +303,21 @@ that tick too; and a hand from a machine does not fill while the machine it puts
 them the simulator has that clock at 512 and selects another observed windows clock, which the game held at 576.
 
 Since 2026-10-14 the generator selects even hands for it (GOALS.md, "Wake-up Lists"): every inserter one window a
-hand, spread evenly over the period of 972, so the two halves open and close together on 5 window deciders
+hand, spread evenly over the window cycle of 972, so the two halves open and close together on 5 window deciders
 (accumulators, iron into the accumulator plants, iron and copper into the battery plants, batteries), at 601.9
-wake-ups a minute in the simulator against 2,906.7 for the observed windows clock. Recorded on the scaffold: 576 in
-each of 46 periods, no difference from the simulator, 972 wake-ups a minute in the game (the simulator counts 278.5 to
+wakeups a minute in the simulator against 2,906.7 for the observed windows clock. Recorded on the scaffold: 576 in
+each of 46 window cycles, no difference from the simulator, 972 wakeups a minute in the game (the simulator counts 278.5 to
 940.7 by where the clock starts). The generator shows 601.9: the count of the steady
 state its own start settles into, as for every clock (GOALS.md, "Wake-up Lists"). The scaffold starts the clock on a
 build that ran free for its warm-up, and settles into another state, which the simulator counts at 940.7 when it
-starts the clock elsewhere in the period; the game test accepts that figure. Under the same clock with all its windows starting at 0 and a period of 486, the
+starts the clock elsewhere in the window cycle; the game test accepts that figure. Under the same clock with all its windows starting at 0 and a window cycle time of 486, the
 iron and battery inserters whose windows opened with the output inserter's took their first items a tick later at 4
-places in the period (300 cases), where the simulator takes them in the tick: a fourth item for the list below.
+places in the window cycle (300 cases), where the simulator takes them in the tick: a fourth item for the list below.
 
 What is left between the simulator and the game on this build, a tick at a time, and changes no verdict found:
-- at one place of the seven-period cycle that the old clock settled into, the iron and copper inserters of a battery
+- at one place of the cycle of seven window cycles that the old clock settled into, the iron and copper inserters of a battery
   plant whose window opened with that of the output inserter took their hands a tick later in the game (36 cases), where
-  the same window a period earlier took them in the tick, as the simulator does;
+  the same window a window cycle earlier took them in the tick, as the simulator does;
 - an inserter that waited 6 ticks or more for the battery plant took its first items a tick later in the game where the
   plant finished a craft the tick before (16 of 16), against the rule recorded on the scaffolds (3,696 there); on the
   scaffolds the inserter that took the products had been waiting at the machine, here it was on its way back;
@@ -326,7 +326,7 @@ What is left between the simulator and the game on this build, a tick at a time,
 
 ## Chemical science with a shared foundry
 
-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY, the block given on 2026-10-15: four chemical science assemblers and four engine assemblers sharing one foundry that casts the pipes, 5.5 copies of it making 240 a second. The selected clock counts 82.2 wake-ups a minute in the simulator and 122.7 in the game; the runner-up counts 122.1 and 122.7. The whole difference is 40.9 in four inserters, the belt inserters of the science machines (10.2 each, one wake-up a period in the game, none in the simulator): in the game the machine starts its next craft one tick after the inserter began to wait for space, in the simulator on the same tick, and a wake-up needs the inserter to have waited the tick before. Moving every machine start one tick earlier gives the simulator's figure in the game's recording; one tick later gives 204.8 in the simulator. What the build moves, and what every inserter and machine does, is held; the clock's wake-ups are not, and in the game the two stable clocks tie at 122.7, so no selection is shown to be wrong. Open: which side of the tick is off (the restart of a machine after its short wait for ingredients, or the order of the start and the inserter's state change inside a tick). The recording merges the block's north and south supply belts into one belt each, so a comparison reports the near lane of four inserters (config 6, 8, 14, 16) as wrong although the config matches the scaffold.
+CHEMICAL_SCIENCE_240_SHARED_FOUNDRY, the block given on 2026-10-15: four chemical science assemblers and four engine assemblers sharing one foundry that casts the pipes, 5.5 copies of it making 240 a second. The recommended clock counts 82.2 wakeups a minute in the simulator and 122.7 in the game; the runner-up counts 122.1 and 122.7. The whole difference is 40.9 in four inserters, the belt inserters of the science machines (10.2 each, one wakeup a window cycle in the game, none in the simulator): in the game the machine starts its next craft one tick after the inserter began to wait for space, in the simulator on the same tick, and a wakeup needs the inserter to have waited the tick before. Moving every machine start one tick earlier gives the simulator's figure in the game's recording; one tick later gives 204.8 in the simulator. What the build moves, and what every inserter and machine does, is held; the clock's wakeups are not, and in the game the two stable clocks tie at 122.7, so no selection is shown to be wrong. Open: which side of the tick is off (the restart of a machine after its short wait for ingredients, or the order of the start and the inserter's state change inside a tick). The recording merges the block's north and south supply belts into one belt each, so a comparison reports the near lane of four inserters (config 6, 8, 14, 16) as wrong although the config matches the scaffold.
 
 ## Advanced circuit
 
@@ -342,34 +342,34 @@ rate only (until 2026-11-04 it also had the coal inserter set to always enabled 
 own input belt and its own output belt, as the scaffold does: each input line has its own feeders, and the two output
 lines meet only past both plants. Splitting them changed none of either sample's clocks. So the same machines hold 240
 a second under a stable clock, and until 2026-10-11 no clock held 230: the nearest made 217.3 on a clock rounded to
-550 ticks. At 230 the clock period is not a whole number of ticks (550.957), and that is where the gap was thought to
-be: in planning a clock whose period is not whole, not in the build
+550 ticks. At 230 the window cycle time is not a whole number of ticks (550.957), and that is where the gap was thought to
+be: in planning a clock whose window cycle time is not whole, not in the build
 ([issue 102](https://github.com/abucnasty/clock-generator/issues/102)). The one search of the windows of a clock
 (2026-10-11) finds full-hand output swings that hold it in the simulator, stable from every start and through every
-loss, at 600 wake-ups a minute: the old search confirmed the first timing without a wait and gave up after a few, the
+loss, at 600 wakeups a minute: the old search confirmed the first timing without a wait and gave up after a few, the
 new one ranks a timing whose neighbours pass first and confirms up to five. Recorded the same day on this scaffold
 (`CONFIG=ADVANCED_CIRCUIT_230 TAG=230` on `scripts/record-clock.js`): the game moved 16,192 items in each of the 2
-repeats of 12,672 ticks that fit the recording, exactly what the clock asks for, at 769 wake-ups a minute against the
+repeats of 12,672 ticks that fit the recording, exactly what the clock asks for, at 769 wakeups a minute against the
 simulator's 600. The build is in `test:game` since. The simulator had called a clock of this build stable before that
 made 90% in the game, so the recording, not the simulator, settles it.
 
-Recorded on 2026-10-10, 36,000 ticks each, wake-ups a minute for one copy:
+Recorded on 2026-10-10, 36,000 ticks each, wakeups a minute for one copy:
 
 | Clock | Output | Game | Simulator |
 |---|---|---|---|
-| The reporter's, tightened by hand | 704 in each of 68 periods | 355 | 395 (355 or 395 by where the clock starts) |
+| The reporter's, tightened by hand | 704 in each of 68 window cycles | 355 | 395 (355 or 395 by where the clock starts) |
 | Made by version 0.5.0 | 704 in each of 68 | 464 | 757 (757 to 1,268) |
-| Selected now, batched swings with 3 output swings | 1056 in each of 45 | 400 | 510 |
-| Selected with "Backed-up belts" on, 2 output swings | 704 in each of 68 | 389 | 627 |
+| Recommended now, batched swings with 3 output swings | 1056 in each of 45 | 400 | 510 |
+| Recommended with "Backed-up belts" on, 2 output swings | 704 in each of 68 | 389 | 627 |
 | Evenly spaced windows of one hand (4 ticks) for the belt inserters | 608 and 624 in turn, of 704 | - | 704, at 545 |
 
-The two selected clocks are those the generator makes since the simulator has the tick an inserter takes to wake
+The two recommended clocks are those the generator makes since the simulator has the tick an inserter takes to wake
 (GOALS.md, "When a waiting inserter acts"): their windows moved by a few ticks, and they were recorded again. With
-510 against 400 the build is over the quarter the game tests allow, so its wake-ups are not held there yet
+510 against 400 the build is over the quarter the game tests allow, so its wakeups are not held there yet
 (`wake_ups_open` in the test); what it moves is.
 
 The rule's count (GOALS.md, "The rule's count and the clock-or-unwired advice"), recorded on 2026-10-14 unclocked and on
-the selected clock, 15,840 ticks each after the first period (`scripts/rule-count-game-check.js`), w a minute for each
+the recommended clock, 15,840 ticks each after the first window cycle (`scripts/rule-count-game-check.js`), w a minute for each
 inserter, game against simulator:
 
 | Group | Unclocked | Clocked | w removed |
@@ -383,11 +383,11 @@ inserter, game against simulator:
 Every group is called "clock" in both. The machines craft at the same rate in both (2,752 products a minute an
 advanced circuit plant). The output's difference is the one in the table above: the simulator shows the output as
 waiting on its plant where the game shows it working, so the simulator counts a craft (742 a minute) where the game
-counts a pickup (760). The inputs into the plants count about 8% more sink wake-ups in the game, unclocked; why was
+counts a pickup (760). The inputs into the plants count about 8% more sink wakeups in the game, unclocked; why was
 not looked into. No call changes, so both are left (working rule 2).
 
 In true starts (the call since 0.12.0), the same recordings and those of the accumulator, low density structure and
-agricultural science scaffolds (2026-10-15, the same way: warmup, settle and seed as in the game tests, the first period
+agricultural science scaffolds (2026-10-15, the same way: warmup, settle and kick start as in the game tests, the first window cycle
 left out), the game read by the series' method as every recording is, w removed a minute for each inserter, game
 against simulator, with the original count after it:
 
@@ -416,7 +416,7 @@ against simulator, with the original count after it:
 | | pooled | **106 / 213** | **98 / 283** |
 
 On the first three builds every call is "clock", firm, in both counts and in both the game and the simulator. The
-output of a part-hand machine differs most (the simulator counts craft wake-ups where the game counts pickups), and the
+output of a part-hand machine differs most (the simulator counts craft wakeups where the game counts pickups), and the
 low density structure inputs, on sinks where the method is exact, count about 25% more in the simulator. On
 agricultural science, whose input sinks are all biochambers, where the method is a known miss, two calls differ in both
 counts (in bold): in the game the input into the science biochamber wakes more on the clock than without it, and it
@@ -425,7 +425,7 @@ depends on these calls, so they are left (working rule 2). The comparisons are i
 on the machine they were made on.
 
 The last row is the clock that rule was read from (`src/crafting/wake-after-output-block.test.ts`). One plant made its
-352 a period and the other 264, from the first period the clock ran on the build. That plant held 14 advanced circuits
+352 a window cycle and the other 264, from the first window cycle the clock ran on the build. That plant held 14 advanced circuits
 when the clock started and 9 after its first output window, so it was over its output block of 21 before every
 output window from then on, and no window of that clock takes more than is made. The simulator has that state: a run
 started in it holds what the game held, tick for tick, as it does for the clock tightened by hand and, with
@@ -435,17 +435,17 @@ generator takes the clock for one that holds. `.scratch/tools/sim-from-recording
 state of a recording and names the first tick where the two part.
 
 The clock tightened by hand is the one to beat: no clock the generator offers comes near it. Its gains in the game
-are the coal inserter, 95 wake-ups a minute down to none with windows of one hand (6 ticks), and the two output
+are the coal inserter, 95 wakeups a minute down to none with windows of one hand (6 ticks), and the two output
 inserters, 48 each down to 14 and 20 with two short windows in every crafting cycle that take what has piled up.
 `clockFromWindows` builds and checks a clock from windows like these, and `scripts/record-clock.js` records one
 (`WINDOWS=`); the windows are in `src/crafting/clock-from-windows.test.ts`.
 
 Open:
-- A clock is checked from the start the generator gives it and, since 2026-10-10, after each backpressure loss
+- A clock is checked from the start the generator gives it and, since 2026-10-10, after each disturbance trial
   (above). A build that gets its clock while it runs starts elsewhere: with ingredients below their limits and
-  products in the plants. The evenly spaced clock is the case, and the trials for backpressure loss do not catch it. In the simulator the clock selected now also ends up short (495 of 528 products a plant) when the plants
+  products in the plants. The evenly spaced clock is the case, and the disturbance trials do not catch it. In the simulator the clock selected now also ends up short (495 of 528 products a plant) when the plants
   start with 10 to 26 plastic, which the game was not seen to do.
-- The simulator counts far more wake-ups than the game on the output inserters (50 a minute each against 4.5 under
+- The simulator counts far more wakeups than the game on the output inserters (50 a minute each against 4.5 under
   the clock selected now), from every start of the clock, also in a run that holds what the game held. It is in the
   status shown, not in what the inserters do. Two differences are found. An inserter that holds part of a hand from a
   machine shows as working, not as waiting for more items, in a tick in which that machine finishes a product (18,871
