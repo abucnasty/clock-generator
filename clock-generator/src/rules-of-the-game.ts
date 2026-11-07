@@ -76,8 +76,8 @@ export { loopInserters, alwaysEnabledInserters } from "./crafting/sequence/unpla
 export { sharedItemDeadlockRisks } from "./crafting/deadlock-risk";
 
 /**
- * 10. Belt pickup slack (GOALS.md "Wake-up Lists"): the ticks one more full hand takes at one belt stack a tick (the
- * code caps them at 16). A rule of thumb for a moving belt. Cases: `rules-of-the-game.test.ts`.
+ * 10. Belt pickup slack (GOALS.md "Wake-up Lists"): the ticks one more full hand of the item on the lane takes at one
+ * belt stack a tick (the code caps them at 16). A rule of thumb for a moving belt. Cases: `rules-of-the-game.test.ts`.
  */
 export { beltPickupSlackTicks } from "./crafting/clock";
 
