@@ -10,7 +10,7 @@ const grenade = async (change?: (config: Config) => void): Promise<Config> => {
     return config;
 };
 const at = (x: number) => (config: Config) => { config.setpoint.copy_offset = { x, y: 0 }; };
-const LEAD = "At about 112 ticks a period (estimated from the target rate: one output hand at the machine's rate), the hands of the 7 copies";
+const LEAD = "At about 112 ticks a window cycle (estimated from the setpoint: one output hand at the machine's rate), the hands of the 7 copies";
 
 describe("the period estimated from the settings", () => {
     it("is the ticks one output hand takes at the target rate: 16 grenades at 240 a second over 7 copies of 4 machines", async () => {
@@ -53,7 +53,7 @@ describe("the note under the gap between copies", () => {
         expect(dropRoomNote(await grenade(at(27)))).toBe(dropRoomNote(await grenade(at(13)))!.replace("13 tiles apart", "27 tiles apart"));
     });
 
-    it("says why no spacing fits when the hands of the copies outnumber the tiles the belt moves in a period: automation science, 240 a second, 9 copies", async () => {
+    it("says why no spacing fits when the hands of the copies outnumber the tiles the belt moves in a window cycle: automation science, 240 a second, 9 copies", async () => {
         const science = async (change?: (config: Config) => void): Promise<Config> => {
             const config = structuredClone(await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240));
             config.machines[0].position = { x: 0, y: 0 };
@@ -63,14 +63,14 @@ describe("the note under the gap between copies", () => {
             change?.(config);
             return config;
         };
-        const text = "At about 36 ticks a period, the belt moves 4.5 tiles a period, but the 9 copies drop 9 hands on it, so no spacing of the copies fits: some hands always wait for room. This assumes every copy drops onto the belt the way this one does.";
+        const text = "At about 36 ticks a window cycle, the belt moves 4.5 tiles a window cycle, but the 9 copies drop 9 hands on it, so no spacing of the copies fits: some hands always wait for room. This assumes every copy drops onto the belt the way this one does.";
         expect(estimatedWindowCycle(await science())).toBe(36);
         expect(dropRoomNote(await science())).toBe(text);
         // whatever spacing is typed
         expect(dropRoomNote(await science(it => { it.setpoint.copy_offset = { x: 12, y: 0 }; }))).toBe(text);
         // at a quarter of the rate the window cycle is 144 ticks and the belt moves 18 tiles in it: the 9 hands have room, and the scan is made
         const slow = dropRoomNote(await science(it => { it.setpoint.items_per_second = 60; }))!;
-        expect(slow).toMatch(/^At about 144 ticks a period \(estimated/);
+        expect(slow).toMatch(/^At about 144 ticks a window cycle \(estimated/);
         expect(slow).not.toMatch(/always wait/);
     });
 
@@ -96,9 +96,9 @@ describe("the note under the gap between copies", () => {
                 if (ids.includes(inserter.id ?? index + 1) && inserter.sink.type === "belt") inserter.sink.drop_capture = { status: "side-loaded", tiles: 3 };
             });
         };
-        expect(dropRoomNote(await grenade(mark()))).toBe("At about 56 ticks a period, the belt moves 7 tiles a period, but the 7 copies drop 14 hands on it, so no spacing of the copies fits: some hands always wait for room. This assumes every copy drops onto the belt the way this one does.");
+        expect(dropRoomNote(await grenade(mark()))).toBe("At about 56 ticks a window cycle, the belt moves 7 tiles a window cycle, but the 7 copies drop 14 hands on it, so no spacing of the copies fits: some hands always wait for room. This assumes every copy drops onto the belt the way this one does.");
         const left = dropRoomNote(await grenade(mark(2, 8)))!;
-        expect(left).toMatch(/^At about 56 ticks a period \(estimated from the target rate/);
+        expect(left).toMatch(/^At about 56 ticks a window cycle \(estimated from the setpoint/);
         expect(left).not.toContain("always wait");
         expect(left.endsWith(" This assumes every copy drops onto the belt the way this one does. Drops that are side-loaded or go through a splitter are not checked here.")).toBe(true);
     });

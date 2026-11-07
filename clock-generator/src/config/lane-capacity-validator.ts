@@ -211,7 +211,7 @@ export function lanesSharedByCopiesNote(issues: readonly LaneCapacityIssue[]): s
     if (issues.length === 0) {
         return null;
     }
-    return `${issues.map(describeLaneSharedByCopies).join(' ')} The config cannot say yet whether its copies share these `
+    return `${issues.map(describeLaneSharedByCopies).join(' ')} The configuration cannot say yet whether its copies share these `
         + 'lanes, so this is only a warning: a build whose copies have belts of their own is not affected.';
 }
 

@@ -55,7 +55,7 @@ describe('validateCopies', () => {
             validateCopies(c);
         } catch (e) {
             expect((e as CopiesError).message).toBe(
-                'The config holds 2 identical copies of a unit of 2 machines (copy 1: machines 1, 2; copy 2: machines 3, 4). '
+                'The configuration holds 2 identical copies of a build of 2 machines (copy 1: machines 1, 2; copy 2: machines 3, 4). '
                 + 'Describe one copy and set setpoint.copies to 6 (now 3, times 2).');
             expect((e as CopiesError).units).toEqual([{ machine_ids: [1, 2] }, { machine_ids: [3, 4] }]);
         }
@@ -104,7 +104,7 @@ describe('validateCopies', () => {
         });
         expect(findRepeatedUnits(c).gcd).toBe(3);
         expect(() => validateCopies(c)).toThrow(
-            'The config holds 3 identical copies of a unit of 1 machine (copy 1: machines 1; copy 2: machines 2; copy 3: machines 3).');
+            'The configuration holds 3 identical copies of a build of 1 machine (copy 1: machines 1; copy 2: machines 2; copy 3: machines 3).');
     });
 
     it('does not refuse units that repeat while another unit appears another number of times', () => {

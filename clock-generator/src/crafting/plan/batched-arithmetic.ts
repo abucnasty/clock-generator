@@ -59,7 +59,7 @@ export interface ArithmeticWindows {
 /** Hands an inserter moves in each cycle of the window cycle: a fraction of hands a cycle is spread as evenly as whole hands go */
 function handsPerCycle(hands: { getNumerator: number; getDenominator: number }, cycles: number, id: string): number[] {
     const numerator = hands.getNumerator, denominator = hands.getDenominator;
-    if (cycles % denominator !== 0) refuse(`${id} moves ${numerator}/${denominator} hands a cycle, not whole in ${cycles} cycles`);
+    if (cycles % denominator !== 0) refuse(`${id} moves ${numerator}/${denominator} hands each output cycle, not whole in ${cycles} output cycles`);
     return Array.from({ length: cycles }, (_, cycle) => {
         const at = cycle % denominator;
         return Math.floor((at + 1) * numerator / denominator) - Math.floor(at * numerator / denominator);
@@ -148,12 +148,12 @@ function cycleOf(tick: number, cycle_starts: readonly number[]): number {
  */
 export function batchedSwingsWindowsByArithmetic(input: ArithmeticWindowsInput): ArithmeticWindows {
     const { entity_registry: registry, output_cycle_plan: plan, window_cycle_ticks, recipe_lcm: cycles } = input;
-    if (!Number.isInteger(window_cycle_ticks)) refuse(`a period of ${window_cycle_ticks} ticks is not whole`);
+    if (!Number.isInteger(window_cycle_ticks)) refuse(`a window cycle time of ${window_cycle_ticks} ticks is not whole`);
     if (plan.fractional_swings_enabled) refuse("fractional swings are planned by their own clock");
-    if (plan.exhaust !== undefined) refuse("results that come by chance get windows of their own");
+    if (plan.exhaust !== undefined) refuse("results that come by chance get enable windows of their own");
     if (plan.production_rate.counts !== "made") refuse("a target that counts an item destroyed is planned by its own arithmetic");
     const cycle_ticks = plan.total_duration_ticks.toDecimal();
-    if (Math.abs(cycle_ticks * cycles - window_cycle_ticks) > 1e-6) refuse(`the period ${window_cycle_ticks} is not ${cycles} cycles of ${cycle_ticks} ticks`);
+    if (Math.abs(cycle_ticks * cycles - window_cycle_ticks) > 1e-6) refuse(`the window cycle time ${window_cycle_ticks} is not ${cycles} output cycles of ${cycle_ticks} ticks`);
     const entities = registry.getAll();
     if (entities.some(Entity.isDrill)) refuse("a build with drills");
     if (input.always_enabled_by_config.size > 0 || alwaysEnabledInserters(registry).length > 0) refuse("a build with inserters left always enabled");
@@ -236,7 +236,7 @@ export function batchedSwingsWindowsByArithmetic(input: ArithmeticWindowsInput):
             const hands = walk.hands.filter(hand => hand.id === hand_owner.id);
             const expected = hand_owner.quota!.reduce((sum, it) => sum + it, 0);
             if (hands.length !== expected) {
-                refuse(`${hand_owner.id} moves ${hands.length} hands a period in the stock walk of ${next.entity_id.id}, not ${expected}`);
+                refuse(`${hand_owner.id} moves ${hands.length} hands each window cycle in the stock walk of ${next.entity_id.id}, not ${expected}`);
             }
             const by_cycle = new Map<number, { first: number; last: number }>();
             for (const hand of hands) {

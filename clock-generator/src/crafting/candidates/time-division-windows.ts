@@ -9,7 +9,7 @@ import { turnOffsets } from "./taker-turns";
 import { createEntityRegistryFromConfig } from "../sequence/simulation-context";
 
 function assertNoDrills(registry: ReadableEntityRegistry): void {
-    assert(registry.getAll().every(entity => !Entity.isDrill(entity)), "even hands are not made for a build with mining drills");
+    assert(registry.getAll().every(entity => !Entity.isDrill(entity)), "Time-Division Windows are not made for a build with mining drills");
 }
 
 function assertTimeDivisionWindowsSource(inserter: Inserter): void {
@@ -21,7 +21,7 @@ function assertTimeDivisionWindowsSource(inserter: Inserter): void {
 }
 
 /**
- * Even hands: every inserter gets one window for each hand the plan has it move in the window cycle, the windows spread
+ * Time-Division Windows: every inserter gets one window for each hand the plan has it move in the window cycle, the windows spread
  * evenly over the window cycle, each one tick shorter than the inserter's hand cycle. Made from the plan's hand counts and
  * these rules of the game (Factorio 2.1.21, factorio-benchmarks docs/mechanics):
  *
@@ -51,7 +51,7 @@ export function timeDivisionWindows(
     /** Where the turn rule reports what the takers into other recipes take (`turnOffsets`); not reported without it */
     log?: (line: string) => void,
 ): Map<string, OpenRange[]> {
-    assert(Number.isInteger(window_cycle_ticks), `even hands need a period of whole ticks, not ${window_cycle_ticks}`);
+    assert(Number.isInteger(window_cycle_ticks), `Time-Division Windows need a window cycle time of whole ticks, not ${window_cycle_ticks}`);
     const inserters = entity_registry.getAll().filter(Entity.isInserter);
     assertNoDrills(entity_registry);
     const transfers = new Map(Array.from(swing_counts.entries(), ([entity_id, transfer]) => [entity_id.id, transfer] as const));
@@ -62,7 +62,7 @@ export function timeDivisionWindows(
         assert(transfer !== undefined, `${inserter.entity_id.id} is not in the plan's hand counts`);
         const exact = transfer.total_transfer_count.toDecimal() * recipe_lcm;
         const hands = Math.round(exact);
-        assert(hands > 0 && Math.abs(exact - hands) < 1e-9, `${inserter.entity_id.id} moves ${exact} hands a period, not a whole number`);
+        assert(hands > 0 && Math.abs(exact - hands) < 1e-9, `${inserter.entity_id.id} moves ${exact} hands each window cycle, not a whole number`);
         assert(inserter.animation.total.ticks >= 2 && hands * inserter.animation.total.ticks <= window_cycle_ticks, `${hands} hands of ${inserter.entity_id.id} do not fit in ${window_cycle_ticks} ticks`);
         windows.set(inserter.entity_id.id, evenWindows(hands, inserter.animation.total.ticks, window_cycle_ticks, evenTurnOffset(entity_registry, inserter, hands, transfers, recipe_lcm, window_cycle_ticks, log)));
     }
@@ -133,10 +133,10 @@ export function timeDivisionWindowsClock(config: Config, options: GenerateClockO
     const plan = unclockedRun(config, options);
     const { simulation_context, swing_counts, recipe_lcm, duration, always_enabled_by_config, inserter_clocks } = plan.run;
     assert(always_enabled_by_config.size === 0 && inserter_clocks.size === 0 && alwaysEnabledInserters(simulation_context.entity_registry).length === 0,
-        "even hands are not made for a build with inserters outside the plan");
+        "Time-Division Windows are not made for a build with inserters outside the plan");
     // a window that carries a result that comes by chance gets room for its spread, as the plan's do
     const room = withRoomForRandomAmounts(plan, timeDivisionWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks,
-        line => plan.logger.log(`Even hands: ${line}`)));
+        line => plan.logger.log(`Time-Division Windows: ${line}`)));
     const windows = room.windows;
     const planned = clockOfPlan(plan, { ...options, belt_pickup_slack: "never" });
     const clock = { ...planned, random_margins: room.random_margins };

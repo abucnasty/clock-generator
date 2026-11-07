@@ -32,7 +32,7 @@ export function sharedLaneShortened(config: Config, made: ReadonlyMap<string, re
         const shortened = all.inserter_ids.map(id => `inserter:${id}`).filter(id => open(made, id) < open(planned, id));
         if (shortened.length === 0) continue;
         return `the ${copies} copies take ${(all.items_per_second.toDecimal() * copies).toFixed(2)} a second from belt ${belt_id}, `
-            + `of ${all.capacity_per_second.toDecimal().toFixed(2)}, and ${shortened.join(", ")} would be open for less than the planning run has them`;
+            + `of ${all.capacity_per_second.toDecimal().toFixed(2)}, and ${shortened.join(", ")} would be open for less than the unclocked run has them`;
     }
     return null;
 }

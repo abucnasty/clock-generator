@@ -111,7 +111,7 @@ export function movedOutputSwingWindows(
         tieBreak: (a, b) => Math.abs(a.candidate.shift_ticks) - Math.abs(b.candidate.shift_ticks),
         confirm: ({ candidate, quick }) => confirm(base_config, quick.derived.windows!, window_cycle_ticks, logger, describe(candidate), report, quick.derived.verified, true),
     });
-    logger.log(`Uneven output swings: ${tried.filter(it => it.quick.holds).length} of ${candidates.length} positions pass the quick trial`);
+    logger.log(`Moved Output Swing: ${tried.filter(it => it.quick.holds).length} of ${candidates.length} positions pass the quick trial`);
     if (picked === null || pick === null) {
         return null;
     }

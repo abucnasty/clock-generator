@@ -19,7 +19,7 @@ describe('optional timeline observer', () => {
         // Below the absolute ceiling but past the one whole window cycle the existing budget permits.
         expect(() => recordSimulationTimeline({config, mode: 'clock', window_cycle_ticks,
             terminal_swing_count: 2, windows: {}, settle_ticks: window_cycle_ticks + 1}))
-            .toThrow('This clock period cannot be recorded safely.');
+            .toThrow('This window cycle time cannot be recorded safely.');
     });
     it('records baseline values without inventing warm-up events, and exact partial drops with the previous hand item', () => {
         const context = SimulationContext.fromConfig(config);

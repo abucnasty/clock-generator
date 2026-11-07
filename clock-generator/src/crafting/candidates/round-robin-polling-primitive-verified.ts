@@ -42,7 +42,7 @@ export function verifiedPrimitiveRoundRobinPollingClock(
     const report: PrimitiveRoundRobinPollingAttemptReport = { strategy: "primitive-grouped", eligibility: "separate-windows-only",
         outcome: "inapplicable", attempts: [] };
     const refused = (reason: string): VerifiedPrimitiveRoundRobinPollingResult => ({ clock: null, report: { ...report, reason } });
-    if (!primitiveRoundRobinPollingOptionsSupported(config, options)) return refused("the caller's scheduling options are outside the primitive separate-window policy");
+    if (!primitiveRoundRobinPollingOptionsSupported(config, options)) return refused("the caller's scheduling options are outside the primitive separate enable window policy");
     let construction;
     try { construction = constructPrimitiveRoundRobinPolling(config); }
     catch (error) {
@@ -61,7 +61,7 @@ export function verifiedPrimitiveRoundRobinPollingClock(
     const made = unclockedRun(derived, options);
     const { run } = made;
     assert(plannedTerminalSwingCount(run.output_cycle_plan) === construction.terminal_swing_count, "primitive planner count changed");
-    assert(run.duration.ticks === construction.window_cycle_ticks && run.recipe_lcm === construction.grouped_cycles, "primitive period/cycles changed");
+    assert(run.duration.ticks === construction.window_cycle_ticks && run.recipe_lcm === construction.grouped_cycles, "primitive window cycle time/output cycles changed");
     assert(canonicalVerificationJson(EntityTransferCountMap.serialize(run.swing_counts)) === canonicalVerificationJson(construction.transfer_plan), "primitive transfer facts changed");
     const registry = run.simulation_context.entity_registry;
     const clocks = unplannedInserterClocks(registry, construction.window_cycle_ticks);
@@ -91,7 +91,7 @@ export function verifiedPrimitiveRoundRobinPollingClock(
             config.overrides?.backed_up_belts !== true, attempt.options, null, { output_paths, direct_sources, retained_clocks: clocks });
         const serialize = (windows: Map<string, OpenRange[]>) => Object.fromEntries([...windows].map(([id, ranges]) =>
             [id, ranges.map(range => ({ start: range.start_inclusive, end: range.end_inclusive }))]));
-        assert(canonicalVerificationJson(serialize(grouped.windows)) === canonicalVerificationJson(built.planned_windows), "primitive reconstructed windows changed");
+        assert(canonicalVerificationJson(serialize(grouped.windows)) === canonicalVerificationJson(built.planned_windows), "primitive reconstructed enable windows changed");
         assert(canonicalVerificationJson(grouped.busy) === canonicalVerificationJson(built.busy), "primitive busy dispositions changed");
         const room = withRoomForRandomAmounts(made, grouped.windows);
         const windows = room.windows;
@@ -111,8 +111,8 @@ export function verifiedPrimitiveRoundRobinPollingClock(
             requested_terminal_swing_count, terminal_swing_count: construction.terminal_swing_count, grouped_cycles: construction.grouped_cycles,
             construction_key: key, options: { ...attempt.options, share_windows: false }, loop_refinement: false };
         result = { ...result, round_robin_polling: { shared_windows: false }, primitive_round_robin_polling: policy };
-        assert(canonicalVerificationJson(result.clock_windows) === canonicalVerificationJson(serialize(withInserterClocks(windows, clocks, construction.window_cycle_ticks))), "primitive exported controls changed");
-        assert(canonicalVerificationJson(result.unplanned_inserter_clocks ?? {}) === canonicalVerificationJson(construction.retained_clocks), "primitive exported by-product controls changed");
+        assert(canonicalVerificationJson(result.clock_windows) === canonicalVerificationJson(serialize(withInserterClocks(windows, clocks, construction.window_cycle_ticks))), "primitive blueprint controls changed");
+        assert(canonicalVerificationJson(result.unplanned_inserter_clocks ?? {}) === canonicalVerificationJson(construction.retained_clocks), "primitive blueprint by-product controls changed");
         for (const inserter of construction.inserters) assert(result.clock_windows[inserter.id]?.length
             || result.unplanned_inserter_clocks?.[inserter.id] !== undefined
             || (built.busy.includes(inserter.id) && result.always_on_reasons?.[inserter.id]?.kind === "busy"), `primitive control missing: ${inserter.id}`);

@@ -137,8 +137,8 @@ export const TARGET_COUNTS = ["made", "destroyed"] as const;
 export type TargetCounts = typeof TARGET_COUNTS[number];
 
 export const TargetProductionRateConfigSchema = z.object({
-    recipe: z.string().describe("The name of the item that the target output counts."),
-    items_per_second: z.number().positive().describe("The rate of the target output for all copies together, in items per second."),
+    recipe: z.string().describe("The name of the item that the setpoint counts."),
+    items_per_second: z.number().positive().describe("The rate of the setpoint for all copies together, in items per second."),
     copies: z.number().positive().refine(isShortDecimalCopies, {
         message: COPIES_DECIMAL_ERROR,
     }).describe("The number of identical builds in the game, which can be partial, for example 2.25."),
@@ -194,7 +194,7 @@ const EnableControlOverrideNeverSchema = z.object({
 const EnableControlOverrideClockedSchema = z.object({
     mode: z.literal(EnableControlMode.CLOCKED).describe("CLOCKED: the entity is enabled during the enable windows that you give."),
     ranges: z.array(EnableControlRangeSchema).min(1).describe("The enable windows of the entity, as tick ranges of the window cycle."),
-    period_duration_ticks: z.number().int().positive().optional().describe("The window cycle time of these enable windows, in ticks; the default is the time of the planned crafting cycles."),
+    period_duration_ticks: z.number().int().positive().optional().describe("The window cycle time of these enable windows, in ticks; the default is the time of the planned output cycles."),
     /**
      * Where the decider of these windows stands in the order the clock's deciders are built, 0 the first: set by the
      * check of an exported clock, which builds them in the order of its blueprint. Of two inserters whose windows open
@@ -370,7 +370,7 @@ const DrillTargetConfigSchema = z.discriminatedUnion("type", [DrillTargetMachine
  * Overrides configuration for mining drills.
  */
 const MiningDrillOverridesConfigSchema = z.object({
-    enable_control: EnableControlOverrideConfigSchema.optional().describe("The enable rule of the drill."),
+    enable_control: EnableControlOverrideConfigSchema.optional().describe("The Enable Control Strategy override of the drill."),
     /**
      * For a drill into a chest on the windows the generator makes for it (no enable control, or AUTO): ticks each window
      * starts earlier than the fewest that keep the chest's takers supplied. The generator tries 1 when a clock does not
@@ -514,7 +514,7 @@ export type InserterAnimationOverrideConfig = z.infer<typeof InserterAnimationOv
  */
 const InserterOverridesConfigSchema = z.object({
     animation: InserterAnimationOverrideConfigSchema.optional().describe("Settings that replace the movement times of the inserter."),
-    enable_control: EnableControlOverrideConfigSchema.optional().describe("The enable rule of the inserter.")
+    enable_control: EnableControlOverrideConfigSchema.optional().describe("The Enable Control Strategy override of the inserter.")
 });
 
 export const InserterConfigSchema = z.object({
@@ -772,12 +772,12 @@ export type ChestConfig = z.infer<typeof ChestConfigSchema>;
 // ============================================================================
 
 export const ConfigOverridesSchema = z.preprocess(renameLoopSeedItemsToKickStart, z.preprocess(dropFractionalSwingsOverride, z.preprocess(migrateBeltSupplyOverrides, z.object({
-    lcm: z.number().int().positive().optional().describe("The number of crafting cycles in one window cycle; without it, the generator calculates the number."),
+    lcm: z.number().int().positive().optional().describe("The number of output cycles in one window cycle; without it, the generator calculates the number."),
     /**
      * Forces the number of output swings per crafting cycle. Without it the generator picks the count and lowers it
      * until the output is stable.
      */
-    terminal_swing_count: z.number().int().positive().optional().describe("The number of output swings in each crafting cycle; without it, the generator chooses the number."),
+    terminal_swing_count: z.number().int().positive().optional().describe("The number of output swings in each output cycle; without it, the generator chooses the number."),
     /**
      * Input supply is backed up at the pickup: items stop between grabs and upstream supply refills the gaps at belt
      * speed, so a hand takes the stacks in reach a tick each and then waits for the belt to bring the rest. Geometry is
@@ -790,7 +790,7 @@ export const ConfigOverridesSchema = z.preprocess(renameLoopSeedItemsToKickStart
      *
      * @default false
      */
-    backed_up_belts: z.boolean().optional().describe("Whether the input belts are backed up at the pickup, so that the clocks have no belt pickup slack."),
+    backed_up_belts: z.boolean().optional().describe("Whether the input belts are backed up at the pickup, so that the clocks have no belt slack."),
     /**
      * Run the four searches for every build: observed windows, uneven output swings, shifted swings and full-hand
      * output swings. They take most of the time of a generation.
@@ -891,13 +891,13 @@ export const ConfigSchema = z.preprocess(renameTargetOutputToSetpoint, z.preproc
             const target = config.machines.find(target => target.id === machine.result_target!.id);
             const path = ["machines", index, "result_target"];
             if (!target) {
-                context.addIssue({ code: "custom", path: [...path, "id"], message: `Machine ${machine.id} places its results into machine ${chest_id}, which is not in the config` });
+                context.addIssue({ code: "custom", path: [...path, "id"], message: `Machine ${machine.id} places its results into machine ${chest_id}, which is not in the configuration` });
             } else if (target.id === machine.id) {
                 context.addIssue({ code: "custom", path, message: `Machine ${machine.id} cannot place its results into itself. Pick the machine at its output side.` });
             }
         } else if (!config.chests?.some(chest => chest.id === chest_id)) {
             context.addIssue({ code: "custom", path: ["machines", index, "result_target", "id"],
-                message: `Machine ${machine.id} places its results into chest ${chest_id}, which is not in the config` });
+                message: `Machine ${machine.id} places its results into chest ${chest_id}, which is not in the configuration` });
         }
         // the prototype's game data says whether it places its results itself; without the data this is checked when it loads
         if (FactorioDataService.isAvailable() && !machinePlacesResults(machine)) {
@@ -920,14 +920,14 @@ export const ConfigSchema = z.preprocess(renameTargetOutputToSetpoint, z.preproc
         const chest_id = drill.target.id;
         if (!config.chests?.some(chest => chest.id === chest_id)) {
             context.addIssue({ code: "custom", path: ["drills", "configs", index, "target", "id"],
-                message: `Drill ${drill.id} drops into chest ${chest_id}, which is not in the config` });
+                message: `Drill ${drill.id} drops into chest ${chest_id}, which is not in the configuration` });
         }
         // a drill into a chest is on the windows the generator makes for it (AUTO), on its own (CLOCKED) or always on;
         // a condition needs an inserter's hand to read, and a drill that never runs fills nothing
         const mode = drill.overrides?.enable_control?.mode;
         if (mode === EnableControlMode.CONDITIONAL || mode === EnableControlMode.NEVER) {
             context.addIssue({ code: "custom", path: ["drills", "configs", index, "overrides", "enable_control"],
-                message: `Drill ${drill.id} drops into a chest; its enable control can be AUTO, CLOCKED or ALWAYS, not ${mode}` });
+                message: `Drill ${drill.id} drops into a chest; its override can be AUTO, CLOCKED or ALWAYS, not ${mode}` });
         }
     });
     // a drop spot is all or none per belt: the lane rule needs every stack on it

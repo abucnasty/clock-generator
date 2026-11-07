@@ -255,8 +255,8 @@ describe("the target rate in a blueprint", async () => {
 
     it("is in the description of the blueprint, with the clock period", () => {
         expect(rocket_fuel.description).toBe([
-            "Target: 60 [item=rocket-fuel] per second",
-            "Clock period: 128 ticks",
+            "Setpoint: 60 [item=rocket-fuel] per second",
+            "Window cycle time: 128 ticks",
             `Made by Clock Generator ${GENERATOR.version}: https://clock-generator-self.vercel.app`,
             "Source: https://github.com/abucnasty/clock-generator",
         ].join("\n"));
@@ -274,7 +274,7 @@ describe("the target rate in a blueprint", async () => {
 
     it("is on the clock combinator, with the period and how the one clock counts", () => {
         expect(clockDescription(rocket_fuel).split("\n").slice(0, 2)).toEqual([
-            "Clock for [item=rocket-fuel] 60/s. Period 128 ticks; counts 1–2688 on [virtual-signal=signal-T] (21 periods, for the fuel clocks); [virtual-signal=signal-clock] = that mod 128",
+            "Clock for [item=rocket-fuel] 60/s. Window cycle time 128 ticks; counts 1–2688 on [virtual-signal=signal-T] (21 window cycles, for the fuel clocks); [virtual-signal=signal-clock] = that mod 128",
             "Wire every other combinator's output to the inserters it names; set them Enable if Anything > 0",
         ]);
     });
@@ -293,7 +293,7 @@ describe("the target rate in a blueprint", async () => {
     it("gives the rate of all copies and of one", async () => {
         const blueprint = generateClockForConfig(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250), { logger: quiet }).blueprint;
         expect(blueprint.description?.split("\n")[0])
-            .toBe("Target: 250 [item=agricultural-science-pack] per second over 5 copies (50 each)");
+            .toBe("Setpoint: 250 [item=agricultural-science-pack] per second over 5 copies (50 each)");
     });
 });
 
@@ -369,7 +369,7 @@ describe("the count of a clock", async () => {
             is_on: false,
         });
         expect(constants[0].player_description).toBe(
-            "Clock lock: switch on to stop every clock; no inserter or drill is enabled while it is on. Off by default. Switching off starts the clocks again from the beginning, and the first period after may be a tick off");
+            "Clock lock: switch on to stop every clock; no inserter or drill is enabled while it is on. Off by default. Switching off starts the clocks again from the beginning, and the first window cycle after may be a tick off");
     });
 
     it.each(blueprints)("is counted by deciders that start over at 1 and wait there while the lock is on (%s)", (_, blueprint) => {
@@ -462,11 +462,11 @@ describe("the count of a clock", async () => {
 
     it("ends at the period, where the clock starts over", () => {
         const [, blueprint] = blueprints[0];
-        const window_cycle_ticks = Number(/Clock period: (\d+) ticks/.exec(blueprint.description ?? "")![1]);
+        const window_cycle_ticks = Number(/Window cycle time: (\d+) ticks/.exec(blueprint.description ?? "")![1]);
         const clock = blueprint.entities.find(entity => (entity.player_description ?? "").startsWith("Clock for"))!;
         expect(deciderOf(clock).conditions[0]).toMatchObject({ first_signal: { name: "signal-clock" }, comparator: "<", constant: window_cycle_ticks });
         expect(Math.max(...conditionsOf(blueprint).flatMap(it => it.constant === undefined ? [] : [it.constant]))).toBe(window_cycle_ticks);
-        expect((clock.player_description ?? "").split("\n")[0]).toContain(`Period ${window_cycle_ticks} ticks; counts 1–${window_cycle_ticks}`);
+        expect((clock.player_description ?? "").split("\n")[0]).toContain(`Window cycle time ${window_cycle_ticks} ticks; counts 1–${window_cycle_ticks}`);
     });
 
     it("is, with no modulo and no fuel clock, a clock, the lock and a filter, like the example it follows", () => {
@@ -546,7 +546,7 @@ describe("the count of a clock", async () => {
     });
 
     describe("replaying the circuit", () => {
-        const windowCycleOf = (blueprint: Blueprint) => Number(/Clock period: (\d+) ticks/.exec(blueprint.description ?? "")?.[1]);
+        const windowCycleOf = (blueprint: Blueprint) => Number(/Window cycle time: (\d+) ticks/.exec(blueprint.description ?? "")?.[1]);
         const countedBy = (loop: Entity) => deciderOf(loop).conditions[0].first_signal.name;
         const windowCycleOfLoop = (loop: Entity) => deciderOf(loop).conditions[0].constant!;
         const valueOf = (replay: CircuitReplay, entity: Entity, connector: number, signal: string) => replay.network(numberOf(entity), connector).get(signal) ?? 0;

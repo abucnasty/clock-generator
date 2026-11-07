@@ -11,7 +11,7 @@ import { fraction } from "../data-types/fraction";
 export const quiet = { log() { }, warn() { }, error() { }, debug() { } };
 
 export const SEARCH_MAKERS = ["derived", "uneven-output", "shifted-swings", "full-hand"];
-export const SEARCH_LABELS = ["Observed windows", "Uneven output swings", "Shifted swings", "Full-hand output swings"];
+export const SEARCH_LABELS = ["Time-Study Windows", "Moved Output Swing", "Phase-Shifted Batch", "Pitch Pickups"];
 export const alternativeMakersOf = (generated: ClockAlternativesResult) => generated.alternatives.map(alternative => alternative.maker);
 export const selectedAlternativeOf = (generated: ClockAlternativesResult) => generated.alternatives[generated.selected_index];
 
@@ -23,7 +23,7 @@ export const withSearches = (config: Config): Config =>
     ({ ...config, overrides: { ...config.overrides, search_for_fewer_wake_ups: true } });
 
 /**
- * The clock as the "Fractional swings" alternative would have made it: its cycle plan made again at its output swings
+ * The clock as the "Euclidean Swings" alternative would have made it: its cycle plan made again at its output swings
  * a cycle with fractional swings asked for, which the checks of the clock read (`fractionalSwingsOf`)
  */
 export function plannedFractionally(planned_on: Config, made: BlueprintGenerationResult): BlueprintGenerationResult {

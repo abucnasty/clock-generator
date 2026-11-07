@@ -47,9 +47,9 @@ export class ClockWindowCycleLimitError extends Error {
     constructor(rejection: SwingWindowCycleRejection, arithmetic?: WholeSwingArithmeticSnapshot) {
         if (!Number.isFinite(rejection.window_cycle_ticks) || rejection.window_cycle_ticks <= 0 || !Number.isFinite(rejection.limit_ticks)
             || rejection.limit_ticks <= 0 || rejection.window_cycle_ticks < rejection.limit_ticks) {
-            throw new RangeError('A period-limit refusal needs a positive finite period at or above its limit.');
+            throw new RangeError('A window cycle time limit refusal needs a positive finite window cycle time at or above its limit.');
         }
-        super(`Clock period of ${rejection.window_cycle_ticks} ticks exceeds maximum allowed ${rejection.limit_ticks} ticks`);
+        super(`Window cycle time of ${rejection.window_cycle_ticks} ticks exceeds maximum allowed ${rejection.limit_ticks} ticks`);
         this.name = 'ClockPeriodLimitError';
         this.rejection = Object.freeze({ ...rejection });
         this.arithmetic = arithmetic === undefined ? undefined : Object.freeze({ ...arithmetic });

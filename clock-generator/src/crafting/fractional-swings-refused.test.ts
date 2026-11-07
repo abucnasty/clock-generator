@@ -62,7 +62,7 @@ describe('fractional swings the insertion limits refuse', () => {
     it('make no clock where the count they are planned at has every swing whole: it is the clock of that many output swings', () => {
         const generate = refusingAbove(2, count => result(count, true, false));
         expect(() => generateClockWithSwingBackoff(config, { logger: quiet, fractional_swings: true }, generate))
-            .toThrow(/^refused at 16\/3 At 2 output swings a cycle, the most the insertion limits allow, every inserter swings a whole number of times a cycle: the clock of 2 output swings\.$/);
+            .toThrow(/^refused at 16\/3 At 2 output swings each output cycle, the most the insertion limits allow, every inserter swings a whole number of times each output cycle: the clock of 2 output swings\.$/);
     });
 
     it('are not planned at another count where the config forces one, nor without fractional swings asked for', () => {

@@ -132,17 +132,17 @@ function createDeciderCombinatorForTransfers(
 
 /**
  * The rate the clock was made for, so a blueprint says what it is meant to deliver:
- * "Target: 265 [item=agricultural-science-pack] per second over 5 copies (53 each)"
+ * "Setpoint: 265 [item=agricultural-science-pack] per second over 5 copies (53 each)"
  */
 function targetRateDescription(cycle: OutputCyclePlan): string {
     const target = cycle.production_rate;
     const item_icon = SignalId.toDescriptionString(SignalId.item(target.total_production_rate.item));
     const total = formatRate(target.total_production_rate.amount_per_second.toDecimal());
     if (target.copies === 1) {
-        return `Target: ${total} ${item_icon} per second`;
+        return `Setpoint: ${total} ${item_icon} per second`;
     }
     const each = formatRate(target.machine_production_rate.amount_per_second.toDecimal());
-    return `Target: ${total} ${item_icon} per second over ${target.copies} copies (${each} each)`;
+    return `Setpoint: ${total} ${item_icon} per second over ${target.copies} copies (${each} each)`;
 }
 
 /**
@@ -470,12 +470,12 @@ export function createSignalPerInserterBlueprint(
             items_per_second: cycle.production_rate.total_production_rate.amount_per_second.toDecimal(),
             copies: cycle.production_rate.copies,
             window_cycle_text: subtick_clock
-                ? `Period ${window_cycle.ticks} ticks; counts ${CLOCK_FIRST_VALUE}–${subtick_clock.window_cycle_ticks} (${subtick_clock.scale} periods), read in 1/${subtick_clock.scale} ticks`
+                ? `Window cycle time ${window_cycle.ticks} ticks; counts ${CLOCK_FIRST_VALUE}–${subtick_clock.window_cycle_ticks} (${subtick_clock.scale} window cycles), read in 1/${subtick_clock.scale} ticks`
                 : !Number.isInteger(total_duration.ticks)
-                    ? `Period ${window_cycle.ticks} ticks (${formatRate(total_duration.ticks)} rounded down: runs a little fast); counts ${CLOCK_FIRST_VALUE}–${window_cycle.ticks}`
+                    ? `Window cycle time ${window_cycle.ticks} ticks (${formatRate(total_duration.ticks)} rounded down: runs a little fast); counts ${CLOCK_FIRST_VALUE}–${window_cycle.ticks}`
                     : window_cycle_modulus !== null
-                        ? `Period ${window_cycle.ticks} ticks; counts ${CLOCK_FIRST_VALUE}–${merged_clock_ticks} on ${SignalId.toDescriptionString(counted_signal)} (${merged_clock_ticks! / total_duration.ticks} periods, for the fuel clocks); ${SignalId.toDescriptionString(SignalId.clock)} = that mod ${total_duration.ticks}`
-                        : `Period ${window_cycle.ticks} ticks; counts ${CLOCK_FIRST_VALUE}–${counted_ticks}`,
+                        ? `Window cycle time ${window_cycle.ticks} ticks; counts ${CLOCK_FIRST_VALUE}–${merged_clock_ticks} on ${SignalId.toDescriptionString(counted_signal)} (${merged_clock_ticks! / total_duration.ticks} window cycles, for the fuel clocks); ${SignalId.toDescriptionString(SignalId.clock)} = that mod ${total_duration.ticks}`
+                        : `Window cycle time ${window_cycle.ticks} ticks; counts ${CLOCK_FIRST_VALUE}–${counted_ticks}`,
             drills: sortedEntityIds.some(entityId => EntityId.isDrill(entityId)),
             not_clocked: notClocked(entityRegistry, [
                 ...sortedEntityIds.flatMap(entityId => [entityId, ...(history.merged_entities.get(entityId.id) ?? [])]),
@@ -489,7 +489,7 @@ export function createSignalPerInserterBlueprint(
     const lock = ConstantCombinatorEntity.lock({
         position: Position.fromXY(clock.position.x, 1.5),
         description: [
-            "Clock lock: switch on to stop every clock; no inserter or drill is enabled while it is on. Off by default. Switching off starts the clocks again from the beginning, and the first period after may be a tick off",
+            "Clock lock: switch on to stop every clock; no inserter or drill is enabled while it is on. Off by default. Switching off starts the clocks again from the beginning, and the first window cycle after may be a tick off",
         ],
     });
 
@@ -664,7 +664,7 @@ export function createSignalPerInserterBlueprint(
     const blueprint = new BlueprintBuilder()
         .setLabel(blueprint_label)
         // the game keeps 500 bytes of a blueprint's description too (recorded in Factorio 2.1.21)
-        .setDescription(fitPlayerDescription([targetRateDescription(cycle), `Clock period: ${formatRate(total_duration.ticks)} ticks`, ...generatorDescriptionLines()]))
+        .setDescription(fitPlayerDescription([targetRateDescription(cycle), `Window cycle time: ${formatRate(total_duration.ticks)} ticks`, ...generatorDescriptionLines()]))
         .setEntities(entities)
         .setWires(wires.concat(fuel_wires))
         .build();

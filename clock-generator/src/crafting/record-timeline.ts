@@ -32,12 +32,12 @@ export interface RecordTimelineRequest {
 /** Replay the saved build, never the form being edited. This is independent of generation and its assessment. */
 export function recordSimulationTimeline(request: RecordTimelineRequest): TimelineRecording {
     if (!Number.isFinite(request.window_cycle_ticks) || request.window_cycle_ticks <= 0 || request.window_cycle_ticks >= SIMULATION_BUDGET_TICKS) {
-        throw new Error("This clock period cannot be recorded safely.");
+        throw new Error("This window cycle time cannot be recorded safely.");
     }
     if (request.mode === "clock" && request.settle_ticks !== undefined
         && (!Number.isInteger(request.settle_ticks) || request.settle_ticks < 0
             || request.settle_ticks > request.window_cycle_ticks * Math.floor((SIMULATION_BUDGET_TICKS - 1) / request.window_cycle_ticks))) {
-        throw new Error("This clock period cannot be recorded safely.");
+        throw new Error("This window cycle time cannot be recorded safely.");
     }
     const config = { ...request.config, overrides: { ...request.config.overrides, terminal_swing_count: request.terminal_swing_count, derive_clock_windows: false } };
     const logger: Logger = { log() {}, warn() {}, error() {}, debug() {} };

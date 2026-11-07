@@ -14,7 +14,7 @@ const buffer = { type: "buffer-chest", storage_size: 80, item_filter: "iron-plat
 describe("a config naming an entity the generator does not support yet", () => {
     it("is refused with the reason and the roadmap milestone, not the list of types it takes", async () => {
         await expect(parseConfig(config(buffer, "rocket-silo"))).rejects.toThrow(
-            "Configuration validation failed at 'machines[0].type': \"rocket-silo\" is not supported yet: a rocket silo as a machine, "
+            "Configuration check failed at 'machines[0].type': \"rocket-silo\" is not supported yet: a rocket silo as a machine, "
             + "crafting rocket parts and launching, comes with phase 2 of roadmap milestone M2 (containers); a rocket silo is "
             + "taken as a chest: list it under `chests` with type \"rocket-silo\"");
         await expect(parseConfig(config(buffer, "lab"))).rejects.toThrow(
@@ -31,7 +31,7 @@ describe("a car, a tank, a cargo wagon or a rocket silo as a chest", () => {
         for (const type of ["car", "tank", "cargo-wagon", "rocket-silo"]) {
             await expect(parseConfig(config({ type }))).resolves.toBeDefined();
             await expect(parseConfig(config({ type, storage_size: 80 }))).rejects.toThrow(
-                "Configuration validation failed at 'chests[0].storage_size': `storage_size` is refused on a car, a tank, a cargo "
+                "Configuration check failed at 'chests[0].storage_size': `storage_size` is refused on a car, a tank, a cargo "
                 + "wagon or a rocket silo: their slots come from the game data (a cargo wagon's by its `quality`)");
         }
     });

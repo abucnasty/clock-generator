@@ -116,22 +116,22 @@ describe("the line that says where a clock depends on the start", () => {
             outcome("cold+30", true, 3072, [3072]),
             outcome("ascending", false, 2880, [2784, 2944, 2912]),
         ), per_second);
-        expect(note).toBe("start-dependent: reaches 480/s from cold, cold+30; settles at 2880 a period (450.0/s, cycle 2784/2944/2912) from ascending.");
+        expect(note).toBe("start-dependent: reaches 480/s from cold, cold+30; settles at 2880 a window cycle (450.0/s, cycle 2784/2944/2912) from ascending.");
     });
 
     it("gives the rate alone for a flat run and says so when no long run was made", () => {
         expect(startDependenceNote(dependence(outcome("cold", true), outcome("random-1", false, 2560, [2560]), outcome("ascending", false)), per_second))
-            .toBe("start-dependent: reaches 480/s from cold; settles at 2560 a period (400.0/s) from random-1; has no long run from ascending.");
+            .toBe("start-dependent: reaches 480/s from cold; settles at 2560 a window cycle (400.0/s) from random-1; has no long run from ascending.");
     });
 
     it("says how many periods are off the target where the mean is at it", () => {
         expect(startDependenceNote(dependence(outcome("cold", true), outcome("random-1", false, 3072, [3072], { count: 3, of: 80 })), per_second))
-            .toBe("start-dependent: reaches 480/s from cold; settles at 3072 a period (480.0/s, 3 of 80 periods more than a hand off it) from random-1.");
+            .toBe("start-dependent: reaches 480/s from cold; settles at 3072 a window cycle (480.0/s, 3 of 80 window cycles more than a hand off it) from random-1.");
     });
 
     it("says by how many items the judged part is under the target where no period is far off it", () => {
         expect(startDependenceNote(dependence(outcome("cold", true), outcome("random-1", false, 3072, [3072], { count: 0, of: 80 }, -40, false)), per_second))
-            .toBe("start-dependent: reaches 480/s from cold; settles at 3072 a period (480.0/s, 40 items under the judged periods as a whole) from random-1.");
+            .toBe("start-dependent: reaches 480/s from cold; settles at 3072 a window cycle (480.0/s, 40 items under the judged window cycles as a whole) from random-1.");
     });
 
     it("is null for a clock that is stable or unstable", () => {

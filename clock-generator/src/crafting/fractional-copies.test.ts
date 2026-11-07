@@ -115,6 +115,6 @@ describe("a clock for a fractional number of copies", () => {
 
     it("names the fractional number of copies and the rate of one in the blueprint", () => {
         const { blueprint } = generateClockForConfig(build(5.5, 11), { logger: quiet });
-        expect(blueprint.description?.split("\n")[0]).toBe("Target: 11 [item=iron-gear-wheel] per second over 5.5 copies (2 each)");
+        expect(blueprint.description?.split("\n")[0]).toBe("Setpoint: 11 [item=iron-gear-wheel] per second over 5.5 copies (2 each)");
     });
 });

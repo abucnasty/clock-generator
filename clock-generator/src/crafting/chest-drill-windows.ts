@@ -31,18 +31,18 @@ export type ChestDrillWhy =
 /** The reason as the log and the insight say it, after "always enabled" */
 export function chestDrillBecause(why: ChestDrillWhy): string {
     switch (why.kind) {
-        case "config": return "the config sets it to always enabled";
+        case "config": return "the configuration sets it to always enabled";
         case "other-drill": return `drill ${why.drill_number} fills the same chest with ${why.item} too`;
         case "filler": return `inserter ${why.inserter_number} fills the same chest with ${why.item} too`;
         case "no-taker": return `no inserter of the plan takes ${why.item} out of the chest`;
-        case "taker-without-window": return `inserter ${why.inserter_number} takes ${why.item} out of the chest with no window`;
-        case "no-take": return `no window of the clock takes ${why.item} out of the chest`;
+        case "taker-without-window": return `inserter ${why.inserter_number} takes ${why.item} out of the chest with no enable window`;
+        case "no-take": return `no enable window of the clock takes ${why.item} out of the chest`;
         case "no-room": return `the chest has no room for ${why.item}`;
-        case "needs-whole-period": return "no windows shorter than the whole period keep the chest's takers supplied";
-        case "would-cover-period": return "its windows would cover the whole period";
-        case "fallback": return "the clock does not meet goal 1 with its fewest windows, nor with them a tick longer";
-        case "windows-did-not-hold": return "its windows did not hold the clock";
-        case "no-window": return "it has no window";
+        case "needs-whole-period": return "no enable windows shorter than the whole window cycle keep the chest's takers supplied";
+        case "would-cover-period": return "its enable windows would cover the whole window cycle";
+        case "fallback": return "the clock is not stable with its fewest enable windows, nor with them a tick longer";
+        case "windows-did-not-hold": return "its enable windows did not hold the clock";
+        case "no-window": return "it has no enable window";
     }
 }
 
@@ -615,5 +615,5 @@ export function chestDrillClockLine(drill: ChestDrillClock): string {
         return `${what}: always enabled, since ${drill.always_enabled_because === undefined ? "nothing times it" : chestDrillBecause(drill.always_enabled_because)}`;
     }
     const ticks = Number(drill.enabled_ticks.toFixed(2));
-    return `${what}: enabled ${ticks} tick${ticks === 1 ? "" : "s"} a period, in ${drill.window_count} window${drill.window_count === 1 ? "" : "s"}`;
+    return `${what}: enabled ${ticks} tick${ticks === 1 ? "" : "s"} a window cycle, in ${drill.window_count} enable window${drill.window_count === 1 ? "" : "s"}`;
 }

@@ -72,6 +72,6 @@ describe("a clock built from windows that are given", () => {
     });
 
     it("refuses windows of another period than the config is planned on", () => {
-        expect(() => clockFromWindows(config, tightened, 792, quiet)).toThrow(/of a clock of 792 ticks, and the config is planned on one of 528/);
+        expect(() => clockFromWindows(config, tightened, 792, quiet)).toThrow(/of a clock of 792 ticks, and the configuration is planned on one of 528/);
     });
 });

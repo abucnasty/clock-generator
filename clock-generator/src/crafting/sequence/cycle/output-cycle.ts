@@ -75,7 +75,7 @@ export function plannedTerminalSwingCount(plan: OutputCyclePlan): number | undef
 const planned_with_fractional_swings = new WeakSet<OutputCyclePlan>();
 
 /**
- * Whether the plan was made with fractional swings asked for (the "Fractional swings" alternative): a run of its clock is
+ * Whether the plan was made with fractional swings asked for (the "Euclidean Swings" alternative): a run of its clock is
  * planned so too. True also where every swing came out whole (`fractional_swings_enabled` false).
  */
 export function plannedWithFractionalSwings(plan: OutputCyclePlan): boolean {
@@ -142,7 +142,7 @@ function createPlan(
     max_possible_swings: Fraction,
     config_overrides: Partial<ConfigOverrides> = {},
     exhaust?: ExhaustDecision,
-    /** The "Fractional swings" alternative's planning: swings a cycle as the fraction the machines make, alternated over sub-cycles */
+    /** The "Euclidean Swings" alternative's planning: swings a cycle as the fraction the machines make, alternated over sub-cycles */
     fractional_swings: boolean = false,
 ): OutputCyclePlan {
     assertMachineResultTargetsSupported(entity_registry);
@@ -239,7 +239,7 @@ function createMadePlan(
             swings_per_single_cycle = config_overrides.terminal_swing_count;
         }
 
-        assert(Number.isInteger(swings_per_single_cycle), `Swings per single cycle must be an integer but got ${swings_per_single_cycle}`);
+        assert(Number.isInteger(swings_per_single_cycle), `Swings per single output cycle must be an integer but got ${swings_per_single_cycle}`);
         swings_per_cycle = fraction(swings_per_single_cycle);
     }
 
@@ -307,12 +307,12 @@ function distributionsAt(swings_per_cycle: Fraction, distributions: () => SwingD
 
 function print(plan: OutputCyclePlan): void {
     console.log("----------------------")
-    console.log(`Crafting Cycle Plan:`)
+    console.log(`Output Cycle Plan:`)
     console.log(`- Total Duration: ${plan.total_duration.ticks} ticks`)
-    console.log(`- Entity Transfer Counts:`)
+    console.log(`- Entity Swing Counts:`)
     plan.entity_transfer_map.entries_array().forEach(([entityId, transfer]) => {
         const items = transfer.item_transfers.map(it => `${it.item_name} (${it.transfer_count})`).join(", ");
-        console.log(`  - ${entityId}: ${transfer.total_transfer_count} total transfers [${items}] (stack size: ${transfer.stack_size})`)
+        console.log(`  - ${entityId}: ${transfer.total_transfer_count} total swings [${items}] (stack size: ${transfer.stack_size})`)
     })
     console.log("----------------------")
 }

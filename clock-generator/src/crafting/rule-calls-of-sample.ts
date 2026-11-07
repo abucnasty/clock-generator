@@ -50,8 +50,8 @@ function clockedStockOf(config: Config, selected: ClockAlternative, logger: Logg
     const result = selected.result;
     const window_cycle_ticks = result.simulation_duration.ticks;
     const long_run = result.stability_check.as_built?.wake_ups;
-    assert(long_run !== undefined, `The selected clock (${selected.id}, ${selected.verdict}) has no long-run wake-up count: its check failed `
-        + "before the long run, or the period is too long for one");
+    assert(long_run !== undefined, `The recommended clock (${selected.id}, ${selected.verdict}) has no long-run wakeup count: its check failed `
+        + "before the long run, or the window cycle time is too long for one");
     const windows = new Map(Object.entries(result.clock_windows).map(([entity_id, ranges]) =>
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     // the long run is the standard length, or twice that for a clock with the windows of a loop (LOOP_WINDOW_CHECK_TICKS);
@@ -75,7 +75,7 @@ function clockedStockOf(config: Config, selected: ClockAlternative, logger: Logg
             return { stock, from_tick };
         }
     }
-    throw new Error(`No long run of the clock ${selected.id} (period ${window_cycle_ticks}) counts ${long_run.ticks} ticks; tried periods ${[...tried].join(", ")}`);
+    throw new Error(`No long run of the clock ${selected.id} (window cycle time ${window_cycle_ticks}) counts ${long_run.ticks} ticks; tried window cycles ${[...tried].join(", ")}`);
 }
 
 /** The build with every inserter and drill always enabled, at least `ticks` ticks of it recorded */

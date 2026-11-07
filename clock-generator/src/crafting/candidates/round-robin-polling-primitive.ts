@@ -85,7 +85,7 @@ export function constructPrimitiveRoundRobinPolling(config: Config): PrimitiveRo
     // what each makes of the item a second, as its Yield trait gives it
     const traits = traitsOf(config);
     const capacity = output_machines.reduce((sum, machine) => sum.add(mainProductRateOf(traits, machine.entity_id.id)), fraction(0)).multiply(target.copies);
-    assert(capacity.toDecimal() >= target.total_production_rate.amount_per_second.toDecimal(), "The current configuration cannot meet the target production rate.");
+    assert(capacity.toDecimal() >= target.total_production_rate.amount_per_second.toDecimal(), "The current configuration cannot meet the setpoint.");
     const cycle = OutputCyclePlan.create(target, registry, config, fraction(1), config.overrides);
     const output_paths = output_machines.map(machine => outputPathOf(machine, registry));
     const direct_sources = new Map<string, string[]>();
@@ -108,7 +108,7 @@ export function constructPrimitiveRoundRobinPolling(config: Config): PrimitiveRo
             base_cycle_ticks: cycle.total_duration_ticks.toDecimal(), computed_lcm: EntityTransferCountMap.lcm(cycle.entity_transfer_map),
             effective_lcm: grouped_cycles, window_cycle_ticks, limit_ticks: SIMULATION_BUDGET_TICKS });
     }
-    assert(Number.isFinite(window_cycle_ticks) && window_cycle_ticks > 0, `Clock period must be positive and finite, got ${window_cycle_ticks}`);
+    assert(Number.isFinite(window_cycle_ticks) && window_cycle_ticks > 0, `Window cycle time must be positive and finite, got ${window_cycle_ticks}`);
     if (!Number.isInteger(window_cycle_ticks)) throw new RoundRobinPollingNotApplicable(`the period is ${window_cycle_ticks} ticks, not a whole number`);
     const clocks = unplannedInserterClocks(registry, window_cycle_ticks);
     if ([...clocks.values()].some(clock => clock.kind !== "by-product")) throw new RoundRobinPollingNotApplicable("primitive grouped construction retains by-product clocks only");
@@ -155,8 +155,8 @@ export function constructPrimitiveRoundRobinPolling(config: Config): PrimitiveRo
             const dispositions = inserters.map((inserter): Extract<PrimitiveRoundRobinPollingAttempt["result"], { kind: "constructed" }>["dispositions"][number] => {
                 const id = inserter.id;
                 if (clocks.has(id)) return { inserter_id: id, control: "clocked", basis: "computed-by-product", reason: "Existing computed by-product control retained; not verified by construction." };
-                if (plan.busy.includes(id)) return { inserter_id: id, control: "always", basis: "grouped-busy", reason: "The grouped opportunity occupies this period; this is a construction consequence, not proof that Always is necessary." };
-                if (planned_windows[id]?.length) return { inserter_id: id, control: "clocked", basis: "grouped-window", reason: "Candidate grouped windows; stock, throughput and recovery are not verified." };
+                if (plan.busy.includes(id)) return { inserter_id: id, control: "always", basis: "grouped-busy", reason: "The grouped opportunity occupies this window cycle; this is a construction consequence, not proof that Always is necessary." };
+                if (planned_windows[id]?.length) return { inserter_id: id, control: "clocked", basis: "grouped-window", reason: "Candidate grouped enable windows; stock, throughput and recovery are not verified." };
                 throw new RoundRobinPollingNotApplicable(`${id} has no construction control disposition`);
             });
             // Construction deduplication only. This is never a cached verification verdict.

@@ -215,7 +215,7 @@ function shiftedCycleWindows(
 ): { windows: Map<string, OpenRange[]>; search: SearchReport; verified: Confirmed } | null {
     const candidates = shiftedCycleCandidates(planned_windows, cycle_ticks, window_cycle_ticks);
     const describe = (candidate: ShiftedCycleCandidate) =>
-        `cycle ${candidate.cycle_index + 1} ${Math.abs(candidate.shift_ticks)} ticks ${candidate.shift_ticks < 0 ? "earlier" : "later"}`;
+        `output cycle ${candidate.cycle_index + 1} ${Math.abs(candidate.shift_ticks)} ticks ${candidate.shift_ticks < 0 ? "earlier" : "later"}`;
 
     const { picked, pick, tried } = search<ShiftedCycleCandidate, QuickTrial & { result: TrialRun; run: AsBuiltRun }, Confirmed>({
         candidates,
@@ -229,7 +229,7 @@ function shiftedCycleWindows(
         tieBreak: (a, b) => Math.abs(a.candidate.shift_ticks) - Math.abs(b.candidate.shift_ticks),
         confirm: ({ candidate, quick }) => confirm(config, candidate.windows, window_cycle_ticks, logger, describe(candidate), report, quick.run),
     });
-    logger.log(`Shifted crafting cycle: ${tried.filter(it => it.quick.holds).length} of ${candidates.length} shifts pass the quick trial`);
+    logger.log(`Phase-Shifted Batch: ${tried.filter(it => it.quick.holds).length} of ${candidates.length} shifts pass the quick trial`);
     if (picked === null || pick === null) {
         return null;
     }

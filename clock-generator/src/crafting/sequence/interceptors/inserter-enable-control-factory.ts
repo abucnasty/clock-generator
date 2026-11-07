@@ -474,7 +474,7 @@ export class EnableControlFactory {
         // For fractional swings, use clocked control to schedule inserters at end of subcycle
         if (this.output_cycle_plan.fractional_swings_enabled) {
             const enabled_ranges = this.computeInputInserterEnableRanges(inserter)
-            this.logger.log(`Fractional swings enabled for inserter ${inserter.entity_id.id}, enabled ranges:`);
+            this.logger.log(`Euclidean Swings enabled for inserter ${inserter.entity_id.id}, enable windows:`);
             enabled_ranges.forEach(range => {
                 this.logger.log(`  [${range.start_inclusive},${range.end_inclusive}]`);
             });
@@ -1282,7 +1282,7 @@ export class EnableControlFactory {
             const items = Array.from(inserter.filtered_items).join(", ");
             throw new Error(
                 `Inserter ${inserter.entity_id.number} (${inserter.source.entity_id.id} to ${inserter.sink.entity_id.id}, carrying ${items}) `
-                + `is missing from the transfer plan, so no clock windows can be made for it.`
+                + `is missing from the transfer plan, so no enable windows can be made for it.`
             );
         }
         return transfer_count;
@@ -1308,7 +1308,7 @@ export class EnableControlFactory {
             .filter(s => target_ids.has(s.entity_id.id));
         assert(
             final_machines.length > 0,
-            `No machine found producing target output item ${this.target_output_item_name}`
+            `No machine found producing the target item ${this.target_output_item_name}`
         );
         return new Set(final_machines);
     }

@@ -147,7 +147,7 @@ describe('a drill into a chest stays always enabled', () => {
         const windows = windowsOf({ 'inserter:2': [[28, 41]] });
         const because = always(build(), windows).always_enabled_because!;
         expect(because).toEqual({ kind: 'taker-without-window', inserter_number: 1, item: 'iron-ore' });
-        expect(chestDrillBecause(because)).toBe('inserter 1 takes iron-ore out of the chest with no window');
+        expect(chestDrillBecause(because)).toBe('inserter 1 takes iron-ore out of the chest with no enable window');
     });
 });
 

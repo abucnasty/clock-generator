@@ -529,7 +529,7 @@ const listedSpacings = (values: readonly number[], word = "or"): string =>
 /** Why no spacing fits: "The belt moves 4.5 tiles a window cycle, but the 9 copies drop 9 hands on it, so no spacing of the copies fits: some hands always wait for room." */
 export function crowdedText(crowded: { hands: number; belt_tiles: number; hand_tiles: number }, copies: number): string {
     const hands = crowded.hand_tiles === 1 ? `${crowded.hands} hands` : `${crowded.hands} hands of ${tiles(crowded.hand_tiles)} of a tile`;
-    return `The belt moves ${tiles(crowded.belt_tiles)} tiles a period, but the ${copies} copies drop ${hands} on it, so no spacing of the copies fits: some hands always wait for room.`;
+    return `The belt moves ${tiles(crowded.belt_tiles)} tiles a window cycle, but the ${copies} copies drop ${hands} on it, so no spacing of the copies fits: some hands always wait for room.`;
 }
 
 /**
@@ -541,8 +541,8 @@ export function crowdedText(crowded: { hands: number; belt_tiles: number; hand_t
 export function describeDropRoom(room: DropRoom): string {
     if (room.crowded !== null) return crowdedText(room.crowded, room.copies);
     const lead = Number.isInteger(room.belt_tiles) && room.hand_tiles === 1
-        ? `The belt moves ${tiles(room.belt_tiles)} tiles a period, so each hand lands on one of ${tiles(room.belt_tiles)} tiles.`
-        : `The belt moves ${tiles(room.belt_tiles)} tiles a period, and a hand takes ${tiles(room.hand_tiles)} of a tile.`;
+        ? `The belt moves ${tiles(room.belt_tiles)} tiles a window cycle, so each hand lands on one of ${tiles(room.belt_tiles)} tiles.`
+        : `The belt moves ${tiles(room.belt_tiles)} tiles a window cycle, and a hand takes ${tiles(room.hand_tiles)} of a tile.`;
     const stand = room.pair !== null ? `With inserters ${room.pair.first} and ${room.pair.second} as they stand (${tiles(room.pair.apart)} tiles apart)` : "With the inserters as they stand";
     const clauses: string[] = [room.fits.length > 0 ? `the copies fit ${listedSpacings(room.fits)} tiles apart`
         : `the copies fit at no spacing from ${room.low} to ${room.high} tiles`];
@@ -560,7 +560,7 @@ export function describeDropSpacing(spacing: DropSpacing): { fits: boolean; titl
     const fits = spacing.lines.every(line => line.fits);
     const belts = [...new Set(spacing.lines.map(line => line.belt_id))];
     const belt = belts.length === 1 ? `belt ${belts[0]}` : `belts ${listed(belts)}`;
-    const window_cycle = `In every period of ${tiles(spacing.window_cycle_ticks)} ticks`;
+    const window_cycle = `In every window cycle of ${tiles(spacing.window_cycle_ticks)} ticks`;
     const sentences: string[] = [];
     spacing.lines.forEach((line, index) => {
         const first = spacing.lines[0];
@@ -580,8 +580,8 @@ export function describeDropSpacing(spacing: DropSpacing): { fits: boolean; titl
         }
     });
     const closing = spacing.gap !== null
-        ? `The copies stand ${tiles(spacing.gap)} tiles apart and the belt moves ${tiles(spacing.belt_tiles)} tiles in a period.`
-        : `The belt moves ${tiles(spacing.belt_tiles)} tiles in a period.`;
+        ? `The copies stand ${tiles(spacing.gap)} tiles apart and the belt moves ${tiles(spacing.belt_tiles)} tiles in a window cycle.`
+        : `The belt moves ${tiles(spacing.belt_tiles)} tiles in a window cycle.`;
     const hand_tiles = spacing.hand / (4 * spacing.lane_stack);
     const tile = hand_tiles === 1 ? `A tile of a belt lane holds one hand of ${spacing.hand} at stack size ${spacing.lane_stack}.`
         : `A tile of a belt lane holds ${4 * spacing.lane_stack} items at stack size ${spacing.lane_stack}, and a hand of ${spacing.hand} takes ${tiles(hand_tiles)} of a tile.`;
@@ -613,7 +613,7 @@ export function describeDropSpacing(spacing: DropSpacing): { fits: boolean; titl
 /** The numbers behind the text, a row for each line */
 export function dropSpacingTable(spacing: DropSpacing): { columns: string[]; rows: string[][] } {
     return {
-        columns: ["Inserters", "Hands a period", "Tiles between copies", "Belt tiles in a period", "Pairs landing on each other", "Longest wait (ticks)"],
+        columns: ["Inserters", "Hands each window cycle", "Tiles between copies", "Belt tiles in a window cycle", "Pairs landing on each other", "Longest wait (ticks)"],
         rows: spacing.lines.map(line => [listed(line.inserter_ids), String(line.hands), spacing.gap === null ? "-" : tiles(spacing.gap),
             tiles(spacing.belt_tiles), String(line.pairs), tiles(line.longest_wait)]),
     };

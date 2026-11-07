@@ -36,7 +36,7 @@ export interface ClockStart {
 export const CLOCK_STARTS: readonly ClockStart[] = [
     ...COLD_START_SHIFTS.map(shift => ({
         id: shift === 0 ? "cold" : `cold+${shift}`,
-        label: shift === 0 ? "the cold start" : `the cold start with the clock ${shift} ticks into its period`,
+        label: shift === 0 ? "the cold start" : `the cold start with the clock ${shift} ticks into its window cycle`,
         clock_shift: shift,
         competing_takers_order: DEFAULT_TAKER_ORDER,
     })),
@@ -49,7 +49,7 @@ export const CLOCK_STARTS: readonly ClockStart[] = [
     })),
     {
         id: "deciders-reversed",
-        label: "the cold start with the clock's window deciders built in reverse order",
+        label: "the cold start with the clock's enable window deciders built in reverse order",
         clock_shift: 0,
         competing_takers_order: DEFAULT_TAKER_ORDER,
         decider_order: "reversed" as const,
@@ -149,11 +149,11 @@ export function startDependenceNote(dependence: StartDependence, items_per_secon
         }
         const mean = Math.round(start.output_items_per_window_cycle);
         const cycle = start.cycle !== null && start.cycle.length > 1 ? `, cycle ${cycleText(start.cycle)}` : "";
-        const off = start.off_bins !== null && start.off_bins.count > 0 ? `, ${start.off_bins.count} of ${start.off_bins.of} periods more than a hand off it` : "";
+        const off = start.off_bins !== null && start.off_bins.count > 0 ? `, ${start.off_bins.count} of ${start.off_bins.of} window cycles more than a hand off it` : "";
         // a mean at the target and no window cycle far off it: the judged part as a whole is a few hands short or over
         const span = off === "" && start.span_items !== null && start.span_items !== 0 && !start.long_run_keeps_up
-            ? `, ${Math.abs(start.span_items)} items ${start.span_items < 0 ? "under" : "over"} the judged periods as a whole` : "";
-        return `settles at ${mean} a period (${items_per_second_of(start.output_items_per_window_cycle).toFixed(1)}/s${cycle}${off}${span}) from ${start.id}`;    });
+            ? `, ${Math.abs(start.span_items)} items ${start.span_items < 0 ? "under" : "over"} the judged window cycles as a whole` : "";
+        return `settles at ${mean} a window cycle (${items_per_second_of(start.output_items_per_window_cycle).toFixed(1)}/s${cycle}${off}${span}) from ${start.id}`;    });
     const expected_rate = items_per_second_of(dependence.expected_output_items);
     return `start-dependent: reaches ${Number(expected_rate.toFixed(2))}/s from ${names(reaching)}; ${settles.join("; ")}.`;
 }

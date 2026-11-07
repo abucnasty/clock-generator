@@ -39,7 +39,8 @@ import { TargetProductionRate } from "./target-production-rate";
 import { loopStockBoundOf } from "./candidates/loop-stock-bound";
 import { AsBuiltStabilityCheck, DisturbanceTrialAssessment, disturbanceTrialVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, clockVerificationSignature, FREE_RUNNING_CHECK_TICKS, fractionalSwingsChangeChecksOf, LOOP_WINDOW_CHECK_TICKS, roundedClockTrial, startDependenceVerdictOf, wakeUpsFromStartsOf, withSettledOutput } from "./trial";
 import { WakeUpsFromStarts } from "./wake-ups-from-starts";
-import { alternativeIdOf, ChestDrillFallbackKind, ClockStrategy, DefinitionSettings, DefinitionStrategyId, ListingSettings, strategyListedAs, strategyOf } from "./clock-strategy";
+import { alternativeIdOf, ChestDrillFallbackKind, ClockStrategy, DefinitionSettings, DefinitionStrategyId, ListingSettings, StrategyId, strategyListedAs, strategyOf } from "./clock-strategy";
+import { catalogRowOf, fixedTuningMethodOf, routerRowOf, settingChipsOf, strategyRowOf } from "./strategy-catalog";
 import { signalsPerMinuteOf } from "./clock-signals";
 import { START_DEPENDENCE_NOT_CHECKED, StartDependence, startDependenceNote } from "./start-dependence";
 import { NotMadeClock, notTriedSentence, WhyNotStable, whyNotStable, whyNotStableClockOf } from "./why-not-stable";
@@ -127,16 +128,16 @@ export interface ClockAlternativeContext {
     /** Count-only AUTO policy from an accepted primitive primary; other families still choose their own LCM. */
     secondary_planning?: SecondaryPlanningCount;
     swings: number;
-    /** The output swings per cycle the plan started with: more than `swings` when it backed off to a lower count */
+    /** The output swings each output cycle the plan started with: more than `swings` when it backed off to a lower count */
     planned_swings?: number;
     primary_stable: boolean;
     /** Clock window cycle of the primary alternative */
     window_cycle_ticks: number;
     /** The primary alternative's results come too rarely for whole hands in a window cycle: it is a clock of result windows */
     exhaust?: boolean;
-    /** Small batches was tried for the primary alternative (its first plan's window cycle too long): it is not offered again */
+    /** Round-Robin Polling with a shorter window cycle was tried for the primary alternative (its first plan's window cycle too long): it is not offered again */
     primitive_tried?: boolean;
-    /** The "Fractional swings" alternative would make the primary clock again (see fractionalMakesThePrimary): it is not made */
+    /** The "Euclidean Swings" alternative would make the primary clock again (see fractionalMakesThePrimary): it is not made */
     fractional_is_primary?: true;
 }
 
@@ -169,7 +170,7 @@ export interface ClockAlternativesPlan {
     tasks: ClockAlternativeTask[];
 }
 
-/** The options Small batches is verified with, as the primary alternative's (see primaryDefinition) */
+/** The options Round-Robin Polling with a shorter window cycle is verified with, as the primary alternative's (see primaryDefinition) */
 const SMALL_BATCHES_OPTIONS: GenerateClockOptions = { verify_as_built: true, belt_pickup_slack: "always" };
 
 
@@ -256,29 +257,50 @@ export function windowDeciderCount(blueprint: FactorioBlueprint): number {
 }
 
 /** What a clock with shared windows says about itself, after how its alternative is made */
-const SHARED_WINDOWS_NOTE = "Inserters that take into their machines at the same moment share one wake window, as long as the longest of them needs, "
-    + "so they share one decider combinator. An inserter that needs fewer hands than that window stays enabled longer than it must, "
-    + "so it can wake more often. It is only listed when it keeps the rate and recovers after being starved or jammed.";
+const SHARED_WINDOWS_NOTE = "Inserters that take into their machines at the same moment share one enable window, as long as the longest of them needs, "
+    + "so they share one decider combinator. An inserter that needs fewer hands than that enable window stays enabled longer than it must, "
+    + "so it can have more wakeups. It is only listed when it keeps the rate and goes back to it by itself after a supply stop or an output blockage.";
 
 /** What a clock with a window at each swing says about itself, after how its alternative is made */
 const PER_HAND_WINDOWS_NOTE = "Inserters whose machines have room for more than the hands they need are enabled for one tick at the start of "
-    + "each of their swings instead of one window for all of them, so they are woken fewer times while they wait between swings. "
-    + "It is only listed when it keeps the rate and recovers after being starved or jammed.";
+    + "each of their swings instead of one enable window for all of them, so they have fewer wakeups while they wait between swings. "
+    + "It is only listed when it keeps the rate and goes back to it by itself after a supply stop or an output blockage.";
+
+/**
+ * The name a definition's label starts with, read from the strategy catalog. Takt Batches is Takt Batches until a run says which
+ * strategy it made (`withResolvedName`); Coordinated Sources is a router, named by the router's row.
+ */
+function nameOf(definition: DefinitionStrategyId): string {
+    if (definition === "coordinated_sources") return routerRowOf("coordinated_sources").name;
+    const id: StrategyId = definition === "batched_swings" ? "takt_batches" : definition;
+    return catalogRowOf({ id, tuning_method: fixedTuningMethodOf(id) ?? "calculated" }).name;
+}
 
 /** The alternative every run starts with, and the one the others are described against */
-const BATCHED_SWINGS_LABEL = "Batched swings";
+const TAKT_BATCHES = nameOf("batched_swings");
+
+/** The words the labels of the clocks with a shorter window cycle carry after their strategy's name: the setting's chip */
+const SHORTER_WINDOW_CYCLE = settingChipsOf({ output_count: { kind: "output_swings", count: 0 }, window_cycle: [{ kind: "shorter_window_cycle" }], belt_pickups: [] })[1].label;
+
+/**
+ * A text of a batched swings definition that starts with the name it was written with (Takt Batches), starting with the name of the
+ * strategy the run made: Round-Robin Polling where that rule built the windows. Other definitions name their strategy for sure.
+ */
+function withResolvedName(definition: Pick<AlternativeDefinition, "strategy">, text: string, strategy: ClockStrategy): string {
+    if (definition.strategy !== "batched_swings" || !text.startsWith(TAKT_BATCHES)) return text;
+    return `${strategyRowOf(strategy).name}${text.slice(TAKT_BATCHES.length)}`;
+}
 
 
 const RESULTS_IN_TURN_ID = "results-in-turn";
-const RESULTS_IN_TURN_LABEL = "Results in turn";
 const RESULTS_IN_TURN_DESCRIPTION = "For results that come by small chances. The inserters that take each result out of the container "
-    + "the machine fills open once a period, in turn, each for as many hands as its results give in all but 1 period in 740, "
-    + "with room for the part hand it may still hold. The period is the longest whose results the container holds at the "
+    + "the machine fills open once a window cycle, in turn, each for as many hands as its results give in all but 1 window cycle in 740, "
+    + "with room for the part hand it may still hold. The window cycle time is the longest whose results the container holds at the "
     + "worst moment, just before an opening.";
 
-const BATCHED_SWINGS_DESCRIPTION = "The swing schedule the generator plans for the target rate. The build is simulated with each "
-    + "inserter waiting on its machine's inventory, and each inserter's windows are the ticks it moved items. Swings are "
-    + "grouped into batches that match the crafting cycle.";
+const BATCHED_SWINGS_DESCRIPTION = "The swing schedule the generator plans for the setpoint. The build is simulated with each "
+    + "inserter waiting on its machine's inventory, and each inserter's enable windows are the ticks it moved items. Swings are "
+    + "grouped into batches that match the output cycle.";
 
 /** True when an inserter of the build takes fuel for its machine off a belt as well as an ingredient */
 function takesFuelOffABelt(config: Config): boolean {
@@ -322,17 +344,17 @@ function primaryDefinition(config: Config, options: GenerateClockOptions, report
         ? withFuelHandRoomWhereNeeded(() => generate(config), () => takesFuelOffABelt(config) ? generate(config, true) : undefined)
         : generate(config);
     if (result.exhaust !== undefined) {
-        return { id: RESULTS_IN_TURN_ID, label: RESULTS_IN_TURN_LABEL, description: RESULTS_IN_TURN_DESCRIPTION, strategy: "exhaust", run: () => result };
+        return { id: RESULTS_IN_TURN_ID, label: nameOf("exhaust"), description: RESULTS_IN_TURN_DESCRIPTION, strategy: "exhaust", run: () => result };
     }
     if (result.primitive_round_robin_polling !== undefined) {
-        return { id: "primitive-grouped", label: "Small batches",
-            description: "Uses small output batches when the initial clock would be too long. Checked for timing margin, clock starts and recovery after interruptions.",
+        return { id: "primitive-grouped", label: `${nameOf("round_robin_polling")}, ${SHORTER_WINDOW_CYCLE}`,
+            description: `${nameOf("round_robin_polling")} with a ${SHORTER_WINDOW_CYCLE}. Uses small output batches when the initial clock would be too long. Checked for timing margin, clock starts and recovery after interruptions.`,
             strategy: "round_robin_polling", settings: { shorter_window_cycle: true },
             run: () => result };
     }
     return {
         id: "planned-belt-slack",
-        label: BATCHED_SWINGS_LABEL,
+        label: TAKT_BATCHES,
         description: BATCHED_SWINGS_DESCRIPTION,
         strategy: "batched_swings",
         run: () => result,
@@ -350,12 +372,12 @@ function beltNote(config: Config, result: BlueprintGenerationResult): string {
         const [first, last] = [belt.slack_ticks[0], belt.slack_ticks[belt.slack_ticks.length - 1]];
         const ticks = first === last ? `${first} more tick${first === 1 ? "" : "s"}` : `${first}–${last} more ticks`;
         const pickup = " Reachable moving stacks are timed using the pickup geometry (straight belt by default). "
-            + "The remaining slack is margin for late starts and gaps; sparse upstream supply is not simulated.";
+            + "The remaining belt slack is margin for late starts and gaps; sparse upstream supply is not simulated.";
         return ` Made for a moving belt. After its last pickup from the belt, an inserter stays enabled for ${ticks}. `
             + "These ticks are the belt slack. On a moving belt, a pickup can start after the usual tick. The belt slack lets the "
             + `inserter fill its hand.${pickup}`;
     }
-    const backed_up = " Made for a backed-up belt: its belt inserters get only the windows they need with backed-up supply at the pickup, "
+    const backed_up = " Made for a backed-up belt: its belt inserters get only the enable windows they need with backed-up supply at the pickup, "
         + "without belt slack. On a moving belt an inserter can be switched off holding a partial hand.";
     if (config.overrides?.backed_up_belts === true) {
         const room = Object.entries(result.fuel_hand_room_ticks);
@@ -364,15 +386,15 @@ function beltNote(config: Config, result: BlueprintGenerationResult): string {
         const ids = room.map(([key]) => inserter_ids.get(key));
         const fuel = room.length === 0 ? ""
             : ` ${ids.length === 1 ? `Inserter ${ids[0]} takes` : `Inserters ${ids.slice(0, -1).join(", ")} and ${ids[ids.length - 1]} take`} fuel off the belt as `
-            + `well as an ingredient and stay${ids.length === 1 ? "s" : ""} enabled ${room[0][1]} more ticks after each window, the ticks a hand of fuel takes to fill: `
-            + "the fuel slot asks for a hand in any window, ahead of the hands the window is planned for, and this clock did not hold "
+            + `well as an ingredient and stay${ids.length === 1 ? "s" : ""} enabled ${room[0][1]} more ticks after each enable window, the ticks a hand of fuel takes to fill: `
+            + "the fuel slot asks for a hand in any enable window, ahead of the hands the enable window is planned for, and this clock did not hold "
             + "the expected output without the room for it.";
-        return `${backed_up} The config says the input belts are backed up, so it goes without the slack.${fuel}`;
+        return `${backed_up} The configuration says the input belts are backed up, so it goes without the belt slack.${fuel}`;
     }
     if (!Number.isInteger(result.simulation_duration.ticks)) {
-        return `${backed_up} The slack is not given to a clock whose period is not a whole number of ticks.`;
+        return `${backed_up} The belt slack is not given to a clock whose window cycle time is not a whole number of ticks.`;
     }
-    return `${backed_up} This clock did not hold the expected output with the slack, so it is only selected for you when no clock for a moving belt holds the target rate.`;
+    return `${backed_up} This clock did not hold the expected output with the belt slack, so it is only selected for you when no clock for a moving belt holds the setpoint.`;
 }
 
 /**
@@ -455,11 +477,11 @@ function withChestDrillFallbacks(
 }
 
 /** The alternatives as the config asks for them, each made once */
-const EVEN_HANDS_DESCRIPTION = "One window for each hand an inserter moves in the clock period, the windows spread evenly over the period "
-    + "and each a tick shorter than the inserter's hand cycle, so a window moves one hand whenever in it the source "
-    + "has the hand and the sink takes it. Inserters that move the same hands a period, such as those of two "
-    + "halves of a build that do the same thing, get the same windows and share a window decider. Only offered "
-    + "where every inserter takes from a machine or a chest and moves a whole number of hands a period.";
+const EVEN_HANDS_DESCRIPTION = "One enable window for each hand an inserter moves in the window cycle, the enable windows spread evenly over the window cycle "
+    + "and each a tick shorter than the inserter's swing time, so an enable window moves one hand whenever in it the source "
+    + "has the hand and the sink takes it. Inserters that move the same hands each window cycle, such as those of two "
+    + "halves of a build that do the same thing, get the same enable windows and share an enable window decider. Only offered "
+    + "where every inserter takes from a machine or a chest and moves a whole number of hands each window cycle.";
 
 function alternativeDefinitionsFor(
     config: Config,
@@ -488,7 +510,7 @@ function alternativeDefinitionsFor(
     if (config.setpoint.counts === "destroyed") {
         return [{
             id: "even-hands",
-            label: "Even hands",
+            label: nameOf("time_division_windows"),
             description: EVEN_HANDS_DESCRIPTION,
             strategy: "time_division_windows",
             run: () => generateClockWithSwingBackoff(base_config, quiet, timeDivisionWindowsClock),
@@ -497,9 +519,9 @@ function alternativeDefinitionsFor(
     return [
         ...(context.fractional_is_primary === true ? [] : [{
             id: "fractional",
-            label: "Fractional swings",
-            description: `${BATCHED_SWINGS_LABEL} with fractional swings turned on: an inserter that needs e.g. 3/2 swings per cycle alternates `
-                + "between 1 and 2 swings instead of rounding, which can need fewer or shorter windows.",
+            label: nameOf("euclidean_swings"),
+            description: `${TAKT_BATCHES} with fractional swings turned on: an inserter that needs e.g. 3/2 swings each output cycle alternates `
+                + "between 1 and 2 swings instead of rounding, which can need fewer or shorter enable windows.",
             strategy: "euclidean_swings" as const,
             // planned with fractional swings asked for: its clock's runs are planned so too, as its cycle plan says
             run: () => generateClockWithSwingBackoff(base_config, { ...quiet, fractional_swings: true }),
@@ -510,33 +532,33 @@ function alternativeDefinitionsFor(
         }]),
         {
             id: "even-hands",
-            label: "Even hands",
+            label: nameOf("time_division_windows"),
             description: EVEN_HANDS_DESCRIPTION,
             strategy: "time_division_windows" as const,
             run: () => generateClockWithSwingBackoff(base_config, quiet, timeDivisionWindowsClock),
         },
         ...(context.window_cycle_ticks > MAX_OBSERVED_WINDOWS_WINDOW_CYCLE_TICKS ? [] : [{
             id: "derived",
-            label: "Observed windows",
+            label: nameOf("time_study_windows"),
             strategy: "time_study_windows" as const,
             description: "Built from what the inserters actually do rather than from the planned schedule. The build is simulated with only "
-                + "the output inserters clocked and every other inserter running freely; each inserter's windows are the ticks "
+                + "the output inserters clocked and every other inserter running freely; each inserter's enable windows are the ticks "
                 + "it was busy picking up, swinging and dropping, plus a few ticks of padding. Swings end up spread out, roughly "
-                + `one per craft, so its inserters usually have more wake windows than in ${BATCHED_SWINGS_LABEL}, which groups several swings into one window. An inserter between two machines that waits at `
-                + "its source for a full hand gets short, evenly spaced windows instead when they stay stable, so it grabs a hand "
+                + `one per craft, so its inserters usually have more enable windows than in ${TAKT_BATCHES}, which groups several swings into one enable window. An inserter between two machines that waits at `
+                + "its source for a full hand gets short, evenly spaced enable windows instead when they stay stable, so it grabs a hand "
                 + "that is already there rather than staying enabled while the machine crafts.",
             run: () => generateClockWithSwingBackoff(base_config, quiet, (swings_config, options) => timeStudyWindowsClock(swings_config, options, "always")),
             search: true,
         }]),
         ...(context.window_cycle_ticks > MAX_OBSERVED_WINDOWS_WINDOW_CYCLE_TICKS ? [] : [{
             id: "uneven-output",
-            label: "Uneven output swings",
+            label: nameOf("moved_output_swing"),
             strategy: "moved_output_swing" as const,
-            description: "Observed windows with one output swing moved off its planned start, so the output swings are not evenly "
-                + "spaced. A machine only has to make up for what the output inserter takes over the whole clock period, so it can "
+            description: `${nameOf("time_study_windows")} with one output swing moved off its planned start, so the output swings are not evenly `
+                + "spaced. A machine only has to make up for what the output inserter takes over the whole window cycle, so it can "
                 + "craft more between one pair of swings than the next and carry the difference in its output slot. The swing is "
-                + "tried at positions a craft apart and every other inserter's windows are observed again for each; a position "
-                + "whose neighbours work too is used, the smallest move of those. Only offered when the period has more than one "
+                + "tried at positions a craft apart and every other inserter's enable windows are observed again for each; a position "
+                + "whose neighbours work too is used, the smallest move of those. Only offered when the window cycle has more than one "
                 + "output swing and a moved swing passes the clock-only check.",
             run: () => {
                 // one search at the planned swing count; backing off would repeat it for every lower count
@@ -548,40 +570,40 @@ function alternativeDefinitionsFor(
         }]),
         {
             id: "shifted-swings",
-            label: "Shifted swings",
+            label: nameOf("phase_shifted_batch"),
             strategy: "phase_shifted_batch" as const,
-            description: `${BATCHED_SWINGS_LABEL} with one round of swings moved together to another place in the `
-                + "clock period: an output swing and the input swings planned with it. The plan spaces these rounds evenly, but a "
+            description: `${TAKT_BATCHES} with one round of swings moved together to another place in the `
+                + "window cycle: an output swing and the input swings planned with it. The plan spaces these rounds evenly, but a "
                 + "machine takes a swing whenever its limits allow: an input hand once it is below its insertion limit and before "
                 + "it runs out of that ingredient, an output hand once a full one is ready and before the output fills up. Within "
-                + "those limits a round can run earlier or later. Window lengths and their spacing within the round are kept, so "
-                + "swings stay as batched as planned. Every shift is checked with the clock-only simulation and a shift whose "
-                + "neighbours work too is used, the smallest of those. Only offered when the clock period has more than one round "
+                + "those limits a round can run earlier or later. Enable window lengths and their spacing within the round are kept, so "
+                + "swings stay as batched as planned. Every shift is checked with the clock-only check and a shift whose "
+                + "neighbours work too is used, the smallest of those. Only offered when the window cycle has more than one round "
                 + "and a shift passes.",
             run: () => {
                 // one search at the planned swing count, like uneven output swings
                 const result = phaseShiftedBatchClock(base_config, { ...quiet, belt_pickup_slack: "always" });
-                assert(result.search?.kind === "shifted cycle" && result.search.picked !== null, "no shifted round of swings passes the clock-only check");
+                assert(result.search?.kind === "shifted cycle" && result.search.picked !== null, `no ${nameOf("phase_shifted_batch")} passes the clock-only check`);
                 return result;
             },
             search: true,
         },
         ...higher_counts.map(higher => ({
             id: `swings-${higher}`,
-            label: `${higher} output swings per cycle`,
+            label: `${TAKT_BATCHES}: ${higher} output swings each output cycle`,
             strategy: "batched_swings" as const,
             offers_output_count: true as const,
-            description: `${BATCHED_SWINGS_LABEL} with a longer crafting cycle: the output inserter takes ${higher} hands per cycle instead of `
-                + `${swings} while the machine keeps crafting between swings. Batches more swings into fewer, longer windows.`,
+            description: `${TAKT_BATCHES} with a longer output cycle: the output inserter takes ${higher} hands each output cycle instead of `
+                + `${swings} while the machine keeps crafting between swings. Batches more swings into fewer, longer enable windows.`,
             run: () => withSwings(higher, quiet),
             no_shared_windows: true as const,
         })),
         ...lower_counts.map(lower => ({
             id: `swings-${lower}`,
-            label: `${lower} output swing${lower === 1 ? "" : "s"} per cycle`,
+            label: `${TAKT_BATCHES}: ${lower} output swing${lower === 1 ? "" : "s"} each output cycle`,
             strategy: "batched_swings" as const,
             offers_output_count: true as const,
-            description: `${BATCHED_SWINGS_LABEL} with the output inserter limited to ${lower} swing${lower === 1 ? "" : "s"} per crafting cycle `
+            description: `${TAKT_BATCHES} with the output inserter limited to ${lower} swing${lower === 1 ? "" : "s"} each output cycle `
                 + `instead of ${swings}. The output machine buffers more between swings; useful when the higher swing count `
                 + "is unstable.",
             run: () => withSwings(lower, quiet),
@@ -589,14 +611,14 @@ function alternativeDefinitionsFor(
         })),
         {
             id: "full-hand",
-            label: "Full-hand output swings",
+            label: nameOf("pitch_pickups"),
             strategy: "pitch_pickups" as const,
-            description: "Output inserters swing once per window, evenly spaced and timed so the machine already holds a full hand when "
+            description: "Output inserters swing once per enable window, evenly spaced and timed so the machine already holds a full hand when "
                 + "the inserter arrives, instead of grabbing a few items at a time while the machine crafts. Only offered when the "
                 + "planned output inserters often need more than one grab per hand and a full hand fits below the output block. The timing is "
-                + "searched with clock-only simulations, preferring the fewest pickups that wait for items. The timing must "
-                + "recover from full output machines; if it does not, some windows are lengthened so a second grab can drain the "
-                + `surplus. Other inserters keep the windows of ${BATCHED_SWINGS_LABEL}.`,
+                + "searched with clock-only checks, preferring the fewest pickups that wait for items. The timing must "
+                + "let the build go back to its rate by itself when the output machines are full; if it does not, some enable windows are lengthened so a second grab can drain the "
+                + `surplus. Other inserters keep the enable windows of ${TAKT_BATCHES}.`,
             run: () => {
                 // input windows come from the first planned run whose clock passes, most batched first
                 const full_hand: GenerateClockOptions = { ...quiet, belt_pickup_slack: "always" };
@@ -611,19 +633,19 @@ function alternativeDefinitionsFor(
             },
             search: true,
         },
-        // Small batches where its first plan's window cycle was not too long, so the primary did not try it: a fallback, made
+        // Round-Robin Polling with a shorter window cycle, where its first plan's window cycle was not too long, so the primary did not try it: a fallback, made
         // only where no clock made before it can be selected as stable, so it never moves a clock that was selected
         ...(context.primitive_tried === true || !primitiveRoundRobinPollingOptionsSupported(small_batches_config, SMALL_BATCHES_OPTIONS)
             || !primitiveRoundRobinPollingConfigSupported(small_batches_config) ? [] : [{
             id: "primitive-grouped",
-            label: "Small batches",
+            label: `${nameOf("round_robin_polling")}, ${SHORTER_WINDOW_CYCLE}`,
             strategy: "round_robin_polling" as const,
             settings: { shorter_window_cycle: true as const },
-            description: "Uses small output batches when no planned clock holds. Checked for timing margin, clock starts and recovery after interruptions.",
+            description: `${nameOf("round_robin_polling")} with a ${SHORTER_WINDOW_CYCLE}. Uses small output batches when no planned clock holds. Checked for timing margin, clock starts and recovery after interruptions.`,
             run: () => {
                 const made = verifiedPrimitiveRoundRobinPollingClock(small_batches_config, { ...quiet, ...SMALL_BATCHES_OPTIONS },
                     context.planned_swings ?? swings, "no-count-holds");
-                if (made.clock === null) throw new Error(made.report.reason ?? "no clock of small batches holds");
+                if (made.clock === null) throw new Error(made.report.reason ?? `no ${nameOf("round_robin_polling")} clock with a ${SHORTER_WINDOW_CYCLE} holds`);
                 return made.clock;
             },
             fallback: true,
@@ -639,7 +661,7 @@ function asBuiltNotes(as_built: AsBuiltStabilityCheck | undefined, expected_outp
     let notes = "";
     if (as_built.repeat_window_cycles !== undefined && as_built.repeat_output_items !== undefined) {
         const expected = expected_output_items * as_built.repeat_window_cycles;
-        notes += ` In the clock-only check the build repeats every ${as_built.repeat_window_cycles} periods instead of every period, `
+        notes += ` In the clock-only check the build repeats every ${as_built.repeat_window_cycles} window cycles instead of every window cycle, `
             + `moving ${as_built.repeat_output_items} of ${expected} items over them.`;
     }
     return notes;
@@ -648,13 +670,13 @@ function asBuiltNotes(as_built: AsBuiltStabilityCheck | undefined, expected_outp
 /** A sentence for an alternative's description about the losses its clock does not get back from, or why none was tried */
 function disturbanceTrialNote(verdict: DisturbanceTrialVerdict | null, not_tried: string | undefined): string {
     if (verdict === null) {
-        return not_tried === undefined ? "" : ` Its backpressure losses could not be tried, so whether it gets back after one is not known: ${not_tried.replace(/\.$/, "")}.`;
+        return not_tried === undefined ? "" : ` Its supply stops and output blockages could not be tried, so whether it goes back to its rate by itself after one is not known: ${not_tried.replace(/\.$/, "")}.`;
     }
     if (verdict.survives) {
         return "";
     }
-    return verdict.broken_by.length === 0 ? " It was off its expected output in the run the backpressure losses are tried on, so it is not counted as stable."
-        : ` It does not survive backpressure loss: the build does not get back to its expected output under this clock after ${verdict.broken_by.join(", or after ")}.${notTriedSentence(verdict.not_tried)}`;
+    return verdict.broken_by.length === 0 ? " It was off its expected output in the run used for the loss trials, so it is not counted as stable."
+        : ` It is not stable: the build does not go back to its expected output by itself under this clock after ${verdict.broken_by.join(", or after ")}.${notTriedSentence(verdict.not_tried)}`;
 }
 
 
@@ -684,7 +706,7 @@ function wakeUpsFromStartsNote(from_starts: WakeUpsFromStarts | undefined, cold:
     }
     const figures = from_starts.wake_ups_per_minute;
     const round = (figure: number) => Math.round(figure).toLocaleString("en-US");
-    return ` With a loop in the build, its wake-ups depend on where its clock is when the build starts: from ${figures.length} start points,`
+    return ` With a loop in the build, its wakeups depend on where its clock is when the build starts: from ${figures.length} start points,`
         + ` ${round(Math.min(...figures))} to ${round(Math.max(...figures))} a minute, ${round(from_starts.mean)} on average, which it is ranked by`
         + (cold === null ? "." : ` (${round(cold)} from a cold start).`);
 }
@@ -766,11 +788,11 @@ function perHandRun(
         ...definition,
         run: () => {
             const made = perHandWindowsClock(varied.result);
-            if (made === null) throw new Error("no per-hand windows");
+            if (made === null) throw new Error("no per-hand enable windows");
             return made;
         },
         id: `${definition.id}-per-hand`,
-        label: `${definition.label}, a window a swing`,
+        label: `${definition.label}, one enable window a swing`,
         settings: { ...definition.settings, window_a_swing: true },
         description: `${definition.description} ${PER_HAND_WINDOWS_NOTE}`,
         chest_drill_fallbacks: undefined,
@@ -805,7 +827,7 @@ function sharedRun(
         shared_definition = definition.shared_windows();
     } catch (error) {
         if (error instanceof SecondaryPlanningInvariantError) throw error;
-        logger.log(`Clock alternative "${definition.label}" with shared windows could not be generated: ${error instanceof Error ? error.message : String(error)}`);
+        logger.log(`Clock "${definition.label}" with shared enable windows could not be generated: ${error instanceof Error ? error.message : String(error)}`);
         return run;
     }
     if (shared_definition === undefined) {
@@ -817,11 +839,11 @@ function sharedRun(
         // a clock that is not the grouped hands' with shared windows is not an alternative, and not worth assessing
         run: () => {
             const made = shared_run();
-            if (made.round_robin_polling?.shared_windows !== true) throw new Error("no shared windows hold");
+            if (made.round_robin_polling?.shared_windows !== true) throw new Error("no shared enable windows hold");
             return made;
         },
         id: `${definition.id}-shared`,
-        label: `${definition.label}, shared windows`,
+        label: `${definition.label}, shared enable windows`,
         description: `${definition.description} ${SHARED_WINDOWS_NOTE}`,
         shared_windows: undefined,
     }, config, logger, report, new Set([...(assessed ?? []), run.signature]), verification_cache, undefined, settle_unstable);
@@ -852,7 +874,7 @@ function runAlternativeOf(
     } catch (error) {
         if (error instanceof SecondaryPlanningInvariantError) throw error;
         const reason = error instanceof Error ? error.message : String(error);
-        logger.log(`Clock alternative "${definition.label}" could not be generated: ${reason}`);
+        logger.log(`Clock "${definition.label}" could not be generated: ${reason}`);
         on_not_made?.({ id: definition.id, label: definition.label, reason });
         return null;
     }
@@ -878,9 +900,9 @@ function runAlternativeOf(
     // windows (see trialWithLoopWindows), until one does
     const remakes = [
         { made: definition.without_in_loop_windows, applies: (it: BlueprintGenerationResult) => (it.loop_windows?.in_loop_ids?.length ?? 0) > 0,
-            what: "the windows of its loop's own inserters", left: "the loop's own inserters always enabled" },
+            what: "the enable windows of its loop's own inserters", left: "the loop's own inserters always enabled" },
         { made: definition.without_loop_windows, applies: (it: BlueprintGenerationResult) => it.loop_windows !== undefined,
-            what: "the windows out of its loop", left: "always enabled" },
+            what: "the enable windows out of its loop", left: "always enabled" },
     ];
     for (const remake of remakes) {
         if (cached !== undefined || !remake.applies(result) || (held && loss.disturbance_trial?.survives !== false)) {
@@ -893,11 +915,11 @@ function runAlternativeOf(
                 used = without;
                 held = holds(result);
                 loss = held ? disturbanceTrialVerdictOf(without.planned_on ?? config, result, logger, report) : { disturbance_trial: null };
-                logger.log(`Clock alternative "${definition.label}": ${remake.what} did not meet goal 1; ${remake.left}: holds=${held} survives=${loss.disturbance_trial?.survives ?? "not tried"}`);
+                logger.log(`Clock "${definition.label}": ${remake.what} did not give a stable clock; ${remake.left}: holds=${held} stable=${loss.disturbance_trial?.survives ?? "not tried"}`);
             }
         } catch (error) {
             if (error instanceof SecondaryPlanningInvariantError) throw error;
-            logger.log(`Clock alternative "${definition.label}" with ${remake.left === "always enabled" ? "the inserters out of its loop always enabled" : remake.left} could not be generated: ${error instanceof Error ? error.message : String(error)}`);
+            logger.log(`Clock "${definition.label}" with ${remake.left === "always enabled" ? "the inserters out of its loop always enabled" : remake.left} could not be generated: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
     // the drills into chests on their fewest windows: a clock that does not meet goal 1 with them is made again with
@@ -913,7 +935,7 @@ function runAlternativeOf(
             made = fallback.run();
         } catch (error) {
             if (error instanceof SecondaryPlanningInvariantError) throw error;
-            logger.log(`Clock alternative "${definition.label}" with its drill windows ${index === 0 ? "a tick longer" : "always enabled"} could not be generated: ${error instanceof Error ? error.message : String(error)}`);
+            logger.log(`Clock "${definition.label}" with its drill enable windows ${index === 0 ? "a tick longer" : "always enabled"} could not be generated: ${error instanceof Error ? error.message : String(error)}`);
             continue;
         }
         result = made;
@@ -921,7 +943,7 @@ function runAlternativeOf(
         chest_drill_fallback = index === 0 ? "tick-longer" : "always-on";
         held = holds(result);
         loss = held ? disturbanceTrialVerdictOf(fallback.planned_on ?? config, result, logger, report) : { disturbance_trial: null };
-        logger.log(`Clock alternative "${definition.label}": the fewest drill windows did not meet goal 1; ${index === 0 ? "a tick longer" : "always enabled"}: holds=${held} survives=${loss.disturbance_trial?.survives ?? "not tried"}`);
+        logger.log(`Clock "${definition.label}": the fewest drill enable windows did not give a stable clock; ${index === 0 ? "a tick longer" : "always enabled"}: holds=${held} stable=${loss.disturbance_trial?.survives ?? "not tried"}`);
         if (held && loss.disturbance_trial?.survives !== false) break;
     }
     if (used !== definition && !plannedChestDrillWindows(result) && result.chest_drills !== undefined) {
@@ -933,7 +955,7 @@ function runAlternativeOf(
     const { disturbance_trial } = loss;
     const strategy = strategyOf(definition.strategy, result, { chest_drill_fallback, destroyed_target: config.setpoint.counts === "destroyed",
         ...(definition.settings !== undefined && { definition_settings: definition.settings }) });
-    const label = withOutputSwings(definition, result.used_terminal_swing_count, config.setpoint.counts);
+    const label = withOutputSwings(definition, strategy, result.used_terminal_swing_count, config.setpoint.counts);
     const inserter_window_count = entity_registry.getAll().filter(Entity.isInserter)
         .reduce((sum, inserter) => sum + (result.clock_windows[inserter.entity_id.id]?.length ?? 0), 0);
     const ranking_window_count = rankingWindowCount(inserter_window_count, result.clock_windows, result.loop_windows);
@@ -948,8 +970,8 @@ function runAlternativeOf(
     }
     const deadlock_risks = sharedItemDeadlockRisks(entity_registry);
     const planning_note = actual_output_items === expected_output_items ? ""
-        : ` The planning simulation moved ${actual_output_items} of ${expected_output_items} items per period; `
-        + "stability is judged by the clock-only check, which runs the exported clock windows.";
+        : ` The planning simulation moved ${actual_output_items} of ${expected_output_items} items each window cycle; `
+        + "stability is judged by the clock-only check, which runs the enable windows of the blueprint.";
     const search = result.search?.picked ? result.search : undefined;
     const moved_note = search?.kind !== "moved output swing" ? ""
         : ` Output swing ${search.picked!.row} starts ${Math.abs(search.picked!.setting)} ticks ${search.picked!.setting < 0 ? "earlier" : "later"} than planned.`;
@@ -996,7 +1018,7 @@ function runAlternativeOf(
                     exact && trial.result.loop_windows !== undefined ? LOOP_WINDOW_CHECK_TICKS : FREE_RUNNING_CHECK_TICKS, logger,
                     fractionalSwingsOf(trial.result.output_cycle_plan));
             } catch (error) {
-                logger.log(`Clock alternative "${label}" could not be started from other places: ${error instanceof Error ? error.message : String(error)}`);
+                logger.log(`Clock "${label}" could not be started from other places: ${error instanceof Error ? error.message : String(error)}`);
                 made = null;
             }
             from_starts_of.set(trial, made);
@@ -1023,7 +1045,7 @@ function runAlternativeOf(
         const { disturbance_trial, disturbance_trial_not_tried } = trial.loss;
         const start_dependence_note = trial.start_dependence === null ? null
             : startDependenceNote(trial.start_dependence, items => itemsPerSecondOverCopies(items, trial.clock_window_cycle, copies));
-        const description = definition.description + moved_note + shifted_note + belt_note + planning_note + asBuiltNotes(as_built, expected_output_items)
+        const description = withResolvedName(definition, definition.description, strategy) + moved_note + shifted_note + belt_note + planning_note + asBuiltNotes(as_built, expected_output_items)
             + disturbanceTrialNote(disturbance_trial, disturbance_trial_not_tried)
             + (start_dependence_note === null ? "" : ` ${start_dependence_note[0].toUpperCase()}${start_dependence_note.slice(1)}`) + row.description_suffix;
         // what a clock that holds says about the build is read from it, whether it gets back from a loss or not
@@ -1065,7 +1087,7 @@ function runAlternativeOf(
     };
     const exact_trial: Trial = { result, held, loss, start_dependence, clock_window_cycle: window_cycle_ticks };
     const exact = alternativeOf(exact_trial, { id, label, description_suffix: "", result });
-    logger.log(`Clock alternative "${label}": windows=${inserter_window_count} verdict=${exact.verdict} survives=${disturbance_trial?.survives ?? "not tried"} as-built=${as_built?.actual_output_items}/${expected_output_items} planned=${actual_output_items} belt=${clockBeltLabel(belt) || "none"}`);
+    logger.log(`Clock "${label}": windows=${inserter_window_count} verdict=${exact.verdict} stable=${disturbance_trial?.survives ?? "not tried"} as-built=${as_built?.actual_output_items}/${expected_output_items} planned=${actual_output_items} belt=${clockBeltLabel(belt) || "none"}`);
     if (Number.isInteger(window_cycle_ticks)) {
         return { signature, alternatives: [exact] };
     }
@@ -1077,10 +1099,10 @@ function runAlternativeOf(
             id: `${id}-subtick`,
             label: `${label}, subtick clock`,
             listing: { subtick_clock: true },
-            description_suffix: ` Exported with a subtick clock: the ${window_cycle_ticks.toFixed(3)}-tick period is `
+            description_suffix: ` The blueprint has a subtick clock: the ${window_cycle_ticks.toFixed(3)}-tick window cycle time is `
                 + `${counted_ticks}/${scale} ticks, so a ${counted_ticks}-tick clock is multiplied by ${scale} and taken modulo `
-                + `${counted_ticks} by two extra arithmetic combinators, giving the position in the period in 1/${scale} ticks. `
-                + "Window starts can move by a tick between periods but never drift, so the build runs at exactly the target rate.",
+                + `${counted_ticks} by two extra arithmetic combinators, giving the position in the window cycle in 1/${scale} ticks. `
+                + "Enable window starts can move by a tick between window cycles but never drift, so the build runs at exactly the setpoint.",
             result: { ...result, blueprint: result.subtick.blueprint, schedule: result.subtick.schedule },
         })] };
     }
@@ -1101,27 +1123,27 @@ function runAlternativeOf(
         } catch (error) {
             if (error instanceof SecondaryPlanningInvariantError) throw error;
             not_tried_on_its_window_cycle = error instanceof Error ? error.message : String(error);
-            logger.log(`Clock alternative "${label}" rounded to ${rounded_ticks} ticks could not be tried on its own period: ${not_tried_on_its_window_cycle}`);
+            logger.log(`Clock "${label}" rounded to ${rounded_ticks} ticks could not be tried on its own window cycle: ${not_tried_on_its_window_cycle}`);
             return null;
         }
     })() : null;
     const rounded: RoundedClock = { window_cycle_ticks: rounded_ticks, runs_fast, within_machines, tried_on_its_window_cycle: rounded_trial !== null };
     const fast = `${fastPercent(runs_fast)} fast`;
     if (rounded_trial !== null) {
-        logger.log(`Clock alternative "${label}" rounded to ${rounded_ticks} ticks (runs ${fast}): holds=${rounded_trial.held} survives=${rounded_trial.loss.disturbance_trial?.survives ?? "not tried"}`);
+        logger.log(`Clock "${label}" rounded to ${rounded_ticks} ticks (runs ${fast}): holds=${rounded_trial.held} stable=${rounded_trial.loss.disturbance_trial?.survives ?? "not tried"}`);
     }
     return { signature, alternatives: [alternativeOf(rounded_trial ?? { ...exact_trial, clock_window_cycle: rounded_ticks }, {
         id,
-        label: `${label} (clock rounded to ${rounded_ticks} ticks, runs ${fast})`,
+        label: `${label} (rounded to ${rounded_ticks} ticks, ${fast})`,
         listing: { rounded: { window_cycle_ticks: rounded_ticks, runs_fast } },
-        description_suffix: ` The period is not a whole number of ticks (${window_cycle_ticks.toFixed(3)}) and has no subtick clock of a small `
+        description_suffix: ` The window cycle time is not a whole number of ticks (${window_cycle_ticks.toFixed(3)}) and has no subtick clock of a small `
             + `enough scale, so this clock runs it rounded down to ${rounded_ticks} ticks, ${fastPercent(runs_fast)} faster than the target`
             + (rounded_trial !== null
-                ? `: within the ${fastPercent(ROUNDED_CLOCK_MAX_FAST)} a rounded clock may run and what the machines make, so it is checked on its own ${rounded_ticks}-tick period.`
+                ? `: within the ${fastPercent(ROUNDED_CLOCK_MAX_FAST)} a rounded clock may run and what the machines make, so it is checked on its own ${rounded_ticks}-tick window cycle.`
                 : not_tried_on_its_window_cycle !== null
-                    ? `; it could not be tried on its own period (${(not_tried_on_its_window_cycle as string).replace(/\.$/, "")}), so the clock-only check models the exact period.`
+                    ? `; it could not be tried on its own window cycle (${(not_tried_on_its_window_cycle as string).replace(/\.$/, "")}), so the clock-only check models the exact window cycle.`
                     : `, ${within_machines ? `more than the ${fastPercent(ROUNDED_CLOCK_MAX_FAST)} a rounded clock may run` : "more than the machines make"}; `
-                    + "the clock-only check models the exact period."),
+                    + "the clock-only check models the exact window cycle."),
         result: rounded_trial?.result ?? result,
         rounded,
     })] };
@@ -1202,7 +1224,7 @@ function planPrimaryAndTasks(
 }
 
 /**
- * Whether the "Fractional swings" alternative would make the primary clock again, and so the same run with nothing to
+ * Whether the "Euclidean Swings" alternative would make the primary clock again, and so the same run with nothing to
  * add: its first plan starts where the machines' crafts put it, at the primary's own count, whole, with every inserter's
  * hands a cycle whole, so that it is the primary's plan; the primary held on that first plan, with nothing tried after
  * it (no lower count, no window cycle limit, no room for fuel, no loop windows, no chest drill windows to fall back from), so
@@ -1226,17 +1248,19 @@ function fractionalMakesThePrimary(config: Config, primary: AlternativeDefinitio
 }
 
 /**
- * The label of an alternative with the output swings per cycle it ended up with, e.g. "Batched swings: 6 output swings
- * per cycle", or, for a target that counts an item destroyed, the hands of it brought in a cycle ("Even hands: 5 hands
- * brought in per cycle"). The alternatives named after a swing count already say it.
+ * The label of an alternative with the output swings each output cycle it ended up with, e.g. "Takt Batches: 6 output swings
+ * each output cycle", or, for a target that counts an item destroyed, the hands of it brought in each output cycle
+ * ("Time-Division Windows: 5 hands brought in each output cycle"). The alternatives named after a swing count already say it.
  */
-function withOutputSwings(definition: { label: string; offers_output_count?: true }, swings: number, counts?: TargetCounts): string {
+function withOutputSwings(definition: Pick<AlternativeDefinition, "label" | "strategy" | "offers_output_count">, strategy: ClockStrategy, swings: number, counts?: TargetCounts): string {
+    // the name of the strategy the run made, in place of the one the label was written with (batched swings: Takt Batches or Round-Robin Polling)
+    const label = withResolvedName(definition, definition.label, strategy);
     if (definition.offers_output_count === true) {
-        return definition.label;
+        return label;
     }
     const count = Number.isInteger(swings) ? `${swings}` : swings.toFixed(2).replace(/0+$/, "");
-    return counts === "destroyed" ? `${definition.label}: ${count} hand${swings === 1 ? "" : "s"} brought in per cycle`
-        : `${definition.label}: ${count} output swing${swings === 1 ? "" : "s"} per cycle`;
+    return counts === "destroyed" ? `${label}: ${count} hand${swings === 1 ? "" : "s"} brought in each output cycle`
+        : `${label}: ${count} output swing${swings === 1 ? "" : "s"} each output cycle`;
 }
 
 /** Generates one alternative listed by planClockAlternatives; progress goes to options.on_progress_detail */
@@ -1261,13 +1285,13 @@ function runTask(
     const logger = options.logger ?? defaultLogger;
     const definition = alternativeDefinitions(config, context, quietOptions(options, logger, options.on_progress_detail))
         .find(it => it.id === task_id);
-    assert(definition !== undefined, `Unknown clock alternative task "${task_id}"`);
+    assert(definition !== undefined, `Unknown clock task "${task_id}"`);
     return runAlternative(definition, config, logger, options.on_progress_detail, new Set(assessed_signatures), undefined, options.on_not_made, !context.primary_stable);
 }
 
 /** The id of the per-branch clock (DESIGN D7) */
 export const COORDINATED_SOURCES_MAKER = "per-branch";
-const COORDINATED_SOURCES_LABEL = "Coordinated sources";
+const COORDINATED_SOURCES_LABEL = nameOf("coordinated_sources");
 const COORDINATED_SOURCES_DESCRIPTION = "The inserters of each source use the enable windows of one other clock made for the build, on one shared window cycle. "
     + "A source is a machine, belt or chest that inserters take from. The generator sets the sources one at a time, from the output "
     + "upstream. It keeps the setting with the smallest number of wakeups for the full clock, until no source changes.";
@@ -1344,7 +1368,7 @@ export function generateClockAlternatives(
 
 function generateAllAlternatives(config: Config, options: GenerateClockOptions): ClockAlternativesResult {
     const logger = options.logger ?? defaultLogger;
-    let current_step = BATCHED_SWINGS_LABEL;
+    let current_step = TAKT_BATCHES;
     let completed = 0;
     let total: number | null = null;
     const report = (detail?: string) => options.on_progress?.({ step: current_step, detail, completed, total });
@@ -1396,7 +1420,7 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
     generate(searched);
     if (not_searched.length > 0) {
         logger.log(`Not searched (${not_searched.map(it => it.label).join(", ")}): a clock made without a search is stable. `
-            + "Set overrides.search_for_fewer_wake_ups to search for one with fewer wake-ups.");
+            + "Set overrides.search_for_fewer_wake_ups to search for one with fewer wakeups.");
     }
     // last, a clock for another belt than the config's, where nothing made so far can be selected as stable
     if (fallbacks.length > 0 && searchesAreNeeded(runs, it => it.ranking)) {

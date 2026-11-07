@@ -50,7 +50,7 @@ describe("generateClockForConfig", () => {
         });
 
         it("holds the target of 380 a second with 3 hands an inserter a cycle", () => {
-            expect(selected.label).toBe("6 output swings per cycle, subtick clock");
+            expect(selected.label).toBe("Takt Batches: 6 output swings each output cycle, subtick clock");
             expect(selected.verdict).toBe("stable");
             expect(selected.assessment.items_per_second).toBeCloseTo(380, 6);
             // 6 hands a machine in each of the 3 cycles of the window cycle, over all four output inserters
@@ -58,7 +58,7 @@ describe("generateClockForConfig", () => {
         });
 
         it("does not call a clock stable whose swings do not come out whole for each output inserter", () => {
-            const odd = alternatives.filter(a => /(: | )?[135] output swings? per cycle/.test(a.label));
+            const odd = alternatives.filter(a => /(: | )?[135] output swings? each output cycle/.test(a.label));
             expect(odd.length).toBeGreaterThan(0);
             expect(odd.every(a => a.verdict !== "stable")).toBe(true);
         });

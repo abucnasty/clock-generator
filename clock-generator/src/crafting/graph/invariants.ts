@@ -61,10 +61,10 @@ export function graphInvariantIssues(facts: PlannerFacts, graph: PlannerGraph, c
     const entityOf = (vertex: string) => vertex === SINK ? SINK : node_of.get(vertex.split("#")[0])?.entity;
 
     // 1. an edge per inserter and item it carries, and per placed result, and nothing else
-    if (!sameAs(graph.edges.map(edge => edge.key), facts.edges.map(edge => edge.key))) issues.push("1: the edges are not the facts' edges");
+    if (!sameAs(graph.edges.map(edge => edge.key), facts.edges.map(edge => edge.key))) issues.push("1: the graph edges are not the facts' edges");
     for (const group of facts.capacity_groups) {
         const of_group = graph.edges.filter(edge => edge.group === group.group).map(edge => edge.key);
-        if (!sameAs(of_group, group.edges.map(edge => edge.edge))) issues.push(`1: ${group.group} has edges ${of_group.join(", ")}`);
+        if (!sameAs(of_group, group.edges.map(edge => edge.edge))) issues.push(`1: ${group.group} has graph edges ${of_group.join(", ")}`);
     }
 
     // 2. ends that exist; the edges of one inserter share its group, its source entity and its sink entity
@@ -77,7 +77,7 @@ export function graphInvariantIssues(facts: PlannerFacts, graph: PlannerGraph, c
     for (const entity of new Set(graph.edges.map(edge => edge.entity))) {
         const own = graph.edges.filter(edge => edge.entity === entity);
         const ends = new Set(own.map(edge => `${edge.group} ${entityOf(edge.from)} ${entityOf(edge.to)}`));
-        if (ends.size > 1) issues.push(`2: the edges of ${entity} differ in group or ends: ${[...ends].join("; ")}`);
+        if (ends.size > 1) issues.push(`2: the graph edges of ${entity} differ in group or ends: ${[...ends].join("; ")}`);
     }
 
     // 3. coverage agrees with the coverage check
@@ -113,7 +113,7 @@ export function graphInvariantIssues(facts: PlannerFacts, graph: PlannerGraph, c
 
     // 5. one SINK; the terminal edges are its in-edges
     if (graph.nodes.filter(node => node.kind === "sink").length !== 1 || graph.nodes[graph.nodes.length - 1].key !== SINK) issues.push("5: not one SINK, last");
-    if (!sameAs(graph.terminal, graph.edges.filter(edge => edge.terminal !== null).map(edge => edge.key))) issues.push("5: the terminal list is not the terminal edges");
+    if (!sameAs(graph.terminal, graph.edges.filter(edge => edge.terminal !== null).map(edge => edge.key))) issues.push("5: the terminal list is not the terminal graph edges");
 
     // 6. keys: the entities' ids, with the lane, item and input suffixes
     for (const node of graph.nodes) {
@@ -123,7 +123,7 @@ export function graphInvariantIssues(facts: PlannerFacts, graph: PlannerGraph, c
         }
     }
     for (const edge of graph.edges) {
-        if (!EDGE_KEY.test(edge.key) || !edge.key.endsWith(`/${edge.item}`)) issues.push(`6: edge key ${edge.key}`);
+        if (!EDGE_KEY.test(edge.key) || !edge.key.endsWith(`/${edge.item}`)) issues.push(`6: graph edge key ${edge.key}`);
     }
 
     // 7. plain JSON

@@ -4,7 +4,7 @@ import { EntityTransferCount, EntityTransferCountMap } from "./swing-counts";
 import type Fraction from "../../../data-types/fraction";
 
 /**
- * Fractional swings the insertion limits do not allow: an inserter into a machine would have to swing more often in a
+ * Euclidean Swings the insertion limits do not allow: an inserter into a machine would have to swing more often in a
  * sub-cycle than the machine takes. The cycle plan rethrows it with the output swings a cycle it was asked to plan, which
  * a run that asked for fractional swings without a forced count backs off from (generateClockWithSwingBackoff).
  */
@@ -25,8 +25,8 @@ export class FractionalSwingsRefusedError extends Error {
  */
 export function fractionalSwingsWholeAt(refusal: FractionalSwingsRefusedError, count: number): Error {
     const swings = `${count} output swing${count === 1 ? "" : "s"}`;
-    return new Error(`${refusal.message} At ${swings} a cycle, the most the insertion limits allow, every inserter swings a whole `
-        + `number of times a cycle: the clock of ${swings}.`);
+    return new Error(`${refusal.message} At ${swings} each output cycle, the most the insertion limits allow, every inserter swings a whole `
+        + `number of times each output cycle: the clock of ${swings}.`);
 }
 
 /**

@@ -22,7 +22,7 @@ import { TargetProductionRate } from "../target-production-rate";
 import { CycleMeasure, cycleMeasureOf } from "./composition";
 import type { GroupShape } from "./groups";
 
-/** Observed windows re-simulate the build hundreds of times; above this window cycle (a high LCM) that takes minutes */
+/** Time-Study Windows re-simulate the build hundreds of times; above this window cycle (a high LCM) that takes minutes */
 export const MAX_OBSERVED_WINDOWS_WINDOW_CYCLE_TICKS = 2400;
 
 /**
@@ -165,7 +165,7 @@ export function plannedWindowCyclesOf(
     };
 
     if (target.counts === "destroyed") {
-        assert(exhaust !== null, "a destroyed target is planned with the decision of its results' windows");
+        assert(exhaust !== null, "a destroyed target is planned with the decision of its results' enable windows");
         // planned by arithmetic: one count, no backoff, no other count offered (even hands moves the same hands)
         const main = planned(OutputCyclePlan.create(target, registry, config, fraction(1), overrides, exhaust), "main");
         return { per_group: groups.map((_, at) => [choiceOf(main, at)]), tried: [main], main, can_back_off: false, listed_from: null };

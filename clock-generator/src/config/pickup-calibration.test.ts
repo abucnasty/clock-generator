@@ -143,7 +143,7 @@ describe("a generation with a belt pickup outside the calibration", () => {
                 what: "Inserter 1 picks up iron-plate from belt 1 in 2-item belt stacks.",
                 why: "Belt pickup timing is calibrated with 16-item hands on 4-item belt stacks only. At other belt stack sizes and "
                     + "hand sizes the simulator's pickup timing has not been compared with the game.",
-                explanation: "The clock may not match the game: its rate, stability and wake-ups are worked out from pickup timing "
+                explanation: "The clock may not match the game: its rate, stability and wakeups are worked out from pickup timing "
                     + "never checked there.",
             }]);
         }

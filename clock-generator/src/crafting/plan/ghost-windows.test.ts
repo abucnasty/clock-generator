@@ -38,13 +38,13 @@ describe("windowsWithoutGhostWakeUps", () => {
         const told: string[] = [];
         expect(windowsWithoutGhostWakeUps(windows, WINDOW_CYCLE, stockOf(new Array(2 * WINDOW_CYCLE).fill(0)), [ghost(27)], new Set(["inserter:1"]), 0,
             (_, why) => told.push(why))).toBeNull();
-        expect(told).toEqual(["its windows are fixed"]);
+        expect(told).toEqual(["its enable windows are fixed"]);
     });
 
     it("leaves the windows where the switch-offs do not line up with the clock's offset", () => {
         const told: string[] = [];
         expect(windowsWithoutGhostWakeUps(windows, WINDOW_CYCLE, stockOf(new Array(2 * WINDOW_CYCLE).fill(0)), [ghost(27)], new Set(), 3,
             (_, why) => told.push(why))).toBeNull();
-        expect(told).toEqual(["its switch-offs do not line up with its windows"]);
+        expect(told).toEqual(["its switch-offs do not line up with its enable windows"]);
     });
 });

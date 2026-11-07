@@ -152,7 +152,7 @@ export function loopInserterWindows(
         }
         const into_sink = inserters.filter(it => it.sink.entity_id.id === sink_id);
         if (anyFeederCarriesFuel(into_sink, sink.fuel_slot?.fuel.item_name)) {
-            logger.log(`Loop windows into ${sink_id}: kept always enabled, one of its inserters carries its fuel`);
+            logger.log(`Loop enable windows into ${sink_id}: kept always enabled, one of its inserters carries its fuel`);
             continue;
         }
         const output = stock.machines.find(it => it.machine_id === sink_id)?.outputs[sink.output.item_name];
@@ -172,10 +172,10 @@ export function loopInserterWindows(
             });
             const windows = lengths.length === 0 ? null : underBlockWindows(map, min_disabled_ticks, Math.max(...lengths));
             if (windows === null) {
-                logger.log(`Loop windows of ${inserter.entity_id.id}: kept always enabled, ${sink_id} is under its output block nearly all the time`);
+                logger.log(`Loop enable windows of ${inserter.entity_id.id}: kept always enabled, ${sink_id} is under its output block nearly all the time`);
                 continue;
             }
-            logger.log(`Loop windows of ${inserter.entity_id.id}: ${Math.max(...lengths)} ticks of each stretch ${sink_id} was under its output block, `
+            logger.log(`Loop enable windows of ${inserter.entity_id.id}: ${Math.max(...lengths)} ticks of each stretch ${sink_id} was under its output block, `
                 + `off for ${windows.shortest_off_ticks} to ${windows.longest_off_ticks} ticks at a time`);
             result.set(inserter.entity_id.id, { windows: windows.windows, item_name: Array.from(inserter.filtered_items).sort().join(",") });
         }
@@ -303,7 +303,7 @@ export function inLoopInserterWindows(
                 && from_loop.has(it.entity_id.id));
             const taken = windowsOf(windows, takers.map(it => it.entity_id.id));
             if (taken.length === 0) {
-                logger.log(`Loop windows of ${id}: kept always enabled, the takers of ${sink.entity_id.id} out of the loop have no windows`);
+                logger.log(`Loop enable windows of ${id}: kept always enabled, the takers of ${sink.entity_id.id} out of the loop have no enable windows`);
                 continue;
             }
             const output = outputWindowsOf(takers[0].sink.entity_id.id);
@@ -324,7 +324,7 @@ export function inLoopInserterWindows(
             placed = length >= span ? [OpenRange.from(0, span - 1)] : OpenRange.reduceRanges(Array.from({ length: hands }, (_, k) =>
                 windowFrom(phase + Math.round(k * window_cycle_ticks / hands), length, span)).flat());
         }
-        logger.log(`Loop windows of ${id} (${rule}): ${placed.map(range => `${range.start_inclusive}-${range.end_inclusive}`).join(", ")}`);
+        logger.log(`Loop enable windows of ${id} (${rule}): ${placed.map(range => `${range.start_inclusive}-${range.end_inclusive}`).join(", ")}`);
         result.set(id, { windows: placed, item_name: Array.from(inserter.filtered_items).sort().join(","), rule });
     }
     return result;
