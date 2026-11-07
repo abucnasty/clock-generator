@@ -238,8 +238,7 @@ const STRATEGY_ROWS: Record<StrategyId, StrategyCatalogRow> = {
         line: "Named after phase shift in signal processing: one batch of swings moved in time.",
         definition: "Takt Batches with one set of swings moved to another place in the window cycle. "
             + "The set is an output swing and the input swings planned with it. The limits of the machine set how far it can move.",
-        // TEXT TO APPROVE (manager, 2026-11-07): the practice text for the signal-processing source
-        practice: "A phase shift moves one repeating signal along the time axis against another of the same period. "
+        practice: "A phase shift moves one repeating signal along the time axis against another that repeats as often. "
             + "Source: Wikipedia, \"Phase (waves)\"; J. O. Smith III, Introduction to Digital Filters, \"Phase Delay\".",
     },
     pitch_pickups: {
