@@ -31,7 +31,7 @@ export interface StrategyCatalogRow {
 }
 
 /** Which router gave a clock's entities their strategies */
-export type Router = "direct" | "coordinated_sources";
+export type EnableControlStrategyRouter = "direct" | "coordinated_sources";
 
 /** What a router gives one entity: a strategy, or no enable windows and the reason it stays always enabled */
 export type EnableControl =
@@ -47,8 +47,8 @@ export interface SourceControl {
 
 /** The router of a clock and, for Coordinated Sources, what it gave each source's entities */
 export interface ClockRouting {
-    router: Router;
-    /** Set for coordinated_sources only: every source with a choice, in the order the router took them (from the output upstream) */
+    router: EnableControlStrategyRouter;
+    /** Set for coordinated_sources only: every source group, in the order the router took them (from the output upstream) */
     sources?: SourceControl[];
 }
 
@@ -59,7 +59,7 @@ export function catalogRowOf(strategy: Pick<ClockStrategy, "family" | "construct
 }
 
 /** The words of a router */
-export function routerRowOf(router: Router): StrategyCatalogRow {
+export function routerRowOf(router: EnableControlStrategyRouter): StrategyCatalogRow {
     return ROUTER_ROWS[router];
 }
 
@@ -159,7 +159,7 @@ const FAMILY_ROWS: Record<StrategyFamily, StrategyCatalogRow> = {
         practice: "Pitch is the time needed in a production area to make one container of products. Here the container is a full hand. "
             + "Source: Lean Enterprise Institute, Lean Lexicon, \"Pitch\" (https://www.lean.org/lexicon-terms/pitch/).",
     },
-    // the per-branch clock is a router, not a strategy (question 24); its family stays until P1 moves it to the router
+    // the per-branch clock is a router, not a strategy (question 24); its family id stays (`ClockStrategy.routing` names its router)
     "per-branch": {
         name: "Coordinated Sources",
         tuning_method: null,
@@ -186,7 +186,7 @@ const FAMILY_ROWS: Record<StrategyFamily, StrategyCatalogRow> = {
     },
 };
 
-const ROUTER_ROWS: Record<Router, StrategyCatalogRow> = {
+const ROUTER_ROWS: Record<EnableControlStrategyRouter, StrategyCatalogRow> = {
     // TEXT TO APPROVE (manager, 2026-11-07): Direct's line and definition
     direct: {
         name: "Direct",

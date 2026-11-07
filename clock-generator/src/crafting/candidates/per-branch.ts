@@ -2,7 +2,7 @@ import type { Config } from "../../config";
 import { defaultLogger, Logger } from "../../common/logger";
 import { OpenRange } from "../../data-types";
 import { Entity } from "../../entities";
-import type { AlwaysOnReason } from "../always-on-reasons";
+import type { AlwaysOnReason, AlwaysOnReasons } from "../always-on-reasons";
 import type { SerializableClockWindows } from "../clock";
 import { sharedItemDeadlockRisks } from "../deadlock-risk";
 import { BlueprintGenerationResult, GenerateClockOptions, PlanRun, planRun } from "../plan/plan-run";
@@ -10,6 +10,7 @@ import { backpressureLossVerdictOf } from "../trial";
 import type { BackpressureLossVerdict } from "../backpressure-loss";
 import { finishedClock, holdsWithMargin } from "./grouped-hands";
 import { partKey, type PerBranchInput, type PerBranchPart } from "./per-branch-parts";
+import type { EnableControl, SourceControl } from "../strategy-catalog";
 
 /**
  * The per-branch clock (DESIGN D7, PR 18): each part of the build gets the windows of the clock that fits it, all on one shared
@@ -108,6 +109,38 @@ export function partGroups(inserters: readonly GroupedInserter[], parts: readonl
         }
     }
     return groups.map(({ source, inserters: ids, choices }) => ({ source, inserters: ids, choices }));
+}
+
+/**
+ * What the router gave each entity of the groups, source by source in the order the groups were taken: the strategy of the part the
+ * group took, or, for an inserter the part leaves without windows, the reason it stays always enabled (the part's own, else the clock's:
+ * `always_on_reasons`). It never refuses: an inserter whose reason is not known, or whose part has no strategy, is left out of its
+ * source's entities and named in a debug line of the log.
+ */
+export function sourceControlsOf(
+    groups: readonly PartGroup[],
+    chosen: ReadonlyMap<string, number>,
+    always_on_reasons: AlwaysOnReasons,
+    logger: Logger,
+    build: string,
+): SourceControl[] {
+    return groups.map(group => {
+        const choice = group.choices[chosen.get(group.source)!];
+        const part = choice.parts[0];
+        const entities: Record<string, EnableControl> = {};
+        for (const id of group.inserters) {
+            if (choice.windows[id] !== null && choice.windows[id] !== undefined) {
+                if (part.strategy === undefined) { logger.debug(`Per-branch clock, ${build}: ${id} left out of the sources, the part ${partName(part)} has no strategy`); continue; }
+                const { family, construction } = part.strategy;
+                entities[id] = { kind: "strategy", family, ...(construction !== undefined && { construction }) };
+                continue;
+            }
+            const reason = choice.parts.map(it => it.always_on?.[id]).find(it => it !== undefined) ?? always_on_reasons[id];
+            if (reason === undefined) { logger.debug(`Per-branch clock, ${build}: ${id} left out of the sources, it is always enabled with no reason known`); continue; }
+            entities[id] = { kind: "always_on", reason };
+        }
+        return { source: group.source, entities };
+    });
 }
 
 /** What a composed clock was found to do: its clock, whether it holds as built, its wakeups a minute */
@@ -270,7 +303,8 @@ export function perBranchClock(config: Config, input: PerBranchInput, options: G
     logger.log(`Per-branch clock: ${groups.map(group => `${group.source} from ${partName(group.choices[current.get(group.source)!].parts[0])}`).join(", ")}; `
         + `${trials.size} clocks simulated`);
     const result = finishedClock(made, map, [], { ...options, loop_windows: false }, left_open);
-    return { ...result, per_branch: { parts: Object.fromEntries(groups.map(group => [group.source, partName(group.choices[current.get(group.source)!].parts[0])])) } };
+    return { ...result, per_branch: { parts: Object.fromEntries(groups.map(group => [group.source, partName(group.choices[current.get(group.source)!].parts[0])])),
+        sources: sourceControlsOf(groups, current, result.always_on_reasons ?? {}, logger, config.target_output.recipe) } };
 }
 
 /** The inserters a part leaves always enabled, with its reasons */

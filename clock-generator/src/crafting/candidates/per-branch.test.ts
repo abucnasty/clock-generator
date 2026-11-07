@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { partGroups, tiledWindows, upstreamOrder, type GroupedInserter } from "./per-branch";
+import { partGroups, sourceControlsOf, tiledWindows, upstreamOrder, type GroupedInserter } from "./per-branch";
 import { collectingParts, offerPart, partKey, partsWanted, perBranchInputOf, type PerBranchPart } from "./per-branch-parts";
 
 const window = (start: number, end: number) => ({ start, end });
@@ -84,5 +84,57 @@ describe("the collection of parts", () => {
         expect(outer.value.parts.map(it => it.name)).toEqual(["second"]);
         expect(outer.parts.map(it => it.name)).toEqual(["first", "second"]);
         expect(partsWanted()).toBe(false);
+    });
+});
+
+describe("what the router gave each entity", () => {
+    const takt = { family: "takt-batches", construction: "arithmetic" } as const;
+    const polling = { family: "round-robin-polling", construction: "grouped-hands" } as const;
+    const recommended = part("recommended", 20, { "inserter:1": [window(0, 4)], "inserter:2": [window(5, 6)], "inserter:3": [window(5, 6)], "inserter:4": [window(0, 0)] },
+        { alternative_id: "recommended", strategy: takt });
+    // inserter 1 has no windows in this part, which says why
+    const other = part("other", 20, { "inserter:2": [window(7, 8)], "inserter:3": [window(7, 8)], "inserter:4": [window(0, 0)] },
+        { strategy: polling, always_on: { "inserter:1": { kind: "busy", period_ticks: 20 } } });
+    const groups = partGroups(CHAIN, [recommended, other], 20);
+    const logged: string[] = [];
+    const logger = { log: () => { }, warn: () => { }, error: () => { }, debug: (message: string) => { logged.push(message); } };
+
+    it("lists every inserter of every group once, with the strategy of the part its group took", () => {
+        const sources = sourceControlsOf(groups, new Map([["machine:2", 0], ["machine:1", 1], ["belt:1", 0]]), {}, logger, "gear");
+        expect(sources.map(it => it.source)).toEqual(["machine:2", "machine:1", "belt:1"]);
+        expect(sources.flatMap(it => Object.keys(it.entities)).sort()).toEqual(CHAIN.map(it => it.id));
+        expect(sources[0].entities).toEqual({ "inserter:4": { kind: "strategy", family: "takt-batches", construction: "arithmetic" } });
+        expect(sources[1].entities).toEqual({
+            "inserter:2": { kind: "strategy", family: "round-robin-polling", construction: "grouped-hands" },
+            "inserter:3": { kind: "strategy", family: "round-robin-polling", construction: "grouped-hands" },
+        });
+    });
+
+    it("gives an inserter its part leaves without windows its always-on reason: the part's, else the clock's", () => {
+        const from_part = sourceControlsOf(groups, new Map([["machine:2", 0], ["machine:1", 0], ["belt:1", 1]]), {}, logger, "gear");
+        expect(from_part[2].entities).toEqual({ "inserter:1": { kind: "always_on", reason: { kind: "busy", period_ticks: 20 } } });
+        const bare = partGroups(CHAIN, [recommended, { ...other, always_on: undefined }], 20);
+        expect(sourceControlsOf(bare, new Map([["machine:2", 0], ["machine:1", 0], ["belt:1", 1]]), { "inserter:1": { kind: "loop" } }, logger, "gear")[2].entities)
+            .toEqual({ "inserter:1": { kind: "always_on", reason: { kind: "loop" } } });
+    });
+
+    it("leaves out an inserter with no reason known or a part with no strategy, and says so in the log, never refusing", () => {
+        const bare = partGroups(CHAIN, [recommended, { ...other, always_on: undefined }], 20);
+        const sources = sourceControlsOf(bare, new Map([["machine:2", 0], ["machine:1", 0], ["belt:1", 1]]), {}, logger, "gear");
+        expect(sources[2].entities).toEqual({});
+        expect(logged).toEqual(["Per-branch clock, gear: inserter:1 left out of the sources, it is always enabled with no reason known"]);
+        logged.length = 0;
+        const unknown = partGroups(CHAIN, [{ ...recommended, strategy: undefined }], 20);
+        expect(sourceControlsOf(unknown, new Map([["machine:2", 0], ["machine:1", 0], ["belt:1", 0]]), {}, logger, "gear").flatMap(it => Object.keys(it.entities))).toEqual([]);
+        expect(logged).toHaveLength(4);
+    });
+});
+
+describe("the strategy of a part", () => {
+    it("is the one of the alternative it is, and Round-Robin Polling by the grouped hands for a way", () => {
+        const alternative = part("exhaust", 24, { "inserter:1": [window(0, 3)] }, { alternative_id: "exhaust", verdict: "stable" });
+        const way = part("staged", 24, { "inserter:1": [window(1, 3)] });
+        const input = perBranchInputOf([{ alternatives: [{ id: "exhaust", strategy: { family: "exhaust" } }], parts: [alternative, way] }], "exhaust");
+        expect(input.parts.map(it => it.strategy)).toEqual([{ family: "exhaust" }, { family: "round-robin-polling", construction: "grouped-hands" }]);
     });
 });

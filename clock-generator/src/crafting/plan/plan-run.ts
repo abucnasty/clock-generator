@@ -67,6 +67,7 @@ import type { SearchReport } from "../candidates/search";
 import { ClockBelt, SerializableClockWindows, backedUpHandTicks, beltPickupSlackTicks, fuelHandRoomTicks, subtickClockForPeriod, withBeltPickupSlack, withWindowsAtLeast } from "../clock";
 import { ChestDrillClock, chestDrillClockLine, chestDrillWindows } from "../chest-drill-windows";
 import type { TurnGroup } from "../turn-groups";
+import type { SourceControl } from "../strategy-catalog";
 import { AlwaysOnReason, AlwaysOnReasons, alwaysOnReasons } from "../always-on-reasons";
 import { RunMemo, currentRunMemo } from "./run-memo";
 import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, beltPickupSlackTrial, runAsBuiltCheck, runClockOnBuild, trialWithLoopWindows } from "../trial";
@@ -319,9 +320,9 @@ export interface BlueprintGenerationResult {
     grouped_hands?: { shared_windows: boolean; harmonic_window_cycle?: true; guarded_takers?: GuardedTaker[] };
     /**
      * The windows are the per-branch clock's (candidates/per-branch.ts): which part each group of inserters, by the entity they take
-     * from, took its windows from; absent for any other clock
+     * from, took its windows from, and what the router gave each of their entities; absent for any other clock
      */
-    per_branch?: { parts: Record<string, string> };
+    per_branch?: { parts: Record<string, string>; sources: SourceControl[] };
     /** The windows are of a planning run that counts every belt pickup from its entry, not from the take that freed it (see clockWithPickupsFromTheirEntry) */
     pickups_from_entry?: true;
     /**

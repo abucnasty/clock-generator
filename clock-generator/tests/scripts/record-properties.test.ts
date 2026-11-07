@@ -25,7 +25,7 @@ const made = (override: Record<string, any> = {}): any => {
     const alternative: any = {
         id: 'even-hands', verdict: 'stable', deciders: 2,
         assessment: { holds: true, backpressure_loss: { survives: true }, wake_ups_per_minute: 3, signals_per_minute: 4 }, ranking: { meets_target_rate: true },
-        strategy: { family: 'time-division-slots', qualifiers: ['output-swings'], output_swings: 2 },
+        strategy: { family: 'time-division-slots', qualifiers: ['output-swings'], output_swings: 2, routing: { router: 'direct' } },
         result: {
             used_terminal_swing_count: 2,
             clock_windows: {}, unplanned_inserter_clocks: {},
