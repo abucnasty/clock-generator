@@ -22,7 +22,7 @@ describe("constructionOf", () => {
 
 describe("strategyOf", () => {
     test("batched swings are takt batches from the planning run and from arithmetic, round-robin polling from the grouped hands", () => {
-        expect(strategyOf("batched-swings", result(), findings())).toEqual({ family: "takt-batches", qualifiers: ["output-swings"], construction: "planning-run", output_swings: 2 });
+        expect(strategyOf("batched-swings", result(), findings())).toEqual({ family: "takt-batches", qualifiers: ["output-swings"], construction: "planning-run", output_swings: 2, routing: { router: "direct" } });
         expect(strategyOf("batched-swings", result({ window_maker: "arithmetic" }), findings()).construction).toBe("arithmetic");
         const grouped = strategyOf("batched-swings", result({ grouped_hands: { shared_windows: false } }), findings());
         expect(grouped).toMatchObject({ family: "round-robin-polling", construction: "grouped-hands" });
@@ -35,12 +35,12 @@ describe("strategyOf", () => {
 
     test("small batches are round-robin polling with a shorter window cycle", () => {
         const small = strategyOf("round-robin-polling", result({ primitive_grouped: {} }), findings({ definition_qualifiers: ["shorter-window-cycle"] }));
-        expect(small).toEqual({ family: "round-robin-polling", qualifiers: ["output-swings", "shorter-window-cycle"], construction: "grouped-hands", output_swings: 2 });
+        expect(small).toEqual({ family: "round-robin-polling", qualifiers: ["output-swings", "shorter-window-cycle"], construction: "grouped-hands", output_swings: 2, routing: { router: "direct" } });
     });
 
     test("a family of its own has no construction, and a search says so", () => {
         const searched = strategyOf("signal-offset", result({ window_maker: "arithmetic" }), findings({ definition_qualifiers: ["found-by-search"] }));
-        expect(searched).toEqual({ family: "signal-offset", qualifiers: ["output-swings", "found-by-search"], output_swings: 2 });
+        expect(searched).toEqual({ family: "signal-offset", qualifiers: ["output-swings", "found-by-search"], output_swings: 2, routing: { router: "direct" } });
         expect(strategyOf("euclidean-swings", result(), findings()).construction).toBe("planning-run");
     });
 
@@ -63,5 +63,19 @@ describe("strategyOf", () => {
         expect(strategyOf("batched-swings", result(), findings({ chest_drill_fallback: "tick-longer" })).qualifiers).toEqual(["output-swings", "drill-windows-longer"]);
         expect(strategyOf("batched-swings", result(), findings({ chest_drill_fallback: "always-on" })).qualifiers).toEqual(["output-swings", "drills-always-on"]);
         expect(strategyOf("batched-swings", result({ fuel_hand_room_ticks: { "inserter:3": 4 } }), findings()).qualifiers).toEqual(["output-swings", "fuel-hand-room"]);
+    });
+});
+
+describe("the router of a strategy", () => {
+    test("is direct for every clock but the per-branch one", () => {
+        expect(strategyOf("takt-batches", result(), findings()).routing).toEqual({ router: "direct" });
+        expect(strategyOf("batched-swings", result({ grouped_hands: { shared_windows: false } }), findings()).routing).toEqual({ router: "direct" });
+        expect(strategyOf("exhaust", result(), findings()).routing).toEqual({ router: "direct" });
+    });
+
+    test("is Coordinated Sources on the per-branch clock, with the sources the run recorded", () => {
+        const sources = [{ source: "machine:1", entities: { "inserter:1": { kind: "strategy" as const, family: "exhaust" as const } } }];
+        expect(strategyOf("per-branch", result({ per_branch: { parts: { "machine:1": "exhaust" }, sources } }), findings()).routing)
+            .toEqual({ router: "coordinated_sources", sources });
     });
 });

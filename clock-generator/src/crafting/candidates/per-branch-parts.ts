@@ -1,5 +1,6 @@
 import type { AlwaysOnReasons } from "../always-on-reasons";
 import type { SerializableClockWindows } from "../clock";
+import type { ClockStrategy } from "../clock-strategy";
 
 /**
  * The parts the per-branch clock is composed from (per-branch.ts): every clock the other makers built for the build, with
@@ -13,6 +14,11 @@ export interface PerBranchPart {
     alternative_id?: string;
     /** The alternative's verdict; absent for a way */
     verdict?: "stable" | "no recovery" | "unstable";
+    /**
+     * The strategy of its clock (family and construction): set for an alternative by `perBranchInputOf`, from the alternatives of the
+     * runs; a way of the grouped hands rule has none and is Round-Robin Polling by the grouped hands construction
+     */
+    strategy?: Pick<ClockStrategy, "family" | "construction">;
     /** The ticks of its period, the period its windows are of */
     period_ticks: number;
     windows: SerializableClockWindows;
@@ -63,9 +69,13 @@ export function partKey(part: Pick<PerBranchPart, "period_ticks" | "windows">): 
     return `${part.period_ticks}|${ids.map(id => `${id}:${part.windows[id].map(range => `${range.start}-${range.end}`).join(",")}`).join(";")}`;
 }
 
-/** What `perBranchInputOf` reads of a run: its parts, and the runs listed after it */
+/** The strategy of a way: the grouped hands rule makes every way, so each is Round-Robin Polling by the grouped hands construction */
+const WAY_STRATEGY: Pick<ClockStrategy, "family" | "construction"> = { family: "round-robin-polling", construction: "grouped-hands" };
+
+/** What `perBranchInputOf` reads of a run: its parts, the alternatives it lists (for their strategies), and the runs listed after it */
 interface RunWithParts {
     parts?: PerBranchPart[];
+    alternatives?: readonly { id: string; strategy: Pick<ClockStrategy, "family" | "construction"> }[];
     also?: RunWithParts[];
 }
 
@@ -77,12 +87,18 @@ interface RunWithParts {
  */
 export function perBranchInputOf(runs: readonly (RunWithParts | null)[], recommended_id: string): PerBranchInput {
     const all: PerBranchPart[] = [];
+    const strategies = new Map<string, Pick<ClockStrategy, "family" | "construction">>();
     const walk = (run: RunWithParts | null | undefined): void => {
         if (run === null || run === undefined) return;
+        for (const alternative of run.alternatives ?? []) strategies.set(alternative.id, alternative.strategy);
         all.push(...(run.parts ?? []));
         run.also?.forEach(walk);
     };
     runs.forEach(walk);
+    for (const [index, part] of all.entries()) {
+        const strategy = part.alternative_id === undefined ? WAY_STRATEGY : strategies.get(part.alternative_id);
+        if (strategy !== undefined) all[index] = { ...part, strategy: { family: strategy.family, ...(strategy.construction !== undefined && { construction: strategy.construction }) } };
+    }
     const ordered = [...all.filter(part => part.alternative_id !== undefined && part.verdict === "stable"),
         ...all.filter(part => part.alternative_id === undefined)];
     const kept = new Map<string, PerBranchPart>();

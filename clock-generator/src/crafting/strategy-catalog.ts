@@ -48,7 +48,7 @@ export interface SourceControl {
 /** The router of a clock and, for Coordinated Sources, what it gave each source's entities */
 export interface ClockRouting {
     router: Router;
-    /** Set for coordinated_sources only: every source with a choice, in the order the router took them (from the output upstream) */
+    /** Set for coordinated_sources only: every source group, in the order the router took them (from the output upstream) */
     sources?: SourceControl[];
 }
 
@@ -159,7 +159,7 @@ const FAMILY_ROWS: Record<StrategyFamily, StrategyCatalogRow> = {
         practice: "Pitch is the time needed in a production area to make one container of products. Here the container is a full hand. "
             + "Source: Lean Enterprise Institute, Lean Lexicon, \"Pitch\" (https://www.lean.org/lexicon-terms/pitch/).",
     },
-    // the per-branch clock is a router, not a strategy (question 24); its family stays until P1 moves it to the router
+    // the per-branch clock is a router, not a strategy (question 24); its family id stays (`ClockStrategy.routing` names its router)
     "per-branch": {
         name: "Coordinated Sources",
         tuning_method: null,
