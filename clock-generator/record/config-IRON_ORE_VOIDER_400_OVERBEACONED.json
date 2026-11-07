@@ -1,5 +1,5 @@
 {
-  "format": "clock-record-1",
+  "format": "clock-record-2",
   "job": "config-IRON_ORE_VOIDER_400_OVERBEACONED",
   "group": "config",
   "name": "IRON_ORE_VOIDER_400_OVERBEACONED",
@@ -15,7 +15,7 @@
     "inserter:1": "1-47,56-99,105-135"
   },
   "alternatives": [
-    {"id": "takt_batches_observed", "verdict": "stable", "holds": true, "rate": 400, "supply": null, "period": 144, "wake_ups": 0, "descriptions_cut": 0, "clock_sha256": "d540d9e19d7e0a96c8109a0922d9a9d1dac1ff4c51cc0ea42b07a2bd6a52c49f", "windows_sha256": "fa65d5183d0a64f9a1f8a9b6b3a712bc31115ebbffc6640b8040ad717610b7b1", "text_sha256": "4540bc3cb4a50746e160147200569dfd9d9add3106fb755defc55369483e38b3", "results_sha256": "cfd76bca393c0601724474d6bcd55fce78b9a2844520fb43543b81793abd0ca8"},
-    {"id": "time_division_windows", "verdict": "stable", "holds": true, "rate": 400, "supply": null, "period": 144, "wake_ups": 0, "descriptions_cut": 0, "clock_sha256": "719cfc482830f08461177b8cd086e39d44271fdf480c4767780adfc0a7d90d61", "windows_sha256": "697ceea34661a16ef20eaa11b3ae4aa41730c0ee363ba5c8dbfe5af1bb73a944", "text_sha256": "e17f6c7c666c51500991f817cae0942266c1e858e76eec96dd2118071aa3f567", "results_sha256": "7d636c30415a24b78635f4ea4a04285f087b393678fdb7b160ef5faf0ff7f889"}
+    {"id": "takt_batches_observed", "verdict": "stable", "holds": true, "rate": 400, "supply": null, "window_cycle_ticks": 144, "wake_ups": 0, "descriptions_cut": 0, "clock_sha256": "d540d9e19d7e0a96c8109a0922d9a9d1dac1ff4c51cc0ea42b07a2bd6a52c49f", "windows_sha256": "fa65d5183d0a64f9a1f8a9b6b3a712bc31115ebbffc6640b8040ad717610b7b1", "text_sha256": "4540bc3cb4a50746e160147200569dfd9d9add3106fb755defc55369483e38b3", "results_sha256": "cfd76bca393c0601724474d6bcd55fce78b9a2844520fb43543b81793abd0ca8"},
+    {"id": "time_division_windows", "verdict": "stable", "holds": true, "rate": 400, "supply": null, "window_cycle_ticks": 144, "wake_ups": 0, "descriptions_cut": 0, "clock_sha256": "719cfc482830f08461177b8cd086e39d44271fdf480c4767780adfc0a7d90d61", "windows_sha256": "697ceea34661a16ef20eaa11b3ae4aa41730c0ee363ba5c8dbfe5af1bb73a944", "text_sha256": "e17f6c7c666c51500991f817cae0942266c1e858e76eec96dd2118071aa3f567", "results_sha256": "7d636c30415a24b78635f4ea4a04285f087b393678fdb7b160ef5faf0ff7f889"}
   ]
 }

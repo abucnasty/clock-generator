@@ -308,14 +308,14 @@ export function historicalPinMismatches(history: ClockHistory["cases"], current:
     return found;
 }
 
-/** An alternative of a record job (`record/<job>.json`, format clock-record-1): the fields a control's pin is checked against */
+/** An alternative of a record job (`record/<job>.json`, format clock-record-2): the fields a control's pin is checked against */
 export interface RecordAlternative {
     id: string;
     verdict: string;
     holds: boolean;
     rate: number;
     supply: string | null;
-    period: number;
+    window_cycle_ticks: number;
     clock_sha256: string;
 }
 
@@ -383,8 +383,8 @@ export function recordMismatches(cases: Record<string, ClockControl>, link: Reco
             found.push(`${name}: the pin names clock ${pin.clock_sha256.slice(0, 12)} and ${where} makes ${alternative.clock_sha256.slice(0, 12)}: the generation moved, so the game recording is of another clock`);
         }
         const shape = (window_cycle_ticks: number, verdict: string, selection: GenerationPin["selection"]) =>
-            ({period: window_cycle_ticks, verdict, selection: {id: selection.id, holds: selection.holds, rate: selection.rate, supply: selection.supply}});
-        const asPinned = shape(alternative.period, alternative.verdict, alternative);
+            ({window_cycle_ticks, verdict, selection: {id: selection.id, holds: selection.holds, rate: selection.rate, supply: selection.supply}});
+        const asPinned = shape(alternative.window_cycle_ticks, alternative.verdict, alternative);
         const pinned = shape(pin.period, pin.verdict, pin.selection);
         if (JSON.stringify(asPinned) !== JSON.stringify(pinned)) found.push(`${name}: the pin (${JSON.stringify(pinned)}) and ${where} (${JSON.stringify(asPinned)}) differ`);
         const offered = link.offered?.includes(name) ?? false;

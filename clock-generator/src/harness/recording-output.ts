@@ -17,7 +17,7 @@ interface WindowCycleOutput extends WindowCycleRange {
  * Sample ranges of the complete window cycles in a series of recorded clock values. A window cycle starts where the
  * value falls below the previous sample's: the clock may count from 0 or from 1, so the wrap is the only sure sign.
  * The first sample starts a window cycle only when it holds the lowest value the clock reaches, and the last window cycle is
- * complete only when its last sample holds the highest, so a recording that begins or ends mid-period loses its ends.
+ * complete only when its last sample holds the highest, so a recording that begins or ends in the middle of a window cycle loses its ends.
  */
 export function clockWindowCycles(values: number[]): WindowCycleRange[] {
     if (values.length === 0) {

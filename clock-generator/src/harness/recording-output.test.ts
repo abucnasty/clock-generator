@@ -32,17 +32,17 @@ function recording(clock_values: number[]) {
     });
 }
 
-describe("clockPeriods", () => {
-    it("starts a period where the clock value falls, whatever the clock counts from", () => {
+describe("clockWindowCycles", () => {
+    it("starts a window cycle where the clock value falls, whatever the clock counts from", () => {
         expect(clockWindowCycles([0, 1, 2, 3, 0, 1, 2, 3])).toEqual([{ start: 0, end: 4 }, { start: 4, end: 8 }]);
         expect(clockWindowCycles([1, 2, 3, 4, 1, 2, 3, 4])).toEqual([{ start: 0, end: 4 }, { start: 4, end: 8 }]);
     });
 
-    it("leaves out the ends of a recording that begins and ends in the middle of a period", () => {
+    it("leaves out the ends of a recording that begins and ends in the middle of a window cycle", () => {
         expect(clockWindowCycles([2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1])).toEqual([{ start: 2, end: 6 }, { start: 6, end: 10 }]);
     });
 
-    it("has no periods without clock values", () => {
+    it("has no window cycles without clock values", () => {
         expect(clockWindowCycles([])).toEqual([]);
     });
 });
@@ -77,8 +77,8 @@ describe("outputInserters through a container", () => {
     });
 });
 
-describe("outputPerPeriod", () => {
-    it("sums the drops of the output inserters in each period, counting a drop on the boundary in the period that starts there", () => {
+describe("outputPerWindowCycle", () => {
+    it("sums the drops of the output inserters in each window cycle, counting a drop on the boundary in the window cycle that starts there", () => {
         expect(outputPerWindowCycle(recording([1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4]), ["electronic-circuit"])).toEqual([
             { start: 0, end: 4, items: 2 },
             { start: 4, end: 8, items: 0 },
@@ -86,7 +86,7 @@ describe("outputPerPeriod", () => {
         ]);
     });
 
-    it("leaves out a last period the recording ends in the middle of", () => {
+    it("leaves out a last window cycle the recording ends in the middle of", () => {
         expect(outputPerWindowCycle(recording([1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3]), ["electronic-circuit"]).map(window_cycle => window_cycle.items)).toEqual([2, 0]);
     });
 });

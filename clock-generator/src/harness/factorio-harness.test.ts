@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import path from "path";
 import { encodeBlueprintFile } from "../blueprints/serde";
 import {
-    assertClockAttached, assertClockPriming, assertRecordableTicks, buildPartsMissingFromConfig, stagedBuildOrder, clockOfBlueprintString, clockPeriodTicks, matchBuiltCopies, matchBuiltDrills, matchBuiltInserters, MAX_RECORDED_TICKS,
+    assertClockAttached, assertClockPriming, assertRecordableTicks, buildPartsMissingFromConfig, stagedBuildOrder, clockOfBlueprintString, clockWindowCycleTicks, matchBuiltCopies, matchBuiltDrills, matchBuiltInserters, MAX_RECORDED_TICKS,
     factorioDataDir, missingFromConfigMessage, recordedTicks, recordInFactorio, scheduledDrillIds, scheduledInserterIds,
     drillResourceOf,
 } from "./factorio-harness";
@@ -271,19 +271,19 @@ describe("the most ticks one run in Factorio records", () => {
         }
     });
 
-    it("reads the period a clock blueprint counts: from 1 with something adding the 1, from 0 before that", () => {
-        expect(clockPeriodTicks(clock(1728, ONE_BASED))).toBe(1728);
+    it("reads the window cycle a clock blueprint counts: from 1 with something adding the 1, from 0 before that", () => {
+        expect(clockWindowCycleTicks(clock(1728, ONE_BASED))).toBe(1728);
         // the game keeps the whole part of a constant: 90.947 counts 1 to 90
-        expect(clockPeriodTicks(clock(90.94736842105263, ONE_BASED))).toBe(90);
-        expect(clockPeriodTicks(clock(1728, [], [{ signal: { name: "signal-clock", type: "virtual" }, constant: 1 }]))).toBe(1728);
+        expect(clockWindowCycleTicks(clock(90.94736842105263, ONE_BASED))).toBe(90);
+        expect(clockWindowCycleTicks(clock(1728, [], [{ signal: { name: "signal-clock", type: "virtual" }, constant: 1 }]))).toBe(1728);
         // a clock made before 0.6.0 counts 0 to 89 while under 89.947
-        expect(clockPeriodTicks(clock(89.94736842105263))).toBe(90);
+        expect(clockWindowCycleTicks(clock(89.94736842105263))).toBe(90);
         // a scaffold without a clock of the generator's, and something that is no blueprint
-        expect(clockPeriodTicks(encodeBlueprintFile({ blueprint: { entities: [{ name: "decider-combinator" }] } } as any))).toBeNull();
-        expect(clockPeriodTicks("not a blueprint")).toBeNull();
+        expect(clockWindowCycleTicks(encodeBlueprintFile({ blueprint: { entities: [{ name: "decider-combinator" }] } } as any))).toBeNull();
+        expect(clockWindowCycleTicks("not a blueprint")).toBeNull();
     });
 
-    it("counts what a clocked recording holds: whole periods until at least the ticks asked for", () => {
+    it("counts what a clocked recording holds: whole window cycles until at least the ticks asked for", () => {
         expect(recordedTicks(36_000, 1728)).toBe(36_288);
         expect(recordedTicks(36_000, 90)).toBe(36_000);
         expect(recordedTicks(600, 100_000)).toBe(100_000);
@@ -292,16 +292,16 @@ describe("the most ticks one run in Factorio records", () => {
         expect(() => assertRecordableTicks(36_000, 1728)).not.toThrow();
     });
 
-    it("refuses a request whose whole periods pass the limit, and names the most that fits", () => {
+    it("refuses a request whose whole window cycles pass the limit, and names the most that fits", () => {
         // 72,000 ticks on a clock of 1728 would record 42 window cycles, 72,576 ticks
         expect(() => assertRecordableTicks(72_000, 1728)).toThrow(
-            "A request for 72000 ticks records 72576: whole periods of the clock, which counts 1728 ticks. "
-            + "That is over the limit of 72000 ticks (20 minutes of game time) for one run in Factorio. The most that fits is 70848 ticks (41 periods).");
+            "A request for 72000 ticks records 72576: whole window cycles of the clock, which counts 1728 ticks. "
+            + "That is over the limit of 72000 ticks (20 minutes of game time) for one run in Factorio. The most that fits is 70848 ticks (41 window cycles).");
         expect(() => assertRecordableTicks(70_848, 1728)).not.toThrow();
         expect(() => assertRecordableTicks(70_849, 1728)).toThrow("records 72576");
         // a clock longer than the limit records one window cycle however little is asked for
         expect(() => assertRecordableTicks(600, 100_000)).toThrow("A request for 600 ticks records 100000");
-        expect(() => assertRecordableTicks(600, 100_000)).toThrow("Not one period of this clock fits.");
+        expect(() => assertRecordableTicks(600, 100_000)).toThrow("Not one window cycle of this clock fits.");
         // without a clock the request is what is recorded
         expect(() => assertRecordableTicks(72_000, null)).not.toThrow();
         expect(() => assertRecordableTicks(72_001, null)).toThrow("A recording of 72001 ticks is over the limit of 72000 ticks (20 minutes of game time)");
@@ -501,9 +501,9 @@ describe("a clock the build came with", () => {
         control_behavior: { decider_conditions: { conditions: [{ first_signal: { name: "signal-clock" }, constant }], outputs: [{ signal: { name: "signal-clock" } }] } },
     }] } } as any);
 
-    it("is cut by the period it is named with, which the limit on a recording is checked against", async () => {
-        await expect(run({ built_clock: { counter: 5, period: 100_000, first_value: 0 } }, counter(99_999))).rejects.toThrow("records 100000");
-        await expect(run({ built_clock: { counter: 5, period: 216, first_value: 0 } }, counter(215))).rejects.toThrow("Factorio not found");
+    it("is cut by the window cycle it is named with, which the limit on a recording is checked against", async () => {
+        await expect(run({ built_clock: { counter: 5, window_cycle_ticks: 100_000, first_value: 0 } }, counter(99_999))).rejects.toThrow("records 100000");
+        await expect(run({ built_clock: { counter: 5, window_cycle_ticks: 216, first_value: 0 } }, counter(215))).rejects.toThrow("Factorio not found");
     });
 
     it("is told the copies of the config only with a clock to wire to them", async () => {
@@ -516,7 +516,7 @@ describe("a clock the build came with", () => {
     });
 
     it("is refused with an unclocked run, a staged start, or a blueprint it does not fit", async () => {
-        const built_clock = { counter: 5, period: 216, first_value: 0 as const };
+        const built_clock = { counter: 5, window_cycle_ticks: 216, first_value: 0 as const };
         await expect(run({ built_clock, unclocked: true }, counter(215))).rejects.toThrow("kept or replaced");
         await expect(run({ built_clock, staged_start: { build_order: "ascending" } }, counter(215))).rejects.toThrow("kept or replaced");
         await expect(run({ built_clock }, counter(100))).rejects.toThrow("not the 216 asked for");
@@ -569,7 +569,7 @@ describe("a clock placed first in a staged start", () => {
         expect(() => assertClockPriming(readings(500, [0, 1, 2, 3]), 2, 40)).toThrow("read 2 at tick 502, before its last reading");
         expect(() => assertClockPriming(readings(500, [0, 1, 1, 1]), 7, 40)).toThrow("never read 7: it read 0, 1, 1, 1");
         const slow = readings(500, [...Array.from({ length: 83 }, () => 1), 5]);
-        expect(() => assertClockPriming(slow, 5, 40)).toThrow("took 83 ticks to read 5, over two periods of 40 ticks and two");
+        expect(() => assertClockPriming(slow, 5, 40)).toThrow("took 83 ticks to read 5, over two window cycles of 40 ticks and two");
     });
 
     const placed = { tick: 500, counter: 0, main_unit: 900, combinators: [900, 901, 902], cell_ghosts: 20,
@@ -604,7 +604,7 @@ describe("a clock placed first in a staged start", () => {
         await expect(run({ config: {}, staged_start: { build_order: "descending", clock_phase: 13 } })).rejects.toThrow("only with a generated clock");
         await expect(run({ clock: swapped, config: {}, unclocked: true, staged_start: { clock_phase: 13 } })).rejects.toThrow("only with a generated clock");
         for (const phase of [-1, 41, 1.5]) {
-            await expect(run({ clock: swapped, config: {}, staged_start: { clock_phase: phase } })).rejects.toThrow(`from 0 to its period of 40 ticks, not ${phase}`);
+            await expect(run({ clock: swapped, config: {}, staged_start: { clock_phase: phase } })).rejects.toThrow(`from 0 to its window cycle of 40 ticks, not ${phase}`);
         }
         await expect(run({ clock: swapped, config: {}, copies: 2, staged_start: { build_order: "descending", clock_phase: 13 } })).rejects.toThrow("Factorio not found");
         await expect(run({ clock: swapped, config: {}, staged_start: { clock_phase: 0 } })).rejects.toThrow("Factorio not found");

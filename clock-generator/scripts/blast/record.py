@@ -50,14 +50,16 @@ hold (expected texts, deciders, always-on reasons, the fuel view). `check` fails
 that failed; it fails on a job file with no `checks`, one the module could not run on, or one judged by another version of the module, as it
 does for the properties (--allow-unchecked lists them and goes on).
 
-The format (clock-record-1) is documented in clock-generator/record/README.md. Field names are stable: a new field is a new
-format number.
+The format (clock-record-2) is documented in clock-generator/record/README.md. Field names are stable: a new field is a new
+format number. `worse` still reads a base record in clock-record-1, whose alternatives name the window cycle time `period`.
 """
 import glob, hashlib, json, os, re, sys
 
-FORMAT = 'clock-record-1'
+FORMAT = 'clock-record-2'
+# the formats a base record may be in: clock-record-1 named the window cycle time of an alternative `period`
+BASE_FORMATS = ('clock-record-1', FORMAT)
 # the fields of an alternative, in the order they are written
-ALTERNATIVE_FIELDS = ['id', 'verdict', 'holds', 'rate', 'supply', 'period', 'wake_ups', 'descriptions_cut', 'clock_sha256',
+ALTERNATIVE_FIELDS = ['id', 'verdict', 'holds', 'rate', 'supply', 'window_cycle_ticks', 'wake_ups', 'descriptions_cut', 'clock_sha256',
                       'windows_sha256', 'text_sha256', 'results_sha256']
 # wake-ups a minute are written to this many decimals: the record is read by people, and the results digest holds the rest
 WAKE_UP_DECIMALS = 3
@@ -95,7 +97,8 @@ def project(job, config_sha256):
         return {**base, 'error': job['error']}
     alternatives = []
     for a in job['alternatives']:
-        row = {f: a.get(f) for f in ALTERNATIVE_FIELDS}
+        # a job file written before the window cycle was named has it as `period`
+        row = {f: a.get(f) if f != 'window_cycle_ticks' or f in a else a.get('period') for f in ALTERNATIVE_FIELDS}
         if row['wake_ups'] is not None:
             row['wake_ups'] = round(row['wake_ups'], WAKE_UP_DECIMALS)
         alternatives.append(row)
@@ -291,6 +294,19 @@ def load_record(directory):
     return out
 
 
+def load_base_record(directory):
+    """the committed records of the base's folder, {job key: record}, each in the current format: a clock-record-1 file (the format of a
+    base from before the window cycle time was named) has `period` in its alternatives, which is read as `window_cycle_ticks`"""
+    out = load_record(directory)
+    for key, record in out.items():
+        if record.get('format') not in BASE_FORMATS:
+            die(f"{key}: the base record is in format {record.get('format')!r}; this reads {' and '.join(BASE_FORMATS)}")
+        if record['format'] != FORMAT and 'alternatives' in record:
+            alternatives = [{('window_cycle_ticks' if f == 'period' else f): v for f, v in a.items()} for a in record['alternatives']]
+            out[key] = {**record, 'format': FORMAT, 'alternatives': alternatives}
+    return out
+
+
 def render(record):
     """the file text of a record: one line a field, a window list a line, an alternative a line; the same text for the same record"""
     dump = lambda x: json.dumps(x, ensure_ascii=False, separators=(', ', ': '))
@@ -451,7 +467,7 @@ def main_worse(opts):
     if not base_dir:
         die('worse takes --base <the record folder of the base>')
     directory = opts.get('dir') or os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'record')
-    base, change = load_record(base_dir), load_record(directory)
+    base, change = load_base_record(base_dir), load_record(directory)
     if not base or not change:
         die(f'no records in {base_dir if not base else directory}')
     moves = ''

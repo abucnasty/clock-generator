@@ -262,7 +262,7 @@ describe("the record", () => {
     });
     describe.each(Object.entries(RECORD_LINKS))("%s", (file, link) => {
         const controls = readControls(file);
-        test("each generation pin is the record's: clock hash, period, verdict, selection and earlier clock", () => {
+        test("each generation pin is the record's: clock hash, window cycle time, verdict, selection and earlier clock", () => {
             expect(recordMismatches(controls.cases, link, readRecordJob, link.runs)).toEqual([]);
         });
         test("every generation pin has a job in the record", () => {
@@ -321,7 +321,7 @@ describe("the record", () => {
 
     describe("recordMismatches", () => {
         const pinned = "a".repeat(64), other = "b".repeat(64);
-        const alternative = (extra: object = {}) => ({id: "x", verdict: "stable", holds: true, rate: 1, supply: null, period: 10, clock_sha256: pinned, ...extra});
+        const alternative = (extra: object = {}) => ({id: "x", verdict: "stable", holds: true, rate: 1, supply: null, window_cycle_ticks: 10, clock_sha256: pinned, ...extra});
         const job = (alternatives = [alternative()], selected = "x"): RecordJob => ({job: "config-ONE", selected, alternatives});
         const entry = (extra: Partial<ClockControl> = {}): ClockControl => ({
             recorded: {pr: 1, commit: "c0ffee", frozen_head: null, clock_basis: "capture", clock_sha256: pinned},
@@ -342,10 +342,10 @@ describe("the record", () => {
             expect(found[0]).toContain("one: the pin names clock aaaaaaaaaaaa");
             expect(found[0]).toContain("record job config-ONE, alternative x makes bbbbbbbbbbbb");
         });
-        test("fails a job missing from the record, an alternative that is gone, and a period, verdict or supply that differ", () => {
+        test("fails a job missing from the record, an alternative that is gone, and a window cycle time, verdict or supply that differ", () => {
             expect(check(undefined)[0]).toContain("record job config-ONE has no result");
             expect(check(job([alternative({id: "y"})]))[0]).toContain("has no alternative x");
-            expect(check(job([alternative({period: 12})]))[0]).toContain("differ");
+            expect(check(job([alternative({window_cycle_ticks: 12})]))[0]).toContain("differ");
             expect(check(job([alternative({verdict: "unstable"})]))[0]).toContain("differ");
             expect(check(job([alternative({supply: "moving"})]))[0]).toContain("differ");
         });

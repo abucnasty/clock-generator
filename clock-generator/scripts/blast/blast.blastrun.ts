@@ -212,7 +212,7 @@ function clocksOf(config: any, expand: ExpandHistory | undefined, key: string, p
         const with_text = { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule };
         return {
             id: a.id, ...(a.maker !== undefined && { maker: a.maker }), verdict: a.verdict, holds: a.assessment.holds, rate: a.assessment.items_per_second,
-            supply: a.belt?.kind ?? null, period: a.result.subtick?.clock.window_cycle_ticks ?? a.result.simulation_duration.ticks,
+            supply: a.belt?.kind ?? null, window_cycle_ticks: a.result.subtick?.clock.window_cycle_ticks ?? a.result.simulation_duration.ticks,
             wake_ups: a.assessment.wake_ups?.wake_ups_per_minute ?? a.result.stability_check?.as_built?.wake_ups?.wake_ups_per_minute ?? null,
             clock_sha256: sha(clockIdentity(exported)), text_sha256: sha(with_text), descriptions_cut: descriptionsCut(a.result), windows_sha256: sha(a.result.clock_windows), windows: a.result.clock_windows,
             ...digestAlternative(a, expand),

@@ -3,15 +3,15 @@ import { encodeBlueprintFile } from "../blueprints/serde";
 
 /**
  * A clock the build came with, named by the test that records it, in place of a description the build need not have: the
- * harness finds the clock of a generated clock's blueprint by its description ("Clock for ...", see clockPeriodTicks), and
+ * harness finds the clock of a generated clock's blueprint by its description ("Clock for ...", see clockWindowCycleTicks), and
  * the recorder mod does too, but a clock built by hand has none.
  */
 export interface BuiltClock {
     /** The entity number, in the blueprint, of the decider combinator that counts the clock on the clock signal */
     counter: number;
-    /** Ticks the clock counts before it starts over */
-    period: number;
-    /** What the clock shows in the first tick of a period, 0 or 1 */
+    /** Ticks the clock counts before it starts over: its window cycle */
+    window_cycle_ticks: number;
+    /** What the clock shows in the first tick of a window cycle, 0 or 1 */
     first_value: 0 | 1;
 }
 
@@ -31,7 +31,7 @@ interface Entity {
  * The blueprint with "Clock for " put before the description of the counter of the clock the build came with, so the
  * game finds it as it finds a generated clock: to record it, or, when another clock is put in its place, to remove it
  * with the combinators and wires that hang on it. The string the test gave is not changed. Throws when the entity is not
- * a counter of the clock signal, or when its constant is not the period asked for.
+ * a counter of the clock signal, or when its constant is not the window cycle asked for.
  */
 export function blueprintWithNamedClock(blueprint: string, built_clock: BuiltClock): string {
     const file = JSON.parse(zlib.inflateSync(Buffer.from(blueprint.slice(1), "base64")).toString("utf-8"));
@@ -43,8 +43,8 @@ export function blueprintWithNamedClock(blueprint: string, built_clock: BuiltClo
     if (counter.name !== "decider-combinator") {
         throw new Error(`Entity ${built_clock.counter} is a ${counter.name}: the counter of a clock is a decider combinator`);
     }
-    if (!Number.isInteger(built_clock.period) || built_clock.period < 1) {
-        throw new Error(`The period of the clock is ${built_clock.period}: it is a whole number of ticks`);
+    if (!Number.isInteger(built_clock.window_cycle_ticks) || built_clock.window_cycle_ticks < 1) {
+        throw new Error(`The window cycle of the clock is ${built_clock.window_cycle_ticks}: it is a whole number of ticks`);
     }
     const decider = counter.control_behavior?.decider_conditions;
     if (!(decider?.outputs ?? []).some(output => output.signal?.name === CLOCK_SIGNAL)) {
@@ -54,9 +54,9 @@ export function blueprintWithNamedClock(blueprint: string, built_clock: BuiltClo
     if (counted?.first_signal?.name === CLOCK_SIGNAL && (counted.comparator ?? "<") === "<" && typeof counted.constant === "number") {
         // it counts from first_value up to the constant, then starts over
         const counts = Math.trunc(counted.constant) + 1 - built_clock.first_value;
-        if (counts !== built_clock.period) {
-            throw new Error(`Decider ${built_clock.counter} counts ${built_clock.first_value} to ${Math.trunc(counted.constant)}, a period of ${counts} ticks, `
-                + `not the ${built_clock.period} asked for`);
+        if (counts !== built_clock.window_cycle_ticks) {
+            throw new Error(`Decider ${built_clock.counter} counts ${built_clock.first_value} to ${Math.trunc(counted.constant)}, a window cycle of ${counts} ticks, `
+                + `not the ${built_clock.window_cycle_ticks} asked for`);
         }
     }
     const other = entities.find(entity => entity !== counter && entity.name === "decider-combinator"
@@ -76,7 +76,7 @@ export function recordingOfBuiltClock(written: { clock?: { values: unknown } }, 
     if (!written.clock) {
         throw new Error("The recorder found no clock in the build, so the recording is not cut by the clock that was named");
     }
-    return { ...written, clock: { ...written.clock, first_value: built_clock.first_value, period: built_clock.period } };
+    return { ...written, clock: { ...written.clock, first_value: built_clock.first_value, window_cycle_ticks: built_clock.window_cycle_ticks } };
 }
 
 /** The combinators the harness mod follows from a clock: the clock is the chain of these wired to its counter */
@@ -84,7 +84,7 @@ const CLOCK_COMBINATORS = new Set(["decider-combinator", "arithmetic-combinator"
 
 /**
  * What a clock built by hand is, for a control to name it by (the counterpart of `clockIdentity` for a generated clock):
- * the combinators wired to its counter, with what they are set to and the wires between them, and the period and first
+ * the combinators wired to its counter, with what they are set to and the wires between them, and the window cycle and first
  * value it was named with. Where the combinators stand, their numbers in the blueprint and their descriptions are not in
  * it, so the identity stays the same when the build is moved or its text is edited.
  */
@@ -112,7 +112,8 @@ export function builtClockIdentity(blueprint: string, built_clock: BuiltClock): 
     const members = entities.filter(entity => found.has(entity.entity_number)).sort((a, b) => a.entity_number - b.entity_number);
     const number = new Map(members.map((entity, index) => [entity.entity_number, index + 1]));
     return {
-        period: built_clock.period,
+        // `period` stays the key of the identity: the hash of a hand-made clock's identity is pinned in the game controls
+        period: built_clock.window_cycle_ticks,
         first_value: built_clock.first_value,
         counter: number.get(built_clock.counter),
         combinators: members.map(entity => ({ name: entity.name, direction: entity.direction ?? 0, control_behavior: entity.control_behavior })),

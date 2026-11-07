@@ -14,7 +14,7 @@ import { parseRecording } from "../verification/recording";
  */
 
 /** Bump when what is kept per recording, or how a key is made, changes: every key made before is then another key */
-export const RECORDING_CACHE_PROTOCOL = 1;
+export const RECORDING_CACHE_PROTOCOL = 2;
 
 /** The environment variable that sets how the store is used: unset or "on" (look up, store), "off" (neither), "refresh" (always run the game, store the result) */
 export const RECORDING_CACHE_MODE_VARIABLE = "CLOCK_RECORDING_CACHE";

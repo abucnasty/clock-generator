@@ -81,6 +81,13 @@ def load_map(path):
 def is_check(j):
     return 'refused' in j
 
+def field_of(alternative, name):
+    """a field of an alternative; a job file written before the window cycle was named has it as `period`"""
+    if name == 'window_cycle_ticks' and name not in alternative:
+        return alternative['period']
+    return alternative[name]
+
+
 def results_moved(b, a):
     """The components of the results digest that differ between two sides of a job, as 'job:name' or 'alternative:name';
     None where a side has no digest"""
@@ -161,8 +168,8 @@ for key in sorted(before):
     if 'error' in b or 'error' in a:
         rows.append({'key': key, 'status': 'error', 'same_error': b.get('error') == a.get('error')}); continue
     sb, sa = b['selected'], a['selected']
-    fields = ['id', 'verdict', 'holds', 'rate', 'supply', 'period']
-    changed_fields = [f for f in fields if sb[f] != sa[f]]
+    fields = ['id', 'verdict', 'holds', 'rate', 'supply', 'window_cycle_ticks']
+    changed_fields = [f for f in fields if field_of(sb, f) != field_of(sa, f)]
     alt_b = {x['id']: x['clock_sha256'] for x in b['alternatives']}
     alt_a = {x['id']: x['clock_sha256'] for x in a['alternatives']}
     alt_changed = sorted(i for i in set(alt_b) | set(alt_a) if alt_b.get(i) != alt_a.get(i))
@@ -175,8 +182,8 @@ for key in sorted(before):
     rows.append({
         'key': key, 'status': 'ok', 'selected_hash_changed': sb['clock_sha256'] != sa['clock_sha256'],
         'results_changed': results, 'results_digest': None if results is None else b['results_sha256'] != a['results_sha256'],
-        'selected_fields_changed': {f: [sb[f], sa[f]] for f in changed_fields},
-        'before': {f: sb[f] for f in fields + ['clock_sha256']}, 'after': {f: sa[f] for f in fields + ['clock_sha256']},
+        'selected_fields_changed': {f: [field_of(sb, f), field_of(sa, f)] for f in changed_fields},
+        'before': {f: field_of(sb, f) for f in fields + ['clock_sha256']}, 'after': {f: field_of(sa, f) for f in fields + ['clock_sha256']},
         'wake_ups': [sb.get('wake_ups'), sa.get('wake_ups')],
         'alternatives_hash_changed': alt_changed, 'alternative_verdict_changes': alt_verdicts,
         'alternatives_text_only_changed': text_only,

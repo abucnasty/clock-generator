@@ -39,7 +39,7 @@ export function oreVoiderCases(): OreVoiderCase[] {
 
 /** What the probe writes into its report, beside steady.lua's `protocol` */
 interface OreVoiderReport {
-    initial: {period: number; capacity: number; car_contents: number};
+    initial: {window_cycle_ticks: number; capacity: number; car_contents: number};
     /** Counted over the baseline's ticks */
     baseline: {
         ticks: number;
@@ -161,14 +161,14 @@ export async function captureOreVoider(variant: OreVoiderCase): Promise<OreVoide
         }
         fs.writeFileSync(path.join(capture.directory, "clock.json"), JSON.stringify({...clock, sha256: sha}) + "\n");
         // the baseline is the protocol's minute: the clock's cycle is its window cycle, which a minute holds whole
-        expect(RUN_PROTOCOL.baseline % window_cycle_ticks, "a whole number of the clock's periods in the baseline").toBe(0);
+        expect(RUN_PROTOCOL.baseline % window_cycle_ticks, "a whole number of the clock's window cycles in the baseline").toBe(0);
         const expectedPerWindow = Math.round(config.setpoint.items_per_second * RUN_PROTOCOL.window / 60 * 1e6) / 1e6;
         const {recording} = await recordInFactorio({factorio: process.env.FACTORIO_PATH!, save: process.env.FACTORIO_HARNESS_SAVE!, config,
             clock: {blueprint: encodeBlueprintFile({blueprint: exported.blueprint}), schedule: exported.schedule}, blueprint: scaffoldOf(config_path),
             out: path.join(capture.directory, "recording.json"), work_dir: path.join(capture.directory, "game"),
             ticks: 3600, record_at_once: true, warmup_ticks: 600, settle_ticks: RUN_PROTOCOL.cap + 1, seed: [], unclocked: false,
             lua: composeProbeSource(path.join(__dirname, "iron-ore-voider-400-clock-probe.lua"),
-                {period: window_cycle_ticks, window: RUN_PROTOCOL.window, expected: expectedPerWindow, baseline: RUN_PROTOCOL.baseline, cap: RUN_PROTOCOL.cap}),
+                {window_cycle_ticks, window: RUN_PROTOCOL.window, expected: expectedPerWindow, baseline: RUN_PROTOCOL.baseline, cap: RUN_PROTOCOL.cap}),
             game_speed: 1000, watch: false, timeout_seconds: 900, log() {}});
         // the build as Sidecar exports it: the recycler puts its results into the car
         const exported_config = recording.config as {machines?: {result_target?: unknown}[]; chests?: {type: string; id: number}[]};
