@@ -81,7 +81,10 @@ function migrateChests(chests: unknown[]): ChestFormData[] {
 }
 
 /** A config with the names it had before: the setpoint was `target_output`, and the kick start `loop_seed_items` of the overrides (the schema reads them too) */
-function readFormerNames(parsed: any): any {
+// a file or saved form is read by the shape it has, before any check: no type holds all the shapes it had
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function readFormerNames(parsed: unknown): any {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const config = renameTargetOutputToSetpoint(parsed) as any;
     return typeof config?.overrides === 'object' && config.overrides !== null
         ? { ...config, overrides: renameLoopSeedItemsToKickStart(config.overrides) } : config;

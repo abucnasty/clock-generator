@@ -205,7 +205,7 @@ describe('share links made before the setpoint and the kick start were named so'
     it('still opens: the build loads with its setpoint and its kick start, and nothing is left under the old names', async () => {
         const decoded = await decodeShareLink(await formerLink());
         if (decoded.kind !== 'build') throw new Error(`Expected a decoded build, not ${decoded.problem}`);
-        const file = readConfigFile(JSON.stringify(decoded.config)) as Record<string, any>;
+        const file = readConfigFile(JSON.stringify(decoded.config)) as { setpoint: unknown; overrides: unknown };
         expect(file.setpoint).toEqual({ recipe: 'iron-gear-wheel', items_per_second: 2.5, copies: 1 });
         expect(file.overrides).toEqual({ kick_start_items: 50 });
         expect('target_output' in file).toBe(false);
