@@ -4,11 +4,11 @@ import { Logger } from "../common/logger";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { ClockAlternative, ClockAlternativesResult, generateClockAlternatives } from "./alternatives";
 import { StockRecording } from "./machine-stock";
-import { runBuild } from "./plan/plan-run";
+import { runBuild } from "./plan/unclocked-run";
 import { removedBetween, RuleRemoval } from "./rule-call";
 import { ruleCount, RuleCountRun } from "./rule-count";
 import { ruleCountInputOfStock } from "./rule-count-stock";
-import { FREE_RUNNING_CHECK_TICKS, longRunPeriodsOf, LOOP_WINDOW_CHECK_TICKS, runClockOnBuild } from "./trial";
+import { FREE_RUNNING_CHECK_TICKS, longRunWindowCyclesOf, LOOP_WINDOW_CHECK_TICKS, runClockOnBuild } from "./trial";
 import { LONG_RUN_SETTLE_SHARE } from "./long-run";
 import { returnTicksOf, wakeUpsOfStock } from "./wake-ups";
 import { Entity, EntityId, handSizeFor } from "../entities";
@@ -22,7 +22,7 @@ import { OpenRange } from "../data-types";
 const quiet: Logger = { log() { }, warn() { }, error() { }, debug() { } };
 
 export interface RuleCallsOfClock {
-    clock: { id: string; label: string; verdict: string; period_ticks: number };
+    clock: { id: string; label: string; verdict: string; window_cycle_ticks: number };
     /** The ticks both runs are counted over: from a third of the clocked long run to its end, as its wake-ups are */
     from_tick: number;
     to_tick: number;
@@ -48,23 +48,23 @@ export interface RuleCallsOfClock {
  */
 function clockedStockOf(config: Config, selected: ClockAlternative, logger: Logger): { stock: StockRecording; from_tick: number } {
     const result = selected.result;
-    const period = result.simulation_duration.ticks;
+    const window_cycle_ticks = result.simulation_duration.ticks;
     const long_run = result.stability_check.as_built?.wake_ups;
-    assert(long_run !== undefined, `The selected clock (${selected.id}, ${selected.verdict}) has no long-run wake-up count: its check failed `
-        + "before the long run, or the period is too long for one");
+    assert(long_run !== undefined, `The recommended clock (${selected.id}, ${selected.verdict}) has no long-run wakeup count: its check failed `
+        + "before the long run, or the window cycle time is too long for one");
     const windows = new Map(Object.entries(result.clock_windows).map(([entity_id, ranges]) =>
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     // the long run is the standard length, or twice that for a clock with the windows of a loop (LOOP_WINDOW_CHECK_TICKS);
     // the one that gives the ticks the long run counted is the one the generator ran
     const tried = new Set<number>();
     for (const check_ticks of [FREE_RUNNING_CHECK_TICKS, LOOP_WINDOW_CHECK_TICKS]) {
-        const periods = longRunPeriodsOf(period, check_ticks);
-        if (periods <= 1 || tried.has(periods)) {
+        const window_cycles = longRunWindowCyclesOf(window_cycle_ticks, check_ticks);
+        if (window_cycles <= 1 || tried.has(window_cycles)) {
             continue;
         }
-        tried.add(periods);
-        const run = runClockOnBuild({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, windows, period, logger,
-            { simulate_periods: periods, machine_stock: true, factorio_states: false, detect_repeat: true });
+        tried.add(window_cycles);
+        const run = runClockOnBuild({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, windows, window_cycle_ticks, logger,
+            { simulate_window_cycles: window_cycles, machine_stock: true, factorio_states: false, detect_repeat: true });
         const stock = run.machine_stock;
         assert(stock !== undefined, "The run recorded no stock");
         // wakeUps counts from tick 1 at the earliest (the first tick has no change to read), as the generator's did
@@ -75,11 +75,11 @@ function clockedStockOf(config: Config, selected: ClockAlternative, logger: Logg
             return { stock, from_tick };
         }
     }
-    throw new Error(`No long run of the clock ${selected.id} (period ${period}) counts ${long_run.ticks} ticks; tried periods ${[...tried].join(", ")}`);
+    throw new Error(`No long run of the clock ${selected.id} (window cycle time ${window_cycle_ticks}) counts ${long_run.ticks} ticks; tried window cycles ${[...tried].join(", ")}`);
 }
 
 /** The build with every inserter and drill always enabled, at least `ticks` ticks of it recorded */
-function unwiredStockOf(config: Config, period: number, ticks: number, logger: Logger): StockRecording {
+function unwiredStockOf(config: Config, window_cycle_ticks: number, ticks: number, logger: Logger): StockRecording {
     const always = { mode: "ALWAYS" } as const;
     const unclocked = {
         ...config,
@@ -90,15 +90,15 @@ function unwiredStockOf(config: Config, period: number, ticks: number, logger: L
             configs: config.drills.configs.map(d => ({ ...d, overrides: { ...d.overrides, enable_control: always } })),
         },
     };
-    // the plan's own period is not known here, so ask for enough periods of the clock's length and ask again if short
-    let periods = Math.ceil(ticks / period) + 1;
+    // the plan's own window cycle is not known here, so ask for enough window cycles of the clock's length and ask again if short
+    let window_cycles = Math.ceil(ticks / window_cycle_ticks) + 1;
     for (let attempt = 0; attempt < 3; attempt++) {
-        const stock = runBuild(unclocked, { logger, simulate_periods: periods, machine_stock: true, factorio_states: false }).machine_stock;
+        const stock = runBuild(unclocked, { logger, simulate_window_cycles: window_cycles, machine_stock: true, factorio_states: false }).machine_stock;
         assert(stock !== undefined, "The run recorded no stock");
         if (stock.ticks >= ticks) {
             return stock;
         }
-        periods = Math.ceil(periods * ticks / Math.max(1, stock.ticks)) + 1;
+        window_cycles = Math.ceil(window_cycles * ticks / Math.max(1, stock.ticks)) + 1;
     }
     throw new Error(`The unwired run is shorter than the ${ticks} ticks of the clock's long run`);
 }
@@ -109,18 +109,18 @@ function unwiredStockOf(config: Config, period: number, ticks: number, logger: L
  * wake-ups over. The wired inserters of the clocked run are the ones the clock gives windows.
  *
  * The clocked run is not kept by the generator, so it is run again from the clock's windows (`simulateClockOnly`) for
- * as many periods as its long run lasts, and checked to count the same ticks and the same goal-2 wake-ups.
+ * as many window cycles as its long run lasts, and checked to count the same ticks and the same goal-2 wake-ups.
  */
 export function ruleCallsOfClock(config: Config, selected: ClockAlternative, logger: Logger = quiet): RuleCallsOfClock {
     const result = selected.result;
-    const period = result.simulation_duration.ticks;
+    const window_cycle_ticks = result.simulation_duration.ticks;
     // the plan's output swings, as the clock was made with
     const planned = { ...config, overrides: { ...config.overrides, terminal_swing_count: result.used_terminal_swing_count } };
     const registry = createEntityRegistryFromConfig(planned);
 
     const { stock: clocked_stock, from_tick } = clockedStockOf(planned, selected, logger);
     const to_tick = clocked_stock.ticks;
-    const unwired_stock = unwiredStockOf(planned, period, to_tick, logger);
+    const unwired_stock = unwiredStockOf(planned, window_cycle_ticks, to_tick, logger);
 
     const clocked_input = ruleCountInputOfStock(clocked_stock, registry, id => (result.clock_windows[id]?.length ?? 0) > 0);
     const unwired_input = ruleCountInputOfStock(unwired_stock, registry, () => false);
@@ -135,7 +135,7 @@ export function ruleCallsOfClock(config: Config, selected: ClockAlternative, log
         hand_size_of: (item_name: string) => handSizeFor(inserter, item_name),
     }));
     return {
-        clock: { id: selected.id, label: selected.label, verdict: selected.verdict, period_ticks: period },
+        clock: { id: selected.id, label: selected.label, verdict: selected.verdict, window_cycle_ticks },
         from_tick, to_tick, unwired_run, clocked_run,
         removal: removedBetween(unwired_run, clocked_run),
         removal_original: removedBetween(unwired_run, clocked_run, "original"),

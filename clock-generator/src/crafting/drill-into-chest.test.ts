@@ -17,7 +17,7 @@ const stack = (source: object, sink: object) => ({ source, sink, prototype: 'sta
 /** The drill into chest 1, which `chests` gives, and a furnace on iron plates the inserters may feed from it */
 function build(chests: object[], inserters: object[] = []): Config {
     return ConfigSchema.parse({
-        target_output: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
+        setpoint: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
         machines: [{ id: 1, recipe: 'iron-plate', crafting_speed: 5, productivity: 0, type: 'furnace' }],
         drills: { configs: [drill({ type: 'chest', id: 1 })] },
         inserters, belts: [], chests,
@@ -88,7 +88,7 @@ describe('a drill that drops into a chest', () => {
 
 describe('the config of a drill into a chest', () => {
     const base = {
-        target_output: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
+        setpoint: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
         machines: [{ id: 1, recipe: 'iron-plate', crafting_speed: 5, productivity: 0, type: 'furnace' }],
         inserters: [], belts: [], chests: [{ id: 1, type: 'car' }],
     };
@@ -103,11 +103,11 @@ describe('the config of a drill into a chest', () => {
     it('refuses a chest that is not in the config', () => {
         const parsed = parse({ type: 'chest', id: 2 });
         expect(parsed.success).toBe(false);
-        expect(parsed.error!.issues[0].message).toBe('Drill 1 drops into chest 2, which is not in the config');
+        expect(parsed.error!.issues[0].message).toBe('Drill 1 drops into chest 2, which is not in the configuration');
     });
 
     it('takes AUTO, CLOCKED and ALWAYS as its enable control', () => {
-        for (const enable_control of [{ mode: 'AUTO' }, { mode: 'ALWAYS' }, { mode: 'CLOCKED', ranges: [{ start: 1, end: 2 }], period_duration_ticks: 72 }]) {
+        for (const enable_control of [{ mode: 'AUTO' }, { mode: 'ALWAYS' }, { mode: 'CLOCKED', ranges: [{ start: 1, end: 2 }], window_cycle_ticks: 72 }]) {
             expect(parse({ type: 'chest', id: 1 }, { enable_control }).success, enable_control.mode).toBe(true);
         }
         expect(parse({ type: 'chest', id: 1 }, { extra_window_ticks: 1 }).success).toBe(true);
@@ -119,7 +119,7 @@ describe('the config of a drill into a chest', () => {
             const parsed = parse({ type: 'chest', id: 1 }, { enable_control });
             expect(parsed.success, enable_control.mode).toBe(false);
             expect(parsed.error!.issues.map(issue => issue.message)).toContain(
-                `Drill 1 drops into a chest; its enable control can be AUTO, CLOCKED or ALWAYS, not ${enable_control.mode}`);
+                `Drill 1 drops into a chest; its override can be AUTO, CLOCKED or ALWAYS, not ${enable_control.mode}`);
         }
     });
 });
@@ -127,7 +127,7 @@ describe('the config of a drill into a chest', () => {
 describe('a clock for a drill into a car between two furnaces', () => {
     it('enables the drill a tick a period on the clocks that meet goal 1, and leaves it always enabled on the others', () => {
         const config = ConfigSchema.parse({
-            target_output: { recipe: 'iron-plate', items_per_second: 80, copies: 1 },
+            setpoint: { recipe: 'iron-plate', items_per_second: 80, copies: 1 },
             machines: [1, 2].map(id => ({ id, recipe: 'iron-plate', crafting_speed: 86.18, productivity: 50, type: 'furnace' })),
             drills: { configs: [drill({ type: 'chest', id: 1 })] },
             inserters: [stack({ type: 'chest', id: 1 }, { type: 'machine', id: 1 }), stack({ type: 'chest', id: 1 }, { type: 'machine', id: 2 }),
@@ -142,7 +142,7 @@ describe('a clock for a drill into a car between two furnaces', () => {
         for (const alternative of alternatives) {
             const drill = alternative.result.clock_windows['drill:1'];
             if (alternative.verdict === 'stable') {
-                // the tick before the takers' first window: 617 ore a tick, more than a period takes
+                // the tick before the takers' first window: 617 ore a tick, more than a window cycle takes
                 const first_take = Math.min(...alternative.result.clock_windows['inserter:1'].map(range => range.start));
                 expect(drill, alternative.id).toEqual([{ start: first_take - 1, end: first_take - 1 }]);
                 expect(alternative.insights.find(it => it.id === 'chest-drill-windows')?.what).toContain('is enabled 1 tick of the');
@@ -153,7 +153,7 @@ describe('a clock for a drill into a car between two furnaces', () => {
                 expect(alternative.result.always_on_reasons?.['drill:1'], alternative.id).toEqual({ kind: 'chest-drill', why: { kind: 'fallback' } });
             }
         }
-        // the decider of the drill, named by its ends, its windows a period, its one condition, and tagged with the drill it switches on
+        // the decider of the drill, named by its ends, its windows a window cycle, its one condition, and tagged with the drill it switches on
         const decider = selected.result.blueprint.entities.find(entity => entity.tags?.clock_generator?.drills !== undefined);
         const window = selected.result.clock_windows['drill:1'][0];
         expect(decider?.tags?.clock_generator?.drills).toEqual([1]);
@@ -161,7 +161,7 @@ describe('a clock for a drill into a car between two furnaces', () => {
         expect(selected.result.blueprint.label).toBe('[item=iron-plate] Iron plate clock');
         expect(decider?.player_description?.split('\n')).toEqual([
             '[entity=big-mining-drill] [item=iron-ore] → [entity=car] (drill 1)',
-            `Tops the [entity=car] up just in time, 1 window per 288-tick period: open ${window.start + 1}`,
+            `Tops the [entity=car] up just in time, 1 enable window per 144-tick window cycle: open ${window.start + 1}`,
             'Not counted as swings: opens just before the inserters take from the [entity=car]',
         ]);
         // a window of one tick is one condition, the clock equal to it

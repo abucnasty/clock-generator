@@ -58,7 +58,7 @@ export interface NativeRunSummary {
     generationVerdict: string;
     /** Products a second the build is asked for (its share of the config's target) */
     target: number;
-    /** The period of the clock it ran, which ties the summary to its pin; nothing is timed by it */
+    /** The window cycle of the clock it ran, which ties the summary to its pin; nothing is timed by it */
     period: number;
     /** Ticks in the trailing window, and the products the window has to hold: target x window / 60 */
     window: number;
@@ -115,7 +115,7 @@ export interface NativeDisturbance {
     recovered?: number;
 }
 
-/** A summary under the protocol timed in game ticks, not a legacy one counted in clock periods */
+/** A summary under the protocol timed in game ticks, not a legacy one counted in window cycles */
 export function isRunSummary(native: NativeClockSummary | NativeRunSummary): native is NativeRunSummary {
     return (native as NativeRunSummary).protocol === "trailing-minute";
 }
@@ -147,7 +147,7 @@ export type AnyNativeSummary = NativeRunSummary | NativeClockSummary;
 
 export interface ClockControl<N extends AnyNativeSummary = AnyNativeSummary> {
     recorded: Recorded;
-    /** The run under the protocol timed in game ticks; a legacy summary counted in clock periods in the history files and the families not moved yet */
+    /** The run under the protocol timed in game ticks; a legacy summary counted in window cycles in the history files and the families not moved yet */
     native: N;
     generation?: GenerationPin;
     /**
@@ -156,7 +156,7 @@ export interface ClockControl<N extends AnyNativeSummary = AnyNativeSummary> {
      */
     previous?: PreviousClock;
     /**
-     * Of a container fixture whose two cuts take the same input: the periods the simulator holds the target through the
+     * Of a container fixture whose two cuts take the same input: the window cycles the simulator holds the target through the
      * second cut when it runs the probe's protocol on the pinned clock. A clock that brings more than the target's share
      * refills the container between the cuts, and the game holds the target as long as that stock lasts
      */
@@ -262,11 +262,11 @@ export function pinMismatches(cases: Record<string, ClockControl>, untied: reado
             found.push(`${name}: has a native summary and no generation pin`);
             continue;
         }
-        // a run keeps its target to a millionth (34.285714 for 240/7): its output a period is the pin's to a thousandth
-        const perPeriod = isRunSummary(control.native) ? Math.round(control.native.target * control.native.period / 60 * 1e3) / 1e3 : control.native.expected;
+        // a run keeps its target to a millionth (34.285714 for 240/7): its output a window cycle is the pin's to a thousandth
+        const perWindowCycle = isRunSummary(control.native) ? Math.round(control.native.target * control.native.period / 60 * 1e3) / 1e3 : control.native.expected;
         const pinned = isRunSummary(control.native) ? Math.round(generation.expected * 1e3) / 1e3 : generation.expected;
-        if (perPeriod !== pinned || control.native.period !== generation.period) {
-            found.push(`${name}: the native summary (period ${control.native.period}, expected ${perPeriod} a period) and the pin (${generation.period}, ${generation.expected}) are of different clocks`);
+        if (perWindowCycle !== pinned || control.native.period !== generation.period) {
+            found.push(`${name}: the native summary (period ${control.native.period}, expected ${perWindowCycle} a period) and the pin (${generation.period}, ${generation.expected}) are of different clocks`);
         }
         if (recorded.clock_sha256 !== generation.clock_sha256) {
             found.push(`${name}: the pin names clock ${generation.clock_sha256.slice(0, 12)} and the native summary was recorded on ${recorded.clock_sha256.slice(0, 12)}: record it again in the game (recorded.clock_sha256)`);
@@ -308,14 +308,14 @@ export function historicalPinMismatches(history: ClockHistory["cases"], current:
     return found;
 }
 
-/** An alternative of a record job (`record/<job>.json`, format clock-record-1): the fields a control's pin is checked against */
+/** An alternative of a record job (`record/<job>.json`, format clock-record-2): the fields a control's pin is checked against */
 export interface RecordAlternative {
     id: string;
     verdict: string;
     holds: boolean;
     rate: number;
     supply: string | null;
-    period: number;
+    window_cycle_ticks: number;
     clock_sha256: string;
 }
 
@@ -357,7 +357,7 @@ export function fixtureAlternativeMismatches(cases: Record<string, ClockControl>
 
 /**
  * The entries of a family's controls whose generation pin differs from the record: the pin is of the record job's alternative
- * with the pin's `selection.id` (its clock hash, period, verdict, holds, rate and supply), the selection where the entry is not
+ * with the pin's `selection.id` (its clock hash, window cycle, verdict, holds, rate and supply), the selection where the entry is not
  * listed as `offered`, and its `previous` clock is an alternative of the job with that hash. Where the game's run is judged
  * (`runs`), a stable alternative holds in the game and a run that misses its target over the baseline is one the generator
  * sees, as `expectRunAgreesWithSelection` asked of the generation. Lines to read; an entry with no job is not looked at.
@@ -382,9 +382,9 @@ export function recordMismatches(cases: Record<string, ClockControl>, link: Reco
         if (alternative.clock_sha256 !== pin.clock_sha256) {
             found.push(`${name}: the pin names clock ${pin.clock_sha256.slice(0, 12)} and ${where} makes ${alternative.clock_sha256.slice(0, 12)}: the generation moved, so the game recording is of another clock`);
         }
-        const shape = (period: number, verdict: string, selection: GenerationPin["selection"]) =>
-            ({period, verdict, selection: {id: selection.id, holds: selection.holds, rate: selection.rate, supply: selection.supply}});
-        const asPinned = shape(alternative.period, alternative.verdict, alternative);
+        const shape = (window_cycle_ticks: number, verdict: string, selection: GenerationPin["selection"]) =>
+            ({window_cycle_ticks, verdict, selection: {id: selection.id, holds: selection.holds, rate: selection.rate, supply: selection.supply}});
+        const asPinned = shape(alternative.window_cycle_ticks, alternative.verdict, alternative);
         const pinned = shape(pin.period, pin.verdict, pin.selection);
         if (JSON.stringify(asPinned) !== JSON.stringify(pinned)) found.push(`${name}: the pin (${JSON.stringify(pinned)}) and ${where} (${JSON.stringify(asPinned)}) differ`);
         const offered = link.offered?.includes(name) ?? false;

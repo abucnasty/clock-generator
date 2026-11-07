@@ -71,20 +71,20 @@ export { loopInserters, alwaysEnabledInserters } from "./crafting/sequence/unpla
 
 /**
  * 9. Two inserters that bring the same item (GOALS.md "Two inserters that bring the same item"): a deadlock risk of the
- * build, read off the config. Cases: `crafting/deadlock-risk.test.ts` (utility science, 0 of 192 in 53 periods).
+ * build, read off the config. Cases: `crafting/deadlock-risk.test.ts` (utility science, 0 of 192 in 53 window cycles).
  */
 export { sharedItemDeadlockRisks } from "./crafting/deadlock-risk";
 
 /**
- * 10. Belt pickup slack (GOALS.md "Wake-up Lists"): the ticks one more full hand takes at one belt stack a tick (the
- * code caps them at 16). A rule of thumb for a moving belt. Cases: `rules-of-the-game.test.ts`.
+ * 10. Belt pickup slack (GOALS.md "Wake-up Lists"): the ticks one more full hand of the item on the lane takes at one
+ * belt stack a tick (the code caps them at 16). A rule of thumb for a moving belt. Cases: `rules-of-the-game.test.ts`.
  */
 export { beltPickupSlackTicks } from "./crafting/clock";
 
 /**
  * 11. Room for a hand of fuel (GOALS.md "Wake-up Lists"): the same ticks, for an inserter that takes fuel off a belt
  * as well as an ingredient, on a backed-up belt. Cases: `rules-of-the-game.test.ts` (agricultural science,
- * 377 of 400 a period without it).
+ * 377 of 400 a window cycle without it).
  */
 export { fuelHandRoomTicks } from "./crafting/clock";
 

@@ -13,8 +13,8 @@ import { destroyedTargetBalance, madeTargetBalance, transfersOfBalance } from ".
 import { buildOutputInsertersOf, destroyedTargetCrafts, type EntityTransferCountMap } from "../sequence/cycle/swing-counts";
 import { createEntityRegistryFromConfig } from "../sequence/simulation-context";
 import { TargetProductionRate } from "../target-production-rate";
-import { Balance, balanceBuildOf, DRILL_ITEMS_PER_SWING, periodCyclesOf } from "./balance";
-import { destroyedTargetBasisOf } from "./result-windows";
+import { Balance, balanceBuildOf, DRILL_ITEMS_PER_SWING, windowCycleCyclesOf } from "./balance";
+import { destroyedTargetBasisOf } from "./exhaust";
 
 /**
  * The oracle of the balance equations: every sample's transfers at several counts, recorded from the demand walk they
@@ -55,7 +55,7 @@ interface Case {
 /** The counts of a sample: output swings a cycle, or hands of a destroyed target brought into each machine */
 function casesOf(config: Config): Case[] {
     const registry = createEntityRegistryFromConfig(config);
-    const target = TargetProductionRate.fromConfig(config.target_output);
+    const target = TargetProductionRate.fromConfig(config.setpoint);
     const item = target.machine_production_rate.item;
     if (target.counts === "destroyed") {
         const basis = destroyedTargetBasisOf(target, registry, config.overrides ?? {});
@@ -102,7 +102,7 @@ describe("the balance equations of a cycle", () => {
             for (const run of casesOf(config)) {
                 recorded[run.label] = outcomeOf(() => transfersOfBalance(run.balance(), registry));
                 const transfers = run.balance().transfers;
-                const cycles = periodCyclesOf(transfers);
+                const cycles = windowCycleCyclesOf(transfers);
                 expect(transfers.flatMap(it => it.items).every(it => it.hands.multiply(cycles).getDenominator === 1), run.label).toBe(true);
             }
             await expect(`${JSON.stringify({ sample: key, ...recorded }, null, 2)}\n`)

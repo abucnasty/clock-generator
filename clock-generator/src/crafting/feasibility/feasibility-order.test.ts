@@ -50,14 +50,14 @@ describe("a refusal hands over its opening and each problem as the message is ma
 
     it("makes the message of the opening and the problems, with no change to its words", () => {
         expect(refusal.message).toBe(`${refusal.opening} ${refusal.problems.join(" ")}`);
-        expect(refusal.opening).toMatch(/^No clock can hold this build's target.*:$/);
+        expect(refusal.opening).toMatch(/^No clock can hold this build's setpoint.*:$/);
     });
 
     it("says that every figure is for one copy when the build has copies", () => {
         const shared = new FeasibilityError(refusal.issues, { items_per_second: 1600, copies: 24 });
-        expect(shared.opening).toBe(`No clock can hold this build's target of 1600 a second over 24 copies (every figure here is for one copy):`);
+        expect(shared.opening).toBe(`No clock can hold this build's setpoint of 1600 a second over 24 copies (every figure here is for one copy):`);
         expect(shared.message).toBe(`${shared.opening} ${refusal.problems.join(" ")}`);
-        expect(new FeasibilityError(refusal.issues, { items_per_second: 1600, copies: 1 }).opening).toBe(`No clock can hold this build's target:`);
-        expect(new FeasibilityError(refusal.issues).opening).toBe(`No clock can hold this build's target:`);
+        expect(new FeasibilityError(refusal.issues, { items_per_second: 1600, copies: 1 }).opening).toBe(`No clock can hold this build's setpoint:`);
+        expect(new FeasibilityError(refusal.issues).opening).toBe(`No clock can hold this build's setpoint:`);
     });
 });

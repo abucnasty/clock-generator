@@ -618,8 +618,8 @@ function recorder.start(force, entities, player_index, options)
 
     if clock then
         notify(player_index, "Found clock combinator. Waiting for it to wrap to start recording "
-            .. storage.recording.periods .. " period(s)"
-            .. (storage.recording.minimum_ticks > 0 and (", and whole periods until at least " .. storage.recording.minimum_ticks .. " ticks,") or "")
+            .. storage.recording.periods .. " window cycle(s)"
+            .. (storage.recording.minimum_ticks > 0 and (", and whole window cycles until at least " .. storage.recording.minimum_ticks .. " ticks,") or "")
             .. " of " .. #inserters .. " inserters, " .. #machines .. " machines and " .. #drills .. " mining drills.")
     else
         notify(player_index, "No clock combinator selected; recording "
@@ -660,7 +660,7 @@ function recorder.on_tick()
             recording.wraps = recording.wraps + 1
             -- whole periods: at least the periods asked for, and more until the minimum ticks are recorded
             if recording.wraps >= recording.periods and recording.sample_count >= (recording.minimum_ticks or 0) then
-                recorder.finish("recorded " .. recording.wraps .. " clock period(s)")
+                recorder.finish("recorded " .. recording.wraps .. " window cycle(s)")
                 return
             end
         end

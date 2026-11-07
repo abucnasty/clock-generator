@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
-import { returnTicksOf, wakeUps, WatchedMachine, WatchingInserter } from "./wake-ups";
+import { ghostWakeUps, returnTicksOf, wakeUps, WatchedMachine, WatchingInserter } from "./wake-ups";
 
 const WORKING = "working";
 const SOURCE = "waiting_for_source_items";
@@ -208,7 +208,7 @@ function expanded<T>(changes: [number, T][], ticks: number): T[] {
 }
 
 /**
- * One clock period recorded in Factorio 2.1.24, with the ticks in which the game delivered a wake-up by the plant to each
+ * One window cycle recorded in Factorio 2.1.24, with the ticks in which the game delivered a wake-up by the plant to each
  * inserter, read in the running game:
  * - FRONT_EXIT (fixtures/wake-ups-capture-2.1.24.json): an electromagnetic plant, the stack inserter that takes its
  *   science packs to a belt (inserter:1) and the one that feeds it from a belt (inserter:2);
@@ -272,9 +272,9 @@ describe("the rule \"kept-lists\" against a period of the game", () => {
 });
 
 /**
- * Ten periods of the sample agricultural science build recorded in Factorio 2.1.24 (fixtures/wake-ups-capture-agricultural-
+ * Ten window cycles of the sample agricultural science build recorded in Factorio 2.1.24 (fixtures/wake-ups-capture-agricultural-
  * science-2.1.24.json, five biochambers and twelve inserters, clock 3450755e), with the ticks the game woke each inserter
- * from a machine's list and why, read in the running game. Counted from `count_from`; the period before lets the lists
+ * from a machine's list and why, read in the running game. Counted from `count_from`; the window cycle before lets the lists
  * settle.
  */
 const AGRICULTURAL = "wake-ups-capture-agricultural-science-2.1.24.json";
@@ -368,11 +368,20 @@ describe("the rule \"kept-lists\"", () => {
         const working = wakeUps([inserter([WORKING, OFF, OFF, OFF, OFF, OFF])], [plant], 0, 6);
         expect(working.inserters[0].wake_ups_per_minute).toBe(0);
     });
+
+    it("names that wakeup a ghost wakeup, with the tick it went to sleep and the tick it was switched off", () => {
+        const plant = machine("machine:1", 7, [4, 6]);
+        // asleep waiting in tick 1, switched off from tick 2, woken by the result in tick 4
+        const ghosts = ghostWakeUps([inserter([WORKING, SOURCE, OFF, OFF, OFF, OFF, OFF])], [plant], 0, 7);
+        expect(ghosts).toEqual([{ inserter_id: "inserter:1", tick: 4, end: "source", switched_off: 2, asleep_from: 1 }]);
+        // a wakeup while enabled is none
+        expect(ghostWakeUps([inserter([WORKING, SOURCE, SOURCE, SOURCE, SOURCE, SOURCE, SOURCE])], [plant], 0, 7)).toEqual([]);
+    });
 });
 
 /**
- * Ten settled periods of the sample metallurgic science build recorded in Factorio 2.1.24 (fixtures/wake-ups-capture-
- * metallurgic-science-2.1.24.json, four machines and eight inserters, clock cec15038; four periods before them let the
+ * Ten settled window cycles of the sample metallurgic science build recorded in Factorio 2.1.24 (fixtures/wake-ups-capture-
+ * metallurgic-science-2.1.24.json, four machines and eight inserters, clock cec15038; four window cycles before them let the
  * lists settle), with the ticks the game woke each inserter from a machine's list and why, read in the running game.
  * Inserters 4 and 5 take tungsten ore from a backed-up turbo belt that inserter 7 takes from too; their machine refuses
  * the ore at its insertion limit, and they go to sleep on its input list only while both lines of the belt are still.

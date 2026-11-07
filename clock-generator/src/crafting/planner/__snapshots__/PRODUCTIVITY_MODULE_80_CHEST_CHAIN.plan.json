@@ -49,12 +49,12 @@
         "inserter:13/copper-cable",
         "inserter:14/iron-plate"
       ],
-      "periods": [
-        {"swings":2,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":144,"denominator":1},"cycles":363,"period_ticks":52272,"kept":true},
-        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":72,"denominator":1},"cycles":363,"period_ticks":26136,"kept":true},
-        {"swings":null,"fractional":true,"listed_as":"fractional","pruned":{"rule":"cycle-refused","terms":{"reason":"Cannot satisfy fractional swing constraint: each sub-cycle requires 5 swings, but maximum allowed is 4 due to insertion limits. Total swings: 880, cycle multiplier: 176."}}}
+      "window_cycles": [
+        {"swings":2,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":144,"denominator":1},"cycles":363,"window_cycle_ticks":52272,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":72,"denominator":1},"cycles":363,"window_cycle_ticks":26136,"kept":true},
+        {"swings":1,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":72,"denominator":1},"cycles":363,"window_cycle_ticks":26136,"kept":true}
       ],
-      "duty": [
+      "utilization": [
         {
           "producer": "machine:plastic-bar",
           "members": [
@@ -68,7 +68,7 @@
             "numerator": 10523,
             "denominator": 80
           },
-          "duty": {
+          "utilization": {
             "numerator": 32000,
             "denominator": 1041777
           }
@@ -86,7 +86,7 @@
             "numerator": 1601,
             "denominator": 96
           },
-          "duty": {
+          "utilization": {
             "numerator": 51200,
             "denominator": 52833
           }
@@ -104,7 +104,7 @@
             "numerator": 2161,
             "denominator": 240
           },
-          "duty": {
+          "utilization": {
             "numerator": 6400,
             "denominator": 6483
           }
@@ -123,7 +123,7 @@
             "numerator": 249463,
             "denominator": 1000
           },
-          "duty": {
+          "utilization": {
             "numerator": 32320000,
             "denominator": 271665207
           }
@@ -142,7 +142,7 @@
             "numerator": 255,
             "denominator": 1
           },
-          "duty": {
+          "utilization": {
             "numerator": 6080,
             "denominator": 55539
           }
@@ -161,7 +161,7 @@
             "numerator": 645,
             "denominator": 8
           },
-          "duty": {
+          "utilization": {
             "numerator": 9728,
             "denominator": 140481
           }
@@ -177,7 +177,7 @@
       "planned": 2,
       "higher_up_to_ticks": 2400
     },
-    "main_period": {
+    "main_window_cycle": {
       "ticks": 52272,
       "exact": {
         "numerator": 52272,
@@ -204,5 +204,5 @@
       "action": "none"
     }
   },
-  "result_windows": null
+  "exhaust": null
 }

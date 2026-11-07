@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
-import { ChestType, dropFractionalSwingsOverride, migrateBeltSupplyOverrides, migrateMiningProductivityLevel } from 'clock-generator/light';
+import { ChestType, dropFractionalSwingsOverride, migrateBeltSupplyOverrides, migrateMiningProductivityLevel, renameClockedPeriodInConfig, renameLoopSeedItemsToKickStart, renameTargetOutputToSetpoint } from 'clock-generator/light';
 import { askEngine } from '../worker/engineClient';
 import {
     backupKey,
@@ -80,9 +80,22 @@ function migrateChests(chests: unknown[]): ChestFormData[] {
     });
 }
 
+/**
+ * A config with the names it had before: the setpoint was `target_output`, the kick start `loop_seed_items` of the overrides, and the
+ * window cycle time of a Clocked override `period_duration_ticks` (the schema reads them too)
+ */
+// a file or saved form is read by the shape it has, before any check: no type holds all the shapes it had
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function readFormerNames(parsed: unknown): any {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const config = renameClockedPeriodInConfig(renameTargetOutputToSetpoint(parsed)) as any;
+    return typeof config?.overrides === 'object' && config.overrides !== null
+        ? { ...config, overrides: renameLoopSeedItemsToKickStart(config.overrides) } : config;
+}
+
 /** The config in an imported file, not yet checked against the config schema; files from before chest types have chests without a type */
 export function readConfigFile(content: string): unknown {
-    const parsed = JSON.parse(content);
+    const parsed = readFormerNames(JSON.parse(content));
     if (Array.isArray(parsed?.chests)) {
         parsed.chests = migrateChests(parsed.chests);
     }
@@ -92,9 +105,9 @@ export function readConfigFile(content: string): unknown {
 /** The saved form state with the legacy fields migrated; null if it is not JSON or lacks the required fields */
 export function readSavedConfig(stored: string): ConfigFormData | null {
     try {
-        const parsed = JSON.parse(stored);
+        const parsed = readFormerNames(JSON.parse(stored));
         // Basic validation - check if it has the required fields
-        if (parsed && parsed.target_output && parsed.machines && parsed.chests) {
+        if (parsed && parsed.setpoint && parsed.machines && parsed.chests) {
             // builds saved when the Fractional swings switch existed carry its field: it is dropped, as the engine does
             if (parsed.overrides !== undefined) parsed.overrides = dropFractionalSwingsOverride(migrateBeltSupplyOverrides(parsed.overrides));
             // Migrate legacy chests
@@ -226,7 +239,7 @@ export interface BuildMutationSnapshot {
 const newBuildMeta = (id: string, form: ConfigFormData, name: string | null, now: number): BuildMeta => ({
     id,
     name,
-    recipe: form.target_output.recipe,
+    recipe: form.setpoint.recipe,
     createdAt: now,
     openedAt: now,
 });
@@ -426,7 +439,7 @@ export function usePersistedConfigForm() {
             }),
             (e) => complete(() => {
                 console.warn('Failed to check the config from localStorage:', e);
-                setLoadError(e instanceof Error ? e.message : 'Failed to check the saved config');
+                setLoadError(e instanceof Error ? e.message : 'Failed to check the saved configuration');
             }),
         );
         return () => {
@@ -469,7 +482,7 @@ export function usePersistedConfigForm() {
         if (!wrote) return;
         setConflict((state) => nextConflict(state, { kind: 'saved-here' }));
         const own = indexRef.current.builds.find((build) => build.id === current.id);
-        const recipe = current.form.target_output.recipe;
+        const recipe = current.form.setpoint.recipe;
         if (deletedElsewhereRef.current && own) {
             // deleted in another tab: this edit lists it again
             deletedElsewhereRef.current = false;

@@ -39,34 +39,34 @@ export const MAX_RECORDED_TICKS = 72_000;
 
 /**
  * Ticks a recording of the requested length will hold. Without a clock, the ticks asked for. With one, the recorder
- * records whole periods of the clock until it has at least the ticks asked for, so the next multiple of the period.
+ * records whole window cycles of the clock until it has at least the ticks asked for, so the next multiple of the window cycle.
  */
-export function recordedTicks(requested_ticks: number, clock_period_ticks: number | null): number {
-    return clock_period_ticks === null ? requested_ticks : Math.ceil(requested_ticks / clock_period_ticks) * clock_period_ticks;
+export function recordedTicks(requested_ticks: number, clock_window_cycle_ticks: number | null): number {
+    return clock_window_cycle_ticks === null ? requested_ticks : Math.ceil(requested_ticks / clock_window_cycle_ticks) * clock_window_cycle_ticks;
 }
 
 /**
  * Throws when the request is no whole positive number of ticks, or when what it would record is over
- * MAX_RECORDED_TICKS. `clock_period_ticks` is the period the clock of the build counts, null when it has none or
- * the period is not known before the run; the request alone is limited then.
+ * MAX_RECORDED_TICKS. `clock_window_cycle_ticks` is the window cycle the clock of the build counts, null when it has none or
+ * the window cycle is not known before the run; the request alone is limited then.
  */
-export function assertRecordableTicks(requested_ticks: number, clock_period_ticks: number | null = null): void {
+export function assertRecordableTicks(requested_ticks: number, clock_window_cycle_ticks: number | null = null): void {
     if (!Number.isInteger(requested_ticks) || requested_ticks <= 0) {
         throw new Error(`Ticks to record must be a whole number above 0, not ${requested_ticks}`);
     }
     const limit = `the limit of ${MAX_RECORDED_TICKS} ticks (${MAX_RECORDED_TICKS / 3600} minutes of game time) for one run in Factorio`;
-    if (clock_period_ticks === null) {
+    if (clock_window_cycle_ticks === null) {
         if (requested_ticks > MAX_RECORDED_TICKS) {
             throw new Error(`A recording of ${requested_ticks} ticks is over ${limit}. Record fewer ticks; warm-up and settle ticks do not count.`);
         }
         return;
     }
-    const recorded = recordedTicks(requested_ticks, clock_period_ticks);
+    const recorded = recordedTicks(requested_ticks, clock_window_cycle_ticks);
     if (recorded > MAX_RECORDED_TICKS) {
-        const fits = Math.floor(MAX_RECORDED_TICKS / clock_period_ticks) * clock_period_ticks;
-        throw new Error(`A request for ${requested_ticks} ticks records ${recorded}: whole periods of the clock, which counts ${clock_period_ticks} ticks. `
+        const fits = Math.floor(MAX_RECORDED_TICKS / clock_window_cycle_ticks) * clock_window_cycle_ticks;
+        throw new Error(`A request for ${requested_ticks} ticks records ${recorded}: whole window cycles of the clock, which counts ${clock_window_cycle_ticks} ticks. `
             + `That is over ${limit}. `
-            + (fits > 0 ? `The most that fits is ${fits} ticks (${fits / clock_period_ticks} periods).` : "Not one period of this clock fits.")
+            + (fits > 0 ? `The most that fits is ${fits} ticks (${fits / clock_window_cycle_ticks} window cycles).` : "Not one window cycle of this clock fits.")
             + " Warm-up and settle ticks do not count.");
     }
 }
@@ -100,7 +100,7 @@ export interface HarnessOptions {
     blueprint: string;
     /** Where the recording is written */
     out: string;
-    /** Ticks to record. With a clock, whole clock periods until at least this many ticks */
+    /** Ticks to record. With a clock, whole window cycles until at least this many ticks */
     ticks: number;
     /** Ticks the build runs before seeding and recording, so belts are full */
     warmup_ticks: number;
@@ -114,7 +114,7 @@ export interface HarnessOptions {
     /**
      * The clock the build came with, named by the test, for a build whose clock is not one the generator made (it has no
      * "Clock for ..." description). Without `clock` and `unclocked` that clock is kept and the recording is cut by it,
-     * and its period replaces the one read off a generated clock; with a generated `clock` it is the clock removed to
+     * and its window cycle replaces the one read off a generated clock; with a generated `clock` it is the clock removed to
      * make room for it. Not with `unclocked`, nor in a staged start.
      */
     built_clock?: BuiltClock;
@@ -145,7 +145,7 @@ export interface HarnessOptions {
     lua?: string;
     /**
      * Record exactly `ticks` from the end of the settle, without waiting for the clock to wrap: the recording carries no clock.
-     * For a probe that times its run in game ticks (a clock's period can be far longer than the run)
+     * For a probe that times its run in game ticks (a clock's window cycle can be far longer than the run)
      */
     record_at_once?: boolean;
     /** Scratch folder for Factorio's write data; a temporary folder that is removed afterwards when absent */
@@ -253,9 +253,9 @@ export interface ClockReading {
 
 /**
  * Throws when the readings of a clock placed first are not one a tick from its placement on: each after exactly one more tick than
- * the one before, the last the first to read the phase asked for, and within two periods and two ticks of the placement.
+ * the one before, the last the first to read the phase asked for, and within two window cycles and two ticks of the placement.
  */
-export function assertClockPriming(trace: ClockReading[], clock_phase: number, period: number): void {
+export function assertClockPriming(trace: ClockReading[], clock_phase: number, window_cycle_ticks: number): void {
     if (trace.length === 0) {
         throw new Error("The clock placed first was never read");
     }
@@ -270,8 +270,8 @@ export function assertClockPriming(trace: ClockReading[], clock_phase: number, p
             ? `The main counter of the clock placed first never read ${clock_phase}: it read ${trace.map(it => it.counter).join(", ")}`
             : `The main counter of the clock placed first read ${clock_phase} at tick ${trace[first].tick}, before its last reading`);
     }
-    if (trace.length - 1 > 2 * period + 2) {
-        throw new Error(`The main counter of the clock placed first took ${trace.length - 1} ticks to read ${clock_phase}, over two periods of ${period} ticks and two`);
+    if (trace.length - 1 > 2 * window_cycle_ticks + 2) {
+        throw new Error(`The main counter of the clock placed first took ${trace.length - 1} ticks to read ${clock_phase}, over two window cycles of ${window_cycle_ticks} ticks and two`);
     }
 }
 
@@ -454,13 +454,13 @@ function decodeBlueprintString(blueprint: string): any {
  * A generated clock given only as a blueprint string, as `npm run record -- --clock=` takes it, with its schedule read
  * back from its combinators: the inserters each enables from its tags (ClockGeneratorTags), or, in a string from before
  * the tags, from its description ("Inserters 1, 2 for ..."); the clock is the decider described as "Clock for ..." (see
- * clockPeriodTicks). A clock from the generator itself comes with its schedule (BlueprintGenerationResult.schedule) and
+ * clockWindowCycleTicks). A clock from the generator itself comes with its schedule (BlueprintGenerationResult.schedule) and
  * needs none of this.
  */
 export function clockOfBlueprintString(blueprint: string): GeneratedClock {
-    const counted_ticks = clockPeriodTicks(blueprint);
+    const counted_ticks = clockWindowCycleTicks(blueprint);
     if (counted_ticks === null) {
-        throw new Error("The clock blueprint has no clock the generator made: no decider described as \"Clock for ...\" that counts a period");
+        throw new Error("The clock blueprint has no clock the generator made: no decider described as \"Clock for ...\" that counts a window cycle");
     }
     const entities: { entity_number: number; player_description?: string; tags?: { clock_generator?: ClockGeneratorTags } }[] =
         decodeBlueprintString(blueprint).blueprint?.entities ?? [];
@@ -483,7 +483,7 @@ export function scheduledInserterIds(schedule: ClockSchedule): number[] {
 }
 
 /** Ticks a clock counts before it starts over: the game keeps the whole part of the constant, so 90.947 counts 1 to 90 */
-function clockPeriodOf(schedule: ClockSchedule): number {
+function clockWindowCycleOf(schedule: ClockSchedule): number {
     return Math.trunc(schedule.counted_ticks);
 }
 
@@ -571,12 +571,12 @@ function matchBuild(described: any, config: Config, named_copies?: number) {
 }
 
 /**
- * Ticks the clock of a blueprint counts before it starts over, which is what the recorder cuts a recording into; null
+ * Ticks the clock of a blueprint counts before it starts over (its window cycle), which is what the recorder cuts a recording into; null
  * when the blueprint has no clock the generator made or its counter is not one this reads. The clock is the decider
  * described as "Clock for ...", which counts while its signal is under a constant: from 1 when something adds the 1
  * for it (a constant combinator next to it, or an else output), from 0 as clocks made before 0.6.0 did.
  */
-export function clockPeriodTicks(blueprint: string): number | null {
+export function clockWindowCycleTicks(blueprint: string): number | null {
     let entities: any[];
     try {
         entities = decodeBlueprintString(blueprint).blueprint?.entities ?? [];
@@ -592,8 +592,8 @@ export function clockPeriodTicks(blueprint: string): number | null {
     // the game keeps whole numbers: a constant of 90.947 is read as 90
     const limit = Math.trunc(counted.constant);
     const counts_from_one = entities.some(entity => entity.name === "constant-combinator") || (conditions.else_outputs ?? []).length > 0;
-    const period = counts_from_one ? limit : limit + 1;
-    return period > 0 ? period : null;
+    const window_cycle_ticks = counts_from_one ? limit : limit + 1;
+    return window_cycle_ticks > 0 ? window_cycle_ticks : null;
 }
 
 /**
@@ -917,9 +917,9 @@ function assertBuildOptions(options: BuildOptions): void {
             if (!options.clock || options.unclocked) {
                 throw new Error("A staged start places its clock first only with a generated clock to place");
             }
-            const period = clockPeriodOf(options.clock.schedule);
-            if (!Number.isInteger(phase) || phase < 0 || phase > period) {
-                throw new Error(`The phase the clock is placed first to is a value its main counter reads, a whole number from 0 to its period of ${period} ticks, not ${phase}`);
+            const window_cycle_ticks = clockWindowCycleOf(options.clock.schedule);
+            if (!Number.isInteger(phase) || phase < 0 || phase > window_cycle_ticks) {
+                throw new Error(`The phase the clock is placed first to is a value its main counter reads, a whole number from 0 to its window cycle of ${window_cycle_ticks} ticks, not ${phase}`);
             }
         }
         // the recording runs for exactly the ticks asked for, from the placement tick
@@ -927,9 +927,9 @@ function assertBuildOptions(options: BuildOptions): void {
         return;
     }
     // the clock the recording is cut by: the one swapped in, or the one the build came with when it is kept
-    const period = options.unclocked || options.record_at_once ? null
-        : options.clock ? clockPeriodOf(options.clock.schedule) : options.built_clock?.period ?? clockPeriodTicks(options.blueprint);
-    assertRecordableTicks(options.ticks, period);
+    const window_cycle_ticks = options.unclocked || options.record_at_once ? null
+        : options.clock ? clockWindowCycleOf(options.clock.schedule) : options.built_clock?.window_cycle_ticks ?? clockWindowCycleTicks(options.blueprint);
+    assertRecordableTicks(options.ticks, window_cycle_ticks);
 }
 
 /**
@@ -1288,16 +1288,16 @@ export class HarnessSession {
         // with the clock placed first: the clock alone, read after every tick until its counter reads the phase asked for
         let priming: { target: number; placed: any; trace: ClockReading[] } | undefined;
         if (staged.clock_phase !== undefined) {
-            const period = clockPeriodOf(options.clock!.schedule);
+            const window_cycle_ticks = clockWindowCycleOf(options.clock!.schedule);
             const placed = await this.call("harness_place_clock", { clock: { blueprint: withInserterTags(options.clock!) } });
             options.log(`Placed the clock at tick ${placed.tick} with the ${placed.cell_ghosts} inserters of the cell not built; its counter reads ${placed.counter}`);
             const trace: ClockReading[] = [{ tick: placed.tick, counter: placed.counter }];
-            while (trace[trace.length - 1].counter !== staged.clock_phase && trace.length <= 2 * period + 3) {
+            while (trace[trace.length - 1].counter !== staged.clock_phase && trace.length <= 2 * window_cycle_ticks + 3) {
                 await this.call("harness_advance", { ticks: 1 });
                 const status = await this.waitFor("one tick of the clock placed first", deadline, it => it.ready);
                 trace.push({ tick: status.tick, counter: status.clock.counter });
             }
-            assertClockPriming(trace, staged.clock_phase, period);
+            assertClockPriming(trace, staged.clock_phase, window_cycle_ticks);
             options.log(`The counter reads ${staged.clock_phase} at tick ${trace[trace.length - 1].tick}, ${trace.length - 1} ticks after the clock was placed`);
             priming = { target: staged.clock_phase, placed, trace };
         }

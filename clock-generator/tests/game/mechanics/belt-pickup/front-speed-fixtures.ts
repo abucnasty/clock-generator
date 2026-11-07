@@ -18,9 +18,9 @@ export const frontPickupPhases = {
 
 /** Enumerate the distinct quarter-tile arrival phases for the compact moving control. */
 export function frontPickupReleaseDelays(speed: FixtureBeltSpeed, compactDestination: boolean, backedUp: boolean) {
-    const period = !compactDestination || backedUp ? 1 : frontPickupPhases[speed.name].length;
+    const window_cycle_ticks = !compactDestination || backedUp ? 1 : frontPickupPhases[speed.name].length;
     // Express release 0 and 1 both first grab at tick 3; delay 8 supplies the otherwise missing native phase.
-    return Array.from({length: period}, (_, delay) => delay);
+    return Array.from({length: window_cycle_ticks}, (_, delay) => delay);
 }
 
 /** A real empty circuit network is required for the native inserter's false condition to take effect. */

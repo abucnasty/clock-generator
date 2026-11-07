@@ -22,7 +22,7 @@ interface CheckPlanSectionProps {
 const formatTicks = (ticks: number) => Number.isInteger(ticks) ? `${ticks}` : ticks.toFixed(3);
 
 /**
- * The swing plan of the last check, in Advanced: how many swings each inserter makes per crafting cycle, and
+ * The swing plan of the last check, in Advanced: how many swings each inserter makes each output cycle, and
  * which ingredients are left out of the LCM. Any check makes it, Generate's or Check only's; an edit since makes it read-only.
  */
 export function CheckPlanSection({
@@ -104,10 +104,10 @@ export function CheckPlanSection({
                             ? HANDS_TEXT.plan(plan.output_swings_per_cycle, formatTicks(plan.cycle_ticks))
                             : <>
                                 Each output machine has {plan.output_swings_per_cycle} total output swing
-                                {plan.output_swings_per_cycle === 1 ? '' : 's'} per crafting cycle of{' '}
+                                {plan.output_swings_per_cycle === 1 ? '' : 's'} each output cycle of{' '}
                                 {formatTicks(plan.cycle_ticks)} ticks, shared equally across its output inserters</>}
-                        , and the clock {plan.used_lcm === 1 ? 'period is' : 'repeats every'}{' '}
-                        {formatTicks(plan.period_ticks)} ticks ({plan.used_lcm} crafting
+                        , and the {plan.used_lcm === 1 ? 'window cycle time is' : 'clock repeats every'}{' '}
+                        {formatTicks(plan.window_cycle_ticks)} ticks ({plan.used_lcm} output
                         cycle{plan.used_lcm === 1 ? '' : 's'}). Generating may still use fewer {plan.counts === 'destroyed' ? 'hands' : 'swings'}{' '}
                         if this count does not hold the rate.
                     </Alert>

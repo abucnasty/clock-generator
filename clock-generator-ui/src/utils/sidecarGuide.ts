@@ -15,19 +15,19 @@ export const NEW_TAB_CUE = '(opens in a new tab)';
 /** How to copy a build in Factorio with the mod, as the mod's portal page says it */
 export const SIDECAR_COPY_STEPS = [
     "In Factorio, press Alt+E to pick up the Sidecar mod's selection tool.",
-    'Drag a box over the machines, inserters, belts, chests, mining drills, cars, tanks, wagons and rocket silos of one unit of your build. For repeated identical units, select just one and set Copies here.',
+    'Drag a box over the machines, inserters, belts, chests, mining drills, cars, tanks, wagons and rocket silos of one copy of your build. For identical copies, select just one and set Copies here.',
     'Click Export (Copy JSON before Sidecar 0.12.0).',
     'Press Ctrl+C.',
 ] as const;
 
 export const INTRO_HEADING = 'Make a clock for your build';
 export const INTRO_SENTENCE =
-    'This tool makes a circuit clock that switches your inserters and mining drills on only when they have work, so your build holds the rate you want with fewer inserter wake-ups.';
+    'This tool makes a circuit clock that switches your inserters and mining drills on only when they have work, so your build holds the rate you want with fewer inserter wakeups.';
 export const INTRO_STEPS = {
     getBuildIn: 'Get your build in. With the Sidecar mod:',
     getBuildInLast: 'Then click Paste from Factorio here.',
     generate: 'Click Generate. The tool checks your build and makes the clocks.',
-    copy: 'Copy the blueprint, place it in Factorio, and wire the clock to your inserters.',
+    copy: 'Copy the blueprint, put it in Factorio, and wire the clock to your inserters.',
 } as const;
 export const INTRO_BUTTONS = {
     paste: 'Paste from Factorio',
@@ -56,11 +56,11 @@ export const PASTE_PROMPTS: Record<SidecarExportProblem | ClipboardProblem, Past
     'not-an-export': { severity: 'warning', text: 'Your clipboard does not hold a build from the Clock Generator Sidecar mod.' },
     'build-file': {
         severity: 'warning',
-        text: 'That is a build file, not an export from the mod. To open it, use Open build file… in the ⋮ menu.',
+        text: 'That is a configuration file, not an export from the mod. To open it, use Open configuration file… in the ⋮ menu.',
     },
     'no-entities': {
         severity: 'warning',
-        text: 'The export has no machines, inserters, belts, chests or mining drills. Drag a box over one complete unit of the build in Factorio, then click Export again.',
+        text: 'The export has no machines, inserters, belts, chests or mining drills. Drag a box over one complete copy of the build in Factorio, then click Export again.',
     },
 };
 
@@ -97,8 +97,8 @@ export const PASTE_DIALOG = {
 /** A file that was opened but is not a build file this site can read; never the parser's own words */
 export function openFileProblem(error: unknown): string {
     if (error instanceof SyntaxError) {
-        return 'Could not open that file: it is not a build file (it does not hold JSON).';
+        return 'Could not open that file: it is not a configuration file (it does not hold JSON).';
     }
-    const reason = error instanceof Error && error.message ? asSentence(error.message) : 'it is not a build file this site can read.';
+    const reason = error instanceof Error && error.message ? asSentence(error.message) : 'it is not a configuration file this site can read.';
     return `Could not open that file: ${reason}`;
 }

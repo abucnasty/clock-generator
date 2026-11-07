@@ -47,10 +47,10 @@ interface WorkflowBarProps {
     chip: { label: string; color: 'success' | 'error' } | null;
     /** Blueprint of the selected clock, once one is generated */
     blueprintString: string | null;
-    /** Name of the selected clock by what it is for ("Fewest wake-ups") */
+    /** Name of the selected clock, its strategy and its chips ("Takt Batches · 2 output swings each output cycle") */
     selectedLabel: string | null;
-    /** The engine's name of the selected clock, which says how it is made; shown when the name is pointed at */
-    selectedEngineName: string | null;
+    /** Where the strategy's name comes from, in a few words; shown when the name is pointed at */
+    selectedLine: string | null;
     /** Id of the selected clock, which tells apart two of the same name */
     selectedId: string | null;
     /** The selection last changed by the card's Back to recommended, whose focus on the name reads it: not announced */
@@ -65,7 +65,7 @@ interface WorkflowBarProps {
     copied: boolean;
     /** Copies the blueprint, or asks first for the clock of an earlier build (the copy every Copy button shares) */
     onCopy: () => void;
-    /** Blocking validation errors, shared with the Build validation panel. */
+    /** Blocking validation errors, shared with the Build check panel. */
     problems: Problem[];
     /** The engine refused the build as it stands now: Generate is off until the build changes */
     refused: boolean;
@@ -110,7 +110,7 @@ export function WorkflowBar({
     chip,
     blueprintString,
     selectedLabel,
-    selectedEngineName,
+    selectedLine,
     selectedId,
     selectionQuiet,
     rateWarning,
@@ -370,7 +370,7 @@ export function WorkflowBar({
                                     variant="body2"
                                     color="text.secondary"
                                     noWrap
-                                    title={selectedEngineName ?? undefined}
+                                    title={selectedLine ?? undefined}
                                     sx={{ maxWidth: 320, minWidth: 0, flex: '1 1 0', display: { xs: 'none', md: 'block' } }}
                                     data-selected-clock
                                 >
@@ -408,8 +408,8 @@ export function WorkflowBar({
                             color="error"
                             id={!note ? ELEMENT_IDS.blockReason : undefined}
                             label={validationCountLabel(problems.length)}
-                            onClick={() => onGoToProblem({ text: 'Build validation', target: { kind: 'validation-panel' } })}
-                            aria-label={`${validationCountLabel(problems.length)}. Show build validation.`}
+                            onClick={() => onGoToProblem({ text: 'Build check', target: { kind: 'validation-panel' } })}
+                            aria-label={`${validationCountLabel(problems.length)}. Show the build check.`}
                             // outlined as "Check failed" is, which takes the same place: one look for red in the bar. A
                             // tint under the red would take its words under 4.5:1; hovered, they are underlined
                             sx={{

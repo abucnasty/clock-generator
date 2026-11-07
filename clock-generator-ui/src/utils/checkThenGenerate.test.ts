@@ -22,8 +22,8 @@ import { PROBLEM_TEXT, type Problem } from './firstProblem';
 /** A build as the page holds it: a target, a machine, and two inserters */
 function form(): ConfigFormData {
     let config = createDefaultConfig();
-    config = edits.updateTargetOutput(config, 'recipe', 'logistic-science-pack');
-    config = edits.updateTargetOutput(config, 'items_per_second', 240);
+    config = edits.updateSetpoint(config, 'recipe', 'logistic-science-pack');
+    config = edits.updateSetpoint(config, 'items_per_second', 240);
     config = edits.updateMachine(config, 0, 'recipe', 'logistic-science-pack');
     return edits.addInserter(edits.addInserter(config));
 }
@@ -124,7 +124,7 @@ describe('checkKeyOf', () => {
         ['the forced output swings', withOverrides({ terminal_swing_count: 3 })],
         ['the ingredients left out of the LCM', withOverrides({ ignored_lcm_ingredients: ['iron-plate'] })],
         ['a machine recipe', (c) => edits.updateMachine(c, 0, 'recipe', 'automation-science-pack')],
-        ['the target rate', (c) => edits.updateTargetOutput(c, 'items_per_second', 200)],
+        ['the target rate', (c) => edits.updateSetpoint(c, 'items_per_second', 200)],
         ['an inserter enable rule', (c) => edits.updateInserter(c, 0, { overrides: { enable_control: { mode: 'ALWAYS' } } })],
     ])('changes with %s', (_, edit) => {
         expect(keyOf(edit)).not.toBe(base);
@@ -152,7 +152,7 @@ describe('checkStatusOf', () => {
     });
 
     it('is out of date once the build changed', () => {
-        const edited = keyOf((c) => edits.updateTargetOutput(c, 'items_per_second', 200));
+        const edited = keyOf((c) => edits.updateSetpoint(c, 'items_per_second', 200));
         expect(checkStatusOf(valid, edited)).toBe('out-of-date');
         expect(checkStatusOf(invalid, edited)).toBe('out-of-date');
     });
@@ -230,11 +230,11 @@ describe('PendingChecks', () => {
 });
 
 describe('CHECK_TEXT', () => {
-    it('uses Check for actions, names Build validation as the failure destination, and uses three dots while busy', () => {
+    it('uses Check for actions, names Build check as the failure destination, and uses three dots while busy', () => {
         for (const text of Object.values(CHECK_TEXT)) {
             expect(text).not.toMatch(/\b(?:validate|validated|valid)\b/i);
         }
-        expect(CHECK_TEXT.planFailed).toContain('Build validation');
+        expect(CHECK_TEXT.planFailed).toContain('Build check');
         expect(CHECK_TEXT.checking).toBe('Checking...');
         expect(CHECK_TEXT.generating).toBe('Generating...');
         expect(CHECK_TEXT.cancel).toBe('Cancel');

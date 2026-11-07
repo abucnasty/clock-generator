@@ -7,13 +7,14 @@ import { DebugSettingsProvider } from "../sequence/debug/debug-settings-provider
 import { SimulationContext } from "../sequence/simulation-context";
 import { generateClockAlternatives } from "../alternatives";
 import { generateClockForConfig } from "../generate-clock";
-import { backpressureLossKey, backpressureLossVerdictOf } from "../trial";
-import { BlueprintGenerationResult, planRun, runBuild, trialRunOf } from "./plan-run";
+import { disturbanceTrialKey, disturbanceTrialVerdictOf } from "../trial";
+import { BlueprintGenerationResult, unclockedRun, runBuild, trialRunOf } from "./unclocked-run";
 import { InserterTransferTracker } from "../../simulation/observers/inserter-transfer-tracker";
 import { DrillTransferTracker } from "../../simulation/observers/drill-transfer-tracker";
 import { StateTransitionTracker } from "../../simulation/observers/state-transition-tracker";
 import { FactorioStateTracker } from "../../simulation/observers/factorio-state-tracker";
 import { RUN_MEMO_MIN_TICKS, RunMemo, canonicalKey, currentRunMemo, withRunMemo } from "./run-memo";
+import { plannedFractionally } from "../generate-blueprint-test-helpers";
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 
@@ -119,11 +120,11 @@ describe("the memo of the runs of a generation", () => {
     });
 
     it("reads a kept run as a run made anew: the windows of a plan and a trial", () => {
-        const fresh = planRun(config, options);
+        const fresh = unclockedRun(config, options);
         const fresh_trial = trialRunOf(fresh.run);
         withRunMemo(() => {
-            const first = planRun(config, options);
-            const again = planRun(config, options);
+            const first = unclockedRun(config, options);
+            const again = unclockedRun(config, options);
             expect(currentRunMemo()!.hits).toBe(1);
             expect(again.unslacked_windows).toEqual(fresh.unslacked_windows);
             expect(first.unslacked_windows).toEqual(fresh.unslacked_windows);
@@ -137,9 +138,9 @@ describe("the memo of the runs of a generation", () => {
             const memo = currentRunMemo()!;
             runBuild(config, options);
             runBuild({ ...config, overrides: { ...config.overrides, backed_up_belts: true } }, options);
-            runBuild(config, { ...options, warmup_periods: 3 });
+            runBuild(config, { ...options, warmup_window_cycles: 3 });
             runBuild(config, { ...options, factorio_states: true });
-            runBuild(config, { ...options, simulate_periods: 2 });
+            runBuild(config, { ...options, simulate_window_cycles: 2 });
             expect([memo.size, memo.hits]).toEqual([5, 0]);
             // the logger is the one option that is not read
             runBuild(config, { ...options, logger: { ...quiet } });
@@ -174,7 +175,7 @@ describe("the memo of the runs of a generation", () => {
     });
 
     it("keeps at most the ticks it is given, letting the run used longest ago go first", () => {
-        const others = [2, 3].map(warmup_periods => ({ ...options, warmup_periods }));
+        const others = [2, 3].map(warmup_window_cycles => ({ ...options, warmup_window_cycles }));
         const [ticks, second, third] = [options, ...others].map(it => runBuild(config, it).ticks_simulated);
         withRunMemo(() => {
             const memo = currentRunMemo()!;
@@ -182,7 +183,7 @@ describe("the memo of the runs of a generation", () => {
             runBuild(config, others[0]);
             runBuild(config, options); // used again: now the last used
             expect([memo.size, memo.hits]).toEqual([2, 1]);
-            runBuild(config, others[1]); // over the limit: the run with 2 warm-up periods goes
+            runBuild(config, others[1]); // over the limit: the run with 2 warm-up window cycles goes
             expect(memo.size).toBe(2);
             runBuild(config, options);
             expect(memo.hits).toBe(2);
@@ -218,16 +219,16 @@ describe("the memo of the runs of a generation", () => {
     });
 
     it("gives a planning run the plan of the first, as a plan made anew would be", () => {
-        const fresh = planRun(config, options);
+        const fresh = unclockedRun(config, options);
         withRunMemo(() => {
-            const first = planRun(config, options);
-            const again = planRun({ ...config }, options);
+            const first = unclockedRun(config, options);
+            const again = unclockedRun({ ...config }, options);
             expect(currentRunMemo()!.hits).toBe(1);
             expect(again.run.final_history).toBe(first.run.final_history);
             expect(again.unslacked_windows).toEqual(fresh.unslacked_windows);
             expect(again.item_names).toEqual(fresh.item_names);
             expect(again.run.stability_check).toEqual(fresh.run.stability_check);
-            expect(again.run.crafting_cycle_plan.total_duration).toEqual(fresh.run.crafting_cycle_plan.total_duration);
+            expect(again.run.output_cycle_plan.total_duration).toEqual(fresh.run.output_cycle_plan.total_duration);
         }, 0);
     });
 
@@ -254,28 +255,28 @@ describe("the memo of the backpressure loss verdicts of a generation", () => {
     });
 
     it("tries a clock once in a generation, whichever alternative asks, and every time outside one", () => {
-        const fresh = backpressureLossVerdictOf(config, clock, quiet);
-        expect(backpressureLossVerdictOf(config, clock, quiet)).not.toBe(fresh);
+        const fresh = disturbanceTrialVerdictOf(config, clock, quiet);
+        expect(disturbanceTrialVerdictOf(config, clock, quiet)).not.toBe(fresh);
         withRunMemo(() => {
             const memo = currentRunMemo()!;
-            const first = backpressureLossVerdictOf(config, clock, quiet);
+            const first = disturbanceTrialVerdictOf(config, clock, quiet);
             expect(first).toEqual(fresh);
-            expect(backpressureLossVerdictOf(config, clock, quiet)).toBe(first);
+            expect(disturbanceTrialVerdictOf(config, clock, quiet)).toBe(first);
             // the way an alternative reaches the same clock: planned with fractional swings, or with the cycles of its own
-            expect(backpressureLossVerdictOf({ ...config, overrides: { ...config.overrides, use_fractional_swings: true } }, clock, quiet)).toBe(first);
-            expect(backpressureLossVerdictOf({ ...config, overrides: { ...config.overrides, lcm: 7 } }, clock, quiet)).toBe(first);
+            expect(disturbanceTrialVerdictOf(config, plannedFractionally(config, clock), quiet)).toBe(first);
+            expect(disturbanceTrialVerdictOf({ ...config, overrides: { ...config.overrides, lcm: 7 } }, clock, quiet)).toBe(first);
             expect(memo.loss_hits).toBe(3);
         });
     });
 
     it("tries a clock again when its windows, its period or the build differ", () => {
-        const key = backpressureLossKey(config, clock);
+        const key = disturbanceTrialKey(config, clock);
         const other_windows = { ...clock, clock_windows: { ...clock.clock_windows, "inserter:1": [{ start: 0, end: 1 }] } };
-        const other_period = { ...clock, simulation_duration: clock.simulation_duration.add(clock.simulation_duration) };
+        const other_window_cycle = { ...clock, simulation_duration: clock.simulation_duration.add(clock.simulation_duration) };
         const other_output = { ...clock, stability_check: { ...clock.stability_check, expected_output_items: clock.stability_check.expected_output_items + 1 } };
-        const keys = [other_windows, other_period, other_output].map(it => backpressureLossKey(config, it));
-        keys.push(backpressureLossKey({ ...config, overrides: { ...config.overrides, backed_up_belts: true } }, clock));
-        keys.push(backpressureLossKey({ ...config, overrides: { ...config.overrides, loop_seed_items: 17 } }, clock));
+        const keys = [other_windows, other_window_cycle, other_output].map(it => disturbanceTrialKey(config, it));
+        keys.push(disturbanceTrialKey({ ...config, overrides: { ...config.overrides, backed_up_belts: true } }, clock));
+        keys.push(disturbanceTrialKey({ ...config, overrides: { ...config.overrides, kick_start_items: 17 } }, clock));
         expect(new Set([key, ...keys]).size).toBe(keys.length + 1);
     });
 
@@ -283,16 +284,16 @@ describe("the memo of the backpressure loss verdicts of a generation", () => {
         const fuel = await loadConfigFromFile(TestConfigPaths.BIOCHAMBER_FUEL);
         const built = generateClockForConfig(fuel, { logger: quiet, verify_as_built: false, fuel_consumption_view: false, modulo_blueprint: false, factorio_states: false });
         expect(Object.keys(built.unplanned_inserter_clocks ?? {})).not.toEqual([]);
-        expect(backpressureLossKey({ ...fuel, overrides: { ...fuel.overrides, lcm: 7 } }, built)).not.toBe(backpressureLossKey(fuel, built));
+        expect(disturbanceTrialKey({ ...fuel, overrides: { ...fuel.overrides, lcm: 7 } }, built)).not.toBe(disturbanceTrialKey(fuel, built));
     });
 
     it("keeps no verdict for a clock that could not be tried", () => {
         withRunMemo(() => {
             const memo = currentRunMemo()!;
             let tried = 0;
-            const none = () => { tried++; return { backpressure_loss: null, backpressure_loss_not_tried: "no" }; };
-            memo.backpressureLoss("clock", none);
-            memo.backpressureLoss("clock", none);
+            const none = () => { tried++; return { disturbance_trial: null, disturbance_trial_not_tried: "no" }; };
+            memo.disturbanceTrial("clock", none);
+            memo.disturbanceTrial("clock", none);
             expect([tried, memo.loss_hits]).toEqual([2, 0]);
         });
     });

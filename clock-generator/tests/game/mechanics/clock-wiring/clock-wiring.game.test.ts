@@ -9,7 +9,7 @@ import { ConfigPaths } from "../../../../src/config/config-paths";
 import { loadConfigFromFile } from "../../../../src/config/loader";
 import { generateClockAlternatives } from "../../../../src/crafting/generate-blueprint";
 import { recordInFactorio } from "../../../../src/harness/factorio-harness";
-import { outputPerPeriod, recipesMaking } from "../../../../src/harness/recording-output";
+import { outputPerWindowCycle, recipesMaking } from "../../../../src/harness/recording-output";
 
 /** Runs a headless Factorio, so it needs the game and a save to build in; without either it is skipped, not failed */
 const FACTORIO = process.env.FACTORIO_PATH;
@@ -20,7 +20,7 @@ const WHY_SKIPPED = !FACTORIO ? "FACTORIO_PATH is not set to a Factorio executab
     : null;
 
 const SCAFFOLD = path.join(SAMPLE_BUILDS_DIR, "science", "automation", "automation-240.scaffold");
-/** Several clock periods of automation science after the warmup and settling */
+/** Several window cycles of automation science after the warmup and settling */
 const RECORDED_TICKS = 7_200;
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 
@@ -55,8 +55,8 @@ describe("the harness wires the clock to the build", () => {
         const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
         const selected = alternatives[selected_index];
         const subtick = selected.result.subtick;
-        const period = subtick?.clock.period_ticks ?? selected.result.simulation_duration.ticks;
-        const expected = Math.round(config.target_output.items_per_second / config.target_output.copies * period / 60 * 1e6) / 1e6;
+        const window_cycle_ticks = subtick?.clock.window_cycle_ticks ?? selected.result.simulation_duration.ticks;
+        const expected = Math.round(config.setpoint.items_per_second / config.setpoint.copies * window_cycle_ticks / 60 * 1e6) / 1e6;
         // the clock with its schedule as the generator made it, which the harness wires without reading descriptions
         const exported = subtick ?? selected.result;
         const result = await recordInFactorio({
@@ -77,13 +77,13 @@ describe("the harness wires the clock to the build", () => {
             log: () => { },
         });
 
-        const periods = outputPerPeriod(result.recording, recipesMaking(config, config.target_output.recipe));
-        // the first period is left out: the build may still be settling into the clock
-        const checked = periods.slice(1);
+        const window_cycles = outputPerWindowCycle(result.recording, recipesMaking(config, config.setpoint.recipe));
+        // the first window cycle is left out: the build may still be settling into the clock
+        const checked = window_cycles.slice(1);
         expect(checked.length, `the recording of ${result.recording.sample_count} ticks holds whole clock periods after the first`).toBeGreaterThan(1);
-        const wrong_length = checked.filter(it => it.end - it.start !== period);
-        expect(wrong_length, `every one of the ${checked.length} periods checked lasts ${period} ticks`).toEqual([]);
+        const wrong_length = checked.filter(it => it.end - it.start !== window_cycle_ticks);
+        expect(wrong_length, `every one of the ${checked.length} periods checked lasts ${window_cycle_ticks} ticks`).toEqual([]);
         const short = checked.filter(it => it.items !== expected);
-        expect(short, `every one of the ${checked.length} periods checked moves ${expected} items of ${config.target_output.recipe}`).toEqual([]);
+        expect(short, `every one of the ${checked.length} periods checked moves ${expected} items of ${config.setpoint.recipe}`).toEqual([]);
     }, 960_000);
 });

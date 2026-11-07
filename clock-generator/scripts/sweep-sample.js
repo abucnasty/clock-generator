@@ -23,7 +23,7 @@ const { describeSharedItem } = dist("crafting/deadlock-risk.js");
         row.deadlock_risks = (alternatives[0]?.deadlock_risks ?? []).map(describeSharedItem);
         row.alternatives = alternatives.map(a => ({
             id: a.id, label: a.label, is_stable: a.verdict === "stable", holds_expected_output: a.verdict !== "unstable",
-            broken_by: a.assessment.backpressure_loss?.broken_by ?? null, meets_target_rate: a.ranking.meets_target_rate,
+            broken_by: a.assessment.disturbance_trial?.broken_by ?? null, meets_target_rate: a.ranking.meets_target_rate,
             matches_belt_choice: a.ranking.matches_belt_choice, items_per_second: a.assessment.items_per_second,
             wake_ups_per_minute: a.assessment.wake_ups_per_minute, start_dependence: a.assessment.start_dependence,
             start_dependence_note: a.insights.find(it => it.id === "start-dependence")?.what ?? null, belt: a.belt === null ? null : clockBeltLabel(a.belt),

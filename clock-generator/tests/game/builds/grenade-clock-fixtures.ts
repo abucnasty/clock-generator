@@ -38,12 +38,12 @@ export function grenadeClockCases(): GrenadeClockCase[] {
 
 const FOLDER = path.dirname(ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY);
 const BUILDS = {
-    "one copy": {file: "grenade-240-fills-belt-exactly-hand-clock.blueprint", clock: {counter: 87, period: 112, first_value: 0} as BuiltClock, copies: 1, share: 1 / 7},
-    "full build": {file: "grenade-240-fills-belt-exactly-full-build.blueprint", clock: {counter: 1, period: 112, first_value: 0} as BuiltClock, copies: 7, share: 1},
+    "one copy": {file: "grenade-240-fills-belt-exactly-hand-clock.blueprint", clock: {counter: 87, window_cycle_ticks: 112, first_value: 0} as BuiltClock, copies: 1, share: 1 / 7},
+    "full build": {file: "grenade-240-fills-belt-exactly-full-build.blueprint", clock: {counter: 1, window_cycle_ticks: 112, first_value: 0} as BuiltClock, copies: 7, share: 1},
 } as const;
 
 /** The id of the alternative the generated clock is: the 112-tick one, which the rule for hands in groups makes stable */
-export const GENERATED_ALTERNATIVE = "planned-belt-slack";
+export const GENERATED_ALTERNATIVE = "round_robin_polling";
 
 const scaffoldOf = (build: GrenadeClockCase["build"]) => fs.readFileSync(path.join(FOLDER, BUILDS[build].file), "utf8").trim();
 

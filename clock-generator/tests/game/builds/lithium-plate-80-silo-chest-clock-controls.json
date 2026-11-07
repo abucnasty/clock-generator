@@ -4,10 +4,10 @@
     "lithium-silo-swings-3": {
       "recorded": {
         "pr": 0,
-        "commit": "038ed41a",
-        "frozen_head": "038ed41a",
-        "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
-        "clock_sha256": "9c4f03147dde26b7e1c32ea1b7e2d816adf98f5d8706b6252f5fb07f795bfa52",
+        "commit": "57c76634",
+        "frozen_head": "57c76634",
+        "note": "recorded under the protocol in game ticks on the engine of this head; pr is set when the PR is opened",
+        "clock_sha256": "540e662ef5dc989fe1542fe48697557f4dc4ffc55c729c9d8340b7ad620d124f",
         "clock_basis": "capture"
       },
       "native": {
@@ -30,8 +30,8 @@
             "ticks": 3240,
             "items": 4320,
             "expected": 4320,
-            "stock_start": 216,
-            "stock_end": 216,
+            "stock_start": 312,
+            "stock_end": 312,
             "net": 4320
           }
         },
@@ -59,8 +59,8 @@
           }
         ],
         "stock": {
-          "lowest": 0,
-          "end": 198,
+          "lowest": 96,
+          "end": 230,
           "holds": true
         },
         "result": "holds",
@@ -68,24 +68,24 @@
       },
       "generation": {
         "period": 1080,
-        "expected": 1440.0,
+        "expected": 1440,
         "verdict": "stable",
         "selection": {
-          "id": "swings-3",
+          "id": "takt_batches_observed_swings_3",
           "holds": true,
           "rate": 80,
           "supply": null
         },
-        "clock_sha256": "9c4f03147dde26b7e1c32ea1b7e2d816adf98f5d8706b6252f5fb07f795bfa52"
+        "clock_sha256": "540e662ef5dc989fe1542fe48697557f4dc4ffc55c729c9d8340b7ad620d124f"
       }
     },
     "lithium-silo-swings-3-fill-last": {
       "recorded": {
         "pr": 0,
-        "commit": "038ed41a",
-        "frozen_head": "038ed41a",
-        "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
-        "clock_sha256": "9c4f03147dde26b7e1c32ea1b7e2d816adf98f5d8706b6252f5fb07f795bfa52",
+        "commit": "57c76634",
+        "frozen_head": "57c76634",
+        "note": "recorded under the protocol in game ticks on the engine of this head; pr is set when the PR is opened",
+        "clock_sha256": "540e662ef5dc989fe1542fe48697557f4dc4ffc55c729c9d8340b7ad620d124f",
         "clock_basis": "capture"
       },
       "native": {
@@ -108,8 +108,8 @@
             "ticks": 3240,
             "items": 4320,
             "expected": 4320,
-            "stock_start": 216,
-            "stock_end": 216,
+            "stock_start": 312,
+            "stock_end": 312,
             "net": 4320
           }
         },
@@ -137,8 +137,8 @@
           }
         ],
         "stock": {
-          "lowest": 0,
-          "end": 198,
+          "lowest": 96,
+          "end": 230,
           "holds": true
         },
         "result": "holds",
@@ -146,24 +146,24 @@
       },
       "generation": {
         "period": 1080,
-        "expected": 1440.0,
+        "expected": 1440,
         "verdict": "stable",
         "selection": {
-          "id": "swings-3",
+          "id": "takt_batches_observed_swings_3",
           "holds": true,
           "rate": 80,
           "supply": null
         },
-        "clock_sha256": "9c4f03147dde26b7e1c32ea1b7e2d816adf98f5d8706b6252f5fb07f795bfa52"
+        "clock_sha256": "540e662ef5dc989fe1542fe48697557f4dc4ffc55c729c9d8340b7ad620d124f"
       }
     },
     "lithium-silo-swings-1": {
       "recorded": {
         "pr": 0,
-        "commit": "038ed41a",
-        "frozen_head": "038ed41a",
-        "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
-        "clock_sha256": "38c48860e108924796bb431c8107fd3ca8f96c743b7d223efc6a4edaf8c9b6b9",
+        "commit": "57c76634",
+        "frozen_head": "57c76634",
+        "note": "recorded under the protocol in game ticks on the engine of this head; pr is set when the PR is opened",
+        "clock_sha256": "3d8551f9e68d8dd8cef1bc629eb2c74286893b5a5a30c7578002b1edb04277a2",
         "clock_basis": "capture"
       },
       "native": {
@@ -173,7 +173,7 @@
         "period": 1080,
         "window": 3600,
         "expected": 4800,
-        "steady": 7971,
+        "steady": 6891,
         "baseline": {
           "ticks": 3600,
           "total": 4842,
@@ -186,32 +186,32 @@
             "ticks": 3240,
             "items": 4320,
             "expected": 4320,
-            "stock_start": 54,
-            "stock_end": 54,
+            "stock_start": 86,
+            "stock_end": 86,
             "net": 4320
           }
         },
         "disturbances": [
           {
             "kind": "cut holmium-plate",
-            "start": 11571,
-            "drop": 12662,
-            "release": 12662,
-            "recovered": 16907
+            "start": 10491,
+            "drop": 11303,
+            "release": 11303,
+            "recovered": 15531
           },
           {
             "kind": "block output",
-            "start": 16907,
-            "drop": 17923,
-            "release": 17923,
-            "recovered": 22011
+            "start": 15531,
+            "drop": 16438,
+            "release": 16438,
+            "recovered": 20073
           },
           {
             "kind": "cut holmium-plate",
-            "start": 22011,
-            "drop": 22786,
-            "release": 22786,
-            "recovered": 26627
+            "start": 20073,
+            "drop": 20525,
+            "release": 20525,
+            "recovered": 24467
           }
         ],
         "stock": {
@@ -220,28 +220,28 @@
           "holds": true
         },
         "result": "holds",
-        "ended": 26627
+        "ended": 24467
       },
       "generation": {
         "period": 1080,
-        "expected": 1440.0,
+        "expected": 1440,
         "verdict": "stable",
         "selection": {
-          "id": "swings-1",
+          "id": "takt_batches_observed_swings_1",
           "holds": true,
           "rate": 80,
           "supply": null
         },
-        "clock_sha256": "38c48860e108924796bb431c8107fd3ca8f96c743b7d223efc6a4edaf8c9b6b9"
+        "clock_sha256": "3d8551f9e68d8dd8cef1bc629eb2c74286893b5a5a30c7578002b1edb04277a2"
       }
     },
     "lithium-silo-swings-7": {
       "recorded": {
         "pr": 0,
-        "commit": "038ed41a",
-        "frozen_head": "038ed41a",
-        "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
-        "clock_sha256": "343b7a92f307168f7dd52c3147c328193c1641e09d67fdaa8b4255b198531fdb",
+        "commit": "57c76634",
+        "frozen_head": "57c76634",
+        "note": "recorded under the protocol in game ticks on the engine of this head; pr is set when the PR is opened",
+        "clock_sha256": "61effe3366fe9712e27b307ba9c8b36bac71e6b84e07885d055baca16133438a",
         "clock_basis": "capture"
       },
       "native": {
@@ -260,15 +260,15 @@
       },
       "generation": {
         "period": 7560,
-        "expected": 10080.0,
+        "expected": 10080,
         "verdict": "stable",
         "selection": {
-          "id": "swings-7",
+          "id": "takt_batches_observed_swings_7",
           "holds": true,
           "rate": 80,
           "supply": null
         },
-        "clock_sha256": "343b7a92f307168f7dd52c3147c328193c1641e09d67fdaa8b4255b198531fdb"
+        "clock_sha256": "61effe3366fe9712e27b307ba9c8b36bac71e6b84e07885d055baca16133438a"
       }
     }
   }

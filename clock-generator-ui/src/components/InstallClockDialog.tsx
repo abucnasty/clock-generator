@@ -2,7 +2,9 @@ import { Check, ContentCopy } from '@mui/icons-material';
 import { Alert, Box, Button, Tab, Tabs, Typography } from '@mui/material';
 import { useId, useLayoutEffect, useMemo, useState } from 'react';
 import type { ClockAlternativeView } from '../worker/types';
-import { beltCellText, clockTechnicalName, wakeUpsText } from '../utils/clockSummary';
+import { beltCellText, wakeUpsText } from '../utils/clockSummary';
+import type { PickRule } from '../utils/recommendedClock';
+import { fullClockName } from '../utils/strategyNames';
 import { INSTALL_COPY, needsNoClock, REQUIRES_FACTORIO, type WiringMoves } from '../utils/installSteps';
 import { rateWarningOf } from '../utils/rateWarning';
 import type { GeneratedFor } from '../utils/resultsStaleness';
@@ -16,8 +18,10 @@ import { TabBody } from './TabBody';
 import { HANDS_TEXT } from '../utils/targetCounts';
 
 /** On-demand help shared by the toolbar and fullscreen workspace. Closing keeps the last reference tab. */
-export function InstallClockDialog({ open, onClose, selected, blueprintString, staleFor, copyLabel, copied, onCopy }: {
+export function InstallClockDialog({ open, onClose, selected, blueprintString, staleFor, copyLabel, copied, onCopy, pickRule = null }: {
     open: boolean;
+    /** What the selection rule was given by the latest generation's config; null when not known */
+    pickRule?: PickRule | null;
     onClose: () => void;
     selected: ClockAlternativeView;
     blueprintString: string | null;
@@ -46,8 +50,8 @@ export function InstallClockDialog({ open, onClose, selected, blueprintString, s
         actions={blueprintString && <Button variant="contained" color={staleFor || warning ? 'warning' : 'secondary'} onClick={onCopy} startIcon={copied ? <Check /> : <ContentCopy />}>
             {copied ? 'Copied' : copyLabel}
         </Button>}>
-        <Typography variant="body2" sx={{ fontWeight: 600 }}>{selected.counts === 'destroyed' ? HANDS_TEXT.clock(selected.terminalSwingCount) : `${selected.terminalSwingCount} ${selected.terminalSwingCount === 1 ? 'swing' : 'swings'}`} · {wakeUpsText(selected).value.replace(' a minute', ' wake-ups/min')}{selected.beltLabel && ` · ${beltCellText(selected.beltLabel)}`}</Typography>
-        <Typography variant="caption" color="text.secondary" component="p">{clockTechnicalName(selected)} · {REQUIRES_FACTORIO}</Typography>
+        <Typography variant="body2" sx={{ fontWeight: 600 }}>{selected.counts === 'destroyed' ? HANDS_TEXT.clock(selected.terminalSwingCount) : `${selected.terminalSwingCount} ${selected.terminalSwingCount === 1 ? 'swing' : 'swings'}`} · {wakeUpsText(selected).value.replace(' a minute', ' wakeups/min')}{selected.beltLabel && ` · ${beltCellText(selected.beltLabel, pickRule)}`}</Typography>
+        <Typography variant="caption" color="text.secondary" component="p">{fullClockName(selected)} · {REQUIRES_FACTORIO}</Typography>
         {warning && <Alert severity="warning" sx={{ mt: 1 }}>{warning}</Alert>}
         <Tabs value={tab} onChange={(_, value: 'guide' | 'wiring') => setTab(value)} aria-label="Installation help" sx={{ mt: 1, borderBottom: 1, borderColor: 'divider' }}>
             <Tab label="Guide" value="guide" {...tabProps(id, 'guide')} />

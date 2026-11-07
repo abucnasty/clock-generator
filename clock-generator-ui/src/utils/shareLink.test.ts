@@ -18,7 +18,7 @@ import {
 const BASE = 'https://clock-generator.example/';
 
 const smallBuild = (): Config => ({
-    target_output: { recipe: 'iron-gear-wheel', items_per_second: 2.5, copies: 1 },
+    setpoint: { recipe: 'iron-gear-wheel', items_per_second: 2.5, copies: 1 },
     machines: [{ id: 1, recipe: 'iron-gear-wheel', productivity: 0, crafting_speed: 1.25 }],
     inserters: [{ source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 }, stack_size: 16 }],
     belts: [],
@@ -26,7 +26,7 @@ const smallBuild = (): Config => ({
 } as unknown as Config);
 
 const bigBuild = (): Config => ({
-    target_output: { recipe: 'electronic-circuit', items_per_second: 30, copies: 4 },
+    setpoint: { recipe: 'electronic-circuit', items_per_second: 30, copies: 4 },
     machines: [
         { id: 1, recipe: 'electronic-circuit', productivity: 0.5, crafting_speed: 2.5 },
         { id: 2, recipe: 'copper-cable', productivity: 0, crafting_speed: 2.5 },
@@ -47,7 +47,7 @@ const bigBuild = (): Config => ({
                 },
             },
         },
-        { source: { type: 'machine', id: 2 }, sink: { type: 'machine', id: 1 }, stack_size: 12, overrides: { enable_control: { mode: 'CLOCKED', ranges: [{ start: 10, end: 90 }], period_duration_ticks: 600 } } },
+        { source: { type: 'machine', id: 2 }, sink: { type: 'machine', id: 1 }, stack_size: 12, overrides: { enable_control: { mode: 'CLOCKED', ranges: [{ start: 10, end: 90 }], window_cycle_ticks: 600 } } },
     ],
     belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }] }],
     chests: [
@@ -65,7 +65,7 @@ function generatedBuild(inserters: number): Config {
         source: { type: 'machine', id: (i % build.machines.length) + 1 },
         sink: { type: 'chest', id: 1 },
         stack_size: (i % 16) + 1,
-        overrides: { enable_control: { mode: 'CLOCKED', ranges: [{ start: i * 7, end: i * 7 + 13 + (i % 5) }], period_duration_ticks: 600 + i } },
+        overrides: { enable_control: { mode: 'CLOCKED', ranges: [{ start: i * 7, end: i * 7 + 13 + (i % 5) }], window_cycle_ticks: 600 + i } },
     })) as unknown as Config['inserters'];
     return build;
 }
@@ -194,10 +194,65 @@ describe('sharedBuildSummary', () => {
     });
 });
 
+describe('share links made before the setpoint and the kick start were named so', () => {
+    /** A link as the site made it before: the build carries `target_output`, and `loop_seed_items` in its overrides */
+    const formerLink = async () => {
+        const { setpoint, ...rest } = smallBuild();
+        const former = { target_output: setpoint, ...rest, overrides: { loop_seed_items: 50 } } as unknown as Config;
+        return linkTo(former, 'An old link');
+    };
+
+    it('still opens: the build loads with its setpoint and its kick start, and nothing is left under the old names', async () => {
+        const decoded = await decodeShareLink(await formerLink());
+        if (decoded.kind !== 'build') throw new Error(`Expected a decoded build, not ${decoded.problem}`);
+        const file = readConfigFile(JSON.stringify(decoded.config)) as { setpoint: unknown; overrides: unknown };
+        expect(file.setpoint).toEqual({ recipe: 'iron-gear-wheel', items_per_second: 2.5, copies: 1 });
+        expect(file.overrides).toEqual({ kick_start_items: 50 });
+        expect('target_output' in file).toBe(false);
+        const parsed = parseFormConfig(ConfigSchema, file);
+        expect(parsed.success).toBe(true);
+        expect(parsed.data!.setpoint.recipe).toBe('iron-gear-wheel');
+        expect(parsed.data!.overrides?.kick_start_items).toBe(50);
+    });
+
+    it('loads to the same build as a link made with the new names, and the schema reads the old names without the file reader as well', async () => {
+        const old = await decodeShareLink(await formerLink());
+        if (old.kind !== 'build') throw new Error('Expected a decoded build');
+        const current = { ...smallBuild(), overrides: { kick_start_items: 50 } };
+        expect(ConfigSchema.parse(old.config)).toEqual(ConfigSchema.parse(current));
+    });
+});
+
+describe('share links made before the window cycle time was named so', () => {
+    /** A link as the site made it before: a Clocked override of an inserter carries `period_duration_ticks` */
+    const formerLink = async () => {
+        const build = smallBuild();
+        build.inserters = [{ ...build.inserters[0], overrides: { enable_control: { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }], period_duration_ticks: 120 } } }] as unknown as Config['inserters'];
+        return linkTo(build, 'An old link');
+    };
+
+    it('still opens: the build loads with its window cycle time, and nothing is left under the old name', async () => {
+        const decoded = await decodeShareLink(await formerLink());
+        if (decoded.kind !== 'build') throw new Error(`Expected a decoded build, not ${decoded.problem}`);
+        const file = readConfigFile(JSON.stringify(decoded.config));
+        const parsed = parseFormConfig(ConfigSchema, file);
+        expect(parsed.success).toBe(true);
+        const control = parsed.data!.inserters[0].overrides?.enable_control;
+        expect(control).toEqual({ mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }], window_cycle_ticks: 120 });
+        expect(JSON.stringify(file)).not.toContain('period_duration_ticks');
+    });
+
+    it('is read by the schema without the file reader as well', async () => {
+        const decoded = await decodeShareLink(await formerLink());
+        if (decoded.kind !== 'build') throw new Error('Expected a decoded build');
+        expect(ConfigSchema.parse(decoded.config).inserters[0].overrides?.enable_control).toMatchObject({ window_cycle_ticks: 120 });
+    });
+});
+
 describe('shared builds through the real file and worker boundary', () => {
     it.each([0.0625, 0.0001, 1 / 3])('preserves Copies %s and inserter metadata', async copies => {
         const config = smallBuild();
-        config.target_output.copies = copies;
+        config.setpoint.copies = copies;
         config.inserters = [
             { prototype: 'bulk-inserter', quality: 'normal' },
             { prototype: 'fast-inserter', quality: 'normal' },
@@ -214,14 +269,14 @@ describe('shared builds through the real file and worker boundary', () => {
         expect(parsed.success).toBe(true);
         expect(ConfigSchema.safeParse(file).success).toBe(copiesProblem(copies) === null);
         const exported = JSON.parse(JSON.stringify(formDataToConfig(configToFormData(parsed.data!))));
-        expect(exported.target_output.copies).toBe(copies);
+        expect(exported.setpoint.copies).toBe(copies);
         // Metadata is independent of the Copies refinement; keep its full presence/value matrix once.
         if (copies === 0.0625) expect(metadataOf(exported.inserters)).toStrictEqual(metadataOf(JSON.parse(original).inserters));
         expect(JSON.stringify(config)).toBe(original);
     });
 
     it('rejects malformed decoded config at the worker boundary even with editable Copies', async () => {
-        const config = { ...smallBuild(), machines: 'broken', target_output: { ...smallBuild().target_output, copies: 0.0001 } };
+        const config = { ...smallBuild(), machines: 'broken', setpoint: { ...smallBuild().setpoint, copies: 0.0001 } };
         const decoded = await decodeShareLink({ version: '1', data: await deflatedBase64Url(JSON.stringify({ name: 'Broken', config })) });
         if (decoded.kind !== 'build') throw new Error(`Expected unknown decoded config, not ${decoded.problem}`);
         expect(parseFormConfig(ConfigSchema, readConfigFile(JSON.stringify(decoded.config))).success).toBe(false);

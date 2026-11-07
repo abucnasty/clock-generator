@@ -72,7 +72,7 @@ function run(is_game_clock: boolean) {
         sink_state,
         tick_provider,
         enable_control: EnableControl.clocked({
-            periodDuration: Duration.ofTicks(40),
+            windowCycleDuration: Duration.ofTicks(40),
             enabledRanges: [OpenRange.from(10, 13)],
             tickProvider: tick_provider,
             is_game_clock,

@@ -5,10 +5,10 @@ import type { Config } from "../config";
 import { planClockAlternatives } from "./alternatives";
 import * as generation from "./generate-clock";
 import * as trial from "./trial";
-import type { BlueprintGenerationResult } from "./plan/plan-run";
+import type { BlueprintGenerationResult } from "./plan/unclocked-run";
 
 const quiet = { log() {}, warn() {}, error() {}, debug() {} };
-const recovered = { survives: true, broken_by: [], recovered_after_periods: 0 };
+const recovered = { survives: true, broken_by: [], recovered_after_window_cycles: 0 };
 const options = { logger: quiet, verify_as_built: true, factorio_states: false, fuel_consumption_view: false, modulo_blueprint: false };
 
 describe("primitive primary integration and legacy sibling compatibility", () => {
@@ -21,49 +21,49 @@ describe("primitive primary integration and legacy sibling compatibility", () =>
     afterEach(() => vi.restoreAllMocks());
 
     it("does not spawn shared bootstrap, preserves grouped metadata and uses derived count in later tasks", () => {
-        const result: BlueprintGenerationResult = { ...base, used_terminal_swing_count: 2, grouped_hands: { shared_windows: false },
-            primitive_grouped: { strategy: "primitive-grouped", trigger: "initial-period-limit", requested_terminal_swing_count: 602,
+        const result: BlueprintGenerationResult = { ...base, used_terminal_swing_count: 2, round_robin_polling: { shared_windows: false },
+            primitive_round_robin_polling: { strategy: "primitive-grouped", trigger: "initial-period-limit", requested_terminal_swing_count: 602,
                 terminal_swing_count: 1, grouped_cycles: 1, construction_key: "test composition", loop_refinement: false,
                 options: { share_windows: false, feeder_offset: 1, surplus_guard: false } } };
         const signature = trial.clockVerificationSignature(config, result);
-        result.primitive_grouped!.verification = { signature, backpressure_loss: recovered, start_dependence: null };
+        result.primitive_round_robin_polling!.verification = { signature, disturbance_trial: recovered, start_dependence: null };
         const generate = vi.spyOn(generation, "generateClockWithSwingBackoff").mockReturnValue(result);
-        const recovery = vi.spyOn(trial, "backpressureLossVerdictOf").mockImplementation(() => { throw new Error("completed recovery should be reused"); });
+        const recovery = vi.spyOn(trial, "disturbanceTrialVerdictOf").mockImplementation(() => { throw new Error("completed recovery should be reused"); });
         const plan = planClockAlternatives(config, options);
         expect(generate).toHaveBeenCalledOnce();
         expect(recovery).not.toHaveBeenCalled();
         expect(plan.context).toMatchObject({ swings: 1, planned_swings: 1 });
         expect(plan.context.secondary_planning).toEqual({ source: "primitive-primary", terminal_swing_count: 1 });
         expect(structuredClone(plan.context)).toEqual(JSON.parse(JSON.stringify(plan.context)));
-        expect(plan.primary?.alternatives[0].label).toContain("Small batches");
-        expect(plan.primary?.alternatives[0].result.grouped_hands).toEqual({ shared_windows: false });
-        expect(plan.primary?.alternatives[0].assessment.backpressure_loss?.survives).toBe(true);
+        expect(plan.primary?.alternatives[0].label).toContain("Round-Robin Polling, shorter window cycle");
+        expect(plan.primary?.alternatives[0].result.round_robin_polling).toEqual({ shared_windows: false });
+        expect(plan.primary?.alternatives[0].assessment.disturbance_trial?.survives).toBe(true);
     });
 
     it("still invokes the automatic shared callback for an ordinary grouped result", () => {
         const generate = vi.spyOn(generation, "generateClockWithSwingBackoff").mockImplementation((_config, requested) => ({
-            ...base, grouped_hands: { shared_windows: requested?.shared_windows === true } }));
-        vi.spyOn(trial, "backpressureLossVerdictOf").mockReturnValue({ backpressure_loss: recovered });
+            ...base, round_robin_polling: { shared_windows: requested?.shared_windows === true } }));
+        vi.spyOn(trial, "disturbanceTrialVerdictOf").mockReturnValue({ disturbance_trial: recovered });
         const plan = planClockAlternatives(config, options);
         expect(plan.context).not.toHaveProperty("secondary_planning");
         expect(generate.mock.calls.some(call => call[1]?.shared_windows === true)).toBe(true);
     });
 
-    it("offers Small batches where the primary did not try it only as a fallback: it never re-counts the other alternatives", () => {
+    it("offers Round-Robin Polling, shorter window cycle where the primary did not try it only as a fallback: it never re-counts the other alternatives", () => {
         vi.spyOn(generation, "generateClockWithSwingBackoff").mockReturnValue(base);
-        vi.spyOn(trial, "backpressureLossVerdictOf").mockReturnValue({ backpressure_loss: recovered });
+        vi.spyOn(trial, "disturbanceTrialVerdictOf").mockReturnValue({ disturbance_trial: recovered });
         const plan = planClockAlternatives(config, options);
         expect(plan.context).not.toHaveProperty("secondary_planning");
         expect(plan.context).not.toHaveProperty("primitive_tried");
-        expect(plan.tasks.find(task => task.id === "primitive-grouped")).toEqual({ id: "primitive-grouped", label: "Small batches", only_when_needed: true, fallback: true });
+        expect(plan.tasks.find(task => task.id === "primitive-grouped")).toEqual({ id: "primitive-grouped", label: "Round-Robin Polling, shorter window cycle", only_when_needed: true, fallback: true });
     });
 
-    it("does not offer Small batches again where the primary tried it", () => {
+    it("does not offer Round-Robin Polling, shorter window cycle again where the primary tried it", () => {
         const report = { strategy: "primitive-grouped" as const, eligibility: "separate-windows-only" as const, outcome: "failed" as const, attempts: [] };
         const attempt = { terminal_swing_count: 1, holds: false, actual_output_items: 0, expected_output_items: 1 };
         vi.spyOn(generation, "generateClockWithSwingBackoff").mockReturnValue({ ...base, swing_backoff_report: { triggered: false,
             initial_terminal_swing_count: 1, initial_attempt: attempt, stable_terminal_swing_count: null, attempts: [], primitive_grouped_attempt: report } });
-        vi.spyOn(trial, "backpressureLossVerdictOf").mockReturnValue({ backpressure_loss: recovered });
+        vi.spyOn(trial, "disturbanceTrialVerdictOf").mockReturnValue({ disturbance_trial: recovered });
         const plan = planClockAlternatives(config, options);
         expect(plan.context.primitive_tried).toBe(true);
         expect(plan.tasks.some(task => task.id === "primitive-grouped")).toBe(false);

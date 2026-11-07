@@ -28,7 +28,7 @@ const KINDS: { kind: LabelKind; many: string; of: (config: Config) => { id?: num
 const OWN_OVERRIDES = ['backed_up_belts', 'search_for_fewer_wake_ups'];
 
 /** The parts of a config this file names a change in; anything else that changed is "other settings" */
-const NAMED_PARTS = ['target_output', 'machines', 'inserters', 'belts', 'chests', 'drills', 'overrides'];
+const NAMED_PARTS = ['setpoint', 'machines', 'inserters', 'belts', 'chests', 'drills', 'overrides'];
 
 const beltsText = (config: Config) => (config.overrides?.backed_up_belts === true ? 'backed up' : 'moving');
 const onOff = (on: boolean) => (on ? 'on' : 'off');
@@ -55,8 +55,8 @@ function entityChanges(kind: LabelKind, many: string, generated: { id?: number }
  */
 export function buildChangesOf(generated: Config, current: Config, recipeLabel: (id: string) => string = (id) => id): string[] {
     const changes: string[] = [];
-    const before = generated.target_output;
-    const after = current.target_output;
+    const before = generated.setpoint;
+    const after = current.setpoint;
     if (before.recipe !== after.recipe) {
         changes.push(`Recipe (${recipeLabel(before.recipe)} → ${recipeLabel(after.recipe)})`);
     }
@@ -84,7 +84,7 @@ export function buildChangesOf(generated: Config, current: Config, recipeLabel: 
     const deeperBefore = generated.overrides?.search_for_fewer_wake_ups === true;
     const deeperAfter = current.overrides?.search_for_fewer_wake_ups === true;
     if (deeperBefore !== deeperAfter) {
-        changes.push(`Search for fewer wake-ups (${onOff(deeperBefore)} → ${onOff(deeperAfter)})`);
+        changes.push(`Search for fewer wakeups (${onOff(deeperBefore)} → ${onOff(deeperAfter)})`);
     }
     const otherOverrides = (config: Config) => Object.fromEntries(Object.entries(config.overrides ?? {})
         .filter(([key, value]) => value !== undefined && !OWN_OVERRIDES.includes(key)));

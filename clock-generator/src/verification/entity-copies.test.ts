@@ -35,7 +35,7 @@ const chest = (id: number): End => ({ type: "chest", id });
 const copy = (a: number, b: number): [End, End][] => [[belt(1), machine(a)], [machine(a), machine(b)], [machine(b), belt(2)]];
 
 const config = {
-    target_output: { recipe: "product", items_per_second: 1, copies: 2 },
+    setpoint: { recipe: "product", items_per_second: 1, copies: 2 },
     machines: [
         { id: 1, recipe: "gear", productivity: 0, crafting_speed: 1 },
         { id: 2, recipe: "product", productivity: 0, crafting_speed: 1 },

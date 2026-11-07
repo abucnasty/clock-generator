@@ -5,10 +5,10 @@ import { alwaysEnabledInserters, loopInserters } from "./sequence/unplanned-inse
 /**
  * Why a clock leaves an inserter or a drill on all the time, with no wake window, where the planner has a reason:
  *
- * - "enable-rule": its enable rule is Always on, set by the build;
+ * - "override": its Enable Control Strategy override is Always on, set by the build;
  * - "loop": it moves items between machines that feed each other in a loop, which the clock leaves running;
  * - "from-loop": it takes from a machine of a loop to a machine outside it, which the clock leaves running too;
- * - "busy": its swings take the whole clock period (or all of it but the offset of its window), so a wake window would
+ * - "busy": its swings take the whole window cycle (or all of it but the offset of its window), so a wake window would
  *   only put gaps between swings that follow each other;
  * - "chest-drill": a drill into a chest that nothing can time (see `ChestDrillWhy`);
  * - "no-swing": the run of the build that the windows are read from recorded no swing of it, so there is nothing to read
@@ -17,10 +17,10 @@ import { alwaysEnabledInserters, loopInserters } from "./sequence/unplanned-inse
  * An inserter or drill with no reason here is one the planner leaves on without having said why.
  */
 export type AlwaysOnReason =
-    | { kind: "enable-rule" }
+    | { kind: "override" }
     | { kind: "loop" }
     | { kind: "from-loop" }
-    | { kind: "busy"; period_ticks: number }
+    | { kind: "busy"; window_cycle_ticks: number }
     | { kind: "no-swing" }
     | { kind: "chest-drill"; why: Exclude<ChestDrillWhy, { kind: "config" }> };
 
@@ -35,7 +35,7 @@ export function chestDrillReasons(drills: readonly ChestDrillClock[]): AlwaysOnR
             return [];
         }
         // a drill the build sets to Always on is not a chest drill's reason
-        const reason: AlwaysOnReason = why.kind === "config" ? { kind: "enable-rule" } : { kind: "chest-drill", why };
+        const reason: AlwaysOnReason = why.kind === "config" ? { kind: "override" } : { kind: "chest-drill", why };
         return [[EntityId.forDrill(drill.drill_id).id, reason] as const];
     }));
 }
@@ -51,7 +51,7 @@ export function alwaysOnReasons(
     is_clocked: (entity_id: string) => boolean,
     known: {
         /** The ids the build sets to Always on */
-        enable_rule: ReadonlySet<string>;
+        override: ReadonlySet<string>;
         /** What the strategy that made the windows left without them, with its reason */
         left_open: ReadonlyMap<string, AlwaysOnReason>;
         chest_drills: readonly ChestDrillClock[];
@@ -69,7 +69,7 @@ export function alwaysOnReasons(
             continue;
         }
         const reason = known.left_open.get(id) ?? drills[id]
-            ?? (known.enable_rule.has(id) ? { kind: "enable-rule" as const } : undefined)
+            ?? (known.override.has(id) ? { kind: "override" as const } : undefined)
             ?? (loop.has(id) ? { kind: "loop" as const } : from_loop.has(id) ? { kind: "from-loop" as const } : undefined)
             ?? (known.swung.has(id) ? undefined : { kind: "no-swing" as const });
         if (reason !== undefined) {

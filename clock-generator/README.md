@@ -125,7 +125,7 @@ build without a clock, for recording it in the game.
 
 `src/config/config-paths.ts` names every sample.
 
-A config describes one copy of a build, and `target_output.copies` says how many identical copies stand side by side:
+A config describes one copy of a build, and `setpoint.copies` says how many identical copies stand side by side:
 the generator plans one and multiplies its rate. The copies are assumed identical, with no inserter from one to another,
 and the belts shared between them. A config that itself holds several identical copies (the same machines and
 inserters written out twice or more, joined by no inserter) is refused and told to describe one copy and set `copies`
@@ -226,7 +226,7 @@ Here is a complete configuration for a utility science pack build. Recipe names 
       "recipe": "utility-science-pack"
     }
   ],
-  "target_output": {
+  "setpoint": {
     "copies": 7,
     "items_per_second": 120,
     "recipe": "utility-science-pack"
@@ -284,7 +284,7 @@ normal inserter. Picking up from a belt (4 ticks) is calibrated on the legendary
 by any other prototype or quality is refused (follow-up F7). It is calibrated with 16-item hands on 4-item belt stacks
 only: a belt pickup with another hand (a `stack_size` other than 16, or an item that stacks to less) or from a lane whose
 `stack_size` is not 4 is generated with a warning that its timing is not tested, in the log, among the clocks' insights
-and in the web form's Build validation. Dropping onto a belt keeps the legendary stack inserter's
+and in the web form's Build check. Dropping onto a belt keeps the legendary stack inserter's
 timing, which is not checked for the others. The simulator also gives every inserter the stack inserter's wait for a
 full hand, which the other prototypes do not have in the game.
 
@@ -404,7 +404,7 @@ You can override the automatic enable control logic for individual inserters and
 
 #### Inserter Override Example
 
-Both overrides are optional; `period_duration_ticks` defaults to the crafting cycle duration.
+Both overrides are optional; `window_cycle_ticks` defaults to the output cycle duration.
 
 ```json
 {
@@ -419,7 +419,7 @@ Both overrides are optional; `period_duration_ticks` defaults to the crafting cy
         { "start": 0, "end": 100 },
         { "start": 200, "end": 300 }
       ],
-      "period_duration_ticks": 500
+      "window_cycle_ticks": 500
     }
   }
 }
@@ -454,7 +454,7 @@ Both overrides are optional; `period_duration_ticks` defaults to the crafting cy
 **CLOCKED**: The entity is enabled only during specified tick ranges within the window cycle. Each range has:
 - `start`: The tick when the entity becomes enabled (inclusive)
 - `end`: The tick when the entity becomes disabled (inclusive)
-- `period_duration_ticks` (optional): The window cycle time in ticks. If not specified, uses the crafting cycle duration.
+- `window_cycle_ticks` (optional): The window cycle time in ticks. If not specified, uses the output cycle duration.
 
 For a moving belt input, set `pickup_length` on the inserter's `source`: `1` for the exposed line on a straight
 belt or `0.5` at either underground endpoint. Sidecar 0.9.0 exports this automatically for inserters beside those
@@ -468,7 +468,7 @@ timing; `overrides.backed_up_belts: true` selects backed-up supply independently
 - `backed_up_belts`: items back up at the input pickups and upstream supply refills the gaps, making one stack available each pickup tick (default false)
 - `search_for_fewer_wake_ups`: run the four searches for every build (default false)
 - `check_start_dependence`: try every clock from other starts than the cold start too, and name the clocks that reach their target from some starts only (default false; see `docs/stability.md`, "Start dependence")
-- `loop_seed_items`: items a machine that makes its own ingredient (pentapod eggs) is given once when a clock starts (default 200, the same kick start as the harness gives)
+- `kick_start_items`: items a machine that makes its own ingredient (pentapod eggs) is given once when a clock starts (default 200, the same kick start as the harness gives)
 
 `src/config/schema.ts` (`ConfigOverridesSchema`) lists the others. Older files using `non_moving_belts` migrate to
 `backed_up_belts` on import; if both are present, `backed_up_belts` takes precedence. New configs and exports use
@@ -637,7 +637,7 @@ try {
 } catch (error) {
     if (error instanceof ConfigValidationError) {
         console.error(error.getFormattedIssues());
-        // Output: target_output.items_per_second: Invalid input: expected number, received string (expected number)
+        // Output: setpoint.items_per_second: Invalid input: expected number, received string (expected number)
     }
 }
 ```

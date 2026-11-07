@@ -106,7 +106,7 @@ async function repairOutputFocusAt(browser, url) {
     });
 
     const config = {
-        target_output: { recipe: 'supercapacitor', items_per_second: 0.1, copies: 1 },
+        setpoint: { recipe: 'supercapacitor', items_per_second: 0.1, copies: 1 },
         machines: [
             { id: 1, recipe: 'processing-unit-recycling', crafting_speed: 1, productivity: 0, prototype: 'recycler', result_target: { type: 'machine', id: 2 } },
             { id: 2, recipe: 'supercapacitor', crafting_speed: 1, productivity: 50, prototype: 'electromagnetic-plant' },
@@ -118,7 +118,7 @@ async function repairOutputFocusAt(browser, url) {
 
     const importBuild = async (name, value) => {
         await page.getByRole('button', { name: 'More options' }).click();
-        await page.getByRole('menuitem', { name: 'Open build file…' }).click();
+        await page.getByRole('menuitem', { name: 'Open configuration file…' }).click();
         await page.locator('input[type="file"]').setInputFiles({
             name,
             mimeType: 'application/json',
@@ -128,7 +128,7 @@ async function repairOutputFocusAt(browser, url) {
     };
 
     const scrapConfig = {
-        target_output: { recipe: 'scrap', items_per_second: 0.5, copies: 1, counts: 'destroyed' },
+        setpoint: { recipe: 'scrap', items_per_second: 0.5, copies: 1, counts: 'destroyed' },
         machines: [{ id: 1, recipe: 'scrap-recycling', crafting_speed: 0.5, productivity: 300, prototype: 'recycler', result_target: { type: 'chest', id: 1 } }],
         chests: [{ id: 1, type: 'infinity-chest', remove_unfiltered_items: true }],
         inserters: [],

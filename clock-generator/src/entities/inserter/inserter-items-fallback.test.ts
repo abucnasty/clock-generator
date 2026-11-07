@@ -16,7 +16,7 @@ FactorioDataService.findRecipeOrThrow("copper-cable");
  * accepts, a belt anything.
  */
 const chain = () => ConfigSchema.parse({
-    target_output: { recipe: "transport-belt", items_per_second: 1, copies: 1 },
+    setpoint: { recipe: "transport-belt", items_per_second: 1, copies: 1 },
     machines: [
         { id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1 },
         { id: 2, recipe: "transport-belt", productivity: 0, crafting_speed: 1 },
@@ -78,7 +78,7 @@ describe("the items an inserter carries when its config names no filters", () =>
 
     it("leave out a lane of the belt that the machine does not take", () => {
         const context = SimulationContext.fromConfig(ConfigSchema.parse({
-            target_output: { recipe: "copper-cable", items_per_second: 1, copies: 1 },
+            setpoint: { recipe: "copper-cable", items_per_second: 1, copies: 1 },
             machines: [{ id: 1, recipe: "copper-cable", productivity: 0, crafting_speed: 1 }],
             inserters: [{ id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: 4 }],
             belts: [{ id: 1, type: "transport-belt", lanes: [{ ingredient: "iron-plate", stack_size: 4 }, { ingredient: "copper-plate", stack_size: 4 }] }],
@@ -93,7 +93,7 @@ describe("the items an inserter carries when its config names no filters", () =>
 
     it("are the product of a machine on a belt that has a lane for it, and the belt receives it", () => {
         const context = SimulationContext.fromConfig(ConfigSchema.parse({
-            target_output: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+            setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
             machines: [{ id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1 }],
             inserters: [
                 { id: 1, source: { type: "chest", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: 4 },
@@ -113,7 +113,7 @@ describe("the items an inserter carries when its config names no filters", () =>
 
     it("are nothing for a chest that accepts none of what the machine makes, and nothing moves", () => {
         const context = SimulationContext.fromConfig(ConfigSchema.parse({
-            target_output: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+            setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
             machines: [{ id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1 }],
             inserters: [
                 { id: 1, source: { type: "chest", id: 2 }, sink: { type: "machine", id: 1 }, stack_size: 4 },

@@ -1,7 +1,7 @@
 // The blast radius: generate every sample config as it is (its belts moving or backed up as the config says; nothing makes
 // a copy with the other supply) and, when BLAST_GROUPS asks for them, every pickup, over-hood, front and blocked-output
 // fixture, every container config and every variant (a sample with the options a test or a game recording sets: belts backed up,
-// an ingredient left out of the period) (the record, clock-generator/record/, holds one file for each), and hash every alternative's
+// an ingredient left out of the window cycle) (the record, clock-generator/record/, holds one file for each), and hash every alternative's
 // exported clock (the way the controls files of the game tests pin one)
 // (clock_sha256: sha256 of its identity, clockIdentity of subtick ?? result: the blueprint without its text or metadata,
 // and the schedule; text_sha256: sha256 of {blueprint, schedule} with the text, which moves with any description;
@@ -211,8 +211,8 @@ function clocksOf(config: any, expand: ExpandHistory | undefined, key: string, p
         const exported = a.result.subtick ?? a.result;
         const with_text = { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule };
         return {
-            id: a.id, verdict: a.verdict, holds: a.assessment.holds, rate: a.assessment.items_per_second,
-            supply: a.belt?.kind ?? null, period: a.result.subtick?.clock.period_ticks ?? a.result.simulation_duration.ticks,
+            id: a.id, ...(a.maker !== undefined && { maker: a.maker }), verdict: a.verdict, holds: a.assessment.holds, rate: a.assessment.items_per_second,
+            supply: a.belt?.kind ?? null, window_cycle_ticks: a.result.subtick?.clock.window_cycle_ticks ?? a.result.simulation_duration.ticks,
             wake_ups: a.assessment.wake_ups?.wake_ups_per_minute ?? a.result.stability_check?.as_built?.wake_ups?.wake_ups_per_minute ?? null,
             clock_sha256: sha(clockIdentity(exported)), text_sha256: sha(with_text), descriptions_cut: descriptionsCut(a.result), windows_sha256: sha(a.result.clock_windows), windows: a.result.clock_windows,
             ...digestAlternative(a, expand),

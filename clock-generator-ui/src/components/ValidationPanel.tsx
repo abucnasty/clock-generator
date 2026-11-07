@@ -13,10 +13,10 @@ export function ValidationPanel({ issues, children, focusTargets = true }: {
     const advice = issues.filter(issue => !issue.blocksGeneration);
     // the sentence that opens one refusal, said once above the problems it lists
     const lead = errors.find(issue => issue.lead)?.lead;
-    return <Paper component="section" variant="outlined" aria-label="Build validation" id={focusTargets ? 'build-validation' : undefined}
+    return <Paper component="section" variant="outlined" aria-label="Build check" id={focusTargets ? 'build-validation' : undefined}
         tabIndex={-1} sx={{ mb: 2, p: 1.5, '&:focus': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 } }}>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 1, mb: 1 }}>
-            <Typography component="h3" variant="subtitle1" sx={{ fontWeight: 600 }}>Build validation</Typography>
+            <Typography component="h3" variant="subtitle1" sx={{ fontWeight: 600 }}>Build check</Typography>
             <Typography variant="caption" color="text.secondary">
                 {[errors.length ? `${errors.length} ${errors.length === 1 ? 'error' : 'errors'}` : '', advice.length ? `${advice.length} ${advice.length === 1 ? 'advisory' : 'advisories'}` : ''].filter(Boolean).join(' · ')}
             </Typography>

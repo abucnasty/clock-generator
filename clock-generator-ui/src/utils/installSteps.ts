@@ -43,8 +43,8 @@ export const INSTALL_COPY = {
             + 'book opens on it. The second does the same with more conditions.',
     },
     place: {
-        title: 'Place the combinators next to your build.',
-        detail: 'Place the blueprint on clear ground near your inserters. It has only combinators: no inserters and no '
+        title: 'Put the combinators next to your build.',
+        detail: 'Put the blueprint on clear ground near your inserters. It has only combinators: no inserters and no '
             + 'machines. They are wired to each other already; do not rewire them. A wire reaches 9 tiles, so keep each '
             + 'combinator within reach of its inserters.',
     },
@@ -59,8 +59,8 @@ export const INSTALL_COPY = {
     },
     enable: {
         title: 'Set each wired inserter to switch on with that wire.',
-        detail: 'Open the inserter, find Circuit network connection, choose Enable/disable, and set the condition to '
-            + 'Anything > 0. The combinator puts out one of the inserter\'s item only while the clock is in a wake '
+        detail: 'Open the inserter, find Circuit network connection, choose Enable if, and set the condition to '
+            + 'Anything > 0. The combinator puts out one of the inserter\'s item only while the clock is in an enable '
             + 'window, so the inserter works only then.',
         drills: ' A mining drill is wired and set the same way, with Read resources off: a drill that reads its resources '
             + 'puts its ore on the wire, and Anything > 0 then keeps it on.',
@@ -69,7 +69,7 @@ export const INSTALL_COPY = {
         title: 'Wire each combinator\'s output to its mining drills, and set them to switch on with it.',
         detail: 'A combinator whose description ends its first line with "(drill 1)" switches that mining drill on. With '
             + 'a green wire, connect its output to each drill in the wiring reference; the numbers are the ones on Configure. '
-            + 'Then open the drill, find Circuit network connection, choose Enable/disable, and set the condition to '
+            + 'Then open the drill, find Circuit network connection, choose Enable if, and set the condition to '
             + 'Anything > 0, with Read resources off: a drill that reads its resources puts its ore on the wire, and '
             + 'Anything > 0 then keeps it on. The Clock, the Clock lock and every combinator described "Part of the clock" '
             + 'are the clock itself: leave them.',
@@ -83,10 +83,10 @@ export const INSTALL_COPY = {
         detail: 'An inserter that is not in the list gets no combinator. One set to Always on, or with nothing to wait '
             + 'for, runs all the time: do not wire it. One set to Never on is never switched on by the clock: keep it '
             + 'off in the game yourself. If this clock replaces an older one, an inserter the old clock switched and '
-            + 'this list does not name stays off for good: remove its wire, or untick Enable/disable.',
+            + 'this list does not name stays off for good: remove its wire, or untick Enable if.',
     },
     none: {
-        title: 'Nothing to place or wire.',
+        title: 'Nothing to put down or wire.',
         // generic: the clock's facts do not say whether the build has an inserter set to Never on
         detail: 'No inserter or drill is on the clock, so this build needs no clock. If you set an inserter to Never '
             + 'on, keep it switched off in the game yourself.',
@@ -95,7 +95,7 @@ export const INSTALL_COPY = {
         title: 'Know the lock.',
         detail: 'The small constant combinator under the clock is the lock. It is off: leave it off. Switch it on to '
             + 'stop the clock; no inserter is switched on while it is on. Switch it off and the clock starts again from '
-            + 'its beginning, and the first period after may be a tick off.',
+            + 'its beginning, and the first window cycle after may be a tick off.',
     },
 } as const;
 

@@ -98,7 +98,7 @@
         "expected": 960,
         "verdict": "stable",
         "selection": {
-          "id": "even-hands",
+          "id": "time_division_windows",
           "holds": true,
           "rate": 400,
           "supply": null
@@ -202,7 +202,7 @@
         "expected": 960.0,
         "verdict": "stable",
         "selection": {
-          "id": "planned-belt-slack",
+          "id": "takt_batches_observed",
           "holds": true,
           "rate": 400,
           "supply": null

@@ -91,7 +91,7 @@ describe.each(RUNS)("%s run", run => {
 describe("the two lane choices of the simulator", () => {
     /** A machine that makes gears, dropping onto a belt of two lanes with no drop spot named; the lanes name the given items */
     function build(lanes: [string, string], stack_sizes: [number, number] = [4, 4]) {
-        const config = ConfigSchema.parse({target_output: {recipe: "iron-gear-wheel", items_per_second: 1, copies: 1},
+        const config = ConfigSchema.parse({setpoint: {recipe: "iron-gear-wheel", items_per_second: 1, copies: 1},
             machines: [{id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0}],
             belts: [{id: 1, type: "turbo-transport-belt", lanes: lanes.map((ingredient, index) => ({ingredient, stack_size: stack_sizes[index]}))}],
             inserters: [{id: 1, source: {type: "machine", id: 1}, sink: {type: "belt", id: 1}, stack_size: 16, filters: ["iron-gear-wheel"]}]});

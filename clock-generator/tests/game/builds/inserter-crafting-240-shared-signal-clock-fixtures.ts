@@ -14,7 +14,7 @@ import {assertFeedBacksUp, PickupClockScenario} from "./pickup-clock-capture";
  * The inserter build (`INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK`, 240 a second over three copies, 80 a second each) as
  * it was built: three copies in a row, the ore lines of the copies running on past the last into loaders and
  * void chests (drained and moving), the circuits and the product from chests and a loader. The hand-made clock is in it,
- * one for the three copies: a counter of the clock signal that counts 0 to 215 (a period of 216 ticks), and two window
+ * one for the three copies: a counter of the clock signal that counts 0 to 215 (a window cycle of 216 ticks), and two window
  * combinators, an iron plate signal on ticks 1-33 and 109-138 for the 12 ore and 12 plate inserters and an iron gear
  * wheel signal on ticks 1-65 and 109-173 for the 3 gear inserters; the circuit and output inserters are not wired.
  *
@@ -37,7 +37,7 @@ export function inserterCraftingClockCases(): InserterCraftingClockCase[] {
     return [
         {name: "hand-made-clock-three-copies", kind: "hand-made clock"},
         {name: "generated-three-copies", kind: "generated clock", alternative: GENERATED_ALTERNATIVE},
-        {name: "generated-backed-up-one-copy", kind: "generated clock", alternative: GENERATED_ALTERNATIVE, backed_up_one_copy: true},
+        {name: "generated-backed-up-one-copy", kind: "generated clock", alternative: BACKED_UP_ALTERNATIVE, backed_up_one_copy: true},
     ];
 }
 
@@ -46,7 +46,7 @@ const SCAFFOLD = path.join(__dirname, "inserter-crafting-240-shared-signal-clock
 const ONE_COPY_SCAFFOLD = path.join(path.dirname(ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK), "inserter-crafting-240-shared-signal-clock.scaffold");
 
 /** The counter of the hand-made clock (entity 36 of the blueprint): 0 to 215 */
-export const OWNER_CLOCK: BuiltClock = {counter: 36, period: 216, first_value: 0};
+export const OWNER_CLOCK: BuiltClock = {counter: 36, window_cycle_ticks: 216, first_value: 0};
 
 /** The sha256 of the identity of the hand-made clock in the blueprint (`builtClockIdentity`): what its control names it by */
 export function handMadeClockHash(): string {
@@ -60,7 +60,10 @@ export const COPIES = 3;
  * The clock recorded on the three copies (`swings-6`, 6 output swings): the generator's selected clock until the default dispatch changed, still
  * made; with the belts backed up it is the selected clock now
  */
-export const GENERATED_ALTERNATIVE = "swings-6";
+export const GENERATED_ALTERNATIVE = "takt_batches_observed_swings_6";
+
+/** The same clock with the belts backed up: the strategy and tuning method the backed-up build gets for it */
+export const BACKED_UP_ALTERNATIVE = "round_robin_polling_swings_6";
 
 /**
  * The copies are not alike, as they were built, and the config is the third (the eastern copy, with no overrides): the

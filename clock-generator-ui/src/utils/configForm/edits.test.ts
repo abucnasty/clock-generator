@@ -71,11 +71,11 @@ describe('ids', () => {
 
 describe('target output', () => {
     it('sets one field, and leaves an optional one, the gap between copies, out when it is cleared', () => {
-        const set = edits.updateTargetOutput(edits.updateTargetOutput(createDefaultConfig(), 'recipe', 'iron-gear-wheel'), 'copy_offset', { x: -12, y: 0 });
-        expect(set.target_output).toEqual({ recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1, copy_offset: { x: -12, y: 0 } });
-        const cleared = edits.updateTargetOutput(set, 'copy_offset', undefined);
-        expect(cleared.target_output).toEqual({ recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 });
-        expect('copy_offset' in cleared.target_output).toBe(false);
+        const set = edits.updateSetpoint(edits.updateSetpoint(createDefaultConfig(), 'recipe', 'iron-gear-wheel'), 'copy_offset', { x: -12, y: 0 });
+        expect(set.setpoint).toEqual({ recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1, copy_offset: { x: -12, y: 0 } });
+        const cleared = edits.updateSetpoint(set, 'copy_offset', undefined);
+        expect(cleared.setpoint).toEqual({ recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 });
+        expect('copy_offset' in cleared.setpoint).toBe(false);
     });
 });
 
@@ -155,7 +155,7 @@ describe('inserters', () => {
     });
 
     it('keeps the uuid, rule and forced flag on an inserter it renumbers', () => {
-        const rule: EnableControlOverride = { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }], period_duration_ticks: 60 };
+        const rule: EnableControlOverride = { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }], window_cycle_ticks: 60 };
         const config = edits.removeInserter(form({ 2: { overrides: { enable_control: rule }, _forced_always: true } }), 0);
         expect(ids(config.inserters)).toEqual([1, 2]);
         expect(config.inserters.map((ins) => ins._uuid)).toEqual(['inserter-2', 'inserter-3']);
@@ -334,7 +334,7 @@ describe('overrides', () => {
     });
 
     it.each<EnableControlOverride>([
-        { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }], period_duration_ticks: 60 },
+        { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }], window_cycle_ticks: 60 },
         { mode: 'CONDITIONAL', rule_set: { operator: 'AND', rules: [] } },
         { mode: 'NEVER' },
         { mode: 'ALWAYS' },

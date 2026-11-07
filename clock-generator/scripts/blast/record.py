@@ -18,6 +18,11 @@ usage:
                                                     the base, and <dir>, the record of the change), and every job whose selected clock got
                                                     worse (below); exit 1 on any that the --moves text does not name
 
+The ids of the alternatives are derived from the strategy and the settings of their clocks; the slot that made a clock is the `maker` of its
+job-file entry (today's old id). `check` reads an id of the committed record that is a maker of the run, and not an id of it, as the id the
+run gave that maker's clock, so a renamed id is not one alternative removed and another added (the ids in order and every field of the
+alternative then compare under the new id). A run from an engine from before has no makers and no ids to read so.
+
 --map: the blast's rename map (`old-job-key new-job-key` a line, '#' starts a comment): the committed record's jobs are
 renamed through it before the join, so a renamed job compares with its new name; the config hash of a renamed job is
 a field like another (a pure rename keeps it; a config_sha256 row says it did not). --summary: the table is also appended to this file (GITHUB_STEP_SUMMARY).
@@ -34,7 +39,7 @@ A job is named when its key (the file name without `.json`, as in MOVES.md) is i
 adds to record/MOVES.md. A job in one record only (added or removed) is not compared. A job named but not worse is not an error.
 
 The properties: every job file the blast writes holds `properties`, what tests/game/builds/record-properties.ts found on the live
-results of the job (the five properties, on every alternative; the results are too big to keep). `check` fails, with a table of job,
+results of the job (the six properties, on every alternative; the results are too big to keep). `check` fails, with a table of job,
 property, alternative and the values, on any problem; it also fails on a job file with no `properties`, one the module could not run
 on, or one judged by another version of the module than the checkout's (a run made before the module, or carried from one by a
 selective run): rerun with `blast.sh run --full`, or pass --allow-unchecked to list them and go on.
@@ -45,14 +50,16 @@ hold (expected texts, deciders, always-on reasons, the fuel view). `check` fails
 that failed; it fails on a job file with no `checks`, one the module could not run on, or one judged by another version of the module, as it
 does for the properties (--allow-unchecked lists them and goes on).
 
-The format (clock-record-1) is documented in clock-generator/record/README.md. Field names are stable: a new field is a new
-format number.
+The format (clock-record-2) is documented in clock-generator/record/README.md. Field names are stable: a new field is a new
+format number. `worse` still reads a base record in clock-record-1, whose alternatives name the window cycle time `period`.
 """
 import glob, hashlib, json, os, re, sys
 
-FORMAT = 'clock-record-1'
+FORMAT = 'clock-record-2'
+# the formats a base record may be in: clock-record-1 named the window cycle time of an alternative `period`
+BASE_FORMATS = ('clock-record-1', FORMAT)
 # the fields of an alternative, in the order they are written
-ALTERNATIVE_FIELDS = ['id', 'verdict', 'holds', 'rate', 'supply', 'period', 'wake_ups', 'descriptions_cut', 'clock_sha256',
+ALTERNATIVE_FIELDS = ['id', 'verdict', 'holds', 'rate', 'supply', 'window_cycle_ticks', 'wake_ups', 'descriptions_cut', 'clock_sha256',
                       'windows_sha256', 'text_sha256', 'results_sha256']
 # wake-ups a minute are written to this many decimals: the record is read by people, and the results digest holds the rest
 WAKE_UP_DECIMALS = 3
@@ -90,7 +97,8 @@ def project(job, config_sha256):
         return {**base, 'error': job['error']}
     alternatives = []
     for a in job['alternatives']:
-        row = {f: a.get(f) for f in ALTERNATIVE_FIELDS}
+        # a job file written before the window cycle was named has it as `period`
+        row = {f: a.get(f) if f != 'window_cycle_ticks' or f in a else a.get('period') for f in ALTERNATIVE_FIELDS}
         if row['wake_ups'] is not None:
             row['wake_ups'] = round(row['wake_ups'], WAKE_UP_DECIMALS)
         alternatives.append(row)
@@ -119,6 +127,38 @@ def load_jobs(path):
             die(f'{key} is not in the job list of {path} (or has no config hash)')
         records[key] = project(json.load(open(f)), hashes[key])
     return records
+
+
+def load_makers(path):
+    """{job key: {maker: alternative id}} of the job files of a jobs folder or cache entry. Since the ids of the alternatives are derived from
+    the strategy and the settings of their clocks, a job file keeps the slot that made each clock (`maker`, today's old id) beside the id; a
+    job file of an engine from before has none. The record does not hold it (its format does not change)."""
+    out = {}
+    for f in sorted(glob.glob(os.path.join(jobs_dir(path), '*.json'))):
+        if os.path.basename(f).startswith('_'):
+            continue
+        body = json.load(open(f))
+        out[os.path.basename(f)[:-5]] = {a['maker']: a['id'] for a in body.get('alternatives', []) if a.get('maker') is not None}
+    return out
+
+
+def with_derived_ids(before, makers):
+    """the committed records with the ids their alternatives had before they were derived (the maker's id) read as the id the run gave the
+    same maker's clock, so that an id renamed is not read as one alternative removed and another added: {job key: record}, and how many ids
+    were read so. An id the run still has is left alone (a record written after the derivation has none to rename)."""
+    out, renamed = {}, 0
+    for key, record in before.items():
+        by_maker = makers.get(key, {})
+        ids = {a['id'] for a in record.get('alternatives', [])}
+        live = set(by_maker.values())
+        mapping = {old: by_maker[old] for old in ids if old in by_maker and old not in live}
+        if not mapping:
+            out[key] = record
+            continue
+        renamed += len(mapping)
+        out[key] = {**record, 'selected': mapping.get(record['selected'], record['selected']),
+                    'alternatives': [{**a, 'id': mapping.get(a['id'], a['id'])} for a in record['alternatives']]}
+    return out, renamed
 
 
 MODULE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'tests', 'game', 'builds', 'record-properties.ts')
@@ -251,6 +291,19 @@ def load_record(directory):
         if record.get('job') != key:
             die(f'{f}: the job field {record.get("job")!r} is not the file name')
         out[key] = record
+    return out
+
+
+def load_base_record(directory):
+    """the committed records of the base's folder, {job key: record}, each in the current format: a clock-record-1 file (the format of a
+    base from before the window cycle time was named) has `period` in its alternatives, which is read as `window_cycle_ticks`"""
+    out = load_record(directory)
+    for key, record in out.items():
+        if record.get('format') not in BASE_FORMATS:
+            die(f"{key}: the base record is in format {record.get('format')!r}; this reads {' and '.join(BASE_FORMATS)}")
+        if record['format'] != FORMAT and 'alternatives' in record:
+            alternatives = [{('window_cycle_ticks' if f == 'period' else f): v for f, v in a.items()} for a in record['alternatives']]
+            out[key] = {**record, 'format': FORMAT, 'alternatives': alternatives}
     return out
 
 
@@ -414,7 +467,7 @@ def main_worse(opts):
     if not base_dir:
         die('worse takes --base <the record folder of the base>')
     directory = opts.get('dir') or os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'record')
-    base, change = load_record(base_dir), load_record(directory)
+    base, change = load_base_record(base_dir), load_record(directory)
     if not base or not change:
         die(f'no records in {base_dir if not base else directory}')
     moves = ''
@@ -484,6 +537,9 @@ def main(argv):
     if not before:
         die(f'no records in {directory}')
     renames = load_map(opts['map']) if 'map' in opts else {}
+    before, derived = with_derived_ids(before, load_makers(pos[0]))
+    if derived:
+        print(f'record.py: {derived} alternative ids of the record read as the derived ids of the clocks the same makers made (the run\'s `maker` fields)')
     rows, unused = differences(before, after, renames)
     if renames:
         print(f'renamed through the map: {len(renames) - len(unused)} jobs (a renamed job whose config hash differs is a config_sha256 row below)'

@@ -14,7 +14,7 @@ const GEARS = "iron-gear-wheel";
 /** Gears from an assembling machine at crafting speed 1 (a gear a second), taken into a car by an inserter of the prototype */
 function gearsTakenBy(prototype: string, quality = "normal"): Config {
     return ConfigSchema.parse({
-        target_output: { recipe: GEARS, items_per_second: 1, copies: 1 },
+        setpoint: { recipe: GEARS, items_per_second: 1, copies: 1 },
         machines: [{ id: 1, recipe: GEARS, productivity: 0, crafting_speed: 1 }],
         inserters: [
             { id: 1, source: { type: "chest", id: 1 }, sink: { type: "machine", id: 1 }, filters: ["iron-plate"] },

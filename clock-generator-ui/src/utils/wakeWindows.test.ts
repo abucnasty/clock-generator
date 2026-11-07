@@ -24,7 +24,7 @@ import {
 type Pair = [start: number, end: number];
 
 const spans = (...pairs: Pair[]): TickSpan[] => pairs.map(([start, end]) => ({ start, end }));
-const normalize = (period: number, ...pairs: Pair[]) => normalizeWindows(spans(...pairs), period);
+const normalize = (window_cycle_ticks: number, ...pairs: Pair[]) => normalizeWindows(spans(...pairs), window_cycle_ticks);
 
 function entity(id: string, extra: Partial<CompactEntityStateTransitions> = {}): CompactEntityStateTransitions {
     const [type, number] = id.split(':');
@@ -75,7 +75,7 @@ function fuelView(inserterId: string): FuelViewData {
         enables_per_minute: 9,
         fuel_item: 'coal',
     };
-    return { plan: { period_ticks: 600, merged_clock_ticks: 1200, machines: [], inserters: [inserter as FuelInserterPlan] }, run: null };
+    return { plan: { window_cycle_ticks: 600, merged_clock_ticks: 1200, machines: [], inserters: [inserter as FuelInserterPlan] }, run: null };
 }
 
 type SourceFields = Partial<WakeWindowSource> & { entities?: (string | CompactEntityStateTransitions)[] };
@@ -96,7 +96,7 @@ function source({ entities = [], ...extra }: SourceFields = {}): WakeWindowSourc
 const rowsOf = (fields?: SourceFields, options?: EntityOption[]) => buildWakeWindowRows(source(fields), options);
 
 describe('normalizeWindows', () => {
-    const shape = (period: number, ...pairs: Pair[]) => normalize(period, ...pairs).map(w => [w.start, w.end, w.length, w.wraps]);
+    const shape = (window_cycle_ticks: number, ...pairs: Pair[]) => normalize(window_cycle_ticks, ...pairs).map(w => [w.start, w.end, w.length, w.wraps]);
 
     it.each<[string, number, Pair[], [number, number, number, boolean][]]>([
         ['sorts windows', 600, [[50, 59], [0, 9]], [[0, 9, 10, false], [50, 59, 10, false]]],
@@ -107,8 +107,8 @@ describe('normalizeWindows', () => {
         ['leaves an empty list empty', 600, [], []],
         ['does not wrap a lone window at tick 0', 100, [[0, 4]], [[0, 4, 5, false]]],
         ['keeps the wrapped window last, after the others', 100, [[0, 4], [40, 49], [96, 99]], [[40, 49, 10, false], [96, 4, 9, true]]],
-    ])('%s', (_name, period, raw, windows) => {
-        expect(shape(period, ...raw)).toEqual(windows);
+    ])('%s', (_name, window_cycle_ticks, raw, windows) => {
+        expect(shape(window_cycle_ticks, ...raw)).toEqual(windows);
     });
 
     it('joins a window that wraps past the end of the period into one with two segments', () => {
@@ -136,8 +136,8 @@ describe('coverage', () => {
         ['counts a wrapped window once', 100, [[0, 4], [96, 99]], 9 / 100],
         ['uses the fractional period', 550.957, [[0, 99]], 100 / 550.957],
         ['is at most 1 over a fractional period', 550.957, [[0, 550.957]], 1],
-    ])('%s', (_name, period, raw, share) => {
-        expect(coverage(normalize(period, ...raw), period)).toBe(share);
+    ])('%s', (_name, window_cycle_ticks, raw, share) => {
+        expect(coverage(normalize(window_cycle_ticks, ...raw), window_cycle_ticks)).toBe(share);
     });
 });
 
@@ -221,12 +221,12 @@ describe('buildWakeWindowRows', () => {
     it('carries the engine\'s reason on a row the clock leaves always on, and on no other', () => {
         const rows = rowsOf({
             clockWindows: { 'inserter:1': spans([0, 9]) },
-            alwaysOnReasons: { 'inserter:2': { kind: 'busy', period_ticks: 24 }, 'inserter:1': { kind: 'loop' } },
+            alwaysOnReasons: { 'inserter:2': { kind: 'busy', window_cycle_ticks: 24 }, 'inserter:1': { kind: 'loop' } },
             entities: ['inserter:1', 'inserter:2', 'inserter:3'],
         });
         expect(rows.map(row => [row.id, row.mode, row.alwaysOnReason])).toEqual([
             ['inserter:1', 'windows', undefined],
-            ['inserter:2', 'always-on', { kind: 'busy', period_ticks: 24 }],
+            ['inserter:2', 'always-on', { kind: 'busy', window_cycle_ticks: 24 }],
             ['inserter:3', 'always-on', undefined],
         ]);
     });
@@ -237,13 +237,13 @@ describe('buildWakeWindowRows', () => {
         expect(row.ownClock).toBeUndefined();
     });
 
-    it('has a row for an id only the wake-ups or only the windows know', () => {
+    it('has a row for an id only the wakeups or only the windows know', () => {
         const rows = rowsOf({ clockWindows: { 'inserter:5': spans([0, 9]), 'drill:2': spans([100, 120]) }, asBuilt: asBuilt({ 'inserter:6': 3 }) });
         expect(rows.map(row => row.id)).toEqual(['inserter:5', 'inserter:6', 'drill:2']);
         expect(rows[0]).toMatchObject({ items: [], route: '' });
     });
 
-    it('takes the wake-ups by id, and has none for a drill or a clock without a count', () => {
+    it('takes the wakeups by id, and has none for a drill or a clock without a count', () => {
         const clockWindows = { 'inserter:1': spans([0, 9]), 'inserter:2': spans([20, 29]), 'drill:1': spans([0, 9]) };
         const wakeUps = (check: AsBuiltStabilityCheck | null) => rowsOf({ clockWindows, asBuilt: check }).map(row => row.wakeUpsPerMinute);
         expect(wakeUps(asBuilt({ 'inserter:1': 12.5, 'inserter:2': 3, 'drill:1': 99 }))).toEqual([12.5, 3, null]);
@@ -291,8 +291,8 @@ describe('axisTicks', () => {
         [600, 10, [0, 100, 200, 300, 400, 500]],
         [60, 10, [0, 10, 20, 30, 40, 50]],
         [1, 6, [0]],
-    ])('marks a period of %s with at most %s marks, at the finest step of 1, 2 or 5 that fits', (period, maxMarks, marks) => {
-        expect(axisTicks(period, maxMarks)).toEqual(marks);
+    ])('marks a period of %s with at most %s marks, at the finest step of 1, 2 or 5 that fits', (window_cycle_ticks, maxMarks, marks) => {
+        expect(axisTicks(window_cycle_ticks, maxMarks)).toEqual(marks);
     });
 });
 

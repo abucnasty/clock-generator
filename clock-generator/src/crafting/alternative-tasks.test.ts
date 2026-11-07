@@ -4,7 +4,7 @@ import {ConfigPaths} from "../config/config-paths";
 import { TestConfigPaths } from "../../tests/configs/paths";
 import {loadConfigFromFile} from "../config/loader";
 import {EnableControlMode} from "../config/schema";
-import {planClockAlternatives} from "./alternatives";
+import {planClockAlternatives, runClockAlternativeTask} from "./alternatives";
 import {quiet} from "./generate-blueprint-test-helpers";
 
 const options = {logger: quiet, factorio_states: false, fuel_consumption_view: false};
@@ -67,5 +67,30 @@ describe("output swing counts above the planned one", () => {
         const grenade = planClockAlternatives(await loadConfigFromFile(ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY), options);
         expect(grenade.context.planned_swings).toBe(1);
         expect(swingTasks(grenade)).toEqual(["swings-2", "swings-3"]);
+        // planning the three builds generates their clocks, which the shaping of the enable windows against ghost wakeups slowed (#695)
+    }, 120_000);
+});
+
+describe("the fractional swings task", () => {
+    const ids = (plan: ReturnType<typeof planClockAlternatives>) => plan.tasks.map(task => task.id);
+
+    // every inserter's hands a cycle come out whole at the primary's own count, which it held on its first plan
+    // on logistic science it is left out as well, where the primary keeps the belt pickup slack inside its windows (#595)
+    // and the run of fractional swings, which adds the slack, makes the same windows with it: a clock the primary beats
+    it("is left out where it would make the primary clock again, which made anyway it does", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.MILITARY_SCIENCE_120);
+        let signature = "";
+        const plan = planClockAlternatives(config, options, (_context, _tasks, primary) => { signature = primary; });
+        expect(plan.context.fractional_is_primary).toBe(true);
+        expect(ids(plan)).not.toContain("fractional");
+        const made = runClockAlternativeTask(config, { ...plan.context, fractional_is_primary: undefined }, "fractional", options, [signature]);
+        // merged into the primary's run: it lists nothing, and still carries the clocks it made as parts of the per-branch clock
+        expect({ ...made, parts: undefined }).toEqual({ signature, alternatives: [], parts: undefined });
+    });
+
+    it("is made where a swing of the first plan is fractional", async () => {
+        const plan = planClockAlternatives(await loadConfigFromFile(ConfigPaths.ELECTRIC_FURNACE_20), options);
+        expect(plan.context.fractional_is_primary).toBeUndefined();
+        expect(ids(plan)).toContain("fractional");
     });
 });

@@ -6,8 +6,8 @@ id: glossary
 # Glossary
 
 The words of the clock generator, for its documentation, its site and its code. The clock generator plans circuit
-clocks for Factorio builds: when each inserter is enabled in a repeating window cycle, so that the build holds its
-setpoint with as few wakeups as possible.
+clocks for Factorio builds: when each inserter is enabled in a repeating window cycle, so that the build holds its setpoint
+with as few wakeups as possible.
 
 Each term is checked against three sources, in this order:
 
@@ -48,8 +48,7 @@ The product a build must make and the rate it must hold, in items per second, fo
 clock never changes it. Control theory: the setpoint (Janert p.21-22, who uses it for rate targets). In IEC terms it is
 the command variable (IEC 351-48-09): it comes from outside, and the control does not change it. IEC's reference
 variable (351-48-02) is the input of a comparing element in closed-loop control, so the open-loop clock has none. A
-setpoint at the maximum rate of the build leaves no time for recovery (Janert p.22). The site's **Target Output**
-panel shows it, until the site's next release names the panel **Setpoint**.
+setpoint at the maximum rate of the build leaves no time for recovery (Janert p.22). The site's **Setpoint** panel.
 _Avoid_: target output, target rate, goal, control frequency (that is the window cycle time)
 
 **Copies**:
@@ -58,7 +57,7 @@ COPY (n), approved.
 _Avoid_: units (as the count)
 
 **Configuration**:
-A build, with its setpoint and enable rules: what the generator works from, what the site saves, and what
+A build, with its setpoint and overrides: what the generator works from, what the site saves, and what
 clocks are made for. Saved as a configuration file (**Open configuration file…**, **Save configuration file**). The
 game's word for a saved set of settings ("Server configuration").
 _Avoid_: config (bare), build file
@@ -123,8 +122,39 @@ A machine two or more inserters take from, whose output their enable windows mus
 ## Strategies
 
 **Strategy**:
-The rule that places an inserter's enable windows. The generator chooses it for each inserter, from the strategies
-that apply to the inserter's source, its sink and its place in the graph.
+One of several ways to do a job. The generator chooses the one that fits the case. This is the strategy pattern. The full form names the job (Enable Control Strategy, Belt strategy). The short form is used where the context is clear.
+
+**Enable Control Strategy**:
+How the clock controls one inserter or mining drill: the rule that places its enable windows. Each strategy is named after a practice with a similar timing problem. A router gives each entity its strategy. The site shows a strategy by its name, its tuning method and its selection.
+_Avoid_: clocking strategy, clock type
+
+**Belt strategy**:
+How a belt works in the simulation: Normal or Export. It is not an Enable Control Strategy.
+
+**Enable Control Strategy Router** (short form: **router**):
+The rule above the strategies. It gives each inserter and mining drill of the clock an Enable Control Strategy. Or it gives the reason the entity stays always enabled. There are two: Direct and Coordinated Sources. An override other than Auto decides the entity's control before any strategy.
+
+**Direct**:
+The router that gives every inserter and mining drill of the clock the one chosen strategy. An entity the strategy does not control stays always enabled, with its reason.
+
+**Coordinated Sources**:
+The router that gives the inserters of each source the enable windows of another clock of the build. A source is a machine, belt or chest that inserters take from. All sources use the window cycle of the recommended clock. The generator sets the sources one at a time, from the output upstream. It keeps the setting with the smallest number of wakeups for the full clock. It is a router, not a strategy.
+
+**Enable Control Strategy override** (short form: **override**):
+The setting that overrides the Enable Control Strategy of one inserter or drill (the configuration's `overrides.enable_control`). Auto lets the generator choose the strategy. Always on, Never on, Clocked and Conditional decide the control instead: the router then gives no strategy.
+_Avoid_: enable rule, enable control
+
+**Tuning method**:
+How the generator finds the enable windows. Calculated: the windows come from the numbers of the build. Observed: the windows are drawn around an unclocked run of the build. In control theory this is tuning (Åström and Murray 10.3, p.302). Calculated is tuning from a model (feedforward, IEC 351-47-09). Observed is tuning from the response of the plant with no controller: the process reaction curve (Janert 2013, p.82).
+
+**Selection**:
+How the generator gets the clock of a strategy. One version: it makes one clock. Best of N versions: it makes N clocks. The simulation keeps the one with the fewest wakeups that holds. Found by search: it moves the windows through many placements in the simulator. It keeps the best one that holds.
+
+**Unclocked run**:
+A run of the build with no clock: all inserters and drills stay enabled. The generator watches what they do. Time-Study Windows are drawn around it.
+
+**Primitive grouped**:
+Round-Robin Polling with a shorter window cycle: one output swing each output cycle, calculated straight from the numbers of the build. It is made when the usual window cycle is too long, or when no other clock holds. It tries the same versions and keeps the best one that holds.
 
 ## Windows
 
@@ -145,8 +175,12 @@ _Avoid_: belt pickup slack, pickup slack, slack (bare)
 One complete sequence of all enable windows of a clock, after which the sequence starts again. STE: CYCLE (n), approved.
 _Avoid_: periodicity, clock period, period (bare), cycle (bare)
 
+**Output cycle**:
+The time in which each output inserter makes its set number of swings at your setpoint. A window cycle is a whole number of output cycles.
+_Avoid_: crafting cycle
+
 **Window cycle time**:
-The time of one window cycle, in ticks: a whole number of crafting cycles, which can be a fraction of a tick. The
+The time of one window cycle, in ticks: a whole number of output cycles, which can be a fraction of a tick. The
 number the site shows. STE: TIME (n), approved.
 _Avoid_: clock period, period (bare), repeat interval, schedule length, LCM period
 

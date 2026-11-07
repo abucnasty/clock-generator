@@ -119,7 +119,7 @@ describe('backedUpBeltsHint', () => {
     const clocks = [clock(177), backedUp(0)];
 
     it.each([
-        ['says how few wake-ups the build may do with on backed-up belts', 177, 0, BELT_COPY.hint(0, 177)],
+        ['says how few wakeups the build may do with on backed-up belts', 177, 0, BELT_COPY.hint(0, 177)],
         ['prints the numbers rounded, as the table does', 176.6, 3.2, BELT_COPY.hint(3, 177)],
     ])('%s', (_, pickWakeUps, backedUpWakeUps, hint) => {
         expect(backedUpBeltsHint([clock(pickWakeUps), backedUp(backedUpWakeUps)], 0, 'moving')).toBe(hint);
@@ -129,11 +129,11 @@ describe('backedUpBeltsHint', () => {
         ['on a backed-up belt result', clocks, 0, 'backed_up'],
         ['with no pick', clocks, null, 'moving'],
         ['with no clocks', [], 0, 'moving'],
-        ['when the clock for backed-up belts has as many wake-ups, to a thousandth', [clock(12), backedUp(12.0004)], 0, 'moving'],
-        ['when the clock for backed-up belts has more wake-ups', [clock(12), backedUp(30)], 0, 'moving'],
+        ['when the clock for backed-up belts has as many wakeups, to a thousandth', [clock(12), backedUp(12.0004)], 0, 'moving'],
+        ['when the clock for backed-up belts has more wakeups', [clock(12), backedUp(30)], 0, 'moving'],
         ['when the best clock for backed-up belts does not meet the rate', [clock(177), backedUp(0, { meets_target_rate: false, rate_off_target: -10 })], 0, 'moving'],
-        ['when the pick\'s wake-up count is missing', [clock(null), backedUp(0)], 0, 'moving'],
-        ['when the backed-up clock\'s wake-up count is missing', [clock(177), backedUp(null)], 0, 'moving'],
+        ['when the pick\'s wakeup count is missing', [clock(null), backedUp(0)], 0, 'moving'],
+        ['when the backed-up clock\'s wakeup count is missing', [clock(177), backedUp(null)], 0, 'moving'],
         ['when the difference rounds away', [clock(176.7), backedUp(176.6)], 0, 'moving'],
     ])('says nothing %s', (_, alternatives, pick, used) => {
         expect(backedUpBeltsHint(alternatives, pick, used)).toBeNull();

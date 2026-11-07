@@ -245,7 +245,7 @@ describe('buildFlowGraph', () => {
     });
 
     it('puts the List row\'s chip text on an inserter with a rule, and none on Auto', () => {
-        const clocked: EnableControlOverride = { mode: 'CLOCKED', ranges: [{ start: 0, end: 7 }], period_duration_ticks: 192 };
+        const clocked: EnableControlOverride = { mode: 'CLOCKED', ranges: [{ start: 0, end: 7 }], window_cycle_ticks: 192 };
         const { nodes } = graph(form({ machines: 1, belts: 1 }, [
             inserter(1, belt(1), machine(1), { enable_control: clocked }),
             inserter(2, belt(1), machine(1), { enable_control: { mode: 'AUTO' } }),

@@ -8,7 +8,7 @@ import { FeasibilityError } from './errors';
 /** Actual free-lane gear build: four total items/s requires the multiplied Copies after extraction. */
 function eightUnits(): Config {
     return {
-        target_output: { recipe: 'iron-gear-wheel', items_per_second: 4, copies: 0.5 },
+        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 4, copies: 0.5 },
         machines: Array.from({ length: 8 }, (_, i) => ({ id: i + 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 })),
         inserters: Array.from({ length: 8 }, (_, i) => [
             { id: 2 * i + 1, source: { type: 'belt' as const, id: 1, near_lane: 1 as const }, sink: { type: 'machine' as const, id: i + 1 }, stack_size: 1, filters: ['iron-plate'] },
@@ -17,7 +17,7 @@ function eightUnits(): Config {
         belts: [
             { id: 1, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1 }] },
             { id: 2, type: 'transport-belt', lanes: [{ ingredient: 'iron-gear-wheel', stack_size: 1 }] },
-        ], chests: [], overrides: { check_start_dependence: false, loop_seed_items: 0 },
+        ], chests: [], overrides: { check_start_dependence: false, kick_start_items: 0 },
     } as Config;
 }
 
@@ -29,13 +29,13 @@ describe('complete repeated-unit conversion', () => {
         if (plan.kind !== 'available') return;
         expect(plan.multiplicity).toBe(8);
         expect(plan.copies).toBe(4);
-        expect(plan.candidate.target_output).toEqual({ ...source.target_output, copies: 4 });
+        expect(plan.candidate.setpoint).toEqual({ ...source.setpoint, copies: 4 });
         expect(plan.retained.machines).toEqual([{ sourceIndex: 0, sourceId: 1, resultId: 1 }]);
         expect(plan.retained.inserters.map(it => it.sourceIndex)).toEqual([0, 1]);
         expect(plan.candidate.belts).toEqual(source.belts);
         expect(plan.candidate.inserters).toEqual(source.inserters.slice(0, 2));
         expect(() => validateConfig(plan.candidate)).not.toThrow();
-        expect(() => validateConfig({ ...plan.candidate, target_output: { ...plan.candidate.target_output, copies: 0.5 } })).toThrow(FeasibilityError);
+        expect(() => validateConfig({ ...plan.candidate, setpoint: { ...plan.candidate.setpoint, copies: 0.5 } })).toThrow(FeasibilityError);
         expect(source).toEqual(before);
         plan.candidate.belts[0].lanes[0].stack_size = 2;
         expect(source).toEqual(before);
@@ -44,7 +44,7 @@ describe('complete repeated-unit conversion', () => {
     it('reads where the next copy stands from the places of the copies, which are no part of what makes them copies', () => {
         const placed = (gap: (unit: number) => number): Config => {
             const source = eightUnits();
-            source.target_output.copies = 1;
+            source.setpoint.copies = 1;
             source.machines.forEach((machine, i) => { machine.position = { x: gap(i), y: 3 }; });
             source.inserters.forEach((inserter, index) => { inserter.position = { x: gap(Math.floor(index / 2)) + 1.5 * (index % 2), y: 5 }; });
             return source;
@@ -52,19 +52,19 @@ describe('complete repeated-unit conversion', () => {
         const plan = planRepeatedUnitConversion(placed(i => 12 * i - 80.5));
         expect(plan.kind).toBe('available');
         if (plan.kind !== 'available') return;
-        expect(plan.candidate.target_output.copy_offset).toEqual({ x: 12, y: 0 });
+        expect(plan.candidate.setpoint.copy_offset).toEqual({ x: 12, y: 0 });
         // copies that do not stand a fixed step apart, or a member without a place, leave the gap unsaid
         const uneven = planRepeatedUnitConversion(placed(i => i * i));
-        expect(uneven.kind === 'available' && uneven.candidate.target_output.copy_offset).toBeUndefined();
+        expect(uneven.kind === 'available' && uneven.candidate.setpoint.copy_offset).toBeUndefined();
         const missing = placed(i => 12 * i);
         delete missing.inserters[3].position;
         const unplaced = planRepeatedUnitConversion(missing);
-        expect(unplaced.kind === 'available' && unplaced.candidate.target_output.copy_offset).toBeUndefined();
+        expect(unplaced.kind === 'available' && unplaced.candidate.setpoint.copy_offset).toBeUndefined();
     });
 
     it('retains the complete composite GCD unit, internal buffers/drills, fuel, rules and nontrivial ID maps', () => {
         const source: Config = {
-            target_output: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
+            setpoint: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
             machines: Array.from({ length: 6 }, (_, i) => ({ id: i + 1, recipe: 'iron-plate', crafting_speed: i < 4 ? 1 : 2, productivity: 0, prototype: 'stone-furnace', fuel: 'coal' })),
             chests: [
                 ...Array.from({ length: 6 }, (_, i) => ({ id: i + 1, type: 'buffer-chest' as const, storage_size: 2, item_filter: 'iron-plate' })),
@@ -77,8 +77,8 @@ describe('complete repeated-unit conversion', () => {
                 { id: i * 3 + 1, source: { type: 'chest' as const, id: 7 }, sink: { type: 'machine' as const, id: i + 1 }, filters: ['coal'], overrides: { enable_control: { mode: 'ALWAYS' as const } } },
                 { id: i * 3 + 2, source: { type: 'machine' as const, id: i + 1 }, sink: { type: 'chest' as const, id: i + 1 }, filters: ['iron-plate'] },
                 { id: i * 3 + 3, source: { type: 'chest' as const, id: i + 1 }, sink: { type: 'belt' as const, id: 1 }, filters: ['iron-plate'], overrides: { animation: { pickup_duration_ticks: 10 },
-                    enable_control: { mode: 'CLOCKED' as const, ranges: [{ start: 0, end: 10 }, { start: 20, end: 30 }], period_duration_ticks: 40 } } },
-            ]).flat(), overrides: { backed_up_belts: false, ignored_lcm_ingredients: ['coal'], loop_seed_items: 0 },
+                    enable_control: { mode: 'CLOCKED' as const, ranges: [{ start: 0, end: 10 }, { start: 20, end: 30 }], window_cycle_ticks: 40 } } },
+            ]).flat(), overrides: { backed_up_belts: false, ignored_lcm_ingredients: ['coal'], kick_start_items: 0 },
         } as Config;
         const plan = planRepeatedUnitConversion(source);
         expect(plan.kind).toBe('available');
@@ -135,7 +135,7 @@ describe('complete repeated-unit conversion', () => {
         });
         const units = [unit(1), unit(2)];
         const source = ConfigSchema.parse({
-            target_output: { recipe: 'iron-ore', items_per_second: 400, copies: 1, counts: 'destroyed' },
+            setpoint: { recipe: 'iron-ore', items_per_second: 400, copies: 1, counts: 'destroyed' },
             machines: units.map(it => it.machine), inserters: units.flatMap(it => it.inserters), belts: [], chests: units.flatMap(it => it.chests),
         }) as Config;
         expect(planRepeatedUnitConversion(source)).toMatchObject({ kind: 'unavailable', reason: { code: 'unsupported-boundary' } });
@@ -143,7 +143,7 @@ describe('complete repeated-unit conversion', () => {
 
     it('fails closed on unrepresentable exact Copies, unsupported fields and execution order', () => {
         const source = eightUnits();
-        source.target_output.copies = Number.MAX_SAFE_INTEGER;
+        source.setpoint.copies = Number.MAX_SAFE_INTEGER;
         expect(planRepeatedUnitConversion(source)).toMatchObject({ kind: 'unavailable', reason: { code: 'copies-not-representable' } });
         const unknown = eightUnits();
         Object.assign(unknown.machines[0], { absolute_entity_reference: 8 });

@@ -6,15 +6,15 @@ import { enableControlDraftOf, type EnableControlDraft } from './enableControlDr
 import { blockedSummaryOf, itemFieldName, PROBLEM_TEXT, REPEAT_LABEL, ruleProblemsOf, ruleWarningsOf } from './ruleProblems';
 import { NO_TIMING, type RuleTiming } from './ruleTiming';
 
-const known: RuleTiming = { cycleTicks: 132, periodTicks: 264, from: 'check', windows: null };
+const known: RuleTiming = { cycleTicks: 132, windowCycleTicks: 264, from: 'check', windows: null };
 const ctx = { entityType: 'inserter' as const, timing: known, idPrefix: 'p' };
-const { enterTick, wholeTick, endBeforeStart, endAtZero, pastPeriod } = PROBLEM_TEXT;
+const { enterTick, wholeTick, endBeforeStart, endAtZero, pastWindowCycle } = PROBLEM_TEXT;
 
-const clockedDraft = (ranges: [string, string][], periodDuration = ''): EnableControlDraft => ({
+const clockedDraft = (ranges: [string, string][], windowCycleDuration = ''): EnableControlDraft => ({
     ...enableControlDraftOf(),
     mode: 'CLOCKED',
     ranges: ranges.map(([start, end]) => ({ start, end })),
-    periodDuration,
+    windowCycleDuration,
 });
 
 /** Each problem as its field and its text */
@@ -32,10 +32,10 @@ describe('ruleProblemsOf, Clocked', () => {
         ['refuses an end before the start, and names the start', [['10', '5']], '', [[end(), endBeforeStart(10)]]],
         ['takes an end equal to the start (one tick)', [['12', '12']], '', []],
         ["refuses a window that ends at tick 0, which the config file can't hold", [['0', '0']], '', [[end(), endAtZero]]],
-        // window 1 ends on the period's last tick, window 2 one past it
-        ['checks the ticks against the crafting cycle when there is no "Repeat every"', [['0', '131'], ['0', '132'], ['140', '150']], '',
-            [[end(2), pastPeriod(132)], [start(3), pastPeriod(132)], [end(3), pastPeriod(132)]]],
-        ['checks them against a valid "Repeat every" instead of the cycle', [['0', '263'], ['0', '264']], '264', [[end(2), pastPeriod(264)]]],
+        // window 1 ends on the window cycle's last tick, window 2 one past it
+        ['checks the ticks against the output cycle when there is no "Repeat every"', [['0', '131'], ['0', '132'], ['140', '150']], '',
+            [[end(2), pastWindowCycle(132)], [start(3), pastWindowCycle(132)], [end(3), pastWindowCycle(132)]]],
+        ['checks them against a valid "Repeat every" instead of the cycle', [['0', '263'], ['0', '264']], '264', [[end(2), pastWindowCycle(264)]]],
         ['refuses a "Repeat every" of 0', [['0', '5']], '0', [[REPEAT_LABEL, PROBLEM_TEXT.repeat]]],
         ['refuses a negative "Repeat every"', [['0', '5']], '-3', [[REPEAT_LABEL, PROBLEM_TEXT.repeat]]],
         ['refuses a "Repeat every" of text', [['0', '5']], 'x', [[REPEAT_LABEL, PROBLEM_TEXT.repeat]]],
@@ -45,7 +45,7 @@ describe('ruleProblemsOf, Clocked', () => {
 
     it('names the start an end is before, and tells the last tick of the period, one before its length', () => {
         expect(endBeforeStart(10)).toMatch(/ the start \(10\)\.$/);
-        expect(pastPeriod(132)).toMatch(/ 132-tick period: the last tick is 131\.$/);
+        expect(pastWindowCycle(132)).toMatch(/ 132-tick window cycle: the last tick is 131\.$/);
     });
 
     it('does not check past the period when it is unknown or fractional', () => {
@@ -120,8 +120,8 @@ describe('field names', () => {
         expect(itemFieldName('release.0', 'left')).toBe('Item, release condition 1');
     });
 
-    it('names a tick field by its side and its wake window', () => {
-        expect([start(), end(2)]).toEqual(['Start tick, wake window 1', 'End tick, wake window 2']);
+    it('names a tick field by its side and its enable window', () => {
+        expect([start(), end(2)]).toEqual(['Start tick, enable window 1', 'End tick, enable window 2']);
     });
 });
 
@@ -134,9 +134,9 @@ describe('ruleProblemsOf, order', () => {
 });
 
 describe('ruleWarningsOf', () => {
-    it('warns of a "Repeat every" the clock period is not a whole number of', () => {
+    it('warns of a "Repeat every" the window cycle is not a whole number of', () => {
         expect(ruleWarningsOf(clockedDraft([['0', '5']], '100'), known)).toEqual([
-            '100 ticks doesn\'t fit a whole number of times into the 264-tick clock period, so the clock can\'t follow this rule exactly.',
+            '100 ticks doesn\'t fit a whole number of times into the 264-tick window cycle, so the clock can\'t follow this rule exactly.',
         ]);
         expect(ruleWarningsOf(clockedDraft([['0', '5']], '132'), known)).toEqual([]);
         expect(ruleWarningsOf(clockedDraft([['0', '5']], ''), known)).toEqual([]);

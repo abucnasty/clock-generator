@@ -5,7 +5,7 @@ import exact from '../../../clock-generator/resources/config-samples/recycling/i
 import overbeaconed from '../../../clock-generator/resources/config-samples/recycling/iron-ore/iron-ore-voider-400-overbeaconed.json';
 import { configToFormData, formDataToConfig } from './configForm/configMapping';
 import { readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
-import { removeChest, removeMachine, reorderChests, reorderMachines, updateMachine, updateTargetOutput, patchMachine } from './configForm/edits';
+import { removeChest, removeMachine, reorderChests, reorderMachines, updateMachine, updateSetpoint, patchMachine } from './configForm/edits';
 import { describeConfigEdit, removalMessage } from './undoSnapshot';
 import { buildChangesOf } from './buildChanges';
 
@@ -17,7 +17,7 @@ const config = ConfigSchema.parse(exact);
 describe('a target that counts the item destroyed, and a recycler\'s result target', () => {
     it('are read from the sample as they are written', () => {
         const form = configToFormData(config);
-        expect(form.target_output).toEqual({ recipe: 'iron-ore', items_per_second: 400, copies: 1, counts: 'destroyed' });
+        expect(form.setpoint).toEqual({ recipe: 'iron-ore', items_per_second: 400, copies: 1, counts: 'destroyed' });
         expect(form.machines[0].result_target).toEqual({ type: 'chest', id: 1 });
         expect(form.chests.map(chest => [chest.id, chest.type])).toEqual([[1, 'car'], [2, 'infinity-chest']]);
     });
@@ -28,24 +28,24 @@ describe('a target that counts the item destroyed, and a recycler\'s result targ
         expect(formDataToConfig(form)).toEqual(parsed);
         expect(formDataToConfig(readSavedConfig(serializeConfig(form))!)).toEqual(parsed);
         expect(ConfigSchema.parse(formDataToConfig(form))).toEqual(parsed);
-        expect(formDataToConfig(form).target_output.counts).toBe('destroyed');
+        expect(formDataToConfig(form).setpoint.counts).toBe('destroyed');
         expect(formDataToConfig(form).machines[0].result_target).toEqual({ type: 'chest', id: 1 });
     });
 
     it('leave a config without them as it was: it counts the item made, and its machines have no result target', () => {
-        const plain: Config = { target_output: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
+        const plain: Config = { setpoint: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
             machines: [{ id: 1, recipe: 'iron-plate', crafting_speed: 5, productivity: 0, prototype: 'electric-furnace' }], belts: [], inserters: [], chests: [] };
         const form = configToFormData(plain);
-        expect('counts' in form.target_output).toBe(false);
+        expect('counts' in form.setpoint).toBe(false);
         expect('result_target' in form.machines[0]).toBe(false);
         expect(formDataToConfig(form)).toEqual(plain);
     });
 
     it('are edited as other fields are: Counts set, and cleared back to the default', () => {
         const form = configToFormData(config);
-        const made = updateTargetOutput(form, 'counts', undefined);
-        expect('counts' in made.target_output).toBe(false);
-        expect(updateTargetOutput(made, 'counts', 'destroyed').target_output.counts).toBe('destroyed');
+        const made = updateSetpoint(form, 'counts', undefined);
+        expect('counts' in made.setpoint).toBe(false);
+        expect(updateSetpoint(made, 'counts', 'destroyed').setpoint.counts).toBe('destroyed');
         const own = patchMachine(form, 0, { result_target: undefined });
         expect('result_target' in own.machines[0]).toBe(false);
         expect(patchMachine(own, 0, { result_target: { type: 'chest', id: 2 } }).machines[0].result_target).toEqual({ type: 'chest', id: 2 });
@@ -79,12 +79,12 @@ describe('the container a machine puts its results into', () => {
 describe('Counts in the messages of an edit and of the changes since the clocks were made', () => {
     const form = configToFormData(config);
     it('is named when it is the field that changed', () => {
-        expect(describeConfigEdit(form, updateTargetOutput(form, 'counts', undefined)).message).toBe('Updated Counts.');
-        expect(describeConfigEdit(form, updateTargetOutput(form, 'counts', undefined)).key).toBe('target:counts');
+        expect(describeConfigEdit(form, updateSetpoint(form, 'counts', undefined)).message).toBe('Updated Counts.');
+        expect(describeConfigEdit(form, updateSetpoint(form, 'counts', undefined)).key).toBe('target:counts');
     });
 
     it('is listed with the words of its choices', () => {
-        const made = formDataToConfig(updateTargetOutput(form, 'counts', undefined));
+        const made = formDataToConfig(updateSetpoint(form, 'counts', undefined));
         expect(buildChangesOf(config, made)).toEqual(['Counts (Items destroyed → Items made)']);
         expect(buildChangesOf(made, config)).toEqual(['Counts (Items made → Items destroyed)']);
         expect(buildChangesOf(config, config)).toEqual([]);

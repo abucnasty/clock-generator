@@ -240,7 +240,7 @@ function createSimulationContextFromConfig(config: Config): SimulationContext {
             })
         })
 
-    const target_production_rate = TargetProductionRate.fromConfig(config.target_output);
+    const target_production_rate = TargetProductionRate.fromConfig(config.setpoint);
 
     return new SimulationContext(
         tick_provider,

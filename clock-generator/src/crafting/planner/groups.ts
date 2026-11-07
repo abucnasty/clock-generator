@@ -10,7 +10,7 @@ import type { UnboundedSource } from "../../data-types/build-plan";
 import { arcsOf, SINK } from "../graph/build-graph";
 import type { Arc } from "../graph/components";
 
-/** A group before its periods and duty are planned */
+/** A group before its window cycles and utilization are planned */
 export interface GroupShape {
     readonly key: string;
     /** Its entries of the graph's order */

@@ -2,24 +2,24 @@ import { RecordedInserter, Recording } from "../verification/recording";
 import { Config } from "../config";
 import { Machine } from "../entities";
 
-/** One complete clock period of a recording: the samples from start (inclusive) to end (exclusive) */
-export interface PeriodRange {
+/** One complete window cycle of a recording: the samples from start (inclusive) to end (exclusive) */
+export interface WindowCycleRange {
     start: number;
     end: number;
 }
 
-interface PeriodOutput extends PeriodRange {
-    /** Items the output inserters dropped during the period */
+interface WindowCycleOutput extends WindowCycleRange {
+    /** Items the output inserters dropped during the window cycle */
     items: number;
 }
 
 /**
- * Sample ranges of the complete clock periods in a series of recorded clock values. A period starts where the
+ * Sample ranges of the complete window cycles in a series of recorded clock values. A window cycle starts where the
  * value falls below the previous sample's: the clock may count from 0 or from 1, so the wrap is the only sure sign.
- * The first sample starts a period only when it holds the lowest value the clock reaches, and the last period is
- * complete only when its last sample holds the highest, so a recording that begins or ends mid-period loses its ends.
+ * The first sample starts a window cycle only when it holds the lowest value the clock reaches, and the last window cycle is
+ * complete only when its last sample holds the highest, so a recording that begins or ends in the middle of a window cycle loses its ends.
  */
-export function clockPeriods(values: number[]): PeriodRange[] {
+export function clockWindowCycles(values: number[]): WindowCycleRange[] {
     if (values.length === 0) {
         return [];
     }
@@ -32,16 +32,16 @@ export function clockPeriods(values: number[]): PeriodRange[] {
             starts.push(i);
         }
     }
-    const periods: PeriodRange[] = [];
+    const window_cycles: WindowCycleRange[] = [];
     for (let i = 0; i < starts.length; i++) {
         const next = starts[i + 1];
         if (next !== undefined) {
-            periods.push({ start: starts[i], end: next });
+            window_cycles.push({ start: starts[i], end: next });
         } else if (values[values.length - 1] === highest) {
-            periods.push({ start: starts[i], end: values.length });
+            window_cycles.push({ start: starts[i], end: values.length });
         }
     }
-    return periods;
+    return window_cycles;
 }
 
 /** The recipes of the config's machines that make the item: a cast recipe is named after the item, with "casting-" in front */
@@ -68,23 +68,23 @@ export function outputInserters(recording: Recording, recipes: Iterable<string>)
 }
 
 /**
- * Items the output inserters of the recipes moved in each complete clock period of a clocked recording. A drop is a
- * fall of an inserter's held count from one sample to the next; it is counted in the period of the later sample, so
- * a drop on the period boundary belongs to the period that starts there. A partial drop into a full sink counts for
+ * Items the output inserters of the recipes moved in each complete window cycle of a clocked recording. A drop is a
+ * fall of an inserter's held count from one sample to the next; it is counted in the window cycle of the later sample, so
+ * a drop on the window cycle boundary belongs to the window cycle that starts there. A partial drop into a full sink counts for
  * the items it did move.
  */
-export function outputPerPeriod(recording: Recording, recipes: Iterable<string>): PeriodOutput[] {
+export function outputPerWindowCycle(recording: Recording, recipes: Iterable<string>): WindowCycleOutput[] {
     const inserters = outputInserters(recording, recipes);
-    return clockPeriods(recording.clock?.values ?? []).map(period => {
+    return clockWindowCycles(recording.clock?.values ?? []).map(window_cycle => {
         let items = 0;
         for (const inserter of inserters) {
             const held = inserter.samples.held_count;
-            for (let i = Math.max(period.start, 1); i < period.end; i++) {
+            for (let i = Math.max(window_cycle.start, 1); i < window_cycle.end; i++) {
                 if (held[i] < held[i - 1]) {
                     items += held[i - 1] - held[i];
                 }
             }
         }
-        return { ...period, items };
+        return { ...window_cycle, items };
     });
 }

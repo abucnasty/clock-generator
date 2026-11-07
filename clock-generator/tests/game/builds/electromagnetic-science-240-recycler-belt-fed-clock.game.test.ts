@@ -26,7 +26,7 @@ const sample = path.resolve(__dirname, '../../../resources/config-samples/scienc
 const scaffold = sample.replace(/\.json$/, '.scaffold');
 const originalHash = '3cb6ca71400bda8580d605cbbc3eff69f4db594ee761a27311bdefe2487573a5';
 const probe = path.join(__dirname, 'electromagnetic-science-240-recycler-belt-fed-clock-probe.lua');
-const period = 40;
+const window_cycle_ticks = 40;
 // the disturbances of the warm run, each distinct kind once: the five supplies cut (the feeders off and the item taken from the
 // belt lanes and the supply chests upstream), the output blocked at the four terminals, the advanced-circuit disposal blocked
 const disturbanceKinds = ['cut accumulator', 'cut processing-unit', 'cut battery', 'cut holmium-plate', 'cut superconductor',
@@ -78,15 +78,15 @@ for (const run of runs) test(`original electromagnetic science scaffold, automat
         const {config, selected} = await clockedFixture();
 
         // The sample is automatic: nothing fixed, and the selected clock is the one built for it
-        expect(config.target_output).toMatchObject({items_per_second: 240, copies: 5});
+        expect(config.setpoint).toMatchObject({items_per_second: 240, copies: 5});
         expect(config.overrides?.lcm).toBeUndefined();
         expect(config.overrides?.terminal_swing_count).toBeUndefined();
         const result = selected.result;
         expect(selected.verdict).toBe('stable');
-        expect(selected.assessment.backpressure_loss?.survives).toBe(true);
-        expect(selected.assessment.backpressure_loss?.not_tried ?? []).toHaveLength(0);
+        expect(selected.assessment.disturbance_trial?.survives).toBe(true);
+        expect(selected.assessment.disturbance_trial?.not_tried ?? []).toHaveLength(0);
         expect(result.stability_check.as_built?.holds).toBe(true);
-        expect(result.simulation_duration.ticks).toBe(period);
+        expect(result.simulation_duration.ticks).toBe(window_cycle_ticks);
         expect(Object.keys(result.always_on_reasons ?? {})).toHaveLength(0);
         const ids = config.inserters.map((row, index) => row.id ?? index + 1).sort((a, b) => a - b);
         expect(ids).toHaveLength(12);
@@ -95,18 +95,18 @@ for (const run of runs) test(`original electromagnetic science scaffold, automat
         const open = (windows: {start: number; end: number}[] | undefined, tick: number) => (windows ?? []).some(w => tick >= w.start && tick <= w.end);
         const [turnsA, turnsB] = [result.clock_windows['inserter:6'], result.clock_windows['inserter:7']];
         expect(turnsA && turnsB).toBeTruthy();
-        expect([...Array(period).keys()].filter(tick => open(turnsA, tick) && open(turnsB, tick))).toEqual([]);
+        expect([...Array(window_cycle_ticks).keys()].filter(tick => open(turnsA, tick) && open(turnsB, tick))).toEqual([]);
         fs.writeFileSync(path.join(directory, 'generation.json'), JSON.stringify({
             selected: selected.id, verdict: selected.verdict, assessment: selected.assessment,
-            period, windows: result.clock_windows,
+            window_cycle_ticks, windows: result.clock_windows,
         }, null, 2));
         const combinatorOf = new Map<number, number>(result.schedule.inserter_combinators
             .flatMap((row: any) => row.inserter_ids.map((id: number) => [id, row.entity_number] as const)));
 
         // the build is two of the config's copies: 96 science a second, 5,760 in the trailing minute
-        const target = config.target_output.items_per_second / (config.target_output.copies ?? 1) * COPIES;
+        const target = config.setpoint.items_per_second / (config.setpoint.copies ?? 1) * COPIES;
         expect(target).toBe(96);
-        const options = {period, cold: run.cold, initialization_delay_ticks: run.cold ? 2 : 0, window: RUN_PROTOCOL.window,
+        const options = {window_cycle_ticks, cold: run.cold, initialization_delay_ticks: run.cold ? 2 : 0, window: RUN_PROTOCOL.window,
             expected: Math.round(target * RUN_PROTOCOL.window / 60 * 1e6) / 1e6, baseline: RUN_PROTOCOL.baseline, cap};
         const {recording, build, start} = await recordInFactorio({factorio: factorio!, save: save!, config, copies: COPIES,
             blueprint: bytes.toString('utf8').trim(),
@@ -128,7 +128,7 @@ for (const run of runs) test(`original electromagnetic science scaffold, automat
         // every terminal drops from a steel buffer: the branch is judged exactly
         expect(values(report.topology.branches).every((branch: any) => branch.gate === 'exact' && branch.buffer)).toBe(true);
         // the protocol: steady state, a baseline whose whole clock cycles make the target, each disturbance recovered
-        const summary = runSummary(report.protocol, {generationVerdict: selected.verdict, target, period});
+        const summary = runSummary(report.protocol, {generationVerdict: selected.verdict, target, period: window_cycle_ticks});
         fs.writeFileSync(path.join(directory, 'summary.json'), JSON.stringify(summary) + '\n');
         expect(summary.result).toBe('holds');
         expect(summary.steady).not.toBeNull();
@@ -139,11 +139,11 @@ for (const run of runs) test(`original electromagnetic science scaffold, automat
         const ledger = report.baseline_ledger;
         expect(ledger.ticks).toBeGreaterThan(0);
         expect(ledger.ticks).toBe(summary.baseline!.measured!.ticks);
-        expect(ledger.ticks % period).toBe(0);
+        expect(ledger.ticks % window_cycle_ticks).toBe(0);
         expect(ledger.branches).toHaveLength(4);
         for (const [index, branch] of ledger.branches.entries()) {
             expect(branch.residual, `branch ${index} closes`).toBe(0);
-            expect(branch.delivered, `branch ${index} drops its share in every cycle`).toBe(16 * ledger.ticks / period);
+            expect(branch.delivered, `branch ${index} drops its share in every cycle`).toBe(16 * ledger.ticks / window_cycle_ticks);
             // no branch loses more than the probe's own bound over the baseline
             expect(branch.reserve_delta).toBeGreaterThanOrEqual(-64);
         }
@@ -262,7 +262,7 @@ for (const run of runs) test(`original electromagnetic science scaffold, automat
         }
         fs.writeFileSync(path.join(directory, 'figures.json'), JSON.stringify({run: run.name, original_scaffold_sha256: originalHash,
             verdict: selected.verdict, science_per_second: 96, all_copies_per_second: 240, copies: 2.5,
-            clock_period: period, clock_start_phase: run.phase, build_order: run.order, clock_sha256: clockHash(result.subtick ?? result),
+            clock_window_cycle: window_cycle_ticks, clock_start_phase: run.phase, build_order: run.order, clock_sha256: clockHash(result.subtick ?? result),
             wake_ups_per_minute: selected.assessment.wake_ups_per_minute, estimated_ticks: estimate, ended: summary.ended, ...report}, null, 2));
     } finally { if (!retained) fs.rmSync(parent, {recursive: true, force: true}); }
 }, 1_800_000);

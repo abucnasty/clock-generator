@@ -20,7 +20,7 @@ const render = (install: ClockInstallFacts) => renderToStaticMarkup(
 // every sample's clock, made as the page makes it: each combinator that switches an inserter or a drill on is a row of
 // the wiring list with the first line of its description
 const quiet = { log() {}, info() {}, warn() {}, error() {}, debug() {} };
-/** The clock the page selects. A build whose first plan runs to a period too long to simulate is planned as the page plans it, in alternatives. */
+/** The clock the page selects. A build whose first plan runs to a window cycle too long to simulate is planned as the page plans it, in alternatives. */
 function clockOf(config: Config): BlueprintGenerationResult {
     try {
         return generateClockForConfig(config, { logger: quiet });

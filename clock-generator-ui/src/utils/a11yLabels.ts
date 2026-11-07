@@ -28,12 +28,12 @@ export const BUTTON_NAMES = {
     closeFullscreen: 'Close fullscreen',
     removeCondition: 'Remove condition',
     removeStatusCheck: 'Remove status condition',
-    removeRange: 'Remove wake window',
+    removeRange: 'Remove enable window',
     close: 'Close',
     moreOptions: 'More options',
     fullscreen: 'Fullscreen',
     exitFullscreen: 'Exit fullscreen',
-    useClockWindows: "Use the clock's wake windows",
+    useClockWindows: "Use the clock's enable windows",
     replaceConditions: 'Replace conditions',
     useTemplate: 'Use template',
     replaceRule: 'Replace rule',
@@ -45,7 +45,7 @@ export const removeGroupName = (n: number) => `Remove group ${n}`;
 
 /** The rule editor's tick fields: "Start tick, wake window 1", which holds the visible label "Start tick" */
 export function windowFieldName(side: 'start' | 'end', n: number): string {
-    return `${side === 'start' ? 'Start tick' : 'End tick'}, wake window ${n}`;
+    return `${side === 'start' ? 'Start tick' : 'End tick'}, enable window ${n}`;
 }
 
 /** The names of the rule editor's toggle groups, which have no visible label */
@@ -108,14 +108,14 @@ export const CHART_NAMES = {
     /** "Machine 1 fuel level over the run" */
     fuelLevel: (machineLabel: string) => `${machineLabel} fuel level over the run`,
     /** "Inserter 2 fuel clock wake windows and swings" */
-    fuelClock: (inserterLabel: string) => `${inserterLabel} fuel clock wake windows and swings`,
+    fuelClock: (inserterLabel: string) => `${inserterLabel} fuel clock enable windows and swings`,
 } as const;
 
 /** Names of the row menu and selection checkbox. */
 export const rowActionsName = (label: string) => `More actions for ${label}`;
 export const selectRowName = (label: string) => `Select ${label}`;
 
-/** The name of a recipe field: "Recipe, Machine 2" (`owner` is the row's name, or "Target Output") */
+/** The name of a recipe field: "Recipe, Machine 2" (`owner` is the row's name, or "Setpoint") */
 export function recipeName(owner: string): string {
     return `Recipe, ${owner}`;
 }
@@ -124,7 +124,7 @@ export function recipeName(owner: string): string {
 export const changeMachineName = (owner: string) => `Change machine, ${owner}`;
 
 /** The name of the target's recipe field */
-export const TARGET_RECIPE_NAME = 'Recipe, Target Output';
+export const TARGET_RECIPE_NAME = 'Recipe, Setpoint';
 
 /** The name of the second lane's delete button, "Delete lane 2 of Belt 1" */
 export function deleteLaneName(beltLabel: string, lane: number): string {

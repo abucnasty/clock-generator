@@ -12,7 +12,7 @@ export interface SpoilingItem {
 
 /**
  * The items an entity holds or moves that spoil. The simulator spoils nothing: only the backpressure loss trials read
- * spoilage, as a limit of the loss at `loss_limit_share` of the shortest spoil time (backpressure-loss.ts).
+ * spoilage, as a limit of the loss at `loss_limit_share` of the shortest spoil time (disturbance-trial.ts).
  */
 export interface SpoilageTrait {
     readonly items: readonly SpoilingItem[];

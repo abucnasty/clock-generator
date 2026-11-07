@@ -16,10 +16,10 @@ afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 const sha = (c: string) => c.repeat(64);
 const run = (...args: string[]) => spawnSync('python3', [record, ...args], { encoding: 'utf8' });
 
-interface Edit { id?: string; verdict?: string; holds?: boolean; rate?: number; period?: number; wake_ups?: number; clock?: string; windows?: Record<string, { start: number; end: number }[]> }
+interface Edit { id?: string; maker?: string; verdict?: string; holds?: boolean; rate?: number; window_cycle_ticks?: number; wake_ups?: number; clock?: string; windows?: Record<string, { start: number; end: number }[]> }
 /** An alternative as the blast writes it (the fields the record reads, and the heavy ones it leaves out) */
 const alternative = (e: Edit = {}) => ({
-    id: e.id ?? 'even-hands', verdict: e.verdict ?? 'stable', holds: e.holds ?? true, rate: e.rate ?? 640, supply: null, period: e.period ?? 972,
+    id: e.id ?? 'even-hands', ...(e.maker !== undefined && { maker: e.maker }), verdict: e.verdict ?? 'stable', holds: e.holds ?? true, rate: e.rate ?? 640, supply: null, window_cycle_ticks: e.window_cycle_ticks ?? 972,
     wake_ups: e.wake_ups ?? 889.0718254784936, clock_sha256: e.clock ?? sha('a'), text_sha256: sha('2'), descriptions_cut: 0,
     windows_sha256: sha('7'), windows: e.windows ?? { 'inserter:1': [{ start: 0, end: 10 }, { start: 54, end: 64 }], 'drill:1': [] },
     results_sha256: sha('3'), results: { label: sha('1'), assessment: sha('9') },
@@ -27,7 +27,7 @@ const alternative = (e: Edit = {}) => ({
 /** What the property module writes into a job file of a result it found nothing wrong with */
 const clean = () => ({
     module_sha256: moduleSha256(), seconds: 0.5, problems: [] as { property: string; alternative: string; message: string }[],
-    checked: { 'always-on-reasons-named': 2, 'decider-build-order': 2, 'stable-holds-and-survives-loss': 2, 'counters-add-up': 1, 'fuel-never-dry': 0 },
+    checked: { 'always-on-reasons-named': 2, 'decider-build-order': 2, 'stable-holds-and-survives-loss': 2, 'counters-add-up': 1, 'fuel-never-dry': 0, 'strategy-and-signals': 2 },
 });
 /** What the per-job checks module writes into a job file of a result it found nothing wrong with */
 const cleanChecks = () => ({ module_sha256: checksSha256(), seconds: 0.25, ran: ['says what it must', 'and the other'], failures: [] as { check: string; message: string; expected?: string; actual?: string }[] });
@@ -56,14 +56,21 @@ const written = (jobs: Parameters<typeof side>[0], hashes?: Record<string, strin
 const read = (dir: string, key: string) => JSON.parse(fs.readFileSync(path.join(dir, `${key}.json`), 'utf8'));
 
 describe('record.py write', () => {
+    it('reads the window cycle time of a job file from before it was named, which has it as `period`', () => {
+        const { window_cycle_ticks, ...rest } = alternative();
+        const dir = written({ A: jobFile('A', [{ ...rest, period: window_cycle_ticks } as unknown as ReturnType<typeof alternative>]) });
+        expect(read(dir, 'config-A').alternatives[0].window_cycle_ticks).toBe(972);
+        expect(JSON.stringify(read(dir, 'config-A'))).not.toContain('"period"');
+    });
+
     it('projects a job: the selected clock and every alternative, windows as ranges, no seconds, no raw results', () => {
         const dir = written({ A: jobFile('A') });
         const text = fs.readFileSync(path.join(dir, 'config-A.json'), 'utf8');
         const body = JSON.parse(text);
-        expect(body).toMatchObject({ format: 'clock-record-1', job: 'config-A', group: 'config', name: 'A', config_sha256: sha('c'), job_results_sha256: sha('5'), selected: 'even-hands' });
+        expect(body).toMatchObject({ format: 'clock-record-2', job: 'config-A', group: 'config', name: 'A', config_sha256: sha('c'), job_results_sha256: sha('5'), selected: 'even-hands' });
         expect(body.selected_windows).toEqual({ 'inserter:1': '0-10,54-64', 'drill:1': '' });
         expect(body.alternatives.map((a: any) => a.id)).toEqual(['even-hands', 'plain']);
-        expect(Object.keys(body.alternatives[0])).toEqual(['id', 'verdict', 'holds', 'rate', 'supply', 'period', 'wake_ups', 'descriptions_cut', 'clock_sha256', 'windows_sha256', 'text_sha256', 'results_sha256']);
+        expect(Object.keys(body.alternatives[0])).toEqual(['id', 'verdict', 'holds', 'rate', 'supply', 'window_cycle_ticks', 'wake_ups', 'descriptions_cut', 'clock_sha256', 'windows_sha256', 'text_sha256', 'results_sha256']);
         expect(body.alternatives[0].wake_ups).toBe(889.072);
         expect(text).not.toContain('seconds');
         expect(text).not.toContain('"results"');
@@ -112,13 +119,13 @@ describe('record.py check', () => {
     it('fails on one changed field of the record with a table of job, field, before and after', () => {
         const dir = written({ A: jobFile('A'), B: jobFile('B') });
         const body = read(dir, 'config-B');
-        body.alternatives[1].period = 1000;
+        body.alternatives[1].window_cycle_ticks = 1000;
         fs.writeFileSync(path.join(dir, 'config-B.json'), JSON.stringify(body));
         const done = run('check', '--dir', dir, side({ A: jobFile('A'), B: jobFile('B') }));
         expect(done.status).toBe(1);
         const rows = done.stdout.split('\n').filter(line => line.startsWith('config-'));
         expect(rows).toHaveLength(1);
-        expect(rows[0].split(/\s{2,}/)).toEqual(['config-B', 'alternatives[plain].period', '1000', '972']);
+        expect(rows[0].split(/\s{2,}/)).toEqual(['config-B', 'alternatives[plain].window_cycle_ticks', '1000', '972']);
         expect(done.stdout).toContain('job  ');
         expect(done.stdout).toContain('1 differences in 1 of 2 jobs');
     });
@@ -153,9 +160,9 @@ describe('record.py check', () => {
     it('appends the table to the summary file', () => {
         const dir = written({ A: jobFile('A') });
         const summary = path.join(tmp, `summary${count++}.md`);
-        const done = run('check', '--dir', dir, '--summary', summary, side({ A: jobFile('A', [alternative({ period: 5 }), alternative({ id: 'plain', verdict: 'unstable', clock: sha('b') })]) }));
+        const done = run('check', '--dir', dir, '--summary', summary, side({ A: jobFile('A', [alternative({ window_cycle_ticks: 5 }), alternative({ id: 'plain', verdict: 'unstable', clock: sha('b') })]) }));
         expect(done.status).toBe(1);
-        expect(fs.readFileSync(summary, 'utf8')).toContain('alternatives[even-hands].period');
+        expect(fs.readFileSync(summary, 'utf8')).toContain('alternatives[even-hands].window_cycle_ticks');
     });
 
     it('refuses a run with no job and a folder with no record', () => {
@@ -174,7 +181,7 @@ describe('record.py check: the properties of the run', () => {
     it('says what it checked and how long it took, and passes a run with no problem', () => {
         const done = run('check', '--dir', dirOf(), side({ A: jobFile('A'), B: jobFile('B') }));
         expect(done.status, done.stdout).toBe(0);
-        expect(done.stdout).toContain('properties checked on 2 jobs (14 alternative checks, 1.0 s of the module): 0 problems');
+        expect(done.stdout).toContain('properties checked on 2 jobs (18 alternative checks, 1.0 s of the module): 0 problems');
     });
 
     it('fails on one problem with a table of job, property, alternative and the values, though the record has no difference', () => {
@@ -317,6 +324,37 @@ describe('record.py check --map', () => {
     });
 });
 
+describe('record.py check: the derived ids of the alternatives', () => {
+    const old = () => written({ A: jobFile('A', [alternative({ id: 'planned-belt-slack' }), alternative({ id: 'planned-belt-slack-subtick', clock: sha('b') })]) });
+    const derived = (id: string, maker: string, clock = sha('a')) => alternative({ id, maker, clock });
+
+    it('reads an id of the record as the id the run gave the same maker, so a pure rename of the ids is no difference', () => {
+        const done = run('check', '--dir', old(), side({ A: jobFile('A', [derived('takt_batches', 'planned-belt-slack'), derived('takt_batches_subtick', 'planned-belt-slack-subtick', sha('b'))]) }));
+        expect(done.status, done.stdout).toBe(0);
+        expect(done.stdout).toContain('2 alternative ids of the record read as the derived ids');
+    });
+
+    it('still lists what moved besides the ids', () => {
+        const done = run('check', '--dir', old(), side({ A: jobFile('A', [derived('takt_batches', 'planned-belt-slack', sha('d')), derived('takt_batches_subtick', 'planned-belt-slack-subtick', sha('b'))]) }));
+        expect(done.status).toBe(1);
+        expect(done.stdout).toMatch(/config-A\s+alternatives\[takt_batches\]\.clock_sha256\s+aaaaaaaaaaaa\.\.\s+dddddddddddd\.\./);
+        expect(done.stdout).not.toContain('alternatives (ids, in order)');
+    });
+
+    it('leaves the ids alone where the run has no makers (an engine from before), which are then read as removed and added', () => {
+        const done = run('check', '--dir', old(), side({ A: jobFile('A', [alternative({ id: 'takt_batches' }), alternative({ id: 'takt_batches_subtick', clock: sha('b') })]) }));
+        expect(done.status).toBe(1);
+        expect(done.stdout).toContain('alternatives (ids, in order)');
+    });
+
+    it('does not touch a record whose ids the run has (written after the derivation)', () => {
+        const dir = written({ A: jobFile('A', [derived('takt_batches', 'planned-belt-slack')]) });
+        const done = run('check', '--dir', dir, side({ A: jobFile('A', [derived('takt_batches', 'planned-belt-slack')]) }));
+        expect(done.status, done.stdout).toBe(0);
+        expect(done.stdout).not.toContain('alternative ids of the record read as');
+    });
+});
+
 describe('record.py worse (the never-worse rule)', () => {
     const base = () => written({ A: jobFile('A'), B: jobFile('B') });
     /** The change: the same two jobs, A with these alternatives, in a record folder of its own */
@@ -391,6 +429,37 @@ describe('record.py worse (the never-worse rule)', () => {
         expect(fs.readFileSync(summary, 'utf8')).toContain('### Never worse: 1 selected clocks got worse and are not named in MOVES.md');
     });
 
+    /** The record folder as the format before the window cycle time was named wrote it: clock-record-1, `period` */
+    const asRecord1 = (dir: string) => {
+        const old = folder();
+        fs.mkdirSync(old);
+        for (const file of fs.readdirSync(dir)) {
+            const text = fs.readFileSync(path.join(dir, file), 'utf8').replace('"clock-record-2"', '"clock-record-1"').split('"window_cycle_ticks"').join('"period"');
+            fs.writeFileSync(path.join(old, file), text);
+        }
+        return old;
+    };
+
+    it('reads a base record in clock-record-1: the same verdict as the base in clock-record-2, and no worse rows for an unmoved record', () => {
+        const dir = base();
+        const old = asRecord1(dir);
+        expect(fs.readFileSync(path.join(old, 'config-A.json'), 'utf8')).toContain('"period": 972');
+        expect(worse(old, dir).status).toBe(0);
+        const edit = { verdict: 'no recovery', clock: sha('e') } as const;
+        const done = worse(old, change(alternative(edit)), '## Something else (#1)\n- config-B: faster\n');
+        expect(done.status, done.stdout).toBe(1);
+        expect(done.stdout.split('\n').find(line => line.startsWith('config-A'))!.split(/\s{2,}/)).toEqual(['config-A', 'verdict', 'stable', 'no recovery', 'NO']);
+        expect(worse(old, change(alternative(edit)), '- config-A: no recovery\n').status).toBe(0);
+    });
+
+    it('refuses a base record in a format it does not know', () => {
+        const old = asRecord1(base());
+        for (const file of fs.readdirSync(old)) fs.writeFileSync(path.join(old, file), fs.readFileSync(path.join(old, file), 'utf8').replace('clock-record-1', 'clock-record-0'));
+        const done = worse(old, base());
+        expect(done.status).not.toBe(0);
+        expect(done.stderr).toContain("format 'clock-record-0'");
+    });
+
     it('refuses a missing base and a folder with no record', () => {
         expect(run('worse', '--dir', base()).stderr).toContain('--base');
         expect(run('worse', '--base', path.join(tmp, 'nothing'), '--dir', base()).status).not.toBe(0);
@@ -409,7 +478,7 @@ describe('the committed record', () => {
         expect(files.length).toBeGreaterThan(0);
         for (const file of files) {
             const body = JSON.parse(fs.readFileSync(path.join(recordDir, file), 'utf8'));
-            expect(body.format, file).toBe('clock-record-1');
+            expect(body.format, file).toBe('clock-record-2');
             expect(body.job, file).toBe(file.replace(/\.json$/, ''));
             expect(`${body.group}-${body.name}`, file).toBe(body.job);
             expect(body.config_sha256, file).toMatch(/^[0-9a-f]{64}$/);

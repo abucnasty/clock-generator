@@ -72,7 +72,7 @@ describe("the game's run of the recorded clock holds the target and recovers", (
         // the run under the protocol (a minute of baseline, the ore cut, the output blocked) was recorded on the pinned clock and holds the target and recovers from both
         test.each([["ore-voider-exact-speed", "IRON_ORE_VOIDER_400_EXACT_SPEED"], ["ore-voider-overbeaconed", "IRON_ORE_VOIDER_400_OVERBEACONED"]] as const)("%s", async (name, sample) => {
             const {native, generation} = controls.cases[name];
-            expectRunIsConsistent(native, generation!, (await loadConfigFromFile(ConfigPaths[sample])).target_output.items_per_second);
+            expectRunIsConsistent(native, generation!, (await loadConfigFromFile(ConfigPaths[sample])).setpoint.items_per_second);
             expect(runHolds(native), native.result).toBe(true);
         });
     });

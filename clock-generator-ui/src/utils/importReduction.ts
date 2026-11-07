@@ -3,7 +3,7 @@ import type { Config } from 'clock-generator/browser';
 export interface ImportReduction {
     changes: { label: string; before: number; after: number }[];
     copies: number;
-    target: Config['target_output'];
+    target: Config['setpoint'];
 }
 
 export function importReduction(before: Config, after: Config): ImportReduction {
@@ -14,10 +14,10 @@ export function importReduction(before: Config, after: Config): ImportReduction 
             { label: 'Belts', before: before.belts.length, after: after.belts.length },
             { label: 'Chests', before: before.chests?.length ?? 0, after: after.chests?.length ?? 0 },
             { label: 'Drills', before: before.drills?.configs.length ?? 0, after: after.drills?.configs.length ?? 0 },
-            { label: 'Copies', before: before.target_output.copies, after: after.target_output.copies },
+            { label: 'Copies', before: before.setpoint.copies, after: after.setpoint.copies },
         ].filter(change => change.before !== change.after),
-        copies: after.target_output.copies,
-        target: after.target_output,
+        copies: after.setpoint.copies,
+        target: after.setpoint,
     };
 }
 

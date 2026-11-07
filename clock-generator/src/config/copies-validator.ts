@@ -7,7 +7,7 @@ import { machineRuleOf } from './machine-prototype';
 // Units of a build
 // ============================================================================
 //
-// A config describes ONE unit and `target_output.copies` says how many identical units exist. A config that itself
+// A config describes ONE unit and `setpoint.copies` says how many identical units exist. A config that itself
 // holds several identical units (each with its own machines and inserters) is refused, so that nobody plans hundreds
 // of redundant copies.
 //
@@ -237,12 +237,12 @@ export function findRepeatedUnits(config: Config): RepeatedUnits {
 
 /**
  * Throws a CopiesError when the config holds several identical units of a build, which it should describe once and
- * multiply with `target_output.copies`.
+ * multiply with `setpoint.copies`.
  */
 export function validateCopies(config: Config): void {
     assertInsertersInScope(config);
     const found = findRepeatedUnits(config);
     if (found.gcd > 1) {
-        throw new CopiesError(found.copies, config.target_output.copies);
+        throw new CopiesError(found.copies, config.setpoint.copies);
     }
 }

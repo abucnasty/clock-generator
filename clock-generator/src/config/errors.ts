@@ -143,7 +143,7 @@ export class ConfigValidationError extends Error {
 
         if (issues.length === 1) {
             const issue = issues[0];
-            let msg = `Configuration validation failed at '${issue.path}': ${issue.message}`;
+            let msg = `Configuration check failed at '${issue.path}': ${issue.message}`;
             if (issue.expected) {
                 msg += ` (expected ${issue.expected}`;
                 if (issue.received !== undefined) {
@@ -155,7 +155,7 @@ export class ConfigValidationError extends Error {
         }
 
         const lines = [
-            `Configuration validation failed with ${issues.length} errors:`
+            `Configuration check failed with ${issues.length} errors:`
         ];
 
         for (const issue of issues) {
@@ -239,6 +239,50 @@ export class InserterCoverageError extends Error {
 }
 
 // ============================================================================
+// Belt pickup into something other than a machine
+// ============================================================================
+
+/** One inserter that takes from a belt and drops into anything but a machine */
+export interface BeltPickupSinkInserter {
+    inserter_id: number;
+    belt_id: number;
+    /** What the inserter drops into: a chest, or a belt */
+    sink: { type: 'chest' | 'belt'; id: number };
+}
+
+/**
+ * A build has an inserter that takes from a belt and drops into anything but a machine, which the generator does not
+ * clock. Thrown before any simulation (config/inserter-scope.ts) and names every such inserter by its id.
+ */
+export class BeltPickupSinkError extends Error {
+    public readonly inserters: BeltPickupSinkInserter[];
+    /** The ids of the inserters, in the config's order */
+    public readonly inserter_ids: number[];
+
+    constructor(inserters: BeltPickupSinkInserter[]) {
+        super(BeltPickupSinkError.formatMessage(inserters));
+        this.name = 'BeltPickupSinkError';
+        this.inserters = inserters;
+        this.inserter_ids = inserters.map(it => it.inserter_id);
+    }
+
+    private static formatMessage(inserters: BeltPickupSinkInserter[]): string {
+        const route = (it: BeltPickupSinkInserter) =>
+            `takes from belt ${it.belt_id} and drops ${it.sink.type === 'belt' ? 'onto' : 'into'} ${it.sink.type} ${it.sink.id}`;
+        const rule = 'Taking from a belt into anything but a machine is not supported, so this build cannot be clocked.';
+        if (inserters.length === 1) {
+            return `Inserter ${inserters[0].inserter_id} ${route(inserters[0])}. ${rule} `
+                + 'Make that inserter drop into a machine, so that the machine is fed straight from the belt.';
+        }
+        const ids = inserters.map(it => String(it.inserter_id));
+        const list = `${ids.slice(0, -1).join(', ')} and ${ids[ids.length - 1]}`;
+        return `Inserters ${list} take from a belt and drop into something other than a machine: `
+            + `${inserters.map(it => `inserter ${it.inserter_id} ${route(it)}`).join('; ')}. ${rule} `
+            + 'Make each of them drop into a machine, so that the machine is fed straight from the belt.';
+    }
+}
+
+// ============================================================================
 // Copies Validation Types
 // ============================================================================
 
@@ -249,14 +293,14 @@ export interface CopiesUnit {
 
 /**
  * A config holds several identical units of a build, where it should describe one unit and set
- * `target_output.copies`.
+ * `setpoint.copies`.
  */
 export class CopiesError extends Error {
     /** The identical copies found, each with the machine ids of its unit; one entry per copy */
     public readonly units: CopiesUnit[];
     /** The number of identical copies the config holds */
     public readonly copies_found: number;
-    /** `target_output.copies` of the config as given */
+    /** `setpoint.copies` of the config as given */
     public readonly configured_copies: number;
 
     constructor(units: CopiesUnit[], configuredCopies: number) {
@@ -273,8 +317,8 @@ export class CopiesError extends Error {
         const listed = units
             .map((unit, i) => `copy ${i + 1}: machines ${unit.machine_ids.join(', ')}`)
             .join('; ');
-        return `The config holds ${found} identical copies of a unit of ${size} machine${size === 1 ? '' : 's'} `
-            + `(${listed}). Describe one copy and set target_output.copies to ${fraction(configuredCopies).multiply(found).toDecimal()} `
+        return `The configuration holds ${found} identical copies of a build of ${size} machine${size === 1 ? '' : 's'} `
+            + `(${listed}). Describe one copy and set setpoint.copies to ${fraction(configuredCopies).multiply(found).toDecimal()} `
             + `(now ${configuredCopies}, times ${found}).`;
     }
 }
@@ -298,7 +342,7 @@ export interface LaneCapacityIssue {
     items_per_second: number;
     /** Items a second the lanes carry: half the belt's speed times each lane's stack size */
     capacity_per_second: number;
-    /** `target_output.copies` of the config */
+    /** `setpoint.copies` of the config */
     copies: number;
 }
 
@@ -658,6 +702,6 @@ export class FeasibilityError extends Error {
         // copies as configured: a short decimal (copies-value.ts), never rounded the way a rate is
         const copies = target === null || target.copies === 1 ? ''
             : ` of ${formatRate(target.items_per_second)} a second over ${target.copies} copies (every figure here is for one copy)`;
-        return `No clock can hold this build's target${copies}:`;
+        return `No clock can hold this build's setpoint${copies}:`;
     }
 }

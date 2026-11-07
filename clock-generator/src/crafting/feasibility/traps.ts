@@ -7,7 +7,7 @@
  *   text follows the item from the port it is first dropped into to the ports it stops in.
  * - S2, a shared hand at a placer's target: an inserter that takes two or more of a placer's results out of where it
  *   places them, with the full hand rule there (`hand.full_hand.at_placing_source`); the same condition and text as
- *   `sharedHandRefusal` (result-windows.ts), for every target, where the placer must craft.
+ *   `sharedHandRefusal` (exhaust.ts), for every target, where the placer must craft.
  * - S3, a loop that uses up all it makes: a certificate from the loop's linear system (demand.ts).
  */
 import { FeasibilityIssue } from "../../config/errors";

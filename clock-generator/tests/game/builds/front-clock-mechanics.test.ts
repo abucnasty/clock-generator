@@ -105,13 +105,13 @@ describe("the recorded clock controls of the front fixtures", () => {
     test.each(variants.map(variant => variant.name))("%s: the game was recorded at the target rate over the pinned period", async name => {
         const variant = variants.find(it => it.name === name)!;
         const config = await frontClockConfig(variant);
-        expectRunIsConsistent(controls[name].native, controls[name].generation!, config.target_output.items_per_second);
+        expectRunIsConsistent(controls[name].native, controls[name].generation!, config.setpoint.items_per_second);
         // the targets: 6/s on the compact entrance scaffold, the tier's belt units over four times 30/s on the exit's plant
-        expect(config.target_output.items_per_second).toBe(variant.endpoint === "entrance" ? 6 : 30 * variant.speed.units / 4);
+        expect(config.setpoint.items_per_second).toBe(variant.endpoint === "entrance" ? 6 : 30 * variant.speed.units / 4);
     });
 
     test("all 12 recordings hold their target and recover from every disturbance", () => {
-        for (const variant of variants) expect(runHolds(controls[variant.name].native), `${variant.name}: ${controls[variant.name].native.result}`).toBe(true);
+        for (const variant of variants) expect(runHolds(controls[variant.name].native, controls[variant.name].known_differences), `${variant.name}: ${controls[variant.name].native.result}`).toBe(true);
     });
 
     test("the generator judged every turbo clock stable, the moving-config exits included", () => {

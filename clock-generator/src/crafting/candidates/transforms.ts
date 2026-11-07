@@ -2,7 +2,7 @@ import { OpenRange } from "../../data-types";
 import { InserterStatus } from "../../state";
 import { rotateRanges } from "../clock";
 import { CIRCUIT_LATENCY_TICKS } from "../../common/rule-constants";
-import { TrialRun } from "../plan/plan-run";
+import { TrialRun } from "../plan/unclocked-run";
 import { transitionsOf } from "../sequence/compact-history";
 
 /**
@@ -12,12 +12,12 @@ import { transitionsOf } from "../sequence/compact-history";
  * clock, `withBeltPickupSlack` in clock.ts, since the belt a clock is made for is read off it.
  */
 
-/** Every window of the inserters named lengthened at its end by `padding` ticks, up to the end of the period */
+/** Every window of the inserters named lengthened at its end by `padding` ticks, up to the end of the window cycle */
 export function paddedWindows(
     windows: Map<string, OpenRange[]>,
     padded_ids: Iterable<string>,
     padding: number,
-    period: number,
+    window_cycle_ticks: number,
 ): Map<string, OpenRange[]> {
     const result = new Map(windows);
     for (const key of padded_ids) {
@@ -26,13 +26,13 @@ export function paddedWindows(
             continue;
         }
         result.set(key, OpenRange.reduceRanges(ranges.map(r =>
-            OpenRange.from(r.start_inclusive, Math.min(r.end_inclusive + padding, period - 1))
+            OpenRange.from(r.start_inclusive, Math.min(r.end_inclusive + padding, window_cycle_ticks - 1))
         )));
     }
     return result;
 }
 
-/** The crafting cycle a window belongs to: the one it starts in, the last cycle taking what runs past the period */
+/** The crafting cycle a window belongs to: the one it starts in, the last cycle taking what runs past the window cycle */
 export function cycleOfWindow(range: OpenRange, cycle_ticks: number, cycles: number): number {
     return Math.min(cycles - 1, Math.floor(range.start_inclusive / cycle_ticks));
 }
@@ -46,9 +46,9 @@ export function withCycleShifted(
     cycle_index: number,
     shift_ticks: number,
     cycle_ticks: number,
-    period: number,
+    window_cycle_ticks: number,
 ): Map<string, OpenRange[]> {
-    const cycles = Math.round(period / cycle_ticks);
+    const cycles = Math.round(window_cycle_ticks / cycle_ticks);
     return new Map(Array.from(planned_windows, ([key, ranges]) => [key, ranges
         .map(range => cycleOfWindow(range, cycle_ticks, cycles) !== cycle_index ? range
             : OpenRange.from(range.start_inclusive + shift_ticks, range.end_inclusive + shift_ticks))
@@ -79,18 +79,18 @@ export function withSingleSwingOutput(
     windows: Map<string, OpenRange[]>,
     output_ids: Iterable<string>,
     swings: number,
-    period: number,
+    window_cycle_ticks: number,
     offset: number,
     length: number,
     spare?: SpareOutputWindows,
 ): Map<string, OpenRange[]> {
-    const spacing = period / swings;
+    const spacing = window_cycle_ticks / swings;
     const result = new Map(windows);
-    // floor keeps every start below the period, so starts stay whole ticks
+    // floor keeps every start below the window cycle, so starts stay whole ticks
     const starts = Array.from({ length: swings }, (_, j) => Math.floor(offset + j * spacing));
     const ranges = OpenRange.reduceRanges(starts.flatMap((start, j) => {
         const extra = spare && j % spare.every === 0 ? spare.ticks : 0;
-        return rotateRanges([OpenRange.from(0, length - 1 + extra)], start, period);
+        return rotateRanges([OpenRange.from(0, length - 1 + extra)], start, window_cycle_ticks);
     }));
     for (const key of output_ids) {
         result.set(key, ranges);
@@ -99,16 +99,16 @@ export function withSingleSwingOutput(
 }
 
 /**
- * The output inserters' swings spread evenly over the period, one swing per window. Windows are the shortest
+ * The output inserters' swings spread evenly over the window cycle, one swing per window. Windows are the shortest
  * planned window minus the circuit latency, since the game keeps the inserter enabled that much longer and
  * a longer window lets it return and grab a partial stack. Null when that would not change anything or cannot be built.
  */
 export function evenlySpacedOutputWindows(
     output_windows: Map<string, OpenRange[]>,
     swing_counts: ReadonlyMap<string, number>,
-    period: number,
+    window_cycle_ticks: number,
 ): Map<string, OpenRange[]> | null {
-    if (!Number.isInteger(period)) {
+    if (!Number.isInteger(window_cycle_ticks)) {
         return null;
     }
     const even = new Map<string, OpenRange[]>();
@@ -119,13 +119,13 @@ export function evenlySpacedOutputWindows(
             return null;
         }
         const length = Math.min(...ranges.map(r => r.end_inclusive - r.start_inclusive + 1)) - CIRCUIT_LATENCY_TICKS;
-        if (length < 1 || length >= period / swings) {
+        if (length < 1 || length >= window_cycle_ticks / swings) {
             return null;
         }
         const first = ranges[0].start_inclusive;
         const spaced: OpenRange[] = [];
         for (let k = 0; k < swings; k++) {
-            spaced.push(...rotateRanges([OpenRange.from(first, first + length - 1)], Math.round(k * period / swings), period));
+            spaced.push(...rotateRanges([OpenRange.from(first, first + length - 1)], Math.round(k * window_cycle_ticks / swings), window_cycle_ticks));
         }
         const reduced = OpenRange.reduceRanges(spaced);
         changed ||= reduced.length !== ranges.length || reduced.some((r, i) => r.start_inclusive !== ranges[i].start_inclusive || r.end_inclusive !== ranges[i].end_inclusive);
@@ -134,8 +134,8 @@ export function evenlySpacedOutputWindows(
     return changed ? even : null;
 }
 
-/** How many swings each output inserter made in the first period of a run: its drops, as the trial recorded them */
-export function outputSwingCountsOf(run: TrialRun, output_ids: ReadonlySet<string>, period: number): Map<string, number> {
+/** How many swings each output inserter made in the first window cycle of a run: its drops, as the trial recorded them */
+export function outputSwingCountsOf(run: TrialRun, output_ids: ReadonlySet<string>, window_cycle_ticks: number): Map<string, number> {
     const swing_counts = new Map<string, number>();
     for (const entity of run.serializable_state_transition_history.entities) {
         if (!output_ids.has(entity.entity_id)) {
@@ -145,7 +145,7 @@ export function outputSwingCountsOf(run: TrialRun, output_ids: ReadonlySet<strin
         let status = entity.initial_status;
         let swings = 0;
         for (const transition of sorted) {
-            if (transition.tick >= 1 && transition.tick <= period && transition.to_status === InserterStatus.DROP_OFF && status !== InserterStatus.DROP_OFF) {
+            if (transition.tick >= 1 && transition.tick <= window_cycle_ticks && transition.to_status === InserterStatus.DROP_OFF && status !== InserterStatus.DROP_OFF) {
                 swings++;
             }
             status = transition.to_status;
@@ -167,10 +167,10 @@ const INSERTER_BUSY_STATUSES = new Set<string>([
 export function busyDeciderRanges(
     initial_status: string,
     transitions: { tick: number; to_status: string }[],
-    period: number,
+    window_cycle_ticks: number,
 ): OpenRange[] {
-    // manual lcm overrides can produce fractional periods; the simulation runs whole ticks up to the ceiling
-    const ticks = Math.ceil(period);
+    // manual lcm overrides can produce fractional window cycles; the simulation runs whole ticks up to the ceiling
+    const ticks = Math.ceil(window_cycle_ticks);
     const busy = new Array<boolean>(ticks).fill(false);
     const sorted = [...transitions].sort((a, b) => a.tick - b.tick);
     let status = initial_status;

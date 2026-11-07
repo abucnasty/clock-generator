@@ -106,7 +106,7 @@ were measured at stack sizes 1–4 ([below](#generated-clocks-and-drops)); picku
 The same-item probes' 8- and 12-item hands ([calibration](../simulator.md#picking-up-from-moving-belts-and-underground-endpoints))
 matched subsequent grabs when seeded with the observed first grab, on moving turbo and express belts of four-item
 stacks; they cover no other speed, no backed-up supply and no clock, so these rows stay Not tested. A config with
-such a pickup is generated, not refused: the log, the clocks' insights and the web form's Build validation warn that
+such a pickup is generated, not refused: the log, the clocks' insights and the web form's Build check warn that
 its timing is not tested. Measuring them is follow-up F7.
 
 ### Generated clocks and drops
@@ -430,13 +430,13 @@ hand a tick later would move agricultural science's recommended clock, which the
 keeps its rule in 0.19.0: no recording varies the drop target alone, and for windows that open together the drop target
 once stood in for the decider order.
 
-**Clock latencies never checked tick for tick in the game.** The simulator gives the window deciders of the period
+**Clock latencies never checked tick for tick in the game.** The simulator gives the window deciders of the
 clock two ticks of latency, pinned tick for tick on whole-tick clocks by the runs above, the eight staged cold starts of the
 normal underground pickups that preceded #266 and its 128 lane-phase cells. Two kinds of clock rest on the blueprint's encoding alone:
 
 - **A subtick clock** (a fractional window cycle time) runs in the simulator on the same two ticks. Its blueprint puts a multiply
   and a modulo between the counter and the deciders and makes up for them by moving the windows back a tick, so its
-  steady state is the period clock's by construction; the one recording of such a clock (the advanced circuit scaffold
+  steady state is that of a clock with the same window cycle, by construction; the one recording of such a clock (the advanced circuit scaffold
   at 230 a second) agrees per window cycle and by state shares, not tick for tick. At its start the encoding differs further:
   the lock filter adds its 1 before the multiply and the modulo have put anything out, so for its first ticks the
   inserters see the window position of tick 1. Not recorded.

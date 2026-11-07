@@ -34,7 +34,7 @@ export function blockedOutputClockCases(): BlockedOutputClockCase[] {
 export function blockedOutputClockConfig(variant: BlockedOutputClockCase): Config {
     const product = "iron-gear-wheel";
     return ConfigSchema.parse({
-        target_output: {recipe: product, items_per_second: BLOCKED_OUTPUT_TARGET, copies: 1},
+        setpoint: {recipe: product, items_per_second: BLOCKED_OUTPUT_TARGET, copies: 1},
         machines: [{id: 1, type: "machine", recipe: product, crafting_speed: BLOCKED_OUTPUT_CRAFTING_SPEED, productivity: 0}],
         inserters: [
             {id: 1, source: {type: "machine", id: 1}, sink: {type: "belt", id: 1}, stack_size: 16},
@@ -83,7 +83,7 @@ export function assertBlockedOutputHardware(recording: Recording, config: Config
     expect(drops.length).toBeGreaterThan(0);
     expect(drops.every(count => count === variant.stackSize)).toBe(true);
     expect(Math.max(...counts)).toBe(variant.stackSize === 3 ? 15 : 16);
-    expect(output[0].samples.held_item.map(([, item]) => item).filter(Boolean).every(item => item === config.target_output.recipe)).toBe(true);
+    expect(output[0].samples.held_item.map(([, item]) => item).filter(Boolean).every(item => item === config.setpoint.recipe)).toBe(true);
 }
 
 export function blockedOutputClockScenario(variant: BlockedOutputClockCase): PickupClockScenario {

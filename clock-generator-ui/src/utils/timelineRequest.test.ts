@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import type { Config } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
-import { settledPeriodLabel, timelineRequestFor } from './timelineRequest';
+import { settledWindowCycleLabel, timelineRequestFor } from './timelineRequest';
 const config = { overrides: { backed_up_belts: false } } as Config;
 const clock = { simulationDurationTicks: 100, terminalSwingCount: 2, clockWindows: {}, beltLabel: 'backed-up', fuelView: null } as ClockAlternativeView;
 it('reproduces the other belt choice for legacy results without mutating the saved build', () => {
@@ -25,27 +25,27 @@ it('migrates old config and result names without changing their belt supply assu
 });
 it('asks the clock replay for the period the long run first judges, and no other replay', () => {
     const settled = { ...clock, simulationDurationTicks: 24, asBuilt: { first_judged_tick: 960 } } as ClockAlternativeView;
-    expect(timelineRequestFor(config, settled, 'clock')?.settle_periods).toBe(40);
-    expect(timelineRequestFor(config, settled, 'plan')).not.toHaveProperty('settle_periods');
-    // judged from the first period, or no long run (or a result kept before it was carried): the replay is what it was
-    expect(timelineRequestFor(config, { ...settled, asBuilt: { first_judged_tick: 0 } } as ClockAlternativeView, 'clock')).not.toHaveProperty('settle_periods');
-    expect(timelineRequestFor(config, { ...settled, asBuilt: null }, 'clock')).not.toHaveProperty('settle_periods');
-    expect(timelineRequestFor(config, clock, 'clock')).not.toHaveProperty('settle_periods');
+    expect(timelineRequestFor(config, settled, 'clock')?.settle_window_cycles).toBe(40);
+    expect(timelineRequestFor(config, settled, 'plan')).not.toHaveProperty('settle_window_cycles');
+    // judged from the first window cycle, or no long run (or a result kept before it was carried): the replay is what it was
+    expect(timelineRequestFor(config, { ...settled, asBuilt: { first_judged_tick: 0 } } as ClockAlternativeView, 'clock')).not.toHaveProperty('settle_window_cycles');
+    expect(timelineRequestFor(config, { ...settled, asBuilt: null }, 'clock')).not.toHaveProperty('settle_window_cycles');
+    expect(timelineRequestFor(config, clock, 'clock')).not.toHaveProperty('settle_window_cycles');
 });
 it('uses the measured clock origin rather than the judged stock index when both are available', () => {
     const measured = { ...clock, simulationDurationTicks: 24,
         asBuilt: { first_judged_tick: 960, clock_tick_at_first_judged: 1200 } } as ClockAlternativeView;
     expect(timelineRequestFor(config, measured, 'clock')?.settle_ticks).toBe(1200);
-    expect(timelineRequestFor(config, measured, 'plan')).not.toHaveProperty('settle_periods');
+    expect(timelineRequestFor(config, measured, 'plan')).not.toHaveProperty('settle_window_cycles');
     expect(timelineRequestFor(config, measured, 'plan')).not.toHaveProperty('settle_ticks');
     expect(timelineRequestFor(config, { ...measured, asBuilt: { clock_tick_at_first_judged: 1201 } } as ClockAlternativeView, 'clock')?.settle_ticks).toBe(1201);
-    expect(settledPeriodLabel(timelineRequestFor(config, measured, 'clock'), { mode: 'clock', ticks_before_recording: 1200 }))
-        .toBe('Period from tick 1200, after the build has settled');
+    expect(settledWindowCycleLabel(timelineRequestFor(config, measured, 'clock'), { mode: 'clock', ticks_before_recording: 1200 }))
+        .toBe('Window cycle from tick 1200, at steady state');
 });
 it('says which period a settled replay shows, and says nothing of the first one', () => {
     const request = timelineRequestFor(config, { ...clock, simulationDurationTicks: 24, asBuilt: { first_judged_tick: 960 } } as ClockAlternativeView, 'clock');
-    expect(settledPeriodLabel(request, { mode: 'clock', ticks_before_recording: 960 })).toBe('Period from tick 960, after the build has settled');
-    expect(settledPeriodLabel(request, { mode: 'plan', ticks_before_recording: 240 })).toBeNull();
-    expect(settledPeriodLabel(timelineRequestFor(config, clock, 'clock'), { mode: 'clock', ticks_before_recording: 240 })).toBeNull();
-    expect(settledPeriodLabel(null, null)).toBeNull();
+    expect(settledWindowCycleLabel(request, { mode: 'clock', ticks_before_recording: 960 })).toBe('Window cycle from tick 960, at steady state');
+    expect(settledWindowCycleLabel(request, { mode: 'plan', ticks_before_recording: 240 })).toBeNull();
+    expect(settledWindowCycleLabel(timelineRequestFor(config, clock, 'clock'), { mode: 'clock', ticks_before_recording: 240 })).toBeNull();
+    expect(settledWindowCycleLabel(null, null)).toBeNull();
 });

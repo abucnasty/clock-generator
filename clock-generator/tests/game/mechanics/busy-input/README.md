@@ -1,7 +1,7 @@
 # Bounded busy-input observations
 
 These Factorio 2.1.21 observations compare only the first two common ticks of two unmatched real and control layouts.
-They are not a controlled minimal pair. No new scaffold, substitute screenshot, whole-period denominator or throughput
+They are not a controlled minimal pair. No new scaffold, substitute screenshot, whole-window-cycle denominator or throughput
 claim is introduced. GameFixturePaths.BUSY_INPUT_OBSERVATIONS catalogs the sealed [observations](fixtures/observations.json).
 
 All eight selected real input inserters and twelve control input inserters update once per tick: 16/24 updates.
@@ -16,7 +16,7 @@ observation-induced target-full checks per common slice are excluded. Visible en
 
 The fixture retains exact per-role order, results and denominators. Zero selected checks do not prove zero alternative
 work. Longer control attempts exceeded their existing limit and are not accepted evidence. No full-factory cause,
-sharing/price conclusion, whole-period rate or production fix follows from these two unmatched ticks.
+sharing/price conclusion, whole-window-cycle rate or production fix follows from these two unmatched ticks.
 
 ```bash
 npm test -- src/harness/probe-observations.test.ts

@@ -8,7 +8,7 @@ describe("a clock of the game", () => {
     it("enables by its windows", () => {
         const tick_provider = TickProvider.mutable(0);
         const clock = EnableControl.clocked({
-            periodDuration: Duration.ofTicks(10), enabledRanges: [OpenRange.from(2, 4)], tickProvider: tick_provider, is_game_clock: true,
+            windowCycleDuration: Duration.ofTicks(10), enabledRanges: [OpenRange.from(2, 4)], tickProvider: tick_provider, is_game_clock: true,
         });
         const enabled = Array.from({ length: 10 }, (_, tick) => { tick_provider.setCurrentTick(tick); return clock.isEnabled(); });
         expect(enabled).toEqual([false, false, true, true, true, false, false, false, false, false]);
@@ -16,7 +16,7 @@ describe("a clock of the game", () => {
 
     it("keeps its count when a recording starts where it runs through the steps of a run (new dispatch)", () => {
         const tick = TickProvider.mutable(100);
-        const clock = EnableControl.clocked({ periodDuration: Duration.ofTicks(192),
+        const clock = EnableControl.clocked({ windowCycleDuration: Duration.ofTicks(192),
             enabledRanges: [OpenRange.from(126, 133)], tickProvider: tick, is_game_clock: true, runs_through_steps: true });
         clock.reset(true);
         tick.setCurrentTick(100 + 1280);
@@ -31,7 +31,7 @@ describe("a clock of the game", () => {
 
     it("starts its count again when a recording starts where it does not run through the steps (configured order)", () => {
         const tick = TickProvider.mutable(100);
-        const clock = EnableControl.clocked({ periodDuration: Duration.ofTicks(192),
+        const clock = EnableControl.clocked({ windowCycleDuration: Duration.ofTicks(192),
             enabledRanges: [OpenRange.from(126, 133)], tickProvider: tick, is_game_clock: true });
         clock.reset(true);
         tick.setCurrentTick(100 + 1280);
@@ -42,7 +42,7 @@ describe("a clock of the game", () => {
 
     it("restarts a planning schedule for a new step", () => {
         const tick = TickProvider.mutable(100);
-        const clock = EnableControl.clocked({ periodDuration: Duration.ofTicks(192),
+        const clock = EnableControl.clocked({ windowCycleDuration: Duration.ofTicks(192),
             enabledRanges: [OpenRange.from(126, 133)], tickProvider: tick });
         clock.reset(true);
         tick.setCurrentTick(100 + 1280);
@@ -55,13 +55,13 @@ describe("a clock of the game", () => {
 describe("a clock of a period of part ticks", () => {
     // 640/3 ticks, as the metallurgic science pack's derived subtick clock: the one-tick window [212, 212], moved by the
     // 2 ticks of circuit latency, wraps to [2/3, 2/3] (0.666...6572 in floats), which tick 214 + 640 k meets in the game
-    const period = 640 / 3;
-    const windows = shiftRangesForCircuitLatency([OpenRange.from(212, 212)], period)
+    const window_cycle_ticks = 640 / 3;
+    const windows = shiftRangesForCircuitLatency([OpenRange.from(212, 212)], window_cycle_ticks)
         .map(range => OpenRange.from(range.start, range.end));
     const enabledTicks = (exact_subtick_positions: boolean, ticks: number): number[] => {
         const tick_provider = TickProvider.mutable(0);
         const clock = EnableControl.clocked({
-            periodDuration: Duration.ofTicks(period), enabledRanges: windows, tickProvider: tick_provider, is_game_clock: true,
+            windowCycleDuration: Duration.ofTicks(window_cycle_ticks), enabledRanges: windows, tickProvider: tick_provider, is_game_clock: true,
             exact_subtick_positions,
         });
         const enabled: number[] = [];
@@ -83,11 +83,11 @@ describe("a clock of a period of part ticks", () => {
     });
 
     it("answers whole-tick windows as the float clock does", () => {
-        const whole = [OpenRange.from(0, 7), OpenRange.from(16, 23), OpenRange.from(200, period)];
+        const whole = [OpenRange.from(0, 7), OpenRange.from(16, 23), OpenRange.from(200, window_cycle_ticks)];
         const answers = (exact_subtick_positions: boolean) => {
             const tick_provider = TickProvider.mutable(0);
             const clock = EnableControl.clocked({
-                periodDuration: Duration.ofTicks(period), enabledRanges: whole, tickProvider: tick_provider, exact_subtick_positions,
+                windowCycleDuration: Duration.ofTicks(window_cycle_ticks), enabledRanges: whole, tickProvider: tick_provider, exact_subtick_positions,
             });
             return Array.from({ length: 6400 }, (_, tick) => { tick_provider.setCurrentTick(tick); return clock.isEnabled(); });
         };

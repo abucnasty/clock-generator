@@ -102,16 +102,16 @@ function removeAndRenumber<T extends { id: number }>(items: T[], index: number):
 }
 
 // Target output
-export function updateTargetOutput(
+export function updateSetpoint(
     prev: ConfigFormData,
-    field: keyof ConfigFormData['target_output'],
+    field: keyof ConfigFormData['setpoint'],
     value: string | number | { x: number; y: number } | undefined,
 ): ConfigFormData {
     // an optional field cleared is left out, not kept as undefined
-    const target: Record<string, unknown> = { ...prev.target_output };
+    const target: Record<string, unknown> = { ...prev.setpoint };
     if (value === undefined) delete target[field];
     else target[field] = value;
-    return { ...prev, target_output: target as ConfigFormData['target_output'] };
+    return { ...prev, setpoint: target as ConfigFormData['setpoint'] };
 }
 
 // Machines

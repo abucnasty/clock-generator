@@ -9,15 +9,15 @@ const UNDER_BLOCK_MARGIN_TICKS = 2;
  */
 export const LOOP_WINDOW_MIN_SWINGS = 2;
 
-/** Where in the period a machine was under its output block over the judged part of a run of the build */
+/** Where in the window cycle a machine was under its output block over the judged part of a run of the build */
 export interface UnderBlockMap {
-    period: number;
-    /** By tick of the period: under its block in some judged period */
+    window_cycle_ticks: number;
+    /** By tick of the window cycle: under its block in some judged window cycle */
     some: readonly boolean[];
 }
 
 interface UnderBlockWindows {
-    /** Windows over the clock period in which the inserter is enabled */
+    /** Windows over the window cycle in which the inserter is enabled */
     windows: OpenRange[];
     /** Ticks of the shortest and the longest stretch in which it is disabled */
     shortest_off_ticks: number;
@@ -26,39 +26,39 @@ interface UnderBlockWindows {
 
 /**
  * Where a machine was under its output block, from the quantity of its main product after each tick of a run that
- * starts at the start of a period, judged after its first third, where the start-up of a loop has worked itself out.
- * Null when the run is shorter than two periods, the period is not a whole number of ticks, or the machine was never
+ * starts at the start of a window cycle, judged after its first third, where the start-up of a loop has worked itself out.
+ * Null when the run is shorter than two window cycles, the window cycle is not a whole number of ticks, or the machine was never
  * under its block.
  */
-export function underBlockMap(output: readonly number[], output_block: number, period: number): UnderBlockMap | null {
-    if (!Number.isInteger(period) || output.length < 2 * period) {
+export function underBlockMap(output: readonly number[], output_block: number, window_cycle_ticks: number): UnderBlockMap | null {
+    if (!Number.isInteger(window_cycle_ticks) || output.length < 2 * window_cycle_ticks) {
         return null;
     }
-    const periods = Math.floor(output.length / period);
-    const some = new Array<boolean>(period).fill(false);
-    for (let tick = Math.floor(periods / 3) * period; tick < periods * period; tick++) {
+    const window_cycles = Math.floor(output.length / window_cycle_ticks);
+    const some = new Array<boolean>(window_cycle_ticks).fill(false);
+    for (let tick = Math.floor(window_cycles / 3) * window_cycle_ticks; tick < window_cycles * window_cycle_ticks; tick++) {
         if (output[tick] < output_block) {
-            some[tick % period] = true;
+            some[tick % window_cycle_ticks] = true;
         }
     }
-    return some.includes(true) ? { period, some } : null;
+    return some.includes(true) ? { window_cycle_ticks, some } : null;
 }
 
-/** The stretches of the ticks marked, around the period, as [start, length] from the first after an unmarked tick */
+/** The stretches of the ticks marked, around the window cycle, as [start, length] from the first after an unmarked tick */
 function stretchesOf(marked: readonly boolean[]): { start: number; length: number }[] {
-    const period = marked.length;
+    const window_cycle_ticks = marked.length;
     const first_unmarked = marked.indexOf(false);
     if (first_unmarked < 0) {
-        return [{ start: 0, length: period }];
+        return [{ start: 0, length: window_cycle_ticks }];
     }
     const stretches: { start: number; length: number }[] = [];
-    for (let step = 1; step <= period; step++) {
-        const position = (first_unmarked + step) % period;
+    for (let step = 1; step <= window_cycle_ticks; step++) {
+        const position = (first_unmarked + step) % window_cycle_ticks;
         if (!marked[position]) {
             continue;
         }
         const last = stretches[stretches.length - 1];
-        if (last !== undefined && marked[(position - 1 + period) % period]) {
+        if (last !== undefined && marked[(position - 1 + window_cycle_ticks) % window_cycle_ticks]) {
             last.length += 1;
         } else {
             stretches.push({ start: position, length: 1 });
@@ -91,15 +91,15 @@ export function underBlockStretches(map: UnderBlockMap, min_disabled_ticks: numb
  * `OutputBlock.ingredients_blocked_at`), with a margin on each side, the inserter disabled in the rest: the stretches in
  * which the machine was under its block (`underBlockStretches`), or with `length_ticks` only that many ticks of each,
  * from the first run of ticks under the block that is as long. Where the machine's output is taken in
- * windows, the stretches follow them and are the same every period whatever the machine holds: the inserter is only
+ * windows, the stretches follow them and are the same every window cycle whatever the machine holds: the inserter is only
  * switched off where the machine could take nothing from it.
  *
- * Null when the windows would fill the period: the machine is under its block at every tick, or is off it for less
+ * Null when the windows would fill the window cycle: the machine is under its block at every tick, or is off it for less
  * than `min_disabled_ticks` at a time.
  */
 export function underBlockWindows(map: UnderBlockMap, min_disabled_ticks: number, length_ticks?: number): UnderBlockWindows | null {
-    const { period, some } = map;
-    const enabled = new Array<boolean>(period).fill(false);
+    const { window_cycle_ticks, some } = map;
+    const enabled = new Array<boolean>(window_cycle_ticks).fill(false);
     for (const stretch of underBlockStretches(map, min_disabled_ticks)) {
         let from = 0;
         if (length_ticks !== undefined) {
@@ -108,7 +108,7 @@ export function underBlockWindows(map: UnderBlockMap, min_disabled_ticks: number
             // holds, is not room for the hands
             const runs: { start: number; length: number }[] = [];
             for (let k = 0; k < stretch.length; k++) {
-                if (!some[(stretch.start + k) % period]) {
+                if (!some[(stretch.start + k) % window_cycle_ticks]) {
                     continue;
                 }
                 const last = runs[runs.length - 1];
@@ -122,7 +122,7 @@ export function underBlockWindows(map: UnderBlockMap, min_disabled_ticks: number
         }
         const to = length_ticks === undefined ? stretch.length : Math.min(stretch.length, from + length_ticks);
         for (let k = from - UNDER_BLOCK_MARGIN_TICKS; k < to + UNDER_BLOCK_MARGIN_TICKS; k++) {
-            enabled[(((stretch.start + k) % period) + period) % period] = true;
+            enabled[(((stretch.start + k) % window_cycle_ticks) + window_cycle_ticks) % window_cycle_ticks] = true;
         }
     }
     const kept = withShortGapsFilled(enabled, min_disabled_ticks);
@@ -131,10 +131,10 @@ export function underBlockWindows(map: UnderBlockMap, min_disabled_ticks: number
         return null;
     }
     const windows: OpenRange[] = [];
-    for (let position = 0; position < period; position++) {
+    for (let position = 0; position < window_cycle_ticks; position++) {
         if (kept[position] && (position === 0 || !kept[position - 1])) {
             let end = position;
-            while (end + 1 < period && kept[end + 1]) {
+            while (end + 1 < window_cycle_ticks && kept[end + 1]) {
                 end++;
             }
             windows.push(OpenRange.from(position, end));

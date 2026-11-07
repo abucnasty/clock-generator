@@ -195,7 +195,7 @@ export function toPlannerFacts(config: Config): PlannerFacts {
         edges: group.map(edge => ({ edge: edge.key, item: edge.item, hand: edge.hand.by_item, floor_cycle: edge.floor.cycle })),
     }));
 
-    const target = config.target_output;
+    const target = config.setpoint;
     return {
         schema: 1,
         target: {

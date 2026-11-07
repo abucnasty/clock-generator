@@ -25,16 +25,16 @@ for (const compact of [false, true]) for (const speed of BELT_SPEEDS) for (const
         if (!compact && speed.name === "normal") continue;
         const name = `${speed.name}-${compact ? "compact" : "plant"}-${mirrored ? "mirrored" : "unmirrored"}-moving-${content}`;
         test(`native first-grab phases cover both aligned lanes: ${name}`, () => {
-            const period = speed.name === "turbo" ? 2 : speed.name === "fast" ? 4 : 8;
-            const rows = Array.from({length: period}, (_, delay) => delay ? shifted[`${name}-release-${delay}`] : base[name]);
+            const window_cycle_ticks = speed.name === "turbo" ? 2 : speed.name === "fast" ? 4 : 8;
+            const rows = Array.from({length: window_cycle_ticks}, (_, delay) => delay ? shifted[`${name}-release-${delay}`] : base[name]);
             expect(rows.every(Boolean)).toBe(true);
             expect(rows.every(row => row.preferred === (mirrored ? 2 : 1))).toBe(true);
             expect(rows.every(row => row.first_grab_phases[0] === row.first_grab_phases[1])).toBe(true);
             for (const lane of [0, 1]) {
                 const observed = [...new Set(rows.map(row => row.first_grab_phases[lane]))].sort((a, b) => a - b);
-                const cycle = Array.from({length: period}, (_, delay) =>
+                const cycle = Array.from({length: window_cycle_ticks}, (_, delay) =>
                     (base[name].first_grab_phases[lane] - delay * speed.units * 8 + 512) % 64).sort((a, b) => a - b);
-                expect(observed).toHaveLength(period);
+                expect(observed).toHaveLength(window_cycle_ticks);
                 expect(observed).toEqual(cycle);
             }
         });

@@ -37,7 +37,7 @@ const crafting = (answers: { in_progress?: boolean; keeps_working?: boolean } = 
     return user satisfies EnergyUser;
 };
 
-const idleBuild = { target_output: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+const idleBuild = { setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
     machines: [{ id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0 }], belts: [], inserters: [] };
 
 describe("Energy.of", () => {

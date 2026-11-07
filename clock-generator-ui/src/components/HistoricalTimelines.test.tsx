@@ -164,7 +164,7 @@ it('retains transfer routes, item icons, totals, ticks and zero-duration transfe
         ] }] };
     const { user } = show(<TransferHistoryVisualization transferHistory={transfers} />, { names: GAME_NAMES });
     const name = screen.getByText('Transfer inserter');
-    expect(await tooltipOf(user, name)).toBe('Transfer inserterFrom: Input beltTo: Output machineTotal transferred: 7');
+    expect(await tooltipOf(user, name)).toBe('Transfer inserterFrom: Input beltTo: Output machineTotal moved: 7');
     for (const icon of ['Stack inserter', 'Copper plate', 'Iron plate']) expect(screen.getByRole('img', { name: icon })).toBeDefined();
     for (const item of ['Copper plate', 'Iron plate']) expect(screen.getByText(item)).toBeDefined();
     // a transfer's mark has no text or role of its own: it is drawn on the row's chart, beside the row's name

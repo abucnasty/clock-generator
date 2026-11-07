@@ -21,7 +21,7 @@ Use the sidecar mod to copy a build from Factorio to the clock generator site.
 
    The selection tool is in your hand.
 
-2. Drag to select an area that contains one unit of the build. Include all of its machines, inserters, belts, chests
+2. Drag to select an area that contains one copy of the build. Include all of its machines, inserters, belts, chests
    and mining drills.
 
    The **Clock Generator Sidecar** window opens. It shows the number of entities and the suggested target.
@@ -48,9 +48,9 @@ Use the sidecar mod to copy a build from Factorio to the clock generator site.
 
 ## Result
 
-The build is on the site. If the site had no target output before, the target output is the suggested target: the
+The build is on the site. If the site had no setpoint before, the setpoint is the suggested target: the
 product of the build at the maximum rate of its machines. At the maximum rate, the clock has no time for recovery.
-To give the clock time for recovery, decrease the rate in **Target Output**.
+To give the clock time for recovery, decrease the rate in **Setpoint**.
 
 ## Related information
 

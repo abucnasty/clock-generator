@@ -20,7 +20,7 @@ for f in sorted(glob.glob(os.path.join(d, '*.json'))):
     survivors = [c['id'] for c in cs if c.get('survives')]
     broken = lambda c: ', '.join(c.get('broken_by') or ([] if c.get('holds_undisturbed', True) else ['off with nothing cut'])) or c.get('error', '')[:50]
     if sel is not None and sel.get('survives'):
-        groups['selected survives'].append((key, f"{sel['id']}, back within {sel['recovered_after_periods']} periods{note}"))
+        groups['selected survives'].append((key, f"{sel['id']}, back within {sel['recovered_after_window_cycles']} periods{note}"))
     elif survivors:
         groups['another clock survives'].append((key, f"selected {sel['id'] if sel else r.get('selected')} broken by: {broken(sel) if sel else 'not stable'}; survive: {', '.join(survivors)}{note}"))
     else:

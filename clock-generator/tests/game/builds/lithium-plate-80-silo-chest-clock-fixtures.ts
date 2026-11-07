@@ -15,7 +15,7 @@ import {PickupClockScenario} from "./pickup-clock-capture";
  * The lithium plate build, 80 a second from one copy (`LITHIUM_PLATE_80_SILO_CHEST`): two cryogenic plants, fed
  * holmium plates by infinity chests, put lithium into a rocket silo taken as a chest, and six furnaces take it out and
  * put plates onto a belt that a loader empties into a disposal chest. The silo holds at most 250 lithium (by weight), so
- * the standard cuts of 2 periods (of 7,560 or 1,080 ticks) empty it many times over.
+ * the standard cuts of 2 window cycles (of 7,560 or 1,080 ticks) empty it many times over.
  *
  * The clock with 3 output swings (selected until the default dispatch changed) is recorded in two build orders. The game serves inserters that act on one entity
  * in the same tick in the order of their unit numbers, the last built first (docs/simulator.md): as the build's blueprint
@@ -27,7 +27,7 @@ import {PickupClockScenario} from "./pickup-clock-capture";
 export interface LithiumSiloCase {
     name: string;
     /** The alternative recorded */
-    alternative: "swings-3" | "swings-7" | "swings-1";
+    alternative: "takt_batches_observed_swings_3" | "takt_batches_observed_swings_7" | "takt_batches_observed_swings_1";
     /** Set where the game does not hold this clock though the simulator does: the limit of the drops the config marks */
     known_limit?: "side-loaded-drop";
     order: "as-built" | "fill-last";
@@ -35,10 +35,10 @@ export interface LithiumSiloCase {
 
 export function lithiumSiloCases(): LithiumSiloCase[] {
     return [
-        {name: "lithium-silo-swings-3", alternative: "swings-3", order: "as-built"},
-        {name: "lithium-silo-swings-3-fill-last", alternative: "swings-3", order: "fill-last"},
-        {name: "lithium-silo-swings-1", alternative: "swings-1", order: "as-built"},
-        {name: "lithium-silo-swings-7", alternative: "swings-7", order: "as-built",
+        {name: "lithium-silo-swings-3", alternative: "takt_batches_observed_swings_3", order: "as-built"},
+        {name: "lithium-silo-swings-3-fill-last", alternative: "takt_batches_observed_swings_3", order: "fill-last"},
+        {name: "lithium-silo-swings-1", alternative: "takt_batches_observed_swings_1", order: "as-built"},
+        {name: "lithium-silo-swings-7", alternative: "takt_batches_observed_swings_7", order: "as-built",
             known_limit: "side-loaded-drop"},
     ];
 }
@@ -92,7 +92,7 @@ export function lithiumSiloScenario(variant: LithiumSiloCase): PickupClockScenar
         scaffold: () => lithiumSiloScaffold(variant.order),
         alternative: variant.alternative,
         // the clock with 7 output swings repeats over 7,560 ticks, longer than a minute
-        ...(variant.alternative === "swings-7" && {baseline: {ticks: 7560, reason: "the clock's output repeats over its 7,560-tick period, longer than a minute"}}),
+        ...(variant.alternative === "takt_batches_observed_swings_7" && {baseline: {ticks: 7560, reason: "the clock's output repeats over its 7,560-tick period, longer than a minute"}}),
         probeFile: path.join(__dirname, "lithium-plate-80-silo-chest-clock-probe.lua"),
         probe: {family: "lithium-silo"},
         controls: path.join(__dirname, "lithium-plate-80-silo-chest-clock-controls.json"),

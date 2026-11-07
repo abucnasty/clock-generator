@@ -23,7 +23,7 @@ for (const clip of fixture.clips) test(`production over-the-hood pickup matches 
     const speed = BELT_SPEEDS.find(speed => speed.units / 32 === clip.belt_speed)!;
     configAtSpeed(config, speed);
     config.overrides = {...config.overrides, backed_up_belts: clip.backed};
-    config.target_output.recipe = clip.recipe;
+    config.setpoint.recipe = clip.recipe;
     config.machines[0] = {...config.machines[0], recipe: clip.recipe, crafting_speed: clip.crafting_speed, productivity: 0};
     config.belts.find(belt => belt.id === 1)!.lanes[0].ingredient = clip.recipe;
     const input = config.inserters.find(inserter => inserter.source.type === "belt")!;

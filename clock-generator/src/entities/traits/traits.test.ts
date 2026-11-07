@@ -11,7 +11,7 @@ type Parts = Partial<Pick<Config, "machines" | "inserters" | "belts" | "chests" 
 /** The traits of a build of these entities, with a target that nothing here reads */
 function traitsOf(parts: Parts) {
     return buildTraits(ConfigSchema.parse({
-        target_output: { recipe: parts.machines?.[0]?.recipe ?? "iron-gear-wheel", items_per_second: 1, copies: 1 },
+        setpoint: { recipe: parts.machines?.[0]?.recipe ?? "iron-gear-wheel", items_per_second: 1, copies: 1 },
         machines: [], belts: [], inserters: [], ...parts,
     }) as Config);
 }

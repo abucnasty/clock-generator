@@ -29,7 +29,7 @@ describe("the traits of a crafting machine prototype", () => {
         // one machine of each prototype on one recipe: a machine that cannot make its recipe is only warned about
         const machines = prototypes.map((prototype, index) => ({ id: index + 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0, prototype: prototype.name }));
         const traits = buildTraits(ConfigSchema.parse({
-            target_output: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 }, machines, belts: [], inserters: [],
+            setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 }, machines, belts: [], inserters: [],
         }) as Config);
         prototypes.forEach((prototype, index) => {
             const built = traits[`machine:${index + 1}`] as MachineTraits;

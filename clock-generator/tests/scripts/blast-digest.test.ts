@@ -95,7 +95,7 @@ describe('the digest of an alternative and of a job', () => {
     });
 
     it('hashes the fuel view\'s history as the serializable form writes it, whatever the reason numbers', () => {
-        const view = (state_transition_history: unknown) => ({ periods: 2, fuel_levels: [], state_transition_history });
+        const view = (state_transition_history: unknown) => ({ window_cycles: 2, fuel_levels: [], state_transition_history });
         const sealed = digestAlternative(alternative({}, { fuel_consumption_view: view(history) }), expandStateTransitionHistory);
         const written = digestAlternative(alternative({}, { fuel_consumption_view: view(expandStateTransitionHistory(history)) }), expandStateTransitionHistory);
         expect(sealed.results.fuel_consumption_view).toBe(written.results.fuel_consumption_view);

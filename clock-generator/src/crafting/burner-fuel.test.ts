@@ -5,7 +5,7 @@ import { quiet } from "./generate-blueprint-test-helpers";
 
 /** A steel furnace on iron plates: ore from one belt, coal from another, the plates out on a third */
 const furnaceBuild = (prototype: string) => ConfigSchema.parse({
-    target_output: { recipe: "iron-plate", items_per_second: 0.3, copies: 1 },
+    setpoint: { recipe: "iron-plate", items_per_second: 0.3, copies: 1 },
     machines: [{ id: 1, recipe: "iron-plate", productivity: 0, crafting_speed: 2, prototype, fuel: "coal" }],
     inserters: [
         { id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: 1 },

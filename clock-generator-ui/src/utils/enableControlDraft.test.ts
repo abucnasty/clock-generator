@@ -12,7 +12,7 @@ import {
 const ruleSet = { operator: 'OR', rules: [] } as unknown as RuleSet;
 const release = { operator: 'AND', rules: [] } as unknown as RuleSet;
 
-const clocked: EnableControlOverride = { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }, { start: 20, end: 30 }], period_duration_ticks: 60 };
+const clocked: EnableControlOverride = { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }, { start: 20, end: 30 }], window_cycle_ticks: 60 };
 const clockedWindows = [{ start: '0', end: '10' }, { start: '20', end: '30' }];
 const conditional: EnableControlOverride = { mode: 'CONDITIONAL', rule_set: ruleSet, latch: { release } };
 
@@ -22,31 +22,31 @@ const conditionalDraft = enableControlDraftOf(conditional);
 const alwaysDraft = enableControlDraftOf({ mode: 'ALWAYS' });
 
 describe('enableControlDraftOf', () => {
-    it('starts from AUTO, one empty wake window, no period and the default rule set when there is no rule', () => {
+    it('starts from AUTO, one empty enable window, no period and the default rule set when there is no rule', () => {
         expect(enableControlDraftOf()).toEqual({
             mode: 'AUTO',
             ranges: [{ start: '', end: '' }],
-            periodDuration: '',
+            windowCycleDuration: '',
             ruleSet: createDefaultRuleSet(),
             latchEnabled: false,
             releaseCondition: undefined,
         });
     });
 
-    /** The clock's wake windows for the entity and its period, and the same as the form shows them */
-    const planned = { ranges: [{ start: 12, end: 20 }, { start: 80, end: 95 }], periodTicks: 264 };
+    /** The clock's wake windows for the entity and its window cycle, and the same as the form shows them */
+    const planned = { ranges: [{ start: 12, end: 20 }, { start: 80, end: 95 }], windowCycleTicks: 264 };
     const plannedWindows = [{ start: '12', end: '20' }, { start: '80', end: '95' }];
 
     it.each<{ why: string; stored?: EnableControlOverride; plan?: typeof planned; draft: Partial<EnableControlDraft> }>([
-        { why: 'takes the fields of a stored CLOCKED rule', stored: clocked, draft: { mode: 'CLOCKED', ranges: clockedWindows, periodDuration: '60' } },
+        { why: 'takes the fields of a stored CLOCKED rule', stored: clocked, draft: { mode: 'CLOCKED', ranges: clockedWindows, windowCycleDuration: '60' } },
         { why: 'takes the fields of a stored CONDITIONAL rule', stored: conditional, draft: { mode: 'CONDITIONAL', ruleSet, latchEnabled: true, releaseCondition: release } },
-        { why: 'starts the Clocked fields of no rule from the clock\'s windows and period', plan: planned, draft: { mode: 'AUTO', ranges: plannedWindows, periodDuration: '264' } },
+        { why: 'starts the Clocked fields of no rule from the clock\'s windows and period', plan: planned, draft: { mode: 'AUTO', ranges: plannedWindows, windowCycleDuration: '264' } },
         { why: 'starts the Clocked fields of an ALWAYS rule from the clock\'s windows and period', stored: { mode: 'ALWAYS' }, plan: planned,
-            draft: { mode: 'ALWAYS', ranges: plannedWindows, periodDuration: '264' } },
+            draft: { mode: 'ALWAYS', ranges: plannedWindows, windowCycleDuration: '264' } },
         { why: 'starts the Clocked fields of a CONDITIONAL rule from the clock\'s windows and period', stored: conditional, plan: planned,
-            draft: { mode: 'CONDITIONAL', ranges: plannedWindows, periodDuration: '264' } },
+            draft: { mode: 'CONDITIONAL', ranges: plannedWindows, windowCycleDuration: '264' } },
         { why: 'keeps a stored Clocked rule\'s own windows and period over the clock\'s', stored: clocked, plan: planned,
-            draft: { mode: 'CLOCKED', ranges: clockedWindows, periodDuration: '60' } },
+            draft: { mode: 'CLOCKED', ranges: clockedWindows, windowCycleDuration: '60' } },
     ])('$why', ({ stored, plan, draft }) => {
         expect(enableControlDraftOf(stored, plan)).toMatchObject(draft);
     });
@@ -62,12 +62,12 @@ describe('buildEnableControlOverride', () => {
         { why: 'a stored CLOCKED rule as it is', draft: clockedDraft, saved: clocked },
         { why: 'a CLOCKED window of one tick, leaving out one that ends before it starts',
             draft: { ...clockedDraft, ranges: [{ start: '0', end: '10' }, { start: '5', end: '5' }, { start: '9', end: '3' }] },
-            saved: { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }, { start: 5, end: 5 }], period_duration_ticks: 60 } },
+            saved: { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }, { start: 5, end: 5 }], window_cycle_ticks: 60 } },
         { why: 'no CLOCKED window with an empty or unwhole field, never making a value up',
             draft: { ...clockedDraft, ranges: [{ start: '', end: '10' }, { start: '1.5', end: '3' }, { start: ' 4 ', end: '6' }] },
-            saved: { mode: 'CLOCKED', ranges: [{ start: 4, end: 6 }], period_duration_ticks: 60 } },
-        ...['', '0', '-5', 'abc', '1.5'].map((periodDuration): Saving => ({ why: `no CLOCKED period of ${JSON.stringify(periodDuration)}`,
-            draft: { ...clockedDraft, periodDuration }, saved: { mode: 'CLOCKED', ranges: clocked.ranges } })),
+            saved: { mode: 'CLOCKED', ranges: [{ start: 4, end: 6 }], window_cycle_ticks: 60 } },
+        ...['', '0', '-5', 'abc', '1.5'].map((windowCycleDuration): Saving => ({ why: `no CLOCKED period of ${JSON.stringify(windowCycleDuration)}`,
+            draft: { ...clockedDraft, windowCycleDuration }, saved: { mode: 'CLOCKED', ranges: clocked.ranges } })),
         { why: 'a CONDITIONAL rule with its latch', draft: conditionalDraft, saved: conditional },
         { why: 'no latch for a CONDITIONAL rule whose latch is off', draft: { ...conditionalDraft, latchEnabled: false }, saved: { mode: 'CONDITIONAL', rule_set: ruleSet } },
         { why: 'no latch for a CONDITIONAL rule without a release condition', draft: { ...conditionalDraft, releaseCondition: undefined },
@@ -94,11 +94,11 @@ describe('enableControlDraftChanged', () => {
         { why: 'the latch turned off', draft: { ...conditionalDraft, latchEnabled: false }, initial: conditionalDraft, changed: true },
         { why: 'another range while ALWAYS is picked, as the save leaves ranges out', draft: { ...alwaysDraft, ranges: [{ start: '5', end: '50' }] }, initial: alwaysDraft,
             changed: false },
-        { why: 'another "Repeat every"', draft: { ...clockedDraft, periodDuration: '61' }, initial: clockedDraft, changed: true },
-        { why: 'a "Repeat every" changed back to what it was', draft: { ...clockedDraft, periodDuration: '60' }, initial: clockedDraft, changed: false },
+        { why: 'another "Repeat every"', draft: { ...clockedDraft, windowCycleDuration: '61' }, initial: clockedDraft, changed: true },
+        { why: 'a "Repeat every" changed back to what it was', draft: { ...clockedDraft, windowCycleDuration: '60' }, initial: clockedDraft, changed: false },
         { why: 'a half-typed window while Clocked is picked, which the save would leave out', draft: { ...clockedDraft, ranges: [...clockedDraft.ranges, { start: '5', end: '' }] },
             initial: clockedDraft, changed: true },
-        { why: 'an unwhole "Repeat every" while Clocked is picked, which the save would leave out', draft: { ...clockedDraft, periodDuration: 'x' }, initial: clockedDraft, changed: true },
+        { why: 'an unwhole "Repeat every" while Clocked is picked, which the save would leave out', draft: { ...clockedDraft, windowCycleDuration: 'x' }, initial: clockedDraft, changed: true },
         { why: 'a half-typed window in a new Clocked rule', draft: { ...newClocked, ranges: [{ start: '12', end: '' }] }, initial: newClocked, changed: true },
         { why: 'a new Clocked rule with nothing typed', draft: newClocked, initial: newClocked, changed: false },
     ])('is $changed for $why', ({ draft, initial, changed }) => {

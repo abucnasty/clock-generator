@@ -1,9 +1,39 @@
 import assert from "../../../common/assert";
 import { assertIsInserter, assertIsMachine, Entity, EntityId, ReadableEntityRegistry } from "../../../entities";
 import { EntityTransferCount, EntityTransferCountMap } from "./swing-counts";
+import type Fraction from "../../../data-types/fraction";
 
-/** Practical upper limit when swings are effectively unlimited */
-const MAX_SWINGS_UNLIMITED = 100;
+/**
+ * Euclidean Swings the insertion limits do not allow: an inserter into a machine would have to swing more often in a
+ * sub-cycle than the machine takes. The cycle plan rethrows it with the output swings a cycle it was asked to plan, which
+ * a run that asked for fractional swings without a forced count backs off from (generateClockWithSwingBackoff).
+ */
+export class FractionalSwingsRefusedError extends Error {
+    /** The output swings a cycle the cycle plan was asked for; absent where the distribution is made on its own */
+    readonly swings_per_cycle?: Fraction;
+
+    constructor(message: string, swings_per_cycle?: Fraction) {
+        super(message);
+        this.name = "FractionalSwingsRefusedError";
+        this.swings_per_cycle = swings_per_cycle;
+    }
+}
+
+/**
+ * Why a run that asked for fractional swings makes no clock where they are refused (FractionalSwingsRefusedError) and the
+ * whole count below them the cycle plan accepts has every inserter's swings whole: that is the clock of `count` output swings.
+ */
+export function fractionalSwingsWholeAt(refusal: FractionalSwingsRefusedError, count: number): Error {
+    const swings = `${count} output swing${count === 1 ? "" : "s"}`;
+    return new Error(`${refusal.message} At ${swings} each output cycle, the most the insertion limits allow, every inserter swings a whole `
+        + `number of times each output cycle: the clock of ${swings}.`);
+}
+
+/**
+ * Practical upper limit on the swings of one sub-cycle where the insertion limits set none: a simulator budget, not a
+ * proof. It is inert on every record job: the largest need is 26 swings, and no refusal at this limit occurs.
+ */
+const SWINGS_PER_SUBCYCLE_BUDGET = 100;
 
 /**
  * Represents the distribution of swings across multiple sub-cycles.
@@ -75,7 +105,7 @@ export function computeMaxSwingsPerSubCycle(constraints: SwingCapacityConstraint
     
     // If consumption per swing >= effective_stack_size, inventory never accumulates
     if (items_consumed_per_swing >= effective_stack_size) {
-        return MAX_SWINGS_UNLIMITED;
+        return SWINGS_PER_SUBCYCLE_BUDGET;
     }
 
     // Net inventory increase per swing after the first
@@ -101,7 +131,7 @@ export function computeMaxSwingsPerSubCycle(constraints: SwingCapacityConstraint
  * The pattern repeats based on the remainder. If we have 6 swings over 4 cycles:
  * - Base: 6/4 = 1 swing per cycle
  * - Remainder: 6 % 4 = 2 extra swings to distribute
- * - Pattern period: 4 / gcd(4, 2) = 2
+ * - Pattern window cycle: 4 / gcd(4, 2) = 2
  * - Result: [1, 2, 1, 2] (alternates every cycle)
  * 
  * @param total_swings Total swings to distribute (numerator)
@@ -127,7 +157,7 @@ export function createAlternatingDistribution(
         // Evenly divisible - all cycles get the same number
         const distribution = Array(cycle_multiplier).fill(base_swings);
         if (base_swings > max_swings_per_subcycle) {
-            throw new Error(
+            throw new FractionalSwingsRefusedError(
                 `Cannot satisfy fractional swing constraint: each sub-cycle requires ${base_swings} swings, ` +
                 `but maximum allowed is ${max_swings_per_subcycle} due to insertion limits. ` +
                 `Total swings: ${total_swings}, cycle multiplier: ${cycle_multiplier}.`
@@ -149,7 +179,7 @@ export function createAlternatingDistribution(
         const swings = base_swings + extra;
         
         if (swings > max_swings_per_subcycle) {
-            throw new Error(
+            throw new FractionalSwingsRefusedError(
                 `Cannot satisfy fractional swing constraint: sub-cycle ${i} requires ${swings} swings, ` +
                 `but maximum allowed is ${max_swings_per_subcycle} due to insertion limits. ` +
                 `Total swings: ${total_swings}, cycle multiplier: ${cycle_multiplier}.`
@@ -203,7 +233,7 @@ function computeSwingDistributionForEntity(
     
     // Calculate total swings across all sub-cycles
     // The transfer_count.total_transfer_count is the fractional count per base cycle
-    // Multiply by cycle_multiplier to get total swings across the extended period
+    // Multiply by cycle_multiplier to get total swings across the extended window cycle
     const total_swings_fraction = transfer_count.total_transfer_count.multiply(cycle_multiplier);
     const total_swings = Math.round(total_swings_fraction.toDecimal());
     
@@ -213,7 +243,7 @@ function computeSwingDistributionForEntity(
         const distribution = createAlternatingDistribution(
             total_swings,
             cycle_multiplier,
-            MAX_SWINGS_UNLIMITED // No practical limit for drills
+            SWINGS_PER_SUBCYCLE_BUDGET // No practical limit for drills
         );
         
         return {
@@ -238,7 +268,7 @@ function computeSwingDistributionForEntity(
             // No practical limit for belts or chests
             // Belts could in theory have a constraint but that depends on eventually
             // modellling the spacing between belts appropriately or take into account the speed of the belt
-            MAX_SWINGS_UNLIMITED
+            SWINGS_PER_SUBCYCLE_BUDGET
         );
         
         return {

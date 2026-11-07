@@ -64,7 +64,7 @@
         "expected": 64.0,
         "verdict": "stable",
         "selection": {
-          "id": "fractional",
+          "id": "euclidean_swings",
           "holds": true,
           "rate": 240,
           "supply": "moving"

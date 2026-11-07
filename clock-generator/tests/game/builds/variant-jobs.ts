@@ -1,6 +1,6 @@
 // The variants of the blast (`BLAST_GROUPS=variants`, job keys `variants-<name>`; #600): a sample with the options a test or a game
 // recording sets on it, built here in code (the samples carry no overrides, so a build with belts backed up, or with an ingredient
-// left out of the period, is a sample plus the option). Each is one job of the record, so that its result is pinned there and
+// left out of the window cycle, is a sample plus the option). Each is one job of the record, so that its result is pinned there and
 // the property module runs on it; the test or the recording that qualifies it is named beside it. A variant is a job only
 // because a game recording is tied to its clock, a test pins it or a per-job check reads it; the speed-80 agricultural ranking config is a plain test.
 //

@@ -32,7 +32,7 @@ import { serializeConfig } from './hooks/usePersistedConfigForm';
 import { selectBuildEntity } from './utils/buildViewContext';
 import { useMachinesMax } from './hooks/useMachineFacts';
 import { useTargetRateMax } from './hooks/useTargetRateMax';
-import { TargetOutputForm } from './components/TargetOutputForm';
+import { SetpointForm } from './components/SetpointForm';
 import { countsOf } from './utils/targetCounts';
 import { rateMaxOf, resultComesBack } from './utils/targetRateLimit';
 import { MachinesForm } from './components/MachinesForm';
@@ -49,7 +49,7 @@ import { RenameBuildDialog } from './components/RenameBuildDialog';
 import { OpenSharedBuildDialog } from './components/OpenSharedBuildDialog';
 import { BuildValidationPanel } from './components/BuildValidationPanel';
 import { outputChestIssues } from './utils/outputChestIssues';
-import { buildValidationIssues, isRefused, navigateToOutputRouteRepair } from './utils/buildValidation';
+import { buildValidationIssues, isRefused, navigateToOutputRouteRepair, refusedInserterIdsOf } from './utils/buildValidation';
 import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 import { BuildPanel, type BuildView } from './components/BuildPanel';
 import { PanelSection } from './components/Panel';
@@ -72,7 +72,7 @@ import { copyBlueprintLabelOf, rateWarningOf } from './utils/rateWarning';
 import { buildChangesText } from './utils/buildChanges';
 import { configKeyOf, isStale } from './utils/resultsStaleness';
 import { withDeeperSearch } from './utils/deeperSearch';
-import { clockTechnicalName, plainClockName } from './utils/clockSummary';
+import { familyCopyOf, fullClockName } from './utils/strategyNames';
 import { ANNOUNCEMENTS } from './utils/workflowAnnouncement';
 import { BELT_COPY, beltQuestionOf, backedUpBeltsFor, backedUpBeltsHint, withBeltAnswer, type BeltAnswer } from './utils/beltQuestion';
 import { PickupGeometrySummary } from './components/PickupGeometrySummary';
@@ -203,7 +203,7 @@ function App() {
         setConfig,
         captureBuildMutation,
         commitBuildReplacement,
-        updateTargetOutput,
+        updateSetpoint,
         duplicateEntity,
         updateInserters,
         addMachine,
@@ -436,7 +436,7 @@ function App() {
 
     // the selected clock as the bar, the card and the announcements name it
     const selectedClock = alternatives[selectedAlternativeIndex];
-    const selectedName = selectedClock ? plainClockName(alternatives, selectedAlternativeIndex) : null;
+    const selectedName = selectedClock ? fullClockName(selectedClock) : null;
     const rateWarning = rateWarningOf(selectedClock);
     const [installOpen, setInstallOpen] = useState(false);
     const copyLabel = copyBlueprintLabelOf(selectedClock, resultsAreStale, isRunning);
@@ -445,15 +445,15 @@ function App() {
     const timingClock = generatedFor !== null && !resultsAreStale ? selectedClock ?? null : null;
     const checkedPlan = validation.status === 'valid' && checkStatus === 'valid' ? validation.validation : null;
     const checkedCycle = checkedPlan?.cycle_ticks ?? null;
-    const checkedPeriod = checkedPlan?.period_ticks ?? null;
+    const checkedWindowCycle = checkedPlan?.window_cycle_ticks ?? null;
     const ruleTiming = useMemo(
         () => ruleTimingOf({
             results: timingClock
-                ? { cycleTicks: timingClock.cycleTicks, periodTicks: timingClock.simulationDurationTicks, windows: timingClock.clockWindows }
+                ? { cycleTicks: timingClock.cycleTicks, windowCycleTicks: timingClock.simulationDurationTicks, windows: timingClock.clockWindows }
                 : null,
-            check: checkedCycle !== null && checkedPeriod !== null ? { cycleTicks: checkedCycle, periodTicks: checkedPeriod } : null,
+            check: checkedCycle !== null && checkedWindowCycle !== null ? { cycleTicks: checkedCycle, windowCycleTicks: checkedWindowCycle } : null,
         }),
-        [timingClock, checkedCycle, checkedPeriod],
+        [timingClock, checkedCycle, checkedWindowCycle],
     );
 
     // one copy for every Copy button: the bar's, the card's and the string's
@@ -522,10 +522,10 @@ function App() {
     }, [selectRecommended]);
 
     // the most the machines making the target recipe can make (or destroy, for a target that counts the item destroyed): a target above it is a problem
-    const targetCounts = countsOf(config.target_output);
+    const targetCounts = countsOf(config.setpoint);
     const machinesWithReturn = useMemo(() => config.machines.map(machine => ({ ...machine,
-        comesBack: resultComesBack(machine, config.inserters, config.target_output.recipe) })), [config.machines, config.inserters, config.target_output.recipe]);
-    const machinesOnlyMax = useMachinesMax(config.target_output.recipe, machinesWithReturn, targetCounts);
+        comesBack: resultComesBack(machine, config.inserters, config.setpoint.recipe) })), [config.machines, config.inserters, config.setpoint.recipe]);
+    const machinesOnlyMax = useMachinesMax(config.setpoint.recipe, machinesWithReturn, targetCounts);
     // the engine's own limit, which counts the inserters and belts too, as the check that refuses a target above it does
     const feasibleMax = useTargetRateMax(engineConfig, isInitialized);
     const machinesMax = useMemo(() => rateMaxOf(machinesOnlyMax, feasibleMax), [machinesOnlyMax, feasibleMax]);
@@ -535,12 +535,12 @@ function App() {
     // what keeps the build from being clocked, and so where Generate goes instead
     const validationIssues = useMemo(() => buildValidationIssues({
         fieldProblems: problemsOf({
-            targetOutput: config.target_output,
+            setpoint: config.setpoint,
             machines: config.machines,
             machinesMax,
         }).concat(outputGenerationIssues.map(issue => ({ text: issue.message,
                     target: { kind: 'machine-result-target', machineId: issue.machine_id } as FocusTarget }))),
-        coverage: checkedCoverage?.issues ?? [], scopeRefusal: checkedCoverage?.refusal, pickupNotTested: checkedCoverage?.pickupNotTested, laneSharedByCopies: checkedCoverage?.laneSharedByCopies,
+        coverage: checkedCoverage?.issues ?? [], scopeRefusal: checkedCoverage?.refusal, scopeRefusalInserters: checkedCoverage?.refusal_inserters, pickupNotTested: checkedCoverage?.pickupNotTested, laneSharedByCopies: checkedCoverage?.laneSharedByCopies,
         sideLoadedDrop: checkedCoverage?.sideLoadedDrop, lanesExactlyFull: checkedCoverage?.lanesExactlyFull, copyGapNeeded: checkedCoverage?.copyGapNeeded,
         machinePrototypes: checkedCoverage?.machinePrototypes?.map(issue => ({ ...issue, message: nameIdsInText(gameNames, issue.message) })), chests: config.chests, inserters: config.inserters, machines: config.machines, belts: config.belts, chestIssues,
         coverageText: issue => (issue.kind === 'missing_input_inserter' ? PROBLEM_TEXT.missingInput : PROBLEM_TEXT.missingOutput)(
@@ -548,8 +548,10 @@ function App() {
         failure: validation.status === 'invalid' && checkStatus === 'invalid' && !validation.crashed
             ? { message: validation.message, diagnostics: validation.diagnostics }
             : error && errorRecovery?.sourceConfigKey === configKey ? { message: error } : undefined,
-    }), [config.target_output, config.machines, config.chests, config.inserters, config.belts, checkedCoverage, chestIssues, machinesMax, gameNames, validation, checkStatus, error, errorRecovery, configKey, outputGenerationIssues]);
+    }), [config.setpoint, config.machines, config.chests, config.inserters, config.belts, checkedCoverage, chestIssues, machinesMax, gameNames, validation, checkStatus, error, errorRecovery, configKey, outputGenerationIssues]);
     const problems = useMemo(() => validationIssues.filter(issue => issue.blocksGeneration), [validationIssues]);
+    // the inserters the engine's refusal names, live or from the last check: their rows are outlined while it stands
+    const refusedInserterIds = useMemo(() => refusedInserterIdsOf(problems), [problems]);
     // the engine's refusal is for the build as the last check saw it: any change to the build takes it away
     const refused = isRefused(problems);
 
@@ -924,8 +926,8 @@ function App() {
                 || document.querySelector('[data-edits-build]')) return;
             if (checked.kind === 'unavailable') {
                 notify({ severity: 'warning', text: checked.stage === 'check'
-                    ? `One complete unit was identified, but its check failed: ${checked.reason.message} Your build has not changed.`
-                    : `${checked.reason.message} Your build has not changed. Select one complete unit in Factorio and paste it again. Keep Items per Second as the total rate.` });
+                    ? `One complete copy was identified, but its check failed: ${checked.reason.message} Your build has not changed.`
+                    : `${checked.reason.message} Your build has not changed. Select one complete copy in Factorio and paste it again. Keep Items per Second as the total rate.` });
                 return;
             }
             if (checked.plan.sourceConfigKey !== oldKey) throw new Error('The conversion answer does not match this build.');
@@ -933,7 +935,7 @@ function App() {
             if (!next) throw new Error('The conversion answer could not be applied completely.');
             let complete: ((suffix?: string) => void) | undefined;
             const committed = commitBuildReplacement(snapshot, next, () => {
-                complete = offerUndoOfBuild(`Using one complete modeled unit with ${checked.plan.copies} copies. Items per Second is still the total.`,
+                complete = offerUndoOfBuild(`Using one complete modeled copy with ${checked.plan.copies} copies. Items per Second is still the total.`,
                     { deferAnnouncement: true, snapshot: snapshot.form }, oldKey);
             });
             if (!committed) return;
@@ -944,7 +946,7 @@ function App() {
             const current = captureBuildMutation();
             if (mountedRef.current && token === conversionTokenRef.current && current.buildId === snapshot.buildId
                 && current.revision === snapshot.revision && current.form === snapshot.form) {
-                notify({ severity: 'error', text: `Could not check the conversion: ${failure instanceof Error ? failure.message : 'The engine did not answer.'} Your build has not changed. Try again, or select one complete unit in Factorio and paste it again. Keep Items per Second as the total rate.` });
+                notify({ severity: 'error', text: `Could not check the conversion: ${failure instanceof Error ? failure.message : 'The engine did not answer.'} Your build has not changed. Try again, or select one complete copy in Factorio and paste it again. Keep Items per Second as the total rate.` });
             }
         } finally {
             if (mountedRef.current && token === conversionTokenRef.current) {
@@ -1081,7 +1083,7 @@ function App() {
     }
     const sharedReplacesBlank = blankBuild && library.currentMeta.name === null;
     const sharedTitle = (build: SharedBuild) => build.name
-        ?? (build.config.target_output.recipe === '' ? UNTITLED_BUILD : recipeTitle(build.config.target_output.recipe, recipeLabel));
+        ?? (build.config.setpoint.recipe === '' ? UNTITLED_BUILD : recipeTitle(build.config.setpoint.recipe, recipeLabel));
     const handleOpenShared = useCallback(() => {
         const build = shared.accept();
         if (!build) return;
@@ -1089,7 +1091,7 @@ function App() {
         const previous = library.currentMeta;
         const replaceId = sharedReplacesBlank ? previous.id : undefined;
         const title = build.name
-            ?? (build.config.target_output.recipe === '' ? UNTITLED_BUILD : recipeTitle(build.config.target_output.recipe, recipeLabel));
+            ?? (build.config.setpoint.recipe === '' ? UNTITLED_BUILD : recipeTitle(build.config.setpoint.recipe, recipeLabel));
         // the build the link added, which its Undo takes out again (none when it took the empty build's place)
         const added: { id?: string } = {};
         const complete = offerUndoOfBuild(sharedOpenedMessage(title), {
@@ -1126,7 +1128,7 @@ function App() {
                             currentForm={config}
                             ref={buildEntryRef}
                             config={exportableConfig}
-                            target={config.target_output}
+                            target={config.setpoint}
                             onImport={handleImportConfig}
                             onApplyPaste={setConfig}
                             onReset={handleReset}
@@ -1178,7 +1180,7 @@ function App() {
                                     chip={checkChipOf({ checkStatus, clocksAreForThisBuild: generatedFor !== null && !resultsAreStale })}
                                     blueprintString={blueprintString}
                                     selectedLabel={selectedName}
-                                    selectedEngineName={selectedClock ? clockTechnicalName(selectedClock) : null}
+                                    selectedLine={selectedClock ? familyCopyOf(selectedClock)?.line ?? null : null}
                                     selectedId={selectedClock?.id ?? null}
                                     selectionQuiet={selectionQuiet}
                                     rateWarning={rateWarning}
@@ -1231,7 +1233,7 @@ function App() {
                                     {error}
                                 </Alert>
                             )}
-                            <CheckErrorAlert message={validation.status === 'invalid' && checkStatus === 'invalid' && validation.crashed ? validation.message : null} crashed />
+                            <CheckErrorAlert message={validation.status === 'invalid' && checkStatus === 'invalid' && validation.crashed ? validation.message : null} crashed internal={validation.status === 'invalid' ? validation.internal : undefined} />
 
                             {introVisible && (
                                 <IntroCard
@@ -1242,21 +1244,21 @@ function App() {
                                 />
                             )}
 
-                            <TargetOutputForm
-                                recipe={config.target_output.recipe}
-                                itemsPerSecond={config.target_output.items_per_second}
-                                copies={config.target_output.copies}
+                            <SetpointForm
+                                recipe={config.setpoint.recipe}
+                                itemsPerSecond={config.setpoint.items_per_second}
+                                copies={config.setpoint.copies}
                                 counts={targetCounts}
                                 machinesMax={machinesMax}
                                 recipeNames={recipeNames}
                                 destroyedItemNames={destroyedItemNames}
-                                onRecipeChange={(recipe) => updateTargetOutput('recipe', recipe)}
-                                onItemsPerSecondChange={(value) => updateTargetOutput('items_per_second', value)}
-                                onCountsChange={(counts) => updateTargetOutput('counts', counts === 'made' ? undefined : counts)}
-                                onCopiesChange={(value) => updateTargetOutput('copies', value)}
-                                copyOffset={config.target_output.copy_offset}
-                                showCopyOffset={config.target_output.copies > 1 && config.inserters.some(inserter => inserter.sink.type === 'belt' && inserter.position !== undefined)}
-                                onCopyOffsetChange={(value) => updateTargetOutput('copy_offset', value)}
+                                onRecipeChange={(recipe) => updateSetpoint('recipe', recipe)}
+                                onItemsPerSecondChange={(value) => updateSetpoint('items_per_second', value)}
+                                onCountsChange={(counts) => updateSetpoint('counts', counts === 'made' ? undefined : counts)}
+                                onCopiesChange={(value) => updateSetpoint('copies', value)}
+                                copyOffset={config.setpoint.copy_offset}
+                                showCopyOffset={config.setpoint.copies > 1 && config.inserters.some(inserter => inserter.sink.type === 'belt' && inserter.position !== undefined)}
+                                onCopyOffsetChange={(value) => updateSetpoint('copy_offset', value)}
                                 copyOffsetNote={checkedCoverage?.dropRoom}
                             />
 
@@ -1264,7 +1266,7 @@ function App() {
                                 <PickupGeometrySummary build={config} onEdit={reviewPickup} busy={busy} />
                                 <BuildValidationPanel issues={validationIssues} machines={config.machines} belts={config.belts} chests={config.chests} inserters={config.inserters} outputTransfers={outputTransfers}
                                     onApplyFix={handleInserterFix} fixUnavailable={fixUnavailable} onSwitchType={undoable.switchChestType} onEnableRemoval={undoable.enableChestRemoval}
-                                    onReview={goToTarget} recovery={conversionRecovery} conversionPending={conversionPending} onConvert={handleConvertRepeatedUnit} counts={targetCounts} />
+                                    onReview={goToTarget} onReviewInserter={editOutputInserter} recovery={conversionRecovery} conversionPending={conversionPending} onConvert={handleConvertRepeatedUnit} counts={targetCounts} />
                                 {/* in the order a row's sources are made in: an inserter's machines, belts and chests are above it */}
                                 {configView === 'list' ? (
                                     <>
@@ -1319,6 +1321,7 @@ function App() {
                                             key={library.currentId}
                                             focusRequest={inserterFocusRequest}
                                             onFocusHandled={finishInserterFocus}
+                                            refusedIds={refusedInserterIds}
                                             inserters={config.inserters}
                                             machines={config.machines}
                                             belts={config.belts}
@@ -1587,7 +1590,7 @@ function App() {
                     <Box sx={{ px: 2, pt: 1, flexShrink: 0 }}>
                         <BuildValidationPanel issues={validationIssues} machines={config.machines} belts={config.belts} chests={config.chests} inserters={config.inserters} outputTransfers={outputTransfers}
                             onApplyFix={handleInserterFix} fixUnavailable={fixUnavailable} onSwitchType={undoable.switchChestType} onEnableRemoval={undoable.enableChestRemoval}
-                            onReview={target => { setDiagramFullscreen(false); goToTarget(target); }} recovery={conversionRecovery} conversionPending={conversionPending} onConvert={handleConvertRepeatedUnit} counts={targetCounts} focusTargets={false} />
+                            onReview={target => { setDiagramFullscreen(false); goToTarget(target); }} onReviewInserter={editOutputInserter} recovery={conversionRecovery} conversionPending={conversionPending} onConvert={handleConvertRepeatedUnit} counts={targetCounts} focusTargets={false} />
                     </Box>
                     <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
                         <ConfigFlowDiagram

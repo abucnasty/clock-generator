@@ -9,11 +9,11 @@ import {
     beltLine,
     beltValue,
     beltValueSub,
-    clockTechnicalName,
+    clockBadges,
+    signalsText,
     differenceFromRecommended,
     foldedMakes,
     makesText,
-    plainClockName,
     recoversOf,
     lossLimitText,
     minutesAndSecondsText,
@@ -25,7 +25,7 @@ import {
 
 const TARGET = 240;
 
-type Loss = NonNullable<SummaryClock['assessment']['backpressure_loss']>;
+type Loss = NonNullable<SummaryClock['assessment']['disturbance_trial']>;
 
 interface ClockOptions extends Partial<ClockRanking> {
     verdict?: ClockVerdict;
@@ -49,7 +49,7 @@ function clock(id: string, options: ClockOptions = {}): SummaryClock {
         ...ranking,
     };
     const tried: Loss | null = verdict === 'unstable' ? null : {
-        survives: verdict === 'stable', broken_by: verdict === 'no recovery' ? ['an input stops arriving'] : [], recovered_after_periods: verdict === 'stable' ? 1 : null,
+        survives: verdict === 'stable', broken_by: verdict === 'no recovery' ? ['an input stops arriving'] : [], recovered_after_window_cycles: verdict === 'stable' ? 1 : null,
     };
     return {
         id, label: `Engine name of ${id}`, verdict, beltLabel, deciders,
@@ -59,23 +59,24 @@ function clock(id: string, options: ClockOptions = {}): SummaryClock {
             holds: verdict !== 'unstable',
             items_per_second: TARGET + full.rate_off_target,
             wake_ups_per_minute: full.wake_ups_per_minute,
-            backpressure_loss: loss === null || tried === null ? null : { ...tried, ...loss },
+            disturbance_trial: loss === null || tried === null ? null : { ...tried, ...loss },
             start_dependence: null,
         },
     };
 }
 
-const nameOf = (clocks: SummaryClock[], id: string) => plainClockName(clocks, clocks.findIndex(it => it.id === id));
+/** The chips beside a clock's name, as their words */
+const nameOf = (clocks: SummaryClock[], id: string) => clockBadges(clocks, clocks.findIndex(it => it.id === id)).map(badge => badge.text);
 
 describe('sampled starts remain separate from rate and recovery', () => {
     it('names a target-rate dependent clock and retains its evaluated recovery and actual sample counts', () => {
         const dependent = clock('dependent', { verdict: 'unstable', meets_target_rate: false });
         dependent.assessment = { ...dependent.assessment, holds: true,
-            backpressure_loss: { survives: true, broken_by: [], recovered_after_periods: 2 },
+            disturbance_trial: { survives: true, broken_by: [], recovered_after_window_cycles: 2 },
             start_dependence: { verdict: 'start-dependent', expected_output_items: 240,
                 starts: ['cold', 'ascending'].map((id, i) => ({ id, label: id, reaches_target: i === 0,
-                    output_items_per_period: i === 0 ? 240 : 120, cycle: null, off_bins: null, span_items: null, long_run_keeps_up: i === 0 })) } };
-        expect(plainClockName([dependent], 0)).toBe(SUMMARY_COPY.startDependent);
+                    output_items_per_window_cycle: i === 0 ? 240 : 120, cycle: null, off_bins: null, span_items: null, long_run_keeps_up: i === 0 })) } };
+        expect(nameOf([dependent], 'dependent')).toEqual([SUMMARY_COPY.startDependent]);
         expect(worksOf(dependent)).toEqual({ kind: 'caution', text: SUMMARY_COPY.worksStartDependent });
         expect(recoversOf(dependent)).toMatchObject({ kind: 'yes', value: SUMMARY_COPY.recoversYes });
         expect(rateWarningOf(dependent)).toContain('some sampled starts');
@@ -90,74 +91,63 @@ describe('sampled starts remain separate from rate and recovery', () => {
         // the loss trials' baseline missed its output: no cause, so no verdict on recovery
         const baseline = clock('baseline', { verdict: 'no recovery', meets_target_rate: false, loss: { broken_by: [] } });
         expect(recoversOf(baseline)).toMatchObject({ value: SUMMARY_COPY.recoversUnavailable, detail: SUMMARY_COPY.recoversBaselineUnavailableDetail });
-        expect(plainClockName([baseline], 0)).toBe(SUMMARY_COPY.recoveryUnavailable);
+        expect(nameOf([baseline], 'baseline')).toEqual([SUMMARY_COPY.recoveryUnavailable]);
         expect(worksOf(baseline)).toEqual({ kind: 'caution', text: SUMMARY_COPY.recoveryUnavailable });
         expect(differenceFromRecommended(baseline, clock('recommended'))).toBe('Recovery results are unavailable for this clock.');
     });
 });
 
-describe('plainClockName', () => {
-    const { fewestWakeUps, fewestDeciders, fewestWakeWindows } = SUMMARY_COPY;
-    const another = SUMMARY_COPY.another('240');
+describe('clockBadges', () => {
+    const { fewestWakeUps, fewestDeciders } = SUMMARY_COPY;
 
-    // the names asked of each clock, by id
-    it.each<[string, SummaryClock[], Record<string, string>]>([
-        ['names the clock with the fewest wake-ups among the contenders',
-            [clock('a', { wake_ups_per_minute: 12 }), clock('b', { wake_ups_per_minute: 8 })], { b: fewestWakeUps }],
-        ['gives tied clocks the same name',
-            [clock('a', { wake_ups_per_minute: 8.0001 }), clock('b', { wake_ups_per_minute: 8 })], { a: fewestWakeUps, b: fewestWakeUps }],
-        ['names a clock with more wake-ups but the fewest windows "Fewest wake windows", not by the deciders every clock has as many of',
-            [clock('a', { wake_ups_per_minute: 8, window_count: 6 }), clock('b', { wake_ups_per_minute: 12, window_count: 3 })], { b: fewestWakeWindows }],
-        ['names a clock with more wake-ups but the fewest deciders "Fewest deciders", before the windows',
+    // the chips asked of each clock, by id: the recommended clock has its own chip, so none for what it has fewest of
+    it.each<[string, SummaryClock[], Record<string, string[]>]>([
+        ['gives the fewest-wakeups chip to a tied clock that is not the recommended one, not to the recommended one',
+            [clock('a', { wake_ups_per_minute: 8.0001 }), clock('b', { wake_ups_per_minute: 8 })], { a: [], b: [fewestWakeUps] }],
+        ['gives no chip to a clock with more wakeups',
+            [clock('a', { wake_ups_per_minute: 12 }), clock('b', { wake_ups_per_minute: 8 })], { a: [], b: [] }],
+        ['gives the fewest-deciders chip to a clock with more wakeups but the fewest deciders',
             [clock('a', { wake_ups_per_minute: 8, window_count: 6, deciders: 10 }), clock('b', { wake_ups_per_minute: 12, window_count: 3, deciders: 6 })],
-            { b: fewestDeciders, a: fewestWakeUps }],
-        ['does not name a clock Fewest deciders when it only ties the recommended clock, whose name it leaves to the windows', [
+            { b: [fewestDeciders], a: [] }],
+        ['does not give Fewest deciders to a clock that only ties the recommended clock', [
             clock('a', { wake_ups_per_minute: 8, window_count: 6, deciders: 4 }),
             clock('b', { wake_ups_per_minute: 12, window_count: 6, deciders: 4 }),
             clock('c', { wake_ups_per_minute: 15, window_count: 3, deciders: 6 }),
-        ], { a: fewestWakeUps, b: another, c: fewestWakeWindows }],
-        ['does not name a clock Fewest deciders when it only ties a clock tied for the fewest wake-ups', [
+        ], { a: [], b: [], c: [] }],
+        ['does not give Fewest deciders to a clock that only ties a clock tied for the fewest wakeups', [
             clock('a', { wake_ups_per_minute: 8.0001, window_count: 6, deciders: 8 }),
             clock('b', { wake_ups_per_minute: 8, window_count: 6, deciders: 4 }),
             clock('c', { wake_ups_per_minute: 15, window_count: 6, deciders: 4 }),
-        ], { a: fewestWakeUps, b: fewestWakeUps, c: expect.not.stringContaining(fewestDeciders) }],
-        ['names a clock Fewest deciders when it has fewer than the recommended clock and every clock with the fewest wake-ups', [
+        ], { a: [], b: [fewestWakeUps], c: [] }],
+        ['gives Fewest deciders to a clock that has fewer than the recommended clock and every clock with the fewest wakeups', [
             clock('a', { wake_ups_per_minute: 8, window_count: 6, deciders: 5 }),
             clock('b', { wake_ups_per_minute: 12, window_count: 6, deciders: 4 }),
             clock('c', { wake_ups_per_minute: 15, window_count: 6, deciders: 4 }),
-        ], { b: fewestDeciders, c: fewestDeciders }],
-        ['falls through to the windows when the wake-ups were not counted',
-            [clock('a', { wake_ups_per_minute: null, window_count: 5 }), clock('b', { wake_ups_per_minute: null, window_count: 3 })], { b: fewestWakeWindows, a: another }],
-        ['names a clock that does not match the belt by its belt, even with the fewest wake-ups',
+        ], { b: [fewestDeciders], c: [fewestDeciders] }],
+        ['says No belt slack for a clock that does not match the belt, even with the fewest wakeups',
             [clock('a', { wake_ups_per_minute: 12 }), clock('b', { wake_ups_per_minute: 2, matches_belt_choice: false, beltLabel: 'backed-up' })],
-            { b: SUMMARY_COPY.backedUpBelts, a: fewestWakeUps }],
-        ['names a clock that does not recover, or does not hold its rate', [
+            { b: [SUMMARY_COPY.noBeltSlack], a: [] }],
+        ['says a clock that has no recovery, or does not hold its rate, so', [
             clock('a'),
             clock('b', { verdict: 'no recovery', meets_target_rate: false }),
             clock('c', { verdict: 'unstable', meets_target_rate: false, holds_expected_output: false }),
-        ], { b: SUMMARY_COPY.noRecovery, c: SUMMARY_COPY.unstable }],
-        ['names a clock off the target rate by its rate, below or above, before its verdict', [
+        ], { b: [SUMMARY_COPY.worksNoRecovery], c: [SUMMARY_COPY.unstable] }],
+        ['says the rate a clock off the setpoint misses, below or above, before its verdict', [
             clock('a'),
             clock('below', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 }),
             clock('above', { meets_target_rate: false, rate_off_target: 12.5 }),
-        ], { below: SUMMARY_COPY.offTarget('192', '240'), above: SUMMARY_COPY.offTarget('252.5', '240') }],
-        ['does not name a clock by a rate less than half a hundredth off', [clock('a', { rate_off_target: -0.004 })], { a: fewestWakeUps }],
-        ['names any other clock by the rate it makes',
-            [clock('a', { wake_ups_per_minute: 4, window_count: 2 }), clock('b', { wake_ups_per_minute: 9, window_count: 7 })], { b: another }],
-        ['names a clock that holds the rate on a deadlock build by its trade-off, as its verdict does not decide', [
+        ], { below: [SUMMARY_COPY.worksOffTarget('192')], above: [SUMMARY_COPY.worksOffTarget('252.5')] }],
+        ['does not say a rate less than half a hundredth off', [clock('a', { rate_off_target: -0.004 })], { a: [] }],
+        ['gives a clock with a deadlock risk that holds the rate no recovery chip, as its verdict does not decide', [
             clock('a', { verdict: 'no recovery', deadlock: true, wake_ups_per_minute: 6 }),
             clock('b', { verdict: 'stable', deadlock: true, wake_ups_per_minute: 9, window_count: 5 }),
-        ], { a: fewestWakeUps, b: another }],
+        ], { a: [], b: [] }],
     ])('%s', (_, clocks, names) => {
         expect(Object.fromEntries(Object.keys(names).map(id => [id, nameOf(clocks, id)]))).toEqual(names);
     });
 
     it('is empty for an index with no clock', () => {
-        expect(plainClockName([], 0)).toBe('');
-    });
-
-    it('keeps the engine name as it is', () => {
-        expect(clockTechnicalName(clock('a'))).toBe('Engine name of a');
+        expect(clockBadges([], 0)).toEqual([]);
     });
 });
 
@@ -170,8 +160,8 @@ describe('pickNameMeaning', () => {
         pickNameMeaning(clocks, clocks.findIndex(it => it.id === id), rule);
     /** The pick's reason for the clock with the fewest deciders of these contenders, on a moving belt unless told otherwise */
     const reason = (contenders: string, belt = RECOMMENDED_COPY.beltMoving) =>
-        `Fewest deciders of the clocks that ${contenders}${belt}: the least wiring to do by hand.`;
-    const recover = 'keep making 240/s and recover';
+        `Fewest deciders of the clocks that ${contenders}${belt}. This is the least wiring to do by hand.`;
+    const recover = 'keep making 240/s and go back to it after a stop';
 
     // what is said of clock b
     it.each<[string, SummaryClock[], PickRule | null, string]>([
@@ -187,7 +177,7 @@ describe('pickNameMeaning', () => {
         expect(meaning(clocks, 'b', rule)).toBe(expected);
     });
 
-    it('has nothing to say of a clock with any other name', () => {
+    it('has nothing to say of a clock without the chip', () => {
         expect(meaning(decidersAndWakeUps(), 'a')).toBe('');
         expect(meaning([clock('a', { wake_ups_per_minute: 8, window_count: 6 }), clock('b', { wake_ups_per_minute: 12, window_count: 3 })], 'b')).toBe('');
     });
@@ -209,7 +199,7 @@ describe('recoversOf', () => {
         const notTried = ' Not tried, since one failure is enough: iron plate stops arriving, iron gear wheel is not taken away.';
         const stopped = clock('a', { verdict: 'no recovery', loss: { broken_by: ['coal stops arriving'], not_tried: ['iron plate stops arriving', 'iron gear wheel is not taken away'] } });
         expect(recoversOf(stopped).detail).toBe(`${SUMMARY_COPY.recoversNoDetail('coal stops arriving')}${notTried}`);
-        expect(rateWarningOf(stopped)).toContain(`after coal stops arriving for a while, the build does not get back to its rate by itself in the simulator.${notTried}`);
+        expect(rateWarningOf(stopped)).toContain(`after coal stops arriving for a while, the build does not go back to its rate by itself in the simulator.${notTried}`);
         // all tried: nothing is said
         expect(recoversOf(clock('b', { verdict: 'no recovery', loss: { broken_by: ['coal stops arriving'] } })).detail).not.toContain('Not tried');
     });
@@ -222,9 +212,9 @@ describe('recoversOf', () => {
     it('says why the recovery of a clock that holds could not be tried', () => {
         const reason = 'A clock of 47.537 ticks does not repeat in whole ticks, so its output cannot be counted by the period';
         const untried = clock('a', { loss: null });
-        untried.assessment.backpressure_loss_not_tried = reason;
+        untried.assessment.disturbance_trial_not_tried = reason;
         expect(recoversOf(untried)).toEqual({ kind: 'not-tested', value: SUMMARY_COPY.recoversUnavailable, detail: SUMMARY_COPY.recoversNotTriedDetail(reason) });
-        // the why itself, and the period that closes it
+        // the why itself, and the window cycle that closes it
         expect(recoversOf(untried).detail).toContain(`: ${reason}.`);
     });
 
@@ -259,7 +249,7 @@ describe('makesText and wakeUpsText', () => {
         expect(makesText(clock('a'), 1)).toEqual({ value: SUMMARY_COPY.makes('240'), sub: '' });
     });
 
-    it.each([0.0625, 0.9999, 1.0001])('keeps Copies %s exact while leaving the total rate and one-copy wake-ups unchanged', copies => {
+    it.each([0.0625, 0.9999, 1.0001])('keeps Copies %s exact while leaving the total rate and one-copy wakeups unchanged', copies => {
         const result = clock('a', { rate_off_target: -0.125, wake_ups_per_minute: 17.6 });
         expect(makesText(result, copies)).toEqual({ value: SUMMARY_COPY.makes('239.88'), sub: `all ${copies} copies` });
         // rounded as the table rounds them, for one copy
@@ -270,7 +260,7 @@ describe('makesText and wakeUpsText', () => {
         expect(makesText(clock('a', { rate_off_target: -0.123 }), 1).value).toBe(SUMMARY_COPY.makes('239.88'));
     });
 
-    it('says where the wake-ups are the average of the start points, and the cold start\'s figure where it is far off it', () => {
+    it('says where the wakeups are the average of the start points, and the cold start\'s figure where it is far off it', () => {
         const averaged = (cold: number, figures: number[]): SummaryClock => {
             const base = clock('a');
             const mean = [cold, ...figures].reduce((sum, it) => sum + it, 0) / (figures.length + 1);
@@ -290,13 +280,15 @@ describe('makesText and wakeUpsText', () => {
 describe('beltLine, beltValue and beltValueSub', () => {
     const moving = { backedUpBelts: false, searchedForFewerWakeUps: false };
     const backedUp = { backedUpBelts: true, searchedForFewerWakeUps: false };
-    const { beltLineMoving, beltLineBackedUp, beltMoving, beltBackedUp } = SUMMARY_COPY;
+    const { beltLineMoving, beltLineBackedUp, beltLineNoSlack, beltMoving, beltBackedUp, beltNoSlackSub } = SUMMARY_COPY;
 
     // the line, the tile's word and the line under it
     it.each<[string, PickRule | null, string, string, string, string | undefined]>([
         ['says moving for a clock made for a moving belt', moving, 'moving (+4 ticks)', beltLineMoving, beltMoving, undefined],
         ['says backed up when the build says so', backedUp, 'moving (+4 ticks)', beltLineBackedUp, beltBackedUp, undefined],
-        ['says backed up when the clock says so', moving, 'backed-up', beltLineBackedUp, beltBackedUp, undefined],
+        // #457: a clock made without belt slack in a run for moving belts was checked on moving belts
+        ['says moving, without belt slack, for a clock without slack in a run for moving belts', moving, 'backed-up', beltLineNoSlack, beltMoving, beltNoSlackSub],
+        ['says backed up for a clock without slack when the rule is not known', null, 'backed-up', beltLineBackedUp, beltBackedUp, undefined],
         ['says there is no belt when no clocked inserter picks up from one', moving, '', SUMMARY_COPY.beltLineNone, SUMMARY_COPY.beltNone, SUMMARY_COPY.beltNoneSub],
         ['says there is no belt without a rule either', null, '', SUMMARY_COPY.beltLineNone, SUMMARY_COPY.beltNone, SUMMARY_COPY.beltNoneSub],
         ['goes by the label alone without a rule', null, 'moving (+2 ticks)', beltLineMoving, beltMoving, undefined],
@@ -310,6 +302,9 @@ describe('beltCellText', () => {
         expect(beltCellText('moving (+4 ticks)')).toBe(SUMMARY_COPY.beltCellMoving('+4 ticks'));
         expect(beltCellText('moving (+2–4 ticks)')).toBe(SUMMARY_COPY.beltCellMoving('+2–4 ticks'));
         expect(beltCellText('backed-up')).toBe(SUMMARY_COPY.beltBackedUp);
+        expect(beltCellText('backed-up', { backedUpBelts: true, searchedForFewerWakeUps: false })).toBe(SUMMARY_COPY.beltBackedUp);
+        // in a run for moving belts, a clock without slack was checked on moving belts
+        expect(beltCellText('backed-up', { backedUpBelts: false, searchedForFewerWakeUps: false })).toBe(SUMMARY_COPY.beltCellNoSlack);
         expect(beltCellText('')).toBe('');
     });
 });
@@ -323,10 +318,10 @@ describe('differenceFromRecommended', () => {
     it.each<[string, SummaryClock, string]>([
         ['says the rate first', clock('s', offRate), `${SUMMARY_COPY.differsRate('192', '240')} ${wakes('20 more times')}`],
         // one time, not one times
-        ['says one more wake-up', clock('s', { wake_ups_per_minute: 11 }), wakes('1 more time')],
-        ['says fewer wake-ups, then the belt', clock('s', { wake_ups_per_minute: 4, matches_belt_choice: false }), `${wakes('6 fewer times')} ${SUMMARY_COPY.differsBelt}`],
-        ['says nothing of wake-ups that round to the same', clock('s', { wake_ups_per_minute: 10.2 }), SUMMARY_COPY.differsNothing],
-        ['says nothing of uncounted wake-ups', clock('s', { wake_ups_per_minute: null }), SUMMARY_COPY.differsNothing],
+        ['says one more wakeup', clock('s', { wake_ups_per_minute: 11 }), wakes('1 more time')],
+        ['says fewer wakeups, then the belt', clock('s', { wake_ups_per_minute: 4, matches_belt_choice: false }), `${wakes('6 fewer times')} ${SUMMARY_COPY.differsBelt}`],
+        ['says nothing of wakeups that round to the same', clock('s', { wake_ups_per_minute: 10.2 }), SUMMARY_COPY.differsNothing],
+        ['says nothing of uncounted wakeups', clock('s', { wake_ups_per_minute: null }), SUMMARY_COPY.differsNothing],
         ['says when it does not recover', clock('s', { verdict: 'no recovery' }), SUMMARY_COPY.differsNoRecovery],
     ])('%s', (_, selected, expected) => {
         expect(differenceFromRecommended(selected, recommended)).toBe(expected);
@@ -335,6 +330,21 @@ describe('differenceFromRecommended', () => {
     it('keeps to two sentences', () => {
         const selected = clock('s', { ...offRate, matches_belt_choice: false });
         expect(differenceFromRecommended(selected, recommended).match(/\./g)?.length).toBe(2);
+    });
+});
+
+describe('signalsText', () => {
+    it('rounds the signals of one copy a minute, as the wakeups are', () => {
+        const counted = clock('a');
+        counted.assessment = { ...counted.assessment, signals_per_minute: 40.4 };
+        expect(signalsText(counted)).toEqual({ value: SUMMARY_COPY.wakeUps(40), sub: SUMMARY_COPY.oneCopy });
+    });
+
+    it('says "Not counted" when they were not, or the clock was kept before they were counted', () => {
+        const uncounted = clock('a');
+        uncounted.assessment = { ...uncounted.assessment, signals_per_minute: null };
+        expect(signalsText(uncounted)).toEqual({ value: SUMMARY_COPY.wakeUpsNotCounted, sub: '' });
+        expect(signalsText(clock('b'))).toEqual({ value: SUMMARY_COPY.wakeUpsNotCounted, sub: '' });
     });
 });
 
@@ -369,9 +379,10 @@ describe('worksOf', () => {
 
 describe('SUMMARY_COPY', () => {
     it('uses the glossary words, not the old ones', () => {
-        const texts = Object.values(SUMMARY_COPY).map(it => typeof it === 'string' ? it : (it as (...args: unknown[]) => string)('2', '3'));
+        const texts = Object.values(SUMMARY_COPY)
+            .map(it => typeof it === 'string' ? it : (it as (...args: unknown[]) => string)('2', '3'));
         for (const text of texts) {
-            expect(text).not.toMatch(/potential|backpressure|hands?\b|transfer/i);
+            expect(text).not.toMatch(/potential|backpressure|hands?\b|transfer|starved|jammed|wake window|wake-up/i);
             expect(text.length).toBeGreaterThan(0);
         }
     });

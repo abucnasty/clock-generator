@@ -1,45 +1,11 @@
 import { Fragment, type ReactNode } from 'react';
 import { Box, Chip, Link, Typography } from '@mui/material';
 import { AppDialog } from './AppDialog';
+import { parseChangelog, releasesWithEntries } from '../utils/changelog';
 
 interface ChangelogDialogProps {
     open: boolean;
     onClose: () => void;
-}
-
-interface Release {
-    version: string;
-    date: string;
-    sections: { title: string; items: string[] }[];
-}
-
-/** Parses the `## [version] - date` / `### Section` / `- item` structure of CHANGELOG.md */
-function parseChangelog(markdown: string): Release[] {
-    const releases: Release[] = [];
-    for (const line of markdown.split('\n')) {
-        const release = line.match(/^## \[(.+?)\](?:\s*-\s*(.+))?/);
-        if (release) {
-            releases.push({ version: release[1], date: release[2] ?? '', sections: [] });
-            continue;
-        }
-        const current = releases[releases.length - 1];
-        if (!current) {
-            continue;
-        }
-        const section = line.match(/^### (.+)/);
-        if (section) {
-            current.sections.push({ title: section[1], items: [] });
-            continue;
-        }
-        const item = line.match(/^- (.+)/);
-        if (item) {
-            if (current.sections.length === 0) {
-                current.sections.push({ title: '', items: [] });
-            }
-            current.sections[current.sections.length - 1].items.push(item[1]);
-        }
-    }
-    return releases;
 }
 
 /** Renders `code` and [links](https://...) */
@@ -57,7 +23,7 @@ function renderInline(text: string): ReactNode[] {
     });
 }
 
-const releases = parseChangelog(__CHANGELOG__);
+const releases = releasesWithEntries(parseChangelog(__CHANGELOG__));
 
 export function ChangelogDialog({ open, onClose }: ChangelogDialogProps) {
     return (

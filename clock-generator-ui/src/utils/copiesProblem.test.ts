@@ -8,11 +8,11 @@ const invalid = [0, -1, Infinity, -Infinity, NaN, 0.0001, 1 / 3];
 
 describe('Copies field and engine schema agreement', () => {
     it.each([...valid, ...invalid])('uses the same boundary for %s', copies => {
-        const targetOutput = { recipe: 'iron-gear-wheel', items_per_second: 1, copies };
-        const accepted = TargetProductionRateConfigSchema.safeParse(targetOutput).success;
+        const setpoint = { recipe: 'iron-gear-wheel', items_per_second: 1, copies };
+        const accepted = TargetProductionRateConfigSchema.safeParse(setpoint).success;
         expect(accepted).toBe(valid.includes(copies));
         expect(copiesProblem(copies) === null).toBe(accepted);
-        const [problem] = problemsOf({ targetOutput, machines: [{ id: 1, recipe: 'iron-gear-wheel' }] });
+        const [problem] = problemsOf({ setpoint, machines: [{ id: 1, recipe: 'iron-gear-wheel' }] });
         if (accepted) expect(problem).toBeUndefined();
         else {
             expect(problem?.text).toBe(copiesProblem(copies));

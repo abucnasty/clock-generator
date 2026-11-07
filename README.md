@@ -3,18 +3,18 @@
 A clock generator for Factorio builds. Describe a build (its machines, inserters, belts, chests and drills, and the
 rate it should make) and the generator simulates it tick by tick, works out when each inserter has to be enabled, and
 gives you a blueprint of decider combinators that clock the inserters, so the build holds exactly its setpoint with
-as few inserter wakeups as it can. It lists the clocks it could make, says which hold the rate and have recovery after a
-disturbance, and selects one.
+as few inserter wakeups as it can. It lists the clocks it could make, says which hold the rate and go back to it by themselves after a
+supply stop or an output blockage, and selects one.
 
 Use it on the site: <https://clock-generator-self.vercel.app>. The source is at
 <https://github.com/abucnasty/clock-generator>.
 
 ## Repository
 
-- `clock-generator/`: the engine, a TypeScript library that validates a config, simulates the build and generates the
+- `clock-generator/`: the engine, a TypeScript library that checks a configuration, simulates the build and generates the
   clocks as blueprints; also the `record` and `verify` commands that compare a build in the game with the simulator.
   See its [README](clock-generator/README.md).
-- `clock-generator-ui/`: the site, a React and Vite app that builds a config, runs the engine in web workers and shows
+- `clock-generator-ui/`: the site, a React and Vite app that builds a configuration, runs the engine in web workers and shows
   the clocks. See its [README](clock-generator-ui/README.md).
 - `clock-generator-sidecar/`: a Factorio mod that reads machines, inserters and belts from the game and exports them
   for the generator.
@@ -50,7 +50,7 @@ npm run test:game -- <file> # selected game checks; requires Factorio (see the g
 
 In `clock-generator-ui`, `npm test` runs the UI's tests, and `npm run test:browser` generates a clock in a real browser.
 
-The [game verification guide](clock-generator/tests/game/README.md) covers setup, mechanic fixtures, clock-build
+The [game verification guide](clock-generator/tests/game/README.md) covers installation, mechanic fixtures, clock-build
 checks and retained probe captures.
 
 ## Versioning
@@ -62,8 +62,8 @@ section for the new version in `CHANGELOG.md`. Merging a new version to `master`
 (`.github/workflows/release.yml`); a merge that does not change the version releases nothing.
 
 The same workflow deploys the site. Vercel deploys nothing by itself, not `master` and not a pull request:
-`vercel.json` switches that off. The site players use is deployed when a version is released, from
-the commit of its tag and after its GitHub release exists, so `master` can run ahead of what players have. A fix
+`vercel.json` switches that off. The site users use is deployed when a version is released, from
+the commit of its tag and after its GitHub release exists, so `master` can run ahead of what users have. A fix
 reaches them with a version bump: a patch version and its changelog section, in the pull request of the fix or in one
 that carries the bump for several (its Version slot says which; see [Pull requests](CONTRIBUTING.md#pull-requests)).
 Every merge to `master` is also deployed as a preview, with its address in the summary of the workflow run. The

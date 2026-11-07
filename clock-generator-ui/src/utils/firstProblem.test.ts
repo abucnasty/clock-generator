@@ -1,7 +1,7 @@
 import type { InserterCoverageIssue } from 'clock-generator/browser';
 import { describe, expect, it } from 'vitest';
 import { createDefaultConfig, type ConfigFormData } from './configForm/formData';
-import { updateTargetOutput } from './configForm/edits';
+import { updateSetpoint } from './configForm/edits';
 import {
     ELEMENT_IDS,
     PROBLEM_TEXT,
@@ -17,16 +17,16 @@ import {
 } from './firstProblem';
 
 type Input = Parameters<typeof problemsOf>[0];
-type Overrides = Omit<Partial<Input>, 'targetOutput'> & { targetOutput?: Partial<Input['targetOutput']> };
+type Overrides = Omit<Partial<Input>, 'setpoint'> & { setpoint?: Partial<Input['setpoint']> };
 
-/** A build with no field problem; `targetOutput` changes only the fields it gives */
-const filledIn = ({ targetOutput, ...overrides }: Overrides = {}): Input => ({
-    targetOutput: { recipe: 'logistic-science-pack', items_per_second: 240, copies: 1, ...targetOutput },
+/** A build with no field problem; `setpoint` changes only the fields it gives */
+const filledIn = ({ setpoint, ...overrides }: Overrides = {}): Input => ({
+    setpoint: { recipe: 'logistic-science-pack', items_per_second: 240, copies: 1, ...setpoint },
     machines: [{ id: 1, recipe: 'logistic-science-pack' }],
     ...overrides,
 });
 
-const problemsIn = (config: ConfigFormData) => problemsOf({ targetOutput: config.target_output, machines: config.machines });
+const problemsIn = (config: ConfigFormData) => problemsOf({ setpoint: config.setpoint, machines: config.machines });
 
 const recipeProblem: Problem = { text: PROBLEM_TEXT.noRecipe, target: { kind: 'target-recipe' } };
 const rateProblem: Problem = { text: PROBLEM_TEXT.noRate, target: { kind: 'target-rate' } };
@@ -39,7 +39,7 @@ describe('problemsOf', () => {
 
     it.each([[1, 1e-23], [1e308, 1]])('defers unsupported target/capacity arithmetic to worker validation without formatting an unknown limit (%d copies, %d/s)', (copies, items_per_second) => {
         const machinesMax = { machineIds: [1], perCopy: 2, perCopyRatio: { numerator: 2, denominator: 1 } };
-        expect(problemsOf(filledIn({ machinesMax, targetOutput: { copies, items_per_second } }))).toEqual([]);
+        expect(problemsOf(filledIn({ machinesMax, setpoint: { copies, items_per_second } }))).toEqual([]);
     });
 
     it('finds two problems in the default build: the target recipe, then the machine recipe', () => {
@@ -47,15 +47,15 @@ describe('problemsOf', () => {
     });
 
     it('fixing the target recipe of the default build leaves the machine recipe first', () => {
-        const [first] = problemsIn(updateTargetOutput(createDefaultConfig(), 'recipe', 'logistic-science-pack'));
+        const [first] = problemsIn(updateSetpoint(createDefaultConfig(), 'recipe', 'logistic-science-pack'));
         expect(first).toEqual(machineProblem(1));
     });
 
     it.each<[string, Overrides, Problem]>([
-        ['a target without a recipe', { targetOutput: { recipe: '' } }, recipeProblem],
-        ['a rate of 0', { targetOutput: { items_per_second: 0 } }, rateProblem],
-        ['a rate below 0', { targetOutput: { items_per_second: -3 } }, rateProblem],
-        ['0 copies', { targetOutput: { copies: 0 } }, { text: PROBLEM_TEXT.noCopies, target: { kind: 'target-copies' } }],
+        ['a target without a recipe', { setpoint: { recipe: '' } }, recipeProblem],
+        ['a rate of 0', { setpoint: { items_per_second: 0 } }, rateProblem],
+        ['a rate below 0', { setpoint: { items_per_second: -3 } }, rateProblem],
+        ['0 copies', { setpoint: { copies: 0 } }, { text: PROBLEM_TEXT.noCopies, target: { kind: 'target-copies' } }],
         ['no machine', { machines: [] }, { text: PROBLEM_TEXT.noMachines, target: { kind: 'add-machine' } }],
     ])('says what is wrong with %s, alone, and where it is fixed', (_, overrides, problem) => {
         expect(problemsOf(filledIn(overrides))).toEqual([problem]);
@@ -63,7 +63,7 @@ describe('problemsOf', () => {
 
     it('puts the target first, then each machine without a recipe, in machine order', () => {
         const machines = [{ id: 1, recipe: 'a' }, { id: 2, recipe: '' }, { id: 3, recipe: '' }];
-        expect(problemsOf(filledIn({ targetOutput: { recipe: '', items_per_second: 0 }, machines })))
+        expect(problemsOf(filledIn({ setpoint: { recipe: '', items_per_second: 0 }, machines })))
             .toEqual([recipeProblem, rateProblem, machineProblem(2), machineProblem(3)]);
     });
 });
@@ -71,7 +71,7 @@ describe('problemsOf', () => {
 describe('a target more than the machines can make', () => {
     // Machine 1 of the logistic science sample: 11 copies make 252.656…/s, printed rounded down as 252.65
     const machinesMax = { machineIds: [1], perCopy: 22.96874920527133 };
-    const at = (items_per_second: number) => filledIn({ targetOutput: { items_per_second, copies: 11 }, machinesMax });
+    const at = (items_per_second: number) => filledIn({ setpoint: { items_per_second, copies: 11 }, machinesMax });
     const tooHigh = at(240200);
     const aboveMax: Problem = { text: 'Items per Second is more than the machines can make (at most 252.65/s)', target: { kind: 'target-rate' } };
 
@@ -93,7 +93,7 @@ describe('a target more than the machines can make', () => {
 describe('a target that counts the item destroyed, more than the machines can destroy', () => {
     // Machine 1 of the exact-speed ore voider: 540 crafts a second, a quarter of an ore given back by each
     const machinesMax = { machineIds: [1], perCopy: 405, perCopyRatio: { numerator: 405, denominator: 1 } };
-    const at = (items_per_second: number) => filledIn({ targetOutput: { recipe: 'iron-ore', items_per_second, copies: 1, counts: 'destroyed' }, machinesMax });
+    const at = (items_per_second: number) => filledIn({ setpoint: { recipe: 'iron-ore', items_per_second, copies: 1, counts: 'destroyed' }, machinesMax });
 
     it('says destroy, goes to Items per Second, and is not there for the 400 the sample asks', () => {
         expect(problemsOf(at(406))).toEqual([{ text: PROBLEM_TEXT.rateAboveMax(405, 'destroyed'), target: { kind: 'target-rate' } }]);
@@ -139,8 +139,8 @@ describe('barNoteOf', () => {
 describe('PROBLEM_TEXT', () => {
     it('words each problem and note as the tooltips and the bar say them', () => {
         expect(PROBLEM_TEXT).toMatchObject({
-            noRecipe: 'Set the recipe in Target Output',
-            noRate: 'Set Items per Second in Target Output to more than 0',
+            noRecipe: 'Set the recipe in the Setpoint panel',
+            noRate: 'Set Items per Second in the Setpoint panel to more than 0',
             noCopies: 'Set Copies to more than 0.',
             noMachines: 'Add a machine',
             validationFailed: 'The last check failed. Show why',

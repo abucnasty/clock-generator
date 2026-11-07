@@ -1,5 +1,5 @@
 {
-  "target_output": {
+  "setpoint": {
     "recipe": "processing-unit",
     "items_per_second": 80,
     "copies": 1

@@ -10,13 +10,13 @@ import type { EntityTransferCountMap } from "./sequence/cycle/swing-counts";
 // To the inserter that drops into it, a chest with room and an infinity chest are the same: neither ever refuses a hand.
 // Where every terminal output drops into an infinity chest, the target is judged as a rate: each branch (the terminal
 // outputs that take from one machine or one container) has to carry its share of the target over the cycle in whole
-// hands, not an exact count in every period. A branch may run a hand behind (none in one period, 32 in the next): it
+// hands, not an exact count in every window cycle. A branch may run a hand behind (none in one window cycle, 32 in the next): it
 // carries its share from a bin on where no stretch of bins from there carries less than its share by more than its
 // hands, and, where the run repeats forever, the repeating cycle carries its share to less than an item, so that it never
 // falls further behind. What it carries over its share is a surplus the sink takes, as a buffer with room takes it, and
 // is not held against it; nor does it count towards a later stretch: a hand made ahead (the output a machine had stocked
 // before a loss, handed on when it is restored) does not hide a shortfall after it. Anything else (a belt, a machine's insertion limit, a chest that can fill) cannot take lumps
-// or a surplus, and its output stays judged exactly in every period: a branch with no hand and no surplus.
+// or a surplus, and its output stays judged exactly in every window cycle: a branch with no hand and no surplus.
 
 /** Room for the rounding of shares that are not whole */
 const EPSILON = 1e-9;
@@ -27,8 +27,8 @@ export interface TerminalBranch {
     source_id: string;
     /** The terminal output inserters of the branch, by id */
     inserter_ids: string[];
-    /** Items the branch is planned to carry in a clock period */
-    share_per_period: number;
+    /** Items the branch is planned to carry in a window cycle */
+    share_per_window_cycle: number;
     /** Items the branch's inserters move in one hand each: how far it may fall behind its share */
     hand: number;
 }
@@ -44,10 +44,10 @@ export interface BranchBins {
 }
 
 /**
- * The branches of the terminal outputs `output_inserter_ids`, each with its planned share of a period (the plan's hands
+ * The branches of the terminal outputs `output_inserter_ids`, each with its planned share of a window cycle (the plan's hands
  * of its inserters, `total_transfer_count` x hand, over `recipe_lcm` cycles), in the order of their sources' ids. Only
  * where every one of them drops into a sink that never blocks and has a planned share: otherwise none, and the output is
- * judged exactly in every period. The sink is the container node the inserter drops into, by its Storage trait
+ * judged exactly in every window cycle. The sink is the container node the inserter drops into, by its Storage trait
  * (`never_refuses`: an infinity chest); a belt, a machine or a chest with room is not one.
  */
 export function neverBlockingBranchesOf(
@@ -72,9 +72,9 @@ export function neverBlockingBranchesOf(
     for (const inserter of outputs) {
         const id = inserter.entity_id.id;
         const source_id = inserter.source.entity_id.id;
-        const branch = branches.get(source_id) ?? { source_id, inserter_ids: [], share_per_period: 0, hand: 0 };
+        const branch = branches.get(source_id) ?? { source_id, inserter_ids: [], share_per_window_cycle: 0, hand: 0 };
         branch.inserter_ids.push(id);
-        branch.share_per_period += planned.get(id)!.share;
+        branch.share_per_window_cycle += planned.get(id)!.share;
         branch.hand += planned.get(id)!.hand;
         branches.set(source_id, branch);
     }
@@ -82,14 +82,14 @@ export function neverBlockingBranchesOf(
 }
 
 /**
- * The branches with their shares scaled so that they add up to `expected_per_period`: a clock judged on another count
- * than its plan's (a period rounded to whole ticks) keeps each branch's part of it. Unchanged where the shares add up to
+ * The branches with their shares scaled so that they add up to `expected_per_window_cycle`: a clock judged on another count
+ * than its plan's (a window cycle rounded to whole ticks) keeps each branch's part of it. Unchanged where the shares add up to
  * nothing.
  */
-export function branchesScaledTo(branches: readonly TerminalBranch[], expected_per_period: number): TerminalBranch[] {
-    const planned = branches.reduce((sum, branch) => sum + branch.share_per_period, 0);
-    if (!(planned > 0) || Math.abs(planned - expected_per_period) < EPSILON) return [...branches];
-    return branches.map(branch => ({ ...branch, share_per_period: branch.share_per_period * expected_per_period / planned }));
+export function branchesScaledTo(branches: readonly TerminalBranch[], expected_per_window_cycle: number): TerminalBranch[] {
+    const planned = branches.reduce((sum, branch) => sum + branch.share_per_window_cycle, 0);
+    if (!(planned > 0) || Math.abs(planned - expected_per_window_cycle) < EPSILON) return [...branches];
+    return branches.map(branch => ({ ...branch, share_per_window_cycle: branch.share_per_window_cycle * expected_per_window_cycle / planned }));
 }
 
 /** How far a branch may run ahead of its share */

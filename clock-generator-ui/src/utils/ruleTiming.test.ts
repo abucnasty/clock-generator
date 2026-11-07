@@ -2,16 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { entityKey, NO_TIMING, plannedWindowsOf, ruleTimingOf, ticksText, type RuleTiming } from './ruleTiming';
 
 const windows = { 'inserter:1': [{ start: 12, end: 20 }, { start: 80, end: 95 }], 'inserter:2': [] };
-const results = { cycleTicks: 132, periodTicks: 264, windows };
-const check = { cycleTicks: 130, periodTicks: 260 };
+const results = { cycleTicks: 132, windowCycleTicks: 264, windows };
+const check = { cycleTicks: 130, windowCycleTicks: 260 };
 
 describe('ruleTimingOf', () => {
     it('takes the clock on Results before the check', () => {
-        expect(ruleTimingOf({ results, check })).toEqual({ cycleTicks: 132, periodTicks: 264, from: 'results', windows });
+        expect(ruleTimingOf({ results, check })).toEqual({ cycleTicks: 132, windowCycleTicks: 264, from: 'results', windows });
     });
 
     it('takes the check alone, with no windows', () => {
-        expect(ruleTimingOf({ results: null, check })).toEqual({ cycleTicks: 130, periodTicks: 260, from: 'check', windows: null });
+        expect(ruleTimingOf({ results: null, check })).toEqual({ cycleTicks: 130, windowCycleTicks: 260, from: 'check', windows: null });
     });
 
     it('knows nothing with neither', () => {
@@ -48,7 +48,7 @@ describe('plannedWindowsOf', () => {
     it('is null for a missing key, an entity with no window, a fractional period, or a check', () => {
         expect(plannedWindowsOf(timing, 'inserter:9')).toBeNull();
         expect(plannedWindowsOf(timing, 'inserter:2')).toBeNull();
-        expect(plannedWindowsOf({ ...timing, periodTicks: 550.957 }, 'inserter:1')).toBeNull();
+        expect(plannedWindowsOf({ ...timing, windowCycleTicks: 550.957 }, 'inserter:1')).toBeNull();
         expect(plannedWindowsOf({ ...timing, from: 'check' }, 'inserter:1')).toBeNull();
         expect(plannedWindowsOf(NO_TIMING, 'inserter:1')).toBeNull();
     });

@@ -2,63 +2,69 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Config } from '../config';
 import { ConfigPaths } from '../config/config-paths';
 import { loadConfigFromFile } from '../config/loader';
-import { ClockPeriodLimitError } from './plan/clock-period-limit';
-import type { BlueprintGenerationResult, GenerateClockOptions, PlanRun } from './plan/plan-run';
+import { ClockWindowCycleLimitError } from './plan/clock-window-cycle-limit';
+import type { BlueprintGenerationResult, GenerateClockOptions, UnclockedRun } from './plan/unclocked-run';
 import { generateClockWithSwingBackoff } from './generate-clock';
-import { primitiveGroupedOptionsSupported } from './candidates/verified-primitive-grouped';
-import type { PrimitiveGroupedAttemptReport } from './primitive-grouped-policy';
+import { primitiveRoundRobinPollingOptionsSupported } from './candidates/round-robin-polling-primitive-verified';
+import type { PrimitiveRoundRobinPollingAttemptReport } from './round-robin-polling-primitive-policy';
 
 const mocks = vi.hoisted(() => ({
-    planRun: vi.fn(),
+    unclockedRun: vi.fn(),
     clockOfPlan: vi.fn(),
     checkedClock: vi.fn(),
-    groupedHandsClock: vi.fn(),
-    observedWindowsClock: vi.fn(),
-    resultWindowsClockOfPlan: vi.fn(),
-    verifiedPrimitiveGroupedClock: vi.fn(),
+    roundRobinPollingClock: vi.fn(),
+    timeStudyWindowsClock: vi.fn(),
+    exhaustClockOfPlan: vi.fn(),
+    verifiedPrimitiveRoundRobinPollingClock: vi.fn(),
 }));
 
-vi.mock('./plan/plan-run', async importOriginal => {
-    const actual = await importOriginal<typeof import('./plan/plan-run')>();
-    return { ...actual, planRun: mocks.planRun, clockOfPlan: mocks.clockOfPlan, checkedClock: mocks.checkedClock };
+vi.mock('./plan/unclocked-run', async importOriginal => {
+    const actual = await importOriginal<typeof import('./plan/unclocked-run')>();
+    return { ...actual, unclockedRun: mocks.unclockedRun, clockOfPlan: mocks.clockOfPlan, checkedClock: mocks.checkedClock };
 });
 
-vi.mock('./candidates/verified-primitive-grouped', async importOriginal => {
-    const actual = await importOriginal<typeof import('./candidates/verified-primitive-grouped')>();
-    return { ...actual, verifiedPrimitiveGroupedClock: mocks.verifiedPrimitiveGroupedClock };
+vi.mock('./candidates/round-robin-polling-primitive-verified', async importOriginal => {
+    const actual = await importOriginal<typeof import('./candidates/round-robin-polling-primitive-verified')>();
+    return { ...actual, verifiedPrimitiveRoundRobinPollingClock: mocks.verifiedPrimitiveRoundRobinPollingClock };
 });
 
-vi.mock('./candidates/grouped-hands', async importOriginal => {
-    const actual = await importOriginal<typeof import('./candidates/grouped-hands')>();
-    return { ...actual, groupedHandsClock: mocks.groupedHandsClock };
+vi.mock('./candidates/round-robin-polling', async importOriginal => {
+    const actual = await importOriginal<typeof import('./candidates/round-robin-polling')>();
+    return { ...actual, roundRobinPollingClock: mocks.roundRobinPollingClock };
 });
 
-vi.mock('./candidates/observed-windows', async importOriginal => {
-    const actual = await importOriginal<typeof import('./candidates/observed-windows')>();
-    return { ...actual, observedWindowsClock: mocks.observedWindowsClock };
+vi.mock('./candidates/time-study-windows', async importOriginal => {
+    const actual = await importOriginal<typeof import('./candidates/time-study-windows')>();
+    return { ...actual, timeStudyWindowsClock: mocks.timeStudyWindowsClock };
 });
 
-vi.mock('./candidates/result-windows-clock', async importOriginal => {
-    const actual = await importOriginal<typeof import('./candidates/result-windows-clock')>();
-    return { ...actual, resultWindowsClockOfPlan: mocks.resultWindowsClockOfPlan };
+// the plans here are mocks, with no build for the windows by arithmetic to be made from: the arithmetic refuses them
+vi.mock('./plan/batched-arithmetic', async importOriginal => {
+    const actual = await importOriginal<typeof import('./plan/batched-arithmetic')>();
+    return { ...actual, batchedSwingsWindowsByArithmetic: () => { throw new actual.ArithmeticWindowsNotApplicable('a mocked plan'); } };
+});
+
+vi.mock('./candidates/exhaust-clock', async importOriginal => {
+    const actual = await importOriginal<typeof import('./candidates/exhaust-clock')>();
+    return { ...actual, exhaustClockOfPlan: mocks.exhaustClockOfPlan };
 });
 
 const quiet = { log() {}, warn() {}, error() {}, debug() {} };
-const acceptedReport: PrimitiveGroupedAttemptReport = {
+const acceptedReport: PrimitiveRoundRobinPollingAttemptReport = {
     strategy: 'primitive-grouped', eligibility: 'separate-windows-only', outcome: 'accepted', attempts: [],
 };
 
 let original: Config;
 
-function config(overrides?: Config['overrides'], counts: Config['target_output']['counts'] = original.target_output.counts): Config {
-    return { ...original, target_output: { ...original.target_output, counts }, overrides,
+function config(overrides?: Config['overrides'], counts: Config['setpoint']['counts'] = original.setpoint.counts): Config {
+    return { ...original, setpoint: { ...original.setpoint, counts }, overrides,
         inserters: original.inserters.map(inserter => ({ ...inserter, overrides: undefined })) };
 }
 
 function result(count: number, holds: boolean, primitive = false): BlueprintGenerationResult {
     return {
         used_terminal_swing_count: primitive ? 2 : count,
-        ...(primitive && { primitive_grouped: {
+        ...(primitive && { primitive_round_robin_polling: {
             strategy: 'primitive-grouped', trigger: 'initial-period-limit', requested_terminal_swing_count: 602,
             terminal_swing_count: 1, grouped_cycles: 1, construction_key: 'test-construction',
             options: { share_windows: false, feeder_offset: 16, surplus_guard: false }, loop_refinement: false,
@@ -68,35 +74,35 @@ function result(count: number, holds: boolean, primitive = false): BlueprintGene
     } as unknown as BlueprintGenerationResult;
 }
 
-function refusalFor(candidate: Config): ClockPeriodLimitError {
-    return new ClockPeriodLimitError({ terminal_swing_count: 602, base_cycle_ticks: 24080,
-        computed_lcm: 605, effective_lcm: 605, period_ticks: 14568400, limit_ticks: 500000 },
+function refusalFor(candidate: Config): ClockWindowCycleLimitError {
+    return new ClockWindowCycleLimitError({ terminal_swing_count: 602, base_cycle_ticks: 24080,
+        computed_lcm: 605, effective_lcm: 605, window_cycle_ticks: 14568400, limit_ticks: 500000 },
     { config_json: JSON.stringify(candidate), terminal_swing_count: 602 });
 }
 
-function report(outcome: 'inapplicable' | 'failed', reason: string): PrimitiveGroupedAttemptReport {
+function report(outcome: 'inapplicable' | 'failed', reason: string): PrimitiveRoundRobinPollingAttemptReport {
     return { strategy: 'primitive-grouped', eligibility: 'separate-windows-only', outcome, reason,
         attempts: outcome === 'failed' ? [{ construction_key: 'one', stage: 'as-built', reason }] : [] };
 }
 
-function preparedPlan(candidate: Config): PlanRun {
-    return { config: candidate, run: { crafting_cycle_plan: { result_windows: undefined } } } as unknown as PlanRun;
+function preparedPlan(candidate: Config): UnclockedRun {
+    return { config: candidate, logger: quiet, run: { output_cycle_plan: { exhaust: undefined }, simulation_context: {}, duration: {} } } as unknown as UnclockedRun;
 }
 
 function prepareOrdinaryRun(candidate: Config): void {
     const refusal = refusalFor(candidate);
-    mocks.planRun.mockImplementation((next: Config) => {
+    mocks.unclockedRun.mockImplementation((next: Config) => {
         if (next.overrides?.terminal_swing_count === undefined) throw refusal;
         return preparedPlan(next);
     });
     mocks.clockOfPlan.mockReturnValue({ windows: new Map() });
-    mocks.checkedClock.mockImplementation((plan: PlanRun) => {
+    mocks.checkedClock.mockImplementation((plan: UnclockedRun) => {
         const count = plan.config.overrides?.terminal_swing_count ?? 602;
         return result(count, count !== 550);
     });
-    mocks.groupedHandsClock.mockReturnValue(null);
-    mocks.observedWindowsClock.mockReturnValue(result(1, true));
-    mocks.resultWindowsClockOfPlan.mockReturnValue(result(1, true));
+    mocks.roundRobinPollingClock.mockReturnValue(null);
+    mocks.timeStudyWindowsClock.mockReturnValue(result(1, true));
+    mocks.exhaustClockOfPlan.mockReturnValue(result(1, true));
 }
 
 describe('verified primitive bootstrap orchestration', () => {
@@ -114,21 +120,21 @@ describe('verified primitive bootstrap orchestration', () => {
         const candidate = config();
         prepareOrdinaryRun(candidate);
         const constructed = result(1, true, true);
-        mocks.verifiedPrimitiveGroupedClock.mockReturnValue({ clock: constructed, report: acceptedReport });
+        mocks.verifiedPrimitiveRoundRobinPollingClock.mockReturnValue({ clock: constructed, report: acceptedReport });
 
         const generated = generateClockWithSwingBackoff(candidate, options);
 
-        expect(mocks.verifiedPrimitiveGroupedClock).toHaveBeenCalledTimes(1);
-        expect(mocks.verifiedPrimitiveGroupedClock).toHaveBeenCalledWith(candidate, options, 602);
-        expect(mocks.planRun).toHaveBeenCalledTimes(1); // 602 was refused arithmetically; no simulation was invented.
+        expect(mocks.verifiedPrimitiveRoundRobinPollingClock).toHaveBeenCalledTimes(1);
+        expect(mocks.verifiedPrimitiveRoundRobinPollingClock).toHaveBeenCalledWith(candidate, options, 602);
+        expect(mocks.unclockedRun).toHaveBeenCalledTimes(1); // 602 was refused arithmetically; no simulation was invented.
         expect(mocks.checkedClock).not.toHaveBeenCalled();
         expect(generated.used_terminal_swing_count).toBe(2); // Preserve the legacy aggregate report.
-        expect(generated.primitive_grouped?.terminal_swing_count).toBe(1);
+        expect(generated.primitive_round_robin_polling?.terminal_swing_count).toBe(1);
         expect(generated.stability_check.actual_output_items).toBe(16); // Planner output is diagnostic, not as-built verdict.
         expect(generated.swing_backoff_report).toMatchObject({ triggered: false, initial_terminal_swing_count: 1,
             initial_attempt: { terminal_swing_count: 1, holds: true, actual_output_items: 32 }, attempts: [],
             primitive_grouped_attempt: acceptedReport,
-            period_limit_pruning: { requested_terminal_swing_count: 602 } });
+            window_cycle_limit_pruning: { requested_terminal_swing_count: 602 } });
     });
 
     it.each([
@@ -138,43 +144,43 @@ describe('verified primitive bootstrap orchestration', () => {
     ] as const)('falls back unchanged after one primitive %s result', (_name, primitiveReport) => {
         const candidate = config();
         prepareOrdinaryRun(candidate);
-        mocks.verifiedPrimitiveGroupedClock.mockReturnValue({ clock: null, report: primitiveReport });
+        mocks.verifiedPrimitiveRoundRobinPollingClock.mockReturnValue({ clock: null, report: primitiveReport });
 
         const generated = generateClockWithSwingBackoff(candidate, options);
 
-        expect(mocks.verifiedPrimitiveGroupedClock).toHaveBeenCalledTimes(1);
-        expect(mocks.verifiedPrimitiveGroupedClock).toHaveBeenCalledWith(candidate, options, 602);
-        expect(mocks.planRun.mock.calls.map(([next]) => next.overrides?.terminal_swing_count)).toEqual([undefined, 550, 495]);
+        expect(mocks.verifiedPrimitiveRoundRobinPollingClock).toHaveBeenCalledTimes(1);
+        expect(mocks.verifiedPrimitiveRoundRobinPollingClock).toHaveBeenCalledWith(candidate, options, 602);
+        expect(mocks.unclockedRun.mock.calls.map(([next]) => next.overrides?.terminal_swing_count)).toEqual([undefined, 550, 495]);
         expect(mocks.checkedClock.mock.calls.map(([plan]) => plan.config.overrides?.terminal_swing_count)).toEqual([550, 495]);
         expect(generated.used_terminal_swing_count).toBe(495);
         expect(generated.swing_backoff_report).toMatchObject({ triggered: true, initial_terminal_swing_count: 550,
             initial_attempt: { terminal_swing_count: 550, holds: false },
             attempts: [{ terminal_swing_count: 495, holds: true }], primitive_grouped_attempt: primitiveReport,
-            period_limit_pruning: { requested_terminal_swing_count: 602 } });
+            window_cycle_limit_pruning: { requested_terminal_swing_count: 602 } });
     });
 
     it('propagates unexpected primitive adapter errors without starting arithmetic fallback', () => {
         const candidate = config();
         prepareOrdinaryRun(candidate);
         const unexpected = new Error('unexpected adapter failure');
-        mocks.verifiedPrimitiveGroupedClock.mockImplementation(() => { throw unexpected; });
+        mocks.verifiedPrimitiveRoundRobinPollingClock.mockImplementation(() => { throw unexpected; });
 
         expect(() => generateClockWithSwingBackoff(candidate, options)).toThrow(unexpected);
-        expect(mocks.verifiedPrimitiveGroupedClock).toHaveBeenCalledTimes(1);
-        expect(mocks.planRun).toHaveBeenCalledTimes(1);
+        expect(mocks.verifiedPrimitiveRoundRobinPollingClock).toHaveBeenCalledTimes(1);
+        expect(mocks.unclockedRun).toHaveBeenCalledTimes(1);
         expect(mocks.checkedClock).not.toHaveBeenCalled();
     });
 
     it('does not invoke primitive bootstrap for an in-budget first result', () => {
         const candidate = config();
-        mocks.planRun.mockImplementation((next: Config) => preparedPlan(next));
+        mocks.unclockedRun.mockImplementation((next: Config) => preparedPlan(next));
         mocks.clockOfPlan.mockReturnValue({ windows: new Map() });
-        mocks.checkedClock.mockImplementation((plan: PlanRun) => result(plan.config.overrides?.terminal_swing_count ?? 3, true));
+        mocks.checkedClock.mockImplementation((plan: UnclockedRun) => result(plan.config.overrides?.terminal_swing_count ?? 3, true));
 
         const generated = generateClockWithSwingBackoff(candidate, options);
 
         expect(generated.stability_check.holds).toBe(true);
-        expect(mocks.verifiedPrimitiveGroupedClock).not.toHaveBeenCalled();
+        expect(mocks.verifiedPrimitiveRoundRobinPollingClock).not.toHaveBeenCalled();
     });
 
     it('does not invoke primitive bootstrap from a custom generator', () => {
@@ -187,33 +193,33 @@ describe('verified primitive bootstrap orchestration', () => {
 
         expect(generateClockWithSwingBackoff(candidate, options, custom).stability_check.holds).toBe(true);
         expect(custom.mock.calls.map(([next]) => next.overrides?.terminal_swing_count)).toEqual([undefined, 550]);
-        expect(mocks.verifiedPrimitiveGroupedClock).not.toHaveBeenCalled();
+        expect(mocks.verifiedPrimitiveRoundRobinPollingClock).not.toHaveBeenCalled();
     });
 
     it.each([
-        ['explicit count', () => config({ terminal_swing_count: 602 })],
-        ['fractional swings', () => config({ use_fractional_swings: true })],
-        ['destroyed target', () => config(undefined, 'destroyed')],
-    ] as const)('does not bootstrap the %s path', (_name, makeConfig) => {
+        ['explicit count', () => config({ terminal_swing_count: 602 }), options],
+        ['fractional swings', () => config(), { ...options, fractional_swings: true as const }],
+        ['destroyed target', () => config(undefined, 'destroyed'), options],
+    ] as const)('does not bootstrap the %s path', (_name, makeConfig, asked) => {
         const candidate = makeConfig();
         const refusal = refusalFor(candidate);
-        mocks.planRun.mockImplementation(() => { throw refusal; });
+        mocks.unclockedRun.mockImplementation(() => { throw refusal; });
 
-        expect(() => generateClockWithSwingBackoff(candidate, options)).toThrow(refusal);
-        expect(mocks.verifiedPrimitiveGroupedClock).not.toHaveBeenCalled();
-        expect(mocks.planRun).toHaveBeenCalledTimes(1);
+        expect(() => generateClockWithSwingBackoff(candidate, asked)).toThrow(refusal);
+        expect(mocks.verifiedPrimitiveRoundRobinPollingClock).not.toHaveBeenCalled();
+        expect(mocks.unclockedRun).toHaveBeenCalledTimes(1);
     });
 
     it('does not bootstrap with a manual LCM', () => {
         const candidate = config({ lcm: 11 });
         prepareOrdinaryRun(candidate);
-        mocks.checkedClock.mockImplementation((plan: PlanRun) => result(plan.config.overrides?.terminal_swing_count ?? 602, true));
-        expect(primitiveGroupedOptionsSupported(candidate, options)).toBe(false);
+        mocks.checkedClock.mockImplementation((plan: UnclockedRun) => result(plan.config.overrides?.terminal_swing_count ?? 602, true));
+        expect(primitiveRoundRobinPollingOptionsSupported(candidate, options)).toBe(false);
 
         try { generateClockWithSwingBackoff(candidate, options); }
-        catch (error) { expect(error).toBeInstanceOf(ClockPeriodLimitError); }
+        catch (error) { expect(error).toBeInstanceOf(ClockWindowCycleLimitError); }
 
-        expect(mocks.verifiedPrimitiveGroupedClock).not.toHaveBeenCalled();
+        expect(mocks.verifiedPrimitiveRoundRobinPollingClock).not.toHaveBeenCalled();
     });
 
     it.each([
@@ -224,20 +230,20 @@ describe('verified primitive bootstrap orchestration', () => {
     ] as const)('does not bootstrap with %s', (_name, makeConfig, actualOptions) => {
         const candidate = makeConfig();
         prepareOrdinaryRun(candidate);
-        mocks.checkedClock.mockImplementation((plan: PlanRun) => result(plan.config.overrides?.terminal_swing_count ?? 602, true));
-        expect(primitiveGroupedOptionsSupported(candidate, actualOptions)).toBe(false);
-        if (actualOptions.shared_windows === true) mocks.groupedHandsClock.mockReturnValue(result(550, true));
+        mocks.checkedClock.mockImplementation((plan: UnclockedRun) => result(plan.config.overrides?.terminal_swing_count ?? 602, true));
+        expect(primitiveRoundRobinPollingOptionsSupported(candidate, actualOptions)).toBe(false);
+        if (actualOptions.shared_windows === true) mocks.roundRobinPollingClock.mockReturnValue(result(550, true));
 
         const generated = generateClockWithSwingBackoff(candidate, actualOptions);
 
         expect(generated.stability_check.holds).toBe(true);
-        expect(mocks.verifiedPrimitiveGroupedClock).not.toHaveBeenCalled();
+        expect(mocks.verifiedPrimitiveRoundRobinPollingClock).not.toHaveBeenCalled();
         if (candidate.overrides?.derive_clock_windows === true) {
-            expect(mocks.observedWindowsClock).toHaveBeenCalledTimes(1);
-            expect(mocks.planRun).not.toHaveBeenCalled();
+            expect(mocks.timeStudyWindowsClock).toHaveBeenCalledTimes(1);
+            expect(mocks.unclockedRun).not.toHaveBeenCalled();
         } else {
-            expect(mocks.planRun.mock.calls[0][0]).toBe(candidate);
-            expect(mocks.planRun).toHaveBeenCalledTimes(2);
+            expect(mocks.unclockedRun.mock.calls[0][0]).toBe(candidate);
+            expect(mocks.unclockedRun).toHaveBeenCalledTimes(2);
         }
     });
 });

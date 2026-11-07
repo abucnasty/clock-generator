@@ -11,8 +11,8 @@ class Worker {
     terminate = vi.fn();
     answer(data: WorkerResponse) { this.onmessage?.({ data }); }
 }
-const request = { config: {}, mode: 'clock', period_ticks: 100, terminal_swing_count: 1, windows: {} } as RecordTimelineRequest;
-const recording: TimelineRecording = { version: 1, mode: 'clock', start_tick: 0, end_tick: 100, period_ticks: 100, requested_ticks: 100, ticks_before_recording: 1000, ticks_per_second: 60, copies: 1, truncated: false, entities: [], events: [] };
+const request = { config: {}, mode: 'clock', window_cycle_ticks: 100, terminal_swing_count: 1, windows: {} } as RecordTimelineRequest;
+const recording: TimelineRecording = { version: 1, mode: 'clock', start_tick: 0, end_tick: 100, window_cycle_ticks: 100, requested_ticks: 100, ticks_before_recording: 1000, ticks_per_second: 60, copies: 1, truncated: false, entities: [], events: [] };
 const settle = () => Promise.resolve();
 let workers: Worker[];
 beforeEach(() => { workers = []; clearTimelineRecordingCache(); mocks.load.mockResolvedValue('{}'); mocks.create.mockImplementation(() => { const worker = new Worker(); workers.push(worker); return worker; }); });
@@ -43,7 +43,7 @@ describe('on-demand recording worker', () => {
     it('keys the saved build, domain, period, windows and independent fuel clocks', async () => {
         const first = requestTimelineRecording(request, new AbortController().signal);
         workers[0].answer({ type: 'answer', requestId: 1, answer: recording }); await first;
-        for (const change of [{ mode: 'plan' }, { period_ticks: 90 }, { config: { overrides: { backed_up_belts: true } } }, { windows: { 'inserter:1': [{ start: 1, end: 8 }] } }, { inserter_clocks: { 'inserter:1': { modulus: 30 } } }]) {
+        for (const change of [{ mode: 'plan' }, { window_cycle_ticks: 90 }, { config: { overrides: { backed_up_belts: true } } }, { windows: { 'inserter:1': [{ start: 1, end: 8 }] } }, { inserter_clocks: { 'inserter:1': { modulus: 30 } } }]) {
             const controller = new AbortController(); const pending = requestTimelineRecording({ ...request, ...change } as RecordTimelineRequest, controller.signal);
             controller.abort(); await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
         }

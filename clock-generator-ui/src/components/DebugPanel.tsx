@@ -26,7 +26,7 @@ interface DebugPanelProps {
 
 const STEP_LABELS = {
     prepare: 'Prepare Step',
-    warm_up: 'Warm Up Step',
+    warm_up: 'Steady-State Run-Up Step',
     simulate: 'Simulate Step',
 } as const;
 

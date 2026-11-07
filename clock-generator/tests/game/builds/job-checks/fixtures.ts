@@ -23,13 +23,13 @@ function beltPickupChecks(family: 'electromagnetic' | 'same-item', name: string)
             expect(native, 'every ordinary speed/layout/supply combination has a native control').toBeDefined();
             expect(pin, 'and a pin of the selection its native summary was recorded on').toBeDefined();
             const selected = selectedOf(generated);
-            const period = selected.result.subtick?.clock.period_ticks ?? selected.result.simulation_duration.ticks;
+            const window_cycle = selected.result.subtick?.clock.window_cycle_ticks ?? selected.result.simulation_duration.ticks;
             if (pin!.as_built) expect(selected.result.stability_check.as_built, "the model's lane-phase evidence of the selection").toMatchObject(pin!.as_built);
             expect(generated.why_not_stable?.cause).toBe(pin!.why_not_stable);
-            expect(Math.round(config.target_output.items_per_second * period / 60 * 1e6) / 1e6).toBe(pin!.expected);
+            expect(Math.round(config.setpoint.items_per_second * window_cycle / 60 * 1e6) / 1e6).toBe(pin!.expected);
             if (runHolds(native)) {
                 expect(selected.verdict).toBe('stable');
-                expect(selected.assessment.items_per_second).toBe(config.target_output.items_per_second);
+                expect(selected.assessment.items_per_second).toBe(config.setpoint.items_per_second);
                 expect(selected.belt?.kind).toBe(variant.backed ? 'backed_up' : 'moving');
                 expect(generated.why_not_stable).toBeNull();
             } else {

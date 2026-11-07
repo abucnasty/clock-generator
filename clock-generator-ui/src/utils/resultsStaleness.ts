@@ -39,9 +39,9 @@ export function configKeyOf(config: Config): string {
 export function generatedForOf(config: Config, at: number = Date.now()): GeneratedFor {
     return {
         key: configKeyOf(config),
-        recipe: config.target_output.recipe,
-        itemsPerSecond: config.target_output.items_per_second,
-        ...(config.target_output.counts === 'destroyed' && { counts: 'destroyed' as const }),
+        recipe: config.setpoint.recipe,
+        itemsPerSecond: config.setpoint.items_per_second,
+        ...(config.setpoint.counts === 'destroyed' && { counts: 'destroyed' as const }),
         beltQuestion: beltQuestionOf(config),
         generatedAt: at,
     };

@@ -14,7 +14,7 @@ describe("generateClockForConfig", () => {
     describe("agricultural science: windows for the inserters of the egg loop", async () => {
         const sample = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250);
 
-        it("counts a clock's windows without those of its feeders; the 5-swing clock does not get back from the nutrients loss and the 2-swing one is selected", () => {
+        it("counts a clock's windows without those of its feeders; the 5-swing clock does not go back to its rate by itself after a supply stop or an output blockage and the 2-swing one is selected", () => {
             // With hands of 12 on the sample this was 354 windows with the feeders', 324 without: the 3-swing clock has
             // 336 and was selected while the fewest windows were, before the windows of the feeders were left out of the
             // count. Wake-ups decide now, which the windows of the feeders bring down, and the windows only between
@@ -22,10 +22,10 @@ describe("generateClockForConfig", () => {
             // it puts into is at its block) the sample with hands of 12 keeps no windows for its feeders, and the case is
             // made with egg biochambers at speed 80 and feeder hands of 8: 118 windows with the feeders', 108 without.
             //
-            // The batched 5-swing clock (480 ticks) reads 108 windows with and without the feeders'. The simulator serves
+            // The batched 5-swing clock (480 ticks) reads 100 windows with and without the feeders'. The simulator serves
             // the takers of one machine in the order the game serves them and judges a clock under every order
-            // (docs/simulator.md, docs/stability.md): the 5-swing clock holds but does not get back after the nutrients
-            // stop arriving, and the 3-swing clock does not hold. The clocks of 1 and 2 swings get back from every loss and
+            // (docs/simulator.md, docs/stability.md): the 5-swing clock holds but does not get back after the bioflux
+            // stops arriving, and the 3-swing clock does not hold. The clocks of 1 and 2 swings get back from every loss and
             // the 2-swing clock is selected (GOALS.md, "Backpressure Loss").
             const config: Config = {
                 ...sample,
@@ -33,20 +33,23 @@ describe("generateClockForConfig", () => {
                 inserters: sample.inserters.map(it => it.id === 9 || it.id === 10 ? { ...it, stack_size: 8 } : it),
             };
             const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
-            const five_swings = alternatives.find(it => it.id === "planned-belt-slack")!;
-            const three_swings = alternatives.find(it => it.id === "swings-3")!;
+            const five_swings = alternatives.find(it => it.maker === "planned-belt-slack")!;
+            const three_swings = alternatives.find(it => it.maker === "swings-3")!;
             expect(five_swings.verdict).toBe("no recovery");
-            expect(five_swings.assessment.backpressure_loss).toMatchObject({ survives: false, broken_by: ["nutrients stops arriving"] });
-            expect(five_swings.inserter_window_count).toBe(108);
-            expect(five_swings.ranking_window_count).toBe(108);
+            // its windows shaped against ghost wakeups (#641) wake fewer and do not get back from the bioflux loss; the
+            // planned windows broke on the nutrients loss, the first tried
+            expect(five_swings.assessment.disturbance_trial).toMatchObject({ survives: false, broken_by: ["bioflux stops arriving"] });
+            // 108 windows before 8 were dropped against ghost wakeups (#641)
+            expect(five_swings.inserter_window_count).toBe(100);
+            expect(five_swings.ranking_window_count).toBe(100);
             expect(five_swings.result.simulation_duration.ticks).toBe(480);
             expect(three_swings.ranking_window_count).toBe(336);
             expect(three_swings.verdict).toBe("unstable");
-            expect(alternatives.filter(it => it.verdict === "stable").map(it => it.id).sort()).toEqual(["swings-1", "swings-2"]);
+            expect(alternatives.filter(it => it.verdict === "stable").map(it => it.maker).sort()).toEqual(["swings-1", "swings-2"]);
             const selected = alternatives[selected_index];
-            expect(selected.id).toBe("swings-2");
+            expect(selected.maker).toBe("swings-2");
             expect(selected.verdict).toBe("stable");
-            expect(selected.assessment.backpressure_loss).toMatchObject({ survives: true, broken_by: [] });
+            expect(selected.assessment.disturbance_trial).toMatchObject({ survives: true, broken_by: [] });
         });
     });
 });

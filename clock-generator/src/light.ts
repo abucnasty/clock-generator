@@ -38,6 +38,8 @@ export { StatusCategory, statusToCategory } from "./state/status-category";
 
 export { combineClockAlternativeRuns, searchesAreNeeded, searchesToRun } from "./crafting/rank";
 
+export { coordinatedSourcesInputOf } from "./crafting/candidates/coordinated-sources-parts";
+
 export { whyNotStable, whyNotStableClockOf } from "./crafting/why-not-stable";
 
 export { Option } from "./data-types/option";
@@ -46,6 +48,9 @@ export { COPIES_DECIMAL_ERROR, isShortDecimalCopies } from "./config/copies-valu
 export { fraction } from "./data-types/fraction";
 export { migrateBeltSupplyOverrides } from "./config/migrate-belt-supply";
 export { dropFractionalSwingsOverride } from "./config/migrate-fractional-swings";
+export { renameLoopSeedItemsToKickStart } from "./config/migrate-kick-start";
+export { renameTargetOutputToSetpoint } from "./config/migrate-setpoint";
+export { renameClockedPeriodInConfig } from "./config/migrate-window-cycle";
 export { BLOCKED_SLOT_MARKERS } from "./config/migrate-blocked-slots";
 export { migrateMiningProductivityLevel, PRODUCTIVITY_PER_MINING_LEVEL } from "./config/migrate-mining-productivity";
 
@@ -96,3 +101,5 @@ export type {
     SharedVertex,
     TerminalKind,
 } from "./data-types/planner-graph";
+
+export { catalogRowOf, routerRowOf, settingChipsOf, strategyRowOf } from "./crafting/strategy-catalog";

@@ -71,7 +71,7 @@
         "expected": 4992.0,
         "verdict": "stable",
         "selection": {
-          "id": "planned-belt-slack-subtick",
+          "id": "takt_batches_observed_subtick",
           "holds": true,
           "rate": 26,
           "supply": null
@@ -149,7 +149,7 @@
         "expected": 4992.0,
         "verdict": "stable",
         "selection": {
-          "id": "planned-belt-slack-subtick",
+          "id": "takt_batches_observed_subtick",
           "holds": true,
           "rate": 26,
           "supply": null
@@ -227,7 +227,7 @@
         "expected": 1664.0,
         "verdict": "stable",
         "selection": {
-          "id": "planned-belt-slack-subtick",
+          "id": "takt_batches_observed_subtick",
           "holds": true,
           "rate": 26.000000000000004,
           "supply": null

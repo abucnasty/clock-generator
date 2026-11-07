@@ -38,16 +38,16 @@ function exportedClockText(fuel: FuelViewData): string {
     const fuelClocks = `${moduli.length === 1 ? 'a fuel clock' : 'fuel clocks'} of ${moduli.join(' and ')} ticks`;
     if (plan.merged_clock_ticks !== null) {
         return `One clock counts ${plan.merged_clock_ticks.toLocaleString()} ticks, the least common multiple of the `
-            + `${plan.period_ticks} tick clock period and ${fuelClocks}. Modulo combinators give the clock period and each fuel clock from it.`;
+            + `${plan.window_cycle_ticks} tick window cycle and ${fuelClocks}. Modulo combinators give the window cycle and each fuel clock from it.`;
     }
     return `The blueprint has ${fuelClocks} next to the main clock, each with a counter of its own, because `
         + (plan.separate_clocks_reason === 'fractional_period'
-            ? `the ${plan.period_ticks.toFixed(3)} tick clock period is not a whole number of ticks.`
+            ? `the window cycle time, ${plan.window_cycle_ticks.toFixed(3)} ticks, is not a whole number of ticks.`
             : 'one clock for all of them would count further than a signal can hold.');
 }
 
 function RanOutAlert({ run }: { run: FuelRunView }) {
-    const span = `${run.durationTicks} ticks (${run.periods} clock periods)`;
+    const span = `${run.durationTicks} ticks (${run.window_cycles} window cycles)`;
     const empty = run.levels.filter(levels => levels.empty_ticks > 0);
     if (empty.length > 0) {
         return (
@@ -85,7 +85,7 @@ function MachineTable({ machines, run }: { machines: FuelMachinePlan[]; run: Fue
         { header: 'Burn while crafting', align: 'right', cell: machine => `${machine.burn_rate_per_second.toFixed(3)}/s` },
         { header: 'Crafts', align: 'right', cell: machine => percent(machine.crafting_share) },
         { header: 'Effective burn', align: 'right', cell: machine => `${machine.effective_burn_rate_per_second.toFixed(3)}/s` },
-        { header: 'Per clock period', align: 'right', cell: machine => machine.burned_per_period.toFixed(2) },
+        { header: 'Per window cycle', align: 'right', cell: machine => machine.burned_per_window_cycle.toFixed(2) },
         { header: `Limit of ${machines[0]?.insertion_limit} lasts`, align: 'right', cell: machine => machine.insertion_limit_lasted_at_least_ticks === undefined
             ? ticksAndSeconds(machine.insertion_limit_lasts_ticks)
             : `at least ${ticksAndSeconds(machine.insertion_limit_lasted_at_least_ticks)}` },
@@ -106,15 +106,15 @@ function InserterTable({ inserters, run }: { inserters: FuelInserterPlan[]; run:
         { header: 'Inserter', cell: inserter => entityLabel('inserter', inserter.inserter_number) },
         { header: 'Feeds', cell: inserter => entityLabel('machine', inserter.machine_number) },
         { header: 'Switched on every', align: 'right', cell: inserter => `${inserter.modulus} ticks` },
-        { header: 'Wake window (ticks)', align: 'right', cell: inserter => `${inserter.window.start} to ${inserter.window.end}` },
-        { header: 'Wake windows', align: 'right', cell: inserter => `${inserter.enables_per_minute.toFixed(1)}/min` },
+        { header: 'Enable window (ticks)', align: 'right', cell: inserter => `${inserter.window.start} to ${inserter.window.end}` },
+        { header: 'Enable windows', align: 'right', cell: inserter => `${inserter.enables_per_minute.toFixed(1)}/min` },
         { header: 'A hand lasts', align: 'right', cell: inserter => `${inserter.hand_size} for ${ticksAndSeconds(inserter.hand_lasts_ticks)}` },
         { header: 'Expected swings', align: 'right', cell: inserter => `${inserter.expected_swings_per_minute.toFixed(1)}/min` },
-        { header: 'Wake windows with a swing', align: 'right', cell: inserter => percent(inserter.swing_share) },
+        { header: 'Enable windows with a swing', align: 'right', cell: inserter => percent(inserter.swing_share) },
         run !== null && { header: 'Simulated swings', align: 'right', cell: inserter => {
             const swings = run.swings[inserter.inserter_id] ?? [];
             const enables = Math.ceil(run.durationTicks / inserter.modulus);
-            return `${swings.length} in ${enables} wake windows (${(swings.length / run.durationTicks * 3600).toFixed(1)}/min)`;
+            return `${swings.length} in ${enables} enable windows (${(swings.length / run.durationTicks * 3600).toFixed(1)}/min)`;
         } },
     ]} />;
 }
@@ -355,16 +355,16 @@ function FuelPanelComponent({ fuel }: FuelPanelProps) {
             {/* inside Results' Details, under its Fuel tab: the cards are a level below the section */}
             <Panel title="Fuel consumption" level={3}>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                    A machine burns fuel only while it crafts, so it burns its crafting share of the rate over a clock period.
+                    A machine burns fuel only while it crafts, so it burns its crafting share of the rate over a window cycle.
                 </Typography>
                 <MachineTable machines={plan.machines} run={run} />
             </Panel>
 
             <Panel title="Fuel clocks" level={3}>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                    A fuel clock switches its inserter on for a few ticks (a wake window) as often as the fuel slot's limit
-                    lasts, whatever the clock period is. The inserter only swings when the slot is below the limit, so most
-                    wake windows pass without a swing. {exportedClockText(fuel)}
+                    A fuel clock switches its inserter on for a few ticks (an enable window) as often as the fuel slot's limit
+                    lasts, whatever the window cycle time is. The inserter only swings when the slot is below the limit, so most
+                    enable windows pass without a swing. {exportedClockText(fuel)}
                 </Typography>
                 <InserterTable inserters={plan.inserters} run={run} />
             </Panel>
@@ -372,7 +372,7 @@ function FuelPanelComponent({ fuel }: FuelPanelProps) {
             {run && (
                 <Panel title="Fuel timeline" level={3} sx={{ mb: 0 }}>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        The exported clock run for {run.periods} clock periods: {durationText(run.durationTicks)}.
+                        The blueprint clock run for {run.window_cycles} window cycles: {durationText(run.durationTicks)}.
                         The dashed line is the fuel slot's limit.
                     </Typography>
                     <FuelTimeline fuel={fuel} run={run} />

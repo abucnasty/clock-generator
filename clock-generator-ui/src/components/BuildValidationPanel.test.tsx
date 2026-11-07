@@ -36,7 +36,7 @@ it('renders one named validation panel with one chest error, preserving the repa
     const { user, onEnableRemoval } = panel([infinityChest(7, { remove_unfiltered_items: undefined })],
         [inserter(2, { sink: { type: 'chest', id: 7 } })]);
     const row = screen.getByRole('group', { name: 'Chest 7 needs output removal enabled' });
-    expect(screen.getByRole('region', { name: 'Build validation' }).contains(row)).toBe(true);
+    expect(screen.getByRole('region', { name: 'Build check' }).contains(row)).toBe(true);
     expect(screen.getByText('1 error')).toBeDefined();
     expect(screen.getAllByText('Chest 7 needs output removal enabled')).toHaveLength(1);
     expect(document.getElementById('validation-issue-chest:7:removal-disabled')).toBe(row);
@@ -101,7 +101,7 @@ it('shows a refusal of two problems as two errors, opened once and with no confi
             diagnostics: [{ kind: 'refusal', opening, problems: [machineLimit, inserterLimit] }] } });
     show(<BuildValidationPanel issues={issues} machines={[]} belts={[]} chests={[]} inserters={[]}
         onApplyFix={vi.fn()} onSwitchType={vi.fn()} onEnableRemoval={vi.fn()} onReview={vi.fn()} />);
-    const panel = screen.getByRole('region', { name: 'Build validation' });
+    const panel = screen.getByRole('region', { name: 'Build check' });
     expect(within(panel).getByText('2 errors')).toBeDefined();
     expect(within(panel).getAllByText(opening)).toHaveLength(1);
     const items = within(panel).getAllByRole('group');
@@ -113,10 +113,25 @@ it('shows a refusal of two problems as two errors, opened once and with no confi
 it('names a schema error by the field the player sees and keeps its button to the field', async () => {
     const onReview = vi.fn();
     const issues = buildValidationIssues({ fieldProblems: [], coverage: [], chests: [], inserters: [], machines: [{ id: 1 }], chestIssues: [],
-        coverageText: () => '', failure: { message: 'x', diagnostics: [{ kind: 'field', path: ['target_output', 'items_per_second'], message: 'Too small' }] } });
+        coverageText: () => '', failure: { message: 'x', diagnostics: [{ kind: 'field', path: ['setpoint', 'items_per_second'], message: 'Too small' }] } });
     const { user } = show(<BuildValidationPanel issues={issues} machines={[]} belts={[]} chests={[]} inserters={[]}
         onApplyFix={vi.fn()} onSwitchType={vi.fn()} onEnableRemoval={vi.fn()} onReview={onReview} />);
     expect(screen.getByText('Items per Second: Too small')).toBeDefined();
     await user.click(screen.getByRole('button', { name: 'Review setting' }));
     expect(onReview).toHaveBeenCalledExactlyOnceWith({ kind: 'target-rate' });
+});
+
+it('points at each inserter the engine refuses (#650): one button per named inserter, to its row', async () => {
+    const message = 'Inserters 3 and 5 take from a belt and drop into something other than a machine: inserter 3 takes from belt 4 and drops into chest 2; '
+        + 'inserter 5 takes from belt 3 and drops into chest 1. Taking from a belt into anything but a machine is not supported, so this build cannot be clocked. '
+        + 'Make each of them drop into a machine, so that the machine is fed straight from the belt.';
+    const issues = buildValidationIssues({ fieldProblems: [], coverage: [], chests: [], inserters: [], machines: [{ id: 1 }], chestIssues: [],
+        coverageText: () => '', scopeRefusal: message, scopeRefusalInserters: [3, 5] });
+    const onReviewInserter = vi.fn();
+    const { user } = show(<BuildValidationPanel issues={issues} machines={[]} belts={[]} chests={[]} inserters={[]}
+        onApplyFix={vi.fn()} onSwitchType={vi.fn()} onEnableRemoval={vi.fn()} onReview={vi.fn()} onReviewInserter={onReviewInserter} />);
+    expect(screen.getAllByText(message)).toHaveLength(1);
+    await user.click(screen.getByRole('button', { name: 'Review inserter 5' }));
+    expect(onReviewInserter).toHaveBeenCalledExactlyOnceWith(5);
+    expect(screen.getByRole('button', { name: 'Review inserter 3' })).toBeDefined();
 });

@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { TARGET_OUTPUT_HEADING_ID } from '../utils/introCard';
+import { SETPOINT_HEADING_ID } from '../utils/introCard';
 import { ManualBlueprintDialog } from './ManualBlueprintDialog';
 
 let trigger: HTMLElement, toggle: HTMLElement, heading: HTMLElement;
@@ -17,7 +17,7 @@ const notRendered = (element: HTMLElement) => vi.spyOn(element, 'getClientRects'
 beforeEach(() => {
     // a browser computes the initial visibility as visible; happy-dom leaves it empty unless it is set
     document.documentElement.style.visibility = 'visible';
-    document.body.innerHTML = `<h2 id="${TARGET_OUTPUT_HEADING_ID}" tabindex="-1">Target output</h2>
+    document.body.innerHTML = `<h2 id="${SETPOINT_HEADING_ID}" tabindex="-1">Target output</h2>
         <div data-focus-fallback><button aria-pressed="true">Generate</button><button aria-pressed="false">Check only</button></div>
         <button>Copy blueprint</button>`;
     trigger = screen.getByRole('button', { name: 'Copy blueprint' });

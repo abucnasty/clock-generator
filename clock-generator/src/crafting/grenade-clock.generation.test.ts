@@ -1,5 +1,5 @@
 import {expect, test} from "vitest";
-import {backpressureLossOf, clockFromWindows, generateClockAlternatives} from "./generate-blueprint";
+import {disturbanceTrialOf, clockFromWindows, generateClockAlternatives} from "./generate-blueprint";
 import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
 
@@ -10,7 +10,7 @@ const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 
 test("grenade: copies a tile closer put hands on each other, and the insight says so", async () => {
     const config = await loadConfigFromFile(ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY);
-    const closer = {...config, target_output: {...config.target_output, copy_offset: {x: 11, y: 0}}};
+    const closer = {...config, setpoint: {...config.setpoint, copy_offset: {x: 11, y: 0}}};
     const made = generateClockAlternatives(closer, {logger: quiet});
     const selected = made.alternatives[made.selected_index];
     const insight = selected.insights.find(it => it.id === "drop-spacing")!;
@@ -19,7 +19,7 @@ test("grenade: copies a tile closer put hands on each other, and the insight say
         + "13, 15, 17, 19, 23 or 25 apart only with a copy's inserters 7 tiles apart; 14 or 21 apart never. The same holds at any of these spacings plus 14.");
 });
 
-test("grenade: the hand-made clock, as windows, holds in the simulator and gets back after every loss", async () => {
+test("grenade: the hand-made clock, as windows, holds in the simulator and goes back to its rate by itself after every supply stop and output blockage", async () => {
     const config = await loadConfigFromFile(ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY);
     const range = (start: number, end: number) => [{start, end}];
     // counted 0 to 111; a window decider reads the counter, so its first value is the window's first tick
@@ -32,5 +32,5 @@ test("grenade: the hand-made clock, as windows, holds in the simulator and gets 
     const made = clockFromWindows(forced, windows, 112, quiet);
     expect(made.stability_check.as_built?.holds).toBe(true);
     expect(made.stability_check.as_built?.actual_output_items).toBe(64);
-    expect(backpressureLossOf(forced, windows, 112, 64, quiet).survives).toBe(true);
+    expect(disturbanceTrialOf(forced, windows, 112, 64, quiet).survives).toBe(true);
 });

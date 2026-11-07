@@ -6,6 +6,9 @@ import { parseConfig } from "./loader";
 import { migrateBeltSupplyOverrides } from "./migrate-belt-supply";
 import { migrateBlockedSlotFilter } from "./migrate-blocked-slots";
 import { dropFractionalSwingsOverride } from "./migrate-fractional-swings";
+import { renameLoopSeedItemsToKickStart } from "./migrate-kick-start";
+import { renameTargetOutputToSetpoint } from "./migrate-setpoint";
+import { renameClockedPeriodInConfig } from "./migrate-window-cycle";
 import { migrateChestType } from "./migrate-chest-type";
 import { migrateMachineType } from "./migrate-machine-type";
 import { migrateMiningProductivityLevel } from "./migrate-mining-productivity";
@@ -32,11 +35,15 @@ const MIGRATIONS: Record<string, (config: Raw) => Raw> = {
         object(chest) ? at(chest, "slot_filters", filters => each(filters, migrateBlockedSlotFilter)) : chest)),
     "non-moving-belts": config => at(config, "overrides", migrateBeltSupplyOverrides),
     "fractional-swings": config => at(config, "overrides", dropFractionalSwingsOverride),
+    "target-output": config => renameTargetOutputToSetpoint(config) as Raw,
+    "loop-seed-items": config => at(config, "overrides", renameLoopSeedItemsToKickStart),
+    "period-duration-ticks": config => renameClockedPeriodInConfig(config) as Raw,
 };
 
 /** The schema's preprocess steps that MIGRATIONS holds (`z.preprocess(<step>, ...)` in schema.ts) */
 const SCHEMA_STEPS = ["normalizePickupCaptureConfig", "migrateMachineTypeStep", "migrateMiningProductivityLevelStep",
-    "migrateBlockedSlotFilter", "migrateBeltSupplyOverrides", "dropFractionalSwingsOverride"];
+    "migrateBlockedSlotFilter", "migrateBeltSupplyOverrides", "dropFractionalSwingsOverride", "renameLoopSeedItemsToKickStart", "renameTargetOutputToSetpoint",
+    "renameClockedPeriodToWindowCycle"];
 
 const migrated = (config: Raw) => Object.values(MIGRATIONS).reduce((value, step) => step(value), config);
 const read = (file: string) => JSON.parse(fs.readFileSync(file, "utf8")) as Raw;
@@ -49,7 +56,7 @@ function sampleConfigs(dir: string): string[] {
         if (!entry.name.endsWith(".json")) return [];
         const value: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
         const config = object(value) && Array.isArray(value.machines);
-        return config && (object(value.target_output) || entry.name.endsWith(".sidecar-export.json")) ? [file] : [];
+        return config && (object(value.setpoint) || entry.name.endsWith(".sidecar-export.json")) ? [file] : [];
     });
 }
 

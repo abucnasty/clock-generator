@@ -4,7 +4,7 @@ import path from "path";
 const ENGINE = path.resolve(__dirname, "../../..");
 
 /**
- * Every config the repository keeps with a target under a folder: the files that hold `machines` and a `target_output`
+ * Every config the repository keeps with a target under a folder: the files that hold `machines` and a `setpoint`
  * (a Sidecar export has no target: it is not a config the generator runs)
  */
 function sampleConfigs(dir: string): string[] {
@@ -14,7 +14,7 @@ function sampleConfigs(dir: string): string[] {
         if (!entry.name.endsWith(".json")) return [];
         const value: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
         const config = typeof value === "object" && value !== null && Array.isArray((value as { machines?: unknown }).machines);
-        return config && typeof (value as { target_output?: unknown }).target_output === "object" ? [file] : [];
+        return config && typeof (value as { setpoint?: unknown }).setpoint === "object" ? [file] : [];
     });
 }
 

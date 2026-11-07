@@ -1,5 +1,5 @@
 import type { TimelineEvent, TimelineRecording, TimelineValue } from 'clock-generator/browser';
-import { craftingCycles } from './craftingCycles';
+import { outputCycles } from './outputCycles';
 import { timelineValueAt, upperBound } from './timelineInspection';
 
 export function flowReplayIndex(recording: TimelineRecording) {
@@ -49,8 +49,8 @@ export function flowEventSummary(events: TimelineEvent[], entityId: string) {
 }
 
 /** The recorder rounds its last simulated tick up; that fraction is not an extra planned cycle. */
-export function flowReplayCycles(cycleTicks: number, recording: Pick<TimelineRecording, 'period_ticks' | 'end_tick'>) {
-    return craftingCycles(cycleTicks, Math.min(recording.end_tick, recording.period_ticks));
+export function flowReplayCycles(cycleTicks: number, recording: Pick<TimelineRecording, 'window_cycle_ticks' | 'end_tick'>) {
+    return outputCycles(cycleTicks, Math.min(recording.end_tick, recording.window_cycle_ticks));
 }
 
 /** Transfer stepping follows whole routes through connected inserters, not machine production events. */

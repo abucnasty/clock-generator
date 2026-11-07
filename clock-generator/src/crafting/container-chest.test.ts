@@ -38,7 +38,7 @@ it('gives a mixed car the item of its last slot first, across stacks, and waits 
     // as the game did: iron 40 in slot 1, copper 100 in 2, gears 30 in 5, iron 100 in 9; an unfiltered inserter into a
     // disposal chest took iron (16 from slot 9 at a time, then 4 of it and 12 from slot 1), then the gears of slot 5
     const context = SimulationContext.fromConfig(ConfigSchema.parse({
-        target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
         machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],
         inserters: [
             { id: 1, source: { type: 'chest', id: 1 }, sink: { type: 'chest', id: 2 } },

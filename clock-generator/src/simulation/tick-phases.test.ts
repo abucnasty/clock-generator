@@ -31,7 +31,7 @@ const EXPECTED: readonly { name: string; entities: TickPhaseRow["entities"]; run
  * feeders of one machine, a machine that places its results, containers.
  */
 const BUILD: Config = ConfigSchema.parse({
-    target_output: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+    setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
     machines: [
         { id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 30 },
         { id: 2, recipe: "iron-gear-wheel-recycling", productivity: 0, crafting_speed: 0.5, prototype: "recycler", result_target: { type: "chest", id: 2 } },

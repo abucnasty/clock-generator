@@ -8,7 +8,7 @@ import { assertFeasible } from "./assert-feasible";
 import { targetRateMaxOf } from "./max-rate";
 
 const withRate = (config: Config, items_per_second: number): Config =>
-    ConfigSchema.parse({ ...config, target_output: { ...config.target_output, items_per_second } });
+    ConfigSchema.parse({ ...config, setpoint: { ...config.setpoint, items_per_second } });
 
 /** Whether the feasibility pass refuses the config */
 function refused(config: Config): boolean {
@@ -22,7 +22,7 @@ function refused(config: Config): boolean {
 }
 
 /** The most one copy's target can be, over all copies, rounded down to the thousandth as a player types it */
-const typedMax = (config: Config, max: number): number => Math.floor(max * config.target_output.copies * 1000) / 1000;
+const typedMax = (config: Config, max: number): number => Math.floor(max * config.setpoint.copies * 1000) / 1000;
 
 describe("the most a target can be agrees with the feasibility pass over the samples", () => {
     const samples = Object.entries(ConfigPaths);
@@ -32,8 +32,8 @@ describe("the most a target can be agrees with the feasibility pass over the sam
         // the sample's own target is carried: it is never above the maximum
         expect(refused(config)).toBe(false);
         if (max === null) return;
-        const total = max.per_copy_per_second * config.target_output.copies;
-        expect(total).toBeGreaterThanOrEqual(config.target_output.items_per_second * (1 - 1e-9));
+        const total = max.per_copy_per_second * config.setpoint.copies;
+        expect(total).toBeGreaterThanOrEqual(config.setpoint.items_per_second * (1 - 1e-9));
         expect(refused(withRate(config, typedMax(config, max.per_copy_per_second)))).toBe(false);
         expect(refused(withRate(config, Math.ceil(total * 1000 + 1) / 1000))).toBe(true);
         expect(max.limit).toBeNull();

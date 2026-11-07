@@ -56,7 +56,7 @@ interface StateTransitionTimelineProps {
     fullscreen?: boolean;
 }
 
-const CLOCK_WINDOW_LABEL = 'Wake window (decider on; the inserter reacts 2 ticks later)';
+const CLOCK_WINDOW_LABEL = 'Enable window (decider on; the inserter reacts 2 ticks later)';
 
 /** The thin strip under each row that shows the state the entity would show in Factorio */
 const FACTORIO_STATE_STRIP_HEIGHT = 6;

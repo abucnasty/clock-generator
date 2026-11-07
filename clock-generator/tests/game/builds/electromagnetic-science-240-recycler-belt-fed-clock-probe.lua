@@ -18,12 +18,12 @@ local all_entities, _, _, settle = ...
 local placed_at = game.tick
 local function run_probe(entities)
 local ITEM = "electromagnetic-science-pack"
--- what each branch carries a period, and how far a branch whose drain never blocks may fall behind it
+-- what each branch carries a window cycle, and how far a branch whose drain never blocks may fall behind it
 local SHARE, HAND = options.share_per_period or 16, options.hand or 16
 local outputs, recyclers, science, capacitors, bends, disposal, inserters = {}, {}, {}, {}, {}, {}, {}
 local feeds, feed_units, output_units, bend_units, red_units = {}, {}, {}, {}, {}
 local science_units, capacitor_units, recycler_units, buffers = {}, {}, {}, {}
-local report = {period = options.period, topology = {}, events = {}, evidence = {}}
+local report = {window_cycle_ticks = options.window_cycle_ticks, topology = {}, events = {}, evidence = {}}
 local function write() helpers.write_file("electromagnetic-science-240-recycler-belt-fed-clock.json", helpers.table_to_json(report), false) end
 local function check(condition, message)
     if not condition then report.error = message; write(); error(message) end

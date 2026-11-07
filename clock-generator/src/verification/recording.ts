@@ -114,28 +114,28 @@ const RecordedConfigSchema = z.object({
 export const CLOCK_TO_WINDOW_TICKS = 1;
 
 /**
- * The clock counts 1 to its period, never 0 (see the clock in crafting/blueprint.ts), and the recorder samples it as
+ * The clock counts 1 to its window cycle, never 0 (see the clock in crafting/blueprint.ts), and the recorder samples it as
  * it is, where it counts. A clock the build came with may count from 0, which the harness says in the recording
- * (first_value, period). Here the values become 0-based positions in the period, as the windows of the generator are: the period
- * starts where the clock is 1, and the period is the largest position plus one. A recorded 0 is not a position: the
+ * (first_value, window cycle). Here the values become 0-based positions in the window cycle, as the windows of the generator are: the window cycle
+ * starts where the clock is 1, and the window cycle is the largest position plus one. A recorded 0 is not a position: the
  * clock signal was absent, or the clock counted from 0, as clocks made before the count started at 1 did.
  * The windows are CLOCK_TO_WINDOW_TICKS later than these positions (see windowPositions in recording-history.ts);
- * the periods stay where the recorder cut them, which is where the clock wraps.
+ * the window cycles stay where the recorder cut them, which is where the clock wraps.
  */
 const RecordedClockSchema = z.object({
     values: luaArray(z.number()),
     /**
      * Only in the recording of a clock the build came with (see HarnessOptions.built_clock), which the harness stamps:
-     * the value the clock shows at the start of its period, 0 or 1. Absent, 1: the clock is a generated one.
+     * the value the clock shows at the start of its window cycle, 0 or 1. Absent, 1: the clock is a generated one.
      */
     first_value: z.union([z.literal(0), z.literal(1)]).optional(),
-    /** Likewise: the ticks the clock counts before it starts over */
-    period: z.number().int().positive().optional(),
+    /** Likewise: the ticks the clock counts before it starts over (its window cycle) */
+    window_cycle_ticks: z.number().int().positive().optional(),
 }).superRefine((clock, context) => {
     const first = clock.first_value ?? 1;
-    if (clock.period === undefined) {
+    if (clock.window_cycle_ticks === undefined) {
         if (clock.first_value === 0) {
-            context.addIssue({ code: "custom", path: ["period"], message: "A clock that counts from 0 needs its period: without it a missing clock signal cannot be told from the clock" });
+            context.addIssue({ code: "custom", path: ["window_cycle_ticks"], message: "A clock that counts from 0 needs its window cycle: without it a missing clock signal cannot be told from the clock" });
             return;
         }
         const index = clock.values.indexOf(0);
@@ -143,15 +143,15 @@ const RecordedClockSchema = z.object({
             context.addIssue({
                 code: "custom",
                 path: ["values", index],
-                message: "Recorded clock value 0: a clock counts 1 to its period, so the clock signal was absent, "
+                message: "Recorded clock value 0: a clock counts 1 to its window cycle, so the clock signal was absent, "
                     + "or the clock was made before clocks counted from 1 and has to be generated again",
             });
         }
         return;
     }
-    // a clock with a known period: every sample is the one before plus 1, starting over after the last value, and the
-    // recording holds whole periods, so an absent signal (always 0) or a skipped tick is refused
-    const last = first + clock.period - 1;
+    // a clock with a known window cycle: every sample is the one before plus 1, starting over after the last value, and the
+    // recording holds whole window cycles, so an absent signal (always 0) or a skipped tick is refused
+    const last = first + clock.window_cycle_ticks - 1;
     let previous: number | undefined;
     for (const [index, value] of clock.values.entries()) {
         const expected = previous === undefined || previous === last ? first : previous + 1;
@@ -166,8 +166,8 @@ const RecordedClockSchema = z.object({
         }
         previous = value;
     }
-    if (clock.values.length % clock.period !== 0) {
-        context.addIssue({ code: "custom", path: ["values"], message: `${clock.values.length} clock values are not whole periods of ${clock.period}` });
+    if (clock.values.length % clock.window_cycle_ticks !== 0) {
+        context.addIssue({ code: "custom", path: ["values"], message: `${clock.values.length} clock values are not whole window cycles of ${clock.window_cycle_ticks}` });
     }
 }).transform(clock => ({ values: clock.values.map(value => value - (clock.first_value ?? 1)) }));
 
@@ -209,8 +209,8 @@ export function expandChangeList<T>(changes: [number, T][], sample_count: number
     return values;
 }
 
-/** Clock period inferred from the recorded clock values (max value + 1) */
-export function recordedClockPeriod(recording: Recording): number | null {
+/** Clock window cycle inferred from the recorded clock values (max value + 1) */
+export function recordedClockWindowCycle(recording: Recording): number | null {
     const values = recording.clock?.values;
     if (!values || values.length === 0) {
         return null;

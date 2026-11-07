@@ -2,7 +2,7 @@ import { Config } from "../config";
 import { ClockAlternative, ClockAlternativeRun } from "./alternatives";
 import type { ClockAssessment } from "./trial";
 import { SerializableClockWindows } from "./clock";
-import { BlueprintGenerationResult } from "./plan/plan-run";
+import { BlueprintGenerationResult } from "./plan/unclocked-run";
 
 /**
  * What the selection compares between two alternatives, in this order (see `combineClockAlternativeRuns`), worked out
@@ -10,8 +10,8 @@ import { BlueprintGenerationResult } from "./plan/plan-run";
  */
 export interface ClockRanking {
     /**
-     * Goal 1: the clock is stable and runs the build at the target rate. A clock whose period is rounded down to whole
-     * ticks meets it when it runs at most 0.1% fast and within what the machines can make, tried on its own period
+     * Goal 1: the clock is stable and runs the build at the target rate. A clock whose window cycle is rounded down to whole
+     * ticks meets it when it runs at most 0.1% fast and within what the machines can make, tried on its own window cycle
      * (`runs_fast`; GOALS.md, goal 1).
      * On a build with a deadlock risk a clock that holds its expected output at the target rate meets it, whether it
      * gets back from every backpressure loss or not: the trials do not see the deadlock, so what they say of the
@@ -20,7 +20,7 @@ export interface ClockRanking {
     meets_target_rate: boolean;
     /**
      * The clock meets the target rate and its backpressure losses could not be tried on it (the assessment's
-     * `backpressure_loss_not_tried` says why): whether it gets back is not known. It ranks below every clock that meets
+     * `disturbance_trial_not_tried` says why): whether it gets back is not known. It ranks below every clock that meets
      * the target rate and was tried, and above every clock that does not meet it, those tried and not getting back
      * included. False on a build with a deadlock risk, where the trials do not decide. The engine always sets it; a
      * ranking kept from before it (a stored result) lacks it, which reads as false.
@@ -35,7 +35,7 @@ export interface ClockRanking {
     /**
      * Set when the clock does not meet the target rate and is stable above it: it holds its expected output, gets back
      * from every backpressure loss (on a build with a deadlock risk: holds it) and runs over the target, at its exact
-     * period. Where no clock meets the target rate, these come first, the nearest to it first: a stable clock over the
+     * window cycle. Where no clock meets the target rate, these come first, the nearest to it first: a stable clock over the
      * target is selected before an unstable one nearer to it, and never one under it (decided 2026-10-28, Thaeln's
      * cell 07: a stable clock 2.3% over before an unstable one 0.2% under).
      */
@@ -55,19 +55,19 @@ export interface ClockRanking {
      * False when the clock is not made for the belt the config asks for; such a clock is only selected when no other
      * meets the target rate. It is a clock whose belt-fed inserters go without belt pickup slack though the config
      * does not say the input belts are backed up: its windows omit the extra margin for late moving pickups. True for every clock when the config says the input belts are backed up (`overrides.backed_up_belts`),
-     * and for a clock with a period that is not a whole number of ticks, which never gets the slack.
+     * and for a clock with a window cycle that is not a whole number of ticks, which never gets the slack.
      */
     matches_belt_choice: boolean;
     /** Null when they were not counted, which ranks after any count */
     wake_ups_per_minute: number | null;
     /**
-     * The most periods the clock took to be back at its expected output over its backpressure loss trials
-     * (`BackpressureLossVerdict.recovered_after_periods`); null where it was not tried or does not get back, and absent
+     * The most window cycles the clock took to be back at its expected output over its backpressure loss trials
+     * (`DisturbanceTrialVerdict.recovered_after_window_cycles`); null where it was not tried or does not get back, and absent
      * from a ranking kept from before 0.26.0. Of clocks equal on wake-ups the one that recovers sooner comes first
      * (decided 2026-10-31: on the container wagons, even hands recovered from the second cut of an input within 5
-     * periods in the game where another clock of 0 wake-ups too took 33 to 48).
+     * window cycles in the game where another clock of 0 wake-ups too took 33 to 48).
      */
-    recovery_periods?: number | null;
+    recovery_window_cycles?: number | null;
     window_count: number;
 }
 
@@ -76,25 +76,25 @@ const TARGET_RATE_TOLERANCE = 1e-6;
 
 /**
  * The share of the target rate a clock rounded down to whole ticks may run above it and still meet goal 1 (decided
- * 2026-10-23: an iron gear wheel build at 9.97 a second: its 2,888-tick clock of a 2,888.666-tick period runs 0.02% fast, and held and recovered in
+ * 2026-10-23: an iron gear wheel build at 9.97 a second: its 2,888-tick clock of a 2,888.666-tick window cycle runs 0.02% fast, and held and recovered in
  * the game, #332)
  */
 export const ROUNDED_CLOCK_MAX_FAST = 0.001;
 
-/** A clock of a period that is not a whole number of ticks, exported rounded down to whole ticks */
+/** A clock of a window cycle that is not a whole number of ticks, exported rounded down to whole ticks */
 export interface RoundedClock {
-    /** The ticks its blueprint counts: the period rounded down */
-    period_ticks: number;
+    /** The ticks its blueprint counts: the window cycle rounded down */
+    window_cycle_ticks: number;
     /** How much faster than the target it runs, as a share: 0.0002 for 0.02% */
     runs_fast: number;
     /** Its rate is at most what the machines that make the target item can make together */
     within_machines: boolean;
     /**
-     * Its verdict is of its own period: the clock-only check and the loss trials ran on the clock of whole ticks. Only
+     * Its verdict is of its own window cycle: the clock-only check and the loss trials ran on the clock of whole ticks. Only
      * a clock that can meet goal 1 (`ROUNDED_CLOCK_MAX_FAST`, `within_machines`) is tried so; another keeps the verdict
-     * of the exact period, which its rate keeps from meeting the target.
+     * of the exact window cycle, which its rate keeps from meeting the target.
      */
-    tried_on_its_period: boolean;
+    tried_on_its_window_cycle: boolean;
 }
 
 /** Whether a rounded clock's rate is one that meets the target: at most `ROUNDED_CLOCK_MAX_FAST` fast, within the machines */
@@ -104,17 +104,17 @@ export function roundedRateAllowed(rounded: Pick<RoundedClock, "runs_fast" | "wi
 
 /** How a clock ranks, from its assessment and verdict, the belt it is made for, and the deadlock risks of its build */
 export function rankingOf(clock: Omit<ClockAlternative, "ranking">, config: Config): ClockRanking {
-    const target = config.target_output.items_per_second;
+    const target = config.setpoint.items_per_second;
     const rate_off_target = clock.assessment.items_per_second - target;
     // on a build with a deadlock risk the recovery verdict does not decide: see `meets_target_rate`
     const counts_as_holding = clock.deadlock_risks.length > 0 ? clock.verdict !== "unstable" : clock.verdict === "stable";
     const exact = Math.abs(rate_off_target) <= TARGET_RATE_TOLERANCE;
-    // a rounded clock is judged by the rate it runs at on its own period, which it was tried on
-    const runs_fast = !exact && clock.rounded?.tried_on_its_period === true && rate_off_target > 0
+    // a rounded clock is judged by the rate it runs at on its own window cycle, which it was tried on
+    const runs_fast = !exact && clock.rounded?.tried_on_its_window_cycle === true && rate_off_target > 0
         && roundedRateAllowed({ runs_fast: rate_off_target / target, within_machines: clock.rounded.within_machines })
         ? rate_off_target / target : undefined;
     const meets_target_rate = counts_as_holding && (exact || runs_fast !== undefined);
-    // a clock rounded down that runs further over than a rounded clock may keeps the verdict of the exact period, which
+    // a clock rounded down that runs further over than a rounded clock may keeps the verdict of the exact window cycle, which
     // is not of the clock it is; a clock whose recovery could not be tried is not known to be stable
     const stable_above_target = !meets_target_rate && counts_as_holding && rate_off_target > TARGET_RATE_TOLERANCE
         && clock.rounded === undefined && (clock.deadlock_risks.length > 0 || !recoveryUntried(clock.assessment));
@@ -128,14 +128,14 @@ export function rankingOf(clock: Omit<ClockAlternative, "ranking">, config: Conf
         // with backed-up belts every clock goes without the slack, which is the choice
         matches_belt_choice: config.overrides?.backed_up_belts === true || !clock.result.belt_pickup_slack_left_out,
         wake_ups_per_minute: clock.assessment.wake_ups_per_minute,
-        recovery_periods: clock.assessment.backpressure_loss?.recovered_after_periods ?? null,
+        recovery_window_cycles: clock.assessment.disturbance_trial?.recovered_after_window_cycles ?? null,
         window_count: clock.ranking_window_count,
     };
 }
 
 /** The clock holds its expected output and its backpressure losses could not be tried on it */
-export function recoveryUntried(assessment: Pick<ClockAssessment, "holds" | "backpressure_loss" | "backpressure_loss_not_tried">): boolean {
-    return assessment.holds && assessment.backpressure_loss === null && assessment.backpressure_loss_not_tried !== undefined;
+export function recoveryUntried(assessment: Pick<ClockAssessment, "holds" | "disturbance_trial" | "disturbance_trial_not_tried">): boolean {
+    return assessment.holds && assessment.disturbance_trial === null && assessment.disturbance_trial_not_tried !== undefined;
 }
 
 /**
@@ -178,6 +178,19 @@ function costKey(ranking: Pick<ClockRanking, "wake_ups_per_minute">): number {
 }
 
 /**
+ * The dominance rule behind the skip of the searches at 0 wakeups: under today's ranking no search can beat a selected
+ * clock of 0 wakeups. The selection puts the fewest wakeups a minute (to a thousandth, as `costKey` compares) before
+ * the window cycles to get back from a loss and then the window count. 0 wakeups is the floor of the first key and 1 window cycle
+ * the floor of the second, so a search can at best tie a clock of 0 wakeups on those. The window count is no floor: a
+ * search could in principle tie on both and have fewer windows. Lifting the skip on all 86 record jobs found no such
+ * clock (0 new; 1 duplicate of the selected clock), but that is a measure, not part of the rule. The rule is not a
+ * cost skip; it holds only while the ranking puts wakeups first among these keys. A cost not counted (null) is not 0.
+ */
+export function noSearchCanBeat(ranking: Pick<ClockRanking, "wake_ups_per_minute">): boolean {
+    return costKey(ranking) <= 0;
+}
+
+/**
  * The searches run where a clock made without one can already be selected as stable, in the order listed: the two that
  * found a clock with fewer wake-ups on a sample (measured on every sample as built and with backed-up belts, the four
  * searches run on every one: observed windows on 8 of 106 jobs, shifted swings on 3; uneven output swings and full-hand
@@ -187,30 +200,30 @@ function costKey(ranking: Pick<ClockRanking, "wake_ups_per_minute">): number {
 export const SEARCHES_THAT_CAN_IMPROVE: readonly string[] = ["derived", "shifted-swings"];
 
 /**
- * The longest period of the primary clock on which those searches still run past a stable clock: every improvement
- * measured was on a period of at most 432 ticks, and a search's builds grow with the period (the periods of 672 to 1,728
+ * The longest window cycle of the primary clock on which those searches still run past a stable clock: every improvement
+ * measured was on a window cycle of at most 432 ticks, and a search's builds grow with the window cycle (the window cycles of 672 to 1,728
  * ticks held most of their cost), as the 2,400-tick limit of observed windows also bounds it
  */
-export const IMPROVING_SEARCH_MAX_PERIOD_TICKS = 480;
+export const IMPROVING_SEARCH_MAX_WINDOW_CYCLE_TICKS = 480;
 
 /**
  * The searches to run once the clocks made without one are in: every one where none of them can be selected as stable
  * (`searchesAreNeeded`); else those of SEARCHES_THAT_CAN_IMPROVE, where the clock the selection ends on so far has a cost
- * above 0 (none can beat a clock of no wake-ups) and the primary period is at most IMPROVING_SEARCH_MAX_PERIOD_TICKS;
- * else none.
+ * above 0 (`noSearchCanBeat`: none can beat a clock of no wakeups) and the primary window cycle is at most
+ * IMPROVING_SEARCH_MAX_WINDOW_CYCLE_TICKS; else none.
  */
 export function searchesToRun<T, S extends { id: string }>(
     runs: (ClockAlternativeRun<T> | null)[],
     rankingOf: (alternative: T) => ClockRanking,
     searches: readonly S[],
-    primary_period_ticks: number,
+    primary_window_cycle_ticks: number,
 ): S[] {
     if (searchesAreNeeded(runs, rankingOf)) {
         return [...searches];
     }
     const { alternatives, selected_index } = combineClockAlternativeRuns(runs, rankingOf);
     const selected = alternatives[selected_index];
-    if (selected === undefined || costKey(rankingOf(selected)) <= 0 || primary_period_ticks > IMPROVING_SEARCH_MAX_PERIOD_TICKS) {
+    if (selected === undefined || noSearchCanBeat(rankingOf(selected)) || primary_window_cycle_ticks > IMPROVING_SEARCH_MAX_WINDOW_CYCLE_TICKS) {
         return [];
     }
     return searches.filter(search => SEARCHES_THAT_CAN_IMPROVE.includes(search.id));
@@ -238,7 +251,7 @@ export function rankingWindowCount(
  * first: those at exactly the target rate and tried, then those rounded down to whole ticks that run at most 0.1% fast
  * and were tried, then those whose recovery could not be tried; among them those made for the belt the
  * config asks for, so that the count of wake-ups never drops belt pickup slack on its own; then the fewest wake-ups a
- * minute (goal 2); then the fewest periods to get back from a loss; then the fewest windows. Of equals the first listed
+ * minute (goal 2); then the fewest window cycles to get back from a loss; then the fewest windows. Of equals the first listed
  * is selected.
  *
  * Where none meets the target rate, those stable above it come first (`stable_above_target`), the nearest to it
@@ -277,7 +290,7 @@ export function combineClockAlternativeRuns<T>(
             // to a thousandth: less than that is the rounding of a division, not a difference between two clocks
             costKey(ranking),
             // of equals on cost, the one that gets back from a loss sooner
-            ranking.recovery_periods ?? Infinity,
+            ranking.recovery_window_cycles ?? Infinity,
             ranking.window_count,
         ];
     };

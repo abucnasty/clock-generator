@@ -32,7 +32,7 @@ export async function parseConfig(jsonString: string): Promise<ParsedConfig> {
     try {
         parsed = JSON.parse(jsonString);
     } catch (error) {
-        throw new Error(`Config is not valid JSON: ${error instanceof Error ? error.message : String(error)}`);
+        throw new Error(`The configuration is not valid JSON: ${error instanceof Error ? error.message : String(error)}`);
     }
     // Normalize config for backwards compatibility
     const normalized = normalizeConfig(parsed);

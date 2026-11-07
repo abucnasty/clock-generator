@@ -43,7 +43,7 @@ function frontEntranceClockConfig(variant: FrontClockCase): Config {
     const product = variant.family === "different-items" ? "electronic-circuit" : "iron-gear-wheel";
     const type = `${variant.speed.prefix}transport-belt`;
     return ConfigSchema.parse({
-        target_output: {recipe: product, items_per_second: 6, copies: 1},
+        setpoint: {recipe: product, items_per_second: 6, copies: 1},
         machines: [{id: 1, type: "machine", recipe: product, crafting_speed: COMPACT_CRAFTING_SPEED, productivity: 0}],
         inserters: [
             {id: 1, source: {type: "machine", id: 1}, sink: {type: "belt", id: 1}, stack_size: 16},
@@ -62,7 +62,7 @@ function frontEntranceClockConfig(variant: FrontClockCase): Config {
 async function frontExitClockConfig(variant: FrontClockCase): Promise<Config> {
     const config = await loadConfigFromFile(path.join(GameFixturePaths.FRONT_UNDERGROUND_EXIT, "config.json"));
     configAtSpeed(config, variant.speed);
-    config.target_output.items_per_second = 30 * variant.speed.units / 4;
+    config.setpoint.items_per_second = 30 * variant.speed.units / 4;
     config.overrides = {...config.overrides, backed_up_belts: variant.backed};
     const input = config.inserters.find(inserter => inserter.source.type === "belt")!;
     if (input.source.type !== "belt") throw new Error("Expected the front exit's belt input");

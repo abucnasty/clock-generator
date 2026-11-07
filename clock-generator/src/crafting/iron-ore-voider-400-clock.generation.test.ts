@@ -18,5 +18,5 @@ test("names each clock by the hands brought in a cycle when the inserters have a
         inserters: config.inserters.map(it => it.source.id === 2 ? { ...it, source: { ...it.source, id: it.id! - 1 } } : it),
         chests: [config.chests![0], ...[2, 3, 4, 5].map(id => ({ ...config.chests![1], id }))] } as Config;
     expect(generateClockAlternatives(own_chests, { logger: quiet }).alternatives.map(it => it.label))
-        .toEqual(["Batched swings: 5 hands brought in per cycle", "Even hands: 5 hands brought in per cycle"]);
+        .toEqual(["Takt Batches: 5 hands brought in each output cycle", "Time-Division Windows: 5 hands brought in each output cycle"]);
 });

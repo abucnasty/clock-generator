@@ -117,7 +117,7 @@ const CHEST_ORE = 48 * 50;
 
 /** A drill on iron ore into a steel chest as the simulator builds it; `room` is the ore the chest has room for at the start */
 function simulatedChestDrill(entity: string, room: number | null, at: {tick: number}, enabled: (tick: number) => boolean) {
-    const config = ConfigSchema.parse({target_output: {recipe: "iron-plate", items_per_second: 1, copies: 1}, belts: [], inserters: [],
+    const config = ConfigSchema.parse({setpoint: {recipe: "iron-plate", items_per_second: 1, copies: 1}, belts: [], inserters: [],
         machines: [{id: 1, recipe: "iron-plate", crafting_speed: 1, productivity: 0, type: "furnace"}],
         drills: {configs: [{id: 1, type: entity, mined_item_name: "iron-ore", speed_bonus: 0, productivity: 0, target: {type: "chest", id: 1}}]},
         chests: [{id: 1, type: "buffer-chest", storage_size: 48, item_filter: "iron-ore"}]});
@@ -255,7 +255,7 @@ describe.each(DRILLS)("the state the simulator records for a %s mining drill", d
 });
 
 test("into a furnace that cannot craft a big drill stops at 114 ore and shows waiting for space from then on, tick by tick as the game does", () => {
-    const config = ConfigSchema.parse({target_output: {recipe: "iron-plate", items_per_second: 1, copies: 1}, belts: [], inserters: [],
+    const config = ConfigSchema.parse({setpoint: {recipe: "iron-plate", items_per_second: 1, copies: 1}, belts: [], inserters: [],
         machines: [{id: 1, recipe: "iron-plate", crafting_speed: 1, productivity: 0, type: "furnace"}],
         drills: {configs: [{id: 1, type: "big-mining-drill", mined_item_name: "iron-ore", speed_bonus: 0, productivity: 0, target: {type: "machine", id: 1}}]}});
     const context = SimulationContext.fromConfig(config);

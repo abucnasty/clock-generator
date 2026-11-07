@@ -138,7 +138,7 @@ export function shareLinkNotice(length: number): 'ok' | 'long' | 'too-long' {
  * Without `withRecipe` it starts at the rate, for a build already named after its recipe in the line above.
  */
 export function sharedBuildSummary(config: Config, recipeLabel: (id: string) => string, { withRecipe = true } = {}): string {
-    const { recipe, items_per_second, copies, counts: targetCounts } = config.target_output;
+    const { recipe, items_per_second, copies, counts: targetCounts } = config.setpoint;
     const counts = [
         [config.machines.length, 'machine', 'machines'],
         [config.drills?.configs.length ?? 0, 'drill', 'drills'],
@@ -159,19 +159,19 @@ export function sharedBuildSummary(config: Config, recipeLabel: (id: string) => 
 // ---- the words, in one place
 
 export const SHARE_COPIED_MESSAGE = 'Share link copied. Anyone who opens it gets a copy of this build.';
-export const SHARE_TOO_BIG_MESSAGE = 'This build is too big for a share link. Use Save build file to share it.';
-export const SHARE_UNSUPPORTED_MESSAGE = 'This browser cannot make or open share links. Update it, or use Save build file.';
+export const SHARE_TOO_BIG_MESSAGE = 'This build is too big for a share link. Use Save configuration file to share it.';
+export const SHARE_UNSUPPORTED_MESSAGE = 'This browser cannot make or open share links. Update it, or use Save configuration file.';
 export const SHARE_FALLBACK_TEXT = 'Your browser did not let this page copy. Copy the link below:';
 export const SHARE_PROBLEM_MESSAGES: Record<ShareProblem, string> = {
     broken: 'This share link is broken or was cut short, so nothing was opened. Ask for the link again.',
     'newer-version': 'This share link was made by a newer version of the site. Reload the page, then open the link again.',
-    'too-big': 'This share link is too big to open. Ask for the build file instead.',
+    'too-big': 'This share link is too big to open. Ask for the configuration file instead.',
     unsupported: SHARE_UNSUPPORTED_MESSAGE,
 };
 
 export function shareLongMessage(length: number): string {
     return `Share link copied. It is ${length.toLocaleString('en-US')} characters long, too long for some chats (Discord allows 2,000). `
-        + 'Save build file is the safer way to share this build.';
+        + 'Save configuration file is the safer way to share it.';
 }
 
 export function shareInvalidMessage(engineMessage: string): string {
@@ -186,5 +186,5 @@ export function sharedOpenedMessage(name: string): string {
 export function sharedPlaceNote(replacesBlank: boolean, currentTitle: string): string {
     return replacesBlank
         ? 'It takes the place of your empty build.'
-        : `It is added to Your builds as a new build. The build open now, ${currentTitle}, stays as it is.`;
+        : `It is added to Your configurations. The build open now, ${currentTitle}, stays as it is.`;
 }

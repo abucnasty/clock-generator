@@ -29,9 +29,9 @@ export const ENABLE_MODE_LABELS: Record<EnableControlMode, string> = {
 };
 const RANGE_DASH = '–';
 const RANGE_SEPARATOR = ', ';
-const PERIOD_JOINER = ' of ';
+const WINDOW_CYCLE_JOINER = ' of ';
 const TICKS_SUFFIX = ' ticks';
-const NO_RANGES = ', no wake windows';
+const NO_RANGES = ', no enable windows';
 const MORE_RANGES = (count: number) => ` +${count} more`;
 const CONDITION_COUNT_JOINER = ': ';
 const CONDITION_COUNT = (count: number) => (count === 0 ? 'no conditions' : `${count} ${count === 1 ? 'condition' : 'conditions'}`);
@@ -71,10 +71,10 @@ function rangesText(ranges: Range[]): string {
     return ranges.map((range) => `${range.start}${RANGE_DASH}${range.end}`).join(RANGE_SEPARATOR);
 }
 
-/** The CLOCKED chip: every range and the period if they fit, else the ranges, else the first ranges and a count of the rest */
-function clockedChip(ranges: Range[], period: string): string {
+/** The CLOCKED chip: every range and the window cycle if they fit, else the ranges, else the first ranges and a count of the rest */
+function clockedChip(ranges: Range[], window_cycle: string): string {
     const head = `${MODE_CLOCKED} `;
-    const candidates = [`${head}${rangesText(ranges)}${period}`, `${head}${rangesText(ranges)}`];
+    const candidates = [`${head}${rangesText(ranges)}${window_cycle}`, `${head}${rangesText(ranges)}`];
     for (let kept = ranges.length - 1; kept >= 1; kept--) {
         candidates.push(`${head}${rangesText(ranges.slice(0, kept))}${MORE_RANGES(ranges.length - kept)}`);
     }
@@ -101,14 +101,14 @@ export function describeEnableRule(
                 const text = `${MODE_CLOCKED}${NO_RANGES}`;
                 return { mode, quiet, chip: cut(text), summary: text };
             }
-            const period = override.period_duration_ticks && override.period_duration_ticks > 0
-                ? `${PERIOD_JOINER}${override.period_duration_ticks}`
+            const window_cycle = override.window_cycle_ticks && override.window_cycle_ticks > 0
+                ? `${WINDOW_CYCLE_JOINER}${override.window_cycle_ticks}`
                 : '';
             return {
                 mode,
                 quiet,
-                chip: clockedChip(override.ranges, period),
-                summary: `${MODE_CLOCKED} ${rangesText(override.ranges)}${period}${TICKS_SUFFIX}`,
+                chip: clockedChip(override.ranges, window_cycle),
+                summary: `${MODE_CLOCKED} ${rangesText(override.ranges)}${window_cycle}${TICKS_SUFFIX}`,
             };
         }
         case EnableControlMode.CONDITIONAL: {

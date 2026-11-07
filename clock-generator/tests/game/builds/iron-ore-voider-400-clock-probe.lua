@@ -32,7 +32,7 @@ for name, value in pairs(defines.entity_status) do status_name[value] = name end
 local chest_filters = {}
 for index, chest in ipairs(chests) do chest_filters[index] = chest.infinity_container_filters end
 
-local report = {events = {}, initial = {period = options.period, capacity = #trunk * prototypes.item[ORE].stack_size,
+local report = {events = {}, initial = {window_cycle_ticks = options.window_cycle_ticks, capacity = #trunk * prototypes.item[ORE].stack_size,
     car_contents = trunk.get_item_count(ORE)},
     baseline = {ticks = 0, crafts = 0, placed = 0, taken = 0, car_max = 0, source_max = 0, full_ticks = 0,
         recycler_status = {}, result_after_tick = {}, wake = {alarms = {0, 0}, woken = {0, 0}, waiting_ticks = {0, 0}, enabled_ticks = {0, 0}}}}

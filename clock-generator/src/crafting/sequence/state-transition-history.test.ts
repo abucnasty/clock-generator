@@ -3,7 +3,7 @@ import { ConfigPaths } from "../../config/config-paths";
 import { loadConfigFromFile } from "../../config/loader";
 import { generateClockAlternatives } from "../alternatives";
 import { quiet } from "../generate-blueprint-test-helpers";
-import { runBuild } from "../plan/plan-run";
+import { runBuild } from "../plan/unclocked-run";
 import { expandStateTransitionHistory, toPortable } from "./compact-history";
 import { RecordedBothWays, historyDifference, recordBothWays } from "./legacy-state-transition-history.fixture";
 
@@ -58,7 +58,7 @@ describe("a run's sealed state transition history, read back", () => {
     it("equals what was serialized before over two periods, and without the game's states", async () => {
         const config = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_330);
         const recorded = recordedBothWays(() => {
-            runBuild(config, { logger: quiet, simulate_periods: 2 });
+            runBuild(config, { logger: quiet, simulate_window_cycles: 2 });
             runBuild(config, { logger: quiet, factorio_states: false });
         });
         expect(recorded).toHaveLength(2);

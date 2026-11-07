@@ -1,8 +1,8 @@
 -- Observe a clocked cold start without changing anything: the lane phase of the pickup tile at placement, the lattice
--- its stock keeps in every period, and the clock against the probe tick. The run is timed in game ticks (the game tests'
+-- its stock keeps in every window cycle, and the clock against the probe tick. The run is timed in game ticks (the game tests'
 -- protocol): it lasts until the machine making the target has made `expected` over the trailing `window` ticks, no less than
 -- as many whole clock cycles earlier as fit in the window (steady state), then one more window, at most `ticks`; the recording is cut there too (settle.record_samples).
--- options: ticks, period, units (the belt tier's step in 1/32 tile a tick: 1 normal, 2 fast, 3 express, 4 turbo), window,
+-- options: ticks, window_cycle_ticks, units (the belt tier's step in 1/32 tile a tick: 1 normal, 2 fast, 3 express, 4 turbo), window,
 -- expected, recipes, item
 local entities, surface, _, settle = ...
 local machine = capture.find_one(entities, function(entity) return entity.type == "assembling-machine" end, "machine")
@@ -55,8 +55,8 @@ local function made()
 end
 local window, history, last_tick, last_at = options.window, {[0] = made()}, options.ticks, {}
 local function observe(tick)
-    -- the period of the model's frame the tick falls in (model held[i] is sample i + 4, and sample j is probe tick j + 1)
-    local key = tostring(math.max(0, math.floor((tick - 5) / options.period)))
+    -- the window cycle of the model's frame the tick falls in (model held[i] is sample i + 4, and sample j is probe tick j + 1)
+    local key = tostring(math.max(0, math.floor((tick - 5) / options.window_cycle_ticks)))
     local record = report.periods[key]
     if not record then
         record = {{off_lattice = 0, phases = {}}, {off_lattice = 0, phases = {}}}
@@ -72,8 +72,8 @@ local function observe(tick)
             end
         end
     end
-    if tick % options.period < 64 then
-        local offset = (capture.clock_value(clock) - (tick - 1)) % options.period
+    if tick % options.window_cycle_ticks < 64 then
+        local offset = (capture.clock_value(clock) - (tick - 1)) % options.window_cycle_ticks
         if not offsets[offset] then
             offsets[offset] = true
             table.insert(report.clock_offsets, offset)
