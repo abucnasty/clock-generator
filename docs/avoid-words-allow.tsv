@@ -6,3 +6,5 @@ goal	goal [0-9]	The numbered goals of clock-generator/GOALS.md
 idle	idle (rule|phase)	The idle rule and idle phase of the simulator's Hand (src/simulation/components/hand.ts)
 object	config object	A JavaScript object of the configuration
 cell	cell [0-9]	A cell number of a save, not a build
+structure	low density structure	The game's item Low density structure
+process	verification process	A process of checking, not a build

@@ -2,7 +2,7 @@
 
 | Build | Credit | Source | Issues | Recorded in the game |
 |---|---|---|---|---|
-| `steel-plate-26-wagon-chest` | abucnasty | blueprint given on 2026-10-22 | none recorded | Scaffold: yes (a blueprint given 2026-10-22). One cargo wagon is a hub: a big mining drill fills it with iron ore, a furnace makes plates from the ore and puts them back, a second makes steel from the plates and puts it back, and one inserter takes the steel out onto the output belt, all legendary, 26 steel a second; the wagon's slots are filtered (20 ore, 5 plates, 5 steel, 10 blocked), and the harness puts the ore under the drill. The steel leaves through the wagon, so the inserter that takes it out is the output inserter. The recommended clock (planned with belt slack, a subtick clock of 886.15 ticks) recorded 4,992 in every period of 11,520 ticks, both build orders, and got back to it after the drill was stopped until the wagon ran dry, twice, and the output blocked; the clock planned without iron ore in its window cycle too. A full plate or steel filter stops a furnace a few ticks a period with no steel lost. 81.6 wakeups a minute in the simulator, 83.1 in the game. Note: in `test:game`. |
+| `steel-plate-26-wagon-chest` | abucnasty | blueprint given on 2026-10-22 | none recorded | Scaffold: yes (a blueprint given 2026-10-22). One cargo wagon is a hub: a big mining drill fills it with iron ore, a furnace makes plates from the ore and puts them back, a second makes steel from the plates and puts it back, and one inserter takes the steel out onto the output belt, all legendary, 26 steel a second; the wagon's slots are filtered (20 ore, 5 plates, 5 steel, 10 blocked), and the harness puts the ore under the drill. The steel leaves through the wagon, so the inserter that takes it out is the output inserter. The recommended clock (planned with belt slack, a subtick clock of 886.15 ticks) recorded 4,992 in every window cycle of 11,520 ticks, both build orders, and got back to it after the drill was stopped until the wagon ran dry, twice, and the output blocked; the clock planned without iron ore in its window cycle too. A full plate or steel filter stops a furnace a few ticks a window cycle with no steel lost. 81.6 wakeups a minute in the simulator, 83.1 in the game. Note: in `test:game`. |
 
 The build: one cargo wagon is a hub. A big mining drill with 4 legendary speed modules 3 drops iron ore into it.
 A stack inserter takes the ore into a legendary electric furnace making iron plates (2 legendary productivity modules 3,
@@ -44,7 +44,7 @@ after the other entities changed nothing in any period: the steel moved, the wag
 the furnaces' ticks with a full output are equal in all 210 periods.
 
 The wagon's 5 plate and 5 steel slots do fill, and stop a furnace for a few ticks a period, with no steel lost. On the
-recommended clock the wagon holds 1,000 ore and 240 plates at each period's start (16 plates once the drill is restarted),
+recommended clock the wagon holds 1,000 ore and 240 plates at each window cycle's start (16 plates once the drill is restarted),
 and no furnace waits for room. Once the output has been blocked, its plate and steel slots stay full (500 each) until the
 drill is stopped again, and the plate furnace waits for room 13 ticks a period. On the clock planned without iron ore the
 plate slots are full at each period's start and the plate furnace waits 425 to 440 ticks of each 3,840; once the output
