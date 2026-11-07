@@ -6,7 +6,9 @@ const FAMILIES: StrategyFamily[] = ['takt-batches', 'round-robin-polling', 'eucl
     'signal-offset', 'pitch-pickups', 'exhaust', 'per-branch'];
 
 const strategy = (family: StrategyFamily, qualifiers: StrategyQualifier[] = ['output-swings'], output_swings = 2, construction?: StrategyConstruction): ClockStrategy =>
-    ({ family, qualifiers, output_swings, routing: { router: 'direct' }, ...(construction !== undefined && { construction }) });
+    ({ family, qualifiers, output_swings, routing: { router: 'direct' },
+        settings: { output_count: { kind: 'output_swings', count: output_swings }, window_cycle: [], belt_pickups: [] },
+        ...(construction !== undefined && { construction }) });
 const withRouting = (base: ClockStrategy, routing: ClockRouting): ClockStrategy => ({ ...base, routing });
 const labels = (value: NamedClock) => qualifierChipsOf(value).map(chip => chip.label);
 const clock = (extra: Partial<NamedClock> & { strategy?: ClockStrategy } = {}): NamedClock => ({ label: 'Engine label', strategy: strategy('takt-batches'), ...extra });
