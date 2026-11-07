@@ -11,6 +11,8 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-11-07
+
 ### Added
 - generation: a new clock that enables some inserters for one tick at each swing
 - generation: a new router, Coordinated Sources, gives each source's inserters the strategy that fits them
