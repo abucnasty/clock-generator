@@ -70,7 +70,7 @@ import type { TurnGroup } from "../turn-groups";
 import type { SourceControl } from "../strategy-catalog";
 import { AlwaysOnReason, AlwaysOnReasons, alwaysOnReasons } from "../always-on-reasons";
 import { RunMemo, currentRunMemo } from "./run-memo";
-import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, beltPickupSlackTrial, runAsBuiltCheck, runClockOnBuild, trialWithLoopWindows } from "../trial";
+import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, beltPickupSlackTrial, completedAsBuiltCheck, runAsBuiltCheck, runClockOnBuild, trialWithLoopWindows } from "../trial";
 
 export { SIMULATION_BUDGET_TICKS };
 
@@ -1905,14 +1905,16 @@ export function checkedClock(
         verified?: { windows: Map<string, OpenRange[]>; run: AsBuiltRun };
         /** Given the clock-only check the verdict is of, with the windows it ran on (the loop's added where it has them) */
         on_as_built?: (run: AsBuiltRun, windows: Map<string, OpenRange[]>) => void;
+        /**
+         * "long-run": the clock-only check stops after its long run where it holds there (see runAsBuiltCheck), and
+         * `completedClockCheck` finishes it; the check, the verdict and the export are then of the check that far
+         */
+        through?: "long-run";
     } = {},
 ): BlueprintGenerationResult {
     const { config, logger, run: { stability_check, total_expected_output, duration, output_cycle_plan } } = plan;
     const swings = fractionalSwingsOf(output_cycle_plan);
-    // windows that carry part hands from one window cycle to the next are run for several window cycles, to see every result taken
-    // out as it comes (exhaust.ts)
-    const long_run_ticks = output_cycle_plan.exhaust === undefined ? FREE_RUNNING_CHECK_TICKS
-        : Math.max(FREE_RUNNING_CHECK_TICKS, EXHAUST_CHECK_WINDOW_CYCLES * duration.ticks);
+    const long_run_ticks = longRunTicksOf(plan);
     let clock_only_run: ClockOnlyRun | undefined;
     let loop_windows: BlueprintGenerationResult["loop_windows"];
     let item_names: ReadonlyMap<string, string> | undefined;
@@ -1925,7 +1927,7 @@ export function checkedClock(
                 // a confirmed search pick ran the same unshifted run, pickup phase starts and long run on these windows
                 extras.verified !== undefined && extras.verified.windows === windows
                     ? { run: extras.verified.run, long_run_ticks: FREE_RUNNING_CHECK_TICKS } : undefined,
-                false, "loop-windows", swings);
+                false, "loop-windows", swings, extras.through ?? "starts");
         let kept_run = as_built_run;
         // also where the clock does not hold without them: the windows of a loop can make it hold
         if (options.loop_windows !== false) {
@@ -1945,6 +1947,26 @@ export function checkedClock(
         logger.log(`As-built check (enable windows only, ${stability_check.as_built.start_phases_checked} start phases): actual=${stability_check.as_built.actual_output_items} expected=${total_expected_output} stable=${stability_check.as_built.holds}`);
     }
     return exportClock(plan, clock, windows, options, { clock_only_run, loop_windows, item_names, search: extras.search, left_open: extras.left_open });
+}
+
+/**
+ * The long run of a clock's clock-only check: windows that carry part hands from one window cycle to the next are run for
+ * several window cycles, to see every result taken out as it comes (exhaust.ts)
+ */
+function longRunTicksOf(plan: UnclockedRun): number {
+    const { duration, output_cycle_plan } = plan.run;
+    return output_cycle_plan.exhaust === undefined ? FREE_RUNNING_CHECK_TICKS
+        : Math.max(FREE_RUNNING_CHECK_TICKS, EXHAUST_CHECK_WINDOW_CYCLES * duration.ticks);
+}
+
+/**
+ * The clock-only check of `checkedClock` with `through` "long-run", finished: the other taker orders and the start phases,
+ * on the same plan and windows (those `checkedClock` was given, the loop's windows left out). The check is the one a check
+ * run through gives.
+ */
+export function completedClockCheck(plan: UnclockedRun, windows: Map<string, OpenRange[]>, run: AsBuiltRun): AsBuiltRun {
+    return completedAsBuiltCheck(plan.config, windows, plan.run.duration.ticks, plan.logger, run, AS_BUILT_START_PHASES, longRunTicksOf(plan),
+        fractionalSwingsOf(plan.run.output_cycle_plan));
 }
 
 /** The crafting cycle of a build, with the machines that make the target item and the inserters that take it out */

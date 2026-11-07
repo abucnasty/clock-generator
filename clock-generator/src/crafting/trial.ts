@@ -1144,14 +1144,17 @@ export function runAsBuiltCheck(
     stock_detail: StockDetail = "loop-windows",
     /** How the clock's runs plan, as the clock was planned (`fractionalSwingsOf`) */
     swings: FractionalSwings = {},
+    /**
+     * "long-run" stops after the long run, before the other taker orders and the start phases: a check that holds there is
+     * finished by `completedAsBuiltCheck`, with the same result as this check run through. "starts" (the default) runs it all.
+     */
+    through: "long-run" | "starts" = "starts",
 ): AsBuiltRun {
     // the drills into chests run on the windows made from their takers' in these windows, as the export gives them
     decider_windows = withChestDrillWindows(config, decider_windows, window_cycle_ticks);
     const counter = wholeCounterOf(window_cycle_ticks);
-    const start_shifts = startShiftsOf(window_cycle_ticks, counter, start_phases);
     // the count the progress is reported against: as it always was where no whole counter is checked
-    const total = counter === null ? Math.min(start_phases, Math.floor((window_cycle_ticks - 1) / Math.max(1, Math.floor(window_cycle_ticks / start_phases))) + 1)
-        : start_shifts.length + 1;
+    const total = startPhaseTotalOf(window_cycle_ticks, counter, start_phases);
     const result = passed !== undefined ? passed.run.result : firstClockSpan(config, decider_windows, window_cycle_ticks, logger, swings);
     const check: AsBuiltStabilityCheck = {
         holds: result.stability_check.holds,
@@ -1265,9 +1268,63 @@ export function runAsBuiltCheck(
             }
         }
     }
+    if (through === "long-run" && check.holds) return { result, check, stock };
+    return afterTheLongRun(config, decider_windows, window_cycle_ticks, logger, start_phases, report, long_run_ticks,
+        { result, check, stock }, passed?.long_run_ticks === long_run_ticks ? passed.run.check : undefined, swings);
+}
+
+/** The count of the start phases a check reports its progress against (see runAsBuiltCheck) */
+function startPhaseTotalOf(window_cycle_ticks: number, counter: SubtickWindowCycle | null, start_phases: number): number {
+    return counter === null ? Math.min(start_phases, Math.floor((window_cycle_ticks - 1) / Math.max(1, Math.floor(window_cycle_ticks / start_phases))) + 1)
+        : startShiftsOf(window_cycle_ticks, counter, start_phases).length + 1;
+}
+
+/**
+ * Finishes a check that `runAsBuiltCheck` stopped after its long run (`through` "long-run") on the same config, windows,
+ * window cycle and long run: the other taker orders and the start phases, as the check run through makes them. The result
+ * is the one the check run through gives; `run` is left as it is.
+ */
+export function completedAsBuiltCheck(
+    config: Config,
+    decider_windows: Map<string, OpenRange[]>,
+    window_cycle_ticks: number,
+    logger: Logger,
+    run: AsBuiltRun,
+    start_phases: number = AS_BUILT_START_PHASES,
+    long_run_ticks: number = FREE_RUNNING_CHECK_TICKS,
+    swings: FractionalSwings = {},
+): AsBuiltRun {
+    if (!run.check.holds) return run;
+    // what follows sets and deletes fields of the check, never inside one
+    const check = { ...run.check };
+    return afterTheLongRun(config, withChestDrillWindows(config, decider_windows, window_cycle_ticks), window_cycle_ticks, logger, start_phases, undefined,
+        long_run_ticks, { ...run, check }, undefined, swings);
+}
+
+/**
+ * What a check makes after its long run (see runAsBuiltCheck): where it holds, the other taker orders, then the start phases
+ * (or the proof of every phase, with CLOCK_PROOF_PHASES=1), each stopping at the first that fails. `decider_windows` are the
+ * check's own (with the drills into chests); `orders_passed` is a check handed over that made the other taker orders.
+ */
+function afterTheLongRun(
+    config: Config,
+    decider_windows: Map<string, OpenRange[]>,
+    window_cycle_ticks: number,
+    logger: Logger,
+    start_phases: number,
+    report: ((checked: number, total: number) => void) | undefined,
+    long_run_ticks: number,
+    { result, check, stock }: AsBuiltRun,
+    orders_passed: AsBuiltStabilityCheck | undefined,
+    swings: FractionalSwings,
+): AsBuiltRun {
+    const counter = wholeCounterOf(window_cycle_ticks);
+    const start_shifts = startShiftsOf(window_cycle_ticks, counter, start_phases);
+    const total = startPhaseTotalOf(window_cycle_ticks, counter, start_phases);
+    const strict = long_run_ticks > 0;
     if (check.holds) {
         heldUnderOtherTakerOrders(config, decider_windows, window_cycle_ticks, logger, check, result.stability_check.expected_output_items, long_run_ticks,
-            passed?.long_run_ticks === long_run_ticks ? passed.run.check : undefined, swings);
+            orders_passed, swings);
     }
     if (!check.holds) {
         check.failed_start_offset = 0;
