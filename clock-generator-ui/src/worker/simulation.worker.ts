@@ -162,7 +162,8 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         insights: alternative.insights,
         shiftOptions: shiftOptionsOf(result),
         simulationDurationTicks: result.simulation_duration.ticks,
-        ...(alternative.rounded && { roundedPeriodTicks: alternative.rounded.period_ticks }),
+        ...(alternative.rounded && { roundedPeriodTicks: alternative.rounded.period_ticks, roundedRunsFast: alternative.rounded.runs_fast }),
+        strategy: alternative.strategy,
         swingBackoffReport: result.swing_backoff_report ?? null,
         inserterClocks: result.unplanned_inserter_clocks ?? {},
         backedUpBelts: alternative.belt?.kind === 'backed_up' || (alternative.belt === null && config.overrides?.backed_up_belts === true),
@@ -225,7 +226,7 @@ function handleValidate(requestId: number, config: Config): void {
         requireValidConfig(config);
         postResponse({ type: 'validated', requestId, validation: clockGenerator.validateConfig(config) });
     } catch (error) {
-        const { message, recovery } = failureOf(error, config, 'Validation failed');
+        const { message, recovery } = failureOf(error, config, 'Check failed');
         postResponse({
             type: 'validation-failed',
             requestId,
@@ -299,7 +300,7 @@ function checkRepeatedUnitConversion(config: Config): CheckedRepeatedUnitConvers
             && !(error instanceof clockGenerator.FeasibilityError)
             && !(error instanceof clockGenerator.AssertionError)) throw error;
         return { kind: 'unavailable', stage: 'check', reason: { code: 'candidate-check-failed',
-            message: error instanceof Error ? error.message : 'The candidate Check failed.' }, repeatedGroups: repeatedGroups() };
+            message: error instanceof Error ? error.message : 'The check failed.' }, repeatedGroups: repeatedGroups() };
     }
 }
 

@@ -381,6 +381,8 @@ export interface GroupedHandsPlan {
      * the tick it opens: what the per-hand variant splits (`perHandWindowsClock`)
      */
     guarded: GuardedTaker[];
+    /** Rule F changed a count: an inserter that fills a machine moves a fraction of a hand a cycle, planned at the next whole number */
+    hands_rounded_up: boolean;
 }
 
 /** The windows of `groupedHandsWindows`, with the groups whose turns they are */
@@ -434,6 +436,7 @@ export function groupedHandsPlan(
     }
     if (sinks.size === 0) refuse("nothing is put into a machine");
 
+    let hands_rounded_up = false;
     const takers: Taker[] = [];
     const outputs: Inserter[] = [];
     // the chests something takes from to fill a machine: an inserter that fills one from a machine is a taker of that machine
@@ -464,6 +467,7 @@ export function groupedHandsPlan(
                 if (input === undefined) refuse(`${sink.entity_id.id} has no input for ${item.item_name}`);
                 const hands = wholeHands(item.transfer_count.toDecimal(), recipe_lcm);
                 // outside a chain the hands must be whole as planned; a chain rounds them up (rule F)
+                if (chained && Math.abs(item.transfer_count.toDecimal() * recipe_lcm - hands) > 1e-9) hands_rounded_up = true;
                 if (!chained && Math.abs(item.transfer_count.toDecimal() * recipe_lcm - hands) > 1e-9) {
                     refuse(`${inserter.entity_id.id} moves ${item.transfer_count.toDecimal() * recipe_lcm} hands a period, not a whole number`);
                 }
@@ -639,7 +643,7 @@ export function groupedHandsPlan(
         const made = leaveOpen(windows);
         const without_room = turnsWithoutRoom(entity_registry, made.windows, turned, hands_out, period);
         if (without_room.length > 0) throw new TurnWithoutRoom(without_room.join("; "));
-        return { ...made, turns: [] };
+        return { ...made, turns: [], hands_rounded_up };
     }
     const start_of = (machine: string): number => Math.round(group_of.get(machine)! * period / groups);
     for (const taker of takers) {
@@ -673,7 +677,7 @@ export function groupedHandsPlan(
             ...drills.filter(it => group_of.get(it.sink_id.id) === group).sort(byNumber),
         ].map(it => it.entity_id.id),
     }));
-    return { ...leaveOpen(windows), turns };
+    return { ...leaveOpen(windows), turns, hands_rounded_up };
 }
 
 /**
@@ -896,6 +900,7 @@ export function groupedHandsClock(
     }
     const guarded_takers = options.shared_windows === true ? [] : kept?.planned.guarded ?? [];
     const result: BlueprintGenerationResult = { ...finished!, grouped_hands: { shared_windows: options.shared_windows === true,
+        ...(kept?.planned.hands_rounded_up === true && { harmonic_window_cycle: true as const }),
         ...(guarded_takers.length > 0 && { guarded_takers }) } };
     if (guarded_takers.length > 0) per_hand_sources.set(result.clock_windows, { made, options, planned: kept!.planned, left_open: kept!.left_open });
     return result;
@@ -933,5 +938,5 @@ export function perHandWindowsClock(clock: BlueprintGenerationResult): Blueprint
     const per_hand = finishedClock(made, windows, planned.turns, options, left_open);
     made.logger.log(`Grouped hands, per hand: ${per_hand.stability_check.holds ? "holds" : "does not hold"} at `
         + `${per_hand.stability_check.as_built?.wake_ups?.wake_ups_per_minute ?? "?"} wake-ups a minute`);
-    return { ...per_hand, grouped_hands: { shared_windows: false } };
+    return { ...per_hand, grouped_hands: { shared_windows: false, ...(planned.hands_rounded_up && { harmonic_window_cycle: true as const }) } };
 }

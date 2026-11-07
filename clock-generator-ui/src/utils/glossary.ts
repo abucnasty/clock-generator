@@ -45,17 +45,29 @@ export type GlossaryId =
     | 'belt-slack'
     | 'simulator'
     | 'hand'
-    | 'lcm';
+    | 'lcm'
+    | 'setpoint'
+    | 'stable'
+    | 'steady-state'
+    | 'signal';
 
 /**
  * The glossary's wakeup, in the user's words (the repo glossary's alarm and sleep are maintainer words). Its case of a
  * switched-off inserter is provisional; edit it here, and only here.
  */
-export const WAKEUP_DEFINITION: string = 'One time the game checks an inserter that is waiting, because a machine it waits on started a '
-    + 'craft (inputs), or finished a craft or paid out productivity (outputs). Each is a small check that moves little or nothing, '
-    + 'so fewer wakeups cost less UPS. It counts also when the clock has switched the inserter off; the clock switching an '
+export const WAKEUP_DEFINITION: string = 'One time the game checks an inserter that is waiting. This happens because a machine it waits on started a '
+    + 'craft (inputs), or finished a craft or paid out productivity (outputs). Each is a small check that moves little or nothing. '
+    + 'Fewer wakeups cost less UPS. It counts also when the clock has switched the inserter off. The clock switching an '
     + 'inserter on is not a wakeup. Only the switched-off case is provisional: seen on three builds in Factorio 2.1.24, its '
     + 'cost not measured.';
+
+/**
+ * The signals a clock sends, in the user's words. A signal here is the game's: the output a decider combinator sends. It is
+ * counted once for each enable window that opens on a decider, as the engine counts it (`signalsPerMinuteOf`).
+ */
+export const SIGNAL_DEFINITION: string = 'A signal is the output a decider sends when one of its enable windows opens. It switches on every '
+    + 'inserter wired to that decider. Inserters that share a decider share its signals. Each signal costs the game time. '
+    + 'How a signal compares with a wakeup is not measured.';
 
 /** In the order the popover lists them; the expert terms last */
 export const GLOSSARY: readonly GlossaryEntry[] = [
@@ -81,15 +93,16 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     {
         id: 'window-cycle-time',
         term: 'window cycle time',
-        definition: 'The time of one window cycle: one complete sequence of all the enable windows of a clock, after which '
-            + 'the sequence starts again. A whole number of crafting cycles, which can be a fraction of a tick. Shown in ticks.',
+        definition: 'The time of one window cycle, in ticks. A window cycle is one complete sequence of all the enable windows '
+            + 'of a clock, after which the sequence starts again. The time is a whole number of crafting cycles, and can be a '
+            + 'fraction of a tick.',
         insteadOf: 'clock period, period, LCM period',
     },
     {
         id: 'enable-window',
         term: 'enable window',
-        definition: 'The ticks of the window cycle during which the clock makes an inserter\'s Enable if condition true, so '
-            + 'that the inserter is switched on. A stretch that runs over the end of the window cycle is one enable window.',
+        definition: 'The ticks of the window cycle in which the clock makes the Enable if condition of an inserter true. '
+            + 'The inserter is then switched on. A stretch that runs over the end of the window cycle is one enable window.',
         insteadOf: 'wake window, window, clock window, inserter window, enable range',
     },
     {
@@ -108,19 +121,19 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     {
         id: 'copies',
         term: 'copies',
-        definition: 'How many identical builds you put in the game, including partial ones such as 0.5 or 2.25. Describe only one of them.',
+        definition: 'How many identical builds you put in the game. It can be partial, such as 0.5 or 2.25. Describe only one of them.',
         insteadOf: 'units (as the count), copy as any other noun ("Copy" stays a verb: "Copy blueprint")',
     },
     {
         id: 'build',
         term: 'build',
-        definition: 'A group of entities in the game, of any number, that together make a target output.',
-        insteadOf: 'setup, structure, "build" as a verb',
+        definition: 'A group of entities in the game, of any number, that together make one product.',
+        insteadOf: 'setup, structure, cell, "build" as a verb',
     },
     {
         id: 'configuration',
         term: 'configuration',
-        definition: 'A build, with its target output, copies and enable rules: what the site saves and what clocks are made '
+        definition: 'A build, with its setpoint, copies and enable rules: what the site saves and what clocks are made '
             + 'for. Saved as a configuration file (Open configuration file…, Save configuration file, Reset configuration).',
         insteadOf: 'config, build file, "build" for what the site saves',
     },
@@ -139,9 +152,9 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     {
         id: 'clock',
         term: 'clock',
-        definition: 'The set of combinators that switches your inserters and mining drills on in their enable windows and repeats every '
-            + 'window cycle. The tool makes several and recommends one.',
-        insteadOf: 'potential clock',
+        definition: 'The set of combinators that switches your inserters and mining drills on in their enable windows. It repeats '
+            + 'every window cycle. The tool makes several and recommends one.',
+        insteadOf: 'potential clock, alternative, candidate, solution',
     },
     {
         id: 'blueprint',
@@ -152,7 +165,7 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     {
         id: 'check',
         term: 'check',
-        definition: 'A test of a configuration that shows whether it can be clocked, without making any clocks.',
+        definition: 'A test of a configuration that shows whether it can be clocked. It makes no clocks.',
         insteadOf: 'check as a verb, validation, "run a simulation", "re-run the simulation" (in sentences)',
     },
     {
@@ -173,34 +186,34 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
         id: 'holds-the-rate',
         term: 'holds the rate',
         definition: 'The clock holds its expected output in the modeled cold-start checks while supplies remain available. '
-            + 'A start-dependent clock can hold here yet settle differently from other sampled starts and be ranked unstable.',
-        insteadOf: '"meets the target rate"',
+            + 'A start-dependent clock can hold here. It can still settle differently from other sampled starts, and be ranked unstable.',
+        insteadOf: '"meets the target rate", "holds the target rate" (say "holds the setpoint")',
     },
     {
         id: 'supply-stop',
         term: 'supply stop',
         definition: 'A time when one item stops arriving from the belts or chests of a build.',
-        insteadOf: 'starved, input loss',
+        insteadOf: 'starved, starvation, input loss',
     },
     {
         id: 'output-blockage',
         term: 'output blockage',
         definition: 'A time when one product of a build is not taken away.',
-        insteadOf: 'jammed, backpressure loss',
+        insteadOf: 'jammed, jam, output loss',
     },
     {
         id: 'recovery',
         term: 'recovery',
-        definition: 'In the simulator\'s evaluated loss trials, the clock goes back to its rate by itself after a supply stop '
-            + 'or an output blockage. A clock that fails one loss is not tried on the others. '
+        definition: 'In the simulator\'s loss trials, the clock goes back to its rate by itself. The trials are a supply stop '
+            + 'and an output blockage. A clock that fails one loss is not tried on the others. '
             + 'This is separate from holding the modeled rate and from checks of other sampled starts.',
-        insteadOf: 'recovers, survives backpressure loss, gets back',
+        insteadOf: 'recovers, recover, gets back',
     },
     {
         id: 'belt-slack',
         term: 'belt slack',
-        definition: 'Extra ticks added to an enable window so a late pickup from a moving belt can still finish.',
-        insteadOf: 'belt pickup slack',
+        definition: 'Extra ticks added to an enable window. A late pickup from a moving belt can then still finish.',
+        insteadOf: 'belt pickup slack, pickup slack, slack on its own',
     },
     {
         id: 'simulator',
@@ -213,6 +226,33 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
         term: 'hand',
         definition: 'What an inserter is holding right now. Only for the load, never for the trip.',
         insteadOf: 'hand for a swing',
+    },
+    {
+        id: 'setpoint',
+        term: 'setpoint',
+        definition: 'The product your build must make, and the rate it must hold, for all copies. The rate is in items per second. '
+            + 'You set it. The clock never changes it.',
+        insteadOf: 'target output, target rate, goal',
+    },
+    {
+        id: 'stable',
+        term: 'stable',
+        definition: 'A clock is stable when it holds your setpoint at steady state. The build also goes back to its '
+            + 'rate by itself after a supply stop or an output blockage.',
+        insteadOf: 'survives backpressure loss',
+    },
+    {
+        id: 'steady-state',
+        term: 'steady state',
+        definition: 'The condition after the startup period. The build repeats the same pattern in each window cycle. '
+            + 'The output repeats. It is not constant.',
+        insteadOf: 'warm, warmed up, settled',
+    },
+    {
+        id: 'signal',
+        term: 'signal',
+        definition: SIGNAL_DEFINITION,
+        insteadOf: 'pulse, activation pulse',
     },
     {
         id: 'lcm',
@@ -236,5 +276,6 @@ export function glossaryWithFocus(focus: readonly GlossaryId[]): { related: Glos
 /** The terms the clock table's (i) buttons open the Terms with, first */
 export const TERMS_FOCUS = {
     wakeUps: ['wakeup', 'enable-window'],
+    signals: ['signal', 'wakeup', 'enable-window'],
     works: ['holds-the-rate', 'recovery', 'output-blockage', 'supply-stop'],
 } as const satisfies Record<string, readonly GlossaryId[]>;

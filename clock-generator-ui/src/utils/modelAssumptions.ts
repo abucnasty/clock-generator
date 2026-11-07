@@ -18,15 +18,15 @@ export function startCheckSummary(clocks: Pick<ClockAlternativeView, 'assessment
 }
 
 /** The cold start every clock is tested from, for the card's details */
-export const COLD_START = 'Tested in the simulator from a cold start: full input, empty machines and inserters, the clock at its first tick. Rates are read once the machines have warmed up.';
+export const COLD_START = 'Tested in the simulator from a cold start: full input, empty machines and inserters, the clock at its first tick. Rates are read at steady state.';
 /** The same, with what it does not promise, for the Overview */
-export const MODELED_START = 'Tested from a cold start: full input, empty machines and inserters, the clock at its first tick. The clock is planned on a separate copy of the build, and rates are read once the machines have warmed up, so they do not promise the target in the first period, or from every state a running build can be in.';
+export const MODELED_START = 'Tested from a cold start: full input, empty machines and inserters, the clock at its first tick. The clock is planned on a separate copy of the build, and rates are read at steady state, so they do not promise the setpoint in the first window cycle, or from every state a running build can be in.';
 /** What the tests do not cover, last in the Overview's list */
 export const START_LIMITS = 'None of this covers every stock of items in a running build, the order you build it in, how much a real belt carries, or recovery in the game. Belt slack is a rule of thumb, not a check of what the belt carries.';
-/** How many other places in its period the clock was tried from */
+/** How many other places in its window cycle the clock was tried from */
 export const phaseChecksText = (checked: number | undefined): string => checked === undefined
-    ? 'How many other places in its period the clock was tried from is unavailable.'
-    : `The clock was also tried from ${checked} other places in its period. More starting states can be sampled separately.`;
+    ? 'How many other places in its window cycle the clock was tried from is unavailable.'
+    : `The clock was also tried from ${checked} other places in its window cycle. More starting states can be sampled separately.`;
 
 /** Where the output inserters drop onto a belt was not given: what the simulator does instead */
 export const freeLaneDropText = (belt: string): string =>
@@ -39,7 +39,7 @@ export function modeledDetails(clock: ClockAlternativeView, itemLabel: (id: stri
         ...facts.loopSeeds.map(seed => {
             const id = /^machine:(\d+)$/.exec(seed.machineId);
             const machine = id ? entityLabel('machine', Number(id[1])) : seed.machineId;
-            return `${machine} starts once with ${seed.items} ${itemLabel(seed.item)}. Losing that seed is a separate recovery question.`;
+            return `${machine} gets a kick start of ${seed.items} ${itemLabel(seed.item)}. Losing those items is a separate recovery question.`;
         }),
         ...facts.outputDrops.map(drop => drop.mode === 'shared-lanes'
             ? `${entityLabel('belt', drop.beltId)}: the drop positions you gave are used to space the drops of ${drop.inserterIds.map(id => entityLabel('inserter', id)).join(', ')} on the belt.`

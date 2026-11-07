@@ -24,5 +24,5 @@ export function timelineRequestFor(config: Config | null | undefined, clock: Clo
 /** Which period a settled replay shows; nothing where the replay is the first period after the warm-up */
 export function settledPeriodLabel(request: RecordTimelineRequest | null, recording: Pick<TimelineRecording, 'mode' | 'ticks_before_recording'> | null | undefined): string | null {
     return ((request?.settle_ticks ?? 0) > 0 || (request?.settle_periods ?? 0) > 0) && recording?.mode === 'clock'
-        ? `Period from tick ${formatNumberText(recording.ticks_before_recording, { maxDecimals: 0 })}, after the build has settled` : null;
+        ? `Window cycle from tick ${formatNumberText(recording.ticks_before_recording, { maxDecimals: 0 })}, at steady state` : null;
 }

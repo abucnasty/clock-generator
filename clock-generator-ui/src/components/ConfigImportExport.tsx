@@ -460,7 +460,7 @@ export function ConfigImportExport({
         const fill = importSelections.target ? pendingImport.fill : null;
         const parts = currentPreview.counts.filter(row => row.replacing)
             .map(row => countOf(row.incoming, row.category.slice(0, -1), row.category));
-        if (fill !== null) parts.unshift('Target Output');
+        if (fill !== null) parts.unshift('Setpoint');
         const next = applyPaste(currentForm, pendingImport, importSelections, fill?.values);
 
         resetPasteFlow();

@@ -35,7 +35,7 @@ function InternalDetails({ error, copied, onCopied }: { error: InternalError; co
 }
 
 /**
- * Engine refusal details inside Build validation, or a standalone operational failure when its worker crashed.
+ * Engine refusal details inside Build check, or a standalone operational failure when its worker crashed.
  * Not a live region: focusing the validation panel or the standalone failure reads the message once.
  */
 export function CheckErrorAlert({ message, crashed = false, internal, recovery, machineCount, counts, conversionPending = false, onConvert, embedded = false }: {
@@ -66,7 +66,7 @@ export function CheckErrorAlert({ message, crashed = false, internal, recovery, 
                         {reducedMachines !== null && <span>Machines shown: {machineCount} → {reducedMachines}</span>}
                         <span>Copies: {recovery.configuredCopies} → {conversion.copies}</span>
                     </Box>
-                    <Typography variant="body2">The total target output stays the same. This changes the configuration here; your machines in Factorio are untouched. You can undo it.</Typography>
+                    <Typography variant="body2">The total setpoint stays the same. This changes the configuration here; your machines in Factorio are untouched. You can undo it.</Typography>
                 </> : internal ? <>
                     <Typography variant="body2">{internal.dataMismatch ? CHECK_TEXT.internalDataText : CHECK_TEXT.internalText}</Typography>
                     <InternalDetails error={internal} copied={copied} onCopied={() => setCopied(true)} />

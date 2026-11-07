@@ -27,7 +27,7 @@ Install with `npm install`. The dev server needs the engine built first (`npm ru
 
 ## Words in the UI
 
-One word per idea in every string a player reads. The terms, what they mean and the words they replace are in
+One word per idea in every string a user reads. The terms, what they mean and the words they replace are in
 `src/utils/glossary.ts`, which also feeds the Terms popover (⋮ > Terms); new copy uses them.
 
 ## Maintaining the UI

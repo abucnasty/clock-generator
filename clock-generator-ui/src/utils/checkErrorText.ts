@@ -7,7 +7,7 @@ const CANNOT_MEET_RATE = /The current configuration cannot meet the target produ
 /** What the page says instead of the engine's words, with what to do next */
 const CHECK_ERROR_COPY = {
     cannotMeetRate: (capacity: string, target: string, counts: TargetCounts) =>
-        `The build's machines can ${counts === 'destroyed' ? 'destroy' : 'make'} at most ${capacity}/s, but the target is ${target}/s. Lower the target, `
+        `The build's machines can ${counts === 'destroyed' ? 'destroy' : 'make'} at most ${capacity}/s, but the setpoint is ${target}/s. Lower the setpoint, `
         + 'raise Copies, or add machines or crafting speed (modules, beacons or a faster machine).',
 };
 

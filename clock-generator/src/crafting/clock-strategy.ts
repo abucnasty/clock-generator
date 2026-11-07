@@ -47,7 +47,11 @@ export type StrategyQualifier =
     /** An inserter that takes fuel off a belt has room in its window for one more hand */
     | "fuel-hand-room"
     /** Found by trying placements in a simulation, not worked out from the build's numbers */
-    | "found-by-search";
+    | "found-by-search"
+    /** Belt pickups are counted from the moment the inserter reaches the belt, not from the take that freed it */
+    | "pickups-from-entry"
+    /** An inserter that fills a machine and needs a fraction of a hand a cycle is planned at the next whole number, and the window cycle is cut to the crafting cycles after which the output inserters move whole hands (rule F) */
+    | "harmonic-window-cycle";
 
 /** Which construction made the windows of a clock built from batched swings */
 export type StrategyConstruction =
@@ -98,7 +102,7 @@ const BATCHED_FAMILIES: readonly DefinitionFamily[] = ["batched-swings", "round-
  */
 export function strategyOf(
     family: DefinitionFamily,
-    result: Pick<BlueprintGenerationResult, "window_maker" | "grouped_hands" | "primitive_grouped" | "loop_windows" | "fuel_hand_room_ticks" | "used_terminal_swing_count">,
+    result: Pick<BlueprintGenerationResult, "window_maker" | "grouped_hands" | "primitive_grouped" | "loop_windows" | "fuel_hand_room_ticks" | "used_terminal_swing_count" | "pickups_from_entry">,
     findings: StrategyFindings,
 ): ClockStrategy {
     const construction = BATCHED_FAMILIES.includes(family) ? constructionOf(result) : undefined;
@@ -106,6 +110,8 @@ export function strategyOf(
         : construction === "grouped-hands" ? "round-robin-polling" : "takt-batches";
     const qualifiers: StrategyQualifier[] = [findings.destroyed_target ? "hands-brought-in" : "output-swings"];
     if (result.grouped_hands?.shared_windows === true) qualifiers.push("shared-enable-windows");
+    if (result.grouped_hands?.harmonic_window_cycle === true) qualifiers.push("harmonic-window-cycle");
+    if (result.pickups_from_entry === true) qualifiers.push("pickups-from-entry");
     qualifiers.push(...findings.definition_qualifiers);
     if (result.loop_windows !== undefined) {
         qualifiers.push((result.loop_windows.in_loop_ids?.length ?? 0) > 0 ? "loop-windows" : "loop-exits-only");

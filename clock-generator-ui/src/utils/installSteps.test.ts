@@ -39,7 +39,7 @@ describe('installSteps', () => {
     it.each<[string, Input, InstallStepId, string[]]>([
         ['says to use the first blueprint of a book', book, 'book', ['Use the first blueprint', 'the book opens on it']],
         ['says how to wire a drill and set it to switch on', drillOnly, 'drills', ['(drill 1)', 'Anything > 0']],
-        ['says how to set an inserter to switch on', plain, 'enable', ['Anything > 0', 'Enable/disable']],
+        ['says how to set an inserter to switch on', plain, 'enable', ['Anything > 0', 'Enable if']],
         ['names the clock lock among the parts to leave, and points the description to the list', plain, 'wire', [
             'the Clock lock and every combinator described "Part of the clock"',
             'The combinator\'s description names the same inserters; this list has all of it.',
@@ -48,7 +48,7 @@ describe('installSteps', () => {
             'gets no combinator',
             'One set to Always on, or with nothing to wait for, runs all the time: do not wire it.',
             'One set to Never on is never switched on by the clock: keep it off in the game yourself.',
-            'remove its wire, or untick Enable/disable',
+            'remove its wire, or untick Enable if',
         ]],
         ['says the lock is off', plain, 'lock', ['It is off']],
     ])('%s', (_, input, id, claims) => {

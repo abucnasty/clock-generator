@@ -139,8 +139,8 @@ describe('barNoteOf', () => {
 describe('PROBLEM_TEXT', () => {
     it('words each problem and note as the tooltips and the bar say them', () => {
         expect(PROBLEM_TEXT).toMatchObject({
-            noRecipe: 'Set the recipe in Target Output',
-            noRate: 'Set Items per Second in Target Output to more than 0',
+            noRecipe: 'Set the recipe in the Setpoint panel',
+            noRate: 'Set Items per Second in the Setpoint panel to more than 0',
             noCopies: 'Set Copies to more than 0.',
             noMachines: 'Add a machine',
             validationFailed: 'The last check failed. Show why',

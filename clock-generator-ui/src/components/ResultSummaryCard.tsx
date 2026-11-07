@@ -8,15 +8,18 @@ import {
     beltLine,
     beltValue,
     beltValueSub,
-    clockTechnicalName,
+    clockBadges,
     differenceFromRecommended,
     lossLimitText,
     makesText,
     pickNameMeaning,
-    plainClockName,
     recoversOf,
+    signalsText,
+    SUMMARY_COPY,
     wakeUpsText,
 } from '../utils/clockSummary';
+import { familyCopyOf, strategyNameOf } from '../utils/strategyNames';
+import { BadgeChips, QualifierChips } from './StrategyChips';
 import { RECOMMENDED_COPY, recommendationReason, type PickRule } from '../utils/recommendedClock';
 import { Panel } from './Panel';
 import { Disclosure } from './Disclosure';
@@ -32,6 +35,7 @@ const CARD_COPY = {
     heading: 'Selected clock',
     makingFirst: 'Making the first clock…',
     wakeUps: 'Wakeups',
+    signals: 'Signals',
     recovers: 'Recovery',
     belt: 'Belt pickups',
     detailsHeading: 'How this was checked',
@@ -99,6 +103,7 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
     const recommended = recommendedIndex === null ? undefined : alternatives[recommendedIndex];
     const makes = makesText(selected, selected.copies);
     const wakeUps = wakeUpsText(selected);
+    const signals = signalsText(selected);
     const recovers = recoversOf(selected);
     const { itemLabel } = useGameNames();
     const lossLimit = lossLimitText(selected, itemLabel);
@@ -114,8 +119,10 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
                     sx={{ fontWeight: 600 }}
                     data-clock-name
                 >
-                    {plainClockName(alternatives, selectedIndex)}
+                    {strategyNameOf(selected)}
                 </Typography>
+                <QualifierChips clock={selected} />
+                <BadgeChips badges={clockBadges(alternatives, selectedIndex)} meanings={fewestDecidersMeaning(alternatives, selectedIndex, props.pickRule)} />
                 {isRecommended && (
                     <RecommendedChip isGenerating={isGenerating} data-card-chip="" />
                 )}
@@ -128,14 +135,14 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
                     </Button>
                 )}
             </Box>
-            <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }} data-engine-name>
-                {clockTechnicalName(selected)}
+            <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }} data-strategy-line>
+                {familyCopyOf(selected)?.line ?? selected.label}
             </Typography>
 
             <Box
                 sx={{
                     display: 'grid',
-                    gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(4, minmax(0, 1fr))' },
+                    gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(5, minmax(0, 1fr))' },
                     columnGap: 2,
                     rowGap: 1,
                     mt: 1.5,
@@ -143,8 +150,9 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
             >
                 <Fact label={rateVerbs(selected.counts).title} value={makes.value} sub={makes.sub} />
                 <Fact label={CARD_COPY.wakeUps} value={wakeUps.value.replace(' a minute', '/min')} sub={wakeUps.sub} />
+                <Fact label={CARD_COPY.signals} value={signals.value.replace(' a minute', '/min')} sub={signals.sub} />
                 <Fact label={CARD_COPY.recovers} value={recovers.value} icon={RECOVERS_ICON[recovers.kind]} />
-                <Fact label={CARD_COPY.belt} value={beltValue(props.pickRule, selected.beltLabel)} sub={beltValueSub(props.pickRule, selected.beltLabel) ?? (selected.ranking.matches_belt_choice ? undefined : 'Different setting')} />
+                <Fact label={CARD_COPY.belt} value={beltValue(props.pickRule, selected.beltLabel)} sub={beltValueSub(props.pickRule, selected.beltLabel)} />
             </Box>
             {recovers.kind !== 'yes' && !props.rateWarning && <Typography variant="body2" sx={{ mt: 1 }}>{recovers.detail}</Typography>}
             {lossLimit && <Typography variant="body2" sx={{ mt: 1 }} data-loss-limit>{lossLimit}</Typography>}
@@ -152,11 +160,17 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
     );
 }
 
-/** Whether the clock keeps its rate once the machines have warmed up, as a sentence */
+/** What the chip Fewest deciders means, by the chip's text; nothing for any other clock */
+function fewestDecidersMeaning(alternatives: ClockAlternativeView[], index: number, rule: PickRule | null): Record<string, string> {
+    const meaning = pickNameMeaning(alternatives, index, rule);
+    return meaning ? { [SUMMARY_COPY.fewestDeciders]: meaning } : {};
+}
+
+/** Whether the clock keeps its rate at steady state, as a sentence */
 function holdStatusText(rate: string, holds: boolean | null | undefined, counts?: TargetCounts): string {
-    if (holds === true) return `It keeps ${rateVerbs(counts).ing} ${rate} once warmed up: yes.`;
-    if (holds === false) return 'It does not keep its rate once warmed up.';
-    return 'Whether it keeps its rate once warmed up is unavailable.';
+    if (holds === true) return `At steady state it keeps ${rateVerbs(counts).ing} ${rate}: yes.`;
+    if (holds === false) return 'At steady state it does not keep its rate.';
+    return 'Whether it keeps its rate at steady state is unavailable.';
 }
 
 function ClockExplanation(props: SelectedProps) {

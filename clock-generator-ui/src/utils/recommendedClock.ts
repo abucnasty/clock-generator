@@ -28,7 +28,7 @@ export interface ClockRow<T> {
 export const RECOMMENDED_COPY = {
     chip: 'Recommended',
     chipWhileGenerating: 'Best so far',
-    intro: 'Each clock was tested in the simulator. Select a row to show it in Your clock above. Fewer wakeups are '
+    intro: 'Each clock was tested in the simulator. Select a row to show it in Selected clock above. Fewer wakeups are '
         + 'better: each one costs a little UPS.',
     backToRecommended: 'Back to recommended',
     backWhileGenerating: 'Back to best so far',
@@ -37,12 +37,12 @@ export const RECOMMENDED_COPY = {
     disclosure: [
         'The simulator checks exported enable windows from a modeled cold start, including clock-phase checks where available. '
             + 'Extended sampled-start checks are separate and optional; Model and tested starts reports what actually ran. '
-            + 'Clocks that hold are also assessed for recovery after inputs stop or outputs back up; an unavailable result is not a pass.',
-        'The clock picked for you is the one that holds the rate and recovers with the fewest wakeups; on a build '
+            + 'Clocks that hold are also assessed for recovery after a supply stop or an output blockage; an unavailable result is not a pass.',
+        'The clock picked for you is the one that holds the rate and has recovery, with the fewest wakeups; on a build '
             + 'with a deadlock risk, the one '
-            + 'with the fewest wakeups of the clocks that hold the rate. If clocks tie, the one that recovers sooner, then the '
-            + 'one with fewer enable windows. If none qualifies, the stable clock that runs nearest over the target rate; if there is none, the one '
-            + 'that runs nearest to the target rate. On a build with a loop of machines, '
+            + 'with the fewest wakeups of the clocks that hold the rate. If clocks tie, the one that goes back to its rate sooner, then the '
+            + 'one with fewer enable windows. If none qualifies, the stable clock that runs nearest over the setpoint. If there is none, the one '
+            + 'that runs nearest to the setpoint. On a build with a loop of machines, '
             + 'whose wakeups depend on where its clock is when the build starts, their average over 12 start points is compared.',
         'A clock made for a moving belt keeps each belt inserter\'s enable window open a few ticks longer (belt slack). '
             + 'A clock made without it is only picked when no clock for a moving belt holds the rate. If you say your '
@@ -51,7 +51,7 @@ export const RECOMMENDED_COPY = {
     runMovingBelts: 'This run assumed moving belts.',
     runBackedUpBelts: 'This run assumed backed-up belts.',
     runSearched: 'The slower searches for fewer wakeups were run.',
-    runSearchedWhenNeeded: 'The slower searches were only run if no other clock held the rate and recovered, apart from the two that can still find fewer wakeups on a short clock.',
+    runSearchedWhenNeeded: 'The slower searches were only run if no other clock held the rate and had recovery, apart from the two that can still find fewer wakeups on a short clock.',
     provisional: 'More clocks are still being made, so this may change. ',
     stopped: 'You stopped this run early, so a better clock may not have been made yet. ',
     beltBackedUp: ' with backed-up belts',
@@ -61,11 +61,11 @@ export const RECOMMENDED_COPY = {
      * those that hold the rate (the glossary's words, not the table's old "Stable")
      */
     contenders: (rate: string, deadlock: boolean, counts?: TargetCounts) =>
-        deadlock ? `the clocks that hold ${rate}/s` : `the clocks that keep ${rateVerbs(counts).ing} ${rate}/s and recover`,
+        deadlock ? `the clocks that hold ${rate}/s` : `the clocks that keep ${rateVerbs(counts).ing} ${rate}/s and go back to it after a stop`,
     fewestWakeUps: (contenders: string, belt: string) => `Fewest wakeups of ${contenders}${belt}.`,
-    fewestDeciders: (contenders: string, belt: string) => `Fewest deciders of ${contenders}${belt}: the least wiring to do by hand.`,
+    fewestDeciders: (contenders: string, belt: string) => `Fewest deciders of ${contenders}${belt}. This is the least wiring to do by hand.`,
     onlyContender: (rate: string, belt: string, deadlock: boolean) =>
-        deadlock ? `The only clock that holds ${rate}/s${belt}.` : `The only clock that holds ${rate}/s and recovers${belt}.`,
+        deadlock ? `The only clock that holds ${rate}/s${belt}.` : `The only clock that holds ${rate}/s and has recovery${belt}.`,
     wakeUpsNotCounted: (contenders: string, belt: string) =>
         `Fewest enable windows among ${contenders}${belt}. Wakeups could not be counted for them.`,
     tieOnWakeUps: (others: number, kind: string) =>
@@ -74,20 +74,20 @@ export const RECOMMENDED_COPY = {
         ` ${othersText(others, kind)} on wakeups, so the one with fewer enable windows was picked, not counting the `
         + 'extra enable windows that only cut wakeups.',
     tieOnRecovery: (others: number, kind: string) =>
-        ` ${othersText(others, kind)} on wakeups, so the one that recovers sooner after inputs stop or outputs back up was picked.`,
+        ` ${othersText(others, kind)} on wakeups, so the one that goes back to its rate sooner after a supply stop or an output blockage was picked.`,
     tieOnWindows: (others: number, kind: string) =>
         ` ${othersText(others, kind)} on wakeups and enable windows, so the first one in the list is shown.`,
     tieKindMoving: ' for a moving belt',
     recoveryDoesNotDecide: ' The recovery trials do not decide on this build.',
     noneForMovingBelt: (rate: string, deadlock: boolean) => deadlock
-        ? `No clock made for a moving belt holds ${rate}/s.`
-        : `No clock made for a moving belt holds ${rate}/s and recovers.`,
-    backedUpOnly: ' This one, made for backed-up belts, does.',
-    backedUpFewestWakeUps: ' Of those made for backed-up belts, this one has the fewest wakeups.',
-    backedUpWakeUpsNotCounted: ' Of those made for backed-up belts, this one has the fewest enable windows; wakeups '
+        ? `No clock with belt slack holds ${rate}/s.`
+        : `No clock with belt slack holds ${rate}/s and has recovery.`,
+    backedUpOnly: ' This one, without belt slack, does.',
+    backedUpFewestWakeUps: ' Of those without belt slack, this one has the fewest wakeups.',
+    backedUpWakeUpsNotCounted: ' Of those without belt slack, this one has the fewest enable windows. Wakeups '
         + 'could not be counted for them.',
-    mayFailOnMovingBelt: ' It may fail on a moving belt.',
-    noneHolds: (rate: string, deadlock: boolean) => deadlock ? `No clock holds ${rate}/s.` : `No clock holds ${rate}/s and recovers.`,
+    mayFailOnMovingBelt: ' A pickup that comes late on a moving belt may not finish.',
+    noneHolds: (rate: string, deadlock: boolean) => deadlock ? `No clock holds ${rate}/s.` : `No clock holds ${rate}/s and has recovery.`,
     atRateHolds: (rate: string, fewest: boolean) =>
         ` This one holds ${rate}/s from the modeled cold start${fewest ? ' with the fewest wakeups' : ''}.`,
     atRateRuns: (rate: string, fewest: boolean) => ` This one runs at ${rate}/s${fewest ? ' with the fewest wakeups' : ''}.`,
@@ -95,7 +95,7 @@ export const RECOMMENDED_COPY = {
     nearestAt: (itsRate: string) => ` This one runs nearest to it, at ${itsRate}/s.`,
     nearestHolds: ' Of the equally near clocks, it is the one that holds its output from the modeled cold start.',
     stableOver: (itsRate: string, percent: string) => ` This one is stable and runs over it, at ${itsRate}/s (${percent} over): `
-        + 'a stable clock over the target is picked before a clock nearer to it that is unstable or runs under it.',
+        + 'a stable clock over the setpoint is picked before a clock nearer to it that is unstable or runs under it.',
 };
 
 /** "1 other clock for a moving belt ties" / "2 other clocks tie" */
@@ -243,7 +243,7 @@ function tieOf(pick: PickableClock, others: PickableClock[], kind: string): stri
 function nearestReason(alternatives: PickableClock[], pick: PickableClock, rate: string, deadlock: boolean): string {
     const { ranking } = pick;
     if (pick.assessment.start_dependence?.verdict === 'start-dependent') {
-        return `No clock qualifies under the engine's selection rule. This one is assessed at ${figure(pick.assessment.items_per_second)}/s and reaches the target from only some sampled starts. See Model and tested starts.`;
+        return `No clock qualifies under the engine's selection rule. This one is assessed at ${figure(pick.assessment.items_per_second)}/s and reaches the setpoint from only some sampled starts. See Model and tested starts.`;
     }
     const lead = RECOMMENDED_COPY.noneHolds(rate, deadlock);
     if (ranking.stable_above_target === true) {

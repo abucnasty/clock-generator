@@ -40,11 +40,11 @@ it('uses the measured clock origin rather than the judged stock index when both 
     expect(timelineRequestFor(config, measured, 'plan')).not.toHaveProperty('settle_ticks');
     expect(timelineRequestFor(config, { ...measured, asBuilt: { clock_tick_at_first_judged: 1201 } } as ClockAlternativeView, 'clock')?.settle_ticks).toBe(1201);
     expect(settledPeriodLabel(timelineRequestFor(config, measured, 'clock'), { mode: 'clock', ticks_before_recording: 1200 }))
-        .toBe('Period from tick 1200, after the build has settled');
+        .toBe('Window cycle from tick 1200, at steady state');
 });
 it('says which period a settled replay shows, and says nothing of the first one', () => {
     const request = timelineRequestFor(config, { ...clock, simulationDurationTicks: 24, asBuilt: { first_judged_tick: 960 } } as ClockAlternativeView, 'clock');
-    expect(settledPeriodLabel(request, { mode: 'clock', ticks_before_recording: 960 })).toBe('Period from tick 960, after the build has settled');
+    expect(settledPeriodLabel(request, { mode: 'clock', ticks_before_recording: 960 })).toBe('Window cycle from tick 960, at steady state');
     expect(settledPeriodLabel(request, { mode: 'plan', ticks_before_recording: 240 })).toBeNull();
     expect(settledPeriodLabel(timelineRequestFor(config, clock, 'clock'), { mode: 'clock', ticks_before_recording: 240 })).toBeNull();
     expect(settledPeriodLabel(null, null)).toBeNull();

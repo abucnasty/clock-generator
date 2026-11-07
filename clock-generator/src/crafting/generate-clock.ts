@@ -318,7 +318,7 @@ function clockWithPickupsFromTheirEntry(made: MadeClocks, plan: PlanRun, options
     const checked = checkedAndKept(made, from_entry, clock, clock.windows, options);
     const holds = checked.stability_check.as_built?.holds ?? checked.stability_check.holds;
     plan.logger.log(`Pickups counted from their entry, not from the take that freed them: the clock ${holds ? "holds, kept" : "does not hold either"}`);
-    return holds ? checked : null;
+    return holds ? { ...checked, pickups_from_entry: true } : null;
 }
 
 /**

@@ -22,7 +22,7 @@ export function MachineProductionSummary({ facts, targetRate, atTarget = false }
         stochastic: false,
     }];
     const targetRatesUnavailable = atTarget && outputs.some(output => !targetRate?.outputs?.some(candidate => candidate.item_name === output.item_name));
-    return <Box role="group" aria-label={`${targetRate ? 'At-target' : 'Maximum'} production per machine`} sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.75 }}>
+    return <Box role="group" aria-label={`${targetRate ? 'Production per machine at the setpoint' : 'Maximum production per machine'}`} sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.75 }}>
         {facts.inputs.length > 0 && <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, maxWidth: '100%' }}>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
             {facts.inputs.map(input => {
@@ -58,7 +58,7 @@ export function MachineProductionSummary({ facts, targetRate, atTarget = false }
                 })}
             </Box>
         </Box>
-        {targetRatesUnavailable && <Typography component="span" variant="caption" color="text.secondary">At-target rate unavailable</Typography>}
+        {targetRatesUnavailable && <Typography component="span" variant="caption" color="text.secondary">Rate at the setpoint unavailable</Typography>}
         {facts.fuel && <Tooltip title={`Consumes ${itemLabel(facts.fuel.item_name)} as fuel: ${formatNumberText(facts.fuel.consumption_rate_per_second * share)}/s ${fuelTiming} (${formatNumberText(facts.fuel.amount_per_craft)} per craft).`} arrow>
             <Box component="span" tabIndex={0} role="img" aria-label={`Fuel: ${itemLabel(facts.fuel.item_name)}, ${formatNumberText(facts.fuel.consumption_rate_per_second * share)} per second ${fuelTiming}`} sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, borderLeft: 1, borderColor: 'divider', pl: 0.75, borderRadius: 0.5 }}>
                 <LocalFireDepartmentOutlined aria-hidden sx={{ fontSize: 14 }} />

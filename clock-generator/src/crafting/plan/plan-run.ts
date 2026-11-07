@@ -316,7 +316,9 @@ export interface BlueprintGenerationResult {
      * other clock. `guarded_takers`: the takers the surplus guard gave a window for their hands alone, one span from `start`
      * (`(hands - 1) x cycle_ticks + 2` ticks), which the per-hand variant splits into a tick at each pick; absent where none is.
      */
-    grouped_hands?: { shared_windows: boolean; guarded_takers?: GuardedTaker[] };
+    grouped_hands?: { shared_windows: boolean; harmonic_window_cycle?: true; guarded_takers?: GuardedTaker[] };
+    /** The windows are of a planning run that counts every belt pickup from its entry, not from the take that freed it (see clockWithPickupsFromTheirEntry) */
+    pickups_from_entry?: true;
     /**
      * Where results come by chance (a target that counts an item destroyed by a recycler): the room of the windows that
      * carry each result, and of each machine's crafting, against the spread of the game's amounts (random-margins.ts).

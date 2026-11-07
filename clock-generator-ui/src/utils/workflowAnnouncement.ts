@@ -44,7 +44,7 @@ export interface WorkflowSnapshot {
     /** The run stopped on an error; clocks that arrived before it may still be on screen */
     failed: boolean;
     hasBlueprint: boolean;
-    /** The selected clock's name, by what it is for ("Fewest wake-ups") */
+    /** The selected clock's name, its strategy and chips ("Takt batches · 2 output swings a cycle") */
     selectedLabel: string | null;
     /** The selected clock's id, which tells apart two clocks of the same name */
     selectedId: string | null;

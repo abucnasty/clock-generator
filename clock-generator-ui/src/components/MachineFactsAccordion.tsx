@@ -66,7 +66,7 @@ export function MachineFactsAccordion({ facts, error, headingLevel = 4, machineI
                             value={formatNumberText(facts.output_per_craft)}
                         />
                         <FactItem
-                            label={targetRate ? 'At-target rate' : 'Max rate'}
+                            label={targetRate ? 'Rate at the setpoint' : 'Max rate'}
                             value={`${formatNumberText(outputRate)}/s`}
                             tooltip={`${outputRate}/s ${rateContext}`}
                         />
@@ -261,7 +261,7 @@ const FACT_DESCRIPTIONS: Record<string, string> = {
     'Fuel Per Craft': 'Fuel items burned per craft',
     'Amount Per Craft': 'Amount produced per craft (including productivity)',
     'Max rate': 'Most this machine can make, in items per second',
-    'At-target rate': 'Planned output per second for one machine in one copy of the build',
+    'Rate at the setpoint': 'Planned output per second for one machine in one copy of the build',
     'Capacity used': 'Planned demand as a percentage of this machine’s maximum capacity; above 100% exceeds its capacity',
     'Output Block': 'How many output items the machine holds before it stops crafting until some are taken out',
     'Craft': 'Ticks required per craft',
