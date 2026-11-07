@@ -6,7 +6,7 @@ the near lane has none. There is one grab total per tick and no fixed delay for 
 lanes of four-item stacks, a hand of 16 filled at offsets `0,1,2,3` on all three geometries at turbo and express
 speeds. The simulator uses this lane order and retains each lane's holes and partial stacks between hands.
 
-Each scaffold has the same cell: a legendary assembling machine 3 making iron gears, a legendary stack inserter
+Each scaffold has the same build: a legendary assembling machine 3 making iron gears, a legendary stack inserter
 bringing iron plates, and another taking gears into an infinity chest that removes them. Both hands hold 16.
 The assembler has no modules: crafting speed 3.125, productivity 0. The ordinary config targets 6 gears/second.
 

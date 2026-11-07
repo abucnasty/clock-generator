@@ -8,7 +8,7 @@ This fixture covers a northbound exit with the inserter directly north of it.
 ending in a northbound turbo underground exit. The input inserter stands one tile north of the exit and drops into
 the plant to its north. The base blueprint has `mirror: true`; the flipped case changes only the input inserter to
 `mirror: false`. The probe verifies the actual `mirroring` property against the host-supplied expectation.
-The ingredient drain is removed, so both lanes back up before the cell's inserters are placed in a staged start.
+The ingredient drain is removed, so both lanes back up before the build's inserters are put down in a staged start.
 The base scaffold has accumulators on lane 1 and supercapacitors on lane 2, both in stacks of four.
 The swapped case reverses only the four ingredient feeder filters and the input config lanes, using
 `swapElectromagneticIngredientFeeds` from the shared fixture helpers. The flipped case keeps these swapped

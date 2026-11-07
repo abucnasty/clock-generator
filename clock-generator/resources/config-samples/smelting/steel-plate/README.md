@@ -37,7 +37,7 @@ inserter: it has the output swings and windows, and the steel furnace's inserter
 
 The recommended clock (planned with belt slack, a subtick clock of 886.15 ticks, 11,520 for 13 window cycles) moves 4,992 steel
 in each of 63 periods of 11,520 ticks in the game, and the clock planned without iron ore in its window cycle (295.38 ticks,
-3,840 for 13) 1,664 in each of 63 periods of 3,840. Both get back to it after the drill is stopped until the wagon has run
+3,840 for 13) 1,664 in each of 63 periods of 3,840. Both go back to it after the drill is stopped until the wagon has run
 dry of steel (9 and 10 periods), the output is blocked for 4 and the drill is stopped again
 (`tests/game/builds/steel-plate-26-wagon-chest-clock-controls.json`). Building the two inserters that put plates and steel into the wagon
 after the other entities changed nothing in any period: the steel moved, the wagon's contents at each period's start and

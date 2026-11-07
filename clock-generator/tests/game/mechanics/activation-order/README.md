@@ -15,9 +15,9 @@ The images show warmed layouts, not the observation state. See the [game evidenc
 | agricultural-belt | 4836–4838 | Belt input wakes after B; next updates are belt, B, A, output. Its first stack is visible in row 4839. |
 | lds-diagnostic | 5629–5630 | Consumption wakes input, then a control change wakes output; next updates are output, input. Transfers appear in row 5631. |
 
-An alarm is a delivered notification; it does not always cause a wake or reorder an awake inserter. The original
+An alarm is a delivered notification; it does not always cause a wake or reorder an inserter on the update list. The original
 sleep transitions are inferred between observations. Both bounds remain in each fixture; the replay applies sleep
-only at the final asleep observation and does not invent an exact sleep time. Later directly observed sleep events
+only at the final observation in sleep and does not invent an exact sleep time. Later directly observed sleep events
 in the [partial-hand](fixtures/partial-hand/README.md) and [condition-assignment](fixtures/condition-writes/README.md)
 cases do not upgrade those older intervals.
 

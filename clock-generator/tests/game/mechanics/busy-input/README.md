@@ -10,9 +10,9 @@ The real refusal path has eight target-full=true checks and no selected source-f
 Control has eight target-full=false checks, eight filter checks and eight refused acceptance checks. The controlled
 [source-pickup complement](../source-search/README.md) separates these gates and source inventory shapes.
 
-Alarm totals are 8/16, distinct from the eight wakes in either case. An alarm on an already awake hand does not
+Alarm totals are 8/16, distinct from the eight wakes in either case. An alarm on a hand already on the update list does not
 necessarily wake it again. Only alarm beginnings were observed; no unobserved end state is supplied. Exactly twelve
-observation-induced target-full checks per common slice are excluded. Visible entity status is not awake/asleep state.
+observation-induced target-full checks per common slice are excluded. Visible entity status is not the sleep state.
 
 The fixture retains exact per-role order, results and denominators. Zero selected checks do not prove zero alternative
 work. Longer control attempts exceeded their existing limit and are not accepted evidence. No full-factory cause,

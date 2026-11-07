@@ -44,12 +44,12 @@ light entry, and each sample's facts are kept in `src/crafting/facts/__snapshots
 - **Read-only.** A node's trait fields are the objects of the traits built for that call.
 
 **The planner reads the same traits** where it works a figure out of a build (`traitsOf(config)`,
-`src/entities/traits/traits-of.ts`: `buildTraits` once per config object, kept with it; a candidate's or a trial's
+`src/entities/traits/traits-of.ts`: `buildTraits` once per config object, kept with it; a clock's or a trial's
 config is a new object and gets its own): the output capacity of the machines that make the target (`yield` of each,
 its main product's exact rate), the machines' rates at the target (`yield`, `production`, `placement` and the takers'
 `hand`), the sinks whose terminal outputs are judged as a rate or get room for one more output swing
 (`storage.never_refuses`). The lane check reads what a
-lane carries off the Lane traits of the belt it checks, and the belt pickup slack and the room for a hand of fuel count
+lane carries off the Lane traits of the belt it checks, and the belt slack and the room for a hand of fuel count
 a hand as the timing floor does, one belt stack a tick, each with the hand it reads (the nominal one and the hand of the
 fuel). The cycle plan's transfers are the balance equations over the facts and the graph (`planner/balance.ts`): what a
 craft takes and makes of each item (`production.inputs`, the exact `yield.results[].per_craft`), the hands of the edges,

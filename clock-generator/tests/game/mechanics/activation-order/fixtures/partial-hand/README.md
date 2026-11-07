@@ -11,7 +11,7 @@ The [screenshot provenance](../../../screenshots.generated.json) identifies the 
 It shows the warmed layout without the observation stock/interventions.
 
 The fixture preserves 20 updates, 14 alarms, 6 wakes and 6 directly observed sleeps. Partial hands sleep after a
-top-up; a full 16-item hand stays awake to swing and delivers before source event 8. Craft 8 wakes hands 3,2,1;
+top-up; a full 16-item hand stays on the update list to swing and delivers before source event 8. Craft 8 wakes hands 3,2,1;
 updates at 9 are 1,2,3. Direct insertion at 14 wakes 1,2,3; updates at 14 are 3,2,1. These source-specific sequences
 do not establish a universal subscriber order.
 
