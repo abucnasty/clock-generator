@@ -161,7 +161,10 @@ function oldFuelHandRoomTicks(entity_registry: ReadableEntityRegistry): Map<stri
     return room;
 }
 
-/** clock.ts beltPickupSlackTicks before R21 */
+/**
+ * clock.ts beltPickupSlackTicks before R21, of the nominal hand. It reads each item's hand since; on every config here
+ * the belt-fed inserters' hands equal their nominal hand, so the two agree (the per-item case: rules-of-the-game.test.ts)
+ */
 function oldBeltPickupSlackTicks(entity_registry: ReadableEntityRegistry): Map<string, number> {
     const slack = new Map<string, number>();
     for (const entity of entity_registry.getAll()) {

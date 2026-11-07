@@ -105,6 +105,16 @@ describe("the rules of the game", () => {
             expect(Array.from(slack.keys()).sort()).toEqual(belt_fed.map(it => it.entity_id.id).sort());
             expect(new Set(slack.values())).toEqual(new Set([4]));
         });
+
+        // the hand it moves of the item on the lane, not its nominal hand: an item that stacks under the nominal hand, or a
+        // hand rounded to whole stacks of a belt it drops on, fills in fewer ticks
+        it("is the ticks of its hand of the item on the lane: 2 for a hand of 8 from stacks of 4", async () => {
+            const registry = await registryOf(ConfigPaths.LOGISTIC_SCIENCE_240);
+            const inserter = registry.getAll().filter(Entity.isInserter).find(it => Entity.isBelt(registry.getEntityByIdOrThrow(it.source.entity_id)))!;
+            expect(inserter.metadata.stack_size).toBe(16);
+            inserter.hand_sizes = new Map(Array.from(inserter.filtered_items, item => [item, 8]));
+            expect(beltPickupSlackTicks(registry).get(inserter.entity_id.id)).toBe(2);
+        });
     });
 
     describe("room for a hand of fuel", () => {

@@ -70,7 +70,8 @@ export function fuelHandRoomTicks(entity_registry: ReadableEntityRegistry): Map<
 /**
  * Ticks added to the end of each belt-fed inserter's window. In game, a grab from a full belt can stall while a
  * gap left by an upstream inserter passes the pickup point, so the window must outlast a late pickup or the
- * inserter is disabled holding a partial hand. Sized as one more full-hand pickup (one lane stack per tick).
+ * inserter is disabled holding a partial hand. Sized as one more full-hand pickup (one lane stack per tick) of the hand
+ * it moves of the item on the lane.
  */
 const MAX_BELT_PICKUP_SLACK_TICKS = 16;
 
@@ -86,9 +87,10 @@ export function beltPickupSlackTicks(entity_registry: ReadableEntityRegistry): M
             continue;
         }
         const lanes = source.lanes.filter(lane => entity.filtered_items.has(lane.ingredient_name));
-        const lane_stack_size = Math.min(...(lanes.length > 0 ? lanes : source.lanes).map(lane => lane.stack_size));
-        // the timing floor's count (one belt stack a tick) of its nominal hand (P3 2.3: each count keeps the hand it reads)
-        const ticks = stacksOf(entity.metadata.stack_size, lane_stack_size);
+        // the timing floor's count (one belt stack a tick) of its hand of each item it takes (its Hand trait's `by_item`,
+        // as handSizeFor reads it: its nominal hand for an item it does not carry), the slowest lane's fill
+        const ticks = Math.max(...(lanes.length > 0 ? lanes : source.lanes)
+            .map(lane => stacksOf(handSizeFor(entity, lane.ingredient_name), lane.stack_size)));
         slack.set(entity.entity_id.id, Math.min(ticks, MAX_BELT_PICKUP_SLACK_TICKS));
     }
     return slack;
