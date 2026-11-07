@@ -112,7 +112,7 @@ export type { MachinePrototypeIssue } from './config/machine-prototype';
 
 export type { ClockStrategy, StrategyFamily, StrategyQualifier, StrategyConstruction } from "./crafting/clock-strategy";
 export { catalogRowOf, routerRowOf } from "./crafting/strategy-catalog";
-export type { StrategyCatalogRow, TuningMethod, Selection, Router, EnableControl, SourceControl, ClockRouting } from "./crafting/strategy-catalog";
+export type { StrategyCatalogRow, TuningMethod, Selection, EnableControlStrategyRouter, EnableControl, SourceControl, ClockRouting } from "./crafting/strategy-catalog";
 export {
     generateClockForConfig,
     validateConfig,

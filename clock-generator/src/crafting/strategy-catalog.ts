@@ -31,7 +31,7 @@ export interface StrategyCatalogRow {
 }
 
 /** Which router gave a clock's entities their strategies */
-export type Router = "direct" | "coordinated_sources";
+export type EnableControlStrategyRouter = "direct" | "coordinated_sources";
 
 /** What a router gives one entity: a strategy, or no enable windows and the reason it stays always enabled */
 export type EnableControl =
@@ -47,7 +47,7 @@ export interface SourceControl {
 
 /** The router of a clock and, for Coordinated Sources, what it gave each source's entities */
 export interface ClockRouting {
-    router: Router;
+    router: EnableControlStrategyRouter;
     /** Set for coordinated_sources only: every source group, in the order the router took them (from the output upstream) */
     sources?: SourceControl[];
 }
@@ -59,7 +59,7 @@ export function catalogRowOf(strategy: Pick<ClockStrategy, "family" | "construct
 }
 
 /** The words of a router */
-export function routerRowOf(router: Router): StrategyCatalogRow {
+export function routerRowOf(router: EnableControlStrategyRouter): StrategyCatalogRow {
     return ROUTER_ROWS[router];
 }
 
@@ -186,7 +186,7 @@ const FAMILY_ROWS: Record<StrategyFamily, StrategyCatalogRow> = {
     },
 };
 
-const ROUTER_ROWS: Record<Router, StrategyCatalogRow> = {
+const ROUTER_ROWS: Record<EnableControlStrategyRouter, StrategyCatalogRow> = {
     // TEXT TO APPROVE (manager, 2026-11-07): Direct's line and definition
     direct: {
         name: "Direct",

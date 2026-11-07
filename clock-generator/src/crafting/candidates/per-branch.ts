@@ -114,23 +114,32 @@ export function partGroups(inserters: readonly GroupedInserter[], parts: readonl
 /**
  * What the router gave each entity of the groups, source by source in the order the groups were taken: the strategy of the part the
  * group took, or, for an inserter the part leaves without windows, the reason it stays always enabled (the part's own, else the clock's:
- * `always_on_reasons`). Refuses (PerBranchNotApplicable) where an inserter is always enabled with no reason known: the router type has
- * no unknown reason. Throws where a part has no strategy.
+ * `always_on_reasons`). It never refuses: an inserter whose reason is not known, or whose part has no strategy, is left out of its
+ * source's entities and named in a debug line of the log.
  */
-export function sourceControlsOf(groups: readonly PartGroup[], chosen: ReadonlyMap<string, number>, always_on_reasons: AlwaysOnReasons = {}): SourceControl[] {
+export function sourceControlsOf(
+    groups: readonly PartGroup[],
+    chosen: ReadonlyMap<string, number>,
+    always_on_reasons: AlwaysOnReasons,
+    logger: Logger,
+    build: string,
+): SourceControl[] {
     return groups.map(group => {
         const choice = group.choices[chosen.get(group.source)!];
         const part = choice.parts[0];
-        return { source: group.source, entities: Object.fromEntries(group.inserters.map((id): [string, EnableControl] => {
+        const entities: Record<string, EnableControl> = {};
+        for (const id of group.inserters) {
             if (choice.windows[id] !== null && choice.windows[id] !== undefined) {
-                if (part.strategy === undefined) throw new Error(`The part ${partName(part)} has no strategy`);
+                if (part.strategy === undefined) { logger.debug(`Per-branch clock, ${build}: ${id} left out of the sources, the part ${partName(part)} has no strategy`); continue; }
                 const { family, construction } = part.strategy;
-                return [id, { kind: "strategy", family, ...(construction !== undefined && { construction }) }];
+                entities[id] = { kind: "strategy", family, ...(construction !== undefined && { construction }) };
+                continue;
             }
             const reason = choice.parts.map(it => it.always_on?.[id]).find(it => it !== undefined) ?? always_on_reasons[id];
-            if (reason === undefined) refuse(`the inserter ${id} is always enabled with no reason known`);
-            return [id, { kind: "always_on", reason }];
-        })) };
+            if (reason === undefined) { logger.debug(`Per-branch clock, ${build}: ${id} left out of the sources, it is always enabled with no reason known`); continue; }
+            entities[id] = { kind: "always_on", reason };
+        }
+        return { source: group.source, entities };
     });
 }
 
@@ -295,7 +304,7 @@ export function perBranchClock(config: Config, input: PerBranchInput, options: G
         + `${trials.size} clocks simulated`);
     const result = finishedClock(made, map, [], { ...options, loop_windows: false }, left_open);
     return { ...result, per_branch: { parts: Object.fromEntries(groups.map(group => [group.source, partName(group.choices[current.get(group.source)!].parts[0])])),
-        sources: sourceControlsOf(groups, current, result.always_on_reasons) } };
+        sources: sourceControlsOf(groups, current, result.always_on_reasons ?? {}, logger, config.target_output.recipe) } };
 }
 
 /** The inserters a part leaves always enabled, with its reasons */

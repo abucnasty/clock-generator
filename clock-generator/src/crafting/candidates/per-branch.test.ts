@@ -96,9 +96,11 @@ describe("what the router gave each entity", () => {
     const other = part("other", 20, { "inserter:2": [window(7, 8)], "inserter:3": [window(7, 8)], "inserter:4": [window(0, 0)] },
         { strategy: polling, always_on: { "inserter:1": { kind: "busy", period_ticks: 20 } } });
     const groups = partGroups(CHAIN, [recommended, other], 20);
+    const logged: string[] = [];
+    const logger = { log: () => { }, warn: () => { }, error: () => { }, debug: (message: string) => { logged.push(message); } };
 
     it("lists every inserter of every group once, with the strategy of the part its group took", () => {
-        const sources = sourceControlsOf(groups, new Map([["machine:2", 0], ["machine:1", 1], ["belt:1", 0]]));
+        const sources = sourceControlsOf(groups, new Map([["machine:2", 0], ["machine:1", 1], ["belt:1", 0]]), {}, logger, "gear");
         expect(sources.map(it => it.source)).toEqual(["machine:2", "machine:1", "belt:1"]);
         expect(sources.flatMap(it => Object.keys(it.entities)).sort()).toEqual(CHAIN.map(it => it.id));
         expect(sources[0].entities).toEqual({ "inserter:4": { kind: "strategy", family: "takt-batches", construction: "arithmetic" } });
@@ -109,12 +111,22 @@ describe("what the router gave each entity", () => {
     });
 
     it("gives an inserter its part leaves without windows its always-on reason: the part's, else the clock's", () => {
-        const from_part = sourceControlsOf(groups, new Map([["machine:2", 0], ["machine:1", 0], ["belt:1", 1]]));
+        const from_part = sourceControlsOf(groups, new Map([["machine:2", 0], ["machine:1", 0], ["belt:1", 1]]), {}, logger, "gear");
         expect(from_part[2].entities).toEqual({ "inserter:1": { kind: "always_on", reason: { kind: "busy", period_ticks: 20 } } });
         const bare = partGroups(CHAIN, [recommended, { ...other, always_on: undefined }], 20);
-        expect(sourceControlsOf(bare, new Map([["machine:2", 0], ["machine:1", 0], ["belt:1", 1]]), { "inserter:1": { kind: "loop" } })[2].entities)
+        expect(sourceControlsOf(bare, new Map([["machine:2", 0], ["machine:1", 0], ["belt:1", 1]]), { "inserter:1": { kind: "loop" } }, logger, "gear")[2].entities)
             .toEqual({ "inserter:1": { kind: "always_on", reason: { kind: "loop" } } });
-        expect(() => sourceControlsOf(bare, new Map([["machine:2", 0], ["machine:1", 0], ["belt:1", 1]]))).toThrow("no reason");
+    });
+
+    it("leaves out an inserter with no reason known or a part with no strategy, and says so in the log, never refusing", () => {
+        const bare = partGroups(CHAIN, [recommended, { ...other, always_on: undefined }], 20);
+        const sources = sourceControlsOf(bare, new Map([["machine:2", 0], ["machine:1", 0], ["belt:1", 1]]), {}, logger, "gear");
+        expect(sources[2].entities).toEqual({});
+        expect(logged).toEqual(["Per-branch clock, gear: inserter:1 left out of the sources, it is always enabled with no reason known"]);
+        logged.length = 0;
+        const unknown = partGroups(CHAIN, [{ ...recommended, strategy: undefined }], 20);
+        expect(sourceControlsOf(unknown, new Map([["machine:2", 0], ["machine:1", 0], ["belt:1", 0]]), {}, logger, "gear").flatMap(it => Object.keys(it.entities))).toEqual([]);
+        expect(logged).toHaveLength(4);
     });
 });
 
