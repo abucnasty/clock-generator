@@ -1,6 +1,6 @@
-import { catalogRowOf, routerRowOf } from 'clock-generator/light';
+import { catalogRowOf, routerRowOf, settingChipsOf, strategyRowOf } from 'clock-generator/light';
 import type {
-    AlwaysOnReason, ClockStrategy, EnableControl, Selection, StrategyCatalogRow, StrategyQualifier, TuningMethod,
+    AlwaysOnReason, ClockStrategy, EnableControl, Selection, SettingChip, StrategyCatalogRow, StrategyRef, TuningMethod,
 } from 'clock-generator/browser';
 import { entityLabel, type LabelKind } from './entityLabel';
 import { modeText } from './wakeWindowCopy';
@@ -8,119 +8,72 @@ import { modeText } from './wakeWindowCopy';
 /**
  * The names of the ways to make a clock (the strategies), as the user reads them: each takes its name from a real
  * practice with a similar timing problem. The engine's strategy catalog holds the words of every strategy and router
- * (name, line, definition, practice); this file reads them (`catalogRowOf`, `routerRowOf`) and words the chips.
+ * (name, line, definition, practice) and the chip words of the clock settings (`settingChipsOf`); this file reads them
+ * and adds the line each chip has in its hover and its (i).
  */
 
 /** What a clock needs to be named: the engine's label is the name of a clock kept before its strategy was carried */
 export interface NamedClock {
     label: string;
     strategy?: ClockStrategy;
-    /** The ticks of a clock rounded down to whole ticks, and how much faster than the setpoint it runs, as a share */
-    roundedPeriodTicks?: number;
-    roundedRunsFast?: number;
 }
 
-/** The catalog row of a clock's strategy: the router's for Coordinated Sources, the family's for the rest */
-function rowOfStrategy(strategy: ClockStrategy): StrategyCatalogRow {
-    return strategy.routing?.router === 'coordinated_sources' ? routerRowOf('coordinated_sources') : catalogRowOf(strategy);
-}
-
-/** A chip after the name: the tuning method and the selection of the strategy, then what qualifies the clock */
-interface QualifierChip {
-    id: StrategyQualifier | 'tuning_method' | 'selection';
+/** A chip after the name: the tuning method and the selection of the strategy, then the settings of the clock */
+interface ClockChip {
+    /** 'tuning_method', 'selection', or the setting's field and value ("window_cycle:subtick_clock") */
+    id: string;
     /** What the chip says; the name and the chips are joined by " · " */
     label: string;
     /** The line in its hover and its (i) */
     line: string;
 }
 
+/** The line of each value of the clock settings, in the hover of its chip and in the (i); the words of the chips are the catalog's */
+const SETTING_LINES: Record<string, string> = {
+    'output_count:output_swings': 'The output inserter makes this many swings each output cycle.',
+    'output_count:hands_brought_in': 'The inserters bring in this many hands each time the output cycle repeats.',
+    'shared_windows:shared_enable_windows': 'Inserters that open on the same tick share one enable window, the longest any needs. They share one decider.',
+    'shared_windows:window_a_swing': 'The machine has room for more hands than the inserter needs. The inserter is enabled for one tick at each swing.',
+    'window_cycle:shorter_window_cycle': 'Made from fewer swings each output cycle, so the whole window cycle is shorter.',
+    'window_cycle:subtick_clock': 'The clock counts the window cycle in fractions of a tick. The build then runs at exactly your rate. '
+        + 'Source: Wikipedia, "Direct digital synthesis" (the phase accumulator).',
+    'window_cycle:rounded_clock': 'The same clock on a window cycle of whole ticks. It runs fast by the percent shown.',
+    'loops:loop_windows': 'The inserters in a loop of machines get enable windows. So do the inserters that take out of the loop. '
+        + 'Kanban is a pull system: a card shows that a container needs more items. Source: Wikipedia, "Kanban". '
+        + 'Its latch is hysteresis: the switch-on and switch-off levels differ. Source: P. K. Janert, Feedback Control for Computer Systems, pp. 41-42.',
+    'loops:loop_exits_only': 'Only the inserters that take out of the loop get enable windows.',
+    'drill_windows:a_tick_longer': 'The mining drills that fill a chest get enable windows a tick longer than planned.',
+    'belt_pickups:room_for_a_hand_of_fuel': 'An inserter takes fuel off a belt. It has room in its enable window for one more hand.',
+    'belt_pickups:counted_from_entry': 'Belt pickups are counted from the time the inserter reaches the belt.',
+    'window_cycle:harmonic_window_cycle': 'An inserter fills a machine. It needs a fraction of a hand each output cycle, such as 15/8. It plans the next whole number of hands. '
+        + 'The window cycle is cut so the output inserters move whole hands. Each swing rate is then a whole multiple of one base rate. '
+        + 'A harmonic is a whole multiple of a base frequency. Source: J. O. Smith III, Spectral Audio Signal Processing, "Periodic Signals" (https://ccrma.stanford.edu/~jos/sasp/Periodic_Signals.html).',
+};
+
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
-/** A share the way the engine's labels print it: "2.32%", "under 0.01%" */
-const fastPercent = (share: number) => share * 100 < 0.005 ? 'under 0.01%' : `${Number((share * 100).toFixed(2))}%`;
-
-type QualifierCopy = (clock: NamedClock) => Omit<QualifierChip, 'id'>;
-
-const QUALIFIER_COPY: Record<Exclude<StrategyQualifier, 'found-by-search'>, QualifierCopy> = {
-    'output-swings': clock => ({
-        label: `${plural(clock.strategy?.output_swings ?? 0, 'output swing', 'output swings')} a cycle`,
-        line: 'The output inserter makes this many swings each output cycle.',
-    }),
-    'hands-brought-in': clock => ({
-        label: `${plural(clock.strategy?.output_swings ?? 0, 'hand', 'hands')} brought in a cycle`,
-        line: 'The inserters bring in this many hands each time the output cycle repeats.',
-    }),
-    'shared-enable-windows': () => ({
-        label: 'shared enable windows',
-        line: 'Inserters that open on the same tick share one enable window, the longest any needs. They share one decider.',
-    }),
-    'window-a-swing': () => ({
-        label: 'one enable window a swing',
-        line: 'The machine has room for more hands than the inserter needs. The inserter is enabled for one tick at each swing.',
-    }),
-    'shorter-window-cycle': () => ({
-        label: 'shorter window cycle',
-        line: 'Made from fewer swings each output cycle, so the whole window cycle is shorter.',
-    }),
-    'phase-accumulator': () => ({
-        label: 'subtick clock',
-        line: 'The clock counts the window cycle in fractions of a tick. The build then runs at exactly your rate. '
-            + 'Source: Wikipedia, "Direct digital synthesis" (the phase accumulator).',
-    }),
-    'rounded-clock': clock => ({
-        label: `rounded to ${clock.roundedPeriodTicks ?? '?'} ticks${clock.roundedRunsFast === undefined ? '' : `, ${fastPercent(clock.roundedRunsFast)} fast`}`,
-        line: 'The same clock on a window cycle of whole ticks. It runs fast by the percent shown.',
-    }),
-    'loop-windows': () => ({
-        label: 'kanban pull: loop windows',
-        line: 'The inserters in a loop of machines get enable windows. So do the inserters that take out of the loop. '
-            + 'Kanban is a pull system: a card shows that a container needs more items. Source: Wikipedia, "Kanban". '
-            + 'Its latch is hysteresis: the switch-on and switch-off levels differ. Source: P. K. Janert, Feedback Control for Computer Systems, pp. 41-42.',
-    }),
-    'loop-exits-only': () => ({
-        label: 'kanban pull: loop exits only',
-        line: 'Only the inserters that take out of the loop get enable windows.',
-    }),
-    'drill-windows-longer': () => ({
-        label: 'drill windows a tick longer',
-        line: 'The mining drills that fill a chest get enable windows a tick longer than planned.',
-    }),
-    'drills-always-on': () => ({
-        label: 'drills always on',
-        line: 'The mining drills that fill a chest stay on. Their enable windows did not hold.',
-    }),
-    'fuel-hand-room': () => ({
-        label: 'room for a hand of fuel',
-        line: 'An inserter takes fuel off a belt. It has room in its enable window for one more hand.',
-    }),
-    'pickups-from-entry': () => ({
-        label: 'pickups counted from entry',
-        line: 'Belt pickups are counted from the time the inserter reaches the belt.',
-    }),
-    'harmonic-window-cycle': () => ({
-        label: 'harmonic window cycle',
-        line: 'An inserter fills a machine. It needs a fraction of a hand each output cycle, such as 15/8. It plans the next whole number of hands. '
-            + 'The window cycle is cut so the output inserters move whole hands. Each swing rate is then a whole multiple of one base rate. '
-            + 'A harmonic is a whole multiple of a base frequency. Source: J. O. Smith III, Spectral Audio Signal Processing, "Periodic Signals" (https://ccrma.stanford.edu/~jos/sasp/Periodic_Signals.html).',
-    }),
-};
+/** The chip of a setting: the catalog's words and the line of its value */
+function settingChip(chip: SettingChip): ClockChip {
+    const id = `${chip.field}:${chip.value}`;
+    return { id, label: chip.label, line: SETTING_LINES[id] ?? '' };
+}
 
 /** The name of the clock's strategy; the engine's label for a clock kept before the strategy was carried */
 export function strategyNameOf(clock: NamedClock): string {
-    return clock.strategy ? rowOfStrategy(clock.strategy).name : clock.label;
+    return clock.strategy ? strategyRowOf(clock.strategy).name : clock.label;
 }
 
 /** The catalog row of the clock's strategy (name, line, definition, practice); null for a clock kept before the strategy was carried */
 export function familyCopyOf(clock: NamedClock): StrategyCatalogRow | null {
-    return clock.strategy ? rowOfStrategy(clock.strategy) : null;
+    return clock.strategy ? strategyRowOf(clock.strategy) : null;
 }
 
-const TUNING_METHOD_COPY: Record<TuningMethod, Omit<QualifierChip, 'id'>> = {
+const TUNING_METHOD_COPY: Record<TuningMethod, Omit<ClockChip, 'id'>> = {
     calculated: { label: 'calculated', line: 'Windows calculated from the build\'s numbers.' },
     observed: { label: 'observed', line: 'Windows drawn around an unclocked run of the build.' },
 };
 
-const SELECTION_COPY: Record<Selection, Omit<QualifierChip, 'id'>> = {
+const SELECTION_COPY: Record<Selection, Omit<ClockChip, 'id'>> = {
     one_version: { label: 'one version', line: 'One clock is made.' },
     // the engine does not carry how many versions were made, so the chip says several
     best_of_versions: {
@@ -133,15 +86,14 @@ const SELECTION_COPY: Record<Selection, Omit<QualifierChip, 'id'>> = {
     },
 };
 
-/** The chips after the name: the tuning method (none for Coordinated Sources) and the selection, then the qualifiers in the order the engine lists them */
-export function qualifierChipsOf(clock: NamedClock): QualifierChip[] {
+/** The chips after the name: the tuning method (none for Coordinated Sources) and the selection, then the settings of the clock in the order of the catalog */
+export function clockChipsOf(clock: NamedClock): ClockChip[] {
     if (!clock.strategy) return [];
-    const row = rowOfStrategy(clock.strategy);
-    const qualifiers = clock.strategy.qualifiers.filter((id): id is Exclude<StrategyQualifier, 'found-by-search'> => id !== 'found-by-search');
+    const row = strategyRowOf(clock.strategy);
     return [
-        ...(row.tuning_method === null ? [] : [{ id: 'tuning_method' as const, ...TUNING_METHOD_COPY[row.tuning_method] }]),
-        { id: 'selection' as const, ...SELECTION_COPY[row.selection] },
-        ...qualifiers.map(id => ({ id, ...QUALIFIER_COPY[id](clock) })),
+        ...(row.tuning_method === null ? [] : [{ id: 'tuning_method', ...TUNING_METHOD_COPY[row.tuning_method] }]),
+        { id: 'selection', ...SELECTION_COPY[row.selection] },
+        ...settingChipsOf(clock.strategy.settings).map(settingChip),
     ];
 }
 
@@ -153,7 +105,7 @@ export const CHIP_SEPARATOR = ' · ';
  * "Takt Batches · calculated · one version · 2 output swings a cycle · shared enable windows"
  */
 export function fullClockName(clock: NamedClock): string {
-    return [strategyNameOf(clock), ...qualifierChipsOf(clock).map(chip => chip.label)].join(CHIP_SEPARATOR);
+    return [strategyNameOf(clock), ...clockChipsOf(clock).map(chip => chip.label)].join(CHIP_SEPARATOR);
 }
 
 /**
@@ -161,14 +113,14 @@ export function fullClockName(clock: NamedClock): string {
  * swings (`swings-6`) only by its number, as a Takt Batches or a Round-Robin Polling clock is known only after the run.
  */
 export function pendingClockName(task: { id: string; label: string }): string {
-    const names: Record<string, Pick<ClockStrategy, 'family' | 'construction'>> = {
-        'fractional': { family: 'euclidean-swings' },
-        'even-hands': { family: 'time-division-slots' },
-        'derived': { family: 'time-study-windows' },
-        'uneven-output': { family: 'moved-output-swing' },
-        'shifted-swings': { family: 'signal-offset' },
-        'full-hand': { family: 'pitch-pickups' },
-        'primitive-grouped': { family: 'round-robin-polling', construction: 'grouped-hands' },
+    const names: Record<string, StrategyRef> = {
+        'fractional': { id: 'euclidean_swings', tuning_method: 'observed' },
+        'even-hands': { id: 'time_division_windows', tuning_method: 'calculated' },
+        'derived': { id: 'time_study_windows', tuning_method: 'observed' },
+        'uneven-output': { id: 'moved_output_swing', tuning_method: 'observed' },
+        'shifted-swings': { id: 'phase_shifted_batch', tuning_method: 'observed' },
+        'full-hand': { id: 'pitch_pickups', tuning_method: 'observed' },
+        'primitive-grouped': { id: 'round_robin_polling', tuning_method: 'calculated' },
     };
     if (task.id === 'per-branch') return routerRowOf('coordinated_sources').name;
     const known = names[task.id];
@@ -205,8 +157,8 @@ const ENTITY_KINDS: Record<LabelKind, true> = { machine: true, inserter: true, b
 /** What the router gave one entity: the name of its strategy and its tuning method, or "always enabled: <reason>" */
 function controlText(control: EnableControl): string {
     if (control.kind === 'always_on') return alwaysEnabledText(control.reason);
-    const row = catalogRowOf({ family: control.family, construction: control.construction });
-    return row.tuning_method === null ? row.name : `${row.name}${CHIP_SEPARATOR}${row.tuning_method}`;
+    const row = catalogRowOf({ id: control.id, tuning_method: control.tuning_method });
+    return `${row.name}${CHIP_SEPARATOR}${control.tuning_method}`;
 }
 
 /** The reason in the words the Enable windows view uses, with its "Always on:" said "always enabled:" */

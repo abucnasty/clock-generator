@@ -19,7 +19,7 @@ import { lithiumSiloCases } from '../lithium-plate-80-silo-chest-clock-fixtures'
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 const selectedOf = (generated: ClockAlternativesResult): ClockAlternative => generated.alternatives[generated.selected_index];
-const byId = (generated: ClockAlternativesResult, id: string): ClockAlternative => generated.alternatives.find(alternative => alternative.id === id)!;
+const byMaker = (generated: ClockAlternativesResult, maker: string): ClockAlternative => generated.alternatives.find(alternative => alternative.maker === maker)!;
 const byLabel = (generated: ClockAlternativesResult, label: string): ClockAlternative => generated.alternatives.find(alternative => alternative.label === label)!;
 type Entities = ClockAlternative['result']['blueprint']['entities'];
 const deciderDescriptions = (alternative: ClockAlternative) => alternative.result.blueprint.entities
@@ -44,7 +44,7 @@ const productivityChain: JobCheck[] = [
     {
         name: 'the shared clock has 6 deciders, shared windows, and says they share one wake window',
         run: ({ generated }) => {
-            const shared = byId(generated, 'planned-belt-slack-shared');
+            const shared = byMaker(generated, 'planned-belt-slack-shared');
             expect(shared.label).toBe('Batched swings, shared windows: 1 output swing per cycle');
             expect(shared.deciders).toBe(6);
             // rule F rounded the coal hand up on this chain: the clock says so (`harmonic_window_cycle`)
@@ -55,7 +55,7 @@ const productivityChain: JobCheck[] = [
     {
         name: 'a decider of inserters that carry different items names them all, and each count where they move different numbers',
         run: ({ generated }) => {
-            const descriptions = (id: string) => deciderDescriptions(byId(generated, id));
+            const descriptions = (id: string) => deciderDescriptions(byMaker(generated, id));
             expect(descriptions('planned-belt-slack')).toContainEqual([
                 '2 inserters [item=plastic-bar] [item=electronic-circuit] (6, 9)',
                 '2.424 swings each in 1 window per 72-tick period: open 35–60',
@@ -94,7 +94,7 @@ const agriculturalScience: JobCheck[] = [
     {
         name: 'the 5-swing clock leaves the inserters of the egg loop always on',
         run: ({ generated }) => {
-            const five_swings = byId(generated, 'planned-belt-slack');
+            const five_swings = byMaker(generated, 'planned-belt-slack');
             expect(five_swings.result.loop_windows?.inserter_ids.slice().sort()).toEqual(['inserter:10', 'inserter:9']);
             expect(five_swings.result.loop_windows?.in_loop_ids).toBeUndefined();
         },
@@ -122,7 +122,7 @@ const circuitExport: JobCheck[] = [
     {
         name: 'Behavior: the explicit one-cycle plan is offered, in 24 ticks with 32 items, on a moving belt with 4 ticks of slack',
         run: ({ generated }) => {
-            const plan = byId(generated, 'planned-belt-slack');
+            const plan = byMaker(generated, 'planned-belt-slack');
             expect(plan, 'the explicit behavior plan is offered, independently of the selector').toBeDefined();
             expect(plan.result.stability_check.as_built).toMatchObject({ holds: true, actual_output_items: 32 });
             expect(plan.belt).toEqual({ kind: 'moving', slack_ticks: [4] });
@@ -134,7 +134,7 @@ const circuitExport: JobCheck[] = [
         // of the per-hand clock the grouped hands make, which the per-branch clock composed from it is recommended over
         name: 'Selection: the 4 inserters with no window are the circuits into the processing unit machines, which the remake leaves unguarded',
         run: ({ generated }) => {
-            expect(byId(generated, 'planned-belt-slack-per-hand').result.always_on_reasons).toEqual(Object.fromEntries([3, 4, 7, 8]
+            expect(byMaker(generated, 'planned-belt-slack-per-hand').result.always_on_reasons).toEqual(Object.fromEntries([3, 4, 7, 8]
                 .map(number => [`inserter:${number}`, { kind: 'busy', period_ticks: 24 }])));
         },
     },
@@ -169,7 +169,7 @@ const circuitExport: JobCheck[] = [
         name: 'records a settled period from the clock tick the long run judges, not the stalled first one',
         run: ({ config, generated }) => {
             // the per-hand clock of the grouped hands, which stalls in its first period; the per-branch clock composed from it does not
-            const selected = byId(generated, 'planned-belt-slack-per-hand');
+            const selected = byMaker(generated, 'planned-belt-slack-per-hand');
             const first_judged_tick = selected.result.stability_check.as_built?.first_judged_tick;
             expect(first_judged_tick).toBe(960);
             const judged_clock_tick = selected.result.stability_check.as_built?.clock_tick_at_first_judged;
@@ -285,7 +285,7 @@ const lithium: JobCheck[] = [{
     name: 'every clock of the build says the two drops side-load onto another belt',
     run: ({ generated }) => {
         for (const variant of lithiumSiloCases()) {
-            const chosen = generated.alternatives.find(alternative => alternative.id === variant.alternative)!;
+            const chosen = generated.alternatives.find(alternative => alternative.maker === variant.alternative)!;
             expect(chosen.insights.filter(insight => insight.id === 'side-loaded-drop').map(insight => insight.what), variant.name).toEqual([
                 'Inserter 15 drops onto a 3 tile belt buffer that side-loads onto another belt. '
                 + 'Inserter 16 drops onto a 3 tile belt buffer that side-loads onto another belt.']);
@@ -430,7 +430,7 @@ const logistic: JobCheck[] = [
     {
         name: 'makes batched swings for a moving belt, with 4 ticks of belt pickup slack inside its windows',
         run: ({ generated }) => {
-            const batched = byId(generated, 'planned-belt-slack');
+            const batched = byMaker(generated, 'planned-belt-slack');
             expect(batched.label).toBe('Batched swings: 4 output swings per cycle');
             // its two pickup windows a window cycle stay open 5 ticks after their last pickup: none are added (#595)
             expect(batched.belt).toEqual({ kind: 'moving', slack_ticks: [4], inside: true });
@@ -440,13 +440,13 @@ const logistic: JobCheck[] = [
     {
         name: 'the clocks that hold the slack are made for a moving belt with 4 ticks',
         run: ({ generated }) => {
-            expect(byId(generated, 'swings-2').belt).toEqual({ kind: 'moving', slack_ticks: [4] });
-            expect(byId(generated, 'derived').belt).toEqual({ kind: 'moving', slack_ticks: [4] });
+            expect(byMaker(generated, 'swings-2').belt).toEqual({ kind: 'moving', slack_ticks: [4] });
+            expect(byMaker(generated, 'derived').belt).toEqual({ kind: 'moving', slack_ticks: [4] });
         },
     },
     {
         name: 'the 2-swing clock meets the target rate',
-        run: ({ generated }) => { expect(byId(generated, 'swings-2').ranking.meets_target_rate).toBe(true); },
+        run: ({ generated }) => { expect(byMaker(generated, 'swings-2').ranking.meets_target_rate).toBe(true); },
     },
     { name: 'leaves two searches out by default (#527 runs observed and shifted searches past a stable short clock)', run: ({ generated }) => { expect(generated.skipped_searches).toEqual(['Uneven output swings', 'Full-hand output swings']); } },
 ];

@@ -130,7 +130,7 @@ async function prepare(scenario: PickupClockScenario): Promise<Prepared> {
     }
     const alternatives = generateClockAlternatives(config, {logger: quiet});
     const selected = scenario.alternative === undefined ? alternatives.alternatives[alternatives.selected_index]
-        : alternatives.alternatives.find(alternative => alternative.id === scenario.alternative);
+        : alternatives.alternatives.find(alternative => alternative.maker === scenario.alternative);
     if (!selected) throw new Error(`No alternative ${scenario.alternative} for ${scenario.name}`);
     // A generation-only preflight checks the target. Native captures also retain below-target candidates:
     // their output is evidence of a shortfall, rather than a reason to skip the game measurement entirely.

@@ -211,7 +211,7 @@ function clocksOf(config: any, expand: ExpandHistory | undefined, key: string, p
         const exported = a.result.subtick ?? a.result;
         const with_text = { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule };
         return {
-            id: a.id, verdict: a.verdict, holds: a.assessment.holds, rate: a.assessment.items_per_second,
+            id: a.id, ...(a.maker !== undefined && { maker: a.maker }), verdict: a.verdict, holds: a.assessment.holds, rate: a.assessment.items_per_second,
             supply: a.belt?.kind ?? null, period: a.result.subtick?.clock.period_ticks ?? a.result.simulation_duration.ticks,
             wake_ups: a.assessment.wake_ups?.wake_ups_per_minute ?? a.result.stability_check?.as_built?.wake_ups?.wake_ups_per_minute ?? null,
             clock_sha256: sha(clockIdentity(exported)), text_sha256: sha(with_text), descriptions_cut: descriptionsCut(a.result), windows_sha256: sha(a.result.clock_windows), windows: a.result.clock_windows,

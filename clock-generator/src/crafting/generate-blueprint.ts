@@ -11,7 +11,7 @@ export { SearchReport, SearchCandidate, SearchRangeEdge } from "./candidates/sea
 export { hasPlannedWindowsNotHands } from "./candidates/pitch-pickups";
 export { anyFeederCarriesFuel, drawWindowTicks } from "./candidates/loop-windows";
 export { ClockRanking, rankingOf, rankingWindowCount, combineClockAlternativeRuns, selectableAsStable, searchesAreNeeded } from "./rank";
-export { ClockAlternative, ClockAlternativesResult, ClockAlternativeRun, ClockAlternativeContext, ClockAlternativeTask, ClockAlternativesPlan, planClockAlternatives, runClockAlternativeTask, runCoordinatedSourcesTask, COORDINATED_SOURCES_ID, generateClockAlternatives } from "./alternatives";
+export { ClockAlternative, ClockAlternativesResult, ClockAlternativeRun, ClockAlternativeContext, ClockAlternativeTask, ClockAlternativesPlan, planClockAlternatives, runClockAlternativeTask, runCoordinatedSourcesTask, COORDINATED_SOURCES_MAKER, generateClockAlternatives } from "./alternatives";
 export { coordinatedSourcesInputOf, CoordinatedSourcesInput, CoordinatedSourcesPart } from "./candidates/coordinated-sources-parts";
 export { blueprintFileFor } from "./blueprint-export";
 export type { AlwaysOnReason, AlwaysOnReasons } from "./always-on-reasons";

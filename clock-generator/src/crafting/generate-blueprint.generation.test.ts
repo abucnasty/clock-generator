@@ -71,7 +71,7 @@ describe("generateClockForConfig", () => {
                 expect(windows[id]).toEqual([{ start: 15, end: 23 }, { start: 60, end: 68 }]);
             }
             expect(selected.result.loop_windows?.in_loop_ids?.slice().sort()).toEqual(["inserter:7", "inserter:8"]);
-            const observed = alternatives.find(a => a.id === "derived-subtick")!;
+            const observed = alternatives.find(a => a.maker === "derived-subtick")!;
             expect(observed.verdict).toBe("stable");
             expect(observed.result.clock_windows["inserter:7"]).toBeUndefined();
             expect(observed.result.clock_windows["inserter:8"]).toBeUndefined();

@@ -110,8 +110,8 @@ export type { MachinePrototypeIssue } from './config/machine-prototype';
 // Blueprint Generation
 // ============================================================================
 
-export type { ClockStrategy, StrategyFamily, StrategyQualifier, StrategyConstruction } from "./crafting/clock-strategy";
-export { catalogRowOf, routerRowOf, settingChipsOf } from "./crafting/strategy-catalog";
+export type { ClockStrategy, StrategyId, StrategyRef } from "./crafting/clock-strategy";
+export { catalogRowOf, routerRowOf, settingChipsOf, strategyRowOf } from "./crafting/strategy-catalog";
 export type { StrategyCatalogRow, TuningMethod, Selection, EnableControlStrategyRouter, EnableControl, SourceControl, ClockRouting, ClockSettings, SettingChip, OutputCountSetting, WindowCycleSetting, SharedWindowsSetting, LoopsSetting, DrillWindowsSetting, BeltPickupSetting } from "./crafting/strategy-catalog";
 export {
     generateClockForConfig,
@@ -122,7 +122,7 @@ export {
     planClockAlternatives,
     runClockAlternativeTask,
     runCoordinatedSourcesTask,
-    COORDINATED_SOURCES_ID,
+    COORDINATED_SOURCES_MAKER,
     CoordinatedSourcesInput,
     CoordinatedSourcesPart,
     combineClockAlternativeRuns,

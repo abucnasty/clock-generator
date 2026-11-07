@@ -46,7 +46,7 @@ const holds = (config, clock_windows, period, swings) => {
             const period = result.simulation_duration.ticks;
             // the config the clock was planned on: its output swings per cycle; fractional swings for the fractional alternative
             const planned_on = { ...config, overrides: { ...config.overrides, terminal_swing_count: result.used_terminal_swing_count } };
-            const swings = alternative.id.startsWith("fractional") ? { fractional_swings: true } : {};
+            const swings = alternative.strategy.id === "euclidean_swings" ? { fractional_swings: true } : {};
             row.clocks.push({
                 id: alternative.id, selected: alternative.id === row.selected, period, expected: result.stability_check.expected_output_items,
                 window_count: Object.values(result.clock_windows).reduce((sum, ranges) => sum + ranges.length, 0),

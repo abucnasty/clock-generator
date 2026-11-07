@@ -99,4 +99,4 @@ export type {
     TerminalKind,
 } from "./data-types/planner-graph";
 
-export { catalogRowOf, routerRowOf } from "./crafting/strategy-catalog";
+export { catalogRowOf, routerRowOf, settingChipsOf, strategyRowOf } from "./crafting/strategy-catalog";

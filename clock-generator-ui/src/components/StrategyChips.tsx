@@ -1,13 +1,13 @@
 import { Box, Chip, Tooltip, Typography } from '@mui/material';
 import type { ClockBadge } from '../utils/clockSummary';
-import { qualifierChipsOf, type NamedClock } from '../utils/strategyNames';
+import { clockChipsOf, type NamedClock } from '../utils/strategyNames';
 
 /**
  * What qualifies a clock's strategy, after its name: "· 2 output swings a cycle · shared enable windows". Each is a few
  * words in the page's grey, with its line in the hover and for the keyboard.
  */
-export function QualifierChips({ clock }: { clock: NamedClock }) {
-    const chips = qualifierChipsOf(clock);
+export function ClockChips({ clock }: { clock: NamedClock }) {
+    const chips = clockChipsOf(clock);
     if (chips.length === 0) return null;
     return (
         <>

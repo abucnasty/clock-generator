@@ -100,7 +100,7 @@ describe("generateClockForConfig", () => {
         // window trim, which ended 4 ticks later than these; the build has no scaffold, so these were not recorded
         describe("clock alternatives", () => {
             let alternatives: ClockAlternative[];
-            const windowsOf = (id: string) => alternatives.find(a => a.id === id)?.result.clock_windows;
+            const windowsOf = (id: string) => alternatives.find(a => a.maker === id)?.result.clock_windows;
 
             beforeAll(() => {
                 // batched swings is stable, so observed windows are only made when they are asked for
@@ -112,7 +112,7 @@ describe("generateClockForConfig", () => {
             });
 
             it.each(["planned-belt-slack", "derived"])("%s is stable", (id) => {
-                expect(alternatives.find(a => a.id === id)?.verdict).toBe("stable");
+                expect(alternatives.find(a => a.maker === id)?.verdict).toBe("stable");
             });
 
             // inserter 1's two windows close a rotation before their last return swing, 5 ticks after their last pickup:
@@ -132,8 +132,8 @@ describe("generateClockForConfig", () => {
             });
 
             it("has no uneven output swings to offer with one output window per period, and no swings to shift with one round of swings", () => {
-                expect(alternatives.find(a => a.id === "uneven-output")).toBeUndefined();
-                expect(alternatives.find(a => a.id === "shifted-swings")).toBeUndefined();
+                expect(alternatives.find(a => a.maker === "uneven-output")).toBeUndefined();
+                expect(alternatives.find(a => a.maker === "shifted-swings")).toBeUndefined();
             });
         });
     });
@@ -203,7 +203,7 @@ describe("generateClockForConfig", () => {
     describe("stone bricks from mining drills that drop into the furnaces", async () => {
         const config = await loadConfigFromFile(ConfigPaths.STONE_BRICK_120_DRILL_DIRECT_INSERT);
         let alternatives: ClockAlternative[];
-        const alternative = (id: string) => alternatives.find(a => a.id === id)!;
+        const alternative = (id: string) => alternatives.find(a => a.maker === id)!;
         const outputWindows = (id: string) => alternative(id).result.clock_windows["inserter:1"].map(w => [w.start, w.end]);
 
         beforeAll(() => {

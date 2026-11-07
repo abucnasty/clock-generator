@@ -97,7 +97,7 @@ describe("generateClockForConfig", () => {
             // belt window trim; these are not recorded
             describe("clock alternatives", () => {
                 let alternatives: ClockAlternative[];
-                const windowsOf = (id: string) => alternatives.find(a => a.id === id)?.result.clock_windows;
+                const windowsOf = (id: string) => alternatives.find(a => a.maker === id)?.result.clock_windows;
 
                 beforeAll(() => {
                     // batched swings is stable, so observed windows are only made when they are asked for
@@ -105,7 +105,7 @@ describe("generateClockForConfig", () => {
                 });
 
                 it.each(["planned-belt-slack", "derived"])("%s is stable", (id) => {
-                    expect(alternatives.find(a => a.id === id)?.verdict).toBe("stable");
+                    expect(alternatives.find(a => a.maker === id)?.verdict).toBe("stable");
                 });
 
                 // inserter 1 and 3 windows end 3 ticks earlier since belt windows close before their last return swing,
@@ -177,7 +177,7 @@ describe("generateClockForConfig", () => {
             let planned: ClockAlternative;
 
             beforeAll(() => {
-                planned = alternatives.find(a => a.id === "planned-belt-slack")!;
+                planned = alternatives.find(a => a.maker === "planned-belt-slack")!;
             });
 
             it("is stable and repeats every period", () => {
@@ -200,7 +200,7 @@ describe("generateClockForConfig", () => {
         });
 
         describe("insights", () => {
-            const insightsOf = (id: string) => alternatives.find(a => a.id === id)!.insights;
+            const insightsOf = (id: string) => alternatives.find(a => a.maker === id)!.insights;
             const insight = (id: string, insight_id: string) => insightsOf(id).find(it => it.id === insight_id);
 
             it("says how much time the machine has to spare", () => {
@@ -248,7 +248,7 @@ describe("generateClockForConfig", () => {
             let uneven: ClockAlternative;
 
             beforeAll(() => {
-                uneven = alternatives.find(a => a.id === "uneven-output")!;
+                uneven = alternatives.find(a => a.maker === "uneven-output")!;
             });
 
             it("is offered and stable from every start phase checked", () => {
@@ -286,8 +286,8 @@ describe("generateClockForConfig", () => {
             let primary: ClockAlternative;
 
             beforeAll(() => {
-                shifted = alternatives.find(a => a.id === "shifted-swings")!;
-                primary = alternatives.find(a => a.id === "planned-belt-slack")!;
+                shifted = alternatives.find(a => a.maker === "shifted-swings")!;
+                primary = alternatives.find(a => a.maker === "planned-belt-slack")!;
             });
 
             it("is offered and stable", () => {

@@ -25,8 +25,8 @@ describe("the rule count of a simulated run", () => {
         config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240);
         const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
         selected = alternatives[selected_index];
-        clock = alternatives.find(alternative => alternative.id === "planned-belt-slack")!;
-        expect(selected.id).toBe("planned-belt-slack");
+        clock = alternatives.find(alternative => alternative.maker === "planned-belt-slack")!;
+        expect(selected.maker).toBe("planned-belt-slack");
         expect(clock.verdict).toBe("stable");
         expect(clock.ranking.recovery_periods).toBe(3);
     });
@@ -45,7 +45,7 @@ describe("the rule count of a simulated run", () => {
     // The simulator counts the crafts a machine starts; it reads them nowhere. These figures use the 4-swing clock
     // from the staged start (empty machines), over 40 periods.
     it("records the crafts a machine starts without changing the run", () => {
-        expect(clock.id).toBe("planned-belt-slack");
+        expect(clock.maker).toBe("planned-belt-slack");
         const stock = stockOf(40);
         expect(stock.ticks).toBe(7040);
         const machine = stock.machines[0];

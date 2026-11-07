@@ -2,16 +2,16 @@
 // test of each build checked on the result that the record does not hold (see samples.ts for what the record does hold).
 import { expect } from 'vitest';
 import type { JobCheck } from '../record-job-checks';
-import { backpressureLossOf, COORDINATED_SOURCES_ID, selectableAsStable } from '../../../../src/crafting/generate-blueprint';
+import { backpressureLossOf, COORDINATED_SOURCES_MAKER, selectableAsStable } from '../../../../src/crafting/generate-blueprint';
 import type { ClockAlternative, ClockAlternativesResult } from '../../../../src/crafting/generate-blueprint';
 import { lossId, verdictOf, type BackpressureLossReport } from '../../../../src/crafting/backpressure-loss';
 import { START_DEPENDENCE_NOT_CHECKED } from '../../../../src/crafting/start-dependence';
-import { SEARCH_IDS } from '../../../../src/crafting/generate-blueprint-test-helpers';
+import { SEARCH_MAKERS } from '../../../../src/crafting/generate-blueprint-test-helpers';
 import type { Config } from '../../../../src/config/schema';
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 const selectedOf = (generated: ClockAlternativesResult): ClockAlternative => generated.alternatives[generated.selected_index];
-const byId = (generated: ClockAlternativesResult, id: string): ClockAlternative => generated.alternatives.find(alternative => alternative.id === id)!;
+const byMaker = (generated: ClockAlternativesResult, maker: string): ClockAlternative => generated.alternatives.find(alternative => alternative.maker === maker)!;
 
 // Agricultural science with its belts backed up (AGRICULTURAL_SCIENCE_250_BACKED_UP). Three inserters take bioflux off a belt for their
 // biochambers, and the nutrients the biochambers burn. Without room for a hand of nutrients the windows of batched swings close on partly filled
@@ -19,7 +19,7 @@ const byId = (generated: ClockAlternativesResult, id: string): ClockAlternative 
 const agriculturalBackedUp: JobCheck[] = [{
     name: 'makes batched swings with room for a hand of fuel, as a clock for a backed-up belt',
     run: ({ generated }) => {
-        const batched = byId(generated, 'planned-belt-slack');
+        const batched = byMaker(generated, 'planned-belt-slack');
         expect(batched.label).toBe('Batched swings: 5 output swings per cycle');
         expect(batched.ranking.matches_belt_choice).toBe(true);
         expect(batched.result.belt_pickup_slack_ticks).toEqual({});
@@ -33,7 +33,7 @@ const circuitExportBackedUp: JobCheck[] = [
     {
         name: 'Behavior: the explicit one-cycle plan is offered, in 24 ticks with 32 items, for a backed-up belt',
         run: ({ generated }) => {
-            const plan = byId(generated, 'planned-belt-slack');
+            const plan = byMaker(generated, 'planned-belt-slack');
             expect(plan, 'the explicit behavior plan is offered, independently of the selector').toBeDefined();
             expect(plan.result.stability_check.as_built).toMatchObject({ holds: true, actual_output_items: 32 });
             expect(plan.belt).toEqual({ kind: 'backed_up' });
@@ -45,7 +45,7 @@ const circuitExportBackedUp: JobCheck[] = [
         // of the per-hand clock the grouped hands make, which the per-branch clock composed from it is recommended over
         name: 'Selection: the 4 inserters with no window are the circuits into the processing unit machines, which the remake leaves unguarded',
         run: ({ generated }) => {
-            expect(byId(generated, 'planned-belt-slack-per-hand').result.always_on_reasons).toEqual(Object.fromEntries([3, 4, 7, 8]
+            expect(byMaker(generated, 'planned-belt-slack-per-hand').result.always_on_reasons).toEqual(Object.fromEntries([3, 4, 7, 8]
                 .map(number => [`inserter:${number}`, { kind: 'busy', period_ticks: 24 }])));
         },
     },
@@ -82,7 +82,7 @@ const reportOf = (config: Config, alternative: ClockAlternative): BackpressureLo
  */
 const BROKEN_AUTOMATION_WINDOWS = { "inserter:1": [{ start: 1, end: 20 }], "inserter:2": [{ start: 1, end: 21 }, { start: 37, end: 56 }, { start: 73, end: 73 }] };
 const brokenReportOf = (config: Config, generated: ClockAlternativesResult): BackpressureLossReport => {
-    const fractional = byId(generated, 'fractional');
+    const fractional = byMaker(generated, 'fractional');
     return backpressureLossOf(config, BROKEN_AUTOMATION_WINDOWS, fractional.result.simulation_duration.ticks,
         fractional.result.stability_check.expected_output_items, quiet);
 };
@@ -182,7 +182,7 @@ const automation: JobCheck[] = [
         run: ({ generated }) => {
             expect(generated.skipped_searches).toEqual([]);
             // the per-branch clock is made after the searches and does not count toward the gate
-            expect(generated.alternatives.filter(a => !SEARCH_IDS.includes(a.id) && a.id !== COORDINATED_SOURCES_ID).some(a => selectableAsStable(a.ranking))).toBe(false);
+            expect(generated.alternatives.filter(a => !SEARCH_MAKERS.includes(a.maker) && a.maker !== COORDINATED_SOURCES_MAKER).some(a => selectableAsStable(a.ranking))).toBe(false);
         },
     },
     {
@@ -212,7 +212,7 @@ const forcedSwings: JobCheck[] = [{
 const fractionalSwings: JobCheck[] = [{
     name: 'the fractional swings alternative: a cycle multiplier, a swing distribution that sums to the totals and alternates, a duration extended by the multiplier',
     run: ({ generated }) => {
-        const result = byId(generated, 'fractional').result;
+        const result = byMaker(generated, 'fractional').result;
         expect(result.output_cycle_plan.fractional_swings_enabled).toBe(true);
         expect(result.output_cycle_plan.cycle_multiplier).toBeDefined();
         expect(result.output_cycle_plan.cycle_multiplier).toBeGreaterThan(1);

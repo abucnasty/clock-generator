@@ -10,9 +10,9 @@ import { fraction } from "../data-types/fraction";
 /** A logger for the generations whose log the test does not read */
 export const quiet = { log() { }, warn() { }, error() { }, debug() { } };
 
-export const SEARCH_IDS = ["derived", "uneven-output", "shifted-swings", "full-hand"];
+export const SEARCH_MAKERS = ["derived", "uneven-output", "shifted-swings", "full-hand"];
 export const SEARCH_LABELS = ["Observed windows", "Uneven output swings", "Shifted swings", "Full-hand output swings"];
-export const alternativeIdsOf = (generated: ClockAlternativesResult) => generated.alternatives.map(alternative => alternative.id);
+export const alternativeMakersOf = (generated: ClockAlternativesResult) => generated.alternatives.map(alternative => alternative.maker);
 export const selectedAlternativeOf = (generated: ClockAlternativesResult) => generated.alternatives[generated.selected_index];
 
 /**
@@ -73,7 +73,7 @@ export const rocketFuelSample = async (source: string | Config): Promise<RocketF
         config.inserters.filter(matches).map(inserter => EntityId.forInserter(inserter.id!).id);
     // with the searches, whose clocks the tests of these samples read as well: batched swings is stable on both
     const { alternatives } = generateClockAlternatives(withSearches(config));
-    const alternative = (id: string) => alternatives.find(a => a.id === id)!;
+    const alternative = (id: string) => alternatives.find(a => a.maker === id)!;
     const moved = (inserter_id: string): number => alternative("planned-belt-slack").result.serializable_transfer_history.entities
         .find(entity => entity.entity_id === inserter_id)!.transfers.reduce((sum, t) => sum + t.amount, 0);
     return {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { partGroups, sourceControlsOf, tiledWindows, upstreamOrder, type GroupedInserter } from "./coordinated-sources";
 import { collectingParts, offerPart, partKey, partsWanted, coordinatedSourcesInputOf, type CoordinatedSourcesPart } from "./coordinated-sources-parts";
+import type { ClockStrategy } from "../clock-strategy";
 
 const window = (start: number, end: number) => ({ start, end });
 
@@ -88,8 +89,8 @@ describe("the collection of parts", () => {
 });
 
 describe("what the router gave each entity", () => {
-    const takt = { family: "takt-batches", construction: "arithmetic" } as const;
-    const polling = { family: "round-robin-polling", construction: "grouped-hands" } as const;
+    const takt = { id: "takt_batches", tuning_method: "calculated" } as const;
+    const polling = { id: "round_robin_polling", tuning_method: "calculated" } as const;
     const recommended = part("recommended", 20, { "inserter:1": [window(0, 4)], "inserter:2": [window(5, 6)], "inserter:3": [window(5, 6)], "inserter:4": [window(0, 0)] },
         { alternative_id: "recommended", strategy: takt });
     // inserter 1 has no windows in this part, which says why
@@ -103,10 +104,10 @@ describe("what the router gave each entity", () => {
         const sources = sourceControlsOf(groups, new Map([["machine:2", 0], ["machine:1", 1], ["belt:1", 0]]), {}, logger, "gear");
         expect(sources.map(it => it.source)).toEqual(["machine:2", "machine:1", "belt:1"]);
         expect(sources.flatMap(it => Object.keys(it.entities)).sort()).toEqual(CHAIN.map(it => it.id));
-        expect(sources[0].entities).toEqual({ "inserter:4": { kind: "strategy", family: "takt-batches", construction: "arithmetic" } });
+        expect(sources[0].entities).toEqual({ "inserter:4": { kind: "strategy", id: "takt_batches", tuning_method: "calculated" } });
         expect(sources[1].entities).toEqual({
-            "inserter:2": { kind: "strategy", family: "round-robin-polling", construction: "grouped-hands" },
-            "inserter:3": { kind: "strategy", family: "round-robin-polling", construction: "grouped-hands" },
+            "inserter:2": { kind: "strategy", id: "round_robin_polling", tuning_method: "calculated" },
+            "inserter:3": { kind: "strategy", id: "round_robin_polling", tuning_method: "calculated" },
         });
     });
 
@@ -134,7 +135,7 @@ describe("the strategy of a part", () => {
     it("is the one of the alternative it is, and Round-Robin Polling by the grouped hands for a way", () => {
         const alternative = part("exhaust", 24, { "inserter:1": [window(0, 3)] }, { alternative_id: "exhaust", verdict: "stable" });
         const way = part("staged", 24, { "inserter:1": [window(1, 3)] });
-        const input = coordinatedSourcesInputOf([{ alternatives: [{ id: "exhaust", strategy: { family: "exhaust" } }], parts: [alternative, way] }], "exhaust");
-        expect(input.parts.map(it => it.strategy)).toEqual([{ family: "exhaust" }, { family: "round-robin-polling", construction: "grouped-hands" }]);
+        const input = coordinatedSourcesInputOf([{ alternatives: [{ id: "exhaust", strategy: { id: "exhaust", tuning_method: "calculated" } as ClockStrategy }], parts: [alternative, way] }], "exhaust");
+        expect(input.parts.map(it => it.strategy)).toEqual([{ id: "exhaust", tuning_method: "calculated" }, { id: "round_robin_polling", tuning_method: "calculated" }]);
     });
 });

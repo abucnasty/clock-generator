@@ -39,7 +39,7 @@ import { TargetProductionRate } from "./target-production-rate";
 import { loopStockBoundOf } from "./candidates/loop-stock-bound";
 import { AsBuiltStabilityCheck, BackpressureLossAssessment, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, clockVerificationSignature, FREE_RUNNING_CHECK_TICKS, fractionalSwingsChangeChecksOf, LOOP_WINDOW_CHECK_TICKS, roundedClockTrial, startDependenceVerdictOf, wakeUpsFromStartsOf, withSettledOutput } from "./trial";
 import { WakeUpsFromStarts } from "./wake-ups-from-starts";
-import { ChestDrillFallbackKind, ClockStrategy, DefinitionFamily, StrategyQualifier, strategyListedAs, strategyOf } from "./clock-strategy";
+import { alternativeIdOf, ChestDrillFallbackKind, ClockStrategy, DefinitionSettings, DefinitionStrategyId, ListingSettings, strategyListedAs, strategyOf } from "./clock-strategy";
 import { signalsPerMinuteOf } from "./clock-signals";
 import { START_DEPENDENCE_NOT_CHECKED, StartDependence, startDependenceNote } from "./start-dependence";
 import { NotMadeClock, notTriedSentence, WhyNotStable, whyNotStable, whyNotStableClockOf } from "./why-not-stable";
@@ -47,7 +47,10 @@ import { DEFAULT_LOOP_SEED_ITEMS } from "./runner/cold-start";
 
 
 export interface ClockAlternative {
+    /** Derived from the clock's strategy and settings (`alternativeIdOf`), such as takt_batches_observed or round_robin_polling_per_hand */
     id: string;
+    /** The slot that made the clock, as its id was before it was derived: planned-belt-slack, swings-6, planned-belt-slack-subtick */
+    maker: string;
     label: string;
     description: string;
     /** Total decider windows across inserters, as exported; fewer means more batched swings */
@@ -71,7 +74,7 @@ export interface ClockAlternative {
     belt: ClockBelt | null;
     /** What the simulation found that is worth explaining about the build and this clock */
     insights: ClockInsight[];
-    /** Which way of making a clock this is: its family, what qualifies it and which construction made its windows, as ids (see clock-strategy.ts) */
+    /** Which Enable Control Strategy the clock follows, its tuning method and settings, and its router, as ids (see clock-strategy.ts) */
     strategy: ClockStrategy;
     /** For a clock of a period that is not whole, exported rounded down to whole ticks: how it runs against the target */
     rounded?: RoundedClock;
@@ -174,10 +177,12 @@ interface AlternativeDefinition {
     id: string;
     label: string;
     description: string;
-    /** The way of making a clock it is (see clock-strategy.ts); the batched swings' is takt batches or round-robin polling by the construction */
-    family: DefinitionFamily;
-    /** What qualifies its clock beyond what the result shows (a search adds its own) */
-    qualifiers?: StrategyQualifier[];
+    /** The strategy it stands for (see clock-strategy.ts); the batched swings' is Takt Batches or Round-Robin Polling by what the run made */
+    strategy: DefinitionStrategyId;
+    /** What it sets on its clock beyond what the result shows */
+    settings?: DefinitionSettings;
+    /** It offers another output count than the plan's: its clock's id says which (`_swings_N`) */
+    offers_output_count?: true;
     run: () => BlueprintGenerationResult;
     /** The config its clock is planned on, where that is not the one the alternatives are made for */
     planned_on?: Config;
@@ -317,19 +322,19 @@ function primaryDefinition(config: Config, options: GenerateClockOptions, report
         ? withFuelHandRoomWhereNeeded(() => generate(config), () => takesFuelOffABelt(config) ? generate(config, true) : undefined)
         : generate(config);
     if (result.exhaust !== undefined) {
-        return { id: RESULTS_IN_TURN_ID, label: RESULTS_IN_TURN_LABEL, description: RESULTS_IN_TURN_DESCRIPTION, family: "exhaust", run: () => result };
+        return { id: RESULTS_IN_TURN_ID, label: RESULTS_IN_TURN_LABEL, description: RESULTS_IN_TURN_DESCRIPTION, strategy: "exhaust", run: () => result };
     }
     if (result.primitive_round_robin_polling !== undefined) {
         return { id: "primitive-grouped", label: "Small batches",
             description: "Uses small output batches when the initial clock would be too long. Checked for timing margin, clock starts and recovery after interruptions.",
-            family: "round-robin-polling", qualifiers: ["shorter-window-cycle"],
+            strategy: "round_robin_polling", settings: { shorter_window_cycle: true },
             run: () => result };
     }
     return {
         id: "planned-belt-slack",
         label: BATCHED_SWINGS_LABEL,
         description: BATCHED_SWINGS_DESCRIPTION,
-        family: "batched-swings",
+        strategy: "batched_swings",
         run: () => result,
     };
 }
@@ -485,7 +490,7 @@ function alternativeDefinitionsFor(
             id: "even-hands",
             label: "Even hands",
             description: EVEN_HANDS_DESCRIPTION,
-            family: "time-division-slots",
+            strategy: "time_division_windows",
             run: () => generateClockWithSwingBackoff(base_config, quiet, timeDivisionWindowsClock),
         }];
     }
@@ -495,7 +500,7 @@ function alternativeDefinitionsFor(
             label: "Fractional swings",
             description: `${BATCHED_SWINGS_LABEL} with fractional swings turned on: an inserter that needs e.g. 3/2 swings per cycle alternates `
                 + "between 1 and 2 swings instead of rounding, which can need fewer or shorter windows.",
-            family: "euclidean-swings" as const,
+            strategy: "euclidean_swings" as const,
             // planned with fractional swings asked for: its clock's runs are planned so too, as its cycle plan says
             run: () => generateClockWithSwingBackoff(base_config, { ...quiet, fractional_swings: true }),
             // the config it is checked on is the alternatives' own, as with the other definitions, and stays so for its
@@ -507,13 +512,13 @@ function alternativeDefinitionsFor(
             id: "even-hands",
             label: "Even hands",
             description: EVEN_HANDS_DESCRIPTION,
-            family: "time-division-slots",
+            strategy: "time_division_windows" as const,
             run: () => generateClockWithSwingBackoff(base_config, quiet, timeDivisionWindowsClock),
         },
         ...(context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? [] : [{
             id: "derived",
             label: "Observed windows",
-            family: "time-study-windows" as const,
+            strategy: "time_study_windows" as const,
             description: "Built from what the inserters actually do rather than from the planned schedule. The build is simulated with only "
                 + "the output inserters clocked and every other inserter running freely; each inserter's windows are the ticks "
                 + "it was busy picking up, swinging and dropping, plus a few ticks of padding. Swings end up spread out, roughly "
@@ -526,7 +531,7 @@ function alternativeDefinitionsFor(
         ...(context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? [] : [{
             id: "uneven-output",
             label: "Uneven output swings",
-            family: "moved-output-swing" as const,
+            strategy: "moved_output_swing" as const,
             description: "Observed windows with one output swing moved off its planned start, so the output swings are not evenly "
                 + "spaced. A machine only has to make up for what the output inserter takes over the whole clock period, so it can "
                 + "craft more between one pair of swings than the next and carry the difference in its output slot. The swing is "
@@ -544,7 +549,7 @@ function alternativeDefinitionsFor(
         {
             id: "shifted-swings",
             label: "Shifted swings",
-            family: "signal-offset" as const,
+            strategy: "phase_shifted_batch" as const,
             description: `${BATCHED_SWINGS_LABEL} with one round of swings moved together to another place in the `
                 + "clock period: an output swing and the input swings planned with it. The plan spaces these rounds evenly, but a "
                 + "machine takes a swing whenever its limits allow: an input hand once it is below its insertion limit and before "
@@ -564,7 +569,8 @@ function alternativeDefinitionsFor(
         ...higher_counts.map(higher => ({
             id: `swings-${higher}`,
             label: `${higher} output swings per cycle`,
-            family: "batched-swings" as const,
+            strategy: "batched_swings" as const,
+            offers_output_count: true as const,
             description: `${BATCHED_SWINGS_LABEL} with a longer crafting cycle: the output inserter takes ${higher} hands per cycle instead of `
                 + `${swings} while the machine keeps crafting between swings. Batches more swings into fewer, longer windows.`,
             run: () => withSwings(higher, quiet),
@@ -573,7 +579,8 @@ function alternativeDefinitionsFor(
         ...lower_counts.map(lower => ({
             id: `swings-${lower}`,
             label: `${lower} output swing${lower === 1 ? "" : "s"} per cycle`,
-            family: "batched-swings" as const,
+            strategy: "batched_swings" as const,
+            offers_output_count: true as const,
             description: `${BATCHED_SWINGS_LABEL} with the output inserter limited to ${lower} swing${lower === 1 ? "" : "s"} per crafting cycle `
                 + `instead of ${swings}. The output machine buffers more between swings; useful when the higher swing count `
                 + "is unstable.",
@@ -583,7 +590,7 @@ function alternativeDefinitionsFor(
         {
             id: "full-hand",
             label: "Full-hand output swings",
-            family: "pitch-pickups" as const,
+            strategy: "pitch_pickups" as const,
             description: "Output inserters swing once per window, evenly spaced and timed so the machine already holds a full hand when "
                 + "the inserter arrives, instead of grabbing a few items at a time while the machine crafts. Only offered when the "
                 + "planned output inserters often need more than one grab per hand and a full hand fits below the output block. The timing is "
@@ -610,8 +617,8 @@ function alternativeDefinitionsFor(
             || !primitiveRoundRobinPollingConfigSupported(small_batches_config) ? [] : [{
             id: "primitive-grouped",
             label: "Small batches",
-            family: "round-robin-polling" as const,
-            qualifiers: ["shorter-window-cycle" as const],
+            strategy: "round_robin_polling" as const,
+            settings: { shorter_window_cycle: true as const },
             description: "Uses small output batches when no planned clock holds. Checked for timing margin, clock starts and recovery after interruptions.",
             run: () => {
                 const made = verifiedPrimitiveRoundRobinPollingClock(small_batches_config, { ...quiet, ...SMALL_BATCHES_OPTIONS },
@@ -764,7 +771,7 @@ function perHandRun(
         },
         id: `${definition.id}-per-hand`,
         label: `${definition.label}, a window a swing`,
-        qualifiers: [...(definition.qualifiers ?? []), "window-a-swing"],
+        settings: { ...definition.settings, window_a_swing: true },
         description: `${definition.description} ${PER_HAND_WINDOWS_NOTE}`,
         chest_drill_fallbacks: undefined,
         shared_windows: undefined,
@@ -924,8 +931,8 @@ function runAlternativeOf(
         result = { ...result, chest_drills, always_on_reasons: { ...result.always_on_reasons, ...chestDrillReasons(chest_drills) } };
     }
     const { backpressure_loss } = loss;
-    const strategy = strategyOf(definition.family, result, { chest_drill_fallback, destroyed_target: config.target_output.counts === "destroyed",
-        definition_qualifiers: [...(definition.search === true ? ["found-by-search" as const] : []), ...(definition.qualifiers ?? [])] });
+    const strategy = strategyOf(definition.strategy, result, { chest_drill_fallback, destroyed_target: config.target_output.counts === "destroyed",
+        ...(definition.settings !== undefined && { definition_settings: definition.settings }) });
     const label = withOutputSwings(definition, result.used_terminal_swing_count, config.target_output.counts);
     const inserter_window_count = entity_registry.getAll().filter(Entity.isInserter)
         .reduce((sum, inserter) => sum + (result.clock_windows[inserter.entity_id.id]?.length ?? 0), 0);
@@ -1002,8 +1009,8 @@ function runAlternativeOf(
     let rounded_trial: Trial | null = null;
     /** The alternative for a trial of the clock: its notes, insights, assessment and ranking */
     const alternativeOf = (trial: Trial, row: { id: string; label: string; description_suffix: string; result: BlueprintGenerationResult; rounded?: RoundedClock;
-        /** What this listing of the clock adds to its strategy's qualifiers: a subtick clock, a clock rounded down */
-        qualifiers?: StrategyQualifier[] }): ClockAlternative => {
+        /** What this listing of the clock adds to the settings of its strategy: a subtick clock, a clock rounded down */
+        listing?: ListingSettings }): ClockAlternative => {
         const tried_as = trial;
         // a clock that fails its first check is listed by the mean of its long run, not the one period measured
         const settled_check = (settle_unstable ?? !held) ? settledStability(trial) : trial.result.stability_check;
@@ -1038,9 +1045,10 @@ function runAlternativeOf(
             wake_ups_per_minute: as_built?.wake_ups?.wake_ups_per_minute ?? null,
             signals_per_minute: as_built?.wake_ups === undefined ? null : signalsPerMinuteOf(as_built.counters, row.result.blueprint, row.result.chest_drills, trial.clock_period),
             start_dependence: trial.start_dependence, ...loopStockBoundOf(config, row.result, trial.clock_period) };
-        const clock = { id: row.id, label: row.label, description, result: row.result, ...(row.rounded && { rounded: row.rounded }),
+        const listed_strategy = strategyListedAs(strategy, row.listing ?? {});
+        const clock = { id: alternativeIdOf(listed_strategy, definition), maker: row.id, label: row.label, description, result: row.result, ...(row.rounded && { rounded: row.rounded }),
             inserter_window_count, deciders: windowDeciderCount(row.result.blueprint), ranking_window_count, assessment, verdict: clockVerdictOf(assessment), deadlock_risks, belt, insights,
-            strategy: strategyListedAs(strategy, row) };
+            strategy: listed_strategy };
         const ranking = rankingOf(clock, config);
         // where its wake-ups decide the selection, a clock of a build with a loop, whose wake-ups depend on how it starts, is ranked by their mean
         // over the starts; the clock of a trial that is neither the exact one nor the rounded one tried meets no target
@@ -1068,7 +1076,7 @@ function runAlternativeOf(
         return { signature, alternatives: [alternativeOf(exact_trial, {
             id: `${id}-subtick`,
             label: `${label}, subtick clock`,
-            qualifiers: ["phase-accumulator"],
+            listing: { subtick_clock: true },
             description_suffix: ` Exported with a subtick clock: the ${period.toFixed(3)}-tick period is `
                 + `${period_ticks}/${scale} ticks, so a ${period_ticks}-tick clock is multiplied by ${scale} and taken modulo `
                 + `${period_ticks} by two extra arithmetic combinators, giving the position in the period in 1/${scale} ticks. `
@@ -1105,7 +1113,7 @@ function runAlternativeOf(
     return { signature, alternatives: [alternativeOf(rounded_trial ?? { ...exact_trial, clock_period: rounded_ticks }, {
         id,
         label: `${label} (clock rounded to ${rounded_ticks} ticks, runs ${fast})`,
-        qualifiers: ["rounded-clock"],
+        listing: { rounded: { period_ticks: rounded_ticks, runs_fast } },
         description_suffix: ` The period is not a whole number of ticks (${period.toFixed(3)}) and has no subtick clock of a small `
             + `enough scale, so this clock runs it rounded down to ${rounded_ticks} ticks, ${fastPercent(runs_fast)} faster than the target`
             + (rounded_trial !== null
@@ -1187,7 +1195,7 @@ function planPrimaryAndTasks(
         .map(definition => ({
             id: definition.id, label: definition.label, only_when_needed: onlyWhenNeeded(definition, config),
             ...(definition.fallback === true ? { fallback: true } : {}),
-        })), { id: COORDINATED_SOURCES_ID, label: COORDINATED_SOURCES_LABEL, only_when_needed: false, coordinated_sources: true }];
+        })), { id: COORDINATED_SOURCES_MAKER, label: COORDINATED_SOURCES_LABEL, only_when_needed: false, coordinated_sources: true }];
     on_tasks?.(context, tasks, clockVerificationSignature(config, result));
     const primary_run = runAlternative(primary, config, logger, options.on_progress_detail, undefined, undefined, options.on_not_made);
     return { primary: primary_run === null ? null : withParts(primary_run, config, primary_ways), context, tasks };
@@ -1222,8 +1230,8 @@ function fractionalMakesThePrimary(config: Config, primary: AlternativeDefinitio
  * per cycle", or, for a target that counts an item destroyed, the hands of it brought in a cycle ("Even hands: 5 hands
  * brought in per cycle"). The alternatives named after a swing count already say it.
  */
-function withOutputSwings(definition: { id: string; label: string }, swings: number, counts?: TargetCounts): string {
-    if (definition.id.startsWith("swings-")) {
+function withOutputSwings(definition: { label: string; offers_output_count?: true }, swings: number, counts?: TargetCounts): string {
+    if (definition.offers_output_count === true) {
         return definition.label;
     }
     const count = Number.isInteger(swings) ? `${swings}` : swings.toFixed(2).replace(/0+$/, "");
@@ -1258,7 +1266,7 @@ function runTask(
 }
 
 /** The id of the per-branch clock (DESIGN D7) */
-export const COORDINATED_SOURCES_ID = "per-branch";
+export const COORDINATED_SOURCES_MAKER = "per-branch";
 const COORDINATED_SOURCES_LABEL = "Coordinated sources";
 const COORDINATED_SOURCES_DESCRIPTION = "The inserters of each source use the enable windows of one other clock made for the build, on one shared window cycle. "
     + "A source is a machine, belt or chest that inserters take from. The generator sets the sources one at a time, from the output "
@@ -1278,7 +1286,7 @@ export function runCoordinatedSourcesTask(
     return withRunMemo(() => {
         const logger = options.logger ?? defaultLogger;
         const quiet = quietOptions(options, logger, options.on_progress_detail);
-        const run = runAlternativeOf({ id: COORDINATED_SOURCES_ID, label: COORDINATED_SOURCES_LABEL, description: COORDINATED_SOURCES_DESCRIPTION, family: "per-branch",
+        const run = runAlternativeOf({ id: COORDINATED_SOURCES_MAKER, label: COORDINATED_SOURCES_LABEL, description: COORDINATED_SOURCES_DESCRIPTION, strategy: "coordinated_sources",
             run: () => coordinatedSourcesClock(config, input, { ...quiet, logger }) }, config, logger, options.on_progress_detail, new Set(assessed_signatures), undefined, undefined, false);
         const listed = run?.alternatives.filter(it => it.verdict === "stable") ?? [];
         return run === null || listed.length === 0 ? null : { ...run, alternatives: listed };

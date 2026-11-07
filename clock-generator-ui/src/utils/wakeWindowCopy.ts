@@ -147,7 +147,7 @@ function alwaysOnText(reason: AlwaysOnReason | undefined): string {
         return ALWAYS_ON_TEXT;
     }
     switch (reason.kind) {
-        case 'enable-rule':
+        case 'override':
             return 'Always on: its enable rule is Always on';
         case 'loop':
             return 'Always on: it moves items between machines that feed each other in a loop, which the clock leaves running';

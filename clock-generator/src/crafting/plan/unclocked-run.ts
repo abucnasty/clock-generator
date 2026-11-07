@@ -1709,7 +1709,7 @@ export function exportClock(
         simulation_context.entity_registry,
         id => clock_windows.has(id) || inserter_clocks.get(id)?.own_clock === true,
         {
-            enable_rule: plan.run.always_enabled_by_config,
+            override: plan.run.always_enabled_by_config,
             left_open: extras.left_open ?? new Map(),
             chest_drills: chest_drill_clock.drills,
             swung: new Set(Array.from(final_history.entries()).filter(([, transfers]) => transfers.length > 0).map(([entity_id]) => entity_id.id)),

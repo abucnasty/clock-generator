@@ -33,8 +33,8 @@ describe("generateClockForConfig", () => {
                 inserters: sample.inserters.map(it => it.id === 9 || it.id === 10 ? { ...it, stack_size: 8 } : it),
             };
             const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
-            const five_swings = alternatives.find(it => it.id === "planned-belt-slack")!;
-            const three_swings = alternatives.find(it => it.id === "swings-3")!;
+            const five_swings = alternatives.find(it => it.maker === "planned-belt-slack")!;
+            const three_swings = alternatives.find(it => it.maker === "swings-3")!;
             expect(five_swings.verdict).toBe("no recovery");
             // its windows shaped against ghost wakeups (#641) wake fewer and do not get back from the bioflux loss; the
             // planned windows broke on the nutrients loss, the first tried
@@ -45,9 +45,9 @@ describe("generateClockForConfig", () => {
             expect(five_swings.result.simulation_duration.ticks).toBe(480);
             expect(three_swings.ranking_window_count).toBe(336);
             expect(three_swings.verdict).toBe("unstable");
-            expect(alternatives.filter(it => it.verdict === "stable").map(it => it.id).sort()).toEqual(["swings-1", "swings-2"]);
+            expect(alternatives.filter(it => it.verdict === "stable").map(it => it.maker).sort()).toEqual(["swings-1", "swings-2"]);
             const selected = alternatives[selected_index];
-            expect(selected.id).toBe("swings-2");
+            expect(selected.maker).toBe("swings-2");
             expect(selected.verdict).toBe("stable");
             expect(selected.assessment.backpressure_loss).toMatchObject({ survives: true, broken_by: [] });
         });

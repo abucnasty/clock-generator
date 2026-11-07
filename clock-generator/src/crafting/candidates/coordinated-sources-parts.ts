@@ -1,6 +1,6 @@
 import type { AlwaysOnReasons } from "../always-on-reasons";
 import type { SerializableClockWindows } from "../clock";
-import type { ClockStrategy } from "../clock-strategy";
+import type { ClockStrategy, StrategyRef } from "../clock-strategy";
 
 /**
  * The parts the per-branch clock is composed from (coordinated-sources.ts): every clock the other makers built for the build, with
@@ -18,7 +18,7 @@ export interface CoordinatedSourcesPart {
      * The strategy of its clock (family and construction): set for an alternative by `coordinatedSourcesInputOf`, from the alternatives of the
      * runs; a way of the grouped hands rule has none and is Round-Robin Polling by the grouped hands construction
      */
-    strategy?: Pick<ClockStrategy, "family" | "construction">;
+    strategy?: StrategyRef;
     /** The ticks of its period, the period its windows are of */
     period_ticks: number;
     windows: SerializableClockWindows;
@@ -70,12 +70,12 @@ export function partKey(part: Pick<CoordinatedSourcesPart, "period_ticks" | "win
 }
 
 /** The strategy of a way: the grouped hands rule makes every way, so each is Round-Robin Polling by the grouped hands construction */
-const WAY_STRATEGY: Pick<ClockStrategy, "family" | "construction"> = { family: "round-robin-polling", construction: "grouped-hands" };
+const WAY_STRATEGY: StrategyRef = { id: "round_robin_polling", tuning_method: "calculated" };
 
 /** What `coordinatedSourcesInputOf` reads of a run: its parts, the alternatives it lists (for their strategies), and the runs listed after it */
 interface RunWithParts {
     parts?: CoordinatedSourcesPart[];
-    alternatives?: readonly { id: string; strategy: Pick<ClockStrategy, "family" | "construction"> }[];
+    alternatives?: readonly { id: string; strategy: ClockStrategy }[];
     also?: RunWithParts[];
 }
 
@@ -87,17 +87,17 @@ interface RunWithParts {
  */
 export function coordinatedSourcesInputOf(runs: readonly (RunWithParts | null)[], recommended_id: string): CoordinatedSourcesInput {
     const all: CoordinatedSourcesPart[] = [];
-    const strategies = new Map<string, Pick<ClockStrategy, "family" | "construction">>();
+    const strategies = new Map<string, StrategyRef>();
     const walk = (run: RunWithParts | null | undefined): void => {
         if (run === null || run === undefined) return;
-        for (const alternative of run.alternatives ?? []) strategies.set(alternative.id, alternative.strategy);
+        for (const { id, strategy } of run.alternatives ?? []) if (strategy.id !== null && strategy.tuning_method !== null) strategies.set(id, { id: strategy.id, tuning_method: strategy.tuning_method });
         all.push(...(run.parts ?? []));
         run.also?.forEach(walk);
     };
     runs.forEach(walk);
     for (const [index, part] of all.entries()) {
         const strategy = part.alternative_id === undefined ? WAY_STRATEGY : strategies.get(part.alternative_id);
-        if (strategy !== undefined) all[index] = { ...part, strategy: { family: strategy.family, ...(strategy.construction !== undefined && { construction: strategy.construction }) } };
+        if (strategy !== undefined) all[index] = { ...part, strategy };
     }
     const ordered = [...all.filter(part => part.alternative_id !== undefined && part.verdict === "stable"),
         ...all.filter(part => part.alternative_id === undefined)];

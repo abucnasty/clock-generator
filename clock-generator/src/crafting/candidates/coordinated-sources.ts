@@ -131,8 +131,7 @@ export function sourceControlsOf(
         for (const id of group.inserters) {
             if (choice.windows[id] !== null && choice.windows[id] !== undefined) {
                 if (part.strategy === undefined) { logger.debug(`Per-branch clock, ${build}: ${id} left out of the sources, the part ${partName(part)} has no strategy`); continue; }
-                const { family, construction } = part.strategy;
-                entities[id] = { kind: "strategy", family, ...(construction !== undefined && { construction }) };
+                entities[id] = { kind: "strategy", id: part.strategy.id, tuning_method: part.strategy.tuning_method };
                 continue;
             }
             const reason = choice.parts.map(it => it.always_on?.[id]).find(it => it !== undefined) ?? always_on_reasons[id];

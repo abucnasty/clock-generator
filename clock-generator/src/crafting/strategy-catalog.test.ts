@@ -1,44 +1,46 @@
 import { describe, expect, test } from "vitest";
-import type { StrategyConstruction, StrategyFamily } from "./clock-strategy";
-import { catalogRowOf, routerRowOf, settingChipsOf, type ClockSettings, type EnableControlStrategyRouter, type StrategyCatalogRow } from "./strategy-catalog";
+import type { StrategyId, StrategyRef } from "./clock-strategy";
+import { catalogRowOf, fixedTuningMethodOf, routerRowOf, settingChipsOf, strategyRowOf, type ClockSettings, type EnableControlStrategyRouter, type StrategyCatalogRow } from "./strategy-catalog";
 
-// Every family and construction of a strategy has its row; typed so that a family added to the union fails here until it is listed.
-const CONSTRUCTIONS: Record<StrategyFamily, (StrategyConstruction | undefined)[]> = {
-    "takt-batches": ["arithmetic", "planning-run"],
-    "round-robin-polling": ["grouped-hands"],
-    "euclidean-swings": ["planning-run"],
-    "time-division-slots": [undefined],
-    "time-study-windows": [undefined],
-    "moved-output-swing": [undefined],
-    "signal-offset": [undefined],
-    "pitch-pickups": [undefined],
-    "exhaust": [undefined],
-    "per-branch": [undefined],
+// Every strategy and tuning method has its row; typed so that a strategy added to the union fails here until it is listed.
+const TUNING_METHODS: Record<StrategyId, StrategyRef["tuning_method"][]> = {
+    takt_batches: ["calculated", "observed"],
+    round_robin_polling: ["calculated"],
+    euclidean_swings: ["observed"],
+    time_division_windows: ["calculated"],
+    time_study_windows: ["observed"],
+    moved_output_swing: ["observed"],
+    phase_shifted_batch: ["observed"],
+    pitch_pickups: ["observed"],
+    exhaust: ["calculated"],
 };
 const ROUTERS: Record<EnableControlStrategyRouter, true> = { direct: true, coordinated_sources: true };
 
 const words = (row: StrategyCatalogRow) => [row.name, row.line, row.definition, row.practice];
 
 describe("the catalog", () => {
-    test("has a row of words for every family and construction", () => {
-        for (const [family, constructions] of Object.entries(CONSTRUCTIONS) as [StrategyFamily, (StrategyConstruction | undefined)[]][]) {
-            for (const construction of constructions) {
-                const row = catalogRowOf({ family, ...(construction !== undefined && { construction }) });
-                expect(words(row).every(text => text.length > 0), `${family} ${construction}`).toBe(true);
+    test("has a row of words for every strategy and tuning method, and the tuning method of the row is the strategy's", () => {
+        for (const [id, methods] of Object.entries(TUNING_METHODS) as [StrategyId, StrategyRef["tuning_method"][]][]) {
+            for (const tuning_method of methods) {
+                const row = catalogRowOf({ id, tuning_method });
+                expect(words(row).every(text => text.length > 0), `${id} ${tuning_method}`).toBe(true);
+                expect(row.tuning_method, `${id} ${tuning_method}`).toBe(tuning_method);
             }
+            expect(fixedTuningMethodOf(id), id).toBe(methods.length === 1 ? methods[0] : null);
         }
     });
 
     test("tells the two Takt Batches apart by the tuning method", () => {
-        expect(catalogRowOf({ family: "takt-batches", construction: "arithmetic" }).tuning_method).toBe("calculated");
-        expect(catalogRowOf({ family: "takt-batches", construction: "planning-run" }).tuning_method).toBe("observed");
-        expect(catalogRowOf({ family: "takt-batches", construction: "arithmetic" }).name).toBe(catalogRowOf({ family: "takt-batches", construction: "planning-run" }).name);
+        expect(catalogRowOf({ id: "takt_batches", tuning_method: "calculated" }).tuning_method).toBe("calculated");
+        expect(catalogRowOf({ id: "takt_batches", tuning_method: "observed" }).tuning_method).toBe("observed");
+        expect(catalogRowOf({ id: "takt_batches", tuning_method: "calculated" }).name).toBe(catalogRowOf({ id: "takt_batches", tuning_method: "observed" }).name);
     });
 
-    test("has a row of words for every router, and Coordinated Sources is the per-branch row", () => {
+    test("has a row of words for every router, and a clock without a strategy of its own is read as its router", () => {
         for (const router of Object.keys(ROUTERS) as EnableControlStrategyRouter[]) expect(words(routerRowOf(router)).every(text => text.length > 0), router).toBe(true);
-        expect(routerRowOf("coordinated_sources")).toBe(catalogRowOf({ family: "per-branch" }));
         expect(routerRowOf("direct").tuning_method).toBeNull();
+        expect(strategyRowOf({ id: null, tuning_method: null, routing: { router: "coordinated_sources" } })).toBe(routerRowOf("coordinated_sources"));
+        expect(strategyRowOf({ id: "exhaust", tuning_method: "calculated", routing: { router: "direct" } })).toBe(catalogRowOf({ id: "exhaust", tuning_method: "calculated" }));
     });
 });
 

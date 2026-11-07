@@ -25,7 +25,7 @@ describe("the car paste at 80.78/s", () => {
     // 5 swings is 356.524 ticks: no subtick clock (a scale above 1000), so its blueprint counts 356 ticks and takes 416
     // plates of them
     test("lists the clock of 356.524 ticks as the clock rounded to 356 it is, at its own rate, and does not select it", () => {
-        const five = paste.alternatives.find(alternative => alternative.id === "swings-5")!;
+        const five = paste.alternatives.find(alternative => alternative.maker === "swings-5")!;
         expect(five.result.simulation_duration.ticks).toBeCloseTo(356.524, 3);
         expect(five.result.subtick).toBeUndefined();
         // 0.15% fast: more than the 0.1% a rounded clock may run, so it is not tried on its own period
@@ -34,15 +34,15 @@ describe("the car paste at 80.78/s", () => {
         expect(five.rounded).toMatchObject({period_ticks: 356, tried_on_its_period: false});
         expect(five.ranking).toMatchObject({meets_target_rate: false, recovery_untried: false});
         expect(five.ranking.runs_fast).toBeUndefined();
-        expect(paste.alternatives.filter(alternative => alternative.id.startsWith("swings-5"))).toHaveLength(1);
+        expect(paste.alternatives.filter(alternative => alternative.maker.startsWith("swings-5"))).toHaveLength(1);
         expect(paste.alternatives[paste.selected_index].id).not.toBe("swings-5");
     });
 
     // the batched clock's 285.19 ticks have a subtick clock, so it is listed as that alone: rounded down to 285 ticks it
     // would run 0.08% fast, but above the furnaces' 80.78015625/s, which a rounded clock may not
     test("lists the batched clock as its subtick clock alone, whose rounding would run above what the furnaces make", () => {
-        expect(paste.alternatives.find(alternative => alternative.id === "planned-belt-slack")).toBeUndefined();
-        const subtick = paste.alternatives.find(alternative => alternative.id === "planned-belt-slack-subtick")!;
+        expect(paste.alternatives.find(alternative => alternative.maker === "planned-belt-slack")).toBeUndefined();
+        const subtick = paste.alternatives.find(alternative => alternative.maker === "planned-belt-slack-subtick")!;
         expect(subtick.rounded).toBeUndefined();
         expect(Math.floor(subtick.result.simulation_duration.ticks)).toBe(285);
         const rounded_rate = subtick.result.stability_check.expected_output_items * 60 / 285 * (paste_config.target_output.copies ?? 1);
@@ -51,7 +51,7 @@ describe("the car paste at 80.78/s", () => {
     });
 
     test("says why the recovery of a clock of 356.524 ticks cannot be tried, and the selected clock meets the target rate", () => {
-        const five = paste.alternatives.find(alternative => alternative.id === "swings-5")!;
+        const five = paste.alternatives.find(alternative => alternative.maker === "swings-5")!;
         expect(backpressureLossVerdictOf(paste_config, five.result, quiet)).toEqual({
             backpressure_loss: null,
             backpressure_loss_not_tried: "A clock of 356.524 ticks does not repeat in whole ticks, so its output cannot be counted by the period",

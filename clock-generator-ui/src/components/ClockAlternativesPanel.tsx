@@ -26,8 +26,8 @@ import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import { CLOCK_TABLE_NAME, CLOCK_TABLE_REGION, clockHelpName, termsHelpName } from '../utils/a11yLabels';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import { SUMMARY_COPY, beltCellText, clockBadges, foldedMakes, isStartDependent, pickNameMeaning, recoversOf, wakeUpsAverageOf, worksOf } from '../utils/clockSummary';
-import { directRouterOf, familyCopyOf, fullClockName, qualifierChipsOf, sourceLinesOf, strategyNameOf } from '../utils/strategyNames';
-import { BadgeChips, QualifierChips } from './StrategyChips';
+import { directRouterOf, familyCopyOf, fullClockName, clockChipsOf, sourceLinesOf, strategyNameOf } from '../utils/strategyNames';
+import { BadgeChips, ClockChips } from './StrategyChips';
 import { SIGNAL_DEFINITION, WAKEUP_DEFINITION, TERMS_FOCUS, type GlossaryId } from '../utils/glossary';
 import { HelpButton } from './HelpButton';
 import { ScrollX } from './ScrollX';
@@ -234,7 +234,7 @@ export function ClockAlternativesPanel({
                 <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: 1, rowGap: 0.5 }}>
                         <Box component="span" sx={{ fontWeight: 600 }}>{strategyNameOf(alternative)}</Box>
-                        <QualifierChips clock={alternative} />
+                        <ClockChips clock={alternative} />
                         <BadgeChips badges={clockBadges(alternatives, index)} meanings={badgeMeanings(alternatives, index, pickRule)} />
                         {index === recommendedIndex && <RecommendedChip isGenerating={isGenerating} />}
                     </Box>
@@ -507,7 +507,7 @@ function StrategyHelp({ clock }: { clock: ClockAlternativeView }) {
             {sources.map(line => (
                 <Typography key={line} variant="body2" sx={{ mb: 0.75 }} data-source-line="">{line}</Typography>
             ))}
-            {qualifierChipsOf(clock).map(chip => (
+            {clockChipsOf(clock).map(chip => (
                 <Typography key={chip.id} variant="body2" sx={{ mb: 0.75 }}><strong>{chip.label}.</strong> {chip.line}</Typography>
             ))}
         </>
