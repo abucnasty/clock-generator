@@ -98,3 +98,5 @@ export type {
     SharedVertex,
     TerminalKind,
 } from "./data-types/planner-graph";
+
+export { catalogRowOf, routerRowOf } from "./crafting/strategy-catalog";
