@@ -8,6 +8,10 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
+## Release 0.28.0 (release/0-28-0)
+Every clock blueprint carries the engine's version, so each alternative's `text_sha256` moves with the bump from 0.27.2 to 0.28.0. No selection, rate, window or wake-up moved.
+- all 86 jobs: `text_sha256` of every alternative, for the version in the blueprint text
+
 ## Alternative ids follow the strategy catalog (refactor/strategy-catalog)
 An alternative's id is derived from the strategy and the settings of its clock; the slot that made the clock is its `maker`, the id it had before. The lines below name the old ids and stay as history. Old id -> new id:
 `even-hands` -> `time_division_windows`; `fractional` -> `euclidean_swings`; `derived` -> `time_study_windows`; `uneven-output` -> `moved_output_swing`; `shifted-swings` -> `phase_shifted_batch`; `full-hand` -> `pitch_pickups`; `results-in-turn` -> `exhaust`; `per-branch` -> `coordinated_sources`; `primitive-grouped` -> `round_robin_polling_shorter_window_cycle`;
