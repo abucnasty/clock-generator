@@ -8,6 +8,10 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
+## Loop windows report #516's two-hop bound (#516)
+A clock with windows for a loop of machines now carries #516's two-hop bound in its assessment (`loop_stock_bound`), a report that keeps, drops and ranks nothing: only the results digest of those alternatives moves, no clock, verdict or wake-up count.
+- config-AGRICULTURAL_SCIENCE_250 (planned-belt-slack, shifted-swings, swings-1), variants-AGRICULTURAL_SCIENCE_250_BACKED_UP (planned-belt-slack), config-IRON_BACTERIA_380_CULTIVATION (planned-belt-slack-subtick, swings-4-subtick, swings-6-subtick): results digest only (the assessment)
+
 ## Enable windows shaped against ghost wakeups (#641)
 Each window of the primary batched-swings clock whose closing edge left its inserter asleep on a machine's list closes before the inserter went to sleep or took the hand it held, or is dropped where that leaves it nothing; kept where the clock holds, wakes fewer and gets back from every loss the primary gets back from. Game figures: wakeups (ghost wakeups) a period of one copy on its one-copy scaffold, before -> after, output 100% in every period both sides.
 - config-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY, variants-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY_BACKED_UP: planned-belt-slack stays selected, wake-ups 245.687 -> 163.791 a minute (game: 24 (16) -> 16 (8))
