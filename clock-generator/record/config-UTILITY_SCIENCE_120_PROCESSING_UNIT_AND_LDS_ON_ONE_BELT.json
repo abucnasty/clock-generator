@@ -4,12 +4,12 @@
   "group": "config",
   "name": "UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT",
   "config_sha256": "784f568702cc28fd17b9916d255c5a184c61b0a8ac66f2f0ebc94aac65b9eafb",
-  "job_results_sha256": "f165f917084b43135f75db5eeeb05686c393fd76d35c30b73522ac02034d86e9",
-  "selected": "planned-belt-slack",
+  "job_results_sha256": "a382b03129c4cd5c5426a52484f5d9a5c7bc32d3a75264a774a4b682028641a3",
+  "selected": "per-branch",
   "selected_windows": {
     "inserter:2": "1-48,169-208",
-    "inserter:3": "13-33,181-201,214-222",
-    "inserter:1": "206-214"
+    "inserter:1": "206-214",
+    "inserter:3": "26-63,194-220"
   },
   "alternatives": [
     {"id": "planned-belt-slack", "verdict": "stable", "holds": true, "rate": 120, "supply": "moving", "period": 336, "wake_ups": 42.985, "descriptions_cut": 0, "clock_sha256": "1083cff4401660ef62c240811d66dcf5ea1f2023980652ad985f4701daed8da9", "windows_sha256": "16794f810bbff1d56526d6353acaea40f83c2785953f808876e601afe050539c", "text_sha256": "e41c0834569452a319a10ad44c9fe12254743c660e217d9c03ea8895d98d2727", "results_sha256": "8e0f3683ca2a6b3ebb47702512a2b63b8fde9b81a6bd56640a7080449463160a"},
@@ -19,6 +19,7 @@
     {"id": "swings-5", "verdict": "unstable", "holds": false, "rate": 72, "supply": "moving", "period": 1680, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "f8daf5c25b708ef1e6147966b3641538678480eac2dfa317e6f0a982595732f7", "windows_sha256": "f78a7094043dd9e52dc4b855120ed8f5e8230427861e110ccd0aaacb4b9b7480", "text_sha256": "a3c59d86c42e772bad99d3f4e38f30b78037e7986d6cf4042962efdde7c4faed", "results_sha256": "99d6acf0ac011b7cea8b08919d61066936b2b275ba2855bd894d28b7b43d6cdc"},
     {"id": "swings-6", "verdict": "unstable", "holds": false, "rate": 20, "supply": "moving", "period": 336, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "bffbb066315a70bc3e7392c5cad14fe120590d61581ce24e5a0a09fb7b62c9b7", "windows_sha256": "2a60233cab894e2c7a5f2d6c26b76fc051206a4f52c091c14b16cd598955b538", "text_sha256": "acf05401f71fc4bd25c582a2ea6cb71e64cfb2adb28a20b097e468b31d7392fd", "results_sha256": "90cc6f782672081710555e6d855471bd991b9f96588587b76c924a6ea357681d"},
     {"id": "swings-2", "verdict": "stable", "holds": true, "rate": 120, "supply": "moving", "period": 336, "wake_ups": 42.985, "descriptions_cut": 0, "clock_sha256": "b21e593fd89909b995e91b57e25ad85e9948040790f29ce9c744ebb008cc8427", "windows_sha256": "b309f338c2c974e8b95208a7c77c64e747fef5eef1b70a9e7ab8d1471b5aef58", "text_sha256": "752708c22db660330e448e37daa9de80d15c62e546cd3b11b9fd5a32d46c94e4", "results_sha256": "f3e97fa12ddce2b75332b30b724f8abab8b6a803a02923a0433dc8e2e86e9452"},
-    {"id": "swings-1", "verdict": "stable", "holds": true, "rate": 120, "supply": "moving", "period": 336, "wake_ups": 107.463, "descriptions_cut": 0, "clock_sha256": "0666474b67d80f8b97730d1bd378c3ef62b9ae4aba108d52d79e27f1e491c95a", "windows_sha256": "6d371ca7ec92b6f7336583103c52580a6851435cec2127a901c40c7a2a7f3344", "text_sha256": "d2891be9f13a7338e366f3553d154daae29489a353c30eedec84e2f46f817d13", "results_sha256": "a7059cd5c69e6349674b2457dd502d5973064d0a90235ebb23b22a35a3491d8b"}
+    {"id": "swings-1", "verdict": "stable", "holds": true, "rate": 120, "supply": "moving", "period": 336, "wake_ups": 107.463, "descriptions_cut": 0, "clock_sha256": "0666474b67d80f8b97730d1bd378c3ef62b9ae4aba108d52d79e27f1e491c95a", "windows_sha256": "6d371ca7ec92b6f7336583103c52580a6851435cec2127a901c40c7a2a7f3344", "text_sha256": "d2891be9f13a7338e366f3553d154daae29489a353c30eedec84e2f46f817d13", "results_sha256": "a7059cd5c69e6349674b2457dd502d5973064d0a90235ebb23b22a35a3491d8b"},
+    {"id": "per-branch", "verdict": "stable", "holds": true, "rate": 120, "supply": "moving", "period": 336, "wake_ups": 32.239, "descriptions_cut": 0, "clock_sha256": "4d76e23812f7488a2b89e06cc1931527d215c6ec13e69a90d3c7ada3d8c73fcb", "windows_sha256": "0a31ac921e55ab62e5ed8022311fcecb5f20aa785d8b34f83659d81764dcd215", "text_sha256": "810c44186c87e41d418391f6ee9f904ec430ca025d6604f505ddcc96d95eb58d", "results_sha256": "0a956816401f9ff70e0228e58444fa11d6afe5e73e0df3023cf197c4ea57ecb0"}
   ]
 }

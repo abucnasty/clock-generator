@@ -13,8 +13,10 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ### Added
 - generation: a new clock that enables some inserters for one tick at each swing
+- generation: a new clock, Coordinated signal system, gives each part of the build the enable windows that fit it
 
 ### Changed
+- generation: accumulator, processing unit, advanced circuit and ten other builds recommend clocks with fewer wakeups
 - generation: chemical science, electric furnace and nine other builds recommend clocks with fewer wakeups
 - generation: fractional swings now falls back to fewer output swings where the machine cannot take them
 - generation: several builds now select clocks with fewer wake-ups, among them logistic and electromagnetic science

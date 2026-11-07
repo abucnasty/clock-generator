@@ -131,9 +131,10 @@ const circuitExport: JobCheck[] = [
     {
         // the guard per taker gates the 12 takers whose hands and a start more take the 24-tick period; that clock does not get back
         // from every loss, so it is remade once with the takers into the target machines (the processing unit machines 2 and 3) unguarded
+        // of the per-hand clock the grouped hands make, which the per-branch clock composed from it is recommended over
         name: 'Selection: the 4 inserters with no window are the circuits into the processing unit machines, which the remake leaves unguarded',
         run: ({ generated }) => {
-            expect(selectedOf(generated).result.always_on_reasons).toEqual(Object.fromEntries([3, 4, 7, 8]
+            expect(byId(generated, 'planned-belt-slack-per-hand').result.always_on_reasons).toEqual(Object.fromEntries([3, 4, 7, 8]
                 .map(number => [`inserter:${number}`, { kind: 'busy', period_ticks: 24 }])));
         },
     },
@@ -167,7 +168,8 @@ const circuitExport: JobCheck[] = [
         // shows the inserters at work
         name: 'records a settled period from the clock tick the long run judges, not the stalled first one',
         run: ({ config, generated }) => {
-            const selected = selectedOf(generated);
+            // the per-hand clock of the grouped hands, which stalls in its first period; the per-branch clock composed from it does not
+            const selected = byId(generated, 'planned-belt-slack-per-hand');
             const first_judged_tick = selected.result.stability_check.as_built?.first_judged_tick;
             expect(first_judged_tick).toBe(960);
             const judged_clock_tick = selected.result.stability_check.as_built?.clock_tick_at_first_judged;

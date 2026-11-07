@@ -2,7 +2,7 @@
 // test of each build checked on the result that the record does not hold (see samples.ts for what the record does hold).
 import { expect } from 'vitest';
 import type { JobCheck } from '../record-job-checks';
-import { backpressureLossOf, selectableAsStable } from '../../../../src/crafting/generate-blueprint';
+import { backpressureLossOf, PER_BRANCH_ID, selectableAsStable } from '../../../../src/crafting/generate-blueprint';
 import type { ClockAlternative, ClockAlternativesResult } from '../../../../src/crafting/generate-blueprint';
 import { lossId, verdictOf, type BackpressureLossReport } from '../../../../src/crafting/backpressure-loss';
 import { START_DEPENDENCE_NOT_CHECKED } from '../../../../src/crafting/start-dependence';
@@ -42,9 +42,10 @@ const circuitExportBackedUp: JobCheck[] = [
     {
         // the guard per taker gates the 12 takers whose hands and a start more take the 24-tick period; that clock does not get back
         // from every loss, so it is remade once with the takers into the target machines (the processing unit machines 2 and 3) unguarded
+        // of the per-hand clock the grouped hands make, which the per-branch clock composed from it is recommended over
         name: 'Selection: the 4 inserters with no window are the circuits into the processing unit machines, which the remake leaves unguarded',
         run: ({ generated }) => {
-            expect(selectedOf(generated).result.always_on_reasons).toEqual(Object.fromEntries([3, 4, 7, 8]
+            expect(byId(generated, 'planned-belt-slack-per-hand').result.always_on_reasons).toEqual(Object.fromEntries([3, 4, 7, 8]
                 .map(number => [`inserter:${number}`, { kind: 'busy', period_ticks: 24 }])));
         },
     },
@@ -180,7 +181,8 @@ const automation: JobCheck[] = [
         name: 'runs the searches by default, where no clock made without a search is stable',
         run: ({ generated }) => {
             expect(generated.skipped_searches).toEqual([]);
-            expect(generated.alternatives.filter(a => !SEARCH_IDS.includes(a.id)).some(a => selectableAsStable(a.ranking))).toBe(false);
+            // the per-branch clock is made after the searches and does not count toward the gate
+            expect(generated.alternatives.filter(a => !SEARCH_IDS.includes(a.id) && a.id !== PER_BRANCH_ID).some(a => selectableAsStable(a.ranking))).toBe(false);
         },
     },
     {

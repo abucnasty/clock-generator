@@ -8,6 +8,21 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
+## The per-branch clock (#699)
+A new alternative, `per-branch`, made after every other clock: each group of inserters (those that take from one source) takes the enable windows of one clock the other makers built, on the recommended clock's window cycle, chosen group by group from the output upstream by simulated wakeups. Listed only where it is stable and another clock; on 16 jobs it is selected, with fewer wakeups, and on the other 70 it is not listed. Game figures: the per-branch clock on its sample's scaffold, made / expected in every period recorded, and wakeups a minute in the game (simulator, seeded); every run holds the setpoint (minute protocol, turbo).
+- config-ACCUMULATOR_640: selected even-hands -> per-branch, wake-ups 889.072 -> 696.44 a minute, period 972 (game: 576 / 576 in 3 of 3 periods, 696.5 (696.3))
+- config-PROCESSING_UNIT_80_CIRCUIT_EXPORT: selected planned-belt-slack-per-hand -> per-branch, 3,502.5 -> 3,050.625, period 24 (game: 32 / 32 in 149 of 149 periods, 3,034.8 (3,047.3 cold); the export belt 2 meets its rate); variants-PROCESSING_UNIT_80_CIRCUIT_EXPORT_BACKED_UP: planned-belt-slack-per-hand -> per-branch, 3,444.375 -> 3,030 (game: 32 / 32 in 149 of 149, 3,098.9 (3,330.2))
+- config-ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED: selected primitive-grouped -> per-branch, 2,171.25 -> 2,086.875, period 40 (game: its game test on the two-cell scaffold, 5,760 / 5,760 in the baseline minute, back after each of the seven disturbances, both cold starts at the setpoint)
+- config-ADVANCED_CIRCUIT_240: selected planned-belt-slack -> per-branch, 429.545 -> 334.091, period 528 (game: 704 / 704 in 6 of 6, 416.0 (443.2)); variants-ADVANCED_CIRCUIT_240_BACKED_UP: swings-1 -> per-branch, 954.545 -> 872.727, period 264 (game: 352 / 352 in 13 of 13, 1,102.9 (1,187.4))
+- config-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY, variants-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY_BACKED_UP: selected planned-belt-slack -> per-branch, 163.791 -> 81.896, period 352 (game: 256 / 256 in 10 of 10, 81.8 (81.8), both belts)
+- config-INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK: selected swings-6 -> per-branch, 450 -> 150, period 72 (game: 96 / 96 in 49 of 49, 250.1 (250.0)); variants-INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK_BACKED_UP: swings-6 -> per-branch, 450 -> 300 (game: 96 / 96 in 49 of 49, 450.1 (613.3))
+- config-IRON_PLATE_80_CAR_CHEST: selected swings-2 -> per-branch, 158.75 -> 137.5, period 144 (game: 192 / 192 in 24 of 24, 144.0 (129.2 cold))
+- config-LITHIUM_PLATE_80_SILO_CHEST: selected even-hands -> per-branch, 13.34 -> 3.335, period 2,160 (game: 2,880 / 2,880 in 1 of 1, 136.7 (70.0); the furnace output inserters the warm-up wakes, as the scaffold test's note says)
+- config-LOGISTIC_SCIENCE_240_DIRECT_INSERT: selected planned-belt-slack -> per-branch, 200.069 -> 100.035, period 576 (game: 384 / 384 in 6 of 6, 100.0 (100.0))
+- config-PRODUCTIVITY_MODULE_80_CHEST_CHAIN: selected planned-belt-slack -> per-branch, 666.25 -> 620, period 72 (game: 16 / 16 in 49 of 49, 623.2 (630.6))
+- config-UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT: selected planned-belt-slack -> per-branch, 42.985 -> 32.239, period 336 (game: 96 / 96 in 10 of 10, 32.2 (32.1))
+- variants-AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING: selected full-hand -> per-branch, 50.174 -> 0, period 72 (game: 32 / 32 in 49 of 49, 0.0 (0.0))
+
 ## Loop windows report #516's two-hop bound (#516)
 A clock with windows for a loop of machines now carries #516's two-hop bound in its assessment (`loop_stock_bound`), a report that keeps, drops and ranks nothing: only the results digest of those alternatives moves, no clock, verdict or wake-up count.
 - config-AGRICULTURAL_SCIENCE_250 (planned-belt-slack, shifted-swings, swings-1), variants-AGRICULTURAL_SCIENCE_250_BACKED_UP (planned-belt-slack), config-IRON_BACTERIA_380_CULTIVATION (planned-belt-slack-subtick, swings-4-subtick, swings-6-subtick): results digest only (the assessment)
