@@ -167,7 +167,7 @@ function divideTransfers(
     original: EntityTransferCountMap,
     output_cycles: Fraction
 ): EntityTransferCountMap {
-    assert(output_cycles.getDenominator === 1, "Crafting cycles must be an integer");
+    assert(output_cycles.getDenominator === 1, "Output cycles must be an integer");
     return EntityTransferCountMap.fromEntries(
         original.map((value) => {
             return {
@@ -223,19 +223,19 @@ function serializeTransferPlan(
 
 function printInserterSwingCounts(transfers: EntityTransferCountMap, logger: Logger = defaultLogger) {
     logger.log("----------------------");
-    logger.log("Transfer Counts:");
+    logger.log("Swing Counts:");
     transfers.forEach(it => {
         if (Entity.isInserter(it.entity)) {
             if (it.item_transfers.length === 1) {
-                logger.log(`- Inserter ${it.entity.entity_id.id} for item ${it.item_transfers[0].item_name}: ${it.total_transfer_count} transfers (stack size: ${it.stack_size})`);
+                logger.log(`- Inserter ${it.entity.entity_id.id} for item ${it.item_transfers[0].item_name}: ${it.total_transfer_count} swings (stack size: ${it.stack_size})`);
             } else {
                 const items = it.item_transfers.map(t => `${t.item_name} (${t.transfer_count})`).join(", ");
-                logger.log(`- Inserter ${it.entity.entity_id.id} for items [${items}]: ${it.total_transfer_count} total transfers (stack size: ${it.stack_size})`);
+                logger.log(`- Inserter ${it.entity.entity_id.id} for items [${items}]: ${it.total_transfer_count} total swings (stack size: ${it.stack_size})`);
             }
         }
 
         if (Entity.isDrill(it.entity)) {
-            logger.log(`- Drill ${it.entity.entity_id.id} for item ${it.item_transfers[0].item_name}: ${it.total_transfer_count} transfers`);
+            logger.log(`- Drill ${it.entity.entity_id.id} for item ${it.item_transfers[0].item_name}: ${it.total_transfer_count} swings`);
         }
     });
     logger.log("----------------------");

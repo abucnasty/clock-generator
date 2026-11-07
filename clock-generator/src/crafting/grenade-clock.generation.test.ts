@@ -19,7 +19,7 @@ test("grenade: copies a tile closer put hands on each other, and the insight say
         + "13, 15, 17, 19, 23 or 25 apart only with a copy's inserters 7 tiles apart; 14 or 21 apart never. The same holds at any of these spacings plus 14.");
 });
 
-test("grenade: the hand-made clock, as windows, holds in the simulator and gets back after every loss", async () => {
+test("grenade: the hand-made clock, as windows, holds in the simulator and goes back to its rate by itself after every supply stop and output blockage", async () => {
     const config = await loadConfigFromFile(ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY);
     const range = (start: number, end: number) => [{start, end}];
     // counted 0 to 111; a window decider reads the counter, so its first value is the window's first tick

@@ -156,9 +156,9 @@ function shortfallOf(clock: WhyNotStableClock): string {
         return "";
     }
     if (output.repeat_window_cycles !== undefined && output.repeat_window_cycles > 1 && output.repeat_output_items !== undefined) {
-        return `${output.repeat_output_items} of ${clock.expected_output_items * output.repeat_window_cycles} items over ${output.repeat_window_cycles} periods`;
+        return `${output.repeat_output_items} of ${clock.expected_output_items * output.repeat_window_cycles} items over ${output.repeat_window_cycles} window cycles`;
     }
-    return `${figure(output.items)} of ${clock.expected_output_items} items a period`;
+    return `${figure(output.items)} of ${clock.expected_output_items} items a window cycle`;
 }
 
 /** What the config says of its belts and its target, which every clock of a generation shares */
@@ -178,7 +178,7 @@ function movingLanePhases(clock: WhyNotStableClock, build: WhyNotStableBuild): W
     if (!clock.moving_belt) {
         return null;
     }
-    const lead = `The selected clock (${clock.label}) is made for a moving belt. It holds the target rate from the modeled start`;
+    const lead = `The recommended clock (${clock.label}) is made for a moving belt. It holds the setpoint from the modeled start`;
     const in_the_game = "In the game a belt's lanes reach the pickups in whatever phase they happen to have, so the build can fall short."
         + (build.backed_up_belts ? "" : BACKED_UP_MAY_HOLD);
     if (clock.verdict === "unstable" && clock.failed_pickup_phases !== undefined) {
@@ -194,7 +194,7 @@ function movingLanePhases(clock: WhyNotStableClock, build: WhyNotStableBuild): W
     if (clock.verdict === "no recovery" && loss !== null && loss.broken_by.length > 0 && loss.broken_by.every(it => other_phases.includes(it))) {
         return {
             cause: "moving lane phases",
-            message: `${lead} and gets back to it from there after every loss, but not when the lanes come back in another `
+            message: `${lead} and goes back to it by itself from there after every supply stop and output blockage, but not when the lanes come back in another `
                 + `phase after ${lossList(loss.broken_by)}. ${in_the_game}`,
         };
     }
@@ -202,7 +202,7 @@ function movingLanePhases(clock: WhyNotStableClock, build: WhyNotStableBuild): W
 }
 
 /** Said of a clock that holds with the inserters of one machine served in one order and not in another */
-const ORDER_IN_THE_GAME = "The game serves inserters that take from one machine in a fixed order, which the config does not tell, "
+const ORDER_IN_THE_GAME = "The game serves inserters that take from one machine in a fixed order, which the configuration does not tell, "
     + "so the build can fall short.";
 
 /** "inserters 6 and 7", or "inserters 6, 7, 22 and 25" for several machines; "the inserters that take from one machine" when not known */
@@ -218,7 +218,7 @@ function takerOrder(clock: WhyNotStableClock): WhyNotStable | null {
     const shortfall = shortfallOf(clock);
     return {
         cause: "taker order",
-        message: `The selected clock (${clock.label}) holds the target rate when ${competingTakersNamed(clock)} are served in one order, `
+        message: `The recommended clock (${clock.label}) holds the setpoint when ${competingTakersNamed(clock)} are served in one order, `
             + `but not in another${shortfall ? `: then it moves ${shortfall}` : ""}. ${ORDER_IN_THE_GAME}`,
     };
 }
@@ -236,10 +236,10 @@ function spareTimeSentence(spare: SpareTime | null): string {
         return "";
     }
     const ticks = figure(spare.spare_ticks);
-    const window_cycles = Number.isFinite(make_up_window_cycles) ? `${Math.ceil(make_up_window_cycles)} periods` : "forever";
-    return ` ${spare.machine} crafts ${figure(spare.working_ticks)} ticks of a period and has ${ticks} ${ticks === "1" ? "tick" : "ticks"} `
-        + `to spare: making up one period it lost takes it ${window_cycles}, more than the ${spare.recovery_window_cycles} a build is given to `
-        + "get back. That is too little to make up what it lost.";
+    const window_cycles = Number.isFinite(make_up_window_cycles) ? `${Math.ceil(make_up_window_cycles)} window cycles` : "forever";
+    return ` ${spare.machine} crafts ${figure(spare.working_ticks)} ticks of a window cycle and has ${ticks} ${ticks === "1" ? "tick" : "ticks"} `
+        + `to spare: making up one window cycle it lost takes it ${window_cycles}, more than the ${spare.recovery_window_cycles} a build is given to `
+        + "go back to its rate. That is too little to make up what it lost.";
 }
 
 function noRecovery(clock: WhyNotStableClock): WhyNotStable {
@@ -251,17 +251,17 @@ function noRecovery(clock: WhyNotStableClock): WhyNotStable {
     const in_another_order = broken_by.filter(it => other_orders.includes(it));
     const after = (first: boolean) => first ? "after" : "After";
     const sentences = [
-        ...(at_the_start.length > 0 ? [`does not get back to it by itself after ${lossList(at_the_start)}.`] : []),
-        ...(elsewhere.length > 0 ? [`${after(at_the_start.length === 0)} ${lossList(elsewhere)} it gets back to it from the `
+        ...(at_the_start.length > 0 ? [`does not go back to it by itself after ${lossList(at_the_start)}.`] : []),
+        ...(elsewhere.length > 0 ? [`${after(at_the_start.length === 0)} ${lossList(elsewhere)} it goes back to it by itself from the `
             + "modeled start, but not when a moving belt's lanes come back in another phase."] : []),
-        ...(in_another_order.length > 0 ? [`${after(at_the_start.length === 0 && elsewhere.length === 0)} ${lossList(in_another_order)} it gets back to it when `
+        ...(in_another_order.length > 0 ? [`${after(at_the_start.length === 0 && elsewhere.length === 0)} ${lossList(in_another_order)} it goes back to it by itself when `
             + `${competingTakersNamed(clock)} are served in one order, but not in another. ${ORDER_IN_THE_GAME}`] : []),
     ];
     const losses = sentences.length > 0 ? sentences.join(" ")
-        : "was off its expected output in the run the losses are tried on, so whether it gets back after one is not known.";
+        : "was off its expected output in the run the loss trials are made on, so whether it goes back to it by itself after a supply stop or an output blockage is not known.";
     return {
         cause: "no recovery",
-        message: `The selected clock (${clock.label}) holds the target rate, but ${losses}${notTriedSentence(clock.assessment.disturbance_trial?.not_tried)}${spareTimeSentence(clock.spare_time)}`
+        message: `The recommended clock (${clock.label}) holds the setpoint, but ${losses}${notTriedSentence(clock.assessment.disturbance_trial?.not_tried)}${spareTimeSentence(clock.spare_time)}`
             + " A buffer, or a faster machine, lets it catch up.",
     };
 }
@@ -274,7 +274,7 @@ function noRecovery(clock: WhyNotStableClock): WhyNotStable {
 function nothingHolds(clock: WhyNotStableClock, build: WhyNotStableBuild): WhyNotStable {
     return {
         cause: "nothing holds",
-        message: `No clock holds the target rate of ${figure(build.target_items_per_second)} a second. ${nearestOf(clock, build)}${notMadeOf(build)}`,
+        message: `No clock holds the setpoint of ${figure(build.target_items_per_second)} a second. ${nearestOf(clock, build)}${notMadeOf(build)}`,
     };
 }
 
@@ -283,7 +283,7 @@ function nearestOf(clock: WhyNotStableClock, build: WhyNotStableBuild): string {
     const rate = clock.assessment.items_per_second;
     const off = rate - build.target_items_per_second;
     if (clock.stable_above_target === true) {
-        return `The selected one, ${clock.label}, is stable and moves ${figure(rate)} a second, ${figure(off)} `
+        return `The recommended one, ${clock.label}, is stable and moves ${figure(rate)} a second, ${figure(off)} `
             + `(${Number((off / build.target_items_per_second * 100).toFixed(2))}%) over the target: a stable clock over the target `
             + "is picked before a clock nearer to it that is unstable or runs under it.";
     }
@@ -318,7 +318,7 @@ function outputChestFull(clock: WhyNotStableClock, build: WhyNotStableBuild): Wh
     }
     return {
         cause: "output chest full",
-        message: `No clock holds the target rate of ${figure(build.target_items_per_second)} a second: ${clock.full_output_chests.map(fullChestSentence).join(" ")} `
+        message: `No clock holds the setpoint of ${figure(build.target_items_per_second)} a second: ${clock.full_output_chests.map(fullChestSentence).join(" ")} `
             + `${nearestOf(clock, build)} Use an infinity chest, or add an inserter that takes the items out, and generate again.${notMadeOf(build)}`,
     };
 }
@@ -339,7 +339,7 @@ function exportBeltShort(clock: WhyNotStableClock, at_target: boolean): WhyNotSt
     }
     return {
         cause: "export belt short",
-        message: `The selected clock (${clock.label}) moves ${figure(clock.assessment.items_per_second)} a second, but ${clock.export_shortfalls.map(exportShortfallSentence).join(" ")}`,
+        message: `The recommended clock (${clock.label}) moves ${figure(clock.assessment.items_per_second)} a second, but ${clock.export_shortfalls.map(exportShortfallSentence).join(" ")}`,
     };
 }
 
@@ -364,7 +364,7 @@ function resultsNotTaken(clock: WhyNotStableClock, at_target: boolean): WhyNotSt
     }
     return {
         cause: "results not taken out",
-        message: `The selected clock (${clock.label}) brings in ${figure(clock.assessment.items_per_second)} a second, but its results are not all `
+        message: `The recommended clock (${clock.label}) brings in ${figure(clock.assessment.items_per_second)} a second, but its results are not all `
             + `taken out as they come: ${sentences.join(" ")}`,
     };
 }

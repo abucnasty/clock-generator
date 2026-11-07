@@ -26,7 +26,7 @@ describe("even-hands hard topology preflight", () => {
     it("refuses drills using the existing rule before prepare/count arithmetic", () => {
         const plan = vi.spyOn(planning, "unclockedRun").mockImplementation(() => { throw new Error("planning must not run"); });
         expect(drill.drills?.configs.length).toBeGreaterThan(0);
-        expect(() => timeDivisionWindowsClock(drill)).toThrow("even hands are not made for a build with mining drills");
+        expect(() => timeDivisionWindowsClock(drill)).toThrow("Time-Division Windows are not made for a build with mining drills");
         expect(plan).not.toHaveBeenCalled();
     });
     const supported: Config = {

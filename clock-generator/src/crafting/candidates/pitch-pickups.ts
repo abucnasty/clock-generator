@@ -154,7 +154,7 @@ function pitchPickupsOutputWindows(
     // a machine with a surplus fills every hand in one grab, which says nothing about its windows: they let the surplus out
     const { actual_output_items, expected_output_items } = planned_run.stability_check;
     const over_produces = actual_output_items > expected_output_items + LCM_STABILITY_TOLERANCE;
-    logger.log(`Full-hand output: current windows take ${planned.pickups} grabs for ${planned.swings} hands, ${planned.slow} waited for items`
+    logger.log(`Pitch Pickups: current enable windows take ${planned.pickups} grabs for ${planned.swings} hands, ${planned.slow} waited for items`
         + (over_produces ? `, and move ${actual_output_items} of ${expected_output_items} items` : ""));
     if (!over_produces && extra_grabs < FULL_HAND_MIN_EXTRA_GRABS_PER_HAND && !(count_waits && waits >= FULL_HAND_MIN_EXTRA_GRABS_PER_HAND)) {
         return null;
@@ -169,7 +169,7 @@ function pitchPickupsOutputWindows(
         }
         for (const every of FULL_HAND_SPARE_EVERY) {
             for (const ticks of FULL_HAND_SPARE_TICKS.filter(t => timing.length + t < spacing)) {
-                report?.(`Searching spare output capacity (${label}, every ${every} windows +${ticks} ticks)`);
+                report?.(`Searching spare output capacity (${label}, every ${every} enable windows +${ticks} ticks)`);
                 const spare = { every, ticks };
                 const spare_windows = build(timing, spare);
                 const result = runClockOnBuild(config, spare_windows, window_cycle_ticks, logger);
@@ -192,7 +192,7 @@ function pitchPickupsOutputWindows(
     const { picked, pick, tried } = search<Timing, TimingTrial, Confirmed & { windows: Map<string, OpenRange[]> }>({
         candidates: timings,
         quick: (timing, index) => {
-            report?.(`Searching full-hand output timing (${index + 1}/${timings.length})`);
+            report?.(`Searching Pitch Pickups timing (${index + 1}/${timings.length})`);
             const timing_windows = build(timing);
             const trial = quickTrial(config, timing_windows, window_cycle_ticks, logger, pickup_phase_cycles);
             return trial.holds
@@ -206,27 +206,27 @@ function pitchPickupsOutputWindows(
         tieBreak: (a, b) => a.quick.output_full - b.quick.output_full || a.quick.slow - b.quick.slow || a.candidate.length - b.candidate.length,
         // this search's own check first: the timing has to get back from full output machines, with spare windows if need be
         confirm: ({ candidate: timing, quick }) => {
-            let label = `full-hand output (offset ${timing.offset}, ${timing.length}-tick windows)`;
+            let label = `Pitch Pickups (offset ${timing.offset}, ${timing.length}-tick enable windows)`;
             report?.(`Checking ${label} recovery`);
             const recovery = recoveringTiming(timing, label);
             if (!recovery) {
-                logger.log(`Full-hand output: ${label} does not recover from full output machines`);
+                logger.log(`Pitch Pickups: ${label} does not go back to its rate by itself after an output blockage`);
                 return null;
             }
             const { output_full, slow } = recovery.spare ? recovery as Required<typeof recovery> : quick;
             if (recovery.spare) {
-                label += `, every ${recovery.spare.every} windows +${recovery.spare.ticks} ticks`;
+                label += `, every ${recovery.spare.every} enable windows +${recovery.spare.ticks} ticks`;
             }
             // without spare capacity the windows are the quick trial's, whose check the confirmation takes over
             const candidate_windows = recovery.spare ? build(timing, recovery.spare) : quick.windows;
             const confirmed = confirm(config, candidate_windows, window_cycle_ticks, logger, label, report,
                 recovery.spare ? undefined : quick.run, pickup_phase_cycles);
-            logger.log(`Full-hand output: ${label}, ${output_full} output-full ticks, ${slow} slow pickups, stable=${confirmed !== null}`);
+            logger.log(`Pitch Pickups: ${label}, ${output_full} output-full ticks, ${slow} slow pickups, stable=${confirmed !== null}`);
             return confirmed === null ? null : { ...confirmed, windows: candidate_windows };
         },
     });
     if (picked === null || pick === null) {
-        logger.log("Full-hand output: no timing kept the expected output; keeping the planned output windows.");
+        logger.log("Pitch Pickups: no timing kept the expected output; keeping the planned output enable windows.");
         return null;
     }
     return {

@@ -399,7 +399,7 @@ export interface GenerateClockOptions {
      */
     loop_windows?: boolean | "out-of-loop";
     /**
-     * Plan with fractional swings, the "Fractional swings" alternative: the output swings a cycle are the fraction the
+     * Plan with fractional swings, the "Euclidean Swings" alternative: the output swings a cycle are the fraction the
      * machines make (e.g. 3/2), not rounded down, and an inserter alternates between whole swings over sub-cycles (see
      * OutputCyclePlan). Never planned without being asked for; absent, never false, so it is not in a run's key.
      */
@@ -444,7 +444,7 @@ const fractional_starts = new WeakMap<OutputCyclePlan, Fraction>();
 
 /**
  * The output swings a cycle the output machines of the run a plan was made in make before they block, before any count
- * is forced or made whole and without the belts backed up: where the "Fractional swings" alternative's first plan of
+ * is forced or made whole and without the belts backed up: where the "Euclidean Swings" alternative's first plan of
  * the build starts. Undefined for a plan made in no run (a target that counts an item destroyed, or arithmetic alone).
  */
 export function fractionalStartOf(output_cycle_plan: OutputCyclePlan): Fraction | undefined {
@@ -835,7 +835,7 @@ function setUpTheStart(
     // Clear final output machine buffers to prevent OUTPUT_FULL during simulation start
     // This is especially important for fractional swing scenarios where the machine
     // produces slightly more than what gets cleared per sub-cycle
-    logger.log("Clearing final output machine buffers before warmup...");
+    logger.log("Clearing final output machine buffers before the startup period...");
     output_machine_state_machines.filter(() => !options.keep_output_buffers).forEach(machine_sm => {
         const machine_state = machine_sm.machine_state;
         const output_item = machine_state.machine.output.item_name;
@@ -985,7 +985,7 @@ function withEnableControls(
         drill: (drill_state) => {
             if (configurable_enable_control_factory.hasOverride(drill_state.entity_id)) {
                 const override_mode = configurable_enable_control_factory.getOverrideOrThrow(drill_state.entity_id).mode;
-                logger.log(`Using configurable enable control override for drill ${drill_state.entity_id.id} with mode ${override_mode}`);
+                logger.log(`Using configurable override for drill ${drill_state.entity_id.id} with mode ${override_mode}`);
                 return configurable_enable_control_factory.createForEntityId(drill_state.entity_id);
             }
             return enable_control_factory.createForEntityId(drill_state.entity_id);
@@ -993,7 +993,7 @@ function withEnableControls(
         inserter: (inserter_state) => {
             if (configurable_enable_control_factory.hasOverride(inserter_state.entity_id)) {
                 const override_mode = configurable_enable_control_factory.getOverrideOrThrow(inserter_state.entity_id).mode;
-                logger.log(`Using configurable enable control override for inserter ${inserter_state.entity_id.id} with mode ${override_mode}`);
+                logger.log(`Using configurable override for inserter ${inserter_state.entity_id.id} with mode ${override_mode}`);
                 return configurable_enable_control_factory.createForEntityId(inserter_state.entity_id, inserter_state.inserter);
             }
             return enable_control_factory.createForEntityId(inserter_state.entity_id);
@@ -1014,14 +1014,14 @@ function runWindowCyclesOf(output_cycle_plan: OutputCyclePlan, recipe_lcm: numbe
     overLimit: (window_cycle_ticks: number) => ClockWindowCycleLimitError): RunWindowCycles {
     const duration: Duration = Duration.ofTicks(options.window_cycle_ticks ?? options.timeline_recording?.window_cycle_ticks ?? OutputCyclePlan.ticksOfCycles(output_cycle_plan, recipe_lcm));
     if (Number.isFinite(duration.ticks) && duration.ticks > 0 && duration.ticks >= SIMULATION_BUDGET_TICKS) throw overLimit(duration.ticks);
-    assert(Number.isFinite(duration.ticks) && duration.ticks > 0 && duration.ticks < SIMULATION_BUDGET_TICKS, `Clock period of ${duration.ticks} ticks exceeds maximum allowed ${SIMULATION_BUDGET_TICKS} ticks`);
+    assert(Number.isFinite(duration.ticks) && duration.ticks > 0 && duration.ticks < SIMULATION_BUDGET_TICKS, `Window cycle time of ${duration.ticks} ticks exceeds maximum allowed ${SIMULATION_BUDGET_TICKS} ticks`);
     // a recording of a settled window cycle runs the build that long from its cold start, as the long run of the clock does
     const requested_warmup_window_cycles = Math.max(options.warmup_window_cycles ?? 10, options.timeline_recording?.settle_window_cycles ?? 0);
     // long window cycles (large ingredient LCMs) get fewer warmup window cycles to stay under the tick budget
     const warmup_window_cycles = Math.min(requested_warmup_window_cycles, Math.floor((SIMULATION_BUDGET_TICKS - 1) / duration.ticks));
     const exact_ticks = options.timeline_recording?.settle_ticks;
     if (exact_ticks === undefined && warmup_window_cycles < requested_warmup_window_cycles) {
-        logger.log(`Warm up shortened to ${warmup_window_cycles} periods to stay under ${SIMULATION_BUDGET_TICKS} ticks`);
+        logger.log(`Startup period shortened to ${warmup_window_cycles} window cycles to stay under ${SIMULATION_BUDGET_TICKS} ticks`);
     }
     assert(exact_ticks === undefined || (Number.isInteger(exact_ticks) && exact_ticks >= 0), "The exact timeline start must be a nonnegative whole tick");
     assert(exact_ticks === undefined || exact_ticks <= duration.ticks * Math.floor((SIMULATION_BUDGET_TICKS - 1) / duration.ticks),
@@ -1030,8 +1030,8 @@ function runWindowCyclesOf(output_cycle_plan: OutputCyclePlan, recipe_lcm: numbe
         : exact_ticks);
 
     logger.log(`Base Cycle Ticks: ${output_cycle_plan.total_duration.ticks}`);
-    logger.log(`Warm up period: ${warmup_window_cycle.ticks} ticks`);
-    logger.log(`Simulation period: ${duration.ticks} ticks`);
+    logger.log(`Startup period: ${warmup_window_cycle.ticks} ticks`);
+    logger.log(`Window cycle time: ${duration.ticks} ticks`);
     return { duration, warmup_window_cycle };
 }
 
@@ -1051,7 +1051,7 @@ function warmUp(
 ): { repeat_window_cycles: number | undefined; ticks_run: number } {
     const { simulation_context } = build;
     const { resettable_registry } = controlled;
-    logger.log("Warming up simulation...");
+    logger.log("Simulating the startup period...");
     logger.log("Executing Warmup Step");
     // the clocks start here, on a cold build at its tick 0
     resettable_registry.resetAll(true);
@@ -1062,7 +1062,7 @@ function warmUp(
                 : undefined);
         warmup_step.execute();
         if (warmup_step.ticks_run < warmup_window_cycle.ticks) {
-            logger.log(`Warm up reached a repeating state after ${warmup_step.ticks_run} ticks`);
+            logger.log(`Startup period reached a repeating state after ${warmup_step.ticks_run} ticks`);
         }
         return { repeat_window_cycles: warmup_step.repeat_window_cycles, ticks_run: warmup_step.ticks_run };
     });
@@ -1337,7 +1337,7 @@ function checkOutput(
                 repeat_output_items += transfers.reduce((s, t) => s + t.amount, 0);
             }
         }
-        logger.log(`Stability check: state repeats every ${repeat_window_cycles} periods, output over them=${repeat_output_items}`);
+        logger.log(`Stability check: state repeats every ${repeat_window_cycles} window cycles, output over them=${repeat_output_items}`);
     }
     const repeats_at_expected_output = repeat_window_cycles === undefined || repeat_output_items === undefined
         || Math.abs(repeat_output_items - total_expected_output_float * repeat_window_cycles) <= LCM_STABILITY_TOLERANCE * repeat_window_cycles;
@@ -1385,7 +1385,7 @@ function disturbanceTrialOf(
     const repeat = subtickClockForWindowCycle(loss_window_cycle);
     const bin = Number.isInteger(loss_window_cycle) ? { ticks: loss_window_cycle, window_cycles: 1 }
         : repeat === null ? null : { ticks: repeat.window_cycle_ticks, window_cycles: repeat.scale };
-    assert(bin !== null, `A clock of ${Number(loss_window_cycle.toFixed(3))} ticks does not repeat in whole ticks, so its output cannot be counted by the period`);
+    assert(bin !== null, `A clock of ${Number(loss_window_cycle.toFixed(3))} ticks does not repeat in whole ticks, so its output cannot be counted by the window cycle`);
     const own_clock_ticks = Array.from(controlled.inserter_clocks.values()).filter(clock => clock.own_clock).map(clock => clock.modulus);
     // boundaries a whole proven bin apart repeat for good; in bins of the window cycle that is every `stride`-th boundary
     const proven_bin = provenRepeatBin(config, loss_window_cycle);
@@ -1396,7 +1396,7 @@ function disturbanceTrialOf(
         .map(exported => ({ exported, fillers: exported.filler_ids.flatMap(id => inserter_states.get(id) ?? []) }));
     const disturbance_trial = runLossTrials(trial_context, simulated.output_inserter_states, options.disturbance_trial, bin,
         Math.max(bin.ticks, ...own_clock_ticks), proof_stride, watched_exports, terminal_branches);
-    logger.log(`Backpressure loss (${options.disturbance_trial.loss.kind}): recovers=${disturbance_trial.recovers} over ${disturbance_trial.trials.length} trials`);
+    logger.log(`Loss trial (${options.disturbance_trial.loss.kind}): back_to_rate=${disturbance_trial.recovers} over ${disturbance_trial.trials.length} trials`);
     return disturbance_trial;
 }
 
@@ -1588,7 +1588,7 @@ export function clockOfWindows(
     const slack_inside = belt_pickup_slack_mode === "inside" && unslacked_windows === plan.unslacked_windows
         ? slackInsideWindows(plan) : null;
     if (belt_pickup_slack_mode === "inside" && slack_inside === null) {
-        throw new Error("belt pickup slack inside the windows is only for the planning run's windows that hold it");
+        throw new Error("belt slack inside the enable windows is only for the unclocked run's enable windows that hold it");
     }
     const slack_trial = belt_pickup_slack_mode === "auto"
         ? beltPickupSlackTrial(config, unslacked_windows, full_belt_pickup_slack, duration.ticks, total_expected_output, logger,
@@ -1646,8 +1646,8 @@ export function withRoomForRandomAmounts(plan: UnclockedRun, windows: Map<string
     }
     const added = margins.margins.filter(it => it.added_hands > 0);
     for (const margin of added) {
-        logger.log(`Machine ${margin.machine_id}: the windows of ${margin.inserter_ids.join(", ")} get ${margin.added_hands} hand(s) `
-            + `of room each for ${margin.item}: ${margin.room_items} over the ${margin.expected_items} a period brings on average, `
+        logger.log(`Machine ${margin.machine_id}: the enable windows of ${margin.inserter_ids.join(", ")} get ${margin.added_hands} hand(s) `
+            + `of room each for ${margin.item}: ${margin.room_items} over the ${margin.expected_items} a window cycle brings on average, `
             + `against ${margin.needed_items.toFixed(1)} needed`);
     }
     return { windows: added.length === 0 ? windows : margins.windows, random_margins: { windows: margins.margins, crafting: margins.crafting } };
@@ -1942,7 +1942,7 @@ export function checkedClock(
         extras.on_as_built?.(kept_run, windows);
         clock_only_run = clockOnlyRunOf(kept_run.result);
         stability_check.holds = stability_check.holds && stability_check.as_built.holds;
-        logger.log(`As-built check (clock windows only, ${stability_check.as_built.start_phases_checked} start phases): actual=${stability_check.as_built.actual_output_items} expected=${total_expected_output} stable=${stability_check.as_built.holds}`);
+        logger.log(`As-built check (enable windows only, ${stability_check.as_built.start_phases_checked} start phases): actual=${stability_check.as_built.actual_output_items} expected=${total_expected_output} stable=${stability_check.as_built.holds}`);
     }
     return exportClock(plan, clock, windows, options, { clock_only_run, loop_windows, item_names, search: extras.search, left_open: extras.left_open });
 }
@@ -2007,15 +2007,15 @@ function outputsOfPreparedBuild(config: Config, simulation_context: SimulationCo
             : `No machine takes ${target.item} in from outside the build to destroy it`
     );
 
-    // validate target production rate can be met
+    // validate setpoint can be met
     const total_output_capacity_per_second = output_machine_state_machines
         .map(it => targetCapacityPerSecond(it.machine_state.machine, target, config, simulation_context.entity_registry))
         .reduce((a, b) => a.add(b), fraction(0))
         .multiply(fraction(config.setpoint.copies));
     assert(total_output_capacity_per_second.toDecimal() >= target_production_rate.total_production_rate.amount_per_second.toDecimal(),
-       "The current configuration cannot meet the target production rate. " +
+       "The current configuration cannot meet the setpoint. " +
        `Total output capacity is ${total_output_capacity_per_second.toDecimal()} items/second, ` +
-       `but target production rate is ${target_production_rate.total_production_rate.amount_per_second.toDecimal()} items/second.`
+       `but the setpoint is ${target_production_rate.total_production_rate.amount_per_second.toDecimal()} items/second.`
     )
 
     // Every inserter that takes the target item out of the build, or out of the container its machine puts it into; a
@@ -2238,7 +2238,7 @@ function assertBeltFillersPlanned(entity_registry: ReadableEntityRegistry, swing
         const items = Array.from(inserter.filtered_items).join(", ");
         throw new Error(
             `Inserter ${inserter.entity_id.number} puts ${items} onto belt ${inserter.sink.entity_id.number}, `
-            + `but nothing in the config takes it off. Make it an export belt with a consumption rate (items/s) on that lane.`
+            + `but nothing in the configuration takes it off. Make it an export belt with a consumption rate (items/s) on that lane.`
         );
     }
 }
@@ -2378,7 +2378,7 @@ function fuelConsumptionView(
         const swung = run.serializable_transfer_history.entities
             .some(entity => fuel_inserter_ids.includes(entity.entity_id) && entity.transfers.length > 0);
         if (swung || window_cycles >= max_window_cycles) {
-            logger.log(`Fuel consumption view: ${window_cycles} periods, fuel inserters ${swung ? "swing" : "did not swing"}`);
+            logger.log(`Fuel consumption view: ${window_cycles} window cycles, fuel inserters ${swung ? "swing" : "did not swing"}`);
             return {
                 window_cycles,
                 duration_ticks: window_cycles * window_cycle_ticks,
@@ -2528,7 +2528,7 @@ function serializeClockWindows(windows: Map<string, OpenRange[]>): SerializableC
  * step that was run counts them: the belts are backed up already, no inserter takes from a belt, the config sets the
  * output swings, or the plan takes fractional swings, whose swings per cycle are the build's own count, not a cap.
  *
- * Whole output swings per cycle are at most what a machine makes from the hands it gets before its output blocks, and
+ * Whole output swings each output cycle are at most what a machine makes from the hands it gets before its output blocks, and
  * the swing backoff only lowers them. On moving belts the prepare step's machines start empty and get their first
  * hands as fast as the belt brings them: on the express moving half-tile pickups the electromagnetic plant gets one
  * hand of each ingredient before its output blocks where backed-up belts give it two, so the plan had 2 output swings,
@@ -2567,7 +2567,7 @@ function maxSwingsPossibleOf(
 
     if (config.overrides?.terminal_swing_count !== undefined) {
         max_swings_possible = fraction(config.overrides.terminal_swing_count);
-        logger.log(`Overriding max swings possible to ${max_swings_possible} due to config override`);
+        logger.log(`Overriding max swings possible to ${max_swings_possible} due to configuration override`);
     }
     return max_swings_possible!;
 }

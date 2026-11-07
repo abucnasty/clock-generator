@@ -303,7 +303,7 @@ export function takerGroupsOf(machine: Machine, registry: Pick<ReadableEntityReg
             const swing_ticks = takers[0].animation.total.ticks;
             for (const taker of takers) {
                 assert(taker.animation.total.ticks === swing_ticks && Math.min(...items.map(item => handSizeFor(taker, item))) === hand,
-                    `${name}: the inserters that take ${items.join(", ")} out of ${target} have different hands or hand cycles; they have to be the same`);
+                    `${name}: the inserters that take ${items.join(", ")} out of ${target} have different hands or swing times; they have to be the same`);
             }
             groups.set(key, {
                 items, results: items.map(item => machine.outputs.find(it => it.item_name === item)!.ingredient),
@@ -402,7 +402,7 @@ function containerOf(machine: Machine, registry: Pick<ReadableEntityRegistry, "g
     const name = `Machine ${machine.entity_id.number}`;
     assert(machine.result_target !== undefined, `${name} places no results into a container`);
     const chest = registry.getEntityById(machine.result_target);
-    assert(chest !== null && Entity.isChest(chest), `${name} places its results into ${machine.result_target}, which is not in the config`);
+    assert(chest !== null && Entity.isChest(chest), `${name} places its results into ${machine.result_target}, which is not in the configuration`);
     const measure = containerMeasureOf(chest);
     assert(measure !== null, `${name} places its results into ${machine.result_target}, whose room is not known: `
         + "a clock for results that come by small chances is planned for a rocket silo or a car, a tank or a cargo wagon");
@@ -412,8 +412,8 @@ function containerOf(machine: Machine, registry: Pick<ReadableEntityRegistry, "g
 /** The longest whole number of feed cycles, up to the longest window cycle, whose results the container holds at the level */
 function longestCycles(input: ExhaustInput, measure: ContainerMeasure, groups: readonly TakerGroup[], level: number): number {
     const fits = (cycles: number) => worstHeld(input, measure, groups, cycles, level).at_level_units <= measure.capacity;
-    assert(fits(1), `Machine ${input.machine.entity_id.number} places more into ${input.machine.result_target} in one cycle of ${input.cycle_ticks} ticks `
-        + "than it holds in all but 1 in 740 cycles");
+    assert(fits(1), `Machine ${input.machine.entity_id.number} places more into ${input.machine.result_target} in one output cycle of ${input.cycle_ticks} ticks `
+        + "than it holds in all but 1 in 740 output cycles");
     const longest = Math.max(1, Math.floor(EXHAUST_WINDOW_CYCLE_BUDGET_TICKS / input.cycle_ticks));
     // the longest that fits: doubled while it fits, then halved back into the last step (what it holds grows with the window cycle)
     let low = 1;
@@ -456,7 +456,7 @@ function planExhaust(input: ExhaustInput): ExhaustPlan {
         const left_over = group.takers * (group.hand - 1);
         const hands = Math.max(1, Math.ceil((taken + left_over) / (group.takers * group.hand)));
         const window_ticks = (hands - 1) * group.swing_ticks + 1;
-        assert(window_ticks < window_cycle_ticks, `${name}: ${group.items.join(", ")} need a window of ${window_ticks} ticks a period of ${window_cycle_ticks}, which is no window`);
+        assert(window_ticks < window_cycle_ticks, `${name}: ${group.items.join(", ")} need an enable window of ${window_ticks} ticks a window cycle of ${window_cycle_ticks}, which is no enable window`);
         const room_items = hands * group.takers * group.hand - left_over;
         return {
             items: group.items, inserter_ids: group.inserters.map(it => it.entity_id.id),

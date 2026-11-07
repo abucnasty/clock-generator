@@ -58,7 +58,7 @@ function reportOtherDraw(machine: Machine, item: string, turns: number, slot_tic
     const round = (value: number) => Math.round(value * 100) / 100;
     const verdict = (supply: number) => draw <= supply ? "together" : "in turns";
     const flips = (draw <= given) !== (draw <= with_draw);
-    other_draw.log(`Turns at ${machine.entity_id.id} (${item}, ${turns} turns, a window of ${round(window_ticks)} ticks every ${round(slot_ticks)}): `
+    other_draw.log(`Turns at ${machine.entity_id.id} (${item}, ${turns} turns, an enable window of ${round(window_ticks)} ticks every ${round(slot_ticks)}): `
         + `${draw} against ${round(given)} it can give, ${verdict(given)}; ${round(with_draw)} with the ${round(other_draw.per_tick)} a tick the takers `
         + `into other recipes take, ${verdict(with_draw)}${flips ? " (the decision would flip; reported only)" : ""}`);
 }

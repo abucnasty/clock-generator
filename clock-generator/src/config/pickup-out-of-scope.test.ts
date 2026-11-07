@@ -32,7 +32,7 @@ describe("a pickup from a side-loaded belt tile", () => {
         { field: "pickup_merge", value: merge },
     ])("is refused by the schema with the reason when it names $field $value", async ({ field, value }) => {
         await expect(parseConfig(JSON.stringify(withSource({ [field]: value })))).rejects.toThrow(
-            `Configuration validation failed at 'inserters[0].source.${field}': \`${field}\` is refused: picking up from a belt tile that another belt side-loads onto`);
+            `Configuration check failed at 'inserters[0].source.${field}': \`${field}\` is refused: picking up from a belt tile that another belt side-loads onto`);
     });
 
     it("is never stripped and read as a belt running straight onto the pickup tile", () => {

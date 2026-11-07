@@ -101,11 +101,11 @@ describe("verified primitive adapter orchestration (verification outcomes are ex
         expect(() => verifiedPrimitiveRoundRobinPollingClock(config, { verify_as_built: true, logger: quiet }, 602)).toThrow(cancelled);
     });
 
-    it("rejects changed exported controls instead of blessing planning-history windows", () => {
+    it("rejects changed blueprint controls instead of blessing planning-history windows", () => {
         const spies = arrange();
         const normal = spies.finish.getMockImplementation()!;
         spies.finish.mockImplementation((...args) => { const result = normal(...args); delete result.clock_windows["inserter:9"]; return result; });
-        expect(() => verifiedPrimitiveRoundRobinPollingClock(config, { verify_as_built: true, logger: quiet }, 602)).toThrow("primitive exported controls changed");
+        expect(() => verifiedPrimitiveRoundRobinPollingClock(config, { verify_as_built: true, logger: quiet }, 602)).toThrow("primitive blueprint controls changed");
     });
 });
 

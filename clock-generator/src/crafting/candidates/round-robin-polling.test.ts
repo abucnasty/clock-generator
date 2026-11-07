@@ -407,7 +407,7 @@ describe("the takers of a machine into machines of other recipes", () => {
         // 93.52 plates against two hands of 16: together, as without the report
         expect(offsets).toBeNull();
         expect(turnOffsets(foundry, "iron-plate", [[into_1], [into_2]], 54, 18)).toBeNull();
-        expect(lines).toEqual(["Turns at machine:3 (iron-plate, 2 turns, a window of 18 ticks every 54): 32 against 93.52 it can give, together; "
+        expect(lines).toEqual(["Turns at machine:3 (iron-plate, 2 turns, an enable window of 18 ticks every 54): 32 against 93.52 it can give, together; "
             + "29.52 with the 1.19 a tick the takers into other recipes take, in turns (the decision would flip; reported only)"]);
     });
 });

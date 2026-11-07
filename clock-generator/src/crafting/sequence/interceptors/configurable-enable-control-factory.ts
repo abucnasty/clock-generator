@@ -62,7 +62,7 @@ export class ConfigurableEnableControlFactory {
         const override = this.override_map.get(entity_id.id);
         assert(
             override !== undefined,
-            `No enable control override configured for entity ${entity_id.id}`
+            `No override configured for entity ${entity_id.id}`
         );
         return override;
     }
@@ -76,7 +76,7 @@ export class ConfigurableEnableControlFactory {
         const override = this.override_map.get(entity_id.id);
         assert(
             override !== undefined,
-            `No enable control override configured for entity ${entity_id.id}`
+            `No override configured for entity ${entity_id.id}`
         );
         assert(
             override.mode !== "AUTO",
@@ -98,7 +98,7 @@ export class ConfigurableEnableControlFactory {
                 return this.conditional_factory.createFromConfig(override, inserter);
 
             default:
-                throw new Error(`Unknown enable control mode: ${(override as any).mode}`);
+                throw new Error(`Unknown override mode: ${(override as any).mode}`);
         }
     }
 
@@ -114,8 +114,8 @@ export class ConfigurableEnableControlFactory {
         const enabled_ranges = override.ranges.map(range => {
             if (range.end > window_cycle_duration.ticks) {
                 console.warn(
-                    `Warning: Enable control range [${range.start}, ${range.end}] for entity ${entity_id.id} ` +
-                    `exceeds period duration of ${window_cycle_duration.ticks} ticks. Range will be clamped.`
+                    `Warning: Enable window [${range.start}, ${range.end}] for entity ${entity_id.id} ` +
+                    `exceeds the window cycle time of ${window_cycle_duration.ticks} ticks. The enable window will be clamped.`
                 );
             }
             return OpenRange.from(range.start, Math.min(range.end, window_cycle_duration.ticks));

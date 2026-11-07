@@ -111,7 +111,7 @@ export interface PlanGroup {
 /** What is done where the main window cycle is over the limit */
 export type OverLimitAction =
     | { readonly action: "none" }
-    /** today's swing backoff: the next lower count whose period is under the limit (Small batches is tried first where it applies) */
+    /** today's swing backoff: the next lower count whose period is under the limit (Round-Robin Polling with a shorter window cycle is tried first where it applies) */
     | { readonly action: "swing-backoff"; readonly rule: "P-limit"; readonly terms: OverLimitTerms }
     /** no count can be backed off to (a forced count, fractional swings, a destroyed target, or none under the limit) */
     | { readonly action: "refused"; readonly rule: "P-limit"; readonly terms: OverLimitTerms };

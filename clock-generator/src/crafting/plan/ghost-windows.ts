@@ -59,7 +59,7 @@ export function windowsWithoutGhostWakeUps(
         const ranges = windows.get(id);
         const recorded = series.get(id);
         if (fixed.has(id) || ranges === undefined || ranges.length === 0 || recorded === undefined) {
-            left?.(id, fixed.has(id) ? "its windows are fixed" : "no windows");
+            left?.(id, fixed.has(id) ? "its enable windows are fixed" : "no enable windows");
             continue;
         }
         const { factorio_state: states, held } = recorded;
@@ -73,7 +73,7 @@ export function windowsWithoutGhostWakeUps(
         const offsets = (clock_offset !== undefined ? [mod(clock_offset)] : ranges.map(range => mod(own[0].switched_off - 1 - range.end_inclusive)))
             .filter(k => switch_offs.every(tick => ends.has(mod(tick - 1 - k))));
         if (new Set(offsets).size !== 1) {
-            left?.(id, "its switch-offs do not line up with its windows");
+            left?.(id, "its switch-offs do not line up with its enable windows");
             continue;
         }
         const offset = offsets[0];
@@ -81,7 +81,7 @@ export function windowsWithoutGhostWakeUps(
         let usable = true;
         for (const ghost of own) {
             const index = ranges.findIndex(range => mod(range.end_inclusive) === mod(ghost.switched_off - 1 - offset));
-            if (index < 0) { left?.(id, `no window ends before the switch-off at ${ghost.switched_off}`); usable = false; break; }
+            if (index < 0) { left?.(id, `no enable window ends before the switch-off at ${ghost.switched_off}`); usable = false; break; }
             const range = ranges[index];
             const c = ghost.switched_off;
             // the tick it took the hand it held at the switch-off, or the tick it went to sleep with an empty hand
@@ -91,7 +91,7 @@ export function windowsWithoutGhostWakeUps(
                 while (q > 0 && !(held[q - 1] === 0 && held[q] > 0)) q--;
             }
             const opened = c - (range.end_inclusive - range.start_inclusive + 1);
-            if (q <= opened || q > c) { left?.(id, `the hand or the sleep (tick ${q}) is from before the window ${range.start_inclusive}-${range.end_inclusive}`); usable = false; break; }
+            if (q <= opened || q > c) { left?.(id, `the hand or the sleep (tick ${q}) is from before the enable window ${range.start_inclusive}-${range.end_inclusive}`); usable = false; break; }
             const before = shifts.get(index);
             shifts.set(index, { ticks: Math.max(before?.ticks ?? 0, c - q + 1), ghosts: (before?.ghosts ?? 0) + 1 });
         }

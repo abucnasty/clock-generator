@@ -45,7 +45,7 @@ export function estimatedWindowCycle(config: Config): number | null {
     }
 }
 
-export const DROP_ROOM_NOT_ESTIMATED = "The period of the clock cannot be estimated from these settings, so whether the hands of the copies fit between each other is shown in the result after Generate.";
+export const DROP_ROOM_NOT_ESTIMATED = "The window cycle time of the clock cannot be estimated from these settings, so whether the hands of the copies fit between each other is shown in the result after Generate.";
 
 const listed = (values: readonly (string | number)[]): string =>
     values.length <= 1 ? values.join("") : `${values.slice(0, -1).join(", ")} or ${values[values.length - 1]}`;
@@ -83,13 +83,13 @@ export function dropRoomNote(config: Config): string | null {
     const room = dropRoom(config, lines, window_cycle_ticks);
     if (room === null) return null;
     const unchecked = ` ${DROP_SPACING_COPIES_ALIKE}${left_out}`;
-    if (room.crowded !== null) return `At about ${window_cycle_ticks} ticks a period, ${crowdedText(room.crowded, copies).replace(/^T/, "t")}${unchecked}`;
+    if (room.crowded !== null) return `At about ${window_cycle_ticks} ticks a window cycle, ${crowdedText(room.crowded, copies).replace(/^T/, "t")}${unchecked}`;
     const together = new Map(lines.flatMap(line => line.inserters.map(inserter => [inserter.id, [0]] as const)));
     const spacing = dropSpacing(config, together, window_cycle_ticks);
     if (spacing === null) return null;
     const belts = [...new Set(spacing.lines.map(line => line.belt_id))].sort((a, b) => a - b);
     const belt = belts.length === 1 ? `belt ${belts[0]}` : `belts ${belts.join(", ")}`;
-    const lead = `At about ${window_cycle_ticks} ticks a period (estimated from the target rate: one output hand at the machine's rate), the hands of the ${copies} copies`;
+    const lead = `At about ${window_cycle_ticks} ticks a window cycle (estimated from the setpoint: one output hand at the machine's rate), the hands of the ${copies} copies`;
     const more = alsoFits(room);
     const plus = room.loop !== null ? `, and at any of these plus ${room.loop}` : "";
     if (spacing.lines.every(line => line.fits)) {

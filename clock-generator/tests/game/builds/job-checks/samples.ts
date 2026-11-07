@@ -45,7 +45,7 @@ const productivityChain: JobCheck[] = [
         name: 'the shared clock has 6 deciders, shared windows, and says they share one wake window',
         run: ({ generated }) => {
             const shared = byMaker(generated, 'planned-belt-slack-shared');
-            expect(shared.label).toBe('Batched swings, shared windows: 1 output swing per cycle');
+            expect(shared.label).toBe('Takt Batches, shared windows: 1 output swing each output cycle');
             expect(shared.deciders).toBe(6);
             // rule F rounded the coal hand up on this chain: the clock says so (`harmonic_window_cycle`)
             expect(shared.result.round_robin_polling).toEqual({ shared_windows: true, harmonic_window_cycle: true });
@@ -83,7 +83,7 @@ const agriculturalScience: JobCheck[] = [
     {
         // 25 cycles of 115.2 or 57.6 ticks: multiplied in floating point these came out as 2879.9999999999995 and 1439.9999999999998,
         // were taken for fractional window cycles and offered as subtick and "rounded to 2879" clocks
-        name: 'makes clocks of whole ticks for 6 and 3 output swings per cycle: 2880 and 1440, none offered as subtick or rounded',
+        name: 'makes clocks of whole ticks for 6 and 3 output swings each output cycle: 2880 and 1440, none offered as subtick or rounded',
         run: ({ config, generated }) => {
             const window_cycle = (swings: number) => validateConfig({ ...config, overrides: { ...config.overrides, terminal_swing_count: swings } }).window_cycle_ticks;
             expect(window_cycle(6)).toBe(2880);
@@ -102,7 +102,7 @@ const agriculturalScience: JobCheck[] = [
     {
         name: 'can be run on its clock alone for a few periods, with what every machine and inserter holds after each tick',
         run: ({ config, generated }) => {
-            const windows = byLabel(generated, '1 output swing per cycle').result.clock_windows;
+            const windows = byLabel(generated, 'Takt Batches: 1 output swing each output cycle').result.clock_windows;
             const stock = simulateClockOnly(config, windows, 480, 3, { log() { }, warn() { }, error() { }, debug() { } });
             expect(stock.ticks).toBeGreaterThanOrEqual(3 * 480);
             const science = stock.machines.find(it => it.recipe === 'agricultural-science-pack')!;
@@ -218,7 +218,7 @@ const steelWagon: JobCheck[] = [
 // The utility science 480 build (UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN): windows from the hands and the order of the chain hold in one cycle, so
 // the selected clock needs no search; targeted searches still run past it since #527
 const utility480: JobCheck[] = [
-    { name: 'the targeted searches that run past the short plan are the two skipped', run: ({ generated }) => { expect(generated.skipped_searches).toEqual(['Uneven output swings', 'Full-hand output swings']); } },
+    { name: 'the targeted searches that run past the short plan are the two skipped', run: ({ generated }) => { expect(generated.skipped_searches).toEqual(['Moved Output Swing', 'Pitch Pickups']); } },
 ];
 
 // Metallurgic science at the speeds the game gives its scaffold, its packs taken into a chest that removes them
@@ -233,7 +233,7 @@ const metallurgic: JobCheck[] = [
     {
         name: 'the 1-swing and 2-swing subtick clocks do not hold the expected output',
         run: ({ generated }) => {
-            for (const clock of [byLabel(generated, '1 output swing per cycle, subtick clock'), byLabel(generated, '2 output swings per cycle, subtick clock')]) {
+            for (const clock of [byLabel(generated, 'Takt Batches: 1 output swing each output cycle, subtick clock'), byLabel(generated, 'Takt Batches: 2 output swings each output cycle, subtick clock')]) {
                 expect(clock.ranking.holds_expected_output).toBe(false);
             }
         },
@@ -431,7 +431,7 @@ const logistic: JobCheck[] = [
         name: 'makes batched swings for a moving belt, with 4 ticks of belt pickup slack inside its windows',
         run: ({ generated }) => {
             const batched = byMaker(generated, 'planned-belt-slack');
-            expect(batched.label).toBe('Batched swings: 4 output swings per cycle');
+            expect(batched.label).toBe('Takt Batches: 4 output swings each output cycle');
             // its two pickup windows a window cycle stay open 5 ticks after their last pickup: none are added (#595)
             expect(batched.belt).toEqual({ kind: 'moving', slack_ticks: [4], inside: true });
             expect(batched.description).toContain('Made for a moving belt. After its last pickup from the belt, an inserter stays enabled for 4 more ticks. These ticks are the belt slack.');
@@ -448,7 +448,7 @@ const logistic: JobCheck[] = [
         name: 'the 2-swing clock meets the target rate',
         run: ({ generated }) => { expect(byMaker(generated, 'swings-2').ranking.meets_target_rate).toBe(true); },
     },
-    { name: 'leaves two searches out by default (#527 runs observed and shifted searches past a stable short clock)', run: ({ generated }) => { expect(generated.skipped_searches).toEqual(['Uneven output swings', 'Full-hand output swings']); } },
+    { name: 'leaves two searches out by default (#527 runs observed and shifted searches past a stable short clock)', run: ({ generated }) => { expect(generated.skipped_searches).toEqual(['Moved Output Swing', 'Pitch Pickups']); } },
 ];
 
 // The ore voider (IRON_ORE_VOIDER_400_EXACT_SPEED): a recycler at crafting speed 16.875 destroys 400 iron ore a second, brought in by four stack
@@ -488,7 +488,7 @@ const voiderExact: JobCheck[] = [
     {
         name: 'names each clock by the hands brought in a cycle',
         run: ({ generated }) => {
-            expect(generated.alternatives.map(it => it.label)).toEqual(['Batched swings: 5 hands brought in per cycle', 'Even hands: 5 hands brought in per cycle']);
+            expect(generated.alternatives.map(it => it.label)).toEqual(['Takt Batches: 5 hands brought in each output cycle', 'Time-Division Windows: 5 hands brought in each output cycle']);
         },
     },
     {

@@ -92,7 +92,7 @@ describe("generateClockForConfig", () => {
             expect(drawWindowTicks(inserter, 28, 16, 1 / 3)).toBe(5);
         });
 
-        it("keeps them always enabled where the clock-only check does not hold: 3 output swings per cycle", () => {
+        it("keeps them always enabled where the clock-only check does not hold: 3 output swings each output cycle", () => {
             const result = generateClockForConfig({ ...sample, overrides: { ...sample.overrides, terminal_swing_count: 3 } }, { verify_as_built: true, logger: quiet });
             expect(result.stability_check.as_built?.holds).toBe(false);
             expect(result.loop_windows).toBeUndefined();

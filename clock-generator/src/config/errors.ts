@@ -143,7 +143,7 @@ export class ConfigValidationError extends Error {
 
         if (issues.length === 1) {
             const issue = issues[0];
-            let msg = `Configuration validation failed at '${issue.path}': ${issue.message}`;
+            let msg = `Configuration check failed at '${issue.path}': ${issue.message}`;
             if (issue.expected) {
                 msg += ` (expected ${issue.expected}`;
                 if (issue.received !== undefined) {
@@ -155,7 +155,7 @@ export class ConfigValidationError extends Error {
         }
 
         const lines = [
-            `Configuration validation failed with ${issues.length} errors:`
+            `Configuration check failed with ${issues.length} errors:`
         ];
 
         for (const issue of issues) {
@@ -317,7 +317,7 @@ export class CopiesError extends Error {
         const listed = units
             .map((unit, i) => `copy ${i + 1}: machines ${unit.machine_ids.join(', ')}`)
             .join('; ');
-        return `The config holds ${found} identical copies of a unit of ${size} machine${size === 1 ? '' : 's'} `
+        return `The configuration holds ${found} identical copies of a build of ${size} machine${size === 1 ? '' : 's'} `
             + `(${listed}). Describe one copy and set setpoint.copies to ${fraction(configuredCopies).multiply(found).toDecimal()} `
             + `(now ${configuredCopies}, times ${found}).`;
     }
@@ -702,6 +702,6 @@ export class FeasibilityError extends Error {
         // copies as configured: a short decimal (copies-value.ts), never rounded the way a rate is
         const copies = target === null || target.copies === 1 ? ''
             : ` of ${formatRate(target.items_per_second)} a second over ${target.copies} copies (every figure here is for one copy)`;
-        return `No clock can hold this build's target${copies}:`;
+        return `No clock can hold this build's setpoint${copies}:`;
     }
 }

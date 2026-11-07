@@ -16,11 +16,11 @@ describe("why the selected clock does not meet goal 1, as a generation says it",
         }]);
         expect(generated.why_not_stable).toEqual({
             cause: "output chest full",
-            message: "No clock holds the target rate of 48 a second: Chest 1 fills up. Nothing takes any electromagnetic science pack out of it, "
-                + "so it holds 9,600 of 9,600 and inserters 1 and 2 have nowhere to drop. The closest, Batched swings: 2 output swings per "
-                + "cycle, moves 0 a second, 48 under the target. Use an infinity chest, or add an inserter that takes the items out, and "
-                + "generate again. Not made: Even hands (only "
-                + "made where every inserter takes from a machine or a chest; inserter 5 takes from a belt); Shifted swings (no shifted round of swings passes the clock-only check).",
+            message: "No clock holds the setpoint of 48 a second: Chest 1 fills up. Nothing takes any electromagnetic science pack out of it, "
+                + "so it holds 9,600 of 9,600 and inserters 1 and 2 have nowhere to drop. The closest, Takt Batches: 2 output swings each "
+                + "output cycle, moves 0 a second, 48 under the target. Use an infinity chest, or add an inserter that takes the items out, and "
+                + "generate again. Not made: Time-Division Windows (only "
+                + "made where every inserter takes from a machine or a chest; inserter 5 takes from a belt); Phase-Shifted Batch (no Phase-Shifted Batch passes the clock-only check).",
         });
     });
 

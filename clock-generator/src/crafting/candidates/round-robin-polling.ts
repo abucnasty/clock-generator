@@ -421,7 +421,7 @@ export function roundRobinPollingPlan(
         if (transfer === undefined) refuse(`${inserter.entity_id.id} is not in the plan's hand counts`);
         const exact = transfer.total_transfer_count.toDecimal() * recipe_lcm;
         const whole = Math.round(exact);
-        if (whole <= 0 || Math.abs(exact - whole) > 1e-9) refuse(`${inserter.entity_id.id} moves ${exact} hands a period, not a whole number`);
+        if (whole <= 0 || Math.abs(exact - whole) > 1e-9) refuse(`${inserter.entity_id.id} moves ${exact} hands each window cycle, not a whole number`);
         return whole;
     };
 
@@ -504,7 +504,7 @@ export function roundRobinPollingPlan(
         } else {
             if (!sinks.has(source.entity_id.id)) refuse(`${inserter.entity_id.id} takes ${source.entity_id.id}, which nothing is put into, to ${sink.entity_id.id}`);
             if (!EntityId.isBelt(sink.entity_id) && !EntityId.isChest(sink.entity_id)) refuse(`${inserter.entity_id.id} puts into ${sink.entity_id.id}`);
-            if (outputHands(inserter) !== 1 && !chained) refuse(`${inserter.entity_id.id} moves ${outputHands(inserter)} hands a period, not one`);
+            if (outputHands(inserter) !== 1 && !chained) refuse(`${inserter.entity_id.id} moves ${outputHands(inserter)} hands each window cycle, not one`);
             outputs.push(inserter);
         }
     }
@@ -688,7 +688,7 @@ export function roundRobinPollingPlan(
  */
 export function holdsWithMargin(plan: UnclockedRun, windows: Map<string, OpenRange[]>, window_cycle_ticks: number): string | null {
     const swings = fractionalSwingsOf(plan.run.output_cycle_plan);
-    if (!runClockOnBuild(plan.config, windows, window_cycle_ticks, plan.logger, swings).stability_check.holds) return "the windows do not hold";
+    if (!runClockOnBuild(plan.config, windows, window_cycle_ticks, plan.logger, swings).stability_check.holds) return "the enable windows do not hold";
     const groups = new Map<string, string[]>();
     for (const [id, ranges] of windows) {
         const key = ranges.map(range => `${range.start_inclusive}-${range.end_inclusive}`).join(",");
@@ -699,7 +699,7 @@ export function holdsWithMargin(plan: UnclockedRun, windows: Map<string, OpenRan
             const moved = new Map(windows);
             for (const id of ids) moved.set(id, shiftedWindows(windows.get(id)!, ticks, window_cycle_ticks));
             if (!runClockOnBuild(plan.config, moved, window_cycle_ticks, plan.logger, swings).stability_check.holds) {
-                return `the windows ${key} (${ids.join(", ")}) do not hold ${ticks > 0 ? "+" : ""}${ticks} tick`;
+                return `the enable windows ${key} (${ids.join(", ")}) do not hold ${ticks > 0 ? "+" : ""}${ticks} tick`;
             }
         }
     }
@@ -874,7 +874,7 @@ export function roundRobinPollingClock(
             let planned: RoundRobinPollingPlan;
             try {
                 planned = roundRobinPollingPlan(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks,
-                    made.config.overrides?.backed_up_belts !== true, way, drops, undefined, line => plan.logger.log(`Grouped hands: ${line}`));
+                    made.config.overrides?.backed_up_belts !== true, way, drops, undefined, line => plan.logger.log(`Round-Robin Polling: ${line}`));
             } catch (error) {
                 // a turn without room is this way's: another way may place the turns with room
                 if (!(error instanceof TurnWithoutRoom)) throw error;
@@ -901,22 +901,22 @@ export function roundRobinPollingClock(
                 }
                 continue;
             }
-            reasons.push(`the ${way.share_windows ? "shared " : ""}windows ${key} do not hold from every start`);
+            reasons.push(`the ${way.share_windows ? "shared " : ""}enable windows ${key} do not hold from every start`);
             // shared windows are kept only if they hold
             if (!way.share_windows) finished ??= clock_of_windows;
         }
         if (holding.length > 0) {
             const best = bestHolding(made, holding, options.shared_windows === true);
-            plan.logger.log(`Grouped hands: ${holding.map(it => `${wayName(it.way)} holds at ${it.clock.stability_check.as_built?.wake_ups?.wake_ups_per_minute ?? "?"} wake-ups a minute`).join(", ")}; `
-                + (best === null ? "none gets back from every loss" : `kept ${wayName(best.way)}`));
+            plan.logger.log(`Round-Robin Polling: ${holding.map(it => `${wayName(it.way)} holds at ${it.clock.stability_check.as_built?.wake_ups?.wake_ups_per_minute ?? "?"} wakeups a minute`).join(", ")}; `
+                + (best === null ? "none goes back to its rate by itself after every supply stop and output blockage" : `kept ${wayName(best.way)}`));
             kept = best;
             finished = best?.clock ?? finished;
-            if (finished === null) reasons.push("no shared windows that hold get back from every loss");
+            if (finished === null) reasons.push("no shared enable windows that hold let the clock go back to its rate by itself after every supply stop and output blockage");
         }
         if (finished === null) refuse(reasons.join("; "));
     } catch (error) {
         if (error instanceof RoundRobinPollingNotApplicable) {
-            plan.logger.log(`Grouped hands do not apply: ${error.message}`);
+            plan.logger.log(`Round-Robin Polling does not apply: ${error.message}`);
             return null;
         }
         throw error;
@@ -957,9 +957,9 @@ export function perHandWindowsClock(clock: BlueprintGenerationResult): Blueprint
     const window_cycle_ticks = made.run.duration.ticks;
     const windows = perHandWindows(planned.windows, guarded, window_cycle_ticks);
     const unmoved = holdsWithMargin(made, windows, window_cycle_ticks);
-    if (unmoved !== null) throw new RoundRobinPollingNotApplicable(`the per-hand windows: ${unmoved}`);
+    if (unmoved !== null) throw new RoundRobinPollingNotApplicable(`the per-hand enable windows: ${unmoved}`);
     const per_hand = finishedClock(made, windows, planned.turns, options, left_open);
-    made.logger.log(`Grouped hands, per hand: ${per_hand.stability_check.holds ? "holds" : "does not hold"} at `
-        + `${per_hand.stability_check.as_built?.wake_ups?.wake_ups_per_minute ?? "?"} wake-ups a minute`);
+    made.logger.log(`Round-Robin Polling, one enable window a swing: ${per_hand.stability_check.holds ? "holds" : "does not hold"} at `
+        + `${per_hand.stability_check.as_built?.wake_ups?.wake_ups_per_minute ?? "?"} wakeups a minute`);
     return { ...per_hand, round_robin_polling: { shared_windows: false, ...(planned.hands_rounded_up && { harmonic_window_cycle: true as const }) } };
 }

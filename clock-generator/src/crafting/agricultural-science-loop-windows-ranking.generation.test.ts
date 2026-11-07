@@ -14,7 +14,7 @@ describe("generateClockForConfig", () => {
     describe("agricultural science: windows for the inserters of the egg loop", async () => {
         const sample = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250);
 
-        it("counts a clock's windows without those of its feeders; the 5-swing clock does not get back from a loss and the 2-swing one is selected", () => {
+        it("counts a clock's windows without those of its feeders; the 5-swing clock does not go back to its rate by itself after a supply stop or an output blockage and the 2-swing one is selected", () => {
             // With hands of 12 on the sample this was 354 windows with the feeders', 324 without: the 3-swing clock has
             // 336 and was selected while the fewest windows were, before the windows of the feeders were left out of the
             // count. Wake-ups decide now, which the windows of the feeders bring down, and the windows only between

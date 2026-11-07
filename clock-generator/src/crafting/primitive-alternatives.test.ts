@@ -35,7 +35,7 @@ describe("primitive primary integration and legacy sibling compatibility", () =>
         expect(plan.context).toMatchObject({ swings: 1, planned_swings: 1 });
         expect(plan.context.secondary_planning).toEqual({ source: "primitive-primary", terminal_swing_count: 1 });
         expect(structuredClone(plan.context)).toEqual(JSON.parse(JSON.stringify(plan.context)));
-        expect(plan.primary?.alternatives[0].label).toContain("Small batches");
+        expect(plan.primary?.alternatives[0].label).toContain("Round-Robin Polling, shorter window cycle");
         expect(plan.primary?.alternatives[0].result.round_robin_polling).toEqual({ shared_windows: false });
         expect(plan.primary?.alternatives[0].assessment.disturbance_trial?.survives).toBe(true);
     });
@@ -49,16 +49,16 @@ describe("primitive primary integration and legacy sibling compatibility", () =>
         expect(generate.mock.calls.some(call => call[1]?.shared_windows === true)).toBe(true);
     });
 
-    it("offers Small batches where the primary did not try it only as a fallback: it never re-counts the other alternatives", () => {
+    it("offers Round-Robin Polling, shorter window cycle where the primary did not try it only as a fallback: it never re-counts the other alternatives", () => {
         vi.spyOn(generation, "generateClockWithSwingBackoff").mockReturnValue(base);
         vi.spyOn(trial, "disturbanceTrialVerdictOf").mockReturnValue({ disturbance_trial: recovered });
         const plan = planClockAlternatives(config, options);
         expect(plan.context).not.toHaveProperty("secondary_planning");
         expect(plan.context).not.toHaveProperty("primitive_tried");
-        expect(plan.tasks.find(task => task.id === "primitive-grouped")).toEqual({ id: "primitive-grouped", label: "Small batches", only_when_needed: true, fallback: true });
+        expect(plan.tasks.find(task => task.id === "primitive-grouped")).toEqual({ id: "primitive-grouped", label: "Round-Robin Polling, shorter window cycle", only_when_needed: true, fallback: true });
     });
 
-    it("does not offer Small batches again where the primary tried it", () => {
+    it("does not offer Round-Robin Polling, shorter window cycle again where the primary tried it", () => {
         const report = { strategy: "primitive-grouped" as const, eligibility: "separate-windows-only" as const, outcome: "failed" as const, attempts: [] };
         const attempt = { terminal_swing_count: 1, holds: false, actual_output_items: 0, expected_output_items: 1 };
         vi.spyOn(generation, "generateClockWithSwingBackoff").mockReturnValue({ ...base, swing_backoff_report: { triggered: false,

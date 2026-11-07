@@ -535,7 +535,7 @@ function longRunOfFreeRunningBuild(
         const longest = Math.min(Math.floor(LONG_RUN_MAX_TICKS / window_cycle_ticks), Math.floor((SIMULATION_BUDGET_TICKS - 1) / window_cycle_ticks));
         if (longest > window_cycles) {
             const longer = runOf(longest);
-            logger.log(`Free running build short by ${target_production.shortfall} (a hand or less) over ${window_cycles} periods: run on for ${longest}, `
+            logger.log(`Free running build short by ${target_production.shortfall} (a hand or less) over ${window_cycles} window cycles: run on for ${longest}, `
                 + (longer.run.state_repeat !== undefined ? "its repeat is proven" : "no repeat proven, the sample stands"));
             if (longer.run.state_repeat !== undefined && longer.run.machine_stock) {
                 ({ build_run, run } = longer);
@@ -553,7 +553,7 @@ function longRunOfFreeRunningBuild(
     if (export_shortfalls.length > 0) {
         logger.log(`Free running build: ${export_shortfalls.map(it => `belt ${it.belt_id} got ${Number(it.delivered_per_second.toFixed(2))} ${it.item} a second, consumers take ${it.expected_per_second}`).join("; ")}`);
     }
-    const bins = verdict.bin_ticks === null ? "span(s)" : verdict.window_cycles_per_bin === 1 ? "periods" : `repeats of ${verdict.window_cycles_per_bin} periods (${verdict.bin_ticks} ticks)`;
+    const bins = verdict.bin_ticks === null ? "span(s)" : verdict.window_cycles_per_bin === 1 ? "window cycles" : `repeats of ${verdict.window_cycles_per_bin} window cycles (${verdict.bin_ticks} ticks)`;
     logger.log(`Free running build over ${verdict.judged.length} ${bins}${proven ? " (repeats forever)" : ""}: moved ${verdict.total} of ${verdict.expected_total}, ${verdict.off_bins.length} more than a hand off the expected ${verdict.expected_per_bin} (${verdict.off_bins.map(it => `${it.index}: ${it.items}`).join(", ") || "none"})`);
     // a machine that places its results into a container: every result went in, and its takers kept up with them
     const results_taken = target.counts === "destroyed" ? resultsTakenOf(stock, registry, verdict.first_judged_tick, window_cycle_ticks) : undefined;
@@ -638,14 +638,14 @@ export function simulateClockOnly(
 /**
  * The clock with the windows given, built as they are, and checked as the generator checks its own: for a clock that
  * it did not make, such as one tightened by hand, or one of its own with windows changed. The windows have to be of
- * the window cycle the config is planned on (`overrides.terminal_swing_count` sets the output swings per cycle it has).
+ * the window cycle the config is planned on (`overrides.terminal_swing_count` sets the output swings each output cycle it has).
  */
 export function clockFromWindows(
     config: Config,
     clock_windows: SerializableClockWindows,
     window_cycle_ticks: number,
     logger: Logger = defaultLogger,
-    /** Plan it with fractional swings, as the "Fractional swings" alternative plans its clocks */
+    /** Plan it with fractional swings, as the "Euclidean Swings" alternative plans its clocks */
     swings: FractionalSwings = {},
 ): BlueprintGenerationResult {
     const plan = unclockedRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, { logger, ...swings });
@@ -656,7 +656,7 @@ export function clockFromWindows(
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const result = checkedClock(plan, clock, windows, { logger, verify_as_built: true, loop_windows: false });
     assert(result.simulation_duration.ticks === window_cycle_ticks,
-        `The windows are of a clock of ${window_cycle_ticks} ticks, and the config is planned on one of ${result.simulation_duration.ticks}`);
+        `The enable windows are of a clock of ${window_cycle_ticks} ticks, and the configuration is planned on one of ${result.simulation_duration.ticks}`);
     return result;
 }
 
@@ -1116,7 +1116,7 @@ export function startShiftsOf(window_cycle_ticks: number, counter: SubtickWindow
  *
  * With `pickup_phase_cycles` each lane-phase start is judged over its repeating cycle, not its first window cycle: its run
  * goes on with nothing cut, as the loss report's undisturbed run does (see disturbanceTrialOf), and a start that does
- * not stay at the expected output fails. Observed windows ask for it: they are read off a run from one lane phase, and
+ * not stay at the expected output fails. Time-Study Windows ask for it: they are read off a run from one lane phase, and
  * on the express mirrored moving over-the-hood pickup windows read that way held their first window cycle from every lane
  * phase but repeated six window cycles of 112 and one of 96 from nine of them, as the game does after a loss.
  */
@@ -1473,7 +1473,7 @@ export function trialWithLoopWindows(
     const passesAsBefore = (check: AsBuiltStabilityCheck) => check.holds && check.failed_start_offset === undefined
         && (!run.check.holds || check.start_phases_checked === run.check.start_phases_checked);
     const checkOf = (candidate: Map<string, OpenRange[]>, what: string) => runAsBuiltCheck(config, candidate, window_cycle_ticks, logger, start_phases,
-        (n, total) => report?.(`Checking the windows ${what}, clock start ${n}/${total}`), LOOP_WINDOW_CHECK_TICKS, undefined, pickup_phase_cycles, "wake-ups", swings);
+        (n, total) => report?.(`Checking the enable windows ${what}, clock start ${n}/${total}`), LOOP_WINDOW_CHECK_TICKS, undefined, pickup_phase_cycles, "wake-ups", swings);
     let kept: (AsBuiltRun & { windows: Map<string, OpenRange[]>; item_names: Map<string, string>; in_loop_ids: string[] }) | null = null;
     const out_of_loop = loopInserterWindows(config, window_cycle_ticks, run.stock, logger);
     if (out_of_loop.size > 0) {
@@ -1483,7 +1483,7 @@ export function trialWithLoopWindows(
         }
         const looped_run = checkOf(looped_windows, "out of the loop");
         const passes = passesAsBefore(looped_run.check);
-        logger.log(`Loop windows: ${passes ? "kept" : "dropped, the as-built check with them does not pass as without"}`);
+        logger.log(`Loop enable windows: ${passes ? "kept" : "dropped, the as-built check with them does not pass as without"}`);
         if (passes) {
             kept = { ...looped_run, windows: looped_windows, in_loop_ids: [],
                 item_names: new Map(Array.from(out_of_loop, ([inserter_id, it]) => [inserter_id, it.item_name])) };
@@ -1500,7 +1500,7 @@ export function trialWithLoopWindows(
             const own_run = checkOf(with_own, "of the loop");
             const why = !passesAsBefore(own_run.check) ? "the as-built check with them does not pass as without"
                 : loopWindowsMargin(config, with_own, [...own.keys(), ...(kept?.item_names.keys() ?? [])], window_cycle_ticks, logger, pickup_phase_cycles, swings);
-            logger.log(`Loop windows of the loop's own inserters: ${why === null ? "kept" : `dropped, ${why}`}`);
+            logger.log(`Loop enable windows of the loop's own inserters: ${why === null ? "kept" : `dropped, ${why}`}`);
             if (why === null) {
                 kept = { ...own_run, windows: with_own, in_loop_ids: Array.from(own.keys()),
                     item_names: new Map([...(kept?.item_names ?? []), ...Array.from(own, ([inserter_id, it]) => [inserter_id, it.item_name] as const)]) };
@@ -1580,7 +1580,7 @@ function marginOfLoopWindows(
             }
             const check = runAsBuiltCheck(config, moved, window_cycle_ticks, logger, AS_BUILT_START_PHASES, undefined, FREE_RUNNING_CHECK_TICKS, undefined, pickup_phase_cycles, "hands", swings).check;
             if (!check.holds || check.failed_start_offset !== undefined) {
-                return `the windows of ${ids.join(", ")} do not hold moved ${ticks > 0 ? "+" : ""}${ticks} tick`;
+                return `the enable windows of ${ids.join(", ")} do not hold moved ${ticks > 0 ? "+" : ""}${ticks} tick`;
             }
         }
     }
@@ -1634,7 +1634,7 @@ export function beltPickupSlackTrial(
         return { helps: true, verified: { windows: slacked, run: with_slack } };
     }
     const without_slack = check(windows).check;
-    logger.log(`Belt pickup slack: clock-only actual with=${with_slack.check.actual_output_items} without=${without_slack.actual_output_items} expected=${expected_output}`);
+    logger.log(`Belt slack: clock-only actual with=${with_slack.check.actual_output_items} without=${without_slack.actual_output_items} expected=${expected_output}`);
     if (without_slack.holds) {
         return { helps: false, verified: null };
     }
@@ -1782,20 +1782,20 @@ function triedDisturbanceTrial(
     report?: (detail: string) => void,
     errors: "report" | "throw" = "report",
 ): DisturbanceTrialAssessment {
-    // the config the clock was planned on has its output swings per cycle
+    // the config the clock was planned on has its output swings each output cycle
     const config = verificationPlanningConfigOf(planned_on, result);
     const quiet: Logger = { log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } };
     // a build with results that come by chance is tried with the backlog of them its margins say it takes up, too
     const excess = result.random_margins === undefined ? null : excessLossOf(result.random_margins.crafting);
     try {
         return { disturbance_trial: verdictOf(disturbanceTrialOf(config, result.clock_windows, result.simulation_duration.ticks,
-            result.stability_check.expected_output_items, quiet, {}, (_loss, index, total) => report?.(`Trying backpressure loss ${index + 1}/${total}`),
+            result.stability_check.expected_output_items, quiet, {}, (_loss, index, total) => report?.(`Trying loss trial ${index + 1}/${total}`),
             result.exhaust === undefined ? undefined : resultLossOptionsOf(result.exhaust.plans), excess === null ? [] : [excess],
             fractionalSwingsOf(result.output_cycle_plan))) };
     } catch (error) {
         if (errors === "throw") throw error;
         const reason = error instanceof Error ? error.message : String(error);
-        logger.log(`Backpressure loss could not be tried: ${reason}`);
+        logger.log(`Loss trials could not be made: ${reason}`);
         return { disturbance_trial: null, disturbance_trial_not_tried: reason };
     }
 }
@@ -1906,13 +1906,13 @@ export function withSettledOutput(
         return reported(long_run === null ? one_window_cycle
             : { ...as_built, actual_output_items: long_run.output_items_per_window_cycle, output_basis: "long-run mean" });
     } catch (error) {
-        logger.log(`The long run of a clock that fails its first check could not be made, so it is listed by the one period measured: ${error instanceof Error ? error.message : String(error)}`);
+        logger.log(`The long run of a clock that fails its first check could not be made, so it is listed by the one window cycle measured: ${error instanceof Error ? error.message : String(error)}`);
         return reported(one_window_cycle);
     }
 }
 
 /**
- * The config a clock is verified on: the one it was planned on with its output swings per cycle and without the derivation
+ * The config a clock is verified on: the one it was planned on with its output swings each output cycle and without the derivation
  * of windows, built as the clock is (`buildAsBuiltConfig`). All physical config, including supply, geometry, seeds, entity
  * order and overrides, stays in it. With it, whether its runs plan with fractional swings where that changes them.
  */

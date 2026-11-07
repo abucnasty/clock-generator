@@ -96,7 +96,7 @@ const IRON_BACTERIA_WAKE_UPS_OPEN = "with windows on the loop's two inserters th
     + "36.8, each bioflux inserter 437.6 against 142.2; 2026-10-24), where the two agreed while the loop was always on";
 /**
  * Places in the window cycle the simulator starts the clock at to find the steady state the game settled into, when the
- * wake-ups of its own run are not the game's. Batched swings on utility science makes 192 a window cycle at 10.7, 26.8 or
+ * wake-ups of its own run are not the game's. Takt Batches on utility science makes 192 a window cycle at 10.7, 26.8 or
  * 32.1 wake-ups a minute depending on where the clock starts; the game shows 26.8, as the generator's run does from the staged start (it counted 10.7 from the prepared build).
  */
 const WAKE_UPS_START_PHASES = 24;
@@ -164,13 +164,13 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         // the egg loop cannot start itself, so the egg machines are given eggs to begin with
         seed: [{ target: { recipe: "pentapod-egg" }, item: "pentapod-egg", count: 200 }],
         warmup_ticks: 300,
-        // Recorded 2026-10-24 on batched swings (5 output swings per cycle) with windows on the two inserters that take eggs
+        // Recorded 2026-10-24 on batched swings (Takt Batches: 5 output swings each output cycle) with windows on the two inserters that take eggs
         // out of the loop into the science biochamber (ticks 23 to 46 of every 96) and on the two of the loop itself (31 to 80
         // and 79 to 128 of every 96): 400 in every one of 74 window cycles after the staged start, and the simulator moves what the
         // game moved through every inserter and machine; so did the family cuts (64 window cycles, then back at 400 from the
         // first or second window cycle after each cut). The same that day with only the first two on windows, and with all four
         // always on. The 2-swing clock selected before (recorded 2026-10-16) was one hand short in window cycles 8 and 9 of the
-        // settling after the staged start. Since 0.27.0 it selects shifted swings (5 output swings per cycle), recorded
+        // settling after the staged start. Since 0.27.0 it selects shifted swings (Takt Batches: 5 output swings each output cycle), recorded
         // 2026-11-03 from the staged start to steady state and a minute more: one window cycle of the settling short (320 at tick
         // 1,440), 400 in every other.
         staged_start: {
@@ -180,7 +180,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         wake_ups_open: AGRICULTURAL_SCIENCE_WAKE_UPS_OPEN,
     },
     // its clocks have no belt pickup slack: batched swings has room for a hand of fuel in the windows of the three
-    // inserters that take nutrients off the belt with their bioflux, without which they do not hold. Batched swings is
+    // inserters that take nutrients off the belt with their bioflux, without which they do not hold. Takt Batches is
     // selected, the same clock as with belts that move (recorded 2026-10-24: 400 in every one of 74 window cycles, no
     // difference between the game and the simulator); the 2-swing clock was while a loss of nutrients broke batched
     // swings (2026-10-10 to 2026-10-14), and again while its nutrients trials dipped a hand late in their 40 window cycles,
@@ -433,7 +433,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     // The owner's processing unit build (2026-11-05): one electromagnetic plant (legendary, 90.372) between two infinity chests, one
     // chest of circuits (200 of each kind) and one that voids the units, each through one inserter; the sulfuric acid comes from an
     // infinity pipe. 15 a second from one copy (the build's most is 36.1). The game's inserter takes advanced circuits first from the
-    // chest, the item its inventory order puts last (#617); the clock selected before that rule (1 output swing per cycle) made half.
+    // chest, the item its inventory order puts last (#617); the clock selected before that rule (Takt Batches: 1 output swing each output cycle) made half.
     "processing units between two chests": {
         scaffold: path.join(SAMPLES, "intermediates", "processing-unit", "processing-unit-15-chest-fed.scaffold"),
         config: ConfigPaths.PROCESSING_UNIT_15_CHEST_FED,
@@ -478,7 +478,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         // the machines make bacteria from bacteria, so they are given some to begin with
         seed: [{ target: { recipe: "iron-bacteria-cultivation" }, item: "iron-bacteria", count: 50 }],
         warmup_ticks: 300,
-        // recorded 2026-10-24 on 6 output swings per cycle (subtick) with windows on the loop's two inserters (ticks 15 to 23
+        // recorded 2026-10-24 on Takt Batches: 6 output swings each output cycle (subtick) with windows on the loop's two inserters (ticks 15 to 23
         // and 60 to 68 of every 90.95): 10,944 in every one of the 20 repeats of 1,728 ticks after the first
         wake_ups_open: IRON_BACTERIA_WAKE_UPS_OPEN,
     },

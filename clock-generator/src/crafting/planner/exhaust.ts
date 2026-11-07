@@ -102,7 +102,7 @@ export function exhaustDecisionOf(
     }
     // the results come too rarely: one window a window cycle for each, on the longest window cycle the containers hold
     assert(forced === undefined || forced % base_hands === 0,
-        `${forced} hands of ${item} a cycle do not last whole ticks: the windows of results that come this rarely need a multiple of ${base_hands}`);
+        `${forced} hands of ${item} each output cycle do not last whole ticks: the enable windows of results that come this rarely need a multiple of ${base_hands}`);
     const cycles = forced !== undefined ? forced / base_hands : Math.min(...machines.map(machine =>
         exhaustPlan({ machine, registry: entity_registry, cycle_ticks, crafts_per_cycle: crafts_per_cycle(machine), kind: "staggered" }).cycles));
     const plans = machines.map(machine =>

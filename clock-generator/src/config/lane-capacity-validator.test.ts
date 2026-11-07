@@ -179,7 +179,7 @@ describe('copies', () => {
         expect(() => assertLaneCapacity(config)).not.toThrow();
         expect(lanesSharedByCopies(config).map(issue => [issue.kind, issue.belt_id, issue.lanes, issue.items_per_second])).toEqual([['take', 1, [1], 96]]);
         expect(laneSharedByCopiesWarning(config)).toBe('If the 3 copies share lane 1 of belt 1, they take 2.40 times what it carries '
-            + '(3 × 96 = 288 a second, of 120). The config cannot say yet whether its copies share these lanes, so this is only '
+            + '(3 × 96 = 288 a second, of 120). The configuration cannot say yet whether its copies share these lanes, so this is only '
             + 'a warning: a build whose copies have belts of their own is not affected.');
         const warned: string[] = [];
         warnLanesSharedByCopies(config, { log: () => { }, warn: (message: string) => warned.push(message), error: () => { }, debug: () => { } });

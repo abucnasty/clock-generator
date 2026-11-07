@@ -56,7 +56,7 @@ export function generateClockForConfig(
     if (options.shared_windows === true) {
         // only the grouped hands' windows with the takers that open together sharing one; where there are none the clock is the
         // plan's, not checked and not holding, so that the output swings back off to the next count
-        if (options.verify_as_built !== true) throw new Error("shared windows are made for a clock that is checked as built");
+        if (options.verify_as_built !== true) throw new Error("shared enable windows are made for a clock that is checked as built");
         const shared = roundRobinPollingClock(plan, options);
         if (shared !== null && shared.stability_check.holds) return shared;
         const unmade = clockOfPlan(plan, { ...options, belt_pickup_slack: "always" });
@@ -100,18 +100,18 @@ function arithmeticWindowsOf(plan: UnclockedRun): Map<string, OpenRange[]> | nul
             output_cycle_plan: run.output_cycle_plan, window_cycle_ticks: run.duration.ticks, recipe_lcm: run.recipe_lcm,
             always_enabled_by_config: run.always_enabled_by_config });
         if (sameWindows(windows, plan.unslacked_windows)) {
-            plan.logger.log("Windows by arithmetic: the planning run's own");
+            plan.logger.log("Enable windows by arithmetic: the unclocked run's own");
             return null;
         }
         const shared = sharedLaneShortened(plan.config, windows, plan.unslacked_windows);
         if (shared !== null) {
-            plan.logger.log(`Windows by arithmetic: not used, ${shared}`);
+            plan.logger.log(`Enable windows by arithmetic: not used, ${shared}`);
             return null;
         }
         return windows;
     } catch (error) {
         if (!(error instanceof ArithmeticWindowsNotApplicable)) throw error;
-        plan.logger.log(`Windows by arithmetic: none (${error.message})`);
+        plan.logger.log(`Enable windows by arithmetic: none (${error.message})`);
         return null;
     }
 }
@@ -132,8 +132,8 @@ function checkedArithmeticClock(made: MadeClocks, plan: UnclockedRun, windows: M
     const clock = clockOfWindows(own, windows, options);
     const checked = checkedAndKept(made, own, clock, clock.windows, options);
     const as_built = checked.stability_check.as_built;
-    plan.logger.log(`Windows by arithmetic: the clock ${as_built?.holds ? "holds" : "does not hold"} as built`
-        + (as_built?.wake_ups === undefined ? "" : `, ${as_built.wake_ups.wake_ups_per_minute.toFixed(2)} wake-ups a minute`));
+    plan.logger.log(`Enable windows by arithmetic: the clock ${as_built?.holds ? "holds" : "does not hold"} as built`
+        + (as_built?.wake_ups === undefined ? "" : `, ${as_built.wake_ups.wake_ups_per_minute.toFixed(2)} wakeups a minute`));
     const result: BlueprintGenerationResult = { ...checked, window_maker: "arithmetic" };
     const kept = made.get(checked);
     if (kept !== undefined) made.set(result, kept);
@@ -156,10 +156,10 @@ function arithmeticBesidePlanned(clocks: MadeClocks, plan: UnclockedRun, planned
     }
     const survives = (result: BlueprintGenerationResult) => disturbanceTrialVerdictOf(plan.config, result, plan.logger).disturbance_trial?.survives === true;
     if (!survives(made) && survives(planned)) {
-        plan.logger.log("Windows by arithmetic: fewer wake-ups, but the clock does not get back from a loss the planned one gets back from");
+        plan.logger.log("Enable windows by arithmetic: fewer wakeups, but the clock does not go back to its rate by itself after a supply stop or an output blockage, as the planned one does");
         return planned;
     }
-    plan.logger.log(`Windows by arithmetic: the primary clock (${made_wake_ups.toFixed(2)} against ${planned_wake_ups.toFixed(2)} wake-ups a minute)`);
+    plan.logger.log(`Enable windows by arithmetic: the primary clock (${made_wake_ups.toFixed(2)} against ${planned_wake_ups.toFixed(2)} wakeups a minute)`);
     return made;
 }
 
@@ -190,10 +190,10 @@ function withSlackInside(made: MadeClocks, plan: UnclockedRun, planned: Blueprin
     }
     const survives = (result: BlueprintGenerationResult) => disturbanceTrialVerdictOf(plan.config, result, plan.logger).disturbance_trial?.survives === true;
     if (!survives(inside) && survives(primary)) {
-        plan.logger.log("Belt pickup slack inside the windows: fewer wake-ups, but the clock does not get back from a loss the primary one gets back from");
+        plan.logger.log("Belt slack inside the enable windows: fewer wakeups, but the clock does not go back to its rate by itself after a supply stop or an output blockage, as the primary one does");
         return primary;
     }
-    plan.logger.log(`Belt pickup slack inside the windows: the primary clock (${inside_wake_ups.toFixed(2)} against ${primary_wake_ups.toFixed(2)} wake-ups a minute)`);
+    plan.logger.log(`Belt slack inside the enable windows: the primary clock (${inside_wake_ups.toFixed(2)} against ${primary_wake_ups.toFixed(2)} wakeups a minute)`);
     return inside;
 }
 
@@ -247,7 +247,7 @@ function withoutGhostWakeUps(made: MadeClocks, primary: BlueprintGenerationResul
         : check.first_judged_tick - check.clock_tick_at_first_judged;
     const shaped = windowsWithoutGhostWakeUps(windows, plan.run.duration.ticks, stock, ghosts, fixed, offset, (id, why) => left.push(`${id}: ${why}`));
     if (left.length > 0) {
-        plan.logger.log(`Ghost wakeups: windows left as they are (${left.join("; ")})`);
+        plan.logger.log(`Ghost wakeups: enable windows left as they are (${left.join("; ")})`);
     }
     if (shaped === null) {
         return primary;
@@ -270,8 +270,8 @@ function withoutGhostWakeUps(made: MadeClocks, primary: BlueprintGenerationResul
         best = all;
         moved.push(...shaped.shaped);
     } else {
-        plan.logger.log(`Windows shaped against ${ghosts.length} ghost wakeups (${textOf(shaped.shaped)}): not used, `
-            + (all.stability_check.as_built?.holds ? `${wake_ups(all)?.toFixed(2)} against ${wake_ups(primary)?.toFixed(2)} wake-ups a minute` : "it does not hold as built"));
+        plan.logger.log(`Enable windows shaped against ${ghosts.length} ghost wakeups (${textOf(shaped.shaped)}): not used, `
+            + (all.stability_check.as_built?.holds ? `${wake_ups(all)?.toFixed(2)} against ${wake_ups(primary)?.toFixed(2)} wakeups a minute` : "it does not hold as built"));
         if (inserters.length > 1) for (const id of inserters) {
             const own = new Map(best_windows);
             own.set(id, shaped.windows.get(id)!);
@@ -282,7 +282,7 @@ function withoutGhostWakeUps(made: MadeClocks, primary: BlueprintGenerationResul
                 best_windows = own;
                 moved.push(...shaped_of);
             } else {
-                plan.logger.log(`Windows of ${id} shaped against ghost wakeups (${textOf(shaped_of)}): not used`);
+                plan.logger.log(`Enable windows of ${id} shaped against ghost wakeups (${textOf(shaped_of)}): not used`);
             }
         }
     }
@@ -291,10 +291,10 @@ function withoutGhostWakeUps(made: MadeClocks, primary: BlueprintGenerationResul
     }
     const survives = (it: BlueprintGenerationResult) => disturbanceTrialVerdictOf(plan.config, it, plan.logger).disturbance_trial?.survives === true;
     if (!survives(best) && survives(primary)) {
-        plan.logger.log(`Windows shaped against ghost wakeups (${textOf(moved)}): fewer wake-ups, but the clock does not get back from a loss the primary one gets back from`);
+        plan.logger.log(`Enable windows shaped against ghost wakeups (${textOf(moved)}): fewer wakeups, but the clock does not go back to its rate by itself after a supply stop or an output blockage, as the primary one does`);
         return primary;
     }
-    plan.logger.log(`Windows shaped against ghost wakeups (${textOf(moved)}): the primary clock (${wake_ups(best)!.toFixed(2)} against ${wake_ups(primary)!.toFixed(2)} wake-ups a minute)`);
+    plan.logger.log(`Enable windows shaped against ghost wakeups (${textOf(moved)}): the primary clock (${wake_ups(best)!.toFixed(2)} against ${wake_ups(primary)!.toFixed(2)} wakeups a minute)`);
     const range = (it: OpenRange) => ({ start: it.start_inclusive, end: it.end_inclusive });
     return { ...best, ...(primary.window_maker !== undefined && { window_maker: primary.window_maker }),
         ghost_wakeup_windows: moved.map(it => ({ inserter_id: it.inserter_id, window: range(it.window), shaped: it.shaped === null ? null : range(it.shaped),
@@ -332,7 +332,7 @@ function clockWithPickupsFromTheirEntry(made: MadeClocks, plan: UnclockedRun, op
  *
  * Backoff is skipped when `config.overrides.terminal_swing_count` is set: that count is forced as-is.
  *
- * Fractional swings (`options.fractional_swings`) that the insertion limits refuse at a count
+ * Euclidean Swings (`options.fractional_swings`) that the insertion limits refuse at a count
  * (FractionalSwingsRefusedError) are planned at the whole counts below it, the first the cycle plan accepts; a
  * forced count is not. Where the first plan is refused and the count it is made at has every inserter's swings whole,
  * no clock is made: it would be the clock of that many whole output swings, which is offered on its own.

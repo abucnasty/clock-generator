@@ -113,9 +113,9 @@ export function deriveTimeStudyWindows(
     confirm_pick: boolean = true,
 ): TimeStudyWindows {
     const fixed_windows = new Map([...output_windows, ...drill_windows]);
-    report?.(`Simulating with only the output inserters clocked (${label} windows)`);
+    report?.(`Simulating with only the output inserters clocked (${label} enable windows)`);
     const derivation = runClockOnBuild(base_config, fixed_windows, window_cycle_ticks, logger);
-    logger.log(`Derived clock windows (${label}): output-only run actual=${derivation.stability_check.actual_output_items} expected=${derivation.stability_check.expected_output_items}`);
+    logger.log(`Derived enable windows (${label}): output-only run actual=${derivation.stability_check.actual_output_items} expected=${derivation.stability_check.expected_output_items}`);
     const even_output_windows = evenlySpacedOutputWindows(output_windows, outputSwingCountsOf(derivation, new Set(output_windows.keys()), window_cycle_ticks), window_cycle_ticks);
     const reportOf = (tried: { candidate: number; quick: QuickTrial }[], picked: number | null): SearchReport => ({
         kind: "padding",
@@ -149,7 +149,7 @@ export function deriveTimeStudyWindows(
             const windows = withBeltPickupSlack(paddedWindows(unpadded, busy_windows.keys(), padding, window_cycle_ticks), belt_pickup_slack, window_cycle_ticks);
             report?.(`Trying ${ticks(padding)}`);
             const trial = quickTrial(base_config, windows, window_cycle_ticks, logger, true);
-            logger.log(`Derived clock windows (${label}): end padding ${padding} -> actual=${trial.result.stability_check.actual_output_items} holds=${trial.holds}`);
+            logger.log(`Derived enable windows (${label}): end padding ${padding} -> actual=${trial.result.stability_check.actual_output_items} holds=${trial.holds}`);
             return { ...trial, windows };
         },
         neighbours: () => true,
@@ -202,7 +202,7 @@ export function timeStudyWindowsClock(
             (n, total) => options.on_progress_detail?.(`Confirming planned windows, clock start ${n}/${total}`),
             FREE_RUNNING_CHECK_TICKS, { run: planned_run, long_run_ticks: FREE_RUNNING_CHECK_TICKS }, true).check;
     }
-    logger.log(`Derived clock windows: planned windows as-built actual=${planned_check.actual_output_items} stable=${planned_check.holds} (${planned_check.start_phases_checked} start phases)`);
+    logger.log(`Derived enable windows: planned enable windows as-built actual=${planned_check.actual_output_items} stable=${planned_check.holds} (${planned_check.start_phases_checked} start phases)`);
     // the windows of the inserters of a loop are part of the planned windows, kept or dropped here as without derivation
     const feedPlanned = () => {
         const fed = planned_stable && planned_check.holds && options.loop_windows !== false
@@ -258,7 +258,7 @@ export function timeStudyWindowsClock(
         return exportClock(plan, clock, windows, options,
             { histories: full_hand?.result ?? derived.verification, fuel_hand_room_ticks: {}, derived_clock_windows: report, search: derived.search });
     }
-    logger.log("Derived clock windows: no padding passed the as-built check; falling back to the planned windows.");
+    logger.log("Derived enable windows: no padding passed the as-built check; falling back to the planned enable windows.");
     const fed = feedPlanned();
     stability_check.as_built = planned_check;
     stability_check.holds = planned_stable && planned_check.holds;

@@ -168,7 +168,7 @@ function partOf(starts: readonly number[] | undefined, position: number): number
 export function walkMachineStock(input: StockWalkInput): StockWalk {
     const { machine, fillers, takers } = input;
     const window_cycle_ticks = input.window_cycle_ticks;
-    if (!Number.isInteger(window_cycle_ticks) || window_cycle_ticks <= 0) throw new Error(`the stock walk needs a period of whole ticks, not ${window_cycle_ticks}`);
+    if (!Number.isInteger(window_cycle_ticks) || window_cycle_ticks <= 0) throw new Error(`the stock walk needs a window cycle time of whole ticks, not ${window_cycle_ticks}`);
     const max_window_cycles = input.max_window_cycles ?? 64;
     const output_stack = input.output_stack ?? Number.POSITIVE_INFINITY;
     const ticks_per_craft = machine.ticks_per_craft;

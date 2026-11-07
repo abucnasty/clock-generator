@@ -239,14 +239,14 @@ export function plannedDescriptionLines(
 function windowsText(windows: DeciderWindows, window_cycle_text: string): string {
     const unit = windows.subtick_scale ? `in 1/${windows.subtick_scale} ticks` : null;
     const listed = windows.listed === null
-        ? unit === null ? "" : `; windows ${unit}`
+        ? unit === null ? "" : `; enable windows ${unit}`
         : `: open ${windows.listed.map(rangeText).join(", ")}${unit === null ? "" : ` (${unit})`}`;
-    return `${windows.count} ${plural(windows.count, "window")} per ${window_cycle_text}-tick period${listed}`;
+    return `${windows.count} ${plural(windows.count, "enable window")} per ${window_cycle_text}-tick window cycle${listed}`;
 }
 
 /** What a decider's windows say beyond when they open: a repeat on a modulo of the clock */
 function unusualWindowLines(windows: DeciderWindows): string[] {
-    return windows.repeat ? [`Windows repeat every ${windows.repeat.modulus} ticks: ${SignalId.toDescriptionString(windows.repeat.signal)} = clock mod ${windows.repeat.modulus}`] : [];
+    return windows.repeat ? [`Enable windows repeat every ${windows.repeat.modulus} ticks: ${SignalId.toDescriptionString(windows.repeat.signal)} = clock mod ${windows.repeat.modulus}`] : [];
 }
 
 /** The chest the drills drop into, as the lines about it name it: "the [entity=car]", "chest 2"; null when they drop into several */
@@ -323,7 +323,7 @@ export function unplannedDescriptionLines(
  * "Group 2 of 2: takes its turn in ticks 57–100 of the 112-tick window cycle. Its combinators stand together, in the order of the turn."
  */
 export function turnLine(group: number, groups: number, turn: OpenRange[], window_cycle_text: string): string {
-    return `Group ${group} of ${groups}: takes its turn in ticks ${turn.map(rangeText).join(" and ")} of the ${window_cycle_text}-tick period. `
+    return `Group ${group} of ${groups}: takes its turn in ticks ${turn.map(rangeText).join(" and ")} of the ${window_cycle_text}-tick window cycle. `
         + "Its combinators stand together, in the order of the turn.";
 }
 

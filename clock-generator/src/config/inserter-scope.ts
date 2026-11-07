@@ -41,7 +41,7 @@ function beltPickupKindProblem(inserter: ScopedInserter): string | null {
 function filterModeProblem(inserter: ScopedInserter): string | null {
     if (inserter.filter_mode !== "blacklist" || (inserter.filters?.length ?? 0) === 0) return null;
     return `\`filter_mode\` "blacklist" is refused: ${OUT_OF_SCOPE.blacklist_filters}. Set its filters to a whitelist of `
-        + "the items it moves, in the game before a recapture or in the config";
+        + "the items it moves, in the game before a recapture or in the configuration";
 }
 
 /**

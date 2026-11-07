@@ -113,11 +113,11 @@ function analyze(config: Config): Analysis {
     // the copies of a machine that places its results into a container are not converted (yet): the conversion follows
     // inserters between entities, not a machine to its result target
     if (config.machines.some(machine => machine.result_target !== undefined)) {
-        refuse('unsupported-boundary', 'A machine that places its results into a container is not supported in a repeated unit.');
+        refuse('unsupported-boundary', 'A machine that places its results into a container is not supported in repeated copies.');
     }
     config.drills?.configs.forEach(drill => {
         // the copies of a drill into a chest are not converted (yet): the conversion follows a drill to its machine
-        if (drill.target.type !== 'machine') refuse('unsupported-boundary', 'A drill into a chest is not supported in a repeated unit.');
+        if (drill.target.type !== 'machine') refuse('unsupported-boundary', 'A drill into a chest is not supported in repeated copies.');
         if (!ids.machines.has(drill.target.id)) refuse('invalid-references', `Missing drill target ${drill.target.id}.`);
         join(keyOf('drill', drill.id), keyOf('machine', drill.target.id));
     });
@@ -150,12 +150,12 @@ function analyze(config: Config): Analysis {
         }
     });
     for (const [key, usedBy] of users) {
-        if (usedBy.size === 0) refuse('unassigned-entities', 'An unreferenced belt or infinity chest cannot be assigned to a complete unit.');
+        if (usedBy.size === 0) refuse('unassigned-entities', 'An unreferenced belt or infinity chest cannot be assigned to a complete copy.');
         if (key.startsWith('belt:')) {
             const belt = config.belts[ids.belts.get(Number(key.slice(5)))!];
             if (belt.strategy === 'export') refuse('unsupported-boundary', 'Export belts have fixed external demand and cannot be converted automatically.');
             if (usedBy.size > 1 && config.inserters.some(ins => ins.sink.type === 'belt' && ins.sink.id === belt.id && ins.sink.drop !== undefined)) {
-                refuse('unsupported-boundary', 'A shared belt has coupled drop coordinates. Select one complete unit in Factorio.');
+                refuse('unsupported-boundary', 'A shared belt has coupled drop coordinates. Select one complete copy in Factorio.');
             }
         }
     }
@@ -294,7 +294,7 @@ export function planRepeatedUnitConversion(config: Config): RepeatedUnitConversi
             const { proof, places } = witness(config, analysis, component), signature = canonical(proof);
             const group = groups.get(signature) ?? [];
             if (group.length > 0 && !equalWitness(group[0].witness, proof)) {
-                refuse('nonuniform-units', 'Complete ordered unit correspondence could not be verified.');
+                refuse('nonuniform-units', 'Complete ordered copy correspondence could not be verified.');
             }
             group.push({ component, witness: proof, places });
             groups.set(signature, group);
@@ -303,7 +303,7 @@ export function planRepeatedUnitConversion(config: Config): RepeatedUnitConversi
         if (multiplicity <= 1) {
             const detected = findRepeatedUnits(config).gcd > 1;
             refuse(detected ? 'nonuniform-units' : 'not-repeated', detected
-                ? 'The complete ordered units differ in their wiring, resources or configuration.' : 'No complete repeated modeled unit was found.');
+                ? 'The complete ordered copies differ in their wiring, resources or configuration.' : 'No complete repeated modeled copy was found.');
         }
         const keptNodes = new Set<string>(), keptInserters = new Set<number>();
         for (const group of groups.values()) {

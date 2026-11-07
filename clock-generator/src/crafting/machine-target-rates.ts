@@ -36,7 +36,7 @@ export function computeMachineTargetRates(config: Config): MachineTargetRate[] {
     assertOutputTransferGenerationSupported(config);
     validateCopies(config);
     assert(Number.isFinite(config.setpoint.items_per_second) && config.setpoint.items_per_second > 0,
-        "Set a positive target output rate to see at-target rates.");
+        "Set a positive setpoint to see at-target rates.");
     assertInserterCoverage(config);
     assertFeasible(config);
     const registry = createEntityRegistryFromConfig(config);

@@ -76,7 +76,7 @@ describe("an inserter that picks up from a belt with two items", () => {
     });
 });
 
-// Batched swings with belt pickup slack on the utility science sample, the clock selected for it. Recorded in
+// Takt Batches with belt pickup slack on the utility science sample, the clock selected for it. Recorded in
 // Factorio 2.1.21 on 2026-10-10: 192 packs in each of 53 window cycles at 26.8 wake-ups a minute. The generator's long run,
 // which starts the clock at its beginning on the empty build of the scaffold's staged start, counted the game's 26.8
 // under the old wake-up rule; the rule "kept-lists" counts more.

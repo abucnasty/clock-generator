@@ -280,16 +280,16 @@ describe("generateClockForConfig", () => {
             const over = { ...config, setpoint: { ...config.setpoint, items_per_second: 1600 } };
             expect(() => validateConfig(over)).toThrow(FeasibilityError);
             // the figures are for one of the 24 copies, and the message says so: 1600 / 24 = 66.67 frames a second a copy
-            expect(() => validateConfig(over)).toThrow("No clock can hold this build's target of 1600 a second over 24 copies (every figure here is "
+            expect(() => validateConfig(over)).toThrow("No clock can hold this build's setpoint of 1600 a second over 24 copies (every figure here is "
                 + "for one copy): Machine 1 (flying robot frame) crafts at most 3.44 a second. The target needs 33.33 crafts a second of it (66.67 a "
                 + "second of flying robot frame at 2 a craft).");
             const quiet = { log: () => { }, warn: () => { }, error: () => { }, debug: () => { } };
-            expect(() => planOutputCycle(over, SimulationContext.fromConfig(over), quiet)).toThrow("cannot meet the target production rate");
+            expect(() => planOutputCycle(over, SimulationContext.fromConfig(over), quiet)).toThrow("cannot meet the setpoint");
         });
     });
 
     describe("config validation", () => {
-        it("throw error if the current configuration cannot meet the target production rate", async () => {
+        it("throw error if the current configuration cannot meet the setpoint", async () => {
             const config = await loadConfigFromFile(ConfigPaths.STONE_BRICK_120_DRILL_DIRECT_INSERT);
             expect(config.setpoint.items_per_second).toBe(120)
             expect(() => generateClockForConfig(config)).not.toThrowError();

@@ -59,7 +59,7 @@ describe("a saved clock for a shorter period, on the utility science 480 sample"
 
     beforeAll(async () => {
         const sample = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN);
-        // the config the clock was planned on: the coal is out of the window cycle, and the output swings per cycle are those of the clock
+        // the config the clock was planned on: the coal is out of the window cycle, and the output swings each output cycle are those of the clock
         config = { ...sample, overrides: { ...sample.overrides, ignored_lcm_ingredients: ["coal"], terminal_swing_count: 3 } };
         result = clockFromWindows(config, windows, WINDOW_CYCLE, quiet);
     });
