@@ -34,6 +34,7 @@ import { EntityTransferCountMap } from "./sequence/cycle/swing-counts";
 import { withRunMemo } from "./plan/run-memo";
 import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, ROUNDED_CLOCK_MAX_FAST, RoundedClock, roundedRateAllowed, searchesToRun, searchesAreNeeded } from "./rank";
 import { TargetProductionRate } from "./target-production-rate";
+import { loopStockBoundOf } from "./candidates/loop-stock-bound";
 import { AsBuiltStabilityCheck, BackpressureLossAssessment, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, clockVerificationSignature, FREE_RUNNING_CHECK_TICKS, fractionalSwingsChangeChecksOf, LOOP_WINDOW_CHECK_TICKS, roundedClockTrial, startDependenceVerdictOf, wakeUpsFromStartsOf, withSettledOutput } from "./trial";
 import { WakeUpsFromStarts } from "./wake-ups-from-starts";
 import { ChestDrillFallbackKind, ClockStrategy, DefinitionFamily, StrategyQualifier, strategyOf } from "./clock-strategy";
@@ -993,7 +994,7 @@ function runAlternativeOf(
             items_per_second: itemsPerSecondOverCopies(achieved_output_items, trial.clock_period, copies),
             wake_ups_per_minute: as_built?.wake_ups?.wake_ups_per_minute ?? null,
             signals_per_minute: as_built?.wake_ups === undefined ? null : signalsPerMinuteOf(as_built.counters, row.result.blueprint, row.result.chest_drills, trial.clock_period),
-            start_dependence: trial.start_dependence };
+            start_dependence: trial.start_dependence, ...loopStockBoundOf(config, row.result, trial.clock_period) };
         const clock = { id: row.id, label: row.label, description, result: row.result, ...(row.rounded && { rounded: row.rounded }),
             inserter_window_count, deciders: windowDeciderCount(row.result.blueprint), ranking_window_count, assessment, verdict: clockVerdictOf(assessment), deadlock_risks, belt, insights,
             strategy: { ...strategy, qualifiers: [...strategy.qualifiers, ...(row.qualifiers ?? [])] } };

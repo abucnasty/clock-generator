@@ -17,14 +17,22 @@ export function anyFeederCarriesFuel(sink_feeders: readonly Inserter[], fuel_ite
     return fuel_item !== undefined && sink_feeders.some(it => it.filtered_items.has(fuel_item));
 }
 
+/** An inserter edge of a loop's composite node: the inserter, the item, the vertex it takes from and the one it drops into */
+export interface LoopEdge {
+    readonly inserter: string;
+    readonly item: string;
+    readonly from: string;
+    readonly to: string;
+}
+
 /**
  * A loop of machines of a build: a composite node of its planner graph (`graph.components`) with an inside edge between two
- * of its machines. `own`: the inserters of those inside edges, the loop's own; `out`: the inserters of its out edges into a
- * machine, which take from one of its machines into a machine outside it. Each by entity id, in the order of the build.
+ * of its machines. `own`: those inside edges, the loop's own inserters; `out`: its out edges, which take from one of its
+ * machines and drop outside it (into a machine, a container, a lane or the target). In the graph's edge order.
  */
-interface MachineLoop {
-    readonly own: readonly string[];
-    readonly out: readonly string[];
+export interface MachineLoop {
+    readonly own: readonly LoopEdge[];
+    readonly out: readonly LoopEdge[];
 }
 
 const loops_of = new WeakMap<Config, readonly MachineLoop[]>();
@@ -34,18 +42,18 @@ const loops_of = new WeakMap<Config, readonly MachineLoop[]>();
  * graph cannot be built (the config is refused elsewhere). A loop through a container port alone (the ore voiders' machine
  * and chest) has no inside edge between two machines and is none: its inserters keep the windows of the plan.
  */
-function machineLoopsOf(config: Config): readonly MachineLoop[] {
+export function machineLoopsOf(config: Config): readonly MachineLoop[] {
     let loops = loops_of.get(config);
     if (loops === undefined) {
         const graph = graphOf(config)?.graph;
         const machines = new Set(graph?.nodes.filter(node => node.kind === "machine").map(node => node.key) ?? []);
         const edge = new Map(graph?.edges.map(it => [it.key, it]) ?? []);
-        const entitiesOf = (keys: readonly string[], keep: (to: string, from: string) => boolean) => Array.from(new Set(keys
-            .map(key => edge.get(key)!).filter(it => it.via === "inserter" && keep(it.to, it.from)).map(it => it.entity)));
+        const edgesOf = (keys: readonly string[]): LoopEdge[] => keys.map(key => edge.get(key)!).filter(it => it.via === "inserter")
+            .map(it => ({ inserter: it.entity, item: it.item, from: it.from, to: it.to }));
         loops = (graph?.components ?? [])
             .map(component => ({
-                own: entitiesOf(component.inside, (to, from) => machines.has(to) && machines.has(from)),
-                out: entitiesOf(component.out, to => machines.has(to)),
+                own: edgesOf(component.inside).filter(it => machines.has(it.from) && machines.has(it.to)),
+                out: edgesOf(component.out).filter(it => machines.has(it.from)),
             }))
             .filter(loop => loop.own.length > 0);
         loops_of.set(config, loops);
@@ -55,14 +63,20 @@ function machineLoopsOf(config: Config): readonly MachineLoop[] {
 
 /**
  * The loops of machines of a config with their inserters as the registry has them (see `machineLoopsOf`), each list in the
- * registry's order: only those the plan leaves always enabled (`alwaysEnabledInserters`), the inserters these windows are for
+ * registry's order: its own, and those of its out edges into a machine; only those the plan leaves always enabled
+ * (`alwaysEnabledInserters`), the inserters these windows are for
  */
 function loopsWithInserters(config: Config, registry: ReadableEntityRegistry): { own: Inserter[]; out: Inserter[] }[] {
     const always_enabled = alwaysEnabledInserters(registry);
-    return machineLoopsOf(config).map(loop => ({
-        own: always_enabled.filter(it => loop.own.includes(it.entity_id.id)),
-        out: always_enabled.filter(it => loop.out.includes(it.entity_id.id) && !loop.own.includes(it.entity_id.id)),
-    }));
+    const machine_ids = new Set(registry.getAll().filter(Entity.isMachine).map(it => it.entity_id.id));
+    return machineLoopsOf(config).map(loop => {
+        const own = new Set(loop.own.map(it => it.inserter));
+        const out = new Set(loop.out.filter(it => machine_ids.has(it.to)).map(it => it.inserter));
+        return {
+            own: always_enabled.filter(it => own.has(it.entity_id.id)),
+            out: always_enabled.filter(it => out.has(it.entity_id.id) && !own.has(it.entity_id.id)),
+        };
+    });
 }
 
 /**
