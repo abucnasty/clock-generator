@@ -8,6 +8,12 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
+## Alternative ids follow the strategy catalog (refactor/strategy-catalog)
+An alternative's id is derived from the strategy and the settings of its clock; the slot that made the clock is its `maker`, the id it had before. The lines below name the old ids and stay as history. Old id -> new id:
+`even-hands` -> `time_division_windows`; `fractional` -> `euclidean_swings`; `derived` -> `time_study_windows`; `uneven-output` -> `moved_output_swing`; `shifted-swings` -> `phase_shifted_batch`; `full-hand` -> `pitch_pickups`; `results-in-turn` -> `exhaust`; `per-branch` -> `coordinated_sources`; `primitive-grouped` -> `round_robin_polling_shorter_window_cycle`;
+`planned-belt-slack` -> `takt_batches`, `takt_batches_observed` or `round_robin_polling`, by the strategy and tuning method the build's clock has; `swings-N` -> the same, with `_swings_N`. A suffix says what sets a clock apart: `_shared` (was `-shared`), `_per_hand` (was `-per-hand`), `_subtick` (was `-subtick`).
+Strategy ids: `per-branch` is no strategy (it is the router `coordinated_sources`), `signal-offset` -> `phase_shifted_batch`, `time-division-slots` -> `time_division_windows`; the other families keep their words in snake case. No clock moved: `clock_sha256` leaves out the ids.
+
 ## The per-branch clock (#699)
 A new alternative, `per-branch`, made after every other clock: each group of inserters (those that take from one source) takes the enable windows of one clock the other makers built, on the recommended clock's window cycle, chosen group by group from the output upstream by simulated wakeups. Listed only where it is stable and another clock; on 16 jobs it is selected, with fewer wakeups, and on the other 70 it is not listed. Game figures: the per-branch clock on its sample's scaffold, made / expected in every period recorded, and wakeups a minute in the game (simulator, seeded); every run holds the setpoint (minute protocol, turbo). The figure in brackets after a game figure is the simulator's count for that same recording, seeded from the game's first sample (cold where the seed is incomplete or the line says cold); it is not a game figure.
 - config-ACCUMULATOR_640: selected even-hands -> per-branch, wake-ups 889.072 -> 696.44 a minute, period 972 (game: 576 / 576 in 3 of 3 periods, 696.5 (696.3))
