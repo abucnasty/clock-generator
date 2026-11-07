@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { ClockRouting, ClockStrategy, StrategyConstruction, StrategyFamily, StrategyQualifier } from 'clock-generator/browser';
-import { CHIP_SEPARATOR, familyCopyOf, fullClockName, pendingClockName, qualifierChipsOf, sourceLinesOf, strategyNameOf, type NamedClock } from './strategyNames';
+import { CHIP_SEPARATOR, directRouterOf, familyCopyOf, fullClockName, pendingClockName, qualifierChipsOf, sourceLinesOf, strategyNameOf, type NamedClock } from './strategyNames';
 
 const FAMILIES: StrategyFamily[] = ['takt-batches', 'round-robin-polling', 'euclidean-swings', 'time-division-slots', 'time-study-windows', 'moved-output-swing',
     'signal-offset', 'pitch-pickups', 'exhaust', 'per-branch'];
 
 const strategy = (family: StrategyFamily, qualifiers: StrategyQualifier[] = ['output-swings'], output_swings = 2, construction?: StrategyConstruction): ClockStrategy =>
-    ({ family, qualifiers, output_swings, ...(construction !== undefined && { construction }) });
-const withRouting = (base: ClockStrategy, routing: ClockRouting): ClockStrategy => ({ ...base, routing } as ClockStrategy);
+    ({ family, qualifiers, output_swings, routing: { router: 'direct' }, ...(construction !== undefined && { construction }) });
+const withRouting = (base: ClockStrategy, routing: ClockRouting): ClockStrategy => ({ ...base, routing });
 const labels = (value: NamedClock) => qualifierChipsOf(value).map(chip => chip.label);
 const clock = (extra: Partial<NamedClock> & { strategy?: ClockStrategy } = {}): NamedClock => ({ label: 'Engine label', strategy: strategy('takt-batches'), ...extra });
 
@@ -24,6 +24,13 @@ describe('strategyNameOf and familyCopyOf', () => {
         const coordinated = clock({ strategy: withRouting(strategy('per-branch'), { router: 'coordinated_sources', sources: [] }) });
         expect(strategyNameOf(coordinated)).toBe('Coordinated Sources');
         expect(familyCopyOf(coordinated)?.line).toContain('own enable windows');
+    });
+
+    it('says Direct in the (i) of a clock that follows one strategy, and not for Coordinated Sources', () => {
+        expect(directRouterOf(clock())?.name).toBe('Direct');
+        expect(directRouterOf(clock({ strategy: withRouting(strategy('per-branch'), { router: 'coordinated_sources', sources: [] }) }))).toBeNull();
+        expect(directRouterOf({ label: 'kept' })).toBeNull();
+        expect(labels(clock())).not.toContain('Direct');
     });
 
     it('names a clock kept before the strategy was carried by its engine label, with no chips', () => {

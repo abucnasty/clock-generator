@@ -219,6 +219,16 @@ const emptyResults = (): ResultsView => ({
     skippedSearches: [], notMade: [], searchedDeeper: false, pickRule: null, generatedFor: null, stoppedEarly: false, pickGone: null,
 });
 
+/** A run for `perBranchInputOf`: its alternatives that carry a strategy (a live generation's all do; a clock kept before it was carried does not) */
+function withStrategies(run: ClockAlternativeRunView | null): Parameters<typeof perBranchInputOf>[0][number] {
+    if (run === null) return null;
+    return {
+        parts: run.parts,
+        alternatives: run.alternatives.flatMap(({ id, strategy }) => strategy === undefined ? [] : [{ id, strategy }]),
+        also: run.also?.map(withStrategies).filter(also => also !== null),
+    };
+}
+
 /** The kept results, opened once for the page (StrictMode mounts the hook twice) */
 let sharedResultsStore: Promise<ResultsStore> | null = null;
 const resultsStore = () => (sharedResultsStore ??= openResultsStore());
@@ -494,7 +504,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 assessedSignatures: [...new Set([...generation.assessedSignatures,
                     ...generation.runs.slice(0, 1 + generation.tasks.findIndex(candidate => candidate.id === task.id))
                         .flatMap(run => task.per_branch === true ? (run === null ? [] : signaturesOf(run)) : run?.alternatives.length ? [run.signature] : [])])],
-                ...(task.per_branch === true && { perBranch: perBranchInputOf(generation.runs,
+                ...(task.per_branch === true && { perBranch: perBranchInputOf(generation.runs.map(withStrategies),
                     (({ alternatives, selected_index }) => alternatives[selected_index].id)(combineClockAlternativeRuns(generation.runs, it => it.ranking))) }),
             } satisfies WorkerRequest);
         }

@@ -1,6 +1,6 @@
 import { catalogRowOf, routerRowOf } from 'clock-generator/light';
 import type {
-    AlwaysOnReason, ClockRouting, ClockStrategy, EnableControl, Selection, StrategyCatalogRow, StrategyQualifier, TuningMethod,
+    AlwaysOnReason, ClockStrategy, EnableControl, Selection, StrategyCatalogRow, StrategyQualifier, TuningMethod,
 } from 'clock-generator/browser';
 import { entityLabel, type LabelKind } from './entityLabel';
 import { modeText } from './wakeWindowCopy';
@@ -20,11 +20,8 @@ export interface NamedClock {
     roundedRunsFast?: number;
 }
 
-/** The strategy as the clock carries it: its routing is set by the engine, and missing from clocks kept before it was carried */
-type RoutedStrategy = ClockStrategy & { routing?: ClockRouting };
-
 /** The catalog row of a clock's strategy: the router's for Coordinated Sources, the family's for the rest */
-function rowOfStrategy(strategy: RoutedStrategy): StrategyCatalogRow {
+function rowOfStrategy(strategy: ClockStrategy): StrategyCatalogRow {
     return strategy.routing?.router === 'coordinated_sources' ? routerRowOf('coordinated_sources') : catalogRowOf(strategy);
 }
 
@@ -47,11 +44,11 @@ type QualifierCopy = (clock: NamedClock) => Omit<QualifierChip, 'id'>;
 const QUALIFIER_COPY: Record<Exclude<StrategyQualifier, 'found-by-search'>, QualifierCopy> = {
     'output-swings': clock => ({
         label: `${plural(clock.strategy?.output_swings ?? 0, 'output swing', 'output swings')} a cycle`,
-        line: 'The output inserter makes this many swings each crafting cycle.',
+        line: 'The output inserter makes this many swings each output cycle.',
     }),
     'hands-brought-in': clock => ({
         label: `${plural(clock.strategy?.output_swings ?? 0, 'hand', 'hands')} brought in a cycle`,
-        line: 'The inserters bring in this many hands each time the crafting cycle repeats.',
+        line: 'The inserters bring in this many hands each time the output cycle repeats.',
     }),
     'shared-enable-windows': () => ({
         label: 'shared enable windows',
@@ -63,7 +60,7 @@ const QUALIFIER_COPY: Record<Exclude<StrategyQualifier, 'found-by-search'>, Qual
     }),
     'shorter-window-cycle': () => ({
         label: 'shorter window cycle',
-        line: 'Made from fewer swings each crafting cycle, so the whole window cycle is shorter.',
+        line: 'Made from fewer swings each output cycle, so the whole window cycle is shorter.',
     }),
     'phase-accumulator': () => ({
         label: 'subtick clock',
@@ -102,7 +99,7 @@ const QUALIFIER_COPY: Record<Exclude<StrategyQualifier, 'found-by-search'>, Qual
     }),
     'harmonic-window-cycle': () => ({
         label: 'harmonic window cycle',
-        line: 'An inserter fills a machine. It needs a fraction of a hand each crafting cycle, such as 15/8. It plans the next whole number of hands. '
+        line: 'An inserter fills a machine. It needs a fraction of a hand each output cycle, such as 15/8. It plans the next whole number of hands. '
             + 'The window cycle is cut so the output inserters move whole hands. Each swing rate is then a whole multiple of one base rate. '
             + 'A harmonic is a whole multiple of a base frequency. Source: J. O. Smith III, Spectral Audio Signal Processing, "Periodic Signals" (https://ccrma.stanford.edu/~jos/sasp/Periodic_Signals.html).',
     }),
@@ -180,9 +177,14 @@ export function pendingClockName(task: { id: string; label: string }): string {
     return swings ? `${plural(Number(swings[1]), 'output swing', 'output swings')} a cycle` : task.label;
 }
 
+/** The router of a clock that follows one strategy, Direct, with its definition; null for any other clock */
+export function directRouterOf(clock: NamedClock): { name: string; definition: string } | null {
+    return clock.strategy?.routing?.router === 'direct' ? routerRowOf('direct') : null;
+}
+
 /** The lines of the (i) of a Coordinated Sources clock: each source and what the router gave its entities; none for any other clock */
 export function sourceLinesOf(clock: NamedClock): string[] {
-    const sources = (clock.strategy as RoutedStrategy | undefined)?.routing?.sources ?? [];
+    const sources = clock.strategy?.routing?.sources ?? [];
     return sources.map(({ source, entities }) => {
         const gave = Object.entries(entities).map(([entity, control]) => ({ entity, text: controlText(control) }));
         const texts = new Set(gave.map(({ text }) => text));
