@@ -82,7 +82,7 @@ drill is disabled, and what it takes.
 | Build | What it checks |
 | --- | --- |
 | `fill-l<level>` | the chest empty, the drill always enabled, until the chest is full and 60 ticks on |
-| `gated-l<level>` | the chest full; every 30 ticks the probe takes all of it, 1,000, 100 or 10 ore, and a constant combinator on the drill's circuit condition enables it for 1, 2 or 3 ticks from the period's fifth tick: 24 windows of every take, length and hold |
+| `gated-l<level>` | the chest full; every 30 ticks the probe takes all of it, 1,000, 100 or 10 ore, and a constant combinator on the drill's circuit condition enables it for 1, 2 or 3 ticks from the window cycle's fifth tick: 24 windows of every take, length and hold |
 | `fill-l40000-drill-last`, `gated-l100000-drill-last` | the drill built after the chest |
 | `gated-l100000-moved` | the build at (203, -141), another chunk |
 
