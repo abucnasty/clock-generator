@@ -40,9 +40,9 @@ The export marks each belt pickup for which the sidecar cannot give data. The si
 - A pickup from a belt tile that has side-loading from a different belt.
 - A pickup in line with the belt, or a different pickup position that the site cannot use.
 
-## Suggested target
+## Suggested setpoint
 
-The export gives a suggested target output: the product that goes out of your selection, and the maximum rate at
+The export gives a suggested setpoint: the product that goes out of your selection, and the maximum rate at
 which the machines can make it, in items each second.
 
 ## Entities that are not in the export

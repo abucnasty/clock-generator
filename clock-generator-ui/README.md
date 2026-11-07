@@ -1,6 +1,6 @@
 # Clock Generator UI
 
-The web front end of the Factorio clock generator: a React and Vite app for building a config, validating it and
+The web front end of the Factorio clock generator: a React and Vite app for building a configuration, checking it and
 generating clocks as blueprints.
 
 It depends on the engine in `../clock-generator` through a `file:` dependency and imports it as
