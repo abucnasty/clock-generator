@@ -30,7 +30,7 @@ describe('the note on why no clock is stable', () => {
     it('says what the engine says of the recommended clock, from the clocks on screen', () => {
         const why = whyNotStableOf([view()], 0, false, []);
         expect(why?.cause).toBe('moving lane phases');
-        expect(why?.message).toContain('not when the lanes reach inserter 2 in another phase: from such a start it moves 880 of 1056 items over 6 periods.');
+        expect(why?.message).toContain('not when the lanes reach inserter 2 in another phase: from such a start it moves 880 of 1056 items over 6 window cycles.');
         expect(why?.message).toContain('answer Backed up for the belts and generate again');
         expect(WHY_NOT_STABLE_TITLE[why!.cause]).toBe('Why no clock is stable: moving lane phases');
         // the run's belts were backed up already
@@ -42,7 +42,7 @@ describe('the note on why no clock is stable', () => {
             ranking: { ...view().ranking, rate_off_target: -60 }, label: '2 output swings per cycle' });
         expect(whyNotStableOf([short], 0, false, [{ id: 'even-hands', label: 'Even hands', reason: 'even hands need a period of whole ticks, not 4.5' }])).toEqual({
             cause: 'nothing holds',
-            message: 'No clock holds the target rate of 240 a second. The closest, 2 output swings per cycle, moves 180 a second, 60 under the target. '
+            message: 'No clock holds the setpoint of 240 a second. The closest, 2 output swings per cycle, moves 180 a second, 60 under the target. '
                 + 'Not made: Even hands (even hands need a period of whole ticks, not 4.5).',
         });
     });

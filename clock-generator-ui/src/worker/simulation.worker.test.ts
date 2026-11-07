@@ -190,7 +190,7 @@ describe('repeated units: the real engine separates Check and generation recover
         { why: 'gives 4 copies of one unit', config: source, response: { type: 'answer', answer: { kind: 'available',
             plan: { copies: 4, candidate: { machines: [source.machines[0]], setpoint: { ...source.setpoint, copies: 4 } } } } } },
         { why: 'is refused at Check for a high target', config: excessive, response: { type: 'answer', answer: { kind: 'unavailable',
-            stage: 'check', repeatedGroups: 8, reason: { code: 'candidate-check-failed', message: expect.stringContaining("No clock can hold this build's target") } } } },
+            stage: 'check', repeatedGroups: 8, reason: { code: 'candidate-check-failed', message: expect.stringContaining("No clock can hold this build's setpoint") } } } },
         { why: 'is refused at the proof for lane drops', config: unsupported, response: { type: 'answer',
             answer: { kind: 'unavailable', stage: 'proof', repeatedGroups: 8, reason: { code: 'unsupported-boundary' } } } },
         // The engine uses untyped errors for an unknown recipe; the worker must not misdiagnose one as a proved candidate refusal.
@@ -205,10 +205,10 @@ describe('repeated units: the real engine separates Check and generation recover
     // a target no clock can hold is a refusal of the build: the engine's opening once and each problem in its own words
     it('Check hands over the opening and each problem when no clock can hold the target', async () => {
         const unheld: Config = { ...source, setpoint: { ...source.setpoint, items_per_second: 100, copies: 1 }, machines: [source.machines[0]], inserters: source.inserters.slice(0, 2) };
-        const noClock = expect.stringContaining("No clock can hold this build's target");
+        const noClock = expect.stringContaining("No clock can hold this build's setpoint");
         const response = await send({ type: 'validate', requestId: 9, config: unheld });
         expect(response).toMatchObject({ type: 'validation-failed', message: noClock,
-            diagnostics: [{ kind: 'refusal', opening: "No clock can hold this build's target:", problems: expect.any(Array) }] });
+            diagnostics: [{ kind: 'refusal', opening: "No clock can hold this build's setpoint:", problems: expect.any(Array) }] });
         const [refusal] = (response as { diagnostics: { opening: string; problems: string[] }[] }).diagnostics;
         expect(refusal.problems.length).toBeGreaterThan(0);
         expect((response as { message: string }).message).toBe(`${refusal.opening} ${refusal.problems.join(' ')}`);
@@ -366,7 +366,7 @@ describe('live advice on a gear assembler, which does not block', () => {
         { name: 'a lane the copies ask too much of', config: gears({ items_per_second: 75, copies: 100 }),
             field: 'laneSharedByCopies', source: 'lanes',
             warning: 'If the 100 copies share lane 1 of belt 1, they take 1.25 times what it carries (100 × 1.5 = 150 a second, of 120). '
-                + 'The config cannot say yet whether its copies share these lanes, so this is only a warning: a build whose copies have '
+                + 'The configuration cannot say yet whether its copies share these lanes, so this is only a warning: a build whose copies have '
                 + 'belts of their own is not affected.' },
     ] as const)('warns live of $name, and Check goes on', async ({ config, field, source, warning }) => {
         const live = await coverageOf(config);
@@ -439,7 +439,7 @@ it('says live whether the copies\' drops fit at the gap given, for the period es
         const grenade = JSON.parse(grenadeSample) as Config;
         return coverageOf({ ...grenade, setpoint: { ...grenade.setpoint, copy_offset } });
     };
-    const lead = "At about 112 ticks a period (estimated from the target rate: one output hand at the machine's rate), the hands of the 7 copies";
+    const lead = "At about 112 ticks a window cycle (estimated from the setpoint: one output hand at the machine's rate), the hands of the 7 copies";
     expect((await live({ x: 12, y: 0 })).dropRoom).toBe(`${lead} fit between each other on belt 1, if the inserters of a copy start together. `
         + 'They would also fit with the copies 16, 18, 20, 22 or 24 tiles apart, and at any of these plus 14. This assumes every copy drops onto the belt the way this one does.');
     expect((await live({ x: 13, y: 0 })).dropRoom).toBe(`${lead} land on each other on belt 1, if the inserters of a copy start together, and some of them wait for room. `

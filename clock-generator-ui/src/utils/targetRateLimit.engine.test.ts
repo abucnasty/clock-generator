@@ -11,7 +11,7 @@ FactorioDataService.initialize(JSON.parse(factorioData));
 /** The engine refuses a target above what the build can carry before any simulation, with this error */
 function expectNoClockCanHold(error: unknown): void {
     expect(error).toBeInstanceOf(FeasibilityError);
-    expect((error as Error).message).toMatch(/^No clock can hold this build's target/);
+    expect((error as Error).message).toMatch(/^No clock can hold this build's setpoint/);
 }
 
 function refusalOf(config: Config): unknown {
@@ -52,7 +52,7 @@ describe('target capacity agrees with actual engine validation', () => {
                 try { validateConfig(candidate); } catch (error) {
                     // the feasibility pass refuses a clear excess first; one a rounding error above the maximum is left to the exact check
                     if (rate === capacity + 0.001) expectNoClockCanHold(error);
-                    else expect(String(error)).toMatch(/No clock can hold this build's target|target production rate/);
+                    else expect(String(error)).toMatch(/No clock can hold this build's setpoint|cannot meet the setpoint/);
                     engineRejected = true;
                 }
                 expect(above).toBe(engineRejected);
