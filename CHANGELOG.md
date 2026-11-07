@@ -13,7 +13,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ### Added
 - generation: a new clock that enables some inserters for one tick at each swing
-- generation: a new clock, Coordinated signal system, gives each part of the build the enable windows that fit it
+- generation: a new clocking strategy, Coordinated signal system, gives each part enable windows that fit it
 
 ### Changed
 - generation: accumulator, processing unit, advanced circuit and nine other builds recommend clocks with fewer wakeups
