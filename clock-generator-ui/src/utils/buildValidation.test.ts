@@ -119,7 +119,7 @@ it('lists each problem of a refusal as its own blocking error, with no config pa
 });
 
 it('shows a refusal without an opening as the one problem it is', () => {
-    const message = 'The current configuration cannot meet the setpoint.';
+    const message = 'The current configuration cannot meet the setpoint. Total output capacity is 252.66 items/second, but the setpoint is 400 items/second.';
     const issues = buildValidationIssues({ ...none, failure: { message, diagnostics: [{ kind: 'refusal', problems: [message] }] } });
     expect(issues).toMatchObject([{ text: message, source: 'refusal', lead: undefined }]);
 });
