@@ -493,12 +493,13 @@ function badgeMeanings(alternatives: ClockAlternativeView[], index: number, pick
 }
 
 /** The (i) of a clock: its strategy's definition and practice, for Coordinated Sources what each source was given, then what each chip says */
-function StrategyHelp({ clock }: { clock: ClockAlternativeView }) {
+export function StrategyHelp({ clock }: { clock: ClockAlternativeView }) {
     const family = familyCopyOf(clock);
     const sources = sourceLinesOf(clock);
     const direct = directRouterOf(clock);
     return (
-        <>
+        // a source's address is one long word: it breaks at the popover's edge and does not run past it
+        <Box sx={{ overflowWrap: 'anywhere' }}>
             {family && <>
                 <Typography variant="body2" sx={{ mb: 0.75 }}>{family.definition}</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>{family.practice}</Typography>
@@ -510,6 +511,6 @@ function StrategyHelp({ clock }: { clock: ClockAlternativeView }) {
             {clockChipsOf(clock).map(chip => (
                 <Typography key={chip.id} variant="body2" sx={{ mb: 0.75 }}><strong>{chip.label}.</strong> {chip.line}</Typography>
             ))}
-        </>
+        </Box>
     );
 }
