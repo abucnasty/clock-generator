@@ -5,8 +5,8 @@ import { Entity } from "../../entities";
 import type { AlwaysOnReason, AlwaysOnReasons } from "../always-on-reasons";
 import type { SerializableClockWindows } from "../clock";
 import { sharedItemDeadlockRisks } from "../deadlock-risk";
-import { BlueprintGenerationResult, GenerateClockOptions, UnclockedRun, unclockedRun } from "../plan/unclocked-run";
-import { disturbanceTrialVerdictOf } from "../trial";
+import { BlueprintGenerationResult, completedClockCheck, GenerateClockOptions, UnclockedRun, unclockedRun } from "../plan/unclocked-run";
+import { type AsBuiltRun, disturbanceTrialVerdictOf } from "../trial";
 import type { DisturbanceTrialVerdict } from "../disturbance-trial";
 import { finishedClock, holdsWithMargin } from "./round-robin-polling";
 import { partKey, type CoordinatedSourcesInput, type CoordinatedSourcesPart } from "./coordinated-sources-parts";
@@ -142,12 +142,24 @@ export function sourceControlsOf(
     });
 }
 
-/** What a composed clock was found to do: its clock, whether it holds as built, its wakeups a minute */
+/**
+ * What a composed clock was found to do: its clock, whether it holds as built, its wakeups a minute. Its check is made up to the
+ * long run, which counts the wakeups; the other taker orders and the start phases, which only find that it does not hold, are
+ * made where the local choice reads whether it holds (`holdsOf`).
+ */
 interface Trial {
     /** The windows it was composed of */
     windows: SerializableClockWindows;
+    /** The windows as the check ran on them */
+    map: Map<string, OpenRange[]>;
+    /** The clock, with its check up to the long run; with the whole check once `holdsOf` has made it */
     result: BlueprintGenerationResult;
-    holds: boolean;
+    /** Whether it holds up to the long run */
+    holds_to_long_run: boolean;
+    /** The check up to the long run, which `holdsOf` finishes */
+    check_to_long_run: AsBuiltRun | undefined;
+    /** Whether it holds as built (its whole check); undefined until `holdsOf` asks */
+    holds?: boolean;
     wake_ups: number | null;
     loss?: DisturbanceTrialVerdict | null;
     /** Why it does not hold a tick either way (`holdsWithMargin`), or null where it does */
@@ -196,11 +208,25 @@ export function coordinatedSourcesClock(config: Config, input: CoordinatedSource
         const known = trials.get(key);
         if (known !== undefined) return known;
         const map = new Map(Object.entries(windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
-        const result = finishedClock(made, map, [], lean, left_open);
+        let check_to_long_run: AsBuiltRun | undefined;
+        const result = finishedClock(made, map, [], lean, left_open, undefined, { through: "long-run", on_as_built: run => { check_to_long_run = run; } });
         const as_built = result.stability_check.as_built;
-        const trial: Trial = { windows, result, holds: as_built?.holds === true, wake_ups: as_built?.wake_ups?.wake_ups_per_minute ?? null };
+        const trial: Trial = { windows, map, result, holds_to_long_run: as_built?.holds === true, check_to_long_run,
+            wake_ups: as_built?.wake_ups?.wake_ups_per_minute ?? null };
         trials.set(key, trial);
         return trial;
+    };
+    // the whole check of a composed clock, made once: the check run through gives the same (completedClockCheck)
+    const holdsOf = (trial: Trial): boolean => {
+        if (trial.holds === undefined) {
+            if (!trial.holds_to_long_run || trial.check_to_long_run === undefined) trial.holds = trial.holds_to_long_run;
+            else {
+                const check = completedClockCheck(made, trial.map, trial.check_to_long_run).check;
+                trial.result = { ...trial.result, stability_check: { ...trial.result.stability_check, holds: check.holds, as_built: check } };
+                trial.holds = check.holds;
+            }
+        }
+        return trial.holds;
     };
     const fits = (part: CoordinatedSourcesPart) => Number.isInteger(part.window_cycle_ticks) && Number.isInteger(shared_ticks / part.window_cycle_ticks)
         && (part === recommended || part.alternative_id === undefined || part.verdict === "stable");
@@ -268,7 +294,9 @@ export function coordinatedSourcesClock(config: Config, input: CoordinatedSource
         for (const group of choosing) {
             const at = current.get(group.source)!;
             const tried = group.choices.map((_, index) => ({ index, trial: trialOfChoice(new Map(current).set(group.source, index)) }));
-            const ranked = tried.filter(it => it.trial.holds && it.trial.wake_ups !== null)
+            // ranked by the check up to the long run; one that does not hold its whole check is passed over where its turn comes,
+            // so the clocks read are those that hold, in the same order, and no clock ranked after the one taken is checked further
+            const ranked = tried.filter(it => it.trial.holds_to_long_run && it.trial.wake_ups !== null)
                 .sort((a, b) => Math.round(a.trial.wake_ups! * 1000) - Math.round(b.trial.wake_ups! * 1000)
                     || (a.index === at ? -1 : b.index === at ? 1 : 0) || a.index - b.index);
             // the current choice stays where it ranks first; another is taken when it holds a tick either way and gets back from every
@@ -276,6 +304,7 @@ export function coordinatedSourcesClock(config: Config, input: CoordinatedSource
             let taken: number | undefined;
             let untried: number | undefined;
             for (const it of ranked) {
+                if (!holdsOf(it.trial)) continue;
                 if (it.index === at) { taken = at; break; }
                 if (marginOf(it.trial) !== null) continue;
                 const loss = deadlock_risk ? undefined : lossOf(it.trial);
