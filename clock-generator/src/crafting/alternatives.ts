@@ -1260,9 +1260,9 @@ function runTask(
 /** The id of the per-branch clock (DESIGN D7) */
 export const PER_BRANCH_ID = "per-branch";
 const PER_BRANCH_LABEL = "Coordinated parts";
-const PER_BRANCH_DESCRIPTION = "Each part of the build gets the enable windows of the clock that fits it, all on one shared window cycle. "
-    + "The inserters that take from one machine, belt or chest take their enable windows from one of the other clocks made for the "
-    + "build, chosen one group at a time from the output upstream by the wakeups of the whole clock, until no group changes.";
+const PER_BRANCH_DESCRIPTION = "Each part of the build uses the enable windows of the clock that fits it, on one shared window cycle. "
+    + "A part is the inserters that take from one machine, belt or chest. The generator sets the parts one at a time, from the output "
+    + "upstream. It keeps the setting with the smallest number of wakeups for the full clock, until no part changes.";
 
 /**
  * Makes the per-branch clock (candidates/per-branch.ts) from the parts of the runs before it and the clock they recommend
