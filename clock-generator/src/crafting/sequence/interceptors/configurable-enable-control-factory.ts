@@ -106,8 +106,8 @@ export class ConfigurableEnableControlFactory {
         entity_id: EntityId,
         override: Extract<EnableControlOverrideConfig, { mode: "CLOCKED" }>
     ): EnableControl {
-        const window_cycle_duration = override.period_duration_ticks !== undefined
-            ? Duration.ofTicks(override.period_duration_ticks)
+        const window_cycle_duration = override.window_cycle_ticks !== undefined
+            ? Duration.ofTicks(override.window_cycle_ticks)
             : this.output_cycle_plan.total_duration;
 
         // Validate and warn if ranges exceed cycle duration

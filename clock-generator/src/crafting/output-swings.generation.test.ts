@@ -167,7 +167,7 @@ describe("generateClockForConfig", () => {
                     enable_control: {
                         mode: "CLOCKED" as const,
                         ranges: windows[inserter.id!].map(([start, end]) => ({ start, end })),
-                        period_duration_ticks: 288,
+                        window_cycle_ticks: 288,
                     },
                 },
             })),

@@ -376,7 +376,7 @@ describe("parseConfig", () => {
                         "overrides": {
                             "enable_control": {
                                 "mode": "CLOCKED",
-                                "period_duration_ticks": 500,
+                                "window_cycle_ticks": 500,
                                 "ranges": [
                                     {
                                         "end": 100,
@@ -416,11 +416,11 @@ describe("parseConfig", () => {
                 expect(enableControl.ranges).toHaveLength(2);
                 expect(enableControl.ranges[0]).toEqual({ start: 0, end: 100 });
                 expect(enableControl.ranges[1]).toEqual({ start: 200, end: 300 });
-                expect(enableControl.period_duration_ticks).toBe(500);
+                expect(enableControl.window_cycle_ticks).toBe(500);
             }
         });
 
-        it("should parse inserter enable_control CLOCKED mode without optional period_duration_ticks", async () => {
+        it("should parse inserter enable_control CLOCKED mode without optional window_cycle_ticks", async () => {
             const json = `{
                 "belts": [],
                 "inserters": [
@@ -461,7 +461,7 @@ describe("parseConfig", () => {
             expect(enableControl?.mode).toBe("CLOCKED");
             if (enableControl?.mode === "CLOCKED") {
                 expect(enableControl.ranges).toHaveLength(1);
-                expect(enableControl.period_duration_ticks).toBeUndefined();
+                expect(enableControl.window_cycle_ticks).toBeUndefined();
             }
         });
 

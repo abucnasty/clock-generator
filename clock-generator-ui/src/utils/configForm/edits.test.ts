@@ -155,7 +155,7 @@ describe('inserters', () => {
     });
 
     it('keeps the uuid, rule and forced flag on an inserter it renumbers', () => {
-        const rule: EnableControlOverride = { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }], period_duration_ticks: 60 };
+        const rule: EnableControlOverride = { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }], window_cycle_ticks: 60 };
         const config = edits.removeInserter(form({ 2: { overrides: { enable_control: rule }, _forced_always: true } }), 0);
         expect(ids(config.inserters)).toEqual([1, 2]);
         expect(config.inserters.map((ins) => ins._uuid)).toEqual(['inserter-2', 'inserter-3']);
@@ -334,7 +334,7 @@ describe('overrides', () => {
     });
 
     it.each<EnableControlOverride>([
-        { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }], period_duration_ticks: 60 },
+        { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }], window_cycle_ticks: 60 },
         { mode: 'CONDITIONAL', rule_set: { operator: 'AND', rules: [] } },
         { mode: 'NEVER' },
         { mode: 'ALWAYS' },

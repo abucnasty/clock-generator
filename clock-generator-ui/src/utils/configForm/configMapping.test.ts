@@ -21,7 +21,7 @@ const imported = {
             sink: { type: 'machine', id: 2 },
             stack_size: 16,
             filters: ['iron-plate'],
-            overrides: { enable_control: { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }], period_duration_ticks: 60 } },
+            overrides: { enable_control: { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }], window_cycle_ticks: 60 } },
         },
     ],
     belts: [
@@ -96,7 +96,7 @@ describe('configToFormData', () => {
         const form = configToFormData(imported);
         expect(form.inserters[1].overrides).toEqual({
             animation: undefined,
-            enable_control: { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }], period_duration_ticks: 60 },
+            enable_control: { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }], window_cycle_ticks: 60 },
         });
         expect(form.drills!.configs[0].overrides).toEqual({ enable_control: { mode: 'NEVER' } });
     });

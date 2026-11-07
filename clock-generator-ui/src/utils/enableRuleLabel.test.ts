@@ -12,7 +12,7 @@ import { CONDITIONAL_CHIP_MAX_CHARS, ENABLE_CHIP_MAX_CHARS, describeEnableRule, 
 const clocked = (ranges: [number, number][], window_cycle_ticks?: number): EnableControlOverride => ({
     mode: EnableControlMode.CLOCKED,
     ranges: ranges.map(([start, end]) => ({ start, end })),
-    ...(window_cycle_ticks === undefined ? {} : { period_duration_ticks: window_cycle_ticks }),
+    ...(window_cycle_ticks === undefined ? {} : { window_cycle_ticks: window_cycle_ticks }),
 });
 
 const condition = (): Condition => ({

@@ -404,7 +404,7 @@ You can override the automatic enable control logic for individual inserters and
 
 #### Inserter Override Example
 
-Both overrides are optional; `period_duration_ticks` defaults to the crafting cycle duration.
+Both overrides are optional; `window_cycle_ticks` defaults to the output cycle duration.
 
 ```json
 {
@@ -419,7 +419,7 @@ Both overrides are optional; `period_duration_ticks` defaults to the crafting cy
         { "start": 0, "end": 100 },
         { "start": 200, "end": 300 }
       ],
-      "period_duration_ticks": 500
+      "window_cycle_ticks": 500
     }
   }
 }
@@ -454,7 +454,7 @@ Both overrides are optional; `period_duration_ticks` defaults to the crafting cy
 **CLOCKED**: The entity is enabled only during specified tick ranges within the window cycle. Each range has:
 - `start`: The tick when the entity becomes enabled (inclusive)
 - `end`: The tick when the entity becomes disabled (inclusive)
-- `period_duration_ticks` (optional): The window cycle time in ticks. If not specified, uses the output cycle duration.
+- `window_cycle_ticks` (optional): The window cycle time in ticks. If not specified, uses the output cycle duration.
 
 For a moving belt input, set `pickup_length` on the inserter's `source`: `1` for the exposed line on a straight
 belt or `0.5` at either underground endpoint. Sidecar 0.9.0 exports this automatically for inserters beside those

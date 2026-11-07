@@ -145,8 +145,8 @@ export function ruleSentenceOf(override: EnableControlOverride | undefined, ctx:
             return RULE_COPY.never;
         case EnableControlMode.CLOCKED: {
             const clocked = override as Extract<EnableControlOverride, { mode: 'CLOCKED' }>;
-            const every = clocked.period_duration_ticks !== undefined
-                ? `${clocked.period_duration_ticks} ticks`
+            const every = clocked.window_cycle_ticks !== undefined
+                ? `${clocked.window_cycle_ticks} ticks`
                 : ctx.cycleTicks !== null
                     ? `output cycle (${ticksText(ctx.cycleTicks)} ticks)`
                     : 'output cycle';

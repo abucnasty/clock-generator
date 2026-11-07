@@ -2298,7 +2298,7 @@ function isPurelyClocked(config: Config, window_cycle_ticks: number): boolean {
 function isClockedThroughout(config: Config, window_cycle_ticks: number): boolean {
     const fixed = (control: EnableControlOverrideConfig | undefined) => control !== undefined && (
         control.mode === "ALWAYS" || control.mode === "NEVER"
-        || (control.mode === "CLOCKED" && control.period_duration_ticks === window_cycle_ticks)
+        || (control.mode === "CLOCKED" && control.window_cycle_ticks === window_cycle_ticks)
     );
     return config.inserters.every(inserter => fixed(inserter.overrides?.enable_control))
         && (config.drills?.configs ?? []).every(drill => fixed(drill.overrides?.enable_control));
@@ -2322,10 +2322,10 @@ export function provenRepeatBin(config: Config, window_cycle_ticks: number): { t
         if (control.mode === "ALWAYS" || control.mode === "NEVER") {
             return true;
         }
-        if (control.mode !== "CLOCKED" || control.period_duration_ticks === undefined) {
+        if (control.mode !== "CLOCKED" || control.window_cycle_ticks === undefined) {
             return false;
         }
-        moduli.add(control.period_duration_ticks);
+        moduli.add(control.window_cycle_ticks);
         return true;
     };
     if (!config.inserters.every(inserter => fixed(inserter.overrides?.enable_control))

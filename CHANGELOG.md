@@ -27,6 +27,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - generation: the processing unit circuit export build's clock now wakes inserters about a quarter less
 - ui: clocks are named for the practice they follow, and the table shows signals a minute
 - generation: logistic science, chemical science, electric furnace and three other builds recommend clocks with fewer wakeups
+- ui: period_duration_ticks is now window_cycle_ticks; files and links with the old name still load
 
 ### Fixed
 - ui: an unexpected error in the check now says the generator failed, not your build

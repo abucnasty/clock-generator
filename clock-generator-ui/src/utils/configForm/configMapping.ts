@@ -18,7 +18,7 @@ import type {
 function mapEnableControlOverride(ec: {
     mode: string;
     ranges?: { start: number; end: number }[];
-    period_duration_ticks?: number;
+    window_cycle_ticks?: number;
     rule_set?: RuleSet;
     latch?: LatchConfig;
 }): EnableControlOverride {
@@ -33,7 +33,7 @@ function mapEnableControlOverride(ec: {
             return {
                 mode: 'CLOCKED',
                 ranges: ec.ranges?.map(r => ({ start: r.start, end: r.end })) ?? [],
-                period_duration_ticks: ec.period_duration_ticks,
+                window_cycle_ticks: ec.window_cycle_ticks,
             };
         case 'CONDITIONAL':
             return {

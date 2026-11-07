@@ -72,7 +72,7 @@ after the engine reads the file: a field with a default is required, but a confi
 | `drills.configs[].overrides.enable_control{mode=CLOCKED}.ranges` | array (at least 1) of objects | yes | The enable windows of the entity, as tick ranges of the window cycle. |
 | `drills.configs[].overrides.enable_control{mode=CLOCKED}.ranges[].start` | integer ≥ 0 | yes | The tick of the window cycle at which the enable window starts. |
 | `drills.configs[].overrides.enable_control{mode=CLOCKED}.ranges[].end` | integer > 0 | yes | The tick of the window cycle at which the enable window ends. |
-| `drills.configs[].overrides.enable_control{mode=CLOCKED}.period_duration_ticks` | integer > 0 | no | The window cycle time of these enable windows, in ticks; the default is the time of the planned output cycles. |
+| `drills.configs[].overrides.enable_control{mode=CLOCKED}.window_cycle_ticks` | integer > 0 | no | The window cycle time of these enable windows, in ticks; the default is the time of the planned output cycles. |
 | `drills.configs[].overrides.enable_control{mode=CLOCKED}.decider_build_order` | integer ≥ 0 | no | The position, from 0, of the decider combinator for these enable windows in the order of the clock's blueprint. |
 | `drills.configs[].overrides.enable_control{mode=CLOCKED}.latency_ticks` | integer ≥ 0 | no | The circuit latency of these enable windows, in ticks. |
 | `drills.configs[].overrides.enable_control{mode=CONDITIONAL}.rule_set` | object | yes | The rule set that enables the entity when it is true. |
@@ -165,7 +165,7 @@ after the engine reads the file: a field with a default is required, but a confi
 | `inserters[].overrides.enable_control{mode=CLOCKED}.ranges` | array (at least 1) of objects | yes | The enable windows of the entity, as tick ranges of the window cycle. |
 | `inserters[].overrides.enable_control{mode=CLOCKED}.ranges[].start` | integer ≥ 0 | yes | The tick of the window cycle at which the enable window starts. |
 | `inserters[].overrides.enable_control{mode=CLOCKED}.ranges[].end` | integer > 0 | yes | The tick of the window cycle at which the enable window ends. |
-| `inserters[].overrides.enable_control{mode=CLOCKED}.period_duration_ticks` | integer > 0 | no | The window cycle time of these enable windows, in ticks; the default is the time of the planned output cycles. |
+| `inserters[].overrides.enable_control{mode=CLOCKED}.window_cycle_ticks` | integer > 0 | no | The window cycle time of these enable windows, in ticks; the default is the time of the planned output cycles. |
 | `inserters[].overrides.enable_control{mode=CLOCKED}.decider_build_order` | integer ≥ 0 | no | The position, from 0, of the decider combinator for these enable windows in the order of the clock's blueprint. |
 | `inserters[].overrides.enable_control{mode=CLOCKED}.latency_ticks` | integer ≥ 0 | no | The circuit latency of these enable windows, in ticks. |
 | `inserters[].overrides.enable_control{mode=CONDITIONAL}.rule_set` | the same as `drills.configs[].overrides.enable_control{mode=CONDITIONAL}.rule_set` | yes | The rule set that enables the entity when it is true. |

@@ -104,7 +104,7 @@ describe('the windows of a drill into a chest', () => {
     });
 
     it('are the ranges of a CLOCKED drill, repeated with its own period', () => {
-        const config = build({ drill_overrides: { enable_control: { mode: 'CLOCKED', ranges: [{ start: 3, end: 4 }], period_duration_ticks: 36 } } });
+        const config = build({ drill_overrides: { enable_control: { mode: 'CLOCKED', ranges: [{ start: 3, end: 4 }], window_cycle_ticks: 36 } } });
         expect(pairs(chestDrillWindows(config, windowsOf(CAR_WINDOWS), 72).windows.get('drill:1'))).toEqual([[3, 4], [39, 40]]);
         expect(hasPlannedChestDrill(config)).toBe(false);
     });

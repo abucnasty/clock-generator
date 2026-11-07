@@ -50,6 +50,7 @@ export { migrateBeltSupplyOverrides } from "./config/migrate-belt-supply";
 export { dropFractionalSwingsOverride } from "./config/migrate-fractional-swings";
 export { renameLoopSeedItemsToKickStart } from "./config/migrate-kick-start";
 export { renameTargetOutputToSetpoint } from "./config/migrate-setpoint";
+export { renameClockedPeriodInConfig } from "./config/migrate-window-cycle";
 export { BLOCKED_SLOT_MARKERS } from "./config/migrate-blocked-slots";
 export { migrateMiningProductivityLevel, PRODUCTIVITY_PER_MINING_LEVEL } from "./config/migrate-mining-productivity";
 

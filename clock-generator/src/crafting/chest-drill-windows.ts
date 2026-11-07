@@ -144,7 +144,7 @@ function chestDrillsOf(config: Config): ChestDrillConfig[] {
                 plan, mode,
                 extra_ticks: drill_config.overrides?.extra_window_ticks ?? 0,
                 clocked: control?.mode === EnableControlMode.CLOCKED
-                    ? { ranges: control.ranges.map(range => OpenRange.from(range.start, range.end)), window_cycle_ticks: control.period_duration_ticks }
+                    ? { ranges: control.ranges.map(range => OpenRange.from(range.start, range.end)), window_cycle_ticks: control.window_cycle_ticks }
                     : undefined,
             };
         });

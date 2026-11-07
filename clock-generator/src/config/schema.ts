@@ -17,6 +17,7 @@ import { migrateBeltSupplyOverrides } from "./migrate-belt-supply";
 import { dropFractionalSwingsOverride } from "./migrate-fractional-swings";
 import { renameLoopSeedItemsToKickStart } from "./migrate-kick-start";
 import { renameTargetOutputToSetpoint } from "./migrate-setpoint";
+import { renameClockedPeriodToWindowCycle } from "./migrate-window-cycle";
 import { migrateBlockedSlotFilter } from "./migrate-blocked-slots";
 import { migrateMiningProductivityLevelStep } from "./migrate-mining-productivity";
 import { migrateMachineTypeStep } from "./migrate-machine-type";
@@ -194,7 +195,7 @@ const EnableControlOverrideNeverSchema = z.object({
 const EnableControlOverrideClockedSchema = z.object({
     mode: z.literal(EnableControlMode.CLOCKED).describe("CLOCKED: the entity is enabled during the enable windows that you give."),
     ranges: z.array(EnableControlRangeSchema).min(1).describe("The enable windows of the entity, as tick ranges of the window cycle."),
-    period_duration_ticks: z.number().int().positive().optional().describe("The window cycle time of these enable windows, in ticks; the default is the time of the planned output cycles."),
+    window_cycle_ticks: z.number().int().positive().optional().describe("The window cycle time of these enable windows, in ticks; the default is the time of the planned output cycles."),
     /**
      * Where the decider of these windows stands in the order the clock's deciders are built, 0 the first: set by the
      * check of an exported clock, which builds them in the order of its blueprint. Of two inserters whose windows open
@@ -333,13 +334,13 @@ const EnableControlOverrideConditionalSchema = z.object({
 
 export type EnableControlOverrideConditional = z.infer<typeof EnableControlOverrideConditionalSchema>;
 
-export const EnableControlOverrideConfigSchema = z.discriminatedUnion("mode", [
+export const EnableControlOverrideConfigSchema = z.preprocess(renameClockedPeriodToWindowCycle, z.discriminatedUnion("mode", [
     EnableControlOverrideAutoSchema,
     EnableControlOverrideAlwaysSchema,
     EnableControlOverrideNeverSchema,
     EnableControlOverrideClockedSchema,
     EnableControlOverrideConditionalSchema
-]);
+]));
 
 export type EnableControlOverrideConfig = z.infer<typeof EnableControlOverrideConfigSchema>;
 

@@ -107,7 +107,7 @@ describe('the config of a drill into a chest', () => {
     });
 
     it('takes AUTO, CLOCKED and ALWAYS as its enable control', () => {
-        for (const enable_control of [{ mode: 'AUTO' }, { mode: 'ALWAYS' }, { mode: 'CLOCKED', ranges: [{ start: 1, end: 2 }], period_duration_ticks: 72 }]) {
+        for (const enable_control of [{ mode: 'AUTO' }, { mode: 'ALWAYS' }, { mode: 'CLOCKED', ranges: [{ start: 1, end: 2 }], window_cycle_ticks: 72 }]) {
             expect(parse({ type: 'chest', id: 1 }, { enable_control }).success, enable_control.mode).toBe(true);
         }
         expect(parse({ type: 'chest', id: 1 }, { extra_window_ticks: 1 }).success).toBe(true);
