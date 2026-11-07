@@ -244,7 +244,7 @@ function handleValidate(requestId: number, config: Config): void {
                     // a build no clock can hold: its opening once, and each problem the engine found on its own
                     : error instanceof clockGenerator.FeasibilityError
                         ? [{ kind: 'refusal' as const, opening: error.opening, problems: error.problems }]
-                        : error instanceof Error && error.message.startsWith('The current configuration cannot meet the target production rate.')
+                        : error instanceof Error && error.message.startsWith('The current configuration cannot meet the setpoint.')
                             ? [{ kind: 'refusal' as const, problems: [error.message] }]
                             : undefined,
         });

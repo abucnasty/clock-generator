@@ -119,7 +119,7 @@ it('lists each problem of a refusal as its own blocking error, with no config pa
 });
 
 it('shows a refusal without an opening as the one problem it is', () => {
-    const message = 'The current configuration cannot meet the target production rate. Total output capacity is 5 items/second, but target production rate is 6 items/second.';
+    const message = 'The current configuration cannot meet the setpoint.';
     const issues = buildValidationIssues({ ...none, failure: { message, diagnostics: [{ kind: 'refusal', problems: [message] }] } });
     expect(issues).toMatchObject([{ text: message, source: 'refusal', lead: undefined }]);
 });

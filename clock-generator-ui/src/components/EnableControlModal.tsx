@@ -700,12 +700,12 @@ function EnableControlModalContent({
                 maxWidth={isFullscreen ? false : 'md'}
                 fullWidth
                 fullScreen={isFullscreen}
-                // named by the heading and the entity, not by the title bar with its buttons: "Enable rule Inserter 1"
+                // named by the heading and the entity, not by the title bar with its buttons: "Enable control override Inserter 1"
                 aria-labelledby="enable-control-title enable-control-entity"
             >
                 <DialogTitle component="div" id="enable-control-bar" sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Box>
-                        <Typography variant="h6" component="h2" id="enable-control-title">Enable rule</Typography>
+                        <Typography variant="h6" component="h2" id="enable-control-title">Enable control override</Typography>
                         <Typography variant="body2" color="text.secondary" id="enable-control-entity">{entityLabel}</Typography>
                     </Box>
                     <Box sx={{ display: 'flex', flexShrink: 0 }}>

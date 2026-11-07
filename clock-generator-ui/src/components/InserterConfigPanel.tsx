@@ -143,7 +143,7 @@ export function InserterConfigPanel({
     // one update with what changed; the overrides only when the rule did, so an untouched rule (a forced ALWAYS
     // included) stays as it is
     const handleSave = () => {
-        // a rule with problems is not saved: the Enable rule tab shows, its first problem takes the focus, and the bar
+        // a rule with problems is not saved: the Enable control override tab shows, its first problem takes the focus, and the bar
         // and the polite region say why
         if (rule.problems.length > 0) {
             flushSync(() => {
@@ -177,7 +177,7 @@ export function InserterConfigPanel({
                     aria-controls={`${id}-tabpanel-0`}
                 />
                 <Tab
-                    label={<TabLabel text="Enable rule" unsaved={rule.changed} />}
+                    label={<TabLabel text="Enable control override" unsaved={rule.changed} />}
                     id={`${id}-tab-1`}
                     aria-controls={`${id}-tabpanel-1`}
                     iconPosition="end"

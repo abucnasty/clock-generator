@@ -1,13 +1,12 @@
-import { formatNumberText } from './numberText';
 import type { TargetCounts } from './targetCounts';
 
-/** The engine's message when the machines cannot make the target rate (`unclocked-run.ts`), with its two numbers */
-const CANNOT_MEET_RATE = /The current configuration cannot meet the target production rate\. Total output capacity is ([-\d.eE+]+) items\/second, but target production rate is ([-\d.eE+]+) items\/second\./;
+/** The engine's message when the machines cannot make the setpoint (`unclocked-run.ts`) */
+const CANNOT_MEET_RATE = /The current configuration cannot meet the setpoint\./;
 
 /** What the page says instead of the engine's words, with what to do next */
 const CHECK_ERROR_COPY = {
-    cannotMeetRate: (capacity: string, target: string, counts: TargetCounts) =>
-        `The build's machines can ${counts === 'destroyed' ? 'destroy' : 'make'} at most ${capacity}/s, but the setpoint is ${target}/s. Lower the setpoint, `
+    cannotMeetRate: (counts: TargetCounts) =>
+        `The build's machines cannot ${counts === 'destroyed' ? 'destroy' : 'make'} the setpoint. Lower the setpoint, `
         + 'raise Copies, or add machines or crafting speed (modules, beacons or a faster machine).',
 };
 
@@ -17,6 +16,5 @@ const CHECK_ERROR_COPY = {
  */
 export function checkErrorText(message: string, counts: TargetCounts = 'made'): string {
     // replaced where it stands, should the message ever come with something around it
-    return message.replace(CANNOT_MEET_RATE, (_, capacity: string, target: string) =>
-        CHECK_ERROR_COPY.cannotMeetRate(formatNumberText(Number(capacity)), formatNumberText(Number(target)), counts));
+    return message.replace(CANNOT_MEET_RATE, () => CHECK_ERROR_COPY.cannotMeetRate(counts));
 }
