@@ -162,7 +162,7 @@ describe('the most a recycler destroys agrees with the engine\'s check of the or
         // another rate of the same build: the maximum stands, the words wait for the engine
         const waiting = rateMaxOf(machines, { max: targetRateMaxOf(above), current: false })!;
         expect(targetRateLineOf({ itemsPerSecond: 600, copies: 1, max: waiting, counts: 'destroyed' }))
-            .toBe('At most 480/s. Lower the rate or raise Copies. Describe one unit in the build.');
+            .toBe('At most 480/s. Lower the rate or raise Copies. Describe only one copy of the build.');
     });
 
     it('is the machines\' where they are what stops the target', () => {
