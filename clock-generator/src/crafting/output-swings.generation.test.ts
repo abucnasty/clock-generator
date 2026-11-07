@@ -206,7 +206,7 @@ describe("generateClockForConfig", () => {
             it("says how much time the machine has to spare", () => {
                 expect(insight("planned-belt-slack", "spare-time")).toMatchObject({
                     scope: "build",
-                    title: "Machine 1 (flying-robot-frame) has 9 ticks to spare each clock period",
+                    title: "Machine 1 (flying-robot-frame) has 9 ticks to spare each window cycle",
                     table: { rows: [["Machine 1 (flying-robot-frame)", "279", "9", "17.4"]] },
                 });
             });
@@ -239,7 +239,7 @@ describe("generateClockForConfig", () => {
                 const ids = insightsOf("swings-2").map(it => it.id);
                 expect(ids).toContain("unstable");
                 expect(ids).not.toContain("spare-time");
-                expect(insight("swings-2", "unstable")?.what).toContain("moved 16 of 32 items in a clock period");
+                expect(insight("swings-2", "unstable")?.what).toContain("moved 16 of 32 items in a window cycle");
                 expect(insight("swings-2", "insertion-limits")?.table?.rows).toHaveLength(4);
             });
         });

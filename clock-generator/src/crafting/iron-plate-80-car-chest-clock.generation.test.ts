@@ -54,7 +54,7 @@ describe("the car paste at 80.78/s", () => {
         const five = paste.alternatives.find(alternative => alternative.maker === "swings-5")!;
         expect(disturbanceTrialVerdictOf(paste_config, five.result, quiet)).toEqual({
             disturbance_trial: null,
-            disturbance_trial_not_tried: "A clock of 356.524 ticks does not repeat in whole ticks, so its output cannot be counted by the period",
+            disturbance_trial_not_tried: "A clock of 356.524 ticks does not repeat in whole ticks, so its output cannot be counted by the window cycle",
         });
         const selected = paste.alternatives[paste.selected_index];
         expect(selected.assessment.items_per_second).toBeCloseTo(80.78, 6);

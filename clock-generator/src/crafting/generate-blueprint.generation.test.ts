@@ -81,9 +81,9 @@ describe("generateClockForConfig", () => {
         it("names every clock a backed-up belt clock on its clock of 90.947 ticks, the subtick one and the rounded one, and counts none as having left the slack out", () => {
             expect(alternatives.length).toBeGreaterThan(0);
             expect(alternatives.map(a => a.belt)).toEqual(alternatives.map(() => ({ kind: "backed_up" })));
-            expect(alternatives.some(a => a.id.endsWith("-subtick"))).toBe(true);
+            expect(alternatives.some(a => a.id.endsWith("_subtick"))).toBe(true);
             expect(alternatives.every(a => a.ranking.matches_belt_choice)).toBe(true);
-            expect(alternatives[0].description).toContain("The slack is not given to a clock whose period is not a whole number of ticks");
+            expect(alternatives[0].description).toContain("The belt slack is not given to a clock whose window cycle time is not a whole number of ticks");
         });
     });
 
