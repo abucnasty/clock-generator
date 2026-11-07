@@ -1,5 +1,5 @@
-import { ClockPeriodLimitError, type SwingPeriodRejection } from "./plan/clock-period-limit";
-import { wholeSwingPeriodsBelow } from "./whole-swing-periods";
+import { ClockWindowCycleLimitError, type SwingWindowCycleRejection } from "./plan/clock-window-cycle-limit";
+import { wholeSwingWindowCyclesBelow } from "./whole-swing-window-cycles";
 import { Config } from "../config";
 import { defaultLogger } from "../common/logger";
 import { roundRobinPollingClock } from "./candidates/round-robin-polling";
@@ -26,7 +26,7 @@ export function terminalCountForAlternativePlanning(result: Pick<BlueprintGenera
     if (result.primitive_round_robin_polling !== undefined) return result.primitive_round_robin_polling.terminal_swing_count;
     if (result.secondary_planning !== undefined) return result.secondary_planning.terminal_swing_count;
     const report = result.swing_backoff_report;
-    return report?.period_limit_pruning === undefined ? result.used_terminal_swing_count
+    return report?.window_cycle_limit_pruning === undefined ? result.used_terminal_swing_count
         : report.stable_terminal_swing_count ?? report.initial_terminal_swing_count;
 }
 
@@ -97,7 +97,7 @@ function arithmeticWindowsOf(plan: UnclockedRun): Map<string, OpenRange[]> | nul
     const { run } = plan;
     try {
         const { windows } = batchedSwingsWindowsByArithmetic({ entity_registry: run.simulation_context.entity_registry,
-            output_cycle_plan: run.output_cycle_plan, period_ticks: run.duration.ticks, recipe_lcm: run.recipe_lcm,
+            output_cycle_plan: run.output_cycle_plan, window_cycle_ticks: run.duration.ticks, recipe_lcm: run.recipe_lcm,
             always_enabled_by_config: run.always_enabled_by_config });
         if (sameWindows(windows, plan.unslacked_windows)) {
             plan.logger.log("Windows by arithmetic: the planning run's own");
@@ -355,12 +355,12 @@ export function generateClockWithSwingBackoff(
     const logger = options.logger ?? defaultLogger;
 
     const swing_count_forced = config.overrides?.terminal_swing_count !== undefined;
-    const can_prune_periods = !swing_count_forced && options.fractional_swings !== true
+    const can_prune_window_cycles = !swing_count_forced && options.fractional_swings !== true
         && config.setpoint.counts !== "destroyed";
-    const period_rejections: SwingPeriodRejection[] = [];
+    const window_cycle_rejections: SwingWindowCycleRejection[] = [];
     let requested_initial_count: number | undefined;
-    let first_period_refusal: ClockPeriodLimitError | undefined;
-    let period_frontier: Generator<SwingPeriodRejection> | undefined;
+    let first_window_cycle_refusal: ClockWindowCycleLimitError | undefined;
+    let window_cycle_frontier: Generator<SwingWindowCycleRejection> | undefined;
     let generated_count: number | undefined;
     let primitive_attempt: PrimitiveRoundRobinPollingAttemptReport | undefined;
     const can_lower_refused_fractions = !swing_count_forced && options.fractional_swings === true;
@@ -368,14 +368,14 @@ export function generateClockWithSwingBackoff(
     const withCount = (count: number): Config => ({ ...config, overrides: { ...config.overrides, terminal_swing_count: count } });
     const generateWithinBudget = (candidate: Config): BlueprintGenerationResult | null => {
         let attempted = candidate;
-        if (period_frontier !== undefined) {
+        if (window_cycle_frontier !== undefined) {
             const ceiling = candidate.overrides?.terminal_swing_count ?? Infinity;
             let eligible: number | undefined;
-            for (let next = period_frontier.next(); !next.done; next = period_frontier.next()) {
-                const period = next.value;
-                if (period.terminal_swing_count > ceiling) continue;
-                if (period.period_ticks >= period.limit_ticks) period_rejections.push(period);
-                else { eligible = period.terminal_swing_count; break; }
+            for (let next = window_cycle_frontier.next(); !next.done; next = window_cycle_frontier.next()) {
+                const window_cycle = next.value;
+                if (window_cycle.terminal_swing_count > ceiling) continue;
+                if (window_cycle.window_cycle_ticks >= window_cycle.limit_ticks) window_cycle_rejections.push(window_cycle);
+                else { eligible = window_cycle.terminal_swing_count; break; }
             }
             if (eligible === undefined) return null;
             attempted = withCount(eligible);
@@ -392,13 +392,13 @@ export function generateClockWithSwingBackoff(
                 const below = Math.ceil(refused.getNumerator / refused.getDenominator) - 1;
                 return below < 1 ? null : generateWithinBudget(withCount(below));
             }
-            if (!can_prune_periods || !(error instanceof ClockPeriodLimitError) || error.arithmetic === undefined) throw error;
-            const initial_refusal = first_period_refusal === undefined && attempted === config;
-            first_period_refusal ??= error;
+            if (!can_prune_window_cycles || !(error instanceof ClockWindowCycleLimitError) || error.arithmetic === undefined) throw error;
+            const initial_refusal = first_window_cycle_refusal === undefined && attempted === config;
+            first_window_cycle_refusal ??= error;
             requested_initial_count ??= error.rejection.terminal_swing_count;
-            period_rejections.push({ ...error.rejection });
+            window_cycle_rejections.push({ ...error.rejection });
             const below = Math.min(error.arithmetic.terminal_swing_count, attempted.overrides?.terminal_swing_count ?? Infinity);
-            period_frontier = wholeSwingPeriodsBelow({ ...error.arithmetic, terminal_swing_count: below }, error.rejection.limit_ticks);
+            window_cycle_frontier = wholeSwingWindowCyclesBelow({ ...error.arithmetic, terminal_swing_count: below }, error.rejection.limit_ticks);
             if (initial_refusal && generate === generateClockForConfig && primitiveRoundRobinPollingOptionsSupported(config, options)) {
                 const primitive = verifiedPrimitiveRoundRobinPollingClock(config, options, error.rejection.terminal_swing_count);
                 primitive_attempt = primitive.report;
@@ -411,15 +411,15 @@ export function generateClockWithSwingBackoff(
         }
     };
     const pruningReport = () => ({ ...(primitive_attempt === undefined ? {} : { primitive_grouped_attempt: primitive_attempt }),
-        ...(period_rejections.length === 0 ? {} : { period_limit_pruning: {
-        requested_terminal_swing_count: requested_initial_count!, rejections: period_rejections,
+        ...(window_cycle_rejections.length === 0 ? {} : { window_cycle_limit_pruning: {
+        requested_terminal_swing_count: requested_initial_count!, rejections: window_cycle_rejections,
     } }) });
     const initial_result = generateWithinBudget(config);
-    if (initial_result === null) throw first_period_refusal ?? first_fractional_refusal!;
+    if (initial_result === null) throw first_window_cycle_refusal ?? first_fractional_refusal!;
     if (first_fractional_refusal !== undefined && !initial_result.output_cycle_plan.fractional_swings_enabled) {
         throw fractionalSwingsWholeAt(first_fractional_refusal, initial_result.used_terminal_swing_count);
     }
-    const initial_swing_count = period_frontier !== undefined && generated_count !== undefined
+    const initial_swing_count = window_cycle_frontier !== undefined && generated_count !== undefined
         ? generated_count : initial_result.used_terminal_swing_count;
     requested_initial_count ??= initial_swing_count;
 
@@ -477,7 +477,7 @@ export function generateClockWithSwingBackoff(
         logger.log(`Attempting terminal_swing_count=${swings}...`);
         const attempt_result = generateWithinBudget(withCount(swings));
         if (attempt_result === null) break;
-        if ((period_frontier !== undefined || first_fractional_refusal !== undefined) && generated_count !== undefined) swings = generated_count;
+        if ((window_cycle_frontier !== undefined || first_fractional_refusal !== undefined) && generated_count !== undefined) swings = generated_count;
 
         attempts.push({
             terminal_swing_count: swings,

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Config } from "../config";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
-import { DROP_ROOM_NOT_ESTIMATED, dropRoomNote, estimatedPeriod } from "./drop-room-note";
+import { DROP_ROOM_NOT_ESTIMATED, dropRoomNote, estimatedWindowCycle } from "./drop-room-note";
 
 const grenade = async (change?: (config: Config) => void): Promise<Config> => {
     const config = structuredClone(await loadConfigFromFile(ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY));
@@ -14,18 +14,18 @@ const LEAD = "At about 112 ticks a period (estimated from the target rate: one o
 
 describe("the period estimated from the settings", () => {
     it("is the ticks one output hand takes at the target rate: 16 grenades at 240 a second over 7 copies of 4 machines", async () => {
-        expect(estimatedPeriod(await grenade())).toBe(112);
+        expect(estimatedWindowCycle(await grenade())).toBe(112);
     });
 
     it("is multiplied by the cycles the config sets, and taken down to whole ticks", async () => {
-        expect(estimatedPeriod(await grenade(it => { it.overrides = { ...it.overrides, lcm: 3 }; }))).toBe(336);
+        expect(estimatedWindowCycle(await grenade(it => { it.overrides = { ...it.overrides, lcm: 3 }; }))).toBe(336);
         // 16 / (239 / 28) = 112.33 ticks
-        expect(estimatedPeriod(await grenade(it => { it.setpoint.items_per_second = 239; }))).toBe(112);
+        expect(estimatedWindowCycle(await grenade(it => { it.setpoint.items_per_second = 239; }))).toBe(112);
     });
 
     it("is none when an output machine has two inserters taking its product out, or the settings are refused", async () => {
-        expect(estimatedPeriod(await grenade(it => { it.inserters.push({ ...structuredClone(it.inserters[0]), id: 9 }); }))).toBeNull();
-        expect(estimatedPeriod(await grenade(it => { it.setpoint.items_per_second = 0; }))).toBeNull();
+        expect(estimatedWindowCycle(await grenade(it => { it.inserters.push({ ...structuredClone(it.inserters[0]), id: 9 }); }))).toBeNull();
+        expect(estimatedWindowCycle(await grenade(it => { it.setpoint.items_per_second = 0; }))).toBeNull();
     });
 });
 
@@ -64,7 +64,7 @@ describe("the note under the gap between copies", () => {
             return config;
         };
         const text = "At about 36 ticks a period, the belt moves 4.5 tiles a period, but the 9 copies drop 9 hands on it, so no spacing of the copies fits: some hands always wait for room. This assumes every copy drops onto the belt the way this one does.";
-        expect(estimatedPeriod(await science())).toBe(36);
+        expect(estimatedWindowCycle(await science())).toBe(36);
         expect(dropRoomNote(await science())).toBe(text);
         // whatever spacing is typed
         expect(dropRoomNote(await science(it => { it.setpoint.copy_offset = { x: 12, y: 0 }; }))).toBe(text);

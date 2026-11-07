@@ -12,7 +12,7 @@ export class WarmupStep implements RunnerStep {
         private readonly simulation_context: SimulationContext,
         private readonly duration: Duration,
         /** Stops early once the state at a period boundary repeats an earlier boundary's: the run is periodic from there */
-        private readonly steady_state?: { period_ticks: number; key: () => string },
+        private readonly steady_state?: { window_cycle_ticks: number; key: () => string },
     ) {
         this.simulation_tick = this.build()
     }
@@ -21,7 +21,7 @@ export class WarmupStep implements RunnerStep {
     public ticks_run = 0;
 
     /** Periods after which the state repeats, once the last execute() saw a period boundary repeat an earlier one */
-    public repeat_periods: number | undefined = undefined;
+    public repeat_window_cycles: number | undefined = undefined;
 
     public execute(): void {
         const context = this.simulation_context
@@ -30,21 +30,21 @@ export class WarmupStep implements RunnerStep {
         const start_tick = context.tick_provider.getCurrentTick();
         const end_tick = start_tick + this.duration.ticks;
         const boundary_by_key = new Map<string, number>();
-        this.repeat_periods = undefined;
+        this.repeat_window_cycles = undefined;
 
         while (true) {
             const current_tick = context.tick_provider.getCurrentTick();
             if (current_tick >= end_tick) {
                 break;
             }
-            if (this.steady_state && (current_tick - start_tick) % this.steady_state.period_ticks === 0) {
+            if (this.steady_state && (current_tick - start_tick) % this.steady_state.window_cycle_ticks === 0) {
                 // the state repeats every `cycle` periods, so stop where the full warmup would end in the same state
-                const boundary = (current_tick - start_tick) / this.steady_state.period_ticks;
-                const last_boundary = this.duration.ticks / this.steady_state.period_ticks;
+                const boundary = (current_tick - start_tick) / this.steady_state.window_cycle_ticks;
+                const last_boundary = this.duration.ticks / this.steady_state.window_cycle_ticks;
                 const key = this.steady_state.key();
                 const earlier = boundary_by_key.get(key);
                 if (earlier !== undefined) {
-                    this.repeat_periods ??= boundary - earlier;
+                    this.repeat_window_cycles ??= boundary - earlier;
                 }
                 if (earlier !== undefined && (last_boundary - boundary) % (boundary - earlier) === 0) {
                     break;

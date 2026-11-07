@@ -12,7 +12,7 @@ import { quiet } from "./generate-blueprint-test-helpers";
 // config's `ignored_lcm_ingredients`) it is two cycles (336 ticks), the coal inserter staying clocked. The observed-windows
 // search finds a clock for that period in about ten minutes, which a test does not wait for: these are the windows it
 // found on 2026-10-16, saved, and judged here as the generator judges its own.
-const COAL_OUT_OF_PERIOD_WINDOWS: Record<string, string> = {
+const COAL_OUT_OF_WINDOW_CYCLE_WINDOWS: Record<string, string> = {
     "inserter:3": "1-35,57-91,113-147,169-203,225-259,281-315",
     "inserter:4": "1-35,57-91,113-147,169-203,225-259,281-315",
     "inserter:9": "1-35,57-91,113-147,169-203,225-259,281-315",
@@ -44,7 +44,7 @@ const COAL_OUT_OF_PERIOD_WINDOWS: Record<string, string> = {
     "inserter:8": "0-5,115-125,215-230,315-325,335-335",
 };
 
-const PERIOD = 336;
+const WINDOW_CYCLE = 336;
 
 /** "1-35,57-91" as windows */
 const windowsOf = (text: string) => text.split(",").map(range => {
@@ -55,29 +55,29 @@ const windowsOf = (text: string) => text.split(",").map(range => {
 describe("a saved clock for a shorter period, on the utility science 480 sample", () => {
     let config: Config;
     let result: BlueprintGenerationResult;
-    const windows: SerializableClockWindows = Object.fromEntries(Object.entries(COAL_OUT_OF_PERIOD_WINDOWS).map(([id, text]) => [id, windowsOf(text)]));
+    const windows: SerializableClockWindows = Object.fromEntries(Object.entries(COAL_OUT_OF_WINDOW_CYCLE_WINDOWS).map(([id, text]) => [id, windowsOf(text)]));
 
     beforeAll(async () => {
         const sample = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN);
         // the config the clock was planned on: the coal is out of the period, and the output swings per cycle are those of the clock
         config = { ...sample, overrides: { ...sample.overrides, ignored_lcm_ingredients: ["coal"], terminal_swing_count: 3 } };
-        result = clockFromWindows(config, windows, PERIOD, quiet);
+        result = clockFromWindows(config, windows, WINDOW_CYCLE, quiet);
     });
 
     it("holds the target, from every start phase and over the long run, in a period of 336 ticks", () => {
-        expect(result.simulation_duration.ticks).toBe(PERIOD);
+        expect(result.simulation_duration.ticks).toBe(WINDOW_CYCLE);
         const as_built = result.stability_check.as_built!;
         expect(as_built.holds).toBe(true);
         expect(as_built.actual_output_items).toBe(result.stability_check.expected_output_items);
         expect(result.stability_check.expected_output_items).toBe(768);
         // 768 items in 336 ticks over all the copies is the target rate, 480 a second
-        const per_second = result.stability_check.expected_output_items * 60 / PERIOD * (config.setpoint.copies ?? 1);
+        const per_second = result.stability_check.expected_output_items * 60 / WINDOW_CYCLE * (config.setpoint.copies ?? 1);
         expect(config.setpoint.items_per_second).toBe(480);
         expect(per_second).toBeCloseTo(480, 6);
     });
 
     it("names the coal loss that settles into unequal periods, despite keeping the average target rate", () => {
-        const report = disturbanceTrialOf(config, result.clock_windows, PERIOD, result.stability_check.expected_output_items, quiet);
+        const report = disturbanceTrialOf(config, result.clock_windows, WINDOW_CYCLE, result.stability_check.expected_output_items, quiet);
         const coal = report.losses.find(outcome => outcome.loss.kind === "supply" && outcome.loss.item === "coal")!;
         const failures = coal.trials.filter(trial => !trial.recovers);
         expect(failures).toHaveLength(1);
@@ -91,7 +91,7 @@ describe("a saved clock for a shorter period, on the utility science 480 sample"
         // the losses after coal are not tried, and the failing trial is the last of its loss
         expect(coal.trials[coal.trials.length - 1]).toBe(failures[0]);
         expect(disturbance_trial).toEqual({survives: false, broken_by: ["coal stops arriving"], broken_at_other_lane_phases: [],
-            not_tried: ["utility science pack is not taken away"], recovered_after_periods: null});
+            not_tried: ["utility science pack is not taken away"], recovered_after_window_cycles: null});
         const verdict = clockVerdictOf({ holds: true, disturbance_trial, items_per_second: 480, wake_ups_per_minute: null, start_dependence: null });
         expect(verdict).toBe("no recovery");
     });

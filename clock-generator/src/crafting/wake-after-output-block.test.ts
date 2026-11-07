@@ -14,8 +14,8 @@ const windows = (text: string) => text.split(" ").map(range => {
 });
 
 /** Windows `length` ticks long, the first from `first`, one every `every` ticks of the period */
-const evenly = (first: number, length: number, every: number, period: number) =>
-    Array.from({ length: period / every }, (_, index) => ({ start: first + index * every, end: first + index * every + length - 1 }));
+const evenly = (first: number, length: number, every: number, window_cycle_ticks: number) =>
+    Array.from({ length: window_cycle_ticks / every }, (_, index) => ({ start: first + index * every, end: first + index * every + length - 1 }));
 
 // One copy of the advanced circuit build of issue 98 (see clock-from-windows.test.ts for the build), under a clock with
 // evenly spaced windows of 4 ticks for the inserters that take off a belt: one hand of electronic circuits every 33
@@ -36,15 +36,15 @@ const evenly = (first: number, length: number, every: number, period: number) =>
 // With both, a run of the simulator that starts in the state the game was in at sample 59 of that recording holds
 // what every machine and every inserter of the game held, tick for tick, for the 36,372 ticks the recording goes on.
 describe("the advanced circuit build under evenly spaced windows of one hand", () => {
-    const PERIOD = 528;
+    const WINDOW_CYCLE = 528;
     const copper_cable = windows("26-47 74-95 122-143 170-191 218-239 266-287 314-335 362-383 410-431 458-479 506-519 522-527");
     const plastic = windows("29-42 77-82 173-186 221-234 269-282 317-330 365-370 461-474 509-522");
     const evenly_spaced: SerializableClockWindows = {
-        "inserter:1": evenly(6, 4, 33, PERIOD), "inserter:8": evenly(6, 4, 33, PERIOD),
+        "inserter:1": evenly(6, 4, 33, WINDOW_CYCLE), "inserter:8": evenly(6, 4, 33, WINDOW_CYCLE),
         "inserter:3": copper_cable, "inserter:7": copper_cable,
         "inserter:4": plastic, "inserter:6": plastic,
-        "inserter:5": evenly(71, 4, 132, PERIOD),
-        "inserter:2": evenly(10, 8, 24, PERIOD), "inserter:9": evenly(10, 8, 24, PERIOD),
+        "inserter:5": evenly(71, 4, 132, WINDOW_CYCLE),
+        "inserter:2": evenly(10, 8, 24, WINDOW_CYCLE), "inserter:9": evenly(10, 8, 24, WINDOW_CYCLE),
     };
 
     // What the machines held at sample 59 of the recording, where every inserter was switched off with an empty hand
@@ -68,47 +68,47 @@ describe("the advanced circuit build under evenly spaced windows of one hand", (
 
     /** The windows as a run has to be given them for its first tick to read `position` of the clock */
     const startingAfter = (clock_windows: SerializableClockWindows, position: number): SerializableClockWindows => {
-        const offset = ((SIMULATED_TICK_TO_CLOCK_POSITION - (position + 1)) % PERIOD + PERIOD) % PERIOD;
+        const offset = ((SIMULATED_TICK_TO_CLOCK_POSITION - (position + 1)) % WINDOW_CYCLE + WINDOW_CYCLE) % WINDOW_CYCLE;
         return Object.fromEntries(Object.entries(clock_windows).map(([entity_id, ranges]) => [entity_id, ranges.flatMap(range => {
-            const from = (range.start + offset) % PERIOD;
+            const from = (range.start + offset) % WINDOW_CYCLE;
             const to = from + range.end - range.start;
-            return to < PERIOD ? [{ start: from, end: to }] : [{ start: 0, end: to - PERIOD }, { start: from, end: PERIOD - 1 }];
+            return to < WINDOW_CYCLE ? [{ start: from, end: to }] : [{ start: 0, end: to - WINDOW_CYCLE }, { start: from, end: WINDOW_CYCLE - 1 }];
         }).sort((a, b) => a.start - b.start)]));
     };
 
     let config: Config;
     let run: StockRecording;
-    const PERIODS = 12;
+    const WINDOW_CYCLES = 12;
 
     beforeAll(async () => {
         const sample = await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT_240);
         config = { ...sample, overrides: { ...sample.overrides, terminal_swing_count: 2 } };
-        run = simulateClockOnly(config, startingAfter(evenly_spaced, RECORDED_CLOCK_POSITION), PERIOD, PERIODS, quiet,
-            { keep_output_buffers: true, warmup_periods: 0, start_stock: recorded_state });
+        run = simulateClockOnly(config, startingAfter(evenly_spaced, RECORDED_CLOCK_POSITION), WINDOW_CYCLE, WINDOW_CYCLES, quiet,
+            { keep_output_buffers: true, warmup_window_cycles: 0, start_stock: recorded_state });
     });
 
     // the periods are cut where the recorder cuts them, where the clock wraps: the run starts at position 60
-    const FIRST_WRAP = PERIOD - (RECORDED_CLOCK_POSITION + 1);
+    const FIRST_WRAP = WINDOW_CYCLE - (RECORDED_CLOCK_POSITION + 1);
     /** The first tick of each of the last `periods` whole clock periods of the run */
-    const periodStarts = (periods: number): number[] => {
-        const whole = Math.floor((PERIODS * PERIOD - FIRST_WRAP) / PERIOD);
-        return Array.from({ length: periods }, (_, index) => FIRST_WRAP + (whole - periods + index) * PERIOD);
+    const windowCycleStarts = (window_cycles: number): number[] => {
+        const whole = Math.floor((WINDOW_CYCLES * WINDOW_CYCLE - FIRST_WRAP) / WINDOW_CYCLE);
+        return Array.from({ length: window_cycles }, (_, index) => FIRST_WRAP + (whole - window_cycles + index) * WINDOW_CYCLE);
     };
     /** Items an inserter dropped in each of the last `periods` clock periods of the run */
-    const dropped = (inserter_id: number, periods: number): number[] => {
+    const dropped = (inserter_id: number, window_cycles: number): number[] => {
         const held = run.inserters.find(it => it.inserter_id === `inserter:${inserter_id}`)!.held;
-        return periodStarts(periods).map(from => {
+        return windowCycleStarts(window_cycles).map(from => {
             let items = 0;
-            for (let tick = from; tick < from + PERIOD; tick++) {
+            for (let tick = from; tick < from + WINDOW_CYCLE; tick++) {
                 items += Math.max(0, held[tick - 1] - held[tick]);
             }
             return items;
         });
     };
     /** Products a machine finished in each of the last `periods` clock periods of the run */
-    const finished = (machine_id: number, periods: number): number[] => {
+    const finished = (machine_id: number, window_cycles: number): number[] => {
         const products = run.machines.find(it => it.machine_id === `machine:${machine_id}`)!.products_finished;
-        return periodStarts(periods).map(from => products[from + PERIOD - 1] - products[from - 1]);
+        return windowCycleStarts(window_cycles).map(from => products[from + WINDOW_CYCLE - 1] - products[from - 1]);
     };
     const sorted = (values: number[]) => [...values].sort((a, b) => a - b);
 
@@ -140,7 +140,7 @@ describe("the advanced circuit build under evenly spaced windows of one hand", (
     // Before that start (the build filled with ingredients, the plants emptied of advanced circuits) both plants
     // held 352 and the check passed it.
     it("falls short of 704 a period from some of the start phases the generator checks a clock from", () => {
-        const made = clockFromWindows(config, evenly_spaced, PERIOD, quiet);
+        const made = clockFromWindows(config, evenly_spaced, WINDOW_CYCLE, quiet);
         expect(made.stability_check.as_built!.holds).toBe(false);
         expect(made.stability_check.as_built!.actual_output_items).toBe(544);
         expect(made.stability_check.as_built!.failed_start_offset).toBe(88);

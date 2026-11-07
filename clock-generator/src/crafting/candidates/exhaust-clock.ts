@@ -17,7 +17,7 @@ export function exhaustClockOfPlan(plan: UnclockedRun, options: GenerateClockOpt
     assert(output_cycle_plan.exhaust !== undefined, "the plan has no windows of results");
     const plans = [...output_cycle_plan.exhaust];
     const registry = simulation_context.entity_registry;
-    const period = duration.ticks;
+    const window_cycle_ticks = duration.ticks;
     const windows = new Map<string, OpenRange[]>();
     for (const inserter of registry.getAll().filter(Entity.isInserter)) {
         if (takesResultOf(plans, inserter.entity_id)) {
@@ -27,7 +27,7 @@ export function exhaustClockOfPlan(plan: UnclockedRun, options: GenerateClockOpt
         assert(transfer !== undefined, `${inserter.entity_id.id} is not in the plan's hand counts`);
         const hands = transfer.total_transfer_count.toDecimal();
         assert(Number.isInteger(hands) && hands > 0, `${inserter.entity_id.id} moves ${hands} hands a period, not a whole number`);
-        windows.set(inserter.entity_id.id, evenWindows(hands, inserter.animation.total.ticks, period));
+        windows.set(inserter.entity_id.id, evenWindows(hands, inserter.animation.total.ticks, window_cycle_ticks));
     }
     for (const result_plan of plans) {
         for (const [inserter_id, ranges] of exhaustWindowRanges(result_plan)) {

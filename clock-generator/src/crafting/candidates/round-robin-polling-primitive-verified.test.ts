@@ -16,7 +16,7 @@ import * as grouped from "./round-robin-polling";
 import { verifiedPrimitiveRoundRobinPollingClock } from "./round-robin-polling-primitive-verified";
 
 const quiet = { log() {}, warn() {}, error() {}, debug() {} };
-const recovered = { survives: true, broken_by: [], recovered_after_periods: 0 };
+const recovered = { survives: true, broken_by: [], recovered_after_window_cycles: 0 };
 
 describe("verified primitive adapter orchestration (verification outcomes are explicit test doubles)", () => {
     let config: Config;

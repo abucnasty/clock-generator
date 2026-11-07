@@ -1,4 +1,4 @@
-import { ClockPeriodLimitError, SIMULATION_BUDGET_TICKS, type SwingPeriodPruning } from "./clock-period-limit";
+import { ClockWindowCycleLimitError, SIMULATION_BUDGET_TICKS, type SwingWindowCyclePruning } from "./clock-window-cycle-limit";
 import { assertOutputTransferGenerationSupported } from "../../config/output-transfer-generation";
 import assert from "../../common/assert";
 import type { NotMadeClock } from "../why-not-stable";
@@ -12,7 +12,7 @@ import { buildPlanOfConfig } from "../planner/plan-build";
 import { assertLaneCapacity } from "../../config/lane-capacity-validator";
 import { DebugObserverFactory } from "../sequence/debug/debug-observer-factory";
 import { DebugSettingsProvider, MutableDebugSettingsProvider } from "../sequence/debug/debug-settings-provider";
-import { InserterClock, byProductOnlyInserters, clockWindowsOverPeriod, fuelOnlyInserters, isByProductOnlyInserter, alwaysEnabledInserters, unplannedInserterClocks } from "../sequence/unplanned-inserter-clock";
+import { InserterClock, byProductOnlyInserters, clockWindowsOverWindowCycle, fuelOnlyInserters, isByProductOnlyInserter, alwaysEnabledInserters, unplannedInserterClocks } from "../sequence/unplanned-inserter-clock";
 import { createEntityRegistryFromConfig, MovingPickupPhases, SimulationContext } from "../sequence/simulation-context";
 import { Duration, OpenRange } from "../../data-types";
 import { Entity, EntityId, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from "../../entities";
@@ -29,7 +29,7 @@ import { returnedTargetRefusal, TargetItem, targetInsertersOf, targetMachinesOf 
 import { neverBlockingBranchesOf, type TerminalBranch } from "../terminal-rate";
 import { mainProductRateOf, traitsOf } from "../../entities/traits/traits-of";
 import { CraftingMargin, RandomAmountMargin, randomAmountMargins } from "../random-margins";
-import { EXHAUST_CHECK_PERIODS, ExhaustPlan } from "../exhaust";
+import { EXHAUST_CHECK_WINDOW_CYCLES, ExhaustPlan } from "../exhaust";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
 import { InventoryTransfer } from "../sequence/inventory-transfer";
 import { InserterTransferTracker } from "../../simulation/observers/inserter-transfer-tracker";
@@ -43,7 +43,7 @@ import { DEFAULT_TAKER_ORDER, TakerOrder } from "../../simulation/competing-take
 import { DeciderOrder } from "../decider-order";
 import { WarmupStep } from "../runner/steps/warmup-step";
 import { FullOutputChest, fullOutputChestsOf } from "../full-output-chests";
-import { ExportShortfall, exportShortfallsOfPeriod, exportedItemsOf } from "../export-delivery";
+import { ExportShortfall, exportShortfallsOfWindowCycle, exportedItemsOf } from "../export-delivery";
 import { simulationStateKey } from "../runner/steady-state";
 import { SimulateStep } from "../runner/steps/simulate-step";
 import { RunnerStepType } from "../runner/steps/runner-step";
@@ -64,7 +64,7 @@ import { CraftingStatus, drillStatusOf, InserterPhase, inserterStatusOf, machine
 import { factorioInserterState, factorioMachineState } from "../../state/factorio-entity-state";
 import type { TimeStudyWindowsReport } from "../candidates/time-study-windows";
 import type { SearchReport } from "../candidates/search";
-import { ClockBelt, SerializableClockWindows, backedUpHandTicks, beltPickupSlackTicks, fuelHandRoomTicks, subtickClockForPeriod, withBeltPickupSlack, withWindowsAtLeast } from "../clock";
+import { ClockBelt, SerializableClockWindows, backedUpHandTicks, beltPickupSlackTicks, fuelHandRoomTicks, subtickClockForWindowCycle, withBeltPickupSlack, withWindowsAtLeast } from "../clock";
 import { ChestDrillClock, chestDrillClockLine, chestDrillWindows } from "../chest-drill-windows";
 import type { TurnGroup } from "../turn-groups";
 import type { SourceControl } from "../strategy-catalog";
@@ -111,7 +111,7 @@ function serializeInserterClocks(clocks: ReadonlyMap<string, InserterClock>): Re
 /** The exported clock run over several periods, to show how a burner machine uses its fuel */
 export interface FuelConsumptionView {
     /** Periods of the clock the view covers; the clock itself stays one period */
-    periods: number;
+    window_cycles: number;
     duration_ticks: number;
     /**
      * The tick the clocks of the game stand at in the first recorded tick, after the warm-up, where they run through it
@@ -141,7 +141,7 @@ export interface ClockOnlyRun {
 
 export interface SimulationStabilityCheck {
     /** Complete physical counter span behind a fractional first-check mean; absent on ordinary one-period runs. */
-    observation_span?: { ticks: number; periods: number; output_items: number };
+    observation_span?: { ticks: number; window_cycles: number; output_items: number };
     /** The run moved its expected output, within a hand of tolerance (and the clock-only check held, when one ran) */
     holds: boolean;
     /** Total items transferred by output inserters during the simulation period */
@@ -154,7 +154,7 @@ export interface SimulationStabilityCheck {
      * Periods after which the simulated state repeats exactly. Only known for a run driven by clock windows alone
      * whose warmup reached the repeat. Above 1, the simulated period is one of several that differ.
      */
-    repeat_periods?: number;
+    repeat_window_cycles?: number;
     /** Output items over repeat_periods periods, required to match the expected output too; set when repeat_periods is more than 1 */
     repeat_output_items?: number;
     /** Re-simulation driven only by the exported clock windows; absent when verify_as_built is disabled */
@@ -182,7 +182,7 @@ export interface SwingBackoffReport {
     /** An early derived strategy's real checks, separate from ordinary swing simulations. */
     primitive_grouped_attempt?: import("../round-robin-polling-primitive-policy").PrimitiveRoundRobinPollingAttemptReport;
     /** Counts refused by period arithmetic, never simulated output/hold attempts. */
-    period_limit_pruning?: SwingPeriodPruning;
+    window_cycle_limit_pruning?: SwingWindowCyclePruning;
     /** Whether the backoff loop was triggered (false when first attempt was stable or backoff is disabled) */
     triggered: boolean;
     /** The terminal_swing_count used in the first attempt */
@@ -504,18 +504,18 @@ export interface RunOptions {
      */
     disturbance_trial?: DisturbanceTrialOptions;
     /** Warmup length in simulation periods (default 10) */
-    warmup_periods?: number;
+    warmup_window_cycles?: number;
     /**
      * The period of the run, when it is not the one the plan gives: a clock of whole ticks run on a plan of a period
      * that is not whole, such as the clock of a fractional period rounded down (the output it is to move a period is
      * still the plan's). Its output is counted and its state compared by this period.
      */
-    period_ticks?: number;
+    window_cycle_ticks?: number;
     /**
      * Simulate and record this many periods instead of one (default 1). The histories then cover the longer run;
      * the output is judged over one period, so it only means something at 1.
      */
-    simulate_periods?: number;
+    simulate_window_cycles?: number;
     /** Exact integer length of a physical counter observation, avoiding fractional-period multiplication noise. */
     observation_ticks?: number;
     /**
@@ -651,7 +651,7 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
     const build = options.cold_start ? coldBuildOf(config, options, debug, logger) : planned_build;
     const controlled = withEnableControls(config, build, output_cycle_plan, transfer_plan.recipe_lcm, logger,
         options.counter_runs_through === true);
-    const { duration, warmup_period } = runPeriodsOf(output_cycle_plan, transfer_plan.recipe_lcm, options, logger, period => {
+    const { duration, warmup_window_cycle } = runWindowCyclesOf(output_cycle_plan, transfer_plan.recipe_lcm, options, logger, window_cycle_ticks => {
         // A shared final chest's reported count aggregates several machines. Planner overrides are per machine.
         const terminal_swing_count = config.setpoint.counts === "destroyed"
             ? plannedOutputSwingCount(output_cycle_plan, planned_cycle.output_inserters,
@@ -659,21 +659,21 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
             : plannedTerminalSwingCount(output_cycle_plan);
         assert(terminal_swing_count !== undefined, "The crafting plan has no terminal-count arithmetic provenance.");
         const whole_made = config.setpoint.counts !== "destroyed" && options.fractional_swings !== true
-            && options.period_ticks === undefined && options.timeline_recording?.period_ticks === undefined;
-        return new ClockPeriodLimitError({ terminal_swing_count, base_cycle_ticks: output_cycle_plan.total_duration_ticks.toDecimal(),
+            && options.window_cycle_ticks === undefined && options.timeline_recording?.window_cycle_ticks === undefined;
+        return new ClockWindowCycleLimitError({ terminal_swing_count, base_cycle_ticks: output_cycle_plan.total_duration_ticks.toDecimal(),
             computed_lcm: transfer_plan.computed_lcm, effective_lcm: transfer_plan.recipe_lcm,
-            period_ticks: period, limit_ticks: SIMULATION_BUDGET_TICKS }, whole_made
+            window_cycle_ticks, limit_ticks: SIMULATION_BUDGET_TICKS }, whole_made
             ? { config_json: JSON.stringify(config), terminal_swing_count } : undefined);
     });
 
-    const warmup = warmUp(config, build, controlled, duration, warmup_period, debug, debug_steps, logger);
-    const repeat_periods = warmup.repeat_periods;
-    const repeat_bin = options.detect_repeat === true && (options.simulate_periods ?? 1) > 1 ? provenRepeatBin(config, duration.ticks) : null;
+    const warmup = warmUp(config, build, controlled, duration, warmup_window_cycle, debug, debug_steps, logger);
+    const repeat_window_cycles = warmup.repeat_window_cycles;
+    const repeat_bin = options.detect_repeat === true && (options.simulate_window_cycles ?? 1) > 1 ? provenRepeatBin(config, duration.ticks) : null;
     const simulated = simulate(build, controlled, all_output_inserters, duration, options, debug, debug_steps, logger, repeat_bin);
     // the recorded run is over: what it recorded is sealed once, and the run, the memo and every result share that copy
     const state_transition_history = build.state_transition_history.seal(build.simulation_context.entity_registry, simulated.recorded_duration.ticks);
     const final_history = finalHistoryOf(build, output_cycle_plan, all_output_inserters, duration, logger);
-    const output = checkOutput(build, planned_cycle, transfer_plan.recipe_lcm, duration, simulated, final_history, repeat_periods, logger);
+    const output = checkOutput(build, planned_cycle, transfer_plan.recipe_lcm, duration, simulated, final_history, repeat_window_cycles, logger);
     const terminal_branches = neverBlockingBranchesOf(build.simulation_context.entity_registry, traitsOf(config), output_cycle_plan.entity_transfer_map,
         transfer_plan.recipe_lcm, new Set(all_output_inserters.map(it => it.inserter.entity_id.id)));
     const disturbance_trial = disturbanceTrialOf(config, build, controlled, simulated, options, logger, terminal_branches);
@@ -702,15 +702,15 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
         inserter_clocks: controlled.inserter_clocks,
         duration,
         recorded_duration: simulated.recorded_duration,
-        ticks_simulated: warmup_period.ticks + simulated.recorded_duration.ticks,
+        ticks_simulated: warmup_window_cycle.ticks + simulated.recorded_duration.ticks,
         state_repeat: simulated.state_repeat,
         final_history,
         state_transition_history,
         fuel_levels: simulated.fuel_levels,
         machine_stock: simulated.machine_stock,
         // the warm-up counts in full where it stopped at a repeating state: the recording is of the period after it
-        timeline_recording: (options.timeline_recording?.settle_periods !== undefined || options.timeline_recording?.settle_ticks !== undefined) && simulated.timeline_recording
-            ? { ...simulated.timeline_recording, ticks_before_recording: warmup_period.ticks } : simulated.timeline_recording,
+        timeline_recording: (options.timeline_recording?.settle_window_cycles !== undefined || options.timeline_recording?.settle_ticks !== undefined) && simulated.timeline_recording
+            ? { ...simulated.timeline_recording, ticks_before_recording: warmup_window_cycle.ticks } : simulated.timeline_recording,
         stability_check: output.stability_check,
         total_expected_output: output.total_expected_output,
         used_terminal_swing_count: output.used_terminal_swing_count,
@@ -1004,35 +1004,35 @@ function withEnableControls(
 }
 
 /** How long a build runs: the period of the clock, and the warmup before it */
-interface RunPeriods {
+interface RunWindowCycles {
     duration: Duration;
-    warmup_period: Duration;
+    warmup_window_cycle: Duration;
 }
 
 /** The period of the plan and the warmup, shortened where a long period would take it past SIMULATION_BUDGET_TICKS */
-function runPeriodsOf(output_cycle_plan: OutputCyclePlan, recipe_lcm: number, options: RunOptions, logger: Logger,
-    overLimit: (period_ticks: number) => ClockPeriodLimitError): RunPeriods {
-    const duration: Duration = Duration.ofTicks(options.period_ticks ?? options.timeline_recording?.period_ticks ?? OutputCyclePlan.ticksOfCycles(output_cycle_plan, recipe_lcm));
+function runWindowCyclesOf(output_cycle_plan: OutputCyclePlan, recipe_lcm: number, options: RunOptions, logger: Logger,
+    overLimit: (window_cycle_ticks: number) => ClockWindowCycleLimitError): RunWindowCycles {
+    const duration: Duration = Duration.ofTicks(options.window_cycle_ticks ?? options.timeline_recording?.window_cycle_ticks ?? OutputCyclePlan.ticksOfCycles(output_cycle_plan, recipe_lcm));
     if (Number.isFinite(duration.ticks) && duration.ticks > 0 && duration.ticks >= SIMULATION_BUDGET_TICKS) throw overLimit(duration.ticks);
     assert(Number.isFinite(duration.ticks) && duration.ticks > 0 && duration.ticks < SIMULATION_BUDGET_TICKS, `Clock period of ${duration.ticks} ticks exceeds maximum allowed ${SIMULATION_BUDGET_TICKS} ticks`);
     // a recording of a settled period runs the build that long from its cold start, as the long run of the clock does
-    const requested_warmup_periods = Math.max(options.warmup_periods ?? 10, options.timeline_recording?.settle_periods ?? 0);
+    const requested_warmup_window_cycles = Math.max(options.warmup_window_cycles ?? 10, options.timeline_recording?.settle_window_cycles ?? 0);
     // long periods (large ingredient LCMs) get fewer warmup periods to stay under the tick budget
-    const warmup_periods = Math.min(requested_warmup_periods, Math.floor((SIMULATION_BUDGET_TICKS - 1) / duration.ticks));
+    const warmup_window_cycles = Math.min(requested_warmup_window_cycles, Math.floor((SIMULATION_BUDGET_TICKS - 1) / duration.ticks));
     const exact_ticks = options.timeline_recording?.settle_ticks;
-    if (exact_ticks === undefined && warmup_periods < requested_warmup_periods) {
-        logger.log(`Warm up shortened to ${warmup_periods} periods to stay under ${SIMULATION_BUDGET_TICKS} ticks`);
+    if (exact_ticks === undefined && warmup_window_cycles < requested_warmup_window_cycles) {
+        logger.log(`Warm up shortened to ${warmup_window_cycles} periods to stay under ${SIMULATION_BUDGET_TICKS} ticks`);
     }
     assert(exact_ticks === undefined || (Number.isInteger(exact_ticks) && exact_ticks >= 0), "The exact timeline start must be a nonnegative whole tick");
     assert(exact_ticks === undefined || exact_ticks <= duration.ticks * Math.floor((SIMULATION_BUDGET_TICKS - 1) / duration.ticks),
         "The exact timeline start exceeds the warm-up tick budget");
-    const warmup_period: Duration = Duration.ofTicks(exact_ticks === undefined ? duration.ticks * warmup_periods
+    const warmup_window_cycle: Duration = Duration.ofTicks(exact_ticks === undefined ? duration.ticks * warmup_window_cycles
         : exact_ticks);
 
     logger.log(`Base Cycle Ticks: ${output_cycle_plan.total_duration.ticks}`);
-    logger.log(`Warm up period: ${warmup_period.ticks} ticks`);
+    logger.log(`Warm up period: ${warmup_window_cycle.ticks} ticks`);
     logger.log(`Simulation period: ${duration.ticks} ticks`);
-    return { duration, warmup_period };
+    return { duration, warmup_window_cycle };
 }
 
 /**
@@ -1044,11 +1044,11 @@ function warmUp(
     build: RecordedBuild,
     controlled: ControlledBuild,
     duration: Duration,
-    warmup_period: Duration,
+    warmup_window_cycle: Duration,
     debug: MutableDebugSettingsProvider,
     debug_steps: DebugSteps,
     logger: Logger,
-): { repeat_periods: number | undefined; ticks_run: number } {
+): { repeat_window_cycles: number | undefined; ticks_run: number } {
     const { simulation_context } = build;
     const { resettable_registry } = controlled;
     logger.log("Warming up simulation...");
@@ -1056,15 +1056,15 @@ function warmUp(
     // the clocks start here, on a cold build at its tick 0
     resettable_registry.resetAll(true);
     return withDebugFor(debug, debug_steps, RunnerStepType.WARM_UP, () => {
-        const warmup_step = new WarmupStep(simulation_context, warmup_period,
+        const warmup_step = new WarmupStep(simulation_context, warmup_window_cycle,
             isPurelyClocked(config, duration.ticks)
-                ? { period_ticks: duration.ticks, key: () => simulationStateKey(simulation_context) }
+                ? { window_cycle_ticks: duration.ticks, key: () => simulationStateKey(simulation_context) }
                 : undefined);
         warmup_step.execute();
-        if (warmup_step.ticks_run < warmup_period.ticks) {
+        if (warmup_step.ticks_run < warmup_window_cycle.ticks) {
             logger.log(`Warm up reached a repeating state after ${warmup_step.ticks_run} ticks`);
         }
-        return { repeat_periods: warmup_step.repeat_periods, ticks_run: warmup_step.ticks_run };
+        return { repeat_window_cycles: warmup_step.repeat_window_cycles, ticks_run: warmup_step.ticks_run };
     });
 }
 
@@ -1099,7 +1099,7 @@ export interface StateRepeat {
     /** Whole ticks in a bin: the period, the whole-tick repeat of a fractional one, or their merge with own clocks */
     bin_ticks: number;
     /** Clock periods in a bin */
-    periods_per_bin: number;
+    window_cycles_per_bin: number;
     /** The boundary whose state came up again, in bins from the start of the recorded run */
     from_bin: number;
     /** Bins from `from_bin` to where its state came up again: the run repeats these bins forever */
@@ -1132,7 +1132,7 @@ function simulate(
     debug_steps: DebugSteps,
     logger: Logger,
     /** Bin at whose boundaries a repeated state repeats forever; the run stops early at a repeat (see detect_repeat) */
-    repeat_bin: { ticks: number; periods: number } | null = null,
+    repeat_bin: { ticks: number; window_cycles: number } | null = null,
 ): SimulatedRun {
     const { simulation_context, inventory_transfer_history, state_transition_history } = build;
     const { resettable_registry } = controlled;
@@ -1151,8 +1151,8 @@ function simulate(
     // (`withEnableControls`)
     resettable_registry.resetAll(ticks_before_run === 0);
 
-    const simulate_periods = options.simulate_periods ?? 1;
-    const recorded_duration = Duration.ofTicks(options.observation_ticks ?? duration.ticks * simulate_periods);
+    const simulate_window_cycles = options.simulate_window_cycles ?? 1;
+    const recorded_duration = Duration.ofTicks(options.observation_ticks ?? duration.ticks * simulate_window_cycles);
     const fuel_level_recorder = options.fuel_levels
         ? new FuelLevelRecorder(simulation_context.machines.map(it => it.machine_state))
         : undefined;
@@ -1191,7 +1191,7 @@ function simulate(
             const key = simulationStateKey(simulation_context);
             const earlier = boundary_by_key.get(key);
             if (earlier !== undefined) {
-                state_repeat = { bin_ticks: repeat_bin.ticks, periods_per_bin: repeat_bin.periods, from_bin: earlier, cycle_bins: boundary - earlier };
+                state_repeat = { bin_ticks: repeat_bin.ticks, window_cycles_per_bin: repeat_bin.window_cycles, from_bin: earlier, cycle_bins: boundary - earlier };
                 return true;
             }
             boundary_by_key.set(key, boundary);
@@ -1298,7 +1298,7 @@ function checkOutput(
     duration: Duration,
     simulated: SimulatedRun,
     final_history: InventoryTransferHistory,
-    repeat_periods: number | undefined,
+    repeat_window_cycles: number | undefined,
     logger: Logger,
 ): OutputCheck {
     const { simulation_context, inventory_transfer_history, state_transition_history } = build;
@@ -1328,19 +1328,19 @@ function checkOutput(
 
     // the simulated period can hit the expected output while the periods it alternates with fall short
     let repeat_output_items: number | undefined;
-    if (repeat_periods !== undefined && repeat_periods > 1 && duration.ticks * repeat_periods < SIMULATION_BUDGET_TICKS) {
+    if (repeat_window_cycles !== undefined && repeat_window_cycles > 1 && duration.ticks * repeat_window_cycles < SIMULATION_BUDGET_TICKS) {
         state_transition_history.recording = false;
-        new SimulateStep(simulation_context, Duration.ofTicks(duration.ticks * (repeat_periods - 1))).execute();
+        new SimulateStep(simulation_context, Duration.ofTicks(duration.ticks * (repeat_window_cycles - 1))).execute();
         repeat_output_items = 0;
         for (const [entity_id, transfers] of inventory_transfer_history.entries()) {
             if (output_inserter_ids.has(entity_id.id)) {
                 repeat_output_items += transfers.reduce((s, t) => s + t.amount, 0);
             }
         }
-        logger.log(`Stability check: state repeats every ${repeat_periods} periods, output over them=${repeat_output_items}`);
+        logger.log(`Stability check: state repeats every ${repeat_window_cycles} periods, output over them=${repeat_output_items}`);
     }
-    const repeats_at_expected_output = repeat_periods === undefined || repeat_output_items === undefined
-        || Math.abs(repeat_output_items - total_expected_output_float * repeat_periods) <= LCM_STABILITY_TOLERANCE * repeat_periods;
+    const repeats_at_expected_output = repeat_window_cycles === undefined || repeat_output_items === undefined
+        || Math.abs(repeat_output_items - total_expected_output_float * repeat_window_cycles) <= LCM_STABILITY_TOLERANCE * repeat_window_cycles;
 
     const stability_check: SimulationStabilityCheck = {
         holds: Math.abs(total_actual_output - total_expected_output) <= LCM_STABILITY_TOLERANCE && export_shortfalls.length === 0
@@ -1348,7 +1348,7 @@ function checkOutput(
         actual_output_items: total_actual_output,
         expected_output_items: total_expected_output,
         used_lcm: recipe_lcm,
-        repeat_periods,
+        repeat_window_cycles,
         repeat_output_items,
         ...(full_output_chests.length > 0 && { full_output_chests }),
         ...(export_shortfalls.length > 0 && { export_shortfalls }),
@@ -1381,14 +1381,14 @@ function disturbanceTrialOf(
     // so the observers that feed them have nothing to do: a trial ticks a few hundred thousand times
     const trial_context = build.simulation_context;
     detachHistoryObservers(build, trial_context);
-    const loss_period = options.disturbance_trial.period_ticks;
-    const repeat = subtickClockForPeriod(loss_period);
-    const bin = Number.isInteger(loss_period) ? { ticks: loss_period, periods: 1 }
-        : repeat === null ? null : { ticks: repeat.period_ticks, periods: repeat.scale };
-    assert(bin !== null, `A clock of ${Number(loss_period.toFixed(3))} ticks does not repeat in whole ticks, so its output cannot be counted by the period`);
+    const loss_window_cycle = options.disturbance_trial.window_cycle_ticks;
+    const repeat = subtickClockForWindowCycle(loss_window_cycle);
+    const bin = Number.isInteger(loss_window_cycle) ? { ticks: loss_window_cycle, window_cycles: 1 }
+        : repeat === null ? null : { ticks: repeat.window_cycle_ticks, window_cycles: repeat.scale };
+    assert(bin !== null, `A clock of ${Number(loss_window_cycle.toFixed(3))} ticks does not repeat in whole ticks, so its output cannot be counted by the period`);
     const own_clock_ticks = Array.from(controlled.inserter_clocks.values()).filter(clock => clock.own_clock).map(clock => clock.modulus);
     // boundaries a whole proven bin apart repeat for good; in bins of the period that is every `stride`-th boundary
-    const proven_bin = provenRepeatBin(config, loss_period);
+    const proven_bin = provenRepeatBin(config, loss_window_cycle);
     const proof_stride = proven_bin !== null && Number.isInteger(proven_bin.ticks / bin.ticks) ? proven_bin.ticks / bin.ticks : null;
     // the belts with a consumption rate have to keep receiving it, as the output keeps coming
     const inserter_states = new Map(trial_context.inserters.map(it => [it.inserter_state.entity_id.id, it.inserter_state] as const));
@@ -1699,7 +1699,7 @@ export function exportClock(
     for (const [key, name] of extras.item_names ?? []) {
         item_names.set(key, name);
     }
-    const subtick_clock = subtickClockForPeriod(duration.ticks);
+    const subtick_clock = subtickClockForWindowCycle(duration.ticks);
 
     // before the blueprint, which exports the fuel clocks this settles on
     const { inserter_clocks, fuel_plan, fuel_consumption_view } = settledFuelClocks(plan, windows, options);
@@ -1912,7 +1912,7 @@ export function checkedClock(
     // windows that carry part hands from one period to the next are run for several periods, to see every result taken
     // out as it comes (exhaust.ts)
     const long_run_ticks = output_cycle_plan.exhaust === undefined ? FREE_RUNNING_CHECK_TICKS
-        : Math.max(FREE_RUNNING_CHECK_TICKS, EXHAUST_CHECK_PERIODS * duration.ticks);
+        : Math.max(FREE_RUNNING_CHECK_TICKS, EXHAUST_CHECK_WINDOW_CYCLES * duration.ticks);
     let clock_only_run: ClockOnlyRun | undefined;
     let loop_windows: BlueprintGenerationResult["loop_windows"];
     let item_names: ReadonlyMap<string, string> | undefined;
@@ -2144,7 +2144,7 @@ function windowsOfThePlanWhereInsertersRunFree(
     history: InventoryTransferHistory,
     entity_registry: ReadableEntityRegistry,
     output_cycle_plan: OutputCyclePlan,
-    period_ticks: number,
+    window_cycle_ticks: number,
 ): InventoryTransferHistory {
     const always_enabled = new Set(alwaysEnabledInserters(entity_registry).map(it => it.entity_id.id));
     if (always_enabled.size === 0) {
@@ -2170,7 +2170,7 @@ function windowsOfThePlanWhereInsertersRunFree(
             const swings = planned.total_transfer_count.getNumerator;
             const window_ticks = inserter.animation.total.ticks * (swings - 1) + OUTPUT_WINDOW_LAST_PICKUP_TICKS;
             const windows: InventoryTransfer[] = [];
-            for (let cycle = 0; Math.floor(cycle * cycle_ticks) + window_ticks < period_ticks; cycle++) {
+            for (let cycle = 0; Math.floor(cycle * cycle_ticks) + window_ticks < window_cycle_ticks; cycle++) {
                 const start = Math.floor(cycle * cycle_ticks);
                 windows.push({ item_name: target_item, tick_range: OpenRange.from(start, start + window_ticks), amount: swings * planned.stack_size });
             }
@@ -2180,17 +2180,17 @@ function windowsOfThePlanWhereInsertersRunFree(
             // surplus the sink's refusals need: a hand the machine has no room for is not taken, so what matters is that
             // there are never too few. The window count is not a count of hands: each window is given the amount it is
             // expected to carry, which is what the transfer table shows.
-            const needed_hands = (planned.needed_transfer_count ?? planned.total_transfer_count).toDecimal() * period_ticks / cycle_ticks;
+            const needed_hands = (planned.needed_transfer_count ?? planned.total_transfer_count).toDecimal() * window_cycle_ticks / cycle_ticks;
             const window_count = Math.max(1, Math.ceil(needed_hands * MACHINE_HANDS_SURPLUS / HANDS_PER_MACHINE_WINDOW - 1e-9));
             const window_ticks = Math.min(
                 inserter.animation.total.ticks * (HANDS_PER_MACHINE_WINDOW - 1) + 1,
-                Math.max(1, Math.floor(period_ticks / window_count) - 1),
+                Math.max(1, Math.floor(window_cycle_ticks / window_count) - 1),
             );
             const expected_amount = Math.max(1, Math.round(needed_hands * planned.stack_size / window_count));
             const windows: InventoryTransfer[] = [];
             for (let window = 0; window < window_count; window++) {
-                const start = Math.floor(window * period_ticks / window_count);
-                windows.push({ item_name, tick_range: OpenRange.from(start, Math.min(start + window_ticks, Math.floor(period_ticks) - 1)), amount: expected_amount });
+                const start = Math.floor(window * window_cycle_ticks / window_count);
+                windows.push({ item_name, tick_range: OpenRange.from(start, Math.min(start + window_ticks, Math.floor(window_cycle_ticks) - 1)), amount: expected_amount });
             }
             result.set(keyFor(inserter.entity_id), windows);
         } else if (Entity.isBelt(source) && EntityId.isMachine(inserter.sink.entity_id)) {
@@ -2209,15 +2209,15 @@ function windowsOfThePlanWhereInsertersRunFree(
                 // swings: its hands come in one window that opens with the output window of every cycle.
                 const hands = Math.ceil(planned.total_transfer_count.toDecimal() - 1e-9);
                 const window_ticks = Math.min(swing_ticks * (hands - 1) + hand_ticks, Math.floor(cycle_ticks) - 1);
-                for (let cycle = 0; Math.floor(cycle * cycle_ticks) + window_ticks < period_ticks; cycle++) {
+                for (let cycle = 0; Math.floor(cycle * cycle_ticks) + window_ticks < window_cycle_ticks; cycle++) {
                     const start = Math.floor(cycle * cycle_ticks);
                     windows.push({ item_name, tick_range: OpenRange.from(start, start + window_ticks), amount: hands * planned.stack_size });
                 }
             } else {
-                const hands = Math.ceil(planned.total_transfer_count.toDecimal() * period_ticks / cycle_ticks - 1e-9);
+                const hands = Math.ceil(planned.total_transfer_count.toDecimal() * window_cycle_ticks / cycle_ticks - 1e-9);
                 for (let hand = 0; hand < hands; hand++) {
-                    const start = Math.floor(hand * period_ticks / hands);
-                    windows.push({ item_name, tick_range: OpenRange.from(start, Math.min(start + hand_ticks, Math.floor(period_ticks) - 1)), amount: planned.stack_size });
+                    const start = Math.floor(hand * window_cycle_ticks / hands);
+                    windows.push({ item_name, tick_range: OpenRange.from(start, Math.min(start + hand_ticks, Math.floor(window_cycle_ticks) - 1)), amount: planned.stack_size });
                 }
             }
             result.set(keyFor(inserter.entity_id), windows);
@@ -2251,7 +2251,7 @@ function exportedLanesShortOfConsumption(
     entity_registry: ReadableEntityRegistry,
     history: InventoryTransferHistory,
     output_inserter_ids: Set<string>,
-    period_ticks: number,
+    window_cycle_ticks: number,
 ): ExportShortfall[] {
     const moved = new Map<string, number>();
     for (const [entity_id, transfers] of history.entries()) {
@@ -2260,23 +2260,23 @@ function exportedLanesShortOfConsumption(
             moved.set(key, (moved.get(key) ?? 0) + transfer.amount);
         }
     }
-    return exportShortfallsOfPeriod(exportedItemsOf(entity_registry, output_inserter_ids),
-        (inserter_id, item) => moved.get(`${inserter_id}|${item}`) ?? 0, period_ticks, LCM_STABILITY_TOLERANCE);
+    return exportShortfallsOfWindowCycle(exportedItemsOf(entity_registry, output_inserter_ids),
+        (inserter_id, item) => moved.get(`${inserter_id}|${item}`) ?? 0, window_cycle_ticks, LCM_STABILITY_TOLERANCE);
 }
 
 /**
  * Every inserter and drill runs on a fixed clock of a whole-tick period (or always/never), as in a clock-only
  * check, so the simulation is deterministic with that period and a repeated state repeats forever.
  */
-function isPurelyClocked(config: Config, period: number): boolean {
-    return Number.isInteger(period) && isClockedThroughout(config, period);
+function isPurelyClocked(config: Config, window_cycle_ticks: number): boolean {
+    return Number.isInteger(window_cycle_ticks) && isClockedThroughout(config, window_cycle_ticks);
 }
 
 /** Every inserter and drill is always or never enabled, or on windows of a clock of this period, whole ticks or not */
-function isClockedThroughout(config: Config, period: number): boolean {
+function isClockedThroughout(config: Config, window_cycle_ticks: number): boolean {
     const fixed = (control: EnableControlOverrideConfig | undefined) => control !== undefined && (
         control.mode === "ALWAYS" || control.mode === "NEVER"
-        || (control.mode === "CLOCKED" && control.period_duration_ticks === period)
+        || (control.mode === "CLOCKED" && control.period_duration_ticks === window_cycle_ticks)
     );
     return config.inserters.every(inserter => fixed(inserter.overrides?.enable_control))
         && (config.drills?.configs ?? []).every(drill => fixed(drill.overrides?.enable_control));
@@ -2291,7 +2291,7 @@ function isClockedThroughout(config: Config, period: number): boolean {
  * (see mergedClockTicks). Null when some control decides from more than the tick (AUTO), or no whole-tick
  * repeat exists: a repeated state then proves nothing.
  */
-export function provenRepeatBin(config: Config, period: number): { ticks: number; periods: number } | null {
+export function provenRepeatBin(config: Config, window_cycle_ticks: number): { ticks: number; window_cycles: number } | null {
     const moduli = new Set<number>();
     const fixed = (control: EnableControlOverrideConfig | undefined): boolean => {
         if (control === undefined) {
@@ -2310,13 +2310,13 @@ export function provenRepeatBin(config: Config, period: number): { ticks: number
         || !(config.drills?.configs ?? []).every(drill => fixed(drill.overrides?.enable_control))) {
         return null;
     }
-    const repeat = subtickClockForPeriod(period);
-    const base = Number.isInteger(period) ? { ticks: period, periods: 1 }
-        : repeat === null ? null : { ticks: repeat.period_ticks, periods: repeat.scale };
+    const repeat = subtickClockForWindowCycle(window_cycle_ticks);
+    const base = Number.isInteger(window_cycle_ticks) ? { ticks: window_cycle_ticks, window_cycles: 1 }
+        : repeat === null ? null : { ticks: repeat.window_cycle_ticks, window_cycles: repeat.scale };
     if (base === null) {
         return null;
     }
-    const own_moduli = Array.from(moduli).filter(modulus => modulus !== period);
+    const own_moduli = Array.from(moduli).filter(modulus => modulus !== window_cycle_ticks);
     if (own_moduli.length === 0) {
         return base;
     }
@@ -2324,7 +2324,7 @@ export function provenRepeatBin(config: Config, period: number): { ticks: number
     if (merged === null || merged >= SIMULATION_BUDGET_TICKS) {
         return null;
     }
-    return { ticks: merged, periods: (merged / base.ticks) * base.periods };
+    return { ticks: merged, window_cycles: (merged / base.ticks) * base.window_cycles };
 }
 
 /** Longest the fuel consumption view runs, in simulated ticks */
@@ -2343,7 +2343,7 @@ function fuelConsumptionView(
     config: Config,
     windows: Map<string, OpenRange[]>,
     inserter_clocks: ReadonlyMap<string, InserterClock>,
-    period: number,
+    window_cycle_ticks: number,
     logger: Logger,
     /** Run the fuel inserters on `inserter_clocks`, and not on the fuel clocks the run would make from its own plan */
     on_these_fuel_clocks: boolean,
@@ -2361,27 +2361,27 @@ function fuelConsumptionView(
         }
         return handSizeFor(inserter, machine.fuel_slot.fuel.item_name) / machine.fuel_consumption.rate_per_tick;
     }), 0);
-    const max_periods = Math.floor(MAX_FUEL_VIEW_TICKS / period);
-    if (max_periods < 1) {
+    const max_window_cycles = Math.floor(MAX_FUEL_VIEW_TICKS / window_cycle_ticks);
+    if (max_window_cycles < 1) {
         return undefined;
     }
 
     const fuel_inserter_ids = fuel_inserters.map(inserter => inserter.entity_id.id);
-    let periods = Math.min(Math.max(2, Math.ceil(FUEL_VIEW_HANDS * hand_lasts / period), Math.ceil(min_ticks / period)), max_periods);
+    let window_cycles = Math.min(Math.max(2, Math.ceil(FUEL_VIEW_HANDS * hand_lasts / window_cycle_ticks), Math.ceil(min_ticks / window_cycle_ticks)), max_window_cycles);
     while (true) {
         // the windows are run as they are: observing them again would return that run instead, without the fuel levels
         const run = runClockOnBuild(
-            { ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, windows, period, logger,
-            { ...swings, simulate_periods: periods, fuel_levels: true },
+            { ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, windows, window_cycle_ticks, logger,
+            { ...swings, simulate_window_cycles: window_cycles, fuel_levels: true },
             on_these_fuel_clocks ? inserter_clocks : undefined,
         );
         const swung = run.serializable_transfer_history.entities
             .some(entity => fuel_inserter_ids.includes(entity.entity_id) && entity.transfers.length > 0);
-        if (swung || periods >= max_periods) {
-            logger.log(`Fuel consumption view: ${periods} periods, fuel inserters ${swung ? "swing" : "did not swing"}`);
+        if (swung || window_cycles >= max_window_cycles) {
+            logger.log(`Fuel consumption view: ${window_cycles} periods, fuel inserters ${swung ? "swing" : "did not swing"}`);
             return {
-                periods,
-                duration_ticks: periods * period,
+                window_cycles,
+                duration_ticks: window_cycles * window_cycle_ticks,
                 ...(run.clock_tick_at_start !== undefined && { clock_tick_at_start: run.clock_tick_at_start }),
                 fuel_inserter_ids,
                 fuel_swings_recorded: swung,
@@ -2391,7 +2391,7 @@ function fuelConsumptionView(
                 state_transition_history: run.serializable_state_transition_history,
             };
         }
-        periods = Math.min(periods * 2, max_periods);
+        window_cycles = Math.min(window_cycles * 2, max_window_cycles);
     }
 }
 
@@ -2434,7 +2434,7 @@ function plannedCraftingShares(entity_registry: ReadableEntityRegistry, output_c
 export function withInserterClocks(
     windows: Map<string, OpenRange[]>,
     inserter_clocks: ReadonlyMap<string, InserterClock>,
-    period: number,
+    window_cycle_ticks: number,
 ): Map<string, OpenRange[]> {
     if (inserter_clocks.size === 0) {
         return windows;
@@ -2444,7 +2444,7 @@ export function withInserterClocks(
         if (clock.own_clock) {
             result.delete(inserter_id);
         } else {
-            result.set(inserter_id, clockWindowsOverPeriod(clock, period));
+            result.set(inserter_id, clockWindowsOverWindowCycle(clock, window_cycle_ticks));
         }
     }
     return result;

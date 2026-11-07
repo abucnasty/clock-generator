@@ -46,7 +46,7 @@ const circuitExportBackedUp: JobCheck[] = [
         name: 'Selection: the 4 inserters with no window are the circuits into the processing unit machines, which the remake leaves unguarded',
         run: ({ generated }) => {
             expect(byMaker(generated, 'planned-belt-slack-per-hand').result.always_on_reasons).toEqual(Object.fromEntries([3, 4, 7, 8]
-                .map(number => [`inserter:${number}`, { kind: 'busy', period_ticks: 24 }])));
+                .map(number => [`inserter:${number}`, { kind: 'busy', window_cycle_ticks: 24 }])));
         },
     },
 ];
@@ -131,7 +131,7 @@ const automation: JobCheck[] = [
             const report = reportOf(config, selectedOf(generated));
             expect(report.survives).toBe(report.undisturbed.recovers && report.losses.every(outcome => outcome.recovers));
             expect(report.broken_by).toEqual(report.losses.filter(outcome => !outcome.recovers).map(outcome => lossId(outcome.loss)));
-            expect(report.recovered_after_periods === null).toBe(!report.survives);
+            expect(report.recovered_after_window_cycles === null).toBe(!report.survives);
         },
     },
     {
@@ -140,7 +140,7 @@ const automation: JobCheck[] = [
             const report = reportOf(config, selectedOf(generated));
             const verdict = verdictOf(report);
             expect(verdict.survives).toBe(report.survives);
-            expect(verdict.recovered_after_periods).toBe(report.recovered_after_periods);
+            expect(verdict.recovered_after_window_cycles).toBe(report.recovered_after_window_cycles);
             expect(verdictOf({ ...report, survives: false, losses: report.losses.map(outcome => ({ ...outcome, recovers: outcome.loss.kind !== 'supply' })) }).broken_by)
                 .toEqual(['copper plate stops arriving', 'iron gear wheel stops arriving']);
         },

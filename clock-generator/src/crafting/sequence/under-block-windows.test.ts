@@ -3,16 +3,16 @@ import { OpenRange } from "../../data-types";
 import { underBlockMap, underBlockStretches, underBlockWindows } from "./under-block-windows";
 
 /** The windows of an output read as underBlockMap reads it */
-const windowsOf = (output: number[], block: number, period: number, min: number, length?: number) => {
-    const map = underBlockMap(output, block, period);
+const windowsOf = (output: number[], block: number, window_cycle_ticks: number, min: number, length?: number) => {
+    const map = underBlockMap(output, block, window_cycle_ticks);
     return map === null ? null : underBlockWindows(map, min, length);
 };
 
 /** An output at `block` but in the given ticks of every period, where it is a hand under it */
-function outputOf(periods: number, period: number, under: [number, number][], block = 28): number[] {
+function outputOf(window_cycles: number, window_cycle_ticks: number, under: [number, number][], block = 28): number[] {
     const output: number[] = [];
-    for (let tick = 0; tick < periods * period; tick++) {
-        const position = tick % period;
+    for (let tick = 0; tick < window_cycles * window_cycle_ticks; tick++) {
+        const position = tick % window_cycle_ticks;
         output.push(under.some(([start, end]) => position >= start && position <= end) ? block - 16 : block);
     }
     return output;
@@ -78,9 +78,9 @@ describe("underBlockWindows", () => {
     it("enables only as many ticks of each stretch as asked, from the first run under its block as long", () => {
         // every period is under it at ticks 17 and 18 too, a hand taken before the others, and back at it from 19 to 24
         const output = outputOf(30, 480, SLOTS.map(at => [at + 25, at + 62]));
-        for (let period = 0; period < 30; period++) {
-            output[period * 480 + 17] = 12;
-            output[period * 480 + 18] = 12;
+        for (let window_cycle_ticks = 0; window_cycle_ticks < 30; window_cycle_ticks++) {
+            output[window_cycle_ticks * 480 + 17] = 12;
+            output[window_cycle_ticks * 480 + 18] = 12;
         }
         const map = underBlockMap(output, 28, 480)!;
         expect(underBlockStretches(map, 16).map(it => [it.start, it.length])).toEqual(SLOTS.map(at => [at === 0 ? 17 : at + 25, at === 0 ? 46 : 38]));

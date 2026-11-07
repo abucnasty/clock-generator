@@ -1,4 +1,4 @@
-import { CLOCK_TO_WINDOW_TICKS, expandChangeList, RecordedInserter, Recording, recordedClockPeriod } from "./recording";
+import { CLOCK_TO_WINDOW_TICKS, expandChangeList, RecordedInserter, Recording, recordedClockWindowCycle } from "./recording";
 
 export interface RecordedTransfer {
     item_name: string;
@@ -30,11 +30,11 @@ function clockValues(recording: Recording): number[] {
  */
 export function windowPositions(recording: Recording): number[] {
     const positions = clockValues(recording);
-    const period = recordedClockPeriod(recording);
-    if (period === null) {
+    const window_cycle_ticks = recordedClockWindowCycle(recording);
+    if (window_cycle_ticks === null) {
         return positions;
     }
-    return positions.map(position => ((position - CLOCK_TO_WINDOW_TICKS) % period + period) % period);
+    return positions.map(position => ((position - CLOCK_TO_WINDOW_TICKS) % window_cycle_ticks + window_cycle_ticks) % window_cycle_ticks);
 }
 
 /** Max ticks between hand count increases that still belong to the same pickup (belt pickups fill over several ticks) */

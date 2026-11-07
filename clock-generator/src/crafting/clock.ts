@@ -11,16 +11,16 @@ import { stacksOf } from "../entities/traits/timing";
 export type SerializableClockWindows = Record<string, { start: number; end: number }[]>;
 
 
-export function rotateRanges(ranges: OpenRange[], offset: number, period: number): OpenRange[] {
+export function rotateRanges(ranges: OpenRange[], offset: number, window_cycle_ticks: number): OpenRange[] {
     // the simulated clock position (tick % period) is fractional for a fractional period
-    const last_position = Number.isInteger(period) ? period - 1 : period;
+    const last_position = Number.isInteger(window_cycle_ticks) ? window_cycle_ticks - 1 : window_cycle_ticks;
     const rotated: OpenRange[] = [];
     for (const range of ranges) {
-        const start = (range.start_inclusive + offset) % period;
+        const start = (range.start_inclusive + offset) % window_cycle_ticks;
         const end = start + (range.end_inclusive - range.start_inclusive);
-        if (end >= period) {
+        if (end >= window_cycle_ticks) {
             rotated.push(OpenRange.from(start, last_position));
-            rotated.push(OpenRange.from(0, end - period));
+            rotated.push(OpenRange.from(0, end - window_cycle_ticks));
         } else {
             rotated.push(OpenRange.from(start, end));
         }
@@ -29,7 +29,7 @@ export function rotateRanges(ranges: OpenRange[], offset: number, period: number
 }
 
 
-export { subtickClockForPeriod } from "../common/subtick-period";
+export { subtickClockForWindowCycle as subtickClockForWindowCycle } from "../common/subtick-window-cycle";
 
 /**
  * Ticks added to the end of each window of an inserter that takes fuel for its machine off a belt as well as an
@@ -140,18 +140,18 @@ export function backedUpHandTicks(entity_registry: ReadableEntityRegistry): Map<
 export function withWindowsAtLeast(
     windows: Map<string, OpenRange[]>,
     least_ticks: ReadonlyMap<string, number>,
-    period: number,
+    window_cycle_ticks: number,
 ): Map<string, OpenRange[]> {
     const result = new Map<string, OpenRange[]>();
     for (const [key, ranges] of windows) {
         const ticks = least_ticks.get(key) ?? 0;
-        if (ticks === 0 || !Number.isInteger(period) || ranges.every(r => r.end_inclusive - r.start_inclusive + 1 >= ticks)) {
+        if (ticks === 0 || !Number.isInteger(window_cycle_ticks) || ranges.every(r => r.end_inclusive - r.start_inclusive + 1 >= ticks)) {
             result.set(key, ranges);
             continue;
         }
         const lengthened = ranges.flatMap(r => {
-            const length = Math.min(Math.max(r.end_inclusive - r.start_inclusive, ticks - 1), period - 1);
-            return rotateRanges([OpenRange.from(0, length)], r.start_inclusive, period);
+            const length = Math.min(Math.max(r.end_inclusive - r.start_inclusive, ticks - 1), window_cycle_ticks - 1);
+            return rotateRanges([OpenRange.from(0, length)], r.start_inclusive, window_cycle_ticks);
         });
         result.set(key, OpenRange.reduceRanges(lengthened));
     }
@@ -161,18 +161,18 @@ export function withWindowsAtLeast(
 export function withBeltPickupSlack(
     windows: Map<string, OpenRange[]>,
     slack: Map<string, number>,
-    period: number,
+    window_cycle_ticks: number,
 ): Map<string, OpenRange[]> {
     const result = new Map<string, OpenRange[]>();
     for (const [key, ranges] of windows) {
         const ticks = slack.get(key) ?? 0;
-        if (ticks === 0 || !Number.isInteger(period)) {
+        if (ticks === 0 || !Number.isInteger(window_cycle_ticks)) {
             result.set(key, ranges);
             continue;
         }
         const extended = ranges.flatMap(r => {
-            const length = Math.min(r.end_inclusive - r.start_inclusive + ticks, period - 1);
-            return rotateRanges([OpenRange.from(0, length)], r.start_inclusive, period);
+            const length = Math.min(r.end_inclusive - r.start_inclusive + ticks, window_cycle_ticks - 1);
+            return rotateRanges([OpenRange.from(0, length)], r.start_inclusive, window_cycle_ticks);
         });
         result.set(key, OpenRange.reduceRanges(extended));
     }
@@ -180,18 +180,18 @@ export function withBeltPickupSlack(
 }
 
 
-export function shiftRangesForCircuitLatency(ranges: OpenRange[], period: number): EnableControlRange[] {
+export function shiftRangesForCircuitLatency(ranges: OpenRange[], window_cycle_ticks: number): EnableControlRange[] {
     const shifted: EnableControlRange[] = [];
     for (const range of ranges) {
         let start = range.start_inclusive + CIRCUIT_LATENCY_TICKS;
         let end = range.end_inclusive + CIRCUIT_LATENCY_TICKS;
-        if (start >= period) {
-            start -= period;
-            end -= period;
+        if (start >= window_cycle_ticks) {
+            start -= window_cycle_ticks;
+            end -= window_cycle_ticks;
         }
-        if (end >= period) {
-            shifted.push({ start, end: Number.isInteger(period) ? period - 1 : period });
-            shifted.push({ start: 0, end: end - period });
+        if (end >= window_cycle_ticks) {
+            shifted.push({ start, end: Number.isInteger(window_cycle_ticks) ? window_cycle_ticks - 1 : window_cycle_ticks });
+            shifted.push({ start: 0, end: end - window_cycle_ticks });
         } else {
             shifted.push({ start, end });
         }

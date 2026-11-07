@@ -8,7 +8,7 @@ import * as trial from "./trial";
 import type { BlueprintGenerationResult } from "./plan/unclocked-run";
 
 const quiet = { log() {}, warn() {}, error() {}, debug() {} };
-const recovered = { survives: true, broken_by: [], recovered_after_periods: 0 };
+const recovered = { survives: true, broken_by: [], recovered_after_window_cycles: 0 };
 const options = { logger: quiet, verify_as_built: true, factorio_states: false, fuel_consumption_view: false, modulo_blueprint: false };
 
 describe("primitive primary integration and legacy sibling compatibility", () => {

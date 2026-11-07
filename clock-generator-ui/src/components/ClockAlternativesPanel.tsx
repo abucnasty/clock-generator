@@ -35,7 +35,7 @@ import { Panel } from './Panel';
 import { RecommendedChip } from './RecommendedChip';
 import { HANDS_TEXT } from '../utils/targetCounts';
 import { TermsList } from './TermsPopover';
-import { OUTPUT_PER_PERIOD_HEADER, SIGNALS_HEADER, WAKE_UPS_HEADER, formatNumberText, makesHeader, rateHeader } from '../utils/numberText';
+import { OUTPUT_PER_WINDOW_CYCLE_HEADER, SIGNALS_HEADER, WAKE_UPS_HEADER, formatNumberText, makesHeader, rateHeader } from '../utils/numberText';
 import { RECOMMENDED_COPY, disclosureRunLine, groupClockRowsByBelt, partitionClockRows, type BeltClockGroups, type ClockRow, type PickRule } from '../utils/recommendedClock';
 
 // fractional (subtick) periods are shown to 3 decimals
@@ -98,11 +98,11 @@ function statusDetail(alternative: ClockAlternativeView): string {
         return `${startup}Clock-phase check unavailable. ${recovery}`;
     }
     const phases = `${startup}${recovery} Checked from ${check.start_phases_checked} clock phase${check.start_phases_checked === 1 ? '' : 's'}`;
-    if (check.repeat_periods === undefined || check.repeat_output_items === undefined) {
+    if (check.repeat_window_cycles === undefined || check.repeat_output_items === undefined) {
         return phases;
     }
-    return `${phases}. The build repeats every ${check.repeat_periods} window cycles, moving ${check.repeat_output_items} of `
-        + `${alternative.expectedOutputItems * check.repeat_periods} items over them`;
+    return `${phases}. The build repeats every ${check.repeat_window_cycles} window cycles, moving ${check.repeat_output_items} of `
+        + `${alternative.expectedOutputItems * check.repeat_window_cycles} items over them`;
 }
 
 /** The engine's description in sentences, so the popover reads as short paragraphs and not one block */
@@ -393,7 +393,7 @@ export function ClockAlternativesPanel({
                                     <TableCell align="right"><HelpHeader label={WAKE_UPS_HEADER} help={COMPARE_COPY.wakeUpsHelp} /></TableCell>
                                     <TableCell align="right"><HelpHeader label={SIGNALS_HEADER} help={COMPARE_COPY.signalsHelp} /></TableCell>
                                     <TableCell align="right">{rateHeader(copies)}</TableCell>
-                                    <TableCell align="right">{OUTPUT_PER_PERIOD_HEADER}</TableCell>
+                                    <TableCell align="right">{OUTPUT_PER_WINDOW_CYCLE_HEADER}</TableCell>
                                     <TableCell><TermsHeader label={COMPARE_COPY.status} focus={TERMS_FOCUS.works} /></TableCell>
                                 </>
                             ) : (

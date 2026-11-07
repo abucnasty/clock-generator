@@ -11,7 +11,7 @@ import type { Config } from "../../config/schema";
 import type { ExhaustDecision, ExhaustTerms } from "../../data-types/build-plan";
 import Fraction, { fraction } from "../../data-types/fraction";
 import { Entity, handSizeFor, Machine, ReadableEntityRegistry } from "../../entities";
-import { EXHAUST_PERIOD_BUDGET_TICKS, resultsFitContainer, exhaustFeasible, exhaustPlan, sharedHandRefusal } from "../exhaust";
+import { EXHAUST_WINDOW_CYCLE_BUDGET_TICKS, resultsFitContainer, exhaustFeasible, exhaustPlan, sharedHandRefusal } from "../exhaust";
 import { destroyedTargetBalance, transfersOfBalance } from "../sequence/cycle/cycle-transfers";
 import { destroyedTargetCrafts, EntityTransferCountMap } from "../sequence/cycle/swing-counts";
 import { targetInsertersOf, targetMachinesOf } from "../sequence/cycle/target-ends";
@@ -95,7 +95,7 @@ export function exhaustDecisionOf(
         cycle_ticks,
         whole_hands_fit: whole_fits,
         windows_feasible: feasible,
-        longest_period_ticks: EXHAUST_PERIOD_BUDGET_TICKS,
+        longest_window_cycle_ticks: EXHAUST_WINDOW_CYCLE_BUDGET_TICKS,
     };
     if (whole_fits || feasible === false) {
         return { kind: "whole-hands", hands: whole_hands, terms };
@@ -133,7 +133,7 @@ function wholeHandsFit(
                 cycles = cycles / gcd(cycles, denominator) * denominator;
             }
         }
-        return cycles * cycle_ticks <= EXHAUST_PERIOD_BUDGET_TICKS
+        return cycles * cycle_ticks <= EXHAUST_WINDOW_CYCLE_BUDGET_TICKS
             && resultsFitContainer(machine, entity_registry, cycle_ticks, craftsOf(machine), cycles);
     });
 }

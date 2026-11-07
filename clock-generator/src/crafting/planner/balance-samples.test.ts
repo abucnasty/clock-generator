@@ -13,7 +13,7 @@ import { destroyedTargetBalance, madeTargetBalance, transfersOfBalance } from ".
 import { buildOutputInsertersOf, destroyedTargetCrafts, type EntityTransferCountMap } from "../sequence/cycle/swing-counts";
 import { createEntityRegistryFromConfig } from "../sequence/simulation-context";
 import { TargetProductionRate } from "../target-production-rate";
-import { Balance, balanceBuildOf, DRILL_ITEMS_PER_SWING, periodCyclesOf } from "./balance";
+import { Balance, balanceBuildOf, DRILL_ITEMS_PER_SWING, windowCycleCyclesOf } from "./balance";
 import { destroyedTargetBasisOf } from "./exhaust";
 
 /**
@@ -102,7 +102,7 @@ describe("the balance equations of a cycle", () => {
             for (const run of casesOf(config)) {
                 recorded[run.label] = outcomeOf(() => transfersOfBalance(run.balance(), registry));
                 const transfers = run.balance().transfers;
-                const cycles = periodCyclesOf(transfers);
+                const cycles = windowCycleCyclesOf(transfers);
                 expect(transfers.flatMap(it => it.items).every(it => it.hands.multiply(cycles).getDenominator === 1), run.label).toBe(true);
             }
             await expect(`${JSON.stringify({ sample: key, ...recorded }, null, 2)}\n`)

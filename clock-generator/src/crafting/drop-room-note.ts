@@ -22,7 +22,7 @@ const WHOLE_TICK_SLACK = 1e-6;
  * at least one swing of the output inserter. None where it cannot be told: the machines making the target differ in rate or
  * hand, one of them has not exactly one inserter taking its product out, or the config is refused.
  */
-export function estimatedPeriod(config: Config): number | null {
+export function estimatedWindowCycle(config: Config): number | null {
     try {
         const rates = computeMachineTargetRates(config);
         const registry = createEntityRegistryFromConfig(config);
@@ -38,8 +38,8 @@ export function estimatedPeriod(config: Config): number | null {
         if (ticks.some(it => it === null)) return null;
         const first = ticks[0]!;
         if (ticks.some(it => Math.abs(it!.ticks - first.ticks) > WHOLE_TICK_SLACK * first.ticks)) return null;
-        const period = Math.floor(first.ticks * (config.overrides?.lcm ?? 1) + WHOLE_TICK_SLACK);
-        return Math.max(period, first.swing);
+        const window_cycle_ticks = Math.floor(first.ticks * (config.overrides?.lcm ?? 1) + WHOLE_TICK_SLACK);
+        return Math.max(window_cycle_ticks, first.swing);
     } catch {
         return null;
     }
@@ -78,18 +78,18 @@ export function dropRoomNote(config: Config): string | null {
     }
     const left_out = uncheckedDrops(config).length > 0 ? ` ${DROP_SPACING_UNCHECKED}` : "";
     if (lines.length === 0) return left_out === "" ? null : DROP_SPACING_UNCHECKED;
-    const period = estimatedPeriod(config);
-    if (period === null) return `${DROP_ROOM_NOT_ESTIMATED}${left_out}`;
-    const room = dropRoom(config, lines, period);
+    const window_cycle_ticks = estimatedWindowCycle(config);
+    if (window_cycle_ticks === null) return `${DROP_ROOM_NOT_ESTIMATED}${left_out}`;
+    const room = dropRoom(config, lines, window_cycle_ticks);
     if (room === null) return null;
     const unchecked = ` ${DROP_SPACING_COPIES_ALIKE}${left_out}`;
-    if (room.crowded !== null) return `At about ${period} ticks a period, ${crowdedText(room.crowded, copies).replace(/^T/, "t")}${unchecked}`;
+    if (room.crowded !== null) return `At about ${window_cycle_ticks} ticks a period, ${crowdedText(room.crowded, copies).replace(/^T/, "t")}${unchecked}`;
     const together = new Map(lines.flatMap(line => line.inserters.map(inserter => [inserter.id, [0]] as const)));
-    const spacing = dropSpacing(config, together, period);
+    const spacing = dropSpacing(config, together, window_cycle_ticks);
     if (spacing === null) return null;
     const belts = [...new Set(spacing.lines.map(line => line.belt_id))].sort((a, b) => a - b);
     const belt = belts.length === 1 ? `belt ${belts[0]}` : `belts ${belts.join(", ")}`;
-    const lead = `At about ${period} ticks a period (estimated from the target rate: one output hand at the machine's rate), the hands of the ${copies} copies`;
+    const lead = `At about ${window_cycle_ticks} ticks a period (estimated from the target rate: one output hand at the machine's rate), the hands of the ${copies} copies`;
     const more = alsoFits(room);
     const plus = room.loop !== null ? `, and at any of these plus ${room.loop}` : "";
     if (spacing.lines.every(line => line.fits)) {

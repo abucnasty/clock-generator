@@ -27,8 +27,8 @@ describe("trimEndsToAvoidBackSwingWakeLists", () => {
             total_transfer_count: fraction(4),
             stack_size: 16,
         }]]);
-        const trim = (transfers: InventoryTransfer[], period_ticks?: number) => InventoryTransferHistory
-            .trimEndsToAvoidBackSwingWakeLists(new InventoryTransferHistory(new Map([[inserter.entity_id, transfers]])), registry, plan, period_ticks)
+        const trim = (transfers: InventoryTransfer[], window_cycle_ticks?: number) => InventoryTransferHistory
+            .trimEndsToAvoidBackSwingWakeLists(new InventoryTransferHistory(new Map([[inserter.entity_id, transfers]])), registry, plan, window_cycle_ticks)
             .get(inserter.entity_id)!
             .map(transfer => [transfer.tick_range.start_inclusive, transfer.tick_range.end_inclusive, transfer.amount]);
         return { trim, back_swing_ticks: inserter.animation.rotation.ticks };

@@ -30,16 +30,16 @@ describe("alwaysOnReasons", () => {
         const everything = new Set(registry.getAll().map(it => it.entity_id.id));
         const reasons = alwaysOnReasons(registry, id => !["inserter:1", "inserter:7", "inserter:9", "inserter:10"].includes(id), {
             override: new Set(["inserter:9"]),
-            left_open: new Map([["inserter:9", { kind: "busy", period_ticks: 24 }], ["inserter:1", { kind: "busy", period_ticks: 24 }]]),
+            left_open: new Map([["inserter:9", { kind: "busy", window_cycle_ticks: 24 }], ["inserter:1", { kind: "busy", window_cycle_ticks: 24 }]]),
             chest_drills: [],
             swung: new Set(everything),
         });
         // 1 is on for the strategy's reason, 9 too (the strategy's reason comes before the rule's), 7 is in the loop,
         // and 10, with nothing to name, has no reason
         expect(reasons).toEqual({
-            "inserter:1": { kind: "busy", period_ticks: 24 },
+            "inserter:1": { kind: "busy", window_cycle_ticks: 24 },
             "inserter:7": { kind: "loop" },
-            "inserter:9": { kind: "busy", period_ticks: 24 },
+            "inserter:9": { kind: "busy", window_cycle_ticks: 24 },
         });
     });
 });

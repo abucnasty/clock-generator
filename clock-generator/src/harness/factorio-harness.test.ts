@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import path from "path";
 import { encodeBlueprintFile } from "../blueprints/serde";
 import {
-    assertClockAttached, assertClockPriming, assertRecordableTicks, buildPartsMissingFromConfig, stagedBuildOrder, clockOfBlueprintString, clockPeriodTicks, matchBuiltCopies, matchBuiltDrills, matchBuiltInserters, MAX_RECORDED_TICKS,
+    assertClockAttached, assertClockPriming, assertRecordableTicks, buildPartsMissingFromConfig, stagedBuildOrder, clockOfBlueprintString, clockWindowCycleTicks, matchBuiltCopies, matchBuiltDrills, matchBuiltInserters, MAX_RECORDED_TICKS,
     factorioDataDir, missingFromConfigMessage, recordedTicks, recordInFactorio, scheduledDrillIds, scheduledInserterIds,
     drillResourceOf,
 } from "./factorio-harness";
@@ -272,15 +272,15 @@ describe("the most ticks one run in Factorio records", () => {
     });
 
     it("reads the period a clock blueprint counts: from 1 with something adding the 1, from 0 before that", () => {
-        expect(clockPeriodTicks(clock(1728, ONE_BASED))).toBe(1728);
+        expect(clockWindowCycleTicks(clock(1728, ONE_BASED))).toBe(1728);
         // the game keeps the whole part of a constant: 90.947 counts 1 to 90
-        expect(clockPeriodTicks(clock(90.94736842105263, ONE_BASED))).toBe(90);
-        expect(clockPeriodTicks(clock(1728, [], [{ signal: { name: "signal-clock", type: "virtual" }, constant: 1 }]))).toBe(1728);
+        expect(clockWindowCycleTicks(clock(90.94736842105263, ONE_BASED))).toBe(90);
+        expect(clockWindowCycleTicks(clock(1728, [], [{ signal: { name: "signal-clock", type: "virtual" }, constant: 1 }]))).toBe(1728);
         // a clock made before 0.6.0 counts 0 to 89 while under 89.947
-        expect(clockPeriodTicks(clock(89.94736842105263))).toBe(90);
+        expect(clockWindowCycleTicks(clock(89.94736842105263))).toBe(90);
         // a scaffold without a clock of the generator's, and something that is no blueprint
-        expect(clockPeriodTicks(encodeBlueprintFile({ blueprint: { entities: [{ name: "decider-combinator" }] } } as any))).toBeNull();
-        expect(clockPeriodTicks("not a blueprint")).toBeNull();
+        expect(clockWindowCycleTicks(encodeBlueprintFile({ blueprint: { entities: [{ name: "decider-combinator" }] } } as any))).toBeNull();
+        expect(clockWindowCycleTicks("not a blueprint")).toBeNull();
     });
 
     it("counts what a clocked recording holds: whole periods until at least the ticks asked for", () => {
@@ -502,8 +502,8 @@ describe("a clock the build came with", () => {
     }] } } as any);
 
     it("is cut by the period it is named with, which the limit on a recording is checked against", async () => {
-        await expect(run({ built_clock: { counter: 5, period: 100_000, first_value: 0 } }, counter(99_999))).rejects.toThrow("records 100000");
-        await expect(run({ built_clock: { counter: 5, period: 216, first_value: 0 } }, counter(215))).rejects.toThrow("Factorio not found");
+        await expect(run({ built_clock: { counter: 5, window_cycle_ticks: 100_000, first_value: 0 } }, counter(99_999))).rejects.toThrow("records 100000");
+        await expect(run({ built_clock: { counter: 5, window_cycle_ticks: 216, first_value: 0 } }, counter(215))).rejects.toThrow("Factorio not found");
     });
 
     it("is told the copies of the config only with a clock to wire to them", async () => {
@@ -516,7 +516,7 @@ describe("a clock the build came with", () => {
     });
 
     it("is refused with an unclocked run, a staged start, or a blueprint it does not fit", async () => {
-        const built_clock = { counter: 5, period: 216, first_value: 0 as const };
+        const built_clock = { counter: 5, window_cycle_ticks: 216, first_value: 0 as const };
         await expect(run({ built_clock, unclocked: true }, counter(215))).rejects.toThrow("kept or replaced");
         await expect(run({ built_clock, staged_start: { build_order: "ascending" } }, counter(215))).rejects.toThrow("kept or replaced");
         await expect(run({ built_clock }, counter(100))).rejects.toThrow("not the 216 asked for");

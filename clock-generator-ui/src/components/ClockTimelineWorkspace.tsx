@@ -4,7 +4,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import type { Config, PortableStateTransitionHistory, SerializableClockWindows, SerializableTransferHistory, TimelineEntity } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
 import type { TimelineViewContext } from '../utils/buildViewContext';
-import { settledPeriodLabel, timelineRequestFor } from '../utils/timelineRequest';
+import { settledWindowCycleLabel, timelineRequestFor } from '../utils/timelineRequest';
 import { useTimelineRecording } from '../hooks/useTimelineRecording';
 import { useGameNames } from '../hooks/useGameNames';
 import { DEFAULT_INSPECTION, validInspection, resolveTimelineEntity, timelineEntityName, clampTimelineRange, panTimeline, relevantTimelineEvents, relatedTimelineEntities, upperBound, zoomTimeline, type TimelineInspection, type TimelineRange } from '../utils/timelineInspection';
@@ -113,7 +113,7 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
     const request = useMemo(() => recordingWanted ? timelineRequestFor(props.config, props.selected, inspection.run) : null, [props.config, props.selected, inspection.run, recordingWanted]);
     const primary = useTimelineRecording(request, retry);
     const recording = primary.data;
-    const settledLabel = settledPeriodLabel(request, recording);
+    const settledLabel = settledWindowCycleLabel(request, recording);
     const selected = useMemo(() => resolveTimelineEntity(recording?.entities ?? options, inspection.entityId), [recording, options, inspection.entityId]);
     const selectedId = selected?.id ?? null;
     const effectiveInspection = useMemo(() => ({ ...inspection, entityId: selectedId }), [inspection, selectedId]);
@@ -200,7 +200,7 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
         {recordingWanted && !isFlow && selected?.type === 'belt' && <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Showing connected inserters. Physical belt contents are not recorded.</Typography>}
         {recordingWanted && !isFlow && selected?.type !== 'belt' && <FormControlLabel sx={{ mb: 0.5 }} label="Show connected entities" control={<Checkbox size="small" checked={inspection.showConnections === true} onChange={(_, showConnections) => patch({ showConnections })} />} />}
         {inspection.view === 'activity' && <TimelineSignals signals={inspection.signals} onChange={signals => patch({ signals })} />}
-        {inspection.view === 'cycles' && <OutputCycleNavigator cycles={cycles} index={cycleIndex} periodTicks={props.selected.simulationDurationTicks} swings={props.selected.terminalSwingCount} counts={props.selected.counts} onSelect={selectCycle} />}
+        {inspection.view === 'cycles' && <OutputCycleNavigator cycles={cycles} index={cycleIndex} windowCycleTicks={props.selected.simulationDurationTicks} swings={props.selected.terminalSwingCount} counts={props.selected.counts} onSelect={selectCycle} />}
         {recordingWanted && <Typography variant="body2" sx={{ mb: 1 }}>
             {props.selected.ranking.meets_target_rate ? `This clock meets ${number(props.selected.assessment.items_per_second)} items/s across all copies. Pauses can be part of that pattern.`
                 : 'Explore the recorded activity alongside this clock’s assessed output.'}

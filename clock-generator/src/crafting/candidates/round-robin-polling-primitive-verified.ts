@@ -4,7 +4,7 @@ import type { Config } from "../../config";
 import { OpenRange } from "../../data-types";
 import { Entity } from "../../entities";
 import type { AlwaysOnReason } from "../always-on-reasons";
-import { ClockPeriodLimitError } from "../plan/clock-period-limit";
+import { ClockWindowCycleLimitError } from "../plan/clock-window-cycle-limit";
 import { unclockedRun, withInserterClocks, withRoomForRandomAmounts, type BlueprintGenerationResult, type GenerateClockOptions } from "../plan/unclocked-run";
 import type { PrimitiveRoundRobinPollingAttemptReport, PrimitiveRoundRobinPollingPolicy } from "../round-robin-polling-primitive-policy";
 import { plannedTerminalSwingCount } from "../sequence/cycle/output-cycle";
@@ -46,7 +46,7 @@ export function verifiedPrimitiveRoundRobinPollingClock(
     let construction;
     try { construction = constructPrimitiveRoundRobinPolling(config); }
     catch (error) {
-        if (error instanceof RoundRobinPollingNotApplicable || error instanceof ClockPeriodLimitError) return refused(error.message);
+        if (error instanceof RoundRobinPollingNotApplicable || error instanceof ClockWindowCycleLimitError) return refused(error.message);
         throw error;
     }
     const ways = construction.attempts.filter(attempt => !attempt.options.share_windows && attempt.result.kind === "constructed");
@@ -61,10 +61,10 @@ export function verifiedPrimitiveRoundRobinPollingClock(
     const made = unclockedRun(derived, options);
     const { run } = made;
     assert(plannedTerminalSwingCount(run.output_cycle_plan) === construction.terminal_swing_count, "primitive planner count changed");
-    assert(run.duration.ticks === construction.period_ticks && run.recipe_lcm === construction.grouped_cycles, "primitive period/cycles changed");
+    assert(run.duration.ticks === construction.window_cycle_ticks && run.recipe_lcm === construction.grouped_cycles, "primitive period/cycles changed");
     assert(canonicalVerificationJson(EntityTransferCountMap.serialize(run.swing_counts)) === canonicalVerificationJson(construction.transfer_plan), "primitive transfer facts changed");
     const registry = run.simulation_context.entity_registry;
-    const clocks = unplannedInserterClocks(registry, construction.period_ticks);
+    const clocks = unplannedInserterClocks(registry, construction.window_cycle_ticks);
     const retained = Object.fromEntries([...clocks].map(([id, clock]) => [id, { kind: clock.kind, modulus: clock.modulus,
         own_clock: clock.own_clock === true, window: { start: clock.window.start_inclusive, end: clock.window.end_inclusive } }]));
     assert(canonicalVerificationJson(retained) === canonicalVerificationJson(construction.retained_clocks), "primitive by-product controls changed");
@@ -101,17 +101,17 @@ export function verifiedPrimitiveRoundRobinPollingClock(
         const event: PrimitiveRoundRobinPollingAttemptReport["attempts"][number] = { construction_key: key, stage: "margin" };
         report.attempts.push(event);
         detail?.(`Checking primitive grouped margins ${report.attempts.length}`);
-        const margin = holdsWithMargin(made, windows, construction.period_ticks);
+        const margin = holdsWithMargin(made, windows, construction.window_cycle_ticks);
         if (margin !== null) { event.reason = margin; continue; }
         event.stage = "as-built";
-        const left_open = new Map<string, AlwaysOnReason>(built.busy.map(id => [id, { kind: "busy", period_ticks: construction.period_ticks }]));
+        const left_open = new Map<string, AlwaysOnReason>(built.busy.map(id => [id, { kind: "busy", window_cycle_ticks: construction.window_cycle_ticks }]));
         let result = finishedClock(made, windows, grouped.turns, { ...options, loop_windows: false }, left_open, room);
         offerWay(`primitive ${attempt.options.feeder_offset === 1 ? "compact" : "staged"}${attempt.options.surplus_guard === true ? " with the surplus guard" : ""}`, result, grouped.guarded);
         const policy: PrimitiveRoundRobinPollingPolicy = { strategy: "primitive-grouped", trigger,
             requested_terminal_swing_count, terminal_swing_count: construction.terminal_swing_count, grouped_cycles: construction.grouped_cycles,
             construction_key: key, options: { ...attempt.options, share_windows: false }, loop_refinement: false };
         result = { ...result, round_robin_polling: { shared_windows: false }, primitive_round_robin_polling: policy };
-        assert(canonicalVerificationJson(result.clock_windows) === canonicalVerificationJson(serialize(withInserterClocks(windows, clocks, construction.period_ticks))), "primitive exported controls changed");
+        assert(canonicalVerificationJson(result.clock_windows) === canonicalVerificationJson(serialize(withInserterClocks(windows, clocks, construction.window_cycle_ticks))), "primitive exported controls changed");
         assert(canonicalVerificationJson(result.unplanned_inserter_clocks ?? {}) === canonicalVerificationJson(construction.retained_clocks), "primitive exported by-product controls changed");
         for (const inserter of construction.inserters) assert(result.clock_windows[inserter.id]?.length
             || result.unplanned_inserter_clocks?.[inserter.id] !== undefined

@@ -35,10 +35,10 @@ interface ShiftedCycleCandidate {
 function shiftedCycleCandidates(
     planned_windows: Map<string, OpenRange[]>,
     cycle_ticks: number,
-    period: number,
+    window_cycle_ticks: number,
 ): ShiftedCycleCandidate[] {
-    const cycles = Math.round(period / cycle_ticks);
-    if (!Number.isInteger(period) || cycles < 2) {
+    const cycles = Math.round(window_cycle_ticks / cycle_ticks);
+    if (!Number.isInteger(window_cycle_ticks) || cycles < 2) {
         return [];
     }
     const cycleOf = (range: OpenRange) => cycleOfWindow(range, cycle_ticks, cycles);
@@ -56,7 +56,7 @@ function shiftedCycleCandidates(
             const first = Math.min(...moved.map(range => range.start_inclusive));
             const last = Math.max(...moved.map(range => range.end_inclusive));
             const before = Math.max(-2, ...fixed.filter(range => range.end_inclusive < first).map(range => range.end_inclusive));
-            const after = Math.min(period + 1, ...fixed.filter(range => range.start_inclusive > last).map(range => range.start_inclusive));
+            const after = Math.min(window_cycle_ticks + 1, ...fixed.filter(range => range.start_inclusive > last).map(range => range.start_inclusive));
             min = Math.max(min, before + 2 - first);
             max = Math.min(max, after - 2 - last);
         }
@@ -75,7 +75,7 @@ function shiftedCycleCandidates(
                 cycle_index,
                 shift_ticks,
                 selectable: Math.abs(shift_ticks) >= cycle_ticks * MIN_SHIFTED_CYCLE_FRACTION,
-                windows: withCycleShifted(planned_windows, cycle_index, shift_ticks, cycle_ticks, period),
+                windows: withCycleShifted(planned_windows, cycle_index, shift_ticks, cycle_ticks, window_cycle_ticks),
             });
         }
         if (of_cycle.some(it => it.selectable)) {
@@ -90,9 +90,9 @@ function movedWindows(
     planned_windows: Map<string, OpenRange[]>,
     candidate: { cycle_index: number; shift_ticks: number },
     cycle_ticks: number,
-    period: number,
+    window_cycle_ticks: number,
 ): { entity_id: string; start: number; end: number }[] {
-    const cycles = Math.round(period / cycle_ticks);
+    const cycles = Math.round(window_cycle_ticks / cycle_ticks);
     const moved: { entity_id: string; start: number; end: number }[] = [];
     for (const [entity_id, ranges] of planned_windows) {
         for (const range of ranges) {
@@ -209,11 +209,11 @@ function shiftedCycleWindows(
     /** The entity behind each key of the windows */
     entity_ids: ReadonlyMap<string, EntityId>,
     cycle_ticks: number,
-    period: number,
+    window_cycle_ticks: number,
     logger: Logger,
     report?: (detail: string) => void,
 ): { windows: Map<string, OpenRange[]>; search: SearchReport; verified: Confirmed } | null {
-    const candidates = shiftedCycleCandidates(planned_windows, cycle_ticks, period);
+    const candidates = shiftedCycleCandidates(planned_windows, cycle_ticks, window_cycle_ticks);
     const describe = (candidate: ShiftedCycleCandidate) =>
         `cycle ${candidate.cycle_index + 1} ${Math.abs(candidate.shift_ticks)} ticks ${candidate.shift_ticks < 0 ? "earlier" : "later"}`;
 
@@ -221,13 +221,13 @@ function shiftedCycleWindows(
         candidates,
         quick: (candidate, index) => {
             report?.(`Shift ${index + 1}/${candidates.length} (${describe(candidate)})`);
-            return quickTrial(config, candidate.windows, period, logger);
+            return quickTrial(config, candidate.windows, window_cycle_ticks, logger);
         },
         // candidates are listed per cycle in shift order; the shifts around the planned position are not used and end a run
         neighbours: (a, b) => a.selectable && b.selectable && a.cycle_index === b.cycle_index && Math.sign(a.shift_ticks) === Math.sign(b.shift_ticks),
         eligible: candidate => candidate.selectable,
         tieBreak: (a, b) => Math.abs(a.candidate.shift_ticks) - Math.abs(b.candidate.shift_ticks),
-        confirm: ({ candidate, quick }) => confirm(config, candidate.windows, period, logger, describe(candidate), report, quick.run),
+        confirm: ({ candidate, quick }) => confirm(config, candidate.windows, window_cycle_ticks, logger, describe(candidate), report, quick.run),
     });
     logger.log(`Shifted crafting cycle: ${tried.filter(it => it.quick.holds).length} of ${candidates.length} shifts pass the quick trial`);
     if (picked === null || pick === null) {
@@ -244,10 +244,10 @@ function shiftedCycleWindows(
         return {
             setting: candidates[edge].shift_ticks,
             is_search_limit: beyond === undefined || beyond.cycle_index !== candidate.cycle_index,
-            notes: shiftEdgeNotes(tried[edge].quick.result, movedWindows(planned_windows, candidates[edge], cycle_ticks, period)),
+            notes: shiftEdgeNotes(tried[edge].quick.result, movedWindows(planned_windows, candidates[edge], cycle_ticks, window_cycle_ticks)),
         };
     };
-    const planned = movedWindows(planned_windows, { ...candidate, shift_ticks: 0 }, cycle_ticks, period);
+    const planned = movedWindows(planned_windows, { ...candidate, shift_ticks: 0 }, cycle_ticks, window_cycle_ticks);
     return {
         windows: candidate.windows,
         verified: picked,

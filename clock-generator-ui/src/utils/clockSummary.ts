@@ -6,7 +6,7 @@ import { rateVerbs, type TargetCounts } from './targetCounts';
 
 /** The fields of a clock its summary is worked out from, so the tests need not build a whole view */
 export type SummaryClock = Pick<ClockAlternativeView, 'id' | 'label' | 'verdict' | 'ranking' | 'beltLabel' | 'deadlockRisk' | 'assessment' | 'deciders'>
-    & Partial<Pick<ClockAlternativeView, 'strategy' | 'roundedPeriodTicks' | 'roundedRunsFast'>> & { counts?: TargetCounts };
+    & Partial<Pick<ClockAlternativeView, 'strategy' | 'roundedWindowCycleTicks' | 'roundedRunsFast'>> & { counts?: TargetCounts };
 
 /**
  * The smallest distance from the target rate that names a clock by its rate, as the Copy button's "below target"

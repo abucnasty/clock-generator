@@ -22,7 +22,7 @@ export function signalsPerMinuteOf(
     counters: InserterCounters | undefined,
     blueprint: FactorioBlueprint,
     chest_drills: readonly ChestDrillClock[] | undefined,
-    clock_period_ticks: number,
+    clock_window_cycle_ticks: number,
 ): number | null {
     if (counters === undefined) {
         return null;
@@ -39,7 +39,7 @@ export function signalsPerMinuteOf(
         if (named.inserters !== undefined) {
             signals += Math.max(0, ...named.inserters.map(number => switched_on.get(EntityId.forInserter(number).id) ?? 0));
         } else if (named.drills !== undefined) {
-            signals += Math.max(0, ...named.drills.map(number => drills.get(number) ?? 0)) * 3600 / clock_period_ticks;
+            signals += Math.max(0, ...named.drills.map(number => drills.get(number) ?? 0)) * 3600 / clock_window_cycle_ticks;
         }
     }
     return signals;

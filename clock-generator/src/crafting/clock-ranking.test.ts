@@ -149,16 +149,16 @@ describe("combineClockAlternativeRuns", () => {
     // the container wagons: even hands and the batched clock both at 0 wake-ups; even hands is back from a loss sooner
     it("selects, of clocks equal on wake-ups, the one that gets back from a loss in fewer periods, before the fewest windows", () => {
         expect(selectedOf([
-            clock("slow", { wake_ups_per_minute: 0, recovery_periods: 33, window_count: 2 }),
-            clock("fast", { wake_ups_per_minute: 0, recovery_periods: 3, window_count: 9 }),
+            clock("slow", { wake_ups_per_minute: 0, recovery_window_cycles: 33, window_count: 2 }),
+            clock("fast", { wake_ups_per_minute: 0, recovery_window_cycles: 3, window_count: 9 }),
         ])).toBe("fast");
         expect(selectedOf([
-            clock("untried", { wake_ups_per_minute: 0, recovery_periods: null, window_count: 2 }),
-            clock("tried", { wake_ups_per_minute: 0, recovery_periods: 40, window_count: 9 }),
+            clock("untried", { wake_ups_per_minute: 0, recovery_window_cycles: null, window_count: 2 }),
+            clock("tried", { wake_ups_per_minute: 0, recovery_window_cycles: 40, window_count: 9 }),
         ])).toBe("tried");
         expect(selectedOf([
-            clock("fewer-wake-ups", { wake_ups_per_minute: 10, recovery_periods: 40 }),
-            clock("sooner", { wake_ups_per_minute: 11, recovery_periods: 1 }),
+            clock("fewer-wake-ups", { wake_ups_per_minute: 10, recovery_window_cycles: 40 }),
+            clock("sooner", { wake_ups_per_minute: 11, recovery_window_cycles: 1 }),
         ])).toBe("fewer-wake-ups");
     });
 
@@ -219,7 +219,7 @@ describe("a clock whose recovery could not be tried", () => {
     it("is a clock that holds the target rate with no loss verdict and the reason the trials did not run", () => {
         expect(clockVerdictOf(assessment({ disturbance_trial_not_tried: NOT_TRIED }))).toBe("stable");
         expect(ranked({ disturbance_trial_not_tried: NOT_TRIED })).toMatchObject({ meets_target_rate: true, recovery_untried: true });
-        expect(ranked({ disturbance_trial: { survives: true, broken_by: [], recovered_after_periods: 3 } }))
+        expect(ranked({ disturbance_trial: { survives: true, broken_by: [], recovered_after_window_cycles: 3 } }))
             .toMatchObject({ meets_target_rate: true, recovery_untried: false });
         expect(ranked({ holds: false })).toMatchObject({ meets_target_rate: false, recovery_untried: false });
     });
@@ -230,7 +230,7 @@ describe("a clock whose recovery could not be tried", () => {
     });
 
     it("is not stable above the target rate, which needs its recovery tried and passed, or on a build with a deadlock risk its output held", () => {
-        const recovers = { survives: true, broken_by: [], recovered_after_periods: 3 };
+        const recovers = { survives: true, broken_by: [], recovered_after_window_cycles: 3 };
         expect(ranked({ disturbance_trial: recovers, items_per_second: 81.7 }).stable_above_target).toBe(true);
         expect(ranked({ disturbance_trial_not_tried: NOT_TRIED, items_per_second: 81.7 }).stable_above_target).toBeUndefined();
         expect(ranked({ disturbance_trial: { ...recovers, survives: false, broken_by: ["coal stops arriving"] }, items_per_second: 81.7 }).stable_above_target).toBeUndefined();
@@ -259,10 +259,10 @@ describe("a clock rounded down to whole ticks", () => {
     const config = { setpoint: { recipe: "iron-gear-wheel", items_per_second: 9.97 } } as Config;
     const ranked = (items_per_second: number, rounded_clock: Partial<RoundedClock> | undefined) => {
         const assessment: ClockAssessment = { holds: true, items_per_second, wake_ups_per_minute: 13.4, start_dependence: null,
-            disturbance_trial: { survives: true, broken_by: [], recovered_after_periods: 2 } };
+            disturbance_trial: { survives: true, broken_by: [], recovered_after_window_cycles: 2 } };
         return rankingOf({ assessment, verdict: clockVerdictOf(assessment), ranking_window_count: 4, deadlock_risks: [],
             result: { belt_pickup_slack_left_out: false },
-            ...(rounded_clock && { rounded: { period_ticks: 2888, runs_fast: items_per_second / 9.97 - 1, within_machines: true, tried_on_its_period: true, ...rounded_clock } }),
+            ...(rounded_clock && { rounded: { window_cycle_ticks: 2888, runs_fast: items_per_second / 9.97 - 1, within_machines: true, tried_on_its_window_cycle: true, ...rounded_clock } }),
         } as unknown as Omit<ClockAlternative, "ranking">, config);
     };
     const fast = 480 * 60 / 2888;
@@ -275,7 +275,7 @@ describe("a clock rounded down to whole ticks", () => {
     it("does not meet it more than 0.1% fast, beyond the machines, untried on its own period, or as an exact clock off the rate", () => {
         expect(ranked(9.97 * 1.0011, {})).toMatchObject({ meets_target_rate: false });
         expect(ranked(fast, { within_machines: false })).toMatchObject({ meets_target_rate: false });
-        expect(ranked(fast, { tried_on_its_period: false })).toMatchObject({ meets_target_rate: false });
+        expect(ranked(fast, { tried_on_its_window_cycle: false })).toMatchObject({ meets_target_rate: false });
         expect(ranked(fast, undefined)).toMatchObject({ meets_target_rate: false });
         expect(ranked(fast, undefined).runs_fast).toBeUndefined();
         expect(ranked(9.97, undefined)).toMatchObject({ meets_target_rate: true });
@@ -334,8 +334,8 @@ describe("searchesAreNeeded", () => {
 
 describe("searchesToRun", () => {
     const SEARCHES = [{ id: "derived" }, { id: "uneven-output" }, { id: "shifted-swings" }, { id: "full-hand" }];
-    const toRun = (clocks: Ranked[], period: number) =>
-        searchesToRun(clocks.map(it => ({ signature: it.id, alternatives: [it] })), it => it, SEARCHES, period).map(it => it.id);
+    const toRun = (clocks: Ranked[], window_cycle_ticks: number) =>
+        searchesToRun(clocks.map(it => ({ signature: it.id, alternatives: [it] })), it => it, SEARCHES, window_cycle_ticks).map(it => it.id);
 
     it("runs every search where no clock made without one can be selected as stable", () => {
         expect(toRun([clock("unstable", { meets_target_rate: false })], 5000)).toEqual(["derived", "uneven-output", "shifted-swings", "full-hand"]);

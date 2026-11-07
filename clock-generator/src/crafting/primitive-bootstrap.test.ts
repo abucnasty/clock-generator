@@ -2,7 +2,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Config } from '../config';
 import { ConfigPaths } from '../config/config-paths';
 import { loadConfigFromFile } from '../config/loader';
-import { ClockPeriodLimitError } from './plan/clock-period-limit';
+import { ClockWindowCycleLimitError } from './plan/clock-window-cycle-limit';
 import type { BlueprintGenerationResult, GenerateClockOptions, UnclockedRun } from './plan/unclocked-run';
 import { generateClockWithSwingBackoff } from './generate-clock';
 import { primitiveRoundRobinPollingOptionsSupported } from './candidates/round-robin-polling-primitive-verified';
@@ -74,9 +74,9 @@ function result(count: number, holds: boolean, primitive = false): BlueprintGene
     } as unknown as BlueprintGenerationResult;
 }
 
-function refusalFor(candidate: Config): ClockPeriodLimitError {
-    return new ClockPeriodLimitError({ terminal_swing_count: 602, base_cycle_ticks: 24080,
-        computed_lcm: 605, effective_lcm: 605, period_ticks: 14568400, limit_ticks: 500000 },
+function refusalFor(candidate: Config): ClockWindowCycleLimitError {
+    return new ClockWindowCycleLimitError({ terminal_swing_count: 602, base_cycle_ticks: 24080,
+        computed_lcm: 605, effective_lcm: 605, window_cycle_ticks: 14568400, limit_ticks: 500000 },
     { config_json: JSON.stringify(candidate), terminal_swing_count: 602 });
 }
 
@@ -134,7 +134,7 @@ describe('verified primitive bootstrap orchestration', () => {
         expect(generated.swing_backoff_report).toMatchObject({ triggered: false, initial_terminal_swing_count: 1,
             initial_attempt: { terminal_swing_count: 1, holds: true, actual_output_items: 32 }, attempts: [],
             primitive_grouped_attempt: acceptedReport,
-            period_limit_pruning: { requested_terminal_swing_count: 602 } });
+            window_cycle_limit_pruning: { requested_terminal_swing_count: 602 } });
     });
 
     it.each([
@@ -156,7 +156,7 @@ describe('verified primitive bootstrap orchestration', () => {
         expect(generated.swing_backoff_report).toMatchObject({ triggered: true, initial_terminal_swing_count: 550,
             initial_attempt: { terminal_swing_count: 550, holds: false },
             attempts: [{ terminal_swing_count: 495, holds: true }], primitive_grouped_attempt: primitiveReport,
-            period_limit_pruning: { requested_terminal_swing_count: 602 } });
+            window_cycle_limit_pruning: { requested_terminal_swing_count: 602 } });
     });
 
     it('propagates unexpected primitive adapter errors without starting arithmetic fallback', () => {
@@ -217,7 +217,7 @@ describe('verified primitive bootstrap orchestration', () => {
         expect(primitiveRoundRobinPollingOptionsSupported(candidate, options)).toBe(false);
 
         try { generateClockWithSwingBackoff(candidate, options); }
-        catch (error) { expect(error).toBeInstanceOf(ClockPeriodLimitError); }
+        catch (error) { expect(error).toBeInstanceOf(ClockWindowCycleLimitError); }
 
         expect(mocks.verifiedPrimitiveRoundRobinPollingClock).not.toHaveBeenCalled();
     });

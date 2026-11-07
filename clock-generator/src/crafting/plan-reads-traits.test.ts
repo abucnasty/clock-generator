@@ -130,9 +130,9 @@ function oldNeverBlockingBranchesOf(
     for (const inserter of outputs) {
         const id = inserter.entity_id.id;
         const source_id = inserter.source.entity_id.id;
-        const branch = branches.get(source_id) ?? { source_id, inserter_ids: [], share_per_period: 0, hand: 0 };
+        const branch = branches.get(source_id) ?? { source_id, inserter_ids: [], share_per_window_cycle: 0, hand: 0 };
         branch.inserter_ids.push(id);
-        branch.share_per_period += planned.get(id)!.share;
+        branch.share_per_window_cycle += planned.get(id)!.share;
         branch.hand += planned.get(id)!.hand;
         branches.set(source_id, branch);
     }

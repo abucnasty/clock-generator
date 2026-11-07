@@ -16,7 +16,7 @@ import {pickupClockConfig, pickupClockScaffold, pickupClockSpeedCases} from "./p
 import {overHoodClockCases, overHoodClockConfig, overHoodClockScaffold} from "./over-hood-clock-fixtures";
 import {clockHash, readControls} from "./clock-controls";
 import {recipesMaking} from "../../../src/harness/recording-output";
-import {COLD_START_CAP_TICKS, perPeriod} from "./pickup-clock-cold-start-runs";
+import {COLD_START_CAP_TICKS, perWindowCycle} from "./pickup-clock-cold-start-runs";
 import {reversedDeciders} from "./reversed-deciders";
 
 interface Run {
@@ -132,7 +132,7 @@ for (const [name, run] of Object.entries(controls.runs)) test(`clocked cold star
         const held = (inserter: any) => inserter.samples.held_count.slice(controls.frame_offset, ticks) as number[];
         const output = held(recording.inserters.find((it: any) => it.source.type === "machine"));
         const input = held(recording.inserters.find((it: any) => it.sink.type === "machine"));
-        const counted = {steady: report.steady, ticks, output: perPeriod(output, P).drops, pickups: perPeriod(input, P).pickups,
+        const counted = {steady: report.steady, ticks, output: perWindowCycle(output, P).drops, pickups: perWindowCycle(input, P).pickups,
             output_held_sha256: sha(output), input_held_sha256: sha(input), native_phases: report.phases, ...(selection && {selection})};
         fs.writeFileSync(path.join(capture.directory, "run.json"), JSON.stringify(counted) + "\n");
         if (process.env.BELT_CLOCK_CALIBRATE === "1") return;

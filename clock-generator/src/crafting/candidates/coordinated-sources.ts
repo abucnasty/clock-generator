@@ -45,11 +45,11 @@ function refuse(reason: string): never {
 const quiet: Logger = { log: () => { }, info: () => { }, warn: () => { }, error: () => { }, debug: () => { } } as unknown as Logger;
 
 /** The windows of a period repeated over a period that is a whole number of times as long */
-export function tiledWindows(windows: SerializableClockWindows, period_ticks: number, shared_ticks: number): SerializableClockWindows {
-    if (period_ticks === shared_ticks) return windows;
-    const times = shared_ticks / period_ticks;
+export function tiledWindows(windows: SerializableClockWindows, window_cycle_ticks: number, shared_ticks: number): SerializableClockWindows {
+    if (window_cycle_ticks === shared_ticks) return windows;
+    const times = shared_ticks / window_cycle_ticks;
     return Object.fromEntries(Object.entries(windows).map(([id, ranges]) => [id,
-        Array.from({ length: times }, (_, k) => ranges.map(range => ({ start: range.start + k * period_ticks, end: range.end + k * period_ticks }))).flat()]));
+        Array.from({ length: times }, (_, k) => ranges.map(range => ({ start: range.start + k * window_cycle_ticks, end: range.end + k * window_cycle_ticks }))).flat()]));
 }
 
 /** One choice of a group: the windows of each of its inserters (null: always enabled), and the parts that give them */
@@ -97,7 +97,7 @@ export function partGroups(inserters: readonly GroupedInserter[], parts: readonl
     const groups = upstreamOrder(inserters).map(source => ({ source, inserters: inserters.filter(it => it.source === source).map(it => it.id),
         choices: [] as GroupChoice[], keys: new Map<string, GroupChoice>() }));
     for (const part of parts) {
-        const windows = tiledWindows(part.windows, part.period_ticks, shared_ticks);
+        const windows = tiledWindows(part.windows, part.window_cycle_ticks, shared_ticks);
         for (const group of groups) {
             const own = Object.fromEntries(group.inserters.map(id => [id, windows[id]?.length ? windows[id] : null]));
             const key = JSON.stringify(own);
@@ -168,12 +168,12 @@ function sharedPlan(config: Config, recommended: CoordinatedSourcesPart): Uncloc
         ...(plan.terminal_swing_count !== undefined && { terminal_swing_count: plan.terminal_swing_count }),
         ...(lcm !== undefined && { lcm }) } }, { logger: quiet, ...swings });
     let made = planned(plan.lcm);
-    const period = recommended.period_ticks;
-    if (made.run.duration.ticks !== period && config.overrides?.lcm === undefined) {
-        const cycles = period / (made.run.duration.ticks / made.run.recipe_lcm);
+    const window_cycle_ticks = recommended.window_cycle_ticks;
+    if (made.run.duration.ticks !== window_cycle_ticks && config.overrides?.lcm === undefined) {
+        const cycles = window_cycle_ticks / (made.run.duration.ticks / made.run.recipe_lcm);
         if (Number.isInteger(cycles) && cycles >= 1) made = planned(cycles);
     }
-    if (made.run.duration.ticks !== period) refuse(`the build plans on ${made.run.duration.ticks} ticks, not the recommended clock's ${period}`);
+    if (made.run.duration.ticks !== window_cycle_ticks) refuse(`the build plans on ${made.run.duration.ticks} ticks, not the recommended clock's ${window_cycle_ticks}`);
     return made;
 }
 
@@ -182,7 +182,7 @@ export function coordinatedSourcesClock(config: Config, input: CoordinatedSource
     const logger = options.logger ?? defaultLogger;
     const recommended = input.parts.find(part => part.alternative_id === input.recommended_id);
     if (recommended === undefined) refuse(`the recommended clock ${input.recommended_id} is not among the parts`);
-    const shared_ticks = recommended.period_ticks;
+    const shared_ticks = recommended.window_cycle_ticks;
     if (!Number.isInteger(shared_ticks)) refuse(`the recommended clock's period of ${shared_ticks} ticks is not whole`);
     const made = sharedPlan(config, recommended);
     const registry = made.run.simulation_context.entity_registry;
@@ -192,7 +192,7 @@ export function coordinatedSourcesClock(config: Config, input: CoordinatedSource
 
     const trials = new Map<string, Trial>();
     const trialOf = (windows: SerializableClockWindows, left_open: ReadonlyMap<string, AlwaysOnReason>): Trial => {
-        const key = partKey({ period_ticks: shared_ticks, windows });
+        const key = partKey({ window_cycle_ticks: shared_ticks, windows });
         const known = trials.get(key);
         if (known !== undefined) return known;
         const map = new Map(Object.entries(windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
@@ -202,7 +202,7 @@ export function coordinatedSourcesClock(config: Config, input: CoordinatedSource
         trials.set(key, trial);
         return trial;
     };
-    const fits = (part: CoordinatedSourcesPart) => Number.isInteger(part.period_ticks) && Number.isInteger(shared_ticks / part.period_ticks)
+    const fits = (part: CoordinatedSourcesPart) => Number.isInteger(part.window_cycle_ticks) && Number.isInteger(shared_ticks / part.window_cycle_ticks)
         && (part === recommended || part.alternative_id === undefined || part.verdict === "stable");
     const candidates = input.parts.filter(part => part !== recommended && fits(part) && part.counted !== false);
     // a part gives windows where its own clock on the shared period was counted as built: one of that period counted already (its own
@@ -212,10 +212,10 @@ export function coordinatedSourcesClock(config: Config, input: CoordinatedSource
     const admitted = candidates.filter(part => {
         const own = partGroups(inserters, [part], shared_ticks).map(group => `${group.source}|${JSON.stringify(group.choices[0].windows)}`);
         if (own.every(key => given.has(key))) return false;
-        let counted = part.counted === true && part.period_ticks === shared_ticks;
+        let counted = part.counted === true && part.window_cycle_ticks === shared_ticks;
         if (!counted) {
             counted_here++;
-            const windows = tiledWindows(part.windows, part.period_ticks, shared_ticks);
+            const windows = tiledWindows(part.windows, part.window_cycle_ticks, shared_ticks);
             counted = trialOf(windows, leftOpenOf(part, inserters, windows)).result.stability_check.as_built?.wake_ups !== undefined;
         }
         if (counted) own.forEach(key => given.add(key));
@@ -223,13 +223,13 @@ export function coordinatedSourcesClock(config: Config, input: CoordinatedSource
     });
     const groups = partGroups(inserters, [recommended, ...admitted], shared_ticks);
     const choosing = groups.filter(group => group.choices.length > 1);
-    logger.log(`Per-branch clock: the parts ${[recommended, ...admitted].map(part => `${partName(part)} (${part.period_ticks} ticks)`).join(", ")}`);
+    logger.log(`Per-branch clock: the parts ${[recommended, ...admitted].map(part => `${partName(part)} (${part.window_cycle_ticks} ticks)`).join(", ")}`);
     logger.log(`Per-branch clock: ${admitted.length + 1} parts on ${shared_ticks} ticks (${counted_here} counted here), ${groups.length} groups, `
         + `${choosing.length} with a choice: ${choosing.map(group => `${group.source} ${group.choices.length}`).join(", ") || "none"}`);
     if (choosing.length === 0) refuse("no group of inserters has another choice than the recommended clock's");
 
     // the windows the clock has beside its inserters' (drills), from the recommended clock
-    const fixed = Object.fromEntries(Object.entries(tiledWindows(recommended.windows, recommended.period_ticks, shared_ticks))
+    const fixed = Object.fromEntries(Object.entries(tiledWindows(recommended.windows, recommended.window_cycle_ticks, shared_ticks))
         .filter(([id]) => !inserters.some(it => it.id === id)));
     const compose = (choice: ReadonlyMap<string, number>): { windows: SerializableClockWindows; left_open: Map<string, AlwaysOnReason> } => {
         const windows: SerializableClockWindows = { ...fixed };
@@ -293,7 +293,7 @@ export function coordinatedSourcesClock(config: Config, input: CoordinatedSource
         if (!changed) break;
     }
     const { windows, left_open } = compose(current);
-    if (partKey({ period_ticks: shared_ticks, windows }) === partKey({ period_ticks: shared_ticks, windows: tiledWindows(recommended.windows, recommended.period_ticks, shared_ticks) })) {
+    if (partKey({ window_cycle_ticks: shared_ticks, windows }) === partKey({ window_cycle_ticks: shared_ticks, windows: tiledWindows(recommended.windows, recommended.window_cycle_ticks, shared_ticks) })) {
         refuse("the local choice keeps the recommended clock");
     }
     const margin = marginOf(trialOf(windows, left_open));

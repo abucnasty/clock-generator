@@ -130,10 +130,10 @@ const RecordedClockSchema = z.object({
      */
     first_value: z.union([z.literal(0), z.literal(1)]).optional(),
     /** Likewise: the ticks the clock counts before it starts over */
-    period: z.number().int().positive().optional(),
+    window_cycle: z.number().int().positive().optional(),
 }).superRefine((clock, context) => {
     const first = clock.first_value ?? 1;
-    if (clock.period === undefined) {
+    if (clock.window_cycle === undefined) {
         if (clock.first_value === 0) {
             context.addIssue({ code: "custom", path: ["period"], message: "A clock that counts from 0 needs its period: without it a missing clock signal cannot be told from the clock" });
             return;
@@ -151,7 +151,7 @@ const RecordedClockSchema = z.object({
     }
     // a clock with a known period: every sample is the one before plus 1, starting over after the last value, and the
     // recording holds whole periods, so an absent signal (always 0) or a skipped tick is refused
-    const last = first + clock.period - 1;
+    const last = first + clock.window_cycle - 1;
     let previous: number | undefined;
     for (const [index, value] of clock.values.entries()) {
         const expected = previous === undefined || previous === last ? first : previous + 1;
@@ -166,8 +166,8 @@ const RecordedClockSchema = z.object({
         }
         previous = value;
     }
-    if (clock.values.length % clock.period !== 0) {
-        context.addIssue({ code: "custom", path: ["values"], message: `${clock.values.length} clock values are not whole periods of ${clock.period}` });
+    if (clock.values.length % clock.window_cycle !== 0) {
+        context.addIssue({ code: "custom", path: ["values"], message: `${clock.values.length} clock values are not whole periods of ${clock.window_cycle}` });
     }
 }).transform(clock => ({ values: clock.values.map(value => value - (clock.first_value ?? 1)) }));
 
@@ -210,7 +210,7 @@ export function expandChangeList<T>(changes: [number, T][], sample_count: number
 }
 
 /** Clock period inferred from the recorded clock values (max value + 1) */
-export function recordedClockPeriod(recording: Recording): number | null {
+export function recordedClockWindowCycle(recording: Recording): number | null {
     const values = recording.clock?.values;
     if (!values || values.length === 0) {
         return null;

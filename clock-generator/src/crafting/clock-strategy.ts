@@ -43,7 +43,7 @@ export interface DefinitionSettings {
 export interface ListingSettings {
     subtick_clock?: true;
     /** The ticks the window cycle is rounded down to, and how much faster than the setpoint it runs, as a share */
-    rounded?: { period_ticks: number; runs_fast: number };
+    rounded?: { window_cycle_ticks: number; runs_fast: number };
 }
 
 export interface ClockStrategy {
@@ -106,7 +106,7 @@ export function strategyOf(
 export function strategyListedAs(strategy: ClockStrategy, listing: ListingSettings): ClockStrategy {
     const window_cycle: WindowCycleSetting[] = [...strategy.settings.window_cycle];
     if (listing.subtick_clock === true) window_cycle.push({ kind: "subtick_clock" });
-    if (listing.rounded !== undefined) window_cycle.push({ kind: "rounded_clock", period_ticks: listing.rounded.period_ticks, runs_fast: listing.rounded.runs_fast });
+    if (listing.rounded !== undefined) window_cycle.push({ kind: "rounded_clock", window_cycle_ticks: listing.rounded.window_cycle_ticks, runs_fast: listing.rounded.runs_fast });
     return { ...strategy, settings: { ...strategy.settings, window_cycle } };
 }
 

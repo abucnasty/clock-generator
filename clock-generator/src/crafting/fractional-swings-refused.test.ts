@@ -77,12 +77,12 @@ describe('fractional swings the insertion limits refuse', () => {
 
     it('electromagnetic science 330/s: refused at 11/2, 5, 4 and 3 output swings, the build plan lists them at 2, with its fractional inputs', async () => {
         const { plan } = await planOfSample(ConfigPaths.ELECTROMAGNETIC_SCIENCE_330);
-        expect(plan.groups[0].periods.find(choice => choice.listed_as === 'fractional'))
-            .toMatchObject({ swings: 2, fractional: true, period_ticks: 704, kept: true });
+        expect(plan.groups[0].window_cycles.find(choice => choice.listed_as === 'fractional'))
+            .toMatchObject({ swings: 2, fractional: true, window_cycle_ticks: 704, kept: true });
         // forced, the count is planned as it is
         const sample = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_330);
         const { plan: forced } = planOfConfig({ ...sample, overrides: { ...sample.overrides, terminal_swing_count: 3 } });
-        expect(forced.groups[0].periods.find(choice => choice.listed_as === 'fractional'))
+        expect(forced.groups[0].window_cycles.find(choice => choice.listed_as === 'fractional'))
             .toMatchObject({ swings: null, fractional: true, pruned: { rule: 'cycle-refused' } });
     });
 });

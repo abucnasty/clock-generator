@@ -2,8 +2,8 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { loadConfigFromFile } from '../config/loader';
 import { ConfigPaths } from '../config/config-paths';
 import type { Config } from '../config/schema';
-import { wholeSwingPeriodsBelow } from './whole-swing-periods';
-import { ClockPeriodLimitError, type WholeSwingArithmeticSnapshot } from './plan/clock-period-limit';
+import { wholeSwingWindowCyclesBelow } from './whole-swing-window-cycles';
+import { ClockWindowCycleLimitError, type WholeSwingArithmeticSnapshot } from './plan/clock-window-cycle-limit';
 import { runBuild, type BlueprintGenerationResult, type GenerateClockOptions, type RunOptions } from './plan/unclocked-run';
 import { generateClockWithSwingBackoff, terminalCountForAlternativePlanning } from './generate-clock';
 import { createEntityRegistryFromConfig } from './sequence/simulation-context';
@@ -14,20 +14,20 @@ import { fraction } from '../data-types/fraction';
 
 const quiet = { log() {}, warn() {}, error() {}, debug() {} };
 // A newly exposed generation duration policy must also update the arithmetic-snapshot eligibility contract.
-const generationExcludesDuration: Extract<keyof GenerateClockOptions, 'period_ticks' | 'timeline_recording'> extends never ? true : false = true;
+const generationExcludesDuration: Extract<keyof GenerateClockOptions, 'window_cycle_ticks' | 'timeline_recording'> extends never ? true : false = true;
 function result(count: number, holds: boolean): BlueprintGenerationResult {
     return { used_terminal_swing_count: count, stability_check: { holds, actual_output_items: holds ? 32 : 16,
         expected_output_items: 32, used_lcm: 1 } } as BlueprintGenerationResult;
 }
 const snapshotOf = (config: Config, count: number): WholeSwingArithmeticSnapshot => ({ config_json: JSON.stringify(config), terminal_swing_count: count });
-function refusalOf(config: Config, options: RunOptions = {}): ClockPeriodLimitError {
+function refusalOf(config: Config, options: RunOptions = {}): ClockWindowCycleLimitError {
     try { runBuild(config, { logger: quiet, ...options }); }
-    catch (error) { if (error instanceof ClockPeriodLimitError) return error; throw error; }
+    catch (error) { if (error instanceof ClockWindowCycleLimitError) return error; throw error; }
     throw new Error('Expected a period refusal before scheduled simulation');
 }
 
 describe('automatic whole-swing period eligibility', () => {
-    let config: Config, refusal: ClockPeriodLimitError;
+    let config: Config, refusal: ClockWindowCycleLimitError;
     beforeAll(async () => {
         const control = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED);
         config = { ...control, overrides: undefined, inserters: control.inserters.map(inserter => ({ ...inserter, overrides: undefined })) };
@@ -36,7 +36,7 @@ describe('automatic whole-swing period eligibility', () => {
 
     it('reports the actual prepared 602-hand batch and immutable arithmetic rather than a simulated failure', () => {
         expect(refusal.rejection).toEqual({ terminal_swing_count: 602, base_cycle_ticks: 24080, computed_lcm: 605,
-            effective_lcm: 605, period_ticks: 14568400, limit_ticks: 500000 });
+            effective_lcm: 605, window_cycle_ticks: 14568400, limit_ticks: 500000 });
         expect(refusal.arithmetic).toEqual(snapshotOf(config, 602));
         expect(Object.isFrozen(refusal.arithmetic)).toBe(true);
         expect(Object.isFrozen(refusal.rejection)).toBe(true);
@@ -44,14 +44,14 @@ describe('automatic whole-swing period eligibility', () => {
     });
 
     it('recomputes the nonmonotonic LCM frontier: 52 initial refusals then 550 and 495', () => {
-        const rows = [refusal.rejection, ...wholeSwingPeriodsBelow(refusal.arithmetic!, 500000)];
-        const eligible = rows.filter(row => row.period_ticks < row.limit_ticks);
-        expect(eligible.slice(0, 3).map(({ terminal_swing_count, effective_lcm, period_ticks }) => [terminal_swing_count, effective_lcm, period_ticks]))
+        const rows = [refusal.rejection, ...wholeSwingWindowCyclesBelow(refusal.arithmetic!, 500000)];
+        const eligible = rows.filter(row => row.window_cycle_ticks < row.limit_ticks);
+        expect(eligible.slice(0, 3).map(({ terminal_swing_count, effective_lcm, window_cycle_ticks }) => [terminal_swing_count, effective_lcm, window_cycle_ticks]))
             .toEqual([[550, 11, 242000], [495, 11, 217800], [484, 5, 96800]]);
         expect(eligible).toHaveLength(63);
-        expect(rows.filter(row => row.period_ticks >= row.limit_ticks)).toHaveLength(539);
-        expect(rows.findIndex(row => row.period_ticks < row.limit_ticks)).toBe(52);
-        expect(eligible.at(-1)).toMatchObject({ terminal_swing_count: 1, period_ticks: 24200 });
+        expect(rows.filter(row => row.window_cycle_ticks >= row.limit_ticks)).toHaveLength(539);
+        expect(rows.findIndex(row => row.window_cycle_ticks < row.limit_ticks)).toBe(52);
+        expect(eligible.at(-1)).toMatchObject({ terminal_swing_count: 1, window_cycle_ticks: 24200 });
     });
 
     it('keeps shared-buffer reporting at 594 while bounding planner retries below the actual 297 count', () => {
@@ -64,13 +64,13 @@ describe('automatic whole-swing period eligibility', () => {
             })) };
         const failure = refusalOf(shared);
         expect(failure.rejection).toMatchObject({ terminal_swing_count: 297, base_cycle_ticks: 11880,
-            computed_lcm: 55, effective_lcm: 55, period_ticks: 653400 });
+            computed_lcm: 55, effective_lcm: 55, window_cycle_ticks: 653400 });
         expect(failure.arithmetic!.terminal_swing_count).toBe(297);
-        const eligible = [...wholeSwingPeriodsBelow(failure.arithmetic!, 500000)].filter(row => row.period_ticks < row.limit_ticks);
-        expect(eligible[0]).toMatchObject({ terminal_swing_count: 275, period_ticks: 121000, effective_lcm: 11 });
+        const eligible = [...wholeSwingWindowCyclesBelow(failure.arithmetic!, 500000)].filter(row => row.window_cycle_ticks < row.limit_ticks);
+        expect(eligible[0]).toMatchObject({ terminal_swing_count: 275, window_cycle_ticks: 121000, effective_lcm: 11 });
         expect(eligible.every(row => row.terminal_swing_count < 297)).toBe(true);
         // A short bounded run tests the existing result alias without accepting or verifying these large windows.
-        const legacy = runBuild(shared, { logger: quiet, period_ticks: 40, warmup_periods: 0 });
+        const legacy = runBuild(shared, { logger: quiet, window_cycle_ticks: 40, warmup_window_cycles: 0 });
         expect(legacy.used_terminal_swing_count).toBe(594);
         expect(plannedTerminalSwingCount(legacy.output_cycle_plan)).toBe(297);
         expect(legacy.output_cycle_plan).not.toHaveProperty('planned_terminal_swing_count');
@@ -87,7 +87,7 @@ describe('automatic whole-swing period eligibility', () => {
         expect(terminalCountForAlternativePlanning(result(594, false))).toBe(594);
         expect(generated.swing_backoff_report).toMatchObject({ initial_terminal_swing_count: 275,
             initial_attempt: { terminal_swing_count: 275, holds: false }, attempts: [{ terminal_swing_count: 242, holds: true }],
-            period_limit_pruning: { requested_terminal_swing_count: 297 } });
+            window_cycle_limit_pruning: { requested_terminal_swing_count: 297 } });
     });
 
     it('continues the lazy cursor after 550 fails, calls only eligible generators and preserves options/config', () => {
@@ -105,8 +105,8 @@ describe('automatic whole-swing period eligibility', () => {
         expect(generated.swing_backoff_report).toMatchObject({ initial_terminal_swing_count: 550,
             initial_attempt: { terminal_swing_count: 550, holds: false, actual_output_items: 16 },
             attempts: [{ terminal_swing_count: 495, holds: true, actual_output_items: 32 }],
-            period_limit_pruning: { requested_terminal_swing_count: 602 } });
-        const rejected = generated.swing_backoff_report!.period_limit_pruning!.rejections;
+            window_cycle_limit_pruning: { requested_terminal_swing_count: 602 } });
+        const rejected = generated.swing_backoff_report!.window_cycle_limit_pruning!.rejections;
         expect(rejected.map(row => row.terminal_swing_count)).not.toContain(550);
         expect(rejected.map(row => row.terminal_swing_count)).not.toContain(495);
         expect(rejected.every(row => !('holds' in row) && !('actual_output_items' in row))).toBe(true);
@@ -121,8 +121,8 @@ describe('automatic whole-swing period eligibility', () => {
         const generated = generateClockWithSwingBackoff(config, { logger: quiet }, generate);
         expect(generated.swing_backoff_report).toMatchObject({ triggered: false, initial_terminal_swing_count: 550,
             initial_attempt: { terminal_swing_count: 550, holds: true }, attempts: [],
-            period_limit_pruning: { requested_terminal_swing_count: 602 } });
-        expect(generated.swing_backoff_report!.period_limit_pruning!.rejections).toHaveLength(52);
+            window_cycle_limit_pruning: { requested_terminal_swing_count: 602 } });
+        expect(generated.swing_backoff_report!.window_cycle_limit_pruning!.rejections).toHaveLength(52);
     });
 
     it('retains existing descending stability backoff and report shape for an in-budget initial plan', () => {
@@ -143,12 +143,12 @@ describe('automatic whole-swing period eligibility', () => {
         expect(generated.used_terminal_swing_count).toBe(7);
         expect(generated.swing_backoff_report).toMatchObject({ stable_terminal_swing_count: 2,
             attempts: [{ terminal_swing_count: 2, holds: true }] });
-        expect(generated.swing_backoff_report).not.toHaveProperty('period_limit_pruning');
+        expect(generated.swing_backoff_report).not.toHaveProperty('window_cycle_limit_pruning');
     });
 
     it('handles a later over-cap backoff count without changing a preceding in-budget attempt', () => {
-        const row = [...wholeSwingPeriodsBelow(refusal.arithmetic!, 500000)].find(period => period.terminal_swing_count === 549)!;
-        const later = new ClockPeriodLimitError(row, snapshotOf(config, 549));
+        const row = [...wholeSwingWindowCyclesBelow(refusal.arithmetic!, 500000)].find(window_cycle => window_cycle.terminal_swing_count === 549)!;
+        const later = new ClockWindowCycleLimitError(row, snapshotOf(config, 549));
         const generate = vi.fn((candidate: Config) => {
             const count = candidate.overrides?.terminal_swing_count;
             if (count === undefined) return result(550, false);
@@ -159,7 +159,7 @@ describe('automatic whole-swing period eligibility', () => {
         expect(generate.mock.calls.map(([candidate]) => candidate.overrides?.terminal_swing_count)).toEqual([undefined, 549, 495]);
         expect(generated.swing_backoff_report).toMatchObject({ initial_terminal_swing_count: 550,
             initial_attempt: { terminal_swing_count: 550, holds: false }, attempts: [{ terminal_swing_count: 495, holds: true }],
-            period_limit_pruning: { requested_terminal_swing_count: 550 } });
+            window_cycle_limit_pruning: { requested_terminal_swing_count: 550 } });
     });
 
     it.each(['explicit', 'fractional', 'destroyed'] as const)('does not prune the %s path', kind => {
@@ -172,11 +172,11 @@ describe('automatic whole-swing period eligibility', () => {
         expect(generate).toHaveBeenCalledTimes(1);
     });
 
-    it.each(['period_ticks', 'timeline_recording'] as const)('keeps an explicit %s duration refusal outside automatic pruning', field => {
+    it.each(['window_cycle_ticks', 'timeline_recording'] as const)('keeps an explicit %s duration refusal outside automatic pruning', field => {
         expect(generationExcludesDuration).toBe(true);
-        const options: RunOptions = field === 'period_ticks' ? { period_ticks: 500000 } : { timeline_recording: { period_ticks: 500000 } };
+        const options: RunOptions = field === 'window_cycle_ticks' ? { window_cycle_ticks: 500000 } : { timeline_recording: { window_cycle_ticks: 500000 } };
         const fixed = refusalOf(config, options);
-        expect(fixed.rejection.period_ticks).toBe(500000);
+        expect(fixed.rejection.window_cycle_ticks).toBe(500000);
         expect(fixed.arithmetic).toBeUndefined();
         const generate = vi.fn(() => { throw fixed; });
         expect(() => generateClockWithSwingBackoff(config, { logger: quiet }, generate)).toThrow(fixed);
@@ -203,24 +203,24 @@ describe('strict period limits and existing arithmetic policies', () => {
 
     it('rejects exact equality at the cap and returns the original refusal if no count is eligible', () => {
         const config = plain(), arithmetic = snapshotOf(config, 2);
-        const failure = new ClockPeriodLimitError({ terminal_swing_count: 2, base_cycle_ticks: 120, computed_lcm: 1,
-            effective_lcm: 1, period_ticks: 120, limit_ticks: 60 }, arithmetic);
-        expect([...wholeSwingPeriodsBelow(arithmetic, 60)]).toMatchObject([{ terminal_swing_count: 1, period_ticks: 60 }]);
+        const failure = new ClockWindowCycleLimitError({ terminal_swing_count: 2, base_cycle_ticks: 120, computed_lcm: 1,
+            effective_lcm: 1, window_cycle_ticks: 120, limit_ticks: 60 }, arithmetic);
+        expect([...wholeSwingWindowCyclesBelow(arithmetic, 60)]).toMatchObject([{ terminal_swing_count: 1, window_cycle_ticks: 60 }]);
         const generate = vi.fn(() => { throw failure; });
         expect(() => generateClockWithSwingBackoff(config, { logger: quiet }, generate)).toThrow(failure);
         expect(generate).toHaveBeenCalledTimes(1);
     });
 
-    it.each([NaN, Infinity, 0, -1, 59])('does not classify an invalid/in-budget period %s as a retryable refusal', period => {
-        expect(() => new ClockPeriodLimitError({ terminal_swing_count: 2, base_cycle_ticks: period,
-            computed_lcm: 1, effective_lcm: 1, period_ticks: period, limit_ticks: 60 }, snapshotOf(plain(), 2))).toThrow(RangeError);
+    it.each([NaN, Infinity, 0, -1, 59])('does not classify an invalid/in-budget period %s as a retryable refusal', window_cycle_ticks => {
+        expect(() => new ClockWindowCycleLimitError({ terminal_swing_count: 2, base_cycle_ticks: window_cycle_ticks,
+            computed_lcm: 1, effective_lcm: 1, window_cycle_ticks, limit_ticks: 60 }, snapshotOf(plain(), 2))).toThrow(RangeError);
     });
 
     it('uses the configured LCM without rewriting it', () => {
         const config = plain(); config.overrides = { lcm: 7 };
-        expect([...wholeSwingPeriodsBelow(snapshotOf(config, 3), 1000)]).toMatchObject([
-            { terminal_swing_count: 2, computed_lcm: 1, effective_lcm: 7, period_ticks: 840 },
-            { terminal_swing_count: 1, computed_lcm: 1, effective_lcm: 7, period_ticks: 420 },
+        expect([...wholeSwingWindowCyclesBelow(snapshotOf(config, 3), 1000)]).toMatchObject([
+            { terminal_swing_count: 2, computed_lcm: 1, effective_lcm: 7, window_cycle_ticks: 840 },
+            { terminal_swing_count: 1, computed_lcm: 1, effective_lcm: 7, window_cycle_ticks: 420 },
         ]);
     });
 
@@ -235,14 +235,14 @@ describe('strict period limits and existing arithmetic policies', () => {
         // Existing fuel rounding: seven swings carry 3/5 hands, not six swings' fuel scaled by 7/6.
         expect(fuelAt(seven).toString()).toBe('3/5');
         expect(fuelAt(six).multiply(fraction(7, 6)).toString()).not.toBe('3/5');
-        const rows = [...wholeSwingPeriodsBelow(snapshotOf(config, 8), 500000)];
+        const rows = [...wholeSwingWindowCyclesBelow(snapshotOf(config, 8), 500000)];
         expect(rows[0]).toMatchObject({ terminal_swing_count: 7,
             computed_lcm: EntityTransferCountMap.lcm(seven.entity_transfer_map, ['nutrients']),
-            period_ticks: OutputCyclePlan.ticksOfCycles(seven, EntityTransferCountMap.lcm(seven.entity_transfer_map, ['nutrients'])) });
+            window_cycle_ticks: OutputCyclePlan.ticksOfCycles(seven, EntityTransferCountMap.lcm(seven.entity_transfer_map, ['nutrients'])) });
         expect(rows[1]).toMatchObject({ terminal_swing_count: 6,
             computed_lcm: EntityTransferCountMap.lcm(six.entity_transfer_map, ['nutrients']) });
         const immutable = snapshotOf(config, 3);
         config.overrides.lcm = 1000;
-        expect([...wholeSwingPeriodsBelow(immutable, 500000)][0].effective_lcm).not.toBe(1000);
+        expect([...wholeSwingWindowCyclesBelow(immutable, 500000)][0].effective_lcm).not.toBe(1000);
     });
 });

@@ -9,10 +9,10 @@ import {
 import type { Condition, EnableControlOverride, RuleSet } from '../hooks/useConfigForm';
 import { CONDITIONAL_CHIP_MAX_CHARS, ENABLE_CHIP_MAX_CHARS, describeEnableRule, enableChipAriaLabel, enableChipTooltip } from './enableRuleLabel';
 
-const clocked = (ranges: [number, number][], period?: number): EnableControlOverride => ({
+const clocked = (ranges: [number, number][], window_cycle_ticks?: number): EnableControlOverride => ({
     mode: EnableControlMode.CLOCKED,
     ranges: ranges.map(([start, end]) => ({ start, end })),
-    ...(period === undefined ? {} : { period_duration_ticks: period }),
+    ...(window_cycle_ticks === undefined ? {} : { period_duration_ticks: window_cycle_ticks }),
 });
 
 const condition = (): Condition => ({

@@ -6,8 +6,8 @@ import { fraction } from "../data-types/fraction";
 import { OutputCyclePlan } from "./sequence/cycle/output-cycle";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { TargetProductionRate } from "./target-production-rate";
-import { SIMULATION_BUDGET_TICKS } from "./plan/clock-period-limit";
-import { EXHAUST_CHECK_PERIODS, EXHAUST_PERIOD_BUDGET_TICKS } from "./exhaust";
+import { SIMULATION_BUDGET_TICKS } from "./plan/clock-window-cycle-limit";
+import { EXHAUST_CHECK_WINDOW_CYCLES, EXHAUST_WINDOW_CYCLE_BUDGET_TICKS } from "./exhaust";
 
 describe("a destroyed target whose takers' hands come out whole in a period its container holds", () => {
     it("keeps the plan that simulates its period at a rate whose feed hands last no whole ticks (the overbeaconed ore voider at 639.22)", async () => {
@@ -29,7 +29,7 @@ describe("a destroyed target whose takers' hands come out whole in a period its 
 describe("the simulator budgets", () => {
     it("fit the check periods of the longest result windows period in one simulated run", () => {
         // 20 check periods x 24,000 ticks = 480,000 < 500,000
-        expect(EXHAUST_CHECK_PERIODS * EXHAUST_PERIOD_BUDGET_TICKS).toBe(480_000);
-        expect(EXHAUST_CHECK_PERIODS * EXHAUST_PERIOD_BUDGET_TICKS).toBeLessThan(SIMULATION_BUDGET_TICKS);
+        expect(EXHAUST_CHECK_WINDOW_CYCLES * EXHAUST_WINDOW_CYCLE_BUDGET_TICKS).toBe(480_000);
+        expect(EXHAUST_CHECK_WINDOW_CYCLES * EXHAUST_WINDOW_CYCLE_BUDGET_TICKS).toBeLessThan(SIMULATION_BUDGET_TICKS);
     });
 });

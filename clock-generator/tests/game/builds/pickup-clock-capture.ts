@@ -139,8 +139,8 @@ async function prepare(scenario: PickupClockScenario): Promise<Prepared> {
         expect(selected.assessment.items_per_second).toBeCloseTo(config.setpoint.items_per_second, 9);
     }
     const exported = selected.result.subtick ?? selected.result;
-    const period = selected.result.subtick?.clock.period_ticks ?? selected.result.simulation_duration.ticks;
-    const prepared = {config, period, expected: config.setpoint.items_per_second * period / 60,
+    const window_cycle_ticks = selected.result.subtick?.clock.window_cycle_ticks ?? selected.result.simulation_duration.ticks;
+    const prepared = {config, period: window_cycle_ticks, expected: config.setpoint.items_per_second * window_cycle_ticks / 60,
         clock: {blueprint: encodeBlueprintFile({blueprint: exported.blueprint}), schedule: exported.schedule},
         generationSeconds: (performance.now() - started) / 1000, generationVerdict: selected.verdict, clockSha256: clockHash(exported),
         selection: {id: selected.id, holds: selected.assessment.holds, rate: selected.assessment.items_per_second,

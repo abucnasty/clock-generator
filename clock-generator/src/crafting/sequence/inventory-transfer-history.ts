@@ -37,7 +37,7 @@ export class InventoryTransferHistory extends MapExtended<EntityId, InventoryTra
         history: InventoryTransferHistory,
         entity_registry: ReadableEntityRegistry,
         entity_transfer_count_map: EntityTransferCountMap,
-        period_ticks?: number,
+        window_cycle_ticks?: number,
     ): InventoryTransferHistory {
         const trimmed: Map<EntityId, InventoryTransfer[]> = new Map();
 
@@ -85,18 +85,18 @@ export class InventoryTransferHistory extends MapExtended<EntityId, InventoryTra
                     tick_range: trimmed_range,
                     amount: transfer.amount,
                 };
-                if (transfer.pickup_tick_before_run === undefined || period_ticks === undefined) {
+                if (transfer.pickup_tick_before_run === undefined || window_cycle_ticks === undefined) {
                     return [in_run];
                 }
                 // A swing in flight when the run started was picked up at the end of the period before. The run
                 // repeats every period, so that pickup needs a window at the end of this one, up to where the part
                 // of the swing inside the run takes over.
-                const wrapped_start = transfer.pickup_tick_before_run + period_ticks;
+                const wrapped_start = transfer.pickup_tick_before_run + window_cycle_ticks;
                 const before_run: InventoryTransfer = {
                     item_name: transfer.item_name,
                     tick_range: OpenRange.from(
                         wrapped_start,
-                        Math.max(wrapped_start, Math.min(trimmed_range.end_inclusive + period_ticks, original_range.start_inclusive + period_ticks - 1)),
+                        Math.max(wrapped_start, Math.min(trimmed_range.end_inclusive + window_cycle_ticks, original_range.start_inclusive + window_cycle_ticks - 1)),
                     ),
                     amount: 0,
                 };

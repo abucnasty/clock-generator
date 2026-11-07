@@ -226,7 +226,7 @@ it('replays detailed activity through the real worker query without changing the
         chests: [{ id: 1, type: 'infinity-chest', item_filter: [{ item_name: 'iron-gear-wheel', request_count: 1 }] }],
     } as Config;
     const before = JSON.stringify(config);
-    expect(await send({ type: 'query', requestId: 40, query: { kind: 'timeline-recording', request: { config, mode: 'plan', period_ticks: 240, terminal_swing_count: 1, windows: {} } } }))
+    expect(await send({ type: 'query', requestId: 40, query: { kind: 'timeline-recording', request: { config, mode: 'plan', window_cycle_ticks: 240, terminal_swing_count: 1, windows: {} } } }))
         .toMatchObject({ type: 'answer', requestId: 40, answer: { mode: 'plan', start_tick: 0, end_tick: 240, entities: expect.arrayContaining([expect.objectContaining({ id: 'machine:1', recipe: 'iron-gear-wheel' })]) } });
     expect(JSON.stringify(config)).toBe(before);
 });

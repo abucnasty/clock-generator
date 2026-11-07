@@ -89,18 +89,18 @@ function shortfallOf(exported: ExportedItem, delivered_per_second: number): Expo
  * belt backs up in the game and the inserter waits, and a clock that takes what the build needs for itself from an
  * export fails the target on its own.
  */
-export function exportShortfallsOfPeriod(
+export function exportShortfallsOfWindowCycle(
     exported: readonly ExportedItem[],
     moved: (inserter_id: string, item: ItemName) => number,
-    period_ticks: number,
+    window_cycle_ticks: number,
     tolerance: number,
 ): ExportShortfall[] {
     const short: ExportShortfall[] = [];
     for (const it of exported) {
         const delivered = it.filler_ids.reduce((sum, id) => sum + moved(id, it.item), 0);
-        const expected = it.items_per_second * period_ticks / 60;
+        const expected = it.items_per_second * window_cycle_ticks / 60;
         if (expected - delivered > tolerance) {
-            short.push(shortfallOf(it, delivered * 60 / period_ticks));
+            short.push(shortfallOf(it, delivered * 60 / window_cycle_ticks));
         }
     }
     return short;

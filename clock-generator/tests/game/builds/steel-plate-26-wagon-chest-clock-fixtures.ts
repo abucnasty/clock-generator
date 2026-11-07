@@ -32,14 +32,14 @@ export interface SteelWagonCase {
     ignored_lcm_ingredients?: string[];
     order: "as-built" | "fill-last";
     /** The capture's period of the alternative recorded, in ticks: its subtick clock's (13 periods of 886.15 ticks; 13 of 295.38) */
-    period_ticks: number;
+    window_cycle_ticks: number;
 }
 
 export function steelWagonCases(): SteelWagonCase[] {
     return [
-        {name: "steel-wagon-belt-slack", alternative: "planned-belt-slack-subtick", order: "as-built", period_ticks: 11520},
-        {name: "steel-wagon-belt-slack-fill-last", alternative: "planned-belt-slack-subtick", order: "fill-last", period_ticks: 11520},
-        {name: "steel-wagon-iron-ore-out-of-period", alternative: "planned-belt-slack-subtick", ignored_lcm_ingredients: ["iron-ore"], order: "as-built", period_ticks: 3840},
+        {name: "steel-wagon-belt-slack", alternative: "planned-belt-slack-subtick", order: "as-built", window_cycle_ticks: 11520},
+        {name: "steel-wagon-belt-slack-fill-last", alternative: "planned-belt-slack-subtick", order: "fill-last", window_cycle_ticks: 11520},
+        {name: "steel-wagon-iron-ore-out-of-period", alternative: "planned-belt-slack-subtick", ignored_lcm_ingredients: ["iron-ore"], order: "as-built", window_cycle_ticks: 3840},
     ];
 }
 
@@ -99,7 +99,7 @@ export async function steelWagonScenario(variant: SteelWagonCase): Promise<Picku
         scaffold: () => steelWagonScaffold(variant.order),
         alternative: variant.alternative,
         // the subtick clock's output repeats only over its whole period (13 periods of the rounded clock), longer than a minute
-        baseline: {ticks: variant.period_ticks, reason: "the subtick clock's output repeats only over its whole period, longer than a minute"},
+        baseline: {ticks: variant.window_cycle_ticks, reason: "the subtick clock's output repeats only over its whole period, longer than a minute"},
         probeFile: path.join(__dirname, "steel-plate-26-wagon-chest-clock-probe.lua"),
         probe: {family: "steel-wagon"},
         controls: path.join(__dirname, "steel-plate-26-wagon-chest-clock-controls.json"),

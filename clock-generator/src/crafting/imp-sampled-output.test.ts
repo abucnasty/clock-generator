@@ -6,11 +6,11 @@ import { parseConfig } from "../config/loader";
 import { OpenRange } from "../data-types";
 import { quiet } from "./generate-blueprint-test-helpers";
 import { judgeLongRun } from "./long-run";
-import { longRunPeriodsOf, runAsBuiltCheck } from "./trial";
+import { longRunWindowCyclesOf, runAsBuiltCheck } from "./trial";
 import { assessTargetProduction } from "./target-production";
 interface ImpFixture {
     config: unknown;
-    period: number;
+    window_cycle_ticks: number;
     used_lcm: number;
     used_terminal_swing_count: number;
     output_inserter: string;
@@ -26,7 +26,7 @@ describe("the archived imp plan's sampled output shortfall", () => {
     let diagnostic: ReturnType<typeof runAsBuiltCheck>;
     const judged = (run: ReturnType<typeof runAsBuiltCheck>) => judgeLongRun(
         [run.stock!.inserters.find(hand => hand.inserter_id === fixture.output_inserter)!.held],
-        run.stock!.ticks, fixture.period, null, 16, 16,
+        run.stock!.ticks, fixture.window_cycle_ticks, null, 16, 16,
     );
 
     beforeAll(async () => {
@@ -36,8 +36,8 @@ describe("the archived imp plan's sampled output shortfall", () => {
             lcm: fixture.used_lcm, terminal_swing_count: fixture.used_terminal_swing_count } };
         const windows = new Map(Object.entries(fixture.clock_windows).map(([id, ranges]) =>
             [id, ranges.map(range => OpenRange.from(range.start, range.end))]));
-        standard = runAsBuiltCheck(prepared, windows, fixture.period, quiet, 12);
-        diagnostic = runAsBuiltCheck(prepared, windows, fixture.period, quiet, 12, undefined, 72_000);
+        standard = runAsBuiltCheck(prepared, windows, fixture.window_cycle_ticks, quiet, 12);
+        diagnostic = runAsBuiltCheck(prepared, windows, fixture.window_cycle_ticks, quiet, 12, undefined, 72_000);
     });
 
     it("preserves the recovered planning arithmetic and exact 96-tick clock", () => {
@@ -45,11 +45,11 @@ describe("the archived imp plan's sampled output shortfall", () => {
         expect(sha(fixture.clock_windows)).toBe("ba6f0240839f99ff3f285ba6d4d8edbd7841292cf0b720b7f4bc023637d5f09d");
         expect(fixture.used_lcm).toBe(1);
         expect(fixture.used_terminal_swing_count).toBe(1);
-        expect(fixture.period).toBe(96);
+        expect(fixture.window_cycle_ticks).toBe(96);
         expect(standard.result.stability_check.expected_output_items).toBe(16);
         expect(diagnostic.result.stability_check.expected_output_items).toBe(16);
-        expect(longRunPeriodsOf(96)).toBe(120);
-        expect(longRunPeriodsOf(96, 72_000)).toBe(750);
+        expect(longRunWindowCyclesOf(96)).toBe(120);
+        expect(longRunWindowCyclesOf(96, 72_000)).toBe(750);
     });
 
     it("preserves the hand-sized deficit in the standard 80-period sample", () => {
@@ -63,16 +63,16 @@ describe("the archived imp plan's sampled output shortfall", () => {
         expect(diagnostic.check.long_run_proven).toBe(false);
         expect(diagnostic.check.holds).toBe(false);
         expect(judged(diagnostic)).toMatchObject({ total: 7904, expected_total: 8000,
-            keeps_up: false, output_items_per_period: 15.808 });
+            keeps_up: false, output_items_per_window_cycle: 15.808 });
         expect(judged(diagnostic).judged).toHaveLength(500);
     });
 
     it("candidate: rejects measured underproduction in both samples without changing the horizon", () => {
         expect(assessTargetProduction(judged(standard), standard.check.long_run_proven === true)).toEqual({
-            valid: false, shortfall: 16, output_items_per_period: 15.8, evidence: "sample",
+            valid: false, shortfall: 16, output_items_per_window_cycle: 15.8, evidence: "sample",
         });
         expect(assessTargetProduction(judged(diagnostic), diagnostic.check.long_run_proven === true)).toEqual({
-            valid: false, shortfall: 96, output_items_per_period: 15.808, evidence: "sample",
+            valid: false, shortfall: 96, output_items_per_window_cycle: 15.808, evidence: "sample",
         });
         // The isolated assessment does not mutate the currently published characterization.
         expect(judged(standard).keeps_up).toBe(true);

@@ -212,20 +212,20 @@ describe("the drops of the grenade build onto its belt", () => {
 });
 
 /** The lane model alone: hands of 4 stacks started at tick t of every period, 14 periods, then whether the last three all land at +0, +1, +2, +4 */
-function replayFits(hands: { place: number; tick: number }[], period: number): boolean {
+function replayFits(hands: { place: number; tick: number }[], window_cycle_ticks: number): boolean {
     const lane = new LaneTraffic();
     const spots = hands.map(hand => hand.place * 8);
     spots.forEach(spot => lane.registerSpot(spot));
     const active: { hand: number; start: number; placed: number[] }[] = [];
     let late = 0;
-    for (let tick = 0; tick < 15 * period; tick++) {
-        const n = Math.floor(tick / period);
-        if (n < 14) hands.forEach((hand, index) => { if (tick === n * period + hand.tick) active.push({ hand: index, start: tick, placed: [] }); });
+    for (let tick = 0; tick < 15 * window_cycle_ticks; tick++) {
+        const n = Math.floor(tick / window_cycle_ticks);
+        if (n < 14) hands.forEach((hand, index) => { if (tick === n * window_cycle_ticks + hand.tick) active.push({ hand: index, start: tick, placed: [] }); });
         for (const entry of [...active]) {
             if (lane.tryPlace(tick, spots[entry.hand])) entry.placed.push(tick - entry.start);
             if (entry.placed.length === 4) {
                 active.splice(active.indexOf(entry), 1);
-                if (Math.floor(entry.start / period) >= 11 && entry.placed.join() !== "0,1,2,4") late++;
+                if (Math.floor(entry.start / window_cycle_ticks) >= 11 && entry.placed.join() !== "0,1,2,4") late++;
             }
         }
     }

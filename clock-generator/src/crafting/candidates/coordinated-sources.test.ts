@@ -13,8 +13,8 @@ const CHAIN: GroupedInserter[] = [
     { id: "inserter:4", source: "machine:2", sink: "belt:2" },
 ];
 
-const part = (name: string, period_ticks: number, windows: CoordinatedSourcesPart["windows"], extra: Partial<CoordinatedSourcesPart> = {}): CoordinatedSourcesPart =>
-    ({ name, period_ticks, windows, counted: true, ...extra });
+const part = (name: string, window_cycle_ticks: number, windows: CoordinatedSourcesPart["windows"], extra: Partial<CoordinatedSourcesPart> = {}): CoordinatedSourcesPart =>
+    ({ name, window_cycle_ticks, windows, counted: true, ...extra });
 
 describe("the windows of a part on the shared period", () => {
     it("repeat a period that divides it, and stay as they are on their own", () => {
@@ -95,7 +95,7 @@ describe("what the router gave each entity", () => {
         { alternative_id: "recommended", strategy: takt });
     // inserter 1 has no windows in this part, which says why
     const other = part("other", 20, { "inserter:2": [window(7, 8)], "inserter:3": [window(7, 8)], "inserter:4": [window(0, 0)] },
-        { strategy: polling, always_on: { "inserter:1": { kind: "busy", period_ticks: 20 } } });
+        { strategy: polling, always_on: { "inserter:1": { kind: "busy", window_cycle_ticks: 20 } } });
     const groups = partGroups(CHAIN, [recommended, other], 20);
     const logged: string[] = [];
     const logger = { log: () => { }, warn: () => { }, error: () => { }, debug: (message: string) => { logged.push(message); } };
@@ -113,7 +113,7 @@ describe("what the router gave each entity", () => {
 
     it("gives an inserter its part leaves without windows its always-on reason: the part's, else the clock's", () => {
         const from_part = sourceControlsOf(groups, new Map([["machine:2", 0], ["machine:1", 0], ["belt:1", 1]]), {}, logger, "gear");
-        expect(from_part[2].entities).toEqual({ "inserter:1": { kind: "always_on", reason: { kind: "busy", period_ticks: 20 } } });
+        expect(from_part[2].entities).toEqual({ "inserter:1": { kind: "always_on", reason: { kind: "busy", window_cycle_ticks: 20 } } });
         const bare = partGroups(CHAIN, [recommended, { ...other, always_on: undefined }], 20);
         expect(sourceControlsOf(bare, new Map([["machine:2", 0], ["machine:1", 0], ["belt:1", 1]]), { "inserter:1": { kind: "loop" } }, logger, "gear")[2].entities)
             .toEqual({ "inserter:1": { kind: "always_on", reason: { kind: "loop" } } });

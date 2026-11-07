@@ -8,8 +8,8 @@ import { startDependenceSummary } from "./alternatives";
 import { startDependenceInsight } from "./insights";
 import type { Config } from "../config";
 
-const outcome = (id: string, reaches_target: boolean, output_items_per_period: number | null = null, cycle: number[] | null = null, off_bins: StartOutcome["off_bins"] = null, span_items: number | null = null, long_run_keeps_up: boolean | null = null): StartOutcome =>
-    ({ id, label: id, reaches_target, output_items_per_period, cycle, off_bins, span_items, long_run_keeps_up });
+const outcome = (id: string, reaches_target: boolean, output_items_per_window_cycle: number | null = null, cycle: number[] | null = null, off_bins: StartOutcome["off_bins"] = null, span_items: number | null = null, long_run_keeps_up: boolean | null = null): StartOutcome =>
+    ({ id, label: id, reaches_target, output_items_per_window_cycle, cycle, off_bins, span_items, long_run_keeps_up });
 
 describe("the starts a clock is tried from", () => {
     it("describes actual samples and unavailable checks without prescribing a filled or free-running start", () => {
@@ -62,7 +62,7 @@ describe("the verdict of a clock tried from several starts", () => {
         expect(clockVerdictOf(assessment(null))).toBe("stable");
         expect(clockVerdictOf(assessment(dependence("stable")))).toBe("stable");
         expect(clockVerdictOf(assessment(dependence("start-dependent")))).toBe("unstable");
-        expect(clockVerdictOf({ ...assessment(dependence("stable")), disturbance_trial: { survives: false, broken_by: ["coal stops arriving"], recovered_after_periods: null } })).toBe("no recovery");
+        expect(clockVerdictOf({ ...assessment(dependence("stable")), disturbance_trial: { survives: false, broken_by: ["coal stops arriving"], recovered_after_window_cycles: null } })).toBe("no recovery");
     });
 });
 

@@ -27,7 +27,7 @@ export interface ConfigValidation {
     /** What the target's rate counts: the item made and taken out, or the item brought in and destroyed */
     counts: TargetCounts;
     cycle_ticks: number;
-    period_ticks: number;
+    window_cycle_ticks: number;
 }
 
 /**
@@ -75,6 +75,6 @@ export function validateConfig(config: Config, options: { logger?: Logger; fract
         output_swings_per_cycle,
         counts: config.setpoint.counts ?? "made",
         cycle_ticks,
-        period_ticks: OutputCyclePlan.ticksOfCycles(output_cycle_plan, recipe_lcm),
+        window_cycle_ticks: OutputCyclePlan.ticksOfCycles(output_cycle_plan, recipe_lcm),
     };
 }

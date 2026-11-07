@@ -49,7 +49,7 @@ function clock(id: string, options: ClockOptions = {}): SummaryClock {
         ...ranking,
     };
     const tried: Loss | null = verdict === 'unstable' ? null : {
-        survives: verdict === 'stable', broken_by: verdict === 'no recovery' ? ['an input stops arriving'] : [], recovered_after_periods: verdict === 'stable' ? 1 : null,
+        survives: verdict === 'stable', broken_by: verdict === 'no recovery' ? ['an input stops arriving'] : [], recovered_after_window_cycles: verdict === 'stable' ? 1 : null,
     };
     return {
         id, label: `Engine name of ${id}`, verdict, beltLabel, deciders,
@@ -72,10 +72,10 @@ describe('sampled starts remain separate from rate and recovery', () => {
     it('names a target-rate dependent clock and retains its evaluated recovery and actual sample counts', () => {
         const dependent = clock('dependent', { verdict: 'unstable', meets_target_rate: false });
         dependent.assessment = { ...dependent.assessment, holds: true,
-            disturbance_trial: { survives: true, broken_by: [], recovered_after_periods: 2 },
+            disturbance_trial: { survives: true, broken_by: [], recovered_after_window_cycles: 2 },
             start_dependence: { verdict: 'start-dependent', expected_output_items: 240,
                 starts: ['cold', 'ascending'].map((id, i) => ({ id, label: id, reaches_target: i === 0,
-                    output_items_per_period: i === 0 ? 240 : 120, cycle: null, off_bins: null, span_items: null, long_run_keeps_up: i === 0 })) } };
+                    output_items_per_window_cycle: i === 0 ? 240 : 120, cycle: null, off_bins: null, span_items: null, long_run_keeps_up: i === 0 })) } };
         expect(nameOf([dependent], 'dependent')).toEqual([SUMMARY_COPY.startDependent]);
         expect(worksOf(dependent)).toEqual({ kind: 'caution', text: SUMMARY_COPY.worksStartDependent });
         expect(recoversOf(dependent)).toMatchObject({ kind: 'yes', value: SUMMARY_COPY.recoversYes });

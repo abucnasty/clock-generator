@@ -44,12 +44,12 @@ describe("generateClockForConfig", () => {
         }, 200_000);
 
         it("plans the nutrient inserters 30.652 hands needed per 480 ticks on every clock, 61.304 per 960 on the 2-swing clock", () => {
-            for (const [swings, period] of [[5, 480], [1, 480], [2, 960]] as const) {
+            for (const [swings, window_cycle_ticks] of [[5, 480], [1, 480], [2, 960]] as const) {
                 const result = generateClockForConfig({ ...sample, overrides: { ...sample.overrides, terminal_swing_count: swings } }, { logger: quiet });
                 const plan = result.output_cycle_plan;
                 const planned = Array.from(plan.entity_transfer_map.values()).find(it => it.entity.entity_id.id === "inserter:3")!;
-                expect(result.simulation_duration.ticks).toBe(period);
-                expect(planned.needed_transfer_count!.toDecimal() * period / plan.total_duration.ticks).toBeCloseTo(30.652 * period / 480, 6);
+                expect(result.simulation_duration.ticks).toBe(window_cycle_ticks);
+                expect(planned.needed_transfer_count!.toDecimal() * window_cycle_ticks / plan.total_duration.ticks).toBeCloseTo(30.652 * window_cycle_ticks / 480, 6);
                 // the output inserter has none
                 const output = Array.from(plan.entity_transfer_map.values()).find(it => it.entity.entity_id.id === "inserter:12")!;
                 expect(output.needed_transfer_count).toBeUndefined();

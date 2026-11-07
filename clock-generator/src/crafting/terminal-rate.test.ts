@@ -25,8 +25,8 @@ async function branchesOf(path: string) {
 describe("the branches of the terminal outputs into sinks that never block", () => {
     it("are the science plants' drains where they drop into infinity chests that remove all", async () => {
         expect(await branchesOf(TestConfigPaths.ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED_NO_BUFFERS)).toEqual([
-            { source_id: "machine:1", inserter_ids: ["inserter:4"], share_per_period: 16, hand: 16 },
-            { source_id: "machine:2", inserter_ids: ["inserter:3"], share_per_period: 16, hand: 16 },
+            { source_id: "machine:1", inserter_ids: ["inserter:4"], share_per_window_cycle: 16, hand: 16 },
+            { source_id: "machine:2", inserter_ids: ["inserter:3"], share_per_window_cycle: 16, hand: 16 },
         ]);
     });
 
@@ -35,8 +35,8 @@ describe("the branches of the terminal outputs into sinks that never block", () 
     });
 
     it("keep each branch's part when judged on another count than the plan's", () => {
-        const branches = [{ source_id: "a", inserter_ids: ["1"], share_per_period: 16, hand: 16 }, { source_id: "b", inserter_ids: ["2"], share_per_period: 48, hand: 16 }];
-        expect(branchesScaledTo(branches, 32).map(branch => branch.share_per_period)).toEqual([8, 24]);
+        const branches = [{ source_id: "a", inserter_ids: ["1"], share_per_window_cycle: 16, hand: 16 }, { source_id: "b", inserter_ids: ["2"], share_per_window_cycle: 48, hand: 16 }];
+        expect(branchesScaledTo(branches, 32).map(branch => branch.share_per_window_cycle)).toEqual([8, 24]);
         expect(branchesScaledTo(branches, 64)).toEqual(branches);
     });
 });

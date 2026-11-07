@@ -106,24 +106,24 @@ export class ConfigurableEnableControlFactory {
         entity_id: EntityId,
         override: Extract<EnableControlOverrideConfig, { mode: "CLOCKED" }>
     ): EnableControl {
-        const period_duration = override.period_duration_ticks !== undefined
+        const window_cycle_duration = override.period_duration_ticks !== undefined
             ? Duration.ofTicks(override.period_duration_ticks)
             : this.output_cycle_plan.total_duration;
 
         // Validate and warn if ranges exceed cycle duration
         const enabled_ranges = override.ranges.map(range => {
-            if (range.end > period_duration.ticks) {
+            if (range.end > window_cycle_duration.ticks) {
                 console.warn(
                     `Warning: Enable control range [${range.start}, ${range.end}] for entity ${entity_id.id} ` +
-                    `exceeds period duration of ${period_duration.ticks} ticks. Range will be clamped.`
+                    `exceeds period duration of ${window_cycle_duration.ticks} ticks. Range will be clamped.`
                 );
             }
-            return OpenRange.from(range.start, Math.min(range.end, period_duration.ticks));
+            return OpenRange.from(range.start, Math.min(range.end, window_cycle_duration.ticks));
         });
 
-        const run_through_ticks = runThroughTicks(this.game_tick_provider, period_duration.ticks, this.counter_runs_through);
+        const run_through_ticks = runThroughTicks(this.game_tick_provider, window_cycle_duration.ticks, this.counter_runs_through);
         const clocked_control = EnableControl.clocked({
-            periodDuration: period_duration,
+            windowCycleDuration: window_cycle_duration,
             enabledRanges: enabled_ranges,
             exact_subtick_positions: this.exact_subtick_positions,
             tickProvider: run_through_ticks ?? this.tick_provider,

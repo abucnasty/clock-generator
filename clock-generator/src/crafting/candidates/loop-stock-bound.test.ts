@@ -5,9 +5,9 @@ import { loopStockBound } from "./loop-stock-bound";
 import { machineLoopsOf } from "./loop-windows";
 
 /** `count` windows of `ticks` ticks a period, evenly from `offset`, one that runs past the last tick split as a clock writes it */
-const every = (period: number, count: number, offset: number, ticks: number) => Array.from({ length: count }, (_, k) => {
-    const start = (k * period / count + offset) % period, end = (start + ticks - 1) % period;
-    return end < start ? [{ start, end: period - 1 }, { start: 0, end }] : [{ start, end }];
+const every = (window_cycle_ticks: number, count: number, offset: number, ticks: number) => Array.from({ length: count }, (_, k) => {
+    const start = (k * window_cycle_ticks / count + offset) % window_cycle_ticks, end = (start + ticks - 1) % window_cycle_ticks;
+    return end < start ? [{ start, end: window_cycle_ticks - 1 }, { start: 0, end }] : [{ start, end }];
 }).flat();
 
 describe("machineLoopsOf", () => {

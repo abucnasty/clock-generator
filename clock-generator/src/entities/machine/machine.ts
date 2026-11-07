@@ -172,7 +172,7 @@ function createMachine(
 
     
 
-    const insertionDurationPeriod = InsertionDuration.create(machineOutput.production_rate, overload_multiplier)
+    const insertionDurationWindowCycle = InsertionDuration.create(machineOutput.production_rate, overload_multiplier)
 
     const bonusProductivityRate = BonusProductivityRate.fromCraftingRate(craftingRate, new Percentage(metadata.productivity));
     // last, as the burner's fuel was before the traits: an unsupported fuel is refused after every other check above
@@ -186,7 +186,7 @@ function createMachine(
         [machineOutput, ...byProducts],
         craftingRate,
         bonusProductivityRate,
-        insertionDurationPeriod,
+        insertionDurationWindowCycle,
         ...fuelOf(energy),
         result_target,
     );

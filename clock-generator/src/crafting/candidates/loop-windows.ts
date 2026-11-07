@@ -93,9 +93,9 @@ export function drawWindowTicks(inserter: Inserter, limit: number, brought_per_s
 }
 
 /** Items of an item the inserters named dropped a tick over the judged part of the run (after its first third) */
-function droppedPerTick(stock: StockRecording, inserter_ids: ReadonlySet<string>, item_name: string, period: number): number {
-    const periods = Math.floor(stock.ticks / period);
-    const from = Math.max(1, Math.floor(periods / 3) * period), to = periods * period;
+function droppedPerTick(stock: StockRecording, inserter_ids: ReadonlySet<string>, item_name: string, window_cycle_ticks: number): number {
+    const window_cycles = Math.floor(stock.ticks / window_cycle_ticks);
+    const from = Math.max(1, Math.floor(window_cycles / 3) * window_cycle_ticks), to = window_cycles * window_cycle_ticks;
     let dropped = 0;
     for (const series of stock.inserters.filter(it => inserter_ids.has(it.inserter_id))) {
         for (let tick = from; tick < to; tick++) {
@@ -130,12 +130,12 @@ function droppedPerTick(stock: StockRecording, inserter_ids: ReadonlySet<string>
  */
 export function loopInserterWindows(
     config: Config,
-    period: number,
+    window_cycle_ticks: number,
     stock: StockRecording,
     logger: Logger,
 ): Map<string, { windows: OpenRange[]; item_name: string }> {
     const result = new Map<string, { windows: OpenRange[]; item_name: string }>();
-    if (!Number.isInteger(period)) {
+    if (!Number.isInteger(window_cycle_ticks)) {
         return result;
     }
     const registry = createEntityRegistryFromConfig(config);
@@ -156,7 +156,7 @@ export function loopInserterWindows(
             continue;
         }
         const output = stock.machines.find(it => it.machine_id === sink_id)?.outputs[sink.output.item_name];
-        const map = output === undefined ? null : underBlockMap(output, sink.output.outputBlock.ingredients_blocked_at, period);
+        const map = output === undefined ? null : underBlockMap(output, sink.output.outputBlock.ingredients_blocked_at, window_cycle_ticks);
         if (map === null) {
             continue;
         }
@@ -166,9 +166,9 @@ export function loopInserterWindows(
             const stretches = underBlockStretches(map, min_disabled_ticks).length;
             const lengths = Array.from(inserter.filtered_items).flatMap(item_name => {
                 const input = sink.inputs.get(item_name);
-                const drawn = droppedPerTick(stock, feeding_sink, item_name, period);
+                const drawn = droppedPerTick(stock, feeding_sink, item_name, window_cycle_ticks);
                 return input === undefined || drawn <= 0 ? []
-                    : [drawWindowTicks(inserter, input.automated_insertion_limit.quantity, drawn * period / stretches, drawn)];
+                    : [drawWindowTicks(inserter, input.automated_insertion_limit.quantity, drawn * window_cycle_ticks / stretches, drawn)];
             });
             const windows = lengths.length === 0 ? null : underBlockWindows(map, min_disabled_ticks, Math.max(...lengths));
             if (windows === null) {
@@ -201,8 +201,8 @@ function windowFrom(start: number, ticks: number, span: number): OpenRange[] {
 }
 
 /** The positions of a period windows can name: a whole period's ticks, or every whole tick a fractional one reaches */
-function positionsOf(period: number): number {
-    return Number.isInteger(period) ? period : Math.ceil(period);
+function positionsOf(window_cycle_ticks: number): number {
+    return Number.isInteger(window_cycle_ticks) ? window_cycle_ticks : Math.ceil(window_cycle_ticks);
 }
 
 /** The windows of the inserters named, as one sorted list with the ones that touch made one */
@@ -211,10 +211,10 @@ function windowsOf(windows: ReadonlyMap<string, OpenRange[]>, inserter_ids: read
 }
 
 /** Hands an inserter dropped a period over the judged part of the run (after its first third), rounded */
-function handsPerPeriod(stock: StockRecording, inserter_id: string, period: number): number {
+function handsPerWindowCycle(stock: StockRecording, inserter_id: string, window_cycle_ticks: number): number {
     const series = stock.inserters.find(it => it.inserter_id === inserter_id);
-    const periods = Math.floor(stock.ticks / period);
-    const from = Math.max(1, Math.floor(Math.floor(periods / 3) * period)), to = Math.floor(periods * period);
+    const window_cycles = Math.floor(stock.ticks / window_cycle_ticks);
+    const from = Math.max(1, Math.floor(Math.floor(window_cycles / 3) * window_cycle_ticks)), to = Math.floor(window_cycles * window_cycle_ticks);
     if (series === undefined || to <= from) {
         return 0;
     }
@@ -224,7 +224,7 @@ function handsPerPeriod(stock: StockRecording, inserter_id: string, period: numb
             hands++;
         }
     }
-    return Math.round(hands * period / (to - from));
+    return Math.round(hands * window_cycle_ticks / (to - from));
 }
 
 /**
@@ -255,7 +255,7 @@ function handsPerPeriod(stock: StockRecording, inserter_id: string, period: numb
  */
 export function inLoopInserterWindows(
     config: Config,
-    period: number,
+    window_cycle_ticks: number,
     windows: ReadonlyMap<string, OpenRange[]>,
     from_loop: ReadonlySet<string>,
     stock: StockRecording,
@@ -272,7 +272,7 @@ export function inLoopInserterWindows(
     const machine_ids = new Set(registry.getAll().filter(Entity.isMachine).map(it => it.entity_id.id));
     const outputWindowsOf = (machine_id: string) => windowsOf(windows, all_inserters
         .filter(it => it.source.entity_id.id === machine_id && !machine_ids.has(it.sink.entity_id.id)).map(it => it.entity_id.id));
-    const span = positionsOf(period);
+    const span = positionsOf(window_cycle_ticks);
     for (const inserter of in_a_loop) {
         const id = inserter.entity_id.id;
         if (always_enabled_by_config.has(id)) {
@@ -308,21 +308,21 @@ export function inLoopInserterWindows(
             }
             const output = outputWindowsOf(takers[0].sink.entity_id.id);
             const anchors = output.length > taken.length ? output : taken;
-            const slot = period / anchors.length;
+            const slot = window_cycle_ticks / anchors.length;
             placed = OpenRange.reduceRanges(anchors.flatMap(anchor =>
                 windowFrom(anchor.start_inclusive + swing + Math.round(j * slot / n), Math.floor(slot / n) + 2, span)));
         } else {
-            const hands = handsPerPeriod(stock, id, period);
+            const hands = handsPerWindowCycle(stock, id, window_cycle_ticks);
             if (hands < 1) {
                 continue;
             }
-            const slot = period / hands;
+            const slot = window_cycle_ticks / hands;
             const output = outputWindowsOf(inserter.source.entity_id.id);
             const phase = output.length === 0 ? 0
-                : Math.round((output[0].start_inclusive + (output[1]?.start_inclusive ?? output[0].start_inclusive + period)) / 2) % Math.round(slot);
+                : Math.round((output[0].start_inclusive + (output[1]?.start_inclusive ?? output[0].start_inclusive + window_cycle_ticks)) / 2) % Math.round(slot);
             const length = Math.min(Math.floor(slot) - 1, swing + 1);
             placed = length >= span ? [OpenRange.from(0, span - 1)] : OpenRange.reduceRanges(Array.from({ length: hands }, (_, k) =>
-                windowFrom(phase + Math.round(k * period / hands), length, span)).flat());
+                windowFrom(phase + Math.round(k * window_cycle_ticks / hands), length, span)).flat());
         }
         logger.log(`Loop windows of ${id} (${rule}): ${placed.map(range => `${range.start_inclusive}-${range.end_inclusive}`).join(", ")}`);
         result.set(id, { windows: placed, item_name: Array.from(inserter.filtered_items).sort().join(","), rule });

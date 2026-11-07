@@ -218,9 +218,9 @@ describe("generateClockForConfig", () => {
             ["swings-1", 72, 48, [[1, 10], [25, 34], [49, 58]]],
             ["fractional", 72, 48, [[1, 34]]],
             ["planned-belt-slack", 144, 96, [[1, 70]]],
-        ] as const)("%s is stable as built with the windows that ran in game", (id, period, bricks, windows) => {
+        ] as const)("%s is stable as built with the windows that ran in game", (id, window_cycle_ticks, bricks, windows) => {
             const result = alternative(id).result;
-            expect(result.simulation_duration.ticks).toBe(period);
+            expect(result.simulation_duration.ticks).toBe(window_cycle_ticks);
             expect(outputWindows(id)).toEqual(windows);
             expect(alternative(id).verdict).toBe("stable");
             expect(result.stability_check.as_built).toMatchObject({ holds: true, actual_output_items: bricks });
@@ -247,7 +247,7 @@ describe("generateClockForConfig", () => {
 
             expect(alwaysOnReasonProblems(config, generated, "planned")).toEqual([]);
             expect(validation.transfer_plan).toEqual(generated.serializable_transfer_plan);
-            expect(validation).toMatchObject({ used_lcm: 2, output_swings_per_cycle: 1, cycle_ticks: 144, period_ticks: 288 });
+            expect(validation).toMatchObject({ used_lcm: 2, output_swings_per_cycle: 1, cycle_ticks: 144, window_cycle_ticks: 288 });
         });
 
         it("does not plan the inserter taking away a by-product nothing in the config uses", async () => {

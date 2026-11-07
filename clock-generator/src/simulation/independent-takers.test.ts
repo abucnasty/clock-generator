@@ -9,7 +9,7 @@ import {World} from "./world";
 import {DEFAULT_TAKER_ORDER} from "./competing-takers";
 
 interface NativeAllocation {
-    period: number;
+    window_cycle_ticks: number;
     observed_source_allocations: {source: number; item: string; stock_before: number; takes: Record<string, number>}[];
     machines_before: {id: number; input: Record<string, number>; output: Record<string, number>; progress: number; bonus: number}[];
     hands_before: {id: number; held: number}[];
@@ -21,7 +21,7 @@ test("Mechanics: robustness covers the independently mixed native shared-source 
     // Source3 serves7 before5, source4 serves6 before8, source11 serves26 before23. No global ascending/descending
     // order represents all three. Only local pickups from measured inventories are replayed here, not the whole tick.
     const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN);
-    const orders = [DEFAULT_TAKER_ORDER, ...otherTakerOrdersOf(config, new Map(), native.period)];
+    const orders = [DEFAULT_TAKER_ORDER, ...otherTakerOrdersOf(config, new Map(), native.window_cycle_ticks)];
     const hands = native.hands_before.map(it => it.id).sort((a, b) => a - b);
     expect(native.hands_before.every(it => it.held === 0)).toBe(true);
     const expected = hands.map(id => native.observed_source_allocations.find(it => String(id) in it.takes)!.takes[id]);

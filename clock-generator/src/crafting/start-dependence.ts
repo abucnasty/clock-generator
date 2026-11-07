@@ -63,7 +63,7 @@ export interface StartOutcome {
     /** The clock holds its expected output from this start, judged on the same checks as from every other start (see `startsReachingTarget`) */
     reaches_target: boolean;
     /** Items a clock period moves from this start once it has settled, averaged over the judged part of a long run; null when none was run */
-    output_items_per_period: number | null;
+    output_items_per_window_cycle: number | null;
     /** Items the settled clock moves in each period of the judged part, repeating (see `cycleOf`); null when it repeats in no short cycle */
     cycle: number[] | null;
     /** Periods (bins) of the judged part more than a hand off the expected output, and how many were judged; null when no long run was made */
@@ -136,7 +136,7 @@ function cycleText(cycle: readonly number[]): string {
  * all copies for the rate: "start-dependent: reaches 480/s from the cold start; settles at 2880 a period (128.6/s,
  * cycle 2784/2944/2912) from the ascending order". Null for a clock that is not start-dependent.
  */
-export function startDependenceNote(dependence: StartDependence, items_per_second_of: (items_per_period: number) => number): string | null {
+export function startDependenceNote(dependence: StartDependence, items_per_second_of: (items_per_window_cycle: number) => number): string | null {
     if (dependence.verdict !== "start-dependent") {
         return null;
     }
@@ -144,16 +144,16 @@ export function startDependenceNote(dependence: StartDependence, items_per_secon
     const elsewhere = dependence.starts.filter(it => !it.reaches_target);
     const names = (starts: StartOutcome[]) => starts.map(it => it.id).join(", ");
     const settles = elsewhere.map(start => {
-        if (start.output_items_per_period === null) {
+        if (start.output_items_per_window_cycle === null) {
             return `has no long run from ${start.id}`;
         }
-        const mean = Math.round(start.output_items_per_period);
+        const mean = Math.round(start.output_items_per_window_cycle);
         const cycle = start.cycle !== null && start.cycle.length > 1 ? `, cycle ${cycleText(start.cycle)}` : "";
         const off = start.off_bins !== null && start.off_bins.count > 0 ? `, ${start.off_bins.count} of ${start.off_bins.of} periods more than a hand off it` : "";
         // a mean at the target and no period far off it: the judged part as a whole is a few hands short or over
         const span = off === "" && start.span_items !== null && start.span_items !== 0 && !start.long_run_keeps_up
             ? `, ${Math.abs(start.span_items)} items ${start.span_items < 0 ? "under" : "over"} the judged periods as a whole` : "";
-        return `settles at ${mean} a period (${items_per_second_of(start.output_items_per_period).toFixed(1)}/s${cycle}${off}${span}) from ${start.id}`;    });
+        return `settles at ${mean} a period (${items_per_second_of(start.output_items_per_window_cycle).toFixed(1)}/s${cycle}${off}${span}) from ${start.id}`;    });
     const expected_rate = items_per_second_of(dependence.expected_output_items);
     return `start-dependent: reaches ${Number(expected_rate.toFixed(2))}/s from ${names(reaching)}; ${settles.join("; ")}.`;
 }

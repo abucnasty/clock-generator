@@ -103,10 +103,10 @@ describe("request-local duplicate verification", () => {
         const other = generated.alternatives.find(clock => clock.maker === "swings-1")!;
         const selected = generated.alternatives[generated.selected_index];
         expect(other.verdict).toBe("stable");
-        expect(other.ranking.recovery_periods).toBe(2);
+        expect(other.ranking.recovery_window_cycles).toBe(2);
         expect(selected.maker).toBe("planned-belt-slack");
         expect(selected.verdict).toBe("stable");
-        expect(selected.ranking.recovery_periods).toBe(3);
+        expect(selected.ranking.recovery_window_cycles).toBe(3);
         expect(selected.ranking.wake_ups_per_minute).toBeLessThan(other.ranking.wake_ups_per_minute!);
         // A later request must make its own checks, rather than inherit a verdict from this generation.
         const first_count = recovery.mock.calls.length;

@@ -58,7 +58,7 @@ function deriveClockWindows(
     planned_history: InventoryTransferHistory,
     output_inserter_ids: Set<string>,
     belt_pickup_slack: Map<string, number>,
-    period: number,
+    window_cycle_ticks: number,
     logger: Logger,
     report?: (detail: string) => void,
 ): TimeStudyWindows {
@@ -69,12 +69,12 @@ function deriveClockWindows(
     const drill_ids = new Set(Array.from(planned_history.keys()).filter(EntityId.isDrill).map(it => it.id));
     const drill_windows = new Map(Array.from(planned_windows).filter(([key]) => drill_ids.has(key)));
 
-    const planned = deriveTimeStudyWindows(base_config, output_windows, drill_windows, output_inserter_ids, belt_pickup_slack, period, "planned output", logger, report);
+    const planned = deriveTimeStudyWindows(base_config, output_windows, drill_windows, output_inserter_ids, belt_pickup_slack, window_cycle_ticks, "planned output", logger, report);
     if (planned.windows !== null || planned.even_output_windows === null) {
         return planned;
     }
     // Bunched output swings (e.g. a double swing then a long gap) can leave a partial stack in hand when the window closes
-    const even = deriveTimeStudyWindows(base_config, planned.even_output_windows, drill_windows, output_inserter_ids, belt_pickup_slack, period, "evenly spaced output", logger, report);
+    const even = deriveTimeStudyWindows(base_config, planned.even_output_windows, drill_windows, output_inserter_ids, belt_pickup_slack, window_cycle_ticks, "evenly spaced output", logger, report);
     if (even.windows !== null) {
         return even;
     }
@@ -88,7 +88,7 @@ function checkOfRun(run: TrialRun): AsBuiltStabilityCheck {
         actual_output_items: run.stability_check.actual_output_items,
         start_phases_checked: 1,
         failed_start_offset: run.stability_check.holds ? undefined : 0,
-        repeat_periods: run.stability_check.repeat_periods,
+        repeat_window_cycles: run.stability_check.repeat_window_cycles,
         repeat_output_items: run.stability_check.repeat_output_items,
     };
 }
@@ -106,7 +106,7 @@ export function deriveTimeStudyWindows(
     drill_windows: Map<string, OpenRange[]>,
     output_inserter_ids: Set<string>,
     belt_pickup_slack: Map<string, number>,
-    period: number,
+    window_cycle_ticks: number,
     label: string,
     logger: Logger,
     report?: (detail: string) => void,
@@ -114,9 +114,9 @@ export function deriveTimeStudyWindows(
 ): TimeStudyWindows {
     const fixed_windows = new Map([...output_windows, ...drill_windows]);
     report?.(`Simulating with only the output inserters clocked (${label} windows)`);
-    const derivation = runClockOnBuild(base_config, fixed_windows, period, logger);
+    const derivation = runClockOnBuild(base_config, fixed_windows, window_cycle_ticks, logger);
     logger.log(`Derived clock windows (${label}): output-only run actual=${derivation.stability_check.actual_output_items} expected=${derivation.stability_check.expected_output_items}`);
-    const even_output_windows = evenlySpacedOutputWindows(output_windows, outputSwingCountsOf(derivation, new Set(output_windows.keys()), period), period);
+    const even_output_windows = evenlySpacedOutputWindows(output_windows, outputSwingCountsOf(derivation, new Set(output_windows.keys()), window_cycle_ticks), window_cycle_ticks);
     const reportOf = (tried: { candidate: number; quick: QuickTrial }[], picked: number | null): SearchReport => ({
         kind: "padding",
         candidates: tried.map(it => ({ row: 1, setting: it.candidate, holds: it.quick.holds })),
@@ -135,7 +135,7 @@ export function deriveTimeStudyWindows(
             || always_enabled_by_config.has(entity.entity_id) || always_enabled.has(entity.entity_id)) {
             continue;
         }
-        const ranges = busyDeciderRanges(entity.initial_status, transitionsOf(derivation.serializable_state_transition_history, entity), period);
+        const ranges = busyDeciderRanges(entity.initial_status, transitionsOf(derivation.serializable_state_transition_history, entity), window_cycle_ticks);
         if (ranges.length > 0) {
             busy_windows.set(entity.entity_id, ranges);
         }
@@ -146,16 +146,16 @@ export function deriveTimeStudyWindows(
     const { picked, pick, tried } = search<number, QuickTrial & { windows: Map<string, OpenRange[]>; result: TrialRun; run: AsBuiltRun }, Confirmed>({
         candidates: DERIVED_WINDOW_END_PADDING_CANDIDATES,
         quick: padding => {
-            const windows = withBeltPickupSlack(paddedWindows(unpadded, busy_windows.keys(), padding, period), belt_pickup_slack, period);
+            const windows = withBeltPickupSlack(paddedWindows(unpadded, busy_windows.keys(), padding, window_cycle_ticks), belt_pickup_slack, window_cycle_ticks);
             report?.(`Trying ${ticks(padding)}`);
-            const trial = quickTrial(base_config, windows, period, logger, true);
+            const trial = quickTrial(base_config, windows, window_cycle_ticks, logger, true);
             logger.log(`Derived clock windows (${label}): end padding ${padding} -> actual=${trial.result.stability_check.actual_output_items} holds=${trial.holds}`);
             return { ...trial, windows };
         },
         neighbours: () => true,
         tieBreak: (a, b) => a.candidate - b.candidate,
         confirm: ({ candidate: padding, quick }) => confirm_pick
-            ? confirm(base_config, quick.windows, period, logger, ticks(padding), report, quick.run, true)
+            ? confirm(base_config, quick.windows, window_cycle_ticks, logger, ticks(padding), report, quick.run, true)
             : { result: quick.result, check: checkOfRun(quick.result) },
     });
     if (picked !== null && pick !== null) {

@@ -110,11 +110,11 @@ describe("by-product clocks", () => {
 
     it("looks at the machine at least as often as a hand of the by-product builds up, on a divisor of the period", async () => {
         const registry = await registryOf();
-        const period = 128;
-        const clock = unplannedInserterClocks(registry, period).get(byProductOnlyInserters(registry)[0].entity_id.id)!;
+        const window_cycle_ticks = 128;
+        const clock = unplannedInserterClocks(registry, window_cycle_ticks).get(byProductOnlyInserters(registry)[0].entity_id.id)!;
 
         expect(clock.kind).toBe("by-product");
-        expect(period % clock.modulus).toBe(0);
+        expect(window_cycle_ticks % clock.modulus).toBe(0);
         // the seed is made at about 0.047 a tick at most, so a hand of 8 builds up in about 171 ticks, but the stack of 10
         // only has room for 2 over a hand: the machine is looked at at least every 2 / 0.047 = 42 ticks
         expect(clock.modulus).toBeLessThanOrEqual(42);

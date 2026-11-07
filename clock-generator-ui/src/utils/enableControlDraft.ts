@@ -17,7 +17,7 @@ export interface EnableControlDraft {
     /** As typed; only a window whose two fields are whole ticks, ending at or after its start, is saved */
     ranges: DraftWindow[];
     /** As typed; only a whole number above 0 is saved */
-    periodDuration: string;
+    windowCycleDuration: string;
     ruleSet: RuleSet;
     latchEnabled: boolean;
     releaseCondition: RuleSet | undefined;
@@ -26,7 +26,7 @@ export interface EnableControlDraft {
 /** The clock's wake windows for the entity and its period, which a Clocked rule starts from when it has none */
 interface PlannedWindows {
     ranges: EnableControlRange[];
-    periodTicks: number;
+    windowCycleTicks: number;
 }
 
 export const draftWindowsOf = (ranges: readonly EnableControlRange[]): DraftWindow[] =>
@@ -46,7 +46,7 @@ export function enableControlDraftOf(current?: EnableControlOverride, planned?: 
     return {
         mode: current?.mode ?? EnableControlMode.AUTO,
         ranges: clocked ? draftWindowsOf(clocked.ranges) : fromPlan ? draftWindowsOf(fromPlan.ranges) : [{ ...EMPTY_WINDOW }],
-        periodDuration: clocked?.period_duration_ticks?.toString() ?? (fromPlan ? `${fromPlan.periodTicks}` : ''),
+        windowCycleDuration: clocked?.period_duration_ticks?.toString() ?? (fromPlan ? `${fromPlan.windowCycleTicks}` : ''),
         ruleSet: conditional?.rule_set ?? createDefaultRuleSet(),
         latchEnabled: !!conditional?.latch,
         releaseCondition: conditional?.latch?.release,
@@ -83,9 +83,9 @@ export function buildEnableControlOverride(draft: EnableControlDraft): EnableCon
                 if (start !== null && end !== null && end >= start) ranges.push({ start, end });
             }
             const override: EnableControlOverride = { mode: EnableControlMode.CLOCKED, ranges };
-            const period = repeatTicksOf(draft.periodDuration);
-            if (period !== null) {
-                override.period_duration_ticks = period;
+            const window_cycle_ticks = repeatTicksOf(draft.windowCycleDuration);
+            if (window_cycle_ticks !== null) {
+                override.period_duration_ticks = window_cycle_ticks;
             }
             return override;
         }
@@ -110,7 +110,7 @@ export function enableControlDraftChanged(draft: EnableControlDraft, initial: En
     if (JSON.stringify(buildEnableControlOverride(draft)) !== JSON.stringify(buildEnableControlOverride(initial))) return true;
     return (
         draft.mode === EnableControlMode.CLOCKED &&
-        (JSON.stringify(draft.ranges) !== JSON.stringify(initial.ranges) || draft.periodDuration !== initial.periodDuration)
+        (JSON.stringify(draft.ranges) !== JSON.stringify(initial.ranges) || draft.windowCycleDuration !== initial.windowCycleDuration)
     );
 }
 

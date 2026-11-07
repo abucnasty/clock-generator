@@ -37,7 +37,7 @@ export function resultsTakenOf(
     stock: StockRecording,
     registry: Pick<ReadableEntityRegistry, "getAll">,
     from_tick: number,
-    period: number,
+    window_cycle_ticks: number,
 ): ResultsTaken[] {
     const machines = registry.getAll().filter(Entity.isMachine).filter((machine): machine is Machine & { result_target: NonNullable<Machine["result_target"]> } =>
         machine.result_target?.type === "chest" && machine.metadata.places_results === true);
@@ -80,11 +80,11 @@ export function resultsTakenOf(
             const per_craft = group.items.reduce((sum, item) => sum + machine.outputs.find(it => it.item_name === item)!.amount_per_craft.toDecimal(), 0);
             const expected_items = per_craft * crafts;
             const taken_items = group.inserter_ids.reduce((sum, id) => sum + dropped(id), 0);
-            const per_period = ticks > 0 ? expected_items * period / ticks : 0;
+            const per_window_cycle = ticks > 0 ? expected_items * window_cycle_ticks / ticks : 0;
             return {
                 items: group.items, item_labels: group.items.map(item => FactorioDataService.itemNameInSentence(item)),
                 inserter_ids: group.inserter_ids, expected_items, taken_items,
-                short: taken_items < expected_items - per_period - group.inserter_ids.length * group.hand,
+                short: taken_items < expected_items - per_window_cycle - group.inserter_ids.length * group.hand,
             };
         });
         return [{ machine_id: machine.entity_id.id, waiting_ticks, takers: outcomes }];

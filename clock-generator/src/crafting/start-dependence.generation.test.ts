@@ -18,7 +18,7 @@ describe("a build generated with and without the check", () => {
             expect(dependence.starts[0].reaches_target, alternative.id).toBe(alternative.assessment.holds);
             // a clock that stands 300 ticks into a period of 72 is a clock like the others, not a build that makes nothing
             if (alternative.assessment.holds) {
-                expect(dependence.starts.every(start => (start.output_items_per_period ?? 0) > 0), alternative.id).toBe(true);
+                expect(dependence.starts.every(start => (start.output_items_per_window_cycle ?? 0) > 0), alternative.id).toBe(true);
             }
             expect(dependence.verdict, alternative.id).toBe(startVerdictOf(dependence.starts));
             // a clock that fails from every start is not start-dependent, and one the cold start fails on a check that

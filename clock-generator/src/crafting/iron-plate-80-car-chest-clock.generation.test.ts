@@ -31,7 +31,7 @@ describe("the car paste at 80.78/s", () => {
         // 0.15% fast: more than the 0.1% a rounded clock may run, so it is not tried on its own period
         expect(five.label).toMatch(/\(clock rounded to 356 ticks, runs 0\.15% fast\)$/);
         expect(five.assessment.items_per_second).toBeCloseTo(416 * 60 / 356, 6);
-        expect(five.rounded).toMatchObject({period_ticks: 356, tried_on_its_period: false});
+        expect(five.rounded).toMatchObject({window_cycle_ticks: 356, tried_on_its_window_cycle: false});
         expect(five.ranking).toMatchObject({meets_target_rate: false, recovery_untried: false});
         expect(five.ranking.runs_fast).toBeUndefined();
         expect(paste.alternatives.filter(alternative => alternative.maker.startsWith("swings-5"))).toHaveLength(1);

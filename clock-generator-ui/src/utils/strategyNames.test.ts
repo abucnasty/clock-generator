@@ -113,7 +113,7 @@ describe('the chips of the settings', () => {
     });
 
     it('say the ticks a rounded clock is rounded to, and how fast it runs', () => {
-        const rounded = (runs_fast: number) => clock({ strategy: strategy('takt_batches', 'calculated', { ...plain(), window_cycle: [{ kind: 'rounded_clock', period_ticks: 600, runs_fast }] }) });
+        const rounded = (runs_fast: number) => clock({ strategy: strategy('takt_batches', 'calculated', { ...plain(), window_cycle: [{ kind: 'rounded_clock', window_cycle_ticks: 600, runs_fast }] }) });
         expect(labels(rounded(0.0002)).slice(2)).toEqual(['output swings 2', 'rounded to 600 ticks, 0.02% fast']);
         expect(labels(rounded(0.000001))[3]).toBe('rounded to 600 ticks, under 0.01% fast');
     });
@@ -121,7 +121,7 @@ describe('the chips of the settings', () => {
     it('have a label and a line for every value the engine can carry', () => {
         const settings: ClockSettings = {
             output_count: { kind: 'output_swings', count: 2 },
-            window_cycle: [{ kind: 'shorter_window_cycle' }, { kind: 'harmonic_window_cycle' }, { kind: 'subtick_clock' }, { kind: 'rounded_clock', period_ticks: 1199, runs_fast: 0.0008 }],
+            window_cycle: [{ kind: 'shorter_window_cycle' }, { kind: 'harmonic_window_cycle' }, { kind: 'subtick_clock' }, { kind: 'rounded_clock', window_cycle_ticks: 1199, runs_fast: 0.0008 }],
             shared_windows: 'window_a_swing', loops: 'loop_windows', drill_windows: 'a_tick_longer', belt_pickups: ['counted_from_entry', 'room_for_a_hand_of_fuel'],
         };
         const chips = clockChipsOf(clock({ strategy: strategy('takt_batches', 'calculated', settings) }));

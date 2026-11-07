@@ -20,7 +20,7 @@ export type AlwaysOnReason =
     | { kind: "override" }
     | { kind: "loop" }
     | { kind: "from-loop" }
-    | { kind: "busy"; period_ticks: number }
+    | { kind: "busy"; window_cycle_ticks: number }
     | { kind: "no-swing" }
     | { kind: "chest-drill"; why: Exclude<ChestDrillWhy, { kind: "config" }> };
 

@@ -107,7 +107,7 @@ export function CheckPlanSection({
                                 {plan.output_swings_per_cycle === 1 ? '' : 's'} per crafting cycle of{' '}
                                 {formatTicks(plan.cycle_ticks)} ticks, shared equally across its output inserters</>}
                         , and the {plan.used_lcm === 1 ? 'window cycle time is' : 'clock repeats every'}{' '}
-                        {formatTicks(plan.period_ticks)} ticks ({plan.used_lcm} crafting
+                        {formatTicks(plan.window_cycle_ticks)} ticks ({plan.used_lcm} crafting
                         cycle{plan.used_lcm === 1 ? '' : 's'}). Generating may still use fewer {plan.counts === 'destroyed' ? 'hands' : 'swings'}{' '}
                         if this count does not hold the rate.
                     </Alert>

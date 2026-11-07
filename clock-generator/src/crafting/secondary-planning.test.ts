@@ -58,7 +58,7 @@ describe("count-only secondary planning provenance", () => {
     });
 
     it("propagates a missing actual plan through the public task boundary instead of reporting an ordinary refusal", () => {
-        const context = { secondary_planning: policy, swings: 1, planned_swings: 1, primary_stable: true, period_ticks: 40 };
+        const context = { secondary_planning: policy, swings: 1, planned_swings: 1, primary_stable: true, window_cycle_ticks: 40 };
         const malformed = { ...base, output_cycle_plan: {} as BlueprintGenerationResult["output_cycle_plan"] };
         vi.spyOn(generation, "generateClockWithSwingBackoff").mockReturnValue(malformed);
         const notMade = vi.fn();
@@ -70,9 +70,9 @@ describe("count-only secondary planning provenance", () => {
 
     it("applies the derived count to default alternatives while preserving the fractional toggle", () => {
         const untouched = structuredClone(config);
-        const context = { secondary_planning: policy, swings: 1, planned_swings: 1, primary_stable: true, period_ticks: 40 };
+        const context = { secondary_planning: policy, swings: 1, planned_swings: 1, primary_stable: true, window_cycle_ticks: 40 };
         const generated = vi.spyOn(generation, "generateClockWithSwingBackoff").mockReturnValue(base);
-        vi.spyOn(trial, "disturbanceTrialVerdictOf").mockReturnValue({ disturbance_trial: { survives: true, broken_by: [], recovered_after_periods: 0 } });
+        vi.spyOn(trial, "disturbanceTrialVerdictOf").mockReturnValue({ disturbance_trial: { survives: true, broken_by: [], recovered_after_window_cycles: 0 } });
 
         runClockAlternativeTask(config, context, "fractional", options);
 
@@ -98,10 +98,10 @@ describe("count-only secondary planning provenance", () => {
 
         const untouched = structuredClone(config);
         const context = { secondary_planning: { ...policy, terminal_swing_count: 2 }, swings: 1, planned_swings: 1,
-            primary_stable: true, period_ticks: 40 };
+            primary_stable: true, window_cycle_ticks: 40 };
         const generate = vi.spyOn(generation, "generateClockForConfig").mockImplementation(candidate =>
             candidate.overrides?.terminal_swing_count === 3 ? three : two);
-        vi.spyOn(trial, "disturbanceTrialVerdictOf").mockReturnValue({ disturbance_trial: { survives: true, broken_by: [], recovered_after_periods: 0 } });
+        vi.spyOn(trial, "disturbanceTrialVerdictOf").mockReturnValue({ disturbance_trial: { survives: true, broken_by: [], recovered_after_window_cycles: 0 } });
 
         const twoRun = runClockAlternativeTask(config, context, "swings-2", options)!;
         const threeRun = runClockAlternativeTask(config, context, "swings-3", options)!;

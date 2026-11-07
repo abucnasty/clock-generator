@@ -182,7 +182,7 @@ describe("generateClockForConfig", () => {
 
             it("is stable and repeats every period", () => {
                 expect(planned.verdict).toBe("stable");
-                expect(planned.result.stability_check.as_built?.repeat_periods).toBe(1);
+                expect(planned.result.stability_check.as_built?.repeat_window_cycles).toBe(1);
             });
 
             // the timelines default to this run; it differs from the planning run the windows were taken from
@@ -254,7 +254,7 @@ describe("generateClockForConfig", () => {
             it("is offered and stable from every start phase checked", () => {
                 expect(uneven.verdict).toBe("stable");
                 expect(uneven.result.stability_check.as_built?.start_phases_checked).toBe(112);
-                expect(uneven.result.stability_check.as_built?.repeat_periods).toBe(1);
+                expect(uneven.result.stability_check.as_built?.repeat_window_cycles).toBe(1);
             });
 
             it("moves the second output swing one craft earlier and keeps the first", () => {
@@ -292,7 +292,7 @@ describe("generateClockForConfig", () => {
 
             it("is offered and stable", () => {
                 expect(shifted.verdict).toBe("stable");
-                expect(shifted.result.stability_check.as_built?.repeat_periods).toBe(1);
+                expect(shifted.result.stability_check.as_built?.repeat_window_cycles).toBe(1);
             });
 
             // the smallest shift that is at least an eighth of the cycle away from the plan and whose neighbours pass too
@@ -367,7 +367,7 @@ describe("generateClockForConfig", () => {
 
             it("is stable and repeats every period", () => {
                 expect(result.stability_check.holds).toBe(true);
-                expect(result.stability_check.repeat_periods).toBe(1);
+                expect(result.stability_check.repeat_window_cycles).toBe(1);
                 expect(result.stability_check.repeat_output_items).toBeUndefined();
             });
         });
@@ -388,7 +388,7 @@ describe("generateClockForConfig", () => {
             });
 
             it("is unstable because the two periods it repeats over move half of it", () => {
-                expect(result.stability_check.repeat_periods).toBe(2);
+                expect(result.stability_check.repeat_window_cycles).toBe(2);
                 expect(result.stability_check.repeat_output_items).toBe(32);
                 expect(result.stability_check.holds).toBe(false);
             });

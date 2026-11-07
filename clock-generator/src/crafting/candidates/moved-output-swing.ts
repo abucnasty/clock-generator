@@ -27,13 +27,13 @@ interface MovedOutputSwingCandidate {
  */
 function movedOutputSwingCandidates(
     output_windows: Map<string, OpenRange[]>,
-    period: number,
+    window_cycle_ticks: number,
     step_ticks: number,
 ): MovedOutputSwingCandidate[] {
     const sorted = new Map(Array.from(output_windows, ([key, ranges]) =>
         [key, [...ranges].sort((a, b) => a.start_inclusive - b.start_inclusive)] as const));
     const count = Math.min(...Array.from(sorted.values(), ranges => ranges.length));
-    if (!Number.isInteger(period) || sorted.size === 0 || count < 2
+    if (!Number.isInteger(window_cycle_ticks) || sorted.size === 0 || count < 2
         || Array.from(sorted.values()).some(ranges => ranges.length !== count)) {
         return [];
     }
@@ -46,9 +46,9 @@ function movedOutputSwingCandidates(
         for (const ranges of sorted.values()) {
             const window = ranges[window_index];
             const length = window.end_inclusive - window.start_inclusive + 1;
-            const next_start = window_index + 1 < count ? ranges[window_index + 1].start_inclusive : ranges[0].start_inclusive + period;
+            const next_start = window_index + 1 < count ? ranges[window_index + 1].start_inclusive : ranges[0].start_inclusive + window_cycle_ticks;
             min = Math.max(min, ranges[window_index - 1].end_inclusive + length + 1 - window.start_inclusive);
-            max = Math.min(max, next_start - length - 1 - window.end_inclusive, period - 1 - window.end_inclusive);
+            max = Math.min(max, next_start - length - 1 - window.end_inclusive, window_cycle_ticks - 1 - window.end_inclusive);
         }
         room.push({ window_index, min, max });
     }
@@ -81,7 +81,7 @@ export function movedOutputSwingWindows(
     planned_history: InventoryTransferHistory,
     output_inserter_ids: Set<string>,
     belt_pickup_slack: Map<string, number>,
-    period: number,
+    window_cycle_ticks: number,
     step_ticks: number,
     logger: Logger,
     report?: (detail: string) => void,
@@ -92,14 +92,14 @@ export function movedOutputSwingWindows(
     const drill_ids = new Set(Array.from(planned_history.keys()).filter(EntityId.isDrill).map(it => it.id));
     const drill_windows = new Map(Array.from(planned_windows).filter(([key]) => drill_ids.has(key)));
 
-    const candidates = movedOutputSwingCandidates(output_windows, period, step_ticks);
+    const candidates = movedOutputSwingCandidates(output_windows, window_cycle_ticks, step_ticks);
     const describe = (candidate: MovedOutputSwingCandidate) => `output swing ${candidate.window_index + 1} moved ${candidate.shift_ticks} ticks`;
     const { picked, pick, tried } = search<MovedOutputSwingCandidate, QuickTrial & { derived: TimeStudyWindows }, Confirmed>({
         candidates,
         // each position gets its own observed windows, with the padding search and its pick taken on the quick trial
         quick: (candidate, index) => {
             const derived = deriveTimeStudyWindows(base_config, candidate.output_windows, drill_windows, output_inserter_ids,
-                belt_pickup_slack, period, describe(candidate), logger,
+                belt_pickup_slack, window_cycle_ticks, describe(candidate), logger,
                 report && (detail => report(`Position ${index + 1}/${candidates.length}: ${detail}`)), false);
             // only the windows that pass are read again; the runs of a position that does not are let go
             return derived.windows === null
@@ -109,7 +109,7 @@ export function movedOutputSwingWindows(
         // candidates are listed per moved window in shift order, so neighbours in the list are neighbours in time
         neighbours: (a, b) => a.window_index === b.window_index,
         tieBreak: (a, b) => Math.abs(a.candidate.shift_ticks) - Math.abs(b.candidate.shift_ticks),
-        confirm: ({ candidate, quick }) => confirm(base_config, quick.derived.windows!, period, logger, describe(candidate), report, quick.derived.verified, true),
+        confirm: ({ candidate, quick }) => confirm(base_config, quick.derived.windows!, window_cycle_ticks, logger, describe(candidate), report, quick.derived.verified, true),
     });
     logger.log(`Uneven output swings: ${tried.filter(it => it.quick.holds).length} of ${candidates.length} positions pass the quick trial`);
     if (picked === null || pick === null) {

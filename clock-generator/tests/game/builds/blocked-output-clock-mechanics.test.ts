@@ -40,7 +40,7 @@ const selectedClockOf = (variant: BlockedOutputClockCase) =>
 /** The hand the output inserter drops: 16 items, 15 at stack size 3 (docs/belt-pickup/experiments.md) */
 const handOf = (variant: BlockedOutputClockCase) => variant.stackSize === 3 ? 15 : 16;
 /** Gears a clock period makes: one hand of 16 a period (192 ticks), or 120 gears a period of 1,440 where the hand is 15 */
-const periodOf = (variant: BlockedOutputClockCase) => variant.stackSize === 3 ? {ticks: 1440, expected: 120} : {ticks: 192, expected: 16};
+const windowCycleOf = (variant: BlockedOutputClockCase) => variant.stackSize === 3 ? {ticks: 1440, expected: 120} : {ticks: 192, expected: 16};
 
 /**
  * A clock made from the recorded drop alone, with no search: the output inserter is enabled for the span of its first
@@ -106,7 +106,7 @@ describe("the recorded controls of the blocked-output fixtures", () => {
         expectRunIsConsistent(native, generation!, config.setpoint.items_per_second);
         expect(native.target).toBe(BLOCKED_OUTPUT_TARGET);
         // five gears a second over the period: 16 in 192 ticks, or 120 in 1,440 where the hand of 15 rules out 192
-        expect({period: native.period, expected: generation!.expected}).toEqual({period: periodOf(variant).ticks, expected: periodOf(variant).expected});
+        expect({period: native.period, expected: generation!.expected}).toEqual({period: windowCycleOf(variant).ticks, expected: windowCycleOf(variant).expected});
         expect(generation!.selection).toEqual({id: selectedClockOf(variant), holds: true, rate: BLOCKED_OUTPUT_TARGET, supply: null});
         expect(generation!.verdict).toBe("stable");
         expect(native.generationVerdict).toBe("stable");
@@ -131,7 +131,7 @@ describe("the recorded controls of the blocked-output fixtures", () => {
 describe("the simulator holds the target and recovers when the output is blocked and released, on a plain clock of each case", () => {
     test.each(cases.map(variant => variant.name))("%s", name => {
         const variant = cases.find(it => it.name === name)!;
-        const {ticks, expected} = periodOf(variant);
+        const {ticks, expected} = windowCycleOf(variant);
         const report = disturbanceTrialOf(blockedOutputClockConfig(variant), plainClock(variant), ticks, expected, {log() {}, warn() {}, error() {}, debug() {}});
         expect(report.undisturbed.recovers, "the plain clock makes the expected output every period undisturbed").toBe(true);
         expect(report.undisturbed.recovered_after_bins).toBe(0);

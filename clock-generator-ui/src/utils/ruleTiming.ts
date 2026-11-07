@@ -10,29 +10,29 @@ export interface RuleTiming {
     /** One crafting cycle, in ticks */
     cycleTicks: number | null;
     /** The clock period, in ticks: a whole number of crafting cycles, fractional for a subtick clock */
-    periodTicks: number | null;
+    windowCycleTicks: number | null;
     /** Where the numbers come from: the clock on Results for this build, the last check, or nowhere yet */
     from: 'results' | 'check' | null;
     /** The selected clock's windows by entity id ("inserter:3"); only from Results */
     windows: SerializableClockWindows | null;
 }
 
-export const NO_TIMING: RuleTiming = { cycleTicks: null, periodTicks: null, from: null, windows: null };
+export const NO_TIMING: RuleTiming = { cycleTicks: null, windowCycleTicks: null, from: null, windows: null };
 
 interface TimingInput {
     /** The selected clock, only when its generation is for the build as it is now */
-    results: { cycleTicks: number; periodTicks: number; windows: SerializableClockWindows } | null;
+    results: { cycleTicks: number; windowCycleTicks: number; windows: SerializableClockWindows } | null;
     /** The last check, only when it is for the build as it is now */
-    check: { cycleTicks: number; periodTicks: number } | null;
+    check: { cycleTicks: number; windowCycleTicks: number } | null;
 }
 
 /** Results first, as a generation can lower the output swings and so change the cycle the check planned */
 export function ruleTimingOf({ results, check }: TimingInput): RuleTiming {
     if (results) {
-        return { cycleTicks: results.cycleTicks, periodTicks: results.periodTicks, from: 'results', windows: results.windows };
+        return { cycleTicks: results.cycleTicks, windowCycleTicks: results.windowCycleTicks, from: 'results', windows: results.windows };
     }
     if (check) {
-        return { cycleTicks: check.cycleTicks, periodTicks: check.periodTicks, from: 'check', windows: null };
+        return { cycleTicks: check.cycleTicks, windowCycleTicks: check.windowCycleTicks, from: 'check', windows: null };
     }
     return NO_TIMING;
 }
@@ -48,11 +48,11 @@ export function entityKey(entityType: 'inserter' | 'drill', id: number): string 
  * (a rule can't repeat with any other) and the entity has a window.
  */
 export function plannedWindowsOf(timing: RuleTiming, key: string): { start: number; end: number }[] | null {
-    const period = timing.periodTicks;
-    if (timing.from !== 'results' || timing.windows === null || period === null || !Number.isInteger(period)) return null;
+    const window_cycle_ticks = timing.windowCycleTicks;
+    if (timing.from !== 'results' || timing.windows === null || window_cycle_ticks === null || !Number.isInteger(window_cycle_ticks)) return null;
     const raw = timing.windows[key];
     if (raw === undefined) return null;
-    const ranges = normalizeWindows(raw, period)
+    const ranges = normalizeWindows(raw, window_cycle_ticks)
         .flatMap((window) => window.segments)
         // a window that wraps by one tick ends its second part at tick 0, which a rule can't hold (its end is 1 or
         // more): it is widened to ticks 0–1. The windows are merged, so the next one starts at 2 or later

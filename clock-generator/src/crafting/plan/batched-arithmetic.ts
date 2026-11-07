@@ -42,7 +42,7 @@ export interface ArithmeticWindowsInput {
     entity_registry: ReadableEntityRegistry;
     output_cycle_plan: OutputCyclePlan;
     /** The clock's period, whole ticks */
-    period_ticks: number;
+    window_cycle_ticks: number;
     /** Cycles in the period */
     recipe_lcm: number;
     /** Inserters the config leaves always enabled, which the arithmetic has no rule for */
@@ -80,12 +80,12 @@ function swingOf(inserter: Inserter, registry: ReadableEntityRegistry): WalkSwin
 }
 
 /** Windows in clock positions from walk ticks: each range the ticks the inserter acts in, less the latency */
-function positions(first: number, last: number, period: number): OpenRange[] {
-    const start = ((first - WINDOW_LATENCY_TICKS) % period + period) % period;
+function positions(first: number, last: number, window_cycle_ticks: number): OpenRange[] {
+    const start = ((first - WINDOW_LATENCY_TICKS) % window_cycle_ticks + window_cycle_ticks) % window_cycle_ticks;
     const length = last - first + 1;
-    if (length >= period) return [OpenRange.from(0, period - 1)];
+    if (length >= window_cycle_ticks) return [OpenRange.from(0, window_cycle_ticks - 1)];
     const end = start + length - 1;
-    return end < period ? [OpenRange.from(start, end)] : [OpenRange.from(start, period - 1), OpenRange.from(0, end - period)];
+    return end < window_cycle_ticks ? [OpenRange.from(start, end)] : [OpenRange.from(start, window_cycle_ticks - 1), OpenRange.from(0, end - window_cycle_ticks)];
 }
 
 /** Times a batch of output windows is lengthened to the hands the stock walk saw come late, before it is given up */
@@ -98,7 +98,7 @@ const MAX_BATCH_PASSES = 6;
  */
 function walkWithBatches(
     facts: ReturnType<typeof machineFactsOfEntity>,
-    period: number,
+    window_cycle_ticks: number,
     takers: WalkHand[],
     fillers: readonly WalkHand[],
     batch: Map<string, OpenRange[]>,
@@ -107,23 +107,23 @@ function walkWithBatches(
     machine_id: string,
 ): StockWalk {
     for (let pass = 0; ; pass++) {
-        const walk = walkMachineStock({ machine: facts, period_ticks: period, takers, fillers, max_periods: 128 });
+        const walk = walkMachineStock({ machine: facts, window_cycle_ticks, takers, fillers, max_window_cycles: 128 });
         if (!walk.converged) refuse(`the stock walk of ${machine_id} does not repeat`);
         let lengthened = false;
         for (const [id, ranges] of batch) {
             const hands = walk.hands.filter(hand => hand.id === id);
             const expected = quotas.get(id)!.reduce((sum, it) => sum + it, 0);
             const late = hands.filter(hand => !ranges.some(range => {
-                const position = ((hand.machine_tick - WINDOW_LATENCY_TICKS) % period + period) % period;
+                const position = ((hand.machine_tick - WINDOW_LATENCY_TICKS) % window_cycle_ticks + window_cycle_ticks) % window_cycle_ticks;
                 return position >= range.start_inclusive && position + 1 <= range.end_inclusive;
             }));
             if (late.length === 0 && hands.length === expected) continue;
             // the window of the cycle the batch starts in runs on to the tick after its last hand is full, or a swing longer
             const longer = ranges.map(range => {
-                const ends = late.map(hand => ((hand.machine_tick - WINDOW_LATENCY_TICKS) % period + period) % period)
-                    .filter(position => position >= range.start_inclusive && position < range.start_inclusive + period / cycle_starts.length);
+                const ends = late.map(hand => ((hand.machine_tick - WINDOW_LATENCY_TICKS) % window_cycle_ticks + window_cycle_ticks) % window_cycle_ticks)
+                    .filter(position => position >= range.start_inclusive && position < range.start_inclusive + window_cycle_ticks / cycle_starts.length);
                 const end = ends.length > 0 ? Math.max(...ends) + 1 : range.end_inclusive + (hands.length < expected ? 4 : 0);
-                return OpenRange.from(range.start_inclusive, Math.min(end, period - 1));
+                return OpenRange.from(range.start_inclusive, Math.min(end, window_cycle_ticks - 1));
             });
             batch.set(id, OpenRange.reduceRanges(longer));
             const taker = takers.find(it => it.id === id)!;
@@ -147,13 +147,13 @@ function cycleOf(tick: number, cycle_starts: readonly number[]): number {
  * `ArithmeticWindowsNotApplicable` for a build it has no rule for.
  */
 export function batchedSwingsWindowsByArithmetic(input: ArithmeticWindowsInput): ArithmeticWindows {
-    const { entity_registry: registry, output_cycle_plan: plan, period_ticks: period, recipe_lcm: cycles } = input;
-    if (!Number.isInteger(period)) refuse(`a period of ${period} ticks is not whole`);
+    const { entity_registry: registry, output_cycle_plan: plan, window_cycle_ticks, recipe_lcm: cycles } = input;
+    if (!Number.isInteger(window_cycle_ticks)) refuse(`a period of ${window_cycle_ticks} ticks is not whole`);
     if (plan.fractional_swings_enabled) refuse("fractional swings are planned by their own clock");
     if (plan.exhaust !== undefined) refuse("results that come by chance get windows of their own");
     if (plan.production_rate.counts !== "made") refuse("a target that counts an item destroyed is planned by its own arithmetic");
     const cycle_ticks = plan.total_duration_ticks.toDecimal();
-    if (Math.abs(cycle_ticks * cycles - period) > 1e-6) refuse(`the period ${period} is not ${cycles} cycles of ${cycle_ticks} ticks`);
+    if (Math.abs(cycle_ticks * cycles - window_cycle_ticks) > 1e-6) refuse(`the period ${window_cycle_ticks} is not ${cycles} cycles of ${cycle_ticks} ticks`);
     const entities = registry.getAll();
     if (entities.some(Entity.isDrill)) refuse("a build with drills");
     if (input.always_enabled_by_config.size > 0 || alwaysEnabledInserters(registry).length > 0) refuse("a build with inserters left always enabled");
@@ -210,7 +210,7 @@ export function batchedSwingsWindowsByArithmetic(input: ArithmeticWindowsInput):
                 const hands = quotas.get(id)!;
                 const swing = taker.animation.total.ticks;
                 const ranges = OpenRange.reduceRanges(cycle_starts.flatMap((start, cycle) => hands[cycle] === 0 ? []
-                    : positions(start + 1 + WINDOW_LATENCY_TICKS, start + 1 + WINDOW_LATENCY_TICKS + hands[cycle] * swing, period)));
+                    : positions(start + 1 + WINDOW_LATENCY_TICKS, start + 1 + WINDOW_LATENCY_TICKS + hands[cycle] * swing, window_cycle_ticks)));
                 batch.set(id, ranges);
                 return { ...common, windows: ranges };
             }
@@ -227,7 +227,7 @@ export function batchedSwingsWindowsByArithmetic(input: ArithmeticWindowsInput):
             return { id: filler.entity_id.id, items: ordered, pick: Entity.isChest(source) ? "in-order" : "least-cover",
                 hand: filler.metadata.stack_size, swing: swingOf(filler, registry), quota: quotas.get(filler.entity_id.id)!, quota_starts: cycle_starts };
         });
-        const walk = walkWithBatches(facts, period, takers, fillers, batch, cycle_starts, quotas, next.entity_id.id);
+        const walk = walkWithBatches(facts, window_cycle_ticks, takers, fillers, batch, cycle_starts, quotas, next.entity_id.id);
         walks.set(next.entity_id.id, walk);
         for (const [id, ranges] of batch) windows.set(id, ranges);
         // each other inserter's hands of a cycle in one window: from its first pickup to the tick after its last (a taker's
@@ -247,7 +247,7 @@ export function batchedSwingsWindowsByArithmetic(input: ArithmeticWindowsInput):
                     : { first: Math.min(known.first, hand.pickup_tick), last: Math.max(known.last, last) });
             }
             windows.set(hand_owner.id, OpenRange.reduceRanges(Array.from(by_cycle.values())
-                .flatMap(({ first, last }) => positions(first, last + 1, period))));
+                .flatMap(({ first, last }) => positions(first, last + 1, window_cycle_ticks))));
         }
         done.add(next.entity_id.id);
     }

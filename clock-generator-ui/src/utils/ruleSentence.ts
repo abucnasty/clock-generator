@@ -46,7 +46,7 @@ export const RULE_COPY = {
         [EnableControlMode.CONDITIONAL]: (entity: string) =>
             `The blueprint holds no circuit condition from this rule. The simulator follows the rule while it plans the clock; the blueprint then switches the ${entity} on in the ticks it moved items.`,
     },
-    periodUnknown:
+    windowCycleUnknown:
         'Run Check only or Generate to see the crafting cycle and the window cycle time. Until then the ticks can\'t be checked against them.',
     fromResults: ' From the clock on Results.',
     fromCheck: ' From your last check.',
@@ -173,14 +173,14 @@ export function blueprintNoteOf(mode: EnableControlMode, entityType: EntityType)
 }
 
 /** The crafting cycle and the clock period the editor checks the ticks against, and where they come from */
-export function periodLineOf(timing: RuleTiming): string {
-    const { cycleTicks, periodTicks, from } = timing;
-    if (from === null || cycleTicks === null || periodTicks === null) return RULE_COPY.periodUnknown;
+export function windowCycleLineOf(timing: RuleTiming): string {
+    const { cycleTicks, windowCycleTicks, from } = timing;
+    if (from === null || cycleTicks === null || windowCycleTicks === null) return RULE_COPY.windowCycleUnknown;
     const source = from === 'results' ? RULE_COPY.fromResults : RULE_COPY.fromCheck;
     const cycle = `Crafting cycle: ${ticksText(cycleTicks)} ticks.`;
-    if (!Number.isInteger(periodTicks)) {
-        return `${cycle} The window cycle time is ${ticksText(periodTicks)} ticks, not a whole number, so a Clocked rule can't repeat with it.${source}`;
+    if (!Number.isInteger(windowCycleTicks)) {
+        return `${cycle} The window cycle time is ${ticksText(windowCycleTicks)} ticks, not a whole number, so a Clocked rule can't repeat with it.${source}`;
     }
-    const cycles = Math.round(periodTicks / cycleTicks);
-    return `${cycle} Window cycle time: ${periodTicks} ticks (${cycles} crafting ${cycles === 1 ? 'cycle' : 'cycles'}).${source}`;
+    const cycles = Math.round(windowCycleTicks / cycleTicks);
+    return `${cycle} Window cycle time: ${windowCycleTicks} ticks (${cycles} crafting ${cycles === 1 ? 'cycle' : 'cycles'}).${source}`;
 }

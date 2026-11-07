@@ -10,7 +10,7 @@ function view(overrides: Partial<ClockAlternativeView> = {}): ClockAlternativeVi
         assessment: { holds: false, items_per_second: 7.5, wake_ups_per_minute: null, disturbance_trial: null, start_dependence: null },
         belt: { kind: 'moving', slack_ticks: [4] },
         asBuilt: { holds: false, actual_output_items: 176, start_phases_checked: 1, failed_start_offset: 0,
-            failed_pickup_phases: { 'inserter:2': [3, 0] }, repeat_periods: 6, repeat_output_items: 880 },
+            failed_pickup_phases: { 'inserter:2': [3, 0] }, repeat_window_cycles: 6, repeat_output_items: 880 },
         expectedOutputItems: 176,
         insights: [],
         ...overrides,

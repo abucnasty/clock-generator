@@ -87,8 +87,8 @@ describe("the settings of a strategy", () => {
         const harmonic = strategyOf("batched_swings", result({ round_robin_polling: { shared_windows: false, harmonic_window_cycle: true } }), findings());
         const subtick = strategyListedAs(harmonic, { subtick_clock: true });
         expect(subtick.settings.window_cycle).toEqual([{ kind: "harmonic_window_cycle" }, { kind: "subtick_clock" }]);
-        const rounded = strategyListedAs(harmonic, { rounded: { period_ticks: 1199, runs_fast: 0.0008 } });
-        expect(rounded.settings.window_cycle).toEqual([{ kind: "harmonic_window_cycle" }, { kind: "rounded_clock", period_ticks: 1199, runs_fast: 0.0008 }]);
+        const rounded = strategyListedAs(harmonic, { rounded: { window_cycle_ticks: 1199, runs_fast: 0.0008 } });
+        expect(rounded.settings.window_cycle).toEqual([{ kind: "harmonic_window_cycle" }, { kind: "rounded_clock", window_cycle_ticks: 1199, runs_fast: 0.0008 }]);
         expect(strategyListedAs(harmonic, {})).toEqual(harmonic);
     });
 });

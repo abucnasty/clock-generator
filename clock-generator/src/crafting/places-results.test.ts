@@ -208,6 +208,6 @@ describe('a rocket silo as the result target', () => {
         const registry = createEntityRegistryFromConfig(config);
         const plan = OutputCyclePlan.create(TargetProductionRate.fromConfig(config.setpoint), registry, config, fraction(1), {});
         expect(plan.exhaust?.[0].windows).toHaveLength(12);
-        expect(plan.exhaust?.[0].period).toBe(5760);
+        expect(plan.exhaust?.[0].window_cycle_ticks).toBe(5760);
     });
 });

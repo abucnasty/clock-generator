@@ -1,6 +1,6 @@
 import { SerializableMachineFacts } from "../data-types/machine-facts";
 import { InserterStatus, MachineStatus } from "../state";
-import { MAX_RECOVERY_PERIODS, type DisturbanceTrialVerdict } from "./disturbance-trial";
+import { MAX_RECOVERY_WINDOW_CYCLES, type DisturbanceTrialVerdict } from "./disturbance-trial";
 import { describeSharedItem, type SharedItemDeadlockRisk } from "./deadlock-risk";
 import type { BlueprintGenerationResult } from "./generate-blueprint";
 import { CompactEntityStateTransitions, CompactStateTransitionHistory, transitionsOf } from "./sequence/compact-history";
@@ -48,7 +48,7 @@ export interface ClockInsight {
 
 export interface SwingComparison {
     /** Length of the compared run in ticks */
-    period: number;
+    window_cycle_ticks: number;
     inserters: { label: string; planned: number[]; clocked: number[] }[];
 }
 
@@ -58,15 +58,15 @@ const SAME_SWING_TOLERANCE_TICKS = 4;
 const round = (value: number, digits = 1) => Number(value.toFixed(digits));
 const ticksList = (ticks: number[]) => ticks.length === 0 ? "never" : ticks.join(", ");
 
-function workingTicks(run: CompactStateTransitionHistory, entity: CompactEntityStateTransitions, period: number): number {
+function workingTicks(run: CompactStateTransitionHistory, entity: CompactEntityStateTransitions, window_cycle_ticks: number): number {
     const sorted = transitionsOf(run, entity).sort((a, b) => a.tick - b.tick);
     const segments = [
-        { status: entity.initial_status, start: 0, end: sorted[0]?.tick ?? period },
+        { status: entity.initial_status, start: 0, end: sorted[0]?.tick ?? window_cycle_ticks },
         ...sorted.map(it => ({ status: it.to_status, start: it.tick, end: it.tick + it.duration_ticks })),
     ];
     return segments
         .filter(it => it.status === MachineStatus.WORKING)
-        .reduce((sum, it) => sum + Math.max(0, Math.min(it.end, period) - Math.max(it.start, 0)), 0);
+        .reduce((sum, it) => sum + Math.max(0, Math.min(it.end, window_cycle_ticks) - Math.max(it.start, 0)), 0);
 }
 
 function dropTicks(history: CompactStateTransitionHistory, entity_id: string): number[] {
@@ -79,11 +79,11 @@ function dropTicks(history: CompactStateTransitionHistory, entity_id: string): n
 
 /** How much of each clock period the machines are not needed, the slack all timing has to fit in */
 function spareTimeInsight(result: BlueprintGenerationResult, run: CompactStateTransitionHistory): ClockInsight | null {
-    const period = run.total_duration_ticks;
+    const window_cycle_ticks = run.total_duration_ticks;
     const machines = run.entities.filter(it => it.entity_type === "machine").map(entity => {
-        const working = workingTicks(run, entity, period);
+        const working = workingTicks(run, entity, window_cycle_ticks);
         const facts = result.machine_facts.find(it => it.entity_id === entity.entity_id)?.facts;
-        return { entity, working, spare: period - working, facts };
+        return { entity, working, spare: window_cycle_ticks - working, facts };
     });
     if (machines.length === 0) {
         return null;
@@ -94,7 +94,7 @@ function spareTimeInsight(result: BlueprintGenerationResult, run: CompactStateTr
         id: "spare-time",
         scope: "build",
         title: `${tightest.entity.label} has ${round(tightest.spare)} ticks to spare each clock period`,
-        what: `${tightest.entity.label} crafts for ${round(tightest.working)} of the ${round(period, 3)} ticks in a clock period`
+        what: `${tightest.entity.label} crafts for ${round(tightest.working)} of the ${round(window_cycle_ticks, 3)} ticks in a clock period`
             + (crafts !== null && tightest.facts ? ` (${crafts} crafts of ${round(tightest.facts.ticks_per_craft)} ticks)` : "")
             + ` and is stopped for the other ${round(tightest.spare)}.`
             + (machines.length > 1 ? " It is the machine with the least time to spare." : ""),
@@ -109,7 +109,7 @@ function spareTimeInsight(result: BlueprintGenerationResult, run: CompactStateTr
                 it.facts ? `${round(it.facts.ticks_per_craft)}` : ""]),
         },
         spare_time: { machine: tightest.entity.label, spare_ticks: tightest.spare, working_ticks: tightest.working,
-            recovery_periods: MAX_RECOVERY_PERIODS },
+            recovery_window_cycles: MAX_RECOVERY_WINDOW_CYCLES },
     };
 }
 
@@ -273,7 +273,7 @@ function planVersusClockInsight(result: BlueprintGenerationResult): ClockInsight
             rows: differing.map(it => [it.label, ticksList(it.planned), ticksList(it.clocked)]),
         },
         swing_comparison: {
-            period: Math.max(plan.total_duration_ticks, clock_only.total_duration_ticks),
+            window_cycle_ticks: Math.max(plan.total_duration_ticks, clock_only.total_duration_ticks),
             inserters: differing.map(({ label, planned, clocked }) => ({ label, planned, clocked })),
         },
     };
@@ -345,9 +345,9 @@ function unstableInsight(result: BlueprintGenerationResult): ClockInsight {
     const as_built = check.as_built;
     // a long-run mean is not a whole number of items: shown to two decimals
     const actual = round(as_built?.actual_output_items ?? check.actual_output_items, 2);
-    const repeats = as_built?.repeat_periods !== undefined && as_built.repeat_output_items !== undefined
-        ? ` The build repeats every ${as_built.repeat_periods} periods and moves ${as_built.repeat_output_items} of `
-            + `${check.expected_output_items * as_built.repeat_periods} items over them.`
+    const repeats = as_built?.repeat_window_cycles !== undefined && as_built.repeat_output_items !== undefined
+        ? ` The build repeats every ${as_built.repeat_window_cycles} periods and moves ${as_built.repeat_output_items} of `
+            + `${check.expected_output_items * as_built.repeat_window_cycles} items over them.`
         : "";
     const offset = as_built?.failed_start_offset;
     return {
@@ -529,7 +529,7 @@ export function chestDrillInsights(result: Pick<BlueprintGenerationResult, "ches
         return [];
     }
     const clocked = drills.filter(drill => drill.enabled_ticks !== null);
-    const period = Number(result.simulation_duration.ticks.toFixed(2));
+    const window_cycle_ticks = Number(result.simulation_duration.ticks.toFixed(2));
     return [{
         id: "chest-drill-windows",
         scope: "clock",
@@ -541,7 +541,7 @@ export function chestDrillInsights(result: Pick<BlueprintGenerationResult, "ches
                 return `${into} and is always enabled: ${drill.always_enabled_because === undefined ? "nothing times it" : chestDrillBecause(drill.always_enabled_because)}.`;
             }
             const ticks = Number(drill.enabled_ticks.toFixed(2));
-            return `${into} and is enabled ${ticks} tick${ticks === 1 ? "" : "s"} of the ${period}-tick period, in ${drill.window_count} window${drill.window_count === 1 ? "" : "s"}.`;
+            return `${into} and is enabled ${ticks} tick${ticks === 1 ? "" : "s"} of the ${window_cycle_ticks}-tick period, in ${drill.window_count} window${drill.window_count === 1 ? "" : "s"}.`;
         }).join(" "),
         why: "A drill mines into a hold of its own and, each tick it is enabled, first drops what it holds into the chest, as far "
             + "as the chest has room. What it mines in its last enabled tick stays in the hold while it is disabled and drops "

@@ -25,20 +25,20 @@ async function preparedFixture() {
 }
 
 /** The long run's recording replaced by hands of `bins` items a period; `proven` makes them a repeating cycle */
-function recordedRun(bins: number[], periods: number, proven: boolean) {
+function recordedRun(bins: number[], window_cycles: number, proven: boolean) {
     const original = planning.trialRunOf;
     vi.spyOn(planning, "trialRunOf").mockImplementation(run => {
         const result = original(run);
         if (run.machine_stock === undefined) return result;
-        const held = new Array<number>(fixture.period * periods).fill(0);
-        for (let period = 0; period < periods; period++) {
-            for (let left = bins[period % bins.length], tick = period * fixture.period + 1; left > 0; tick += 3) {
+        const held = new Array<number>(fixture.period * window_cycles).fill(0);
+        for (let window_cycle_ticks = 0; window_cycle_ticks < window_cycles; window_cycle_ticks++) {
+            for (let left = bins[window_cycle_ticks % bins.length], tick = window_cycle_ticks * fixture.period + 1; left > 0; tick += 3) {
                 held[tick] = Math.min(left, 16);
                 held[tick + 1] = held[tick];
                 left -= held[tick];
             }
         }
-        return { ...result, state_repeat: proven ? {bin_ticks: fixture.period, periods_per_bin: 1, from_bin: 0, cycle_bins: periods} : undefined,
+        return { ...result, state_repeat: proven ? {bin_ticks: fixture.period, window_cycles_per_bin: 1, from_bin: 0, cycle_bins: window_cycles} : undefined,
             machine_stock: {ticks: held.length, detail: "hands", machines: [], inserters: [{
                 inserter_id: fixture.output_inserter, held, held_item: [], status: [], factorio_state: [],
             }]} };
@@ -56,15 +56,15 @@ test("rejects the archived imp plan's measured shortfall without changing either
             run.stock!.ticks, fixture.period, null, 16, 16);
         expect(judged.total).toBeLessThan(judged.expected_total);
         expect(run.check).toMatchObject({ holds: false, failed_start_offset: 0, long_run_proven: false,
-            output_basis: "long-run mean", actual_output_items: judged.output_items_per_period,
+            output_basis: "long-run mean", actual_output_items: judged.output_items_per_window_cycle,
             target_production: { valid: false, evidence: "sample" } });
     }
     expect(standard.check.actual_output_items).toBe(15.8);
     expect(diagnostic.check.actual_output_items).toBe(15.808);
     // the standard 80 bins never repeat: all of them, 1264 of 1280
-    expect(standard.check.target_production).toEqual({ valid: false, shortfall: 16, output_items_per_period: 15.8, evidence: "sample" });
+    expect(standard.check.target_production).toEqual({ valid: false, shortfall: 16, output_items_per_window_cycle: 15.8, evidence: "sample" });
     // the diagnostic's 500 bins repeat every 89 periods, 16 short in each: five whole repeats, 7040 of 7120
-    expect(diagnostic.check.target_production).toEqual({ valid: false, shortfall: 80, output_items_per_period: 7040 / 445, evidence: "sample" });
+    expect(diagnostic.check.target_production).toEqual({ valid: false, shortfall: 80, output_items_per_window_cycle: 7040 / 445, evidence: "sample" });
 });
 
 // These synthetic recorded hands isolate the policy: the ordinary first-period check still runs, and only the long run's
@@ -81,7 +81,7 @@ test.each([
         expect(check.target_production).toBeUndefined();
     } else {
         expect(check).toMatchObject({ actual_output_items: mean, output_basis: "long-run mean",
-            target_production: { valid: false, shortfall, output_items_per_period: mean, evidence: "repeating-cycle" } });
+            target_production: { valid: false, shortfall, output_items_per_window_cycle: mean, evidence: "repeating-cycle" } });
     }
 });
 
@@ -98,7 +98,7 @@ test.each([
         if (options?.factorio_states !== false || options.machine_stock || options.moving_pickup_phases
             || options.competing_takers_order !== undefined) return run;
         return { ...run, stability_check: { ...run.stability_check, holds: true, actual_output_items: 15,
-            repeat_periods: measurement.repeat, repeat_output_items: measurement.total } };
+            repeat_window_cycles: measurement.repeat, repeat_output_items: measurement.total } };
     });
     const { check } = runAsBuiltCheck(config, windows, fixture.period, quiet, 2, undefined, 36_000, undefined, false, "hands");
     if (measurement.shortfall === 0) {
@@ -108,11 +108,11 @@ test.each([
     }
     expect(check).toMatchObject({ holds: false, failed_start_offset: 48, actual_output_items: measurement.mean,
         output_basis: measurement.basis, target_production: { valid: false, shortfall: measurement.shortfall,
-            output_items_per_period: measurement.mean, evidence: measurement.evidence } });
+            output_items_per_window_cycle: measurement.mean, evidence: measurement.evidence } });
     // the unshifted long run is not the run the check failed on
     expect(check.long_run_proven).toBeUndefined();
     expect(check.first_judged_tick).toBeUndefined();
-    expect(check.long_run_cycle_periods).toBeUndefined();
+    expect(check.long_run_cycle_window_cycles).toBeUndefined();
 });
 
 test.each([0, 1])("a final check with no long run is strict, a quick trial stays a screen (long run ticks %s)", async ticks => {
@@ -121,7 +121,7 @@ test.each([0, 1])("a final check with no long run is strict, a quick trial stays
     vi.spyOn(planning, "runBuild").mockImplementation((prepared, options) => {
         const run = original(prepared, options);
         return { ...run, stability_check: { ...run.stability_check, holds: true, actual_output_items: 15,
-            repeat_periods: undefined, repeat_output_items: undefined } };
+            repeat_window_cycles: undefined, repeat_output_items: undefined } };
     });
     const { check } = runAsBuiltCheck(config, windows, fixture.period, quiet, 1, undefined, ticks);
     if (ticks === 0) {
@@ -129,7 +129,7 @@ test.each([0, 1])("a final check with no long run is strict, a quick trial stays
         expect(check.target_production).toBeUndefined();
     } else {
         expect(check).toMatchObject({ holds: false, actual_output_items: 15, output_basis: "one period",
-            target_production: { valid: false, shortfall: 1, output_items_per_period: 15, evidence: "sample" } });
+            target_production: { valid: false, shortfall: 1, output_items_per_window_cycle: 15, evidence: "sample" } });
     }
 });
 
@@ -141,7 +141,7 @@ test("another taker order cannot pass a final check with no long run below its a
         const run = original(prepared, options);
         if (options?.competing_takers_order !== "ascending") return run;
         return { ...run, stability_check: { ...run.stability_check, holds: true, actual_output_items: 15,
-            repeat_periods: undefined, repeat_output_items: undefined } };
+            repeat_window_cycles: undefined, repeat_output_items: undefined } };
     });
     const { check } = runAsBuiltCheck(config, windows, fixture.period, quiet, 1, undefined, 1);
     expect(check).toMatchObject({ holds: false, failed_taker_order: "ascending", actual_output_items: 15,
@@ -160,7 +160,7 @@ test("a final check runs again the lane starts a quick trial held without the am
         if (options?.moving_pickup_phases === undefined) return run;
         lane_runs++;
         return { ...run, stability_check: { ...run.stability_check, holds: true, actual_output_items: 15,
-            repeat_periods: undefined, repeat_output_items: undefined } };
+            repeat_window_cycles: undefined, repeat_output_items: undefined } };
     });
     const quick = runAsBuiltCheck(config, windows, fixture.period, quiet, 1, undefined, 0);
     expect(quick.check.holds).toBe(true);
@@ -168,7 +168,7 @@ test("a final check runs again the lane starts a quick trial held without the am
         { run: quick, long_run_ticks: 0 }, false, "hands");
     expect(lane_runs).toBe(2);
     expect(confirmed.check).toMatchObject({ holds: false, actual_output_items: 15, failed_pickup_phases: {},
-        target_production: { valid: false, shortfall: 1, output_items_per_period: 15, evidence: "sample" } });
+        target_production: { valid: false, shortfall: 1, output_items_per_window_cycle: 15, evidence: "sample" } });
 });
 
 test("a final check takes over the lane starts of a final check that held", async () => {
@@ -201,7 +201,7 @@ test.each([
     const { check } = runAsBuiltCheck(config, windows, fixture.period, quiet, 1, undefined, 36_000, undefined, false, "hands");
     expect(check.holds).toBe(holds);
     if (!holds) {
-        expect(check.target_production).toEqual({ valid: false, shortfall: 26, output_items_per_period: 47 / 3, evidence: "sample" });
+        expect(check.target_production).toEqual({ valid: false, shortfall: 26, output_items_per_window_cycle: 47 / 3, evidence: "sample" });
     }
 });
 
@@ -225,17 +225,17 @@ function recordedRuns(runs: { dip?: number; short_every?: number; repeat?: numbe
         const result = original(run);
         if (run.machine_stock === undefined) return result;
         const spec = runs[Math.min(next++, runs.length - 1)];
-        const periods = Math.floor(result.machine_stock!.ticks / fixture.period);
-        lengths.push(periods);
-        const held = new Array<number>(fixture.period * periods).fill(0);
-        for (let period = 0; period < periods; period++) {
-            const short = period === spec.dip || (spec.short_every !== undefined && period % spec.short_every === spec.short_every - 1);
-            const tick = period * fixture.period + 1;
+        const window_cycles = Math.floor(result.machine_stock!.ticks / fixture.period);
+        lengths.push(window_cycles);
+        const held = new Array<number>(fixture.period * window_cycles).fill(0);
+        for (let window_cycle_ticks = 0; window_cycle_ticks < window_cycles; window_cycle_ticks++) {
+            const short = window_cycle_ticks === spec.dip || (spec.short_every !== undefined && window_cycle_ticks % spec.short_every === spec.short_every - 1);
+            const tick = window_cycle_ticks * fixture.period + 1;
             held[tick] = short ? 15 : 16;
             held[tick + 1] = held[tick];
         }
         return { ...result, state_repeat: spec.repeat === undefined ? undefined
-                : { bin_ticks: fixture.period, periods_per_bin: 1, from_bin: spec.repeat, cycle_bins: periods - spec.repeat },
+                : { bin_ticks: fixture.period, window_cycles_per_bin: 1, from_bin: spec.repeat, cycle_bins: window_cycles - spec.repeat },
             machine_stock: { ticks: held.length, detail: "hands", machines: [], inserters: [{
                 inserter_id: fixture.output_inserter, held, held_item: [], status: [], factorio_state: [],
             }] } };
@@ -252,7 +252,7 @@ test("a sample short by a hand is run on and judged on the repeat it proves", as
     expect(lengths.slice(0, 2)).toEqual([120, 1125]);
     expect(check.holds).toBe(true);
     expect(check.target_production).toBeUndefined();
-    expect(check.start_up_shortfall).toEqual({ orbit_start_period: 60, items: 1 });
+    expect(check.start_up_shortfall).toEqual({ orbit_start_window_cycle: 60, items: 1 });
 });
 
 test("a sample short by a hand that proves no repeat in the longer run stands as judged", async () => {

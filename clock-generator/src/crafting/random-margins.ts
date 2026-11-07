@@ -274,7 +274,7 @@ function handsThatFit(window: OpenRange, swing_ticks: number): number {
 }
 
 /** Crafts a period of a machine that destroys the target item: what its plan brings in, over what a craft keeps of it */
-function craftsPerPeriod(plan: OutputCyclePlan, machine: Machine, registry: Pick<ReadableEntityRegistry, "getAll">, cycles: number): number {
+function craftsPerWindowCycle(plan: OutputCyclePlan, machine: Machine, registry: Pick<ReadableEntityRegistry, "getAll">, cycles: number): number {
     const target = { item: plan.production_rate.machine_production_rate.item, counts: plan.production_rate.counts };
     const brought = targetInsertersOf(machine, target, registry)
         .map(inserter => plan.entity_transfer_map.get(inserter.entity_id))
@@ -294,7 +294,7 @@ export function randomAmountMargins(
     plan: OutputCyclePlan,
     registry: Pick<ReadableEntityRegistry, "getAll">,
     windows: ReadonlyMap<string, OpenRange[]>,
-    period: number,
+    window_cycle_ticks: number,
     cycles: number,
     level: number = RANDOM_MARGIN_LEVEL,
 ): { margins: RandomAmountMargin[]; crafting: CraftingMargin[]; windows: Map<string, OpenRange[]> } {
@@ -306,7 +306,7 @@ export function randomAmountMargins(
     }
     const target = { item: plan.production_rate.machine_production_rate.item, counts: plan.production_rate.counts };
     for (const machine of targetMachinesOf(target, registry)) {
-        const crafts = craftsPerPeriod(plan, machine, registry, cycles);
+        const crafts = craftsPerWindowCycle(plan, machine, registry, cycles);
         const rolls = crafts * rollsPerCraft(machine);
         let variance_back = 0;
         const back: Ingredient[] = [];
@@ -335,7 +335,7 @@ export function randomAmountMargins(
                 for (const taker of takers) {
                     const ranges = windows.get(taker.entity_id.id);
                     if (ranges !== undefined) {
-                        lengthened.set(taker.entity_id.id, lengthenedWindows(ranges, added, taker.animation.total.ticks, period));
+                        lengthened.set(taker.entity_id.id, lengthenedWindows(ranges, added, taker.animation.total.ticks, window_cycle_ticks));
                     }
                 }
             }
@@ -345,15 +345,15 @@ export function randomAmountMargins(
                 crafts, expected_items: expected, sigma_items: sigma, needed_items: needed, room_items: room, sigmas: room / sigma, added_hands: added,
             });
         }
-        const capacity = machine.crafting_rate.crafts_per_tick * period;
+        const capacity = machine.crafting_rate.crafts_per_tick * window_cycle_ticks;
         const sigma_crafts = Math.sqrt(variance_back);
-        const spare_per_tick = (capacity - crafts) / period;
+        const spare_per_tick = (capacity - crafts) / window_cycle_ticks;
         const back_total = [...back_per_craft.values()].reduce((sum, it) => sum + it, 0);
         const waiting = sigma_crafts > 0 ? backlogAtLevel(sigma_crafts, capacity - crafts, back_total, level) : null;
         crafting.push({
             machine_id: machine.entity_id.number, crafts, capacity, sigma_crafts,
             sigmas: sigma_crafts > 0 ? (capacity - crafts) / sigma_crafts : Infinity,
-            ticks_to_cover: ticksToCover(back, rolls / period, spare_per_tick, level),
+            ticks_to_cover: ticksToCover(back, rolls / window_cycle_ticks, spare_per_tick, level),
             backlog: waiting === null ? [] : [...back_per_craft].map(([item, per_craft]) => ({ item, items: Math.ceil(waiting * per_craft / back_total - 1e-9) })),
         });
     }
@@ -364,15 +364,15 @@ export function randomAmountMargins(
  * An inserter's windows with `hands` more hands of room: a swing longer at the end of that many of them, spread evenly
  * over its windows (every window, and then more, where it has fewer windows than hands), as far as the period lets them
  */
-function lengthenedWindows(ranges: OpenRange[], hands: number, swing_ticks: number, period: number): OpenRange[] {
+function lengthenedWindows(ranges: OpenRange[], hands: number, swing_ticks: number, window_cycle_ticks: number): OpenRange[] {
     const sorted = [...ranges].sort((a, b) => a.start_inclusive - b.start_inclusive);
     const extra = sorted.map(() => 0);
     for (let index = 0; index < hands; index++) {
         extra[Math.floor(index * sorted.length / hands) % sorted.length] += swing_ticks;
     }
     return OpenRange.reduceRanges(sorted.flatMap((range, index) => {
-        const length = Math.min(range.end_inclusive - range.start_inclusive + extra[index], period - 1);
-        return rotateRanges([OpenRange.from(0, length)], range.start_inclusive, period);
+        const length = Math.min(range.end_inclusive - range.start_inclusive + extra[index], window_cycle_ticks - 1);
+        return rotateRanges([OpenRange.from(0, length)], range.start_inclusive, window_cycle_ticks);
     }));
 }
 

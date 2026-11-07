@@ -59,7 +59,7 @@ export interface FuelSwing {
 /** The exported clock run over several periods, long enough to show the burner machines being refilled */
 export interface FuelRunView {
     /** Periods of the clock the run covers; the clock itself stays one period */
-    periods: number;
+    window_cycles: number;
     durationTicks: number;
     /** Whether a fuel inserter swung in the run; false when none did even over the longest run tried */
     fuelSwingsRecorded: boolean;
@@ -177,7 +177,7 @@ export interface ClockAlternativeView {
      * The ticks the blueprint counts when the period is not a whole number of ticks and the clock runs it rounded down;
      * missing for any other clock, and from clocks kept before it was carried
      */
-    roundedPeriodTicks?: number;
+    roundedWindowCycleTicks?: number;
     /** How much faster than the setpoint a clock rounded down to whole ticks runs, as a share; missing like `roundedPeriodTicks` */
     roundedRunsFast?: number;
     /** Which strategy the clock follows, its tuning method and settings, and its router, as ids; missing from clocks kept before it was carried */

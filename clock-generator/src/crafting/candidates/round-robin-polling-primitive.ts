@@ -12,7 +12,7 @@ import { createEntityRegistryFromConfig } from "../sequence/simulation-context";
 import { alwaysEnabledInserters, unplannedInserterClocks } from "../sequence/unplanned-inserter-clock";
 import { canonicalVerificationJson } from "../verification-signature";
 import { SIMULATION_BUDGET_TICKS } from "../plan/unclocked-run";
-import { ClockPeriodLimitError } from "../plan/clock-period-limit";
+import { ClockWindowCycleLimitError } from "../plan/clock-window-cycle-limit";
 import { roundRobinPollingCycles, roundRobinPollingPlan, RoundRobinPollingNotApplicable, type RoundRobinPollingComposition, type RoundRobinPollingOptions } from "./round-robin-polling";
 
 type Windows = Record<string, { start: number; end: number }[]>;
@@ -28,7 +28,7 @@ export interface PrimitiveRoundRobinPollingConstruction {
     terminal_swing_count: number;
     base_cycle_ticks: number;
     grouped_cycles: number;
-    period_ticks: number;
+    window_cycle_ticks: number;
     transfer_plan: SerializableTransferPlan;
     final_output_inserter_ids: string[];
     inserters: { id: string; source: string; sink: string; items: string[];
@@ -102,15 +102,15 @@ export function constructPrimitiveRoundRobinPolling(config: Config): PrimitiveRo
     const route_facts = { output_paths, direct_sources, retained_clocks: new Map() } satisfies RoundRobinPollingComposition;
     const grouped_cycles = roundRobinPollingCycles(registry, cycle.entity_transfer_map, route_facts);
     if (grouped_cycles === null) throw new RoundRobinPollingNotApplicable("the plan has no output hands");
-    const period_ticks = OutputCyclePlan.ticksOfCycles(cycle, grouped_cycles);
-    if (Number.isFinite(period_ticks) && period_ticks > 0 && period_ticks >= SIMULATION_BUDGET_TICKS) {
-        throw new ClockPeriodLimitError({ terminal_swing_count: plannedTerminalSwingCount(cycle)!,
+    const window_cycle_ticks = OutputCyclePlan.ticksOfCycles(cycle, grouped_cycles);
+    if (Number.isFinite(window_cycle_ticks) && window_cycle_ticks > 0 && window_cycle_ticks >= SIMULATION_BUDGET_TICKS) {
+        throw new ClockWindowCycleLimitError({ terminal_swing_count: plannedTerminalSwingCount(cycle)!,
             base_cycle_ticks: cycle.total_duration_ticks.toDecimal(), computed_lcm: EntityTransferCountMap.lcm(cycle.entity_transfer_map),
-            effective_lcm: grouped_cycles, period_ticks, limit_ticks: SIMULATION_BUDGET_TICKS });
+            effective_lcm: grouped_cycles, window_cycle_ticks, limit_ticks: SIMULATION_BUDGET_TICKS });
     }
-    assert(Number.isFinite(period_ticks) && period_ticks > 0, `Clock period must be positive and finite, got ${period_ticks}`);
-    if (!Number.isInteger(period_ticks)) throw new RoundRobinPollingNotApplicable(`the period is ${period_ticks} ticks, not a whole number`);
-    const clocks = unplannedInserterClocks(registry, period_ticks);
+    assert(Number.isFinite(window_cycle_ticks) && window_cycle_ticks > 0, `Clock period must be positive and finite, got ${window_cycle_ticks}`);
+    if (!Number.isInteger(window_cycle_ticks)) throw new RoundRobinPollingNotApplicable(`the period is ${window_cycle_ticks} ticks, not a whole number`);
+    const clocks = unplannedInserterClocks(registry, window_cycle_ticks);
     if ([...clocks.values()].some(clock => clock.kind !== "by-product")) throw new RoundRobinPollingNotApplicable("primitive grouped construction retains by-product clocks only");
     const composition: RoundRobinPollingComposition = { ...route_facts, retained_clocks: clocks };
     const retained_clocks = Object.fromEntries([...clocks].map(([id, clock]) => [id, { kind: "by-product" as const,
@@ -136,12 +136,12 @@ export function constructPrimitiveRoundRobinPolling(config: Config): PrimitiveRo
     for (const share_windows of [false, true]) for (const feeder_offset of [16, 1]) for (const surplus_guard of [false, true]) {
         const options: RoundRobinPollingOptions = { share_windows, feeder_offset, surplus_guard, ...(output_room && { output_room }) };
         try {
-            const plan = roundRobinPollingPlan(registry, cycle.entity_transfer_map, grouped_cycles, period_ticks,
+            const plan = roundRobinPollingPlan(registry, cycle.entity_transfer_map, grouped_cycles, window_cycle_ticks,
                 config.overrides?.backed_up_belts !== true, options, null, composition);
             for (const [id, ranges] of plan.windows) for (const range of ranges) {
                 if (!Number.isInteger(range.start_inclusive) || !Number.isInteger(range.end_inclusive)
-                    || range.start_inclusive < 0 || range.end_inclusive < range.start_inclusive || range.end_inclusive >= period_ticks) {
-                    throw new RoundRobinPollingNotApplicable(`${id} has a grouped window outside the ${period_ticks}-tick period`);
+                    || range.start_inclusive < 0 || range.end_inclusive < range.start_inclusive || range.end_inclusive >= window_cycle_ticks) {
+                    throw new RoundRobinPollingNotApplicable(`${id} has a grouped window outside the ${window_cycle_ticks}-tick period`);
                 }
             }
             const planned_windows = Object.fromEntries([...plan.windows].map(([id, ranges]) => [id,
@@ -149,7 +149,7 @@ export function constructPrimitiveRoundRobinPolling(config: Config): PrimitiveRo
             const control_windows = { ...planned_windows };
             for (const [id, clock] of clocks) {
                 control_windows[id] = [];
-                for (let start = 0; start < period_ticks; start += clock.modulus) control_windows[id].push({
+                for (let start = 0; start < window_cycle_ticks; start += clock.modulus) control_windows[id].push({
                     start: start + clock.window.start_inclusive, end: start + clock.window.end_inclusive });
             }
             const dispositions = inserters.map((inserter): Extract<PrimitiveRoundRobinPollingAttempt["result"], { kind: "constructed" }>["dispositions"][number] => {
@@ -160,7 +160,7 @@ export function constructPrimitiveRoundRobinPolling(config: Config): PrimitiveRo
                 throw new RoundRobinPollingNotApplicable(`${id} has no construction control disposition`);
             });
             // Construction deduplication only. This is never a cached verification verdict.
-            const control_key = canonicalVerificationJson({ config, period_ticks, control_windows, retained_clocks, busy: plan.busy });
+            const control_key = canonicalVerificationJson({ config, window_cycle_ticks, control_windows, retained_clocks, busy: plan.busy });
             const duplicate_of = known.get(control_key);
             if (duplicate_of === undefined) known.set(control_key, attempts.length);
             attempts.push({ options, result: { kind: "constructed", planned_windows, control_windows, busy: plan.busy,
@@ -171,7 +171,7 @@ export function constructPrimitiveRoundRobinPolling(config: Config): PrimitiveRo
         }
     }
     return { kind: "pure-construction", terminal_swing_count: plannedTerminalSwingCount(cycle)!,
-        base_cycle_ticks: cycle.total_duration_ticks.toDecimal(), grouped_cycles, period_ticks,
+        base_cycle_ticks: cycle.total_duration_ticks.toDecimal(), grouped_cycles, window_cycle_ticks,
         transfer_plan: EntityTransferCountMap.serialize(cycle.entity_transfer_map),
         final_output_inserter_ids, inserters,
         direct_dependencies, retained_clocks, attempts };

@@ -10,7 +10,7 @@ import { EntityTransferCountMap, outputPathOf } from "../sequence/cycle/swing-co
 import { unplannedInserterClocks } from "../sequence/unplanned-inserter-clock";
 import { TargetProductionRate } from "../target-production-rate";
 import * as planning from "../plan/unclocked-run";
-import { ClockPeriodLimitError } from "../plan/clock-period-limit";
+import { ClockWindowCycleLimitError } from "../plan/clock-window-cycle-limit";
 import * as unplanned from "../sequence/unplanned-inserter-clock";
 import { roundRobinPollingPlan, RoundRobinPollingNotApplicable, heldAtTurn, roomAtTurn, type RoundRobinPollingComposition } from "./round-robin-polling";
 import { assertAcyclicGroupedDependencies, constructPrimitiveRoundRobinPolling } from "./round-robin-polling-primitive";
@@ -29,7 +29,7 @@ describe("pure primitive grouped construction", () => {
         try {
             const artifact = constructPrimitiveRoundRobinPolling(config);
             expect(run).not.toHaveBeenCalled();
-            expect(artifact).toMatchObject({ kind: "pure-construction", terminal_swing_count: 1, base_cycle_ticks: 40, grouped_cycles: 1, period_ticks: 40 });
+            expect(artifact).toMatchObject({ kind: "pure-construction", terminal_swing_count: 1, base_cycle_ticks: 40, grouped_cycles: 1, window_cycle_ticks: 40 });
             expect(artifact).not.toHaveProperty("stability_check");
             expect(artifact.transfer_plan.computed_lcm).toBe(605);
             expect(artifact.attempts).toHaveLength(8);
@@ -118,7 +118,7 @@ describe("pure primitive grouped construction", () => {
     it("retains the computed rejected-result control in composed windows and control keys without a planned red hand", () => {
         const artifact = constructPrimitiveRoundRobinPolling(config);
         const registry = createEntityRegistryFromConfig(config);
-        const red = unplannedInserterClocks(registry, artifact.period_ticks).get("inserter:9")!;
+        const red = unplannedInserterClocks(registry, artifact.window_cycle_ticks).get("inserter:9")!;
         expect(artifact.retained_clocks["inserter:9"]).toEqual({ kind: red.kind, modulus: red.modulus, own_clock: false,
             window: { start: red.window.start_inclusive, end: red.window.end_inclusive } });
         expect(artifact.transfer_plan.entities.some(entity => entity.entity_number === 9)).toBe(false);
@@ -170,22 +170,22 @@ describe("pure primitive grouped construction", () => {
         expect(() => constructPrimitiveRoundRobinPolling({ ...config, inserters: config.inserters.filter(inserter => inserter.id !== 9) })).toThrow();
     });
 
-    it.each([500000, 600000])("rejects primitive period %s before computing/unrolling by-product clocks", period => {
-        const too_slow = { ...config, setpoint: { ...config.setpoint, items_per_second: config.setpoint.items_per_second * 40 / period } };
+    it.each([500000, 600000])("rejects primitive period %s before computing/unrolling by-product clocks", window_cycle_ticks => {
+        const too_slow = { ...config, setpoint: { ...config.setpoint, items_per_second: config.setpoint.items_per_second * 40 / window_cycle_ticks } };
         const compute = vi.spyOn(unplanned, "unplannedInserterClocks");
         try {
-            expect(() => constructPrimitiveRoundRobinPolling(too_slow)).toThrow(ClockPeriodLimitError);
+            expect(() => constructPrimitiveRoundRobinPolling(too_slow)).toThrow(ClockWindowCycleLimitError);
             expect(compute).not.toHaveBeenCalled();
         } finally { compute.mockRestore(); }
     });
 
-    it.each([NaN, Infinity, -Infinity, 0, -1])("rejects invalid computed period %s without classifying it as retryable", period => {
-        const ticks = vi.spyOn(OutputCyclePlan, "ticksOfCycles").mockReturnValue(period);
+    it.each([NaN, Infinity, -Infinity, 0, -1])("rejects invalid computed period %s without classifying it as retryable", window_cycle_ticks => {
+        const ticks = vi.spyOn(OutputCyclePlan, "ticksOfCycles").mockReturnValue(window_cycle_ticks);
         try {
             let failure: unknown;
             try { constructPrimitiveRoundRobinPolling(config); } catch (error) { failure = error; }
             expect(failure).toBeInstanceOf(Error);
-            expect(failure).not.toBeInstanceOf(ClockPeriodLimitError);
+            expect(failure).not.toBeInstanceOf(ClockWindowCycleLimitError);
             expect((failure as Error).message).toMatch(/positive and finite/);
         } finally { ticks.mockRestore(); }
     });
@@ -228,7 +228,7 @@ describe("pure primitive grouped construction", () => {
         const cycle = OutputCyclePlan.create(target, registry, auto, fraction(1));
         const artifact = constructPrimitiveRoundRobinPolling(auto);
         for (const attempt of artifact.attempts) if (attempt.result.kind === "constructed") {
-            const old = roundRobinPollingPlan(registry, cycle.entity_transfer_map, artifact.grouped_cycles, artifact.period_ticks, true, attempt.options);
+            const old = roundRobinPollingPlan(registry, cycle.entity_transfer_map, artifact.grouped_cycles, artifact.window_cycle_ticks, true, attempt.options);
             expect(attempt.result.planned_windows).toEqual(Object.fromEntries([...old.windows].map(([id, ranges]) => [id,
                 ranges.map(range => ({ start: range.start_inclusive, end: range.end_inclusive }))])));
             expect(attempt.result.busy).toEqual(old.busy);

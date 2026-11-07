@@ -16,13 +16,13 @@ export function timelineRequestFor(config: Config | null | undefined, clock: Clo
     const settle = mode === 'clock' && clock_tick === undefined
         ? Math.floor((clock.asBuilt?.first_judged_tick ?? 0) / clock.simulationDurationTicks) : 0;
     return { config: { ...config, overrides: { ...overrides, backed_up_belts: backedUp } }, mode,
-        period_ticks: clock.simulationDurationTicks, terminal_swing_count: clock.terminalSwingCount,
+        window_cycle_ticks: clock.simulationDurationTicks, terminal_swing_count: clock.terminalSwingCount,
         windows: clock.clockWindows, inserter_clocks: clock.inserterClocks,
-        ...(clock_tick !== undefined ? { settle_ticks: clock_tick } : settle > 0 ? { settle_periods: settle } : {}) };
+        ...(clock_tick !== undefined ? { settle_ticks: clock_tick } : settle > 0 ? { settle_window_cycles: settle } : {}) };
 }
 
 /** Which period a settled replay shows; nothing where the replay is the first period after the warm-up */
-export function settledPeriodLabel(request: RecordTimelineRequest | null, recording: Pick<TimelineRecording, 'mode' | 'ticks_before_recording'> | null | undefined): string | null {
-    return ((request?.settle_ticks ?? 0) > 0 || (request?.settle_periods ?? 0) > 0) && recording?.mode === 'clock'
+export function settledWindowCycleLabel(request: RecordTimelineRequest | null, recording: Pick<TimelineRecording, 'mode' | 'ticks_before_recording'> | null | undefined): string | null {
+    return ((request?.settle_ticks ?? 0) > 0 || (request?.settle_window_cycles ?? 0) > 0) && recording?.mode === 'clock'
         ? `Window cycle from tick ${formatNumberText(recording.ticks_before_recording, { maxDecimals: 0 })}, at steady state` : null;
 }

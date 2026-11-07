@@ -68,15 +68,15 @@ async function main() {
 
     // The clock that was built: the subtick clock counts the whole ticks a fractional period repeats after, and the
     // clock rounded down runs every period that much short
-    const planned_period = result.simulation_duration.ticks;
+    const planned_window_cycle = result.simulation_duration.ticks;
     const subtick = alternative.id.endsWith("-subtick") ? result.subtick : undefined;
-    const period = subtick || Number.isInteger(planned_period) ? planned_period : Math.floor(planned_period);
-    const clock_ticks = subtick ? subtick.clock.period_ticks : period;
-    const expected_output_per_period = result.stability_check.expected_output_items * clock_ticks / planned_period;
+    const window_cycle_ticks = subtick || Number.isInteger(planned_window_cycle) ? planned_window_cycle : Math.floor(planned_window_cycle);
+    const clock_ticks = subtick ? subtick.clock.window_cycle_ticks : window_cycle_ticks;
+    const expected_output_per_window_cycle = result.stability_check.expected_output_items * clock_ticks / planned_window_cycle;
 
     // the settled clock on its own, as the blueprint runs it in the game, and not the plan the windows were taken from
     const simulated = quietly(() =>
-        simulateRecording(config, result.clock_windows, period, Math.ceil(recording.sample_count * SIMULATED_TO_RECORDED_TICKS), clock_ticks));
+        simulateRecording(config, result.clock_windows, window_cycle_ticks, Math.ceil(recording.sample_count * SIMULATED_TO_RECORDED_TICKS), clock_ticks));
     const match = matchRecordingToConfig(recording, config);
     const free_running_inserter_ids = new Set(config.inserters.map((inserter, index) => inserter.id ?? index + 1)
         .filter(id => result.unplanned_inserter_clocks?.[EntityId.forInserter(id).id]?.own_clock));
@@ -94,7 +94,7 @@ async function main() {
         { recording, match },
         { recording: simulated, match: matchOfSimulatedRecording(simulated), from_sample: Math.floor(simulated.sample_count / SIMULATED_SETTLE_SHARE) },
         config,
-        { ...options, expected_output_per_period, free_running_inserter_ids },
+        { ...options, expected_output_per_window_cycle, free_running_inserter_ids },
     );
     report.issues.push(...exported.issues);
     formatRecordingComparison(report, options).forEach(line => console.log(line));

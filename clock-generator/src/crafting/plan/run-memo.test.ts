@@ -138,9 +138,9 @@ describe("the memo of the runs of a generation", () => {
             const memo = currentRunMemo()!;
             runBuild(config, options);
             runBuild({ ...config, overrides: { ...config.overrides, backed_up_belts: true } }, options);
-            runBuild(config, { ...options, warmup_periods: 3 });
+            runBuild(config, { ...options, warmup_window_cycles: 3 });
             runBuild(config, { ...options, factorio_states: true });
-            runBuild(config, { ...options, simulate_periods: 2 });
+            runBuild(config, { ...options, simulate_window_cycles: 2 });
             expect([memo.size, memo.hits]).toEqual([5, 0]);
             // the logger is the one option that is not read
             runBuild(config, { ...options, logger: { ...quiet } });
@@ -175,7 +175,7 @@ describe("the memo of the runs of a generation", () => {
     });
 
     it("keeps at most the ticks it is given, letting the run used longest ago go first", () => {
-        const others = [2, 3].map(warmup_periods => ({ ...options, warmup_periods }));
+        const others = [2, 3].map(warmup_window_cycles => ({ ...options, warmup_window_cycles }));
         const [ticks, second, third] = [options, ...others].map(it => runBuild(config, it).ticks_simulated);
         withRunMemo(() => {
             const memo = currentRunMemo()!;
@@ -272,9 +272,9 @@ describe("the memo of the backpressure loss verdicts of a generation", () => {
     it("tries a clock again when its windows, its period or the build differ", () => {
         const key = disturbanceTrialKey(config, clock);
         const other_windows = { ...clock, clock_windows: { ...clock.clock_windows, "inserter:1": [{ start: 0, end: 1 }] } };
-        const other_period = { ...clock, simulation_duration: clock.simulation_duration.add(clock.simulation_duration) };
+        const other_window_cycle = { ...clock, simulation_duration: clock.simulation_duration.add(clock.simulation_duration) };
         const other_output = { ...clock, stability_check: { ...clock.stability_check, expected_output_items: clock.stability_check.expected_output_items + 1 } };
-        const keys = [other_windows, other_period, other_output].map(it => disturbanceTrialKey(config, it));
+        const keys = [other_windows, other_window_cycle, other_output].map(it => disturbanceTrialKey(config, it));
         keys.push(disturbanceTrialKey({ ...config, overrides: { ...config.overrides, backed_up_belts: true } }, clock));
         keys.push(disturbanceTrialKey({ ...config, overrides: { ...config.overrides, kick_start_items: 17 } }, clock));
         expect(new Set([key, ...keys]).size).toBe(keys.length + 1);

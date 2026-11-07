@@ -6,15 +6,15 @@ import { enableControlDraftOf, type EnableControlDraft } from './enableControlDr
 import { blockedSummaryOf, itemFieldName, PROBLEM_TEXT, REPEAT_LABEL, ruleProblemsOf, ruleWarningsOf } from './ruleProblems';
 import { NO_TIMING, type RuleTiming } from './ruleTiming';
 
-const known: RuleTiming = { cycleTicks: 132, periodTicks: 264, from: 'check', windows: null };
+const known: RuleTiming = { cycleTicks: 132, windowCycleTicks: 264, from: 'check', windows: null };
 const ctx = { entityType: 'inserter' as const, timing: known, idPrefix: 'p' };
-const { enterTick, wholeTick, endBeforeStart, endAtZero, pastPeriod } = PROBLEM_TEXT;
+const { enterTick, wholeTick, endBeforeStart, endAtZero, pastWindowCycle } = PROBLEM_TEXT;
 
-const clockedDraft = (ranges: [string, string][], periodDuration = ''): EnableControlDraft => ({
+const clockedDraft = (ranges: [string, string][], windowCycleDuration = ''): EnableControlDraft => ({
     ...enableControlDraftOf(),
     mode: 'CLOCKED',
     ranges: ranges.map(([start, end]) => ({ start, end })),
-    periodDuration,
+    windowCycleDuration,
 });
 
 /** Each problem as its field and its text */
@@ -34,8 +34,8 @@ describe('ruleProblemsOf, Clocked', () => {
         ["refuses a window that ends at tick 0, which the config file can't hold", [['0', '0']], '', [[end(), endAtZero]]],
         // window 1 ends on the period's last tick, window 2 one past it
         ['checks the ticks against the crafting cycle when there is no "Repeat every"', [['0', '131'], ['0', '132'], ['140', '150']], '',
-            [[end(2), pastPeriod(132)], [start(3), pastPeriod(132)], [end(3), pastPeriod(132)]]],
-        ['checks them against a valid "Repeat every" instead of the cycle', [['0', '263'], ['0', '264']], '264', [[end(2), pastPeriod(264)]]],
+            [[end(2), pastWindowCycle(132)], [start(3), pastWindowCycle(132)], [end(3), pastWindowCycle(132)]]],
+        ['checks them against a valid "Repeat every" instead of the cycle', [['0', '263'], ['0', '264']], '264', [[end(2), pastWindowCycle(264)]]],
         ['refuses a "Repeat every" of 0', [['0', '5']], '0', [[REPEAT_LABEL, PROBLEM_TEXT.repeat]]],
         ['refuses a negative "Repeat every"', [['0', '5']], '-3', [[REPEAT_LABEL, PROBLEM_TEXT.repeat]]],
         ['refuses a "Repeat every" of text', [['0', '5']], 'x', [[REPEAT_LABEL, PROBLEM_TEXT.repeat]]],
@@ -45,7 +45,7 @@ describe('ruleProblemsOf, Clocked', () => {
 
     it('names the start an end is before, and tells the last tick of the period, one before its length', () => {
         expect(endBeforeStart(10)).toMatch(/ the start \(10\)\.$/);
-        expect(pastPeriod(132)).toMatch(/ 132-tick window cycle: the last tick is 131\.$/);
+        expect(pastWindowCycle(132)).toMatch(/ 132-tick window cycle: the last tick is 131\.$/);
     });
 
     it('does not check past the period when it is unknown or fractional', () => {

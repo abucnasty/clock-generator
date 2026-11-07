@@ -36,10 +36,10 @@ export interface WakeUpsFromStarts {
  * The places in its period a clock is started from: START_PLACES evenly spaced, in whole ticks of a whole period, the
  * steps of the as-built check's start phases (`runAsBuiltCheck`); a short period has fewer.
  */
-export function startPlaces(period: number): number[] {
-    const step = Math.max(1, Math.floor(period / START_PLACES));
+export function startPlaces(window_cycle_ticks: number): number[] {
+    const step = Math.max(1, Math.floor(window_cycle_ticks / START_PLACES));
     const places: number[] = [];
-    for (let place = 0; place < period && places.length < START_PLACES; place += step) {
+    for (let place = 0; place < window_cycle_ticks && places.length < START_PLACES; place += step) {
         places.push(place);
     }
     return places;
@@ -60,8 +60,8 @@ export function hasStockTheClockDoesNotSet(entity_registry: Pick<ReadableEntityR
  * (ticks into the period), or null where it cannot (no long run): the clock then keeps its one figure, as it does where
  * its period has fewer than two places.
  */
-export function wakeUpsFromStarts(period: number, figureAt: (place: number) => number | null): WakeUpsFromStarts | null {
-    const places = startPlaces(period);
+export function wakeUpsFromStarts(window_cycle_ticks: number, figureAt: (place: number) => number | null): WakeUpsFromStarts | null {
+    const places = startPlaces(window_cycle_ticks);
     if (places.length < 2) {
         return null;
     }

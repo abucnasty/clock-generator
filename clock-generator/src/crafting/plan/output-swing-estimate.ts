@@ -38,7 +38,7 @@ export function outputSwingEstimate(config: Config, swings: number): OutputSwing
         const output_cycle_plan = OutputCyclePlan.create(target, entity_registry, counted, fraction(swings), overrides);
         const recipe_lcm = EntityTransferCountMap.lcm(output_cycle_plan.entity_transfer_map);
         batchedSwingsWindowsByArithmetic({ entity_registry, output_cycle_plan, recipe_lcm,
-            period_ticks: output_cycle_plan.total_duration_ticks.toDecimal() * recipe_lcm,
+            window_cycle_ticks: output_cycle_plan.total_duration_ticks.toDecimal() * recipe_lcm,
             always_enabled_by_config: alwaysEnabledByConfig(counted) });
         return { swings, verdict: "keeps up" };
     } catch (error) {

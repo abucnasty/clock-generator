@@ -85,9 +85,9 @@ const agriculturalScience: JobCheck[] = [
         // were taken for fractional periods and offered as subtick and "rounded to 2879" clocks
         name: 'makes clocks of whole ticks for 6 and 3 output swings per cycle: 2880 and 1440, none offered as subtick or rounded',
         run: ({ config, generated }) => {
-            const period = (swings: number) => validateConfig({ ...config, overrides: { ...config.overrides, terminal_swing_count: swings } }).period_ticks;
-            expect(period(6)).toBe(2880);
-            expect(period(3)).toBe(1440);
+            const window_cycle = (swings: number) => validateConfig({ ...config, overrides: { ...config.overrides, terminal_swing_count: swings } }).window_cycle_ticks;
+            expect(window_cycle(6)).toBe(2880);
+            expect(window_cycle(3)).toBe(1440);
             expect(generated.alternatives.filter(a => /subtick|rounded/.test(a.label)).map(a => a.label)).toEqual([]);
         },
     },
@@ -135,7 +135,7 @@ const circuitExport: JobCheck[] = [
         name: 'Selection: the 4 inserters with no window are the circuits into the processing unit machines, which the remake leaves unguarded',
         run: ({ generated }) => {
             expect(byMaker(generated, 'planned-belt-slack-per-hand').result.always_on_reasons).toEqual(Object.fromEntries([3, 4, 7, 8]
-                .map(number => [`inserter:${number}`, { kind: 'busy', period_ticks: 24 }])));
+                .map(number => [`inserter:${number}`, { kind: 'busy', window_cycle_ticks: 24 }])));
         },
     },
     {
@@ -175,7 +175,7 @@ const circuitExport: JobCheck[] = [
             const judged_clock_tick = selected.result.stability_check.as_built?.clock_tick_at_first_judged;
             expect(judged_clock_tick).toBe(1200);
             const request = {
-                config, mode: 'clock' as const, period_ticks: selected.result.simulation_duration.ticks,
+                config, mode: 'clock' as const, window_cycle_ticks: selected.result.simulation_duration.ticks,
                 terminal_swing_count: selected.result.used_terminal_swing_count, windows: selected.result.clock_windows,
                 inserter_clocks: selected.result.unplanned_inserter_clocks ?? {},
             };

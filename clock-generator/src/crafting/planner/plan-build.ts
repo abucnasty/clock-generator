@@ -17,7 +17,7 @@ import { feasibilityOf, graphOf, type Feasibility } from "../feasibility/assert-
 import { TargetProductionRate } from "../target-production-rate";
 import { compositionOf, transferKeyOf } from "./composition";
 import { GroupShape, groupsOf } from "./groups";
-import { CycleArithmetic, plannedPeriodsOf } from "./periods";
+import { CycleArithmetic, plannedWindowCyclesOf } from "./window-cycles";
 import { exhaustDecisionOf } from "./exhaust";
 
 const ratioOf = (value: Fraction) => ({ numerator: value.getNumerator, denominator: value.getDenominator });
@@ -53,7 +53,7 @@ export function planBuild(facts: PlannerFacts, graph: PlannerGraph, feasibility:
     const group_of = new Map<string, number>();
     const edge = new Map(graph.edges.map(it => [it.key, it]));
     groups.forEach((group, at) => group.edges.forEach(key => group_of.set(transferKeyOf(edge.get(key)!.entity, edge.get(key)!.item), at)));
-    const periods = cycle === null ? null : plannedPeriodsOf(cycle, groups, group_of, exhaust);
+    const window_cycles = cycle === null ? null : plannedWindowCyclesOf(cycle, groups, group_of, exhaust);
     return {
         schema: 1,
         target: graph.target,
@@ -62,10 +62,10 @@ export function planBuild(facts: PlannerFacts, graph: PlannerGraph, feasibility:
             key: group.key,
             members: group.members,
             edges: group.edges,
-            periods: periods?.per_group[at] ?? [],
+            window_cycles: window_cycles?.per_group[at] ?? [],
             utilization: dutiesIn(group, feasibility),
         })),
-        composition: periods === null ? null : compositionOf(periods, groups),
+        composition: window_cycles === null ? null : compositionOf(window_cycles, groups),
         exhaust,
     };
 }

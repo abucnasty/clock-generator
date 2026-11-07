@@ -7,12 +7,12 @@
 import type { Config } from "../../config";
 import type { OverLimitAction, PlanComposition } from "../../data-types/build-plan";
 import Fraction from "../../data-types/fraction";
-import { SIMULATION_BUDGET_TICKS } from "../plan/clock-period-limit";
+import { SIMULATION_BUDGET_TICKS } from "../plan/clock-window-cycle-limit";
 import { carriedItemsOf } from "../exhaust";
 import type { OutputCyclePlan } from "../sequence/cycle/output-cycle";
 import { EntityTransferCountMap } from "../sequence/cycle/swing-counts";
 import type { GroupShape } from "./groups";
-import { MAX_OBSERVED_WINDOWS_PERIOD_TICKS, type PlannedPeriods } from "./periods";
+import { MAX_OBSERVED_WINDOWS_WINDOW_CYCLE_TICKS, type PlannedWindowCycles } from "./window-cycles";
 
 /**
  * The items whose hands are left out of a cycle's lcm: the config's (`overrides.ignored_lcm_ingredients`), and the
@@ -35,7 +35,7 @@ export interface CycleMeasure {
     readonly computed_lcm: number;
     readonly override_lcm: number | null;
     readonly effective_lcm: number;
-    readonly main_period: Fraction;
+    readonly main_window_cycle: Fraction;
 }
 
 const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
@@ -65,32 +65,32 @@ export function cycleMeasureOf(config: Config, cycle: OutputCyclePlan, groups: r
         computed_lcm,
         override_lcm,
         effective_lcm,
-        main_period: cycle.total_duration_ticks.multiply(effective_lcm),
+        main_window_cycle: cycle.total_duration_ticks.multiply(effective_lcm),
     };
 }
 
 const ratioOf = (value: Fraction) => ({ numerator: value.getNumerator, denominator: value.getDenominator });
 
 /** The composition at the main clock's count, and what is done where the planned period is over the limit */
-export function compositionOf(periods: PlannedPeriods, groups: readonly GroupShape[]): PlanComposition {
-    const { main, tried } = periods;
+export function compositionOf(window_cycles: PlannedWindowCycles, groups: readonly GroupShape[]): PlanComposition {
+    const { main, tried } = window_cycles;
     const measure = main.measure;
     const first = tried[0];
-    const over = first.measure.main_period.toDecimal() >= SIMULATION_BUDGET_TICKS;
+    const over = first.measure.main_window_cycle.toDecimal() >= SIMULATION_BUDGET_TICKS;
     const terms = {
         requested_swings: first.swings,
         limit_ticks: SIMULATION_BUDGET_TICKS,
-        tried: tried.map(count => ({ swings: count.swings, period_ticks: count.measure.main_period.toDecimal() })),
+        tried: tried.map(count => ({ swings: count.swings, window_cycle_ticks: count.measure.main_window_cycle.toDecimal() })),
     };
     const over_limit_action: OverLimitAction = !over ? { action: "none" }
-        : periods.can_back_off && measure.main_period.toDecimal() < SIMULATION_BUDGET_TICKS
+        : window_cycles.can_back_off && measure.main_window_cycle.toDecimal() < SIMULATION_BUDGET_TICKS
             ? { action: "swing-backoff", rule: "P-limit", terms }
             : { action: "refused", rule: "P-limit", terms };
     return {
         swings: main.swings,
         fractional: main.fractional,
-        ...(periods.listed_from === null ? {} : { listed_from: { ...periods.listed_from, higher_up_to_ticks: MAX_OBSERVED_WINDOWS_PERIOD_TICKS } }),
-        main_period: { ticks: measure.main_period.toDecimal(), exact: ratioOf(measure.main_period) },
+        ...(window_cycles.listed_from === null ? {} : { listed_from: { ...window_cycles.listed_from, higher_up_to_ticks: MAX_OBSERVED_WINDOWS_WINDOW_CYCLE_TICKS } }),
+        main_window_cycle: { ticks: measure.main_window_cycle.toDecimal(), exact: ratioOf(measure.main_window_cycle) },
         lcm_terms: {
             cycle_ticks: ratioOf(measure.cycle_ticks),
             group_cycles: groups.map((group, at) => ({ group: group.key, cycles: measure.group_cycles[at] })),

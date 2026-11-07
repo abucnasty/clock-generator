@@ -1,6 +1,6 @@
 import { Duration, OpenRange } from "../../data-types";
 import { TickProvider } from "../current-tick-provider";
-import { subtickClockForPeriod, wholeBounds } from "../../common/subtick-period";
+import { subtickClockForWindowCycle, wholeBounds } from "../../common/subtick-window-cycle";
 import { Resettable } from "./resettable";
 
 export interface EnableControl {
@@ -73,11 +73,11 @@ class LastTwoTicks {
 }
 
 /** Position of a tick in a (possibly fractional) clock period; float error is snapped as the game's integer clock would be */
-export function clockPosition(tick: number, period: number): number {
-    const position = tick % period;
+export function clockPosition(tick: number, window_cycle_ticks: number): number {
+    const position = tick % window_cycle_ticks;
     const nearest = Math.round(position);
     const snapped = Math.abs(position - nearest) < 1e-6 ? nearest : position;
-    return snapped >= period ? 0 : snapped;
+    return snapped >= window_cycle_ticks ? 0 : snapped;
 }
 
 /**
@@ -91,7 +91,7 @@ class SubtickPositions {
     private readonly starts: number[] = [];
     private readonly ends: number[] = [];
 
-    constructor(private readonly period_ticks: number, private readonly scale: number, starts: readonly number[], ends: readonly number[]) {
+    constructor(private readonly window_cycle_ticks: number, private readonly scale: number, starts: readonly number[], ends: readonly number[]) {
         for (let i = 0; i < starts.length; i++) {
             const bounds = wholeBounds(starts[i] * scale, ends[i] * scale);
             if (bounds === null) {
@@ -105,7 +105,7 @@ class SubtickPositions {
 
     /** Whether a whole tick from 0 on is in a window */
     public ask(tick: number): boolean {
-        const position = (tick * this.scale) % this.period_ticks;
+        const position = (tick * this.scale) % this.window_cycle_ticks;
         const starts = this.starts;
         const ends = this.ends;
         let low = 0;
@@ -139,11 +139,11 @@ class ClockWindows {
     private run_start = 0;
     private run_end = 0;
     private readonly asked = new LastTwoTicks();
-    private readonly answerAt = (tick: number) => this.inRange(clockPosition(tick, this.period));
+    private readonly answerAt = (tick: number) => this.inRange(clockPosition(tick, this.window_cycle_ticks));
     /** A p/q-tick period's windows in whole 1/q ticks, when the clock answers exactly; null to work in floats */
     private readonly subtick: SubtickPositions | null = null;
 
-    constructor(private readonly period: number, ranges: ReadonlyArray<OpenRange>, exact_subtick_positions: boolean = false) {
+    constructor(private readonly window_cycle_ticks: number, ranges: ReadonlyArray<OpenRange>, exact_subtick_positions: boolean = false) {
         const sorted = [...ranges].sort((a, b) => a.start_inclusive - b.start_inclusive);
         for (const range of sorted) {
             if (this.ends.length > 0 && range.start_inclusive <= this.ends[this.ends.length - 1]) {
@@ -153,10 +153,10 @@ class ClockWindows {
                 this.ends.push(range.end_inclusive);
             }
         }
-        this.whole_ticks = Number.isInteger(period) && period > 0;
-        const subtick = exact_subtick_positions ? subtickClockForPeriod(period) : null;
+        this.whole_ticks = Number.isInteger(window_cycle_ticks) && window_cycle_ticks > 0;
+        const subtick = exact_subtick_positions ? subtickClockForWindowCycle(window_cycle_ticks) : null;
         if (subtick !== null) {
-            this.subtick = new SubtickPositions(subtick.period_ticks, subtick.scale, this.starts, this.ends);
+            this.subtick = new SubtickPositions(subtick.window_cycle_ticks, subtick.scale, this.starts, this.ends);
         }
     }
 
@@ -189,10 +189,10 @@ class ClockWindows {
             // a fractional period or an odd tick: worked out as the game's integer clock would snap it
             return this.asked.get(tick, this.answerAt);
         }
-        const period = this.period;
+        const window_cycle_ticks = this.window_cycle_ticks;
         const starts = this.starts;
         const ends = this.ends;
-        const position = tick % period;
+        const position = tick % window_cycle_ticks;
         let low = 0;
         let high = starts.length - 1;
         let next = starts.length;
@@ -207,13 +207,13 @@ class ClockWindows {
                 low = mid + 1;
             } else {
                 answer = true;
-                change = Math.min(ends[mid] + 1, period);
+                change = Math.min(ends[mid] + 1, window_cycle_ticks);
                 break;
             }
         }
         if (!answer && starts.length > 0) {
             // the gap runs to the next window, through the period boundary when none is left in this period
-            change = next < starts.length ? starts[next] : period + starts[0];
+            change = next < starts.length ? starts[next] : window_cycle_ticks + starts[0];
         }
         this.run_answer = answer;
         this.run_start = tick;
@@ -235,7 +235,7 @@ class EnableControlLambda implements EnableControl {
 class ClockedEnableControl implements EnableControl, Resettable {
 
     public static create(args: {
-        periodDuration: Duration,
+        windowCycleDuration: Duration,
         enabledRanges: ReadonlyArray<OpenRange>,
         tickProvider: TickProvider,
         is_game_clock?: boolean,
@@ -248,7 +248,7 @@ class ClockedEnableControl implements EnableControl, Resettable {
         exact_subtick_positions?: boolean,
     }): ClockedEnableControl {
         return new ClockedEnableControl(
-            args.periodDuration,
+            args.windowCycleDuration,
             args.enabledRanges,
             args.tickProvider,
             args.is_game_clock ?? false,
@@ -264,7 +264,7 @@ class ClockedEnableControl implements EnableControl, Resettable {
     private readonly windows: ClockWindows;
 
     constructor(
-        public readonly periodDuration: Duration,
+        public readonly windowCycleDuration: Duration,
         public readonly enabledRanges: ReadonlyArray<OpenRange>,
         public readonly tickProvider: TickProvider,
         public readonly is_game_clock: boolean = false,
@@ -273,7 +273,7 @@ class ClockedEnableControl implements EnableControl, Resettable {
         public readonly runs_through_steps: boolean = false,
         public readonly exact_subtick_positions: boolean = true,
     ) {
-        this.windows = new ClockWindows(periodDuration.ticks, enabledRanges, exact_subtick_positions);
+        this.windows = new ClockWindows(windowCycleDuration.ticks, enabledRanges, exact_subtick_positions);
     }
 
     public isEnabled(): boolean {

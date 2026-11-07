@@ -221,7 +221,7 @@ function tieOf(pick: PickableClock, others: PickableClock[], kind: string): stri
     const wakeUps = wakeUpsKey(pick.ranking.wake_ups_per_minute);
     const tiedOnWakeUps = others.filter(other => wakeUpsKey(other.ranking.wake_ups_per_minute) === wakeUps);
     // of equals on wake-ups the one that gets back from a loss sooner is picked, before the windows decide
-    const recovery = (clock: PickableClock) => clock.ranking.recovery_periods ?? Infinity;
+    const recovery = (clock: PickableClock) => clock.ranking.recovery_window_cycles ?? Infinity;
     if (tiedOnWakeUps.length > 0 && tiedOnWakeUps.every(other => recovery(other) > recovery(pick))) {
         return RECOMMENDED_COPY.tieOnRecovery(tiedOnWakeUps.length, kind);
     }

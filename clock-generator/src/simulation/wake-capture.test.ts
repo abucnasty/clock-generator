@@ -14,7 +14,7 @@ import * as inserterScheduling from "./inserter-scheduling";
 const modules = { ...generateBlueprint, ...inserterCounters, ...wakeUps, ...machineStock, ...simulatedRecording, ...inserterScheduling };
 
 interface Fixture {
-    clock: { config: Config; windows: SerializableClockWindows; period: number };
+    clock: { config: Config; windows: SerializableClockWindows; window_cycle_ticks: number };
     inserters: Record<string, { states: [number, string][]; woken_by_machine: number[] }>;
 }
 
@@ -27,11 +27,11 @@ interface Fixture {
 async function simulated(file: string): Promise<{ fixture: Fixture; own: Map<string, number[]>; ruled: Map<string, number[]>; switched_on: Map<string, number[]> }> {
     const { simulateClockOnly, inserterEnds, wakeUpsOfStock, SIMULATED_TICK_TO_CLOCK_POSITION, InserterScheduling, StockRecorder } = modules;
     const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "crafting", "fixtures", file), "utf8")) as Fixture;
-    const { config, windows, period } = fixture.clock;
+    const { config, windows, window_cycle_ticks } = fixture.clock;
     const quiet = { log() { }, warn() { }, error() { }, debug() { } };
-    const periods = 12;
-    const from = (periods - 2) * period;
-    const position = (tick: number) => (tick + SIMULATED_TICK_TO_CLOCK_POSITION) % period;
+    const window_cycles = 12;
+    const from = (window_cycles - 2) * window_cycle_ticks;
+    const position = (tick: number) => (tick + SIMULATED_TICK_TO_CLOCK_POSITION) % window_cycle_ticks;
     const add = (map: Map<string, number[]>, id: string, tick: number) => {
         if (tick < from) return;
         if (!map.has(id)) map.set(id, []);
@@ -61,7 +61,7 @@ async function simulated(file: string): Promise<{ fixture: Fixture; own: Map<str
         }),
     ];
     try {
-        const stock = simulateClockOnly(config, windows, period, periods, quiet);
+        const stock = simulateClockOnly(config, windows, window_cycle_ticks, window_cycles, quiet);
         const ruled = new Map<string, number[]>();
         wakeUpsOfStock(stock, inserterEnds(config), from, (inserter_id, at) => add(ruled, inserter_id, at));
         return { fixture, own, ruled, switched_on };
@@ -77,7 +77,7 @@ const positions = (map: Map<string, number[]>, id: string) => [...new Set(map.ge
 function switchOns(fixture: Fixture, id: string): number[] {
     const changes = fixture.inserters[id].states;
     return changes.flatMap(([at, state], index) => index > 0 && changes[index - 1][1] === "disabled_by_control_behavior"
-        && state !== "disabled_by_control_behavior" ? [at % fixture.clock.period] : []).sort((a, b) => a - b);
+        && state !== "disabled_by_control_behavior" ? [at % fixture.clock.window_cycle_ticks] : []).sort((a, b) => a - b);
 }
 
 test.each([
@@ -88,7 +88,7 @@ test.each([
     for (const id of Object.keys(fixture.inserters)) {
         // the events are read at the ticks the stock records them: the switch-ons fall where the game's do
         expect(positions(switched_on, id), `${id} switched on`).toEqual(switchOns(fixture, id));
-        const game = [...fixture.inserters[id].woken_by_machine].map(tick => tick % fixture.clock.period).sort((a, b) => a - b);
+        const game = [...fixture.inserters[id].woken_by_machine].map(tick => tick % fixture.clock.window_cycle_ticks).sort((a, b) => a - b);
         expect(positions(own, id), `${id} by its own lists`).toEqual(game);
         expect(positions(ruled, id), `${id} by the rule on its states`).toEqual(game);
         // the same in each of the two periods
@@ -110,7 +110,7 @@ test("under the new dispatch the simulator wakes the inserters of agricultural s
         machines: Record<string, { fuel_taken: number[] }>;
         clock: Fixture["clock"] & { sample_offset: number; first_sample: number };
     };
-    const { config, windows, period, sample_offset, first_sample } = fixture.clock;
+    const { config, windows, window_cycle_ticks, sample_offset, first_sample } = fixture.clock;
     // the simulator's tick t is the fixture's tick t + sample_offset - first_sample
     const fixtureTick = (tick: number) => tick + sample_offset - first_sample;
     const counted = (tick: number) => tick >= fixture.count_from && tick < fixture.ticks;
@@ -139,7 +139,7 @@ test("under the new dispatch the simulator wakes the inserters of agricultural s
     const ruled = new Map<string, number[]>();
     const fuel_taken = new Map<string, number[]>();
     try {
-        const stock = simulateClockOnly(config, windows, period, Math.ceil((fixture.ticks + first_sample) / period) + 1, quiet, { warmup_periods: 0 });
+        const stock = simulateClockOnly(config, windows, window_cycle_ticks, Math.ceil((fixture.ticks + first_sample) / window_cycle_ticks) + 1, quiet, { warmup_window_cycles: 0 });
         wakeUpsOfStock(stock, inserterEnds(config), 1, (inserter_id, at) => {
             if (counted(fixtureTick(at))) (ruled.get(inserter_id) ?? ruled.set(inserter_id, []).get(inserter_id)!).push(fixtureTick(at));
         });
@@ -187,11 +187,11 @@ test("under the new dispatch the simulator wakes the belt-fed inserters of metal
     const { ConfigPaths } = await import("../config/config-paths");
     const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "crafting", "fixtures", "wake-ups-capture-metallurgic-science-2.1.24.json"), "utf8")) as {
         ticks: number; count_from: number; inserters: Record<string, { woken_by_machine: [number, string][] }>;
-        clock: { windows: SerializableClockWindows; period: number };
+        clock: { windows: SerializableClockWindows; window_cycle_ticks: number };
         seed: { sample: number; start_stock: never; start_hands: never; main_clock_shift: number };
     };
     const config = await loadConfigFromFile(ConfigPaths.METALLURGIC_SCIENCE_45);
-    const { windows, period } = fixture.clock;
+    const { windows, window_cycle_ticks } = fixture.clock;
     const { sample, start_stock, start_hands, main_clock_shift } = fixture.seed;
     // the simulator's tick t is the fixture's tick sample + 1 + t; its first ten ticks are left out (the seed holds no lists)
     const fixtureTick = (tick: number) => tick + sample + 1;
@@ -219,8 +219,8 @@ test("under the new dispatch the simulator wakes the belt-fed inserters of metal
     ];
     const quiet = { log() { }, warn() { }, error() { }, debug() { } };
     try {
-        simulateClockOnly(config, windows, period, Math.ceil((fixture.ticks - sample) / period) + 1, quiet,
-            { keep_output_buffers: true, warmup_periods: 0, start_stock, start_hands, main_clock_shift });
+        simulateClockOnly(config, windows, window_cycle_ticks, Math.ceil((fixture.ticks - sample) / window_cycle_ticks) + 1, quiet,
+            { keep_output_buffers: true, warmup_window_cycles: 0, start_stock, start_hands, main_clock_shift });
     } finally {
         for (const spy of spies) spy.mockRestore();
     }

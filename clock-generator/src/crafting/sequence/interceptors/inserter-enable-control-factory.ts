@@ -26,8 +26,8 @@ import { ContainerStorage } from "../../../simulation/components/container-stora
  * the recorded run, as before, unless the run is judged over its whole counter (`counter_runs_through`, under
  * whole-counter checks), whose total does not depend on where in the counter it starts.
  */
-export function runThroughTicks(game_tick_provider: TickProvider | undefined, period_ticks: number, counter_runs_through = false): TickProvider | undefined {
-    return Number.isInteger(period_ticks) || counter_runs_through ? game_tick_provider : undefined;
+export function runThroughTicks(game_tick_provider: TickProvider | undefined, window_cycle_ticks: number, counter_runs_through = false): TickProvider | undefined {
+    return Number.isInteger(window_cycle_ticks) || counter_runs_through ? game_tick_provider : undefined;
 }
 
 export class EnableControlFactory {
@@ -111,7 +111,7 @@ export class EnableControlFactory {
             const plan = exhaust.find(it => takesResultOf([it], entity_id))!;
             const ranges = exhaustWindowRanges(plan).get(entity_id.id)!;
             return EnableControl.lambda(() => {
-                const tick = this.tick_provider.getCurrentTick() % plan.period;
+                const tick = this.tick_provider.getCurrentTick() % plan.window_cycle_ticks;
                 return ranges.some(range => tick >= range.start_inclusive && tick <= range.end_inclusive);
             });
         }
@@ -1153,7 +1153,7 @@ export class EnableControlFactory {
      * For fractional swings, this returns the extended period (base * cycle_multiplier).
      * For non-fractional, returns the base period.
      */
-    private getExtendedPeriodDuration(): Duration {
+    private getExtendedWindowCycleDuration(): Duration {
         if (this.output_cycle_plan.fractional_swings_enabled && this.output_cycle_plan.cycle_multiplier) {
             return Duration.ofTicks(OutputCyclePlan.ticksOfCycles(this.output_cycle_plan, this.output_cycle_plan.cycle_multiplier));
         }
@@ -1182,7 +1182,7 @@ export class EnableControlFactory {
         }
 
         const clocked_control = EnableControl.clocked({
-            periodDuration: Duration.ofTicks(OutputCyclePlan.ticksOfCycles(this.output_cycle_plan, cycles)),
+            windowCycleDuration: Duration.ofTicks(OutputCyclePlan.ticksOfCycles(this.output_cycle_plan, cycles)),
             enabledRanges: enabled_ranges,
             exact_subtick_positions: this.exact_subtick_positions,
             tickProvider: this.tick_provider,
@@ -1198,7 +1198,7 @@ export class EnableControlFactory {
         }
         const run_through_ticks = runThroughTicks(this.game_tick_provider, inserter_clock.modulus, this.counter_runs_through);
         const clocked_control = EnableControl.clocked({
-            periodDuration: Duration.ofTicks(inserter_clock.modulus),
+            windowCycleDuration: Duration.ofTicks(inserter_clock.modulus),
             enabledRanges: [inserter_clock.window],
             exact_subtick_positions: this.exact_subtick_positions,
             tickProvider: run_through_ticks ?? this.tick_provider,
@@ -1211,7 +1211,7 @@ export class EnableControlFactory {
 
     private clockedForCycle(enable_ranges: OpenRange[]): EnableControl {
         const clocked_control = EnableControl.clocked({
-            periodDuration: this.getExtendedPeriodDuration(),
+            windowCycleDuration: this.getExtendedWindowCycleDuration(),
             enabledRanges: [...enable_ranges],
             exact_subtick_positions: this.exact_subtick_positions,
             tickProvider: this.tick_provider,

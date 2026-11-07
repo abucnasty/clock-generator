@@ -120,7 +120,7 @@ export function lossTrialsPartOfTheWay(
 }
 
 /** A loss ends at the latest after this many periods, whether the build has stopped or not */
-export const MAX_LOSS_PERIODS = 200;
+export const MAX_LOSS_WINDOW_CYCLES = 200;
 
 /** The losses a build whose items spoil is tried with: shorter than `ticks`, which `item`, its first to spoil, sets */
 export interface LossLimit {
@@ -165,27 +165,27 @@ export function lossLimitOf(
  * alone repeats once its state does, so most trials end long before: with the state of a period boundary seen
  * before, what the build did since then is what it does for good.
  */
-export const MAX_RECOVERY_PERIODS = 40;
+export const MAX_RECOVERY_WINDOW_CYCLES = 40;
 /**
  * Where the state cannot be compared (a fuel inserter on a clock of its own does not repeat with the period), the
  * build has recovered when this many periods at the end of the recovery are all at the expected output.
  */
-const RECOVERY_HOLD_PERIODS = 8;
+const RECOVERY_HOLD_WINDOW_CYCLES = 8;
 /**
  * A trial that is short late in its window runs on (see runsOn): until this many periods at the expected output follow
  * its last short one, or its state repeats, and is judged on them. More than any stretch at the expected output that a
  * short period followed in the samples' trials (35 periods, agricultural science's batched swings after a loss of
  * nutrients, run on to 200 periods); as many as the window has (MAX_RECOVERY_PERIODS), a choice of its own.
  */
-export const RUN_ON_EXACT_PERIODS = 40;
+export const RUN_ON_EXACT_WINDOW_CYCLES = 40;
 /** A trial that runs on ends at the latest this many periods after the item is back */
-export const MAX_RUN_ON_PERIODS = 200;
+export const MAX_RUN_ON_WINDOW_CYCLES = 200;
 /**
  * A trial is short late when it was at the expected output in the RECOVERY_HOLD_PERIODS before this mark (as a recovery
  * without a repeated state has to end) and is short after it only: it would be back in a window this long, and falls
  * short in the last RECOVERY_HOLD_PERIODS of MAX_RECOVERY_PERIODS.
  */
-export const LATE_AFTER_PERIODS = MAX_RECOVERY_PERIODS - RECOVERY_HOLD_PERIODS;
+export const LATE_AFTER_WINDOW_CYCLES = MAX_RECOVERY_WINDOW_CYCLES - RECOVERY_HOLD_WINDOW_CYCLES;
 
 /**
  * Whether a trial that is not back at the end of its window runs on: no state of it repeated (one that did proves what
@@ -214,22 +214,22 @@ export function runsOn(
 export interface DisturbanceTrialOptions {
     loss: DisturbanceTrial;
     /** Ticks of the clock period the windows are of */
-    period_ticks: number;
+    window_cycle_ticks: number;
     /** Items the output inserters are expected to drop in a period */
     expected_output_items: number;
     /** Places in the period to cut at, in place of LOSS_PLACES: fewer make the run shorter */
     places?: readonly number[];
     /** Shares of the time the build takes to stop, in place of LOSS_SHARES */
     shares?: readonly number[];
-    max_loss_periods?: number;
-    max_recovery_periods?: number;
-    recovery_hold_periods?: number;
+    max_loss_window_cycles?: number;
+    max_recovery_window_cycles?: number;
+    recovery_hold_window_cycles?: number;
     /** In place of RUN_ON_EXACT_PERIODS */
-    run_on_exact_periods?: number;
+    run_on_exact_window_cycles?: number;
     /** In place of MAX_RUN_ON_PERIODS; 0 or less than the window: no trial runs on */
-    max_run_on_periods?: number;
+    max_run_on_window_cycles?: number;
     /** In place of LATE_AFTER_PERIODS */
-    late_after_periods?: number;
+    late_after_window_cycles?: number;
     /** A loss lasts fewer ticks than this (see lossLimitOf); without it, as long as the build takes to stop */
     loss_limit_ticks?: number;
     /**
@@ -292,7 +292,7 @@ export interface LossOutcome {
     /** Ticks in a bin: the clock period, or the whole ticks after which a fractional period repeats */
     bin_ticks: number;
     /** Clock periods in a bin */
-    periods_per_bin: number;
+    window_cycles_per_bin: number;
     expected_per_bin: number;
     /** Trials from the canonical start, or the first lane-phase start that fails, up to the first that does not recover. */
     trials: LossTrial[];
@@ -478,7 +478,7 @@ export function runLossTrials(
     context: SimulationContext,
     output_inserters: readonly InserterState[],
     options: DisturbanceTrialOptions,
-    bin: { ticks: number; periods: number },
+    bin: { ticks: number; window_cycles: number },
     quiet_ticks: number,
     proof_stride: number | null,
     watched_exports: readonly WatchedExport[] = [],
@@ -489,23 +489,23 @@ export function runLossTrials(
     terminal_branches?: readonly TerminalBranch[],
 ): LossOutcome {
     const { loss } = options;
-    const expected_per_bin = options.expected_output_items * bin.periods;
+    const expected_per_bin = options.expected_output_items * bin.window_cycles;
     // into sinks that never block, each branch at its rate, its surplus taken; otherwise the output exactly in every bin
     const takes_surplus = terminal_branches !== undefined && terminal_branches.length > 0;
     const branches = !takes_surplus
-        ? [{ source_id: "", inserter_ids: output_inserters.map(state => state.entity_id.id), share_per_period: options.expected_output_items, hand: 0 }]
+        ? [{ source_id: "", inserter_ids: output_inserters.map(state => state.entity_id.id), share_per_window_cycle: options.expected_output_items, hand: 0 }]
         : branchesScaledTo(terminal_branches, options.expected_output_items);
     const branch_states = branches.map(branch => output_inserters.filter(state => branch.inserter_ids.includes(state.entity_id.id)));
     const branchDropped = () => branch_states.map(states => states.reduce((sum, state) => sum + state.items_dropped, 0));
     // the most ticks a loss lasts: until the build has stopped, at most the periods of MAX_LOSS_PERIODS, and shorter
     // than the loss limit of a build whose items spoil
     const limit_ticks = options.loss_limit_ticks !== undefined ? Math.max(1, Math.ceil(options.loss_limit_ticks) - 1) : Infinity;
-    const max_loss_ticks = Math.min(limit_ticks, Math.ceil((options.max_loss_periods ?? MAX_LOSS_PERIODS) * options.period_ticks));
-    const max_recovery_bins = Math.max(1, Math.ceil((options.max_recovery_periods ?? MAX_RECOVERY_PERIODS) / bin.periods));
-    const hold_bins = Math.max(1, Math.ceil((options.recovery_hold_periods ?? RECOVERY_HOLD_PERIODS) / bin.periods));
-    const max_run_on_bins = Math.floor((options.max_run_on_periods ?? MAX_RUN_ON_PERIODS) / bin.periods);
-    const run_on_bins = Math.max(1, Math.ceil((options.run_on_exact_periods ?? RUN_ON_EXACT_PERIODS) / bin.periods));
-    const late_after_bins = Math.floor((options.late_after_periods ?? LATE_AFTER_PERIODS) / bin.periods);
+    const max_loss_ticks = Math.min(limit_ticks, Math.ceil((options.max_loss_window_cycles ?? MAX_LOSS_WINDOW_CYCLES) * options.window_cycle_ticks));
+    const max_recovery_bins = Math.max(1, Math.ceil((options.max_recovery_window_cycles ?? MAX_RECOVERY_WINDOW_CYCLES) / bin.window_cycles));
+    const hold_bins = Math.max(1, Math.ceil((options.recovery_hold_window_cycles ?? RECOVERY_HOLD_WINDOW_CYCLES) / bin.window_cycles));
+    const max_run_on_bins = Math.floor((options.max_run_on_window_cycles ?? MAX_RUN_ON_WINDOW_CYCLES) / bin.window_cycles);
+    const run_on_bins = Math.max(1, Math.ceil((options.run_on_exact_window_cycles ?? RUN_ON_EXACT_WINDOW_CYCLES) / bin.window_cycles));
+    const late_after_bins = Math.floor((options.late_after_window_cycles ?? LATE_AFTER_WINDOW_CYCLES) / bin.window_cycles);
     const places = options.places ?? LOSS_PLACES;
     const shares = options.shares ?? LOSS_SHARES;
     const fixed = loss.kind !== "none" ? options.fixed_loss_ticks : undefined;
@@ -637,7 +637,7 @@ export function runLossTrials(
         const restore_at = (now() - start_tick) % bin.ticks;
 
         const output_per_bin: number[] = [];
-        const branch_bins: BranchBins[] = branches.map(branch => ({ bins: [], share_per_bin: branch.share_per_period * bin.periods, hand: branch.hand, takes_surplus }));
+        const branch_bins: BranchBins[] = branches.map(branch => ({ bins: [], share_per_bin: branch.share_per_window_cycle * bin.window_cycles, hand: branch.hand, takes_surplus }));
         const backlog_per_bin: number[] = [];
         const export_per_bin: number[][] = watched_exports.map(() => []);
         const bin_by_state = new Map<string, number>();
@@ -720,7 +720,7 @@ export function runLossTrials(
     return {
         loss,
         bin_ticks: bin.ticks,
-        periods_per_bin: bin.periods,
+        window_cycles_per_bin: bin.window_cycles,
         expected_per_bin,
         trials,
         recovers,
@@ -732,7 +732,7 @@ export function runLossTrials(
 
 /** What a clock does under every loss of its build */
 export interface DisturbanceTrialReport {
-    period_ticks: number;
+    window_cycle_ticks: number;
     expected_output_items: number;
     /** The run with nothing cut, counted as the others: a clock that is off here is off without any loss */
     undisturbed: LossOutcome;
@@ -745,7 +745,7 @@ export interface DisturbanceTrialReport {
     /** The losses it does not get back from, by lossId */
     broken_by: string[];
     /** The most periods it took to be back at the expected output over all trials; null when it does not survive */
-    recovered_after_periods: number | null;
+    recovered_after_window_cycles: number | null;
     /** Ticks simulated for the trials of all losses, without the warm-up of each run */
     ticks: number;
     /** The limit of the losses tried, for a build whose items spoil (lossLimitOf); null for any other */
@@ -753,7 +753,7 @@ export interface DisturbanceTrialReport {
 }
 
 export function reportOf(
-    period_ticks: number,
+    window_cycle_ticks: number,
     expected_output_items: number,
     undisturbed: LossOutcome,
     losses: LossOutcome[],
@@ -763,14 +763,14 @@ export function reportOf(
     const broken_by = losses.filter(outcome => !outcome.recovers).map(outcome => lossId(outcome.loss));
     const survives = undisturbed.recovers && broken_by.length === 0;
     return {
-        period_ticks,
+        window_cycle_ticks,
         expected_output_items,
         undisturbed,
         losses,
         not_tried,
         survives,
         broken_by,
-        recovered_after_periods: survives ? Math.max(0, ...losses.map(outcome => (outcome.recovered_after_bins ?? 0) * outcome.periods_per_bin)) : null,
+        recovered_after_window_cycles: survives ? Math.max(0, ...losses.map(outcome => (outcome.recovered_after_bins ?? 0) * outcome.window_cycles_per_bin)) : null,
         ticks: undisturbed.ticks + losses.reduce((sum, outcome) => sum + outcome.ticks, 0),
         loss_limit,
     };
@@ -799,7 +799,7 @@ export interface DisturbanceTrialVerdict {
      */
     broken_under_other_taker_orders?: string[];
     /** The most periods it took to be back at the expected output over all trials; null when it does not survive */
-    recovered_after_periods: number | null;
+    recovered_after_window_cycles: number | null;
     /** For a build whose items spoil: the losses were shorter than this (lossLimitOf); absent for any other build */
     loss_limit?: LossLimit;
 }
@@ -815,7 +815,7 @@ export function verdictOf(report: DisturbanceTrialReport): DisturbanceTrialVerdi
                 .map(outcome => lossLabel(outcome.loss)),
         }),
         ...(report.not_tried.length > 0 && { not_tried: report.not_tried.map(lossLabel) }),
-        recovered_after_periods: report.recovered_after_periods,
+        recovered_after_window_cycles: report.recovered_after_window_cycles,
         ...(report.loss_limit !== null && { loss_limit: report.loss_limit }),
     };
 }

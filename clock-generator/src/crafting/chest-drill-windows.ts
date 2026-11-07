@@ -107,7 +107,7 @@ interface ChestDrillConfig {
     mode: "AUTO" | "CLOCKED" | "ALWAYS";
     /** Ticks each of the generator's windows starts earlier (the fallback's one tick longer) */
     extra_ticks: number;
-    clocked?: { ranges: OpenRange[]; period?: number };
+    clocked?: { ranges: OpenRange[]; window_cycle_ticks?: number };
 }
 
 const plans_of = new WeakMap<Config, ChestDrillConfig[]>();
@@ -144,7 +144,7 @@ function chestDrillsOf(config: Config): ChestDrillConfig[] {
                 plan, mode,
                 extra_ticks: drill_config.overrides?.extra_window_ticks ?? 0,
                 clocked: control?.mode === EnableControlMode.CLOCKED
-                    ? { ranges: control.ranges.map(range => OpenRange.from(range.start, range.end)), period: control.period_duration_ticks }
+                    ? { ranges: control.ranges.map(range => OpenRange.from(range.start, range.end)), window_cycle_ticks: control.period_duration_ticks }
                     : undefined,
             };
         });
@@ -206,8 +206,8 @@ function inWindows(ranges: readonly OpenRange[], position: number): boolean {
 }
 
 /** The items a taker takes in each of its windows: the hands of a period, shared by the windows' lengths */
-function takerWindows(ranges: readonly OpenRange[], items_per_period: number, hand: number, wraps_at: number | null): TakerWindow[] {
-    const hands = Math.ceil(items_per_period / hand - 1e-9);
+function takerWindows(ranges: readonly OpenRange[], items_per_window_cycle: number, hand: number, wraps_at: number | null): TakerWindow[] {
+    const hands = Math.ceil(items_per_window_cycle / hand - 1e-9);
     const lengths = ranges.map(range => range.end_inclusive - range.start_inclusive + 1);
     const total = lengths.reduce((sum, length) => sum + length, 0);
     const shares = lengths.map(length => hands * length / total);
@@ -229,14 +229,14 @@ function takerWindows(ranges: readonly OpenRange[], items_per_period: number, ha
 }
 
 /** Ranges of whole positions of a period, a range that runs over its end carried to its start */
-function rangesInPeriod(start: number, end: number, whole_period: number): OpenRange[] {
+function rangesInWindowCycle(start: number, end: number, whole_window_cycle: number): OpenRange[] {
     const length = end - start + 1;
-    if (length >= whole_period) {
-        return [OpenRange.from(0, whole_period - 1)];
+    if (length >= whole_window_cycle) {
+        return [OpenRange.from(0, whole_window_cycle - 1)];
     }
-    const from = ((start % whole_period) + whole_period) % whole_period;
+    const from = ((start % whole_window_cycle) + whole_window_cycle) % whole_window_cycle;
     const to = from + length - 1;
-    return to < whole_period ? [OpenRange.from(from, to)] : [OpenRange.from(from, whole_period - 1), OpenRange.from(0, to - whole_period)];
+    return to < whole_window_cycle ? [OpenRange.from(from, to)] : [OpenRange.from(from, whole_window_cycle - 1), OpenRange.from(0, to - whole_window_cycle)];
 }
 
 /** What a replay of a drill's windows against its chest's takers found */
@@ -260,7 +260,7 @@ const REPLAY_MAX_TICKS = 200_000;
  * `min_periods` periods and as many more as the chest takes to fill and the drill to mine a few times at its top (a
  * window that has to mine when the hold runs out brings less than a period's takes, which the chest has to cover).
  */
-function replay(plan: ChestDrillPlan, takers: readonly Taker[], drill_windows: readonly OpenRange[], period: number, min_periods: number, fill_periods: number): ReplayOutcome {
+function replay(plan: ChestDrillPlan, takers: readonly Taker[], drill_windows: readonly OpenRange[], window_cycle_ticks: number, min_window_cycles: number, fill_window_cycles: number): ReplayOutcome {
     const registry = createEntityRegistryForReplay(plan);
     const chest_state = new EntityStateFactory(registry).createStateForEntity(plan.chest.entity_id) as ContainerStorage;
     const drill_state = DrillState.fromEntity(plan.drill);
@@ -270,16 +270,16 @@ function replay(plan: ChestDrillPlan, takers: readonly Taker[], drill_windows: r
     const hold = () => drill_state.held.getCurrentQuantity(item);
     const stock = () => chest_state.getCurrentQuantity(item);
 
-    const periods = Math.max(min_periods, Math.min(fill_periods, Math.floor(REPLAY_MAX_TICKS / period)));
-    const last_tick = Math.min(Math.ceil(periods * period), Math.max(REPLAY_MAX_TICKS, Math.ceil(min_periods * period)));
+    const window_cycles = Math.max(min_window_cycles, Math.min(fill_window_cycles, Math.floor(REPLAY_MAX_TICKS / window_cycle_ticks)));
+    const last_tick = Math.min(Math.ceil(window_cycles * window_cycle_ticks), Math.max(REPLAY_MAX_TICKS, Math.ceil(min_window_cycles * window_cycle_ticks)));
     const was_in = takers.map(() => false);
     const seen = new Map<string, number>();
-    let period_index = -1;
+    let window_cycle_index = -1;
     for (let tick = 0; tick < last_tick; tick++) {
-        const position = clockPosition(tick, period);
-        const index = Math.floor(tick / period + 1e-9);
-        if (index !== period_index) {
-            period_index = index;
+        const position = clockPosition(tick, window_cycle_ticks);
+        const index = Math.floor(tick / window_cycle_ticks + 1e-9);
+        if (index !== window_cycle_index) {
+            window_cycle_index = index;
             // the first period's takes may come up short, so a cycle that holds is one of the periods after it
             if (index >= 1) {
                 const key = `${position};${stock()};${hold()};${mining.key()}`;
@@ -297,7 +297,7 @@ function replay(plan: ChestDrillPlan, takers: readonly Taker[], drill_windows: r
                 if (got > 0) {
                     chest_state.take(item, got);
                 }
-                if (got < window.items && tick >= period) {
+                if (got < window.items && tick >= window_cycle_ticks) {
                     return { passes: false, proven: false };
                 }
             }
@@ -332,19 +332,19 @@ interface PlannedDrillWindows {
 }
 
 /** Periods a period of part ticks is averaged over */
-const AVERAGED_PERIODS = 64;
+const AVERAGED_WINDOW_CYCLES = 64;
 
 /** Enabled ticks a period of windows, on average for a period that is not a whole number of ticks */
-function enabledTicks(ranges: readonly OpenRange[], period: number): number {
+function enabledTicks(ranges: readonly OpenRange[], window_cycle_ticks: number): number {
     // a period of part ticks is averaged over enough of them for its windows' ticks to even out
-    const ticks = Number.isInteger(period) ? period : Math.ceil(period * AVERAGED_PERIODS);
+    const ticks = Number.isInteger(window_cycle_ticks) ? window_cycle_ticks : Math.ceil(window_cycle_ticks * AVERAGED_WINDOW_CYCLES);
     let enabled = 0;
     for (let tick = 0; tick < ticks; tick++) {
-        if (inWindows(ranges, clockPosition(tick, period))) {
+        if (inWindows(ranges, clockPosition(tick, window_cycle_ticks))) {
             enabled++;
         }
     }
-    return enabled * period / ticks;
+    return enabled * window_cycle_ticks / ticks;
 }
 
 /** Steps of the margin the search for the fewest enabled ticks tries, before it gives up */
@@ -358,7 +358,7 @@ interface DrillWindowsSetup {
     before: number[];
     /** Each window's ticks without a margin: what it serves over the drill's yield a tick */
     base: number[];
-    whole_period: number;
+    whole_window_cycle: number;
     /** Whether windows keep the chest's takers supplied (see replay) */
     passes(ranges: OpenRange[]): boolean;
 }
@@ -367,17 +367,17 @@ interface DrillWindowsSetup {
  * The takes of the drill's item out of its chest in the clock's windows, the windows' places and their lengths without
  * a margin, and the replay; or why nothing can time the drill on these windows
  */
-function drillWindowsSetup(plan: ChestDrillPlan, windows: ReadonlyMap<string, OpenRange[]>, period: number): DrillWindowsSetup | { because: ChestDrillWhy } {
-    const whole_period = Math.ceil(period - 1e-9);
+function drillWindowsSetup(plan: ChestDrillPlan, windows: ReadonlyMap<string, OpenRange[]>, window_cycle_ticks: number): DrillWindowsSetup | { because: ChestDrillWhy } {
+    const whole_window_cycle = Math.ceil(window_cycle_ticks - 1e-9);
     const takers: Taker[] = [];
     for (const taker of plan.takers) {
         const ranges = OpenRange.reduceRanges(windows.get(taker.inserter_id) ?? []);
         if (ranges.length === 0) {
             return { because: { kind: "taker-without-window", inserter_number: taker.inserter_number, item: plan.item } };
         }
-        const items = taker.rate.toDecimal() * period;
-        const per_period = Math.abs(items - Math.round(items)) < 1e-6 ? Math.round(items) : Math.ceil(items);
-        takers.push({ windows: takerWindows(ranges, per_period, taker.hand, Number.isInteger(period) ? period : null) });
+        const items = taker.rate.toDecimal() * window_cycle_ticks;
+        const per_window_cycle = Math.abs(items - Math.round(items)) < 1e-6 ? Math.round(items) : Math.ceil(items);
+        takers.push({ windows: takerWindows(ranges, per_window_cycle, taker.hand, Number.isInteger(window_cycle_ticks) ? window_cycle_ticks : null) });
     }
     const takes = takers.flatMap(taker => taker.windows).filter(it => it.items > 0)
         .sort((a, b) => a.range.start_inclusive - b.range.start_inclusive);
@@ -404,7 +404,7 @@ function drillWindowsSetup(plan: ChestDrillPlan, windows: ReadonlyMap<string, Op
     // the first window ends before the first take after the longest stretch without one
     const gap = (index: number) => {
         const previous = starts[(index - 1 + starts.length) % starts.length].start;
-        return ((starts[index].start - previous) % whole_period + whole_period) % whole_period || whole_period;
+        return ((starts[index].start - previous) % whole_window_cycle + whole_window_cycle) % whole_window_cycle || whole_window_cycle;
     };
     let anchor = 0;
     for (let index = 1; index < starts.length; index++) {
@@ -427,14 +427,14 @@ function drillWindowsSetup(plan: ChestDrillPlan, windows: ReadonlyMap<string, Op
     const per_tick = plan.drill.production_rate.amount_per_tick.toDecimal();
     const base = served.map(items => Math.max(1, Math.ceil(items / per_tick - 1e-9)));
     // the replay lasts as long as a mining tick's yield takes to be taken, the chest to fill, and three times more
-    const mining_periods = Math.ceil(per_tick / Math.max(1, demand));
-    const min_periods = mining_periods + 2;
+    const mining_window_cycles = Math.ceil(per_tick / Math.max(1, demand));
+    const min_window_cycles = mining_window_cycles + 2;
     return {
-        order, before, base, whole_period,
+        order, before, base, whole_window_cycle,
         passes: ranges => {
-            const supply = Math.max(1e-9, Math.min(enabledTicks(ranges, period) * per_tick, capacity + per_tick) - demand);
-            const fill_periods = min_periods + 3 * mining_periods + Math.ceil(capacity / supply);
-            return replay(plan, takers, ranges, period, min_periods, fill_periods).passes;
+            const supply = Math.max(1e-9, Math.min(enabledTicks(ranges, window_cycle_ticks) * per_tick, capacity + per_tick) - demand);
+            const fill_window_cycles = min_window_cycles + 3 * mining_window_cycles + Math.ceil(capacity / supply);
+            return replay(plan, takers, ranges, window_cycle_ticks, min_window_cycles, fill_window_cycles).passes;
         },
     };
 }
@@ -443,7 +443,7 @@ function drillWindowsSetup(plan: ChestDrillPlan, windows: ReadonlyMap<string, Op
 function windowsWith(setup: DrillWindowsSetup, extra: number): OpenRange[] {
     return OpenRange.reduceRanges(setup.before.flatMap((first, at) => {
         const end = setup.order[first].start - 1;
-        return rangesInPeriod(end - (setup.base[at] + extra) + 1, end, setup.whole_period);
+        return rangesInWindowCycle(end - (setup.base[at] + extra) + 1, end, setup.whole_window_cycle);
     }));
 }
 
@@ -457,13 +457,13 @@ function windowsWith(setup: DrillWindowsSetup, extra: number): OpenRange[] {
  *   added to all of them until the replay passes; the drop of a window's last mining tick is carried in the drill's
  *   hold to the next window, so it costs no tick in the steady state.
  */
-function plannedWindows(plan: ChestDrillPlan, windows: ReadonlyMap<string, OpenRange[]>, period: number, extra_ticks: number): PlannedDrillWindows {
-    const setup = drillWindowsSetup(plan, windows, period);
+function plannedWindows(plan: ChestDrillPlan, windows: ReadonlyMap<string, OpenRange[]>, window_cycle_ticks: number, extra_ticks: number): PlannedDrillWindows {
+    const setup = drillWindowsSetup(plan, windows, window_cycle_ticks);
     if ("because" in setup) {
         return { ranges: null, enabled_ticks: 0, always_enabled_because: setup.because };
     }
     const passes = (extra: number) => setup.passes(windowsWith(setup, extra));
-    const whole = (extra: number) => windowsWith(setup, extra).reduce((sum, range) => sum + range.end_inclusive - range.start_inclusive + 1, 0) >= setup.whole_period;
+    const whole = (extra: number) => windowsWith(setup, extra).reduce((sum, range) => sum + range.end_inclusive - range.start_inclusive + 1, 0) >= setup.whole_window_cycle;
 
     // the smallest margin that passes: up a step at a time, then by doubling, then back by halving
     let low = -1;
@@ -491,36 +491,36 @@ function plannedWindows(plan: ChestDrillPlan, windows: ReadonlyMap<string, OpenR
         return { ranges: null, enabled_ticks: 0, always_enabled_because: { kind: "would-cover-period" } };
     }
     const ranges = windowsWith(setup, high + extra_ticks);
-    return { ranges, enabled_ticks: enabledTicks(ranges, period) };
+    return { ranges, enabled_ticks: enabledTicks(ranges, window_cycle_ticks) };
 }
 
 /**
  * Whether `drill_windows` keep the chest of drill `drill_id` supplied for the takers' `windows`, by the replay the
  * windows are made with (see chestDrillWindows); null when nothing times the drill
  */
-export function chestDrillWindowsKeepUp(config: Config, windows: Map<string, OpenRange[]>, period: number, drill_id: number, drill_windows: OpenRange[]): boolean | null {
+export function chestDrillWindowsKeepUp(config: Config, windows: Map<string, OpenRange[]>, window_cycle_ticks: number, drill_id: number, drill_windows: OpenRange[]): boolean | null {
     const drill = chestDrillsOf(config).find(it => it.plan.drill_id === drill_id);
     if (drill === undefined || drill.plan.always_enabled_because !== undefined) {
         return null;
     }
-    const setup = drillWindowsSetup(drill.plan, windows, period);
+    const setup = drillWindowsSetup(drill.plan, windows, window_cycle_ticks);
     return "because" in setup ? null : setup.passes(drill_windows);
 }
 
 /** A CLOCKED drill's windows in the clock's period: its ranges, repeated with its own period when it gives one */
-function clockedWindows(clocked: NonNullable<ChestDrillConfig["clocked"]>, period: number): OpenRange[] {
-    const own = clocked.period;
-    const whole_period = Math.ceil(period - 1e-9);
-    if (own === undefined || own >= whole_period) {
-        return OpenRange.reduceRanges(clocked.ranges.flatMap(range => range.start_inclusive < whole_period
-            ? [OpenRange.from(range.start_inclusive, Math.min(range.end_inclusive, whole_period - 1))] : []));
+function clockedWindows(clocked: NonNullable<ChestDrillConfig["clocked"]>, window_cycle_ticks: number): OpenRange[] {
+    const own = clocked.window_cycle_ticks;
+    const whole_window_cycle = Math.ceil(window_cycle_ticks - 1e-9);
+    if (own === undefined || own >= whole_window_cycle) {
+        return OpenRange.reduceRanges(clocked.ranges.flatMap(range => range.start_inclusive < whole_window_cycle
+            ? [OpenRange.from(range.start_inclusive, Math.min(range.end_inclusive, whole_window_cycle - 1))] : []));
     }
     const ranges: OpenRange[] = [];
-    for (let offset = 0; offset < whole_period; offset += own) {
+    for (let offset = 0; offset < whole_window_cycle; offset += own) {
         for (const range of clocked.ranges) {
             const start = offset + range.start_inclusive;
-            if (start < whole_period) {
-                ranges.push(OpenRange.from(start, Math.min(offset + Math.min(range.end_inclusive, own - 1), whole_period - 1)));
+            if (start < whole_window_cycle) {
+                ranges.push(OpenRange.from(start, Math.min(offset + Math.min(range.end_inclusive, own - 1), whole_window_cycle - 1)));
             }
         }
     }
@@ -533,7 +533,7 @@ function clockedWindows(clocked: NonNullable<ChestDrillConfig["clocked"]>, perio
  * sets to always enabled, or that nothing can time, gets none and so stays always enabled. Returns `windows` itself
  * when it adds nothing.
  */
-export function chestDrillWindows(config: Config, windows: Map<string, OpenRange[]>, period: number): { windows: Map<string, OpenRange[]>; drills: ChestDrillClock[] } {
+export function chestDrillWindows(config: Config, windows: Map<string, OpenRange[]>, window_cycle_ticks: number): { windows: Map<string, OpenRange[]>; drills: ChestDrillClock[] } {
     const drills = chestDrillsOf(config);
     if (drills.length === 0) {
         return { windows, drills: [] };
@@ -547,16 +547,16 @@ export function chestDrillWindows(config: Config, windows: Map<string, OpenRange
         if (given !== undefined) {
             reports.push(given.length === 0
                 ? { ...report, enabled_ticks: null, window_count: 0, always_enabled_because: plan.always_enabled_because ?? { kind: "windows-did-not-hold" } }
-                : { ...report, enabled_ticks: enabledTicks(given, period), window_count: given.length });
+                : { ...report, enabled_ticks: enabledTicks(given, window_cycle_ticks), window_count: given.length });
             continue;
         }
         let ranges: OpenRange[] | null = null;
         let because = plan.always_enabled_because;
         if (mode === "CLOCKED") {
-            ranges = clockedWindows(clocked!, period);
+            ranges = clockedWindows(clocked!, window_cycle_ticks);
             because = undefined;
         } else if (because === undefined) {
-            const made = plannedWindows(plan, windows, period, extra_ticks);
+            const made = plannedWindows(plan, windows, window_cycle_ticks, extra_ticks);
             ranges = made.ranges;
             because = made.always_enabled_because;
         }
@@ -568,14 +568,14 @@ export function chestDrillWindows(config: Config, windows: Map<string, OpenRange
             result = new Map(windows);
         }
         result.set(key, ranges);
-        reports.push({ ...report, enabled_ticks: enabledTicks(ranges, period), window_count: ranges.length });
+        reports.push({ ...report, enabled_ticks: enabledTicks(ranges, window_cycle_ticks), window_count: ranges.length });
     }
     return { windows: result, drills: reports };
 }
 
 /** The clock's windows with those of each drill into a chest (see chestDrillWindows) */
-export function withChestDrillWindows(config: Config, windows: Map<string, OpenRange[]>, period: number): Map<string, OpenRange[]> {
-    return chestDrillWindows(config, windows, period).windows;
+export function withChestDrillWindows(config: Config, windows: Map<string, OpenRange[]>, window_cycle_ticks: number): Map<string, OpenRange[]> {
+    return chestDrillWindows(config, windows, window_cycle_ticks).windows;
 }
 
 /** Whether the config has a drill into a chest whose windows the generator makes (no enable control, or AUTO) */

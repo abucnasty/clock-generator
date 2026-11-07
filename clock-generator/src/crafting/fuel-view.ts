@@ -24,7 +24,7 @@ export interface FuelMachinePlan {
     /** Fuel items burned a second over a clock period: the burn rate times the crafting share */
     effective_burn_rate_per_second: number;
     /** Fuel items burned over one clock period */
-    burned_per_period: number;
+    burned_per_window_cycle: number;
     /** Inserters stop dropping fuel once the slot holds this many items */
     insertion_limit: number;
     /** Ticks the insertion limit lasts at the effective burn rate */
@@ -64,7 +64,7 @@ export interface FuelInserterPlan {
 /** Fuel is outside the transfer plan: what the burner machines use, and the clocks exported to refill them */
 export interface FuelPlan {
     /** Ticks of the clock period */
-    period_ticks: number;
+    window_cycle_ticks: number;
     /** Ticks the one merged clock of the blueprint counts: the least common multiple of the period and the fuel clocks */
     merged_clock_ticks: number | null;
     /**
@@ -80,7 +80,7 @@ export function fuelPlan(
     entity_registry: ReadableEntityRegistry,
     inserter_clocks: ReadonlyMap<string, InserterClock>,
     crafting_shares: ReadonlyMap<string, number>,
-    period_ticks: number,
+    window_cycle_ticks: number,
     /** By machine id, the fewest ticks the insertion limit lasted in a run of the exported clock */
     limit_lasted_at_least: ReadonlyMap<string, number> = new Map(),
 ): FuelPlan | undefined {
@@ -112,7 +112,7 @@ export function fuelPlan(
             burn_rate_per_second: machine.fuel_consumption.rate_per_second,
             crafting_share,
             effective_burn_rate_per_second: effective_rate,
-            burned_per_period: effective_rate * period_ticks / TICKS_PER_SECOND,
+            burned_per_window_cycle: effective_rate * window_cycle_ticks / TICKS_PER_SECOND,
             insertion_limit: machine.fuel_slot.automated_insertion_limit,
             insertion_limit_lasts_ticks: machine.fuel_slot.automated_insertion_limit / effective_rate * TICKS_PER_SECOND,
             insertion_limit_lasted_at_least_ticks: limit_lasted_at_least.get(machine.entity_id.id),
@@ -147,12 +147,12 @@ export function fuelPlan(
     }
 
     const moduli = Array.from(new Set(inserters.map(inserter => inserter.modulus))).sort((a, b) => a - b);
-    const merged_clock_ticks = mergedClockTicks(period_ticks, moduli);
+    const merged_clock_ticks = mergedClockTicks(window_cycle_ticks, moduli);
     return {
-        period_ticks,
+        window_cycle_ticks,
         merged_clock_ticks,
         separate_clocks_reason: merged_clock_ticks !== null ? undefined
-            : Number.isInteger(period_ticks) ? "merged_clock_too_long" : "fractional_period",
+            : Number.isInteger(window_cycle_ticks) ? "merged_clock_too_long" : "fractional_period",
         machines: Array.from(machines.values()),
         inserters,
     };

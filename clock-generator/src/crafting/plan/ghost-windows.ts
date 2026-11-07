@@ -30,7 +30,7 @@ export interface GhostWindow {
  */
 export function windowsWithoutGhostWakeUps(
     windows: ReadonlyMap<string, readonly OpenRange[]>,
-    period_ticks: number,
+    window_cycle_ticks: number,
     stock: StockRecording,
     ghosts: readonly GhostWakeUp[],
     fixed: ReadonlySet<string>,
@@ -43,11 +43,11 @@ export function windowsWithoutGhostWakeUps(
     /** Told why the windows of an inserter with ghost wakeups are left as they are */
     left?: (inserter_id: string, why: string) => void,
 ): { windows: Map<string, OpenRange[]>; shaped: GhostWindow[] } | null {
-    if (!Number.isInteger(period_ticks) || ghosts.length === 0) {
+    if (!Number.isInteger(window_cycle_ticks) || ghosts.length === 0) {
         return null;
     }
     const OFF = FactorioInserterState.DISABLED_BY_CONTROL_BEHAVIOR;
-    const mod = (value: number) => ((value % period_ticks) + period_ticks) % period_ticks;
+    const mod = (value: number) => ((value % window_cycle_ticks) + window_cycle_ticks) % window_cycle_ticks;
     const series = new Map(stock.inserters.map(it => [it.inserter_id, it]));
     const result = new Map(Array.from(windows, ([id, ranges]) => [id, ranges.slice()] as const));
     const shaped: GhostWindow[] = [];
@@ -67,7 +67,7 @@ export function windowsWithoutGhostWakeUps(
         // after the end of a window (a window ends at e when the inserter shows disabled from the tick at position e + 1)
         const ends = new Set(ranges.map(range => mod(range.end_inclusive)));
         const switch_offs: number[] = [];
-        for (let tick = Math.max(1, own[0].switched_off - 2 * period_ticks); tick < states.length; tick++) {
+        for (let tick = Math.max(1, own[0].switched_off - 2 * window_cycle_ticks); tick < states.length; tick++) {
             if (states[tick] === OFF && states[tick - 1] !== OFF) switch_offs.push(tick);
         }
         const offsets = (clock_offset !== undefined ? [mod(clock_offset)] : ranges.map(range => mod(own[0].switched_off - 1 - range.end_inclusive)))

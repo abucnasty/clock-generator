@@ -48,7 +48,7 @@ describe("why the selected clock does not meet goal 1", () => {
             label: "1 output swing per cycle", verdict: "unstable", meets_target_rate: false, moving_belt: true,
             assessment: { holds: false, items_per_second: 7.5, disturbance_trial: null },
             failed_pickup_phases: { "inserter:2": [3, 0] },
-            as_built_output: { items: 176, repeat_periods: 6, repeat_output_items: 880 },
+            as_built_output: { items: 176, repeat_window_cycles: 6, repeat_output_items: 880 },
         });
         expect(whyNotStable([unstable], 0, moving)).toEqual({
             cause: "moving lane phases",
@@ -141,7 +141,7 @@ describe("why the selected clock does not meet goal 1", () => {
 
     it("adds the spare time of a machine that takes longer to make up a period than a build is given to get back", () => {
         const spare = (spare_ticks: number, working_ticks: number) => whyNotStable(
-            [noRecovery(["tungsten ore stops arriving"], [], { spare_time: { machine: "Machine 3 (metallurgic-science-pack)", spare_ticks, working_ticks, recovery_periods: 40 } })],
+            [noRecovery(["tungsten ore stops arriving"], [], { spare_time: { machine: "Machine 3 (metallurgic-science-pack)", spare_ticks, working_ticks, recovery_window_cycles: 40 } })],
             0, moving)!.message;
         expect(spare(1, 319)).toContain("after tungsten ore stops arriving. Machine 3 (metallurgic-science-pack) crafts 319 ticks of a period "
             + "and has 1 tick to spare: making up one period it lost takes it 319 periods, more than the 40 a build is given to get back. "
@@ -293,14 +293,14 @@ describe("what the summary reads of a clock", () => {
             label: "1 output swing per cycle", verdict: "unstable", ranking: { meets_target_rate: false }, assessment,
             belt: { kind: "moving", slack_ticks: [4] },
             as_built: { holds: false, actual_output_items: 176, start_phases_checked: 1, failed_start_offset: 0,
-                failed_pickup_phases: { "inserter:2": [3, 0] }, repeat_periods: 6, repeat_output_items: 880 },
+                failed_pickup_phases: { "inserter:2": [3, 0] }, repeat_window_cycles: 6, repeat_output_items: 880 },
             expected_output_items: 176,
-            insights: [{}, { spare_time: { machine: "Machine 1 (assembling-machine)", spare_ticks: 3, working_ticks: 160, recovery_periods: 40 } }],
+            insights: [{}, { spare_time: { machine: "Machine 1 (assembling-machine)", spare_ticks: 3, working_ticks: 160, recovery_window_cycles: 40 } }],
         })).toEqual({
             label: "1 output swing per cycle", verdict: "unstable", meets_target_rate: false, assessment, moving_belt: true,
             failed_pickup_phases: { "inserter:2": [3, 0] }, expected_output_items: 176,
-            as_built_output: { items: 176, repeat_periods: 6, repeat_output_items: 880 },
-            spare_time: { machine: "Machine 1 (assembling-machine)", spare_ticks: 3, working_ticks: 160, recovery_periods: 40 },
+            as_built_output: { items: 176, repeat_window_cycles: 6, repeat_output_items: 880 },
+            spare_time: { machine: "Machine 1 (assembling-machine)", spare_ticks: 3, working_ticks: 160, recovery_window_cycles: 40 },
             full_output_chests: [], export_shortfalls: [],
         });
     });

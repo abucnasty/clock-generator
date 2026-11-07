@@ -28,7 +28,7 @@ export interface TerminalBranch {
     /** The terminal output inserters of the branch, by id */
     inserter_ids: string[];
     /** Items the branch is planned to carry in a clock period */
-    share_per_period: number;
+    share_per_window_cycle: number;
     /** Items the branch's inserters move in one hand each: how far it may fall behind its share */
     hand: number;
 }
@@ -72,9 +72,9 @@ export function neverBlockingBranchesOf(
     for (const inserter of outputs) {
         const id = inserter.entity_id.id;
         const source_id = inserter.source.entity_id.id;
-        const branch = branches.get(source_id) ?? { source_id, inserter_ids: [], share_per_period: 0, hand: 0 };
+        const branch = branches.get(source_id) ?? { source_id, inserter_ids: [], share_per_window_cycle: 0, hand: 0 };
         branch.inserter_ids.push(id);
-        branch.share_per_period += planned.get(id)!.share;
+        branch.share_per_window_cycle += planned.get(id)!.share;
         branch.hand += planned.get(id)!.hand;
         branches.set(source_id, branch);
     }
@@ -86,10 +86,10 @@ export function neverBlockingBranchesOf(
  * than its plan's (a period rounded to whole ticks) keeps each branch's part of it. Unchanged where the shares add up to
  * nothing.
  */
-export function branchesScaledTo(branches: readonly TerminalBranch[], expected_per_period: number): TerminalBranch[] {
-    const planned = branches.reduce((sum, branch) => sum + branch.share_per_period, 0);
-    if (!(planned > 0) || Math.abs(planned - expected_per_period) < EPSILON) return [...branches];
-    return branches.map(branch => ({ ...branch, share_per_period: branch.share_per_period * expected_per_period / planned }));
+export function branchesScaledTo(branches: readonly TerminalBranch[], expected_per_window_cycle: number): TerminalBranch[] {
+    const planned = branches.reduce((sum, branch) => sum + branch.share_per_window_cycle, 0);
+    if (!(planned > 0) || Math.abs(planned - expected_per_window_cycle) < EPSILON) return [...branches];
+    return branches.map(branch => ({ ...branch, share_per_window_cycle: branch.share_per_window_cycle * expected_per_window_cycle / planned }));
 }
 
 /** How far a branch may run ahead of its share */

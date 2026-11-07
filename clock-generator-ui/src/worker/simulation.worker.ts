@@ -99,7 +99,7 @@ function fuelViewOf(result: ClockAlternativeRun['alternatives'][number]['result'
     return {
         plan: result.fuel_plan,
         run: view ? {
-            periods: view.periods,
+            window_cycles: view.window_cycles,
             durationTicks: view.duration_ticks,
             fuelSwingsRecorded: view.fuel_swings_recorded,
             ranOutOfFuel: view.ran_out_of_fuel,
@@ -162,7 +162,7 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         insights: alternative.insights,
         shiftOptions: shiftOptionsOf(result),
         simulationDurationTicks: result.simulation_duration.ticks,
-        ...(alternative.rounded && { roundedPeriodTicks: alternative.rounded.period_ticks, roundedRunsFast: alternative.rounded.runs_fast }),
+        ...(alternative.rounded && { roundedWindowCycleTicks: alternative.rounded.window_cycle_ticks, roundedRunsFast: alternative.rounded.runs_fast }),
         strategy: alternative.strategy,
         swingBackoffReport: result.swing_backoff_report ?? null,
         inserterClocks: result.unplanned_inserter_clocks ?? {},

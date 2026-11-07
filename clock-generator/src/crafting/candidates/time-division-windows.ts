@@ -47,11 +47,11 @@ export function timeDivisionWindows(
     entity_registry: ReadableEntityRegistry,
     swing_counts: EntityTransferCountMap,
     recipe_lcm: number,
-    period: number,
+    window_cycle_ticks: number,
     /** Where the turn rule reports what the takers into other recipes take (`turnOffsets`); not reported without it */
     log?: (line: string) => void,
 ): Map<string, OpenRange[]> {
-    assert(Number.isInteger(period), `even hands need a period of whole ticks, not ${period}`);
+    assert(Number.isInteger(window_cycle_ticks), `even hands need a period of whole ticks, not ${window_cycle_ticks}`);
     const inserters = entity_registry.getAll().filter(Entity.isInserter);
     assertNoDrills(entity_registry);
     const transfers = new Map(Array.from(swing_counts.entries(), ([entity_id, transfer]) => [entity_id.id, transfer] as const));
@@ -63,8 +63,8 @@ export function timeDivisionWindows(
         const exact = transfer.total_transfer_count.toDecimal() * recipe_lcm;
         const hands = Math.round(exact);
         assert(hands > 0 && Math.abs(exact - hands) < 1e-9, `${inserter.entity_id.id} moves ${exact} hands a period, not a whole number`);
-        assert(inserter.animation.total.ticks >= 2 && hands * inserter.animation.total.ticks <= period, `${hands} hands of ${inserter.entity_id.id} do not fit in ${period} ticks`);
-        windows.set(inserter.entity_id.id, evenWindows(hands, inserter.animation.total.ticks, period, evenTurnOffset(entity_registry, inserter, hands, transfers, recipe_lcm, period, log)));
+        assert(inserter.animation.total.ticks >= 2 && hands * inserter.animation.total.ticks <= window_cycle_ticks, `${hands} hands of ${inserter.entity_id.id} do not fit in ${window_cycle_ticks} ticks`);
+        windows.set(inserter.entity_id.id, evenWindows(hands, inserter.animation.total.ticks, window_cycle_ticks, evenTurnOffset(entity_registry, inserter, hands, transfers, recipe_lcm, window_cycle_ticks, log)));
     }
     return windows;
 }
@@ -82,7 +82,7 @@ function evenTurnOffset(
     hands: number,
     transfers: ReadonlyMap<string, { total_transfer_count: { toDecimal(): number } }>,
     recipe_lcm: number,
-    period: number,
+    window_cycle_ticks: number,
     log?: (line: string) => void,
 ): number {
     if (!EntityId.isMachine(inserter.source.entity_id) || !EntityId.isMachine(inserter.sink.entity_id)) return 0;
@@ -95,26 +95,26 @@ function evenTurnOffset(
         && EntityId.isMachine(it.sink.entity_id) && it.filtered_items.has(item));
     const takers = of_item.filter(it => handsOf(it) === hands && recipe_of(it) === recipe_of(inserter));
     const other_draw = log === undefined ? undefined : {
-        per_tick: of_item.filter(it => recipe_of(it) !== recipe_of(inserter)).reduce((sum, it) => sum + handsOf(it) * handSizeFor(it, item), 0) / period,
+        per_tick: of_item.filter(it => recipe_of(it) !== recipe_of(inserter)).reduce((sum, it) => sum + handsOf(it) * handSizeFor(it, item), 0) / window_cycle_ticks,
         log,
     };
     const sinks = Array.from(new Set(takers.map(it => it.sink.entity_id.id))).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
     const turns = sinks.map(sink => takers.filter(it => it.sink.entity_id.id === sink));
-    const offsets = turnOffsets(source, item, turns, period / hands, inserter.animation.total.ticks - 1, other_draw);
+    const offsets = turnOffsets(source, item, turns, window_cycle_ticks / hands, inserter.animation.total.ticks - 1, other_draw);
     return offsets === null ? 0 : offsets[sinks.indexOf(inserter.sink.entity_id.id)];
 }
 
 /** One window for each of `hands` hands in a period, spread evenly over it from `offset`, each a tick shorter than the hand cycle */
-export function evenWindows(hands: number, cycle_ticks: number, period: number, offset: number = 0): OpenRange[] {
+export function evenWindows(hands: number, cycle_ticks: number, window_cycle_ticks: number, offset: number = 0): OpenRange[] {
     const width = cycle_ticks - 1;
     const ranges: OpenRange[] = [];
     for (let k = 0; k < hands; k++) {
-        const start = (Math.round(k * period / hands) + offset) % period;
+        const start = (Math.round(k * window_cycle_ticks / hands) + offset) % window_cycle_ticks;
         const end = start + width - 1;
-        if (end < period) {
+        if (end < window_cycle_ticks) {
             ranges.push(OpenRange.from(start, end));
         } else {
-            ranges.push(OpenRange.from(start, period - 1), OpenRange.from(0, end - period));
+            ranges.push(OpenRange.from(start, window_cycle_ticks - 1), OpenRange.from(0, end - window_cycle_ticks));
         }
     }
     return ranges.sort((a, b) => a.start_inclusive - b.start_inclusive);

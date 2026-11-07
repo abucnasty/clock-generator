@@ -38,16 +38,16 @@ function exportedClockText(fuel: FuelViewData): string {
     const fuelClocks = `${moduli.length === 1 ? 'a fuel clock' : 'fuel clocks'} of ${moduli.join(' and ')} ticks`;
     if (plan.merged_clock_ticks !== null) {
         return `One clock counts ${plan.merged_clock_ticks.toLocaleString()} ticks, the least common multiple of the `
-            + `${plan.period_ticks} tick window cycle and ${fuelClocks}. Modulo combinators give the window cycle and each fuel clock from it.`;
+            + `${plan.window_cycle_ticks} tick window cycle and ${fuelClocks}. Modulo combinators give the window cycle and each fuel clock from it.`;
     }
     return `The blueprint has ${fuelClocks} next to the main clock, each with a counter of its own, because `
         + (plan.separate_clocks_reason === 'fractional_period'
-            ? `the window cycle time, ${plan.period_ticks.toFixed(3)} ticks, is not a whole number of ticks.`
+            ? `the window cycle time, ${plan.window_cycle_ticks.toFixed(3)} ticks, is not a whole number of ticks.`
             : 'one clock for all of them would count further than a signal can hold.');
 }
 
 function RanOutAlert({ run }: { run: FuelRunView }) {
-    const span = `${run.durationTicks} ticks (${run.periods} window cycles)`;
+    const span = `${run.durationTicks} ticks (${run.window_cycles} window cycles)`;
     const empty = run.levels.filter(levels => levels.empty_ticks > 0);
     if (empty.length > 0) {
         return (
@@ -85,7 +85,7 @@ function MachineTable({ machines, run }: { machines: FuelMachinePlan[]; run: Fue
         { header: 'Burn while crafting', align: 'right', cell: machine => `${machine.burn_rate_per_second.toFixed(3)}/s` },
         { header: 'Crafts', align: 'right', cell: machine => percent(machine.crafting_share) },
         { header: 'Effective burn', align: 'right', cell: machine => `${machine.effective_burn_rate_per_second.toFixed(3)}/s` },
-        { header: 'Per window cycle', align: 'right', cell: machine => machine.burned_per_period.toFixed(2) },
+        { header: 'Per window cycle', align: 'right', cell: machine => machine.burned_per_window_cycle.toFixed(2) },
         { header: `Limit of ${machines[0]?.insertion_limit} lasts`, align: 'right', cell: machine => machine.insertion_limit_lasted_at_least_ticks === undefined
             ? ticksAndSeconds(machine.insertion_limit_lasts_ticks)
             : `at least ${ticksAndSeconds(machine.insertion_limit_lasted_at_least_ticks)}` },
@@ -372,7 +372,7 @@ function FuelPanelComponent({ fuel }: FuelPanelProps) {
             {run && (
                 <Panel title="Fuel timeline" level={3} sx={{ mb: 0 }}>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        The exported clock run for {run.periods} window cycles: {durationText(run.durationTicks)}.
+                        The exported clock run for {run.window_cycles} window cycles: {durationText(run.durationTicks)}.
                         The dashed line is the fuel slot's limit.
                     </Typography>
                     <FuelTimeline fuel={fuel} run={run} />

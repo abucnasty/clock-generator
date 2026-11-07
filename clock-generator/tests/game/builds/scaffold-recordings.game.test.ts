@@ -8,7 +8,7 @@ import { ConfigPaths } from "../../../src/config/config-paths";
 import { loadConfigFromFile } from "../../../src/config/loader";
 import { generateClockAlternatives } from "../../../src/crafting/generate-blueprint";
 import { HarnessOptions, HarnessResult, HarnessSession, recordInFactorio, Seed } from "../../../src/harness/factorio-harness";
-import { outputInserters, outputPerPeriod, recipesMaking } from "../../../src/harness/recording-output";
+import { outputInserters, outputPerWindowCycle, recipesMaking } from "../../../src/harness/recording-output";
 import { composeProbeSource } from "../helpers/probe-source";
 import { clockHash, readControls } from "./clock-controls";
 import { matchRecordingToConfig } from "../../../src/verification/entity-matching";
@@ -58,7 +58,7 @@ const WINDOW_TICKS = 3600;
  */
 const RECORDED_TICKS = 3600;
 /** The longest clock period recorded: two of them stay within 10 minutes (a run is at most 15 minutes of game time); a longer one is skipped */
-const MAX_RECORDED_PERIOD = 18_000;
+const MAX_RECORDED_WINDOW_CYCLE = 18_000;
 /** The most ticks a build may take to reach steady state, and a staged start to be recorded */
 const SETTLE_CAP_TICKS = 36_000;
 /** What the probe writes into the game's script-output */
@@ -570,12 +570,12 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             // repeats (1728 for 19 periods of 90.947): that is the period the recording is cut into, and what it has
             // to move is what that many ticks ask for.
             const subtick = selected.result.subtick;
-            const period = subtick?.clock.period_ticks ?? selected.result.simulation_duration.ticks;
-            context.skip(!build.staged_start && period > MAX_RECORDED_PERIOD,
-                `the selected clock counts ${period} ticks, over the ${MAX_RECORDED_PERIOD} ticks one period of a recording may take`);
+            const window_cycle_ticks = subtick?.clock.window_cycle_ticks ?? selected.result.simulation_duration.ticks;
+            context.skip(!build.staged_start && window_cycle_ticks > MAX_RECORDED_WINDOW_CYCLE,
+                `the selected clock counts ${window_cycle_ticks} ticks, over the ${MAX_RECORDED_WINDOW_CYCLE} ticks one period of a recording may take`);
             // a subtick clock's repeat and a rate per copy can leave a float a hair off the whole number of items
             const copies = build.copies ?? 1;
-            const expected_per_copy = Math.round(config.setpoint.items_per_second / config.setpoint.copies * period / 60 * 1e6) / 1e6;
+            const expected_per_copy = Math.round(config.setpoint.items_per_second / config.setpoint.copies * window_cycle_ticks / 60 * 1e6) / 1e6;
             const expected = Math.round(expected_per_copy * copies * 1e6) / 1e6;
             // what the machines that make the target item have to finish over the trailing minute for steady state
             const expected_per_window = Math.round(config.setpoint.items_per_second / config.setpoint.copies * copies * WINDOW_TICKS / 60 * 1e6) / 1e6;
@@ -606,7 +606,7 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                     blueprint: fs.readFileSync(build.scaffold, "utf-8").trim(),
                     out: `${base}.json`,
                     // a clock longer than a minute: a tick more than its period, so the recorder holds a whole period between two wraps
-                    ticks: build.staged_start ? SETTLE_CAP_TICKS : Math.max(RECORDED_TICKS, period + 1),
+                    ticks: build.staged_start ? SETTLE_CAP_TICKS : Math.max(RECORDED_TICKS, window_cycle_ticks + 1),
                     warmup_ticks: build.staged_start ? 0 : build.warmup_ticks,
                     settle_ticks: build.staged_start ? undefined : SETTLE_CAP_TICKS + 1,
                     seed: build.staged_start ? [] : build.seed,
@@ -635,14 +635,14 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             if (build.staged_start) {
                 // a staged recording does not read the clock (the recorder ignores it: it records fixed ticks from the tick the
                 // inserters are placed in), and the clock is wired in that tick to count its period from the first sample
-                result.recording.clock = { values: Array.from({ length: result.recording.sample_count }, (_, tick) => tick % period) };
+                result.recording.clock = { values: Array.from({ length: result.recording.sample_count }, (_, tick) => tick % window_cycle_ticks) };
             }
 
             // the simulator against the game, entity by entity: a run of the same clock, half as long again as the
             // recording and judged on what follows its first third, moves what the game moved through every inserter
             // and finishes what it finished in every machine (asserted below, once the evidence is kept)
             // (a build of copies has no run of one copy to compare entity by entity)
-            const simulated_run = simulateRecording(config, selected.result.clock_windows, selected.result.simulation_duration.ticks, result.recording.sample_count * 1.5, period);
+            const simulated_run = simulateRecording(config, selected.result.clock_windows, selected.result.simulation_duration.ticks, result.recording.sample_count * 1.5, window_cycle_ticks);
             const compared = copies > 1 ? null : compareRecordings(
                 {
                     recording: result.recording,
@@ -651,9 +651,9 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                 },
                 { recording: simulated_run, match: matchOfSimulatedRecording(simulated_run), from_sample: Math.floor(simulated_run.sample_count / 3) },
                 config,
-                { expected_output_per_period: expected },
+                { expected_output_per_window_cycle: expected },
             );
-            const periods = outputPerPeriod(result.recording, recipesMaking(config, config.setpoint.recipe));
+            const window_cycles = outputPerWindowCycle(result.recording, recipesMaking(config, config.setpoint.recipe));
             // a build of copies: what each row of copies (the output inserters at one height) moved in each period, as the game recorded it
             const row_of = new Map(inserter_positions.map(it => [it.unit_number, it.y]));
             const output_unit_numbers = outputInserters(result.recording, recipesMaking(config, config.setpoint.recipe)).map(it => it.unit_number!);
@@ -662,10 +662,10 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                 const members = outputInserters(result.recording, recipesMaking(config, config.setpoint.recipe)).filter(it => row_of.get(it.unit_number!) === y);
                 return {
                     y, output_inserters: members.length,
-                    per_period: periods.map(period => ({ start: period.start, end: period.end, items: members.reduce((sum, inserter) => {
+                    per_window_cycle: window_cycles.map(window_cycle => ({ start: window_cycle.start, end: window_cycle.end, items: members.reduce((sum, inserter) => {
                         const held = inserter.samples.held_count;
                         let moved = 0;
-                        for (let i = Math.max(period.start, 1); i < period.end; i++) {
+                        for (let i = Math.max(window_cycle.start, 1); i < window_cycle.end; i++) {
                             if (held[i] < held[i - 1]) moved += held[i - 1] - held[i];
                         }
                         return sum + moved;
@@ -675,10 +675,10 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             if (KEEP) {
                 fs.writeFileSync(`${base}.simulated.json`, JSON.stringify(simulated_run));
                 fs.writeFileSync(`${base}.meta.json`, JSON.stringify({
-                    name, label: selected.label, verdict: selected.verdict, period, expected, clock_windows: selected.result.clock_windows,
+                    name, label: selected.label, verdict: selected.verdict, period: window_cycle_ticks, expected, clock_windows: selected.result.clock_windows,
                     simulation_ticks: selected.result.simulation_duration.ticks, backed_up_belts: !!build.backed_up_belts,
                     staged_start: !!build.staged_start, issues: compared?.issues ?? [], config, harness_build: result.build,
-                    harness_start: result.start, periods, steady, copies, expected_per_copy, rows,
+                    harness_start: result.start, periods: window_cycles, steady, copies, expected_per_copy, rows,
                 }, null, 1));
             }
             // the build reached steady state in the game, within the ticks it may take
@@ -687,19 +687,19 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             // the machines the probe counted are those of the config that make the target item (one copy)
             expect(Array.isArray(steady.finals) ? steady.finals : [], "the final machines the probe counts")
                 .toHaveLength(config.machines.filter(machine => recipes.includes(machine.recipe)).length * copies);
-            expect(periods.length, `the recording of ${result.recording.sample_count} ticks holds a whole clock period`).toBeGreaterThan(0);
+            expect(window_cycles.length, `the recording of ${result.recording.sample_count} ticks holds a whole clock period`).toBeGreaterThan(0);
             // the first period is left out: the build may still be settling into the clock. A clock that counts over a minute is
             // recorded over one period, which is checked whole: the settle ended at steady state
-            const checked = periods.length > 1 ? periods.slice(1) : periods;
-            const wrong_length = checked.filter(it => it.end - it.start !== period);
-            expect(wrong_length, `every one of the ${checked.length} periods checked lasts ${period} ticks, as the generated clock does`).toEqual([]);
+            const checked = window_cycles.length > 1 ? window_cycles.slice(1) : window_cycles;
+            const wrong_length = checked.filter(it => it.end - it.start !== window_cycle_ticks);
+            expect(wrong_length, `every one of the ${checked.length} periods checked lasts ${window_cycle_ticks} ticks, as the generated clock does`).toEqual([]);
             if (copies > 1) {
                 // 100% or more of the target, each row on its own (copies of the row at one height) and the whole build; recorded raw
                 const per_row = config.setpoint.copies;
                 expect(rows.length, `the output inserters of the build stand in rows (heights: ${row_ys.join(", ")})`).toBeGreaterThan(1);
                 for (const row of rows) {
                     const row_expected = Math.round(expected_per_copy * (output_unit_numbers.filter(unit => row_of.get(unit) === row.y).length) * 1e6) / 1e6;
-                    const row_checked = row.per_period.length > 1 ? row.per_period.slice(1) : row.per_period;
+                    const row_checked = row.per_window_cycle.length > 1 ? row.per_window_cycle.slice(1) : row.per_window_cycle;
                     expect(row_checked.map(it => ({ start: it.start, items: it.items })).filter(it => it.items < row_expected - 1e-6),
                         `every one of the ${row_checked.length} periods checked of the row at y=${row.y} (${row.output_inserters} output inserters, ${per_row} copies wanted) moves ${row_expected} items of ${config.setpoint.recipe} or more`).toEqual([]);
                 }

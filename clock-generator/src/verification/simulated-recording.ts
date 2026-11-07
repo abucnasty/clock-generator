@@ -115,12 +115,12 @@ export function matchOfSimulatedRecording(recording: Recording): EntityMatch {
 export function simulateRecording(
     config: Config,
     clock_windows: SerializableClockWindows,
-    period_ticks: number,
+    window_cycle_ticks: number,
     ticks: number,
-    clock_ticks: number = period_ticks,
+    clock_ticks: number = window_cycle_ticks,
 ): Recording {
     const quiet = { log() { }, warn() { }, error: console.error, debug() { } };
-    const stock = simulateClockOnly(config, clock_windows, period_ticks, Math.ceil(ticks / period_ticks), quiet);
+    const stock = simulateClockOnly(config, clock_windows, window_cycle_ticks, Math.ceil(ticks / window_cycle_ticks), quiet);
     return recordingOfStock(stock, config, clock_ticks);
 }
 
@@ -134,24 +134,24 @@ export function simulateRecording(
 export function simulatedWakeUpsByStart(
     config: Config,
     clock_windows: SerializableClockWindows,
-    period_ticks: number,
+    window_cycle_ticks: number,
     starts: number,
-    periods: number = 60,
+    window_cycles: number = 60,
 ): number[] {
-    if (!Number.isInteger(period_ticks)) {
+    if (!Number.isInteger(window_cycle_ticks)) {
         return [];
     }
     const quiet = { log() { }, warn() { }, error: console.error, debug() { } };
     const figures: number[] = [];
     for (let start = 0; start < starts; start++) {
-        const offset = Math.floor(period_ticks * start / starts);
+        const offset = Math.floor(window_cycle_ticks * start / starts);
         // a window that runs over the end of the period goes on at its beginning
         const shifted = Object.fromEntries(Object.entries(clock_windows).map(([entity_id, ranges]) => [entity_id, ranges.flatMap(range => {
-            const from = (range.start + offset) % period_ticks;
+            const from = (range.start + offset) % window_cycle_ticks;
             const to = from + range.end - range.start;
-            return to < period_ticks ? [{ start: from, end: to }] : [{ start: 0, end: to - period_ticks }, { start: from, end: period_ticks - 1 }];
+            return to < window_cycle_ticks ? [{ start: from, end: to }] : [{ start: 0, end: to - window_cycle_ticks }, { start: from, end: window_cycle_ticks - 1 }];
         }).sort((a, b) => a.start - b.start)]));
-        const recording = recordingOfStock(simulateClockOnly(config, shifted, period_ticks, periods, quiet), config, period_ticks);
+        const recording = recordingOfStock(simulateClockOnly(config, shifted, window_cycle_ticks, window_cycles, quiet), config, window_cycle_ticks);
         figures.push(wakeUpsOfRecording(recording, matchOfSimulatedRecording(recording), Math.floor(recording.sample_count / 3), recording.sample_count, config).wake_ups_per_minute);
     }
     return figures;

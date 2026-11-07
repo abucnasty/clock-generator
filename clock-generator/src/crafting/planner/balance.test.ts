@@ -13,7 +13,7 @@ import { outputPathOf } from "../sequence/cycle/swing-counts";
 import { createEntityRegistryFromConfig } from "../sequence/simulation-context";
 import { validateConfig } from "../plan/validate-config";
 import { TargetProductionRate } from "../target-production-rate";
-import { balanceBuildOf, balanceOf, LOOP_USES_ALL, periodCyclesOf } from "./balance";
+import { balanceBuildOf, balanceOf, LOOP_USES_ALL, windowCycleCyclesOf } from "./balance";
 
 /** The balance of a sample at so many output swings a cycle, with the cycle's exact ticks */
 async function balanceAt(file: string, swings: number) {
@@ -31,7 +31,7 @@ describe("the balance equations of accumulator 640", () => {
     it("give the smallest period of whole hands: 486 ticks, 288 accumulators, hands of 9, 12, 30, 10 and 10", async () => {
         const { ticks, balance } = await balanceAt(ConfigPaths.ACCUMULATOR_640, 1);
         expect(ticks.toString()).toBe("54");
-        const cycles = periodCyclesOf(balance.transfers);
+        const cycles = windowCycleCyclesOf(balance.transfers);
         expect(ticks.multiply(cycles).toString()).toBe("486");
         const hands = Object.fromEntries(balance.transfers.map(it => [it.entity, it.total.multiply(cycles).toString()]));
         expect(hands).toEqual({
@@ -105,7 +105,7 @@ describe("the balance with inserters that carry nothing", () => {
             const validation = validateConfig(config, fractional ? { fractional_swings: true } : {});
             return {
                 lcm: validation.used_lcm,
-                period: validation.period_ticks,
+                window_cycle_ticks: validation.window_cycle_ticks,
                 transfers: validation.transfer_plan.entities.map(entity =>
                     `${entity.entity_id} ${entity.item_transfers.map(it => `${it.item_name} ${it.numerator}/${it.denominator}`).join(", ")}`),
             };
@@ -116,10 +116,10 @@ describe("the balance with inserters that carry nothing", () => {
 
     it("an empty output inserter takes its share of the output swings, in its own hand", async () => {
         expect(await planOf(FIXTURES.stone_bricks_and_an_empty_taker(), false)).toEqual({
-            lcm: 1, period: 144, transfers: ["inserter:1 stone-brick 3/1", "inserter:2 stone-brick 3/1", "drill:1 stone 8/1"],
+            lcm: 1, window_cycle_ticks: 144, transfers: ["inserter:1 stone-brick 3/1", "inserter:2 stone-brick 3/1", "drill:1 stone 8/1"],
         });
         expect(await planOf(FIXTURES.stone_bricks_and_an_empty_taker(), true)).toEqual({
-            lcm: 16, period: 2448, transfers: ["inserter:1 stone-brick 51/16", "inserter:2 stone-brick 51/16", "drill:1 stone 17/2"],
+            lcm: 16, window_cycle_ticks: 2448, transfers: ["inserter:1 stone-brick 51/16", "inserter:2 stone-brick 51/16", "drill:1 stone 17/2"],
         });
     });
 
@@ -130,7 +130,7 @@ describe("the balance with inserters that carry nothing", () => {
             transfers: ["inserter:3 steel-plate 38/1", "inserter:2 steel-plate 38/1", "inserter:1 iron-plate 95/2",
                 "inserter:4 iron-plate 95/6", "inserter:5 iron-ore 95/9"],
         });
-        expect((plan as { period: number }).period).toBeCloseTo(25255.384615384617, 6);
+        expect((plan as { window_cycle_ticks: number }).window_cycle_ticks).toBeCloseTo(25255.384615384617, 6);
         expect(await planOf(FIXTURES.steel_wagon_and_an_empty_filler(), true)).toEqual({
             refused: "Cannot satisfy fractional swing constraint: sub-cycle 0 requires 47 swings, but maximum allowed is 4 due to insertion limits. "
                 + "Total swings: 765, cycle multiplier: 16.",

@@ -55,7 +55,7 @@ describe("the chip words of the settings", () => {
     test("have a word for every value, in the order of the fields, all in lower case", () => {
         const labels = settingChipsOf({
             output_count: { kind: "output_swings", count: 1 },
-            window_cycle: [{ kind: "shorter_window_cycle" }, { kind: "harmonic_window_cycle" }, { kind: "subtick_clock" }, { kind: "rounded_clock", period_ticks: 1199, runs_fast: 0.0232 }],
+            window_cycle: [{ kind: "shorter_window_cycle" }, { kind: "harmonic_window_cycle" }, { kind: "subtick_clock" }, { kind: "rounded_clock", window_cycle_ticks: 1199, runs_fast: 0.0232 }],
             shared_windows: "window_a_swing", loops: "loop_exits_only", drill_windows: "a_tick_longer",
             belt_pickups: ["counted_from_entry", "room_for_a_hand_of_fuel"],
         }).map(it => it.label);
@@ -64,6 +64,6 @@ describe("the chip words of the settings", () => {
         expect(labels.every(label => label === label.toLowerCase())).toBe(true);
         expect(settingChipsOf({ ...plain, shared_windows: "shared_enable_windows", loops: "loop_windows" }).map(it => it.label).slice(1))
             .toEqual(["shared enable windows", "kanban pull: loop windows"]);
-        expect(settingChipsOf({ ...plain, window_cycle: [{ kind: "rounded_clock", period_ticks: 10, runs_fast: 0.00001 }] })[1].label).toBe("rounded to 10 ticks, under 0.01% fast");
+        expect(settingChipsOf({ ...plain, window_cycle: [{ kind: "rounded_clock", window_cycle_ticks: 10, runs_fast: 0.00001 }] })[1].label).toBe("rounded to 10 ticks, under 0.01% fast");
     });
 });

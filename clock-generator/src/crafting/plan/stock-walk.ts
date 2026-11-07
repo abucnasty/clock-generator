@@ -69,7 +69,7 @@ export interface WalkStock {
 export interface StockWalkInput {
     machine: Pick<SerializableMachineFacts, "inputs" | "output_item" | "output_per_craft" | "output_block_size" | "ticks_per_craft">;
     /** Whole ticks of the period */
-    period_ticks: number;
+    window_cycle_ticks: number;
     fillers: readonly WalkHand[];
     takers: readonly WalkHand[];
     /** Where crafting stops for want of room for the product (its stack); default none */
@@ -77,7 +77,7 @@ export interface StockWalkInput {
     /** What it holds when the walk starts: by default nothing (a cold start) */
     start?: WalkStock;
     /** Periods walked at most before it is given up as not repeating (default 64) */
-    max_periods?: number;
+    max_window_cycles?: number;
 }
 
 /**
@@ -108,9 +108,9 @@ export interface StockWalk {
     /** Whether a period's start state came up again within `max_periods` */
     converged: boolean;
     /** Periods walked before the repeat (or `max_periods`) */
-    periods_walked: number;
+    window_cycles_walked: number;
     /** Periods the repeat spans: 1 where every period is the same */
-    repeat_periods: number;
+    repeat_window_cycles: number;
     /** What the machine holds at the start of the fixed point's first period: the surplus it carries */
     start: WalkStock;
     /** The hands of the fixed point's first period, in the order they happened */
@@ -167,9 +167,9 @@ function partOf(starts: readonly number[] | undefined, position: number): number
  */
 export function walkMachineStock(input: StockWalkInput): StockWalk {
     const { machine, fillers, takers } = input;
-    const period = input.period_ticks;
-    if (!Number.isInteger(period) || period <= 0) throw new Error(`the stock walk needs a period of whole ticks, not ${period}`);
-    const max_periods = input.max_periods ?? 64;
+    const window_cycle_ticks = input.window_cycle_ticks;
+    if (!Number.isInteger(window_cycle_ticks) || window_cycle_ticks <= 0) throw new Error(`the stock walk needs a period of whole ticks, not ${window_cycle_ticks}`);
+    const max_window_cycles = input.max_window_cycles ?? 64;
     const output_stack = input.output_stack ?? Number.POSITIVE_INFINITY;
     const ticks_per_craft = machine.ticks_per_craft;
     const per_craft = machine.output_per_craft;
@@ -215,9 +215,9 @@ export function walkMachineStock(input: StockWalkInput): StockWalk {
             arm.spec.quota === undefined ? 0 : arm.started_in_part.reduce((sum, it) => sum + it, 0) - arm.spec.quota.reduce((sum, it) => sum + it, 0)])]);
 
     // what one period's walk records, kept for the period that turns out to be the fixed point's first
-    interface PeriodRecord { start: WalkStock; hands: WalkedHand[]; craft_starts: number[]; output_stock: number[]; input_stock: Record<string, number[]>; waits: Record<string, number> }
-    let record: PeriodRecord;
-    const startRecord = (): PeriodRecord => ({
+    interface WindowCycleRecord { start: WalkStock; hands: WalkedHand[]; craft_starts: number[]; output_stock: number[]; input_stock: Record<string, number[]>; waits: Record<string, number> }
+    let record: WindowCycleRecord;
+    const startRecord = (): WindowCycleRecord => ({
         start: { inputs: { ...stock.inputs }, output: stock.output, craft: stock.craft, made: stock.made },
         hands: [], craft_starts: [], output_stock: [], input_stock: Object.fromEntries(machine.inputs.map(it => [it.item_name, [] as number[]])),
         waits: Object.fromEntries([...takers, ...fillers].map(it => [it.id, 0])),
@@ -231,7 +231,7 @@ export function walkMachineStock(input: StockWalkInput): StockWalk {
     };
 
     const stepTaker = (arm: Arm, position: number) => {
-        const enabled = inWindows(arm.spec.windows, (position - WINDOW_LATENCY_TICKS + period) % period);
+        const enabled = inWindows(arm.spec.windows, (position - WINDOW_LATENCY_TICKS + window_cycle_ticks) % window_cycle_ticks);
         switch (arm.phase) {
             case "idle":
             case "filling": {
@@ -291,7 +291,7 @@ export function walkMachineStock(input: StockWalkInput): StockWalk {
     };
 
     const stepFiller = (arm: Arm, position: number) => {
-        const enabled = inWindows(arm.spec.windows, (position - WINDOW_LATENCY_TICKS + period) % period);
+        const enabled = inWindows(arm.spec.windows, (position - WINDOW_LATENCY_TICKS + window_cycle_ticks) % window_cycle_ticks);
         switch (arm.phase) {
             case "idle": {
                 if (!enabled || !quotaLeft(arm, position)) return;
@@ -356,19 +356,19 @@ export function walkMachineStock(input: StockWalkInput): StockWalk {
 
     // the walk's tick, counted from its start
     let now = 0;
-    const seen = new Map<string, { period: number; record: PeriodRecord | null }>();
-    const kept: PeriodRecord[] = [];
-    for (let walked = 0; walked <= max_periods; walked++) {
+    const seen = new Map<string, { window_cycle_ticks: number; record: WindowCycleRecord | null }>();
+    const kept: WindowCycleRecord[] = [];
+    for (let walked = 0; walked <= max_window_cycles; walked++) {
         const key = keyOf();
         const earlier = seen.get(key);
         if (earlier !== undefined) {
-            const first = kept[earlier.period];
-            return { converged: true, periods_walked: walked, repeat_periods: walked - earlier.period, ...first };
+            const first = kept[earlier.window_cycle_ticks];
+            return { converged: true, window_cycles_walked: walked, repeat_window_cycles: walked - earlier.window_cycle_ticks, ...first };
         }
-        if (walked === max_periods) break;
+        if (walked === max_window_cycles) break;
         record = startRecord();
-        seen.set(key, { period: walked, record });
-        for (let position = 0; position < period; position++) {
+        seen.set(key, { window_cycle_ticks: walked, record });
+        for (let position = 0; position < window_cycle_ticks; position++) {
             for (const arm of taker_arms) stepTaker(arm, position);
             for (const arm of filler_arms) stepFiller(arm, position);
             stepMachine(position);
@@ -387,5 +387,5 @@ export function walkMachineStock(input: StockWalkInput): StockWalk {
         kept.push(record);
     }
     const last = kept[kept.length - 1];
-    return { converged: false, periods_walked: max_periods, repeat_periods: 0, ...last };
+    return { converged: false, window_cycles_walked: max_window_cycles, repeat_window_cycles: 0, ...last };
 }

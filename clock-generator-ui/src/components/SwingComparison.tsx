@@ -72,10 +72,10 @@ export function SwingComparison({ data }: { data: SwingComparisonData }) {
     const lanes = groupLanes(data);
     const svgWidth = Math.max(width, MIN_SVG_WIDTH);
     const plotWidth = svgWidth - LABEL_WIDTH - PLOT_PADDING * 2;
-    const x = (tick: number) => LABEL_WIDTH + PLOT_PADDING + (tick / data.period) * plotWidth;
+    const x = (tick: number) => LABEL_WIDTH + PLOT_PADDING + (tick / data.window_cycle_ticks) * plotWidth;
     const height = AXIS_HEIGHT + lanes.length * LANE_HEIGHT;
-    const step = [10, 20, 25, 50, 100, 200].find(it => data.period / it <= 12) ?? 500;
-    const ticks = Array.from({ length: Math.floor(data.period / step) + 1 }, (_, i) => i * step);
+    const step = [10, 20, 25, 50, 100, 200].find(it => data.window_cycle_ticks / it <= 12) ?? 500;
+    const ticks = Array.from({ length: Math.floor(data.window_cycle_ticks / step) + 1 }, (_, i) => i * step);
 
     const planColor = theme.palette.text.secondary;
     const okColor = theme.palette.success.main;

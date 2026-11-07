@@ -20,7 +20,7 @@ export interface CoordinatedSourcesPart {
      */
     strategy?: StrategyRef;
     /** The ticks of its period, the period its windows are of */
-    period_ticks: number;
+    window_cycle_ticks: number;
     windows: SerializableClockWindows;
     /**
      * Whether its own clock's long run was counted as built (the as-built check's wake-ups): a part without a count gives no
@@ -64,9 +64,9 @@ export function collectingParts<T>(work: () => T): { value: T; parts: Coordinate
 }
 
 /** A part's key: its period and its windows, inserter by inserter in the order of their ids */
-export function partKey(part: Pick<CoordinatedSourcesPart, "period_ticks" | "windows">): string {
+export function partKey(part: Pick<CoordinatedSourcesPart, "window_cycle_ticks" | "windows">): string {
     const ids = Object.keys(part.windows).filter(id => part.windows[id].length > 0).sort();
-    return `${part.period_ticks}|${ids.map(id => `${id}:${part.windows[id].map(range => `${range.start}-${range.end}`).join(",")}`).join(";")}`;
+    return `${part.window_cycle_ticks}|${ids.map(id => `${id}:${part.windows[id].map(range => `${range.start}-${range.end}`).join(",")}`).join(";")}`;
 }
 
 /** The strategy of a way: the grouped hands rule makes every way, so each is Round-Robin Polling by the grouped hands construction */

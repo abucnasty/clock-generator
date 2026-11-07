@@ -136,7 +136,7 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
         return null;
     }
 
-    const periodTicks = alternative.simulationDurationTicks;
+    const windowCycleTicks = alternative.simulationDurationTicks;
     // a selection belongs to the clock it was made on, so another clock starts with none
     const selectedRow = selection !== null && selection.alternative === alternative
         ? rows.find(row => row.id === selection.rowId && selection.windowIndex < row.windows.length)
@@ -146,7 +146,7 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
     const mostWakeUpsId = mostWokenRowId(rows);
     const summary = summaryText({
         // a rounded clock's period is the one its blueprint counts, as its label says
-        periodTicks: alternative.roundedPeriodTicks ?? periodTicks,
+        windowCycleTicks: alternative.roundedWindowCycleTicks ?? windowCycleTicks,
         inserters: rows.filter(row => row.kind === 'inserter').length,
         drills: rows.filter(row => row.kind === 'drill').length,
         wakeUps: counted ? alternative.asBuilt?.wake_ups?.wake_ups_per_minute ?? sumWakeUps(rows) : null,
@@ -207,7 +207,7 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
 
             <Box sx={{ mt: 2 }}>
                 {asTable ? (
-                    <WakeWindowsTable rows={rows} periodTicks={periodTicks} mostWakeUpsId={mostWakeUpsId} />
+                    <WakeWindowsTable rows={rows} windowCycleTicks={windowCycleTicks} mostWakeUpsId={mostWakeUpsId} />
                 ) : (
                     <>
                         <Typography id={hintId} variant="caption" color="text.secondary" component="p" sx={{ mb: 1 }}>
@@ -220,7 +220,7 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
                             range={inspection?.range}
                             tick={inspection?.tick}
                             rows={rows}
-                            periodTicks={periodTicks}
+                            windowCycleTicks={windowCycleTicks}
                             selected={selected}
                             onSelect={onSelect}
                             mostWakeUpsId={mostWakeUpsId}

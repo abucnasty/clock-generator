@@ -88,14 +88,14 @@ interface ColdStartControls {
 export const COLD_START_CAP_TICKS = 36_000;
 
 /** What an inserter moved in each period of a held series (the last period cut short where the series ends in it): drops and pickups */
-export function perPeriod(held: number[], period: number) {
-    const periods = Math.ceil(held.length / period);
-    const drops = new Array<number>(periods).fill(0);
-    const pickups = new Array<number>(periods).fill(0);
+export function perWindowCycle(held: number[], window_cycle_ticks: number) {
+    const window_cycles = Math.ceil(held.length / window_cycle_ticks);
+    const drops = new Array<number>(window_cycles).fill(0);
+    const pickups = new Array<number>(window_cycles).fill(0);
     held.forEach((count, tick) => {
         const before = held[tick - 1] ?? 0;
-        drops[Math.floor(tick / period)] += Math.max(0, before - count);
-        pickups[Math.floor(tick / period)] += Math.max(0, count - before);
+        drops[Math.floor(tick / window_cycle_ticks)] += Math.max(0, before - count);
+        pickups[Math.floor(tick / window_cycle_ticks)] += Math.max(0, count - before);
     });
     return {drops, pickups};
 }

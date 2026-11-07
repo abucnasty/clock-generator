@@ -3,12 +3,12 @@ import { Config } from "../config";
 import { Machine } from "../entities";
 
 /** One complete clock period of a recording: the samples from start (inclusive) to end (exclusive) */
-export interface PeriodRange {
+export interface WindowCycleRange {
     start: number;
     end: number;
 }
 
-interface PeriodOutput extends PeriodRange {
+interface WindowCycleOutput extends WindowCycleRange {
     /** Items the output inserters dropped during the period */
     items: number;
 }
@@ -19,7 +19,7 @@ interface PeriodOutput extends PeriodRange {
  * The first sample starts a period only when it holds the lowest value the clock reaches, and the last period is
  * complete only when its last sample holds the highest, so a recording that begins or ends mid-period loses its ends.
  */
-export function clockPeriods(values: number[]): PeriodRange[] {
+export function clockWindowCycles(values: number[]): WindowCycleRange[] {
     if (values.length === 0) {
         return [];
     }
@@ -32,16 +32,16 @@ export function clockPeriods(values: number[]): PeriodRange[] {
             starts.push(i);
         }
     }
-    const periods: PeriodRange[] = [];
+    const window_cycles: WindowCycleRange[] = [];
     for (let i = 0; i < starts.length; i++) {
         const next = starts[i + 1];
         if (next !== undefined) {
-            periods.push({ start: starts[i], end: next });
+            window_cycles.push({ start: starts[i], end: next });
         } else if (values[values.length - 1] === highest) {
-            periods.push({ start: starts[i], end: values.length });
+            window_cycles.push({ start: starts[i], end: values.length });
         }
     }
-    return periods;
+    return window_cycles;
 }
 
 /** The recipes of the config's machines that make the item: a cast recipe is named after the item, with "casting-" in front */
@@ -73,18 +73,18 @@ export function outputInserters(recording: Recording, recipes: Iterable<string>)
  * a drop on the period boundary belongs to the period that starts there. A partial drop into a full sink counts for
  * the items it did move.
  */
-export function outputPerPeriod(recording: Recording, recipes: Iterable<string>): PeriodOutput[] {
+export function outputPerWindowCycle(recording: Recording, recipes: Iterable<string>): WindowCycleOutput[] {
     const inserters = outputInserters(recording, recipes);
-    return clockPeriods(recording.clock?.values ?? []).map(period => {
+    return clockWindowCycles(recording.clock?.values ?? []).map(window_cycle => {
         let items = 0;
         for (const inserter of inserters) {
             const held = inserter.samples.held_count;
-            for (let i = Math.max(period.start, 1); i < period.end; i++) {
+            for (let i = Math.max(window_cycle.start, 1); i < window_cycle.end; i++) {
                 if (held[i] < held[i - 1]) {
                     items += held[i - 1] - held[i];
                 }
             }
         }
-        return { ...period, items };
+        return { ...window_cycle, items };
     });
 }

@@ -3,9 +3,9 @@ import { Recording } from "../verification/recording";
 /** A few lines per recording that show whether the build ran: what each machine finished and each inserter moved */
 export function summarizeRecording(recording: Recording): string[] {
     const lines: string[] = [];
-    const period = recording.clock ? recording.clock.values.reduce((max, value) => Math.max(max, value), 0) + 1 : null;
+    const window_cycle_ticks = recording.clock ? recording.clock.values.reduce((max, value) => Math.max(max, value), 0) + 1 : null;
     lines.push(`${recording.sample_count} ticks from game tick ${recording.start_game_tick}`
-        + (period ? `, clock counts to ${period}` : ", no clock")
+        + (window_cycle_ticks ? `, clock counts to ${window_cycle_ticks}` : ", no clock")
         + (recording.stop_reason ? ` (${recording.stop_reason})` : ""));
 
     for (const machine of recording.machines) {

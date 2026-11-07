@@ -30,14 +30,14 @@ describe("the fuel plan", () => {
     describe("rocket fuel biochambers on a 128 tick clock", () => {
 
         it("gives what each burner machine uses at its planned crafting share", () => {
-            expect(plan.period_ticks).toBe(128);
+            expect(plan.window_cycle_ticks).toBe(128);
             expect(plan.machines.map(machine => machine.machine_id)).toEqual(["machine:1", "machine:2", "machine:3"]);
             for (const machine of plan.machines) {
                 expect(machine.fuel_item).toBe("nutrients");
                 expect(machine.crafting_share).toBeGreaterThan(0.5);
                 expect(machine.crafting_share).toBeLessThan(1);
                 expect(machine.effective_burn_rate_per_second).toBeCloseTo(machine.burn_rate_per_second * machine.crafting_share);
-                expect(machine.burned_per_period).toBeCloseTo(machine.effective_burn_rate_per_second * 128 / 60);
+                expect(machine.burned_per_window_cycle).toBeCloseTo(machine.effective_burn_rate_per_second * 128 / 60);
                 // what the machine burns in 192 ticks at its full energy consumption, rounded up: 11 and 9 nutrients
                 expect(machine.insertion_limit).toBe(machine.machine_id === "machine:2" ? 9 : 11);
                 expect(machine.insertion_limit_lasts_ticks).toBeCloseTo(machine.insertion_limit / machine.effective_burn_rate_per_second * 60);
@@ -79,8 +79,8 @@ describe("the fuel plan", () => {
             expect(fractional.separate_clocks_reason).toBe("fractional_period");
 
             // fuel clocks that share no factor with a long period
-            const long_period = 2 ** 31 - 1;
-            const too_long = fuelPlan(registry, unplannedInserterClocks(registry, 128), new Map(), long_period)!;
+            const long_window_cycle = 2 ** 31 - 1;
+            const too_long = fuelPlan(registry, unplannedInserterClocks(registry, 128), new Map(), long_window_cycle)!;
             expect(too_long.merged_clock_ticks).toBeNull();
             expect(too_long.separate_clocks_reason).toBe("merged_clock_too_long");
         });

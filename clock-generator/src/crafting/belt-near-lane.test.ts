@@ -12,7 +12,7 @@ import { simulatedWakeUpsByStart } from "../verification/simulated-recording";
 // 2; with the lanes of belt 2 swapped it takes the processing units first and each moves 96. The filters of the
 // inserter were the same in both.
 describe("an inserter that picks up from a belt with two items", () => {
-    const PERIOD = 672;
+    const WINDOW_CYCLE = 672;
     const input_windows = [{ start: 37, end: 64 }, { start: 181, end: 197 }, { start: 361, end: 388 }, { start: 517, end: 533 }];
     const windows: SerializableClockWindows = {
         "inserter:3": [{ start: 1, end: 49 }, { start: 169, end: 215 }, { start: 337, end: 373 }, { start: 505, end: 541 }],
@@ -31,21 +31,21 @@ describe("an inserter that picks up from a belt with two items", () => {
 
     /** What inserter 2 takes first in each period, and what the two input inserters move in the last period run */
     const run = (config: Config) => {
-        const periods = 12;
-        const stock = simulateClockOnly(config, windows, PERIOD, periods);
+        const window_cycles = 12;
+        const stock = simulateClockOnly(config, windows, WINDOW_CYCLE, window_cycles);
         const series = (id: number) => stock.inserters.find(s => s.inserter_id === `inserter:${id}`)!;
         const moved = (id: number) => {
             const held = series(id).held;
             let items = 0;
-            for (let tick = (periods - 1) * PERIOD + 1; tick < periods * PERIOD; tick++) {
+            for (let tick = (window_cycles - 1) * WINDOW_CYCLE + 1; tick < window_cycles * WINDOW_CYCLE; tick++) {
                 items += Math.max(0, held[tick - 1] - held[tick]);
             }
             return items;
         };
         const first_items = new Set<string>();
         const { held, held_item } = series(2);
-        for (let period = 1; period < periods; period++) {
-            for (let tick = period * PERIOD; tick < (period + 1) * PERIOD; tick++) {
+        for (let window_cycle_ticks = 1; window_cycle_ticks < window_cycles; window_cycle_ticks++) {
+            for (let tick = window_cycle_ticks * WINDOW_CYCLE; tick < (window_cycle_ticks + 1) * WINDOW_CYCLE; tick++) {
                 if (held[tick] > 0) {
                     first_items.add(held_item[tick]);
                     break;

@@ -30,8 +30,8 @@ function formatCount(value: Fraction): string {
 }
 
 /** The ticks a line gives as the period: the exact period, or for a clock of whole ticks of a fractional period, the whole ticks it counts */
-export function shownPeriodTicks(period_ticks: number, subtick: boolean): string {
-    return subtick || Number.isInteger(period_ticks) ? formatRate(period_ticks) : String(Math.floor(period_ticks));
+export function shownWindowCycleTicks(window_cycle_ticks: number, subtick: boolean): string {
+    return subtick || Number.isInteger(window_cycle_ticks) ? formatRate(window_cycle_ticks) : String(Math.floor(window_cycle_ticks));
 }
 
 const plural = (count: number, word: string) => `${word}${count === 1 ? "" : "s"}`;
@@ -199,21 +199,21 @@ export function plannedDescriptionLines(
     registry: ReadableEntityRegistry,
     item_names: Iterable<string>,
     /** The swings each of the entities makes in a period */
-    swings_a_period: readonly { entity_id: EntityId; swings: Fraction }[],
+    swings_a_window_cycle: readonly { entity_id: EntityId; swings: Fraction }[],
     windows: DeciderWindows,
-    period_text: string,
+    window_cycle_text: string,
 ): string[] {
     const { first, routes } = identityLines(entity_ids, registry, itemIcons(item_names));
     const drill = EntityId.isDrill(entity_ids[0]);
-    const counts = Array.from(new Set(swings_a_period.map(it => it.swings.toDecimal()))).sort((a, b) => a - b);
-    const swings_of = (count: number) => swings_a_period.find(it => it.swings.toDecimal() === count)!.swings;
+    const counts = Array.from(new Set(swings_a_window_cycle.map(it => it.swings.toDecimal()))).sort((a, b) => a - b);
+    const swings_of = (count: number) => swings_a_window_cycle.find(it => it.swings.toDecimal() === count)!.swings;
     const count_text = (swings: Fraction) => formatCount(drill ? swings.multiply(DRILL_ITEMS_PER_SWING) : swings);
     let what: string;
     if (counts.length > 1) {
         // inserters or drills that share the window but move different numbers: the range, then each number by who moves it
         const noun = drill ? "drill" : "inserter";
         const by_count = counts.map(count => {
-            const numbers = swings_a_period.filter(it => it.swings.toDecimal() === count).map(it => it.entity_id.number).sort((a, b) => a - b);
+            const numbers = swings_a_window_cycle.filter(it => it.swings.toDecimal() === count).map(it => it.entity_id.number).sort((a, b) => a - b);
             return `${plural(numbers.length, noun)} ${numbers.join(", ")}: ${count_text(swings_of(count))}`;
         });
         const [lowest, highest] = [count_text(swings_of(counts[0])), count_text(swings_of(counts[counts.length - 1]))];
@@ -225,7 +225,7 @@ export function plannedDescriptionLines(
     }
     return [
         first,
-        `${what} in ${windowsText(windows, period_text)}`,
+        `${what} in ${windowsText(windows, window_cycle_text)}`,
         ...unusualWindowLines(windows),
         ...routes,
     ];
@@ -236,12 +236,12 @@ export function plannedDescriptionLines(
  * line, so the numbers are not read as ticks: "1 window per 886.154-tick period: open 4486–4499 (in 1/13 ticks)", or
  * "19 windows per 886.154-tick period; windows in 1/13 ticks" when they are too many to list.
  */
-function windowsText(windows: DeciderWindows, period_text: string): string {
+function windowsText(windows: DeciderWindows, window_cycle_text: string): string {
     const unit = windows.subtick_scale ? `in 1/${windows.subtick_scale} ticks` : null;
     const listed = windows.listed === null
         ? unit === null ? "" : `; windows ${unit}`
         : `: open ${windows.listed.map(rangeText).join(", ")}${unit === null ? "" : ` (${unit})`}`;
-    return `${windows.count} ${plural(windows.count, "window")} per ${period_text}-tick period${listed}`;
+    return `${windows.count} ${plural(windows.count, "window")} per ${window_cycle_text}-tick period${listed}`;
 }
 
 /** What a decider's windows say beyond when they open: a repeat on a modulo of the clock */
@@ -273,13 +273,13 @@ export function chestDrillDescriptionLines(
     registry: ReadableEntityRegistry,
     item_names: Iterable<string>,
     windows: DeciderWindows,
-    period_text: string,
+    window_cycle_text: string,
 ): string[] {
     const { first, routes } = identityLines(drill_ids, registry, itemIcons(item_names));
     const sink = sinkOfDrills(drill_ids, registry);
     return [
         first,
-        `Tops ${sink ?? "each drill's container"} up just in time, ${windowsText(windows, period_text)}`,
+        `Tops ${sink ?? "each drill's container"} up just in time, ${windowsText(windows, window_cycle_text)}`,
         ...unusualWindowLines(windows),
         `Not counted as swings: opens just before the inserters take from ${sink ?? "it"}`,
         ...routes,
@@ -322,8 +322,8 @@ export function unplannedDescriptionLines(
  * the ticks of its turn, as the clock counts them (the windows' own numbers, so a turn that runs over the end of the period is two):
  * "Group 2 of 2: takes its turn in ticks 57–100 of the 112-tick period. Its combinators stand together, in the order of the turn."
  */
-export function turnLine(group: number, groups: number, turn: OpenRange[], period_text: string): string {
-    return `Group ${group} of ${groups}: takes its turn in ticks ${turn.map(rangeText).join(" and ")} of the ${period_text}-tick period. `
+export function turnLine(group: number, groups: number, turn: OpenRange[], window_cycle_text: string): string {
+    return `Group ${group} of ${groups}: takes its turn in ticks ${turn.map(rangeText).join(" and ")} of the ${window_cycle_text}-tick period. `
         + "Its combinators stand together, in the order of the turn.";
 }
 
@@ -347,7 +347,7 @@ export function clockDescriptionLines(args: {
     item_name: string;
     items_per_second: number;
     copies: number;
-    period_text: string;
+    window_cycle_text: string;
     drills: boolean;
     /** The config's inserters and drills that no combinator switches on */
     not_clocked: { inserters: number[]; drills: number[] };
@@ -357,7 +357,7 @@ export function clockDescriptionLines(args: {
         ? `${formatRate(args.items_per_second)}/s`
         : `${formatRate(args.items_per_second)}/s over ${formatRate(args.copies)} copies (${formatRate(args.items_per_second / args.copies)}/s each)`;
     const lines = [
-        `Clock for ${item} ${rate}. ${args.period_text}`,
+        `Clock for ${item} ${rate}. ${args.window_cycle_text}`,
         `Wire every other combinator's output to the ${args.drills ? "inserters and drills" : "inserters"} it names${args.copies > 1 ? ", in every copy" : ""}; set them Enable if Anything > 0${args.drills ? ", drills with Read resources off" : ""}`,
     ];
     const not_clocked = idsText(args.not_clocked.inserters, args.not_clocked.drills);

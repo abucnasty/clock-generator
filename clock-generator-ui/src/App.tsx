@@ -445,15 +445,15 @@ function App() {
     const timingClock = generatedFor !== null && !resultsAreStale ? selectedClock ?? null : null;
     const checkedPlan = validation.status === 'valid' && checkStatus === 'valid' ? validation.validation : null;
     const checkedCycle = checkedPlan?.cycle_ticks ?? null;
-    const checkedPeriod = checkedPlan?.period_ticks ?? null;
+    const checkedWindowCycle = checkedPlan?.window_cycle_ticks ?? null;
     const ruleTiming = useMemo(
         () => ruleTimingOf({
             results: timingClock
-                ? { cycleTicks: timingClock.cycleTicks, periodTicks: timingClock.simulationDurationTicks, windows: timingClock.clockWindows }
+                ? { cycleTicks: timingClock.cycleTicks, windowCycleTicks: timingClock.simulationDurationTicks, windows: timingClock.clockWindows }
                 : null,
-            check: checkedCycle !== null && checkedPeriod !== null ? { cycleTicks: checkedCycle, periodTicks: checkedPeriod } : null,
+            check: checkedCycle !== null && checkedWindowCycle !== null ? { cycleTicks: checkedCycle, windowCycleTicks: checkedWindowCycle } : null,
         }),
-        [timingClock, checkedCycle, checkedPeriod],
+        [timingClock, checkedCycle, checkedWindowCycle],
     );
 
     // one copy for every Copy button: the bar's, the card's and the string's

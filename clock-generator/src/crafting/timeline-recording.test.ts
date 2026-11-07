@@ -15,10 +15,10 @@ beforeAll(async () => { config = await loadConfigFromFile(ConfigPaths.ELECTROMAG
 
 describe('optional timeline observer', () => {
     it('rejects an exact clock tick outside the existing warm-up budget instead of silently replaying an earlier tick', () => {
-        const period_ticks = Math.floor(SIMULATION_BUDGET_TICKS / 2) + 1;
+        const window_cycle_ticks = Math.floor(SIMULATION_BUDGET_TICKS / 2) + 1;
         // Below the absolute ceiling but past the one whole period the existing budget permits.
-        expect(() => recordSimulationTimeline({config, mode: 'clock', period_ticks,
-            terminal_swing_count: 2, windows: {}, settle_ticks: period_ticks + 1}))
+        expect(() => recordSimulationTimeline({config, mode: 'clock', window_cycle_ticks,
+            terminal_swing_count: 2, windows: {}, settle_ticks: window_cycle_ticks + 1}))
             .toThrow('This clock period cannot be recorded safely.');
     });
     it('records baseline values without inventing warm-up events, and exact partial drops with the previous hand item', () => {
@@ -26,7 +26,7 @@ describe('optional timeline observer', () => {
         const state = context.inserters[0].inserter_state;
         state.items_picked_up = 200; state.items_dropped = 190;
         state.held_item = { item_name: 'electromagnetic-science-pack', quantity: 10 };
-        const recorder = new TimelineRecorder(context, { period_ticks: 20 });
+        const recorder = new TimelineRecorder(context, { window_cycle_ticks: 20 });
         const initial = recorder.recording('clock', 20, 100, 11);
         expect(initial.events).toEqual([]);
         expect(initial.entities.find(e => e.id === state.entity_id.id)?.signals.find(s => s.id === 'hand')).toMatchObject({ ticks: [0], values: [10] });
@@ -46,7 +46,7 @@ describe('optional timeline observer', () => {
         const context = SimulationContext.fromConfig(config);
         const state = context.machines[0].machine_state;
         state.craftCount = 10; state.productsFinished = 12; state.totalCrafted = 300;
-        const recorder = new TimelineRecorder(context, { period_ticks: 20 });
+        const recorder = new TimelineRecorder(context, { window_cycle_ticks: 20 });
         state.craftsStarted += 1; state.craftCount += 1; state.productsFinished += 3; state.totalCrafted += 9;
         recorder.record();
         expect(recorder.recording('plan', 20, 0, 1).events).toEqual([
@@ -63,46 +63,46 @@ describe('optional timeline observer', () => {
         // the Ingress's views and "until written" memos mirror the inventories: caches, which an ask may fill
         const simulationState = () => JSON.stringify(state, (key, value) => key === 'ingress' ? undefined : value);
         const before = simulationState();
-        const recorder = new TimelineRecorder(context, { period_ticks: 20, max_ticks: 2 });
+        const recorder = new TimelineRecorder(context, { window_cycle_ticks: 20, max_ticks: 2 });
         for (let tick = 0; tick < 5; tick++) recorder.record();
         expect(recorder.recording('clock', 20, 0, 1)).toMatchObject({ end_tick: 2, truncated: true });
         expect(simulationState()).toBe(before);
-        const bounded = new TimelineRecorder(context, { period_ticks: 20, max_points: 1 });
+        const bounded = new TimelineRecorder(context, { window_cycle_ticks: 20, max_points: 1 });
         bounded.record();
         expect(bounded.recording('clock', 20, 0, 1)).toMatchObject({ end_tick: 0, truncated: true });
     });
 
     it('does not change the normal run or its histories and records the requested period on demand', () => {
         const plain = runBuild(config, { logger: quiet });
-        const detailed = runBuild(config, { logger: quiet, timeline_recording: { period_ticks: plain.duration.ticks } });
+        const detailed = runBuild(config, { logger: quiet, timeline_recording: { window_cycle_ticks: plain.duration.ticks } });
         expect(plain.timeline_recording).toBeUndefined();
         expect(trialRunOf(detailed).serializable_transfer_history).toEqual(trialRunOf(plain).serializable_transfer_history);
         expect(expandStateTransitionHistory(trialRunOf(detailed).serializable_state_transition_history))
             .toEqual(expandStateTransitionHistory(trialRunOf(plain).serializable_state_transition_history));
         const before = JSON.stringify(config);
-        const request = { config, mode: 'clock' as const, period_ticks: plain.duration.ticks,
+        const request = { config, mode: 'clock' as const, window_cycle_ticks: plain.duration.ticks,
             terminal_swing_count: 2, windows: {} };
         const recorded = recordSimulationTimeline(request);
-        expect(recorded.end_tick).toBe(request.period_ticks);
+        expect(recorded.end_tick).toBe(request.window_cycle_ticks);
         expect(recorded.events.some(event => event.kind === 'drop' && event.amount > 0 && event.item)).toBe(true);
         expect(recorded.entities.find(e => e.id === 'machine:1')?.signals.find(s => s.id === 'input:accumulator')?.ticks[0]).toBe(0);
         expect(recorded.ticks_before_recording).toBeGreaterThan(0);
         expect(JSON.stringify(config)).toBe(before);
-        expect(() => recordSimulationTimeline({ ...request, period_ticks: 0 })).toThrow('cannot be recorded');
+        expect(() => recordSimulationTimeline({ ...request, window_cycle_ticks: 0 })).toThrow('cannot be recorded');
     });
 
     it('records a settled period when asked for periods from the cold start, and the first one after the warm-up when not', () => {
-        const period_ticks = runBuild(config, { logger: quiet }).duration.ticks;
-        const request = { config, mode: 'clock' as const, period_ticks, terminal_swing_count: 2, windows: {} };
+        const window_cycle_ticks = runBuild(config, { logger: quiet }).duration.ticks;
+        const request = { config, mode: 'clock' as const, window_cycle_ticks, terminal_swing_count: 2, windows: {} };
         const first = recordSimulationTimeline(request);
         // fewer periods than the warm-up already runs change nothing
-        expect(recordSimulationTimeline({ ...request, settle_periods: 3 })).toEqual(first);
-        const settled = recordSimulationTimeline({ ...request, settle_periods: 25 });
-        expect(settled).toMatchObject({ end_tick: period_ticks, ticks_before_recording: 25 * period_ticks });
-        expect(first.ticks_before_recording).toBe(10 * period_ticks);
+        expect(recordSimulationTimeline({ ...request, settle_window_cycles: 3 })).toEqual(first);
+        const settled = recordSimulationTimeline({ ...request, settle_window_cycles: 25 });
+        expect(settled).toMatchObject({ end_tick: window_cycle_ticks, ticks_before_recording: 25 * window_cycle_ticks });
+        expect(first.ticks_before_recording).toBe(10 * window_cycle_ticks);
         // the plan run is of the planning controls: it is never settled
         const plan = recordSimulationTimeline({ ...request, mode: 'plan' });
-        expect(recordSimulationTimeline({ ...request, mode: 'plan', settle_periods: 25 })).toEqual(plan);
+        expect(recordSimulationTimeline({ ...request, mode: 'plan', settle_window_cycles: 25 })).toEqual(plan);
     });
 });
 
@@ -112,7 +112,7 @@ it('records real burner inventory and energy while replaying the saved independe
     const clocks = Object.fromEntries([...planned.inserter_clocks].map(([id, clock]) => [id, {
         ...clock, window: { start: clock.window.start_inclusive, end: clock.window.end_inclusive },
     }]));
-    const recording = recordSimulationTimeline({ config: fuelConfig, mode: 'clock', period_ticks: planned.duration.ticks,
+    const recording = recordSimulationTimeline({ config: fuelConfig, mode: 'clock', window_cycle_ticks: planned.duration.ticks,
         terminal_swing_count: planned.used_terminal_swing_count, windows: {}, inserter_clocks: clocks });
     const machine = recording.entities.find(entity => entity.type === 'machine' && entity.signals.some(signal => signal.id === 'fuel'))!;
     expect(machine.signals.find(signal => signal.id === 'fuel')?.unit).toBe('items');

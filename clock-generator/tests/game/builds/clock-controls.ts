@@ -263,10 +263,10 @@ export function pinMismatches(cases: Record<string, ClockControl>, untied: reado
             continue;
         }
         // a run keeps its target to a millionth (34.285714 for 240/7): its output a period is the pin's to a thousandth
-        const perPeriod = isRunSummary(control.native) ? Math.round(control.native.target * control.native.period / 60 * 1e3) / 1e3 : control.native.expected;
+        const perWindowCycle = isRunSummary(control.native) ? Math.round(control.native.target * control.native.period / 60 * 1e3) / 1e3 : control.native.expected;
         const pinned = isRunSummary(control.native) ? Math.round(generation.expected * 1e3) / 1e3 : generation.expected;
-        if (perPeriod !== pinned || control.native.period !== generation.period) {
-            found.push(`${name}: the native summary (period ${control.native.period}, expected ${perPeriod} a period) and the pin (${generation.period}, ${generation.expected}) are of different clocks`);
+        if (perWindowCycle !== pinned || control.native.period !== generation.period) {
+            found.push(`${name}: the native summary (period ${control.native.period}, expected ${perWindowCycle} a period) and the pin (${generation.period}, ${generation.expected}) are of different clocks`);
         }
         if (recorded.clock_sha256 !== generation.clock_sha256) {
             found.push(`${name}: the pin names clock ${generation.clock_sha256.slice(0, 12)} and the native summary was recorded on ${recorded.clock_sha256.slice(0, 12)}: record it again in the game (recorded.clock_sha256)`);
@@ -382,8 +382,8 @@ export function recordMismatches(cases: Record<string, ClockControl>, link: Reco
         if (alternative.clock_sha256 !== pin.clock_sha256) {
             found.push(`${name}: the pin names clock ${pin.clock_sha256.slice(0, 12)} and ${where} makes ${alternative.clock_sha256.slice(0, 12)}: the generation moved, so the game recording is of another clock`);
         }
-        const shape = (period: number, verdict: string, selection: GenerationPin["selection"]) =>
-            ({period, verdict, selection: {id: selection.id, holds: selection.holds, rate: selection.rate, supply: selection.supply}});
+        const shape = (window_cycle_ticks: number, verdict: string, selection: GenerationPin["selection"]) =>
+            ({period: window_cycle_ticks, verdict, selection: {id: selection.id, holds: selection.holds, rate: selection.rate, supply: selection.supply}});
         const asPinned = shape(alternative.period, alternative.verdict, alternative);
         const pinned = shape(pin.period, pin.verdict, pin.selection);
         if (JSON.stringify(asPinned) !== JSON.stringify(pinned)) found.push(`${name}: the pin (${JSON.stringify(pinned)}) and ${where} (${JSON.stringify(asPinned)}) differ`);

@@ -4,7 +4,7 @@ import {clockFromWindows, runClockOnBuild} from "../../../src/crafting/trial";
 import {OpenRange} from "../../../src/data-types";
 import {clockHash, readControls} from "./clock-controls";
 import {reversedDeciders} from "./reversed-deciders";
-import {coldStart as controls, configOf, perPeriod, physicalColdClockOf} from "./pickup-clock-cold-start-runs";
+import {coldStart as controls, configOf, perWindowCycle, physicalColdClockOf} from "./pickup-clock-cold-start-runs";
 
 /**
  * The clocked cold starts (`pickup-clock-start-controls.json`, `cold_start`: the turbo runs, each recorded from placement until
@@ -48,7 +48,7 @@ describe("clocked cold starts from placement", () => {
         const runConfig = physical ? config : {...config, overrides: {...config.overrides, terminal_swing_count: clock.terminal_swings}};
         const result = runClockOnBuild(runConfig,
             windows, clock.period, quiet, {
-                cold_start: true, warmup_periods: 0, simulate_periods: Math.ceil(run.ticks / clock.period), machine_stock: true, factorio_states: false,
+                cold_start: true, warmup_window_cycles: 0, simulate_window_cycles: Math.ceil(run.ticks / clock.period), machine_stock: true, factorio_states: false,
                 decider_order: run.decider_order,
                 ...(run.model_phases && {moving_pickup_phases: new Map([["inserter:2", run.model_phases]])}),
             });
@@ -56,10 +56,10 @@ describe("clocked cold starts from placement", () => {
         const ticks = run.ticks - controls.frame_offset;
         const output = inserters.find(it => it.inserter_id === "inserter:1")!.held.slice(0, ticks);
         const input = inserters.find(it => it.inserter_id === "inserter:2")!.held.slice(0, ticks);
-        expect(perPeriod(output, clock.period).drops, "output per period").toEqual(run.output);
+        expect(perWindowCycle(output, clock.period).drops, "output per period").toEqual(run.output);
         expect(sha(output), "output inserter held, tick for tick").toBe(run.output_held_sha256);
         if (KNOWN_INPUT_DIFFERENCES[name] !== undefined) return;
-        expect(perPeriod(input, clock.period).pickups, "input pickups per period").toEqual(run.pickups);
+        expect(perWindowCycle(input, clock.period).pickups, "input pickups per period").toEqual(run.pickups);
         expect(sha(input), "input inserter held, tick for tick").toBe(run.input_held_sha256);
     });
 });

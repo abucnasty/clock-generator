@@ -17,9 +17,9 @@ describe("the ticks of a whole number of crafting cycles", () => {
     it("leave a period that is a fraction of a tick as it is", () => {
         // iron bacteria: 3 cycles of 576/19 ticks are 1728/19, 90.947 ticks
         const cycle = { total_duration_ticks: fraction(576, 19) };
-        const period = OutputCyclePlan.ticksOfCycles(cycle, 3);
-        expect(Number.isInteger(period)).toBe(false);
-        expect(period).toBeCloseTo(1728 / 19, 12);
+        const window_cycle_ticks = OutputCyclePlan.ticksOfCycles(cycle, 3);
+        expect(Number.isInteger(window_cycle_ticks)).toBe(false);
+        expect(window_cycle_ticks).toBeCloseTo(1728 / 19, 12);
         // and 19 of those periods are the 1728 whole ticks its subtick clock counts
         expect(OutputCyclePlan.ticksOfCycles(cycle, 57)).toBe(1728);
         // metallurgic science: thirds

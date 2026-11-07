@@ -48,7 +48,7 @@ export function SelectedClockContext({ selected, detail, onDetailChange, timelin
                 {modeledDetails(selected, itemLabel).map(line => <Typography key={line} variant="body2" sx={{ mt: 1 }}>{line}</Typography>)}
                 <Typography variant="body2" sx={{ mt: 1 }}>{phaseChecksText(selected.asBuilt?.start_phases_checked)}</Typography>
                 {selected.assessment.start_dependence?.starts.map(start => <Typography key={start.id} variant="body2" sx={{ mt: 0.5 }}>
-                    {start.label}: {start.reaches_target ? 'reaches target' : 'does not reach target'}{start.output_items_per_period === null ? '; steady-state rate unavailable' : `; ${formatNumberText(start.output_items_per_period)} items per window cycle`}.
+                    {start.label}: {start.reaches_target ? 'reaches target' : 'does not reach target'}{start.output_items_per_window_cycle === null ? '; steady-state rate unavailable' : `; ${formatNumberText(start.output_items_per_window_cycle)} items per window cycle`}.
                 </Typography>)}
                 <Typography variant="body2" sx={{ mt: 1 }}>{START_LIMITS}</Typography>
                 {assumptions}

@@ -471,7 +471,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             const stage = searches.length > 0 ? searches : generation.waiting;
             generation.waiting = generation.waiting.filter(task => !stage.includes(task));
             const run = searches.length > 0
-                ? searchesToRun(generation.runs, it => it.ranking, stage, generation.context!.period_ticks)
+                ? searchesToRun(generation.runs, it => it.ranking, stage, generation.context!.window_cycle_ticks)
                 : searchesAreNeeded(generation.runs, it => it.ranking) ? stage : [];
             generation.queue = orderAlternativeTasks(run);
             generation.skipped = [...generation.skipped, ...stage.filter(task => !run.includes(task))];

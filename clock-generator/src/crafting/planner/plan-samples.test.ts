@@ -3,8 +3,8 @@ import path from "path";
 import { describe, expect, it } from "vitest";
 import { ConfigPaths } from "../../config/config-paths";
 import type { PlanComposition } from "../../data-types/build-plan";
-import { SIMULATION_BUDGET_TICKS } from "../plan/clock-period-limit";
-import { wholeSwingPeriodsBelow } from "../whole-swing-periods";
+import { SIMULATION_BUDGET_TICKS } from "../plan/clock-window-cycle-limit";
+import { wholeSwingWindowCyclesBelow } from "../whole-swing-window-cycles";
 import { planOfSample } from "./plan-test-helpers";
 import { planSnapshotOf } from "./snapshot";
 
@@ -13,8 +13,8 @@ const SNAPSHOTS = path.join(__dirname, "__snapshots__");
 const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
 
 /** The period of the planning run's own count: the first tried where the planned one is over the limit */
-const plannedPeriodOf = (composition: PlanComposition): number => composition.over_limit_action.action === "none"
-    ? composition.main_period.ticks : composition.over_limit_action.terms.tried[0].period_ticks;
+const plannedWindowCycleOf = (composition: PlanComposition): number => composition.over_limit_action.action === "none"
+    ? composition.main_window_cycle.ticks : composition.over_limit_action.terms.tried[0].window_cycle_ticks;
 
 describe("the build plan", () => {
     describe.each(Object.entries(ConfigPaths))("of %s", (key, file) => {
@@ -38,7 +38,7 @@ describe("the build plan", () => {
             expect(validation).not.toBeNull();
             const composition = plan.composition!;
             // the planning run's period and lcm, as validating the config makes them
-            expect(plannedPeriodOf(composition)).toBe(validation!.period_ticks);
+            expect(plannedWindowCycleOf(composition)).toBe(validation!.window_cycle_ticks);
             if (composition.over_limit_action.action === "none") {
                 expect(composition.lcm_terms.effective_lcm).toBe(validation!.used_lcm);
             }
@@ -47,10 +47,10 @@ describe("the build plan", () => {
             expect(cycles).toBe(composition.lcm_terms.computed_lcm);
             // a period over the limit backs off to the count today's whole-swing arithmetic finds
             if (composition.over_limit_action.action === "swing-backoff") {
-                const below = [...wholeSwingPeriodsBelow({ config_json: JSON.stringify(config), terminal_swing_count: composition.over_limit_action.terms.requested_swings },
+                const below = [...wholeSwingWindowCyclesBelow({ config_json: JSON.stringify(config), terminal_swing_count: composition.over_limit_action.terms.requested_swings },
                     SIMULATION_BUDGET_TICKS)];
-                const found = below.find(period => period.period_ticks < SIMULATION_BUDGET_TICKS)!;
-                expect([composition.swings, composition.main_period.ticks]).toEqual([found.terminal_swing_count, found.period_ticks]);
+                const found = below.find(window_cycle => window_cycle.window_cycle_ticks < SIMULATION_BUDGET_TICKS)!;
+                expect([composition.swings, composition.main_window_cycle.ticks]).toEqual([found.terminal_swing_count, found.window_cycle_ticks]);
             }
         });
     });

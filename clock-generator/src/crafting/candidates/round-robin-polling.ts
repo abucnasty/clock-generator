@@ -85,17 +85,17 @@ function refuse(reason: string): never {
 }
 
 /** The ticks of `ticks` long from `start` in a period, as ranges that end inside it */
-function windowFrom(start: number, ticks: number, period: number): OpenRange[] {
-    const first = ((start % period) + period) % period;
+function windowFrom(start: number, ticks: number, window_cycle_ticks: number): OpenRange[] {
+    const first = ((start % window_cycle_ticks) + window_cycle_ticks) % window_cycle_ticks;
     const last = first + ticks - 1;
-    return last < period ? [OpenRange.from(first, last)] : [OpenRange.from(first, period - 1), OpenRange.from(0, last - period)];
+    return last < window_cycle_ticks ? [OpenRange.from(first, last)] : [OpenRange.from(first, window_cycle_ticks - 1), OpenRange.from(0, last - window_cycle_ticks)];
 }
 
 /**
  * The windows of the takers that open on the same tick made one: the earliest start and the latest end any of them needs,
  * which is the longest window from that tick. The takers that are left open all period have none to share.
  */
-function sharedWindows(windows: Map<string, OpenRange[]>, takers: Taker[], period: number): void {
+function sharedWindows(windows: Map<string, OpenRange[]>, takers: Taker[], window_cycle_ticks: number): void {
     const open = new Map<string, { ticks: number; ids: string[] }>();
     for (const taker of takers) {
         const ranges = windows.get(taker.inserter.entity_id.id);
@@ -107,7 +107,7 @@ function sharedWindows(windows: Map<string, OpenRange[]>, takers: Taker[], perio
         open.set(key, known);
     }
     for (const [key, { ticks, ids }] of open) {
-        for (const id of ids) windows.set(id, windowFrom(Number(key), ticks, period));
+        for (const id of ids) windows.set(id, windowFrom(Number(key), ticks, window_cycle_ticks));
     }
 }
 
@@ -124,7 +124,7 @@ function sharedWindows(windows: Map<string, OpenRange[]>, takers: Taker[], perio
  * period (Factorio 2.1.21, the original #100 scaffold: 93 against 94 supercapacitors in 16 periods). The groups that take
  * turns are returned, each in the order of its turns, for the check that every turn has room (`turnsWithoutRoom`).
  */
-function chainTurns(entity_registry: ReadableEntityRegistry, windows: Map<string, OpenRange[]>, takers: readonly Taker[], period: number,
+function chainTurns(entity_registry: ReadableEntityRegistry, windows: Map<string, OpenRange[]>, takers: readonly Taker[], window_cycle_ticks: number,
     hands_out: readonly Inserter[] = [], log?: (line: string) => void): TurnedTakers[] {
     const turned: TurnedTakers[] = [];
     const contested = new Map<string, { machine: Machine; item: string; recipe: string; takers: Taker[] }>();
@@ -144,12 +144,12 @@ function chainTurns(entity_registry: ReadableEntityRegistry, windows: Map<string
     for (const { machine, item, recipe, takers: group } of contested.values()) {
         if (group.length < 2) continue;
         const ranges = group.map(taker => windows.get(taker.inserter.entity_id.id)!);
-        const enabled = new Uint8Array(period);
+        const enabled = new Uint8Array(window_cycle_ticks);
         let together = false;
         for (const taker_ranges of ranges) {
-            const own = new Uint8Array(period);
+            const own = new Uint8Array(window_cycle_ticks);
             for (const range of taker_ranges) for (let tick = range.start_inclusive; tick <= range.end_inclusive; tick++) own[tick] = 1;
-            for (let tick = 0; tick < period; tick++) {
+            for (let tick = 0; tick < window_cycle_ticks; tick++) {
                 if (own[tick] === 1 && enabled[tick] === 1) together = true;
                 enabled[tick] |= own[tick];
             }
@@ -160,10 +160,10 @@ function chainTurns(entity_registry: ReadableEntityRegistry, windows: Map<string
         const other_draw = log === undefined ? undefined : {
             per_tick: takers.filter(it => it.drain !== true && it.source.id === machine.entity_id.id && EntityId.isMachine(it.sink)
                 && (entity_registry.getEntityByIdOrThrow(it.sink) as Machine).metadata.recipe.name !== recipe)
-                .reduce((sum, it) => sum + (it.items_of.get(item) ?? 0), 0) / period,
+                .reduce((sum, it) => sum + (it.items_of.get(item) ?? 0), 0) / window_cycle_ticks,
             log,
         };
-        const offsets = turnOffsets(machine, item, ordered.map(taker => [taker.inserter]), period, Math.max(...group.map(taker => taker.window_ticks)), other_draw);
+        const offsets = turnOffsets(machine, item, ordered.map(taker => [taker.inserter]), window_cycle_ticks, Math.max(...group.map(taker => taker.window_ticks)), other_draw);
         if (offsets === null) continue;
         const first = windows.get(ordered[0].inserter.entity_id.id)![0].start_inclusive;
         const moved = new Set<string>();
@@ -171,12 +171,12 @@ function chainTurns(entity_registry: ReadableEntityRegistry, windows: Map<string
             if (turn === 0) return;
             const id = taker.inserter.entity_id.id;
             const shift = first + offsets[turn] - windows.get(id)![0].start_inclusive;
-            windows.set(id, windowFrom(first + offsets[turn], taker.window_ticks, period));
+            windows.set(id, windowFrom(first + offsets[turn], taker.window_ticks, window_cycle_ticks));
             if (moved.has(taker.sink.id)) return;
             moved.add(taker.sink.id);
             for (const out of hands_out) {
                 const ranges = windows.get(out.entity_id.id);
-                if (out.source.entity_id.id === taker.sink.id && ranges !== undefined) windows.set(out.entity_id.id, shiftedWindows(ranges, shift, period));
+                if (out.source.entity_id.id === taker.sink.id && ranges !== undefined) windows.set(out.entity_id.id, shiftedWindows(ranges, shift, window_cycle_ticks));
             }
         });
         turned.push({ item, takers: ordered });
@@ -191,8 +191,8 @@ interface TurnedTakers {
 }
 
 /** The tick a window opens: the start of its range that no other range of it runs into (a window may wrap the period) */
-function openingTick(ranges: readonly OpenRange[], period: number): number {
-    return (ranges.find(range => !ranges.some(other => (other.end_inclusive + 1) % period === range.start_inclusive)) ?? ranges[0]).start_inclusive;
+function openingTick(ranges: readonly OpenRange[], window_cycle_ticks: number): number {
+    return (ranges.find(range => !ranges.some(other => (other.end_inclusive + 1) % window_cycle_ticks === range.start_inclusive)) ?? ranges[0]).start_inclusive;
 }
 
 /**
@@ -200,8 +200,8 @@ function openingTick(ranges: readonly OpenRange[], period: number): number {
  * in the ticks since the last hand out of it started (`hand_starts`, ticks in the period): what its last output window left
  * after that hand, and what it made since the window closed. A hand out takes what the machine made since the hand before.
  */
-export function heldAtTurn(machine: Machine, turn_start: number, hand_starts: readonly number[], period: number): number {
-    const since = Math.min(...hand_starts.map(start => (((turn_start - start) % period) + period) % period));
+export function heldAtTurn(machine: Machine, turn_start: number, hand_starts: readonly number[], window_cycle_ticks: number): number {
+    const since = Math.min(...hand_starts.map(start => (((turn_start - start) % window_cycle_ticks) + window_cycle_ticks) % window_cycle_ticks));
     return machine.output.production_rate.amount_per_tick.toDecimal() * since;
 }
 
@@ -220,7 +220,7 @@ export function roomAtTurn(machine: Machine, held: number): boolean {
  * enabled all the time, or placed straight into the next machine) holds none of it.
  */
 function turnsWithoutRoom(entity_registry: ReadableEntityRegistry, windows: ReadonlyMap<string, OpenRange[]>, turned: readonly TurnedTakers[],
-    hands_out: ReadonlyMap<Inserter, number>, period: number): string[] {
+    hands_out: ReadonlyMap<Inserter, number>, window_cycle_ticks: number): string[] {
     const reasons: string[] = [];
     for (const { item: taken, takers } of turned) for (const taker of takers) {
         const machine = entity_registry.getEntityByIdOrThrow(taker.sink) as Machine;
@@ -231,11 +231,11 @@ function turnsWithoutRoom(entity_registry: ReadableEntityRegistry, windows: Read
             if (out.source.entity_id.id !== taker.sink.id) continue;
             const out_ranges = windows.get(out.entity_id.id);
             if (out_ranges === undefined) { always = true; continue; }
-            const opens = openingTick(out_ranges, period);
-            for (let hand = 0; hand < hands; hand++) hand_starts.push((opens + hand * out.animation.total.ticks) % period);
+            const opens = openingTick(out_ranges, window_cycle_ticks);
+            for (let hand = 0; hand < hands; hand++) hand_starts.push((opens + hand * out.animation.total.ticks) % window_cycle_ticks);
         }
         if (ranges === undefined || always || hand_starts.length === 0) continue;
-        const held = heldAtTurn(machine, openingTick(ranges, period), hand_starts, period);
+        const held = heldAtTurn(machine, openingTick(ranges, window_cycle_ticks), hand_starts, window_cycle_ticks);
         if (roomAtTurn(machine, held)) continue;
         const item = machine.output.item_name;
         reasons.push(`${taker.sink.id} would still hold about ${Math.round(held * 10) / 10} ${item} when its turn to take `
@@ -246,9 +246,9 @@ function turnsWithoutRoom(entity_registry: ReadableEntityRegistry, windows: Read
 }
 
 /** The windows moved `ticks` later in the period (earlier when negative) */
-function shiftedWindows(ranges: OpenRange[], ticks: number, period: number): OpenRange[] {
+function shiftedWindows(ranges: OpenRange[], ticks: number, window_cycle_ticks: number): OpenRange[] {
     return OpenRange.reduceRanges(ranges.flatMap(range =>
-        windowFrom(range.start_inclusive + ticks, range.end_inclusive - range.start_inclusive + 1, period)));
+        windowFrom(range.start_inclusive + ticks, range.end_inclusive - range.start_inclusive + 1, window_cycle_ticks)));
 }
 
 /**
@@ -356,14 +356,14 @@ export function roundRobinPollingWindows(
     entity_registry: ReadableEntityRegistry,
     swing_counts: EntityTransferCountMap,
     recipe_lcm: number,
-    period: number,
+    window_cycle_ticks: number,
     /** Whether a window that picks up from a belt has the belt pickup slack (a clock for a moving belt); not on backed-up belts */
     with_belt_slack: boolean = true,
     options: RoundRobinPollingOptions = DEFAULT_OPTIONS,
     /** Where the output inserters stand on a shared belt: among groupings that serve the sources equally, the one whose hands fit on the belt */
     drop_tie_break: DropTieBreak | null = null,
 ): Map<string, OpenRange[]> {
-    return roundRobinPollingPlan(entity_registry, swing_counts, recipe_lcm, period, with_belt_slack, options, drop_tie_break).windows;
+    return roundRobinPollingPlan(entity_registry, swing_counts, recipe_lcm, window_cycle_ticks, with_belt_slack, options, drop_tie_break).windows;
 }
 
 /** The windows of `roundRobinPollingWindows` and the groups that take turns in them */
@@ -391,7 +391,7 @@ export function roundRobinPollingPlan(
     entity_registry: ReadableEntityRegistry,
     swing_counts: EntityTransferCountMap,
     recipe_lcm: number,
-    period: number,
+    window_cycle_ticks: number,
     with_belt_slack: boolean = true,
     options: RoundRobinPollingOptions = DEFAULT_OPTIONS,
     drop_tie_break: DropTieBreak | null = null,
@@ -399,15 +399,15 @@ export function roundRobinPollingPlan(
     /** Where the turn rule reports what the takers into other recipes take (`turnOffsets`); not reported without it */
     log?: (line: string) => void,
 ): RoundRobinPollingPlan {
-    if (!Number.isInteger(period)) refuse(`the period is ${period} ticks, not a whole number`);
+    if (!Number.isInteger(window_cycle_ticks)) refuse(`the period is ${window_cycle_ticks} ticks, not a whole number`);
     const entities = entity_registry.getAll();
     const transfers = new Map(Array.from(swing_counts.entries(), ([entity_id, transfer]) => [entity_id.id, transfer] as const));
-    const computed_clocks = composition?.retained_clocks.size ? unplannedInserterClocks(entity_registry, period) : new Map<string, InserterClock>();
+    const computed_clocks = composition?.retained_clocks.size ? unplannedInserterClocks(entity_registry, window_cycle_ticks) : new Map<string, InserterClock>();
     for (const [id, clock] of composition?.retained_clocks ?? []) {
         const inserter = entities.filter(Entity.isInserter).find(it => it.entity_id.id === id);
         const computed = computed_clocks.get(id);
         if (inserter === undefined || clock.kind !== "by-product" || !isByProductOnlyInserter(entity_registry, inserter)
-            || transfers.has(id) || clock.inserter_id.id !== id || clock.own_clock || period % clock.modulus !== 0
+            || transfers.has(id) || clock.inserter_id.id !== id || clock.own_clock || window_cycle_ticks % clock.modulus !== 0
             || computed === undefined || computed.modulus !== clock.modulus
             || computed.window.start_inclusive !== clock.window.start_inclusive || computed.window.end_inclusive !== clock.window.end_inclusive) {
             refuse(`${id} is not a retained unplanned by-product clock`);
@@ -488,7 +488,7 @@ export function roundRobinPollingPlan(
             const slack = EntityId.isBelt(source.entity_id) ? belt_slack.get(inserter.entity_id.id) ?? 0 : 0;
             const surplus_kept = more_room_than_a_hand_over && !EntityId.isBelt(source.entity_id);
             // per taker, the guard is for a taker the extra start would leave busy all period (`open_all_period`, below)
-            const busy_with_extra_start = count * cycle + WINDOW_MARGIN_TICKS + slack + INPUT_OFFSET_TICKS >= period;
+            const busy_with_extra_start = count * cycle + WINDOW_MARGIN_TICKS + slack + INPUT_OFFSET_TICKS >= window_cycle_ticks;
             const guarded = surplus_kept && (options.surplus_guard
                 || (options.per_taker_guard === true && busy_with_extra_start && options.unguarded_sinks?.has(sink.entity_id.id) !== true));
             const starts = guarded ? count : count + 1;
@@ -517,18 +517,18 @@ export function roundRobinPollingPlan(
     };
     // an inserter whose hands (rounded up) take the whole period, or all but the offset of its window, is busy all the time: a window
     // would only put gaps between hands that follow each other, so it is left enabled
-    const open_all_period = (taker: Taker): boolean => taker.window_ticks + INPUT_OFFSET_TICKS >= period;
-    const gated = takers.filter(it => !open_all_period(it));
-    if (gated.length === 0) refuse(`every taker is busy the whole period of ${period} ticks`);
+    const open_all_window_cycle = (taker: Taker): boolean => taker.window_ticks + INPUT_OFFSET_TICKS >= window_cycle_ticks;
+    const gated = takers.filter(it => !open_all_window_cycle(it));
+    if (gated.length === 0) refuse(`every taker is busy the whole period of ${window_cycle_ticks} ticks`);
     const longest = Math.max(...gated.map(it => it.window_ticks));
     const leaveOpen = (made: Map<string, OpenRange[]>): Pick<RoundRobinPollingPlan, "windows" | "busy" | "guarded"> => {
-        const busy = takers.filter(open_all_period).map(taker => taker.inserter.entity_id.id);
+        const busy = takers.filter(open_all_window_cycle).map(taker => taker.inserter.entity_id.id);
         for (const id of busy) made.delete(id);
         const guarded = takers.flatMap(taker => {
             const ranges = made.get(taker.inserter.entity_id.id);
             if (taker.guarded_hands === undefined || ranges === undefined
                 || ranges.reduce((sum, range) => sum + range.end_inclusive - range.start_inclusive + 1, 0) !== taker.window_ticks) return [];
-            return [{ inserter_id: taker.inserter.entity_id.id, start: openingTick(ranges, period), hands: taker.guarded_hands,
+            return [{ inserter_id: taker.inserter.entity_id.id, start: openingTick(ranges, window_cycle_ticks), hands: taker.guarded_hands,
                 cycle_ticks: taker.inserter.animation.total.ticks }];
         });
         return { windows: made, busy, guarded };
@@ -577,7 +577,7 @@ export function roundRobinPollingPlan(
         const collisions = (dealt: ReadonlyMap<string, number>): number => {
             const starts = new Map<number, number[]>();
             for (const output of outputs) {
-                const start = Math.round(dealt.get(output.source.entity_id.id)! * period / groups);
+                const start = Math.round(dealt.get(output.source.entity_id.id)! * window_cycle_ticks / groups);
                 starts.set(output.entity_id.number, [...(starts.get(output.entity_id.number) ?? []), start]);
             }
             return drop_tie_break.collisions(starts);
@@ -597,14 +597,14 @@ export function roundRobinPollingPlan(
         // from the output: the output windows, the inputs of the output machines from belts, chests and the machines that
         // nothing fills, then those from machines that are filled, each stage when the one before ends
         const output_machines = new Set(outputs.map(it => it.source.entity_id.id));
-        for (const output of outputs) windows.set(output.entity_id.id, windowFrom(0, output_ticks(output), period));
+        for (const output of outputs) windows.set(output.entity_id.id, windowFrom(0, output_ticks(output), window_cycle_ticks));
         const top = takers.filter(it => output_machines.has(it.sink.id));
         const filled = (taker: Taker): boolean => sinks.has(taker.source.id);
         // the first inputs open as the output's last hand starts, as in a build of one hand
         let next = Math.max(...outputs.map(it => (outputHands(it) - 1) * it.animation.total.ticks)) + INPUT_OFFSET_TICKS;
         for (const stage of [top.filter(it => !filled(it)), top.filter(filled)]) {
             if (stage.length === 0) continue;
-            for (const taker of stage) windows.set(taker.inserter.entity_id.id, windowFrom(next, taker.window_ticks, period));
+            for (const taker of stage) windows.set(taker.inserter.entity_id.id, windowFrom(next, taker.window_ticks, window_cycle_ticks));
             next += Math.max(...stage.map(it => it.window_ticks));
         }
         const placed = (taker: Taker): boolean => windows.has(taker.inserter.entity_id.id);
@@ -613,7 +613,7 @@ export function roundRobinPollingPlan(
         const feed = (taker: Taker, depth: number): void => {
             if (depth > takers.length) refuse("the chain of machines loops");
             for (const feeder of takers.filter(it => it.sink.id === taker.source.id)) {
-                windows.set(feeder.inserter.entity_id.id, windowFrom(startOf(taker) + options.feeder_offset, feeder.window_ticks, period));
+                windows.set(feeder.inserter.entity_id.id, windowFrom(startOf(taker) + options.feeder_offset, feeder.window_ticks, window_cycle_ticks));
                 feed(feeder, depth + 1);
             }
         };
@@ -625,7 +625,7 @@ export function roundRobinPollingPlan(
                 const next = new Set(path).add(site);
                 for (const feeder of takers.filter(it => it.sink.id === site)) {
                     const at = start + options.feeder_offset;
-                    windows.set(feeder.inserter.entity_id.id, windowFrom(at, feeder.window_ticks, period));
+                    windows.set(feeder.inserter.entity_id.id, windowFrom(at, feeder.window_ticks, window_cycle_ticks));
                     feedSite(feeder.source.id, at, next);
                 }
                 for (const source of composition.direct_sources.get(site) ?? []) feedSite(source, start, next);
@@ -639,21 +639,21 @@ export function roundRobinPollingPlan(
             ...outputs.map(it => [it, outputHands(it)] as const),
             ...drains.map(it => [it.inserter, (it.window_ticks - WINDOW_MARGIN_TICKS) / it.inserter.animation.total.ticks] as const),
         ]);
-        const turned = chainTurns(entity_registry, windows, takers, period, [...hands_out.keys()], log);
-        if (options.share_windows) sharedWindows(windows, gated, period);
+        const turned = chainTurns(entity_registry, windows, takers, window_cycle_ticks, [...hands_out.keys()], log);
+        if (options.share_windows) sharedWindows(windows, gated, window_cycle_ticks);
         const made = leaveOpen(windows);
-        const without_room = turnsWithoutRoom(entity_registry, made.windows, turned, hands_out, period);
+        const without_room = turnsWithoutRoom(entity_registry, made.windows, turned, hands_out, window_cycle_ticks);
         if (without_room.length > 0) throw new TurnWithoutRoom(without_room.join("; "));
         return { ...made, turns: [], hands_rounded_up };
     }
-    const start_of = (machine: string): number => Math.round(group_of.get(machine)! * period / groups);
+    const start_of = (machine: string): number => Math.round(group_of.get(machine)! * window_cycle_ticks / groups);
     for (const taker of takers) {
-        windows.set(taker.inserter.entity_id.id, windowFrom(start_of(taker.sink.id) + INPUT_OFFSET_TICKS, taker.window_ticks, period));
+        windows.set(taker.inserter.entity_id.id, windowFrom(start_of(taker.sink.id) + INPUT_OFFSET_TICKS, taker.window_ticks, window_cycle_ticks));
     }
     for (const output of outputs) {
-        windows.set(output.entity_id.id, windowFrom(start_of(output.source.entity_id.id), output_ticks(output), period));
+        windows.set(output.entity_id.id, windowFrom(start_of(output.source.entity_id.id), output_ticks(output), window_cycle_ticks));
     }
-    if (options.share_windows) sharedWindows(windows, gated, period);
+    if (options.share_windows) sharedWindows(windows, gated, window_cycle_ticks);
     // a drill's window is computed from what its machine takes of it, and the drills of one group have one window: the longest
     const drill_ticks = new Map<number, number>();
     for (const drill of drills) {
@@ -665,13 +665,13 @@ export function roundRobinPollingPlan(
         drill_ticks.set(group, Math.max(drill_ticks.get(group) ?? 0, drillWindowTicks(drill, sink, mined)));
     }
     for (const drill of drills) {
-        windows.set(drill.entity_id.id, windowFrom(start_of(drill.sink_id.id) + INPUT_OFFSET_TICKS, drill_ticks.get(group_of.get(drill.sink_id.id)!)!, period));
+        windows.set(drill.entity_id.id, windowFrom(start_of(drill.sink_id.id) + INPUT_OFFSET_TICKS, drill_ticks.get(group_of.get(drill.sink_id.id)!)!, window_cycle_ticks));
     }
     // each group's turn begins with its output swings; then its inputs, then its drills, each by entity number. The inserters left
     // enabled all the time are named as well: a window that one of them is given later stands in its group
     const byNumber = (a: { entity_id: EntityId }, b: { entity_id: EntityId }) => a.entity_id.number - b.entity_id.number;
     const turns: TurnGroup[] = groups === 1 ? [] : Array.from({ length: groups }, (_, group) => ({
-        start: Math.round(group * period / groups),
+        start: Math.round(group * window_cycle_ticks / groups),
         entity_ids: [
             ...outputs.filter(it => group_of.get(it.source.entity_id.id) === group).sort(byNumber),
             ...takers.map(it => it.inserter).filter(it => group_of.get(it.sink.entity_id.id) === group).sort(byNumber),
@@ -686,9 +686,9 @@ export function roundRobinPollingPlan(
  * windows) is moved a tick either way with the others where they are: one run of the build on each, from the cold start.
  * A clock that holds at one placement and not next to it is not offered (working rule 3). The reason it is not, or null.
  */
-export function holdsWithMargin(plan: UnclockedRun, windows: Map<string, OpenRange[]>, period: number): string | null {
+export function holdsWithMargin(plan: UnclockedRun, windows: Map<string, OpenRange[]>, window_cycle_ticks: number): string | null {
     const swings = fractionalSwingsOf(plan.run.output_cycle_plan);
-    if (!runClockOnBuild(plan.config, windows, period, plan.logger, swings).stability_check.holds) return "the windows do not hold";
+    if (!runClockOnBuild(plan.config, windows, window_cycle_ticks, plan.logger, swings).stability_check.holds) return "the windows do not hold";
     const groups = new Map<string, string[]>();
     for (const [id, ranges] of windows) {
         const key = ranges.map(range => `${range.start_inclusive}-${range.end_inclusive}`).join(",");
@@ -697,8 +697,8 @@ export function holdsWithMargin(plan: UnclockedRun, windows: Map<string, OpenRan
     for (const [key, ids] of groups) {
         for (const ticks of [-MARGIN_SHIFT_TICKS, MARGIN_SHIFT_TICKS]) {
             const moved = new Map(windows);
-            for (const id of ids) moved.set(id, shiftedWindows(windows.get(id)!, ticks, period));
-            if (!runClockOnBuild(plan.config, moved, period, plan.logger, swings).stability_check.holds) {
+            for (const id of ids) moved.set(id, shiftedWindows(windows.get(id)!, ticks, window_cycle_ticks));
+            if (!runClockOnBuild(plan.config, moved, window_cycle_ticks, plan.logger, swings).stability_check.holds) {
                 return `the windows ${key} (${ids.join(", ")}) do not hold ${ticks > 0 ? "+" : ""}${ticks} tick`;
             }
         }
@@ -781,18 +781,18 @@ function bestHolding(made: UnclockedRun, holding: HoldingWay[], shared: boolean)
  */
 export function offerWay(name: string, clock: BlueprintGenerationResult, guarded: readonly GuardedTaker[]): void {
     if (!partsWanted()) return;
-    const period_ticks = clock.simulation_duration.ticks;
+    const window_cycle_ticks = clock.simulation_duration.ticks;
     const always_on = clock.always_on_reasons;
-    offerPart({ name, period_ticks, windows: clock.clock_windows, counted: clock.stability_check.as_built?.wake_ups !== undefined,
+    offerPart({ name, window_cycle_ticks, windows: clock.clock_windows, counted: clock.stability_check.as_built?.wake_ups !== undefined,
         ...(always_on !== undefined && { always_on }) });
     const split = guarded.filter(taker => taker.hands > 1 && clock.clock_windows[taker.inserter_id] !== undefined);
     if (split.length === 0) return;
     const windows = { ...clock.clock_windows };
     for (const taker of split) {
-        windows[taker.inserter_id] = Array.from({ length: taker.hands }, (_, j) => (taker.start + j * taker.cycle_ticks) % period_ticks)
+        windows[taker.inserter_id] = Array.from({ length: taker.hands }, (_, j) => (taker.start + j * taker.cycle_ticks) % window_cycle_ticks)
             .sort((a, b) => a - b).map(tick => ({ start: tick, end: tick }));
     }
-    offerPart({ name: `${name}, per hand`, period_ticks, windows, ...(always_on !== undefined && { always_on }) });
+    offerPart({ name: `${name}, per hand`, window_cycle_ticks, windows, ...(always_on !== undefined && { always_on }) });
 }
 
 /** How a way is named in the planning log */
@@ -882,7 +882,7 @@ export function roundRobinPollingClock(
                 continue;
             }
             const { windows, turns, busy } = planned;
-            const left_open = new Map<string, AlwaysOnReason>(busy.map(id => [id, { kind: "busy", period_ticks: duration.ticks }]));
+            const left_open = new Map<string, AlwaysOnReason>(busy.map(id => [id, { kind: "busy", window_cycle_ticks: duration.ticks }]));
             const key = JSON.stringify(Array.from(windows, ([id, ranges]) => [id, ranges.map(range => [range.start_inclusive, range.end_inclusive])]));
             if (tried.has(key)) continue;
             tried.add(key);
@@ -934,10 +934,10 @@ export function roundRobinPollingClock(
  * each pick, `start + j x cycle` for j = 0 to hands - 1 (DESIGN 3.1, R-busy, the per-hand shape); every other window as it is. A
  * taker of one hand has nothing to split: its window of two ticks stays.
  */
-export function perHandWindows(windows: ReadonlyMap<string, OpenRange[]>, guarded: readonly GuardedTaker[], period: number): Map<string, OpenRange[]> {
+export function perHandWindows(windows: ReadonlyMap<string, OpenRange[]>, guarded: readonly GuardedTaker[], window_cycle_ticks: number): Map<string, OpenRange[]> {
     const split = new Map(windows);
     for (const taker of guarded.filter(it => it.hands > 1)) {
-        const ticks = Array.from({ length: taker.hands }, (_, j) => (taker.start + j * taker.cycle_ticks) % period).sort((a, b) => a - b);
+        const ticks = Array.from({ length: taker.hands }, (_, j) => (taker.start + j * taker.cycle_ticks) % window_cycle_ticks).sort((a, b) => a - b);
         split.set(taker.inserter_id, ticks.map(tick => OpenRange.from(tick, tick)));
     }
     return split;
@@ -954,9 +954,9 @@ export function perHandWindowsClock(clock: BlueprintGenerationResult): Blueprint
     const guarded = clock.round_robin_polling?.guarded_takers;
     if (source === undefined || guarded === undefined || !guarded.some(it => it.hands > 1)) return null;
     const { made, options, planned, left_open } = source;
-    const period = made.run.duration.ticks;
-    const windows = perHandWindows(planned.windows, guarded, period);
-    const unmoved = holdsWithMargin(made, windows, period);
+    const window_cycle_ticks = made.run.duration.ticks;
+    const windows = perHandWindows(planned.windows, guarded, window_cycle_ticks);
+    const unmoved = holdsWithMargin(made, windows, window_cycle_ticks);
     if (unmoved !== null) throw new RoundRobinPollingNotApplicable(`the per-hand windows: ${unmoved}`);
     const per_hand = finishedClock(made, windows, planned.turns, options, left_open);
     made.logger.log(`Grouped hands, per hand: ${per_hand.stability_check.holds ? "holds" : "does not hold"} at `

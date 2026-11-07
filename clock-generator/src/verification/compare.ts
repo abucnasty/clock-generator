@@ -70,9 +70,9 @@ interface ExportedClockReport {
     issues: string[];
 }
 
-function wrapOffset(offset: number, period: number): number {
-    let wrapped = ((offset % period) + period) % period;
-    if (wrapped > period / 2) wrapped -= period;
+function wrapOffset(offset: number, window_cycle_ticks: number): number {
+    let wrapped = ((offset % window_cycle_ticks) + window_cycle_ticks) % window_cycle_ticks;
+    if (wrapped > window_cycle_ticks / 2) wrapped -= window_cycle_ticks;
     return wrapped;
 }
 

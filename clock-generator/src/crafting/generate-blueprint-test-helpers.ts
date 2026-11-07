@@ -59,7 +59,7 @@ export interface RocketFuelSample {
     alternative: (id: string) => ClockAlternative;
     /** Items an inserter moves in the planned period */
     moved: (inserter_id: string) => number;
-    period: number;
+    window_cycle_ticks: number;
     jelly_inserter_ids: string[];
     output_inserter_ids: string[];
     jellynut_inserter_id: string;
@@ -81,7 +81,7 @@ export const rocketFuelSample = async (source: string | Config): Promise<RocketF
         alternatives,
         alternative,
         moved,
-        period: alternative("planned-belt-slack").result.simulation_duration.ticks,
+        window_cycle_ticks: alternative("planned-belt-slack").result.simulation_duration.ticks,
         jelly_inserter_ids: ids(it => it.source.type === "machine" && it.sink.type === "machine"),
         output_inserter_ids: ids(it => it.source.type === "machine" && it.sink.type === "belt" && it.source.id !== 2),
         // belt 1 carries bioflux and jellynut: machine 2 takes the jellynut, the rocket fuel machines the bioflux

@@ -11,11 +11,11 @@
  */
 import assert from "../../common/assert";
 import type { Config } from "../../config";
-import type { PeriodChoice, PeriodListing, ExhaustDecision } from "../../data-types/build-plan";
+import type { WindowCycleChoice, WindowCycleListing, ExhaustDecision } from "../../data-types/build-plan";
 import Fraction, { fraction } from "../../data-types/fraction";
 import { Entity, type ReadableEntityRegistry } from "../../entities";
 import { targetInsertersOf, targetMachinesOf, type TargetItem } from "../sequence/cycle/target-ends";
-import { SIMULATION_BUDGET_TICKS, counterOverLimitOf } from "../plan/clock-period-limit";
+import { SIMULATION_BUDGET_TICKS, counterOverLimitOf } from "../plan/clock-window-cycle-limit";
 import { OutputCyclePlan, plannedTerminalSwingCount } from "../sequence/cycle/output-cycle";
 import { FractionalSwingsRefusedError, fractionalSwingsWholeAt } from "../sequence/cycle/swing-distribution";
 import { TargetProductionRate } from "../target-production-rate";
@@ -23,7 +23,7 @@ import { CycleMeasure, cycleMeasureOf } from "./composition";
 import type { GroupShape } from "./groups";
 
 /** Observed windows re-simulate the build hundreds of times; above this period (a high LCM) that takes minutes */
-export const MAX_OBSERVED_WINDOWS_PERIOD_TICKS = 2400;
+export const MAX_OBSERVED_WINDOWS_WINDOW_CYCLE_TICKS = 2400;
 
 /**
  * Output swing counts above the planned one offered as alternatives, also when the plan backed off to a lower count.
@@ -39,9 +39,9 @@ const EXTENDED_SWING_COUNTS = 3;
  * takes hands, so longer cycles can work too, but the machine holds the planned count when a cycle's swings start: the
  * farthest count is only tried as a multiple of it (the planned cycle repeated). A forced count is the only one.
  */
-export function swingCountsListed(swings: number, planned: number, forced: boolean, period_ticks: number): { lower: number[]; higher: number[] } {
+export function swingCountsListed(swings: number, planned: number, forced: boolean, window_cycle_ticks: number): { lower: number[]; higher: number[] } {
     const lower = forced ? [] : Array.from({ length: Math.max(0, swings - 1) }, (_, i) => swings - 1 - i);
-    const higher = forced || period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? []
+    const higher = forced || window_cycle_ticks > MAX_OBSERVED_WINDOWS_WINDOW_CYCLE_TICKS ? []
         : Array.from({ length: planned + EXTENDED_SWING_COUNTS - swings }, (_, i) => swings + 1 + i)
             .filter(count => count < planned + EXTENDED_SWING_COUNTS || (planned > 1 && count % planned === 0));
     return { lower, higher };
@@ -65,15 +65,15 @@ interface PlannedCount {
     /** The swings as the exact fraction a fractional plan is made on */
     readonly swings_exact?: Fraction;
     readonly fractional: boolean;
-    readonly listed_as: PeriodListing;
+    readonly listed_as: WindowCycleListing;
     readonly cycle: OutputCyclePlan;
     readonly measure: CycleMeasure;
 }
 
 /** The periods of a build: each group's choices and the counts the composition reads */
-export interface PlannedPeriods {
+export interface PlannedWindowCycles {
     /** The choices of each group, in the order of the groups */
-    readonly per_group: readonly (readonly PeriodChoice[])[];
+    readonly per_group: readonly (readonly WindowCycleChoice[])[];
     /** The counts tried from the planned one down until one is under the limit, the planned one first */
     readonly tried: readonly PlannedCount[];
     /** The main clock's count: the last of `tried` */
@@ -91,14 +91,14 @@ interface RefusedCount {
     /** The count asked for; null where the plan refused it before it had one (fractional swings) */
     readonly swings: number | null;
     readonly fractional: boolean;
-    readonly listed_as: PeriodListing;
+    readonly listed_as: WindowCycleListing;
     readonly refused: string;
 }
 
 type ListedCount = PlannedCount | RefusedCount;
 
 /** A choice of a group: its period at the count, kept or pruned by P-limit, or refused by the cycle plan */
-function choiceOf(count: ListedCount, group: number): PeriodChoice {
+function choiceOf(count: ListedCount, group: number): WindowCycleChoice {
     if ("refused" in count) {
         return { swings: count.swings, fractional: count.fractional, listed_as: count.listed_as,
             pruned: { rule: "cycle-refused", terms: { reason: count.refused } } };
@@ -111,14 +111,14 @@ function choiceOf(count: ListedCount, group: number): PeriodChoice {
         listed_as: count.listed_as,
     };
     const cycles = count.measure.override_lcm ?? count.measure.group_cycles[group];
-    const period_ticks = count.measure.cycle_ticks.multiply(cycles).toDecimal();
-    const base = { ...head, cycle_ticks: ratioOf(count.measure.cycle_ticks), cycles, period_ticks };
-    if (period_ticks >= SIMULATION_BUDGET_TICKS) {
-        return { ...base, pruned: { rule: "P-limit", terms: { period_ticks, limit_ticks: SIMULATION_BUDGET_TICKS } } };
+    const window_cycle_ticks = count.measure.cycle_ticks.multiply(cycles).toDecimal();
+    const base = { ...head, cycle_ticks: ratioOf(count.measure.cycle_ticks), cycles, window_cycle_ticks };
+    if (window_cycle_ticks >= SIMULATION_BUDGET_TICKS) {
+        return { ...base, pruned: { rule: "P-limit", terms: { window_cycle_ticks, limit_ticks: SIMULATION_BUDGET_TICKS } } };
     }
-    const counter_ticks = counterOverLimitOf(period_ticks);
+    const counter_ticks = counterOverLimitOf(window_cycle_ticks);
     return counter_ticks !== null
-        ? { ...base, pruned: { rule: "P-limit", terms: { period_ticks, limit_ticks: SIMULATION_BUDGET_TICKS, counter_ticks } } }
+        ? { ...base, pruned: { rule: "P-limit", terms: { window_cycle_ticks, limit_ticks: SIMULATION_BUDGET_TICKS, counter_ticks } } }
         : { ...base, kept: true };
 }
 
@@ -147,17 +147,17 @@ function outputSwingsOf(cycle: OutputCyclePlan, registry: ReadableEntityRegistry
  * The periods of a build's groups at every count today's alternatives are listed for. `exhaust` is the decision of
  * a destroyed target's results (planner/exhaust.ts), which its cycle is made with.
  */
-export function plannedPeriodsOf(
+export function plannedWindowCyclesOf(
     input: CycleArithmetic,
     groups: readonly GroupShape[],
     group_of: ReadonlyMap<string, number>,
     exhaust: ExhaustDecision | null,
-): PlannedPeriods {
+): PlannedWindowCycles {
     const { config, registry } = input;
     const overrides = config.overrides ?? {};
     const target = TargetProductionRate.fromConfig(config.setpoint);
     const forced = overrides.terminal_swing_count !== undefined;
-    const planned = (cycle: OutputCyclePlan, listed_as: PeriodListing, is_fractional = false, swings_exact?: Fraction): PlannedCount => {
+    const planned = (cycle: OutputCyclePlan, listed_as: WindowCycleListing, is_fractional = false, swings_exact?: Fraction): PlannedCount => {
         const swings = target.counts === "destroyed" ? exhaust!.hands : plannedTerminalSwingCount(cycle);
         assert(swings !== undefined, "the cycle plan has no output swing count");
         return { swings, ...(is_fractional && swings_exact !== undefined ? { swings_exact } : {}), fractional: is_fractional, listed_as, cycle,
@@ -173,9 +173,9 @@ export function plannedPeriodsOf(
 
     assert(input.max_swings !== null, "a target that counts an item made is planned on the swings its prepare step found");
     const max_swings = input.max_swings;
-    const atCount = (count: number, listed_as: PeriodListing) => planned(OutputCyclePlan.create(target, registry, config, fraction(count),
+    const atCount = (count: number, listed_as: WindowCycleListing) => planned(OutputCyclePlan.create(target, registry, config, fraction(count),
         { ...overrides, terminal_swing_count: count }), listed_as);
-    const under = (count: PlannedCount) => count.measure.main_period.toDecimal() < SIMULATION_BUDGET_TICKS;
+    const under = (count: PlannedCount) => count.measure.main_window_cycle.toDecimal() < SIMULATION_BUDGET_TICKS;
 
     // the planning run's count, then today's swing backoff while the period is over the limit; the main clock's count
     // is the first under it, or the planned one where there is none
@@ -192,7 +192,7 @@ export function plannedPeriodsOf(
     tried[main_at] = main;
 
     // an alternative's count whose cycle the cycle plan refuses is listed with the reason: today its run fails the same way
-    const alternative = (swings: number | null, listed_as: PeriodListing, is_fractional: boolean, make: () => PlannedCount): ListedCount => {
+    const alternative = (swings: number | null, listed_as: WindowCycleListing, is_fractional: boolean, make: () => PlannedCount): ListedCount => {
         try {
             return make();
         } catch (error) {
@@ -204,7 +204,7 @@ export function plannedPeriodsOf(
     const item = { item: target.machine_production_rate.item, counts: target.counts };
     const listed_from = main_at === 0 ? outputSwingsOf(main.cycle, registry, item) : main.swings;
     const planned_from = main_at === 0 ? listed_from : first.swings;
-    const { lower, higher } = swingCountsListed(listed_from, planned_from, forced, main.measure.main_period.toDecimal());
+    const { lower, higher } = swingCountsListed(listed_from, planned_from, forced, main.measure.main_window_cycle.toDecimal());
     const fractionalAt = (swings: Fraction, count_overrides: typeof overrides) => OutputCyclePlan.create(target, registry, config, swings,
         count_overrides, undefined, true);
     const toggled = alternative(null, "fractional", true, () => {

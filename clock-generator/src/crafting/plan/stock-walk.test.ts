@@ -13,7 +13,7 @@ const swing = { pickup: 1, rotation: 3, drop: 1 };
 describe("the stock walk", () => {
     it("walks a machine fed and emptied as it allows to the period that repeats, from a cold start", () => {
         const walk = walkMachineStock({
-            machine, period_ticks: 64,
+            machine, window_cycle_ticks: 64,
             fillers: [{ id: "in", items: ["plate"], hand: 8, swing }],
             takers: [{ id: "out", items: ["gear"], hand: 8, swing }],
         });
@@ -29,7 +29,7 @@ describe("the stock walk", () => {
 
     it("picks a hand up for the machine only under its insertion limit, and drops it whole over the limit", () => {
         const walk = walkMachineStock({
-            machine, period_ticks: 64,
+            machine, window_cycle_ticks: 64,
             fillers: [{ id: "in", items: ["plate"], hand: 8, swing }],
             takers: [{ id: "out", items: ["gear"], hand: 8, swing }],
         });
@@ -42,7 +42,7 @@ describe("the stock walk", () => {
     it("brings nothing into a machine at its output block until its output is taken under it", () => {
         // the gears are taken once a period, from position 32: the plates wait with the output at its block before it
         const walk = walkMachineStock({
-            machine, period_ticks: 64,
+            machine, window_cycle_ticks: 64,
             fillers: [{ id: "in", items: ["plate"], hand: 8, swing }],
             takers: [{ id: "out", items: ["gear"], hand: 16, swing, windows: [OpenRange.from(32, 40)] }],
         });
@@ -59,7 +59,7 @@ describe("the stock walk", () => {
 
     it("fills a taker's hand with what the machine holds and has it wait for the rest", () => {
         const walk = walkMachineStock({
-            machine, period_ticks: 64,
+            machine, window_cycle_ticks: 64,
             fillers: [{ id: "in", items: ["plate"], hand: 8, swing }],
             takers: [{ id: "out", items: ["gear"], hand: 16, swing }],
         });
@@ -72,7 +72,7 @@ describe("the stock walk", () => {
 
     it("lets an inserter act in the tick after the clock position of its window's tick", () => {
         const walk = walkMachineStock({
-            machine, period_ticks: 64, start: { inputs: { plate: 0 }, output: 8, craft: null, made: 0 }, max_periods: 1,
+            machine, window_cycle_ticks: 64, start: { inputs: { plate: 0 }, output: 8, craft: null, made: 0 }, max_window_cycles: 1,
             fillers: [],
             takers: [{ id: "out", items: ["gear"], hand: 8, swing, windows: [OpenRange.from(10, 10)] }],
         });
@@ -84,17 +84,17 @@ describe("the stock walk", () => {
             ...machine,
             inputs: [machine.inputs[0], { item_name: "wire", amount_per_craft: 1, automated_insertion_limit: 4, consumption_rate_per_second: 15 }],
         };
-        const first = walkMachineStock({ machine: two, period_ticks: 32, max_periods: 1,
+        const first = walkMachineStock({ machine: two, window_cycle_ticks: 32, max_window_cycles: 1,
             fillers: [{ id: "in", items: ["wire", "plate"], pick: "in-order", hand: 8, swing }], takers: [] });
         expect(first.hands[0].item).toBe("wire");
-        const least = walkMachineStock({ machine: two, period_ticks: 32, max_periods: 1, start: { inputs: { plate: 0, wire: 3 }, output: 0, craft: null, made: 0 },
+        const least = walkMachineStock({ machine: two, window_cycle_ticks: 32, max_window_cycles: 1, start: { inputs: { plate: 0, wire: 3 }, output: 0, craft: null, made: 0 },
             fillers: [{ id: "in", items: ["wire", "plate"], pick: "least-cover", hand: 8, swing }], takers: [] });
         expect(least.hands[0].item).toBe("plate");
     });
 
     it("starts no more hands of a part of the period than its quota", () => {
         const walk = walkMachineStock({
-            machine, period_ticks: 64,
+            machine, window_cycle_ticks: 64,
             fillers: [{ id: "in", items: ["plate"], hand: 8, swing, quota: [2, 2], quota_starts: [0, 32] }],
             takers: [{ id: "out", items: ["gear"], hand: 8, swing }],
         });
@@ -104,6 +104,6 @@ describe("the stock walk", () => {
     });
 
     it("refuses a period that is not whole ticks", () => {
-        expect(() => walkMachineStock({ machine, period_ticks: 63.5, fillers: [], takers: [] })).toThrow(/whole ticks/);
+        expect(() => walkMachineStock({ machine, window_cycle_ticks: 63.5, fillers: [], takers: [] })).toThrow(/whole ticks/);
     });
 });

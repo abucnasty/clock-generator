@@ -11,7 +11,7 @@ async function arithmeticOf(key: keyof typeof ConfigPaths, swings?: number) {
     const planned = swings === undefined ? config : { ...config, overrides: { ...config.overrides, terminal_swing_count: swings } };
     const { run } = unclockedRun(planned, { logger: quiet });
     return () => batchedSwingsWindowsByArithmetic({ entity_registry: run.simulation_context.entity_registry, output_cycle_plan: run.output_cycle_plan,
-        period_ticks: run.duration.ticks, recipe_lcm: run.recipe_lcm, always_enabled_by_config: run.always_enabled_by_config });
+        window_cycle_ticks: run.duration.ticks, recipe_lcm: run.recipe_lcm, always_enabled_by_config: run.always_enabled_by_config });
 }
 const ranges = (windows: Map<string, { start_inclusive: number; end_inclusive: number }[]>, id: string) =>
     windows.get(id)!.map(range => [range.start_inclusive, range.end_inclusive]);

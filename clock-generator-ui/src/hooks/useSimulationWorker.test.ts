@@ -110,7 +110,7 @@ function selectionClock(id: string, wakeUps: number): ClockAlternativeView {
     return { id, label: id, verdict: 'stable', ranking: { meets_target_rate: true, rate_off_target: 0,
         holds_expected_output: true, matches_belt_choice: true, wake_ups_per_minute: wakeUps, window_count: 1 },
         assessment: { holds: true, items_per_second: 1, wake_ups_per_minute: wakeUps,
-            disturbance_trial: { survives: true, broken_by: [], recovered_after_periods: 1 }, start_dependence: null },
+            disturbance_trial: { survives: true, broken_by: [], recovered_after_window_cycles: 1 }, start_dependence: null },
         deadlockRisk: null, beltLabel: '', assumptions: { kickStarts: [], outputDrops: [], machineFuel: [], overrides: undefined },
     } as unknown as ClockAlternativeView;
 }
@@ -360,7 +360,7 @@ describe('tasks alongside the primary alternative', () => {
 
     describe('the per-branch clock', () => {
         const coordinatedSources = task('per-branch', 'Coordinated sources', { coordinated_sources: true });
-        const part = (alternative_id: string) => ({ name: alternative_id, alternative_id, verdict: 'stable' as const, period_ticks: 10,
+        const part = (alternative_id: string) => ({ name: alternative_id, alternative_id, verdict: 'stable' as const, window_cycle_ticks: 10,
             windows: { 'inserter:1': [{ start: 0, end: alternative_id.length }] }, counted: true });
 
         it('runs last, after the searches, with the parts of every run and the clock they recommend, and is not a skipped search', async () => {

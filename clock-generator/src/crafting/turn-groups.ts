@@ -64,11 +64,11 @@ export function placeByTurns(deciders: readonly (readonly string[])[], turns: re
  * The ticks a group's turn lasts, as the ticks of the period it covers, from the tick its turn begins to the end of the last
  * window of its deciders. The end is past the period's last tick (`period` or more) where the turn runs over into the next period.
  */
-export function turnTicks(start: number, windows: readonly OpenRange[], period: number): { start: number; end: number } {
+export function turnTicks(start: number, windows: readonly OpenRange[], window_cycle_ticks: number): { start: number; end: number } {
     let end = start;
     for (const window of windows) {
-        const opens = (((window.start_inclusive - start) % period) + period) % period;
+        const opens = (((window.start_inclusive - start) % window_cycle_ticks) + window_cycle_ticks) % window_cycle_ticks;
         end = Math.max(end, start + opens + (window.end_inclusive - window.start_inclusive));
     }
-    return { start, end: Math.min(end, start + period - 1) };
+    return { start, end: Math.min(end, start + window_cycle_ticks - 1) };
 }

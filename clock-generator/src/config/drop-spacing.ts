@@ -34,8 +34,8 @@ export const DROP_SPACING_COPIES_ALIKE = "This assumes every copy drops onto the
 const EPSILON = 1e-9;
 const QUARTER_TILE = 0.25;
 /** The most periods a replay runs, and the periods it runs after the lane is full of the line's hands */
-const MAX_REPLAY_PERIODS = 60;
-const SETTLE_PERIODS = 4;
+const MAX_REPLAY_WINDOW_CYCLES = 60;
+const SETTLE_WINDOW_CYCLES = 4;
 
 /** A cardinal direction of the game: 0 north, 4 east, 8 south, 12 west */
 type Cardinal = 0 | 4 | 8 | 12;
@@ -174,8 +174,8 @@ function handsOf(line: DropLine, starts: ReadonlyMap<number, readonly number[]>,
 }
 
 /** Pairs of hands whose stretches of the lane overlap, seen from the moving belt */
-function collidingPairs(hands: readonly Hand[], tiles_per_tick: number, period: number): [number, number][] {
-    const cycle = tiles_per_tick * period;
+function collidingPairs(hands: readonly Hand[], tiles_per_tick: number, window_cycle_ticks: number): [number, number][] {
+    const cycle = tiles_per_tick * window_cycle_ticks;
     const mod = (value: number) => ((value % cycle) + cycle) % cycle;
     const frame = hands.map(hand => mod(hand.place - tiles_per_tick * hand.tick));
     const width = hands.map(hand => QUARTER_TILE * hand.stacks);
@@ -193,13 +193,13 @@ function collidingPairs(hands: readonly Hand[], tiles_per_tick: number, period: 
  * The ticks each hand waits for room, by the lane model of the simulator replayed on the line for enough periods that
  * the lane is full of its hands. A hand that is not down by the end of its period counts as waiting for the rest of it.
  */
-function waitsOf(hands: readonly Hand[], speed: BeltSpeed, tiles_per_tick: number, period: number): number[] {
+function waitsOf(hands: readonly Hand[], speed: BeltSpeed, tiles_per_tick: number, window_cycle_ticks: number): number[] {
     const lane = new LaneTraffic(speed);
     const lowest = Math.min(...hands.map(hand => hand.place));
     const spots = hands.map(hand => (hand.place - lowest) / tiles_per_tick);
     spots.forEach(spot => lane.registerSpot(spot));
     const span = Math.max(...hands.map(hand => hand.place)) - lowest;
-    const periods = Math.min(MAX_REPLAY_PERIODS, Math.ceil(span / (tiles_per_tick * period)) + SETTLE_PERIODS);
+    const window_cycles = Math.min(MAX_REPLAY_WINDOW_CYCLES, Math.ceil(span / (tiles_per_tick * window_cycle_ticks)) + SETTLE_WINDOW_CYCLES);
     const alone_ticks = new Map<number, number>();
     const free = (stacks: number): number => {
         if (!alone_ticks.has(stacks)) {
@@ -211,18 +211,18 @@ function waitsOf(hands: readonly Hand[], speed: BeltSpeed, tiles_per_tick: numbe
     };
     const waits = hands.map(() => 0);
     const active: { hand: number; start: number; placed: number }[] = [];
-    const last = (periods - 1) * period;
-    for (let tick = 0; tick < periods * period + period; tick++) {
-        const n = Math.floor(tick / period);
-        if (n < periods) hands.forEach((hand, index) => { if (tick === Math.round(n * period + hand.tick)) active.push({ hand: index, start: tick, placed: 0 }); });
+    const last = (window_cycles - 1) * window_cycle_ticks;
+    for (let tick = 0; tick < window_cycles * window_cycle_ticks + window_cycle_ticks; tick++) {
+        const n = Math.floor(tick / window_cycle_ticks);
+        if (n < window_cycles) hands.forEach((hand, index) => { if (tick === Math.round(n * window_cycle_ticks + hand.tick)) active.push({ hand: index, start: tick, placed: 0 }); });
         for (const entry of [...active]) {
             if (lane.tryPlace(tick, spots[entry.hand]) && ++entry.placed === hands[entry.hand].stacks) {
                 active.splice(active.indexOf(entry), 1);
-                if (entry.start >= last - period && entry.start < last) waits[entry.hand] = Math.max(0, tick - entry.start - free(hands[entry.hand].stacks));
+                if (entry.start >= last - window_cycle_ticks && entry.start < last) waits[entry.hand] = Math.max(0, tick - entry.start - free(hands[entry.hand].stacks));
             }
         }
     }
-    for (const entry of active) if (entry.start >= last - period && entry.start < last) waits[entry.hand] = period;
+    for (const entry of active) if (entry.start >= last - window_cycle_ticks && entry.start < last) waits[entry.hand] = window_cycle_ticks;
     return waits;
 }
 
@@ -243,7 +243,7 @@ export interface DropSpacingLine {
 }
 
 export interface DropSpacing {
-    period: number;
+    window_cycle_ticks: number;
     copies: number;
     /** Tiles from one copy to the next along the lines, null for one copy or a gap not given */
     gap: number | null;
@@ -265,9 +265,9 @@ const speedOf = (config: Config, belt_id: number): BeltSpeed =>
     Belt.fromConfig(config.belts.find(it => it.id === belt_id)!).belt_speed;
 
 /** Whether every line fits with the hands of all copies, for a verdict of one sense of the belt */
-function checkLine(config: Config, line: DropLine, starts: ReadonlyMap<number, readonly number[]>, period: number, step: CopyStep | null, sense: 1 | -1) {
+function checkLine(config: Config, line: DropLine, starts: ReadonlyMap<number, readonly number[]>, window_cycle_ticks: number, step: CopyStep | null, sense: 1 | -1) {
     const hands = handsOf(line, starts, config.setpoint.copies, step, sense);
-    return { hands, pairs: hands.length > 0 ? collidingPairs(hands, line.tiles_per_tick, period) : [] };
+    return { hands, pairs: hands.length > 0 ? collidingPairs(hands, line.tiles_per_tick, window_cycle_ticks) : [] };
 }
 
 /**
@@ -275,8 +275,8 @@ function checkLine(config: Config, line: DropLine, starts: ReadonlyMap<number, r
  * `starts` (ticks in a period of `period`). None when no line can be checked: no positions, copies whose gap is not
  * given, hands of different ticks on a line whose belt direction is not known and whose answer depends on it.
  */
-export function dropSpacing(config: Config, starts: ReadonlyMap<number, readonly number[]>, period: number): DropSpacing | null {
-    if (!(period > 0)) return null;
+export function dropSpacing(config: Config, starts: ReadonlyMap<number, readonly number[]>, window_cycle_ticks: number): DropSpacing | null {
+    if (!(window_cycle_ticks > 0)) return null;
     const copies = config.setpoint.copies;
     const results: { line: DropLine; step: CopyStep | null; sense: 1 | -1; result: DropSpacingLine }[] = [];
     for (const line of dropLines(config)) {
@@ -285,10 +285,10 @@ export function dropSpacing(config: Config, starts: ReadonlyMap<number, readonly
         const ticks = line.inserters.map(inserter => starts.get(inserter.id) ?? []).filter(it => it.length > 0);
         if (ticks.length === 0) continue;
         const senses: (1 | -1)[] = line.flow === null ? [1, -1] : [line.flow];
-        const checks = senses.map(sense => ({ sense, ...checkLine(config, line, starts, period, step, sense) }));
+        const checks = senses.map(sense => ({ sense, ...checkLine(config, line, starts, window_cycle_ticks, step, sense) }));
         if (new Set(checks.map(check => check.pairs.length > 0)).size > 1) continue;
         const check = checks[0];
-        const waits = check.pairs.length > 0 ? waitsOf(check.hands, speedOf(config, line.belt_id), line.tiles_per_tick, period) : [];
+        const waits = check.pairs.length > 0 ? waitsOf(check.hands, speedOf(config, line.belt_id), line.tiles_per_tick, window_cycle_ticks) : [];
         results.push({
             line, step, sense: check.sense,
             result: {
@@ -304,17 +304,17 @@ export function dropSpacing(config: Config, starts: ReadonlyMap<number, readonly
     const first = results[0];
     const shared = first.step !== null && first.step.shared && copies > 1;
     const spacing: DropSpacing = {
-        period, copies,
+        window_cycle_ticks, copies,
         gap: shared ? Math.abs(first.step!.along) : null,
-        belt_tiles: first.line.tiles_per_tick * period,
+        belt_tiles: first.line.tiles_per_tick * window_cycle_ticks,
         hand: first.line.hand, lane_stack: first.line.lane_stack,
         lines: results.map(it => it.result),
         unchecked: uncheckedDrops(config),
     };
-    if (shared) spacing.room = dropRoom(config, results.map(it => it.line), period) ?? undefined;
+    if (shared) spacing.room = dropRoom(config, results.map(it => it.line), window_cycle_ticks) ?? undefined;
     if (!results.every(it => it.result.fits)) {
         const failing = results.find(it => !it.result.fits)!;
-        spacing.fitting_start = fittingStart(config, failing.line, failing.step, failing.sense, starts, period);
+        spacing.fitting_start = fittingStart(config, failing.line, failing.step, failing.sense, starts, window_cycle_ticks);
     }
     return spacing;
 }
@@ -332,18 +332,18 @@ export interface DropTieBreak {
     collisions: (starts: ReadonlyMap<number, readonly number[]>) => number;
 }
 
-export function dropTieBreak(config: Config, period: number): DropTieBreak | null {
-    if (!(period > 0)) return null;
+export function dropTieBreak(config: Config, window_cycle_ticks: number): DropTieBreak | null {
+    if (!(window_cycle_ticks > 0)) return null;
     const lines = dropLines(config);
     if (lines.length === 0) return null;
     const places = new Map<number, { line: number; along: number }>();
     lines.forEach((line, index) => line.inserters.forEach(inserter => places.set(inserter.id, { line: index, along: inserter.along })));
     // a check that can be made for no clock (copies whose gap is not given) leaves nothing to choose by
     const probe = new Map(Array.from(places.keys(), id => [id, [0]] as const));
-    if (dropSpacing(config, probe, period) === null) return null;
+    if (dropSpacing(config, probe, window_cycle_ticks) === null) return null;
     return {
         places,
-        collisions: starts => dropSpacing(config, starts, period)?.lines.reduce((sum, line) => sum + line.pairs, 0) ?? 0,
+        collisions: starts => dropSpacing(config, starts, window_cycle_ticks)?.lines.reduce((sum, line) => sum + line.pairs, 0) ?? 0,
     };
 }
 
@@ -357,9 +357,9 @@ const NARROWEST_ENTITY_TILES = 3;
 const LOOP_SLACK = 1e-9;
 
 /** Whether no two hands overlap on the circle of the belt's tiles in a period: the test of collidingPairs, sorted */
-function handsFit(hands: readonly Hand[], tiles_per_tick: number, period: number): boolean {
+function handsFit(hands: readonly Hand[], tiles_per_tick: number, window_cycle_ticks: number): boolean {
     if (hands.length < 2) return true;
-    const cycle = tiles_per_tick * period;
+    const cycle = tiles_per_tick * window_cycle_ticks;
     const mod = (value: number) => ((value % cycle) + cycle) % cycle;
     const placed = hands.map(hand => ({ at: mod(hand.place - tiles_per_tick * hand.tick), width: QUARTER_TILE * hand.stacks })).sort((a, b) => a.at - b.at);
     for (let i = 1; i < placed.length; i++) if (placed[i].at - placed[i - 1].at < placed[i].width - EPSILON) return false;
@@ -413,11 +413,11 @@ function copyWidth(config: Config, axis: "x" | "y"): number | null {
  * do not, and the start delays of the second one that fit. Arithmetic on the places alone: no run of the build. Null where
  * the copies' gap is not given or no line is shared.
  */
-export function dropRoom(config: Config, lines: readonly DropLine[], period: number): DropRoom | null {
+export function dropRoom(config: Config, lines: readonly DropLine[], window_cycle_ticks: number): DropRoom | null {
     const copies = config.setpoint.copies;
     const offset = config.setpoint.copy_offset;
     const shared = lines.filter(line => copyStepOf(config, line.axis)?.shared === true);
-    if (!(period > 0) || !(copies > 1) || offset === undefined || shared.length === 0) return null;
+    if (!(window_cycle_ticks > 0) || !(copies > 1) || offset === undefined || shared.length === 0) return null;
     const signs = shared.map(line => ((line.axis === "x" ? offset.x : offset.y) < 0 ? -1 : 1) as 1 | -1);
     const gap = Math.abs(shared[0].axis === "x" ? offset.x : offset.y);
     const first = shared[0];
@@ -425,7 +425,7 @@ export function dropRoom(config: Config, lines: readonly DropLine[], period: num
     const width = copyWidth(config, first.axis);
     const low = Math.max(1, width ?? 1);
     const together = new Map<number, readonly number[]>(shared.flatMap(line => line.inserters.map(inserter => [inserter.id, [0]] as const)));
-    const loops = shared.map(line => line.tiles_per_tick * period);
+    const loops = shared.map(line => line.tiles_per_tick * window_cycle_ticks);
     const whole = Math.round(loops[0]);
     const loop = whole >= 1 && loops.every(it => Math.abs(it - whole) < LOOP_SLACK) ? whole : null;
     const crowded = shared.map((line, index) => {
@@ -436,7 +436,7 @@ export function dropRoom(config: Config, lines: readonly DropLine[], period: num
     const gap_in_scan = loop !== null ? low + (((Math.round(gap) - low) % loop) + loop) % loop : gap;
     const fitsWith = (candidates: readonly DropLine[], pitch: number, starts: ReadonlyMap<number, readonly number[]>): boolean =>
         candidates.every((line, index) => (line.flow === null ? [1, -1] as const : [line.flow] as const)
-            .every(sense => handsFit(handsOf(line, starts, copies, { along: signs[index] * pitch, shared: true }, sense), line.tiles_per_tick, period)));
+            .every(sense => handsFit(handsOf(line, starts, copies, { along: signs[index] * pitch, shared: true }, sense), line.tiles_per_tick, window_cycle_ticks)));
     const pairable = shared.every(line => line.inserters.length === 2);
     // the line with the second inserter of each copy `apart` tiles from the first, in the direction it has
     const withApart = (apart: number): DropLine[] => shared.map(line => {
@@ -445,7 +445,7 @@ export function dropRoom(config: Config, lines: readonly DropLine[], period: num
     });
     const fits: number[] = [], never: number[] = [];
     const only = new Map<string, { spacings: number[]; apart: number[] }>();
-    const reach = Math.min(MAX_OFFSET_TILES, Math.ceil(tiles_per_tick * period) - 1);
+    const reach = Math.min(MAX_OFFSET_TILES, Math.ceil(tiles_per_tick * window_cycle_ticks) - 1);
     for (let pitch = low; pitch <= high; pitch++) {
         if (fitsWith(shared, pitch, together)) {
             fits.push(pitch);
@@ -462,7 +462,7 @@ export function dropRoom(config: Config, lines: readonly DropLine[], period: num
     }
     const starts_after: number[] = [];
     if (pairable && crowded === undefined) {
-        for (let delay = 1; delay <= Math.min(period - 1, MAX_DELAY_TICKS) && starts_after.length < 3; delay++) {
+        for (let delay = 1; delay <= Math.min(window_cycle_ticks - 1, MAX_DELAY_TICKS) && starts_after.length < 3; delay++) {
             const later = new Map(together);
             shared.forEach(line => later.set(line.inserters[1].id, [delay]));
             if (fitsWith(shared, gap, later)) starts_after.push(delay);
@@ -472,7 +472,7 @@ export function dropRoom(config: Config, lines: readonly DropLine[], period: num
         low, high, loop, copies, crowded: crowded === undefined ? null : { hands: crowded.hands, belt_tiles: crowded.belt_tiles, hand_tiles: crowded.hand_tiles },
         fits, only_with: [...only.values()], never,
         pair: pairable ? { first: first.inserters[0].id, second: first.inserters[1].id, apart: Math.abs(first.inserters[1].along - first.inserters[0].along) } : null,
-        starts_after, belt_tiles: tiles_per_tick * period, ticks_per_tile: 1 / tiles_per_tick, hand_tiles: first.inserters[0].stacks * QUARTER_TILE, gap, gap_in_scan,
+        starts_after, belt_tiles: tiles_per_tick * window_cycle_ticks, ticks_per_tile: 1 / tiles_per_tick, hand_tiles: first.inserters[0].stacks * QUARTER_TILE, gap, gap_in_scan,
     };
 }
 
@@ -480,7 +480,7 @@ export function dropRoom(config: Config, lines: readonly DropLine[], period: num
  * For a line that does not fit: the inserter that starts last, the ticks nearest to its own below and above at which
  * the line fits when it starts there, and the inserter that starts first if starting together fits.
  */
-function fittingStart(config: Config, line: DropLine, step: CopyStep | null, sense: 1 | -1, starts: ReadonlyMap<number, readonly number[]>, period: number): DropSpacing["fitting_start"] {
+function fittingStart(config: Config, line: DropLine, step: CopyStep | null, sense: 1 | -1, starts: ReadonlyMap<number, readonly number[]>, window_cycle_ticks: number): DropSpacing["fitting_start"] {
     const started = line.inserters.filter(inserter => (starts.get(inserter.id) ?? []).length > 0);
     const first_tick = (id: number) => Math.min(...starts.get(id)!);
     const ordered = [...started].sort((a, b) => first_tick(a.id) - first_tick(b.id) || a.id - b.id);
@@ -492,12 +492,12 @@ function fittingStart(config: Config, line: DropLine, step: CopyStep | null, sen
         const shifted = new Map(starts);
         const shift = tick - first_tick(mover.id);
         shifted.set(mover.id, starts.get(mover.id)!.map(it => it + shift));
-        return senses.every(each => checkLine(config, line, shifted, period, step, each).pairs.length === 0);
+        return senses.every(each => checkLine(config, line, shifted, window_cycle_ticks, step, each).pairs.length === 0);
     };
     const own = first_tick(mover.id);
     const ticks: number[] = [];
     for (let tick = Math.ceil(own) - 1; tick >= 0; tick--) if (fitsAt(tick)) { ticks.push(tick); break; }
-    for (let tick = Math.floor(own) + 1; tick < period; tick++) if (fitsAt(tick)) { ticks.push(tick); break; }
+    for (let tick = Math.floor(own) + 1; tick < window_cycle_ticks; tick++) if (fitsAt(tick)) { ticks.push(tick); break; }
     const same = fitsAt(first_tick(reference.id));
     if (ticks.length === 0 && !same) return undefined;
     return { inserter_id: mover.id, ticks, ...(same && { same_as: reference.id }) };
@@ -560,20 +560,20 @@ export function describeDropSpacing(spacing: DropSpacing): { fits: boolean; titl
     const fits = spacing.lines.every(line => line.fits);
     const belts = [...new Set(spacing.lines.map(line => line.belt_id))];
     const belt = belts.length === 1 ? `belt ${belts[0]}` : `belts ${listed(belts)}`;
-    const period = `In every period of ${tiles(spacing.period)} ticks`;
+    const window_cycle = `In every period of ${tiles(spacing.window_cycle_ticks)} ticks`;
     const sentences: string[] = [];
     spacing.lines.forEach((line, index) => {
         const first = spacing.lines[0];
         if (line.fits) {
             if (index === 0) {
-                sentences.push(`${period}, ${whoOf(line, spacing.copies)} drop ${handsWord(line.hands)} onto ${belt}, and each hand lands on a stretch of belt of its own, so none waits.`);
+                sentences.push(`${window_cycle}, ${whoOf(line, spacing.copies)} drop ${handsWord(line.hands)} onto ${belt}, and each hand lands on a stretch of belt of its own, so none waits.`);
             } else if (first.fits && line.hands === first.hands) {
                 sentences.push(`${capital(inserterWords(line.inserter_ids))} do the same${line.facing === (first.facing + 8) % 16 ? " on the other side of the belt" : ""}.`);
             } else {
                 sentences.push(`${capital(whoOf(line, spacing.copies))} drop ${handsWord(line.hands)} onto ${belt}, and each hand lands on a stretch of belt of its own.`);
             }
         } else {
-            const lead = index === 0 || spacing.lines[index - 1].fits ? `${period}, ` : "";
+            const lead = index === 0 || spacing.lines[index - 1].fits ? `${window_cycle}, ` : "";
             const who = lead === "" ? capital(whoOf(line, spacing.copies)) : whoOf(line, spacing.copies);
             sentences.push(`${lead}${who} drop ${handsWord(line.hands)} onto ${belt}. ${line.pairs} ${line.pairs === 1 ? "pair" : "pairs"} of them land on each other, `
                 + `and the later hand of each pair waits, the longest ${tiles(line.longest_wait)} ticks. ${startsSentence(line)}`);

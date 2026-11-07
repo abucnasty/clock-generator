@@ -55,7 +55,7 @@ describe("naming the clock a build came with", () => {
 describe("the recording of a clock the build came with", () => {
     test("carries what the clock is", () => {
         expect(recordingOfBuiltClock({ clock: { values: [0, 1] } }, { counter: 1, period: 2, first_value: 0 }))
-            .toEqual({ clock: { values: [0, 1], first_value: 0, period: 2 } });
+            .toEqual({ clock: { values: [0, 1], first_value: 0, window_cycle_ticks: 2 } });
     });
 
     test("is refused without a clock", () => {

@@ -28,7 +28,7 @@ describe("the rule count of a simulated run", () => {
         clock = alternatives.find(alternative => alternative.maker === "planned-belt-slack")!;
         expect(selected.maker).toBe("planned-belt-slack");
         expect(clock.verdict).toBe("stable");
-        expect(clock.ranking.recovery_periods).toBe(3);
+        expect(clock.ranking.recovery_window_cycles).toBe(3);
     });
 
     it("generates the clock itself when ruleCallsOfSample is not given the alternatives, and finds the same calls", () => {
@@ -38,9 +38,9 @@ describe("the rule count of a simulated run", () => {
         expect(generated.removal.w_removed_pooled).toBe(given.removal.w_removed_pooled);
     });
 
-    const stockOf = (periods: number) => simulateClockOnly(
+    const stockOf = (window_cycles: number) => simulateClockOnly(
         { ...config, overrides: { ...config.overrides, terminal_swing_count: clock.result.used_terminal_swing_count } },
-        clock.result.clock_windows, clock.result.simulation_duration.ticks, periods, quiet);
+        clock.result.clock_windows, clock.result.simulation_duration.ticks, window_cycles, quiet);
 
     // The simulator counts the crafts a machine starts; it reads them nowhere. These figures use the 4-swing clock
     // from the staged start (empty machines), over 40 periods.

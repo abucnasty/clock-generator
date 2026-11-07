@@ -67,7 +67,7 @@ export interface ClockRanking {
      * (decided 2026-10-31: on the container wagons, even hands recovered from the second cut of an input within 5
      * periods in the game where another clock of 0 wake-ups too took 33 to 48).
      */
-    recovery_periods?: number | null;
+    recovery_window_cycles?: number | null;
     window_count: number;
 }
 
@@ -84,7 +84,7 @@ export const ROUNDED_CLOCK_MAX_FAST = 0.001;
 /** A clock of a period that is not a whole number of ticks, exported rounded down to whole ticks */
 export interface RoundedClock {
     /** The ticks its blueprint counts: the period rounded down */
-    period_ticks: number;
+    window_cycle_ticks: number;
     /** How much faster than the target it runs, as a share: 0.0002 for 0.02% */
     runs_fast: number;
     /** Its rate is at most what the machines that make the target item can make together */
@@ -94,7 +94,7 @@ export interface RoundedClock {
      * a clock that can meet goal 1 (`ROUNDED_CLOCK_MAX_FAST`, `within_machines`) is tried so; another keeps the verdict
      * of the exact period, which its rate keeps from meeting the target.
      */
-    tried_on_its_period: boolean;
+    tried_on_its_window_cycle: boolean;
 }
 
 /** Whether a rounded clock's rate is one that meets the target: at most `ROUNDED_CLOCK_MAX_FAST` fast, within the machines */
@@ -110,7 +110,7 @@ export function rankingOf(clock: Omit<ClockAlternative, "ranking">, config: Conf
     const counts_as_holding = clock.deadlock_risks.length > 0 ? clock.verdict !== "unstable" : clock.verdict === "stable";
     const exact = Math.abs(rate_off_target) <= TARGET_RATE_TOLERANCE;
     // a rounded clock is judged by the rate it runs at on its own period, which it was tried on
-    const runs_fast = !exact && clock.rounded?.tried_on_its_period === true && rate_off_target > 0
+    const runs_fast = !exact && clock.rounded?.tried_on_its_window_cycle === true && rate_off_target > 0
         && roundedRateAllowed({ runs_fast: rate_off_target / target, within_machines: clock.rounded.within_machines })
         ? rate_off_target / target : undefined;
     const meets_target_rate = counts_as_holding && (exact || runs_fast !== undefined);
@@ -128,7 +128,7 @@ export function rankingOf(clock: Omit<ClockAlternative, "ranking">, config: Conf
         // with backed-up belts every clock goes without the slack, which is the choice
         matches_belt_choice: config.overrides?.backed_up_belts === true || !clock.result.belt_pickup_slack_left_out,
         wake_ups_per_minute: clock.assessment.wake_ups_per_minute,
-        recovery_periods: clock.assessment.disturbance_trial?.recovered_after_periods ?? null,
+        recovery_window_cycles: clock.assessment.disturbance_trial?.recovered_after_window_cycles ?? null,
         window_count: clock.ranking_window_count,
     };
 }
@@ -204,7 +204,7 @@ export const SEARCHES_THAT_CAN_IMPROVE: readonly string[] = ["derived", "shifted
  * measured was on a period of at most 432 ticks, and a search's builds grow with the period (the periods of 672 to 1,728
  * ticks held most of their cost), as the 2,400-tick limit of observed windows also bounds it
  */
-export const IMPROVING_SEARCH_MAX_PERIOD_TICKS = 480;
+export const IMPROVING_SEARCH_MAX_WINDOW_CYCLE_TICKS = 480;
 
 /**
  * The searches to run once the clocks made without one are in: every one where none of them can be selected as stable
@@ -216,14 +216,14 @@ export function searchesToRun<T, S extends { id: string }>(
     runs: (ClockAlternativeRun<T> | null)[],
     rankingOf: (alternative: T) => ClockRanking,
     searches: readonly S[],
-    primary_period_ticks: number,
+    primary_window_cycle_ticks: number,
 ): S[] {
     if (searchesAreNeeded(runs, rankingOf)) {
         return [...searches];
     }
     const { alternatives, selected_index } = combineClockAlternativeRuns(runs, rankingOf);
     const selected = alternatives[selected_index];
-    if (selected === undefined || noSearchCanBeat(rankingOf(selected)) || primary_period_ticks > IMPROVING_SEARCH_MAX_PERIOD_TICKS) {
+    if (selected === undefined || noSearchCanBeat(rankingOf(selected)) || primary_window_cycle_ticks > IMPROVING_SEARCH_MAX_WINDOW_CYCLE_TICKS) {
         return [];
     }
     return searches.filter(search => SEARCHES_THAT_CAN_IMPROVE.includes(search.id));
@@ -290,7 +290,7 @@ export function combineClockAlternativeRuns<T>(
             // to a thousandth: less than that is the rounding of a division, not a difference between two clocks
             costKey(ranking),
             // of equals on cost, the one that gets back from a loss sooner
-            ranking.recovery_periods ?? Infinity,
+            ranking.recovery_window_cycles ?? Infinity,
             ranking.window_count,
         ];
     };

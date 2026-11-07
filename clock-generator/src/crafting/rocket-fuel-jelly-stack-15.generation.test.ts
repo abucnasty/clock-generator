@@ -14,13 +14,13 @@ describe("generateClockForConfig", () => {
         // 15 jelly a hand is 8 hands a 64 tick period for each jelly inserter, and a hand takes them 8 ticks
         let sample: RocketFuelSample;
         let alternative: RocketFuelSample["alternative"];
-        let period: RocketFuelSample["period"];
+        let window_cycle_ticks: RocketFuelSample["window_cycle_ticks"];
         let jelly_inserter_ids: RocketFuelSample["jelly_inserter_ids"];
         let jellynut_inserter_id: RocketFuelSample["jellynut_inserter_id"];
 
         beforeAll(async () => {
             sample = await rocketFuelSample(withJellyHandsOf15(await loadConfigFromFile(ConfigPaths.ROCKET_FUEL_60)));
-            ({ alternative, period, jelly_inserter_ids, jellynut_inserter_id } = sample);
+            ({ alternative, window_cycle_ticks, jelly_inserter_ids, jellynut_inserter_id } = sample);
         });
 
         it("names why every inserter and drill a clock leaves always on is", () => {
@@ -33,7 +33,7 @@ describe("generateClockForConfig", () => {
         });
 
         it("has a 64 tick period", () => {
-            expect(period).toBe(64);
+            expect(window_cycle_ticks).toBe(64);
         });
 
         it.each(["planned-belt-slack", "fractional", "derived"])("%s is stable as built", (id) => {
@@ -49,7 +49,7 @@ describe("generateClockForConfig", () => {
             for (const id of jelly_inserter_ids) {
                 const last_window = windows[id][windows[id].length - 1];
                 expect(windows[id].length).toBe(2);
-                expect(last_window.end).toBeGreaterThanOrEqual(period - 1);
+                expect(last_window.end).toBeGreaterThanOrEqual(window_cycle_ticks - 1);
             }
         });
 

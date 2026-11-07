@@ -120,10 +120,10 @@ function longestGapOf(feeders: readonly (CycleWindow[] | null)[], span: number):
  * The rates are the machines' at the target, a copy (`computeMachineTargetRates`); where several loop feeders bring the
  * item to one machine, or several takers out of the loop take it from one, they share its rate evenly.
  */
-export function loopStockBound(config: Config, windows: SerializableClockWindows, period: number): LoopStockBound | null {
+export function loopStockBound(config: Config, windows: SerializableClockWindows, window_cycle_ticks: number): LoopStockBound | null {
     const loops = machineLoopsOf(config);
     if (loops.length === 0) return null;
-    const span = Number.isInteger(period) ? period : Math.ceil(period);
+    const span = Number.isInteger(window_cycle_ticks) ? window_cycle_ticks : Math.ceil(window_cycle_ticks);
     const traits = traitsOf(config);
     const rates = new Map(computeMachineTargetRates(config).map(rate => [`machine:${rate.machine_id}`, rate]));
     const madePerTick = (machine: string, item: string) =>
@@ -151,11 +151,11 @@ export function loopStockBound(config: Config, windows: SerializableClockWindows
                 const whole = own === null || all.length === 1;
                 const counted: CycleWindow = whole ? { start: 0, end: span - 1 } : { start: (previous.end + 1) % span, end: window.end };
                 // on a period that is not whole, its positions stand for period / span ticks each
-                const ticks = whole ? period : lengthOf(counted.start, counted.end, span) * period / span;
+                const ticks = whole ? window_cycle_ticks : lengthOf(counted.start, counted.end, span) * window_cycle_ticks / span;
                 const taken = takers.reduce((sum, taker) => {
                     const taker_windows = cycleWindowsOf(windows, taker.inserter, span);
                     if (taker_windows === null) return sum + taker_rate * ticks;
-                    const share = taker_rate * period / taker_windows.length;
+                    const share = taker_rate * window_cycle_ticks / taker_windows.length;
                     return sum + share * (whole ? taker_windows.length : taker_windows.filter(it => isIn(counted, it.start)).length);
                 }, 0);
                 const made = madePerTick(edge.from, edge.item) * ticks;
@@ -183,7 +183,7 @@ export function loopStockBound(config: Config, windows: SerializableClockWindows
 }
 
 /** The assessment's `loop_stock_bound` of a clock: its bound where it has windows for a loop (`loop_windows`), else nothing */
-export function loopStockBoundOf(config: Config, result: Pick<BlueprintGenerationResult, "loop_windows" | "clock_windows">, period: number): { loop_stock_bound?: LoopStockBound } {
-    const bound = result.loop_windows === undefined ? null : loopStockBound(config, result.clock_windows, period);
+export function loopStockBoundOf(config: Config, result: Pick<BlueprintGenerationResult, "loop_windows" | "clock_windows">, window_cycle_ticks: number): { loop_stock_bound?: LoopStockBound } {
+    const bound = result.loop_windows === undefined ? null : loopStockBound(config, result.clock_windows, window_cycle_ticks);
     return bound === null ? {} : { loop_stock_bound: bound };
 }

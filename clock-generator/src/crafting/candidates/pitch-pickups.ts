@@ -32,7 +32,7 @@ const FULL_HAND_SPARE_TICKS = Array.from({ length: 13 }, (_, i) => i + 4);
  * back a build can lose a hand of ingredients and with it a period of output: automation science without belt pickup
  * slack does in its second period, and holds the expected output from the third on.
  */
-const FULL_HAND_RECOVERY_PERIODS = [3, 4];
+const FULL_HAND_RECOVERY_WINDOW_CYCLES = [3, 4];
 
 
 /** One timing of the single-swing output windows: where they start and how long they are */
@@ -82,7 +82,7 @@ function pitchPickupsOutputWindows(
     windows: Map<string, OpenRange[]>,
     output_swings: Map<string, number>,
     output_machine_ids: Set<string>,
-    period: number,
+    window_cycle_ticks: number,
     logger: Logger,
     report?: (detail: string) => void,
     count_waits = false,
@@ -94,10 +94,10 @@ function pitchPickupsOutputWindows(
         return null;
     }
     const swings = swing_counts[0];
-    const spacing = period / swings;
+    const spacing = window_cycle_ticks / swings;
     const outputs = Array.from(output_swings.keys());
 
-    const build = (timing: Timing, spare?: SpareOutputWindows) => withSingleSwingOutput(windows, outputs, swings, period, timing.offset, timing.length, spare);
+    const build = (timing: Timing, spare?: SpareOutputWindows) => withSingleSwingOutput(windows, outputs, swings, window_cycle_ticks, timing.offset, timing.length, spare);
     const pickupStats = (result: TrialRun) => {
         let slow = 0;
         let pickups = 0;
@@ -141,13 +141,13 @@ function pitchPickupsOutputWindows(
                 since = transition.tick;
             }
             if (status === MachineStatus.OUTPUT_FULL) {
-                ticks += Math.ceil(period) - since;
+                ticks += Math.ceil(window_cycle_ticks) - since;
             }
         }
         return ticks;
     };
 
-    const planned_run = runClockOnBuild(config, windows, period, logger);
+    const planned_run = runClockOnBuild(config, windows, window_cycle_ticks, logger);
     const planned = pickupStats(planned_run);
     const extra_grabs = (planned.pickups - planned.swings) / Math.max(1, planned.swings);
     const waits = planned.slow / Math.max(1, planned.swings);
@@ -160,8 +160,8 @@ function pitchPickupsOutputWindows(
         return null;
     }
 
-    const recovers = (candidate_windows: Map<string, OpenRange[]>) => FULL_HAND_RECOVERY_PERIODS.every(warmup_periods =>
-        runClockOnBuild(config, candidate_windows, period, logger, { keep_output_buffers: true, warmup_periods }).stability_check.holds);
+    const recovers = (candidate_windows: Map<string, OpenRange[]>) => FULL_HAND_RECOVERY_WINDOW_CYCLES.every(warmup_window_cycles =>
+        runClockOnBuild(config, candidate_windows, window_cycle_ticks, logger, { keep_output_buffers: true, warmup_window_cycles }).stability_check.holds);
     // shortest spare first: longer windows let more grabs wait for items
     const recoveringTiming = (timing: Timing, label: string) => {
         if (recovers(build(timing))) {
@@ -172,7 +172,7 @@ function pitchPickupsOutputWindows(
                 report?.(`Searching spare output capacity (${label}, every ${every} windows +${ticks} ticks)`);
                 const spare = { every, ticks };
                 const spare_windows = build(timing, spare);
-                const result = runClockOnBuild(config, spare_windows, period, logger);
+                const result = runClockOnBuild(config, spare_windows, window_cycle_ticks, logger);
                 if (result.stability_check.holds && recovers(spare_windows)) {
                     return { spare, output_full: outputFullTicks(result), slow: slowPickups(result) };
                 }
@@ -194,7 +194,7 @@ function pitchPickupsOutputWindows(
         quick: (timing, index) => {
             report?.(`Searching full-hand output timing (${index + 1}/${timings.length})`);
             const timing_windows = build(timing);
-            const trial = quickTrial(config, timing_windows, period, logger, pickup_phase_cycles);
+            const trial = quickTrial(config, timing_windows, window_cycle_ticks, logger, pickup_phase_cycles);
             return trial.holds
                 ? { holds: true, output_full: outputFullTicks(trial.result), slow: slowPickups(trial.result), windows: timing_windows, run: trial.run }
                 : { holds: false, output_full: 0, slow: 0, windows: timing_windows, run: trial.run };
@@ -219,7 +219,7 @@ function pitchPickupsOutputWindows(
             }
             // without spare capacity the windows are the quick trial's, whose check the confirmation takes over
             const candidate_windows = recovery.spare ? build(timing, recovery.spare) : quick.windows;
-            const confirmed = confirm(config, candidate_windows, period, logger, label, report,
+            const confirmed = confirm(config, candidate_windows, window_cycle_ticks, logger, label, report,
                 recovery.spare ? undefined : quick.run, pickup_phase_cycles);
             logger.log(`Full-hand output: ${label}, ${output_full} output-full ticks, ${slow} slow pickups, stable=${confirmed !== null}`);
             return confirmed === null ? null : { ...confirmed, windows: candidate_windows };
@@ -258,7 +258,7 @@ export function pitchPickupsTransferWindows(
     verification: TrialRun,
     output_inserter_ids: Set<string>,
     entity_registry: ReadableEntityRegistry,
-    period: number,
+    window_cycle_ticks: number,
     logger: Logger,
     report?: (detail: string) => void,
 ): { windows: Map<string, OpenRange[]>; result: TrialRun; check: AsBuiltStabilityCheck; inserters: string[] } | null {
@@ -284,7 +284,7 @@ export function pitchPickupsTransferWindows(
         }
         // the windows around these are observed windows, checked as they are (see timeStudyWindowsClock)
         const found = pitchPickupsOutputWindows(config, current?.windows ?? windows, new Map([[entity_id.id, transfers.length]]),
-            new Set([source.entity_id.id]), period, logger, report, true, true);
+            new Set([source.entity_id.id]), window_cycle_ticks, logger, report, true, true);
         if (found) {
             current = found;
             inserters.push(entity_id.id);

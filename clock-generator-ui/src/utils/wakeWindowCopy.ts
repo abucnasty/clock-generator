@@ -108,7 +108,7 @@ function listText(items: string[], cap: number): string {
 }
 
 /** "600 ticks (10 s)", "550.96 ticks (9.18 s)" */
-function periodText(ticks: number): string {
+function windowCycleText(ticks: number): string {
     return `${ticksText(ticks)} (${secondsText(ticks)})`;
 }
 
@@ -154,7 +154,7 @@ function alwaysOnText(reason: AlwaysOnReason | undefined): string {
         case 'from-loop':
             return 'Always on: it takes from a machine in a loop, which the clock leaves running';
         case 'busy':
-            return `Always on: its swings fill the whole window cycle (${ticksText(reason.period_ticks)}), so an enable window would never switch it off`;
+            return `Always on: its swings fill the whole window cycle (${ticksText(reason.window_cycle_ticks)}), so an enable window would never switch it off`;
         case 'no-swing':
             return 'Always on: it made no swing in the run the enable windows are read from, so the clock has no window for it';
         case 'chest-drill':
@@ -251,7 +251,7 @@ export function windowOrdinalText(index: number, count: number): string {
  * Clock period, rows and wake-ups of the clock: "Clock period 600 ticks (10 s) · 14 inserters and 2 drills · 372 wake-ups a minute
  * for one copy"
  */
-export function summaryText(args: { periodTicks: number; inserters: number; drills: number; wakeUps: number | null; fromColdStart?: boolean }): string {
+export function summaryText(args: { windowCycleTicks: number; inserters: number; drills: number; wakeUps: number | null; fromColdStart?: boolean }): string {
     const counts = args.drills > 0
         ? `${plural(args.inserters, 'inserter', 'inserters')} and ${plural(args.drills, 'drill', 'drills')}`
         : plural(args.inserters, 'inserter', 'inserters');
@@ -259,7 +259,7 @@ export function summaryText(args: { periodTicks: number; inserters: number; dril
     const wakeUps = args.wakeUps === null
         ? 'Wakeups not counted'
         : `${formatNumberText(args.wakeUps, { maxDecimals: 0 })} wakeups a minute for one copy${args.fromColdStart ? ' from a cold start' : ''}`;
-    return `Window cycle time ${periodText(args.periodTicks)} · ${counts} · ${wakeUps}`;
+    return `Window cycle time ${windowCycleText(args.windowCycleTicks)} · ${counts} · ${wakeUps}`;
 }
 
 /**
@@ -268,7 +268,7 @@ export function summaryText(args: { periodTicks: number; inserters: number; dril
  */
 export function rowSummary(
     row: WakeWindowRow,
-    periodTicks: number,
+    windowCycleTicks: number,
     ctx: { mostWakeUpsId: string | null; itemLabel?: (id: string) => string } = { mostWakeUpsId: null },
 ): string {
     const detail = rowDetailText(row, ctx.itemLabel);
@@ -282,10 +282,10 @@ export function rowSummary(
         const slackText = slack > 0 ? `, the last ${ticksText(slack)} of each are belt slack` : '';
         parts.push(`${plural(row.windows.length, 'enable window', 'enable windows')}: ticks ${ticks}${slackText}.`);
     }
-    parts.push(`On for ${percentText(row.onShare)} of the window cycle of ${periodText(periodTicks)}.`);
+    parts.push(`On for ${percentText(row.onShare)} of the window cycle of ${windowCycleText(windowCycleTicks)}.`);
     parts.push(`${wakeUpsRowText(row)}.`);
     // the notes too, so a screen reader in focus mode hears them with the row
-    for (const note of watchNotes(row, { periodTicks, mostWakeUpsId: ctx.mostWakeUpsId })) {
+    for (const note of watchNotes(row, { windowCycleTicks, mostWakeUpsId: ctx.mostWakeUpsId })) {
         parts.push(`Note: ${note.text}`);
     }
     return parts.join(' ');
@@ -295,13 +295,13 @@ export function rowSummary(
  * The details of a selected wake window: "Wake window 2 of 3: ticks 212–240 (29 ticks, 0.48 s), of which the last 4 ticks are
  * belt slack. The inserter reacts 2 ticks after the wake window opens."
  */
-export function windowDetails(row: WakeWindowRow, index: number, periodTicks: number): string {
+export function windowDetails(row: WakeWindowRow, index: number, windowCycleTicks: number): string {
     const window = row.windows[index];
     if (!window) {
         return '';
     }
     const where = window.wraps
-        ? `ticks ${num(window.start)}–${num(window.end)}, past the end of the window cycle of ${periodText(periodTicks)} and on from tick 0`
+        ? `ticks ${num(window.start)}–${num(window.end)}, past the end of the window cycle of ${windowCycleText(windowCycleTicks)} and on from tick 0`
         : `ticks ${num(window.start)}–${num(window.end)}`;
     const slack = window.slackTicks > 0
         ? `, of which the last ${ticksText(window.slackTicks)} ${window.slackTicks === 1 ? 'is' : 'are'} belt slack`
@@ -311,8 +311,8 @@ export function windowDetails(row: WakeWindowRow, index: number, periodTicks: nu
 }
 
 /** What the live region says when a window is selected */
-export function selectionAnnouncement(row: WakeWindowRow, index: number, periodTicks: number): string {
-    return `${row.label}. ${windowDetails(row, index, periodTicks)}`;
+export function selectionAnnouncement(row: WakeWindowRow, index: number, windowCycleTicks: number): string {
+    return `${row.label}. ${windowDetails(row, index, windowCycleTicks)}`;
 }
 
 export type WatchNoteKind = 'mostly-on' | 'slack' | 'short' | 'wraps' | 'most-woken' | 'never-woken';
@@ -320,7 +320,7 @@ export type WatchNoteKind = 'mostly-on' | 'slack' | 'short' | 'wraps' | 'most-wo
 /** What to watch for in a row, in the glossary's terms; empty for a row with nothing to say */
 export function watchNotes(
     row: WakeWindowRow,
-    ctx: { periodTicks: number; mostWakeUpsId: string | null },
+    ctx: { windowCycleTicks: number; mostWakeUpsId: string | null },
 ): { id: WatchNoteKind; text: string }[] {
     const notes: { id: WatchNoteKind; text: string }[] = [];
     if (row.mode === 'windows') {

@@ -7,7 +7,7 @@ import { generateClockForConfig } from "../crafting/generate-blueprint";
 import { quiet } from "../crafting/generate-blueprint-test-helpers";
 import { ClockSchedule } from "../crafting/blueprint";
 import { BlueprintGenerationResult } from "../crafting/plan/unclocked-run";
-import { clockOfBlueprintString, clockPeriodTicks } from "./factorio-harness";
+import { clockOfBlueprintString, clockWindowCycleTicks } from "./factorio-harness";
 
 /**
  * The period the harness cuts a recording into is read from the clock blueprint. The generated clock has two
@@ -23,15 +23,15 @@ describe("clockPeriodTicks on the clocks the generator makes, with the lock", ()
         const blueprint = encodeBlueprintFile({ blueprint: result.blueprint });
         const clock = entitiesOf(blueprint).find(entity => /^Clock for/.test(entity.player_description ?? ""));
         expect(clock.control_behavior.decider_conditions.conditions).toHaveLength(2);
-        expect(clockPeriodTicks(blueprint)).toBe(result.simulation_duration.ticks);
+        expect(clockWindowCycleTicks(blueprint)).toBe(result.simulation_duration.ticks);
     });
 
     it("reads a subtick clock: the whole ticks after which the fractional period repeats", async () => {
         // iron bacteria: a period of 1728/19 ticks, so the subtick clock of every clock of the build counts 1728
         const config = await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_380_CULTIVATION);
         const subtick = generateClockForConfig(config, { logger: quiet }).subtick!;
-        expect(subtick.clock.period_ticks).toBe(1728);
-        expect(clockPeriodTicks(encodeBlueprintFile({ blueprint: subtick.blueprint }))).toBe(1728);
+        expect(subtick.clock.window_cycle_ticks).toBe(1728);
+        expect(clockWindowCycleTicks(encodeBlueprintFile({ blueprint: subtick.blueprint }))).toBe(1728);
     });
 
     it("reads a clock merged with its modulos and fuel clocks on signal-T: the count of the merged clock", async () => {
@@ -40,7 +40,7 @@ describe("clockPeriodTicks on the clocks the generator makes, with the lock", ()
         const blueprint = encodeBlueprintFile({ blueprint: result.blueprint });
         const clock = entitiesOf(blueprint).find(entity => /^Clock for/.test(entity.player_description ?? ""));
         expect(clock.control_behavior.decider_conditions.conditions[0].first_signal.name).toBe("signal-T");
-        const counted = clockPeriodTicks(blueprint)!;
+        const counted = clockWindowCycleTicks(blueprint)!;
         expect(counted).toBe(clock.control_behavior.decider_conditions.conditions[0].constant);
         expect(counted % result.simulation_duration.ticks).toBe(0);
         expect(counted).toBeGreaterThan(result.simulation_duration.ticks);
@@ -55,7 +55,7 @@ describe("clockPeriodTicks on the clocks the generator makes, with the lock", ()
         const blueprint = encodeBlueprintFile({ blueprint: result.subtick!.blueprint });
         const fuel_clocks = entitiesOf(blueprint).filter(entity => (entity.player_description ?? "").includes("Fuel clock:"));
         expect(fuel_clocks.length).toBeGreaterThan(0);
-        expect(clockPeriodTicks(blueprint)).toBe(result.subtick!.clock.period_ticks);
+        expect(clockWindowCycleTicks(blueprint)).toBe(result.subtick!.clock.window_cycle_ticks);
     });
 });
 

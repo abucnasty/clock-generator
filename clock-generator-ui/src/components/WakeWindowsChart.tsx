@@ -64,7 +64,7 @@ const LABEL_COLUMN_PX = 206;
 const NUMBERS_COLUMN_PX = 120;
 const COLUMN_GAP_PX = 14;
 
-const percent = (ticks: number, period: number) => `${(ticks / period) * 100}%`;
+const percent = (ticks: number, window_cycle_ticks: number) => `${(ticks / window_cycle_ticks) * 100}%`;
 
 const trackSx = {
     position: 'relative',
@@ -103,7 +103,7 @@ interface TrackProps {
     range: TimelineRange;
     tick?: number;
     row: WakeWindowRow;
-    periodTicks: number;
+    windowCycleTicks: number;
     marks: number[];
     selectedIndex: number | null;
     /** Ticks in one pixel of the track: windows narrower than that are merged in the drawing */
@@ -172,8 +172,8 @@ const NOTE_ICONS: Record<WatchNoteKind, ComponentType<{ fontSize?: 'inherit'; 'a
     'never-woken': BedtimeOutlined,
 };
 
-function WatchNotes(props: { row: WakeWindowRow; periodTicks: number; mostWakeUpsId: string | null; indent: string | number }) {
-    const notes = watchNotes(props.row, { periodTicks: props.periodTicks, mostWakeUpsId: props.mostWakeUpsId }).filter(note => note.id !== 'slack');
+function WatchNotes(props: { row: WakeWindowRow; windowCycleTicks: number; mostWakeUpsId: string | null; indent: string | number }) {
+    const notes = watchNotes(props.row, { windowCycleTicks: props.windowCycleTicks, mostWakeUpsId: props.mostWakeUpsId }).filter(note => note.id !== 'slack');
     if (notes.length === 0) {
         return null;
     }
@@ -205,7 +205,7 @@ interface RowProps {
     tick?: number;
     row: WakeWindowRow;
     rowIndex: number;
-    periodTicks: number;
+    windowCycleTicks: number;
     marks: number[];
     ticksPerPx: number;
     /** The selected window, when it is in this row */
@@ -226,7 +226,7 @@ const gridColumnsOf = (wide: boolean) => (wide ? `${LABEL_COLUMN_PX}px minmax(0,
 
 /** One inserter or drill: its name, track and numbers, the details of its selected window, its notes */
 const WakeWindowsRow = memo(function WakeWindowsRow(props: RowProps) {
-    const { row, periodTicks, selectedIndex, onSelect } = props;
+    const { row, windowCycleTicks, selectedIndex, onSelect } = props;
     const slackTicks = row.windows.reduce((max, window) => Math.max(max, window.slackTicks), 0);
     const { itemLabel } = useGameNames();
     const indent = props.wide ? `${LABEL_COLUMN_PX + COLUMN_GAP_PX}px` : 0;
@@ -284,7 +284,7 @@ const WakeWindowsRow = memo(function WakeWindowsRow(props: RowProps) {
             <Box
                 ref={(element: HTMLElement | null) => props.registerElement(row.id, element)}
                 role="group"
-                aria-label={rowSummary(row, periodTicks, { mostWakeUpsId: props.mostWakeUpsId, itemLabel })}
+                aria-label={rowSummary(row, windowCycleTicks, { mostWakeUpsId: props.mostWakeUpsId, itemLabel })}
                 tabIndex={props.isActive ? 0 : -1}
                 onKeyDown={onKeyDown}
                 onFocus={event => {
@@ -326,7 +326,7 @@ const WakeWindowsRow = memo(function WakeWindowsRow(props: RowProps) {
                         range={props.range}
                         tick={props.tick}
                         row={row}
-                        periodTicks={periodTicks}
+                        windowCycleTicks={windowCycleTicks}
                         marks={props.marks}
                         selectedIndex={selectedIndex}
                         ticksPerPx={props.ticksPerPx}
@@ -342,10 +342,10 @@ const WakeWindowsRow = memo(function WakeWindowsRow(props: RowProps) {
             </Box>
             {selectedIndex !== null && selectedIndex < row.windows.length && (
                 <Box data-wake-details sx={{ ml: indent, mb: 1, pl: 1.5, py: 0.5, borderLeft: 2, borderColor: 'divider' }}>
-                    <Typography variant="body2">{windowDetails(row, selectedIndex, periodTicks)}</Typography>
+                    <Typography variant="body2">{windowDetails(row, selectedIndex, windowCycleTicks)}</Typography>
                 </Box>
             )}
-            <WatchNotes row={row} periodTicks={periodTicks} mostWakeUpsId={props.mostWakeUpsId} indent={indent} />
+            <WatchNotes row={row} windowCycleTicks={windowCycleTicks} mostWakeUpsId={props.mostWakeUpsId} indent={indent} />
         </>
     );
 });
@@ -354,7 +354,7 @@ interface WakeWindowsChartProps {
     range?: TimelineRange;
     tick?: number;
     rows: WakeWindowRow[];
-    periodTicks: number;
+    windowCycleTicks: number;
     selected: Selection | null;
     /** A window of a row, or null to clear the selection; keep it stable, the rows are memoised */
     onSelect: (selection: Selection | null) => void;
@@ -370,8 +370,8 @@ interface WakeWindowsChartProps {
  * tabindex, Up and Down move between them, Left, Right, Home and End step through a row's windows, Escape clears.
  */
 export function WakeWindowsChart(props: WakeWindowsChartProps) {
-    const { rows, periodTicks, selected, onSelect } = props;
-    const range = props.range ?? { start: 0, end: periodTicks };
+    const { rows, windowCycleTicks, selected, onSelect } = props;
+    const range = props.range ?? { start: 0, end: windowCycleTicks };
     const span = range.end - range.start;
     const rootRef = useRef<HTMLDivElement>(null);
     const width = useElementWidth(rootRef);
@@ -436,7 +436,7 @@ export function WakeWindowsChart(props: WakeWindowsChartProps) {
                         range={range}
                         tick={props.tick}
                         rowIndex={rowIndex}
-                        periodTicks={periodTicks}
+                        windowCycleTicks={windowCycleTicks}
                         marks={marks}
                         ticksPerPx={ticksPerPx}
                         selectedIndex={selected?.rowId === row.id ? selected.windowIndex : null}

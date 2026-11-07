@@ -113,10 +113,10 @@ function createDestroyedPlan(
     const basis = destroyedTargetBasisOf(target_production_rate, entity_registry, config_overrides);
     const { item, machines, ticks_per_hand, forced } = basis;
     const planOf = (hands: number, exhaust?: readonly ExhaustPlan[]): OutputCyclePlan => {
-        const period_ticks = ticks_per_hand.multiply(hands);
+        const window_cycle_ticks = ticks_per_hand.multiply(hands);
         return {
-            total_duration: Duration.ofTicks(period_ticks.toDecimal()),
-            total_duration_ticks: period_ticks,
+            total_duration: Duration.ofTicks(window_cycle_ticks.toDecimal()),
+            total_duration_ticks: window_cycle_ticks,
             entity_transfer_map: transfersOfBalance(destroyedTargetBalance([...machines], entity_registry, config, item, fraction(hands),
                 (machine, brought) => destroyedTargetCrafts(machine, entity_registry, item, brought)), entity_registry),
             production_rate: target_production_rate,
@@ -211,7 +211,7 @@ function createMadePlan(
     const per_machine_rate = target_production_rate.machine_production_rate.amount_per_tick
         .divide(num_output_machines);
     
-    const single_swing_period_ticks = fraction(output_stack_size).divide(per_machine_rate);
+    const single_swing_window_cycle_ticks = fraction(output_stack_size).divide(per_machine_rate);
 
     // Determine swings per cycle - either fractional or integer
     let swings_per_cycle: Fraction;
@@ -244,8 +244,8 @@ function createMadePlan(
     }
 
     // kept as a fraction: the product of the two as floating point numbers can miss a whole number of ticks
-    const final_period_ticks = single_swing_period_ticks.multiply(swings_per_cycle);
-    const final_period_duration = Duration.ofTicks(final_period_ticks.toDecimal())
+    const final_window_cycle_ticks = single_swing_window_cycle_ticks.multiply(swings_per_cycle);
+    const final_window_cycle_duration = Duration.ofTicks(final_window_cycle_ticks.toDecimal())
 
     // Compute swing counts for all output machines
     // Each output machine handles the same swing count per machine
@@ -255,7 +255,7 @@ function createMadePlan(
         config,
         swings_per_cycle,
         output_stack_size,
-        final_period_duration.ticks
+        final_window_cycle_duration.ticks
     ), entity_registry)
 
     // Compute swing distributions if fractional swings are enabled
@@ -271,8 +271,8 @@ function createMadePlan(
             ));
 
             return withPlannedTerminalCount({
-                total_duration: final_period_duration,
-                total_duration_ticks: final_period_ticks,
+                total_duration: final_window_cycle_duration,
+                total_duration_ticks: final_window_cycle_ticks,
                 entity_transfer_map: swing_counts.clone(),
                 production_rate: target_production_rate,
                 fractional_swings_enabled: true,
@@ -284,8 +284,8 @@ function createMadePlan(
     }
 
     return withPlannedTerminalCount({
-        total_duration: final_period_duration,
-        total_duration_ticks: final_period_ticks,
+        total_duration: final_window_cycle_duration,
+        total_duration_ticks: final_window_cycle_ticks,
         entity_transfer_map: swing_counts.clone(),
         production_rate: target_production_rate,
         fractional_swings_enabled: false,

@@ -59,7 +59,7 @@ export type WindowCycleSetting =
     /** A window cycle that is not a whole number of ticks is counted in fractions of a tick */
     | { kind: "subtick_clock" }
     /** The window cycle is rounded down to whole ticks and runs fast by `runs_fast`, as a share (0.0002 for 0.02%) */
-    | { kind: "rounded_clock"; period_ticks: number; runs_fast: number }
+    | { kind: "rounded_clock"; window_cycle_ticks: number; runs_fast: number }
     /** The window cycle is cut to the crafting cycles after which the output inserters move whole hands */
     | { kind: "harmonic_window_cycle" }
     /** The same construction at the generator's own swing count, so the whole window cycle is shorter */
@@ -115,7 +115,7 @@ export function settingChipsOf(settings: ClockSettings): SettingChip[] {
         label: `${output_count.kind === "output_swings" ? "output swings" : "hands brought in"} ${output_count.count}` });
     for (const cycle of settings.window_cycle) {
         const label = cycle.kind === "subtick_clock" ? "subtick clock"
-            : cycle.kind === "rounded_clock" ? `rounded to ${cycle.period_ticks} ticks, ${fastPercent(cycle.runs_fast)} fast`
+            : cycle.kind === "rounded_clock" ? `rounded to ${cycle.window_cycle_ticks} ticks, ${fastPercent(cycle.runs_fast)} fast`
             : cycle.kind === "harmonic_window_cycle" ? "harmonic window cycle" : "shorter window cycle";
         chips.push({ field: "window_cycle", value: cycle.kind, label });
     }

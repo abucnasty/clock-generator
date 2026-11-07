@@ -2,7 +2,7 @@ import {describe, expect, test} from "vitest";
 import {FactorioDataService} from "../../../src/data";
 import {CONTAINER_GENERATED} from "./container-clock-cases";
 import {
-    CONTAINER_TARGET, containerClockCases, containerClockConfig, containerDrainPeriods,
+    CONTAINER_TARGET, containerClockCases, containerClockConfig, containerDrainWindowCycles,
 } from "./container-clock-fixtures";
 import {readControls, runHolds, RunControls} from "./clock-controls";
 import {expectRunIsConsistent, unclockedContainerStock} from "../helpers/fixture-mechanics";
@@ -61,13 +61,13 @@ describe("the stock each cut has to use up", () => {
     for (const variant of variants) {
         test(`${variant.name}: the periods the stock lasts at the target`, () => {
             const expected = EXPECTED[variant.name];
-            const period = controls[variant.name].generation!.period;
+            const window_cycle_ticks = controls[variant.name].generation!.period;
             const [cut1, cut2] = variant.recipe === "iron-gear-wheel" ? ["iron-plate", "iron-plate"] : ["iron-plate", "copper-cable"];
             for (const item of new Set([cut1, cut2])) {
                 const perCraft = variant.recipe === "iron-gear-wheel" ? 2 : item === "iron-plate" ? 1 : 3;
                 // stock over what the machine takes of it in a period at the target
-                expect(containerDrainPeriods(variant, item), item).toBe(expected.stock[item].periods);
-                expect(Math.ceil(expected.stock[item].items / (CONTAINER_TARGET * period / 60 * perCraft)), item).toBe(expected.stock[item].periods);
+                expect(containerDrainWindowCycles(variant, item), item).toBe(expected.stock[item].periods);
+                expect(Math.ceil(expected.stock[item].items / (CONTAINER_TARGET * window_cycle_ticks / 60 * perCraft)), item).toBe(expected.stock[item].periods);
             }
         });
     }

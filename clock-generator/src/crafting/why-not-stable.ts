@@ -51,7 +51,7 @@ export interface SpareTime {
     /** The ticks of a period it crafts */
     working_ticks: number;
     /** The periods after a loss a build is given to be back at its expected output (see disturbance-trial.ts) */
-    recovery_periods: number;
+    recovery_window_cycles: number;
 }
 
 /** What the summary reads of a clock: fields the engine's alternatives and the UI's view of them both carry */
@@ -76,7 +76,7 @@ export interface WhyNotStableClock {
     /** Items the output inserters move in a period of the clock when it holds */
     expected_output_items: number;
     /** What the clock-only check moved from the start it reports: a period, or over `repeat_periods` */
-    as_built_output?: { items: number; repeat_periods?: number; repeat_output_items?: number };
+    as_built_output?: { items: number; repeat_window_cycles?: number; repeat_output_items?: number };
     spare_time: SpareTime | null;
     /** The chests the output goes into that nothing empties and that were full where the run that failed the clock ended */
     full_output_chests: readonly FullOutputChest[];
@@ -112,7 +112,7 @@ export function whyNotStableClockOf(clock: {
         ...(as_built?.failed_taker_order !== undefined && { failed_taker_order: as_built.failed_taker_order }),
         ...(as_built?.competing_takers !== undefined && { competing_takers: as_built.competing_takers }),
         expected_output_items: clock.expected_output_items,
-        ...(as_built && { as_built_output: { items: as_built.actual_output_items, repeat_periods: as_built.repeat_periods,
+        ...(as_built && { as_built_output: { items: as_built.actual_output_items, repeat_window_cycles: as_built.repeat_window_cycles,
             repeat_output_items: as_built.repeat_output_items } }),
         spare_time: clock.insights.find(it => it.spare_time !== undefined)?.spare_time ?? null,
         full_output_chests: as_built?.full_output_chests ?? [],
@@ -155,8 +155,8 @@ function shortfallOf(clock: WhyNotStableClock): string {
     if (output === undefined) {
         return "";
     }
-    if (output.repeat_periods !== undefined && output.repeat_periods > 1 && output.repeat_output_items !== undefined) {
-        return `${output.repeat_output_items} of ${clock.expected_output_items * output.repeat_periods} items over ${output.repeat_periods} periods`;
+    if (output.repeat_window_cycles !== undefined && output.repeat_window_cycles > 1 && output.repeat_output_items !== undefined) {
+        return `${output.repeat_output_items} of ${clock.expected_output_items * output.repeat_window_cycles} items over ${output.repeat_window_cycles} periods`;
     }
     return `${figure(output.items)} of ${clock.expected_output_items} items a period`;
 }
@@ -231,14 +231,14 @@ function spareTimeSentence(spare: SpareTime | null): string {
     if (spare === null) {
         return "";
     }
-    const make_up_periods = spare.spare_ticks > 0 ? spare.working_ticks / spare.spare_ticks : Infinity;
-    if (make_up_periods <= spare.recovery_periods) {
+    const make_up_window_cycles = spare.spare_ticks > 0 ? spare.working_ticks / spare.spare_ticks : Infinity;
+    if (make_up_window_cycles <= spare.recovery_window_cycles) {
         return "";
     }
     const ticks = figure(spare.spare_ticks);
-    const periods = Number.isFinite(make_up_periods) ? `${Math.ceil(make_up_periods)} periods` : "forever";
+    const window_cycles = Number.isFinite(make_up_window_cycles) ? `${Math.ceil(make_up_window_cycles)} periods` : "forever";
     return ` ${spare.machine} crafts ${figure(spare.working_ticks)} ticks of a period and has ${ticks} ${ticks === "1" ? "tick" : "ticks"} `
-        + `to spare: making up one period it lost takes it ${periods}, more than the ${spare.recovery_periods} a build is given to `
+        + `to spare: making up one period it lost takes it ${window_cycles}, more than the ${spare.recovery_window_cycles} a build is given to `
         + "get back. That is too little to make up what it lost.";
 }
 

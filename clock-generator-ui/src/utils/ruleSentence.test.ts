@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Condition, EnableControlOverride, RuleSet, ValueReference } from './configForm/formData';
-import { RULE_COPY, blueprintNoteOf, periodLineOf, ruleSentenceOf } from './ruleSentence';
+import { RULE_COPY, blueprintNoteOf, windowCycleLineOf, ruleSentenceOf } from './ruleSentence';
 import { NO_TIMING, type RuleTiming } from './ruleTiming';
 
 const identity = (id: string) => id;
@@ -8,10 +8,10 @@ const names: Record<string, string> = { 'electromagnetic-science-pack': 'Electro
 const named = (id: string) => names[id] ?? id;
 const ctx = { itemLabel: named, cycleTicks: 132 };
 
-const clocked = (ranges: { start: number; end: number }[], period?: number): EnableControlOverride => ({
+const clocked = (ranges: { start: number; end: number }[], window_cycle_ticks?: number): EnableControlOverride => ({
     mode: 'CLOCKED',
     ranges,
-    ...(period !== undefined && { period_duration_ticks: period }),
+    ...(window_cycle_ticks !== undefined && { period_duration_ticks: window_cycle_ticks }),
 });
 
 /** The electromagnetic-science sample's Inserter 2 */
@@ -128,14 +128,14 @@ describe('blueprintNoteOf', () => {
 
 describe('periodLineOf', () => {
     it.each<[string, RuleTiming, string]>([
-        ['names the cycle, the period and the clock on Results', { cycleTicks: 132, periodTicks: 264, from: 'results', windows: {} },
+        ['names the cycle, the period and the clock on Results', { cycleTicks: 132, windowCycleTicks: 264, from: 'results', windows: {} },
             `Crafting cycle: 132 ticks. Window cycle time: 264 ticks (2 crafting cycles).${RULE_COPY.fromResults}`],
-        ['names one crafting cycle and the last check', { cycleTicks: 132, periodTicks: 132, from: 'check', windows: null },
+        ['names one crafting cycle and the last check', { cycleTicks: 132, windowCycleTicks: 132, from: 'check', windows: null },
             `Crafting cycle: 132 ticks. Window cycle time: 132 ticks (1 crafting cycle).${RULE_COPY.fromCheck}`],
-        ['asks for a check when nothing is known', NO_TIMING, RULE_COPY.periodUnknown],
-        ['says a fractional period can\'t be repeated by a rule', { cycleTicks: 137.739, periodTicks: 550.957, from: 'results', windows: {} },
+        ['asks for a check when nothing is known', NO_TIMING, RULE_COPY.windowCycleUnknown],
+        ['says a fractional period can\'t be repeated by a rule', { cycleTicks: 137.739, windowCycleTicks: 550.957, from: 'results', windows: {} },
             `Crafting cycle: 137.739 ticks. The window cycle time is 550.957 ticks, not a whole number, so a Clocked rule can't repeat with it.${RULE_COPY.fromResults}`],
     ])('%s', (_, timing, line) => {
-        expect(periodLineOf(timing)).toBe(line);
+        expect(windowCycleLineOf(timing)).toBe(line);
     });
 });

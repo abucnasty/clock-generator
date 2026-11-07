@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import {
-    disturbanceTrialsOf, judgeRecovery, LATE_AFTER_PERIODS, LOSS_PLACES, LOSS_SHARES, lossId, lossLabel, lossLimitOf, lossTrialsPartOfTheWay,
-    lossTrialsUntilStopped, LossOutcome, MAX_LOSS_PERIODS, MAX_RECOVERY_PERIODS, MAX_RUN_ON_PERIODS, reportOf, RUN_ON_EXACT_PERIODS,
+    disturbanceTrialsOf, judgeRecovery, LATE_AFTER_WINDOW_CYCLES, LOSS_PLACES, LOSS_SHARES, lossId, lossLabel, lossLimitOf, lossTrialsPartOfTheWay,
+    lossTrialsUntilStopped, LossOutcome, MAX_LOSS_WINDOW_CYCLES, MAX_RECOVERY_WINDOW_CYCLES, MAX_RUN_ON_WINDOW_CYCLES, reportOf, RUN_ON_EXACT_WINDOW_CYCLES,
     runsOn, verdictOf,
 } from "./disturbance-trial";
 import { SPOIL_LIMIT_SHARE } from "../common/rule-constants";
@@ -64,34 +64,34 @@ describe("a trial that is short late in its window", () => {
     const late = [320, ...Array(32).fill(400), 352, ...Array(6).fill(400)];
 
     it("runs on where no state repeated, it was back for 8 periods before the late mark and is short only after it", () => {
-        expect(late).toHaveLength(MAX_RECOVERY_PERIODS);
+        expect(late).toHaveLength(MAX_RECOVERY_WINDOW_CYCLES);
         expect(judgeRecovery(late, 400, null, 8).recovers).toBe(false);
-        expect(runsOn(late, 400, null, LATE_AFTER_PERIODS, 8)).toBe(true);
+        expect(runsOn(late, 400, null, LATE_AFTER_WINDOW_CYCLES, 8)).toBe(true);
     });
 
     it("does not run on where a state repeated: what it does from there it does for good", () => {
-        expect(runsOn(late, 400, 36, LATE_AFTER_PERIODS, 8)).toBe(false);
+        expect(runsOn(late, 400, 36, LATE_AFTER_WINDOW_CYCLES, 8)).toBe(false);
     });
 
     it("does not run on where it was short in the 8 periods before the late mark: one that is short every few periods", () => {
         // the 4-swing clock of agricultural science, short every 4 to 6 periods with or without a loss
         const every_few = [0, 6, 11, 16, 21, 27, 34, 37].reduce((bins, at) => { bins[at] = 384; return bins; }, Array(40).fill(400));
-        expect(runsOn(every_few, 400, null, LATE_AFTER_PERIODS, 8)).toBe(false);
+        expect(runsOn(every_few, 400, null, LATE_AFTER_WINDOW_CYCLES, 8)).toBe(false);
     });
 
     it("does not run on where it was back at the end of the window", () => {
         const early = [320, 352, ...Array(38).fill(400)];
-        expect(runsOn(early, 400, null, LATE_AFTER_PERIODS, 8)).toBe(false);
+        expect(runsOn(early, 400, null, LATE_AFTER_WINDOW_CYCLES, 8)).toBe(false);
     });
 
     it("does not run on where a bin is longer than the window: a subtick clock of 83 periods a bin", () => {
-        expect(runsOn([1000], 1020, null, Math.floor(LATE_AFTER_PERIODS / 83), Math.ceil(8 / 83))).toBe(false);
+        expect(runsOn([1000], 1020, null, Math.floor(LATE_AFTER_WINDOW_CYCLES / 83), Math.ceil(8 / 83))).toBe(false);
     });
 
     it("is judged on the periods after its last short one once it has run on", () => {
-        const ran_on = [...late, ...Array(RUN_ON_EXACT_PERIODS - 6).fill(400)];
-        expect(judgeRecovery(ran_on, 400, null, RUN_ON_EXACT_PERIODS)).toMatchObject({ recovers: true, recovered_after_bins: 34, proven: false });
-        expect(judgeRecovery([...ran_on.slice(0, -1), 384], 400, null, RUN_ON_EXACT_PERIODS).recovers).toBe(false);
+        const ran_on = [...late, ...Array(RUN_ON_EXACT_WINDOW_CYCLES - 6).fill(400)];
+        expect(judgeRecovery(ran_on, 400, null, RUN_ON_EXACT_WINDOW_CYCLES)).toMatchObject({ recovers: true, recovered_after_bins: 34, proven: false });
+        expect(judgeRecovery([...ran_on.slice(0, -1), 384], 400, null, RUN_ON_EXACT_WINDOW_CYCLES).recovers).toBe(false);
     });
 });
 
@@ -107,7 +107,7 @@ describe("the losses a build whose items spoil is tried with", () => {
     });
 
     it("are named in the verdict, which no other build's has", () => {
-        const none: LossOutcome = { loss: { kind: "none" }, bin_ticks: 100, periods_per_bin: 1, expected_per_bin: 10, trials: [], recovers: true,
+        const none: LossOutcome = { loss: { kind: "none" }, bin_ticks: 100, window_cycles_per_bin: 1, expected_per_bin: 10, trials: [], recovers: true,
             recovered_after_bins: 0, stopped_after_ticks: 0, ticks: 1000 };
         expect(verdictOf(reportOf(100, 10, none, [], { ticks: 2700, item: "iron-bacteria" })).loss_limit).toEqual({ ticks: 2700, item: "iron-bacteria" });
         expect(verdictOf(reportOf(100, 10, none, [])).loss_limit).toBeUndefined();
@@ -117,7 +117,7 @@ describe("the losses a build whose items spoil is tried with", () => {
 // Automation science: copper plates and gear wheels off one belt into a machine, the packs onto another
 describe("the verdict of a clock's losses", () => {
     const outcome = (loss: LossOutcome["loss"], recovers: boolean, failed_pickup_phases?: LossOutcome["failed_pickup_phases"]): LossOutcome => ({
-        loss, bin_ticks: 100, periods_per_bin: 1, expected_per_bin: 10, trials: [], recovers,
+        loss, bin_ticks: 100, window_cycles_per_bin: 1, expected_per_bin: 10, trials: [], recovers,
         recovered_after_bins: recovers ? 1 : null, stopped_after_ticks: 50, ticks: 1000, ...(failed_pickup_phases && { failed_pickup_phases }),
     });
 
@@ -132,7 +132,7 @@ describe("the verdict of a clock's losses", () => {
             survives: false,
             broken_by: ["coal stops arriving", "copper plate stops arriving"],
             broken_at_other_lane_phases: ["copper plate stops arriving"],
-            recovered_after_periods: null,
+            recovered_after_window_cycles: null,
         });
     });
 
@@ -145,7 +145,7 @@ describe("the verdict of a clock's losses", () => {
             broken_by: ["coal stops arriving"],
             broken_at_other_lane_phases: [],
             not_tried: ["iron plate stops arriving", "iron gear wheel is not taken away"],
-            recovered_after_periods: null,
+            recovered_after_window_cycles: null,
         });
         expect(verdictOf(reportOf(100, 10, outcome({ kind: "none" }, true), [outcome({ kind: "supply", item: "coal" }, true)]))).not.toHaveProperty("not_tried");
     });
@@ -159,7 +159,7 @@ describe("the verdict of a clock's losses", () => {
 
     it("has none apart for a clock that gets back from every loss", () => {
         const report = reportOf(100, 10, outcome({ kind: "none" }, true), [outcome({ kind: "supply", item: "coal" }, true)]);
-        expect(verdictOf(report)).toEqual({ survives: true, broken_by: [], broken_at_other_lane_phases: [], recovered_after_periods: 1 });
+        expect(verdictOf(report)).toEqual({ survives: true, broken_by: [], broken_at_other_lane_phases: [], recovered_after_window_cycles: 1 });
     });
 });
 
@@ -192,13 +192,13 @@ describe("the losses a build can have", () => {
 
 describe("what the generator calls stable", () => {
     it("lets a loss last until the build has stopped, 200 periods at most, and gives the build 40 periods to be back", () => {
-        expect(MAX_LOSS_PERIODS).toBe(200);
-        expect(MAX_RECOVERY_PERIODS).toBe(40);
+        expect(MAX_LOSS_WINDOW_CYCLES).toBe(200);
+        expect(MAX_RECOVERY_WINDOW_CYCLES).toBe(40);
     });
 
     it("runs a trial short late in its 40 periods on, until 40 periods at the expected output follow its last short one, 200 periods at most", () => {
-        expect(LATE_AFTER_PERIODS).toBe(32);
-        expect(RUN_ON_EXACT_PERIODS).toBe(40);
-        expect(MAX_RUN_ON_PERIODS).toBe(200);
+        expect(LATE_AFTER_WINDOW_CYCLES).toBe(32);
+        expect(RUN_ON_EXACT_WINDOW_CYCLES).toBe(40);
+        expect(MAX_RUN_ON_WINDOW_CYCLES).toBe(200);
     });
 });

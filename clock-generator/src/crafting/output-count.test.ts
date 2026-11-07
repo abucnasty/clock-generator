@@ -11,21 +11,21 @@ import { quiet } from "./generate-blueprint-test-helpers";
  */
 const runAsBuilt = async (output_window_start: number) => {
     const config = await loadConfigFromFile(ConfigPaths.STONE_BRICK_120_DRILL_DIRECT_INSERT);
-    const period = 72;
-    const window = (start: number, end: number) => end < period
+    const window_cycle_ticks = 72;
+    const window = (start: number, end: number) => end < window_cycle_ticks
         ? [{ start, end }]
-        : [{ start, end: period - 1 }, { start: 0, end: end - period }];
+        : [{ start, end: window_cycle_ticks - 1 }, { start: 0, end: end - window_cycle_ticks }];
     const clocked: Config = {
         ...config,
         inserters: config.inserters.map(inserter => ({
             ...inserter,
-            overrides: { enable_control: { mode: "CLOCKED" as const, ranges: window(output_window_start, output_window_start + 33), period_duration_ticks: period } },
+            overrides: { enable_control: { mode: "CLOCKED" as const, ranges: window(output_window_start, output_window_start + 33), period_duration_ticks: window_cycle_ticks } },
         })),
         drills: {
             ...config.drills!,
             configs: config.drills!.configs.map(drill => ({
                 ...drill,
-                overrides: { enable_control: { mode: "CLOCKED" as const, ranges: [{ start: 1, end: 5 }], period_duration_ticks: period } },
+                overrides: { enable_control: { mode: "CLOCKED" as const, ranges: [{ start: 1, end: 5 }], period_duration_ticks: window_cycle_ticks } },
             })),
         },
     };

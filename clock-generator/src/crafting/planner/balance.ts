@@ -654,7 +654,7 @@ export function balanceOf(facts: PlannerFacts, graph: PlannerGraph, seed: Balanc
 }
 
 /** The cycles of the period: the lcm of the denominators of every hand a cycle, those of `ignored_items` left out */
-export function periodCyclesOf(transfers: readonly BalancedTransfer[], ignored_items: readonly string[] = []): number {
+export function windowCycleCyclesOf(transfers: readonly BalancedTransfer[], ignored_items: readonly string[] = []): number {
     const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
     return transfers.flatMap(it => it.items).filter(it => !ignored_items.includes(it.item))
         .reduce((lcm, it) => lcm / gcd(lcm, it.hands.getDenominator) * it.hands.getDenominator, 1);
