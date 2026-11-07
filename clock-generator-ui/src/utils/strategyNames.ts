@@ -99,7 +99,7 @@ export const FAMILY_COPY: Record<StrategyFamily, FamilyCopy> = {
             + 'It keeps the setting with the smallest number of wakeups for the full clock.',
         practice: 'Traffic signals along a road work together in a coordination plan. All signals of the plan use the same cycle length. '
             + 'The split and the offset are set for each intersection. '
-            + 'Source: FHWA, Traffic Signal Timing Manual, sections 6.3.1, 6.3.3 and 6.3.4 (https://ops.fhwa.dot.gov/publications/fhwahop08024/chapter6.htm).',
+            + 'Source: FHWA, Traffic Signal Timing Manual (https://ops.fhwa.dot.gov/publications/fhwahop08024/chapter6.htm).',
     },
     'exhaust': {
         name: 'Exhaust',
