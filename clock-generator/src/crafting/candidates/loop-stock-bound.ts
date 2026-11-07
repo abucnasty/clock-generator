@@ -116,7 +116,7 @@ function longestGapOf(feeders: readonly (CycleWindow[] | null)[], span: number):
 /**
  * #516's two-hop bound (`LoopStockBound`) on a clock's windows (`windows`, by entity id: an inserter with none is always on)
  * of a window cycle of `period` ticks; null where the build has no loop of machines. Windows and gaps are counted on the
- * positions the cycle's windows can name (every whole tick a period that is not whole reaches), the items over its ticks.
+ * positions the cycle's windows can name (every whole tick a window cycle that is not whole reaches), the items over its ticks.
  * The rates are the machines' at the target, a copy (`computeMachineTargetRates`); where several loop feeders bring the
  * item to one machine, or several takers out of the loop take it from one, they share its rate evenly.
  */
@@ -150,7 +150,7 @@ export function loopStockBound(config: Config, windows: SerializableClockWindows
                 const previous = all[(at - 1 + all.length) % all.length];
                 const whole = own === null || all.length === 1;
                 const counted: CycleWindow = whole ? { start: 0, end: span - 1 } : { start: (previous.end + 1) % span, end: window.end };
-                // on a period that is not whole, its positions stand for period / span ticks each
+                // on a window cycle that is not whole, its positions stand for window cycle / span ticks each
                 const ticks = whole ? window_cycle_ticks : lengthOf(counted.start, counted.end, span) * window_cycle_ticks / span;
                 const taken = takers.reduce((sum, taker) => {
                     const taker_windows = cycleWindowsOf(windows, taker.inserter, span);

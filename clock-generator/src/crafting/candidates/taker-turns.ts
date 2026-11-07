@@ -29,7 +29,7 @@ export function outputAtWindow(machine: Machine, item: string, gap_ticks: number
  * where the windows stay as they are and the clock-only check judges them.
  *
  * The machine's takers into machines of other recipes take the product too, and the rule does not count them: `other_draw`
- * gives what they take (their items a period over the period), and the rule reports, without acting on it, what the machine
+ * gives what they take (their items a window cycle over the window cycle), and the rule reports, without acting on it, what the machine
  * could give these takers with that taken off what it makes, and whether they would then take turns where they do not, or
  * the other way.
  */
@@ -46,7 +46,7 @@ export function turnOffsets(machine: Machine, item: string, turns: readonly (rea
 
 /** What the takers of a machine's product into machines of other recipes take of it, and where the turn rule reports it */
 export interface OtherRecipeDraw {
-    /** Their items a period over the period */
+    /** Their items a window cycle over the window cycle */
     readonly per_tick: number;
     readonly log: (line: string) => void;
 }

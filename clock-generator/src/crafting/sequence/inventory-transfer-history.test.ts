@@ -46,7 +46,7 @@ describe("trimEndsToAvoidBackSwingWakeLists", () => {
         const in_flight: InventoryTransfer = { item_name: "jelly", tick_range: OpenRange.from(1, 50), amount: 120, pickup_tick_before_run: -6 };
         expect(trim([in_flight], 64)).toEqual([
             [1, 50 - back_swing_ticks, 120],
-            // 58 is tick -6 a period later, and the window runs up to where the one from tick 1 takes over
+            // 58 is tick -6 a window cycle later, and the window runs up to where the one from tick 1 takes over
             [58, 64, 0],
         ]);
     });

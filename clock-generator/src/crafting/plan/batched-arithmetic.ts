@@ -41,22 +41,22 @@ function refuse(reason: string): never {
 export interface ArithmeticWindowsInput {
     entity_registry: ReadableEntityRegistry;
     output_cycle_plan: OutputCyclePlan;
-    /** The clock's period, whole ticks */
+    /** The clock's window cycle, whole ticks */
     window_cycle_ticks: number;
-    /** Cycles in the period */
+    /** Cycles in the window cycle */
     recipe_lcm: number;
     /** Inserters the config leaves always enabled, which the arithmetic has no rule for */
     always_enabled_by_config: ReadonlySet<string>;
 }
 
 export interface ArithmeticWindows {
-    /** The windows of every inserter, by entity id, in clock positions of the period */
+    /** The windows of every inserter, by entity id, in clock positions of the window cycle */
     windows: Map<string, OpenRange[]>;
     /** The stock walk of every machine the windows were made from, by entity id */
     walks: Map<string, StockWalk>;
 }
 
-/** Hands an inserter moves in each cycle of the period: a fraction of hands a cycle is spread as evenly as whole hands go */
+/** Hands an inserter moves in each cycle of the window cycle: a fraction of hands a cycle is spread as evenly as whole hands go */
 function handsPerCycle(hands: { getNumerator: number; getDenominator: number }, cycles: number, id: string): number[] {
     const numerator = hands.getNumerator, denominator = hands.getDenominator;
     if (cycles % denominator !== 0) refuse(`${id} moves ${numerator}/${denominator} hands a cycle, not whole in ${cycles} cycles`);
@@ -135,7 +135,7 @@ function walkWithBatches(
     }
 }
 
-/** The part of the period (cycle) a walk tick falls in */
+/** The part of the window cycle (cycle) a walk tick falls in */
 function cycleOf(tick: number, cycle_starts: readonly number[]): number {
     let cycle = 0;
     for (let index = 0; index < cycle_starts.length; index++) if (cycle_starts[index] <= tick) cycle = index;

@@ -8,7 +8,7 @@ const windowsOf = (output: number[], block: number, window_cycle_ticks: number, 
     return map === null ? null : underBlockWindows(map, min, length);
 };
 
-/** An output at `block` but in the given ticks of every period, where it is a hand under it */
+/** An output at `block` but in the given ticks of every window cycle, where it is a hand under it */
 function outputOf(window_cycles: number, window_cycle_ticks: number, under: [number, number][], block = 28): number[] {
     const output: number[] = [];
     for (let tick = 0; tick < window_cycles * window_cycle_ticks; tick++) {
@@ -31,7 +31,7 @@ describe("underBlockWindows", () => {
 
     it("takes the ticks under the block of every judged period together", () => {
         const output = outputOf(30, 480, SLOTS.map(at => [at + 25, at + 62]));
-        // one period is under it from tick 17, a hand taken before the rest
+        // one window cycle is under it from tick 17, a hand taken before the rest
         for (let tick = 20 * 480 + 17; tick <= 20 * 480 + 19; tick++) {
             output[tick] = 12;
         }
@@ -76,7 +76,7 @@ describe("underBlockWindows", () => {
     });
 
     it("enables only as many ticks of each stretch as asked, from the first run under its block as long", () => {
-        // every period is under it at ticks 17 and 18 too, a hand taken before the others, and back at it from 19 to 24
+        // every window cycle is under it at ticks 17 and 18 too, a hand taken before the others, and back at it from 19 to 24
         const output = outputOf(30, 480, SLOTS.map(at => [at + 25, at + 62]));
         for (let window_cycle_ticks = 0; window_cycle_ticks < 30; window_cycle_ticks++) {
             output[window_cycle_ticks * 480 + 17] = 12;

@@ -59,7 +59,7 @@ describe("why the selected clock does not meet goal 1", () => {
         });
         // a config that already says its belts are backed up is not told to say so
         expect(whyNotStable([unstable], 0, { ...moving, backed_up_belts: true })?.message).not.toContain("answer Backed up");
-        // without the as-built output the shortfall is left out; a failure of one period is told per period
+        // without the as-built output the shortfall is left out; a failure of one window cycle is told per window cycle
         expect(whyNotStable([{ ...unstable, as_built_output: undefined }], 0, moving)?.message).toContain("in another phase. In the game");
         expect(whyNotStable([{ ...unstable, as_built_output: { items: 160 }, failed_pickup_phases: { "inserter:2": [1, 5], "inserter:4": [0, 0] } }], 0, moving)?.message)
             .toContain("reach inserters 2 and 4 in another phase: from such a start it moves 160 of 176 items a period.");
@@ -147,7 +147,7 @@ describe("why the selected clock does not meet goal 1", () => {
             + "and has 1 tick to spare: making up one period it lost takes it 319 periods, more than the 40 a build is given to get back. "
             + "That is too little to make up what it lost. A buffer, or a faster machine, lets it catch up.");
         expect(spare(0, 320)).toContain("making up one period it lost takes it forever");
-        // 146 ticks of crafting made up at 14 a period take 11 periods: within the 40
+        // 146 ticks of crafting made up at 14 a window cycle take 11 window cycles: within the 40
         expect(spare(14, 146)).not.toContain("to spare");
         expect(spare(8, 320)).not.toContain("to spare");
     });

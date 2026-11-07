@@ -56,7 +56,7 @@ describe("generateClockForConfig", () => {
             }
         });
 
-        // The planning run lets the loop run free and makes 416 of the 400 a period; the windows go by the clock-only
+        // The planning run lets the loop run free and makes 416 of the 400 a window cycle; the windows go by the clock-only
         // check alone, which holds. Under the new dispatch the turns of 5 and 8 no longer pass the check, so only 9 and 10
         // get windows and the loop's own inserters stay always enabled.
         it("gives 9 and 10 windows on the 5-swing clock of the sample, where its planning run does not hold, and 5 and 8 none", () => {
@@ -83,7 +83,7 @@ describe("generateClockForConfig", () => {
             expect(windows).toEqual([0, 96, 192, 288, 384].map(at => ({ start: at + 23, end: at + 46 })));
         });
 
-        // 9 and 10 bring 32 eggs in each stretch, the science biochamber draws 160 a period, a third of an egg a tick, and
+        // 9 and 10 bring 32 eggs in each stretch, the science biochamber draws 160 a window cycle, a third of an egg a tick, and
         // takes eggs while it holds fewer than 28: the second hand fits once it has drawn 5, in 15 ticks; and 5 for a hand
         it("makes the windows as long as the science biochamber needs to draw the hands of a stretch under its insertion limit", () => {
             const registry = createEntityRegistryFromConfig(sample);

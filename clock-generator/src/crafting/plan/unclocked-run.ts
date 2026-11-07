@@ -79,7 +79,7 @@ export { SIMULATION_BUDGET_TICKS };
  * when determining whether a simulation is considered stable.
  *
  * A tolerance of 1 accounts for minor trimming edge cases (e.g., back-swing wake-list
- * adjustments at period boundaries) while remaining strict enough to reliably detect
+ * adjustments at window cycle boundaries) while remaining strict enough to reliably detect
  * real instability such as output running at 50% of the expected rate.
  */
 export const LCM_STABILITY_TOLERANCE = 1;
@@ -87,9 +87,9 @@ export const LCM_STABILITY_TOLERANCE = 1;
 
 export interface SerializableInserterClock {
     kind: InserterClock["kind"];
-    /** Ticks between the starts of two windows; divides the clock period unless the inserter has a clock of its own */
+    /** Ticks between the starts of two windows; divides the window cycle unless the inserter has a clock of its own */
     modulus: number;
-    /** The window is on a clock of its own that counts `modulus` ticks (fuel), so it is not among the clock windows of the period */
+    /** The window is on a clock of its own that counts `modulus` ticks (fuel), so it is not among the clock windows of the window cycle */
     own_clock: boolean;
     /** The window within the first `modulus` ticks, as inclusive ticks */
     window: { start: number; end: number };
@@ -108,14 +108,14 @@ function serializeInserterClocks(clocks: ReadonlyMap<string, InserterClock>): Re
     }]));
 }
 
-/** The exported clock run over several periods, to show how a burner machine uses its fuel */
+/** The exported clock run over several window cycles, to show how a burner machine uses its fuel */
 export interface FuelConsumptionView {
-    /** Periods of the clock the view covers; the clock itself stays one period */
+    /** Window cycles of the clock the view covers; the clock itself stays one window cycle */
     window_cycles: number;
     duration_ticks: number;
     /**
      * The tick the clocks of the game stand at in the first recorded tick, after the warm-up, where they run through it
-     * (clocks of a whole-tick period: `BuildRun`); absent where they start again with the recorded run, at 0
+     * (clocks of a whole-tick window cycle: `BuildRun`); absent where they start again with the recorded run, at 0
      */
     clock_tick_at_start?: number;
     /** The inserters that fill a fuel slot */
@@ -144,24 +144,24 @@ export interface SimulationStabilityCheck {
     observation_span?: { ticks: number; window_cycles: number; output_items: number };
     /** The run moved its expected output, within a hand of tolerance (and the clock-only check held, when one ran) */
     holds: boolean;
-    /** Total items transferred by output inserters during the simulation period */
+    /** Total items transferred by output inserters during the simulation window cycle */
     actual_output_items: number;
     /** Expected items to be transferred by output inserters based on the crafting cycle plan */
     expected_output_items: number;
     /** The LCM value used in this simulation run */
     used_lcm: number;
     /**
-     * Periods after which the simulated state repeats exactly. Only known for a run driven by clock windows alone
-     * whose warmup reached the repeat. Above 1, the simulated period is one of several that differ.
+     * Window cycles after which the simulated state repeats exactly. Only known for a run driven by clock windows alone
+     * whose warmup reached the repeat. Above 1, the simulated window cycle is one of several that differ.
      */
     repeat_window_cycles?: number;
-    /** Output items over repeat_periods periods, required to match the expected output too; set when repeat_periods is more than 1 */
+    /** Output items over repeat_window_cycles window cycles, required to match the expected output too; set when repeat_window_cycles is more than 1 */
     repeat_output_items?: number;
     /** Re-simulation driven only by the exported clock windows; absent when verify_as_built is disabled */
     as_built?: AsBuiltStabilityCheck;
     /** The chests the output goes into that nothing empties and that are full where the run ended; absent when none is */
     full_output_chests?: FullOutputChest[];
-    /** The export belts that received less than their consumers take over the period judged; absent when none did */
+    /** The export belts that received less than their consumers take over the window cycle judged; absent when none did */
     export_shortfalls?: ExportShortfall[];
 }
 
@@ -181,7 +181,7 @@ export interface SwingAttemptResult {
 export interface SwingBackoffReport {
     /** An early derived strategy's real checks, separate from ordinary swing simulations. */
     primitive_grouped_attempt?: import("../round-robin-polling-primitive-policy").PrimitiveRoundRobinPollingAttemptReport;
-    /** Counts refused by period arithmetic, never simulated output/hold attempts. */
+    /** Counts refused by window cycle arithmetic, never simulated output/hold attempts. */
     window_cycle_limit_pruning?: SwingWindowCyclePruning;
     /** Whether the backoff loop was triggered (false when first attempt was stable or backoff is disabled) */
     triggered: boolean;
@@ -201,7 +201,7 @@ export interface GuardedTaker {
     inserter_id: string;
     /** The tick its window opens */
     start: number;
-    /** The hands it moves a period, each started inside the window */
+    /** The hands it moves a window cycle, each started inside the window */
     hands: number;
     /** Ticks of one swing of the inserter */
     cycle_ticks: number;
@@ -242,9 +242,9 @@ export interface BlueprintGenerationResult {
     fuel_hand_room_ticks: Record<string, number>;
     /** The belt the clock is made for; null when no inserter with windows picks up from a belt */
     belt: ClockBelt | null;
-    /** For a fractional period: the same windows on a subtick clock that runs the exact period instead of rounding it */
+    /** For a fractional window cycle: the same windows on a subtick clock that runs the exact window cycle instead of rounding it */
     subtick?: { clock: SubtickClock; blueprint: FactorioBlueprint; schedule: ClockSchedule };
-    /** The same windows with repeating parts checked against the clock modulo a divisor of the period; absent when that saves nothing */
+    /** The same windows with repeating parts checked against the clock modulo a divisor of the window cycle; absent when that saves nothing */
     modulo_blueprint?: FactorioBlueprint;
     modulo_schedule?: ClockSchedule;
     output_cycle_plan: OutputCyclePlan;
@@ -276,9 +276,9 @@ export interface BlueprintGenerationResult {
     /** What the burner machines use and the fuel clocks exported to refill them; absent when no inserter only fills a fuel slot */
     fuel_plan?: FuelPlan;
     /**
-     * The exported clock run for several periods, when a machine burns fuel: a fuel inserter swings once in a few
-     * periods, so one period seldom shows it inserting. Extended only to show the fuel being consumed; the clock
-     * and its checks stay one period.
+     * The exported clock run for several window cycles, when a machine burns fuel: a fuel inserter swings once in a few
+     * window cycles, so one window cycle seldom shows it inserting. Extended only to show the fuel being consumed; the clock
+     * and its checks stay one window cycle.
      */
     fuel_consumption_view?: FuelConsumptionView;
     /** The LCM value used in this simulation run */
@@ -332,9 +332,9 @@ export interface BlueprintGenerationResult {
      */
     random_margins?: { windows: RandomAmountMargin[]; crafting: CraftingMargin[] };
     /**
-     * Where results come too rarely for whole hands in a period: the windows of their takers, worked out by arithmetic,
+     * Where results come too rarely for whole hands in a window cycle: the windows of their takers, worked out by arithmetic,
      * one plan a machine (exhaust.ts), and whether the arithmetic holds (every container holds its results at the
-     * worst moment of the period in all but 1 in 740 periods). Absent for any other clock.
+     * worst moment of the window cycle in all but 1 in 740 window cycles). Absent for any other clock.
      */
     exhaust?: { plans: ExhaustPlan[]; holds: boolean };
 }
@@ -371,7 +371,7 @@ export interface GenerateClockOptions {
      * that do not move does not hold the expected output without it (see withFuelHandRoomWhereNeeded).
      */
     fuel_hand_room?: boolean;
-    /** Also run the exported clock for several periods to show the fuel being consumed (default true; internal check runs never do) */
+    /** Also run the exported clock for several window cycles to show the fuel being consumed (default true; internal check runs never do) */
     fuel_consumption_view?: boolean;
     /**
      * Record the state the game would show for every entity over the run, for its timelines (default true). A check
@@ -503,25 +503,25 @@ export interface RunOptions {
      * once it is back (see disturbance-trial.ts). For a run on clock windows alone; nothing is cut in any other run.
      */
     disturbance_trial?: DisturbanceTrialOptions;
-    /** Warmup length in simulation periods (default 10) */
+    /** Warmup length in simulation window cycles (default 10) */
     warmup_window_cycles?: number;
     /**
-     * The period of the run, when it is not the one the plan gives: a clock of whole ticks run on a plan of a period
-     * that is not whole, such as the clock of a fractional period rounded down (the output it is to move a period is
-     * still the plan's). Its output is counted and its state compared by this period.
+     * The window cycle of the run, when it is not the one the plan gives: a clock of whole ticks run on a plan of a window cycle
+     * that is not whole, such as the clock of a fractional window cycle rounded down (the output it is to move a window cycle is
+     * still the plan's). Its output is counted and its state compared by this window cycle.
      */
     window_cycle_ticks?: number;
     /**
-     * Simulate and record this many periods instead of one (default 1). The histories then cover the longer run;
-     * the output is judged over one period, so it only means something at 1.
+     * Simulate and record this many window cycles instead of one (default 1). The histories then cover the longer run;
+     * the output is judged over one window cycle, so it only means something at 1.
      */
     simulate_window_cycles?: number;
     /** Exact integer length of a physical counter observation, avoiding fractional-period multiplication noise. */
     observation_ticks?: number;
     /**
      * The clocks of the game run on through the start of the recorded run (`withEnableControls`); with this those of a
-     * p/q-tick period do too (`runThroughTicks`), not only those of a whole-tick
-     * period: set by a first check that observes a whole counter (trial.ts `firstClockSpan`), which then starts where
+     * p/q-tick window cycle do too (`runThroughTicks`), not only those of a whole-tick
+     * window cycle: set by a first check that observes a whole counter (trial.ts `firstClockSpan`), which then starts where
      * the warm-up left the counter instead of at a counter the recording restarts under a build the warm-up left
      * elsewhere (default false)
      */
@@ -549,7 +549,7 @@ export interface RunOptions {
      * Watch the recorded run for the simulation state repeating at a bin boundary, and stop it early when it does:
      * a build on fixed clocks repeats forever from a repeated state (see runner/steady-state.ts), so the bins
      * recorded to there say everything the full run would. The repeat is reported in `state_repeat`. Only read when
-     * `simulate_periods` is more than 1, and only on a build whose every control is a fixed clock (see
+     * `simulate_window_cycles` is more than 1, and only on a build whose every control is a fixed clock (see
      * `provenRepeatBin`); any other run is never cut short.
      */
     detect_repeat?: boolean;
@@ -566,7 +566,7 @@ export interface RunOptions {
 export interface BuildRun extends PlannedOutputCycle, TransferPlan {
     /**
      * The ticks the clocks of the game have run when the recorded run starts, where they run through the warm-up
-     * (`withEnableControls`): those of a whole-tick period (`runThroughTicks`); a clock of p/q ticks starts again with the
+     * (`withEnableControls`): those of a whole-tick window cycle (`runThroughTicks`); a clock of p/q ticks starts again with the
      * recorded run, at 0, unless the run observes its whole counter (`counter_runs_through`).
      */
     clock_tick_at_start?: number;
@@ -587,11 +587,11 @@ export interface BuildRun extends PlannedOutputCycle, TransferPlan {
     always_enabled_by_config: Set<string>;
     /** The clocks of the inserters outside the plan (fuel and by-product), as the plan made them */
     inserter_clocks: Map<string, InserterClock>;
-    /** The period of the clock */
+    /** The window cycle of the clock */
     duration: Duration;
-    /** What was recorded: `simulate_periods` periods, or less when `detect_repeat` ended the run at a repeat */
+    /** What was recorded: `simulate_window_cycles` window cycles, or less when `detect_repeat` ended the run at a repeat */
     recorded_duration: Duration;
-    /** The ticks the run was given: the warm-up and the recorded periods (a run that ended at a repeat took fewer) */
+    /** The ticks the run was given: the warm-up and the recorded window cycles (a run that ended at a repeat took fewer) */
     ticks_simulated: number;
     /** The repeat that ended the recorded run early, when `detect_repeat` found one */
     state_repeat?: StateRepeat;
@@ -615,7 +615,7 @@ export interface BuildRun extends PlannedOutputCycle, TransferPlan {
 /**
  * Runs a build: the machines are filled until their output is blocked (the prepare step), the crafting cycle is
  * planned on what they made, the output machines are emptied (or, for a cold start, the build is made anew with
- * nothing in it), the build is warmed up and then run for the period of the plan with every transfer and state
+ * nothing in it), the build is warmed up and then run for the window cycle of the plan with every transfer and state
  * recorded, its output is counted against the plan's, and, when asked, the backpressure losses are tried from where
  * it ended. Every inserter runs as its enable control says: the plan's
  * controls in a planning run, the clock windows alone in a trial (see `runClockOnBuild`).
@@ -708,7 +708,7 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
         state_transition_history,
         fuel_levels: simulated.fuel_levels,
         machine_stock: simulated.machine_stock,
-        // the warm-up counts in full where it stopped at a repeating state: the recording is of the period after it
+        // the warm-up counts in full where it stopped at a repeating state: the recording is of the window cycle after it
         timeline_recording: (options.timeline_recording?.settle_window_cycles !== undefined || options.timeline_recording?.settle_ticks !== undefined) && simulated.timeline_recording
             ? { ...simulated.timeline_recording, ticks_before_recording: warmup_window_cycle.ticks } : simulated.timeline_recording,
         stability_check: output.stability_check,
@@ -924,15 +924,15 @@ function withEnableControls(
     output_cycle_plan: OutputCyclePlan,
     recipe_lcm: number,
     logger: Logger,
-    /** Whether a clock of the game of a p/q-tick period runs through too, where they run through (`RunOptions.counter_runs_through`) */
+    /** Whether a clock of the game of a p/q-tick window cycle runs through too, where they run through (`RunOptions.counter_runs_through`) */
     counter_runs_through: boolean = false,
 ): ControlledBuild {
     const { simulation_context, relative_tick_provider } = build;
     // the clocks of the game (an inserter's own clock, a configured clocked control) run on through the start of a later
     // step of a run, as they do in the game, where nothing restarts them when a recording starts: they count the context's
-    // own ticks (the clocks of a whole-tick period, `runThroughTicks`)
+    // own ticks (the clocks of a whole-tick window cycle, `runThroughTicks`)
     const game_tick_provider = simulation_context.tick_provider;
-    // a clock of a p/q-tick period answers in whole 1/q ticks
+    // a clock of a p/q-tick window cycle answers in whole 1/q ticks
     const exact_subtick_positions = true;
 
     // Create resettable registry for centralized reset management
@@ -953,7 +953,7 @@ function withEnableControls(
         counter_runs_through,
     );
 
-    // Fuel is not part of the plan, so the fuel inserters swing on clocks of their own that repeat within the period
+    // Fuel is not part of the plan, so the fuel inserters swing on clocks of their own that repeat within the window cycle
     const crafting_shares = plannedCraftingShares(simulation_context.entity_registry, output_cycle_plan);
     // The fuel clocks of the planning run are made from the crafting share of the plan. The exported ones are made
     // from what a run of the exported clock burns, once its windows are known: see settledFuelClocks.
@@ -1003,21 +1003,21 @@ function withEnableControls(
     return { resettable_registry, crafting_shares, always_enabled_by_config, inserter_clocks };
 }
 
-/** How long a build runs: the period of the clock, and the warmup before it */
+/** How long a build runs: the window cycle of the clock, and the warmup before it */
 interface RunWindowCycles {
     duration: Duration;
     warmup_window_cycle: Duration;
 }
 
-/** The period of the plan and the warmup, shortened where a long period would take it past SIMULATION_BUDGET_TICKS */
+/** The window cycle of the plan and the warmup, shortened where a long window cycle would take it past SIMULATION_BUDGET_TICKS */
 function runWindowCyclesOf(output_cycle_plan: OutputCyclePlan, recipe_lcm: number, options: RunOptions, logger: Logger,
     overLimit: (window_cycle_ticks: number) => ClockWindowCycleLimitError): RunWindowCycles {
     const duration: Duration = Duration.ofTicks(options.window_cycle_ticks ?? options.timeline_recording?.window_cycle_ticks ?? OutputCyclePlan.ticksOfCycles(output_cycle_plan, recipe_lcm));
     if (Number.isFinite(duration.ticks) && duration.ticks > 0 && duration.ticks >= SIMULATION_BUDGET_TICKS) throw overLimit(duration.ticks);
     assert(Number.isFinite(duration.ticks) && duration.ticks > 0 && duration.ticks < SIMULATION_BUDGET_TICKS, `Clock period of ${duration.ticks} ticks exceeds maximum allowed ${SIMULATION_BUDGET_TICKS} ticks`);
-    // a recording of a settled period runs the build that long from its cold start, as the long run of the clock does
+    // a recording of a settled window cycle runs the build that long from its cold start, as the long run of the clock does
     const requested_warmup_window_cycles = Math.max(options.warmup_window_cycles ?? 10, options.timeline_recording?.settle_window_cycles ?? 0);
-    // long periods (large ingredient LCMs) get fewer warmup periods to stay under the tick budget
+    // long window cycles (large ingredient LCMs) get fewer warmup window cycles to stay under the tick budget
     const warmup_window_cycles = Math.min(requested_warmup_window_cycles, Math.floor((SIMULATION_BUDGET_TICKS - 1) / duration.ticks));
     const exact_ticks = options.timeline_recording?.settle_ticks;
     if (exact_ticks === undefined && warmup_window_cycles < requested_warmup_window_cycles) {
@@ -1036,7 +1036,7 @@ function runWindowCyclesOf(output_cycle_plan: OutputCyclePlan, recipe_lcm: numbe
 }
 
 /**
- * Step 2: warms the build up. Returns the periods its state repeats over, when the warmup reached a repeating state;
+ * Step 2: warms the build up. Returns the window cycles its state repeats over, when the warmup reached a repeating state;
  * a build that is not clocked throughout is not checked for one.
  */
 function warmUp(
@@ -1096,9 +1096,9 @@ export function coldControlledTrialBuild(
  * boundaries forever: what they hold is a proof of what the build does for good, not a sample of it.
  */
 export interface StateRepeat {
-    /** Whole ticks in a bin: the period, the whole-tick repeat of a fractional one, or their merge with own clocks */
+    /** Whole ticks in a bin: the window cycle, the whole-tick repeat of a fractional one, or their merge with own clocks */
     bin_ticks: number;
-    /** Clock periods in a bin */
+    /** Clock window cycles in a bin */
     window_cycles_per_bin: number;
     /** The boundary whose state came up again, in bins from the start of the recorded run */
     from_bin: number;
@@ -1108,7 +1108,7 @@ export interface StateRepeat {
 
 /** What the recorded run yields beyond the histories of the build */
 interface SimulatedRun {
-    /** What was recorded: `simulate_periods` periods, or less when `detect_repeat` ended the run at a repeat */
+    /** What was recorded: `simulate_window_cycles` window cycles, or less when `detect_repeat` ended the run at a repeat */
     recorded_duration: Duration;
     /** The repeat that ended the run early, when `detect_repeat` found one */
     state_repeat?: StateRepeat;
@@ -1121,7 +1121,7 @@ interface SimulatedRun {
     timeline_recording?: TimelineRecording;
 }
 
-/** Step 3: runs the build for the periods asked for, with its transfers and states recorded */
+/** Step 3: runs the build for the window cycles asked for, with its transfers and states recorded */
 function simulate(
     build: RecordedBuild,
     controlled: ControlledBuild,
@@ -1162,7 +1162,7 @@ function simulate(
         .map(it => it.inserter_state)
         .filter(state => all_output_inserters.some(os => os.inserter.entity_id.id === state.entity_id.id));
     const dropped_before_run = output_inserter_states.reduce((sum, state) => sum + state.items_dropped, 0);
-    // a run that is watched for a repeat may end long before the periods it was asked for, so it grows its series
+    // a run that is watched for a repeat may end long before the window cycles it was asked for, so it grows its series
     const may_end_early = repeat_bin !== null && repeat_bin.ticks < recorded_duration.ticks;
     const stock_recorder = options.machine_stock
         ? new StockRecorder(simulation_context.machines.map(it => it.machine_state), simulation_context.inserters.map(it => ({
@@ -1260,7 +1260,7 @@ function finalHistoryOf(
     return final_history;
 }
 
-/** The same planned count used in a result and in a pre-simulation period refusal, including final container takers. */
+/** The same planned count used in a result and in a pre-simulation window cycle refusal, including final container takers. */
 function plannedOutputSwingCount(output_cycle_plan: OutputCyclePlan, output_inserters: readonly InserterState[],
     output_inserter_ids: ReadonlySet<string>): number {
     const swing_counts = output_cycle_plan.entity_transfer_map;
@@ -1289,7 +1289,7 @@ interface OutputCheck {
 
 /**
  * Counts what the recorded run made against what the plan expects, the lanes it exports against what their consumers
- * take, and, when the warmup found the state repeating over several periods, the output over all of them.
+ * take, and, when the warmup found the state repeating over several window cycles, the output over all of them.
  */
 function checkOutput(
     build: RecordedBuild,
@@ -1326,7 +1326,7 @@ function checkOutput(
 
     const full_output_chests = fullOutputChestsOf(simulation_context, output_inserter_states);
 
-    // the simulated period can hit the expected output while the periods it alternates with fall short
+    // the simulated window cycle can hit the expected output while the window cycles it alternates with fall short
     let repeat_output_items: number | undefined;
     if (repeat_window_cycles !== undefined && repeat_window_cycles > 1 && duration.ticks * repeat_window_cycles < SIMULATION_BUDGET_TICKS) {
         state_transition_history.recording = false;
@@ -1387,7 +1387,7 @@ function disturbanceTrialOf(
         : repeat === null ? null : { ticks: repeat.window_cycle_ticks, window_cycles: repeat.scale };
     assert(bin !== null, `A clock of ${Number(loss_window_cycle.toFixed(3))} ticks does not repeat in whole ticks, so its output cannot be counted by the period`);
     const own_clock_ticks = Array.from(controlled.inserter_clocks.values()).filter(clock => clock.own_clock).map(clock => clock.modulus);
-    // boundaries a whole proven bin apart repeat for good; in bins of the period that is every `stride`-th boundary
+    // boundaries a whole proven bin apart repeat for good; in bins of the window cycle that is every `stride`-th boundary
     const proven_bin = provenRepeatBin(config, loss_window_cycle);
     const proof_stride = proven_bin !== null && Number.isInteger(proven_bin.ticks / bin.ticks) ? proven_bin.ticks / bin.ticks : null;
     // the belts with a consumption rate have to keep receiving it, as the output keeps coming
@@ -1596,7 +1596,7 @@ export function clockOfWindows(
         : null;
     const use_belt_pickup_slack = belt_pickup_slack_mode === "always" || (slack_trial !== null && slack_trial.helps);
     const belt_pickup_slack = use_belt_pickup_slack ? full_belt_pickup_slack : new Map<string, number>();
-    // the slack only lengthens a window there is, and only in a period of whole ticks (see withBeltPickupSlack)
+    // the slack only lengthens a window there is, and only in a window cycle of whole ticks (see withBeltPickupSlack)
     const belt_fed_with_windows = Array.from(unslacked_windows)
         .filter(([key, ranges]) => ranges.length > 0 && (full_belt_pickup_slack.get(key) ?? 0) > 0)
         .map(([key]) => key);
@@ -1632,7 +1632,7 @@ export function clockOfWindows(
 /**
  * A clock's windows with room for the spread of the results that come by chance (see randomAmountMargins): the windows
  * of the inserters that take such a result out of where a machine places it are lengthened by whole swings where they
- * have less room than a period gives over its mean in all but 1 in 740 periods (the binomial's quantile at
+ * have less room than a window cycle gives over its mean in all but 1 in 740 window cycles (the binomial's quantile at
  * RANDOM_MARGIN_LEVEL). The same windows, and no margins, for any other build.
  */
 export function withRoomForRandomAmounts(plan: UnclockedRun, windows: Map<string, OpenRange[]>): {
@@ -1742,7 +1742,7 @@ export function exportClock(
             return undefined;
         }
         const exported = blueprintForWindows(all_windows, undefined, true);
-        // only worth offering when a window repeats within the period: a fuel clock alone is a modulo of the clock too
+        // only worth offering when a window repeats within the window cycle: a fuel clock alone is a modulo of the clock too
         return exported.modulo ? exported : undefined;
     };
     const subtickClockFor = (all_windows: Map<string, OpenRange[]>) => {
@@ -1802,7 +1802,7 @@ interface SettledFuelClocks {
 }
 
 /**
- * Runs the exported clock for several periods, makes the fuel clocks from what the machines burned in it, and runs
+ * Runs the exported clock for several window cycles, makes the fuel clocks from what the machines burned in it, and runs
  * it again with those. A machine burns in bursts, more in a stretch that starts as it begins to craft than its
  * crafting share says, and how often it stops depends on the windows: the run has both. The fuel clocks of the
  * plan stay when there is no run, or when a machine ran out of fuel with the measured ones.
@@ -1853,7 +1853,7 @@ function settledFuelClocks(
             fuel_consumption_view: planned_view,
         };
     }
-    // Long enough for the fuel clocks to meet the clock of the period every way they do, twice over: the fuel a
+    // Long enough for the fuel clocks to meet the clock of the window cycle every way they do, twice over: the fuel a
     // machine is down to depends on where its fuel windows fall in what it does
     const measured_fuel_ticks = Array.from(measured_clocks.values()).filter(it => it.kind === "fuel").map(it => it.modulus);
     const merged_ticks = mergedClockTicks(duration.ticks, measured_fuel_ticks);
@@ -1890,7 +1890,7 @@ export function clockOnlyRunOf(run: TrialRun): ClockOnlyRun {
  * plan's `stability_check` takes the check's verdict.
  *
  * The windows of the loop are tried wherever the clock-only check holds, whether the planning run held or not: the
- * planning run of a build with a loop lets the loop run free, and on agricultural science makes 432 of the 400 a period
+ * planning run of a build with a loop lets the loop run free, and on agricultural science makes 432 of the 400 a window cycle
  * of every clock, whose verdict follows the clock-only check alone (see `holds` in alternatives.ts). Under the new
  * dispatch (simulation/dispatch.ts) they are tried where it does not hold too, and kept where the clock holds with them:
  * a clock planned for a loop can fail with the loop running free and hold with its windows.
@@ -1909,7 +1909,7 @@ export function checkedClock(
 ): BlueprintGenerationResult {
     const { config, logger, run: { stability_check, total_expected_output, duration, output_cycle_plan } } = plan;
     const swings = fractionalSwingsOf(output_cycle_plan);
-    // windows that carry part hands from one period to the next are run for several periods, to see every result taken
+    // windows that carry part hands from one window cycle to the next are run for several window cycles, to see every result taken
     // out as it comes (exhaust.ts)
     const long_run_ticks = output_cycle_plan.exhaust === undefined ? FREE_RUNNING_CHECK_TICKS
         : Math.max(FREE_RUNNING_CHECK_TICKS, EXHAUST_CHECK_WINDOW_CYCLES * duration.ticks);
@@ -2126,7 +2126,7 @@ const OUTPUT_WINDOW_LAST_PICKUP_TICKS = 4;
 /**
  * In a build with inserters left always enabled, what the planning run did does not repeat: when its swings were
  * taken depends on when the free running inserters happened to deliver. Windows taken from that run are a little
- * off in every period, and in game a build fell behind by a hand every few periods, or made a hand too many. So the
+ * off in every window cycle, and in game a build fell behind by a hand every few window cycles, or made a hand too many. So the
  * inserters at the two ends of such a build, which are the ones the clock still holds, get the windows of the plan
  * and not of the run:
  *
@@ -2135,10 +2135,10 @@ const OUTPUT_WINDOW_LAST_PICKUP_TICKS = 4;
  *   makes at most its target, and the target while the machines keep up. A window as long as the swings took in the
  *   run, waits for the machine included, fits one swing more when the machine has product to spare.
  * - an inserter between machines that is not left always enabled (nutrients from a machine outside the loop): its
- *   needed hands a period, fuel included, times `MACHINE_HANDS_SURPLUS`, as windows of two hands spread evenly.
+ *   needed hands a window cycle, fuel included, times `MACHINE_HANDS_SURPLUS`, as windows of two hands spread evenly.
  * - an inserter taking from a belt: its planned hands, fuel included and rounded up. Into the output machine they
  *   come in one window a cycle that opens with the output window; into any other machine as windows of one hand
- *   spread evenly over the period. A hand its machine has no room for is not taken.
+ *   spread evenly over the window cycle. A hand its machine has no room for is not taken.
  */
 function windowsOfThePlanWhereInsertersRunFree(
     history: InventoryTransferHistory,
@@ -2176,7 +2176,7 @@ function windowsOfThePlanWhereInsertersRunFree(
             }
             result.set(keyFor(inserter.entity_id), windows);
         } else if (Entity.isMachine(source) && EntityId.isMachine(inserter.sink.entity_id) && !always_enabled.has(inserter.entity_id.id)) {
-            // Windows long enough to start two hands back to back, spread evenly over the period, in number for the
+            // Windows long enough to start two hands back to back, spread evenly over the window cycle, in number for the
             // surplus the sink's refusals need: a hand the machine has no room for is not taken, so what matters is that
             // there are never too few. The window count is not a count of hands: each window is given the amount it is
             // expected to carry, which is what the transfer table shows.
@@ -2245,7 +2245,7 @@ function assertBeltFillersPlanned(entity_registry: ReadableEntityRegistry, swing
 
 /**
  * Belt lanes with a consumption rate must be filled at that rate (outside consumers would run dry otherwise).
- * Returns the belts that fell short over the period, by item (see exportedItemsOf).
+ * Returns the belts that fell short over the window cycle, by item (see exportedItemsOf).
  */
 function exportedLanesShortOfConsumption(
     entity_registry: ReadableEntityRegistry,
@@ -2265,14 +2265,14 @@ function exportedLanesShortOfConsumption(
 }
 
 /**
- * Every inserter and drill runs on a fixed clock of a whole-tick period (or always/never), as in a clock-only
- * check, so the simulation is deterministic with that period and a repeated state repeats forever.
+ * Every inserter and drill runs on a fixed clock of a whole-tick window cycle (or always/never), as in a clock-only
+ * check, so the simulation is deterministic with that window cycle and a repeated state repeats forever.
  */
 function isPurelyClocked(config: Config, window_cycle_ticks: number): boolean {
     return Number.isInteger(window_cycle_ticks) && isClockedThroughout(config, window_cycle_ticks);
 }
 
-/** Every inserter and drill is always or never enabled, or on windows of a clock of this period, whole ticks or not */
+/** Every inserter and drill is always or never enabled, or on windows of a clock of this window cycle, whole ticks or not */
 function isClockedThroughout(config: Config, window_cycle_ticks: number): boolean {
     const fixed = (control: EnableControlOverrideConfig | undefined) => control !== undefined && (
         control.mode === "ALWAYS" || control.mode === "NEVER"
@@ -2284,9 +2284,9 @@ function isClockedThroughout(config: Config, window_cycle_ticks: number): boolea
 
 /**
  * The bin at whose boundaries equal simulation states repeat forever: every control of the build is a fixed clock
- * (always, never, or windows of a stated period), so the next tick is a function of the entity states and of where
+ * (always, never, or windows of a stated window cycle), so the next tick is a function of the entity states and of where
  * each clock stands, and at boundaries of this bin every clock stands where it stood at the last one. The bin is the
- * period for a build clocked throughout on whole ticks, the whole-tick repeat of a fractional period, and their
+ * window cycle for a build clocked throughout on whole ticks, the whole-tick repeat of a fractional window cycle, and their
  * merge with the moduli of the clocks inserters have of their own (fuel), as one combinator would count them
  * (see mergedClockTicks). Null when some control decides from more than the tick (AUTO), or no whole-tick
  * repeat exists: a repeated state then proves nothing.
@@ -2334,7 +2334,7 @@ const MAX_FUEL_VIEW_TICKS = 100_000;
 const FUEL_VIEW_HANDS = 4;
 
 /**
- * Runs the exported clock for several periods so a fuel inserter shows inserting. One period seldom does: a hand of
+ * Runs the exported clock for several window cycles so a fuel inserter shows inserting. One window cycle seldom does: a hand of
  * fuel lasts a machine longer than that, and the fuel slot's limit skips the window until it has burned down. The run
  * starts at four times the longest a full hand lasts, enough for each machine to be refilled a few times, and doubles
  * while no fuel inserter swung.
@@ -2428,7 +2428,7 @@ function plannedCraftingShares(entity_registry: ReadableEntityRegistry, output_c
 }
 
 /**
- * The windows of a clock with the inserters outside the plan that repeat on the clock of the period. An inserter on a
+ * The windows of a clock with the inserters outside the plan that repeat on the clock of the window cycle. An inserter on a
  * clock of its own (fuel) has no windows on it.
  */
 export function withInserterClocks(
@@ -2496,7 +2496,7 @@ export function windowsFromHistory(
  * interleave into the window, so the end cannot be trimmed per transfer as a machine-fed inserter's is (see
  * trimEndsToAvoidBackSwingWakeLists). Each window is pulled back one rotation instead: left open through the
  * return swing of its last drop, the returned hand grabs again in the window's last tick — on a backed-up belt
- * every time, one belt stack a period, which came out as an extra full hand every 4th period and one extra output
+ * every time, one belt stack a window cycle, which came out as an extra full hand every 4th window cycle and one extra output
  * hand every 16th on the over-hood builds (in-game confirmed; see tests/game/builds/README.md).
  */
 function beltFedWindowEndsBeforeTheReturnSwing(
@@ -2532,7 +2532,7 @@ function serializeClockWindows(windows: Map<string, OpenRange[]>): SerializableC
  * the swing backoff only lowers them. On moving belts the prepare step's machines start empty and get their first
  * hands as fast as the belt brings them: on the express moving half-tile pickups the electromagnetic plant gets one
  * hand of each ingredient before its output blocks where backed-up belts give it two, so the plan had 2 output swings,
- * a period of part ticks that no moving clock can be made for, and never reached 3, where observed windows hold.
+ * a window cycle of part ticks that no moving clock can be made for, and never reached 3, where observed windows hold.
  */
 function craftsWithBeltsBackedUp(config: Config, fractional_swings: boolean): Map<string, number> | null {
     if (config.overrides?.backed_up_belts === true || config.overrides?.terminal_swing_count !== undefined

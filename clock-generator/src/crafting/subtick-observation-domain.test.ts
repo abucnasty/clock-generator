@@ -18,7 +18,7 @@ const controls = JSON.parse(readFileSync(path.join(__dirname, "fixtures/metallur
 };
 
 it("rejects one missing hand even when its size is below the scaled per-period tolerance", () => {
-    // The existing iron-bacteria fractional-clock shape:19logical periods,576items each, one16item hand lost.
+    // The existing iron-bacteria fractional-clock shape:19logical window cycles,576items each, one16item hand lost.
     const repeat = { window_cycle_ticks: 1728, scale: 19 };
     expect(judgeCounterSpan(19 * 576, 576, repeat, 1)).toMatchObject({ holds: true, output_items_per_window_cycle: 576 });
     const missing = judgeCounterSpan(19 * 576 - 16, 576, repeat, 1);
@@ -73,7 +73,7 @@ it("observes a counter from where the warm-up left its clocks, not from a counte
         terminal_swing_count: controls.terminal_swing_count } };
     const windows = new Map(Object.entries(controls.clock_windows)
         .map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))]));
-    // the warm-up of 10 periods of 640/3 ticks leaves the counter 213 1/3 ticks in; restarted at 0 for the recording,
+    // the warm-up of 10 window cycles of 640/3 ticks leaves the counter 213 1/3 ticks in; restarted at 0 for the recording,
     // the clock jumps under a build the warm-up left elsewhere, and from the start 27 ticks in that costs a hand
     const counter = (counter_runs_through: boolean) => trial.runClockOnBuild(config, windows, controls.window_cycle_ticks, logger, {
         main_clock_shift: 27, simulate_window_cycles: 3, observation_ticks: 640, counter_runs_through, factorio_states: false,

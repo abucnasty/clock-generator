@@ -10,9 +10,9 @@ import { Config } from "../../config/schema";
  * (#660), and the schema has every copy take from the same lanes, so a copy downstream takes from a lane the copies upstream
  * took from first, under the same clock. Where the copies together take every item the lanes carry, the build only works
  * with its copies taking from different stretches of the belt (whatever the clock), and each finds the lane as the one copy
- * does. Where they take less, nothing places them so: copies a whole number of periods of belt travel apart open their
+ * does. Where they take less, nothing places them so: copies a whole number of window cycles of belt travel apart open their
  * windows on the same stretch of belt, and a window only as long as a full-lane pickup finds the stretch the copies upstream
- * emptied (three copies 9 tiles apart on a turbo belt, 72 ticks, a period of 72: the third copy made three quarters of its
+ * emptied (three copies 9 tiles apart on a turbo belt, 72 ticks, a window cycle of 72: the third copy made three quarters of its
  * share). The planning run's windows, longer where its takers wait for room, are kept there.
  *
  * Returns why the windows by arithmetic are not used, or null where nothing of this holds.

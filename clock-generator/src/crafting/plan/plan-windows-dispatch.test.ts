@@ -54,7 +54,7 @@ const ELECTROMAGNETIC_TURBO_BACKED: Config = {
  * The windows planned under the order the game updates inserters in, which are those the planning run had read under the
  * configured order before it. A belt-fed hand that waited at its machine's output block takes its first stack a tick after
  * another inserter took the products down, and its window opens at the take (utility science: 37 and 6923 within the
- * period, not 38); a control swap at the plan's start puts the hands on the list without waking them, so the belt hand
+ * window cycle, not 38); a control swap at the plan's start puts the hands on the list without waking them, so the belt hand
  * asleep at its full assembler takes its first stack when it did under the configured order (automation science).
  */
 describe("planned windows", () => {

@@ -76,7 +76,7 @@ export function recordingOfBuiltClock(written: { clock?: { values: unknown } }, 
     if (!written.clock) {
         throw new Error("The recorder found no clock in the build, so the recording is not cut by the clock that was named");
     }
-    return { ...written, clock: { ...written.clock, first_value: built_clock.first_value, window_cycle_ticks: built_clock.period } };
+    return { ...written, clock: { ...written.clock, first_value: built_clock.first_value, period: built_clock.period } };
 }
 
 /** The combinators the harness mod follows from a clock: the clock is the chain of these wired to its counter */
@@ -112,7 +112,7 @@ export function builtClockIdentity(blueprint: string, built_clock: BuiltClock): 
     const members = entities.filter(entity => found.has(entity.entity_number)).sort((a, b) => a.entity_number - b.entity_number);
     const number = new Map(members.map((entity, index) => [entity.entity_number, index + 1]));
     return {
-        window_cycle_ticks: built_clock.period,
+        period: built_clock.period,
         first_value: built_clock.first_value,
         counter: number.get(built_clock.counter),
         combinators: members.map(entity => ({ name: entity.name, direction: entity.direction ?? 0, control_behavior: entity.control_behavior })),

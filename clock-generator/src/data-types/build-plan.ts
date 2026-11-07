@@ -7,7 +7,7 @@
  *   out; two groups share no node;
  * - per group, the main-period choices (the output swing counts the alternatives are listed for), each kept or pruned
  *   by a rule, and the utilization of each machine group in it;
- * - the composition of the group periods into the one main period;
+ * - the composition of the group window cycles into the one main window cycle;
  * - for a target that counts an item destroyed, whether its results get windows of their own.
  *
  * Only the result windows' decision is read by a generation yet; the rest is recorded.
@@ -41,13 +41,13 @@ export type WindowCycleListing =
     | "fractional";
 
 /**
- * P-limit: a period over the most ticks one simulated run goes on for cannot be simulated, nor, under whole-counter
- * checks, a fractional period whose whole counter is
+ * P-limit: a window cycle over the most ticks one simulated run goes on for cannot be simulated, nor, under whole-counter
+ * checks, a fractional window cycle whose whole counter is
  */
 export interface WindowCycleLimitTerms {
     readonly window_cycle_ticks: number;
     readonly limit_ticks: number;
-    /** The ticks of the period's whole counter (p of p/q), where it is the counter that is over the limit */
+    /** The ticks of the window cycle's whole counter (p of p/q), where it is the counter that is over the limit */
     readonly counter_ticks?: number;
 }
 
@@ -63,9 +63,9 @@ interface WindowCycleChoiceHead {
 interface WindowCycleChoiceBase extends WindowCycleChoiceHead {
     /** Ticks of one crafting cycle at this count, exact */
     readonly cycle_ticks: FactsRatio;
-    /** Cycles of the group's period: the config's own lcm, else the lcm of the denominators of its edges' hands a cycle */
+    /** Cycles of the group's window cycle: the config's own lcm, else the lcm of the denominators of its edges' hands a cycle */
     readonly cycles: number;
-    /** The group's period: cycle_ticks x cycles */
+    /** The group's window cycle: cycle_ticks x cycles */
     readonly window_cycle_ticks: number;
 }
 
@@ -77,7 +77,7 @@ export interface PrunedWindowCycleChoice extends WindowCycleChoiceBase {
     readonly pruned: { readonly rule: "P-limit"; readonly terms: WindowCycleLimitTerms };
 }
 
-/** An alternative's count whose cycle today's cycle plan refuses to make, with its reason: it has no period */
+/** An alternative's count whose cycle today's cycle plan refuses to make, with its reason: it has no window cycle */
 export interface RefusedWindowCycleChoice extends Omit<WindowCycleChoiceHead, "swings"> {
     /** The count asked for; null where the cycle plan refused the swings before it had a count (fractional swings) */
     readonly swings: number | null;
@@ -108,7 +108,7 @@ export interface PlanGroup {
     readonly utilization: readonly PlanUtilization[];
 }
 
-/** What is done where the main period is over the limit */
+/** What is done where the main window cycle is over the limit */
 export type OverLimitAction =
     | { readonly action: "none" }
     /** today's swing backoff: the next lower count whose period is under the limit (Small batches is tried first where it applies) */
@@ -119,7 +119,7 @@ export type OverLimitAction =
 export interface OverLimitTerms {
     readonly requested_swings: number;
     readonly limit_ticks: number;
-    /** The main period of each count tried, from the requested one down */
+    /** The main window cycle of each count tried, from the requested one down */
     readonly tried: readonly { readonly swings: number; readonly window_cycle_ticks: number }[];
 }
 
@@ -129,15 +129,15 @@ export interface PlanComposition {
     readonly fractional: boolean;
     /**
      * What today's lists of other counts start from (planner/periods.ts, swingCountsListed): the output swings the main
-     * run reports and the planned count, and the main period up to which higher counts are listed; absent where no other
+     * run reports and the planned count, and the main window cycle up to which higher counts are listed; absent where no other
      * count is listed (a target that counts an item destroyed)
      */
     readonly listed_from?: { readonly swings: number; readonly planned: number; readonly higher_up_to_ticks: number };
-    /** The main period: cycle_ticks x effective_lcm */
+    /** The main window cycle: cycle_ticks x effective_lcm */
     readonly main_window_cycle: { readonly ticks: number; readonly exact: FactsRatio };
     readonly lcm_terms: {
         readonly cycle_ticks: FactsRatio;
-        /** The cycles of each group's period at the main count */
+        /** The cycles of each group's window cycle at the main count */
         readonly group_cycles: readonly { readonly group: string; readonly cycles: number }[];
         /** Items whose hands are left out of the lcm: the config's, and results carried from one window to the next */
         readonly ignored_items: readonly string[];
@@ -163,7 +163,7 @@ export interface ExhaustTerms {
     readonly forced: number | null;
     /** Ticks of base_hands */
     readonly cycle_ticks: number;
-    /** The takers' hands come out whole in a period the container holds */
+    /** The takers' hands come out whole in a window cycle the container holds */
     readonly whole_hands_fit: boolean;
     /** Every machine's results can be given windows; null where whole hands fit and it is not asked */
     readonly windows_feasible: boolean | null;
@@ -174,7 +174,7 @@ export type ExhaustDecision =
     | { readonly kind: "whole-hands"; readonly hands: number; readonly terms: ExhaustTerms }
     | {
         readonly kind: "result-windows";
-        /** Hands a cycle: base_hands x cycles; the cycle is the whole period */
+        /** Hands a cycle: base_hands x cycles; the cycle is the whole window cycle */
         readonly hands: number;
         readonly cycles: number;
         readonly terms: ExhaustTerms;

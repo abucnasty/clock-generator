@@ -14,18 +14,18 @@ import { rotateRanges } from "./clock";
  *
  * A machine that places its results itself into a container (its result target) and destroys an item it is brought
  * gives each result at its chance, and inserters take the results out of the container, each inserter the results its
- * filters name. Where the hands of those inserters come out whole in no period the container can hold (scrap at +300%
+ * filters name. Where the hands of those inserters come out whole in no window cycle the container can hold (scrap at +300%
  * productivity: holmium ore at 0.04 of a hand a feed cycle), the inserters that take the same results get one window a
- * period instead, and their hands are not whole: an inserter that waits for a full hand keeps a part hand from one
- * window to the next, and its window takes what the period gave of its results in all but 1 in 740 periods
+ * window cycle instead, and their hands are not whole: an inserter that waits for a full hand keeps a part hand from one
+ * window to the next, and its window takes what the window cycle gave of its results in all but 1 in 740 window cycles
  * (RANDOM_MARGIN_LEVEL) plus the part hands left over. All of it is worked out here before anything is simulated:
  *
- * - the period: the longest whole number of feed cycles whose results the container holds at that share, at the worst
- *   moment of the period (just before an opening), with each result counted since its takers' window last opened;
+ * - the window cycle: the longest whole number of feed cycles whose results the container holds at that share, at the worst
+ *   moment of the window cycle (just before an opening), with each result counted since its takers' window last opened;
  * - each window: the hands its results' count at that share needs with the part hands left over, (hands - 1) hand
  *   cycles and one tick long, as an inserter starts a hand in every hand cycle of a window (inserters.md section 9);
- * - the openings: spread evenly over the period, in the order the recipe lists the results ("staggered"), so that the
- *   container never holds a whole period of every result at once; or all at the start of the period with every taker
+ * - the openings: spread evenly over the window cycle, in the order the recipe lists the results ("staggered"), so that the
+ *   container never holds a whole window cycle of every result at once; or all at the start of the window cycle with every taker
  *   on for the longest window ("shared"), which keeps the other takers waiting at the container while the busiest one
  *   takes its hands.
  *
@@ -37,72 +37,72 @@ import { rotateRanges } from "./clock";
  */
 
 /**
- * The longest period the windows are planned on: a simulator budget, not a proof. 20 check periods x 24,000 ticks =
- * 480,000 < 500,000 (SIMULATION_BUDGET_TICKS), so the simulator can check EXHAUST_CHECK_PERIODS of them in its
+ * The longest window cycle the windows are planned on: a simulator budget, not a proof. 20 check window cycles x 24,000 ticks =
+ * 480,000 < 500,000 (SIMULATION_BUDGET_TICKS), so the simulator can check EXHAUST_CHECK_WINDOW_CYCLES of them in its
  * run. No record job reaches it.
  */
 export const EXHAUST_WINDOW_CYCLE_BUDGET_TICKS = 24_000;
 
-/** Periods the simulator runs the windows for after its warmup, to see each result taken out as it comes */
+/** Window cycles the simulator runs the windows for after its warmup, to see each result taken out as it comes */
 export const EXHAUST_CHECK_WINDOW_CYCLES = 20;
 
 /**
- * Periods a window has to drain the backlog a lost output leaves: the periods a loss trial gives a build to be back at
- * its expected output before it has to hold it (MAX_RECOVERY_PERIODS less RECOVERY_HOLD_PERIODS, disturbance-trial.ts)
+ * Window cycles a window has to drain the backlog a lost output leaves: the window cycles a loss trial gives a build to be back at
+ * its expected output before it has to hold it (MAX_RECOVERY_WINDOW_CYCLES less RECOVERY_HOLD_WINDOW_CYCLES, disturbance-trial.ts)
  */
 export const EXHAUST_RECOVERY_WINDOW_CYCLES = 32;
 
 /**
- * Periods the output of a result is not taken away for in a loss trial of these windows, at most: the trial confirms
- * the arithmetic of the recovery (`drain_periods`), and does not run to where the build stops (a silo takes 4,000 copper
- * cables, 200 periods of 96 s)
+ * Window cycles the output of a result is not taken away for in a loss trial of these windows, at most: the trial confirms
+ * the arithmetic of the recovery (`drain_window_cycles`), and does not run to where the build stops (a silo takes 4,000 copper
+ * cables, 200 window cycles of 96 s)
  */
 export const EXHAUST_LOSS_WINDOW_CYCLES = 4;
 
-/** The periods after the release of such a loss: twice the predicted drain and the periods a recovery has to hold, within these */
+/** The window cycles after the release of such a loss: twice the predicted drain and the window cycles a recovery has to hold, within these */
 export const EXHAUST_TRIAL_WINDOW_CYCLES = { least: 16, most: 64 } as const;
 
-/** Cells the weight a container lifts is counted in: every result's weight a period is rounded up to a cell */
+/** Cells the weight a container lifts is counted in: every result's weight a window cycle is rounded up to a cell */
 const WEIGHT_CELLS = 4096;
 
 export type ExhaustKind = "staggered" | "shared";
 
-/** The window a period of the inserters that take the same results */
+/** The window a window cycle of the inserters that take the same results */
 export interface ExhaustWindow {
     /** The results they take, in the recipe's order */
     items: ItemName[];
     /** The inserters, by entity id: all of them on the same window */
     inserter_ids: string[];
-    /** What a period gives of them on average */
+    /** What a window cycle gives of them on average */
     expected_items: number;
-    /** What a period gives of them at most in all but 1 in 740 periods */
+    /** What a window cycle gives of them at most in all but 1 in 740 window cycles */
     items_at_level: number;
     /**
      * What is left to take when their output has not been taken away until the build stopped: the container full of
      * the lightest of them, and a stack of each waiting in the machine. The window takes it over their expected count
-     * within EXHAUST_RECOVERY_PERIODS periods.
+     * within EXHAUST_RECOVERY_WINDOW_CYCLES window cycles.
      */
     backlog_items: number;
     /** The hand of each of the inserters */
     hand: number;
     /**
      * Hands each of the inserters starts in the window, in full hands: the items at the level, or the expected items
-     * and the backlog's share of a period where that is more, and the part hands left over
+     * and the backlog's share of a window cycle where that is more, and the part hands left over
      */
     hands: number;
     /** Ticks the window lasts: (hands - 1) hand cycles and one tick */
     window_ticks: number;
-    /** Tick of the period the window opens at */
+    /** Tick of the window cycle the window opens at */
     opening: number;
-    /** What the window takes a period at most, in full hands less the part hands left over */
+    /** What the window takes a window cycle at most, in full hands less the part hands left over */
     room_items: number;
-    /** `room_items` over the expected count: what a backlog falls by a period (E2's R3: recovery is the backlog drained at the margin) */
+    /** `room_items` over the expected count: what a backlog falls by a window cycle (E2's R3: recovery is the backlog drained at the margin) */
     margin_items: number;
-    /** Periods the margin takes to drain `backlog_items` */
+    /** Window cycles the margin takes to drain `backlog_items` */
     drain_window_cycles: number;
 }
 
-/** What the container holds against what it can hold, at the worst moment of the period */
+/** What the container holds against what it can hold, at the worst moment of the window cycle */
 export interface ContainerMargin {
     /** The container, by entity id */
     container_id: string;
@@ -110,7 +110,7 @@ export interface ContainerMargin {
     measure: "weight" | "slots";
     /** What it holds at most, in the measure (a weight in the data's units, or slots) */
     capacity: number;
-    /** What it holds at most in all but 1 in 740 periods, at the worst moment of the period (null: more than it holds) */
+    /** What it holds at most in all but 1 in 740 window cycles, at the worst moment of the window cycle (null: more than it holds) */
     at_level: number | null;
     /** What it holds on average at that moment */
     mean: number;
@@ -124,10 +124,10 @@ export interface ContainerMargin {
 export interface ExhaustPlan {
     machine_id: number;
     kind: ExhaustKind;
-    /** Ticks of the period: `cycles` feed cycles */
+    /** Ticks of the window cycle: `cycles` feed cycles */
     window_cycle_ticks: number;
     cycles: number;
-    /** Crafts of the machine a period */
+    /** Crafts of the machine a window cycle */
     crafts: number;
     windows: ExhaustWindow[];
     container: ContainerMargin;
@@ -152,7 +152,7 @@ export interface ExhaustInput {
     cycle_ticks: number;
     crafts_per_cycle: number;
     kind: ExhaustKind;
-    /** Feed cycles a period where the config sets them (`overrides.terminal_swing_count`); found here otherwise */
+    /** Feed cycles a window cycle where the config sets them (`overrides.terminal_swing_count`); found here otherwise */
     cycles?: number;
     level?: number;
 }
@@ -314,22 +314,22 @@ export function takerGroupsOf(machine: Machine, registry: Pick<ReadableEntityReg
     return Array.from(groups.values());
 }
 
-/** Ticks of the period each group's results are counted for just before the opening of group `before` (its own: the whole period) */
+/** Ticks of the window cycle each group's results are counted for just before the opening of group `before` (its own: the whole window cycle) */
 function agesBefore(openings: readonly number[], before: number, window_cycle_ticks: number): number[] {
     const at = openings[before];
     return openings.map(opening => ((at - opening) % window_cycle_ticks + window_cycle_ticks) % window_cycle_ticks || window_cycle_ticks);
 }
 
-/** The openings of the windows of `count` groups in a period: spread evenly, or all at its start */
+/** The openings of the windows of `count` groups in a window cycle: spread evenly, or all at its start */
 function openingsOf(kind: ExhaustKind, count: number, window_cycle_ticks: number): number[] {
     return Array.from({ length: count }, (_, index) => kind === "shared" ? 0 : Math.round(index * window_cycle_ticks / count));
 }
 
-/** What the container holds at the worst moment of a period, with that measure in its own units */
+/** What the container holds at the worst moment of a window cycle, with that measure in its own units */
 type WorstHeld = ContainerMargin & { at_level_units: number };
 
 /**
- * What the container holds at the worst moment of a period of `cycles` feed cycles: just before each opening, each
+ * What the container holds at the worst moment of a window cycle of `cycles` feed cycles: just before each opening, each
  * result counted over whole feed cycles since its group's window opened (a part of a cycle counted as a whole one)
  */
 function worstHeld(input: ExhaustInput, measure: ContainerMeasure, groups: readonly TakerGroup[], cycles: number, level: number): WorstHeld {
@@ -409,13 +409,13 @@ function containerOf(machine: Machine, registry: Pick<ReadableEntityRegistry, "g
     return measure;
 }
 
-/** The longest whole number of feed cycles, up to the longest period, whose results the container holds at the level */
+/** The longest whole number of feed cycles, up to the longest window cycle, whose results the container holds at the level */
 function longestCycles(input: ExhaustInput, measure: ContainerMeasure, groups: readonly TakerGroup[], level: number): number {
     const fits = (cycles: number) => worstHeld(input, measure, groups, cycles, level).at_level_units <= measure.capacity;
     assert(fits(1), `Machine ${input.machine.entity_id.number} places more into ${input.machine.result_target} in one cycle of ${input.cycle_ticks} ticks `
         + "than it holds in all but 1 in 740 cycles");
     const longest = Math.max(1, Math.floor(EXHAUST_WINDOW_CYCLE_BUDGET_TICKS / input.cycle_ticks));
-    // the longest that fits: doubled while it fits, then halved back into the last step (what it holds grows with the period)
+    // the longest that fits: doubled while it fits, then halved back into the last step (what it holds grows with the window cycle)
     let low = 1;
     let high = 2;
     while (high <= longest && fits(high)) {
@@ -498,7 +498,7 @@ export function resultsFitContainer(
 /**
  * Whether the windows of a machine's results can be planned: its feed cycle lasts whole ticks, its container's room is
  * known, and the container holds one cycle's results at the level. Where not, the destroyed target keeps the plan that
- * simulates its period (output-cycle.ts), as it had before these windows.
+ * simulates its window cycle (output-cycle.ts), as it had before these windows.
  */
 export function exhaustFeasible(
     machine: Machine,
@@ -516,7 +516,7 @@ export function exhaustFeasible(
     return worstHeld(input, measure, takerGroupsOf(machine, registry), 1, level).at_level_units <= measure.capacity;
 }
 
-/** The windows of the inserters that take the results out, by inserter id, a period of `plan.period` */
+/** The windows of the inserters that take the results out, by inserter id, a window cycle of `plan.period` */
 export function exhaustWindowRanges(plan: ExhaustPlan): Map<string, OpenRange[]> {
     const windows = new Map<string, OpenRange[]>();
     for (const window of plan.windows) {
@@ -534,7 +534,7 @@ export function takesResultOf(plans: readonly ExhaustPlan[], inserter_id: Entity
     return plans.some(plan => plan.windows.some(window => window.inserter_ids.includes(id)));
 }
 
-/** The items whose hands the windows carry across periods: no period makes them whole */
+/** The items whose hands the windows carry across window cycles: no window cycle makes them whole */
 export function carriedItemsOf(plans: readonly ExhaustPlan[]): ItemName[] {
     return Array.from(new Set(plans.flatMap(plan => plan.windows.flatMap(window => window.items))));
 }
@@ -543,23 +543,23 @@ export function carriedItemsOf(plans: readonly ExhaustPlan[]): ItemName[] {
 export interface ResultLossTrial {
     /** Ticks the output is not taken away for */
     loss_ticks: number;
-    /** Periods run after the release */
+    /** Window cycles run after the release */
     recovery_window_cycles: number;
     /** The container and the results whose count in it is watched */
     container_id: string;
     items: ItemName[];
-    /** What they may hold in it at the end: a normal period's worth at the level and a hand for each taker */
+    /** What they may hold in it at the end: a normal window cycle's worth at the level and a hand for each taker */
     backlog_limit: number;
-    /** The backlog the loss leaves, as the arithmetic has it, and the periods its margin drains it in */
+    /** The backlog the loss leaves, as the arithmetic has it, and the window cycles its margin drains it in */
     predicted_backlog: number;
     predicted_drain_window_cycles: number;
 }
 
 /**
  * The loss trial of the output of `item` for a clock of these windows: the output is not taken away for at most
- * EXHAUST_LOSS_PERIODS periods (fewer where the window's worst backlog comes sooner), and the build is run for
- * twice the periods the window's margin drains what that leaves and the periods a recovery holds, between
- * EXHAUST_TRIAL_PERIODS' bounds. Null for an item no window takes.
+ * EXHAUST_LOSS_WINDOW_CYCLES window cycles (fewer where the window's worst backlog comes sooner), and the build is run for
+ * twice the window cycles the window's margin drains what that leaves and the window cycles a recovery holds, between
+ * EXHAUST_TRIAL_WINDOW_CYCLES' bounds. Null for an item no window takes.
  */
 export function resultLossTrialOf(plans: readonly ExhaustPlan[], item: ItemName, hold_window_cycles: number): ResultLossTrial | null {
     for (const plan of plans) {

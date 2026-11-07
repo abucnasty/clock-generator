@@ -56,9 +56,9 @@ export interface FuelSwing {
     amount: number;
 }
 
-/** The exported clock run over several periods, long enough to show the burner machines being refilled */
+/** The exported clock run over several window cycles, long enough to show the burner machines being refilled */
 export interface FuelRunView {
-    /** Periods of the clock the run covers; the clock itself stays one period */
+    /** Window cycles of the clock the run covers; the clock itself stays one window cycle */
     window_cycles: number;
     durationTicks: number;
     /** Whether a fuel inserter swung in the run; false when none did even over the longest run tried */
@@ -93,7 +93,7 @@ export interface CheckedShiftRow {
 /** One end of the unbroken range of shifts that work around the shift in use */
 export interface ShiftRangeEdge {
     shift_ticks: number;
-    /** No place further out was tried: the moved windows would meet the same inserters' other windows or the end of the period */
+    /** No place further out was tried: the moved windows would meet the same inserters' other windows or the end of the window cycle */
     is_search_limit: boolean;
     /** What the inserters and machines are waiting on at this shift, the limits that stop the swings from going further */
     notes: string[];
@@ -152,7 +152,7 @@ export interface ClockAlternativeView {
     asBuilt: AsBuiltStabilityCheck | null;
     expectedOutputItems: number;
     terminalSwingCount: number;
-    /** Length of one crafting cycle; the clock period is a whole number of them */
+    /** Length of one crafting cycle; the window cycle is a whole number of them */
     cycleTicks: number;
     blueprintString: string;
     /** What installing the blueprint takes: whether it is a book, and which inserters each combinator is wired to */
@@ -174,11 +174,11 @@ export interface ClockAlternativeView {
     shiftOptions: ShiftOptionsView | null;
     simulationDurationTicks: number;
     /**
-     * The ticks the blueprint counts when the period is not a whole number of ticks and the clock runs it rounded down;
+     * The ticks the blueprint counts when the window cycle is not a whole number of ticks and the clock runs it rounded down;
      * missing for any other clock, and from clocks kept before it was carried
      */
     roundedWindowCycleTicks?: number;
-    /** How much faster than the setpoint a clock rounded down to whole ticks runs, as a share; missing like `roundedPeriodTicks` */
+    /** How much faster than the setpoint a clock rounded down to whole ticks runs, as a share; missing like `roundedWindowCycleTicks` */
     roundedRunsFast?: number;
     /** Which strategy the clock follows, its tuning method and settings, and its router, as ids; missing from clocks kept before it was carried */
     strategy?: ClockStrategy;
@@ -476,7 +476,7 @@ export interface LiveCoverage {
     lanesExactlyFull: string | null;
     /** The engine's note that the copies' gap is needed to check their drops onto a belt, which does not block */
     copyGapNeeded: string | null;
-    /** The engine's note on whether the copies' drops fit between each other at the period estimated from the settings, shown under the gap between copies */
+    /** The engine's note on whether the copies' drops fit between each other at the window cycle estimated from the settings, shown under the gap between copies */
     dropRoom: string | null;
     /** The engine's warnings for machines whose prototype disagrees with their type or cannot make their recipe; they do not block */
     machinePrototypes: MachinePrototypeIssue[];

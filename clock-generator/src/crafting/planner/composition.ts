@@ -1,8 +1,8 @@
 /**
- * The composition of a build's group periods into its one main period, as today makes it: the cycle's ticks times the
+ * The composition of a build's group window cycles into its one main window cycle, as today makes it: the cycle's ticks times the
  * lcm of the denominators of every hand a cycle (`EntityTransferCountMap.lcm`), or the config's own lcm. A group's
- * period is the cycle's ticks times the lcm of its own edges' denominators, so the main period is the lcm of the group
- * periods. Over SIMULATION_BUDGET_TICKS today's swing backoff picks a lower count where it may.
+ * window cycle is the cycle's ticks times the lcm of its own edges' denominators, so the main window cycle is the lcm of the group
+ * window cycles. Over SIMULATION_BUDGET_TICKS today's swing backoff picks a lower count where it may.
  */
 import type { Config } from "../../config";
 import type { OverLimitAction, PlanComposition } from "../../data-types/build-plan";
@@ -16,7 +16,7 @@ import { MAX_OBSERVED_WINDOWS_WINDOW_CYCLE_TICKS, type PlannedWindowCycles } fro
 
 /**
  * The items whose hands are left out of a cycle's lcm: the config's (`overrides.ignored_lcm_ingredients`), and the
- * results whose hands their windows carry from one period to the next, which are whole in no period (exhaust.ts)
+ * results whose hands their windows carry from one window cycle to the next, which are whole in no window cycle (exhaust.ts)
  */
 export function ignoredLcmItemsOf(config: Config, cycle: OutputCyclePlan): string[] {
     const carried = cycle.exhaust === undefined ? [] : carriedItemsOf(cycle.exhaust);
@@ -26,10 +26,10 @@ export function ignoredLcmItemsOf(config: Config, cycle: OutputCyclePlan): strin
 /** The key of an edge by its entity and item, as the cycle plan's transfers name them */
 export const transferKeyOf = (entity: string, item: string): string => `${entity}\n${item}`;
 
-/** What a cycle plan measures: its ticks, each group's cycles, the lcm and the main period */
+/** What a cycle plan measures: its ticks, each group's cycles, the lcm and the main window cycle */
 export interface CycleMeasure {
     readonly cycle_ticks: Fraction;
-    /** The cycles of each group's period, in the order of the groups */
+    /** The cycles of each group's window cycle, in the order of the groups */
     readonly group_cycles: readonly number[];
     readonly ignored_items: readonly string[];
     readonly computed_lcm: number;
@@ -71,7 +71,7 @@ export function cycleMeasureOf(config: Config, cycle: OutputCyclePlan, groups: r
 
 const ratioOf = (value: Fraction) => ({ numerator: value.getNumerator, denominator: value.getDenominator });
 
-/** The composition at the main clock's count, and what is done where the planned period is over the limit */
+/** The composition at the main clock's count, and what is done where the planned window cycle is over the limit */
 export function compositionOf(window_cycles: PlannedWindowCycles, groups: readonly GroupShape[]): PlanComposition {
     const { main, tried } = window_cycles;
     const measure = main.measure;

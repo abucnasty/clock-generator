@@ -119,7 +119,7 @@ describe("the rules of the game", () => {
 
     describe("room for a hand of fuel", () => {
         // agricultural science: the three inserters that bring nutrients off the belt with their bioflux; without the
-        // room the windows of batched swings closed on partly filled hands, 377 of 400 a period in the game
+        // room the windows of batched swings closed on partly filled hands, 377 of 400 a window cycle in the game
         it("is the ticks a hand of fuel takes to fill, for an inserter that takes fuel off a belt as well as an ingredient", async () => {
             const registry = await registryOf(ConfigPaths.AGRICULTURAL_SCIENCE_250);
             expect(Object.fromEntries(fuelHandRoomTicks(registry))).toEqual({ "inserter:1": 4, "inserter:2": 4, "inserter:11": 4 });

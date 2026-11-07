@@ -39,11 +39,11 @@
         "placement:drill:3/coal",
         "placement:drill:4/coal"
       ],
-      "periods": [
-        {"swings":1,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":112,"denominator":1},"cycles":1,"period_ticks":112,"kept":true},
-        {"swings":2,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":224,"denominator":1},"cycles":1,"period_ticks":224,"kept":true},
-        {"swings":3,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":336,"denominator":1},"cycles":1,"period_ticks":336,"kept":true},
-        {"swings":1,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":112,"denominator":1},"cycles":1,"period_ticks":112,"kept":true}
+      "window_cycles": [
+        {"swings":1,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":112,"denominator":1},"cycles":1,"window_cycle_ticks":112,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":224,"denominator":1},"cycles":1,"window_cycle_ticks":224,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":336,"denominator":1},"cycles":1,"window_cycle_ticks":336,"kept":true},
+        {"swings":1,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":112,"denominator":1},"cycles":1,"window_cycle_ticks":112,"kept":true}
       ],
       "utilization": [
         {
@@ -117,7 +117,7 @@
       "planned": 1,
       "higher_up_to_ticks": 2400
     },
-    "main_period": {
+    "main_window_cycle": {
       "ticks": 112,
       "exact": {
         "numerator": 112,

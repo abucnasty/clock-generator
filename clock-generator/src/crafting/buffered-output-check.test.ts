@@ -60,7 +60,7 @@ describe("long-run output through finite buffers", () => {
         const { check } = runAsBuiltCheck(half, windows(), window_cycle_ticks, quiet, 1);
         expect(check.first_check_failed).toBeUndefined();
         expect(check.holds).toBe(false);
-        // the same windows deliver 32 a period where chest 1 is the sample's: the full chest cuts that
+        // the same windows deliver 32 a window cycle where chest 1 is the sample's: the full chest cuts that
         expect(check.actual_output_items).toBeLessThan(baseline.check.actual_output_items);
         expect(check.full_output_chests).toEqual(expect.arrayContaining([expect.objectContaining({ chest_id: 1 })]));
     });

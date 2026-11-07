@@ -15,7 +15,7 @@ const byMaker = (generated: ClockAlternativesResult, maker: string): ClockAltern
 
 // Agricultural science with its belts backed up (AGRICULTURAL_SCIENCE_250_BACKED_UP). Three inserters take bioflux off a belt for their
 // biochambers, and the nutrients the biochambers burn. Without room for a hand of nutrients the windows of batched swings close on partly filled
-// hands of bioflux: recorded on the scaffold, 377 of 400 a period.
+// hands of bioflux: recorded on the scaffold, 377 of 400 a window cycle.
 const agriculturalBackedUp: JobCheck[] = [{
     name: 'makes batched swings with room for a hand of fuel, as a clock for a backed-up belt',
     run: ({ generated }) => {
@@ -40,7 +40,7 @@ const circuitExportBackedUp: JobCheck[] = [
         },
     },
     {
-        // the guard per taker gates the 12 takers whose hands and a start more take the 24-tick period; that clock does not get back
+        // the guard per taker gates the 12 takers whose hands and a start more take the 24-tick window cycle; that clock does not get back
         // from every loss, so it is remade once with the takers into the target machines (the processing unit machines 2 and 3) unguarded
         // of the per-hand clock the grouped hands make, which the per-branch clock composed from it is recommended over
         name: 'Selection: the 4 inserters with no window are the circuits into the processing unit machines, which the remake leaves unguarded',

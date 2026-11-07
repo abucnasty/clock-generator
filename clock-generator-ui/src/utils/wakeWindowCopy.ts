@@ -24,7 +24,7 @@ const WAKE_UPS_COLUMN_HELP =
 
 // ---- Tunables the notes use -----------------------------------------------------------------------------------------
 
-/** On for this share of the clock period or more, the clock does little (the engine's MOSTLY_ENABLED_SHARE) */
+/** On for this share of the window cycle or more, the clock does little (the engine's MOSTLY_ENABLED_SHARE) */
 const MOSTLY_ON_SHARE = 0.8;
 /** A window this many ticks long or shorter is called very short */
 const SHORT_WINDOW_TICKS = 4;
@@ -140,7 +140,7 @@ function rowDetailText(row: Pick<WakeWindowRow, 'items' | 'route'>, itemLabel: (
 
 /**
  * Why the clock leaves an inserter or drill always on, in the words of the glossary: "Always on: its swings fill the
- * whole clock period (24 ticks), so a wake window would never switch it off". The old words when the engine gives none.
+ * whole window cycle (24 ticks), so a wake window would never switch it off". The old words when the engine gives none.
  */
 function alwaysOnText(reason: AlwaysOnReason | undefined): string {
     if (reason === undefined) {
@@ -232,12 +232,12 @@ export function windowCountText(row: Pick<WakeWindowRow, 'mode' | 'ownClock' | '
     return modeText(row) ?? num(row.windows.length);
 }
 
-/** "212–240"; a wrapped window "590–4 (next clock period)" */
+/** "212–240"; a wrapped window "590–4 (next window cycle)" */
 function windowTicksText(window: Pick<WakeWindow, 'start' | 'end' | 'wraps'>): string {
     return `${num(window.start)}–${num(window.end)}${window.wraps ? ' (next window cycle)' : ''}`;
 }
 
-/** The end of a window in the table: "240", or "4 (next clock period)" */
+/** The end of a window in the table: "240", or "4 (next window cycle)" */
 export function windowEndText(window: Pick<WakeWindow, 'end' | 'wraps'>): string {
     return `${num(window.end)}${window.wraps ? ' (next window cycle)' : ''}`;
 }
@@ -248,7 +248,7 @@ export function windowOrdinalText(index: number, count: number): string {
 }
 
 /**
- * Clock period, rows and wake-ups of the clock: "Clock period 600 ticks (10 s) · 14 inserters and 2 drills · 372 wake-ups a minute
+ * Clock window cycle, rows and wake-ups of the clock: "Clock window cycle 600 ticks (10 s) · 14 inserters and 2 drills · 372 wake-ups a minute
  * for one copy"
  */
 export function summaryText(args: { windowCycleTicks: number; inserters: number; drills: number; wakeUps: number | null; fromColdStart?: boolean }): string {
@@ -264,7 +264,7 @@ export function summaryText(args: { windowCycleTicks: number; inserters: number;
 
 /**
  * A row's accessible name, everything the row shows: "Inserter 3, Iron plate: Belt 1 to Machine 2. 2 windows: ticks
- * 0–28 and 212–240, the last 4 ticks of each are belt slack. On for 10% of the clock period. Wake-ups/min: 12.3."
+ * 0–28 and 212–240, the last 4 ticks of each are belt slack. On for 10% of the window cycle. Wake-ups/min: 12.3."
  */
 export function rowSummary(
     row: WakeWindowRow,

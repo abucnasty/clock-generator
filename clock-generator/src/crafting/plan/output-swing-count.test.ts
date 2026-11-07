@@ -9,7 +9,7 @@ const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 
 // On the express moving half-tile pickups a cold plant gets one hand of each ingredient before its output blocks where
 // backed-up belts give it two: 44 packs made against 88, 2.75 hands against 5.5. Planned on 2.75, the whole swings were
-// 2, a period of part ticks that no moving clock can be made for, and the backoff never reached 3, where one holds.
+// 2, a window cycle of part ticks that no moving clock can be made for, and the backoff never reached 3, where one holds.
 describe("output swings per cycle of a build on moving belts", () => {
     let moving: Config;
     beforeAll(async () => {

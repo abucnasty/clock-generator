@@ -31,7 +31,7 @@ export const PROBLEM_TEXT = {
     drillNeverIntoContainer: "A drill into a container can't be Never on: it would fill nothing. Pick another mode.",
 } as const;
 
-/** The non-blocking warning of a "Repeat every" that the clock period is not a whole number of */
+/** The non-blocking warning of a "Repeat every" that the window cycle is not a whole number of */
 const repeatWarning = (repeat: number, window_cycle_ticks: number) =>
     `${repeat} ticks doesn't fit a whole number of times into the ${window_cycle_ticks}-tick window cycle, so the clock can't follow this rule exactly.`;
 
@@ -68,8 +68,8 @@ interface ProblemContext {
 }
 
 /**
- * The period the wake windows must fit in: "Repeat every" when it is valid, else the crafting cycle. None when neither
- * is known, or the cycle is not a whole number of ticks: the engine places a fractional period's ticks itself
+ * The window cycle the wake windows must fit in: "Repeat every" when it is valid, else the crafting cycle. None when neither
+ * is known, or the cycle is not a whole number of ticks: the engine places a fractional window cycle's ticks itself
  * (`clockPosition` in `enable-control.ts`), so no window can be said to be past its end
  */
 export function ruleWindowCycleOf(draft: Pick<EnableControlDraft, 'windowCycleDuration'>, timing: RuleTiming): number | null {
@@ -152,7 +152,7 @@ export function ruleProblemsOf(draft: EnableControlDraft, { entityType, timing, 
     return problems;
 }
 
-/** The warnings that do not stop Save: a "Repeat every" the clock period is not a whole number of */
+/** The warnings that do not stop Save: a "Repeat every" the window cycle is not a whole number of */
 export function ruleWarningsOf(draft: EnableControlDraft, timing: RuleTiming): string[] {
     if (draft.mode !== EnableControlMode.CLOCKED) return [];
     const repeat = repeatTicksOf(draft.windowCycleDuration);

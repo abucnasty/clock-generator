@@ -6,7 +6,7 @@ import { productionScienceSharedPickup } from "../generate-blueprint-test-helper
 import { planOfConfig, planOfSample } from "./plan-test-helpers";
 import { swingCountsListed } from "./window-cycles";
 
-/** A choice as [swings, listed as, period ticks, kept or the rule that prunes it] */
+/** A choice as [swings, listed as, window cycle ticks, kept or the rule that prunes it] */
 const brief = (choice: WindowCycleChoice) => [choice.swings, choice.listed_as, "window_cycle_ticks" in choice ? choice.window_cycle_ticks : null,
     "kept" in choice ? "kept" : choice.pruned.rule];
 
@@ -51,7 +51,7 @@ describe("the main-period choices of a build", () => {
         expect(window_cycles.filter(choice => choice.listed_as === "backed-off")).toHaveLength(51);
         expect(brief(window_cycles.find(choice => choice.listed_as === "main")!)).toEqual([550, "main", 242_000, "kept"]);
         expect(plan.composition!.over_limit_action).toMatchObject({ action: "swing-backoff", rule: "P-limit", terms: { requested_swings: 602 } });
-        // no higher count above 2,400 ticks; the lower ones whose period is over the limit are pruned too
+        // no higher count above 2,400 ticks; the lower ones whose window cycle is over the limit are pruned too
         expect(window_cycles.filter(choice => choice.listed_as === "higher")).toEqual([]);
         expect(window_cycles.filter(choice => choice.listed_as === "lower")).toHaveLength(549);
     });
@@ -84,7 +84,7 @@ describe("the composition into the main period", () => {
                 override_lcm: 5, effective_lcm: 5 },
             over_limit_action: { action: "none" },
         });
-        // the config's lcm sets the group's period too
+        // the config's lcm sets the group's window cycle too
         expect(plan.groups[0].window_cycles[0]).toMatchObject({ cycles: 5 });
     });
 });

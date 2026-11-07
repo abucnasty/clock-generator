@@ -131,7 +131,7 @@ describe("what a belt with a consumption rate receives", () => {
     });
 
     describe("the clock check", () => {
-        // the windows the generator makes for this build with observed windows (period 1920); inserters 4 and 5 are the exports
+        // the windows the generator makes for this build with observed windows (window cycle 1920); inserters 4 and 5 are the exports
         const derived: SerializableClockWindows = {
     "inserter:1": ranges([[1, 17], [40, 55], [241, 257], [280, 295], [481, 497], [520, 535], [721, 737], [760, 775], [961, 977], [1000, 1015], [1201, 1217], [1240, 1255], [1441, 1457], [1480, 1495], [1681, 1697], [1720, 1735]]),
     "inserter:2": ranges([[1, 13], [241, 253], [481, 493], [721, 733], [961, 973], [1201, 1213], [1441, 1453], [1681, 1693]]),

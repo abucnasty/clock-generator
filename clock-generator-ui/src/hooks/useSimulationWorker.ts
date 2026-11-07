@@ -477,7 +477,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             generation.skipped = [...generation.skipped, ...stage.filter(task => !run.includes(task))];
             publishAlternatives(generation);
         }
-        // the per-branch clock, once every other clock is in: from their parts, on the period of the one they recommend; with no
+        // the per-branch clock, once every other clock is in: from their parts, on the window cycle of the one they recommend; with no
         // clock to start from it is not made
         if (generation.last.length > 0 && generation.waiting.length === 0 && generation.queue.length === 0 && generation.running.size === 0
             && !generation.primaryPending) {

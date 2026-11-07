@@ -1,6 +1,6 @@
 /**
  * The text a player reads on a clock's combinators. An enabling combinator names what it switches on by its two ends
- * as [entity=...] icons, then the item and the config id (line 1), then how much and when over the clock's period in
+ * as [entity=...] icons, then the item and the config id (line 1), then how much and when over the clock's window cycle in
  * whole numbers (line 2), then anything unusual. The combinators that make up the clock say so in one line. Lines come
  * in order of how much they matter: Factorio keeps 500 bytes of a description (fitPlayerDescription drops the rest).
  */
@@ -24,12 +24,12 @@ export function formatRate(value: number): string {
     return String(Number(value.toFixed(3)));
 }
 
-/** A count that is a whole number when it is one, else to 3 decimals: a plan can count half a swing a period */
+/** A count that is a whole number when it is one, else to 3 decimals: a plan can count half a swing a window cycle */
 function formatCount(value: Fraction): string {
     return value.getDenominator === 1 ? String(value.getNumerator) : formatRate(value.toDecimal());
 }
 
-/** The ticks a line gives as the period: the exact period, or for a clock of whole ticks of a fractional period, the whole ticks it counts */
+/** The ticks a line gives as the window cycle: the exact window cycle, or for a clock of whole ticks of a fractional window cycle, the whole ticks it counts */
 export function shownWindowCycleTicks(window_cycle_ticks: number, subtick: boolean): string {
     return subtick || Number.isInteger(window_cycle_ticks) ? formatRate(window_cycle_ticks) : String(Math.floor(window_cycle_ticks));
 }
@@ -161,9 +161,9 @@ export function itemIcons(item_names: Iterable<string>): string {
     return Array.from(item_names).map(item_name => SignalId.toDescriptionString(SignalId.item(item_name))).join(" ");
 }
 
-/** The windows of a decider over the period, as its conditions read them */
+/** The windows of a decider over the window cycle, as its conditions read them */
 export interface DeciderWindows {
-    /** Windows a period (a window the period's end splits counts twice, as it does in the conditions) */
+    /** Windows a window cycle (a window the window cycle's end splits counts twice, as it does in the conditions) */
     count: number;
     /** The clock values of each window when they are few enough to read, else null */
     listed: OpenRange[] | null;
@@ -192,13 +192,13 @@ export function deciderWindows(ranges: OpenRange[], condition_values: (ranges: O
 
 /**
  * The description of the combinator of inserters or drills in the plan: who, how much and when.
- * "15 swings in 19 windows per 886.154-tick period" or, for a drill, "Mines 240 in 2 windows per 336-tick period: open 2–4, 227–231".
+ * "15 swings in 19 windows per 886.154-tick period" or, for a drill, "Mines 240 in 2 windows per 336-tick window cycle: open 2–4, 227–231".
  */
 export function plannedDescriptionLines(
     entity_ids: EntityId[],
     registry: ReadableEntityRegistry,
     item_names: Iterable<string>,
-    /** The swings each of the entities makes in a period */
+    /** The swings each of the entities makes in a window cycle */
     swings_a_window_cycle: readonly { entity_id: EntityId; swings: Fraction }[],
     windows: DeciderWindows,
     window_cycle_text: string,
@@ -232,9 +232,9 @@ export function plannedDescriptionLines(
 }
 
 /**
- * The windows' line: "1 window per 72-tick period: open 28". On a subtick clock the unit of the windows is on the same
- * line, so the numbers are not read as ticks: "1 window per 886.154-tick period: open 4486–4499 (in 1/13 ticks)", or
- * "19 windows per 886.154-tick period; windows in 1/13 ticks" when they are too many to list.
+ * The windows' line: "1 window per 72-tick window cycle: open 28". On a subtick clock the unit of the windows is on the same
+ * line, so the numbers are not read as ticks: "1 window per 886.154-tick window cycle: open 4486–4499 (in 1/13 ticks)", or
+ * "19 windows per 886.154-tick window cycle; windows in 1/13 ticks" when they are too many to list.
  */
 function windowsText(windows: DeciderWindows, window_cycle_text: string): string {
     const unit = windows.subtick_scale ? `in 1/${windows.subtick_scale} ticks` : null;
@@ -265,7 +265,7 @@ function sinkOfDrills(drill_ids: EntityId[], registry: ReadableEntityRegistry): 
 /**
  * The description of a drill into a chest, whose windows are made from the takes out of the chest (see
  * chestDrillWindows), outside the swing counts: "[entity=big-mining-drill] [item=iron-ore] → [entity=car] (drill 1)",
- * "Tops the [entity=car] up just in time, 1 window per 72-tick period: open 28",
+ * "Tops the [entity=car] up just in time, 1 window per 72-tick window cycle: open 28",
  * "Not counted as swings: opens just before the inserters take from the [entity=car]".
  */
 export function chestDrillDescriptionLines(
@@ -319,8 +319,8 @@ export function unplannedDescriptionLines(
 
 /**
  * The line on the first combinator of a group that takes its turn, when the combinators stand in groups: which group it is and
- * the ticks of its turn, as the clock counts them (the windows' own numbers, so a turn that runs over the end of the period is two):
- * "Group 2 of 2: takes its turn in ticks 57–100 of the 112-tick period. Its combinators stand together, in the order of the turn."
+ * the ticks of its turn, as the clock counts them (the windows' own numbers, so a turn that runs over the end of the window cycle is two):
+ * "Group 2 of 2: takes its turn in ticks 57–100 of the 112-tick window cycle. Its combinators stand together, in the order of the turn."
  */
 export function turnLine(group: number, groups: number, turn: OpenRange[], window_cycle_text: string): string {
     return `Group ${group} of ${groups}: takes its turn in ticks ${turn.map(rangeText).join(" and ")} of the ${window_cycle_text}-tick period. `
@@ -339,7 +339,7 @@ function idsText(inserters: number[], drills: number[]): string {
 }
 
 /**
- * The clock decider's description: the rate and how it counts the period, how to wire the rest, the inserters and drills
+ * The clock decider's description: the rate and how it counts the window cycle, how to wire the rest, the inserters and drills
  * that are not on the clock when that line fits, and last which generator made it. The generator's line is never the one
  * Factorio's 500 bytes cut: the line before it is left out when the two do not fit.
  */

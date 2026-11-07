@@ -31,7 +31,7 @@ describe("the groups of the local choice", () => {
 
     it("take the inserters of one source together, each distinct set of windows once, in the order of the parts", () => {
         const recommended = part("recommended", 20, { "inserter:1": [window(0, 4)], "inserter:2": [window(5, 6)], "inserter:3": [window(5, 6)], "inserter:4": [window(0, 0)] });
-        // on half the period: repeated, other windows for every group, and inserter 1 left always enabled
+        // on half the window cycle: repeated, other windows for every group, and inserter 1 left always enabled
         const other = part("other", 10, { "inserter:2": [window(5, 6)], "inserter:3": [window(5, 6)], "inserter:4": [window(0, 0)] });
         const groups = partGroups(CHAIN, [recommended, other], 20);
         expect(groups.map(group => [group.source, group.inserters, group.choices.length])).toEqual([

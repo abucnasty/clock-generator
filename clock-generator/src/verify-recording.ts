@@ -66,8 +66,8 @@ async function main() {
     console.log(`Clock alternative: ${alternative.label} (${alternative.id}), ${alternative.verdict} as built`);
     const result = alternative.result;
 
-    // The clock that was built: the subtick clock counts the whole ticks a fractional period repeats after, and the
-    // clock rounded down runs every period that much short
+    // The clock that was built: the subtick clock counts the whole ticks a fractional window cycle repeats after, and the
+    // clock rounded down runs every window cycle that much short
     const planned_window_cycle = result.simulation_duration.ticks;
     const subtick = alternative.id.endsWith("-subtick") ? result.subtick : undefined;
     const window_cycle_ticks = subtick || Number.isInteger(planned_window_cycle) ? planned_window_cycle : Math.floor(planned_window_cycle);

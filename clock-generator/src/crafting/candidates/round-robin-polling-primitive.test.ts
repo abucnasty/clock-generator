@@ -69,13 +69,13 @@ describe("pure primitive grouped construction", () => {
         let checked = 0;
         for (const attempt of artifact.attempts) if (attempt.result.kind === "constructed") {
             const windows = attempt.result.planned_windows;
-            // where a window opens: the start of its range that no other range of it runs into (a window may wrap the period)
+            // where a window opens: the start of its range that no other range of it runs into (a window may wrap the window cycle)
             const start = (id: number) => {
                 const ranges = windows[`inserter:${id}`]!;
                 return ranges.find(range => !ranges.some(other => (other.end + 1) % 40 === range.start))!.start;
             };
             const [first, second] = takers.map(taker => ({ taker: start(taker.id!), drain: start(drainOf(taker.sink.id).id!) }));
-            // the takers take turns half a period apart, and each drain keeps its place in its plant's turn
+            // the takers take turns half a window cycle apart, and each drain keeps its place in its plant's turn
             expect((second.taker - first.taker + 40) % 40).toBe(20);
             expect((first.drain - first.taker + 40) % 40).toBe((second.drain - second.taker + 40) % 40);
             checked++;

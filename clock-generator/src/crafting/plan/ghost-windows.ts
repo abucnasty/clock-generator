@@ -36,7 +36,7 @@ export function windowsWithoutGhostWakeUps(
     fixed: ReadonlySet<string>,
     /**
      * The tick of the run less the tick of the clock, where the run knows it (`AsBuiltStabilityCheck.clock_tick_at_first_judged`):
-     * a window ending at e switches its inserter off in the ticks t with t - offset = e + 1 modulo the period. Else read
+     * a window ending at e switches its inserter off in the ticks t with t - offset = e + 1 modulo the window cycle. Else read
      * off the switch-offs, where only one offset lines them up with the windows.
      */
     clock_offset: number | undefined,

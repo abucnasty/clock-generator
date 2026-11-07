@@ -32,7 +32,7 @@ interface SetpointFormProps {
     /** Whether to ask for it: the copies drop onto a belt from inserters whose places are known */
     showCopyOffset?: boolean;
     onCopyOffsetChange?: (value: CopyOffset | undefined) => void;
-    /** What the engine says of whether the copies' drops fit at that gap, for the period estimated from the settings; null while it says nothing */
+    /** What the engine says of whether the copies' drops fit at that gap, for the window cycle estimated from the settings; null while it says nothing */
     copyOffsetNote?: string | null;
 }
 

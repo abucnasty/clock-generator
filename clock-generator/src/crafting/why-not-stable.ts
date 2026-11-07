@@ -43,14 +43,14 @@ export interface NotMadeClock {
     reason: string;
 }
 
-/** What the build's tightest machine has to spare a clock period (the spare-time insight) */
+/** What the build's tightest machine has to spare a window cycle (the spare-time insight) */
 export interface SpareTime {
     /** "Machine 3 (metallurgic-science-pack)" */
     machine: string;
     spare_ticks: number;
-    /** The ticks of a period it crafts */
+    /** The ticks of a window cycle it crafts */
     working_ticks: number;
-    /** The periods after a loss a build is given to be back at its expected output (see disturbance-trial.ts) */
+    /** The window cycles after a loss a build is given to be back at its expected output (see disturbance-trial.ts) */
     recovery_window_cycles: number;
 }
 
@@ -73,9 +73,9 @@ export interface WhyNotStableClock {
     failed_taker_order?: string;
     /** Those inserters, by machine and product: [["inserter:6", "inserter:7"]] */
     competing_takers?: string[][];
-    /** Items the output inserters move in a period of the clock when it holds */
+    /** Items the output inserters move in a window cycle of the clock when it holds */
     expected_output_items: number;
-    /** What the clock-only check moved from the start it reports: a period, or over `repeat_periods` */
+    /** What the clock-only check moved from the start it reports: a window cycle, or over `repeat_window_cycles` */
     as_built_output?: { items: number; repeat_window_cycles?: number; repeat_output_items?: number };
     spare_time: SpareTime | null;
     /** The chests the output goes into that nothing empties and that were full where the run that failed the clock ended */
@@ -224,8 +224,8 @@ function takerOrder(clock: WhyNotStableClock): WhyNotStable | null {
 }
 
 /**
- * The spare-time sentence, when making up one period of crafting at the machine's spare ticks a period takes it more
- * periods than a build is given to get back after a loss
+ * The spare-time sentence, when making up one window cycle of crafting at the machine's spare ticks a window cycle takes it more
+ * window cycles than a build is given to get back after a loss
  */
 function spareTimeSentence(spare: SpareTime | null): string {
     if (spare === null) {
@@ -371,7 +371,7 @@ function resultsNotTaken(clock: WhyNotStableClock, at_target: boolean): WhyNotSt
 
 /**
  * Why the selected clock does not meet goal 1; null when it does. A stable clock off the target rate (one with a
- * rounded period, or a build the plan cannot run at the target) is told as nothing holding the target.
+ * rounded window cycle, or a build the plan cannot run at the target) is told as nothing holding the target.
  */
 export function whyNotStable(clocks: readonly WhyNotStableClock[], selected_index: number, build: WhyNotStableBuild): WhyNotStable | null {
     const clock = clocks[selected_index];

@@ -7,7 +7,7 @@ import { windowsWithoutGhostWakeUps } from "./ghost-windows";
 const OFF = "disabled_by_control_behavior";
 const WINDOW_CYCLE = 20;
 
-/** Two periods of an inserter whose window 1-9 switches it off from the tick at position 10, as `held` and the state after each tick */
+/** Two window cycles of an inserter whose window 1-9 switches it off from the tick at position 10, as `held` and the state after each tick */
 function stockOf(held: number[]): StockRecording {
     const factorio_state = Array.from({ length: 2 * WINDOW_CYCLE }, (_, tick) => tick % WINDOW_CYCLE >= 1 && tick % WINDOW_CYCLE <= 9 ? "working" : OFF);
     return { ticks: 2 * WINDOW_CYCLE, machines: [], inserters: [{ inserter_id: "inserter:1", held, held_item: [], status: [], factorio_state }] };

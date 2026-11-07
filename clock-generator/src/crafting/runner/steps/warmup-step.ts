@@ -11,7 +11,7 @@ export class WarmupStep implements RunnerStep {
     constructor(
         private readonly simulation_context: SimulationContext,
         private readonly duration: Duration,
-        /** Stops early once the state at a period boundary repeats an earlier boundary's: the run is periodic from there */
+        /** Stops early once the state at a window cycle boundary repeats an earlier boundary's: the run is periodic from there */
         private readonly steady_state?: { window_cycle_ticks: number; key: () => string },
     ) {
         this.simulation_tick = this.build()
@@ -20,7 +20,7 @@ export class WarmupStep implements RunnerStep {
     /** Ticks actually simulated by the last execute() */
     public ticks_run = 0;
 
-    /** Periods after which the state repeats, once the last execute() saw a period boundary repeat an earlier one */
+    /** Window cycles after which the state repeats, once the last execute() saw a window cycle boundary repeat an earlier one */
     public repeat_window_cycles: number | undefined = undefined;
 
     public execute(): void {
@@ -38,7 +38,7 @@ export class WarmupStep implements RunnerStep {
                 break;
             }
             if (this.steady_state && (current_tick - start_tick) % this.steady_state.window_cycle_ticks === 0) {
-                // the state repeats every `cycle` periods, so stop where the full warmup would end in the same state
+                // the state repeats every `cycle` window cycles, so stop where the full warmup would end in the same state
                 const boundary = (current_tick - start_tick) / this.steady_state.window_cycle_ticks;
                 const last_boundary = this.duration.ticks / this.steady_state.window_cycle_ticks;
                 const key = this.steady_state.key();

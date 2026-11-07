@@ -202,7 +202,7 @@ describe('a rocket silo as the result target', () => {
     });
 
     it('takes results too rare for their hands to come out whole in a clock period: each set of takers gets a window a period', async () => {
-        // at +300% (scrap recycling productivity researched to level 30) the takers' hands come out whole in no period
+        // at +300% (scrap recycling productivity researched to level 30) the takers' hands come out whole in no window cycle
         // the silo holds; see exhaust.test.ts
         const config = await parseConfig(await scrapIntoSilo('uncommon', 300));
         const registry = createEntityRegistryFromConfig(config);

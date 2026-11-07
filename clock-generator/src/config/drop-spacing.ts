@@ -14,7 +14,7 @@ import type { Config } from "./schema";
 // lands; this module asks it of the hands of all the copies together, which a config of one unit does not do.
 //
 // Seen from the moving belt a hand that starts at tick t at place p (tiles downstream along the row of its inserters)
-// lies at (p - v t) mod L, with v the tiles the belt moves in a tick and L = v P the tiles it moves in a period. Two
+// lies at (p - v t) mod L, with v the tiles the belt moves in a tick and L = v P the tiles it moves in a window cycle. Two
 // hands collide when their stretches overlap there. This test is exact against the lane model (drop-spacing.test.ts
 // replays it); the replay is used for the ticks a colliding hand waits.
 //
@@ -33,7 +33,7 @@ export const DROP_SPACING_COPIES_ALIKE = "This assumes every copy drops onto the
 
 const EPSILON = 1e-9;
 const QUARTER_TILE = 0.25;
-/** The most periods a replay runs, and the periods it runs after the lane is full of the line's hands */
+/** The most window cycles a replay runs, and the window cycles it runs after the lane is full of the line's hands */
 const MAX_REPLAY_WINDOW_CYCLES = 60;
 const SETTLE_WINDOW_CYCLES = 4;
 
@@ -190,8 +190,8 @@ function collidingPairs(hands: readonly Hand[], tiles_per_tick: number, window_c
 }
 
 /**
- * The ticks each hand waits for room, by the lane model of the simulator replayed on the line for enough periods that
- * the lane is full of its hands. A hand that is not down by the end of its period counts as waiting for the rest of it.
+ * The ticks each hand waits for room, by the lane model of the simulator replayed on the line for enough window cycles that
+ * the lane is full of its hands. A hand that is not down by the end of its window cycle counts as waiting for the rest of it.
  */
 function waitsOf(hands: readonly Hand[], speed: BeltSpeed, tiles_per_tick: number, window_cycle_ticks: number): number[] {
     const lane = new LaneTraffic(speed);
@@ -231,7 +231,7 @@ export interface DropSpacingLine {
     belt_id: number;
     inserter_ids: number[];
     facing: Cardinal;
-    /** Hands the line takes in a period, all the copies together */
+    /** Hands the line takes in a window cycle, all the copies together */
     hands: number;
     /** Ticks at which each inserter of the line starts a hand */
     starts: { inserter_id: number; ticks: number[] }[];
@@ -247,7 +247,7 @@ export interface DropSpacing {
     copies: number;
     /** Tiles from one copy to the next along the lines, null for one copy or a gap not given */
     gap: number | null;
-    /** Tiles the belt moves in a period */
+    /** Tiles the belt moves in a window cycle */
     belt_tiles: number;
     /** Items in a hand, and in a stack of the lane, of the first line */
     hand: number;
@@ -272,7 +272,7 @@ function checkLine(config: Config, line: DropLine, starts: ReadonlyMap<number, r
 
 /**
  * Where the drops of the output inserters land on the shared belt, for a clock that starts the inserters' hands at
- * `starts` (ticks in a period of `period`). None when no line can be checked: no positions, copies whose gap is not
+ * `starts` (ticks in a window cycle of `period`). None when no line can be checked: no positions, copies whose gap is not
  * given, hands of different ticks on a line whose belt direction is not known and whose answer depends on it.
  */
 export function dropSpacing(config: Config, starts: ReadonlyMap<number, readonly number[]>, window_cycle_ticks: number): DropSpacing | null {
@@ -353,10 +353,10 @@ const MAX_OFFSET_TILES = 64;
 const MAX_DELAY_TICKS = 1000;
 /** The narrowest machine or drill of the game is 3 tiles across: the span of the positions of a copy, plus one such entity */
 const NARROWEST_ENTITY_TILES = 3;
-/** How near a whole number the tiles the belt moves in a period must be to count as one */
+/** How near a whole number the tiles the belt moves in a window cycle must be to count as one */
 const LOOP_SLACK = 1e-9;
 
-/** Whether no two hands overlap on the circle of the belt's tiles in a period: the test of collidingPairs, sorted */
+/** Whether no two hands overlap on the circle of the belt's tiles in a window cycle: the test of collidingPairs, sorted */
 function handsFit(hands: readonly Hand[], tiles_per_tick: number, window_cycle_ticks: number): boolean {
     if (hands.length < 2) return true;
     const cycle = tiles_per_tick * window_cycle_ticks;
@@ -366,17 +366,17 @@ function handsFit(hands: readonly Hand[], tiles_per_tick: number, window_cycle_t
     return placed[0].at + cycle - placed[placed.length - 1].at >= placed[0].width - EPSILON;
 }
 
-/** What the scan of the spacings of the copies finds, at the period it was made for, for inserters that start in the same tick */
+/** What the scan of the spacings of the copies finds, at the window cycle it was made for, for inserters that start in the same tick */
 export interface DropRoom {
     /** The spacings tried, whole tiles from `low` to `high`: the width of a copy, and on to one full loop of the belt's tiles where that is a whole number */
     low: number;
     high: number;
     /**
-     * The tiles the belt moves in a period when that is a whole number the same on every shared line: whether the hands fit then depends on
+     * The tiles the belt moves in a window cycle when that is a whole number the same on every shared line: whether the hands fit then depends on
      * the spacing less a whole number of loops only, so a spacing fits when the spacing plus this much does. Null otherwise.
      */
     loop: number | null;
-    /** The copies, and the hands they drop on a lane in a period when these take more of the lane than the belt moves in it: no spacing fits then. Null otherwise */
+    /** The copies, and the hands they drop on a lane in a window cycle when these take more of the lane than the belt moves in it: no spacing fits then. Null otherwise */
     copies: number;
     crowded: { hands: number; belt_tiles: number; hand_tiles: number } | null;
     /** The spacings at which the lines fit with the inserters where they stand */
@@ -389,7 +389,7 @@ export interface DropRoom {
     pair: { first: number; second: number; apart: number } | null;
     /** The first ticks after the first inserter at which the second starting makes the lines fit, at the spacing the config has */
     starts_after: number[];
-    /** Tiles the belt moves in a period, ticks it takes for a tile, and tiles a hand takes */
+    /** Tiles the belt moves in a window cycle, ticks it takes for a tile, and tiles a hand takes */
     belt_tiles: number;
     ticks_per_tile: number;
     hand_tiles: number;
@@ -407,9 +407,9 @@ function copyWidth(config: Config, axis: "x" | "y"): number | null {
 }
 
 /**
- * The spacings of the copies, from the width of a copy for one full loop of the belt's tiles in a period (the same list whatever
+ * The spacings of the copies, from the width of a copy for one full loop of the belt's tiles in a window cycle (the same list whatever
  * spacing the config has; where that is not a whole number, a fixed range), at which every shared line fits when its
- * inserters start in the same tick, or none when the hands of a lane take more of it than the belt moves in a period; for a line of two inserters in a copy, the distances between them that fit at the spacings that
+ * inserters start in the same tick, or none when the hands of a lane take more of it than the belt moves in a window cycle; for a line of two inserters in a copy, the distances between them that fit at the spacings that
  * do not, and the start delays of the second one that fit. Arithmetic on the places alone: no run of the build. Null where
  * the copies' gap is not given or no line is shared.
  */
@@ -526,14 +526,14 @@ const whoOf = (line: DropSpacingLine, copies: number) =>
 const listedSpacings = (values: readonly number[], word = "or"): string =>
     values.length > MAX_LISTED ? `${values.slice(0, MAX_LISTED).join(", ")} and others` : listed(values, word);
 
-/** Why no spacing fits: "The belt moves 4.5 tiles a period, but the 9 copies drop 9 hands on it, so no spacing of the copies fits: some hands always wait for room." */
+/** Why no spacing fits: "The belt moves 4.5 tiles a window cycle, but the 9 copies drop 9 hands on it, so no spacing of the copies fits: some hands always wait for room." */
 export function crowdedText(crowded: { hands: number; belt_tiles: number; hand_tiles: number }, copies: number): string {
     const hands = crowded.hand_tiles === 1 ? `${crowded.hands} hands` : `${crowded.hands} hands of ${tiles(crowded.hand_tiles)} of a tile`;
     return `The belt moves ${tiles(crowded.belt_tiles)} tiles a period, but the ${copies} copies drop ${hands} on it, so no spacing of the copies fits: some hands always wait for room.`;
 }
 
 /**
- * What the scan of the spacings says, as a paragraph: "The belt moves 14 tiles a period, so each hand lands on one of 14 tiles. With
+ * What the scan of the spacings says, as a paragraph: "The belt moves 14 tiles a window cycle, so each hand lands on one of 14 tiles. With
  * inserters 1 and 2 as they stand (3 tiles apart), the copies fit 12, 16 or 24 tiles apart; 13 or 15 apart only with a copy's
  * inserters 7 tiles apart; 14 or 21 apart never. The same holds at any of these spacings plus 14. Starting inserter 2 16, 32 or 48 ticks
  * after inserter 1 also fits (a tile every 8 ticks)."

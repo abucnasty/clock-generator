@@ -38,7 +38,7 @@ import { TermsList } from './TermsPopover';
 import { OUTPUT_PER_WINDOW_CYCLE_HEADER, SIGNALS_HEADER, WAKE_UPS_HEADER, formatNumberText, makesHeader, rateHeader } from '../utils/numberText';
 import { RECOMMENDED_COPY, disclosureRunLine, groupClockRowsByBelt, partitionClockRows, type BeltClockGroups, type ClockRow, type PickRule } from '../utils/recommendedClock';
 
-// fractional (subtick) periods are shown to 3 decimals
+// fractional (subtick) window cycles are shown to 3 decimals
 /** The header of the column that counts a clock's decider combinators */
 const DECIDERS_HEADER = 'Deciders';
 

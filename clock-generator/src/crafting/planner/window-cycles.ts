@@ -1,8 +1,8 @@
 /**
  * The main-period choices of a build: the output swing counts today's alternatives are listed for (the planned count,
- * the counts above and below the main one, and fractional swings), each with its period, kept or
- * pruned by arithmetic before any simulation. The one rule that prunes is P-limit: a period of SIMULATION_BUDGET_TICKS or
- * more cannot be simulated, nor, under whole-counter checks, a fractional period whose whole counter
+ * the counts above and below the main one, and fractional swings), each with its window cycle, kept or
+ * pruned by arithmetic before any simulation. The one rule that prunes is P-limit: a window cycle of SIMULATION_BUDGET_TICKS or
+ * more cannot be simulated, nor, under whole-counter checks, a fractional window cycle whose whole counter
  * is that long (`counterOverLimitOf`). Each count's hands come from today's cycle plan (`OutputCyclePlan.create`), never
  * worked out again here; an alternative's count that the cycle plan refuses is listed as refused, with the plan's reason,
  * as its run fails. Fractional swings an inserter cannot make within its insertion limits are listed, as their run makes
@@ -22,7 +22,7 @@ import { TargetProductionRate } from "../target-production-rate";
 import { CycleMeasure, cycleMeasureOf } from "./composition";
 import type { GroupShape } from "./groups";
 
-/** Observed windows re-simulate the build hundreds of times; above this period (a high LCM) that takes minutes */
+/** Observed windows re-simulate the build hundreds of times; above this window cycle (a high LCM) that takes minutes */
 export const MAX_OBSERVED_WINDOWS_WINDOW_CYCLE_TICKS = 2400;
 
 /**
@@ -34,7 +34,7 @@ const EXTENDED_SWING_COUNTS = 3;
 
 /**
  * The output swing counts offered as alternatives beside the main clock's `swings`: every lower count, and the higher
- * ones up to `planned` + EXTENDED_SWING_COUNTS where the main period is at most MAX_OBSERVED_WINDOWS_PERIOD_TICKS. The
+ * ones up to `planned` + EXTENDED_SWING_COUNTS where the main window cycle is at most MAX_OBSERVED_WINDOWS_WINDOW_CYCLE_TICKS. The
  * planned count only covers what a machine crafts before its output blocks; it keeps crafting while the output inserter
  * takes hands, so longer cycles can work too, but the machine holds the planned count when a cycle's swings start: the
  * farthest count is only tried as a multiple of it (the planned cycle repeated). A forced count is the only one.
@@ -47,7 +47,7 @@ export function swingCountsListed(swings: number, planned: number, forced: boole
     return { lower, higher };
 }
 
-/** What the periods of a build are planned from: today's cycle arithmetic */
+/** What the window cycles of a build are planned from: today's cycle arithmetic */
 export interface CycleArithmetic {
     readonly config: Config;
     readonly registry: ReadableEntityRegistry;
@@ -70,7 +70,7 @@ interface PlannedCount {
     readonly measure: CycleMeasure;
 }
 
-/** The periods of a build: each group's choices and the counts the composition reads */
+/** The window cycles of a build: each group's choices and the counts the composition reads */
 export interface PlannedWindowCycles {
     /** The choices of each group, in the order of the groups */
     readonly per_group: readonly (readonly WindowCycleChoice[])[];
@@ -97,7 +97,7 @@ interface RefusedCount {
 
 type ListedCount = PlannedCount | RefusedCount;
 
-/** A choice of a group: its period at the count, kept or pruned by P-limit, or refused by the cycle plan */
+/** A choice of a group: its window cycle at the count, kept or pruned by P-limit, or refused by the cycle plan */
 function choiceOf(count: ListedCount, group: number): WindowCycleChoice {
     if ("refused" in count) {
         return { swings: count.swings, fractional: count.fractional, listed_as: count.listed_as,
@@ -144,7 +144,7 @@ function outputSwingsOf(cycle: OutputCyclePlan, registry: ReadableEntityRegistry
 }
 
 /**
- * The periods of a build's groups at every count today's alternatives are listed for. `exhaust` is the decision of
+ * The window cycles of a build's groups at every count today's alternatives are listed for. `exhaust` is the decision of
  * a destroyed target's results (planner/exhaust.ts), which its cycle is made with.
  */
 export function plannedWindowCyclesOf(
@@ -177,7 +177,7 @@ export function plannedWindowCyclesOf(
         { ...overrides, terminal_swing_count: count }), listed_as);
     const under = (count: PlannedCount) => count.measure.main_window_cycle.toDecimal() < SIMULATION_BUDGET_TICKS;
 
-    // the planning run's count, then today's swing backoff while the period is over the limit; the main clock's count
+    // the planning run's count, then today's swing backoff while the window cycle is over the limit; the main clock's count
     // is the first under it, or the planned one where there is none
     const can_back_off = !forced;
     const first = planned(OutputCyclePlan.create(target, registry, config, max_swings(false), overrides), "planned", false, max_swings(false));

@@ -39,7 +39,7 @@ export interface OutputCyclePlan {
     readonly swing_distribution?: SwingDistributionMap;
     /**
      * The cycle multiplier (LCM of swing denominators) for fractional swings.
-     * Represents how many sub-cycles make up the full extended period.
+     * Represents how many sub-cycles make up the full extended window cycle.
      * Only set when fractional_swings_enabled is true.
      */
     readonly cycle_multiplier?: number;
@@ -51,8 +51,8 @@ export interface OutputCyclePlan {
     readonly terminal_swing_count_overridden: boolean;
     /**
      * A target that counts an item destroyed whose results come too rarely for their takers' hands to come out whole in
-     * a period the container they are placed into holds: the windows of those takers by arithmetic, one plan a machine
-     * (see exhaust.ts). The cycle is then the whole period, and the takers' hands a cycle are not whole: they are
+     * a window cycle the container they are placed into holds: the windows of those takers by arithmetic, one plan a machine
+     * (see exhaust.ts). The cycle is then the whole window cycle, and the takers' hands a cycle are not whole: they are
      * carried from one window to the next. Absent for every other plan.
      */
     readonly exhaust?: readonly ExhaustPlan[];
@@ -88,7 +88,7 @@ function withPlannedTerminalCount(plan: OutputCyclePlan, count: Fraction): Outpu
 }
 
 /**
- * Ticks that a whole number of base cycles last, which is how a clock period is made (the cycles of the ingredient
+ * Ticks that a whole number of base cycles last, which is how a window cycle is made (the cycles of the ingredient
  * LCM). Multiplied as a fraction: 25 cycles of 115.2 ticks are 2880 ticks, where 19.2 * 6 * 25 in floating point is
  * 2879.9999999999995, which is no whole number of ticks to anything that asks.
  */
@@ -201,7 +201,7 @@ function createMadePlan(
         );
     }
 
-    // Calculate the single swing period based on the actual machine production rate.
+    // Calculate the single swing window cycle based on the actual machine production rate.
     // With multiple output machines, each machine produces at its own rate, and we need
     // the cycle duration to be based on how long it takes ONE machine to produce a stack.
     // 

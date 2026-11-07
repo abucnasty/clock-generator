@@ -21,17 +21,17 @@ import {PickupClockScenario} from "./pickup-clock-capture";
  * The selected clock is recorded in two build orders. The game serves inserters that act on one entity in the same tick
  * in the order of their unit numbers, the last built first (docs/simulator.md): as the build's blueprint has them, the
  * two inserters that put plates and steel into the wagon are built among the three that take from it; `fill-last`
- * builds them after all of them. The clock the config makes with iron ore out of its period (`ignored_lcm_ingredients`;
+ * builds them after all of them. The clock the config makes with iron ore out of its window cycle (`ignored_lcm_ingredients`;
  * its subtick clock: the clock rounded to 295 ticks makes 26.03 a second) is a second check.
  */
 export interface SteelWagonCase {
     name: string;
     /** The alternative recorded */
     alternative: "planned-belt-slack-subtick";
-    /** The items the config leaves out of the period (`overrides.ignored_lcm_ingredients`) */
+    /** The items the config leaves out of the window cycle (`overrides.ignored_lcm_ingredients`) */
     ignored_lcm_ingredients?: string[];
     order: "as-built" | "fill-last";
-    /** The capture's period of the alternative recorded, in ticks: its subtick clock's (13 periods of 886.15 ticks; 13 of 295.38) */
+    /** The capture's window cycle of the alternative recorded, in ticks: its subtick clock's (13 window cycles of 886.15 ticks; 13 of 295.38) */
     window_cycle_ticks: number;
 }
 
@@ -43,7 +43,7 @@ export function steelWagonCases(): SteelWagonCase[] {
     ];
 }
 
-/** The steel build's config, with the items the case leaves out of the period */
+/** The steel build's config, with the items the case leaves out of the window cycle */
 export async function steelWagonConfig(variant: SteelWagonCase): Promise<Config> {
     const config = await loadConfigFromFile(ConfigPaths.STEEL_PLATE_26_WAGON_CHEST);
     return variant.ignored_lcm_ingredients === undefined ? config
@@ -98,7 +98,7 @@ export async function steelWagonScenario(variant: SteelWagonCase): Promise<Picku
         config: () => config,
         scaffold: () => steelWagonScaffold(variant.order),
         alternative: variant.alternative,
-        // the subtick clock's output repeats only over its whole period (13 periods of the rounded clock), longer than a minute
+        // the subtick clock's output repeats only over its whole window cycle (13 window cycles of the rounded clock), longer than a minute
         baseline: {ticks: variant.window_cycle_ticks, reason: "the subtick clock's output repeats only over its whole period, longer than a minute"},
         probeFile: path.join(__dirname, "steel-plate-26-wagon-chest-clock-probe.lua"),
         probe: {family: "steel-wagon"},

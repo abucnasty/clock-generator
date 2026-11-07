@@ -75,7 +75,7 @@ async function recordFuelBiochamber(options: { swing_offset?: number; later_swin
             version: 1,
             start_game_tick: 0,
             sample_count,
-            // recorded as the game shows it, counting 1 to the period
+            // recorded as the game shows it, counting 1 to the window cycle
             clock: { values: Array.from({ length: sample_count }, (_, i) => i % window_cycle_ticks + 1) },
             config: {
                 inserters: [

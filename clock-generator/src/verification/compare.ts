@@ -29,7 +29,7 @@ interface ClockedInserterComparison {
     modulus: number;
     window: { start: number; end: number };
     swings: number;
-    /** Recorded swings that started outside every window, with the position in the period (the windows') they started at */
+    /** Recorded swings that started outside every window, with the position in the window cycle (the windows') they started at */
     outside: { item_name: string; clock: number }[];
     /** Distinct amounts the swings moved */
     amounts: number[];
@@ -89,7 +89,7 @@ function compareClocked(
     const length = window.end - window.start;
     const outside: ClockedInserterComparison["outside"] = [];
     if (clock_of_inserter.own_clock) {
-        // The clock of a fuel inserter is not recorded and runs free of the clock of the period, so only how the
+        // The clock of a fuel inserter is not recorded and runs free of the clock of the window cycle, so only how the
         // swings sit to each other can be checked: all of them start within one window's length of the same tick of
         // the fuel clock, counted in recorded ticks.
         const offsets = game.map(swing => wrapOffset(swing.pickup_index - (game[0]?.pickup_index ?? 0), modulus));
@@ -177,7 +177,7 @@ export function compareWithExportedClocks(
     const clocked_inserters: ClockedInserterComparison[] = [];
     for (const recorded of recording.inserters) {
         const config_id = match.inserters.get(recorded.id);
-        // an inserter outside the plan swings by its own clock and the state of its machine, not once per period
+        // an inserter outside the plan swings by its own clock and the state of its machine, not once per window cycle
         const clock_of_inserter = config_id === undefined ? undefined : result.unplanned_inserter_clocks?.[EntityId.forInserter(config_id).id];
         if (config_id === undefined || !clock_of_inserter) continue;
         const game_all = extractTransfers(recorded, clock);

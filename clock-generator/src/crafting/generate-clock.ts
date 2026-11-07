@@ -50,7 +50,7 @@ export function generateClockForConfig(
     }
     const plan = unclockedRun(config, options);
     if (plan.run.output_cycle_plan.exhaust !== undefined) {
-        // results that come too rarely for whole hands in a period: their windows are the arithmetic's (exhaust.ts)
+        // results that come too rarely for whole hands in a window cycle: their windows are the arithmetic's (exhaust.ts)
         return exhaustClockOfPlan(plan, options);
     }
     if (options.shared_windows === true) {
@@ -170,7 +170,7 @@ function arithmeticBesidePlanned(clocks: MadeClocks, plan: UnclockedRun, planned
  * its inserters fewer times a minute than the primary and gets back from every backpressure loss the primary gets back
  * from. The slack added after such a window lets the arm, back from its last drop,
  * start a hand the plan does not have, and where that hand waits at its machine it costs a wake-up; it can also join two
- * windows of a period into one (the logistic science sample's two pickup windows of 176 ticks: 20.57 wake-ups a minute
+ * windows of a window cycle into one (the logistic science sample's two pickup windows of 176 ticks: 20.57 wake-ups a minute
  * with the slack inside, 61.71 joined by the slack added; docs/wake-ups.md).
  */
 function withSlackInside(made: MadeClocks, plan: UnclockedRun, planned: BlueprintGenerationResult, primary: BlueprintGenerationResult,

@@ -106,7 +106,7 @@ const NBSP = ' ';
 export const WAKE_UPS_HEADER = `Wakeups/min (1${NBSP}copy)`;
 /** Clocks table header of the signals, which are counted on one copy like the wakeups */
 export const SIGNALS_HEADER = `Signals/min (1${NBSP}copy)`;
-/** Clocks table header of what one copy's clock-only run moved in a clock period */
+/** Clocks table header of what one copy's clock-only run moved in a window cycle */
 export const OUTPUT_PER_WINDOW_CYCLE_HEADER = `Output per window cycle (1${NBSP}copy)`;
 
 /** Clocks table header of the rate, which is the total for all the copies the clocks were made for */

@@ -37,12 +37,12 @@ export interface RoundRobinPollingOptions {
     /**
      * The surplus guard decided per taker (DESIGN 3.1, R-busy), where `surplus_guard` is one switch for every taker: only an
      * inserter that would keep a surplus hand, takes from a machine or a chest, and whose window with the extra start would leave
-     * it enabled all period (busy) gets the window for its hands, `(hands - 1) x cycle + 2` ticks, and is gated; every other
+     * it enabled all window cycle (busy) gets the window for its hands, `(hands - 1) x cycle + 2` ticks, and is gated; every other
      * inserter keeps the extra start
      */
     per_taker_guard?: boolean;
     /**
-     * With `per_taker_guard`: the machines whose takers keep the extra start all the same (and so stay enabled all period where it
+     * With `per_taker_guard`: the machines whose takers keep the extra start all the same (and so stay enabled all window cycle where it
      * leaves them busy). The remake of a guarded clock that holds and does not get back from every loss (`roundRobinPollingClock`)
      * names the machines the target is counted at
      */
@@ -84,7 +84,7 @@ function refuse(reason: string): never {
     throw new RoundRobinPollingNotApplicable(reason);
 }
 
-/** The ticks of `ticks` long from `start` in a period, as ranges that end inside it */
+/** The ticks of `ticks` long from `start` in a window cycle, as ranges that end inside it */
 function windowFrom(start: number, ticks: number, window_cycle_ticks: number): OpenRange[] {
     const first = ((start % window_cycle_ticks) + window_cycle_ticks) % window_cycle_ticks;
     const last = first + ticks - 1;
@@ -93,7 +93,7 @@ function windowFrom(start: number, ticks: number, window_cycle_ticks: number): O
 
 /**
  * The windows of the takers that open on the same tick made one: the earliest start and the latest end any of them needs,
- * which is the longest window from that tick. The takers that are left open all period have none to share.
+ * which is the longest window from that tick. The takers that are left open all window cycle have none to share.
  */
 function sharedWindows(windows: Map<string, OpenRange[]>, takers: Taker[], window_cycle_ticks: number): void {
     const open = new Map<string, { ticks: number; ids: string[] }>();
@@ -113,15 +113,15 @@ function sharedWindows(windows: Map<string, OpenRange[]>, takers: Taker[], windo
 
 /**
  * The turns of a chain (the turn rule, `turnOffsets`): the takers of one machine's product that fill machines of one recipe
- * and are enabled in some same tick, each a turn of its own in the order of their sinks, with a window a period, the longest
- * any of them has. Where they take turns, the windows of the second open a share of the period after the first's, and so on,
+ * and are enabled in some same tick, each a turn of its own in the order of their sinks, with a window a window cycle, the longest
+ * any of them has. Where they take turns, the windows of the second open a share of the window cycle after the first's, and so on,
  * each the length it was given.
  *
  * The inserters that hand a turned machine's product on (`hands_out`: into a chest or onto a belt) move with its turn, so
  * every machine filled in turn is emptied at the same point of its own turn. Left where they were, one turn would fall
  * while its machine holds its output block, when the machine takes nothing and its taker picks nothing up, and the other
  * turns would not: what the one taker leaves goes to the next, and one machine would get less than the others in every
- * period (Factorio 2.1.21, the original #100 scaffold: 93 against 94 supercapacitors in 16 periods). The groups that take
+ * window cycle (Factorio 2.1.21, the original #100 scaffold: 93 against 94 supercapacitors in 16 window cycles). The groups that take
  * turns are returned, each in the order of its turns, for the check that every turn has room (`turnsWithoutRoom`).
  */
 function chainTurns(entity_registry: ReadableEntityRegistry, windows: Map<string, OpenRange[]>, takers: readonly Taker[], window_cycle_ticks: number,
@@ -155,7 +155,7 @@ function chainTurns(entity_registry: ReadableEntityRegistry, windows: Map<string
             }
         }
         if (!together) continue;
-        // each taker is a turn of its own, in the order of the machines they fill; a window a period, the longest of them
+        // each taker is a turn of its own, in the order of the machines they fill; a window a window cycle, the longest of them
         const ordered = [...group].sort((a, b) => byNumber(a.sink, b.sink) || byNumber(a.inserter.entity_id, b.inserter.entity_id));
         const other_draw = log === undefined ? undefined : {
             per_tick: takers.filter(it => it.drain !== true && it.source.id === machine.entity_id.id && EntityId.isMachine(it.sink)
@@ -190,14 +190,14 @@ interface TurnedTakers {
     takers: Taker[];
 }
 
-/** The tick a window opens: the start of its range that no other range of it runs into (a window may wrap the period) */
+/** The tick a window opens: the start of its range that no other range of it runs into (a window may wrap the window cycle) */
 function openingTick(ranges: readonly OpenRange[], window_cycle_ticks: number): number {
     return (ranges.find(range => !ranges.some(other => (other.end_inclusive + 1) % window_cycle_ticks === range.start_inclusive)) ?? ranges[0]).start_inclusive;
 }
 
 /**
  * What a machine holds of its product when a turn to fill it opens at `turn_start`, by arithmetic: what it makes at its rate
- * in the ticks since the last hand out of it started (`hand_starts`, ticks in the period): what its last output window left
+ * in the ticks since the last hand out of it started (`hand_starts`, ticks in the window cycle): what its last output window left
  * after that hand, and what it made since the window closed. A hand out takes what the machine made since the hand before.
  */
 export function heldAtTurn(machine: Machine, turn_start: number, hand_starts: readonly number[], window_cycle_ticks: number): number {
@@ -245,16 +245,16 @@ function turnsWithoutRoom(entity_registry: ReadableEntityRegistry, windows: Read
     return reasons;
 }
 
-/** The windows moved `ticks` later in the period (earlier when negative) */
+/** The windows moved `ticks` later in the window cycle (earlier when negative) */
 function shiftedWindows(ranges: OpenRange[], ticks: number, window_cycle_ticks: number): OpenRange[] {
     return OpenRange.reduceRanges(ranges.flatMap(range =>
         windowFrom(range.start_inclusive + ticks, range.end_inclusive - range.start_inclusive + 1, window_cycle_ticks)));
 }
 
 /**
- * The ticks a drill is enabled in a period to bring `items` to its machine: the items over what it mines in an enabled tick,
+ * The ticks a drill is enabled in a window cycle to bring `items` to its machine: the items over what it mines in an enabled tick,
  * that is at most what the machine takes at once (the drill stops dropping at its limit and keeps the rest), rounded up, and
- * at least MIN_DRILL_WINDOW_TICKS. The drill's bars keep what a tick mines beyond a whole item, so over the periods it mines
+ * at least MIN_DRILL_WINDOW_TICKS. The drill's bars keep what a tick mines beyond a whole item, so over the window cycles it mines
  * its rate in every tick it is enabled.
  */
 export function drillWindowTicks(drill: MiningDrill, machine: Machine, items: number): number {
@@ -266,7 +266,7 @@ interface Taker {
     inserter: Inserter;
     source: EntityId;
     sink: EntityId;
-    /** Items the taker moves a period */
+    /** Items the taker moves a window cycle */
     items: number;
     /** Of them, the items of each item it carries */
     items_of: ReadonlyMap<string, number>;
@@ -277,7 +277,7 @@ interface Taker {
     guarded_hands?: number;
 }
 
-/** Whole hands a period of an item moved `count` hands a cycle over `cycles` cycles: the next whole number (rule F) */
+/** Whole hands a window cycle of an item moved `count` hands a cycle over `cycles` cycles: the next whole number (rule F) */
 function wholeHands(count: number, cycles: number): number {
     return Math.ceil(count * cycles - 1e-9);
 }
@@ -316,7 +316,7 @@ export function roundRobinPollingCycles(entity_registry: ReadableEntityRegistry,
  * Made from the plan's hand counts and these rules of the game (Factorio 2.1.21):
  *
  * - a stack inserter swings once every `cycle` ticks while it is enabled and the sink takes its hand, and a machine
- *   takes a hand while it holds less than its insertion limit, so an inserter whose `h` hands a period follow each
+ *   takes a hand while it holds less than its insertion limit, so an inserter whose `h` hands a window cycle follow each
  *   other without reaching the limit (`computeMaxSwingsPerSubCycle`) moves them all in one window that opens at the tick
  *   its first hand starts. The window is long enough to start every hand the machine can take, `S` of them, and no
  *   longer: `(S - 1) x cycle + 2` ticks (the last hand starts inside it, and a combinator takes a tick), and the belt
@@ -326,20 +326,20 @@ export function roundRobinPollingCycles(entity_registry: ReadableEntityRegistry,
  *   for those the extra start would leave busy all the time (`per_taker_guard`);
  * - rule F: an inserter that fills a machine and moves a fraction of a hand per cycle (15/8) is planned at the next whole
  *   number of hands, which makes its count whole in one cycle. The machine's limit refuses the surplus, so it moves the
- *   fraction on average. The period is the cycles in which the inserters that take the output out move whole hands
+ *   fraction on average. The window cycle is the cycles in which the inserters that take the output out move whole hands
  *   (`roundRobinPollingCycles`);
  * - a machine makes a source's output at a rate and holds up to its output block, so the takers of one source cannot
  *   all draw their hands together: more than the block plus what the source makes in the window is not there. The
  *   machines taking from one source are split into the fewest groups for which each group's draw fits, and the groups
- *   open their windows evenly over the period;
- * - an output inserter swings once a period, in a window of one tick at the start of its machine's group (an output of
+ *   open their windows evenly over the window cycle;
+ * - an output inserter swings once a window cycle, in a window of one tick at the start of its machine's group (an output of
  *   more hands in a window of `h x cycle + 1` ticks), and its machine's input windows open at or after it, never before:
  *   a machine is refilled after its hand has left;
- * - an inserter whose hands, rounded up, take the period (a window of its hands and the offset reaches it) is busy all the time:
+ * - an inserter whose hands, rounded up, take the window cycle (a window of its hands and the offset reaches it) is busy all the time:
  *   a window would only make gaps between hands that follow each other, so it has none and stays enabled;
  * - a mining drill drops the whole of what it mined in a tick it is enabled, up to the machine's limit, and the machine
  *   holds the rest for the next window, so its window is as many ticks as it takes to mine what its machine takes of it
- *   in a period (`drillWindowTicks`), at least two; the drills of one group of machines share one window, the longest any of
+ *   in a window cycle (`drillWindowTicks`), at least two; the drills of one group of machines share one window, the longest any of
  *   them needs, which opens with the group's inputs;
  * - where a source machine is itself filled by other inserters (a chain of machines), the windows go in the order of the
  *   chain, from the output: the output machines' inputs from belts and chests, then those from machines, each stage
@@ -375,7 +375,7 @@ export interface RoundRobinPollingPlan {
      * machines, which one group serves).
      */
     turns: TurnGroup[];
-    /** The ids of the takers busy all the time, whose hands take the whole period: they have no window */
+    /** The ids of the takers busy all the time, whose hands take the whole window cycle: they have no window */
     busy: string[];
     /**
      * The takers the surplus guard is on for that have a window of their hands alone (not shared with a longer one), each with
@@ -487,7 +487,7 @@ export function roundRobinPollingPlan(
             }
             const slack = EntityId.isBelt(source.entity_id) ? belt_slack.get(inserter.entity_id.id) ?? 0 : 0;
             const surplus_kept = more_room_than_a_hand_over && !EntityId.isBelt(source.entity_id);
-            // per taker, the guard is for a taker the extra start would leave busy all period (`open_all_period`, below)
+            // per taker, the guard is for a taker the extra start would leave busy all window cycle (`open_all_window_cycle`, below)
             const busy_with_extra_start = count * cycle + WINDOW_MARGIN_TICKS + slack + INPUT_OFFSET_TICKS >= window_cycle_ticks;
             const guarded = surplus_kept && (options.surplus_guard
                 || (options.per_taker_guard === true && busy_with_extra_start && options.unguarded_sinks?.has(sink.entity_id.id) !== true));
@@ -515,7 +515,7 @@ export function roundRobinPollingPlan(
             && isNeverBlockingSink(entity_registry.getEntityByIdOrThrow(output.sink.entity_id))) return hands * output.animation.total.ticks + WINDOW_MARGIN_TICKS;
         return hands === 1 ? 1 : hands * output.animation.total.ticks + 1;
     };
-    // an inserter whose hands (rounded up) take the whole period, or all but the offset of its window, is busy all the time: a window
+    // an inserter whose hands (rounded up) take the whole window cycle, or all but the offset of its window, is busy all the time: a window
     // would only put gaps between hands that follow each other, so it is left enabled
     const open_all_window_cycle = (taker: Taker): boolean => taker.window_ticks + INPUT_OFFSET_TICKS >= window_cycle_ticks;
     const gated = takers.filter(it => !open_all_window_cycle(it));
@@ -709,7 +709,7 @@ export function holdsWithMargin(plan: UnclockedRun, windows: Map<string, OpenRan
 /**
  * The ways the windows are placed: a window for every start the limit refuses, for the hands only where a surplus hand
  * would be kept, or for the hands only where a surplus hand would be kept and the extra start would leave the taker busy
- * all period (the guard per taker); each with the feeders of a chain staged or compact. A tie in the ranking of their clocks
+ * all window cycle (the guard per taker); each with the feeders of a chain staged or compact. A tie in the ranking of their clocks
  * goes to the first in this order; a way that makes the same windows as one before it is not tried again.
  */
 const SEPARATE_TRIES: RoundRobinPollingOptions[] = FEEDER_OFFSETS_TICKS.flatMap(feeder_offset => [
@@ -812,7 +812,7 @@ export function finishedClock(
     windows: Map<string, OpenRange[]>,
     turns: TurnGroup[],
     options: GenerateClockOptions,
-    /** The takers busy the whole period, which the windows leave out */
+    /** The takers busy the whole window cycle, which the windows leave out */
     left_open: ReadonlyMap<string, AlwaysOnReason>,
     /** A constructed schedule's margins belong to its windows, never to the planning history's windows. */
     constructed?: Pick<BlueprintGenerationResult, "random_margins">,

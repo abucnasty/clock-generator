@@ -4,13 +4,13 @@ import type { DisturbanceTrialAssessment } from "../trial";
 
 /**
  * A run shorter than this is simulated again rather than kept. A run of 100,000 ticks takes seconds; a shorter one
- * costs less to make again than the memory of its histories, so a generation of builds with short periods keeps none.
+ * costs less to make again than the memory of its histories, so a generation of builds with short window cycles keeps none.
  */
 export const RUN_MEMO_MIN_TICKS = 100_000;
 
 /**
  * The most ticks of runs the memo keeps at once; the run used longest ago goes first. A kept run holds its histories,
- * and on the processing-unit export sample (periods of 116,160 ticks) a memo without a limit took the generation past a
+ * and on the processing-unit export sample (window cycles of 116,160 ticks) a memo without a limit took the generation past a
  * heap of 3,000 MB, where it ran 77 s without one.
  */
 export const RUN_MEMO_MAX_TICKS = 4_000_000;

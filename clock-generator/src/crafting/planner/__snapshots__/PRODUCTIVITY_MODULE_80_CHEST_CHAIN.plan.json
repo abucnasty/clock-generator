@@ -49,10 +49,10 @@
         "inserter:13/copper-cable",
         "inserter:14/iron-plate"
       ],
-      "periods": [
-        {"swings":2,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":144,"denominator":1},"cycles":363,"period_ticks":52272,"kept":true},
-        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":72,"denominator":1},"cycles":363,"period_ticks":26136,"kept":true},
-        {"swings":1,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":72,"denominator":1},"cycles":363,"period_ticks":26136,"kept":true}
+      "window_cycles": [
+        {"swings":2,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":144,"denominator":1},"cycles":363,"window_cycle_ticks":52272,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":72,"denominator":1},"cycles":363,"window_cycle_ticks":26136,"kept":true},
+        {"swings":1,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":72,"denominator":1},"cycles":363,"window_cycle_ticks":26136,"kept":true}
       ],
       "utilization": [
         {
@@ -177,7 +177,7 @@
       "planned": 2,
       "higher_up_to_ticks": 2400
     },
-    "main_period": {
+    "main_window_cycle": {
       "ticks": 52272,
       "exact": {
         "numerator": 52272,

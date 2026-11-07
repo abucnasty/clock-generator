@@ -12,7 +12,7 @@ const SNAPSHOTS = path.join(__dirname, "__snapshots__");
 
 const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
 
-/** The period of the planning run's own count: the first tried where the planned one is over the limit */
+/** The window cycle of the planning run's own count: the first tried where the planned one is over the limit */
 const plannedWindowCycleOf = (composition: PlanComposition): number => composition.over_limit_action.action === "none"
     ? composition.main_window_cycle.ticks : composition.over_limit_action.terms.tried[0].window_cycle_ticks;
 
@@ -37,15 +37,15 @@ describe("the build plan", () => {
 
             expect(validation).not.toBeNull();
             const composition = plan.composition!;
-            // the planning run's period and lcm, as validating the config makes them
+            // the planning run's window cycle and lcm, as validating the config makes them
             expect(plannedWindowCycleOf(composition)).toBe(validation!.window_cycle_ticks);
             if (composition.over_limit_action.action === "none") {
                 expect(composition.lcm_terms.effective_lcm).toBe(validation!.used_lcm);
             }
-            // the main period is the lcm of the group periods: the groups' cycles make the build's lcm
+            // the main window cycle is the lcm of the group window cycles: the groups' cycles make the build's lcm
             const cycles = composition.lcm_terms.group_cycles.reduce((lcm, group) => lcm / gcd(lcm, group.cycles) * group.cycles, 1);
             expect(cycles).toBe(composition.lcm_terms.computed_lcm);
-            // a period over the limit backs off to the count today's whole-swing arithmetic finds
+            // a window cycle over the limit backs off to the count today's whole-swing arithmetic finds
             if (composition.over_limit_action.action === "swing-backoff") {
                 const below = [...wholeSwingWindowCyclesBelow({ config_json: JSON.stringify(config), terminal_swing_count: composition.over_limit_action.terms.requested_swings },
                     SIMULATION_BUDGET_TICKS)];

@@ -29,7 +29,7 @@ export interface CarCase {
     name: string;
     /** The alternative recorded */
     alternative: "derived" | "swings-2" | "swings-3" | "swings-1";
-    /** The clock's period in ticks */
+    /** The clock's window cycle in ticks */
     period: 72 | 144 | 288;
     order: "as-built" | "takers-last";
 }

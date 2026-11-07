@@ -35,7 +35,7 @@ it("replays the judged clock state after the measured warm-up, keeping stock ind
         [id, rs.map(r => OpenRange.from(r.start, r.end))]));
     const run = runAsBuiltCheck(config, ranges, 24, quiet);
     expect(run.check).toMatchObject({holds: true, actual_output_items: 32, first_judged_tick: 960});
-    // the long run's warm-up of 10 periods (240 ticks) comes before its stock's first index
+    // the long run's warm-up of 10 window cycles (240 ticks) comes before its stock's first index
     expect(run.check.clock_tick_at_first_judged).toBe(1200);
     const reused = runAsBuiltCheck(config, ranges, 24, quiet, undefined, undefined, FREE_RUNNING_CHECK_TICKS,
         {run, long_run_ticks: FREE_RUNNING_CHECK_TICKS});
@@ -43,9 +43,9 @@ it("replays the judged clock state after the measured warm-up, keeping stock ind
     const request = {config, mode: "clock" as const, window_cycle_ticks: 24, terminal_swing_count: 1, windows};
     const judged = recordSimulationTimeline({...request, settle_ticks: run.check.clock_tick_at_first_judged});
     expect(judged.ticks_before_recording).toBe(1200);
-    // Match every hand throughout the period with the stock the long run actually judged.
+    // Match every hand throughout the window cycle with the stock the long run actually judged.
     expect(handsDifferingFromStock(judged, run.stock!, run.check.first_judged_tick!, 25)).toBe(0);
-    // the replay of whole periods up to the stock's first judged index (a request without the clock tick) starts 240 ticks early
+    // the replay of whole window cycles up to the stock's first judged index (a request without the clock tick) starts 240 ticks early
     const by_window_cycles = recordSimulationTimeline({...request, settle_window_cycles: run.check.first_judged_tick! / 24});
     expect(by_window_cycles.ticks_before_recording).toBe(960);
     expect(handsDifferingFromStock(by_window_cycles, run.stock!, run.check.first_judged_tick!, 25)).toBeGreaterThan(0);
@@ -53,7 +53,7 @@ it("replays the judged clock state after the measured warm-up, keeping stock ind
 });
 
 // A clock of p/q ticks starts again with the recorded run (#568), in the long run and in a replay alike: no one tick from
-// the cold start stands for the state the long run judged, so the check names none, and a replay asks for whole periods.
+// the cold start stands for the state the long run judged, so the check names none, and a replay asks for whole window cycles.
 it("names no judged clock tick for a clock of p/q ticks, whose replay by whole periods shows the judged state", async () => {
     const controls = JSON.parse(readFileSync(path.join(__dirname, "fixtures/metallurgic-subtick-controls.json"), "utf8")) as {
         lcm: number; terminal_swing_count: number; window_cycle_ticks: number; clock_windows: Record<string, {start: number; end: number}[]>;

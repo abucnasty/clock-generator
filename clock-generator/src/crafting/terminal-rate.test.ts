@@ -10,7 +10,7 @@ import { targetItemOf } from "./sequence/cycle/target-ends";
 import { atRateFrom, branchesScaledTo, cycleAtRate, firstBinAtRate, neverBlockingBranchesOf, type BranchBins } from "./terminal-rate";
 import { traitsOf } from "../entities/traits/traits-of";
 
-/** The branches of a sample, with every terminal output planned to move one hand of 16 a period */
+/** The branches of a sample, with every terminal output planned to move one hand of 16 a window cycle */
 async function branchesOf(path: string) {
     const config = await loadConfigFromFile(path);
     const registry = createEntityRegistryFromConfig(config);
@@ -98,7 +98,7 @@ describe("recovery where every terminal output drops into a sink that never bloc
     });
 
     it("is back where a science plant makes a little more than its share and its drain hands the surplus on", () => {
-        // a hand over its share every 14 periods, for the longest a trial runs on: 14 hands ahead by its end
+        // a hand over its share every 14 window cycles, for the longest a trial runs on: 14 hands ahead by its end
         const ahead = Array.from({ length: 200 }, (_, at) => at % 14 === 13 ? 32 : 16);
         expect(judgeRecovery(ahead.map(items => items * 2), 32, null, 40, branches(ahead, ahead)).recovers).toBe(true);
     });

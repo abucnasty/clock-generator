@@ -58,11 +58,11 @@ export interface TimelineRecordingOptions {
     max_ticks?: number;
     max_points?: number;
     /**
-     * Periods the build runs from its cold start before the recorded period, where more than its warm-up: the recording
-     * then shows a settled period (the long run of the clock judges the build from one), not the first after warm-up.
+     * Window cycles the build runs from its cold start before the recorded window cycle, where more than its warm-up: the recording
+     * then shows a settled window cycle (the long run of the clock judges the build from one), not the first after warm-up.
      */
     settle_window_cycles?: number;
-    /** Ticks the clock runs from the cold start before the recorded period, the warm-up included; takes precedence over `settle_periods` */
+    /** Ticks the clock runs from the cold start before the recorded window cycle, the warm-up included; takes precedence over `settle_window_cycles` */
     settle_ticks?: number;
 }
 

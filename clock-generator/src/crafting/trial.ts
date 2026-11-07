@@ -67,7 +67,7 @@ export interface ClockAssessment {
      */
     disturbance_trial: DisturbanceTrialVerdict | null;
     /**
-     * Why the losses could not be tried on a clock that holds its expected output: the trials' error, such as a period
+     * Why the losses could not be tried on a clock that holds its expected output: the trials' error, such as a window cycle
      * that does not repeat in whole ticks. Absent when they were tried, or the clock does not hold.
      */
     disturbance_trial_not_tried?: string;
@@ -135,16 +135,16 @@ export interface AsBuiltStabilityCheck {
     actual_output_items: number;
     /**
      * What `actual_output_items` is, on a clock assessed for listing (see `settledOutputOf`) that fails its first
-     * check: the mean items a period over the judged part of the clock's long run, or, where its period is too long
-     * for a long run, the one period the check measured. Absent on a check as the generator makes it.
+     * check: the mean items a window cycle over the judged part of the clock's long run, or, where its window cycle is too long
+     * for a long run, the one window cycle the check measured. Absent on a check as the generator makes it.
      */
     output_basis?: "long-run mean" | "one period";
     /**
      * On a check that failed: the amount and evidence of the measurement it failed on under the strict target amount
-     * (`actual_output_items` is its unrounded mean a period). Absent on a check that holds.
+     * (`actual_output_items` is its unrounded mean a window cycle). Absent on a check that holds.
      */
     target_production?: TargetProduction;
-    /** The unshifted clock did not hold its first period: `actual_output_items` is that one period (see `withSettledOutput`) */
+    /** The unshifted clock did not hold its first window cycle: `actual_output_items` is that one window cycle (see `withSettledOutput`) */
     first_check_failed?: true;
     /** Number of clock start phases simulated (stops at the first failure) */
     start_phases_checked: number;
@@ -166,13 +166,13 @@ export interface AsBuiltStabilityCheck {
     failed_taker_order?: string;
     /** The inserters that take one product from one machine, by machine and product, where the clock was checked under their orders: [["inserter:6", "inserter:7"]] */
     competing_takers?: string[][];
-    /** Periods after which the reported run repeats, when the simulation found the repeat; see SimulationStabilityCheck */
+    /** Window cycles after which the reported run repeats, when the simulation found the repeat; see SimulationStabilityCheck */
     repeat_window_cycles?: number;
-    /** Output items of the reported run over its repeat_periods periods; set when repeat_periods is more than 1 */
+    /** Output items of the reported run over its repeat_window_cycles window cycles; set when repeat_window_cycles is more than 1 */
     repeat_output_items?: number;
     /**
      * The long run repeated a simulation state at a bin boundary (see runner/steady-state.ts), so its judged bins
-     * are what the build does forever: its verdict is a proof, not a sample of 120 periods. Absent when the check
+     * are what the build does forever: its verdict is a proof, not a sample of 120 window cycles. Absent when the check
      * made no long run; false when the long run ran its full length without a state coming up again.
      */
     long_run_proven?: boolean;
@@ -188,16 +188,16 @@ export interface AsBuiltStabilityCheck {
      * `BuildRun.every_clock_runs_through`); absent otherwise, and where the check failed from another start or order.
      */
     clock_tick_at_first_judged?: number;
-    /** Clock periods in the repeating cycle the proven long run was judged on */
+    /** Clock window cycles in the repeating cycle the proven long run was judged on */
     long_run_cycle_window_cycles?: number;
     /**
      * Under the strict target amount, on a proven long run: what the build moved short of its target before the proven
-     * repeat starts (`orbit_start_period`, periods of the long run). A loss of the start-up, not of the rate: the
+     * repeat starts (`orbit_start_window_cycle`, window cycles of the long run). A loss of the start-up, not of the rate: the
      * amount is judged on the repeat alone. Absent where nothing was short before it.
      */
     start_up_shortfall?: StartUpShortfall;
     /**
-     * Every clock start phase of the whole period was checked, each resolved by proof: its own repeating cycle, or
+     * Every clock start phase of the whole window cycle was checked, each resolved by proof: its own repeating cycle, or
      * a state met on another phase's proven orbit (see exhaustiveStartPhases). Absent when the check sampled its
      * start phases; false when some phase hit the cap unresolved and was judged on its last bin as a sample.
      */
@@ -207,7 +207,7 @@ export interface AsBuiltStabilityCheck {
     /**
      * How often the machines woke the inserters asleep on their wake-up lists (goal 2 of GOALS.md, see wake-ups.ts),
      * for one copy of the build over the judged part of the long run of the unshifted clock. Absent when the check
-     * made no long run: the clock already failed its one-period check, or its period is too long for one.
+     * made no long run: the clock already failed its one-period check, or its window cycle is too long for one.
      */
     wake_ups?: WakeUps;
     /**
@@ -220,7 +220,7 @@ export interface AsBuiltStabilityCheck {
     full_output_chests?: FullOutputChest[];
     /**
      * The export belts (belt lanes with a consumption rate) that received less than their consumers take, over the run
-     * that failed the clock: its period, or the judged part of its long run. The clock moves its target and is not
+     * that failed the clock: its window cycle, or the judged part of its long run. The clock moves its target and is not
      * stable. Absent when none fell short.
      */
     export_shortfalls?: ExportShortfall[];
@@ -277,16 +277,16 @@ function clockBuildRun(
 ): BuildRun {
     const { main_clock_shift = 0, ...run_options } = options;
     const named_start = run_options.keep_output_buffers === true || run_options.start_stock !== undefined;
-    // a clock of whole ticks is counted by its own period, also where the plan's is not whole (a clock rounded down)
+    // a clock of whole ticks is counted by its own window cycle, also where the plan's is not whole (a clock rounded down)
     return runBuild(buildAsBuiltConfig(config, windows, window_cycle_ticks, fuel_clocks, run_options.decider_order, main_clock_shift),
         { logger: quietLogger(logger), cold_start: !named_start, ...(Number.isInteger(window_cycle_ticks) && { window_cycle_ticks }), ...run_options });
 }
 
 /**
  * A first check of a clock: under whole-counter checks (`wholeCounterOf`) a clock of a p/q-tick
- * period runs the whole counter its exported blueprint repeats (p ticks, q periods) and is judged on its total, its
+ * window cycle runs the whole counter its exported blueprint repeats (p ticks, q window cycles) and is judged on its total, its
  * clocks running on through the warm-up as in the game (`counter_runs_through`); any other clock, and one whose
- * counter one run cannot hold, runs one period (`runClockOnBuild`), as before.
+ * counter one run cannot hold, runs one window cycle (`runClockOnBuild`), as before.
  */
 function firstClockSpan(
     config: Config, windows: Map<string, OpenRange[]>, window_cycle_ticks: number, logger: Logger, options: ClockTrialOptions = {},
@@ -366,7 +366,7 @@ interface CompetingTakerGroup {
  * The most takers of a group enabled in one tick: 0 or 1 where they take turns. Whether the machine holds enough for every
  * hand they can start in the ticks they share does not tell whether the order matters, and is not asked: on the jellynut
  * processing sample four takers share 118 ticks in which the machine holds and makes 1,197 jelly against the 960 their
- * 60 hands can take, and with them served in one order of the four the planned clock moves 96 of 128 a period.
+ * 60 hands can take, and with them served in one order of the four the planned clock moves 96 of 128 a window cycle.
  */
 function mostContested(group: CompetingTakerGroup, enabled_at: ReadonlyMap<string, Uint8Array | null>, ticks: number): number {
     const on = group.inserters.map(it => enabled_at.get(it.entity_id.id) ?? null);
@@ -411,38 +411,38 @@ export const FREE_RUNNING_CHECK_TICKS = 36000;
  * `trialWithLoopWindows`): twice the standard check, the length of one game recording. The windows are an
  * optimisation, so they have to clear a longer run than the clock they are added to: with the standard length a
  * variant of the agricultural science sample (egg biochambers at speed 72, stack size 12 on the inserters into the
- * science biochamber) kept windows that came up a hand or more short in two periods of 200. A longer run is still not
+ * science biochamber) kept windows that came up a hand or more short in two window cycles of 200. A longer run is still not
  * a proof, only a smaller chance of keeping windows that drift.
  */
 export const LOOP_WINDOW_CHECK_TICKS = 2 * FREE_RUNNING_CHECK_TICKS;
 
 /**
- * The long run stops at this many periods: a drift shows within a hundred, and short periods would run thousands.
- * A fractional period is run for more of them where it takes more for the judged part to hold one whole repeat of
- * the period, up to LONG_RUN_MAX_TICKS (see longRunPeriods).
+ * The long run stops at this many window cycles: a drift shows within a hundred, and short window cycles would run thousands.
+ * A fractional window cycle is run for more of them where it takes more for the judged part to hold one whole repeat of
+ * the window cycle, up to LONG_RUN_MAX_TICKS (see longRunWindowCycles).
  */
 const LONG_RUN_MAX_WINDOW_CYCLES = 120;
 
-/** Periods the long run of a clock of this period lasts when it is asked to cover `check_ticks` ticks (see longRunPeriods) */
+/** Window cycles the long run of a clock of this window cycle lasts when it is asked to cover `check_ticks` ticks (see longRunWindowCycles) */
 export function longRunWindowCyclesOf(window_cycle_ticks: number, check_ticks: number = FREE_RUNNING_CHECK_TICKS): number {
     const max_window_cycles = Math.floor((SIMULATION_BUDGET_TICKS - 1) / window_cycle_ticks);
-    // a longer check than the standard one is not cut short by the cap on periods, which short periods would hit first
+    // a longer check than the standard one is not cut short by the cap on window cycles, which short window cycles would hit first
     const wanted_window_cycles = Math.ceil(check_ticks / window_cycle_ticks);
     return longRunWindowCycles(window_cycle_ticks, subtickClockForWindowCycle(window_cycle_ticks), Math.min(check_ticks > FREE_RUNNING_CHECK_TICKS ? wanted_window_cycles : Math.min(LONG_RUN_MAX_WINDOW_CYCLES, wanted_window_cycles), max_window_cycles), max_window_cycles);
 }
 
 /**
- * A build does not always repeat with its clock, so one period says little about it: in game builds with inserters
- * left always enabled held their rate for thousands of ticks before a period came up a hand or two short, and a
- * machine with spare speed can drift for dozens of periods. The clock is run for ten minutes of game time or 120
- * periods instead, longer for a fractional period whose repeat needs it, and judged on what follows the first third:
- * in bins of whole ticks (a period, or the repeat of a fractional one), none more than a hand off what it expects
+ * A build does not always repeat with its clock, so one window cycle says little about it: in game builds with inserters
+ * left always enabled held their rate for thousands of ticks before a window cycle came up a hand or two short, and a
+ * machine with spare speed can drift for dozens of window cycles. The clock is run for ten minutes of game time or 120
+ * window cycles instead, longer for a fractional window cycle whose repeat needs it, and judged on what follows the first third:
+ * in bins of whole ticks (a window cycle, or the repeat of a fractional one), none more than a hand off what it expects
  * and all of them together within a hand.
  *
  * The run watches for the simulation state repeating at a bin boundary (see `detect_repeat`): a build on fixed
  * clocks repeats forever from a repeated state, so the run stops there and the bins of the repeating cycle are
  * judged instead, as a proof (`proven`) rather than a sample — every cycle bin within a hand, and the cycle as a
- * whole exactly at its expected output (see judgeProvenCycle). A run that never repeats within its periods is
+ * whole exactly at its expected output (see judgeProvenCycle). A run that never repeats within its window cycles is
  * judged as before.
  */
 function longRunOfFreeRunningBuild(
@@ -467,9 +467,9 @@ function longRunOfFreeRunningBuild(
     off_bins: number;
     span_items: number;
     stock: StockRecording;
-    /** The judged bins repeat forever: the verdict is a proof of the build's eternity, not a sample of 120 periods */
+    /** The judged bins repeat forever: the verdict is a proof of the build's eternity, not a sample of 120 window cycles */
     proven: boolean;
-    /** Clock periods in the proven repeating cycle; null when the run never repeated */
+    /** Clock window cycles in the proven repeating cycle; null when the run never repeated */
     cycle_window_cycles: number | null;
     /** Tick of the run the first judged bin starts at, for judging the same window the verdict is of */
     first_judged_tick: number;
@@ -485,9 +485,9 @@ function longRunOfFreeRunningBuild(
     /** For a target that counts an item destroyed: what was taken of the results its machines place, over the judged part */
     results_taken: ResultsTaken[] | undefined;
 } | null {
-    // every build: a machine with spare speed over its plan can drift for dozens of periods before it shows
+    // every build: a machine with spare speed over its plan can drift for dozens of window cycles before it shows
     const registry = createEntityRegistryFromConfig(config);
-    // a fractional period repeats in whole ticks only every few periods, as its subtick clock counts them
+    // a fractional window cycle repeats in whole ticks only every few window cycles, as its subtick clock counts them
     const repeat = subtickClockForWindowCycle(window_cycle_ticks);
     const window_cycles = longRunWindowCyclesOf(window_cycle_ticks, check_ticks);
     if (window_cycles <= 1) {
@@ -502,8 +502,8 @@ function longRunOfFreeRunningBuild(
     if (!run.machine_stock) {
         return null;
     }
-    // what the output inserters drop, counted as the recordings of a build are: by whole periods of the clock that
-    // is built, which for a fractional period is the subtick clock and its repeat (see long-run.ts)
+    // what the output inserters drop, counted as the recordings of a build are: by whole window cycles of the clock that
+    // is built, which for a fractional window cycle is the subtick clock and its repeat (see long-run.ts)
     // (or, for a target that counts an item destroyed, what the inserters that bring it in from outside drop)
     const target = targetItemOf(config.setpoint);
     // Count at the same boundary as the plan: after an output buffer, not where machines fill it. Machines sharing
@@ -515,7 +515,7 @@ function longRunOfFreeRunningBuild(
     const judged = (of: TrialRun) => {
         const recorded = of.machine_stock!;
         const held = recorded.inserters.filter(it => output_ids.has(it.inserter_id)).map(it => it.held);
-        // the first third of the run carries its start-up, which a loop can take a dozen periods to work out of, as a
+        // the first third of the run carries its start-up, which a loop can take a dozen window cycles to work out of, as a
         // build does in game before a recording is settled; a build is judged by what follows: the span as a whole has
         // to come out within a hand, and no bin further off than a hand. A run that repeated is judged on its cycle.
         const verdict = of.state_repeat !== undefined
@@ -585,7 +585,7 @@ function longRunOfFreeRunningBuild(
 
 /**
  * What a proven run moved short of its target before its repeat starts at `orbit_tick`: the items its output inserters
- * dropped against what the periods before it expect. Undefined where nothing was short.
+ * dropped against what the window cycles before it expect. Undefined where nothing was short.
  */
 function startUpShortfallOf(held: readonly (readonly number[])[], orbit_tick: number, window_cycle_ticks: number, expected_per_window_cycle: number): StartUpShortfall | undefined {
     let dropped = 0;
@@ -607,7 +607,7 @@ function sampledAmountOf(verdict: ReturnType<typeof judgeLongRun>): TargetProduc
 }
 
 /**
- * Runs a build driven only by clock windows, as its blueprint does in game, for a number of periods, and returns what
+ * Runs a build driven only by clock windows, as its blueprint does in game, for a number of window cycles, and returns what
  * every machine and inserter held after each tick. For laying the simulator against a recording of the same clock.
  */
 export function simulateClockOnly(
@@ -621,7 +621,7 @@ export function simulateClockOnly(
      * empty and the clock from tick 0 (`cold_start`), the inserters that compete for a product served in
      * `competing_takers_order`. `keep_output_buffers` leaves the machines the output is taken from as full as they get
      * when nothing takes it, and starts the clock at once. `start_stock` names what machines hold instead, to start in a
-     * state the game was recorded in: with `warmup_periods: 0` the first tick of the run is the first tick after that
+     * state the game was recorded in: with `warmup_window_cycles: 0` the first tick of the run is the first tick after that
      * state, and `main_clock_shift` puts the clock where it was then.
      */
     start: Pick<ClockTrialOptions, "cold_start" | "competing_takers_order" | "keep_output_buffers" | "warmup_window_cycles" | "start_stock" | "start_hands" | "main_clock_shift"> = {},
@@ -638,7 +638,7 @@ export function simulateClockOnly(
 /**
  * The clock with the windows given, built as they are, and checked as the generator checks its own: for a clock that
  * it did not make, such as one tightened by hand, or one of its own with windows changed. The windows have to be of
- * the period the config is planned on (`overrides.terminal_swing_count` sets the output swings per cycle it has).
+ * the window cycle the config is planned on (`overrides.terminal_swing_count` sets the output swings per cycle it has).
  */
 export function clockFromWindows(
     config: Config,
@@ -669,7 +669,7 @@ export function clockFromWindows(
  * See disturbance-trial.ts for how a loss is run and judged.
  *
  * The config has to be the one the clock was planned on, as for clockFromWindows: the plan gives a fuel inserter its
- * clock. `expected_output_items` is what the output inserters drop in a period of the clock when it holds.
+ * clock. `expected_output_items` is what the output inserters drop in a window cycle of the clock when it holds.
  */
 export function disturbanceTrialOf(
     config: Config,
@@ -767,8 +767,8 @@ export function disturbanceTrialOf(
  * Where a clock gets to from the starts of CLOCK_STARTS: each is run as the long run of the clock is, from that start,
  * and judged on what follows its first third. Every start is judged on the same checks (`startsReachingTarget`): the
  * cold start on all the checks of the generator (`cold_holds`), the others on their long run, unless the cold start
- * fails a check that is not about the start, which fails every start. A clock whose period is too long for
- * a long run is judged on one period. `expected_output_items` is what a period has to move.
+ * fails a check that is not about the start, which fails every start. A clock whose window cycle is too long for
+ * a long run is judged on one window cycle. `expected_output_items` is what a window cycle has to move.
  */
 export function startDependenceOf(
     config: Config,
@@ -784,7 +784,7 @@ export function startDependenceOf(
     const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const check_config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
-    // a clock stands at another place of a period of a whole number of ticks only; a fractional one is tried unshifted
+    // a clock stands at another place of a window cycle of a whole number of ticks only; a fractional one is tried unshifted
     const tried = starts.filter(start => start.clock_shift === 0 || Number.isInteger(window_cycle_ticks));
     const runs = tried.map(start => {
         // A start changes the shared counter's position, including computed by-product predicates on that counter.
@@ -818,9 +818,9 @@ export function startDependenceOf(
 /**
  * The wake-ups of a clock from the starts of wake-ups-from-starts.ts, or null where its build holds no stock the clock
  * does not set (no loop of machines, no machine that makes its own ingredient: nothing is run) or a start has no long
- * run. Each start is the cold start with the clock standing at a place in its period, run as the long run of the clock
+ * run. Each start is the cold start with the clock standing at a place in its window cycle, run as the long run of the clock
  * is (`longRunOfFreeRunningBuild`, `long_run_ticks` long, as the clock's own was) and counted over whole bins of its
- * judged part, a period or the repeat of a fractional one, so that two starts that settle alike give the same figure
+ * judged part, a window cycle or the repeat of a fractional one, so that two starts that settle alike give the same figure
  * whatever place they start at. The config is the one the clock was planned on, with its output swings.
  */
 export function wakeUpsFromStartsOf(
@@ -877,15 +877,15 @@ export function exhaustiveCrossingKey(physical_key: string, tick: number): strin
     return `${Math.max(0, CIRCUIT_LATENCY_TICKS - tick)}:${physical_key}`;
 }
 
-/** What checking every start phase of the period found (see exhaustiveStartPhases) */
+/** What checking every start phase of the window cycle found (see exhaustiveStartPhases) */
 export interface ExhaustiveStartPhasesOutcome {
     /** The eternal cycle every phase settles into holds the expected output; false as soon as one does not */
     holds: boolean;
-    /** Phases simulated; the whole period, or fewer when one failed */
+    /** Phases simulated; the whole window cycle, or fewer when one failed */
     phases_checked: number;
     /** First failing phase, as the windows are rotated for it */
     failed_start_offset?: number;
-    /** Items a period of the failing phase's cycle moved */
+    /** Items a window cycle of the failing phase's cycle moved */
     failed_output_items?: number;
     /** Under the strict target amount: the amount and evidence of the failing phase's cycle, or of its last bin at the cap */
     failed_target_production?: TargetProduction;
@@ -901,16 +901,16 @@ export interface ExhaustiveStartPhasesOutcome {
 }
 
 /**
- * Checks every clock start phase of the period, not a sample of them: in game a blueprint's machines can meet the
+ * Checks every clock start phase of the window cycle, not a sample of them: in game a blueprint's machines can meet the
  * clock at any of its `period` ticks, and each meeting is a start phase. Exhausting them is affordable because a
  * phase's run is not run to a verdict of its own: it stops at the first crossing of the clock's phase 0 whose
  * simulation state was seen on a phase already resolved, and inherits that phase's eternal cycle — most phases fall
- * into the orbit of an earlier one within a few periods. A phase no earlier orbit catches runs until a crossing
- * repeats a state of its own run, which proves its cycle: every bin of it (a period, or the merge with own fuel
+ * into the orbit of an earlier one within a few window cycles. A phase no earlier orbit catches runs until a crossing
+ * repeats a state of its own run, which proves its cycle: every bin of it (a window cycle, or the merge with own fuel
  * clocks) has to be within the stability tolerance of the expected output. States of different phases compare at
  * these crossings because every clock of the build stands at the same place there; with fuel clocks of their own
  * moduli they do not, so those builds resolve each phase by its own repeat alone. Null when the check does not
- * apply: a period without a finite whole-tick counter, or a build not on fixed clocks throughout, keeps the sampled check.
+ * apply: a window cycle without a finite whole-tick counter, or a build not on fixed clocks throughout, keeps the sampled check.
  *
  * What stays sampled here: moving-lane phases (varied one pickup at a time elsewhere), and the competing-takers
  * order, which is the one the game was observed to use.
@@ -924,7 +924,7 @@ export function exhaustiveStartPhases(
     /** How the clock's runs plan, as the clock was planned (`fractionalSwingsOf`) */
     swings: FractionalSwings = {},
 ): ExhaustiveStartPhasesOutcome | null {
-    // under whole-counter checks a p/q-tick period's phases are those of its counter's p ticks
+    // under whole-counter checks a p/q-tick window cycle's phases are those of its counter's p ticks
     const counter_ticks = wholeCounterOf(window_cycle_ticks)?.window_cycle_ticks ?? window_cycle_ticks;
     if (!Number.isInteger(counter_ticks)) {
         return null;
@@ -942,7 +942,7 @@ export function exhaustiveStartPhases(
     // the belts with a consumption rate are held to what their consumers take, in the bins the output is
     const exported = exportedItemsOf(base.simulation_context.entity_registry, base.output_inserter_ids);
     // at a crossing of one phase's run a fuel clock of its own modulus stands elsewhere than at another's, so only
-    // a build whose clocks all share the period merges phases into one another's orbits
+    // a build whose clocks all share the window cycle merges phases into one another's orbits
     const can_merge = stride_window_cycles === 1 && !Array.from(base.inserter_clocks.values()).some(clock => clock.own_clock);
     const expected_per_bin = base.total_expected_output * stride_window_cycles;
     const tolerance = LCM_STABILITY_TOLERANCE * stride_window_cycles;
@@ -1055,8 +1055,8 @@ export function exhaustiveStartPhases(
 
 /**
  * The stability check of a lane-phase start's run, judged over its repeating cycle where the run went on with nothing
- * cut (see `pickup_phase_cycles` of runAsBuiltCheck): a run that holds its first period but does not stay at the
- * expected output does not hold, and reports the lowest period of the cycle it ends in.
+ * cut (see `pickup_phase_cycles` of runAsBuiltCheck): a run that holds its first window cycle but does not stay at the
+ * expected output does not hold, and reports the lowest window cycle of the cycle it ends in.
  */
 function overItsCycle(run: TrialRun): TrialRun["stability_check"] {
     const cycle = run.disturbance_trial;
@@ -1076,16 +1076,16 @@ function overItsCycle(run: TrialRun): TrialRun["stability_check"] {
 }
 
 /**
- * The shifts of the main clock (in ticks of its period) the shifted starts of a clock-only check run from, besides the
- * unshifted start: `phases` - 1 of them, `step` = floor(period / phases) whole ticks apart from `step` on and within
- * the period, as they always have been.
+ * The shifts of the main clock (in ticks of its window cycle) the shifted starts of a clock-only check run from, besides the
+ * unshifted start: `phases` - 1 of them, `step` = floor(window cycle / phases) whole ticks apart from `step` on and within
+ * the window cycle, as they always have been.
  *
- * Under whole-counter checks (`counter`, a p/q-tick period) a start is a position u/q (u < p) of the clock in its period:
+ * Under whole-counter checks (`counter`, a p/q-tick window cycle) a start is a position u/q (u < p) of the clock in its window cycle:
  * the p starts of the counter are the p distinct rotations of the windows, no two of them the same start, and nothing in
  * the clock's arithmetic tells which of them a build fails from (that is the cold build's doing), so they are sampled:
  * the same whole-tick positions, each at another of the q sub-tick fractions, `m * q / phases` for the m-th, spread
  * evenly over them (every fraction where q < phases). Every start's judged counter holds each of the q fractions once,
- * so the fraction differs between starts only in the order the periods come in after the start. A failing start that
+ * so the fraction differs between starts only in the order the window cycles come in after the start. A failing start that
  * is none of these can be missed, as one between the whole-tick positions could be before.
  */
 export function startShiftsOf(window_cycle_ticks: number, counter: SubtickWindowCycle | null, phases: number): number[] {
@@ -1098,7 +1098,7 @@ export function startShiftsOf(window_cycle_ticks: number, counter: SubtickWindow
         }
         const { window_cycle_ticks: p, scale: q } = counter;
         const position = offset * q + Math.floor(m * q / phases) % q;
-        // one division, so the shift stays inside the period as it is (see buildAsBuiltConfig)
+        // one division, so the shift stays inside the window cycle as it is (see buildAsBuiltConfig)
         shifts.push((position < p ? position : offset * q) / q);
     }
     return shifts;
@@ -1109,16 +1109,16 @@ export function startShiftsOf(window_cycle_ticks: number, counter: SubtickWindow
  * then with the whole clock shifted to other start offsets relative to the machines' initial state, and, when the
  * unshifted run holds, over a long run (`longRunOfFreeRunningBuild`), which counts the wake-ups. Stops at the first
  * start phase that fails. Moving lane phases are also varied per pickup, without enumerating joint starts across
- * different pickups. Fractional periods are only checked unshifted.
+ * different pickups. Fractional window cycles are only checked unshifted.
  *
- * With CLOCK_PROOF_PHASES=1 the shifted start offsets are not sampled: every phase of the period is checked by
+ * With CLOCK_PROOF_PHASES=1 the shifted start offsets are not sampled: every phase of the window cycle is checked by
  * proof instead (see exhaustiveStartPhases), where that check applies.
  *
- * With `pickup_phase_cycles` each lane-phase start is judged over its repeating cycle, not its first period: its run
+ * With `pickup_phase_cycles` each lane-phase start is judged over its repeating cycle, not its first window cycle: its run
  * goes on with nothing cut, as the loss report's undisturbed run does (see disturbanceTrialOf), and a start that does
  * not stay at the expected output fails. Observed windows ask for it: they are read off a run from one lane phase, and
- * on the express mirrored moving over-the-hood pickup windows read that way held their first period from every lane
- * phase but repeated six periods of 112 and one of 96 from nine of them, as the game does after a loss.
+ * on the express mirrored moving over-the-hood pickup windows read that way held their first window cycle from every lane
+ * phase but repeated six window cycles of 112 and one of 96 from nine of them, as the game does after a loss.
  */
 export function runAsBuiltCheck(
     config: Config,
@@ -1129,7 +1129,7 @@ export function runAsBuiltCheck(
     report?: (checked: number, total: number) => void,
     long_run_ticks: number = FREE_RUNNING_CHECK_TICKS,
     /**
-     * A check that already PASSED on exactly these windows, config and period: its unshifted run and pickup phase
+     * A check that already PASSED on exactly these windows, config and window cycle: its unshifted run and pickup phase
      * starts are taken over instead of being run again, and so is its long run where it made one as long as this
      * check's. The start phases are still this check's own: their step differs with the count of phases.
      */
@@ -1259,7 +1259,7 @@ export function runAsBuiltCheck(
                     check.export_shortfalls = long_run.export_shortfalls;
                 }
             } else if (long_run === null && strict) {
-                // a period too long for a long run: the final check has the span its first check measured
+                // a window cycle too long for a long run: the final check has the span its first check measured
                 const amount = measuredAmountOf(result.stability_check);
                 if (!amount.target_production.valid) failedOnAmount(check, amount);
             }
@@ -1340,8 +1340,8 @@ function clearJudgedClock(check: AsBuiltStabilityCheck): void {
 
 /**
  * The measured amount of a run of one span under the strict target amount: the whole counter it observed where it observed
- * one (`firstClockSpan`), else the complete repeat of more than one period where its warm-up found one, else the one
- * period it measured. A repeat of one period, or a whole-counter span, is a repeating cycle; one period is a sample.
+ * one (`firstClockSpan`), else the complete repeat of more than one window cycle where its warm-up found one, else the one
+ * window cycle it measured. A repeat of one window cycle, or a whole-counter span, is a repeating cycle; one window cycle is a sample.
  */
 function measuredAmountOf(check: SimulationStabilityCheck): { target_production: TargetProduction; output_basis: "long-run mean" | "one period" } {
     const span = check.observation_span;
@@ -1407,7 +1407,7 @@ function heldUnderOtherTakerOrders(
                     amount = { target_production: long_run.target_production, output_basis: "long-run mean" };
                 }
             } else if (long_run === null) {
-                // a period too long for a long run: this order's final check has the span it measured
+                // a window cycle too long for a long run: this order's final check has the span it measured
                 const measured = measuredAmountOf(run.stability_check);
                 if (!measured.target_production.valid) {
                     failed = run.stability_check;
@@ -1529,7 +1529,7 @@ export function trialWithLoopWindows(
  * The one-tick margin of the windows of a loop (`inserter_ids`, those of the loop's own inserters and of those out of
  * it): each set of identical windows among them is moved a tick earlier and a tick later, the others where they are,
  * and the build has to hold with it in the as-built check from AS_BUILT_START_PHASES start phases and its standard long
- * run. A window that is on all the period is not moved. Null where every move holds; else the first that does not.
+ * run. A window that is on all the window cycle is not moved. Null where every move holds; else the first that does not.
  */
 export function loopWindowsMargin(
     config: Config,
@@ -1606,7 +1606,7 @@ export interface BeltPickupSlackDecision {
 }
 
 /**
- * Slack lets a belt-fed inserter finish a late pickup, but in a short period it can also leave time for an
+ * Slack lets a belt-fed inserter finish a late pickup, but in a short window cycle it can also leave time for an
  * extra swing when the machine is not at its insertion limit. `helps` is false only when the clock-only check
  * passes without the slack but not with it, or lands further from the expected output with it. The config is
  * checked with `derive_clock_windows` off, which only `generateClockForConfig` reads: the run is the same as
@@ -1665,7 +1665,7 @@ export function buildAsBuiltConfig(
     const inserter_clocks = unplannedInserterClocks(entity_registry, window_cycle_ticks, undefined, undefined, alwaysEnabledByConfig(config));
     const clocked = withInserterClocks(decider_windows, inserter_clocks, window_cycle_ticks);
     assert(Number.isFinite(main_clock_shift), "The main clock shift must be finite");
-    // a shift inside the period is used as it is: adding and taking the period again makes float noise on a fractional period
+    // a shift inside the window cycle is used as it is: adding and taking the window cycle again makes float noise on a fractional window cycle
     // (209 becomes 209.00000000000003), which drops the first tick of a rotated window
     const shift = main_clock_shift >= 0 && main_clock_shift < window_cycle_ticks ? main_clock_shift : ((main_clock_shift % window_cycle_ticks) + window_cycle_ticks) % window_cycle_ticks;
     for (const [key, ranges] of clocked) {
@@ -1802,9 +1802,9 @@ function triedDisturbanceTrial(
 
 /**
  * How the losses of a clock of windows for results that come by small chances are tried: a result's output is not taken
- * away for a few periods, not until the build stops, and the trial runs on for twice the periods the window's margin
+ * away for a few window cycles, not until the build stops, and the trial runs on for twice the window cycles the window's margin
  * drains what that left (resultLossTrialOf), where the build has to be back at its output and the backlog gone. The
- * recovery from the worst backlog is the arithmetic's (`drain_periods` of each window, within the periods a trial gives).
+ * recovery from the worst backlog is the arithmetic's (`drain_window_cycles` of each window, within the window cycles a trial gives).
  * Every other loss as for any clock.
  */
 function resultLossOptionsOf(plans: readonly ExhaustPlan[]): (loss: DisturbanceTrial) => Partial<DisturbanceTrialOptions> {
@@ -1818,8 +1818,8 @@ function resultLossOptionsOf(plans: readonly ExhaustPlan[]): (loss: DisturbanceT
 }
 
 /**
- * The windows of a clock whose period is not a whole number of ticks, as its blueprint runs them when it counts the
- * period rounded down to `period_ticks`: a window that opens after the last tick is gone, one that ends after it ends
+ * The windows of a clock whose window cycle is not a whole number of ticks, as its blueprint runs them when it counts the
+ * window cycle rounded down to `window_cycle_ticks`: a window that opens after the last tick is gone, one that ends after it ends
  * there.
  */
 export function windowsRoundedTo(clock_windows: SerializableClockWindows, window_cycle_ticks: number): SerializableClockWindows {
@@ -1829,9 +1829,9 @@ export function windowsRoundedTo(clock_windows: SerializableClockWindows, window
         .map(range => ({ start: Math.floor(range.start), end: Math.min(Math.floor(range.end), last) }))]));
 }
 
-/** What a clock rounded down to whole ticks was found to do on its own period (see `roundedClockTrial`) */
+/** What a clock rounded down to whole ticks was found to do on its own window cycle (see `roundedClockTrial`) */
 export interface RoundedClockTrial {
-    /** The clock as it runs: its windows rounded, its clock-only check (`stability_check.as_built`) of its own period */
+    /** The clock as it runs: its windows rounded, its clock-only check (`stability_check.as_built`) of its own window cycle */
     result: BlueprintGenerationResult;
     holds: boolean;
     loss: DisturbanceTrialAssessment;
@@ -1839,10 +1839,10 @@ export interface RoundedClockTrial {
 }
 
 /**
- * Tries the clock of a period that is not whole as its blueprint runs it, rounded down to `period_ticks`: on its own
- * period the clock-only check (its start phases, moving lane phases and long run), and, when it holds, the
+ * Tries the clock of a window cycle that is not whole as its blueprint runs it, rounded down to `window_cycle_ticks`: on its own
+ * window cycle the clock-only check (its start phases, moving lane phases and long run), and, when it holds, the
  * backpressure loss trials and, when the config asks, the other starts, as for a clock of whole ticks. The output it is
- * to move a period is the plan's, in fewer ticks. The config is the one the clock was planned on.
+ * to move a window cycle is the plan's, in fewer ticks. The config is the one the clock was planned on.
  */
 export function roundedClockTrial(
     planned_on: Config,
@@ -1871,17 +1871,17 @@ export function roundedClockTrial(
     const loss = holds ? disturbanceTrialVerdictOf(planned_on, rounded, logger, report) : { disturbance_trial: null };
     const start_dependence = planned_on.overrides?.check_start_dependence === true
         ? startDependenceVerdictOf(planned_on, rounded, holds, logger, report) : null;
-    // the result keeps the period the plan has: the rounded clock is the same export, counting it rounded down
+    // the result keeps the window cycle the plan has: the rounded clock is the same export, counting it rounded down
     return { result: { ...rounded, simulation_duration: result.simulation_duration }, holds, loss, start_dependence };
 }
 
 /**
- * What a clock that failed its first check moves a period, for listing it. The first check measures one period after
- * a warm-up, and a build that does not repeat with its clock moves different amounts in the periods that follow (the
- * circuit export build: 480 to 608 items, 608 in the period measured, 546 on average, which is what the game makes), so
- * a clock that fails it is listed by the mean items a period over the judged part of its long run, as one that fails
+ * What a clock that failed its first check moves a window cycle, for listing it. The first check measures one window cycle after
+ * a warm-up, and a build that does not repeat with its clock moves different amounts in the window cycles that follow (the
+ * circuit export build: 480 to 608 items, 608 in the window cycle measured, 546 on average, which is what the game makes), so
+ * a clock that fails it is listed by the mean items a window cycle over the judged part of its long run, as one that fails
  * later is (`longRunOfFreeRunningBuild`). The check itself, and the clocks the generator picks by it, are not changed.
- * A period too long for a long run keeps the one period the check measured, and says so.
+ * A window cycle too long for a long run keeps the one window cycle the check measured, and says so.
  */
 export function withSettledOutput(
     planned_on: Config,
@@ -1959,10 +1959,10 @@ export function clockVerificationSignature(config: Config, result: BlueprintGene
 }
 
 /**
- * What the trials of a loss are a function of: the config the clock is verified on, its windows and period, and the items it
- * is expected to move a period. The trials run on nothing else, so two clocks with this key have the same verdict. The cycles
- * of the clock (`overrides.lcm`) are left out where they set nothing: they set the period of a run that is not given one, which
- * a whole period is, and the clocks of the inserters outside the plan, which a build without any has none of.
+ * What the trials of a loss are a function of: the config the clock is verified on, its windows and window cycle, and the items it
+ * is expected to move a window cycle. The trials run on nothing else, so two clocks with this key have the same verdict. The cycles
+ * of the clock (`overrides.lcm`) are left out where they set nothing: they set the window cycle of a run that is not given one, which
+ * a whole window cycle is, and the clocks of the inserters outside the plan, which a build without any has none of.
  */
 export function disturbanceTrialKey(planned_on: Config, result: BlueprintGenerationResult): string {
     const window_cycle_ticks = result.simulation_duration.ticks;

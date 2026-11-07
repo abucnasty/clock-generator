@@ -58,7 +58,7 @@ export interface NativeRunSummary {
     generationVerdict: string;
     /** Products a second the build is asked for (its share of the config's target) */
     target: number;
-    /** The period of the clock it ran, which ties the summary to its pin; nothing is timed by it */
+    /** The window cycle of the clock it ran, which ties the summary to its pin; nothing is timed by it */
     period: number;
     /** Ticks in the trailing window, and the products the window has to hold: target x window / 60 */
     window: number;
@@ -115,7 +115,7 @@ export interface NativeDisturbance {
     recovered?: number;
 }
 
-/** A summary under the protocol timed in game ticks, not a legacy one counted in clock periods */
+/** A summary under the protocol timed in game ticks, not a legacy one counted in window cycles */
 export function isRunSummary(native: NativeClockSummary | NativeRunSummary): native is NativeRunSummary {
     return (native as NativeRunSummary).protocol === "trailing-minute";
 }
@@ -147,7 +147,7 @@ export type AnyNativeSummary = NativeRunSummary | NativeClockSummary;
 
 export interface ClockControl<N extends AnyNativeSummary = AnyNativeSummary> {
     recorded: Recorded;
-    /** The run under the protocol timed in game ticks; a legacy summary counted in clock periods in the history files and the families not moved yet */
+    /** The run under the protocol timed in game ticks; a legacy summary counted in window cycles in the history files and the families not moved yet */
     native: N;
     generation?: GenerationPin;
     /**
@@ -156,7 +156,7 @@ export interface ClockControl<N extends AnyNativeSummary = AnyNativeSummary> {
      */
     previous?: PreviousClock;
     /**
-     * Of a container fixture whose two cuts take the same input: the periods the simulator holds the target through the
+     * Of a container fixture whose two cuts take the same input: the window cycles the simulator holds the target through the
      * second cut when it runs the probe's protocol on the pinned clock. A clock that brings more than the target's share
      * refills the container between the cuts, and the game holds the target as long as that stock lasts
      */
@@ -262,7 +262,7 @@ export function pinMismatches(cases: Record<string, ClockControl>, untied: reado
             found.push(`${name}: has a native summary and no generation pin`);
             continue;
         }
-        // a run keeps its target to a millionth (34.285714 for 240/7): its output a period is the pin's to a thousandth
+        // a run keeps its target to a millionth (34.285714 for 240/7): its output a window cycle is the pin's to a thousandth
         const perWindowCycle = isRunSummary(control.native) ? Math.round(control.native.target * control.native.period / 60 * 1e3) / 1e3 : control.native.expected;
         const pinned = isRunSummary(control.native) ? Math.round(generation.expected * 1e3) / 1e3 : generation.expected;
         if (perWindowCycle !== pinned || control.native.period !== generation.period) {
@@ -357,7 +357,7 @@ export function fixtureAlternativeMismatches(cases: Record<string, ClockControl>
 
 /**
  * The entries of a family's controls whose generation pin differs from the record: the pin is of the record job's alternative
- * with the pin's `selection.id` (its clock hash, period, verdict, holds, rate and supply), the selection where the entry is not
+ * with the pin's `selection.id` (its clock hash, window cycle, verdict, holds, rate and supply), the selection where the entry is not
  * listed as `offered`, and its `previous` clock is an alternative of the job with that hash. Where the game's run is judged
  * (`runs`), a stable alternative holds in the game and a run that misses its target over the baseline is one the generator
  * sees, as `expectRunAgreesWithSelection` asked of the generation. Lines to read; an entry with no job is not looked at.

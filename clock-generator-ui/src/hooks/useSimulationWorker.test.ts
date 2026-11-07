@@ -337,7 +337,7 @@ describe('tasks alongside the primary alternative', () => {
         it('is left out with the searches, and not listed among them, when a clock made before it is stable', async () => {
             await initialize();
             const { requested, finish } = start(searches);
-            // of no wake-ups: no search can improve on it (a stable clock with wake-ups on a short period is searched past)
+            // of no wake-ups: no search can improve on it (a stable clock with wake-ups on a short window cycle is searched past)
             finish('one', selectionClock('one', 0));
             const done = latest();
             expect(requested()).not.toContain('derived');

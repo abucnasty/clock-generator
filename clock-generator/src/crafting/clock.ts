@@ -12,7 +12,7 @@ export type SerializableClockWindows = Record<string, { start: number; end: numb
 
 
 export function rotateRanges(ranges: OpenRange[], offset: number, window_cycle_ticks: number): OpenRange[] {
-    // the simulated clock position (tick % period) is fractional for a fractional period
+    // the simulated clock position (tick % window cycle) is fractional for a fractional window cycle
     const last_position = Number.isInteger(window_cycle_ticks) ? window_cycle_ticks - 1 : window_cycle_ticks;
     const rotated: OpenRange[] = [];
     for (const range of ranges) {
@@ -40,7 +40,7 @@ export { subtickClockForWindowCycle as subtickClockForWindowCycle } from "../com
  * hand is back from its drop. A hand of fuel ahead of it takes its fill, its swing, its drop and its swing back, so the
  * last planned hand is full that much later: later than the window ends by the fill of the fuel hand. Without the
  * room the window closes on a partly filled hand, and an inserter that holds an ingredient takes no fuel
- * (agricultural science in the game: 377 of 400 a period).
+ * (agricultural science in the game: 377 of 400 a window cycle).
  *
  * It is not given to every such inserter: the ticks can also let a hand in that the plan does not have. A clock gets
  * it when it does not hold the expected output without (see withFuelHandRoomWhereNeeded). Belt pickup slack is as long.
@@ -136,7 +136,7 @@ export function backedUpHandTicks(entity_registry: ReadableEntityRegistry): Map<
     return hand_ticks;
 }
 
-/** Windows that last at least the ticks given, by key: a shorter window is lengthened at its end (whole-tick periods only) */
+/** Windows that last at least the ticks given, by key: a shorter window is lengthened at its end (whole-tick window cycles only) */
 export function withWindowsAtLeast(
     windows: Map<string, OpenRange[]>,
     least_ticks: ReadonlyMap<string, number>,

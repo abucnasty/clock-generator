@@ -16,7 +16,7 @@ interface ComparedRecording {
 }
 
 interface CompareRecordingsOptions {
-    /** Items the build is expected to put out in each clock period */
+    /** Items the build is expected to put out in each window cycle */
     expected_output_per_window_cycle?: number;
     /**
      * Config ids of inserters whose swings do not repeat with the clock: a fuel inserter on a clock of its own. Their
@@ -24,8 +24,8 @@ interface CompareRecordingsOptions {
      */
     free_running_inserter_ids?: ReadonlySet<number>;
     /**
-     * Items a period by which what an inserter moves, or a machine finishes, may differ between the two. A hand more
-     * or less over the periods compared is allowed on top: a build that takes several periods to repeat is cut off
+     * Items a window cycle by which what an inserter moves, or a machine finishes, may differ between the two. A hand more
+     * or less over the window cycles compared is allowed on top: a build that takes several window cycles to repeat is cut off
      * at another place in each.
      */
     items_tolerance: number;
@@ -50,8 +50,8 @@ interface StateComparison {
     /** Share of the time the two show the same state, laid over each other clock position by clock position */
     agreement: number;
     /**
-     * How alike the two are in how much of the time they show each state, wherever in the period: an entity the
-     * clock does not hold to a place in the period, like the inserters of a loop of machines, can only be judged by this
+     * How alike the two are in how much of the time they show each state, wherever in the window cycle: an entity the
+     * clock does not hold to a place in the window cycle, like the inserters of a loop of machines, can only be judged by this
      */
     share_agreement: number;
     /** Share of the time in each state */
@@ -71,10 +71,10 @@ interface InserterComparison {
     config_id: number;
     /** Its ends, e.g. "belt 2 -> machine 3" */
     label: string;
-    /** Items dropped in a clock period */
+    /** Items dropped in a window cycle */
     game_items: WindowCycleCount;
     sim_items: WindowCycleCount;
-    /** Hands emptied in a clock period, on average */
+    /** Hands emptied in a window cycle, on average */
     game_swings: number;
     sim_swings: number;
     game_wake_ups_per_minute: number;
@@ -85,7 +85,7 @@ interface InserterComparison {
 interface MachineComparison {
     config_id: number;
     recipe: string;
-    /** Crafts and productivity bars finished in a clock period */
+    /** Crafts and productivity bars finished in a window cycle */
     game_finished: WindowCycleCount;
     sim_finished: WindowCycleCount;
     states: StateComparison;
@@ -93,7 +93,7 @@ interface MachineComparison {
 
 interface OutputComparison {
     expected_per_window_cycle: number | null;
-    /** Items put out in each complete clock period */
+    /** Items put out in each complete window cycle */
     game: number[];
     sim: number[];
 }
@@ -123,7 +123,7 @@ interface Side {
 
 function sideOf(compared: ComparedRecording): Side {
     const positions = compared.recording.clock?.values ?? [];
-    // a period that starts with the recording is left out: what a hand dropped on its first tick cannot be told
+    // a window cycle that starts with the recording is left out: what a hand dropped on its first tick cannot be told
     // without the sample before it, and a build may still be settling into its clock there
     const from = Math.max(compared.from_sample ?? 0, 1);
     return {
@@ -141,7 +141,7 @@ function windowCycleCount(values: number[]): WindowCycleCount {
     return { mean: values.reduce((sum, value) => sum + value, 0) / values.length, min: Math.min(...values), max: Math.max(...values) };
 }
 
-/** Items that left a hand in each period: every fall of the held count, as a hand goes onto a belt a stack at a time */
+/** Items that left a hand in each window cycle: every fall of the held count, as a hand goes onto a belt a stack at a time */
 function dropsPerWindowCycle(held: number[], window_cycles: WindowCycleRange[]): number[] {
     return window_cycles.map(window_cycle => {
         let items = 0;
@@ -154,7 +154,7 @@ function dropsPerWindowCycle(held: number[], window_cycles: WindowCycleRange[]):
     });
 }
 
-/** How often each state shows at each clock position over the periods, and over all of them */
+/** How often each state shows at each clock position over the window cycles, and over all of them */
 function stateCounts(states: string[], side: Side, clock_ticks: number): { by_position: Map<string, number>[]; total: Map<string, number>; samples: number } {
     const by_position: Map<string, number>[] = Array.from({ length: clock_ticks }, () => new Map());
     const total = new Map<string, number>();
@@ -205,7 +205,7 @@ function mostCommon(counts: Map<string, number>): string {
     return best;
 }
 
-/** How many times a bar starts over at each clock position, over the periods of a side: it falls where a craft finishes */
+/** How many times a bar starts over at each clock position, over the window cycles of a side: it falls where a craft finishes */
 function barResets(bar: number[], side: Side, clock_ticks: number): number[] {
     const resets = new Array<number>(clock_ticks).fill(0);
     for (const window_cycle of side.window_cycles) {
@@ -220,7 +220,7 @@ function barResets(bar: number[], side: Side, clock_ticks: number): number[] {
 
 /**
  * Ticks by which the crafting bar of the simulator starts over before (negative) or after (positive) the game's: the
- * shift around the period that lays most of the game's resets on the simulator's, the smaller shift where two do
+ * shift around the window cycle that lays most of the game's resets on the simulator's, the smaller shift where two do
  * equally well. Null when either side shows no reset.
  */
 function barOffset(game_bar: number[], game: Side, sim_bar: number[], sim: Side, clock_ticks: number): number | null {
@@ -324,12 +324,12 @@ export function buildDifferences(recording: Recording, match: EntityMatch, confi
 
 /**
  * Lays a recording of the game against a run of the simulator in the same format (see simulated-recording.ts): what
- * every inserter moved and every machine finished in a clock period, the state each showed at each position of the
+ * every inserter moved and every machine finished in a window cycle, the state each showed at each position of the
  * clock, and the wake-ups. Both are read the same way, so a difference is one between the game and the simulator
  * and not between two ways of counting.
  *
- * The two are not laid tick against tick: they start from different stocks, and a build can take several periods to
- * repeat. Each is folded over the positions of the clock instead, over its complete periods.
+ * The two are not laid tick against tick: they start from different stocks, and a build can take several window cycles to
+ * repeat. Each is folded over the positions of the clock instead, over its complete window cycles.
  */
 export function compareRecordings(
     game_recording: ComparedRecording,
@@ -343,7 +343,7 @@ export function compareRecordings(
     const issues: string[] = buildDifferences(game.recording, game.match, config)
         .map(difference => `The config does not describe the recorded build. ${difference}`);
     const notes: string[] = [];
-    // a hand, or a craft, more or less over the periods compared
+    // a hand, or a craft, more or less over the window cycles compared
     const window_cycles_compared = Math.max(1, Math.min(game.window_cycles.length, sim.window_cycles.length));
 
     const game_clock = recordedClockWindowCycle(game.recording);

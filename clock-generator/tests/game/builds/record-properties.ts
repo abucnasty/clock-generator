@@ -73,7 +73,7 @@ function alwaysOnReasons(config: Config, alternative: Alternative): string[] {
 
 /**
  * The order the check of a clock gives its deciders is the order the exported blueprint builds them in: of two inserters, the one
- * whose decider has the higher entity number stands later; a fuel inserter on a clock of its own has no window of the period and its
+ * whose decider has the higher entity number stands later; a fuel inserter on a clock of its own has no window of the window cycle and its
  * decider comes after them all (it decides which of two windows that open together the game updates first, #268).
  * Null where the alternative has no schedule of deciders.
  */

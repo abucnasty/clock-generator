@@ -16,10 +16,10 @@ afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 const sha = (c: string) => c.repeat(64);
 const run = (...args: string[]) => spawnSync('python3', [record, ...args], { encoding: 'utf8' });
 
-interface Edit { id?: string; maker?: string; verdict?: string; holds?: boolean; rate?: number; window_cycle_ticks?: number; wake_ups?: number; clock?: string; windows?: Record<string, { start: number; end: number }[]> }
+interface Edit { id?: string; maker?: string; verdict?: string; holds?: boolean; rate?: number; period?: number; wake_ups?: number; clock?: string; windows?: Record<string, { start: number; end: number }[]> }
 /** An alternative as the blast writes it (the fields the record reads, and the heavy ones it leaves out) */
 const alternative = (e: Edit = {}) => ({
-    id: e.id ?? 'even-hands', ...(e.maker !== undefined && { maker: e.maker }), verdict: e.verdict ?? 'stable', holds: e.holds ?? true, rate: e.rate ?? 640, supply: null, window_cycle_ticks: e.window_cycle_ticks ?? 972,
+    id: e.id ?? 'even-hands', ...(e.maker !== undefined && { maker: e.maker }), verdict: e.verdict ?? 'stable', holds: e.holds ?? true, rate: e.rate ?? 640, supply: null, period: e.period ?? 972,
     wake_ups: e.wake_ups ?? 889.0718254784936, clock_sha256: e.clock ?? sha('a'), text_sha256: sha('2'), descriptions_cut: 0,
     windows_sha256: sha('7'), windows: e.windows ?? { 'inserter:1': [{ start: 0, end: 10 }, { start: 54, end: 64 }], 'drill:1': [] },
     results_sha256: sha('3'), results: { label: sha('1'), assessment: sha('9') },
@@ -153,7 +153,7 @@ describe('record.py check', () => {
     it('appends the table to the summary file', () => {
         const dir = written({ A: jobFile('A') });
         const summary = path.join(tmp, `summary${count++}.md`);
-        const done = run('check', '--dir', dir, '--summary', summary, side({ A: jobFile('A', [alternative({ window_cycle_ticks: 5 }), alternative({ id: 'plain', verdict: 'unstable', clock: sha('b') })]) }));
+        const done = run('check', '--dir', dir, '--summary', summary, side({ A: jobFile('A', [alternative({ period: 5 }), alternative({ id: 'plain', verdict: 'unstable', clock: sha('b') })]) }));
         expect(done.status).toBe(1);
         expect(fs.readFileSync(summary, 'utf8')).toContain('alternatives[even-hands].period');
     });

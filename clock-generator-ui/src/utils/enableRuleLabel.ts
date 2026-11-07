@@ -71,7 +71,7 @@ function rangesText(ranges: Range[]): string {
     return ranges.map((range) => `${range.start}${RANGE_DASH}${range.end}`).join(RANGE_SEPARATOR);
 }
 
-/** The CLOCKED chip: every range and the period if they fit, else the ranges, else the first ranges and a count of the rest */
+/** The CLOCKED chip: every range and the window cycle if they fit, else the ranges, else the first ranges and a count of the rest */
 function clockedChip(ranges: Range[], window_cycle: string): string {
     const head = `${MODE_CLOCKED} `;
     const candidates = [`${head}${rangesText(ranges)}${window_cycle}`, `${head}${rangesText(ranges)}`];

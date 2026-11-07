@@ -30,8 +30,8 @@
         "inserter:6/iron-ore",
         "placement:machine:1/iron-ore"
       ],
-      "periods": [
-        {"swings":5,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":12,"denominator":1},"cycles":12,"period_ticks":144,"kept":true}
+      "window_cycles": [
+        {"swings":5,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":12,"denominator":1},"cycles":12,"window_cycle_ticks":144,"kept":true}
       ],
       "utilization": [
         {
@@ -58,7 +58,7 @@
   "composition": {
     "swings": 5,
     "fractional": false,
-    "main_period": {
+    "main_window_cycle": {
       "ticks": 144,
       "exact": {
         "numerator": 144,
@@ -103,7 +103,7 @@
       "cycle_ticks": 12,
       "whole_hands_fit": true,
       "windows_feasible": null,
-      "longest_period_ticks": 24000
+      "longest_window_cycle_ticks": 24000
     }
   }
 }

@@ -36,7 +36,7 @@ describe("generateClockForConfig", () => {
 
         // A rocket fuel biochamber's slot is filled up to 11 nutrients and the jellynut one's to 9. In a run of the
         // exported clock they lasted at least 208 and 246 ticks, as in game. Less the 14 ticks a hand takes to arrive,
-        // the fuel clocks are 192 and 224, divisors of 21 periods, so one clock of 2688 ticks holds them; on the 128
+        // the fuel clocks are 192 and 224, divisors of 21 window cycles, so one clock of 2688 ticks holds them; on the 128
         // tick clock both were 64. The sample's belts move: with the belt pickup slack the view measures 208 and
         // 248, and 216 and 248 with them backed up, where it has none: the machines idle briefly on the jellynut wait and burn slower, while the sizing keeps the sure bound.
         it("looks at each fuel slot nearly as seldom as its fuel is sure to last, on fuel clocks of their own", () => {

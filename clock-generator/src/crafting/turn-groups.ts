@@ -2,11 +2,11 @@ import { OpenRange } from "../data-types";
 
 /**
  * The machines of a build that cannot all draw from their sources together take turns: the grouped hands rule
- * (candidates/round-robin-polling.ts) deals them into groups, and each group's windows open in its own part of the period.
+ * (candidates/round-robin-polling.ts) deals them into groups, and each group's windows open in its own part of the window cycle.
  * What the clock's blueprint needs of that to show it is who is in a group and when its turn begins.
  */
 export interface TurnGroup {
-    /** The tick of the period at which the group's turn begins: its output swings open */
+    /** The tick of the window cycle at which the group's turn begins: its output swings open */
     start: number;
     /** The group's inserters and drills by entity id, in the order of the turn: the output swings, the inputs, the drills */
     entity_ids: string[];
@@ -61,8 +61,8 @@ export function placeByTurns(deciders: readonly (readonly string[])[], turns: re
 }
 
 /**
- * The ticks a group's turn lasts, as the ticks of the period it covers, from the tick its turn begins to the end of the last
- * window of its deciders. The end is past the period's last tick (`period` or more) where the turn runs over into the next period.
+ * The ticks a group's turn lasts, as the ticks of the window cycle it covers, from the tick its turn begins to the end of the last
+ * window of its deciders. The end is past the window cycle's last tick (`period` or more) where the turn runs over into the next window cycle.
  */
 export function turnTicks(start: number, windows: readonly OpenRange[], window_cycle_ticks: number): { start: number; end: number } {
     let end = start;

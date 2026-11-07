@@ -29,7 +29,7 @@ describe("batched swings by arithmetic", () => {
         const { windows, walks } = (await arithmeticOf("PROCESSING_UNIT_15_CHEST_FED"))();
         const walk = walks.get("machine:1")!;
         const hands = walk.hands.filter(hand => hand.id === "inserter:1");
-        // 11/2 hands a cycle: 5 and 6, 11 a period
+        // 11/2 hands a cycle: 5 and 6, 11 a window cycle
         expect(hands).toHaveLength(11);
         // one window a cycle at most, each from a pickup of the walk
         const filler = ranges(windows, "inserter:1");

@@ -90,7 +90,7 @@ function unwiredStockOf(config: Config, window_cycle_ticks: number, ticks: numbe
             configs: config.drills.configs.map(d => ({ ...d, overrides: { ...d.overrides, enable_control: always } })),
         },
     };
-    // the plan's own period is not known here, so ask for enough periods of the clock's length and ask again if short
+    // the plan's own window cycle is not known here, so ask for enough window cycles of the clock's length and ask again if short
     let window_cycles = Math.ceil(ticks / window_cycle_ticks) + 1;
     for (let attempt = 0; attempt < 3; attempt++) {
         const stock = runBuild(unclocked, { logger, simulate_window_cycles: window_cycles, machine_stock: true, factorio_states: false }).machine_stock;
@@ -109,7 +109,7 @@ function unwiredStockOf(config: Config, window_cycle_ticks: number, ticks: numbe
  * wake-ups over. The wired inserters of the clocked run are the ones the clock gives windows.
  *
  * The clocked run is not kept by the generator, so it is run again from the clock's windows (`simulateClockOnly`) for
- * as many periods as its long run lasts, and checked to count the same ticks and the same goal-2 wake-ups.
+ * as many window cycles as its long run lasts, and checked to count the same ticks and the same goal-2 wake-ups.
  */
 export function ruleCallsOfClock(config: Config, selected: ClockAlternative, logger: Logger = quiet): RuleCallsOfClock {
     const result = selected.result;

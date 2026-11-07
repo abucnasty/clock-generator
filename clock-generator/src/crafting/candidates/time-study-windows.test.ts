@@ -5,7 +5,7 @@ import { pickupClockCase, pickupClockConfig } from "../../../tests/game/builds/p
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 
-// The express moving underground pickups: observed windows at 3 output swings hold 528 a period from every start, and
+// The express moving underground pickups: observed windows at 3 output swings hold 528 a window cycle from every start, and
 // did in the game with exact recovery after every disturbance, while the run they are observed in moves 560. Judged by
 // that run, the swing backoff went past 3 and the build had no clock for moving belts.
 it("holds observed windows by their own clock-only check, not by the run they were observed in", async () => {

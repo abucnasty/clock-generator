@@ -58,9 +58,9 @@ export interface ChestDrillClock {
     /** What the chest is: a car, a cargo wagon, a buffer chest ... (chestName names it) */
     chest_type: ChestType;
     item: string;
-    /** Ticks it is enabled in a period, on average where the period is not a whole number of ticks; null when always enabled */
+    /** Ticks it is enabled in a window cycle, on average where the window cycle is not a whole number of ticks; null when always enabled */
     enabled_ticks: number | null;
-    /** Its windows in a period; 0 when always enabled */
+    /** Its windows in a window cycle; 0 when always enabled */
     window_count: number;
     /** Why it is always enabled; absent when it has windows */
     always_enabled_because?: ChestDrillWhy;
@@ -195,7 +195,7 @@ function alwaysEnabledBecause(plan: ChestDrillPlan, registry: ReadableEntityRegi
     return null;
 }
 
-/** Windows a period, from a whole-tick clock position: the ranges are inclusive, as clock windows are */
+/** Windows a window cycle, from a whole-tick clock position: the ranges are inclusive, as clock windows are */
 function inWindows(ranges: readonly OpenRange[], position: number): boolean {
     for (const range of ranges) {
         if (position >= range.start_inclusive && position <= range.end_inclusive) {
@@ -205,7 +205,7 @@ function inWindows(ranges: readonly OpenRange[], position: number): boolean {
     return false;
 }
 
-/** The items a taker takes in each of its windows: the hands of a period, shared by the windows' lengths */
+/** The items a taker takes in each of its windows: the hands of a window cycle, shared by the windows' lengths */
 function takerWindows(ranges: readonly OpenRange[], items_per_window_cycle: number, hand: number, wraps_at: number | null): TakerWindow[] {
     const hands = Math.ceil(items_per_window_cycle / hand - 1e-9);
     const lengths = ranges.map(range => range.end_inclusive - range.start_inclusive + 1);
@@ -218,7 +218,7 @@ function takerWindows(ranges: readonly OpenRange[], items_per_window_cycle: numb
         given[order[at % order.length].index]++;
     }
     const windows = ranges.map((range, index) => ({ range, items: given[index] * hand }));
-    // a window that runs over the end of a whole-tick period into its start is one window: it takes in its first tick
+    // a window that runs over the end of a whole-tick window cycle into its start is one window: it takes in its first tick
     const first = windows[0];
     const last = windows[windows.length - 1];
     if (wraps_at !== null && windows.length > 1 && first.range.start_inclusive === 0 && last.range.end_inclusive >= wraps_at - 1) {
@@ -228,7 +228,7 @@ function takerWindows(ranges: readonly OpenRange[], items_per_window_cycle: numb
     return windows;
 }
 
-/** Ranges of whole positions of a period, a range that runs over its end carried to its start */
+/** Ranges of whole positions of a window cycle, a range that runs over its end carried to its start */
 function rangesInWindowCycle(start: number, end: number, whole_window_cycle: number): OpenRange[] {
     const length = end - start + 1;
     if (length >= whole_window_cycle) {
@@ -242,7 +242,7 @@ function rangesInWindowCycle(start: number, end: number, whole_window_cycle: num
 /** What a replay of a drill's windows against its chest's takers found */
 interface ReplayOutcome {
     passes: boolean;
-    /** The replay came back to a state it had been in at a period's start: what it found is what the clock repeats */
+    /** The replay came back to a state it had been in at a window cycle's start: what it found is what the clock repeats */
     proven: boolean;
 }
 
@@ -253,12 +253,12 @@ const REPLAY_MAX_TICKS = 200_000;
  * Runs the drill on `drill_windows` against its chest, tick by tick as the engine's own drill does
  * (its Placement into the chest and its `Mining`: drop what it holds as far as the chest has room, then mine while it holds nothing), and
  * the takers as the hardest case: each window takes all the hands planned for it in its first tick, before the drill
- * in that tick (inserters act first). It starts with the chest and the drill's hold empty, so the first period's takes
+ * in that tick (inserters act first). It starts with the chest and the drill's hold empty, so the first window cycle's takes
  * may come up short; every take after it has to find its hands. With nothing in the chest to start from, a drill that
- * brings less than is taken comes up short within the periods its first hold lasts. The replay ends when the state at
- * a period's start repeats (the steady state the clock repeats: the chest, the hold and the bars), or after
- * `min_periods` periods and as many more as the chest takes to fill and the drill to mine a few times at its top (a
- * window that has to mine when the hold runs out brings less than a period's takes, which the chest has to cover).
+ * brings less than is taken comes up short within the window cycles its first hold lasts. The replay ends when the state at
+ * a window cycle's start repeats (the steady state the clock repeats: the chest, the hold and the bars), or after
+ * `min_window_cycles` window cycles and as many more as the chest takes to fill and the drill to mine a few times at its top (a
+ * window that has to mine when the hold runs out brings less than a window cycle's takes, which the chest has to cover).
  */
 function replay(plan: ChestDrillPlan, takers: readonly Taker[], drill_windows: readonly OpenRange[], window_cycle_ticks: number, min_window_cycles: number, fill_window_cycles: number): ReplayOutcome {
     const registry = createEntityRegistryForReplay(plan);
@@ -280,7 +280,7 @@ function replay(plan: ChestDrillPlan, takers: readonly Taker[], drill_windows: r
         const index = Math.floor(tick / window_cycle_ticks + 1e-9);
         if (index !== window_cycle_index) {
             window_cycle_index = index;
-            // the first period's takes may come up short, so a cycle that holds is one of the periods after it
+            // the first window cycle's takes may come up short, so a cycle that holds is one of the window cycles after it
             if (index >= 1) {
                 const key = `${position};${stock()};${hold()};${mining.key()}`;
                 if (seen.has(key)) {
@@ -331,12 +331,12 @@ interface PlannedDrillWindows {
     always_enabled_because?: ChestDrillWhy;
 }
 
-/** Periods a period of part ticks is averaged over */
+/** Window cycles a window cycle of part ticks is averaged over */
 const AVERAGED_WINDOW_CYCLES = 64;
 
-/** Enabled ticks a period of windows, on average for a period that is not a whole number of ticks */
+/** Enabled ticks a window cycle of windows, on average for a window cycle that is not a whole number of ticks */
 function enabledTicks(ranges: readonly OpenRange[], window_cycle_ticks: number): number {
-    // a period of part ticks is averaged over enough of them for its windows' ticks to even out
+    // a window cycle of part ticks is averaged over enough of them for its windows' ticks to even out
     const ticks = Number.isInteger(window_cycle_ticks) ? window_cycle_ticks : Math.ceil(window_cycle_ticks * AVERAGED_WINDOW_CYCLES);
     let enabled = 0;
     for (let tick = 0; tick < ticks; tick++) {
@@ -451,7 +451,7 @@ function windowsWith(setup: DrillWindowsSetup, extra: number): OpenRange[] {
  * The fewest windows for a drill into a chest, from the windows of the chest's takers (see docs/drills.md, "A drill
  * into a chest on a clock"):
  * - each window ends the tick before a take, so the chest is topped up just in time;
- * - the first ends before the first take after the longest stretch of the period without one; the next ones are put
+ * - the first ends before the first take after the longest stretch of the window cycle without one; the next ones are put
  *   in greedily, so that what is taken between two windows fits in the chest's room for the item;
  * - each window is as long as the ticks the drill needs to mine what is taken until the next window, and a margin is
  *   added to all of them until the replay passes; the drop of a window's last mining tick is carried in the drill's
@@ -507,7 +507,7 @@ export function chestDrillWindowsKeepUp(config: Config, windows: Map<string, Ope
     return "because" in setup ? null : setup.passes(drill_windows);
 }
 
-/** A CLOCKED drill's windows in the clock's period: its ranges, repeated with its own period when it gives one */
+/** A CLOCKED drill's windows in the clock's window cycle: its ranges, repeated with its own window cycle when it gives one */
 function clockedWindows(clocked: NonNullable<ChestDrillConfig["clocked"]>, window_cycle_ticks: number): OpenRange[] {
     const own = clocked.window_cycle_ticks;
     const whole_window_cycle = Math.ceil(window_cycle_ticks - 1e-9);

@@ -16,7 +16,7 @@ beforeAll(async () => { config = await loadConfigFromFile(ConfigPaths.ELECTROMAG
 describe('optional timeline observer', () => {
     it('rejects an exact clock tick outside the existing warm-up budget instead of silently replaying an earlier tick', () => {
         const window_cycle_ticks = Math.floor(SIMULATION_BUDGET_TICKS / 2) + 1;
-        // Below the absolute ceiling but past the one whole period the existing budget permits.
+        // Below the absolute ceiling but past the one whole window cycle the existing budget permits.
         expect(() => recordSimulationTimeline({config, mode: 'clock', window_cycle_ticks,
             terminal_swing_count: 2, windows: {}, settle_ticks: window_cycle_ticks + 1}))
             .toThrow('This clock period cannot be recorded safely.');
@@ -95,7 +95,7 @@ describe('optional timeline observer', () => {
         const window_cycle_ticks = runBuild(config, { logger: quiet }).duration.ticks;
         const request = { config, mode: 'clock' as const, window_cycle_ticks, terminal_swing_count: 2, windows: {} };
         const first = recordSimulationTimeline(request);
-        // fewer periods than the warm-up already runs change nothing
+        // fewer window cycles than the warm-up already runs change nothing
         expect(recordSimulationTimeline({ ...request, settle_window_cycles: 3 })).toEqual(first);
         const settled = recordSimulationTimeline({ ...request, settle_window_cycles: 25 });
         expect(settled).toMatchObject({ end_tick: window_cycle_ticks, ticks_before_recording: 25 * window_cycle_ticks });

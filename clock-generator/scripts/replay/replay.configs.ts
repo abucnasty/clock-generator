@@ -1,5 +1,5 @@
 // The inputs of the replay check: for every job of the blast's job list (blast.blastrun.ts's loadJobs, the same groups and
-// skips), the config as the job builds it and the selected clock's windows and period from a finished blast of the same
+// skips), the config as the job builds it and the selected clock's windows and window cycle from a finished blast of the same
 // job list, written as one JSON per job into REPLAY_INPUTS. A job whose blast file has no selected clock (a refusal, a
 // config error) is written without windows. Run by scripts/replay/replay.sh record, which installs it into the worktree's
 // tests/game/builds/.scratch/ beside blast.blastrun.ts (whose job list it reads) and runs it with the blast's

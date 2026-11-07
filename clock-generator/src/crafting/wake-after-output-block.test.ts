@@ -13,7 +13,7 @@ const windows = (text: string) => text.split(" ").map(range => {
     return { start, end };
 });
 
-/** Windows `length` ticks long, the first from `first`, one every `every` ticks of the period */
+/** Windows `length` ticks long, the first from `first`, one every `every` ticks of the window cycle */
 const evenly = (first: number, length: number, every: number, window_cycle_ticks: number) =>
     Array.from({ length: window_cycle_ticks / every }, (_, index) => ({ start: first + index * every, end: first + index * every + length - 1 }));
 
@@ -21,8 +21,8 @@ const evenly = (first: number, length: number, every: number, window_cycle_ticks
 // evenly spaced windows of 4 ticks for the inserters that take off a belt: one hand of electronic circuits every 33
 // ticks, one of coal every 132, and 8 ticks every 24 for the advanced circuits.
 //
-// Recorded on the scaffold in Factorio 2.1.21 on 2026-10-10 for 36,000 ticks: 608 and 624 advanced circuits a period
-// in turn, of 704. One electromagnetic plant (machine 2 of the config) finished its 352 products in every period, the
+// Recorded on the scaffold in Factorio 2.1.21 on 2026-10-10 for 36,000 ticks: 608 and 624 advanced circuits a window cycle
+// in turn, of 704. One electromagnetic plant (machine 2 of the config) finished its 352 products in every window cycle, the
 // other (machine 4) 264: its output stood at 12 after the output inserter had taken its hand, where the other's stood
 // at 0, so it was over its output block of 21 for the ticks before every output window. An inserter whose window opened
 // in those ticks waited, and took its items a tick after the output inserter had taken the block away; with windows
@@ -30,7 +30,7 @@ const evenly = (first: number, length: number, every: number, window_cycle_ticks
 //
 // Two rules of the game are in it, and the simulator had neither:
 // - An inserter that waits for space in a machine acts in the tick after the one that wakes it (see
-//   the idle rule of an inserter's Hand). Without it the simulator left this state within a period and made 352.
+//   the idle rule of an inserter's Hand). Without it the simulator left this state within a window cycle and made 352.
 // - A machine whose output block is more than a stack of its product goes on taking ingredients with the stack full
 //   (see OutputBlock.ingredients_blocked_at): the plastic plant, full at 100 plastic bars, took coal.
 // With both, a run of the simulator that starts in the state the game was in at sample 59 of that recording holds
@@ -87,14 +87,14 @@ describe("the advanced circuit build under evenly spaced windows of one hand", (
             { keep_output_buffers: true, warmup_window_cycles: 0, start_stock: recorded_state });
     });
 
-    // the periods are cut where the recorder cuts them, where the clock wraps: the run starts at position 60
+    // the window cycles are cut where the recorder cuts them, where the clock wraps: the run starts at position 60
     const FIRST_WRAP = WINDOW_CYCLE - (RECORDED_CLOCK_POSITION + 1);
-    /** The first tick of each of the last `periods` whole clock periods of the run */
+    /** The first tick of each of the last `periods` whole window cycles of the run */
     const windowCycleStarts = (window_cycles: number): number[] => {
         const whole = Math.floor((WINDOW_CYCLES * WINDOW_CYCLE - FIRST_WRAP) / WINDOW_CYCLE);
         return Array.from({ length: window_cycles }, (_, index) => FIRST_WRAP + (whole - window_cycles + index) * WINDOW_CYCLE);
     };
-    /** Items an inserter dropped in each of the last `periods` clock periods of the run */
+    /** Items an inserter dropped in each of the last `periods` window cycles of the run */
     const dropped = (inserter_id: number, window_cycles: number): number[] => {
         const held = run.inserters.find(it => it.inserter_id === `inserter:${inserter_id}`)!.held;
         return windowCycleStarts(window_cycles).map(from => {
@@ -105,7 +105,7 @@ describe("the advanced circuit build under evenly spaced windows of one hand", (
             return items;
         });
     };
-    /** Products a machine finished in each of the last `periods` clock periods of the run */
+    /** Products a machine finished in each of the last `periods` window cycles of the run */
     const finished = (machine_id: number, window_cycles: number): number[] => {
         const products = run.machines.find(it => it.machine_id === `machine:${machine_id}`)!.products_finished;
         return windowCycleStarts(window_cycles).map(from => products[from + WINDOW_CYCLE - 1] - products[from - 1]);
@@ -115,7 +115,7 @@ describe("the advanced circuit build under evenly spaced windows of one hand", (
     it("stays in the state the game was recorded in: one plant makes its 352 a period and the other 264", () => {
         expect(finished(2, 4)).toEqual([352, 352, 352, 352]);
         expect(finished(4, 4)).toEqual([264, 264, 264, 264]);
-        // the advanced circuits that leave: 352 from the one, 256 and 272 in turn from the other: 608 and 624 a period
+        // the advanced circuits that leave: 352 from the one, 256 and 272 in turn from the other: 608 and 624 a window cycle
         expect(dropped(2, 4)).toEqual([352, 352, 352, 352]);
         expect(sorted(dropped(9, 4))).toEqual([256, 256, 272, 272]);
     });

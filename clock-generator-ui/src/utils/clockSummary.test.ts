@@ -214,7 +214,7 @@ describe('recoversOf', () => {
         const untried = clock('a', { loss: null });
         untried.assessment.disturbance_trial_not_tried = reason;
         expect(recoversOf(untried)).toEqual({ kind: 'not-tested', value: SUMMARY_COPY.recoversUnavailable, detail: SUMMARY_COPY.recoversNotTriedDetail(reason) });
-        // the why itself, and the period that closes it
+        // the why itself, and the window cycle that closes it
         expect(recoversOf(untried).detail).toContain(`: ${reason}.`);
     });
 

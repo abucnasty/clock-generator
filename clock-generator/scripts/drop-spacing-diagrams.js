@@ -1,14 +1,14 @@
 // node scripts/drop-spacing-diagrams.js [folder]
 // Writes the diagrams of tests/game/mechanics/drop-spacing/README.md (default: that folder's images/). The slot of every hand is
 // worked out the way src/config/drop-spacing.ts does: a hand that starts at tick t at place p lies at (p - v t) mod L, with L = v
-// times the period, from the places and the tiles a tick that dropLines reads off the grenade sample; whether the hands fit
+// times the window cycle, from the places and the tiles a tick that dropLines reads off the grenade sample; whether the hands fit
 // is asked of dropSpacing. Needs the engine built (npm run build).
 const fs = require("fs");
 const path = require("path");
 const { dist, loadSample } = require("./lib");
 const { dropLines, dropSpacing } = dist("config/drop-spacing.js");
 
-const PERIOD = 112;
+const WINDOW_CYCLE = 112;
 const OUT = process.argv[2] ?? path.join(__dirname, "..", "tests", "game", "mechanics", "drop-spacing", "images");
 
 /** The hands of the first line: [{copy, inserter (1 or 2 of the pair), slot}] for a pitch and the ticks the pair's inserters start at */
@@ -16,7 +16,7 @@ async function hands(pitch, ticks) {
     const config = await loadSample("GRENADE_240_FILLS_BELT_EXACTLY");
     config.setpoint.copy_offset = { x: pitch, y: 0 };
     const [line] = dropLines(config);
-    const L = line.tiles_per_tick * PERIOD;
+    const L = line.tiles_per_tick * WINDOW_CYCLE;
     const mod = (value) => ((value % L) + L) % L;
     const sense = line.flow; // the belt runs west: places grow toward smaller x
     const place = (inserter, copy) => sense * (inserter.along + copy * pitch * Math.sign(config.setpoint.copy_offset.x));
@@ -30,7 +30,7 @@ async function hands(pitch, ticks) {
             result.push({ copy, which: index + 1, slot: Math.round(mod(place(inserter, copy) - origin - line.tiles_per_tick * ticks[index])) % L });
         });
     }
-    const fits = dropSpacing(config, starts, PERIOD).lines.every((it) => it.fits);
+    const fits = dropSpacing(config, starts, WINDOW_CYCLE).lines.every((it) => it.fits);
     return { hands: result, fits, L, ids: line.inserters.map((it) => it.id), apart: Math.abs(line.inserters[1].along - line.inserters[0].along) };
 }
 

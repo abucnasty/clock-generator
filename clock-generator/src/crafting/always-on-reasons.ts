@@ -8,7 +8,7 @@ import { alwaysEnabledInserters, loopInserters } from "./sequence/unplanned-inse
  * - "override": its Enable Control Strategy override is Always on, set by the build;
  * - "loop": it moves items between machines that feed each other in a loop, which the clock leaves running;
  * - "from-loop": it takes from a machine of a loop to a machine outside it, which the clock leaves running too;
- * - "busy": its swings take the whole clock period (or all of it but the offset of its window), so a wake window would
+ * - "busy": its swings take the whole window cycle (or all of it but the offset of its window), so a wake window would
  *   only put gaps between swings that follow each other;
  * - "chest-drill": a drill into a chest that nothing can time (see `ChestDrillWhy`);
  * - "no-swing": the run of the build that the windows are read from recorded no swing of it, so there is nothing to read

@@ -46,7 +46,7 @@ async function shiftedRocketFuel(): Promise<Config> {
     return built;
 }
 
-/** The build recorded after a warm-up of `warmup` periods, and the same ticks of one run from the cold start */
+/** The build recorded after a warm-up of `warmup` window cycles, and the same ticks of one run from the cold start */
 function segmentedAndContinuous(built: Config) {
     const options: RunOptions = { logger, cold_start: true, window_cycle_ticks, machine_stock: true, factorio_states: false };
     const continuous = runBuild(built, { ...options, warmup_window_cycles: 0, simulate_window_cycles: warmup + 1 }).machine_stock!;
@@ -74,7 +74,7 @@ describe("the clocks of the game that run through", () => {
     it("are those of a whole-tick period; a p/q clock starts again with the recorded run until it is judged over whole counters", () => {
         const ticks = TickProvider.mutable(0);
         expect(runThroughTicks(ticks, 128)).toBe(ticks);
-        // 10 periods of 12672/23 ticks run 5510 ticks: the recording would start 10/23 of a tick into a period
+        // 10 window cycles of 12672/23 ticks run 5510 ticks: the recording would start 10/23 of a tick into a window cycle
         expect(runThroughTicks(ticks, 12672 / 23)).toBeUndefined();
         expect(runThroughTicks(undefined, 128)).toBeUndefined();
     });

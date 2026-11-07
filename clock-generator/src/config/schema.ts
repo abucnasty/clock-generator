@@ -803,7 +803,7 @@ export const ConfigOverridesSchema = z.preprocess(renameLoopSeedItemsToKickStart
     search_for_fewer_wake_ups: z.boolean().optional().describe("Whether the generator always does the four searches, to find a clock with fewer wakeups."),
     /**
      * Try every clock from other starts than the plain cold start of the staged scaffold too: with the clock standing 30,
-     * 300, 700 and 1000 ticks into its period at the first tick, and with the inserters that compete for one machine's
+     * 300, 700 and 1000 ticks into its window cycle at the first tick, and with the inserters that compete for one machine's
      * product served in ascending config ids and in two random orders. The clock is stable when it reaches its target
      * from every start, start-dependent when it does from some, unstable when it does from none; a start-dependent
      * clock is listed with where it reaches its target and where it settles elsewhere.
@@ -840,7 +840,7 @@ export const ConfigOverridesSchema = z.preprocess(renameLoopSeedItemsToKickStart
      * Inserters that exclusively transfer items in this list will not contribute
      * their transfer fractions to the LCM computation, reducing the overall LCM.
      * Any such inserter should be set to ALWAYS enabled so it runs every cycle
-     * regardless of the clock period.
+     * regardless of the window cycle.
      */
     ignored_lcm_ingredients: z.array(z.string()).optional().describe("The items that do not change the window cycle time; set each inserter that moves only these items to ALWAYS.")
 }))));

@@ -28,7 +28,7 @@ describe("a destroyed target whose takers' hands come out whole in a period its 
 
 describe("the simulator budgets", () => {
     it("fit the check periods of the longest result windows period in one simulated run", () => {
-        // 20 check periods x 24,000 ticks = 480,000 < 500,000
+        // 20 check window cycles x 24,000 ticks = 480,000 < 500,000
         expect(EXHAUST_CHECK_WINDOW_CYCLES * EXHAUST_WINDOW_CYCLE_BUDGET_TICKS).toBe(480_000);
         expect(EXHAUST_CHECK_WINDOW_CYCLES * EXHAUST_WINDOW_CYCLE_BUDGET_TICKS).toBeLessThan(SIMULATION_BUDGET_TICKS);
     });

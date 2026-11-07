@@ -10,7 +10,7 @@ import { longRunWindowCyclesOf, runAsBuiltCheck } from "./trial";
 import { assessTargetProduction } from "./target-production";
 interface ImpFixture {
     config: unknown;
-    window_cycle_ticks: number;
+    period: number;
     used_lcm: number;
     used_terminal_swing_count: number;
     output_inserter: string;
@@ -26,7 +26,7 @@ describe("the archived imp plan's sampled output shortfall", () => {
     let diagnostic: ReturnType<typeof runAsBuiltCheck>;
     const judged = (run: ReturnType<typeof runAsBuiltCheck>) => judgeLongRun(
         [run.stock!.inserters.find(hand => hand.inserter_id === fixture.output_inserter)!.held],
-        run.stock!.ticks, fixture.window_cycle_ticks, null, 16, 16,
+        run.stock!.ticks, fixture.period, null, 16, 16,
     );
 
     beforeAll(async () => {
@@ -36,8 +36,8 @@ describe("the archived imp plan's sampled output shortfall", () => {
             lcm: fixture.used_lcm, terminal_swing_count: fixture.used_terminal_swing_count } };
         const windows = new Map(Object.entries(fixture.clock_windows).map(([id, ranges]) =>
             [id, ranges.map(range => OpenRange.from(range.start, range.end))]));
-        standard = runAsBuiltCheck(prepared, windows, fixture.window_cycle_ticks, quiet, 12);
-        diagnostic = runAsBuiltCheck(prepared, windows, fixture.window_cycle_ticks, quiet, 12, undefined, 72_000);
+        standard = runAsBuiltCheck(prepared, windows, fixture.period, quiet, 12);
+        diagnostic = runAsBuiltCheck(prepared, windows, fixture.period, quiet, 12, undefined, 72_000);
     });
 
     it("preserves the recovered planning arithmetic and exact 96-tick clock", () => {
@@ -45,7 +45,7 @@ describe("the archived imp plan's sampled output shortfall", () => {
         expect(sha(fixture.clock_windows)).toBe("ba6f0240839f99ff3f285ba6d4d8edbd7841292cf0b720b7f4bc023637d5f09d");
         expect(fixture.used_lcm).toBe(1);
         expect(fixture.used_terminal_swing_count).toBe(1);
-        expect(fixture.window_cycle_ticks).toBe(96);
+        expect(fixture.period).toBe(96);
         expect(standard.result.stability_check.expected_output_items).toBe(16);
         expect(diagnostic.result.stability_check.expected_output_items).toBe(16);
         expect(longRunWindowCyclesOf(96)).toBe(120);

@@ -27,7 +27,7 @@ it('asks the clock replay for the period the long run first judges, and no other
     const settled = { ...clock, simulationDurationTicks: 24, asBuilt: { first_judged_tick: 960 } } as ClockAlternativeView;
     expect(timelineRequestFor(config, settled, 'clock')?.settle_window_cycles).toBe(40);
     expect(timelineRequestFor(config, settled, 'plan')).not.toHaveProperty('settle_window_cycles');
-    // judged from the first period, or no long run (or a result kept before it was carried): the replay is what it was
+    // judged from the first window cycle, or no long run (or a result kept before it was carried): the replay is what it was
     expect(timelineRequestFor(config, { ...settled, asBuilt: { first_judged_tick: 0 } } as ClockAlternativeView, 'clock')).not.toHaveProperty('settle_window_cycles');
     expect(timelineRequestFor(config, { ...settled, asBuilt: null }, 'clock')).not.toHaveProperty('settle_window_cycles');
     expect(timelineRequestFor(config, clock, 'clock')).not.toHaveProperty('settle_window_cycles');

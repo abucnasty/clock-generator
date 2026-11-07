@@ -28,14 +28,14 @@ export interface ContainerClockCase {
 export const CONTAINER_CRAFTING_SPEED = 3.125;
 /** Products a second: 80% of the machine for both recipes (gears 0.5 s, circuits 0.5 s, one product a craft) */
 export const CONTAINER_TARGET = 5;
-/** The clock's period in ticks, as generated (gears 192, circuits 384): the cuts are sized by it */
+/** The clock's window cycle in ticks, as generated (gears 192, circuits 384): the cuts are sized by it */
 const WINDOW_CYCLE_TICKS = {"iron-gear-wheel": 192, "electronic-circuit": 384} as const;
 /** What a craft takes of each input */
 const INPUTS = {"iron-gear-wheel": [["iron-plate", 2]], "electronic-circuit": [["iron-plate", 1], ["copper-cable", 3]]} as const;
 
 /**
- * The periods until a cut input's stock in the container has run out: the most of it the container holds, over what
- * the machine takes of it a period at the target. A cut of two periods, as the belt-fed families have, changes nothing
+ * The window cycles until a cut input's stock in the container has run out: the most of it the container holds, over what
+ * the machine takes of it a window cycle at the target. A cut of two window cycles, as the belt-fed families have, changes nothing
  * here: the container holds thousands of items.
  */
 export function containerDrainWindowCycles(variant: ContainerClockCase, item: string): number {

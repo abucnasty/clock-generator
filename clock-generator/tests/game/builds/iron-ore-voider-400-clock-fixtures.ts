@@ -21,7 +21,7 @@ import {RUN_PROTOCOL, runSummary} from "./pickup-clock-capture";
  * by script). What comes back is random in the game and at its expected amount in the simulator, so beside the protocol the
  * baseline is judged on the ore destroyed against the binomial's range, the share of crafts that gave ore back, and on the car
  * never being full and the recycler never waiting for room. Dropped with the hour (owner's protocol, 2026-11-03): the mean of
- * the ore brought in per period, which the baseline's whole clock cycles now judge, and the backlog of 2000 ore put into the car.
+ * the ore brought in per window cycle, which the baseline's whole clock cycles now judge, and the backlog of 2000 ore put into the car.
  */
 export interface OreVoiderCase {
     name: string;
@@ -67,7 +67,7 @@ export interface OreVoiderObserved {
     baseline: {
         ticks: number; periods: number;
         crafts: number; placed: number;
-        /** Ore destroyed over the baseline (each craft destroys the ore it takes, less what it gives back), its expectation at the target, and the range of 3 standard deviations of the returns over the periods */
+        /** Ore destroyed over the baseline (each craft destroys the ore it takes, less what it gives back), its expectation at the target, and the range of 3 standard deviations of the returns over the window cycles */
         destroyed: number; destroyed_expected: number; destroyed_range: number;
         returned_share: number; returned_range: number;
         car_max: number; car_capacity: number; full_ticks: number;
@@ -160,7 +160,7 @@ export async function captureOreVoider(variant: OreVoiderCase): Promise<OreVoide
             expect(sha, `the clock ${variant.name} runs is not the one its summary in iron-ore-voider-400-clock-controls.json was recorded on: record it again`).toBe(recorded);
         }
         fs.writeFileSync(path.join(capture.directory, "clock.json"), JSON.stringify({...clock, sha256: sha}) + "\n");
-        // the baseline is the protocol's minute: the clock's cycle is its period, which a minute holds whole
+        // the baseline is the protocol's minute: the clock's cycle is its window cycle, which a minute holds whole
         expect(RUN_PROTOCOL.baseline % window_cycle_ticks, "a whole number of the clock's periods in the baseline").toBe(0);
         const expectedPerWindow = Math.round(config.setpoint.items_per_second * RUN_PROTOCOL.window / 60 * 1e6) / 1e6;
         const {recording} = await recordInFactorio({factorio: process.env.FACTORIO_PATH!, save: process.env.FACTORIO_HARNESS_SAVE!, config,

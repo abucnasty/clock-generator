@@ -45,15 +45,15 @@
         "inserter:11/nutrients",
         "inserter:12/agricultural-science-pack"
       ],
-      "periods": [
-        {"swings":5,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":96,"denominator":1},"cycles":5,"period_ticks":480,"kept":true},
-        {"swings":6,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":576,"denominator":5},"cycles":25,"period_ticks":2880,"kept":true},
-        {"swings":7,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":672,"denominator":5},"cycles":25,"period_ticks":3360,"kept":true},
-        {"swings":4,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":384,"denominator":5},"cycles":25,"period_ticks":1920,"kept":true},
-        {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":288,"denominator":5},"cycles":25,"period_ticks":1440,"kept":true},
-        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":192,"denominator":5},"cycles":25,"period_ticks":960,"kept":true},
-        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":96,"denominator":5},"cycles":25,"period_ticks":480,"kept":true},
-        {"swings":5,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":96,"denominator":1},"cycles":5,"period_ticks":480,"kept":true}
+      "window_cycles": [
+        {"swings":5,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":96,"denominator":1},"cycles":5,"window_cycle_ticks":480,"kept":true},
+        {"swings":6,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":576,"denominator":5},"cycles":25,"window_cycle_ticks":2880,"kept":true},
+        {"swings":7,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":672,"denominator":5},"cycles":25,"window_cycle_ticks":3360,"kept":true},
+        {"swings":4,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":384,"denominator":5},"cycles":25,"window_cycle_ticks":1920,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":288,"denominator":5},"cycles":25,"window_cycle_ticks":1440,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":192,"denominator":5},"cycles":25,"window_cycle_ticks":960,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":96,"denominator":5},"cycles":25,"window_cycle_ticks":480,"kept":true},
+        {"swings":5,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":96,"denominator":1},"cycles":5,"window_cycle_ticks":480,"kept":true}
       ],
       "utilization": [
         {
@@ -123,7 +123,7 @@
       "planned": 5,
       "higher_up_to_ticks": 2400
     },
-    "main_period": {
+    "main_window_cycle": {
       "ticks": 480,
       "exact": {
         "numerator": 480,

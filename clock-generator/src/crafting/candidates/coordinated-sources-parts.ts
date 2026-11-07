@@ -19,7 +19,7 @@ export interface CoordinatedSourcesPart {
      * runs; a way of the grouped hands rule has none and is Round-Robin Polling by the grouped hands construction
      */
     strategy?: StrategyRef;
-    /** The ticks of its period, the period its windows are of */
+    /** The ticks of its window cycle, the window cycle its windows are of */
     window_cycle_ticks: number;
     windows: SerializableClockWindows;
     /**
@@ -63,7 +63,7 @@ export function collectingParts<T>(work: () => T): { value: T; parts: Coordinate
     }
 }
 
-/** A part's key: its period and its windows, inserter by inserter in the order of their ids */
+/** A part's key: its window cycle and its windows, inserter by inserter in the order of their ids */
 export function partKey(part: Pick<CoordinatedSourcesPart, "window_cycle_ticks" | "windows">): string {
     const ids = Object.keys(part.windows).filter(id => part.windows[id].length > 0).sort();
     return `${part.window_cycle_ticks}|${ids.map(id => `${id}:${part.windows[id].map(range => `${range.start}-${range.end}`).join(",")}`).join(";")}`;

@@ -1,7 +1,7 @@
 // replay.js: one job of the replay check (scripts/replay/replay.sh), in a process of its own. It loads an engine's build
 // (dist/ of the worktree given) and runs one stored job on it with no search:
 //   asbuilt  the build on the job's stored clock windows alone (runClockOnBuild: cold start, the default taker order),
-//            warm-up plus 4 periods, with the machine stock, the Factorio states, the timeline recording, the fuel
+//            warm-up plus 4 window cycles, with the machine stock, the Factorio states, the timeline recording, the fuel
 //            levels and repeat detection
 //   plan     the planning run of the config (runBuild as unclockedRun runs it, with the machine stock and fuel levels
 //            watched), and the figures unclockedRun reads off it (its windows, lane capacity check)
@@ -9,16 +9,16 @@
 //            run with the fuel clocks), on the plan's clock, its history's reasons as texts
 //   speed    the as-built run again with nothing recorded, for ticks per second and scavenges per million ticks
 //   losses   with --losses: disturbanceTrialOf on the stored windows (supply gates)
-// It writes what every run observed, as hashes: per signal (an entity's field, or its events) and per period of the
-// clock, so that a difference names the run, the signal and the first period that differs. Component internals are
+// It writes what every run observed, as hashes: per signal (an entity's field, or its events) and per window cycle of the
+// clock, so that a difference names the run, the signal and the first window cycle that differs. Component internals are
 // never read: only what a run hands back (the stock and timeline recordings, the histories, the figures), so that the
 // check survives the refactor's moves.
 //
 //   node replay.js --engine <clock-generator dir> --input <job.json> --output <result.json> [--losses]
 //   node replay.js --engine <dir> --input <job.json> --dump <run> --period <p>
-//                   prints the per-tick values of every signal of that run and period, as JSON (replay.sh explain)
+//                   prints the per-tick values of every signal of that run and window cycle, as JSON (replay.sh explain)
 //
-// A job file (replay.sh record writes them) is { key, group, name, config, windows, period } with `windows` and `period`
+// A job file (replay.sh record writes them) is { key, group, name, config, windows, window cycle } with `windows` and `period`
 // the blast's selected clock, or { key, group, name, config } for a job with no clock (a refusal or a config error),
 // whose runs record the error each throws.
 'use strict';
@@ -28,8 +28,8 @@ const { createHash } = require('crypto');
 const { GCProfiler } = require('v8');
 
 const FORMAT = 'replay-1';
-/** Periods the as-built run records after its warm-up */
-const PERIODS = 4;
+/** Window cycles the as-built run records after its warm-up */
+const WINDOW_CYCLES = 4;
 
 function args() {
     const out = { losses: false };
@@ -77,7 +77,7 @@ const hash = value => createHash('sha256').update(JSON.stringify(value)).digest(
 
 /**
  * The signals a run observed, by name: a `series` has a value per tick from tick 0 of the recorded run; `events` are
- * [tick, ...] rows; a `whole` value belongs to no period (figures of the run)
+ * [tick, ...] rows; a `whole` value belongs to no window cycle (figures of the run)
  */
 class Signals {
     constructor() { this.map = new Map(); }
@@ -101,10 +101,10 @@ class Signals {
         if (signal.kind === 'series') return signal.values.slice(from, to);
         return signal.rows.filter(row => row[0] >= from && row[0] < to);
     }
-    /** { periods: [hash per period], signals: { name: [hash per period] | hash } } */
-    hashes(period, ticks) {
-        const periods = Math.max(1, Math.ceil(ticks / period));
-        const bounds = Array.from({ length: periods }, (_, p) => [Math.floor(p * period), p === periods - 1 ? Infinity : Math.floor((p + 1) * period)]);
+    /** { window cycles: [hash per window cycle], signals: { name: [hash per window cycle] | hash } } */
+    hashes(window_cycle_ticks, ticks) {
+        const window_cycles = Math.max(1, Math.ceil(ticks / window_cycle_ticks));
+        const bounds = Array.from({ length: window_cycles }, (_, p) => [Math.floor(p * window_cycle_ticks), p === window_cycles - 1 ? Infinity : Math.floor((p + 1) * window_cycle_ticks)]);
         const signals = {};
         for (const [name, signal] of [...this.map.entries()].sort((a, b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)) {
             signals[name] = signal.kind === 'whole' ? hash(signal.value) : bounds.map(([from, to]) => hash(this.slice(signal, from, to)));
@@ -116,9 +116,9 @@ class Signals {
             signals,
         };
     }
-    /** The per-tick values of every signal within one period, for a dump */
-    dump(period, p) {
-        const from = Math.floor(p * period), to = Math.floor((p + 1) * period);
+    /** The per-tick values of every signal within one window cycle, for a dump */
+    dump(window_cycle_ticks, p) {
+        const from = Math.floor(p * window_cycle_ticks), to = Math.floor((p + 1) * window_cycle_ticks);
         const out = {};
         for (const [name, signal] of this.map) out[name] = signal.kind === 'whole' ? signal.value : this.slice(signal, from, to);
         return out;
@@ -231,22 +231,22 @@ const clockConfig = config => ({ ...config, overrides: { ...config.overrides, de
 
 /**
  * The build on the job's clock windows alone, as runClockOnBuild runs it (a cold start, the default taker order and
- * decider order, the period of a whole-tick clock counted as its own), the whole run handed back rather than the trial
+ * decider order, the window cycle of a whole-tick clock counted as its own), the whole run handed back rather than the trial
  * of it, so that its figures can be read
  */
 function asBuiltRun(engine, job, options) {
     const config = engine.buildAsBuiltConfig(clockConfig(job.config), windowsOf(engine, job.windows), job.period);
-    return engine.runBuild(config, { logger: quiet, cold_start: true, ...(Number.isInteger(job.period) && { period_ticks: job.period }), ...options });
+    return engine.runBuild(config, { logger: quiet, cold_start: true, ...(Number.isInteger(job.period) && { window_cycle_ticks: job.period }), ...options });
 }
 
 /** The runs of a job, each as its signals and figures (or the error it threw) */
 const RUNS = {
     asbuilt(engine, job) {
         if (!job.windows) return null;
-        const timeline = Number.isInteger(job.period) ? { period_ticks: job.period, max_ticks: 1e9, max_points: 1e12 } : undefined;
+        const timeline = Number.isInteger(job.period) ? { window_cycle_ticks: job.period, max_ticks: 1e9, max_points: 1e12 } : undefined;
         return () => {
             const run = asBuiltRun(engine, job, {
-                simulate_periods: PERIODS, machine_stock: true, factorio_states: true, fuel_levels: true, detect_repeat: true,
+                simulate_window_cycles: WINDOW_CYCLES, machine_stock: true, factorio_states: true, fuel_levels: true, detect_repeat: true,
                 ...(timeline && { timeline_recording: timeline }),
             });
             const signals = new Signals();
@@ -293,7 +293,7 @@ const RUNS = {
     speed(engine, job) {
         if (!job.windows) return null;
         return () => {
-            const run = asBuiltRun(engine, job, { simulate_periods: PERIODS, factorio_states: false, detect_repeat: true });
+            const run = asBuiltRun(engine, job, { simulate_window_cycles: WINDOW_CYCLES, factorio_states: false, detect_repeat: true });
             const signals = new Signals();
             signals.whole('figures', { recorded_ticks: run.recorded_duration.ticks, ticks_simulated: run.ticks_simulated, state_repeat: run.state_repeat ?? null });
             return { signals, period: job.period, ticks: run.recorded_duration.ticks, ticks_simulated: run.ticks_simulated };

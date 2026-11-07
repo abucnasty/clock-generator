@@ -153,7 +153,7 @@ export function confirm(config: Config, windows: Map<string, OpenRange[]>, windo
 export interface SearchRangeEdge {
     /** The setting at the edge: a shift in ticks, a padding, an offset */
     setting: number;
-    /** No setting further out was tried: the moved windows would meet other windows or the end of the period */
+    /** No setting further out was tried: the moved windows would meet other windows or the end of the window cycle */
     is_search_limit: boolean;
     /** What the inserters and machines are waiting on at this edge, the limits that stop the setting from going further */
     notes: string[];

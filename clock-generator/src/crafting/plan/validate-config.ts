@@ -17,7 +17,7 @@ import { planOutputCycle, transferPlanOf } from "../plan/unclocked-run";
 export interface ConfigValidation {
     /** Hands each inserter and drill moves per crafting cycle */
     transfer_plan: SerializableTransferPlan;
-    /** Crafting cycles in one clock period: the computed LCM, or the config's override */
+    /** Crafting cycles in one window cycle: the computed LCM, or the config's override */
     used_lcm: number;
     /**
      * Hands each output inserter takes per crafting cycle, before any backoff a generation may apply; for a target that

@@ -44,11 +44,11 @@
         "placement:drill:2/stone",
         "placement:drill:3/stone"
       ],
-      "periods": [
-        {"swings":1,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":96,"denominator":1},"cycles":9,"period_ticks":864,"kept":true},
-        {"swings":2,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":192,"denominator":1},"cycles":9,"period_ticks":1728,"kept":true},
-        {"swings":3,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":288,"denominator":1},"cycles":3,"period_ticks":864,"kept":true},
-        {"swings":1.875,"swings_exact":{"numerator":15,"denominator":8},"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":180,"denominator":1},"cycles":24,"period_ticks":4320,"kept":true}
+      "window_cycles": [
+        {"swings":1,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":96,"denominator":1},"cycles":9,"window_cycle_ticks":864,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":192,"denominator":1},"cycles":9,"window_cycle_ticks":1728,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":288,"denominator":1},"cycles":3,"window_cycle_ticks":864,"kept":true},
+        {"swings":1.875,"swings_exact":{"numerator":15,"denominator":8},"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":180,"denominator":1},"cycles":24,"window_cycle_ticks":4320,"kept":true}
       ],
       "utilization": [
         {
@@ -138,7 +138,7 @@
       "planned": 1,
       "higher_up_to_ticks": 2400
     },
-    "main_period": {
+    "main_window_cycle": {
       "ticks": 864,
       "exact": {
         "numerator": 864,

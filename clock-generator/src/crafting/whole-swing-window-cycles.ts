@@ -8,8 +8,8 @@ import { TargetProductionRate } from './target-production-rate';
 import type { SwingWindowCycleRejection, WholeSwingArithmeticSnapshot } from './plan/clock-window-cycle-limit';
 
 /**
- * Descending whole-swing period arithmetic. Each count uses the existing planner again: fuel rounding and ignored
- * ingredients can change its denominators, so neither scaling a previous period nor binary search is sound.
+ * Descending whole-swing window cycle arithmetic. Each count uses the existing planner again: fuel rounding and ignored
+ * ingredients can change its denominators, so neither scaling a previous window cycle nor binary search is sound.
  * Creating entities reads immutable recipe facts only; this never creates state, prepares or simulates a build.
  */
 export function* wholeSwingWindowCyclesBelow(

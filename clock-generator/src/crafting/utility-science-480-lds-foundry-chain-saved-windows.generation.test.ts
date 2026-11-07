@@ -7,10 +7,10 @@ import { disturbanceTrialOf } from "./trial";
 import { verdictOf } from "./disturbance-trial";
 import { quiet } from "./generate-blueprint-test-helpers";
 
-// the utility science 480 build has a coal inserter that moves 15/8 hands a cycle, which stretches the period of every clock made from
-// the plan to eight cycles (1,344 ticks); no clock for it is stable at 480 a second. Without the coal in the period (the
+// the utility science 480 build has a coal inserter that moves 15/8 hands a cycle, which stretches the window cycle of every clock made from
+// the plan to eight cycles (1,344 ticks); no clock for it is stable at 480 a second. Without the coal in the window cycle (the
 // config's `ignored_lcm_ingredients`) it is two cycles (336 ticks), the coal inserter staying clocked. The observed-windows
-// search finds a clock for that period in about ten minutes, which a test does not wait for: these are the windows it
+// search finds a clock for that window cycle in about ten minutes, which a test does not wait for: these are the windows it
 // found on 2026-10-16, saved, and judged here as the generator judges its own.
 const COAL_OUT_OF_WINDOW_CYCLE_WINDOWS: Record<string, string> = {
     "inserter:3": "1-35,57-91,113-147,169-203,225-259,281-315",
@@ -59,7 +59,7 @@ describe("a saved clock for a shorter period, on the utility science 480 sample"
 
     beforeAll(async () => {
         const sample = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN);
-        // the config the clock was planned on: the coal is out of the period, and the output swings per cycle are those of the clock
+        // the config the clock was planned on: the coal is out of the window cycle, and the output swings per cycle are those of the clock
         config = { ...sample, overrides: { ...sample.overrides, ignored_lcm_ingredients: ["coal"], terminal_swing_count: 3 } };
         result = clockFromWindows(config, windows, WINDOW_CYCLE, quiet);
     });
@@ -81,9 +81,9 @@ describe("a saved clock for a shorter period, on the utility science 480 sample"
         const coal = report.losses.find(outcome => outcome.loss.kind === "supply" && outcome.loss.item === "coal")!;
         const failures = coal.trials.filter(trial => !trial.recovers);
         expect(failures).toHaveLength(1);
-        // Recovery requires each period's exact output: a 768 average does not make the 792/744 periods pass that rule.
+        // Recovery requires each window cycle's exact output: a 768 average does not make the 792/744 window cycles pass that rule.
         // The takers of one machine take in the order the game serves them (docs/simulator.md), which sets the cut and
-        // the share of each period: before 0.23.0 the periods were 764/772, then 784/752 with the cut at 168.
+        // the share of each window cycle: before 0.23.0 the window cycles were 764/772, then 784/752 with the cut at 168.
         expect(failures[0]).toMatchObject({cut_at: 84, restore_at: 130, loss_ticks: 718,
             proven: true, ends_in: [792, 744, 792, 744]});
         expect(failures[0].ends_in.reduce((sum, amount) => sum + amount, 0) / failures[0].ends_in.length).toBe(768);

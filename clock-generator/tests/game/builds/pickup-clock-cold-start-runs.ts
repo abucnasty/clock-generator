@@ -57,7 +57,7 @@ export interface ColdStartRun {
     case: string;
     /** Key of `clocks` */
     clock: string;
-    /** Ticks the clock was started into its period (`rotateRanges`): its windows above are already rotated */
+    /** Ticks the clock was started into its window cycle (`rotateRanges`): its windows above are already rotated */
     rotate: number;
     /** The order the clock's deciders were built in the game */
     decider_order: "built" | "reversed";
@@ -68,7 +68,7 @@ export interface ColdStartRun {
     /** The probe tick the plant had made its target over the trailing minute (steady state), and the samples recorded: that and a minute more */
     steady: number;
     ticks: number;
-    /** What the game's output and input inserters moved in each period of the recorded ticks, in the model's frame (the last one cut short) */
+    /** What the game's output and input inserters moved in each window cycle of the recorded ticks, in the model's frame (the last one cut short) */
     output: number[];
     pickups: number[];
     /** sha256 of the game's held count of each in every tick of the model's frame, as JSON */
@@ -87,7 +87,7 @@ interface ColdStartControls {
 /** The most a cold start records: 10 minutes of game time (the game tests' protocol); steady state and a minute more is the run */
 export const COLD_START_CAP_TICKS = 36_000;
 
-/** What an inserter moved in each period of a held series (the last period cut short where the series ends in it): drops and pickups */
+/** What an inserter moved in each window cycle of a held series (the last window cycle cut short where the series ends in it): drops and pickups */
 export function perWindowCycle(held: number[], window_cycle_ticks: number) {
     const window_cycles = Math.ceil(held.length / window_cycle_ticks);
     const drops = new Array<number>(window_cycles).fill(0);

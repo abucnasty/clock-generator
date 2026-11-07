@@ -52,12 +52,12 @@ const windowsOf = (entries: Record<string, [number, number][]>) =>
     new Map(Object.entries(entries).map(([key, ranges]) => [key, ranges.map(([start, end]) => OpenRange.from(start, end))]));
 const pairs = (ranges: OpenRange[] | undefined) => ranges?.map(range => [range.start_inclusive, range.end_inclusive]);
 
-/** The car build's clock with 3 output swings: the takers in ticks 28-41 of a 72-tick period, 32 ore each */
+/** The car build's clock with 3 output swings: the takers in ticks 28-41 of a 72-tick window cycle, 32 ore each */
 const CAR_WINDOWS = { 'inserter:1': [[28, 41]], 'inserter:2': [[28, 41]], 'inserter:3': [[1, 34]], 'inserter:4': [[1, 34]] } as Record<string, [number, number][]>;
 
 describe('the windows of a drill into a chest', () => {
     it('are one tick, the tick before the takers, when a mining tick yields more than a period takes', () => {
-        // 617 ore a tick against 64 a period: the window drops what the drill holds, and it mines again once in ten periods
+        // 617 ore a tick against 64 a window cycle: the window drops what the drill holds, and it mines again once in ten window cycles
         const { windows, drills } = chestDrillWindows(build(), windowsOf(CAR_WINDOWS), 72);
         expect(pairs(windows.get('drill:1'))).toEqual([[27, 27]]);
         expect(drills).toEqual([{ drill_id: 1, chest_id: 1, chest_type: 'car', item: 'iron-ore', planned: true, enabled_ticks: 1, window_count: 1 }]);
@@ -66,7 +66,7 @@ describe('the windows of a drill into a chest', () => {
     });
 
     it('are several where the chest does not hold what is taken between two of them', () => {
-        // a buffer chest of one stack: 50 ore of room against 32 + 32 a period, taken in two windows
+        // a buffer chest of one stack: 50 ore of room against 32 + 32 a window cycle, taken in two windows
         const config = build({ chest: { id: 1, type: 'buffer-chest', storage_size: 1, item_filter: 'iron-ore' } });
         const taken = windowsOf({ ...CAR_WINDOWS, 'inserter:1': [[10, 20]], 'inserter:2': [[40, 50]] });
         const { windows } = chestDrillWindows(config, taken, 72);
@@ -81,7 +81,7 @@ describe('the windows of a drill into a chest', () => {
 
     it('cover what the bars yield at a low rate, and not a tick less', () => {
         // the drills family's l8 and l45 drills: 4 legendary speed modules 3 (bar 0.25 a tick) at +70% and +440%: 0.425
-        // and 1.35 ore a tick; a furnace that takes a hand of 16 a 600-tick period
+        // and 1.35 ore a tick; a furnace that takes a hand of 16 a 600-tick window cycle
         for (const [productivity, ticks] of [[70, 38], [440, 12]] as const) {
             const config = build({ speed_bonus: 5, productivity, items_per_second: 1.5, furnaces: 1 });
             const taken = windowsOf({ 'inserter:1': [[300, 310]], 'inserter:2': [[100, 120]] });

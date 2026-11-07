@@ -1,13 +1,13 @@
 // node scripts/record-clock.js <recordings dir> <build or sample key or config path> <on|off> [alternative id] [--long <reason>]
 // Records a potential clock of a scaffolded build in Factorio (the selected one unless an id is given) and checks it
-// as the game tests do: what it moved in every period, the wake-ups against the simulator's, and the simulator laid
+// as the game tests do: what it moved in every window cycle, the wake-ups against the simulator's, and the simulator laid
 // against the game entity by entity. <on|off> is "Backed-up belts". A recording that is already in the directory is
 // read instead of made again. The simulator's wake-ups a minute are those of the run scripts/sim-game-check.js judges, seeded from
 // the recording (scripts/seeded-run.js), with the cold start's on a line of its own.
 //
 // To record windows of your own, such as a clock tightened by hand: WINDOWS=<json file> holding
 // {"period": 528, "output_swings": 2, "windows": {"inserter:1": [{"start": 1, "end": 6}, ...], ...}}. They are built as
-// they are; output_swings is the output swings per cycle of the plan whose period they are of.
+// they are; output_swings is the output swings per cycle of the plan whose window cycle they are of.
 //
 // <build> is one of the named builds below, or any config: a sample key of ConfigPaths (ADVANCED_CIRCUIT_240) or the path of a
 // config JSON. The scaffold of a config is the <config name>.scaffold beside it (else the longest prefix of its name that has one) (SCAFFOLD= names another), and the
@@ -22,7 +22,7 @@
 // The run is timed in game ticks, as the game tests are (scripts/game-run.js, tests/game/helpers/lua/steady.lua): after the
 // warm-up the build runs on the clock until its final machines have made the target amount over the trailing minute (steady
 // state), the next minute is the baseline, judged by the game tests' own rule, and then the recording starts. It holds whole
-// clock periods, at least TICKS=<n> ticks (3,600 by default). A request, or a recording of whole periods, over 36,000 ticks is
+// window cycles, at least TICKS=<n> ticks (3,600 by default). A request, or a recording of whole window cycles, over 36,000 ticks is
 // refused unless `--long <reason>` (or LONG_RUN=<reason>) says why this build needs it; the reason is printed. The exit code is
 // 1 when the baseline is not met.
 //
@@ -42,7 +42,7 @@ const { ConfigPaths } = dist("config/config-paths.js");
 const { generateClockAlternatives, clockBeltLabel, clockFromWindows } = dist("crafting/generate-blueprint.js");
 const { encodeBlueprintFile } = dist("blueprints/serde.js");
 const { recordInFactorio, recordedTicks } = dist("harness/factorio-harness.js");
-const { outputPerPeriod, recipesMaking, clockPeriods } = dist("harness/recording-output.js");
+const { outputPerWindowCycle, recipesMaking, clockWindowCycles } = dist("harness/recording-output.js");
 const { matchRecordingToConfig } = dist("verification/entity-matching.js");
 const { wakeUpsOfRecording } = dist("verification/recording-wake-ups.js");
 const { judgedWakeUps } = require("./seeded-run");
@@ -64,7 +64,7 @@ const BUILDS = {
     "productivity-module-80-chest-chain-clock": { scaffold: "intermediates/productivity-module/productivity-module-80-chest-chain.scaffold", config: "PRODUCTIVITY_MODULE_80_CHEST_CHAIN", seed: [], warmup_ticks: 3600 },
     "iron-bacteria": { scaffold: "gleba/iron-bacteria/iron-bacteria-380-cultivation.scaffold", config: "IRON_BACTERIA_380_CULTIVATION", seed: [{ target: { recipe: "iron-bacteria-cultivation" }, item: "iron-bacteria", count: 50 }], warmup_ticks: 300 },
 };
-// the recording holds whole clock periods of at least this many ticks: the baseline's minute, or TICKS=<n> in the environment
+// the recording holds whole window cycles of at least this many ticks: the baseline's minute, or TICKS=<n> in the environment
 const RECORDED_TICKS = Number(process.env.TICKS ?? GAME_RUN.baseline);
 
 const TESTS = path.join(ROOT, "tests", "game", "builds", "scaffold-recordings.game.test.ts");
@@ -116,14 +116,14 @@ function buildOfConfig(arg) {
         }
     }
     const result = selected.result;
-    const period = result.simulation_duration.ticks;
-    // a fractional period is built as a subtick clock, which counts the whole ticks after which the period repeats
-    const clock_ticks = result.subtick ? result.subtick.clock.period_ticks : period;
+    const window_cycle_ticks = result.simulation_duration.ticks;
+    // a fractional window cycle is built as a subtick clock, which counts the whole ticks after which the window cycle repeats
+    const clock_ticks = result.subtick ? result.subtick.clock.window_cycle_ticks : window_cycle_ticks;
     console.log(`${name} (backed-up belts: ${belts}): ${selected.id} "${selected.label}", belt ${selected.belt ? clockBeltLabel(selected.belt) : "-"}, `
-        + `${selected.verdict} in the simulator, period ${period}, clock counts ${clock_ticks}`);
+        + `${selected.verdict} in the simulator, period ${window_cycle_ticks}, clock counts ${clock_ticks}`);
 
     // what the scaffold makes a second: the config's target is for all its copies, a scaffold holds the one the generator expects output of
-    const target_per_second = result.stability_check.expected_output_items * 60 / period;
+    const target_per_second = result.stability_check.expected_output_items * 60 / window_cycle_ticks;
     const tag = process.env.TAG ? `-${process.env.TAG}` : "";
     const file = path.join(out_dir, `${path.basename(name, ".json")}${tag}-${selected.id}-${belts}.json`);
     const steady_file = file.replace(/\.json$/, ".steady.json");
@@ -132,7 +132,7 @@ function buildOfConfig(arg) {
         recording = parseRecording(JSON.parse(fs.readFileSync(file, "utf-8")));
         run = fs.existsSync(steady_file) ? JSON.parse(fs.readFileSync(steady_file, "utf-8")) : undefined;
     } else {
-        // whole clock periods, from the clock's next wrap: a clock of a long period records (and waits for) more than the minute asked for
+        // whole window cycles, from the clock's next wrap: a clock of a long window cycle records (and waits for) more than the minute asked for
         assertWithinRun(recordedTicks(RECORDED_TICKS, clock_ticks), long, `the recording of whole periods of ${clock_ticks} ticks`);
         fs.mkdirSync(out_dir, { recursive: true });
         const exported = result.subtick ?? result;
@@ -156,24 +156,24 @@ function buildOfConfig(arg) {
     }
 
     // a subtick clock's repeat can leave a float a hair off the whole number of items
-    const expected = Math.round(result.stability_check.expected_output_items * clock_ticks / period * 1e6) / 1e6;
-    // the first period is cut where the recording starts
-    const periods = outputPerPeriod(recording, recipesMaking(config, config.setpoint.recipe)).slice(1);
+    const expected = Math.round(result.stability_check.expected_output_items * clock_ticks / window_cycle_ticks * 1e6) / 1e6;
+    // the first window cycle is cut where the recording starts
+    const window_cycles = outputPerWindowCycle(recording, recipesMaking(config, config.setpoint.recipe)).slice(1);
     const tally = {};
-    periods.forEach(p => tally[p.items] = (tally[p.items] ?? 0) + 1);
-    console.log(`  game: ${periods.length} periods, expected ${expected} a period, moved`, JSON.stringify(tally));
+    window_cycles.forEach(p => tally[p.items] = (tally[p.items] ?? 0) + 1);
+    console.log(`  game: ${window_cycles.length} periods, expected ${expected} a period, moved`, JSON.stringify(tally));
     const match = matchRecordingToConfig(recording, config);
-    const simulated = simulateRecording(config, result.clock_windows, period, recording.sample_count * 1.5, clock_ticks);
+    const simulated = simulateRecording(config, result.clock_windows, window_cycle_ticks, recording.sample_count * 1.5, clock_ticks);
     const simulated_match = matchOfSimulatedRecording(simulated);
     // both sides by the rule "kept-lists", as scripts/sim-game-check.js counts them. The simulator's figure is the run sim-game-check
     // judges (seeded-run.js): seeded from the recording, whose machines the game warmed up and the simulator does not, where the
-    // recording gives a complete seed, else cold; the game's is its whole recording. The cold start is the simulator's whole periods
+    // recording gives a complete seed, else cold; the game's is its whole recording. The cold start is the simulator's whole window cycles
     // after its first third (the settled run the scaffold tests and the comparison below judge), whose count differs from the seeded
     // run's where a build's states do not repeat within the recording (#603)
-    const settled = clockPeriods(simulated.clock.values).filter(it => it.start >= Math.floor(simulated.sample_count / 3));
+    const settled = clockWindowCycles(simulated.clock.values).filter(it => it.start >= Math.floor(simulated.sample_count / 3));
     const simulated_wake_ups = settled.length === 0 ? undefined
         : wakeUpsOfRecording(simulated, simulated_match, settled[0].start, settled[settled.length - 1].end, config);
-    const judged = judgedWakeUps(await loadSample(process.env.CONFIG ?? build.config, belts === "on"), recording, match, { windows: result.clock_windows, period, clock_ticks });
+    const judged = judgedWakeUps(await loadSample(process.env.CONFIG ?? build.config, belts === "on"), recording, match, { windows: result.clock_windows, period: window_cycle_ticks, clock_ticks });
     const judged_label = judged.judged_run === "seeded" ? `seeded from sample ${judged.seed.sample}, judged by sim-game-check`
         : `cold start, judged by sim-game-check: ${judged.seed.applied ? "the seed is incomplete" : "no seed"}`;
     console.log(`  wake-ups a minute, rule "kept-lists" on the recording: simulator (${judged_label}) ${judged.wake_ups_per_minute?.toFixed(1) ?? "-"}, game ${wakeUpsOfRecording(recording, match, 0, recording.sample_count, config).wake_ups_per_minute.toFixed(1)}`);
@@ -181,9 +181,9 @@ function buildOfConfig(arg) {
     const compared = compareRecordings(
         { recording, match },
         { recording: simulated, match: simulated_match, from_sample: Math.floor(simulated.sample_count / 3) },
-        config, { expected_output_per_period: expected });
+        config, { expected_output_per_window_cycle: expected });
     console.log("  simulator against game, issues:", JSON.stringify(compared.issues).slice(0, 1500));
-    // production is judged by the game tests' rule over the final machines, not by the periods tallied above
+    // production is judged by the game tests' rule over the final machines, not by the window cycles tallied above
     if (run === undefined) {
         console.log("  protocol: no steady-state report beside this recording (it was made before the minute protocol)");
     } else {

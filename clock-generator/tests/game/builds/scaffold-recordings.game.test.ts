@@ -53,11 +53,11 @@ const SAMPLES = path.join(SAMPLE_BUILDS_DIR);
  */
 const WINDOW_TICKS = 3600;
 /**
- * Ticks recorded after the settle: one minute, cut into whole clock periods; a clock that counts more than a minute is recorded
- * over a tick more than its period, so a whole period stands between two wraps
+ * Ticks recorded after the settle: one minute, cut into whole window cycles; a clock that counts more than a minute is recorded
+ * over a tick more than its window cycle, so a whole window cycle stands between two wraps
  */
 const RECORDED_TICKS = 3600;
-/** The longest clock period recorded: two of them stay within 10 minutes (a run is at most 15 minutes of game time); a longer one is skipped */
+/** The longest window cycle recorded: two of them stay within 10 minutes (a run is at most 15 minutes of game time); a longer one is skipped */
 const MAX_RECORDED_WINDOW_CYCLE = 18_000;
 /** The most ticks a build may take to reach steady state, and a staged start to be recorded */
 const SETTLE_CAP_TICKS = 36_000;
@@ -88,15 +88,15 @@ const AGRICULTURAL_SCIENCE_WAKE_UPS_OPEN = "the game counts a wake of the insert
  * every inserter of the build, where the two agreed within the tolerance while they were always on. The series' method
  * is a known miss on biochambers (GOALS.md, goal 2), the harness seeds the loop with 50 bacteria where the simulator's
  * cold start gives it 200, and the loop's steady state depends on the start in the simulator and in the game alike. The
- * clock moves its output in every period all the same, and the game's figure is still far under the simulator's
+ * clock moves its output in every window cycle all the same, and the game's figure is still far under the simulator's
  * 3,534.7 a minute with the loop always on, which the game was within the tolerance of.
  */
 const IRON_BACTERIA_WAKE_UPS_OPEN = "with windows on the loop's two inserters the game counts about three times the simulator's wake-ups "
     + "on every inserter: 1,499.8 a minute in all against 516.4 (each output inserter 116.7 against 39.6, each loop inserter 79.0 against "
     + "36.8, each bioflux inserter 437.6 against 142.2; 2026-10-24), where the two agreed while the loop was always on";
 /**
- * Places in the period the simulator starts the clock at to find the steady state the game settled into, when the
- * wake-ups of its own run are not the game's. Batched swings on utility science makes 192 a period at 10.7, 26.8 or
+ * Places in the window cycle the simulator starts the clock at to find the steady state the game settled into, when the
+ * wake-ups of its own run are not the game's. Batched swings on utility science makes 192 a window cycle at 10.7, 26.8 or
  * 32.1 wake-ups a minute depending on where the clock starts; the game shows 26.8, as the generator's run does from the staged start (it counted 10.7 from the prepared build).
  */
 const WAKE_UPS_START_PHASES = 24;
@@ -108,13 +108,13 @@ interface ScaffoldBuild {
     scaffold: string;
     config: string;
     seed: Seed[];
-    /** Ticks the build runs before it is seeded, so belts are full; the clock is not wired yet, so no clock period runs in them */
+    /** Ticks the build runs before it is seeded, so belts are full; the clock is not wired yet, so no window cycle runs in them */
     warmup_ticks: number;
     /** The clock is made for backed-up belts (`overrides.backed_up_belts`), which is what a scaffold has */
     backed_up_belts?: boolean;
     /**
      * How many times the scaffold holds the config (default 1): a build of several copies that share belts. The harness is told
-     * (`HarnessOptions.copies`) and wires the clock to every copy; what the build has to make in a period and in the settle's
+     * (`HarnessOptions.copies`) and wires the clock to every copy; what the build has to make in a window cycle and in the settle's
      * window is that of one copy times this, and every row of copies (output inserters at one height) is judged on its own too,
      * the whole build against the target times the copies over the config's copies. The simulator's entity-by-entity comparison and
      * the wake-ups are of one copy and are not made for such a build.
@@ -124,12 +124,12 @@ interface ScaffoldBuild {
      * The build is recorded from the staged start of the harness, as the simulator runs it: the belts are saturated first,
      * then every inserter of the cell and the clock are placed in one tick, with the machines empty but for the egg loop,
      * seeded once. `warmup_ticks` is not used, and the recording runs from the placement until steady state and a minute
-     * more (at most SETTLE_CAP_TICKS), so it holds the first periods of the clock, which the build may still be settling
-     * into: the periods are cut from the first sample (the recorder does not read the clock of a staged start), and the game
+     * more (at most SETTLE_CAP_TICKS), so it holds the first window cycles of the clock, which the build may still be settling
+     * into: the window cycles are cut from the first sample (the recorder does not read the clock of a staged start), and the game
      * is compared with the simulator on what follows the first third of each.
      */
     staged_start?: {
-        /** The periods of the recording that move less than the expected output, as the game showed them (the first is left out): where each starts, and the items it moved */
+        /** The window cycles of the recording that move less than the expected output, as the game showed them (the first is left out): where each starts, and the items it moved */
         dips: { start: number; items: number }[];
         /** What the game and the simulator still differ in after the first third of each, as the comparison words it */
         open_issues: string[];
@@ -142,12 +142,12 @@ interface ScaffoldBuild {
     /**
      * Inserters the simulator moves another amount through than the game does, and why that is left: a known
      * difference that changes no verdict and no selection (GOALS.md, "Working Rules"), with its line in the samples
-     * README. What the build moves in every period is held all the same, and so is every other inserter and machine.
+     * README. What the build moves in every window cycle is held all the same, and so is every other inserter and machine.
      */
     moved_open?: { inserter_ids: number[]; why: string };
     /**
-     * Machines whose crafts a period the simulator counts otherwise than the game, and why that is left: a known difference
-     * with its issue and its line in the samples README. What the build moves in every period is held all the same, and so is
+     * Machines whose crafts a window cycle the simulator counts otherwise than the game, and why that is left: a known difference
+     * with its issue and its line in the samples README. What the build moves in every window cycle is held all the same, and so is
      * every inserter and every other machine.
      */
     crafts_open?: { machine_ids: number[]; why: string };
@@ -166,12 +166,12 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         warmup_ticks: 300,
         // Recorded 2026-10-24 on batched swings (5 output swings per cycle) with windows on the two inserters that take eggs
         // out of the loop into the science biochamber (ticks 23 to 46 of every 96) and on the two of the loop itself (31 to 80
-        // and 79 to 128 of every 96): 400 in every one of 74 periods after the staged start, and the simulator moves what the
-        // game moved through every inserter and machine; so did the family cuts (64 periods, then back at 400 from the
-        // first or second period after each cut). The same that day with only the first two on windows, and with all four
-        // always on. The 2-swing clock selected before (recorded 2026-10-16) was one hand short in periods 8 and 9 of the
+        // and 79 to 128 of every 96): 400 in every one of 74 window cycles after the staged start, and the simulator moves what the
+        // game moved through every inserter and machine; so did the family cuts (64 window cycles, then back at 400 from the
+        // first or second window cycle after each cut). The same that day with only the first two on windows, and with all four
+        // always on. The 2-swing clock selected before (recorded 2026-10-16) was one hand short in window cycles 8 and 9 of the
         // settling after the staged start. Since 0.27.0 it selects shifted swings (5 output swings per cycle), recorded
-        // 2026-11-03 from the staged start to steady state and a minute more: one period of the settling short (320 at tick
+        // 2026-11-03 from the staged start to steady state and a minute more: one window cycle of the settling short (320 at tick
         // 1,440), 400 in every other.
         staged_start: {
             dips: [{ start: 1440, items: 320 }],
@@ -181,9 +181,9 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     },
     // its clocks have no belt pickup slack: batched swings has room for a hand of fuel in the windows of the three
     // inserters that take nutrients off the belt with their bioflux, without which they do not hold. Batched swings is
-    // selected, the same clock as with belts that move (recorded 2026-10-24: 400 in every one of 74 periods, no
+    // selected, the same clock as with belts that move (recorded 2026-10-24: 400 in every one of 74 window cycles, no
     // difference between the game and the simulator); the 2-swing clock was while a loss of nutrients broke batched
-    // swings (2026-10-10 to 2026-10-14), and again while its nutrients trials dipped a hand late in their 40 periods,
+    // swings (2026-10-10 to 2026-10-14), and again while its nutrients trials dipped a hand late in their 40 window cycles,
     // until such a trial ran on (2026-10-24)
     "agricultural science (belts are backed up)": {
         scaffold: path.join(SAMPLES, "science", "agricultural", "agricultural-250.scaffold"),
@@ -279,8 +279,8 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         wake_ups_open: "the simulator shows an output inserter as waiting on its machine in ticks the game shows it as working: "
             + "510 wake-ups a minute against 400 on 2026-10-10 (samples README, Advanced circuit)",
     },
-    // The same build at 230 a second, the target the issue was reported at: its period is not a whole number of ticks
-    // (550.957), so its clock counts 12,672 ticks for 23 periods. No clock held it until the one search of 2026-10-11
+    // The same build at 230 a second, the target the issue was reported at: its window cycle is not a whole number of ticks
+    // (550.957), so its clock counts 12,672 ticks for 23 window cycles. No clock held it until the one search of 2026-10-11
     // found full-hand output swings that do; recorded that day, 16,192 in each of 2 repeats, 769 wake-ups a minute in
     // the game against 600 in the simulator.
     "advanced circuit at 230 a second": {
@@ -292,7 +292,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     // One block of four chemical science assemblers, four engine assemblers and one foundry casting the pipes of all four
     // engines, all legendary with legendary modules and 40 legendary beacons: 5.5 copies of it make 240 a second. The
     // build was given 2026-10-15. Without a clock it makes 44.0 a second, a hair over the 43.636 the target asks of one
-    // block; with the selected clock, 256 in each of 102 periods of 352 ticks, recorded 2026-10-15.
+    // block; with the selected clock, 256 in each of 102 window cycles of 352 ticks, recorded 2026-10-15.
     "chemical science with a shared foundry": {
         scaffold: path.join(SAMPLES, "science", "chemical", "chemical-240-shared-foundry.scaffold"),
         config: ConfigPaths.CHEMICAL_SCIENCE_240_SHARED_FOUNDRY,
@@ -311,8 +311,8 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     // One electromagnetic plant (legendary, five legendary productivity modules, 12 legendary beacons) on accumulators and
     // supercapacitors from one belt, its fluids from infinity pipes: 11 copies of it make 330 a second. A fully automatic config
     // (no override). The config's crafting speed is 109.475, what 12 beacons give in the game. Recorded 2026-10-16 on the same
-    // batched swings clock (period 704) with the output inserters on AUTO: from a staged start (empty machines) 288 in the first
-    // period and 352 in each of the 50 after; on this test's start (warm-up and settle) 352 in every period checked.
+    // batched swings clock (window cycle 704) with the output inserters on AUTO: from a staged start (empty machines) 288 in the first
+    // window cycle and 352 in each of the 50 after; on this test's start (warm-up and settle) 352 in every window cycle checked.
     "electromagnetic science": {
         scaffold: path.join(SAMPLES, "science", "electromagnetic", "electromagnetic-330.scaffold"),
         config: ConfigPaths.ELECTROMAGNETIC_SCIENCE_330,
@@ -357,7 +357,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         warmup_ticks: 3600,
     },
     // The build of issue 152: two electromagnetic plants, two cryogenic plants and two foundries, 640 a second over 18
-    // copies, all of it from machine to machine. The clock 0.9.0 selected made 512 to 544 of its 576 a period here.
+    // copies, all of it from machine to machine. The clock 0.9.0 selected made 512 to 544 of its 576 a window cycle here.
     "accumulator": {
         scaffold: path.join(SAMPLES, "intermediates", "accumulator", "accumulator-640.scaffold"),
         config: ConfigPaths.ACCUMULATOR_640,
@@ -566,8 +566,8 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             expect(selected.assessment.items_per_second, `the selected clock (${selected.label}) reaches the target rate in the simulator`)
                 .toBeCloseTo(config.setpoint.items_per_second, 6);
 
-            // A fractional period is built as a subtick clock, which counts the whole ticks after which the period
-            // repeats (1728 for 19 periods of 90.947): that is the period the recording is cut into, and what it has
+            // A fractional window cycle is built as a subtick clock, which counts the whole ticks after which the window cycle
+            // repeats (1728 for 19 window cycles of 90.947): that is the window cycle the recording is cut into, and what it has
             // to move is what that many ticks ask for.
             const subtick = selected.result.subtick;
             const window_cycle_ticks = subtick?.clock.window_cycle_ticks ?? selected.result.simulation_duration.ticks;
@@ -605,7 +605,7 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                     save: SAVE!,
                     blueprint: fs.readFileSync(build.scaffold, "utf-8").trim(),
                     out: `${base}.json`,
-                    // a clock longer than a minute: a tick more than its period, so the recorder holds a whole period between two wraps
+                    // a clock longer than a minute: a tick more than its window cycle, so the recorder holds a whole window cycle between two wraps
                     ticks: build.staged_start ? SETTLE_CAP_TICKS : Math.max(RECORDED_TICKS, window_cycle_ticks + 1),
                     warmup_ticks: build.staged_start ? 0 : build.warmup_ticks,
                     settle_ticks: build.staged_start ? undefined : SETTLE_CAP_TICKS + 1,
@@ -634,7 +634,7 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
 
             if (build.staged_start) {
                 // a staged recording does not read the clock (the recorder ignores it: it records fixed ticks from the tick the
-                // inserters are placed in), and the clock is wired in that tick to count its period from the first sample
+                // inserters are placed in), and the clock is wired in that tick to count its window cycle from the first sample
                 result.recording.clock = { values: Array.from({ length: result.recording.sample_count }, (_, tick) => tick % window_cycle_ticks) };
             }
 
@@ -654,7 +654,7 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                 { expected_output_per_window_cycle: expected },
             );
             const window_cycles = outputPerWindowCycle(result.recording, recipesMaking(config, config.setpoint.recipe));
-            // a build of copies: what each row of copies (the output inserters at one height) moved in each period, as the game recorded it
+            // a build of copies: what each row of copies (the output inserters at one height) moved in each window cycle, as the game recorded it
             const row_of = new Map(inserter_positions.map(it => [it.unit_number, it.y]));
             const output_unit_numbers = outputInserters(result.recording, recipesMaking(config, config.setpoint.recipe)).map(it => it.unit_number!);
             const row_ys = Array.from(new Set(output_unit_numbers.map(unit => row_of.get(unit)))).filter((y): y is number => y !== undefined).sort((a, b) => a - b);
@@ -688,8 +688,8 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             expect(Array.isArray(steady.finals) ? steady.finals : [], "the final machines the probe counts")
                 .toHaveLength(config.machines.filter(machine => recipes.includes(machine.recipe)).length * copies);
             expect(window_cycles.length, `the recording of ${result.recording.sample_count} ticks holds a whole clock period`).toBeGreaterThan(0);
-            // the first period is left out: the build may still be settling into the clock. A clock that counts over a minute is
-            // recorded over one period, which is checked whole: the settle ended at steady state
+            // the first window cycle is left out: the build may still be settling into the clock. A clock that counts over a minute is
+            // recorded over one window cycle, which is checked whole: the settle ended at steady state
             const checked = window_cycles.length > 1 ? window_cycles.slice(1) : window_cycles;
             const wrong_length = checked.filter(it => it.end - it.start !== window_cycle_ticks);
             expect(wrong_length, `every one of the ${checked.length} periods checked lasts ${window_cycle_ticks} ticks, as the generated clock does`).toEqual([]);

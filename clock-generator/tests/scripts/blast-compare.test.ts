@@ -14,7 +14,7 @@ const sha = (c: string) => c.repeat(64);
 /** A job file with one alternative, the fields compare.py reads */
 const jobFile = (name: string, clock = sha('a')) => {
     const results = { label: sha('1') };
-    const alt = { id: 'even-hands', verdict: 'stable', holds: true, rate: 640, supply: null, window_cycle_ticks: 972, wake_ups: 10, clock_sha256: clock, text_sha256: sha('2'), descriptions_cut: 0, results_sha256: sha('3'), results };
+    const alt = { id: 'even-hands', verdict: 'stable', holds: true, rate: 640, supply: null, period: 972, wake_ups: 10, clock_sha256: clock, text_sha256: sha('2'), descriptions_cut: 0, results_sha256: sha('3'), results };
     return {
         group: 'config', name, selected_index: 0, results_sha256: sha('4'), job_results: { results_sha256: sha('5'), results },
         selected: alt, alternatives: [alt], seconds: 1,

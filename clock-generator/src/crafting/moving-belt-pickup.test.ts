@@ -9,7 +9,7 @@ import { AlwaysEnabledControl } from "../simulation/controls/enable-control";
 import { EntityState } from "../state";
 
 const SAMPLE = GameFixturePaths.DIFFERENT_ITEMS_CONFIG;
-// The old default from 0.17.0: measured at 480–528 instead of 528 per period on both moving underground endpoints.
+// The old default from 0.17.0: measured at 480–528 instead of 528 per window cycle on both moving underground endpoints.
 const OLD_WINDOWS = {
     "inserter:1": Array.from({ length: 11 }, (_, k) => ({ start: 1 + 96 * k, end: 37 + 96 * k })),
     "inserter:2": [[13, 51], [109, 147], [217, 244], [301, 339], [346, 362], [409, 425], [434, 461],

@@ -33,7 +33,7 @@ describe('export-clock.js on automation science', () => {
         expect(arm.wake_ups_per_minute).toBeGreaterThan(0);
         const clock = read(out, 'takt_batches_observed_swings_2', 'automation-240.json');
         expect(clock.selected).toMatchObject({ id: 'takt_batches_observed_swings_2', verdict: 'stable' });
-        expect(clock.period_ticks).toBe(arm.period_ticks);
+        expect(clock.window_cycle_ticks).toBe(arm.window_cycle_ticks);
         expect(clock.counted_ticks).toBeGreaterThan(0);
         const combinators = clock.schedule.inserter_combinators as { entity_number: number; inserter_ids: number[] }[];
         const entities = decode(clock.blueprint).entities;

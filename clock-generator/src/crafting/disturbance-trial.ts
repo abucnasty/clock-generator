@@ -6,13 +6,13 @@
  * A loss is run as the rule words it. The belts and chests around a build are a supply that is always full and a
  * place that always takes; for the length of a loss one item is withheld from them, or one is refused by them (see
  * SupplyGate). The loss lasts until the build has stopped: nothing was picked up, dropped, crafted or burned for a
- * whole period, so every machine that depends on the item is dry or full and everything else has backed up to its
- * limits. Then the item comes back, at a place in the clock period the trial names, and what the output inserters drop
- * is counted period by period from that tick on.
+ * whole window cycle, so every machine that depends on the item is dry or full and everything else has backed up to its
+ * limits. Then the item comes back, at a place in the window cycle the trial names, and what the output inserters drop
+ * is counted window cycle by window cycle from that tick on.
  *
  * The trials of a loss are the same for every build and every clock (see LOSS_PLACES and LOSS_SHARES): the loss is
- * cut at four places in the clock period, and at each it lasts a quarter, a half, three quarters and all of the time
- * the build takes to stop. A loss that runs its course is restored at the place in the period it was cut at. Where
+ * cut at four places in the window cycle, and at each it lasts a quarter, a half, three quarters and all of the time
+ * the build takes to stop. A loss that runs its course is restored at the place in the window cycle it was cut at. Where
  * the clock stands when the item comes back decides which window sees a machine first, and a loss that ends before
  * the build has stopped leaves the machines part empty or part full, which one that runs its course never does.
  * One run makes the trials of a loss one after the other.
@@ -45,10 +45,10 @@ export type DisturbanceTrial =
     | ExcessLoss;
 
 /**
- * More of the results that come by chance than their expected amount, as the game's rolls give them in a run of periods
+ * More of the results that come by chance than their expected amount, as the game's rolls give them in a run of window cycles
  * over the mean (the simulator gives every result at its expected amount). Each machine of `at` places `count` more of
- * its item at once into its result target, or into its own output where it has none, at each place in the period. The
- * build has to hold its expected output through it, every period: an excess the clock takes up costs it nothing, and
+ * its item at once into its result target, or into its own output where it has none, at each place in the window cycle. The
+ * build has to hold its expected output through it, every window cycle: an excess the clock takes up costs it nothing, and
  * one it does not costs it a hand of its output, which it does not get back (on the recycler that voids iron ore, the
  * inserters that bring the ore in wait while what came back fills the recycler to its insertion limit). The excess is
  * the backlog the random margins say the container takes up (`CraftingMargin.backlog`, excessLossOf in
@@ -85,18 +85,18 @@ export function lossLabel(loss: DisturbanceTrial): string {
     return loss.kind === "output" ? `${item} is not taken away` : `${item} stops arriving`;
 }
 
-/** One trial of a loss: where in the clock period it starts, in ticks from the start of a period, and when it ends */
+/** One trial of a loss: where in the window cycle it starts, in ticks from the start of a window cycle, and when it ends */
 type LossTrialPlan =
-    /** The loss lasts until the build has stopped, and ends at this place in the period */
+    /** The loss lasts until the build has stopped, and ends at this place in the window cycle */
     | { cut_at: number; restore_at: number }
     /** The loss lasts this many ticks, whatever the build is doing by then */
     | { cut_at: number; loss_ticks: number };
 
-/** Places in the clock period a loss is cut at, as shares of the period */
+/** Places in the window cycle a loss is cut at, as shares of the window cycle */
 export const LOSS_PLACES: readonly number[] = [0, 1 / 4, 1 / 2, 3 / 4];
 /**
  * How long a loss lasts, as shares of the ticks the build takes to stop once the item is gone. 1 is a loss that
- * runs its course: it lasts until the build has stopped, and is restored at the place in the period it was cut at.
+ * runs its course: it lasts until the build has stopped, and is restored at the place in the window cycle it was cut at.
  */
 export const LOSS_SHARES: readonly number[] = [1 / 4, 1 / 2, 3 / 4, 1];
 
@@ -119,7 +119,7 @@ export function lossTrialsPartOfTheWay(
         ({ cut_at: Math.floor(place * bin_ticks), loss_ticks: Math.max(1, Math.ceil(share * stops_after_ticks)) })));
 }
 
-/** A loss ends at the latest after this many periods, whether the build has stopped or not */
+/** A loss ends at the latest after this many window cycles, whether the build has stopped or not */
 export const MAX_LOSS_WINDOW_CYCLES = 200;
 
 /** The losses a build whose items spoil is tried with: shorter than `ticks`, which `item`, its first to spoil, sets */
@@ -161,36 +161,36 @@ export function lossLimitOf(
     return first === null ? null : { ticks: first.spoil_ticks * SPOIL_LIMIT_SHARE, item: first.item };
 }
 /**
- * Periods after the item is back in which the build has to be at its expected output again. A run on clock windows
- * alone repeats once its state does, so most trials end long before: with the state of a period boundary seen
+ * Window cycles after the item is back in which the build has to be at its expected output again. A run on clock windows
+ * alone repeats once its state does, so most trials end long before: with the state of a window cycle boundary seen
  * before, what the build did since then is what it does for good.
  */
 export const MAX_RECOVERY_WINDOW_CYCLES = 40;
 /**
- * Where the state cannot be compared (a fuel inserter on a clock of its own does not repeat with the period), the
- * build has recovered when this many periods at the end of the recovery are all at the expected output.
+ * Where the state cannot be compared (a fuel inserter on a clock of its own does not repeat with the window cycle), the
+ * build has recovered when this many window cycles at the end of the recovery are all at the expected output.
  */
 const RECOVERY_HOLD_WINDOW_CYCLES = 8;
 /**
- * A trial that is short late in its window runs on (see runsOn): until this many periods at the expected output follow
+ * A trial that is short late in its window runs on (see runsOn): until this many window cycles at the expected output follow
  * its last short one, or its state repeats, and is judged on them. More than any stretch at the expected output that a
- * short period followed in the samples' trials (35 periods, agricultural science's batched swings after a loss of
- * nutrients, run on to 200 periods); as many as the window has (MAX_RECOVERY_PERIODS), a choice of its own.
+ * short window cycle followed in the samples' trials (35 window cycles, agricultural science's batched swings after a loss of
+ * nutrients, run on to 200 window cycles); as many as the window has (MAX_RECOVERY_WINDOW_CYCLES), a choice of its own.
  */
 export const RUN_ON_EXACT_WINDOW_CYCLES = 40;
-/** A trial that runs on ends at the latest this many periods after the item is back */
+/** A trial that runs on ends at the latest this many window cycles after the item is back */
 export const MAX_RUN_ON_WINDOW_CYCLES = 200;
 /**
- * A trial is short late when it was at the expected output in the RECOVERY_HOLD_PERIODS before this mark (as a recovery
+ * A trial is short late when it was at the expected output in the RECOVERY_HOLD_WINDOW_CYCLES before this mark (as a recovery
  * without a repeated state has to end) and is short after it only: it would be back in a window this long, and falls
- * short in the last RECOVERY_HOLD_PERIODS of MAX_RECOVERY_PERIODS.
+ * short in the last RECOVERY_HOLD_WINDOW_CYCLES of MAX_RECOVERY_WINDOW_CYCLES.
  */
 export const LATE_AFTER_WINDOW_CYCLES = MAX_RECOVERY_WINDOW_CYCLES - RECOVERY_HOLD_WINDOW_CYCLES;
 
 /**
  * Whether a trial that is not back at the end of its window runs on: no state of it repeated (one that did proves what
  * it does for good), it is not at the rate from any bin before `late_after_bins` on (it fell behind its share after the
- * mark), and it was at the rate over the `back_bins` bins before the mark. A bin of many periods (a subtick clock's)
+ * mark), and it was at the rate over the `back_bins` bins before the mark. A bin of many window cycles (a subtick clock's)
  * leaves no room for that: such a trial does not run on.
  *
  * @param branches the bins of each branch of the terminal outputs into sinks that never block (see terminal-rate.ts);
@@ -213,22 +213,22 @@ export function runsOn(
 
 export interface DisturbanceTrialOptions {
     loss: DisturbanceTrial;
-    /** Ticks of the clock period the windows are of */
+    /** Ticks of the window cycle the windows are of */
     window_cycle_ticks: number;
-    /** Items the output inserters are expected to drop in a period */
+    /** Items the output inserters are expected to drop in a window cycle */
     expected_output_items: number;
-    /** Places in the period to cut at, in place of LOSS_PLACES: fewer make the run shorter */
+    /** Places in the window cycle to cut at, in place of LOSS_PLACES: fewer make the run shorter */
     places?: readonly number[];
     /** Shares of the time the build takes to stop, in place of LOSS_SHARES */
     shares?: readonly number[];
     max_loss_window_cycles?: number;
     max_recovery_window_cycles?: number;
     recovery_hold_window_cycles?: number;
-    /** In place of RUN_ON_EXACT_PERIODS */
+    /** In place of RUN_ON_EXACT_WINDOW_CYCLES */
     run_on_exact_window_cycles?: number;
-    /** In place of MAX_RUN_ON_PERIODS; 0 or less than the window: no trial runs on */
+    /** In place of MAX_RUN_ON_WINDOW_CYCLES; 0 or less than the window: no trial runs on */
     max_run_on_window_cycles?: number;
-    /** In place of LATE_AFTER_PERIODS */
+    /** In place of LATE_AFTER_WINDOW_CYCLES */
     late_after_window_cycles?: number;
     /** A loss lasts fewer ticks than this (see lossLimitOf); without it, as long as the build takes to stop */
     loss_limit_ticks?: number;
@@ -239,16 +239,16 @@ export interface DisturbanceTrialOptions {
      */
     fixed_loss_ticks?: number;
     /**
-     * Items whose count in a container is watched: a trial recovers only where, after its recovery periods, the container
+     * Items whose count in a container is watched: a trial recovers only where, after its recovery window cycles, the container
      * holds no more of them than `limit` (the backlog the loss left has drained)
      */
     watched_backlog?: { container_id: string; items: readonly ItemName[]; limit: number };
 }
 
 export interface LossTrial {
-    /** Where in the period the item went, in ticks */
+    /** Where in the window cycle the item went, in ticks */
     cut_at: number;
-    /** Where in the period it came back */
+    /** Where in the window cycle it came back */
     restore_at: number;
     /** Whether the loss lasted until the build had stopped; false for one that was planned to end part of the way */
     until_stopped: boolean;
@@ -289,9 +289,9 @@ export interface WatchedExport {
 
 export interface LossOutcome {
     loss: DisturbanceTrial;
-    /** Ticks in a bin: the clock period, or the whole ticks after which a fractional period repeats */
+    /** Ticks in a bin: the window cycle, or the whole ticks after which a fractional window cycle repeats */
     bin_ticks: number;
-    /** Clock periods in a bin */
+    /** Clock window cycles in a bin */
     window_cycles_per_bin: number;
     expected_per_bin: number;
     /** Trials from the canonical start, or the first lane-phase start that fails, up to the first that does not recover. */
@@ -464,14 +464,14 @@ function placeExcess(context: SimulationContext, loss: ExcessLoss): void {
  *
  * @param context the build on its clock windows, warmed up
  * @param output_inserters the inserters whose drops are the output of the build
- * @param bin whole ticks the output is counted in, and the clock periods they are
- * @param quiet_ticks ticks without anything done after which the build has stopped: a period, or the longest clock of
+ * @param bin whole ticks the output is counted in, and the window cycles they are
+ * @param quiet_ticks ticks without anything done after which the build has stopped: a window cycle, or the longest clock of
  *                    an inserter that has one of its own
  * @param watched_exports the belts with a consumption rate, whose deliveries in the bins the build ends in are held to what their
  *                consumers take as the output is held to its expected output
  * @param proof_stride bins between boundaries whose equal states repeat for good: 1 when every inserter is on the
- *                     clock of the period or always enabled, more when inserters have clocks of their own (fuel),
- *                     which stand at the same place only every merged period (see provenRepeatBin); null when a
+ *                     clock of the window cycle or always enabled, more when inserters have clocks of their own (fuel),
+ *                     which stand at the same place only every merged window cycle (see provenRepeatBin); null when a
  *                     repeated state proves nothing (some control decides from more than the tick)
  */
 export function runLossTrials(
@@ -497,7 +497,7 @@ export function runLossTrials(
         : branchesScaledTo(terminal_branches, options.expected_output_items);
     const branch_states = branches.map(branch => output_inserters.filter(state => branch.inserter_ids.includes(state.entity_id.id)));
     const branchDropped = () => branch_states.map(states => states.reduce((sum, state) => sum + state.items_dropped, 0));
-    // the most ticks a loss lasts: until the build has stopped, at most the periods of MAX_LOSS_PERIODS, and shorter
+    // the most ticks a loss lasts: until the build has stopped, at most the window cycles of MAX_LOSS_WINDOW_CYCLES, and shorter
     // than the loss limit of a build whose items spoil
     const limit_ticks = options.loss_limit_ticks !== undefined ? Math.max(1, Math.ceil(options.loss_limit_ticks) - 1) : Infinity;
     const max_loss_ticks = Math.min(limit_ticks, Math.ceil((options.max_loss_window_cycles ?? MAX_LOSS_WINDOW_CYCLES) * options.window_cycle_ticks));
@@ -683,7 +683,7 @@ export function runLossTrials(
             judged = judgeRecovery(output_per_bin, expected_per_bin, repeats_from, run_on_bins, branch_bins);
         }
         const ran_on_bins = output_per_bin.length - window_bins;
-        // an excess has to cost the build nothing: it is at its expected output from the first period on
+        // an excess has to cost the build nothing: it is at its expected output from the first window cycle on
         if (loss.kind === "excess" && judged.recovers && judged.recovered_after_bins !== 0) {
             judged = { ...judged, recovers: false, recovered_after_bins: null };
         }
@@ -744,7 +744,7 @@ export interface DisturbanceTrialReport {
     survives: boolean;
     /** The losses it does not get back from, by lossId */
     broken_by: string[];
-    /** The most periods it took to be back at the expected output over all trials; null when it does not survive */
+    /** The most window cycles it took to be back at the expected output over all trials; null when it does not survive */
     recovered_after_window_cycles: number | null;
     /** Ticks simulated for the trials of all losses, without the warm-up of each run */
     ticks: number;
@@ -798,7 +798,7 @@ export interface DisturbanceTrialVerdict {
      * default order, and not in another (the loss's `failed_taker_order`). Absent where there are none.
      */
     broken_under_other_taker_orders?: string[];
-    /** The most periods it took to be back at the expected output over all trials; null when it does not survive */
+    /** The most window cycles it took to be back at the expected output over all trials; null when it does not survive */
     recovered_after_window_cycles: number | null;
     /** For a build whose items spoil: the losses were shorter than this (lossLimitOf); absent for any other build */
     loss_limit?: LossLimit;

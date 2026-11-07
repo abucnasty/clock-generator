@@ -12,7 +12,7 @@ import { transitionsOf } from "../sequence/compact-history";
  * clock, `withBeltPickupSlack` in clock.ts, since the belt a clock is made for is read off it.
  */
 
-/** Every window of the inserters named lengthened at its end by `padding` ticks, up to the end of the period */
+/** Every window of the inserters named lengthened at its end by `padding` ticks, up to the end of the window cycle */
 export function paddedWindows(
     windows: Map<string, OpenRange[]>,
     padded_ids: Iterable<string>,
@@ -32,7 +32,7 @@ export function paddedWindows(
     return result;
 }
 
-/** The crafting cycle a window belongs to: the one it starts in, the last cycle taking what runs past the period */
+/** The crafting cycle a window belongs to: the one it starts in, the last cycle taking what runs past the window cycle */
 export function cycleOfWindow(range: OpenRange, cycle_ticks: number, cycles: number): number {
     return Math.min(cycles - 1, Math.floor(range.start_inclusive / cycle_ticks));
 }
@@ -86,7 +86,7 @@ export function withSingleSwingOutput(
 ): Map<string, OpenRange[]> {
     const spacing = window_cycle_ticks / swings;
     const result = new Map(windows);
-    // floor keeps every start below the period, so starts stay whole ticks
+    // floor keeps every start below the window cycle, so starts stay whole ticks
     const starts = Array.from({ length: swings }, (_, j) => Math.floor(offset + j * spacing));
     const ranges = OpenRange.reduceRanges(starts.flatMap((start, j) => {
         const extra = spare && j % spare.every === 0 ? spare.ticks : 0;
@@ -99,7 +99,7 @@ export function withSingleSwingOutput(
 }
 
 /**
- * The output inserters' swings spread evenly over the period, one swing per window. Windows are the shortest
+ * The output inserters' swings spread evenly over the window cycle, one swing per window. Windows are the shortest
  * planned window minus the circuit latency, since the game keeps the inserter enabled that much longer and
  * a longer window lets it return and grab a partial stack. Null when that would not change anything or cannot be built.
  */
@@ -134,7 +134,7 @@ export function evenlySpacedOutputWindows(
     return changed ? even : null;
 }
 
-/** How many swings each output inserter made in the first period of a run: its drops, as the trial recorded them */
+/** How many swings each output inserter made in the first window cycle of a run: its drops, as the trial recorded them */
 export function outputSwingCountsOf(run: TrialRun, output_ids: ReadonlySet<string>, window_cycle_ticks: number): Map<string, number> {
     const swing_counts = new Map<string, number>();
     for (const entity of run.serializable_state_transition_history.entities) {
@@ -169,7 +169,7 @@ export function busyDeciderRanges(
     transitions: { tick: number; to_status: string }[],
     window_cycle_ticks: number,
 ): OpenRange[] {
-    // manual lcm overrides can produce fractional periods; the simulation runs whole ticks up to the ceiling
+    // manual lcm overrides can produce fractional window cycles; the simulation runs whole ticks up to the ceiling
     const ticks = Math.ceil(window_cycle_ticks);
     const busy = new Array<boolean>(ticks).fill(false);
     const sorted = [...transitions].sort((a, b) => a.tick - b.tick);

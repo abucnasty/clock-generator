@@ -28,9 +28,9 @@ const FULL_HAND_SPARE_EVERY = [3, 2];
 const FULL_HAND_SPARE_TICKS = Array.from({ length: 13 }, (_, i) => i + 4);
 
 /**
- * Warmup periods after which a run started with full output machines must be back at the expected output. On its way
- * back a build can lose a hand of ingredients and with it a period of output: automation science without belt pickup
- * slack does in its second period, and holds the expected output from the third on.
+ * Warmup window cycles after which a run started with full output machines must be back at the expected output. On its way
+ * back a build can lose a hand of ingredients and with it a window cycle of output: automation science without belt pickup
+ * slack does in its second window cycle, and holds the expected output from the third on.
  */
 const FULL_HAND_RECOVERY_WINDOW_CYCLES = [3, 4];
 

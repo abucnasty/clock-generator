@@ -14,7 +14,7 @@ import {assertFeedBacksUp, PickupClockScenario} from "./pickup-clock-capture";
  * The inserter build (`INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK`, 240 a second over three copies, 80 a second each) as
  * it was built: three copies in a row, the ore lines of the copies running on past the last into loaders and
  * void chests (drained and moving), the circuits and the product from chests and a loader. The hand-made clock is in it,
- * one for the three copies: a counter of the clock signal that counts 0 to 215 (a period of 216 ticks), and two window
+ * one for the three copies: a counter of the clock signal that counts 0 to 215 (a window cycle of 216 ticks), and two window
  * combinators, an iron plate signal on ticks 1-33 and 109-138 for the 12 ore and 12 plate inserters and an iron gear
  * wheel signal on ticks 1-65 and 109-173 for the 3 gear inserters; the circuit and output inserters are not wired.
  *

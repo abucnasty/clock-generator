@@ -88,8 +88,8 @@ export class InventoryTransferHistory extends MapExtended<EntityId, InventoryTra
                 if (transfer.pickup_tick_before_run === undefined || window_cycle_ticks === undefined) {
                     return [in_run];
                 }
-                // A swing in flight when the run started was picked up at the end of the period before. The run
-                // repeats every period, so that pickup needs a window at the end of this one, up to where the part
+                // A swing in flight when the run started was picked up at the end of the window cycle before. The run
+                // repeats every window cycle, so that pickup needs a window at the end of this one, up to where the part
                 // of the swing inside the run takes over.
                 const wrapped_start = transfer.pickup_tick_before_run + window_cycle_ticks;
                 const before_run: InventoryTransfer = {
@@ -171,7 +171,7 @@ function mergeOverlappingRanges(original: ReadonlyMap<EntityId, InventoryTransfe
             const merged_ranges: OpenRange[] = OpenRange.reduceRanges(ranges.map(it => it.tick_range), overlap_threshold)
             // The merged ranges are in order and apart, and every transfer lies inside one of them, so a transfer
             // belongs to the last merged range that starts at or before it. Finding it by bisection keeps the cost of
-            // a history of n transfers at n log n (every run of a long period records tens of thousands).
+            // a history of n transfers at n log n (every run of a long window cycle records tens of thousands).
             const amounts: number[] = merged_ranges.map(() => 0)
             const pickups_before_run: (number | undefined)[] = merged_ranges.map(() => undefined)
             ranges.forEach(transfer => {

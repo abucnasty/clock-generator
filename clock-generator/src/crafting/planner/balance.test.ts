@@ -45,7 +45,7 @@ describe("the balance equations of accumulator 640", () => {
         // 9 hands of 16 out of each plant
         const made = ["machine:1", "machine:2"].reduce((sum, machine) => sum.add(balance.made.get(machine)!), fraction(0));
         expect(made.multiply(cycles).toString()).toBe("288");
-        // every hand of a period is whole; the crafts need not be: 4/3 of the battery plants' a cycle at +200% productivity
+        // every hand of a window cycle is whole; the crafts need not be: 4/3 of the battery plants' a cycle at +200% productivity
         expect(balance.transfers.every(it => it.items.every(item => item.hands.multiply(cycles).getDenominator === 1))).toBe(true);
     });
 });

@@ -13,7 +13,7 @@ import { SimulationContext } from "./sequence/simulation-context";
 describe("a clock-only run starts as the staged scaffold does", () => {
     let config: Config;
     let result: BlueprintGenerationResult;
-    /** The first period of the clock with no warm-up of its own, from the start named */
+    /** The first window cycle of the clock with no warm-up of its own, from the start named */
     let first_window_cycle: (start?: Parameters<typeof simulateClockOnly>[5]) => StockRecording;
 
     beforeAll(async () => {

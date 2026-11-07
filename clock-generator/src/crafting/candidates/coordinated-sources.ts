@@ -14,11 +14,11 @@ import type { EnableControl, SourceControl } from "../strategy-catalog";
 
 /**
  * The per-branch clock (DESIGN D7, PR 18): each part of the build gets the windows of the clock that fits it, all on one shared
- * period, the period of today's recommended clock.
+ * window cycle, the window cycle of today's recommended clock.
  *
  * - **Parts:** every clock the other makers built for the build (`CoordinatedSourcesPart`): the stable alternatives, every way of the grouped
  *   hands construction (whether its clock holds as a whole or not), and the per-hand shape of every way that guards takers. A part
- *   gives windows where its period divides the shared one (its windows repeated) and its own clock's long run was counted as built;
+ *   gives windows where its window cycle divides the shared one (its windows repeated) and its own clock's long run was counted as built;
  *   a part with no count gives none.
  * - **Groups:** the inserters that take from one source entity. A group takes the windows of all its inserters from one part, and
  *   an inserter that part leaves always enabled stays so. No window is made that no part makes.
@@ -30,7 +30,7 @@ import type { EnableControl, SourceControl } from "../strategy-catalog";
  * - **The clock** is then checked as a whole: the one-tick margin here (`holdsWithMargin`), and the checks of every alternative
  *   where it is listed (as built from every start, every loss).
  *
- * Throws CoordinatedSourcesNotApplicable where there is nothing to compose: no recommended clock among the parts, a period that is not
+ * Throws CoordinatedSourcesNotApplicable where there is nothing to compose: no recommended clock among the parts, a window cycle that is not
  * whole, no group with a choice, or a local choice that keeps the recommended clock.
  */
 export class CoordinatedSourcesNotApplicable extends Error { }
@@ -44,7 +44,7 @@ function refuse(reason: string): never {
 
 const quiet: Logger = { log: () => { }, info: () => { }, warn: () => { }, error: () => { }, debug: () => { } } as unknown as Logger;
 
-/** The windows of a period repeated over a period that is a whole number of times as long */
+/** The windows of a window cycle repeated over a window cycle that is a whole number of times as long */
 export function tiledWindows(windows: SerializableClockWindows, window_cycle_ticks: number, shared_ticks: number): SerializableClockWindows {
     if (window_cycle_ticks === shared_ticks) return windows;
     const times = shared_ticks / window_cycle_ticks;
@@ -159,7 +159,7 @@ const partName = (part: CoordinatedSourcesPart): string => part.alternative_id ?
 
 /**
  * The plan the composed clocks run on: the config with the recommended clock's output swings, cycles and fractional swings; where its
- * period is not the shared one, planned again with the cycles that make it so
+ * window cycle is not the shared one, planned again with the cycles that make it so
  */
 function sharedPlan(config: Config, recommended: CoordinatedSourcesPart): UnclockedRun {
     const plan = recommended.plan ?? {};
@@ -205,7 +205,7 @@ export function coordinatedSourcesClock(config: Config, input: CoordinatedSource
     const fits = (part: CoordinatedSourcesPart) => Number.isInteger(part.window_cycle_ticks) && Number.isInteger(shared_ticks / part.window_cycle_ticks)
         && (part === recommended || part.alternative_id === undefined || part.verdict === "stable");
     const candidates = input.parts.filter(part => part !== recommended && fits(part) && part.counted !== false);
-    // a part gives windows where its own clock on the shared period was counted as built: one of that period counted already (its own
+    // a part gives windows where its own clock on the shared window cycle was counted as built: one of that window cycle counted already (its own
     // check), any other counted here, once, where it gives a group a choice the parts before it do not
     const given = new Set(partGroups(inserters, [recommended], shared_ticks).map(group => `${group.source}|${JSON.stringify(group.choices[0].windows)}`));
     let counted_here = 0;

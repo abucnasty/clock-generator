@@ -16,7 +16,7 @@
  *   belt draw from its fillers too;
  * - a machine makes what the target asks of it directly plus what the edges taking from it move, and what the machines
  *   that place results into others are asked.
- * Hands need not be whole a cycle: the period is the lcm of their denominators (the repetitions vector), and a machine's
+ * Hands need not be whole a cycle: the window cycle is the lcm of their denominators (the repetitions vector), and a machine's
  * crafts need not be whole at all (it carries part crafts and productivity from one cycle to the next).
  *
  * The system is solved in exact fractions by substitution, the consumers first: the machine rows, condensed into their
@@ -35,7 +35,7 @@
  *
  * Synchronous dataflow models a producer's `held_limit` and a consumer's insertion limit as bounded buffers: back edges
  * with that many initial tokens. A back edge's row is its forward edge's with the sign turned, so it changes no solution
- * of `Γq = 0` and is no row here; the limits bound which periods can run (P-limit, P-stock), not the hands of one.
+ * of `Γq = 0` and is no row here; the limits bound which window cycles can run (P-limit, P-stock), not the hands of one.
  *
  * The transfers are listed from the target's edges back to the inputs: the target's edges, the fillers of the export
  * belts, then each machine's loaders from the output back, every filler after the edge it fills for.
@@ -552,8 +552,8 @@ function machineLoaders(view: BalanceView, direct: Asked, include_fuel: boolean)
 
 /**
  * Fuel is burned at a rate that has nothing to do with the hands of the plan, so counted exactly it would stretch the
- * clock period to fit it. What an inserter carries on top of its ingredients is rounded up to the fractions of a hand its
- * ingredients already come in: a little more room than the fuel needs, in a period that stays the same.
+ * window cycle to fit it. What an inserter carries on top of its ingredients is rounded up to the fractions of a hand its
+ * ingredients already come in: a little more room than the fuel needs, in a window cycle that stays the same.
  */
 function fuelRoundedUp(with_fuel: BalancedTransfer, without_fuel: BalancedTransfer | undefined): BalancedTransfer {
     const cycles = without_fuel?.total.getDenominator ?? 1;
@@ -653,7 +653,7 @@ export function balanceOf(facts: PlannerFacts, graph: PlannerGraph, seed: Balanc
     return seed.counts === "made" ? balanceMade(view, seed) : balanceDestroyed(view, seed);
 }
 
-/** The cycles of the period: the lcm of the denominators of every hand a cycle, those of `ignored_items` left out */
+/** The cycles of the window cycle: the lcm of the denominators of every hand a cycle, those of `ignored_items` left out */
 export function windowCycleCyclesOf(transfers: readonly BalancedTransfer[], ignored_items: readonly string[] = []): number {
     const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
     return transfers.flatMap(it => it.items).filter(it => !ignored_items.includes(it.item))

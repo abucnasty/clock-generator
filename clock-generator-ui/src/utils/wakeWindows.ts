@@ -9,20 +9,20 @@ import { entityLabel, type LabelKind } from './entityLabel';
 import { rowRouteText } from './wakeWindowCopy';
 import type { EntityOption } from './inserterOptions';
 
-/** Inclusive ticks of one clock period */
+/** Inclusive ticks of one window cycle */
 export interface TickSpan {
     start: number;
     end: number;
 }
 
 export interface WakeWindow {
-    /** First tick of the window; for a window that wraps past the end of the period, `end` is less than `start` */
+    /** First tick of the window; for a window that wraps past the end of the window cycle, `end` is less than `start` */
     start: number;
     /** Last tick of the window, inclusive */
     end: number;
     /** Ticks in the window, both ends included */
     length: number;
-    /** What is drawn: one bar, or two for a window that wraps (from `start` to the end of the period, then from 0) */
+    /** What is drawn: one bar, or two for a window that wraps (from `start` to the end of the window cycle, then from 0) */
     segments: TickSpan[];
     wraps: boolean;
     /** Ticks at the end of the window that are belt slack; 0 when none */
@@ -57,9 +57,9 @@ export interface WakeWindowRow {
     /** Why the clock leaves it always on, when the engine says; only on a row in 'always-on' mode */
     alwaysOnReason?: AlwaysOnReason;
     ownClock?: OwnClock;
-    /** Ticks of the period it is on: the windows' lengths, the whole period when always on */
+    /** Ticks of the window cycle it is on: the windows' lengths, the whole window cycle when always on */
     onTicks: number;
-    /** Share of the period it is on, 0 to 1 */
+    /** Share of the window cycle it is on, 0 to 1 */
     onShare: number;
     /** The engine's count for this inserter, a minute, one copy; null for a drill and when the clock has none */
     wakeUpsPerMinute: number | null;
@@ -72,7 +72,7 @@ export type WakeWindowSource = Pick<
 
 const TICKS_PER_SECOND = 60;
 
-/** Last tick of a period: a period of 600 ticks runs 0 to 599, a subtick one of 550.957 runs 0 to 550 */
+/** Last tick of a window cycle: a window cycle of 600 ticks runs 0 to 599, a subtick one of 550.957 runs 0 to 550 */
 export function lastTickOf(window_cycle_ticks: number): number {
     return Number.isInteger(window_cycle_ticks) ? window_cycle_ticks - 1 : Math.floor(window_cycle_ticks);
 }
@@ -93,8 +93,8 @@ function windowOf(segments: TickSpan[]): WakeWindow {
 }
 
 /**
- * The windows of one entity as one period of the clock holds them: sorted, clamped to the period, overlapping and
- * touching windows merged, and a window that runs past the end of the period joined with its rest from tick 0.
+ * The windows of one entity as one window cycle of the clock holds them: sorted, clamped to the window cycle, overlapping and
+ * touching windows merged, and a window that runs past the end of the window cycle joined with its rest from tick 0.
  */
 export function normalizeWindows(raw: readonly TickSpan[], window_cycle_ticks: number): WakeWindow[] {
     const lastTick = lastTickOf(window_cycle_ticks);
@@ -119,7 +119,7 @@ export function normalizeWindows(raw: readonly TickSpan[], window_cycle_ticks: n
     return merged.map(window => windowOf([window]));
 }
 
-/** Share of the period the windows cover, 0 to 1; a wrapped window counts once */
+/** Share of the window cycle the windows cover, 0 to 1; a wrapped window counts once */
 export function coverage(windows: readonly WakeWindow[], window_cycle_ticks: number): number {
     if (window_cycle_ticks <= 0) {
         return 0;
@@ -325,13 +325,13 @@ export function mostWokenRowId(rows: readonly WakeWindowRow[]): string | null {
 
 /**
  * Tick marks of the axis at a step of 1, 2 or 5 times a power of ten, so there are at most `maxMarks`, 0 included.
- * The end of the period is labelled separately, so no mark is placed on or past it.
+ * The end of the window cycle is labelled separately, so no mark is placed on or past it.
  */
 export function axisTicks(window_cycle_ticks: number, maxMarks: number): number[] {
     if (!(window_cycle_ticks > 0) || maxMarks <= 1) {
         return [0];
     }
-    // the marks below the period at a step; a step of the period or more leaves only 0, so the search ends
+    // the marks below the window cycle at a step; a step of the window cycle or more leaves only 0, so the search ends
     const marksAt = (step: number) => Array.from({ length: Math.ceil(window_cycle_ticks / step) }, (_, index) => index * step);
     for (let power = 1; ; power *= 10) {
         for (const factor of [1, 2, 5]) {

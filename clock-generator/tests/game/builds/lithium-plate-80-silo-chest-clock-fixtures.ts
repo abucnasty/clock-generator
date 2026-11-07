@@ -15,7 +15,7 @@ import {PickupClockScenario} from "./pickup-clock-capture";
  * The lithium plate build, 80 a second from one copy (`LITHIUM_PLATE_80_SILO_CHEST`): two cryogenic plants, fed
  * holmium plates by infinity chests, put lithium into a rocket silo taken as a chest, and six furnaces take it out and
  * put plates onto a belt that a loader empties into a disposal chest. The silo holds at most 250 lithium (by weight), so
- * the standard cuts of 2 periods (of 7,560 or 1,080 ticks) empty it many times over.
+ * the standard cuts of 2 window cycles (of 7,560 or 1,080 ticks) empty it many times over.
  *
  * The clock with 3 output swings (selected until the default dispatch changed) is recorded in two build orders. The game serves inserters that act on one entity
  * in the same tick in the order of their unit numbers, the last built first (docs/simulator.md): as the build's blueprint

@@ -18,11 +18,11 @@ import { Logger } from "../../../common/logger";
 import { ContainerStorage } from "../../../simulation/components/container-storage";
 
 /**
- * The ticks of the game a clock of the game of this period counts where it runs on through the steps of a run (where
- * they are given), or undefined where it does not: a clock of a whole-tick period runs through.
- * A warm-up of whole periods ends where a period of such a clock starts, so the one period recorded after it starts
- * there too. A clock of p/q ticks would be a fraction of a tick into a period after a warm-up of whole periods (10
- * periods of 12672/23 ticks run 5510 ticks), and a one-period judgement assumes a period's start: it starts again with
+ * The ticks of the game a clock of the game of this window cycle counts where it runs on through the steps of a run (where
+ * they are given), or undefined where it does not: a clock of a whole-tick window cycle runs through.
+ * A warm-up of whole window cycles ends where a window cycle of such a clock starts, so the one window cycle recorded after it starts
+ * there too. A clock of p/q ticks would be a fraction of a tick into a window cycle after a warm-up of whole window cycles (10
+ * window cycles of 12672/23 ticks run 5510 ticks), and a one-period judgement assumes a window cycle's start: it starts again with
  * the recorded run, as before, unless the run is judged over its whole counter (`counter_runs_through`, under
  * whole-counter checks), whose total does not depend on where in the counter it starts.
  */
@@ -48,15 +48,15 @@ export class EnableControlFactory {
         /**
          * The ticks the clocks of the game count, where they run through the steps of a run: they
          * then keep their count when a later step starts. Without it they count the run's ticks and start again with each step.
-         * Only a clock of a whole-tick period runs through, unless `counter_runs_through` (`runThroughTicks`).
+         * Only a clock of a whole-tick window cycle runs through, unless `counter_runs_through` (`runThroughTicks`).
          */
         private readonly game_tick_provider?: TickProvider,
         /**
-         * Whether the clocks it makes of a p/q-tick period answer in whole 1/q ticks (enable-control.ts `SubtickPositions`):
+         * Whether the clocks it makes of a p/q-tick window cycle answer in whole 1/q ticks (enable-control.ts `SubtickPositions`):
          * true unless a test asks for floats
          */
         private readonly exact_subtick_positions: boolean = true,
-        /** Whether a clock of a p/q-tick period runs through as well (`runThroughTicks`), given a game tick provider */
+        /** Whether a clock of a p/q-tick window cycle runs through as well (`runThroughTicks`), given a game tick provider */
         private readonly counter_runs_through: boolean = false,
     ) {
         this.target_output_item_name = this.output_cycle_plan.production_rate.machine_production_rate.item;
@@ -104,7 +104,7 @@ export class EnableControlFactory {
         const source_state = this.entity_state_registry.getSourceStateOrThrow(entity_id);
         const sink_state = this.entity_state_registry.getSinkStateOrThrow(entity_id);
 
-        // results that come too rarely for whole hands in a period: each taker on its window of the plan (exhaust.ts),
+        // results that come too rarely for whole hands in a window cycle: each taker on its window of the plan (exhaust.ts),
         // carrying a part hand from one window to the next
         const exhaust = this.output_cycle_plan.exhaust;
         if (exhaust !== undefined && takesResultOf(exhaust, entity_id)) {
@@ -270,9 +270,9 @@ export class EnableControlFactory {
                 const automated_insertion_limit = sink_input.automated_insertion_limit.quantity;
                 const sink_consumption_per_tick = sink_input.consumption_rate.rate_per_tick;
                 // The planned swings of a whole number of cycles, e.g. 3 for 3/2 swings per cycle. Refilling by exactly
-                // that many, rather than up to the insertion limit, makes the refills repeat with the clock period: a
+                // that many, rather than up to the insertion limit, makes the refills repeat with the window cycle: a
                 // refill up to the limit takes as many swings as the limit has room for, which has nothing to do with
-                // the period, so one period of the simulation would see more or fewer swings than every period needs.
+                // the window cycle, so one window cycle of the simulation would see more or fewer swings than every window cycle needs.
                 const planned_swings = item_transfers.find(it => it.item_name === source_item_name)?.transfer_count.getNumerator
                     ?? Number.POSITIVE_INFINITY;
 
@@ -1149,9 +1149,9 @@ export class EnableControlFactory {
     }
 
     /**
-     * Gets the period duration for clocked controls.
-     * For fractional swings, this returns the extended period (base * cycle_multiplier).
-     * For non-fractional, returns the base period.
+     * Gets the window cycle duration for clocked controls.
+     * For fractional swings, this returns the extended window cycle (base * cycle_multiplier).
+     * For non-fractional, returns the base window cycle.
      */
     private getExtendedWindowCycleDuration(): Duration {
         if (this.output_cycle_plan.fractional_swings_enabled && this.output_cycle_plan.cycle_multiplier) {

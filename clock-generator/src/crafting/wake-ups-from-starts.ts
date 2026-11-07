@@ -6,25 +6,25 @@ import { loopInserters } from "./sequence/unplanned-inserter-clock";
  *
  * A build on a fixed clock can settle into more than one steady state, and which one it settles into depends on how it
  * starts: where its clock stands when its machines start empty, and, for a loop, what the loop holds. Each start
- * settles for good, and the wake-ups of the steady states differ: on the iron bacteria sample with one window a period
+ * settles for good, and the wake-ups of the steady states differ: on the iron bacteria sample with one window a window cycle
  * on its loop inserters 317 to 907 a minute by start, the same from each start over 180,000 ticks. The figure of the
  * cold start alone is then one of several, and a clock that is lowest from it need not be lowest from the others.
  *
  * On a build that holds a stock its clock does not set (a loop of machines, or a machine that makes its own
  * ingredient) a clock is ranked by the mean of its wake-ups over a fixed set of starts: the config's cold start with
- * the clock standing at START_PLACES evenly spaced places in its period, the places the as-built check starts it from
+ * the clock standing at START_PLACES evenly spaced places in its window cycle, the places the as-built check starts it from
  * (`startPlaces`), the cold start itself the first. The loop is seeded as the config says (`overrides.kick_start_items`)
- * from every start: the seed moves the mean (iron bacteria with one window a period: 495 a minute over every place at a
+ * from every start: the seed moves the mean (iron bacteria with one window a window cycle: 495 a minute over every place at a
  * seed of 200, 670 at 50), so it is part of the build the config describes, not a start to average over. Every other
  * build keeps the one figure of its cold start, for now (docs/wake-ups.md says why).
  */
 
-/** How many places in its period the clock is started from, the cold start included */
+/** How many places in its window cycle the clock is started from, the cold start included */
 export const START_PLACES = 12;
 
 /** The wake-ups of a clock from each start of the set, and their mean, which the clock is ranked by */
 export interface WakeUpsFromStarts {
-    /** Ticks into its period the clock stands at for each start, the cold start (0) first */
+    /** Ticks into its window cycle the clock stands at for each start, the cold start (0) first */
     places: number[];
     /** Wake-ups a minute, summed over the inserters of one copy, from each start, in the order of `places` */
     wake_ups_per_minute: number[];
@@ -33,8 +33,8 @@ export interface WakeUpsFromStarts {
 }
 
 /**
- * The places in its period a clock is started from: START_PLACES evenly spaced, in whole ticks of a whole period, the
- * steps of the as-built check's start phases (`runAsBuiltCheck`); a short period has fewer.
+ * The places in its window cycle a clock is started from: START_PLACES evenly spaced, in whole ticks of a whole window cycle, the
+ * steps of the as-built check's start phases (`runAsBuiltCheck`); a short window cycle has fewer.
  */
 export function startPlaces(window_cycle_ticks: number): number[] {
     const step = Math.max(1, Math.floor(window_cycle_ticks / START_PLACES));
@@ -57,8 +57,8 @@ export function hasStockTheClockDoesNotSet(entity_registry: Pick<ReadableEntityR
 
 /**
  * The wake-ups of a clock from every start of the set. `figureAt` gives the wake-ups a minute from the start at a place
- * (ticks into the period), or null where it cannot (no long run): the clock then keeps its one figure, as it does where
- * its period has fewer than two places.
+ * (ticks into the window cycle), or null where it cannot (no long run): the clock then keeps its one figure, as it does where
+ * its window cycle has fewer than two places.
  */
 export function wakeUpsFromStarts(window_cycle_ticks: number, figureAt: (place: number) => number | null): WakeUpsFromStarts | null {
     const places = startPlaces(window_cycle_ticks);

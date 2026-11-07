@@ -133,7 +133,7 @@ export class CraftingMachineArchetype implements StatusChangeReason<CraftingStat
      * The machine's key (see simulationStateKey): its components' keys in a fixed order, "|" between them: what its
      * Storage holds, its Crafting (status and craft underway), its Yield (held products, productivity bar, carry), its
      * Wakes (the flags of its last tick) and its Energy (a burner's; nothing for an electric machine). Two equal keys
-     * one clock period apart mean the machine repeats. Its Ingress holds caches of its inventories and its Placement a
+     * one window cycle apart mean the machine repeats. Its Ingress holds caches of its inventories and its Placement a
      * running total, so neither has a key; observers only watch.
      */
     public stateKey(): string {

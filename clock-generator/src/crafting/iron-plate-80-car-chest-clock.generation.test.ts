@@ -9,7 +9,7 @@ import type {Config} from "../config/schema";
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 // the clock the generator selects for the build (record job config-IRON_PLATE_80_CAR_CHEST) is pinned there. swings-2 (144 ticks) was the selected clock before the observed windows were searched past a stable clock, and swings-3
 // (72 ticks) before the generator counted a wake-up only while the inserter's arm is at home; their recordings stay. The pin of each
-// recorded clock (hash, period, verdict, selection), and that the generator still makes it, is checked against the record
+// recorded clock (hash, window cycle, verdict, selection), and that the generator still makes it, is checked against the record
 // (tests/game/builds/clock-controls.test.ts), with the game's run against the verdict and the holds of the alternative
 
 // the car's Sidecar export (iron-plate-80-car-chest.sidecar-export.json) as the web app pastes it, at the export's suggested target: the
@@ -28,7 +28,7 @@ describe("the car paste at 80.78/s", () => {
         const five = paste.alternatives.find(alternative => alternative.maker === "swings-5")!;
         expect(five.result.simulation_duration.ticks).toBeCloseTo(356.524, 3);
         expect(five.result.subtick).toBeUndefined();
-        // 0.15% fast: more than the 0.1% a rounded clock may run, so it is not tried on its own period
+        // 0.15% fast: more than the 0.1% a rounded clock may run, so it is not tried on its own window cycle
         expect(five.label).toMatch(/\(clock rounded to 356 ticks, runs 0\.15% fast\)$/);
         expect(five.assessment.items_per_second).toBeCloseTo(416 * 60 / 356, 6);
         expect(five.rounded).toMatchObject({window_cycle_ticks: 356, tried_on_its_window_cycle: false});

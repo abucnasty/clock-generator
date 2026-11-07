@@ -76,7 +76,7 @@ export interface ClockAlternative {
     insights: ClockInsight[];
     /** Which Enable Control Strategy the clock follows, its tuning method and settings, and its router, as ids (see clock-strategy.ts) */
     strategy: ClockStrategy;
-    /** For a clock of a period that is not whole, exported rounded down to whole ticks: how it runs against the target */
+    /** For a clock of a window cycle that is not whole, exported rounded down to whole ticks: how it runs against the target */
     rounded?: RoundedClock;
     result: BlueprintGenerationResult;
 }
@@ -108,7 +108,7 @@ export interface ClockAlternativesResult {
     why_not_stable: WhyNotStable | null;
 }
 
-/** The alternatives one generation run exports (a subtick and a rounded clock for a fractional period) */
+/** The alternatives one generation run exports (a subtick and a rounded clock for a fractional window cycle) */
 export interface ClockAlternativeRun<T = ClockAlternative> {
     /** Runs with the same clock, physical assumptions and checked behavior are duplicates; only the first is listed */
     signature: string;
@@ -130,11 +130,11 @@ export interface ClockAlternativeContext {
     /** The output swings per cycle the plan started with: more than `swings` when it backed off to a lower count */
     planned_swings?: number;
     primary_stable: boolean;
-    /** Clock period of the primary alternative */
+    /** Clock window cycle of the primary alternative */
     window_cycle_ticks: number;
-    /** The primary alternative's results come too rarely for whole hands in a period: it is a clock of result windows */
+    /** The primary alternative's results come too rarely for whole hands in a window cycle: it is a clock of result windows */
     exhaust?: boolean;
-    /** Small batches was tried for the primary alternative (its first plan's period too long): it is not offered again */
+    /** Small batches was tried for the primary alternative (its first plan's window cycle too long): it is not offered again */
     primitive_tried?: boolean;
     /** The "Fractional swings" alternative would make the primary clock again (see fractionalMakesThePrimary): it is not made */
     fractional_is_primary?: true;
@@ -300,7 +300,7 @@ function withFuelHandRoomWhereNeeded(
     withFuelHandRoom: () => BlueprintGenerationResult | undefined,
 ): BlueprintGenerationResult {
     const result = withoutRoom();
-    // the room changes nothing where no clocked inserter picks up from a belt, or in a period of part ticks
+    // the room changes nothing where no clocked inserter picks up from a belt, or in a window cycle of part ticks
     if (holds(result) || result.belt?.kind !== "backed_up" || !Number.isInteger(result.simulation_duration.ticks)) {
         return result;
     }
@@ -479,7 +479,7 @@ function alternativeDefinitionsFor(
     const swings_forced = config.overrides?.terminal_swing_count !== undefined;
     // the counts the build plan lists its main-period choices for (planner/periods.ts)
     const { lower: lower_counts, higher: higher_counts } = swingCountsListed(swings, context.planned_swings ?? swings, swings_forced, context.window_cycle_ticks);
-    // a target that counts an item destroyed is planned by arithmetic: its period and every inserter's hands are worked
+    // a target that counts an item destroyed is planned by arithmetic: its window cycle and every inserter's hands are worked
     // out, not tried, so no other count or search is offered; even hands moves the same hands
     if (config.setpoint.counts === "destroyed" && context.exhaust === true) {
         // results that come by small chances: the windows are worked out, and the primary clock opens them in turn
@@ -611,7 +611,7 @@ function alternativeDefinitionsFor(
             },
             search: true,
         },
-        // Small batches where its first plan's period was not too long, so the primary did not try it: a fallback, made
+        // Small batches where its first plan's window cycle was not too long, so the primary did not try it: a fallback, made
         // only where no clock made before it can be selected as stable, so it never moves a clock that was selected
         ...(context.primitive_tried === true || !primitiveRoundRobinPollingOptionsSupported(small_batches_config, SMALL_BATCHES_OPTIONS)
             || !primitiveRoundRobinPollingConfigSupported(small_batches_config) ? [] : [{
@@ -960,13 +960,13 @@ function runAlternativeOf(
     const { belt } = result;
     const belt_note = beltNote(config, result);
     const window_cycle_ticks = result.simulation_duration.ticks;
-    /** What a trial of the clock found, on the exact period or, for a clock rounded down, on its own */
+    /** What a trial of the clock found, on the exact window cycle or, for a clock rounded down, on its own */
     interface Trial {
         result: BlueprintGenerationResult;
         held: boolean;
         loss: DisturbanceTrialAssessment;
         start_dependence: StartDependence | null;
-        /** The ticks of a period it is run at */
+        /** The ticks of a window cycle it is run at */
         clock_window_cycle: number;
     }
     /** The stability check of a trial with its output as the clock is listed by (see `withSettledOutput`), made once per trial */
@@ -982,7 +982,7 @@ function runAlternativeOf(
     };
     /**
      * The wake-ups of a trial's clock from the starts (see wake-ups-from-starts.ts), made once per trial: of the exact clock as its
-     * long run was made (with the windows out of a loop, twice as long), of a clock rounded down on its own period
+     * long run was made (with the windows out of a loop, twice as long), of a clock rounded down on its own window cycle
      */
     const from_starts_of = new Map<Trial, WakeUpsFromStarts | null>();
     const fromStarts = (trial: Trial, exact: boolean): WakeUpsFromStarts | null => {
@@ -1005,14 +1005,14 @@ function runAlternativeOf(
         }
         return from_starts_of.get(trial)!;
     };
-    /** The trial of a clock rounded down to whole ticks on its own period, where one is made (below) */
+    /** The trial of a clock rounded down to whole ticks on its own window cycle, where one is made (below) */
     let rounded_trial: Trial | null = null;
     /** The alternative for a trial of the clock: its notes, insights, assessment and ranking */
     const alternativeOf = (trial: Trial, row: { id: string; label: string; description_suffix: string; result: BlueprintGenerationResult; rounded?: RoundedClock;
         /** What this listing of the clock adds to the settings of its strategy: a subtick clock, a clock rounded down */
         listing?: ListingSettings }): ClockAlternative => {
         const tried_as = trial;
-        // a clock that fails its first check is listed by the mean of its long run, not the one period measured
+        // a clock that fails its first check is listed by the mean of its long run, not the one window cycle measured
         const settled_check = (settle_unstable ?? !held) ? settledStability(trial) : trial.result.stability_check;
         // the counters of its inserters learn which decider switches each from the blueprint it is listed with
         const settled = settled_check.as_built?.counters === undefined ? settled_check : { ...settled_check,
@@ -1069,24 +1069,24 @@ function runAlternativeOf(
     if (Number.isInteger(window_cycle_ticks)) {
         return { signature, alternatives: [exact] };
     }
-    // a period that is not a whole number of ticks is exported with its subtick clock where it has one: listed as that
+    // a window cycle that is not a whole number of ticks is exported with its subtick clock where it has one: listed as that
     // clock, it runs the build at exactly the target rate
     if (result.subtick) {
-        const { window_cycle_ticks: period_ticks, scale } = result.subtick.clock;
+        const { window_cycle_ticks: counted_ticks, scale } = result.subtick.clock;
         return { signature, alternatives: [alternativeOf(exact_trial, {
             id: `${id}-subtick`,
             label: `${label}, subtick clock`,
             listing: { subtick_clock: true },
             description_suffix: ` Exported with a subtick clock: the ${window_cycle_ticks.toFixed(3)}-tick period is `
-                + `${period_ticks}/${scale} ticks, so a ${period_ticks}-tick clock is multiplied by ${scale} and taken modulo `
-                + `${period_ticks} by two extra arithmetic combinators, giving the position in the period in 1/${scale} ticks. `
+                + `${counted_ticks}/${scale} ticks, so a ${counted_ticks}-tick clock is multiplied by ${scale} and taken modulo `
+                + `${counted_ticks} by two extra arithmetic combinators, giving the position in the period in 1/${scale} ticks. `
                 + "Window starts can move by a tick between periods but never drift, so the build runs at exactly the target rate.",
             result: { ...result, blueprint: result.subtick.blueprint, schedule: result.subtick.schedule },
         })] };
     }
-    // with no subtick clock its blueprint counts the period rounded down (blueprint.ts): listed as that clock, it is
+    // with no subtick clock its blueprint counts the window cycle rounded down (blueprint.ts): listed as that clock, it is
     // judged by its own rate. One whose rate may meet goal 1 (at most 0.1% fast, within the machines) is tried on its
-    // own period
+    // own window cycle
     const rounded_ticks = Math.floor(window_cycle_ticks);
     const rounded_rate = itemsPerSecondOverCopies(expected_output_items, rounded_ticks, copies);
     const target = config.setpoint.items_per_second;
@@ -1205,7 +1205,7 @@ function planPrimaryAndTasks(
  * Whether the "Fractional swings" alternative would make the primary clock again, and so the same run with nothing to
  * add: its first plan starts where the machines' crafts put it, at the primary's own count, whole, with every inserter's
  * hands a cycle whole, so that it is the primary's plan; the primary held on that first plan, with nothing tried after
- * it (no lower count, no period limit, no room for fuel, no loop windows, no chest drill windows to fall back from), so
+ * it (no lower count, no window cycle limit, no room for fuel, no loop windows, no chest drill windows to fall back from), so
  * the alternative's run, which keeps belt pickup slack where the clock holds with it, makes the same clock; and its
  * checks are those of the primary's, which planning them with fractional swings does not change. Then its clock is the
  * primary's, and is merged into it. Where the primary keeps the slack inside its windows (`withSlackInside`), the
@@ -1329,7 +1329,7 @@ export function startDependenceSummary(config: Config, alternatives: readonly Pi
  *
  * The four searches come last and only run when none of the clocks made before them can be selected as stable
  * (`searchesAreNeeded`), unless the config asks for them on every build (`overrides.search_for_fewer_wake_ups`);
- * where one can, the two that can still improve on it run on a short period where it has wake-ups (`searchesToRun`).
+ * where one can, the two that can still improve on it run on a short window cycle where it has wake-ups (`searchesToRun`).
  * After them, on a config whose belts are backed up, a clock made for a moving belt, when still none can. The
  * alternatives are listed in the same order either way.
  *
@@ -1403,7 +1403,7 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
         total += fallbacks.length;
         generate(fallbacks);
     }
-    // and after every other clock, the per-branch clock, composed from their parts on the period of the one they recommend
+    // and after every other clock, the per-branch clock, composed from their parts on the window cycle of the one they recommend
     const so_far = combineClockAlternativeRuns(runs, it => it.ranking);
     const recommended = so_far.alternatives[so_far.selected_index];
     if (recommended !== undefined) {

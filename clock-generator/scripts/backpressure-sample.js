@@ -4,7 +4,7 @@
 // away) the fixed trials of src/crafting/disturbance-trial.ts, and whether the build is back at its expected output
 // after each. A clock is tried no further than the first loss it does not get back from: the losses after it are
 // listed as `not_tried`, and the trials of a loss that fails end at its first failing trial. Simulator only: the harness cannot cut a supply. BACKED_UP=1 turns "Backed-up belts" on;
-// PLACES=0,0.5 cuts at fewer places in the period than the four of LOSS_PLACES, to make the run shorter.
+// PLACES=0,0.5 cuts at fewer places in the window cycle than the four of LOSS_PLACES, to make the run shorter.
 // For all samples: scripts/backpressure-sweep.sh. The table: scripts/backpressure-table.py.
 const path = require("path"), fs = require("fs");
 const out = path.resolve(process.argv[2]);
@@ -37,11 +37,11 @@ const places = process.env.PLACES ? process.env.PLACES.split(",").map(Number) : 
                 clock.survives = report.survives;
                 clock.broken_by = report.broken_by;
                 clock.not_tried = report.not_tried.map(lossId);
-                clock.recovered_after_periods = report.recovered_after_periods;
+                clock.recovered_after_window_cycles = report.recovered_after_window_cycles;
                 clock.ticks = report.ticks;
                 clock.losses = report.losses.map(outcome => ({
                     loss: lossId(outcome.loss), recovers: outcome.recovers, stopped_after_ticks: outcome.stopped_after_ticks,
-                    recovered_after_bins: outcome.recovered_after_bins, periods_per_bin: outcome.periods_per_bin,
+                    recovered_after_bins: outcome.recovered_after_bins, window_cycles_per_bin: outcome.window_cycles_per_bin,
                     trials: outcome.trials.map(t => ({
                         cut_at: t.cut_at, loss_ticks: t.loss_ticks, until_stopped: t.until_stopped, recovers: t.recovers,
                         recovered_after_bins: t.recovered_after_bins, proven: t.proven, ends_in: t.recovers ? undefined : t.ends_in.slice(0, 6),

@@ -10,7 +10,7 @@ import { wakeUpsOfRecording } from "./recording-wake-ups";
 
 /**
  * Ticks from a tick of a simulated run to the sample of a recording that reads the same clock position: tick `i` of
- * a run that starts on a period is what the recorder samples at clock position `i + 3`. Read off recordings of the
+ * a run that starts on a window cycle is what the recorder samples at clock position `i + 3`. Read off recordings of the
  * scaffolded builds in Factorio 2.1.21, where an inserter shows as enabled at the positions of its window plus 3.
  */
 export const SIMULATED_TICK_TO_CLOCK_POSITION = 3;
@@ -31,8 +31,8 @@ function changeList<T>(values: readonly T[]): [number, T][] {
 /**
  * A simulated run in the format of the recorder, so that what reads a recording of the game reads a run of the
  * simulator too, and the two are laid against each other by one set of functions. Its inserters and machines carry
- * the ids of the config. The clock counts `clock_ticks` positions: the period of the clock, or the ticks after which
- * a fractional period repeats, as its subtick clock counts them.
+ * the ids of the config. The clock counts `clock_ticks` positions: the window cycle of the clock, or the ticks after which
+ * a fractional window cycle repeats, as its subtick clock counts them.
  */
 export function recordingOfStock(stock: StockRecording, config: Config, clock_ticks: number): Recording {
     const inserter_configs = new Map(config.inserters.map((inserter, index) => [inserter.id ?? index + 1, inserter]));
@@ -109,7 +109,7 @@ export function matchOfSimulatedRecording(recording: Recording): EntityMatch {
 
 /**
  * Runs a build on clock windows alone in the simulator, as its blueprint does in game, and returns the run as a
- * recording of at least `ticks` samples. `clock_ticks` is what the clock counts to when the period is not a whole
+ * recording of at least `ticks` samples. `clock_ticks` is what the clock counts to when the window cycle is not a whole
  * number of ticks.
  */
 export function simulateRecording(
@@ -125,11 +125,11 @@ export function simulateRecording(
 }
 
 /**
- * The wake-ups a minute a clock counts in the simulator from each of `starts` places in its period to start it at,
+ * The wake-ups a minute a clock counts in the simulator from each of `starts` places in its window cycle to start it at,
  * the first of them where the generator starts it. A clock can settle into more than one steady state with the same
  * output, depending on where it starts, and each has wake-ups of its own: batched swings on utility science makes
- * 192 a period at 10.7, 26.8 or 32.1 wake-ups a minute. The game settles into one of them, which need not be the
- * one the generator's own run does. Empty for a period that is not a whole number of ticks.
+ * 192 a window cycle at 10.7, 26.8 or 32.1 wake-ups a minute. The game settles into one of them, which need not be the
+ * one the generator's own run does. Empty for a window cycle that is not a whole number of ticks.
  */
 export function simulatedWakeUpsByStart(
     config: Config,
@@ -145,7 +145,7 @@ export function simulatedWakeUpsByStart(
     const figures: number[] = [];
     for (let start = 0; start < starts; start++) {
         const offset = Math.floor(window_cycle_ticks * start / starts);
-        // a window that runs over the end of the period goes on at its beginning
+        // a window that runs over the end of the window cycle goes on at its beginning
         const shifted = Object.fromEntries(Object.entries(clock_windows).map(([entity_id, ranges]) => [entity_id, ranges.flatMap(range => {
             const from = (range.start + offset) % window_cycle_ticks;
             const to = from + range.end - range.start;

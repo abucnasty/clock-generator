@@ -172,7 +172,7 @@ export function blueprintNoteOf(mode: EnableControlMode, entityType: EntityType)
     return RULE_COPY.blueprint[mode](entityNoun(entityType));
 }
 
-/** The crafting cycle and the clock period the editor checks the ticks against, and where they come from */
+/** The crafting cycle and the window cycle the editor checks the ticks against, and where they come from */
 export function windowCycleLineOf(timing: RuleTiming): string {
     const { cycleTicks, windowCycleTicks, from } = timing;
     if (from === null || cycleTicks === null || windowCycleTicks === null) return RULE_COPY.windowCycleUnknown;

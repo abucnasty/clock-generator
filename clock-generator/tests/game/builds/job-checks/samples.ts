@@ -1,5 +1,5 @@
 // Per-job checks of the jobs that are a sample as it is (group `config`): what the generation test of each build checked on the result that the
-// record does not hold. The record pins the selected id, verdict, rate, period, wake-ups, windows and the clock hash of every alternative, and
+// record does not hold. The record pins the selected id, verdict, rate, window cycle, wake-ups, windows and the clock hash of every alternative, and
 // hashes the label, description, insights, assessment and why-not-stable; what it cannot say is what a text must read, a field of the result
 // that is not in the exported clock (deciders, always-on reasons, the fuel view, the losses the simulator tries), or a relation between them.
 import { expect } from 'vitest';
@@ -82,7 +82,7 @@ const productivityChain: JobCheck[] = [
 const agriculturalScience: JobCheck[] = [
     {
         // 25 cycles of 115.2 or 57.6 ticks: multiplied in floating point these came out as 2879.9999999999995 and 1439.9999999999998,
-        // were taken for fractional periods and offered as subtick and "rounded to 2879" clocks
+        // were taken for fractional window cycles and offered as subtick and "rounded to 2879" clocks
         name: 'makes clocks of whole ticks for 6 and 3 output swings per cycle: 2880 and 1440, none offered as subtick or rounded',
         run: ({ config, generated }) => {
             const window_cycle = (swings: number) => validateConfig({ ...config, overrides: { ...config.overrides, terminal_swing_count: swings } }).window_cycle_ticks;
@@ -109,7 +109,7 @@ const agriculturalScience: JobCheck[] = [
             expect(Object.keys(science.inputs).sort()).toEqual(['bioflux', 'pentapod-egg']);
             expect(science.outputs['agricultural-science-pack']).toHaveLength(stock.ticks);
             expect(science.fuel).toHaveLength(stock.ticks);
-            // the output inserter takes a hand of 16 a cycle: 25 hands in each period of 480 ticks
+            // the output inserter takes a hand of 16 a cycle: 25 hands in each window cycle of 480 ticks
             const held = stock.inserters.find(it => it.inserter_id === 'inserter:12')!.held;
             const moved = held.slice(0, 3 * 480).reduce((sum, count, tick) => sum + (tick > 0 && count < held[tick - 1] ? held[tick - 1] - count : 0), 0);
             expect(moved).toBe(3 * 400);
@@ -129,7 +129,7 @@ const circuitExport: JobCheck[] = [
         },
     },
     {
-        // the guard per taker gates the 12 takers whose hands and a start more take the 24-tick period; that clock does not get back
+        // the guard per taker gates the 12 takers whose hands and a start more take the 24-tick window cycle; that clock does not get back
         // from every loss, so it is remade once with the takers into the target machines (the processing unit machines 2 and 3) unguarded
         // of the per-hand clock the grouped hands make, which the per-branch clock composed from it is recommended over
         name: 'Selection: the 4 inserters with no window are the circuits into the processing unit machines, which the remake leaves unguarded',
@@ -140,7 +140,7 @@ const circuitExport: JobCheck[] = [
     },
     {
         // The export belt (2) is consumed outside the config: the selected clock fills its lanes at their consumption rate, which the
-        // two inserters that put circuits on it (16 and 17) move over the simulated period
+        // two inserters that put circuits on it (16 and 17) move over the simulated window cycle
         name: 'the selected clock fills the export belt at its consumption rate, moved by inserters 16 and 17',
         run: ({ config, generated }) => {
             const selected = selectedOf(generated);
@@ -164,11 +164,11 @@ const circuitExport: JobCheck[] = [
     },
     {
         // the replay from the warm-up inventory is the build stalled in part (the plastic off the belt, inserter 1, picks up
-        // nothing in the period recorded); the long run judges stock from index 960, after 240 warm-up ticks; replaying clock tick 1200
+        // nothing in the window cycle recorded); the long run judges stock from index 960, after 240 warm-up ticks; replaying clock tick 1200
         // shows the inserters at work
         name: 'records a settled period from the clock tick the long run judges, not the stalled first one',
         run: ({ config, generated }) => {
-            // the per-hand clock of the grouped hands, which stalls in its first period; the per-branch clock composed from it does not
+            // the per-hand clock of the grouped hands, which stalls in its first window cycle; the per-branch clock composed from it does not
             const selected = byMaker(generated, 'planned-belt-slack-per-hand');
             const first_judged_tick = selected.result.stability_check.as_built?.first_judged_tick;
             expect(first_judged_tick).toBe(960);
@@ -199,8 +199,8 @@ const steelWagon: JobCheck[] = [
         run: ({ generated }) => { expect(selectedOf(generated).result.chest_drills?.[0].enabled_ticks).toBeCloseTo(1.078, 3); },
     },
     {
-        // the period of 11520/13 ticks over a cycle of 480/13 was once divided as doubles, 24.000000000000004, and inserter 4's
-        // 5/8 swings a cycle came out as "6000000000000001/400000000000000" swings a period
+        // the window cycle of 11520/13 ticks over a cycle of 480/13 was once divided as doubles, 24.000000000000004, and inserter 4's
+        // 5/8 swings a cycle came out as "6000000000000001/400000000000000" swings a window cycle
         name: 'no description shows a float as a fraction (the period is a whole number of crafting cycles)',
         run: ({ generated }) => {
             for (const alternative of generated.alternatives) {
@@ -226,7 +226,7 @@ const metallurgic: JobCheck[] = [
     {
         name: 'the observed windows do not repeat a state in the long run',
         run: ({ generated }) => {
-            // the long run repeats no state: the game makes 480 and every eighth period 496, 100% of the target over 38 periods
+            // the long run repeats no state: the game makes 480 and every eighth window cycle 496, 100% of the target over 38 window cycles
             expect(selectedOf(generated).result.stability_check.as_built?.long_run_proven).toBe(false);
         },
     },
@@ -463,7 +463,7 @@ const voiderExact: JobCheck[] = [
         },
     },
     {
-        // In Factorio 2.1.21 an hour of the batched clock brought 896 ore in place of 960 in 5 of 1,900 periods, each after periods of
+        // In Factorio 2.1.21 an hour of the batched clock brought 896 ore in place of 960 in 5 of 1,900 window cycles, each after window cycles of
         // returns over the mean; even hands' windows leave the returns in the car
         name: 'is tried with the backlog of returns its margins say the car takes up, which costs the batched clock a hand of ore',
         run: ({ config, generated }) => {
@@ -478,7 +478,7 @@ const voiderExact: JobCheck[] = [
                 const report = disturbanceTrialOf(config, alternative.result.clock_windows, 144, 960, quiet, {}, undefined, undefined, [excess]);
                 return report.losses.find(it => it.loss.kind === 'excess')!;
             });
-            // placed into the car at the start of the period, the batched clock brings 896 ore and then 960 again
+            // placed into the car at the start of the window cycle, the batched clock brings 896 ore and then 960 again
             expect(planned.recovers).toBe(false);
             expect(planned.trials[0].output_per_bin.slice(0, 2)).toEqual([896, 960]);
             expect(even.recovers).toBe(true);
@@ -500,10 +500,10 @@ const voiderExact: JobCheck[] = [
                 const [returns] = margins.windows;
                 expect(returns.expected_items).toBe(320);
                 expect(returns.sigma_items).toBeCloseTo(15.4919, 4);
-                // the binomial of 1280 crafts at 1/4 is under 367 in all but 1 in 740 periods: 47 over the 320
+                // the binomial of 1280 crafts at 1/4 is under 367 in all but 1 in 740 window cycles: 47 over the 320
                 expect(returns.needed_items).toBe(47);
                 expect(returns.room_items, alternative.id).toBeGreaterThanOrEqual(returns.needed_items);
-                // the recycler's own room is one standard deviation a period, enough for what comes back over 1233 ticks, which the car takes up
+                // the recycler's own room is one standard deviation a window cycle, enough for what comes back over 1233 ticks, which the car takes up
                 expect(margins.crafting[0].sigmas).toBeCloseTo(1.0328, 4);
                 expect(margins.crafting[0].ticks_to_cover).toBe(1233);
             }
@@ -522,7 +522,7 @@ const voiderExact: JobCheck[] = [
     },
 ];
 
-// The same cell with six beacons on its recycler (IRON_ORE_VOIDER_400_OVERBEACONED): 852.3 crafts a second, 2045.5 a period against the 1280 it needs
+// The same cell with six beacons on its recycler (IRON_ORE_VOIDER_400_OVERBEACONED): 852.3 crafts a second, 2045.5 a window cycle against the 1280 it needs
 const voiderOverbeaconed: JobCheck[] = [
     {
         name: 'needs no more room of its recycler: what comes back over the mean is covered within a tick',

@@ -4,7 +4,7 @@ import { clockWindowCycles, outputInserters, outputPerWindowCycle } from "./reco
 
 const EMPTY_MACHINE_SAMPLES = { status: [], crafting_progress: [], bonus_progress: [], products_finished: [], inputs: {}, outputs: {} };
 
-/** A gear machine feeding a circuit machine that is emptied into a chest, sampled once per clock value over periods of four ticks */
+/** A gear machine feeding a circuit machine that is emptied into a chest, sampled once per clock value over window cycles of four ticks */
 function recording(clock_values: number[]) {
     const samples = (held_count: number[]) => ({ held_count: held_count.slice(0, clock_values.length), held_item: [], status: [] });
     return parseRecording({
@@ -19,7 +19,7 @@ function recording(clock_values: number[]) {
             { id: 2, name: "assembling-machine-3", recipe: "electronic-circuit", samples: EMPTY_MACHINE_SAMPLES },
         ],
         inserters: [
-            // the output inserter drops two circuits in the first period, none in the second, and two right on the third's first tick
+            // the output inserter drops two circuits in the first window cycle, none in the second, and two right on the third's first tick
             { id: 1, name: "fast-inserter", source: { type: "machine", id: 2 }, sink: { type: "chest", id: 1 }, stack_size: 2,
               samples: samples([2, 0, 0, 0, 2, 2, 2, 2, 0, 2, 2, 2]) },
             // gears between the machines are not output

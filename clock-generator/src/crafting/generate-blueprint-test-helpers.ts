@@ -57,7 +57,7 @@ export interface RocketFuelSample {
     config: Config;
     alternatives: ClockAlternative[];
     alternative: (id: string) => ClockAlternative;
-    /** Items an inserter moves in the planned period */
+    /** Items an inserter moves in the planned window cycle */
     moved: (inserter_id: string) => number;
     window_cycle_ticks: number;
     jelly_inserter_ids: string[];

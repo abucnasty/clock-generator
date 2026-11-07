@@ -101,7 +101,7 @@ describe('the committed split', () => {
 
 /** A job file as the blast writes it, with the record's fields; `rate` is what a test changes */
 const alternative = (rate = 640) => ({
-    id: 'even-hands', verdict: 'stable', holds: true, rate, supply: null, window_cycle_ticks: 972, wake_ups: 889.07, clock_sha256: sha('a'), text_sha256: sha('2'),
+    id: 'even-hands', verdict: 'stable', holds: true, rate, supply: null, period: 972, wake_ups: 889.07, clock_sha256: sha('a'), text_sha256: sha('2'),
     descriptions_cut: 0, windows_sha256: sha('7'), windows: { 'inserter:1': [{ start: 0, end: 10 }] }, results_sha256: sha('3'), results: {},
 });
 const jobFile = (name: string, rate?: number) => ({

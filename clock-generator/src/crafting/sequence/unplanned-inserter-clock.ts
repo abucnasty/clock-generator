@@ -9,17 +9,17 @@ const WINDOW_SLACK_TICKS = 4;
  * machine's inventory is only looked at inside the window: the rest of the time the inserter ignores it.
  *
  * - "fuel": fills the fuel slot of a burner machine. Nothing in the plan depends on when it swings, so it runs on a
- *   clock of its own that counts `modulus` ticks, whatever the clock period is: the fewer windows, the less often the
+ *   clock of its own that counts `modulus` ticks, whatever the window cycle is: the fewer windows, the less often the
  *   inserter is woken up to find the fuel slot full.
  * - "by-product": takes a by-product, which no machine in the config uses, off its machine. Its `modulus` is a divisor
- *   of the clock period, so the clock of the period holds a whole number of repeats.
+ *   of the window cycle, so the clock of the window cycle holds a whole number of repeats.
  */
 export interface InserterClock {
     inserter_id: EntityId;
     kind: "fuel" | "by-product";
-    /** Ticks between the starts of two windows; divides the clock period unless the inserter has a clock of its own */
+    /** Ticks between the starts of two windows; divides the window cycle unless the inserter has a clock of its own */
     modulus: number;
-    /** The window is on a clock of its own that counts `modulus` ticks, not on the clock of the period */
+    /** The window is on a clock of its own that counts `modulus` ticks, not on the clock of the window cycle */
     own_clock: boolean;
     /** The window within the first `modulus` ticks */
     window: OpenRange;
@@ -131,8 +131,8 @@ function pickupTicks(inserter: Inserter, entity_registry: ReadableEntityRegistry
 
 /**
  * The clock of an inserter that repeats every at most `interval_ticks`, which `index` staggers from the others on the
- * same machine. On the clock of the period (`period_ticks`) it repeats every divisor of the period; on a clock of its
- * own (`period_ticks` null) every `interval_ticks`.
+ * same machine. On the clock of the window cycle (`window_cycle_ticks`) it repeats every divisor of the window cycle; on a clock of its
+ * own (`window_cycle_ticks` null) every `interval_ticks`.
  */
 function clockEvery(
     inserter: Inserter,
@@ -186,7 +186,7 @@ const CRAFTING_SHARE_MARGIN = 1.1;
  * crafts more than planned, as it can while a build starts up, may run out of fuel for a few ticks before a window.
  *
  * `index` staggers the windows of the inserters that fill the same machine, so they do not all start on the same tick.
- * With `shared_clock_ticks`, the ticks one clock counts for the period and every fuel clock, the window repeats every
+ * With `shared_clock_ticks`, the ticks one clock counts for the window cycle and every fuel clock, the window repeats every
  * divisor of that.
  */
 function fuelClockFor(
@@ -244,22 +244,22 @@ function fuelBurnIntervalTicks(inserter: Inserter, machine: Machine, crafting_sh
     return Math.floor(items_in_slot_at_a_window / (consumption.rate_per_tick * burning_share));
 }
 
-/** Longest the one clock for the period and the fuel clocks is made to count: 10 minutes */
+/** Longest the one clock for the window cycle and the fuel clocks is made to count: 10 minutes */
 const MAX_SHARED_FUEL_CLOCK_TICKS = 36_000;
 
 /** How many more enables than the fuel needs are taken for a shorter clock */
 const SHARED_FUEL_CLOCK_TOLERANCE = 1.05;
 
 /**
- * The ticks one clock counts to hold the period and every fuel clock: a few periods, with each fuel clock a divisor of
+ * The ticks one clock counts to hold the window cycle and every fuel clock: a few window cycles, with each fuel clock a divisor of
  * it that is no longer than its fuel lasts. Fuel clocks of exactly the ticks their fuel lasts seldom share a factor
- * with the period or each other, and the clock that holds them all counts for hours (839040 ticks for a period of 128
+ * with the window cycle or each other, and the clock that holds them all counts for hours (839040 ticks for a window cycle of 128
  * with fuel clocks of 95 and 138). Looking a little more often gives a short one: 1408 ticks holds fuel clocks of 88
  * and 128.
  *
- * It is the fewest periods whose fuel clocks enable no more than `SHARED_FUEL_CLOCK_TOLERANCE` times as often as the
+ * It is the fewest window cycles whose fuel clocks enable no more than `SHARED_FUEL_CLOCK_TOLERANCE` times as often as the
  * fuel needs, or, when no count up to `MAX_SHARED_FUEL_CLOCK_TICKS` does, the one that enables the least. Null when
- * the period is not a whole number of ticks, or no count has a divisor for every fuel clock.
+ * the window cycle is not a whole number of ticks, or no count has a divisor for every fuel clock.
  */
 export function sharedFuelClockTicks(
     window_cycle_ticks: number,
@@ -297,7 +297,7 @@ export function sharedFuelClockTicks(
  *   window repeats within `(stack size - hand) / rate` ticks.
  *
  * The window is short: the inserter checks the machine's output only there, picks up what is ready, and swings once its
- * hand is full. When no divisor of the clock period fits the stack's room, the hand's interval is used instead.
+ * hand is full. When no divisor of the window cycle fits the stack's room, the hand's interval is used instead.
  */
 export function byProductClockFor(
     inserter: Inserter,
@@ -390,7 +390,7 @@ export function unplannedInserterClocks(
     return clocks;
 }
 
-/** The windows of a clock repeated over a clock period, for a clock that divides it */
+/** The windows of a clock repeated over a window cycle, for a clock that divides it */
 export function clockWindowsOverWindowCycle(clock: InserterClock, window_cycle_ticks: number): OpenRange[] {
     const windows: OpenRange[] = [];
     for (let start = 0; start < window_cycle_ticks; start += clock.modulus) {

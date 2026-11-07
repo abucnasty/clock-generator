@@ -18,11 +18,11 @@ describe("the stock walk", () => {
             takers: [{ id: "out", items: ["gear"], hand: 8, swing }],
         });
         expect(walk.converged).toBe(true);
-        // a craft every 4 ticks: 16 gears and 32 plates a period, in two hands of 8 gears and four of 8 plates
+        // a craft every 4 ticks: 16 gears and 32 plates a window cycle, in two hands of 8 gears and four of 8 plates
         expect(walk.craft_starts).toHaveLength(16);
         expect(walk.hands.filter(hand => hand.id === "out").map(hand => hand.amount)).toEqual([8, 8]);
         expect(walk.hands.filter(hand => hand.id === "in")).toHaveLength(4);
-        // the start of the period it repeats from is the surplus it carries
+        // the start of the window cycle it repeats from is the surplus it carries
         expect(walk.start.inputs.plate).toBe(walk.input_stock.plate[63]);
         expect(walk.start.output).toBe(walk.output_stock[63]);
     });
@@ -40,7 +40,7 @@ describe("the stock walk", () => {
     });
 
     it("brings nothing into a machine at its output block until its output is taken under it", () => {
-        // the gears are taken once a period, from position 32: the plates wait with the output at its block before it
+        // the gears are taken once a window cycle, from position 32: the plates wait with the output at its block before it
         const walk = walkMachineStock({
             machine, window_cycle_ticks: 64,
             fillers: [{ id: "in", items: ["plate"], hand: 8, swing }],

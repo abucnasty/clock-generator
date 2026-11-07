@@ -180,7 +180,7 @@ describe("combineClockAlternativeRuns", () => {
     });
 });
 
-// the car paste at 80.78/s: a clock whose losses could not be tried (its period has no whole-tick repeat) was taken as
+// the car paste at 80.78/s: a clock whose losses could not be tried (its window cycle has no whole-tick repeat) was taken as
 // stable and beat every clock that was tried (U11)
 describe("a clock whose recovery could not be tried", () => {
     const untried = (id: string, ranking: Partial<ClockRanking> = {}) => clock(id, { recovery_untried: true, ...ranking });
@@ -239,7 +239,7 @@ describe("a clock whose recovery could not be tried", () => {
     });
 });
 
-// an iron gear wheel build at 9.97 a second: the 2,888-tick clock of a 2,888.666-tick period runs 0.02% fast, and held and recovered in the game (#332)
+// an iron gear wheel build at 9.97 a second: the 2,888-tick clock of a 2,888.666-tick window cycle runs 0.02% fast, and held and recovered in the game (#332)
 describe("a clock rounded down to whole ticks", () => {
     const rounded = (id: string, ranking: Partial<ClockRanking> = {}) => clock(id, { runs_fast: 0.0002, ...ranking });
 
@@ -316,7 +316,7 @@ describe("searchesAreNeeded", () => {
         expect(needed([null, null])).toBe(true);
     });
 
-    // the subtick clock of a period of part ticks and the same clock rounded come from one run
+    // the subtick clock of a window cycle of part ticks and the same clock rounded come from one run
     it("looks at every clock of a run", () => {
         const subtick = clock("subtick");
         const rounded = clock("rounded", { meets_target_rate: false, rate_off_target: 0.2 });
@@ -369,7 +369,7 @@ describe("noSearchCanBeat", () => {
         expect(noSearchCanBeat({ wake_ups_per_minute: null })).toBe(false);
     });
 
-    // the rule reads wakeups alone: the windows and the periods to get back from a loss of the selected clock do not enter
+    // the rule reads wakeups alone: the windows and the window cycles to get back from a loss of the selected clock do not enter
     it("is the condition that ends the searches, whatever the other keys of the selected clock", () => {
         const SEARCHES = [{ id: "derived" }, { id: "shifted-swings" }];
         const toRun = (selected: Ranked) => searchesToRun([{ signature: selected.id, alternatives: [selected] }], it => it, SEARCHES, 144).map(it => it.id);

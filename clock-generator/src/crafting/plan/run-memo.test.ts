@@ -183,7 +183,7 @@ describe("the memo of the runs of a generation", () => {
             runBuild(config, others[0]);
             runBuild(config, options); // used again: now the last used
             expect([memo.size, memo.hits]).toEqual([2, 1]);
-            runBuild(config, others[1]); // over the limit: the run with 2 warm-up periods goes
+            runBuild(config, others[1]); // over the limit: the run with 2 warm-up window cycles goes
             expect(memo.size).toBe(2);
             runBuild(config, options);
             expect(memo.hits).toBe(2);

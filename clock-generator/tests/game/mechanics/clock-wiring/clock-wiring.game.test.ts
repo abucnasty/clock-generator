@@ -20,7 +20,7 @@ const WHY_SKIPPED = !FACTORIO ? "FACTORIO_PATH is not set to a Factorio executab
     : null;
 
 const SCAFFOLD = path.join(SAMPLE_BUILDS_DIR, "science", "automation", "automation-240.scaffold");
-/** Several clock periods of automation science after the warmup and settling */
+/** Several window cycles of automation science after the warmup and settling */
 const RECORDED_TICKS = 7_200;
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 
@@ -78,7 +78,7 @@ describe("the harness wires the clock to the build", () => {
         });
 
         const window_cycles = outputPerWindowCycle(result.recording, recipesMaking(config, config.setpoint.recipe));
-        // the first period is left out: the build may still be settling into the clock
+        // the first window cycle is left out: the build may still be settling into the clock
         const checked = window_cycles.slice(1);
         expect(checked.length, `the recording of ${result.recording.sample_count} ticks holds whole clock periods after the first`).toBeGreaterThan(1);
         const wrong_length = checked.filter(it => it.end - it.start !== window_cycle_ticks);

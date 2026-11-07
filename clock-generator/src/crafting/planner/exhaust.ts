@@ -2,8 +2,8 @@
  * Whether a target that counts an item destroyed gets windows of results (exhaust.ts), by arithmetic over the
  * registry: the decision the build plan records and the cycle plan of such a target is made from
  * (`OutputCyclePlan.create`, output-cycle.ts). A plan of whole hands where the takers' hands come out whole in a
- * period the container holds, or where the windows cannot be planned; else one window a period for each result, on the
- * longest period the containers hold.
+ * window cycle the container holds, or where the windows cannot be planned; else one window a window cycle for each result, on the
+ * longest window cycle the containers hold.
  */
 import assert from "../../common/assert";
 import type { ConfigOverrides } from "../../config";
@@ -100,7 +100,7 @@ export function exhaustDecisionOf(
     if (whole_fits || feasible === false) {
         return { kind: "whole-hands", hands: whole_hands, terms };
     }
-    // the results come too rarely: one window a period for each, on the longest period the containers hold
+    // the results come too rarely: one window a window cycle for each, on the longest window cycle the containers hold
     assert(forced === undefined || forced % base_hands === 0,
         `${forced} hands of ${item} a cycle do not last whole ticks: the windows of results that come this rarely need a multiple of ${base_hands}`);
     const cycles = forced !== undefined ? forced / base_hands : Math.min(...machines.map(machine =>
@@ -111,10 +111,10 @@ export function exhaustDecisionOf(
 }
 
 /**
- * Whether the takers' hands of a destroyed target's plan come out whole in a period the windows of results can be
- * planned on, and each machine's container holds what that period gives in all but 1 in 740 periods (every result
- * counted over the whole period): then the period is simulated as any other. Where not, the results get one window a
- * period each (exhaust.ts).
+ * Whether the takers' hands of a destroyed target's plan come out whole in a window cycle the windows of results can be
+ * planned on, and each machine's container holds what that window cycle gives in all but 1 in 740 window cycles (every result
+ * counted over the whole window cycle): then the window cycle is simulated as any other. Where not, the results get one window a
+ * window cycle each (exhaust.ts).
  */
 function wholeHandsFit(
     transfers: EntityTransferCountMap,

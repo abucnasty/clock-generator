@@ -84,8 +84,8 @@ function shortfallOf(exported: ExportedItem, delivered_per_second: number): Expo
 }
 
 /**
- * The exports that fell short in one period, from the items the inserters moved in it (all of them, by inserter id and
- * item). Short means more than `tolerance` items fewer than the consumers take in the period. More is not short: the
+ * The exports that fell short in one window cycle, from the items the inserters moved in it (all of them, by inserter id and
+ * item). Short means more than `tolerance` items fewer than the consumers take in the window cycle. More is not short: the
  * belt backs up in the game and the inserter waits, and a clock that takes what the build needs for itself from an
  * export fails the target on its own.
  */
@@ -143,7 +143,7 @@ export interface JudgedBins {
 /**
  * The exports that fell short over the judged part of a long run, from what each inserter held after each tick (a fall
  * from one tick to the next is a drop). Judged as the output is, in the same bins (see exportShortfallOfBins): a drop on
- * the edge of a bin falls on either side of it from one period to the next, so a bin may be a hand short.
+ * the edge of a bin falls on either side of it from one window cycle to the next, so a bin may be a hand short.
  */
 export function exportShortfallsOfRun(
     exported: readonly ExportedItem[],

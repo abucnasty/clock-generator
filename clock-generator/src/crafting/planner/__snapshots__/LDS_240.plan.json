@@ -45,14 +45,14 @@
         "inserter:14/plastic-bar",
         "inserter:15/plastic-bar"
       ],
-      "periods": [
-        {"swings":3,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":48,"denominator":1},"cycles":3,"period_ticks":144,"kept":true},
-        {"swings":4,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":64,"denominator":1},"cycles":3,"period_ticks":192,"kept":true},
-        {"swings":5,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":80,"denominator":1},"cycles":3,"period_ticks":240,"kept":true},
-        {"swings":6,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":96,"denominator":1},"cycles":3,"period_ticks":288,"kept":true},
-        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":32,"denominator":1},"cycles":3,"period_ticks":96,"kept":true},
-        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":16,"denominator":1},"cycles":3,"period_ticks":48,"kept":true},
-        {"swings":3,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":48,"denominator":1},"cycles":3,"period_ticks":144,"kept":true}
+      "window_cycles": [
+        {"swings":3,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":48,"denominator":1},"cycles":3,"window_cycle_ticks":144,"kept":true},
+        {"swings":4,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":64,"denominator":1},"cycles":3,"window_cycle_ticks":192,"kept":true},
+        {"swings":5,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":80,"denominator":1},"cycles":3,"window_cycle_ticks":240,"kept":true},
+        {"swings":6,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":96,"denominator":1},"cycles":3,"window_cycle_ticks":288,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":32,"denominator":1},"cycles":3,"window_cycle_ticks":96,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":16,"denominator":1},"cycles":3,"window_cycle_ticks":48,"kept":true},
+        {"swings":3,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":48,"denominator":1},"cycles":3,"window_cycle_ticks":144,"kept":true}
       ],
       "utilization": [
         {
@@ -105,7 +105,7 @@
       "planned": 3,
       "higher_up_to_ticks": 2400
     },
-    "main_period": {
+    "main_window_cycle": {
       "ticks": 144,
       "exact": {
         "numerator": 144,

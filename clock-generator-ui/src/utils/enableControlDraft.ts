@@ -23,7 +23,7 @@ export interface EnableControlDraft {
     releaseCondition: RuleSet | undefined;
 }
 
-/** The clock's wake windows for the entity and its period, which a Clocked rule starts from when it has none */
+/** The clock's wake windows for the entity and its window cycle, which a Clocked rule starts from when it has none */
 interface PlannedWindows {
     ranges: EnableControlRange[];
     windowCycleTicks: number;
@@ -67,7 +67,7 @@ export function repeatTicksOf(text: string): number | null {
 
 /**
  * The rule the form saves: none for AUTO; for CLOCKED the windows whose ticks are whole numbers that end at or after
- * they start (a window of one tick is kept), and the period only when it is a whole number above 0; for CONDITIONAL the
+ * they start (a window of one tick is kept), and the window cycle only when it is a whole number above 0; for CONDITIONAL the
  * rule set, with a latch only when it is on and has a release condition. It never makes a value up: what it leaves out
  * is a problem the form shows (`ruleProblems.ts`), and the form does not save while there is one.
  */

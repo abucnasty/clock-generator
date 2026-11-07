@@ -98,7 +98,7 @@ const LEGEND: { kind: 'window' | 'slack' | 'selected' | 'track'; text: string }[
 ];
 
 /**
- * When the selected clock switches each inserter and drill on, over one clock period: a chart (or two tables) of
+ * When the selected clock switches each inserter and drill on, over one window cycle: a chart (or two tables) of
  * every wake window, with the wake-ups the engine counted for each inserter. Assumes no layout around it.
  */
 function WakeWindowsViewComponent({ alternative, config, cycleView = false, headingLevel = 'h3', asTable, onAsTableChange: setAsTable, inspection }: WakeWindowsViewProps) {
@@ -145,7 +145,7 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
     const counted = wakeUpsCounted(alternative);
     const mostWakeUpsId = mostWokenRowId(rows);
     const summary = summaryText({
-        // a rounded clock's period is the one its blueprint counts, as its label says
+        // a rounded clock's window cycle is the one its blueprint counts, as its label says
         windowCycleTicks: alternative.roundedWindowCycleTicks ?? windowCycleTicks,
         inserters: rows.filter(row => row.kind === 'inserter').length,
         drills: rows.filter(row => row.kind === 'drill').length,

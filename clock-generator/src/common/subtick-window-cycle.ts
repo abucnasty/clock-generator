@@ -1,6 +1,6 @@
-/** A fractional period as p/q ticks with small integers: the count of a subtick clock and the units of its position */
+/** A fractional window cycle as p/q ticks with small integers: the count of a subtick clock and the units of its position */
 export interface SubtickWindowCycle {
-    /** p: the whole ticks the subtick clock counts, q periods */
+    /** p: the whole ticks the subtick clock counts, q window cycles */
     window_cycle_ticks: number;
     /** q: how many units of the clock's position make one tick */
     scale: number;
@@ -8,7 +8,7 @@ export interface SubtickWindowCycle {
 
 const MAX_SUBTICK_SCALE = 1000;
 
-/** A fractional period as p/q ticks with small integers (e.g. 550.9565... = 12672/23), or null */
+/** A fractional window cycle as p/q ticks with small integers (e.g. 550.9565... = 12672/23), or null */
 export function subtickClockForWindowCycle(window_cycle_ticks: number): SubtickWindowCycle | null {
     if (Number.isInteger(window_cycle_ticks)) {
         return null;
@@ -25,7 +25,7 @@ export function subtickClockForWindowCycle(window_cycle_ticks: number): SubtickW
 
 /**
  * The whole values a decider is open for, of a window with these bounds: a fractional bound (from a fractional
- * period's wrap) is rounded inward, as the exported deciders' constants are. Null when no whole value is inside.
+ * window cycle's wrap) is rounded inward, as the exported deciders' constants are. Null when no whole value is inside.
  */
 export function wholeBounds(start: number, end: number): [number, number] | null {
     const whole_start = Math.ceil(start - 1e-9);

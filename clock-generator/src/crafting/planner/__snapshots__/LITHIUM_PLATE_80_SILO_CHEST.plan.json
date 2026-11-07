@@ -52,16 +52,16 @@
         "inserter:15/lithium-plate",
         "inserter:16/lithium-plate"
       ],
-      "periods": [
-        {"swings":6,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":432,"denominator":1},"cycles":5,"period_ticks":2160,"kept":true},
-        {"swings":7,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":504,"denominator":1},"cycles":15,"period_ticks":7560,"kept":true},
-        {"swings":8,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":576,"denominator":1},"cycles":15,"period_ticks":8640,"kept":true},
-        {"swings":5,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":360,"denominator":1},"cycles":3,"period_ticks":1080,"kept":true},
-        {"swings":4,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":288,"denominator":1},"cycles":15,"period_ticks":4320,"kept":true},
-        {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":216,"denominator":1},"cycles":5,"period_ticks":1080,"kept":true},
-        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":144,"denominator":1},"cycles":15,"period_ticks":2160,"kept":true},
-        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":72,"denominator":1},"cycles":15,"period_ticks":1080,"kept":true},
-        {"swings":3,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":216,"denominator":1},"cycles":5,"period_ticks":1080,"kept":true}
+      "window_cycles": [
+        {"swings":6,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":432,"denominator":1},"cycles":5,"window_cycle_ticks":2160,"kept":true},
+        {"swings":7,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":504,"denominator":1},"cycles":15,"window_cycle_ticks":7560,"kept":true},
+        {"swings":8,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":576,"denominator":1},"cycles":15,"window_cycle_ticks":8640,"kept":true},
+        {"swings":5,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":360,"denominator":1},"cycles":3,"window_cycle_ticks":1080,"kept":true},
+        {"swings":4,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":288,"denominator":1},"cycles":15,"window_cycle_ticks":4320,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":216,"denominator":1},"cycles":5,"window_cycle_ticks":1080,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":144,"denominator":1},"cycles":15,"window_cycle_ticks":2160,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":72,"denominator":1},"cycles":15,"window_cycle_ticks":1080,"kept":true},
+        {"swings":3,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":216,"denominator":1},"cycles":5,"window_cycle_ticks":1080,"kept":true}
       ],
       "utilization": [
         {
@@ -117,7 +117,7 @@
       "planned": 6,
       "higher_up_to_ticks": 2400
     },
-    "main_period": {
+    "main_window_cycle": {
       "ticks": 2160,
       "exact": {
         "numerator": 2160,

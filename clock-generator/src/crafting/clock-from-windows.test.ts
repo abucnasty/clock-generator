@@ -17,7 +17,7 @@ const windows = (text: string) => text.split(" ").map(range => {
 // on a clock of 528 ticks: 11 crafting cycles of 48 with 2 output swings in each.
 //
 // The windows are those of the clock its reporter tightened by hand from the one version 0.5.0 made. Recorded on the
-// scaffold in Factorio 2.1.21 on 2026-10-10: 704 advanced circuits in each of 68 periods under both, at 355 wake-ups
+// scaffold in Factorio 2.1.21 on 2026-10-10: 704 advanced circuits in each of 68 window cycles under both, at 355 wake-ups
 // a minute under this one and 464 under the generated one.
 describe("a clock built from windows that are given", () => {
     const WINDOW_CYCLE = 528;

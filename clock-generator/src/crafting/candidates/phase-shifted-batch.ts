@@ -18,7 +18,7 @@ const MIN_SHIFTED_CYCLE_FRACTION = 1 / 8;
 
 
 interface ShiftedCycleCandidate {
-    /** 0-based crafting cycle within the clock period */
+    /** 0-based crafting cycle within the window cycle */
     cycle_index: number;
     shift_ticks: number;
     /** False for the planned position and shifts next to it: checked to show the whole range, never used */
@@ -29,7 +29,7 @@ interface ShiftedCycleCandidate {
 /**
  * The planned windows with one crafting cycle's windows (every inserter's and drill's) moved together, keeping their
  * lengths and spacing. A window belongs to the cycle it starts in. The first cycle stays put as the reference, and a
- * moved window never touches the same entity's windows of another cycle or wraps the end of the period.
+ * moved window never touches the same entity's windows of another cycle or wraps the end of the window cycle.
  * Only shifts at least an eighth of a cycle away from the planned position can be used; a cycle with none is left out.
  */
 function shiftedCycleCandidates(
@@ -197,7 +197,7 @@ function shiftEdgeNotes(
 
 /**
  * Finds a place for one crafting cycle's planned windows other than where the plan put them. The plan repeats the
- * same cycle evenly over the clock period, but the build only has to balance over the whole period, so a cycle can
+ * same cycle evenly over the window cycle, but the build only has to balance over the whole window cycle, so a cycle can
  * run earlier or later while the machines' buffers carry the difference. Every shift gets the quick trial; of those
  * that pass, one whose neighbours (in the same direction from the planned position) pass too is confirmed before one
  * whose do not, the smallest shift of those (see search.ts). The report carries the ends of the range that works
@@ -268,7 +268,7 @@ function shiftedCycleWindows(
 
 /**
  * The shifted swings candidate: the clock of the plan with one crafting cycle's windows moved together to another place
- * in the period (`shiftedCycleWindows`), checked and exported as a planned clock is. The planned windows are exported
+ * in the window cycle (`shiftedCycleWindows`), checked and exported as a planned clock is. The planned windows are exported
  * when no shift passes.
  */
 export function phaseShiftedBatchClock(config: Config, options: GenerateClockOptions = {}): BlueprintGenerationResult {

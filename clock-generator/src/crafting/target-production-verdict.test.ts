@@ -24,7 +24,7 @@ async function preparedFixture() {
     };
 }
 
-/** The long run's recording replaced by hands of `bins` items a period; `proven` makes them a repeating cycle */
+/** The long run's recording replaced by hands of `bins` items a window cycle; `proven` makes them a repeating cycle */
 function recordedRun(bins: number[], window_cycles: number, proven: boolean) {
     const original = planning.trialRunOf;
     vi.spyOn(planning, "trialRunOf").mockImplementation(run => {
@@ -63,7 +63,7 @@ test("rejects the archived imp plan's measured shortfall without changing either
     expect(diagnostic.check.actual_output_items).toBe(15.808);
     // the standard 80 bins never repeat: all of them, 1264 of 1280
     expect(standard.check.target_production).toEqual({ valid: false, shortfall: 16, output_items_per_window_cycle: 15.8, evidence: "sample" });
-    // the diagnostic's 500 bins repeat every 89 periods, 16 short in each: five whole repeats, 7040 of 7120
+    // the diagnostic's 500 bins repeat every 89 window cycles, 16 short in each: five whole repeats, 7040 of 7120
     expect(diagnostic.check.target_production).toEqual({ valid: false, shortfall: 80, output_items_per_window_cycle: 7040 / 445, evidence: "sample" });
 });
 
@@ -189,7 +189,7 @@ test("a final check takes over the lane starts of a final check that held", asyn
     expect(lane_runs).toBe(1);
 });
 
-// The span rule of a sampled long run: its judged bins (80 of 120 periods here) are no whole number of a three-period
+// The span rule of a sampled long run: its judged bins (80 of 120 window cycles here) are no whole number of a three-period
 // output repeat. Judged from the 16 of 17, 16, 15, a clock steady at its target would show 1279 of 1280; over whole
 // repeats it shows its amount from any start, and a repeat that is short stays short.
 test.each([
@@ -215,7 +215,7 @@ test("whole output repeats of judged bins", () => {
 
 /**
  * Long runs replaced in turn: the n-th run with a recording takes the n-th of `runs`, as long as the run asked for. `dip`
- * puts 15 of 16 in that period of the run (a loss of the start-up); `repeat` proves the repeat from that period on.
+ * puts 15 of 16 in that window cycle of the run (a loss of the start-up); `repeat` proves the repeat from that window cycle on.
  */
 function recordedRuns(runs: { dip?: number; short_every?: number; repeat?: number }[]) {
     const original = planning.trialRunOf;

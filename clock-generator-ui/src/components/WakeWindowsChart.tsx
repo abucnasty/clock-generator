@@ -40,7 +40,7 @@ import type { TimelineRange } from '../utils/timelineInspection';
 // Colours of the chart, measured on the outlined Paper (#232323, no elevation overlay): see the 2.6 spec
 /** A wake window (Wong sky blue), 6.81:1 */
 export const WAKE_BAR_COLOR = '#56B4E9';
-/** The outline of one clock period, 4.67:1 */
+/** The outline of one window cycle, 4.67:1 */
 export const WAKE_TRACK_COLOR = '#8c8c8c';
 /**
  * In forced colours the browser would paint over the bars' backgrounds and they would vanish, so the chart keeps its
@@ -366,7 +366,7 @@ interface WakeWindowsChartProps {
 }
 
 /**
- * The wake windows of every row on one axis of one clock period. The chart is one tab stop: the rows are a roving
+ * The wake windows of every row on one axis of one window cycle. The chart is one tab stop: the rows are a roving
  * tabindex, Up and Down move between them, Left, Right, Home and End step through a row's windows, Escape clears.
  */
 export function WakeWindowsChart(props: WakeWindowsChartProps) {

@@ -68,9 +68,9 @@ async function fixtureOf(name: string): Promise<{config: Config; scaffold: strin
 
 // The clocked cold starts the generation test lays the simulator against (src/crafting/pickup-clock-cold-start.
 // generation.test.ts; tests/game/builds/README.md, "Clocked cold starts"), recorded again: the staged start, the
-// generator's selected clock (or the same windows started inside the period, with the deciders or the inserters built
+// generator's selected clock (or the same windows started inside the window cycle, with the deciders or the inserters built
 // in reverse, or the build moved), nothing written to a belt. The game has to stand where it stood: the same lane phase
-// at placement, every period on that lattice, and what both clocked inserters held in every tick.
+// at placement, every window cycle on that lattice, and what both clocked inserters held in every tick.
 for (const [name, run] of Object.entries(controls.runs)) test(`clocked cold start: ${name}`, async context => {
     const factorio = process.env.FACTORIO_PATH, save = process.env.FACTORIO_HARNESS_SAVE;
     context.skip(!factorio || !save || !fs.existsSync(save), "Factorio harness is not configured");

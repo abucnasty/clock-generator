@@ -1,7 +1,7 @@
 /**
  * What the build plan's tests share: a sample's plan as a generation would make it, with the cycle arithmetic of its
  * planning run (one prepare step on the config with fractional swings on and one with them off, as validateConfig
- * makes it), and the validation of the config that the plan's periods are held to.
+ * makes it), and the validation of the config that the plan's window cycles are held to.
  */
 import type { Config } from "../../config/schema";
 import { loadConfigFromFile } from "../../config/loader";
@@ -29,7 +29,7 @@ export interface PlannedSample {
     readonly config: Config;
     readonly feasibility: Feasibility;
     readonly plan: BuildPlan;
-    /** What validating the config finds (its planning run's period); null where it is refused */
+    /** What validating the config finds (its planning run's window cycle); null where it is refused */
     readonly validation: ConfigValidation | null;
 }
 

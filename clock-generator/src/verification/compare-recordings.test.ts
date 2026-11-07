@@ -147,14 +147,14 @@ describe("laying a recording against a simulated run", () => {
 
         expect(report.issues).toEqual([]);
         expect(report.clock_ticks).toBe(window_cycle_ticks);
-        // the period the recording starts with is left out
+        // the window cycle the recording starts with is left out
         expect(report.game_window_cycles).toBe(WINDOW_CYCLES - 20 - 1);
         expect(report.output.game.every(items => items === 32)).toBe(true);
         expect(report.inserters.map(it => [it.config_id, it.game_items.mean, it.sim_items.mean, it.game_swings])).toEqual([[1, 32, 32, 2], [2, 32, 32, 2]]);
         expect(report.inserters.map(it => it.states.differences)).toEqual([[], []]);
         report.inserters.forEach(it => expect(it.states.agreement).toBeCloseTo(1, 2));
         expect(report.machines[0].states.agreement).toBeCloseTo(1, 2);
-        // counted over other periods of a run that takes several to repeat
+        // counted over other window cycles of a run that takes several to repeat
         expect(Math.abs(report.game_wake_ups_per_minute - report.sim_wake_ups_per_minute)).toBeLessThan(2);
         expect(formatRecordingComparison(report).at(-1)).toBe("RESULT: the simulator moves what the game moved.");
     });

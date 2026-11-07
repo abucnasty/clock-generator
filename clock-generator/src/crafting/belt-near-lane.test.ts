@@ -8,7 +8,7 @@ import { simulatedWakeUpsByStart } from "../verification/simulated-recording";
 // Utility science: inserter 1 takes flying robot frames and low density structures off belt 1, inserter 2 takes
 // processing units and low density structures off belt 2, inserter 3 takes the packs away. Recorded in Factorio
 // 2.1.21 on 2026-10-10 under the clock below, 36,000 ticks each: with the low density structures of belt 2 on the lane
-// nearest to inserter 2 it takes them first, and a period moves 64 items through inserter 1 and 128 through inserter
+// nearest to inserter 2 it takes them first, and a window cycle moves 64 items through inserter 1 and 128 through inserter
 // 2; with the lanes of belt 2 swapped it takes the processing units first and each moves 96. The filters of the
 // inserter were the same in both.
 describe("an inserter that picks up from a belt with two items", () => {
@@ -29,7 +29,7 @@ describe("an inserter that picks up from a belt with two items", () => {
         return config;
     };
 
-    /** What inserter 2 takes first in each period, and what the two input inserters move in the last period run */
+    /** What inserter 2 takes first in each window cycle, and what the two input inserters move in the last window cycle run */
     const run = (config: Config) => {
         const window_cycles = 12;
         const stock = simulateClockOnly(config, windows, WINDOW_CYCLE, window_cycles);
@@ -77,7 +77,7 @@ describe("an inserter that picks up from a belt with two items", () => {
 });
 
 // Batched swings with belt pickup slack on the utility science sample, the clock selected for it. Recorded in
-// Factorio 2.1.21 on 2026-10-10: 192 packs in each of 53 periods at 26.8 wake-ups a minute. The generator's long run,
+// Factorio 2.1.21 on 2026-10-10: 192 packs in each of 53 window cycles at 26.8 wake-ups a minute. The generator's long run,
 // which starts the clock at its beginning on the empty build of the scaffold's staged start, counted the game's 26.8
 // under the old wake-up rule; the rule "kept-lists" counts more.
 describe("a clock with more than one steady state", () => {

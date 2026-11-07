@@ -6,13 +6,13 @@
 // The check of the rule count's simulator path against the game (round 0 of the real-save loop, the reviewer's change
 // A): the same build, unclocked and clocked, counted the rule's way from recordings of the game and from the
 // simulator's runs of its config, per group. SAMPLE names the sample (default ADVANCED_CIRCUIT_240: machine-to-machine
-// inputs and outputs that take part hands). The first clock period of each recording is left out, as the scaffold
+// inputs and outputs that take part hands). The first window cycle of each recording is left out, as the scaffold
 // tests leave it out. Run the game under the harness lock, one at a time. Needs `npx tsc` first.
 //
 // A run is timed in game ticks, as the game tests are (scripts/game-run.js): after the warm-up a build runs until its final
 // machines have made the target amount over the trailing minute, which is printed (for the unclocked build it only says how
 // that build runs), and then each recording holds at least TICKS=<n> ticks (3,600 by default; the clocked one in whole clock
-// periods, the unclocked one as many ticks as the clocked one). A request over 36,000 ticks, or a clocked recording that would
+// window cycles, the unclocked one as many ticks as the clocked one). A request over 36,000 ticks, or a clocked recording that would
 // be, is refused unless `--long <reason>` (or LONG_RUN=<reason>) says why; the reason is printed.
 const fs = require("fs");
 const path = require("path");
@@ -48,7 +48,7 @@ const TICKS = Number(process.env.TICKS ?? GAME_RUN.baseline);
     const config = await loadConfigFromFile(ConfigPaths[SAMPLE]);
     const generated = generateClockAlternatives(config, { logger: quiet });
     const selected = generated.alternatives[generated.selected_index];
-    const period = selected.result.simulation_duration.ticks;
+    const window_cycle_ticks = selected.result.simulation_duration.ticks;
     fs.mkdirSync(out, { recursive: true });
 
     if (mode === "record") {
@@ -61,12 +61,12 @@ const TICKS = Number(process.env.TICKS ?? GAME_RUN.baseline);
         const blueprint = fs.readFileSync(path.join(samples_dir, build.scaffold), "utf8").trim();
         const exported = selected.result.subtick ?? selected.result;
         const clock = { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule };
-        // both recordings hold the same ticks: whole periods of the clock, from its next wrap, for the clocked one
-        const clock_ticks = selected.result.subtick?.clock.period_ticks ?? period;
+        // both recordings hold the same ticks: whole window cycles of the clock, from its next wrap, for the clocked one
+        const clock_ticks = selected.result.subtick?.clock.window_cycle_ticks ?? window_cycle_ticks;
         const ticks = recordedTicks(TICKS, clock_ticks);
         assertWithinRun(TICKS, long, "TICKS");
         assertWithinRun(ticks, long, `the recording of whole periods of ${clock_ticks} ticks`);
-        const target_per_second = selected.result.stability_check.expected_output_items * 60 / period;
+        const target_per_second = selected.result.stability_check.expected_output_items * 60 / window_cycle_ticks;
         const recipes = recipesMaking(config, config.setpoint.recipe);
         for (const unclocked of [true, false]) {
             const name = unclocked ? "unclocked" : "clocked";
@@ -104,7 +104,7 @@ const TICKS = Number(process.env.TICKS ?? GAME_RUN.baseline);
         const recording = parseRecording(JSON.parse(fs.readFileSync(path.join(out, `${SAMPLE}-${name}.json`), "utf8")));
         const match = matchRecordingToConfig(recording, config);
         const input = ruleCountInputOfRecording(recording, id => name === "clocked" && (windows[id]?.length ?? 0) > 0, match);
-        game[name] = ruleCount(input.inserters, input.machines, period, recording.sample_count);
+        game[name] = ruleCount(input.inserters, input.machines, window_cycle_ticks, recording.sample_count);
     }
     const game_removal = removedBetween(game.unclocked, game.clocked);
     const game_original = removedBetween(game.unclocked, game.clocked, "original");
@@ -120,7 +120,7 @@ const TICKS = Number(process.env.TICKS ?? GAME_RUN.baseline);
     const f = x => x === null || x === undefined ? "-" : x.toFixed(1);
     const rows = [];
     const lines = [
-        `${SAMPLE}: ${selected.label} (${selected.id}, ${selected.verdict}), period ${period}. Game: ${game.unclocked.ticks} and ${game.clocked.ticks} ticks counted; simulator ${sim.to_tick - sim.from_tick}.`,
+        `${SAMPLE}: ${selected.label} (${selected.id}, ${selected.verdict}), period ${window_cycle_ticks}. Game: ${game.unclocked.ticks} and ${game.clocked.ticks} ticks counted; simulator ${sim.to_tick - sim.from_tick}.`,
         "",
         "w a minute for each inserter, in true starts (source / sink / pickup), and in the series' original count:",
         "",

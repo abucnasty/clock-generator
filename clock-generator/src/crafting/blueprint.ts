@@ -30,7 +30,7 @@ function notClocked(entity_registry: ReadableEntityRegistry, clocked: EntityId[]
 
 /** What the lines of an enabling combinator say about the clock it reads */
 interface WindowCycleText {
-    /** The period as its lines give it (shownPeriodTicks) */
+    /** The window cycle as its lines give it (shownWindowCycleTicks) */
     ticks: string;
     /** The scale of a subtick clock, whose windows are in 1/scale ticks */
     subtick_scale?: number;
@@ -146,12 +146,12 @@ function targetRateDescription(cycle: OutputCyclePlan): string {
 }
 
 /**
- * A clock for a fractional period p/q ticks: a normal clock counts p ticks, and two arithmetic
- * combinators turn that into (clock * q) % p, the position in the period in 1/q-tick units.
- * The pattern wraps seamlessly because the clock period p times q is a multiple of p.
+ * A clock for a fractional window cycle p/q ticks: a normal clock counts p ticks, and two arithmetic
+ * combinators turn that into (clock * q) % p, the position in the window cycle in 1/q-tick units.
+ * The pattern wraps seamlessly because the window cycle p times q is a multiple of p.
  */
 export interface SubtickClock {
-    /** p: clock period in ticks, and the modulo applied to the subtick clock */
+    /** p: window cycle in ticks, and the modulo applied to the subtick clock */
     window_cycle_ticks: number;
     /** q: how many scaled units make one tick */
     scale: number;
@@ -166,7 +166,7 @@ const SUBTICK_CLOCK_EXTRA_LATENCY_TICKS = 2;
  * and adds 1 to each modulo of the count (see DeciderCombinatorEntity.clock), and the filter after the subtick clock
  * adds 1 to it. Each modulo and the subtick clock is a tick behind the count: that tick makes up for the one the
  * decider adds, so each is its position in its modulus plus 1 and nothing has to be shifted.
- * The windows stay 0-based positions in the period; only the constants of the deciders are this much more.
+ * The windows stay 0-based positions in the window cycle; only the constants of the deciders are this much more.
  */
 const CLOCK_FIRST_VALUE = 1;
 
@@ -207,7 +207,7 @@ export function lockWires(lock: ConstantCombinatorEntity, receivers: CircuitEnti
     return wires;
 }
 
-/** Decider constants are whole numbers; fractional bounds (from a fractional period's wrap) are rounded inward */
+/** Decider constants are whole numbers; fractional bounds (from a fractional window cycle's wrap) are rounded inward */
 function wholeRanges(ranges: OpenRange[]): OpenRange[] {
     return ranges.flatMap(range => {
         const bounds = wholeBounds(range.start_inclusive, range.end_inclusive);
@@ -241,8 +241,8 @@ function maskRuns(mask: Uint8Array, length: number): OpenRange[] {
 }
 
 /**
- * The split of whole-tick windows in a whole-tick period that needs the fewest decider conditions, or null when
- * no divisor of the period beats listing every window. Long periods (a high LCM) mostly repeat every crafting cycle.
+ * The split of whole-tick windows in a whole-tick window cycle that needs the fewest decider conditions, or null when
+ * no divisor of the window cycle beats listing every window. Long window cycles (a high LCM) mostly repeat every crafting cycle.
  */
 export function splitRepeatingRanges(ranges: OpenRange[], window_cycle_ticks: number): ModuloRanges | null {
     if (!Number.isInteger(window_cycle_ticks) || ranges.length < 2) {
@@ -282,15 +282,15 @@ export function splitRepeatingRanges(ranges: OpenRange[], window_cycle_ticks: nu
     return best;
 }
 
-/** The signal one clock for the period and the fuel clocks counts on, which leaves the clock signal for the clock of the period */
+/** The signal one clock for the window cycle and the fuel clocks counts on, which leaves the clock signal for the clock of the window cycle */
 const MERGED_CLOCK_SIGNAL = SignalId.virtual("signal-T");
 
 /** The largest count a signal holds */
 const MAX_SIGNAL_VALUE = 2 ** 31 - 1;
 
 /**
- * Ticks one clock has to count to hold a whole number of periods and of every fuel clock: their least common
- * multiple. Null when the period is not a whole number of ticks or the count does not fit a signal.
+ * Ticks one clock has to count to hold a whole number of window cycles and of every fuel clock: their least common
+ * multiple. Null when the window cycle is not a whole number of ticks or the count does not fit a signal.
  */
 export function mergedClockTicks(window_cycle_ticks: number, fuel_clock_ticks: number[]): number | null {
     if (!Number.isInteger(window_cycle_ticks) || fuel_clock_ticks.some(ticks => !Number.isInteger(ticks) || ticks < 1)) {
@@ -307,7 +307,7 @@ export function mergedClockTicks(window_cycle_ticks: number, fuel_clock_ticks: n
     return merged;
 }
 
-/** Whole-tick windows that run past the end of the period, carried over to its start */
+/** Whole-tick windows that run past the end of the window cycle, carried over to its start */
 function wrapRangesIntoWindowCycle(ranges: OpenRange[], window_cycle_ticks: number): OpenRange[] {
     if (!Number.isInteger(window_cycle_ticks)) {
         return ranges;
@@ -318,7 +318,7 @@ function wrapRangesIntoWindowCycle(ranges: OpenRange[], window_cycle_ticks: numb
 }
 
 /**
- * Windows in ticks of the p/q period, as 0-based positions of the subtick clock shifted back by the extra combinator
+ * Windows in ticks of the p/q window cycle, as 0-based positions of the subtick clock shifted back by the extra combinator
  * latency. The count is its position plus the first value, a tick ahead, which makes up for one tick of the latency.
  */
 function subtickRanges(ranges: OpenRange[], clock: SubtickClock): OpenRange[] {
@@ -343,7 +343,7 @@ function subtickRanges(ranges: OpenRange[], clock: SubtickClock): OpenRange[] {
 /** What the combinators of a clock blueprint do, as data, for what builds it to read instead of their descriptions */
 export interface ClockSchedule {
     /**
-     * Ticks the clock counts before it starts over: the period, the whole ticks of a subtick clock, or the count of a
+     * Ticks the clock counts before it starts over: the window cycle, the whole ticks of a subtick clock, or the count of a
      * clock merged with fuel clocks. The game counts only its whole part.
      */
     counted_ticks: number;
@@ -354,7 +354,7 @@ export interface ClockSchedule {
 /** A clock blueprint, whether some of its windows are checked against a modulo of the clock, and its schedule */
 export interface SignalPerInserterBlueprint {
     blueprint: FactorioBlueprint;
-    /** Some window repeats within the period and is checked against the clock modulo its length: a modulo clock */
+    /** Some window repeats within the window cycle and is checked against the clock modulo its length: a modulo clock */
     modulo: boolean;
     schedule: ClockSchedule;
 }
@@ -363,7 +363,7 @@ export function createSignalPerInserterBlueprint(
     final_output_item_name: string,
     cycle: OutputCyclePlan,
     total_duration: Duration,
-    /** The whole number of crafting cycles the period is made of (the recipe LCM), which the swings of a cycle are multiplied by */
+    /** The whole number of crafting cycles the window cycle is made of (the recipe LCM), which the swings of a cycle are multiplied by */
     cycles_in_window_cycle: number,
     history: InventoryTransferHistory,
     entityRegistry: ReadableEntityRegistry,
@@ -385,16 +385,16 @@ export function createSignalPerInserterBlueprint(
     let x = 0.5;
 
 
-    // Fuel inserters are on clocks of their own, one per interval. One clock counts as many periods as it takes for
+    // Fuel inserters are on clocks of their own, one per interval. One clock counts as many window cycles as it takes for
     // every fuel clock to fit a whole number of times, on a signal of its own, and a modulo of it gives the clock of
-    // the period (on the clock signal, so everything that reads the clock is as without fuel) and each fuel clock.
+    // the window cycle (on the clock signal, so everything that reads the clock is as without fuel) and each fuel clock.
     // A subtick clock, or a count too long for a signal, keeps separate fuel clocks instead.
     const fuel_inserter_clocks = Array.from(inserter_clocks.values())
         .filter(inserter_clock => inserter_clock.own_clock)
         .sort((a, b) => a.inserter_id.number - b.inserter_id.number);
     const fuel_moduli = Array.from(new Set(fuel_inserter_clocks.map(inserter_clock => inserter_clock.modulus))).sort((a, b) => a - b);
     const merged_clock_ticks = subtick_clock || fuel_moduli.length === 0 ? null : mergedClockTicks(total_duration.ticks, fuel_moduli);
-    // the clock of the period is a modulo of the one clock, unless every fuel clock already fits the period
+    // the clock of the window cycle is a modulo of the one clock, unless every fuel clock already fits the window cycle
     const window_cycle_modulus = merged_clock_ticks !== null && merged_clock_ticks !== total_duration.ticks ? total_duration.ticks : null;
     const counted_signal = window_cycle_modulus === null ? SignalId.clock : MERGED_CLOCK_SIGNAL;
     const counted_ticks = merged_clock_ticks ?? (subtick_clock ? subtick_clock.window_cycle_ticks : total_duration.ticks);
@@ -430,7 +430,7 @@ export function createSignalPerInserterBlueprint(
 
     const sortedEntityIds = Array.from(inventory_transfers.keys()).sort((a, b) => a.id.localeCompare(b.id));
 
-    // a window that runs past the end of the period carries on at its start
+    // a window that runs past the end of the window cycle carries on at its start
     const wholeRangesInWindowCycle = (ranges: OpenRange[]) => wrapRangesIntoWindowCycle(wholeRanges(ranges), total_duration.ticks);
     const splits = new Map(sortedEntityIds.map(entityId => [entityId, subtick_clock || !use_modulo ? null : splitRepeatingRanges(
         wholeRangesInWindowCycle(OpenRange.reduceRanges(inventory_transfers.get(entityId)!.map(transfer => transfer.tick_range))),
@@ -442,7 +442,7 @@ export function createSignalPerInserterBlueprint(
     const modulo_letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").filter(letter => `signal-${letter}` !== MERGED_CLOCK_SIGNAL.name);
     const modulo_signals = new Map(moduli.map((modulus, index) => [
         modulus,
-        // the clock of the period is on the clock signal, where everything that reads the clock expects it
+        // the clock of the window cycle is on the clock signal, where everything that reads the clock expects it
         modulus === window_cycle_modulus ? SignalId.clock : SignalId.virtual(`signal-${modulo_letters[index % modulo_letters.length]}`),
     ] as const));
     const fuel_clocks_by_modulus = new Map<number, InserterClock[]>();

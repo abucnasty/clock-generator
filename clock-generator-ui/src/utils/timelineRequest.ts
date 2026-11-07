@@ -11,7 +11,7 @@ export function timelineRequestFor(config: Config | null | undefined, clock: Clo
     const legacy = clock as ClockAlternativeView & { nonMovingBelts?: boolean };
     const backedUp = clock.backedUpBelts ?? legacy.nonMovingBelts ?? (['backed-up', 'non-moving'].includes(clock.beltLabel) ? true
         : clock.beltLabel.startsWith('moving') ? false : overrides?.backed_up_belts === true);
-    // the clock's replay shows a period the long run judges, not the first after warm-up, where it judges the build later
+    // the clock's replay shows a window cycle the long run judges, not the first after warm-up, where it judges the build later
     const clock_tick = mode === 'clock' ? clock.asBuilt?.clock_tick_at_first_judged : undefined;
     const settle = mode === 'clock' && clock_tick === undefined
         ? Math.floor((clock.asBuilt?.first_judged_tick ?? 0) / clock.simulationDurationTicks) : 0;
@@ -21,7 +21,7 @@ export function timelineRequestFor(config: Config | null | undefined, clock: Clo
         ...(clock_tick !== undefined ? { settle_ticks: clock_tick } : settle > 0 ? { settle_window_cycles: settle } : {}) };
 }
 
-/** Which period a settled replay shows; nothing where the replay is the first period after the warm-up */
+/** Which window cycle a settled replay shows; nothing where the replay is the first window cycle after the warm-up */
 export function settledWindowCycleLabel(request: RecordTimelineRequest | null, recording: Pick<TimelineRecording, 'mode' | 'ticks_before_recording'> | null | undefined): string | null {
     return ((request?.settle_ticks ?? 0) > 0 || (request?.settle_window_cycles ?? 0) > 0) && recording?.mode === 'clock'
         ? `Window cycle from tick ${formatNumberText(recording.ticks_before_recording, { maxDecimals: 0 })}, at steady state` : null;

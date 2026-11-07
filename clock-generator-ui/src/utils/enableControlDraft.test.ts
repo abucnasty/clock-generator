@@ -33,7 +33,7 @@ describe('enableControlDraftOf', () => {
         });
     });
 
-    /** The clock's wake windows for the entity and its period, and the same as the form shows them */
+    /** The clock's wake windows for the entity and its window cycle, and the same as the form shows them */
     const planned = { ranges: [{ start: 12, end: 20 }, { start: 80, end: 95 }], windowCycleTicks: 264 };
     const plannedWindows = [{ start: '12', end: '20' }, { start: '80', end: '95' }];
 

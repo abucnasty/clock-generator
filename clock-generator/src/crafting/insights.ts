@@ -77,7 +77,7 @@ function dropTicks(history: CompactStateTransitionHistory, entity_id: string): n
         .sort((a, b) => a - b);
 }
 
-/** How much of each clock period the machines are not needed, the slack all timing has to fit in */
+/** How much of each window cycle the machines are not needed, the slack all timing has to fit in */
 function spareTimeInsight(result: BlueprintGenerationResult, run: CompactStateTransitionHistory): ClockInsight | null {
     const window_cycle_ticks = run.total_duration_ticks;
     const machines = run.entities.filter(it => it.entity_type === "machine").map(entity => {
@@ -113,7 +113,7 @@ function spareTimeInsight(result: BlueprintGenerationResult, run: CompactStateTr
     };
 }
 
-/** Per ingredient: when the machine takes it, how much comes per hand and how many hands a period needs */
+/** Per ingredient: when the machine takes it, how much comes per hand and how many hands a window cycle needs */
 function insertionLimitsInsight(result: BlueprintGenerationResult, entities: CompactEntityStateTransitions[]): ClockInsight | null {
     const rows: { machine: string; item: string; per_craft: number; limit: number; inserter: string; hand: number; hands: number }[] = [];
     for (const planned of result.serializable_transfer_plan.entities) {
@@ -141,7 +141,7 @@ function insertionLimitsInsight(result: BlueprintGenerationResult, entities: Com
     if (rows.length === 0) {
         return null;
     }
-    // the ingredient with the most hands per period is the one whose hands have to be spaced by the limit
+    // the ingredient with the most hands per window cycle is the one whose hands have to be spaced by the limit
     const example = rows.reduce((a, b) => b.hands > a.hands ? b : a);
     return {
         id: "insertion-limits",

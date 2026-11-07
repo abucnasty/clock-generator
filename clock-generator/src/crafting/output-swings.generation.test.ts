@@ -134,7 +134,7 @@ describe("generateClockForConfig", () => {
     });
 
     // One machine, two output hands and nine input hands per 288 ticks. Clocks for it are easy to get to the
-    // expected output in one simulated period without the build actually repeating that period.
+    // expected output in one simulated window cycle without the build actually repeating that window cycle.
     describe("FLYING_ROBOT_FRAME_160 clock-only check", async () => {
         // The sample as it was before it took the lanes of the build (2026-11-05): no near lane on the belt inserters, the
         // output belt's lanes the processing unit and the frame. With the build's own lanes the planned clock is unstable

@@ -108,7 +108,7 @@ describe("the drops of the grenade build onto its belt", () => {
         expect(describeDropRoom(room)).toBe("The belt moves 14 tiles a period, but the 7 copies drop 21 hands on it, so no spacing of the copies fits: some hands always wait for room.");
         // 14 hands on 14 tiles are not too many
         expect((await dropSpacing(await grenade(), BY_LINE, 112))!.room!.crowded).toBeNull();
-        // the same at a period of 100 ticks, 12.5 tiles
+        // the same at a window cycle of 100 ticks, 12.5 tiles
         expect(dropSpacing(await grenade(), BY_LINE, 100)!.room!.crowded).toEqual({ hands: 14, belt_tiles: 12.5, hand_tiles: 1 });
     });
 
@@ -211,7 +211,7 @@ describe("the drops of the grenade build onto its belt", () => {
     });
 });
 
-/** The lane model alone: hands of 4 stacks started at tick t of every period, 14 periods, then whether the last three all land at +0, +1, +2, +4 */
+/** The lane model alone: hands of 4 stacks started at tick t of every window cycle, 14 window cycles, then whether the last three all land at +0, +1, +2, +4 */
 function replayFits(hands: { place: number; tick: number }[], window_cycle_ticks: number): boolean {
     const lane = new LaneTraffic();
     const spots = hands.map(hand => hand.place * 8);

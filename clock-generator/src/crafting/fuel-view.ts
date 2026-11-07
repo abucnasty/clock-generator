@@ -21,9 +21,9 @@ export interface FuelMachinePlan {
     burn_rate_per_second: number;
     /** Part of the time the machine crafts in the plan, 0 to 1 */
     crafting_share: number;
-    /** Fuel items burned a second over a clock period: the burn rate times the crafting share */
+    /** Fuel items burned a second over a window cycle: the burn rate times the crafting share */
     effective_burn_rate_per_second: number;
-    /** Fuel items burned over one clock period */
+    /** Fuel items burned over one window cycle */
     burned_per_window_cycle: number;
     /** Inserters stop dropping fuel once the slot holds this many items */
     insertion_limit: number;
@@ -63,12 +63,12 @@ export interface FuelInserterPlan {
 
 /** Fuel is outside the transfer plan: what the burner machines use, and the clocks exported to refill them */
 export interface FuelPlan {
-    /** Ticks of the clock period */
+    /** Ticks of the window cycle */
     window_cycle_ticks: number;
-    /** Ticks the one merged clock of the blueprint counts: the least common multiple of the period and the fuel clocks */
+    /** Ticks the one merged clock of the blueprint counts: the least common multiple of the window cycle and the fuel clocks */
     merged_clock_ticks: number | null;
     /**
-     * Why each fuel clock has a counter of its own instead of the merged clock: the period is not a whole number of
+     * Why each fuel clock has a counter of its own instead of the merged clock: the window cycle is not a whole number of
      * ticks (subtick clock), or the merged count does not fit a signal
      */
     separate_clocks_reason?: "fractional_period" | "merged_clock_too_long";

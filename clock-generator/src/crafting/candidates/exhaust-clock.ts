@@ -6,11 +6,11 @@ import { exhaustWindowRanges, takesResultOf } from "../exhaust";
 import { evenWindows } from "./time-division-windows";
 
 /**
- * The clock of a plan whose results come too rarely for whole hands in a period (exhaust.ts): the inserters that
- * bring the item destroyed get one window for each hand, spread evenly over the period, as even hands gives them; the
- * inserters that take each result out of the container get the result's one window a period, opened in turn
+ * The clock of a plan whose results come too rarely for whole hands in a window cycle (exhaust.ts): the inserters that
+ * bring the item destroyed get one window for each hand, spread evenly over the window cycle, as even hands gives them; the
+ * inserters that take each result out of the container get the result's one window a window cycle, opened in turn
  * ("staggered"). Nothing is read off the planning run: the windows are the arithmetic's, the simulator runs them for
- * several periods (checkedClock), and the clock holds where both hold.
+ * several window cycles (checkedClock), and the clock holds where both hold.
  */
 export function exhaustClockOfPlan(plan: UnclockedRun, options: GenerateClockOptions = {}): BlueprintGenerationResult {
     const { simulation_context, swing_counts, output_cycle_plan, duration } = plan.run;

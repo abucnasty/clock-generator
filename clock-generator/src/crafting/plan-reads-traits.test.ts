@@ -273,7 +273,7 @@ function checkSinks(registry: ReadableEntityRegistry, traits: ConfigTraits): voi
 
 /**
  * The sinks that never refuse a hand: each inserter alone as a terminal output, then all of them, each planned to move
- * one hand of 16 a period (the branches are the same whatever the hands)
+ * one hand of 16 a window cycle (the branches are the same whatever the hands)
  */
 function checkTerminalBranches(registry: ReadableEntityRegistry, traits: ConfigTraits): void {
     const inserters = registry.getAll().filter(Entity.isInserter);

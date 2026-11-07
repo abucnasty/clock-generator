@@ -39,7 +39,7 @@ describe("the trials of a loss", () => {
 
 describe("judging what a build made after a loss", () => {
     it("has it recover when the periods that repeat are all at the expected output, and counts the periods before", () => {
-        // the state at the end of the fourth period was that at the end of the third: from there on it makes 704
+        // the state at the end of the fourth window cycle was that at the end of the third: from there on it makes 704
         expect(judgeRecovery([640, 688, 704, 704], 704, 3, 8)).toEqual({ recovers: true, recovered_after_bins: 2, proven: true, ends_in: [704] });
     });
 
@@ -60,7 +60,7 @@ describe("judging what a build made after a loss", () => {
 });
 
 describe("a trial that is short late in its window", () => {
-    // back from the second period, then one hand short at period 34 of 40, and never proven: today's hold of 8 fails it
+    // back from the second window cycle, then one hand short at window cycle 34 of 40, and never proven: today's hold of 8 fails it
     const late = [320, ...Array(32).fill(400), 352, ...Array(6).fill(400)];
 
     it("runs on where no state repeated, it was back for 8 periods before the late mark and is short only after it", () => {
@@ -74,7 +74,7 @@ describe("a trial that is short late in its window", () => {
     });
 
     it("does not run on where it was short in the 8 periods before the late mark: one that is short every few periods", () => {
-        // the 4-swing clock of agricultural science, short every 4 to 6 periods with or without a loss
+        // the 4-swing clock of agricultural science, short every 4 to 6 window cycles with or without a loss
         const every_few = [0, 6, 11, 16, 21, 27, 34, 37].reduce((bins, at) => { bins[at] = 384; return bins; }, Array(40).fill(400));
         expect(runsOn(every_few, 400, null, LATE_AFTER_WINDOW_CYCLES, 8)).toBe(false);
     });

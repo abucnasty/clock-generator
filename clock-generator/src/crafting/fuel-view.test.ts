@@ -66,7 +66,7 @@ describe("the fuel plan", () => {
         });
 
         it("counts the period and every fuel clock on one merged clock", () => {
-            // lcm(128, 192, 224): the fuel clocks are divisors of 21 periods, a little shorter than the ticks the fuel
+            // lcm(128, 192, 224): the fuel clocks are divisors of 21 window cycles, a little shorter than the ticks the fuel
             // was sure to last in a run of the exported clock, less what a hand takes to arrive
             expect(plan.merged_clock_ticks).toBe(2688);
             expect(plan.separate_clocks_reason).toBeUndefined();
@@ -78,7 +78,7 @@ describe("the fuel plan", () => {
             expect(fractional.merged_clock_ticks).toBeNull();
             expect(fractional.separate_clocks_reason).toBe("fractional_period");
 
-            // fuel clocks that share no factor with a long period
+            // fuel clocks that share no factor with a long window cycle
             const long_window_cycle = 2 ** 31 - 1;
             const too_long = fuelPlan(registry, unplannedInserterClocks(registry, 128), new Map(), long_window_cycle)!;
             expect(too_long.merged_clock_ticks).toBeNull();
@@ -245,7 +245,7 @@ describe("fuel clocks made from a run of the exported clock", () => {
             expect(levels.limit_lasts_ticks).not.toBeNull();
             const machine = plan.machines.find(it => it.machine_id === levels.machine_id)!;
             expect(machine.insertion_limit_lasted_at_least_ticks).toBe(levels.limit_lasts_ticks);
-            // a machine burns in bursts: the limit never lasts longer than at the rate it burns over a whole period
+            // a machine burns in bursts: the limit never lasts longer than at the rate it burns over a whole window cycle
             expect(levels.limit_lasts_ticks!).toBeLessThanOrEqual(machine.insertion_limit_lasts_ticks * 1.02);
             // and no shorter than while it crafts without a stop, which also burns a little extra as it starts
             expect(levels.limit_lasts_ticks!).toBeGreaterThanOrEqual(Math.floor(machine.insertion_limit / machine.burn_rate_per_second * 60 * 0.9));

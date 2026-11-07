@@ -10,10 +10,10 @@ import { TargetProductionRate } from "./target-production-rate";
 // Whether the drops of the copies fit, before Generate
 // ============================================================================
 //
-// The editor says it under "Next copy stands", for a period estimated from the config alone: the ticks one output hand takes at
+// The editor says it under "Next copy stands", for a window cycle estimated from the config alone: the ticks one output hand takes at
 // the rate the target asks of a machine, which is the clock planner's base cycle (`OutputCyclePlan.create`). The clock's own
-// period is that times the cycles in which every inserter moves whole hands, which only the plan knows, so the note says it is
-// an estimate and the result (the drop-spacing insight) speaks of the clock's period.
+// window cycle is that times the cycles in which every inserter moves whole hands, which only the plan knows, so the note says it is
+// an estimate and the result (the drop-spacing insight) speaks of the clock's window cycle.
 
 const WHOLE_TICK_SLACK = 1e-6;
 
@@ -63,7 +63,7 @@ function alsoFits(room: DropRoom): string[] {
 }
 
 /**
- * The note under "Next copy stands": whether the hands of the copies fit between each other at the estimated period, with the
+ * The note under "Next copy stands": whether the hands of the copies fit between each other at the estimated window cycle, with the
  * inserters of a copy starting together, and the spacings that would. None where the copies share no belt, the gap between
  * them is not given, or no output inserter has a place (the note that asks for the gap is copyGapNeededNote).
  */

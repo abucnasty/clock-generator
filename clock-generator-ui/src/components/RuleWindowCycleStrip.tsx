@@ -7,7 +7,7 @@ interface Span {
 }
 
 interface RuleWindowCycleStripProps {
-    /** The rule's period: positions 0 to `periodTicks - 1` */
+    /** The rule's window cycle: positions 0 to `windowCycleTicks - 1` */
     windowCycleTicks: number;
     /** The rule's valid wake windows, inclusive ticks */
     windows: Span[];
@@ -60,7 +60,7 @@ function Track({ label, spans, windowCycleTicks, outlined }: { label: string; sp
 }
 
 /**
- * The rule's wake windows drawn over one period, and the clock's under them when Results has some: yours solid, the
+ * The rule's wake windows drawn over one window cycle, and the clock's under them when Results has some: yours solid, the
  * clock's outlined, so the shape and the label tell them apart, not the colour. Hidden from screen readers: the
  * sentence and the caption above say the same in words.
  */

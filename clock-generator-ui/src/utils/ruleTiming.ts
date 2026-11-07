@@ -1,5 +1,5 @@
 /**
- * What the rule editor knows of the clock it edits a rule for: the crafting cycle, the clock period and, from Results,
+ * What the rule editor knows of the clock it edits a rule for: the crafting cycle, the window cycle and, from Results,
  * the clock's own wake windows. Pure functions; App works out which source is current, and `RuleTimingContext` hands it
  * to the rule form wherever it is mounted.
  */
@@ -9,7 +9,7 @@ import { normalizeWindows } from './wakeWindows';
 export interface RuleTiming {
     /** One crafting cycle, in ticks */
     cycleTicks: number | null;
-    /** The clock period, in ticks: a whole number of crafting cycles, fractional for a subtick clock */
+    /** The window cycle, in ticks: a whole number of crafting cycles, fractional for a subtick clock */
     windowCycleTicks: number | null;
     /** Where the numbers come from: the clock on Results for this build, the last check, or nowhere yet */
     from: 'results' | 'check' | null;
@@ -43,8 +43,8 @@ export function entityKey(entityType: 'inserter' | 'drill', id: number): string 
 }
 
 /**
- * The clock's wake windows for one entity, as a Clocked rule would hold them: within the period, in order, a window that
- * wraps past the end of the period as two. Null unless they come from Results, the period is a whole number of ticks
+ * The clock's wake windows for one entity, as a Clocked rule would hold them: within the window cycle, in order, a window that
+ * wraps past the end of the window cycle as two. Null unless they come from Results, the window cycle is a whole number of ticks
  * (a rule can't repeat with any other) and the entity has a window.
  */
 export function plannedWindowsOf(timing: RuleTiming, key: string): { start: number; end: number }[] | null {

@@ -19,7 +19,7 @@ import {expectRunIsConsistent, unclockedContainerStock} from "../helpers/fixture
 interface Expected {
     /** Slots of the container, from the game data (README: a wagon 40, legendary 100; a car and a tank 80) */
     slots: number;
-    /** Per cut input: the most the container holds of it (its free and filtered slots times the stack size) and the periods that stock lasts at the target */
+    /** Per cut input: the most the container holds of it (its free and filtered slots times the stack size) and the window cycles that stock lasts at the target */
     stock: Record<string, {items: number; periods: number}>;
 }
 
@@ -65,7 +65,7 @@ describe("the stock each cut has to use up", () => {
             const [cut1, cut2] = variant.recipe === "iron-gear-wheel" ? ["iron-plate", "iron-plate"] : ["iron-plate", "copper-cable"];
             for (const item of new Set([cut1, cut2])) {
                 const perCraft = variant.recipe === "iron-gear-wheel" ? 2 : item === "iron-plate" ? 1 : 3;
-                // stock over what the machine takes of it in a period at the target
+                // stock over what the machine takes of it in a window cycle at the target
                 expect(containerDrainWindowCycles(variant, item), item).toBe(expected.stock[item].periods);
                 expect(Math.ceil(expected.stock[item].items / (CONTAINER_TARGET * window_cycle_ticks / 60 * perCraft)), item).toBe(expected.stock[item].periods);
             }

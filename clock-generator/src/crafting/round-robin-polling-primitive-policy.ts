@@ -42,7 +42,7 @@ export function withSecondaryPlanningProvenance<T extends BlueprintGenerationRes
 /** Derived scheduling policy, distinct from user overrides and legacy final-taker aggregate counts. */
 export interface PrimitiveRoundRobinPollingPolicy {
     strategy: "primitive-grouped";
-    /** Tried because the first plan's period is too long, or because no planned count held */
+    /** Tried because the first plan's window cycle is too long, or because no planned count held */
     trigger: "initial-period-limit" | "no-count-holds";
     requested_terminal_swing_count: number;
     terminal_swing_count: number;

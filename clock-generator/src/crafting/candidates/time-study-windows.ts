@@ -177,7 +177,7 @@ export function deriveTimeStudyWindows(
  *
  * The clock-only checks made here of the windows observed and of the planned windows judge each moving lane-phase
  * start over its repeating cycle (see runAsBuiltCheck): the windows are read off a run from one lane phase, so they can
- * hold their first period from another and still fall short every few periods. The plan's belt pickup slack is decided
+ * hold their first window cycle from another and still fall short every few window cycles. The plan's belt pickup slack is decided
  * as for any planned clock (see clockOfPlan).
  */
 export function timeStudyWindowsClock(
@@ -242,7 +242,7 @@ export function timeStudyWindowsClock(
     stability_check.as_built = derived.as_built ?? undefined;
     // the planning run's windows are not this clock's: it holds when its own windows hold, as even hands do. The swing
     // backoff goes by this: on the express moving underground pickups the run the windows are observed in moves 560
-    // of 528 a period at 3 output swings, and the windows hold 528 from every start, and do in the game
+    // of 528 a window cycle at 3 output swings, and the windows hold 528 from every start, and do in the game
     stability_check.holds = derived.windows !== null && (derived.as_built?.holds ?? false);
 
     if (derived.windows !== null && derived.verification !== null) {

@@ -2,21 +2,21 @@ import { RecordedInserter, Recording } from "../verification/recording";
 import { Config } from "../config";
 import { Machine } from "../entities";
 
-/** One complete clock period of a recording: the samples from start (inclusive) to end (exclusive) */
+/** One complete window cycle of a recording: the samples from start (inclusive) to end (exclusive) */
 export interface WindowCycleRange {
     start: number;
     end: number;
 }
 
 interface WindowCycleOutput extends WindowCycleRange {
-    /** Items the output inserters dropped during the period */
+    /** Items the output inserters dropped during the window cycle */
     items: number;
 }
 
 /**
- * Sample ranges of the complete clock periods in a series of recorded clock values. A period starts where the
+ * Sample ranges of the complete window cycles in a series of recorded clock values. A window cycle starts where the
  * value falls below the previous sample's: the clock may count from 0 or from 1, so the wrap is the only sure sign.
- * The first sample starts a period only when it holds the lowest value the clock reaches, and the last period is
+ * The first sample starts a window cycle only when it holds the lowest value the clock reaches, and the last window cycle is
  * complete only when its last sample holds the highest, so a recording that begins or ends mid-period loses its ends.
  */
 export function clockWindowCycles(values: number[]): WindowCycleRange[] {
@@ -68,9 +68,9 @@ export function outputInserters(recording: Recording, recipes: Iterable<string>)
 }
 
 /**
- * Items the output inserters of the recipes moved in each complete clock period of a clocked recording. A drop is a
- * fall of an inserter's held count from one sample to the next; it is counted in the period of the later sample, so
- * a drop on the period boundary belongs to the period that starts there. A partial drop into a full sink counts for
+ * Items the output inserters of the recipes moved in each complete window cycle of a clocked recording. A drop is a
+ * fall of an inserter's held count from one sample to the next; it is counted in the window cycle of the later sample, so
+ * a drop on the window cycle boundary belongs to the window cycle that starts there. A partial drop into a full sink counts for
  * the items it did move.
  */
 export function outputPerWindowCycle(recording: Recording, recipes: Iterable<string>): WindowCycleOutput[] {

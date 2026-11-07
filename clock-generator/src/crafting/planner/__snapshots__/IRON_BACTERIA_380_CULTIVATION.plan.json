@@ -37,14 +37,14 @@
         "inserter:10/bioflux",
         "inserter:10/nutrients"
       ],
-      "periods": [
-        {"swings":3,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":288,"denominator":19},"cycles":6,"period_ticks":90.94736842105263,"kept":true},
-        {"swings":4,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":384,"denominator":19},"cycles":9,"period_ticks":181.89473684210526,"kept":true},
-        {"swings":5,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":480,"denominator":19},"cycles":18,"period_ticks":454.7368421052632,"kept":true},
-        {"swings":6,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":576,"denominator":19},"cycles":3,"period_ticks":90.94736842105263,"kept":true},
-        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":192,"denominator":19},"cycles":9,"period_ticks":90.94736842105263,"kept":true},
-        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":96,"denominator":19},"cycles":18,"period_ticks":90.94736842105263,"kept":true},
-        {"swings":3.125,"swings_exact":{"numerator":25,"denominator":8},"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":300,"denominator":19},"cycles":144,"period_ticks":2273.684210526316,"kept":true}
+      "window_cycles": [
+        {"swings":3,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":288,"denominator":19},"cycles":6,"window_cycle_ticks":90.94736842105263,"kept":true},
+        {"swings":4,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":384,"denominator":19},"cycles":9,"window_cycle_ticks":181.89473684210526,"kept":true},
+        {"swings":5,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":480,"denominator":19},"cycles":18,"window_cycle_ticks":454.7368421052632,"kept":true},
+        {"swings":6,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":576,"denominator":19},"cycles":3,"window_cycle_ticks":90.94736842105263,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":192,"denominator":19},"cycles":9,"window_cycle_ticks":90.94736842105263,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":96,"denominator":19},"cycles":18,"window_cycle_ticks":90.94736842105263,"kept":true},
+        {"swings":3.125,"swings_exact":{"numerator":25,"denominator":8},"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":300,"denominator":19},"cycles":144,"window_cycle_ticks":2273.684210526316,"kept":true}
       ],
       "utilization": [
         {
@@ -77,7 +77,7 @@
       "planned": 3,
       "higher_up_to_ticks": 2400
     },
-    "main_period": {
+    "main_window_cycle": {
       "ticks": 90.94736842105263,
       "exact": {
         "numerator": 1728,

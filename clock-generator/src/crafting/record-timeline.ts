@@ -16,15 +16,15 @@ export interface RecordTimelineRequest {
     windows: SerializableClockWindows;
     inserter_clocks?: Record<string, SerializableInserterClock>;
     /**
-     * Periods the clock runs from the cold start before the recorded one (mode "clock"): the clock's first judged tick
-     * in periods, `as_built.first_judged_tick`, so that the recording shows a settled period. Absent: the first period
+     * Window cycles the clock runs from the cold start before the recorded one (mode "clock"): the clock's first judged tick
+     * in window cycles, `as_built.first_judged_tick`, so that the recording shows a settled window cycle. Absent: the first window cycle
      * after the warm-up.
      */
     settle_window_cycles?: number;
     /**
-     * Ticks the clock runs from the cold start before the recorded period (mode "clock"), the warm-up included: the tick
+     * Ticks the clock runs from the cold start before the recorded window cycle (mode "clock"), the warm-up included: the tick
      * the long run judged the build from, `as_built.clock_tick_at_first_judged`, where the check names one (the new
-     * dispatch). Takes precedence over `settle_periods`.
+     * dispatch). Takes precedence over `settle_window_cycles`.
      */
     settle_ticks?: number;
 }

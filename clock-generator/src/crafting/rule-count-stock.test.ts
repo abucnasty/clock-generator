@@ -43,7 +43,7 @@ describe("the rule count of a simulated run", () => {
         clock.result.clock_windows, clock.result.simulation_duration.ticks, window_cycles, quiet);
 
     // The simulator counts the crafts a machine starts; it reads them nowhere. These figures use the 4-swing clock
-    // from the staged start (empty machines), over 40 periods.
+    // from the staged start (empty machines), over 40 window cycles.
     it("records the crafts a machine starts without changing the run", () => {
         expect(clock.maker).toBe("planned-belt-slack");
         const stock = stockOf(40);
@@ -91,7 +91,7 @@ describe("the rule count of a simulated run", () => {
     it("works out the removal and the calls of a clock, over the ticks of its long run", () => {
         const calls = ruleCallsOfClock(config, clock);
         // the long run of this clock repeats from its first bin, so the judged window is the one-period cycle
-        // (from tick 1, as the wake-ups count it), no longer the last two thirds of 120 periods
+        // (from tick 1, as the wake-ups count it), no longer the last two thirds of 120 window cycles
         expect(calls.from_tick).toBe(1);
         expect(calls.to_tick).toBe(176);
         // the clocked run is the long run again: goal 2's count of it is the generator's own

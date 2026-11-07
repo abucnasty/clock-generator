@@ -98,7 +98,7 @@ describe("request-local duplicate verification", () => {
             .map(([config, result]) => signature(config, result));
         expect(repeated).toHaveLength(3);
         expect(chosen).toEqual(expect.arrayContaining(repeated));
-        // Both clocks are stable; batched swings is selected on its fewer wake-ups although swings-1 recovers in 2 periods
+        // Both clocks are stable; batched swings is selected on its fewer wake-ups although swings-1 recovers in 2 window cycles
         // rather than 3. Sharing the verification must preserve that choice.
         const other = generated.alternatives.find(clock => clock.maker === "swings-1")!;
         const selected = generated.alternatives[generated.selected_index];

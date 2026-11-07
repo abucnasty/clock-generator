@@ -23,7 +23,7 @@ interface MovedOutputSwingCandidate {
 /**
  * The planned output windows with one window moved earlier or later in steps of a craft, the first window staying
  * put as the reference. A moved window keeps at least its own length clear of its neighbours. Every output inserter
- * moves the same window by the same amount. Empty when there is a single window per period or the period is fractional.
+ * moves the same window by the same amount. Empty when there is a single window per window cycle or the window cycle is fractional.
  */
 function movedOutputSwingCandidates(
     output_windows: Map<string, OpenRange[]>,
@@ -71,7 +71,7 @@ function movedOutputSwingCandidates(
 
 /**
  * Like deriveClockWindows, but with one output swing moved off its planned start: a machine only has to make up for
- * its output over the whole period, so it can craft more between one pair of swings than the next. Every candidate
+ * its output over the whole window cycle, so it can craft more between one pair of swings than the next. Every candidate
  * position gets its own observed windows, which is its quick trial; of those that pass, one whose neighbouring
  * positions pass too is confirmed before one whose do not, the smallest move of those (see search.ts). Null when there
  * is nothing to move or no position passes.

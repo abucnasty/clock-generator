@@ -4,7 +4,7 @@ import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { quiet } from "./generate-blueprint-test-helpers";
 
-// The first check of a clock measures one period after a warm-up; a clock that fails it is listed by the mean of its
+// The first check of a clock measures one window cycle after a warm-up; a clock that fails it is listed by the mean of its
 // long run instead, and a clock that holds, or fails later, by what the check found
 describe("the output a clock that fails its first check is listed by", () => {
     it("is the mean items a period of its long run, and the rate and the check say so", async () => {

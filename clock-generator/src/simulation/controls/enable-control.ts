@@ -72,7 +72,7 @@ class LastTwoTicks {
     }
 }
 
-/** Position of a tick in a (possibly fractional) clock period; float error is snapped as the game's integer clock would be */
+/** Position of a tick in a (possibly fractional) window cycle; float error is snapped as the game's integer clock would be */
 export function clockPosition(tick: number, window_cycle_ticks: number): number {
     const position = tick % window_cycle_ticks;
     const nearest = Math.round(position);
@@ -81,11 +81,11 @@ export function clockPosition(tick: number, window_cycle_ticks: number): number 
 }
 
 /**
- * The windows of a clock whose period is p/q ticks (`subtickClockForPeriod`), in whole 1/q ticks: the position of
+ * The windows of a clock whose window cycle is p/q ticks (`subtickClockForWindowCycle`), in whole 1/q ticks: the position of
  * tick t is (t * q) mod p, an integer, and every window is the whole values inside it (`wholeBounds`), which is what
  * the deciders of the exported subtick clock are open for. Worked out in floats (`clockPosition`), a window one tick
  * long at a fractional position after the circuit latency's wrap (640/3 ticks: [212, 212] moved to [2/3, 2/3]) is met
- * in the first period and missed from the second on, as t % period drifts away from the window's bound.
+ * in the first window cycle and missed from the second on, as t % window cycle drifts away from the window's bound.
  */
 class SubtickPositions {
     private readonly starts: number[] = [];
@@ -125,7 +125,7 @@ class SubtickPositions {
 }
 
 /**
- * The merged windows of a clock period. An ask is answered for the whole run of ticks that answer alike (a window, or
+ * The merged windows of a window cycle. An ask is answered for the whole run of ticks that answer alike (a window, or
  * the gap to the next one), so the clock sleeps between boundaries instead of being worked out every tick, the way the
  * game sleeps an inserter until something wakes it. One binary search pays for the whole run; the answers match
  * ranges.some(r => r.contains(position)) ask for ask.
@@ -133,14 +133,14 @@ class SubtickPositions {
 class ClockWindows {
     private readonly starts: number[] = [];
     private readonly ends: number[] = [];
-    /** Whole-tick periods map a whole tick to its remainder, which runs are counted in */
+    /** Whole-tick window cycles map a whole tick to its remainder, which runs are counted in */
     private readonly whole_ticks: boolean;
     private run_answer = false;
     private run_start = 0;
     private run_end = 0;
     private readonly asked = new LastTwoTicks();
     private readonly answerAt = (tick: number) => this.inRange(clockPosition(tick, this.window_cycle_ticks));
-    /** A p/q-tick period's windows in whole 1/q ticks, when the clock answers exactly; null to work in floats */
+    /** A p/q-tick window cycle's windows in whole 1/q ticks, when the clock answers exactly; null to work in floats */
     private readonly subtick: SubtickPositions | null = null;
 
     constructor(private readonly window_cycle_ticks: number, ranges: ReadonlyArray<OpenRange>, exact_subtick_positions: boolean = false) {
@@ -186,7 +186,7 @@ class ClockWindows {
             return this.subtick.ask(tick);
         }
         if (!this.whole_ticks || !Number.isInteger(tick) || tick < 0) {
-            // a fractional period or an odd tick: worked out as the game's integer clock would snap it
+            // a fractional window cycle or an odd tick: worked out as the game's integer clock would snap it
             return this.asked.get(tick, this.answerAt);
         }
         const window_cycle_ticks = this.window_cycle_ticks;
@@ -212,7 +212,7 @@ class ClockWindows {
             }
         }
         if (!answer && starts.length > 0) {
-            // the gap runs to the next window, through the period boundary when none is left in this period
+            // the gap runs to the next window, through the window cycle boundary when none is left in this window cycle
             change = next < starts.length ? starts[next] : window_cycle_ticks + starts[0];
         }
         this.run_answer = answer;
@@ -244,7 +244,7 @@ class ClockedEnableControl implements EnableControl, Resettable {
         start_latency_ticks?: number,
         /** A clock of the game that keeps its count when a later step of the run starts (see `reset`) */
         runs_through_steps?: boolean,
-        /** Whether a p/q-tick period answers in whole 1/q ticks (`SubtickPositions`, the default) or works in floats */
+        /** Whether a p/q-tick window cycle answers in whole 1/q ticks (`SubtickPositions`, the default) or works in floats */
         exact_subtick_positions?: boolean,
     }): ClockedEnableControl {
         return new ClockedEnableControl(
@@ -296,7 +296,7 @@ class ClockedEnableControl implements EnableControl, Resettable {
      * the clock on the build (`starts_clock`), its first `start_latency_ticks` stay dark: a clock of the game counts from
      * 1 at its start and a window decider is open for the values of its window only, so no window from before the start
      * has reached an inserter in the ticks the latency takes, the part of a window that the latency carries over the end
-     * of the period included (recorded in Factorio 2.1.21: docs/simulator.md, "Starting on supplied belts"). The reset
+     * of the window cycle included (recorded in Factorio 2.1.21: docs/simulator.md, "Starting on supplied belts"). The reset
      * that starts a later step of a run leaves nothing dark, since the clock has run all along.
      */
     public reset(starts_clock: boolean = false): void {

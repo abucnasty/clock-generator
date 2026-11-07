@@ -14,20 +14,20 @@ import * as inserterScheduling from "./inserter-scheduling";
 const modules = { ...generateBlueprint, ...inserterCounters, ...wakeUps, ...machineStock, ...simulatedRecording, ...inserterScheduling };
 
 interface Fixture {
-    clock: { config: Config; windows: SerializableClockWindows; window_cycle_ticks: number };
+    clock: { config: Config; windows: SerializableClockWindows; period: number };
     inserters: Record<string, { states: [number, string][]; woken_by_machine: number[] }>;
 }
 
 /**
- * The clock of a period recorded in Factorio 2.1.24 (crafting/fixtures/wake-ups-capture-*.json), run in the simulator
- * under the new dispatch, the last two of 12 periods: per inserter, the clock positions at which its machine woke it by
+ * The clock of a window cycle recorded in Factorio 2.1.24 (crafting/fixtures/wake-ups-capture-*.json), run in the simulator
+ * under the new dispatch, the last two of 12 window cycles: per inserter, the clock positions at which its machine woke it by
  * the simulator's own lists (an alarm of the machine that put it back on the update list), the positions the rule
  * counts on its states, and the positions the clock switched it on at
  */
 async function simulated(file: string): Promise<{ fixture: Fixture; own: Map<string, number[]>; ruled: Map<string, number[]>; switched_on: Map<string, number[]> }> {
     const { simulateClockOnly, inserterEnds, wakeUpsOfStock, SIMULATED_TICK_TO_CLOCK_POSITION, InserterScheduling, StockRecorder } = modules;
     const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "crafting", "fixtures", file), "utf8")) as Fixture;
-    const { config, windows, window_cycle_ticks } = fixture.clock;
+    const { config, windows, period: window_cycle_ticks } = fixture.clock;
     const quiet = { log() { }, warn() { }, error() { }, debug() { } };
     const window_cycles = 12;
     const from = (window_cycles - 2) * window_cycle_ticks;
@@ -77,7 +77,7 @@ const positions = (map: Map<string, number[]>, id: string) => [...new Set(map.ge
 function switchOns(fixture: Fixture, id: string): number[] {
     const changes = fixture.inserters[id].states;
     return changes.flatMap(([at, state], index) => index > 0 && changes[index - 1][1] === "disabled_by_control_behavior"
-        && state !== "disabled_by_control_behavior" ? [at % fixture.clock.window_cycle_ticks] : []).sort((a, b) => a - b);
+        && state !== "disabled_by_control_behavior" ? [at % fixture.clock.period] : []).sort((a, b) => a - b);
 }
 
 test.each([
@@ -88,20 +88,20 @@ test.each([
     for (const id of Object.keys(fixture.inserters)) {
         // the events are read at the ticks the stock records them: the switch-ons fall where the game's do
         expect(positions(switched_on, id), `${id} switched on`).toEqual(switchOns(fixture, id));
-        const game = [...fixture.inserters[id].woken_by_machine].map(tick => tick % fixture.clock.window_cycle_ticks).sort((a, b) => a - b);
+        const game = [...fixture.inserters[id].woken_by_machine].map(tick => tick % fixture.clock.period).sort((a, b) => a - b);
         expect(positions(own, id), `${id} by its own lists`).toEqual(game);
         expect(positions(ruled, id), `${id} by the rule on its states`).toEqual(game);
-        // the same in each of the two periods
+        // the same in each of the two window cycles
         expect(own.get(id) ?? []).toHaveLength(2 * game.length);
         expect(ruled.get(id) ?? []).toHaveLength(2 * game.length);
     }
 });
 
 /**
- * Ten periods of agricultural science recorded in Factorio 2.1.24 (crafting/fixtures/wake-ups-capture-agricultural-
+ * Ten window cycles of agricultural science recorded in Factorio 2.1.24 (crafting/fixtures/wake-ups-capture-agricultural-
  * science-2.1.24.json, the clock 3450755e from its staged start, 84 eggs in each egg machine), run in the simulator under
- * the new dispatch from the same start. Its loop of eggs does not repeat each period, so the counts are laid against the
- * game's over the ten periods.
+ * the new dispatch from the same start. Its loop of eggs does not repeat each window cycle, so the counts are laid against the
+ * game's over the ten window cycles.
  */
 test("under the new dispatch the simulator wakes the inserters of agricultural science where the game does, its biochambers taking fuel at the game's ticks", async () => {
     const { simulateClockOnly, inserterEnds, wakeUpsOfStock, InserterScheduling, StockRecorder } = modules;
@@ -110,7 +110,7 @@ test("under the new dispatch the simulator wakes the inserters of agricultural s
         machines: Record<string, { fuel_taken: number[] }>;
         clock: Fixture["clock"] & { sample_offset: number; first_sample: number };
     };
-    const { config, windows, window_cycle_ticks, sample_offset, first_sample } = fixture.clock;
+    const { config, windows, period: window_cycle_ticks, sample_offset, first_sample } = fixture.clock;
     // the simulator's tick t is the fixture's tick t + sample_offset - first_sample
     const fixtureTick = (tick: number) => tick + sample_offset - first_sample;
     const counted = (tick: number) => tick >= fixture.count_from && tick < fixture.ticks;
@@ -174,12 +174,12 @@ test("under the new dispatch the simulator wakes the inserters of agricultural s
 });
 
 /**
- * Ten settled periods of metallurgic science recorded in Factorio 2.1.24 (crafting/fixtures/wake-ups-capture-metallurgic-
+ * Ten settled window cycles of metallurgic science recorded in Factorio 2.1.24 (crafting/fixtures/wake-ups-capture-metallurgic-
  * science-2.1.24.json, the clock cec15038), run in the simulator under the new dispatch from the game's machines and hands
  * at the first counted sample. Inserters 4 and 5 take ore from a backed-up turbo belt into a machine that refuses it at its
  * insertion limit: the game lets them sleep on its input list only while both lines of the belt are still (56 times each in
- * the ten periods, woken by its craft starts and an output taken); asleep at every refusal, the simulator woke them about
- * 100 times a period.
+ * the ten window cycles, woken by its craft starts and an output taken); asleep at every refusal, the simulator woke them about
+ * 100 times a window cycle.
  */
 test("under the new dispatch the simulator wakes the belt-fed inserters of metallurgic science where the game does, tick for tick", async () => {
     const { simulateClockOnly, InserterScheduling, StockRecorder } = modules;
@@ -187,11 +187,11 @@ test("under the new dispatch the simulator wakes the belt-fed inserters of metal
     const { ConfigPaths } = await import("../config/config-paths");
     const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "crafting", "fixtures", "wake-ups-capture-metallurgic-science-2.1.24.json"), "utf8")) as {
         ticks: number; count_from: number; inserters: Record<string, { woken_by_machine: [number, string][] }>;
-        clock: { windows: SerializableClockWindows; window_cycle_ticks: number };
+        clock: { windows: SerializableClockWindows; period: number };
         seed: { sample: number; start_stock: never; start_hands: never; main_clock_shift: number };
     };
     const config = await loadConfigFromFile(ConfigPaths.METALLURGIC_SCIENCE_45);
-    const { windows, window_cycle_ticks } = fixture.clock;
+    const { windows, period: window_cycle_ticks } = fixture.clock;
     const { sample, start_stock, start_hands, main_clock_shift } = fixture.seed;
     // the simulator's tick t is the fixture's tick sample + 1 + t; its first ten ticks are left out (the seed holds no lists)
     const fixtureTick = (tick: number) => tick + sample + 1;

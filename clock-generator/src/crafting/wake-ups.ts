@@ -317,7 +317,7 @@ function keptListsAlarmsInOrder(inserters: readonly WatchingInserter[], machines
  * what was read in the running game (Factorio 2.1.24, three builds:
  * a stack inserter taking from an electromagnetic plant onto a belt, the sample electromagnetic science build, the
  * sample agricultural science build; it gives the game's wake-ups by a machine tick for tick on the first two, and on
- * the third all of them and 7 more in ten periods, `wake-ups.test.ts`):
+ * the third all of them and 7 more in ten window cycles, `wake-ups.test.ts`):
  * - **A sleep.** An inserter on the update list goes to sleep in its own update when it finds nothing to do: waiting
  *   for room in a machine, on that machine's input list; waiting for items, on the list of the machine it takes from,
  *   and, from a machine into a machine, also on the input list of the one it puts into when its hand took part of a

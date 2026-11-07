@@ -39,13 +39,13 @@ const selectedClockOf = (variant: BlockedOutputClockCase) =>
 
 /** The hand the output inserter drops: 16 items, 15 at stack size 3 (docs/belt-pickup/experiments.md) */
 const handOf = (variant: BlockedOutputClockCase) => variant.stackSize === 3 ? 15 : 16;
-/** Gears a clock period makes: one hand of 16 a period (192 ticks), or 120 gears a period of 1,440 where the hand is 15 */
+/** Gears a window cycle makes: one hand of 16 a window cycle (192 ticks), or 120 gears a window cycle of 1,440 where the hand is 15 */
 const windowCycleOf = (variant: BlockedOutputClockCase) => variant.stackSize === 3 ? {ticks: 1440, expected: 120} : {ticks: 192, expected: 16};
 
 /**
  * A clock made from the recorded drop alone, with no search: the output inserter is enabled for the span of its first
  * hand (the swing to the belt, then the last drop's offset), the chest-fed input inserter for a swing at evenly spaced
- * places (two a period of 192 for 16 gears, fifteen in 1,440 ticks for 120). The input window is one swing (6 ticks)
+ * places (two a window cycle of 192 for 16 gears, fifteen in 1,440 ticks for 120). The input window is one swing (6 ticks)
  * where the hand is 16; at stack size 3 one swing does not hold the target and two swings (13 ticks) do.
  */
 function plainClock(variant: BlockedOutputClockCase): SerializableClockWindows {
@@ -105,7 +105,7 @@ describe("the recorded controls of the blocked-output fixtures", () => {
         const config = blockedOutputClockConfig(variant);
         expectRunIsConsistent(native, generation!, config.setpoint.items_per_second);
         expect(native.target).toBe(BLOCKED_OUTPUT_TARGET);
-        // five gears a second over the period: 16 in 192 ticks, or 120 in 1,440 where the hand of 15 rules out 192
+        // five gears a second over the window cycle: 16 in 192 ticks, or 120 in 1,440 where the hand of 15 rules out 192
         expect({period: native.period, expected: generation!.expected}).toEqual({period: windowCycleOf(variant).ticks, expected: windowCycleOf(variant).expected});
         expect(generation!.selection).toEqual({id: selectedClockOf(variant), holds: true, rate: BLOCKED_OUTPUT_TARGET, supply: null});
         expect(generation!.verdict).toBe("stable");
@@ -138,8 +138,8 @@ describe("the simulator holds the target and recovers when the output is blocked
         expect(report.not_tried, "the supply of plates and the gears' belt are the only losses").toEqual([]);
         expect(report.losses.map(loss => loss.loss)).toEqual([{kind: "supply", item: "iron-plate"}, {kind: "output", item: "iron-gear-wheel"}]);
         expect(report.survives, `survives ${report.broken_by.join(", ")}`).toBe(true);
-        // the game judges its recovery from the 6th period after the release (docs/simulator.md: the simulator is back
-        // within 1 to 6 periods of it, the game within 0 to 5)
+        // the game judges its recovery from the 6th window cycle after the release (docs/simulator.md: the simulator is back
+        // within 1 to 6 window cycles of it, the game within 0 to 5)
         const blocked = report.losses.find(loss => loss.loss.kind === "output")!;
         expect(blocked.recovered_after_bins).toBeLessThanOrEqual(6);
     });

@@ -21,8 +21,8 @@ function assertTimeDivisionWindowsSource(inserter: Inserter): void {
 }
 
 /**
- * Even hands: every inserter gets one window for each hand the plan has it move in the period, the windows spread
- * evenly over the period, each one tick shorter than the inserter's hand cycle. Made from the plan's hand counts and
+ * Even hands: every inserter gets one window for each hand the plan has it move in the window cycle, the windows spread
+ * evenly over the window cycle, each one tick shorter than the inserter's hand cycle. Made from the plan's hand counts and
  * these rules of the game (Factorio 2.1.21, factorio-benchmarks docs/mechanics):
  *
  * - a hand from a machine or a chest fills in one tick, and a hand cycle between machines and chests is 8 ticks
@@ -35,11 +35,11 @@ function assertTimeDivisionWindowsSource(inserter: Inserter): void {
  *
  * So each window moves at most one hand, whenever in the window its source has it and its sink takes it, and no
  * inserter moves more than the plan asks. Two inserters that do the same thing for two machines of a build (the two
- * halves of a mirrored build) move the same hands a period and get the same windows, so they share one window decider,
+ * halves of a mirrored build) move the same hands a window cycle and get the same windows, so they share one window decider,
  * and two inserters that take from one machine at the same rate take from it in the same ticks, where the machine can
  * give both their hands at once; where it cannot and they fill machines of one recipe, they take turns (`evenTurnOffset`).
  *
- * Only for a build whose inserters all take from machines or chests, and all move a whole number of hands a period:
+ * Only for a build whose inserters all take from machines or chests, and all move a whole number of hands a window cycle:
  * belt pickups fill over several ticks, and these windows are only derived for machine and chest sources.
  * Not for a build with inserters outside the plan (fuel, by-products, loops).
  */
@@ -72,7 +72,7 @@ export function timeDivisionWindows(
 /**
  * Where the windows of a taker of one machine's product start in its turn, in ticks after the even places: 0 but where the
  * turn rule (`turnOffsets`) gives the machines it fills turns. Its fellow takers are those that take the same product from the
- * machine into machines of the same recipe and move the same hands a period, so their windows open at the same even places,
+ * machine into machines of the same recipe and move the same hands a window cycle, so their windows open at the same even places,
  * one every `period / hands` ticks; a turn is a machine they fill, with every taker into it, in the order of the machines, so
  * that no two of them are enabled in one tick and no order of the game's can tell between them (docs/stability.md).
  */
@@ -104,7 +104,7 @@ function evenTurnOffset(
     return offsets === null ? 0 : offsets[sinks.indexOf(inserter.sink.entity_id.id)];
 }
 
-/** One window for each of `hands` hands in a period, spread evenly over it from `offset`, each a tick shorter than the hand cycle */
+/** One window for each of `hands` hands in a window cycle, spread evenly over it from `offset`, each a tick shorter than the hand cycle */
 export function evenWindows(hands: number, cycle_ticks: number, window_cycle_ticks: number, offset: number = 0): OpenRange[] {
     const width = cycle_ticks - 1;
     const ranges: OpenRange[] = [];

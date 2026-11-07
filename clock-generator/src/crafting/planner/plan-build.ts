@@ -1,7 +1,7 @@
 /**
  * The plan of a build (data-types/build-plan.ts): one arithmetic pass after the feasibility pass and before any
  * simulation, over the planner facts, the planner graph and today's cycle arithmetic. It finds the groups, each group's
- * main-period choices kept or pruned, the utilization of the machine groups in it, the composition into the main period, and,
+ * main-period choices kept or pruned, the utilization of the machine groups in it, the composition into the main window cycle, and,
  * for a target that counts an item destroyed, whether its results get windows of their own.
  *
  * Only that last decision is read by a generation (`buildPlanOfConfig`, made once per config object); the rest is

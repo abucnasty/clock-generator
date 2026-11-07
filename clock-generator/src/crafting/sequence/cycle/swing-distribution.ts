@@ -131,7 +131,7 @@ export function computeMaxSwingsPerSubCycle(constraints: SwingCapacityConstraint
  * The pattern repeats based on the remainder. If we have 6 swings over 4 cycles:
  * - Base: 6/4 = 1 swing per cycle
  * - Remainder: 6 % 4 = 2 extra swings to distribute
- * - Pattern period: 4 / gcd(4, 2) = 2
+ * - Pattern window cycle: 4 / gcd(4, 2) = 2
  * - Result: [1, 2, 1, 2] (alternates every cycle)
  * 
  * @param total_swings Total swings to distribute (numerator)
@@ -233,7 +233,7 @@ function computeSwingDistributionForEntity(
     
     // Calculate total swings across all sub-cycles
     // The transfer_count.total_transfer_count is the fractional count per base cycle
-    // Multiply by cycle_multiplier to get total swings across the extended period
+    // Multiply by cycle_multiplier to get total swings across the extended window cycle
     const total_swings_fraction = transfer_count.total_transfer_count.multiply(cycle_multiplier);
     const total_swings = Math.round(total_swings_fraction.toDecimal());
     

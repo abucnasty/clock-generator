@@ -13,7 +13,7 @@ export interface ResultTakersOutcome {
     /** What the inserters dropped in the span */
     taken_items: number;
     /**
-     * They took less than the crafts gave by more than a period's worth and a hand each: what they leave grows, and the
+     * They took less than the crafts gave by more than a window cycle's worth and a hand each: what they leave grows, and the
      * container fills up in the end
      */
     short: boolean;
@@ -30,7 +30,7 @@ export interface ResultsTaken {
 /**
  * The results of each machine that places its results into a container, over the ticks `from_tick` to the end of a run:
  * whether they all went into the container, and whether the inserters that take each out kept up with what the crafts
- * gave, within what a period gives and a hand each (a window takes a period's worth once a period, and a hand may wait
+ * gave, within what a window cycle gives and a hand each (a window takes a window cycle's worth once a window cycle, and a hand may wait
  * part full from one window to the next)
  */
 export function resultsTakenOf(

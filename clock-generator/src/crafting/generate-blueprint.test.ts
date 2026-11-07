@@ -199,7 +199,7 @@ describe("generateClockForConfig", () => {
 
     // Three furnaces fed by mining drills that drop straight into them, 40 bricks a second each. A furnace makes 43 a
     // second, so the window of its output inserter is all that holds it to 40. Recorded in Factorio 2.1.21: the clocks
-    // with 1, 3 and 6 output swings each moved exactly their hands every period for 10 periods, from every furnace.
+    // with 1, 3 and 6 output swings each moved exactly their hands every window cycle for 10 window cycles, from every furnace.
     describe("stone bricks from mining drills that drop into the furnaces", async () => {
         const config = await loadConfigFromFile(ConfigPaths.STONE_BRICK_120_DRILL_DIRECT_INSERT);
         let alternatives: ClockAlternative[];

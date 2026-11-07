@@ -10,8 +10,8 @@ import { outputAtWindow, turnOffsets } from "./taker-turns";
 import { EntityId, Inserter, Machine } from "../../entities";
 
 // The grenade build (GRENADE_240_FILLS_BELT_EXACTLY), one copy: a foundry (3) fills four assembling machines (1, 2, 4, 5) with iron
-// plates through inserters 4, 3, 6 and 5, five hands of 16 a period each; a drill into each machine brings the coal; inserters 1,
-// 2, 7 and 8 take 16 grenades from the machines onto a belt. The period is 112 ticks, the hand cycle 8.
+// plates through inserters 4, 3, 6 and 5, five hands of 16 a window cycle each; a drill into each machine brings the coal; inserters 1,
+// 2, 7 and 8 take 16 grenades from the machines onto a belt. The window cycle is 112 ticks, the hand cycle 8.
 const windowsOf = (config: Config, by_drops = false) => {
     const plan = unclockedRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false, terminal_swing_count: 1 } }, { logger: quiet });
     const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
@@ -65,7 +65,7 @@ describe("hands in groups", () => {
     });
 
     it("gives the drills of one group one window, as long as the ticks the slowest of them needs to mine its machine's coal", () => {
-        // 160 coal a period for a machine against 125 a tick mined (drills 1 and 3, speed bonus 17.725) or 134 (drills 2 and 4, 19.0575):
+        // 160 coal a window cycle for a machine against 125 a tick mined (drills 1 and 3, speed bonus 17.725) or 134 (drills 2 and 4, 19.0575):
         // two ticks, which is also the least a drop needs; the drills of a group have the same window though their speeds differ
         const windows = windowsOf(config, true)();
         const [first, second] = [ranges(windows, "drill:1"), ranges(windows, "drill:2")];
@@ -304,9 +304,9 @@ describe("hands that fill the cycle", () => {
 });
 
 // One supercapacitor plant (3) fills two electromagnetic science plants (1, 2) through inserters 7 and 6, each a hand of 16 a
-// period: the original electromagnetic science sample (ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED) as a chain of its own, without the recycler (4,
+// window cycle: the original electromagnetic science sample (ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED) as a chain of its own, without the recycler (4,
 // with inserters 9 and 10, its belts 2 and 3) and the buffer chests (3 and 4, with inserters 1 and 2): the science goes straight into the
-// infinity chests, the plant's circuits come from a chest of their own (5, inserter 13), and every inserter is clocked. The period is
+// infinity chests, the plant's circuits come from a chest of their own (5, inserter 13), and every inserter is clocked. The window cycle is
 // 40 ticks.
 describe("takers of one machine that it cannot serve together", () => {
     let config: Config;
@@ -393,7 +393,7 @@ describe("takers of one machine that it cannot serve together", () => {
 
 // The accumulator build (ACCUMULATOR_640): the iron foundry (3) fills the accumulator plants (1, 2) through inserters 3 and 4 and the
 // battery plants (4, 5) through inserters 5 and 7, a hand of 16 each. In its batched swings clock of 54 ticks each pair has a window
-// of 18 ticks a period.
+// of 18 ticks a window cycle.
 describe("the takers of a machine into machines of other recipes", () => {
     it("are reported beside the turn decision, which they do not change", async () => {
         const config = await loadConfigFromFile(ConfigPaths.ACCUMULATOR_640);

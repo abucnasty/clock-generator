@@ -36,15 +36,15 @@ export class ConfigurableEnableControlFactory {
         /**
          * The ticks the clocks of the game count, where they run through the steps of a run: they
          * then keep their count when a later step starts. Without it they count the run's ticks and start again with each step.
-         * Only a clock of a whole-tick period runs through, unless `counter_runs_through` (`runThroughTicks`).
+         * Only a clock of a whole-tick window cycle runs through, unless `counter_runs_through` (`runThroughTicks`).
          */
         private readonly game_tick_provider?: TickProvider,
         /**
-         * Whether the clocks it makes of a p/q-tick period answer in whole 1/q ticks (enable-control.ts `SubtickPositions`):
+         * Whether the clocks it makes of a p/q-tick window cycle answer in whole 1/q ticks (enable-control.ts `SubtickPositions`):
          * true unless a test asks for floats
          */
         private readonly exact_subtick_positions: boolean = true,
-        /** Whether a clock of a p/q-tick period runs through as well (`runThroughTicks`), given a game tick provider */
+        /** Whether a clock of a p/q-tick window cycle runs through as well (`runThroughTicks`), given a game tick provider */
         private readonly counter_runs_through: boolean = false,
     ) {
         this.conditional_factory = new ConditionalEnableControlFactory(entity_state_registry);

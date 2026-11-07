@@ -1,7 +1,7 @@
 /**
  * Hands of the four pack inserters of the first pack belt of the utility-science-480-lds-foundry-chain scaffold (config inserters 3, 9, 18 and 24,
  * at 0.5, 6.5, 12.5 and 17.5 tiles of the belt), recorded in Factorio 2.1.21 under the swings-2 clock of the 480 a second
- * selection, from tick 2693 to 3430 of the third period of the recording: the tick the hand became full and the ticks
+ * selection, from tick 2693 to 3430 of the third window cycle of the recording: the tick the hand became full and the ticks
  * its four stacks of 4 came off it (a stack is a drop of the hand's held count). Ticks are counted from the first tick here.
  * Of the 49 hands, 4 took 6 ticks, one (inserter 18) 14 and one (inserter 24) 22; the others dropped in the free lane's 4.
  */

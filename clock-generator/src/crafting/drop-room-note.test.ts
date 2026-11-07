@@ -68,7 +68,7 @@ describe("the note under the gap between copies", () => {
         expect(dropRoomNote(await science())).toBe(text);
         // whatever spacing is typed
         expect(dropRoomNote(await science(it => { it.setpoint.copy_offset = { x: 12, y: 0 }; }))).toBe(text);
-        // at a quarter of the rate the period is 144 ticks and the belt moves 18 tiles in it: the 9 hands have room, and the scan is made
+        // at a quarter of the rate the window cycle is 144 ticks and the belt moves 18 tiles in it: the 9 hands have room, and the scan is made
         const slow = dropRoomNote(await science(it => { it.setpoint.items_per_second = 60; }))!;
         expect(slow).toMatch(/^At about 144 ticks a period \(estimated/);
         expect(slow).not.toMatch(/always wait/);

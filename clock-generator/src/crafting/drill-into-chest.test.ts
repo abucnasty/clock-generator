@@ -142,7 +142,7 @@ describe('a clock for a drill into a car between two furnaces', () => {
         for (const alternative of alternatives) {
             const drill = alternative.result.clock_windows['drill:1'];
             if (alternative.verdict === 'stable') {
-                // the tick before the takers' first window: 617 ore a tick, more than a period takes
+                // the tick before the takers' first window: 617 ore a tick, more than a window cycle takes
                 const first_take = Math.min(...alternative.result.clock_windows['inserter:1'].map(range => range.start));
                 expect(drill, alternative.id).toEqual([{ start: first_take - 1, end: first_take - 1 }]);
                 expect(alternative.insights.find(it => it.id === 'chest-drill-windows')?.what).toContain('is enabled 1 tick of the');
@@ -153,7 +153,7 @@ describe('a clock for a drill into a car between two furnaces', () => {
                 expect(alternative.result.always_on_reasons?.['drill:1'], alternative.id).toEqual({ kind: 'chest-drill', why: { kind: 'fallback' } });
             }
         }
-        // the decider of the drill, named by its ends, its windows a period, its one condition, and tagged with the drill it switches on
+        // the decider of the drill, named by its ends, its windows a window cycle, its one condition, and tagged with the drill it switches on
         const decider = selected.result.blueprint.entities.find(entity => entity.tags?.clock_generator?.drills !== undefined);
         const window = selected.result.clock_windows['drill:1'][0];
         expect(decider?.tags?.clock_generator?.drills).toEqual([1]);

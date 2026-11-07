@@ -18,7 +18,7 @@ it.each([false, true])('places the legend before the first plotted row (cycle vi
         .toEqual([LEGEND_WINDOW, LEGEND_SLACK, LEGEND_SELECTED, cycleView ? 'One crafting cycle' : LEGEND_TRACK]);
 });
 
-// an iron gear wheel build at 9.97 a second's selected clock: its period is 2880000/997 ticks, and its blueprint counts 2888 ("clock rounded to 2888
+// an iron gear wheel build at 9.97 a second's selected clock: its window cycle is 2880000/997 ticks, and its blueprint counts 2888 ("clock rounded to 2888
 // ticks, runs 0.02% fast")
 it.each([
     { clock: 'a rounded clock', view: { ...alternative, simulationDurationTicks: 2880000 / 997, roundedWindowCycleTicks: 2888 }, windowCycleTicks: 2888,
@@ -29,6 +29,6 @@ it.each([
     const subtitle = screen.getByText(/^Window cycle time /).textContent!;
     // one inserter, and no as-built run to count its wake-ups
     expect(subtitle).toBe(summaryText({ windowCycleTicks, inserters: 1, drills: 0, wakeUps: null }));
-    // the copy has no test of its own: the period reads in whole ticks and seconds, as the blueprint counts it
+    // the copy has no test of its own: the window cycle reads in whole ticks and seconds, as the blueprint counts it
     expect(subtitle.split(' · ')[0]).toBe(window_cycle);
 });
