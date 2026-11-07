@@ -77,14 +77,14 @@ pass after the feasibility pass and before any simulation, over the facts, the g
 - **Groups**: the connected parts of the condensed graph once the SINK and the sources of no known bound are taken out (a
   container or lane port nothing drops on, and a port of a container of constant supply outside every loop). Two groups
   share no node; a loop is one member, by its key. Every sample is one group.
-- **Main-period choices** per group: the output swing counts today's alternatives are listed for (the planned count, the
+- **Main window cycle time choices** per group: the output swing counts today's alternatives are listed for (the planned count, the
   counts it backs off through, the main one, the counts above and below it and fractional swings;
   `swingCountsListed` makes the lists for both), each with its cycle's ticks and the group's cycles, kept or pruned. Only
   P-limit prunes: a window cycle time of 500,000 ticks or more. A count whose cycle the cycle plan refuses is listed with the
   plan's reason (`cycle-refused`), as today its run fails. The planned count is the planning run's (its prepare step);
   a count the simulator later finds unstable is not known here.
 - **Duty**: the utilization of each machine group (`Feasibility.utilizations`) in the group that holds its machines.
-- **Composition**: the main period, the cycle's ticks times the lcm of every hand's denominator or the config's own lcm,
+- **Composition**: the main window cycle time, the cycle's ticks times the lcm of every hand's denominator or the config's own lcm,
   with each group's cycles, and what is done over the limit (today's swing backoff, or refused).
 - **Result windows** of a target that counts an item destroyed: whole hands, or windows of their own for results that
   come by small chances (`src/crafting/planner/exhaust.ts`).
@@ -92,5 +92,5 @@ pass after the feasibility pass and before any simulation, over the facts, the g
 Nothing reads the plan yet but the result windows' decision: a planning run of a destroyed target makes its cycle plan
 with the decision of the config's plan (`buildPlanOfConfig`, once per config object), the same decision it made itself
 before. Each sample's plan is kept in `src/crafting/planner/__snapshots__/<KEY>.plan.json`; `vitest run -u` writes them
-again after a deliberate change, and the test holds every sample's main period to the planning run's
+again after a deliberate change, and the test holds every sample's main window cycle time to the planning run's
 (`validateConfig`) and its utilization to the feasibility pass's.
