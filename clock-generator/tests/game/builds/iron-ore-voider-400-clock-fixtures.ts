@@ -26,7 +26,7 @@ import {RUN_PROTOCOL, runSummary} from "./pickup-clock-capture";
 export interface OreVoiderCase {
     name: string;
     sample: "IRON_ORE_VOIDER_400_EXACT_SPEED" | "IRON_ORE_VOIDER_400_OVERBEACONED";
-    /** The alternative recorded, in place of the selected one */
+    /** The id of the alternative recorded, in place of the selected one */
     alternative?: string;
 }
 
@@ -143,7 +143,7 @@ export async function captureOreVoider(variant: OreVoiderCase): Promise<OreVoide
         const config = await loadConfigFromFile(config_path);
         const generated = generateClockAlternatives(config, {logger: quiet});
         const selected = variant.alternative === undefined ? generated.alternatives[generated.selected_index]
-            : generated.alternatives.find(alternative => alternative.maker === variant.alternative);
+            : generated.alternatives.find(alternative => alternative.id === variant.alternative);
         if (!selected) throw new Error(`No alternative ${variant.alternative} for ${variant.name}`);
         const exported = selected.result.subtick ?? selected.result;
         const window_cycle_ticks = selected.result.simulation_duration.ticks;
