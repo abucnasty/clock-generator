@@ -140,10 +140,10 @@ describe("inferSuggestedTarget", () => {
     ])("agrees with the hand-written target of the sample %s", file => {
         const sample = JSON.parse(fs.readFileSync(
             path.resolve(__dirname, "../../resources/config-samples", file), "utf8",
-        )) as { machines: MachineConfiguration[], target_output: { recipe: string, items_per_second: number, copies: number } };
+        )) as { machines: MachineConfiguration[], setpoint: { recipe: string, items_per_second: number, copies: number } };
         const suggested = Option.toNullable(inferSuggestedTarget(sample.machines));
-        expect(suggested?.recipe).toBe(sample.target_output.recipe);
-        expect(suggested!.items_per_second * sample.target_output.copies).toBeGreaterThanOrEqual(sample.target_output.items_per_second);
+        expect(suggested?.recipe).toBe(sample.setpoint.recipe);
+        expect(suggested!.items_per_second * sample.setpoint.copies).toBeGreaterThanOrEqual(sample.setpoint.items_per_second);
         expect(suggested?.copies).toBe(1);
     });
 

@@ -111,7 +111,7 @@ function selectionClock(id: string, wakeUps: number): ClockAlternativeView {
         holds_expected_output: true, matches_belt_choice: true, wake_ups_per_minute: wakeUps, window_count: 1 },
         assessment: { holds: true, items_per_second: 1, wake_ups_per_minute: wakeUps,
             backpressure_loss: { survives: true, broken_by: [], recovered_after_periods: 1 }, start_dependence: null },
-        deadlockRisk: null, beltLabel: '', assumptions: { loopSeeds: [], outputDrops: [], machineFuel: [], overrides: undefined },
+        deadlockRisk: null, beltLabel: '', assumptions: { kickStarts: [], outputDrops: [], machineFuel: [], overrides: undefined },
     } as unknown as ClockAlternativeView;
 }
 /** A plan whose primary alternative offers these clocks, with the task `remaining` still to run when pending. Gives the run's id */
@@ -167,7 +167,7 @@ describe('selection after generation', () => {
         planSelection([recommended, other]);
         call(hook => hook.selectAlternative(1));
         expect(latest().selectedAlternativeIndex).toBe(1);
-        const nextConfig = kind === 'different build' ? { ...config, target_output: { ...config.target_output, items_per_second: 99 } } : config;
+        const nextConfig = kind === 'different build' ? { ...config, setpoint: { ...config.setpoint, items_per_second: 99 } } : config;
         generate(nextConfig, kind === 'deeper search');
         // Reverse the list so choosing index 0 blindly would also fail.
         planSelection([other, recommended]);
@@ -425,7 +425,7 @@ describe('worker startup failure recovery through the hook', () => {
             detectedCopies: 8, configuredCopies: 0.5, units: [{ machine_ids: [1] }], conversion: { kind: 'available', multiplicity: 8, copies: 4 } };
         const pending = call(hook => hook.validate(config));
         const requestId = workers[0].requests('validate').at(-1)!.requestId;
-        const diagnostics = [{ kind: 'field' as const, path: ['target_output', 'copies'], message: 'Actual Copies refusal' }];
+        const diagnostics = [{ kind: 'field' as const, path: ['setpoint', 'copies'], message: 'Actual Copies refusal' }];
         workers[0].send({ type: 'validation-failed', requestId, message: 'Actual Copies refusal', recovery, diagnostics });
         expect(await pending).toEqual({ kind: 'invalid', message: 'Actual Copies refusal', recovery });
         expect(latest().validation).toMatchObject({ status: 'invalid', recovery, diagnostics });

@@ -269,7 +269,7 @@ export function chestConfigItems(chest: ChestConfig): string[] {
 export type EntityKind = 'machines' | 'inserters' | 'belts' | 'chests' | 'drills';
 
 export interface ConfigFormData {
-    target_output: {
+    setpoint: {
         recipe: string;
         items_per_second: number;
         /** Number of duplicate setups being modeled (multiplier for ratio calculations) */
@@ -277,7 +277,7 @@ export interface ConfigFormData {
         /** Where the next copy stands from this one, in tiles: the result checks the drops of the copies onto a shared belt with it */
         copy_offset?: { x: number; y: number };
         /** What the rate counts: the item made and taken out (none set, or "made"), or the item taken in and destroyed */
-        counts?: Config['target_output']['counts'];
+        counts?: Config['setpoint']['counts'];
     };
     machines: MachineFormData[];
     inserters: InserterFormData[];
@@ -290,7 +290,7 @@ export interface ConfigFormData {
 }
 
 export const createDefaultConfig = (): ConfigFormData => ({
-    target_output: {
+    setpoint: {
         recipe: '',
         items_per_second: 1,
         copies: 1,

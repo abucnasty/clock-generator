@@ -351,12 +351,12 @@ export function planRepeatedUnitConversion(config: Config): RepeatedUnitConversi
             const row = candidate.drills!.configs[it.sourceIndex];
             return { ...row, id: it.resultId, target: { ...row.target, id: mapped('machines', row.target.id) } };
         });
-        const copies = multipliedCopies(config.target_output.copies, multiplicity);
-        candidate.target_output.copies = copies;
+        const copies = multipliedCopies(config.setpoint.copies, multiplicity);
+        candidate.setpoint.copies = copies;
         // where the next copy stands, read from the places of the copies; a config that had copies already says nothing of it
-        const offset = config.target_output.copies === 1 ? copyOffsetOf(groups.values(), multiplicity) : undefined;
-        delete candidate.target_output.copy_offset;
-        if (offset !== undefined) candidate.target_output.copy_offset = offset;
+        const offset = config.setpoint.copies === 1 ? copyOffsetOf(groups.values(), multiplicity) : undefined;
+        delete candidate.setpoint.copy_offset;
+        if (offset !== undefined) candidate.setpoint.copy_offset = offset;
         if (!ConfigSchema.safeParse(candidate).success) refuse('copies-not-representable', 'The multiplied Copies value is outside the supported schema.');
         analyze(candidate);
         try { validateCopies(candidate); } catch (error) {
@@ -364,7 +364,7 @@ export function planRepeatedUnitConversion(config: Config): RepeatedUnitConversi
             refuse('candidate-still-repeated', 'The retained composition still contains repetition under the existing Copies check.');
         }
         return { kind: 'available', sourceConfigKey: JSON.stringify(config), multiplicity,
-            previousCopies: config.target_output.copies, copies, candidate, retained };
+            previousCopies: config.setpoint.copies, copies, candidate, retained };
     } catch (error) {
         if (!(error instanceof Refusal)) throw error;
         return { kind: 'unavailable', reason: { code: error.code, message: error.message } };

@@ -61,7 +61,7 @@ for (const compactDestination of [false, true]) for (const speed of BELT_SPEEDS)
         const config = await loadConfigFromFile(GameFixturePaths.FRONT_UNDERGROUND_ENTRANCE_SAME_ITEM_CONFIG);
         configAtSpeed(config, speed);
         if (compactDestination) {
-            config.target_output.recipe = "electronic-circuit";
+            config.setpoint.recipe = "electronic-circuit";
             config.belts.find(belt => belt.id === 1)!.lanes[0].ingredient = "electronic-circuit";
             config.machines[0] = {...config.machines[0], recipe: "electronic-circuit", productivity: 0, crafting_speed: 1.25};
             for (const lane of config.belts.find(belt => belt.id === 2)!.lanes) lane.ingredient = "iron-plate";

@@ -7,11 +7,11 @@ import { NumberField } from './NumberField';
 import { TARGET_RECIPE_NAME } from '../utils/a11yLabels';
 import { itemsPerSecondHelper } from '../utils/numberText';
 import { ELEMENT_IDS } from '../utils/firstProblem';
-import { TARGET_OUTPUT_HEADING_ID } from '../utils/introCard';
+import { SETPOINT_HEADING_ID } from '../utils/introCard';
 import { targetRateLineOf, type MachinesMax } from '../utils/targetRateLimit';
 import { COUNTS_CHOICES, COUNTS_TEXT, type TargetCounts } from '../utils/targetCounts';
 
-interface TargetOutputFormProps {
+interface SetpointFormProps {
     recipe: string;
     itemsPerSecond: number;
     /** Number of duplicate setups being modeled; may be fractional, such as 5.5, for a partial block */
@@ -36,7 +36,7 @@ interface TargetOutputFormProps {
     copyOffsetNote?: string | null;
 }
 
-export function TargetOutputForm({
+export function SetpointForm({
     recipe,
     itemsPerSecond,
     copies,
@@ -52,21 +52,21 @@ export function TargetOutputForm({
     showCopyOffset = false,
     onCopyOffsetChange,
     copyOffsetNote,
-}: TargetOutputFormProps) {
+}: SetpointFormProps) {
     const shown = copyOffsetShown(copyOffset);
     return (
         // the heading is focused by script when the intro card or a dialog that held the focus goes
-        <Paper component="section" variant="outlined" data-build-anchor="target" aria-labelledby={TARGET_OUTPUT_HEADING_ID}
-            sx={{ mb: 2, p: 1.5, containerType: 'inline-size', containerName: 'target-output' }}>
+        <Paper component="section" variant="outlined" data-build-anchor="target" aria-labelledby={SETPOINT_HEADING_ID}
+            sx={{ mb: 2, p: 1.5, containerType: 'inline-size', containerName: 'setpoint' }}>
             <Box sx={{ display: 'grid', gap: 1.5, alignItems: 'start', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
-                '@container target-output (min-width: 820px)': { gridTemplateColumns: 'auto minmax(0, 1fr) 160px 200px 110px', alignItems: 'center' } }}>
-                <Typography component="h2" variant="subtitle1" id={TARGET_OUTPUT_HEADING_ID} tabIndex={-1}
-                    sx={{ fontWeight: 600, gridColumn: '1 / -1', '@container target-output (min-width: 820px)': { gridColumn: 'auto' } }}>Setpoint</Typography>
+                '@container setpoint (min-width: 820px)': { gridTemplateColumns: 'auto minmax(0, 1fr) 160px 200px 110px', alignItems: 'center' } }}>
+                <Typography component="h2" variant="subtitle1" id={SETPOINT_HEADING_ID} tabIndex={-1}
+                    sx={{ fontWeight: 600, gridColumn: '1 / -1', '@container setpoint (min-width: 820px)': { gridColumn: 'auto' } }}>Setpoint</Typography>
                 <ItemSelector
                     // an item destroyed is no recipe's product (scrap is mined): it is chosen from what the machines take in
                     kind={counts === 'destroyed' ? 'item' : 'recipe'}
                     inputId={ELEMENT_IDS.targetRecipe}
-                    sx={{ minWidth: 0, gridColumn: '1 / -1', '@container target-output (min-width: 820px)': { gridColumn: 'auto' } }}
+                    sx={{ minWidth: 0, gridColumn: '1 / -1', '@container setpoint (min-width: 820px)': { gridColumn: 'auto' } }}
                     minWidth={0}
                     dropdownMinWidth={300}
                     size="small"

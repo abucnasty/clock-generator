@@ -52,7 +52,7 @@ export function planOfConfig(config: Config): PlannedSample {
     const cycle = validation === null ? null : {
         config,
         registry: createEntityRegistryFromConfig(config),
-        max_swings: config.target_output.counts === "destroyed" ? null : max_swings,
+        max_swings: config.setpoint.counts === "destroyed" ? null : max_swings,
     };
     return { config, feasibility, plan: planBuild(facts, graph, feasibility, cycle), validation };
 }

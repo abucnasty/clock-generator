@@ -13,7 +13,7 @@ import { loopInserters } from "./sequence/unplanned-inserter-clock";
  * On a build that holds a stock its clock does not set (a loop of machines, or a machine that makes its own
  * ingredient) a clock is ranked by the mean of its wake-ups over a fixed set of starts: the config's cold start with
  * the clock standing at START_PLACES evenly spaced places in its period, the places the as-built check starts it from
- * (`startPlaces`), the cold start itself the first. The loop is seeded as the config says (`overrides.loop_seed_items`)
+ * (`startPlaces`), the cold start itself the first. The loop is seeded as the config says (`overrides.kick_start_items`)
  * from every start: the seed moves the mean (iron bacteria with one window a period: 495 a minute over every place at a
  * seed of 200, 670 at 50), so it is part of the build the config describes, not a start to average over. Every other
  * build keeps the one figure of its cold start, for now (docs/wake-ups.md says why).

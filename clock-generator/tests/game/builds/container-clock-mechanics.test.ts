@@ -85,7 +85,7 @@ describe("the recorded clock controls of the container fixtures", () => {
 
     test.each(recorded.map(({variant}) => variant.name))("%s: the game was recorded at the target over the pinned period, held it and recovered", name => {
         const {variant, native, generation} = recorded.find(it => it.variant.name === name)!;
-        expectRunIsConsistent(native, generation, containerClockConfig(variant).target_output.items_per_second);
+        expectRunIsConsistent(native, generation, containerClockConfig(variant).setpoint.items_per_second);
         expect(native.target).toBe(CONTAINER_TARGET);
         expect(generation.verdict).toBe("stable");
         expect(native.disturbances.map(disturbance => disturbance.kind)).toEqual(["cut iron-plate", "block output",

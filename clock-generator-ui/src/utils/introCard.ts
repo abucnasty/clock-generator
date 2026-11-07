@@ -4,11 +4,11 @@ import type { ConfigFormData } from './configForm/formData';
  * The Target Output heading, where focus goes when what held it leaves the page: the intro card when it is hidden or
  * the build is replaced, or the opener of a dialog that replaced the build. Focusable by script only (tabIndex -1).
  */
-export const TARGET_OUTPUT_HEADING_ID = 'target-output-heading';
+export const SETPOINT_HEADING_ID = 'setpoint-heading';
 
 /** Focuses the Target Output heading; false when it is not on the page */
-export function focusTargetOutputHeading(): boolean {
-    const heading = document.getElementById(TARGET_OUTPUT_HEADING_ID);
+export function focusSetpointHeading(): boolean {
+    const heading = document.getElementById(SETPOINT_HEADING_ID);
     heading?.focus();
     return heading !== null;
 }
@@ -17,8 +17,8 @@ export function focusTargetOutputHeading(): boolean {
 export const INTRO_STORAGE_KEY = 'clock-generator-intro-dismissed';
 
 /** Nothing entered yet: no target recipe, no machine with a recipe, and no inserters, belts, chests or drills */
-export function isBlankBuild(config: Pick<ConfigFormData, 'target_output' | 'machines' | 'inserters' | 'belts' | 'chests' | 'drills'>): boolean {
-    return config.target_output.recipe === ''
+export function isBlankBuild(config: Pick<ConfigFormData, 'setpoint' | 'machines' | 'inserters' | 'belts' | 'chests' | 'drills'>): boolean {
+    return config.setpoint.recipe === ''
         && config.machines.every((machine) => machine.recipe === '')
         && config.inserters.length === 0
         && config.belts.length === 0

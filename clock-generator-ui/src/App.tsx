@@ -32,7 +32,7 @@ import { serializeConfig } from './hooks/usePersistedConfigForm';
 import { selectBuildEntity } from './utils/buildViewContext';
 import { useMachinesMax } from './hooks/useMachineFacts';
 import { useTargetRateMax } from './hooks/useTargetRateMax';
-import { TargetOutputForm } from './components/TargetOutputForm';
+import { SetpointForm } from './components/SetpointForm';
 import { countsOf } from './utils/targetCounts';
 import { rateMaxOf, resultComesBack } from './utils/targetRateLimit';
 import { MachinesForm } from './components/MachinesForm';
@@ -203,7 +203,7 @@ function App() {
         setConfig,
         captureBuildMutation,
         commitBuildReplacement,
-        updateTargetOutput,
+        updateSetpoint,
         duplicateEntity,
         updateInserters,
         addMachine,
@@ -522,10 +522,10 @@ function App() {
     }, [selectRecommended]);
 
     // the most the machines making the target recipe can make (or destroy, for a target that counts the item destroyed): a target above it is a problem
-    const targetCounts = countsOf(config.target_output);
+    const targetCounts = countsOf(config.setpoint);
     const machinesWithReturn = useMemo(() => config.machines.map(machine => ({ ...machine,
-        comesBack: resultComesBack(machine, config.inserters, config.target_output.recipe) })), [config.machines, config.inserters, config.target_output.recipe]);
-    const machinesOnlyMax = useMachinesMax(config.target_output.recipe, machinesWithReturn, targetCounts);
+        comesBack: resultComesBack(machine, config.inserters, config.setpoint.recipe) })), [config.machines, config.inserters, config.setpoint.recipe]);
+    const machinesOnlyMax = useMachinesMax(config.setpoint.recipe, machinesWithReturn, targetCounts);
     // the engine's own limit, which counts the inserters and belts too, as the check that refuses a target above it does
     const feasibleMax = useTargetRateMax(engineConfig, isInitialized);
     const machinesMax = useMemo(() => rateMaxOf(machinesOnlyMax, feasibleMax), [machinesOnlyMax, feasibleMax]);
@@ -535,7 +535,7 @@ function App() {
     // what keeps the build from being clocked, and so where Generate goes instead
     const validationIssues = useMemo(() => buildValidationIssues({
         fieldProblems: problemsOf({
-            targetOutput: config.target_output,
+            setpoint: config.setpoint,
             machines: config.machines,
             machinesMax,
         }).concat(outputGenerationIssues.map(issue => ({ text: issue.message,
@@ -548,7 +548,7 @@ function App() {
         failure: validation.status === 'invalid' && checkStatus === 'invalid' && !validation.crashed
             ? { message: validation.message, diagnostics: validation.diagnostics }
             : error && errorRecovery?.sourceConfigKey === configKey ? { message: error } : undefined,
-    }), [config.target_output, config.machines, config.chests, config.inserters, config.belts, checkedCoverage, chestIssues, machinesMax, gameNames, validation, checkStatus, error, errorRecovery, configKey, outputGenerationIssues]);
+    }), [config.setpoint, config.machines, config.chests, config.inserters, config.belts, checkedCoverage, chestIssues, machinesMax, gameNames, validation, checkStatus, error, errorRecovery, configKey, outputGenerationIssues]);
     const problems = useMemo(() => validationIssues.filter(issue => issue.blocksGeneration), [validationIssues]);
     // the inserters the engine's refusal names, live or from the last check: their rows are outlined while it stands
     const refusedInserterIds = useMemo(() => refusedInserterIdsOf(problems), [problems]);
@@ -1083,7 +1083,7 @@ function App() {
     }
     const sharedReplacesBlank = blankBuild && library.currentMeta.name === null;
     const sharedTitle = (build: SharedBuild) => build.name
-        ?? (build.config.target_output.recipe === '' ? UNTITLED_BUILD : recipeTitle(build.config.target_output.recipe, recipeLabel));
+        ?? (build.config.setpoint.recipe === '' ? UNTITLED_BUILD : recipeTitle(build.config.setpoint.recipe, recipeLabel));
     const handleOpenShared = useCallback(() => {
         const build = shared.accept();
         if (!build) return;
@@ -1091,7 +1091,7 @@ function App() {
         const previous = library.currentMeta;
         const replaceId = sharedReplacesBlank ? previous.id : undefined;
         const title = build.name
-            ?? (build.config.target_output.recipe === '' ? UNTITLED_BUILD : recipeTitle(build.config.target_output.recipe, recipeLabel));
+            ?? (build.config.setpoint.recipe === '' ? UNTITLED_BUILD : recipeTitle(build.config.setpoint.recipe, recipeLabel));
         // the build the link added, which its Undo takes out again (none when it took the empty build's place)
         const added: { id?: string } = {};
         const complete = offerUndoOfBuild(sharedOpenedMessage(title), {
@@ -1128,7 +1128,7 @@ function App() {
                             currentForm={config}
                             ref={buildEntryRef}
                             config={exportableConfig}
-                            target={config.target_output}
+                            target={config.setpoint}
                             onImport={handleImportConfig}
                             onApplyPaste={setConfig}
                             onReset={handleReset}
@@ -1244,21 +1244,21 @@ function App() {
                                 />
                             )}
 
-                            <TargetOutputForm
-                                recipe={config.target_output.recipe}
-                                itemsPerSecond={config.target_output.items_per_second}
-                                copies={config.target_output.copies}
+                            <SetpointForm
+                                recipe={config.setpoint.recipe}
+                                itemsPerSecond={config.setpoint.items_per_second}
+                                copies={config.setpoint.copies}
                                 counts={targetCounts}
                                 machinesMax={machinesMax}
                                 recipeNames={recipeNames}
                                 destroyedItemNames={destroyedItemNames}
-                                onRecipeChange={(recipe) => updateTargetOutput('recipe', recipe)}
-                                onItemsPerSecondChange={(value) => updateTargetOutput('items_per_second', value)}
-                                onCountsChange={(counts) => updateTargetOutput('counts', counts === 'made' ? undefined : counts)}
-                                onCopiesChange={(value) => updateTargetOutput('copies', value)}
-                                copyOffset={config.target_output.copy_offset}
-                                showCopyOffset={config.target_output.copies > 1 && config.inserters.some(inserter => inserter.sink.type === 'belt' && inserter.position !== undefined)}
-                                onCopyOffsetChange={(value) => updateTargetOutput('copy_offset', value)}
+                                onRecipeChange={(recipe) => updateSetpoint('recipe', recipe)}
+                                onItemsPerSecondChange={(value) => updateSetpoint('items_per_second', value)}
+                                onCountsChange={(counts) => updateSetpoint('counts', counts === 'made' ? undefined : counts)}
+                                onCopiesChange={(value) => updateSetpoint('copies', value)}
+                                copyOffset={config.setpoint.copy_offset}
+                                showCopyOffset={config.setpoint.copies > 1 && config.inserters.some(inserter => inserter.sink.type === 'belt' && inserter.position !== undefined)}
+                                onCopyOffsetChange={(value) => updateSetpoint('copy_offset', value)}
                                 copyOffsetNote={checkedCoverage?.dropRoom}
                             />
 

@@ -27,7 +27,7 @@ describe("the result windows' decision of a target that counts an item destroyed
         for (const key of ["IRON_ORE_VOIDER_400_EXACT_SPEED"] as const) {
             const config = await sampleOf(key);
             const registry = createEntityRegistryFromConfig(config);
-            const target = TargetProductionRate.fromConfig(config.target_output);
+            const target = TargetProductionRate.fromConfig(config.setpoint);
             const decision = exhaustDecisionOf(target, registry, config, config.overrides ?? {});
             const given = OutputCyclePlan.create(target, registry, config, fraction(1), config.overrides ?? {}, decision);
             const made = OutputCyclePlan.create(target, registry, config, fraction(1), config.overrides ?? {});

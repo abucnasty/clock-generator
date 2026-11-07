@@ -165,7 +165,7 @@ describe('automatic whole-swing period eligibility', () => {
     it.each(['explicit', 'fractional', 'destroyed'] as const)('does not prune the %s path', kind => {
         const candidate = structuredClone(config);
         if (kind === 'explicit') candidate.overrides = { terminal_swing_count: 602 };
-        if (kind === 'destroyed') candidate.target_output.counts = 'destroyed';
+        if (kind === 'destroyed') candidate.setpoint.counts = 'destroyed';
         const generate = vi.fn(() => { throw refusal; });
         const options: GenerateClockOptions = { logger: quiet, ...(kind === 'fractional' && { fractional_swings: true as const }) };
         expect(() => generateClockWithSwingBackoff(candidate, options, generate)).toThrow(refusal);
@@ -194,7 +194,7 @@ describe('automatic whole-swing period eligibility', () => {
 });
 
 describe('strict period limits and existing arithmetic policies', () => {
-    const plain = (): Config => ({ target_output: { recipe: 'iron-plate', items_per_second: 16, copies: 1 },
+    const plain = (): Config => ({ setpoint: { recipe: 'iron-plate', items_per_second: 16, copies: 1 },
         machines: [{ id: 1, recipe: 'iron-plate', productivity: 0, crafting_speed: 100 }], belts: [],
         chests: [{ id: 1, type: 'infinity-chest', item_filter: [{ item_name: 'iron-ore', request_count: 100 }] },
             { id: 2, type: 'infinity-chest', item_filter: [], remove_unfiltered_items: true }],
@@ -227,7 +227,7 @@ describe('strict period limits and existing arithmetic policies', () => {
     it('recomputes rounded burner fuel and honors ignored ingredients instead of scaling a previous period', async () => {
         const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250);
         config.overrides = { ignored_lcm_ingredients: ['nutrients'] };
-        const registry = createEntityRegistryFromConfig(config), target = TargetProductionRate.fromConfig(config.target_output);
+        const registry = createEntityRegistryFromConfig(config), target = TargetProductionRate.fromConfig(config.setpoint);
         const at = (count: number) => OutputCyclePlan.create(target, registry, config, fraction(count));
         const seven = at(7), six = at(6);
         const fuelAt = (plan: typeof seven) => [...plan.entity_transfer_map.values()].find(row => row.entity.entity_id.number === 11)!

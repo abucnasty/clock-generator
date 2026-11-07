@@ -78,7 +78,7 @@ for (const run of runs) test(`original electromagnetic science scaffold, automat
         const {config, selected} = await clockedFixture();
 
         // The sample is automatic: nothing fixed, and the selected clock is the one built for it
-        expect(config.target_output).toMatchObject({items_per_second: 240, copies: 5});
+        expect(config.setpoint).toMatchObject({items_per_second: 240, copies: 5});
         expect(config.overrides?.lcm).toBeUndefined();
         expect(config.overrides?.terminal_swing_count).toBeUndefined();
         const result = selected.result;
@@ -104,7 +104,7 @@ for (const run of runs) test(`original electromagnetic science scaffold, automat
             .flatMap((row: any) => row.inserter_ids.map((id: number) => [id, row.entity_number] as const)));
 
         // the build is two of the config's copies: 96 science a second, 5,760 in the trailing minute
-        const target = config.target_output.items_per_second / (config.target_output.copies ?? 1) * COPIES;
+        const target = config.setpoint.items_per_second / (config.setpoint.copies ?? 1) * COPIES;
         expect(target).toBe(96);
         const options = {period, cold: run.cold, initialization_delay_ticks: run.cold ? 2 : 0, window: RUN_PROTOCOL.window,
             expected: Math.round(target * RUN_PROTOCOL.window / 60 * 1e6) / 1e6, baseline: RUN_PROTOCOL.baseline, cap};

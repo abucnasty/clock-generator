@@ -126,10 +126,10 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         rankingWindowCount: alternative.ranking_window_count,
         assessment: alternative.assessment,
         assumptions: {
-            loopSeeds: result.machine_facts.flatMap(machine => machine.facts.inputs
+            kickStarts: result.machine_facts.flatMap(machine => machine.facts.inputs
                 .filter(input => clockGenerator.FactorioDataService.findRecipeOrThrow(machine.facts.recipe).results.some(output => output.name === input.item_name))
                 .map(input => ({ machineId: machine.entity_id, item: input.item_name,
-                    items: config.overrides?.loop_seed_items ?? clockGenerator.DEFAULT_LOOP_SEED_ITEMS }))),
+                    items: config.overrides?.kick_start_items ?? clockGenerator.DEFAULT_KICK_START_ITEMS }))),
             outputDrops: [...new Set(config.inserters.filter(ins => ins.sink.type === 'belt').map(ins => ins.sink.id))]
                 .map(beltId => {
                     const inserters = config.inserters.filter(ins => ins.sink.type === 'belt' && ins.sink.id === beltId);
@@ -140,7 +140,7 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
             machineFuel: config.machines.flatMap(machine => machine.fuel === undefined ? [] : [{ machineId: machine.id, fuel: machine.fuel }]),
         },
         copies: result.output_cycle_plan.production_rate.copies,
-        ...(config.target_output.counts === 'destroyed' && { counts: 'destroyed' as const }),
+        ...(config.setpoint.counts === 'destroyed' && { counts: 'destroyed' as const }),
         verdict: alternative.verdict,
         ranking: alternative.ranking,
         deadlockRisk: clockGenerator.deadlockRiskNote(alternative.deadlock_risks),
@@ -309,7 +309,7 @@ function repeatedUnitsRecoveryOf(error: CopiesError, config: Config): RepeatedUn
     const checked = checkRepeatedUnitConversion(config);
     return {
         kind: 'repeated-units', sourceConfigKey: JSON.stringify(config),
-        detectedCopies: error.units.length, configuredCopies: config.target_output.copies,
+        detectedCopies: error.units.length, configuredCopies: config.setpoint.copies,
         units: error.units.map(unit => ({ machine_ids: [...unit.machine_ids] })),
         conversion: checked.kind === 'available'
             ? { kind: 'available', multiplicity: checked.plan.multiplicity, copies: checked.plan.copies }

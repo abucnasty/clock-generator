@@ -61,12 +61,12 @@ describe("the drops of the grenade build onto its belt", () => {
     });
 
     it("land on each other with copies 11, 13 or 14 tiles apart, and fit at 10 and 16", async () => {
-        const at = async (x: number) => dropSpacing(await grenade(it => { it.target_output.copy_offset = { x, y: 0 }; }), BY_LINE, 112)!.lines.every(line => line.fits);
+        const at = async (x: number) => dropSpacing(await grenade(it => { it.setpoint.copy_offset = { x, y: 0 }; }), BY_LINE, 112)!.lines.every(line => line.fits);
         expect(await Promise.all([10, 11, 12, 13, 14, 16].map(at))).toEqual([true, false, true, false, false, true]);
     });
 
     it("name the spacings of the copies and the distances between a copy's inserters that fit, from the width of a copy for one loop of the belt's 14 tiles", async () => {
-        const room = dropSpacing(await grenade(it => { it.target_output.copy_offset = { x: 13, y: 0 }; }), BY_LINE, 112)!.room!;
+        const room = dropSpacing(await grenade(it => { it.setpoint.copy_offset = { x: 13, y: 0 }; }), BY_LINE, 112)!.room!;
         expect([room.low, room.high, room.loop, room.gap, room.gap_in_scan]).toEqual([12, 25, 14, 13, 13]);
         expect(room.crowded).toBeNull();
         expect(room.fits).toEqual([12, 16, 18, 20, 22, 24]);
@@ -78,7 +78,7 @@ describe("the drops of the grenade build onto its belt", () => {
     });
 
     it("list the same spacings whatever spacing is typed, and place a spacing beyond the loop at the one in the list that fits as it does", async () => {
-        const roomAt = async (x: number) => dropSpacing(await grenade(it => { it.target_output.copy_offset = { x, y: 0 }; }), BY_LINE, 112)!.room!;
+        const roomAt = async (x: number) => dropSpacing(await grenade(it => { it.setpoint.copy_offset = { x, y: 0 }; }), BY_LINE, 112)!.room!;
         const base = await roomAt(12);
         for (const x of [5, 11, 13, 26, 40, 80]) {
             const room = await roomAt(x);
@@ -88,7 +88,7 @@ describe("the drops of the grenade build onto its belt", () => {
         expect((await roomAt(40)).gap_in_scan).toBe(26 - 14 + 0);
         expect((await roomAt(11)).gap_in_scan).toBe(25);
         // a spacing and the spacing plus a loop fit alike
-        const at = async (x: number) => dropSpacing(await grenade(it => { it.target_output.copy_offset = { x, y: 0 }; }), BY_LINE, 112)!.lines.every(line => line.fits);
+        const at = async (x: number) => dropSpacing(await grenade(it => { it.setpoint.copy_offset = { x, y: 0 }; }), BY_LINE, 112)!.lines.every(line => line.fits);
         expect(await Promise.all([12, 26, 40, 13, 27, 41].map(at))).toEqual([true, true, true, false, false, false]);
     });
 
@@ -148,7 +148,7 @@ describe("the drops of the grenade build onto its belt", () => {
         for (let pitch = 1; pitch <= 28; pitch++) {
             for (let apart = 1; apart <= 13; apart++) {
                 const config = structuredClone(base);
-                config.target_output.copy_offset = { x: pitch, y: 0 };
+                config.setpoint.copy_offset = { x: pitch, y: 0 };
                 for (const [one, two] of [[0, 1], [6, 7]]) config.inserters[two].position = { x: config.inserters[one].position!.x + apart, y: config.inserters[two].position!.y };
                 const fits = dropSpacing(config, starts({ 1: 0, 2: 0, 7: 0, 8: 0 }), 112)!.lines.every(line => line.fits);
                 expect(fits, `pitch ${pitch}, apart ${apart}`).toBe(rule(pitch, apart));
@@ -165,7 +165,7 @@ describe("the drops of the grenade build onto its belt", () => {
     });
 
     it("name no distance between a copy's inserters for a line that does not have two", async () => {
-        const room = dropSpacing(await grenade(it => { it.target_output.copies = 3; it.inserters.push({ ...structuredClone(it.inserters[0]), id: 9, position: { x: it.inserters[0].position!.x + 1, y: it.inserters[0].position!.y } }); }), starts({ 1: 0, 2: 0, 7: 0, 8: 0, 9: 0 }), 112)!.room!;
+        const room = dropSpacing(await grenade(it => { it.setpoint.copies = 3; it.inserters.push({ ...structuredClone(it.inserters[0]), id: 9, position: { x: it.inserters[0].position!.x + 1, y: it.inserters[0].position!.y } }); }), starts({ 1: 0, 2: 0, 7: 0, 8: 0, 9: 0 }), 112)!.room!;
         expect(room.pair).toBeNull();
         expect(room.only_with).toEqual([]);
         expect(room.never).toEqual([]);
@@ -186,15 +186,15 @@ describe("the drops of the grenade build onto its belt", () => {
     });
 
     it("are not told when the copies' gap is not given, and the note asks for it", async () => {
-        const config = await grenade(it => { delete it.target_output.copy_offset; });
+        const config = await grenade(it => { delete it.setpoint.copy_offset; });
         expect(dropSpacing(config, BY_LINE, 112)).toBeNull();
         expect(copyGapNeededNote(config)).toBe("The 7 copies may drop onto the same belt 1. Say how far apart they stand to check whether their drops fit between each other.");
         expect(copyGapNeededNote(await grenade())).toBeNull();
-        expect(copyGapNeededNote(await grenade(it => { it.target_output.copies = 1; delete it.target_output.copy_offset; }))).toBeNull();
+        expect(copyGapNeededNote(await grenade(it => { it.setpoint.copies = 1; delete it.setpoint.copy_offset; }))).toBeNull();
     });
 
     it("are checked on their own when the copies stand in rows of their own", async () => {
-        const spacing = dropSpacing(await grenade(it => { it.target_output.copy_offset = { x: 0, y: 40 }; }), BY_PLACE, 112)!;
+        const spacing = dropSpacing(await grenade(it => { it.setpoint.copy_offset = { x: 0, y: 40 }; }), BY_PLACE, 112)!;
         expect(spacing.gap).toBeNull();
         expect(spacing.lines.map(line => [line.hands, line.fits])).toEqual([[2, true], [2, true]]);
     });
@@ -241,8 +241,8 @@ describe("the test of whether hands fit", () => {
             const gap = 1 + Math.floor(random() * 30) * 0.5, apart = Math.floor(random() * 7), copies = 2 + Math.floor(random() * 5);
             const ticks = [Math.floor(random() * 112), random() < 0.5 ? -1 : Math.floor(random() * 112)];
             const config = await grenade(it => {
-                it.target_output.copies = copies;
-                it.target_output.copy_offset = { x: gap, y: 0 };
+                it.setpoint.copies = copies;
+                it.setpoint.copy_offset = { x: gap, y: 0 };
                 it.inserters[1].position = { x: it.inserters[0].position!.x + apart, y: it.inserters[0].position!.y };
             });
             const tick2 = ticks[1] < 0 ? ticks[0] : ticks[1];

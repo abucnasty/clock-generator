@@ -20,7 +20,7 @@ describe("the output a clock that fails its first check is listed by", () => {
             expect(as_built.holds).toBe(false);
             expect(as_built.first_check_failed).toBe(true);
             expect(["long-run mean", "one period"]).toContain(as_built.output_basis);
-            const copies = config.target_output.copies ?? 1;
+            const copies = config.setpoint.copies ?? 1;
             expect(alternative.assessment.items_per_second)
                 .toBeCloseTo(as_built.actual_output_items * 60 * copies / alternative.result.simulation_duration.ticks, 6);
         }

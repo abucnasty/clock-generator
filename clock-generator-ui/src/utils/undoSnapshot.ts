@@ -108,7 +108,7 @@ export function describeConfigEdit(before: ConfigFormData, after: ConfigFormData
     const changed = (a: unknown, b: unknown) => JSON.stringify(a) !== JSON.stringify(b);
     const TARGET_FIELDS = { recipe: 'target recipe', items_per_second: 'Items per Second', copies: 'Copies', counts: 'Counts' } as const;
     for (const field of Object.keys(TARGET_FIELDS) as (keyof typeof TARGET_FIELDS)[]) {
-        if (changed(before.target_output[field], after.target_output[field])) {
+        if (changed(before.setpoint[field], after.setpoint[field])) {
             return { message: `Updated ${TARGET_FIELDS[field]}.`, key: `target:${field}` };
         }
     }

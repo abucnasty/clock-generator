@@ -19,7 +19,7 @@ import { Config } from "../../config/schema";
  */
 export function sharedLaneShortened(config: Config, made: ReadonlyMap<string, readonly OpenRange[]>,
     planned: ReadonlyMap<string, readonly OpenRange[]>): string | null {
-    const copies = config.target_output.copies;
+    const copies = config.setpoint.copies;
     if (!(copies > 1)) return null;
     const open = (windows: ReadonlyMap<string, readonly OpenRange[]>, id: string) =>
         (windows.get(id) ?? []).reduce((ticks, range) => ticks + range.end_inclusive - range.start_inclusive + 1, 0);

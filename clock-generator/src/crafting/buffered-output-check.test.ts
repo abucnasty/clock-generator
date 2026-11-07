@@ -56,7 +56,7 @@ describe("long-run output through finite buffers", () => {
     } : chest) });
 
     it("rejects a final sink that fills after the first period, while the upstream buffers still accept packs", () => {
-        const half: Config = { ...finite(), target_output: { ...config.target_output, items_per_second: 120 } };
+        const half: Config = { ...finite(), setpoint: { ...config.setpoint, items_per_second: 120 } };
         const { check } = runAsBuiltCheck(half, windows(), period, quiet, 1);
         expect(check.first_check_failed).toBeUndefined();
         expect(check.holds).toBe(false);

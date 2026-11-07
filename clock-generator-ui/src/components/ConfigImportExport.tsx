@@ -15,7 +15,7 @@ import { looksLikeSidecarExport, readSidecarExport } from '../utils/sidecarExpor
 import { INTRO_BUTTONS, invalidExportPrompt, openFileProblem, PASTE_PROMPTS, type PastePrompt } from '../utils/sidecarGuide';
 import { maximumTargetNote, NO_TARGET_NOTE, replacesTargetNote, targetRowCaption, targetRowLabel, targetToFill, type TargetValues } from '../utils/pasteTarget';
 import type { ExampleBuild } from '../utils/exampleBuilds';
-import { focusTargetOutputHeading } from '../utils/introCard';
+import { focusSetpointHeading } from '../utils/introCard';
 import type { ConfigFormData } from '../utils/configForm/formData';
 import { applyPaste, pastePreview, type ImportSelections, type PasteReferenceWarning } from '../utils/pastePreview';
 import { InserterDetails } from './InserterDetails';
@@ -203,7 +203,7 @@ export function ConfigImportExport({
         const base = formDataToConfig(currentForm);
         simplificationConfig = {
             ...base,
-            target_output: prospectiveTarget,
+            setpoint: prospectiveTarget,
             machines: pendingImport.machines,
             inserters: pendingImport.inserters,
             belts: pendingImport.belts,
@@ -481,7 +481,7 @@ export function ConfigImportExport({
         if (opener instanceof HTMLElement && opener.isConnected) {
             opener.focus();
         } else {
-            focusTargetOutputHeading();
+            focusSetpointHeading();
         }
     }, []);
 
@@ -724,7 +724,7 @@ export function ConfigImportExport({
                             belts: candidate.belts,
                             chests: candidate.chests ?? [],
                             drills: candidate.drills?.configs ?? [],
-                            fill: { values: candidate.target_output, source: pendingImport.fill!.source },
+                            fill: { values: candidate.setpoint, source: pendingImport.fill!.source },
                         });
                         // The explicit simplify action also accepts its displayed Copies change.
                         setImportSelections(current => ({ ...current, target: true }));

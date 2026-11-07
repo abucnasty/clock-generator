@@ -19,7 +19,7 @@ Given by warbaque on 2026-10-23:
   both. The belt is a `turbo-transport-belt`, where the Sidecar of the time named it `turbo-loader` after the loader at the end of
   the line, which the paste refuses; Sidecar 0.14.0 gives a line with a loader the belt type of its first belt, underground belt
   or splitter (#363).
-  `target_output.copy_offset` (12 tiles east) and each output inserter's `belt_direction` (west) were added to it afterwards, for the
+  `setpoint.copy_offset` (12 tiles east) and each output inserter's `belt_direction` (west) were added to it afterwards, for the
   check of the copies' drops onto the belt; the export given has neither.
 - `grenade-240-fills-belt-exactly.scaffold`: the blueprint "scaffold" of the book given, one copy with its 22 beacons and no clock (86 entities).
   The harness needs `drill_resource: coal`; its export matches `grenade-240-fills-belt-exactly.json` entity by entity.

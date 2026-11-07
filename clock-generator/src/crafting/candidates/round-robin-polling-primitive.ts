@@ -64,7 +64,7 @@ export function assertAcyclicGroupedDependencies(registry: Pick<ReadableEntityRe
  */
 /** Whether a config leaves the made item's counts and every control to the generator, as primitive construction needs */
 export function primitiveRoundRobinPollingConfigSupported(config: Config): boolean {
-    return !(config.target_output.counts === "destroyed" || config.overrides?.terminal_swing_count !== undefined
+    return !(config.setpoint.counts === "destroyed" || config.overrides?.terminal_swing_count !== undefined
         || config.overrides?.lcm !== undefined
         || config.inserters.some(it => it.overrides?.enable_control !== undefined && it.overrides.enable_control.mode !== "AUTO")
         || (config.drills?.configs ?? []).some(it => it.overrides?.enable_control !== undefined && it.overrides.enable_control.mode !== "AUTO"));
@@ -80,7 +80,7 @@ export function constructPrimitiveRoundRobinPolling(config: Config): PrimitiveRo
     assertMachineResultTargetsSupported(registry);
     assertAcyclicGroupedDependencies(registry);
     if (alwaysEnabledInserters(registry).length > 0) throw new RoundRobinPollingNotApplicable("the build has inserters outside the plan");
-    const target = TargetProductionRate.fromConfig(config.target_output);
+    const target = TargetProductionRate.fromConfig(config.setpoint);
     const output_machines = registry.getAll().filter(Entity.isMachine).filter(it => it.output.item_name === target.machine_production_rate.item);
     // what each makes of the item a second, as its Yield trait gives it
     const traits = traitsOf(config);

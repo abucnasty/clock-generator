@@ -14,7 +14,7 @@ const FIXTURE = ConfigPaths.IRON_ORE_VOIDER_400_EXACT_SPEED;
 async function marginsOf(windows: Map<string, OpenRange[]>) {
     const config = await loadConfigFromFile(FIXTURE);
     const registry = createEntityRegistryFromConfig(config);
-    const plan = OutputCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), registry, config, fraction(1));
+    const plan = OutputCyclePlan.create(TargetProductionRate.fromConfig(config.setpoint), registry, config, fraction(1));
     // 12 cycles of 12 ticks
     return randomAmountMargins(plan, registry, windows, 144, 12);
 }

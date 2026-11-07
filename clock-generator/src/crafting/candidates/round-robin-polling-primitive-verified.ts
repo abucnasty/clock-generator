@@ -28,7 +28,7 @@ export function primitiveRoundRobinPollingOptionsSupported(config: Config, optio
         && options.belt_pickup_slack !== "never" && options.fuel_hand_room !== true
         && config.overrides?.derive_clock_windows !== true && config.overrides?.lcm === undefined
         && config.overrides?.terminal_swing_count === undefined && options.fractional_swings !== true
-        && config.target_output.counts !== "destroyed";
+        && config.setpoint.counts !== "destroyed";
 }
 
 /**
@@ -68,7 +68,7 @@ export function verifiedPrimitiveRoundRobinPollingClock(
     const retained = Object.fromEntries([...clocks].map(([id, clock]) => [id, { kind: clock.kind, modulus: clock.modulus,
         own_clock: clock.own_clock === true, window: { start: clock.window.start_inclusive, end: clock.window.end_inclusive } }]));
     assert(canonicalVerificationJson(retained) === canonicalVerificationJson(construction.retained_clocks), "primitive by-product controls changed");
-    const target = TargetProductionRate.fromConfig(config.target_output);
+    const target = TargetProductionRate.fromConfig(config.setpoint);
     const output_paths = registry.getAll().filter(Entity.isMachine)
         .filter(machine => machine.output.item_name === target.machine_production_rate.item).map(machine => outputPathOf(machine, registry));
     const finals = [...new Set(output_paths.flatMap(path => path.container === null ? path.feeders : path.takers).map(it => it.entity_id.id))];

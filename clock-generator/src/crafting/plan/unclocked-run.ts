@@ -38,7 +38,7 @@ import { EnableControlFactory } from "../sequence/interceptors/inserter-enable-c
 import { ConfigurableEnableControlFactory, EntityEnableControlOverrideMap } from "../sequence/interceptors/configurable-enable-control-factory";
 import { OutputCyclePlan, plannedTerminalSwingCount, plannedWithFractionalSwings } from "../sequence/cycle/output-cycle";
 import { PrepareStep } from "../runner/steps/prepare-step";
-import { DEFAULT_LOOP_SEED_ITEMS, seedLoopingRecipes } from "../runner/cold-start";
+import { DEFAULT_KICK_START_ITEMS, kickStartLoopingRecipes } from "../runner/cold-start";
 import { DEFAULT_TAKER_ORDER, TakerOrder } from "../../simulation/competing-takers";
 import { DeciderOrder } from "../decider-order";
 import { WarmupStep } from "../runner/steps/warmup-step";
@@ -470,7 +470,7 @@ export interface RunOptions {
     /**
      * Start as the staged scaffold of the game does: the belts are full (they always are), and the machines, the
      * buffers and the hands are empty when the clock starts at its tick 0, with no free run before it. A build that
-     * makes its own ingredient is given `overrides.loop_seed_items` of it, once. For a run on clock windows (default
+     * makes its own ingredient is given `overrides.kick_start_items` of it, once. For a run on clock windows (default
      * false: the planning run is not on a clock, and starts from the build filled until its output is blocked).
      */
     cold_start?: boolean;
@@ -637,7 +637,7 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
     const { simulation_context } = planned_build;
     // a target that counts an item destroyed is planned by arithmetic, with no crafts counted: such a build starts as
     // its staged scaffold does, and never fills up (what is brought in is destroyed)
-    if (config.target_output.counts !== "destroyed") {
+    if (config.setpoint.counts !== "destroyed") {
         prepareBuild(planned_build, debug, debug_steps, logger);
     }
 
@@ -653,12 +653,12 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
         options.counter_runs_through === true);
     const { duration, warmup_period } = runPeriodsOf(output_cycle_plan, transfer_plan.recipe_lcm, options, logger, period => {
         // A shared final chest's reported count aggregates several machines. Planner overrides are per machine.
-        const terminal_swing_count = config.target_output.counts === "destroyed"
+        const terminal_swing_count = config.setpoint.counts === "destroyed"
             ? plannedOutputSwingCount(output_cycle_plan, planned_cycle.output_inserters,
                 new Set(all_output_inserters.map(state => state.inserter.entity_id.id)))
             : plannedTerminalSwingCount(output_cycle_plan);
         assert(terminal_swing_count !== undefined, "The crafting plan has no terminal-count arithmetic provenance.");
-        const whole_made = config.target_output.counts !== "destroyed" && options.fractional_swings !== true
+        const whole_made = config.setpoint.counts !== "destroyed" && options.fractional_swings !== true
             && options.period_ticks === undefined && options.timeline_recording?.period_ticks === undefined;
         return new ClockPeriodLimitError({ terminal_swing_count, base_cycle_ticks: output_cycle_plan.total_duration_ticks.toDecimal(),
             computed_lcm: transfer_plan.computed_lcm, effective_lcm: transfer_plan.recipe_lcm,
@@ -791,11 +791,11 @@ function recordedBuildOf(config: Config, options: RunOptions, debug: MutableDebu
 /**
  * The same build with nothing in it, as a staged scaffold is when its clock starts: no ingredient, product or fuel in a
  * machine, every bar and hand empty, and the chests and belts that feed it the supplies they always are. A recipe that
- * makes its own ingredient is given `overrides.loop_seed_items` of it once (see `seedLoopingRecipes`).
+ * makes its own ingredient is given `overrides.kick_start_items` of it once (see `kickStartLoopingRecipes`).
  */
 function coldBuildOf(config: Config, options: RunOptions, debug: MutableDebugSettingsProvider, logger: Logger): RecordedBuild {
     const build = recordedBuildOf(config, options, debug, logger);
-    seedLoopingRecipes(build.simulation_context, config.overrides?.loop_seed_items ?? DEFAULT_LOOP_SEED_ITEMS);
+    kickStartLoopingRecipes(build.simulation_context, config.overrides?.kick_start_items ?? DEFAULT_KICK_START_ITEMS);
     return build;
 }
 
@@ -1982,7 +1982,7 @@ export function planOutputCycle(config: Config, simulation_context: SimulationCo
  * makes them whole (maxSwingsPossibleOf), as the planning run finds them; for a target that counts an item made
  */
 export function maxSwingsOfPreparedBuild(config: Config, simulation_context: SimulationContext, logger: Logger, fractional_swings: boolean = false): Fraction {
-    assert(config.target_output.counts !== "destroyed", "a target that counts an item destroyed is planned with no prepare step");
+    assert(config.setpoint.counts !== "destroyed", "a target that counts an item destroyed is planned with no prepare step");
     const outputs = outputsOfPreparedBuild(config, simulation_context);
     return maxSwingsPossibleOf(outputs.output_machine_state_machines.map(it => it.machine_state), outputs.output_inserters.map(it => it.inserter),
         config, logger, fractional_swings);
@@ -1991,7 +1991,7 @@ export function maxSwingsOfPreparedBuild(config: Config, simulation_context: Sim
 /** The machines that make (or destroy) the target and the inserters that take it out, once the target is checked */
 function outputsOfPreparedBuild(config: Config, simulation_context: SimulationContext): Omit<PlannedOutputCycle, "output_cycle_plan"> {
     assertOutputTransferGenerationSupported(config);
-    const target_production_rate = TargetProductionRate.fromConfig(config.target_output);
+    const target_production_rate = TargetProductionRate.fromConfig(config.setpoint);
 
     // Find all output machines: the machines that produce the target output item, or that destroy it
     const target = { item: target_production_rate.machine_production_rate.item, counts: target_production_rate.counts };
@@ -2011,7 +2011,7 @@ function outputsOfPreparedBuild(config: Config, simulation_context: SimulationCo
     const total_output_capacity_per_second = output_machine_state_machines
         .map(it => targetCapacityPerSecond(it.machine_state.machine, target, config, simulation_context.entity_registry))
         .reduce((a, b) => a.add(b), fraction(0))
-        .multiply(fraction(config.target_output.copies));
+        .multiply(fraction(config.setpoint.copies));
     assert(total_output_capacity_per_second.toDecimal() >= target_production_rate.total_production_rate.amount_per_second.toDecimal(),
        "The current configuration cannot meet the target production rate. " +
        `Total output capacity is ${total_output_capacity_per_second.toDecimal()} items/second, ` +

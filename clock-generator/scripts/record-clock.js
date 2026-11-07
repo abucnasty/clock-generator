@@ -143,7 +143,7 @@ function buildOfConfig(arg) {
                 factorio: process.env.FACTORIO_PATH, save: process.env.FACTORIO_HARNESS_SAVE,
                 blueprint: fs.readFileSync(scaffold, "utf-8").trim(), out: file,
                 ticks: RECORDED_TICKS, warmup_ticks: build.warmup_ticks, settle_ticks: GAME_RUN.cap + 1, seed: build.seed,
-                lua: steadyProbeSource(target_per_second, config.target_output.recipe, recipesMaking(config, config.target_output.recipe), "record-clock-steady.json"), work_dir,
+                lua: steadyProbeSource(target_per_second, config.setpoint.recipe, recipesMaking(config, config.setpoint.recipe), "record-clock-steady.json"), work_dir,
                 clock: { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule }, config,
                 unclocked: false, game_speed: 1000, timeout_seconds: 900, log: () => { }, cache: false,
             })).recording;
@@ -158,7 +158,7 @@ function buildOfConfig(arg) {
     // a subtick clock's repeat can leave a float a hair off the whole number of items
     const expected = Math.round(result.stability_check.expected_output_items * clock_ticks / period * 1e6) / 1e6;
     // the first period is cut where the recording starts
-    const periods = outputPerPeriod(recording, recipesMaking(config, config.target_output.recipe)).slice(1);
+    const periods = outputPerPeriod(recording, recipesMaking(config, config.setpoint.recipe)).slice(1);
     const tally = {};
     periods.forEach(p => tally[p.items] = (tally[p.items] ?? 0) + 1);
     console.log(`  game: ${periods.length} periods, expected ${expected} a period, moved`, JSON.stringify(tally));

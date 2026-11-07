@@ -8,7 +8,7 @@ import { generateClockAlternatives } from "../crafting/generate-blueprint";
 import { computeMachineTargetRates } from "../crafting/machine-target-rates";
 
 const base = () => ({
-    target_output: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+    setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
     machines: [{ id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0 }],
     inserters: [
         { id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: 16 },
@@ -57,7 +57,7 @@ describe("a pickup from a side-loaded belt tile", () => {
 describe("an out-of-scope pickup whose side stream brings an ingredient", () => {
     // without the side stream the belt lacks copper cable: the refusal has to come before the coverage check asks for it
     const circuits = () => ({
-        target_output: { recipe: "electronic-circuit", items_per_second: 1, copies: 1 },
+        setpoint: { recipe: "electronic-circuit", items_per_second: 1, copies: 1 },
         machines: [{ id: 1, recipe: "electronic-circuit", crafting_speed: 1, productivity: 0 }],
         inserters: [
             { id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: 16 },

@@ -74,7 +74,7 @@ describe('a machine that places its results itself', () => {
 
 describe('a result target in the config', () => {
     const config = (machine: Record<string, unknown>, chests: unknown[] = [{ id: 1, type: 'car' }]) => JSON.stringify({
-        target_output: { recipe: ORE, items_per_second: 400, copies: 1, counts: 'destroyed' },
+        setpoint: { recipe: ORE, items_per_second: 400, copies: 1, counts: 'destroyed' },
         machines: [{ id: 1, recipe: 'iron-ore-recycling', productivity: 0, crafting_speed: 16.875, ...machine }],
         inserters: [], belts: [], chests,
     });
@@ -82,7 +82,7 @@ describe('a result target in the config', () => {
     it('is taken on a machine that places its results itself', async () => {
         const parsed = await parseConfig(config({ prototype: 'recycler', result_target: { type: 'chest', id: 1 } }));
         expect(parsed.machines[0].result_target).toEqual({ type: 'chest', id: 1 });
-        expect(parsed.target_output.counts).toBe('destroyed');
+        expect(parsed.setpoint.counts).toBe('destroyed');
     });
 
     it('is refused on any other machine, and where its chest is not in the config', async () => {
@@ -93,16 +93,16 @@ describe('a result target in the config', () => {
     });
 
     it('reads a target without `counts` as the item made, as every config before it', async () => {
-        const parsed = await parseConfig(JSON.stringify({ target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+        const parsed = await parseConfig(JSON.stringify({ setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
             machines: [], inserters: [], belts: [] }));
-        expect(parsed.target_output.counts).toBeUndefined();
+        expect(parsed.setpoint.counts).toBeUndefined();
     });
 });
 
 /** A recycler at the speed of a normal one with no modules, fed from an infinity chest, its results kept in its output */
 function recyclerWithTakers(recipe: string, ingredient: string, takers: { prototype: string; item: string }[]): Config {
     return ConfigSchema.parse({
-        target_output: { recipe: takers[0].item, items_per_second: 1, copies: 1 },
+        setpoint: { recipe: takers[0].item, items_per_second: 1, copies: 1 },
         machines: [{ id: 1, recipe, productivity: 0, crafting_speed: 0.5, prototype: 'recycler' }],
         inserters: [
             { id: 1, source: { type: 'chest', id: 1 }, sink: { type: 'machine', id: 1 }, filters: [ingredient] },
@@ -177,7 +177,7 @@ async function scrapIntoSilo(recipe_quality?: string, productivity = 0): Promise
     const { RecipeMetadata } = await import('../entities/machine/recipe/recipe-metadata');
     const results = RecipeMetadata.fromRecipeName('scrap-recycling').outputs.map(it => it.name);
     return JSON.stringify({
-        target_output: { recipe: 'scrap', items_per_second: 2, copies: 1, counts: 'destroyed' },
+        setpoint: { recipe: 'scrap', items_per_second: 2, copies: 1, counts: 'destroyed' },
         machines: [{ id: 1, recipe: 'scrap-recycling', productivity, crafting_speed: 0.5, prototype: 'recycler', result_target: { type: 'chest', id: 2 } }],
         inserters: [
             { id: 1, source: { type: 'chest', id: 1 }, sink: { type: 'machine', id: 1 }, filters: ['scrap'] },
@@ -206,7 +206,7 @@ describe('a rocket silo as the result target', () => {
         // the silo holds; see exhaust.test.ts
         const config = await parseConfig(await scrapIntoSilo('uncommon', 300));
         const registry = createEntityRegistryFromConfig(config);
-        const plan = OutputCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), registry, config, fraction(1), {});
+        const plan = OutputCyclePlan.create(TargetProductionRate.fromConfig(config.setpoint), registry, config, fraction(1), {});
         expect(plan.exhaust?.[0].windows).toHaveLength(12);
         expect(plan.exhaust?.[0].period).toBe(5760);
     });

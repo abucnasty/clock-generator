@@ -1,5 +1,5 @@
 {
-  "target_output": {
+  "setpoint": {
     "recipe": "stone-brick",
     "items_per_second": 120,
     "copies": 3

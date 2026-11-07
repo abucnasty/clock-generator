@@ -334,7 +334,7 @@ export { whyNotStable, whyNotStableClockOf } from './crafting/why-not-stable';
 export type { NotMadeClock, SpareTime, WhyNotStable, WhyNotStableBuild, WhyNotStableCause, WhyNotStableClock } from './crafting/why-not-stable';
 export { deadlockRiskNote } from './crafting/deadlock-risk';
 export type { SharedItemDeadlockRisk } from './crafting/deadlock-risk';
-export { DEFAULT_LOOP_SEED_ITEMS } from './crafting/runner/cold-start';
+export { DEFAULT_KICK_START_ITEMS } from './crafting/runner/cold-start';
 
 export { sidecarPickupInserters } from "./config/pickup-capture";
 

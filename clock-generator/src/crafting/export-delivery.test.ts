@@ -10,7 +10,7 @@ import { quiet } from "./generate-blueprint-test-helpers";
 // Gears are the target; a second machine makes copper cable, which two inserters put on belt 2, an export belt of two
 // lanes of cable that consumers outside the config take 3 a second each from
 const SMALL_BUILD = JSON.stringify({
-    target_output: { recipe: "iron-gear-wheel", items_per_second: 4, copies: 1 },
+    setpoint: { recipe: "iron-gear-wheel", items_per_second: 4, copies: 1 },
     machines: [
         { id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 2, type: "machine" },
         { id: 2, recipe: "copper-cable", productivity: 0, crafting_speed: 2, type: "machine" },

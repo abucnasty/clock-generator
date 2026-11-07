@@ -866,7 +866,7 @@ export function roundRobinPollingClock(
         const tried = new Set<string>();
         const drops = dropTieBreak(made.config, duration.ticks);
         const losses_decide = options.shared_windows === true || sharedItemDeadlockRisks(simulation_context.entity_registry).length === 0;
-        const target_machines = new Set(targetMachinesOf(targetItemOf(made.config.target_output), simulation_context.entity_registry)
+        const target_machines = new Set(targetMachinesOf(targetItemOf(made.config.setpoint), simulation_context.entity_registry)
             .map(machine => machine.entity_id.id));
         const ways = [...(options.shared_windows === true ? SHARED_TRIES : SEPARATE_TRIES)];
         for (let index = 0; index < ways.length; index++) {

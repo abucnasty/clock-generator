@@ -49,7 +49,7 @@ describe("clockPeriodTicks on the clocks the generator makes, with the lock", ()
     it("reads a subtick clock with fuel clocks of their own: the subtick count, not a fuel clock", async () => {
         const rocket_fuel = await loadConfigFromFile(ConfigPaths.ROCKET_FUEL_60);
         const result = generateClockForConfig(
-            { ...rocket_fuel, target_output: { ...rocket_fuel.target_output, items_per_second: 54 } },
+            { ...rocket_fuel, setpoint: { ...rocket_fuel.setpoint, items_per_second: 54 } },
             { logger: quiet, fuel_consumption_view: false },
         );
         const blueprint = encodeBlueprintFile({ blueprint: result.subtick!.blueprint });
@@ -80,7 +80,7 @@ describe("the schedule of a generated clock", () => {
             await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240),
             await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_380_CULTIVATION),
             rocket_fuel,
-            { ...rocket_fuel, target_output: { ...rocket_fuel.target_output, items_per_second: 54 } },
+            { ...rocket_fuel, setpoint: { ...rocket_fuel.setpoint, items_per_second: 54 } },
         ];
         for (const config of configs) {
             const clocks = exported(generateClockForConfig(config, { logger: quiet, fuel_consumption_view: false }));

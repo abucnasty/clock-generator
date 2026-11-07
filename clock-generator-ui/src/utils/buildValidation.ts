@@ -74,7 +74,7 @@ export function navigateToOutputRouteRepair(issue: Pick<InserterCoverageIssue, '
 
 /** The words of a config key as a player reads them: the form's labels where it has one, else the key with spaces */
 const FIELD_LABELS: Record<string, string> = {
-    target_output: 'Setpoint', items_per_second: 'Items per Second', recipe: 'Recipe', copies: 'Copies',
+    setpoint: 'Setpoint', items_per_second: 'Items per Second', recipe: 'Recipe', copies: 'Copies',
     overrides: 'Advanced settings',
 };
 const label = (key: string | number) => typeof key === 'number' ? String(key + 1) : FIELD_LABELS[key] ?? words(key);
@@ -96,7 +96,7 @@ function wordsOf(path: (string | number)[]): string[] {
 function fieldLocation(path: (string | number)[], input: Pick<Input, 'machines' | 'chests' | 'inserters' | 'belts'>): string {
     if (!path.length) return 'Build';
     const [group, index, ...rest] = path;
-    if (group === 'target_output' && typeof index === 'string' && rest.length === 0) return label(index);
+    if (group === 'setpoint' && typeof index === 'string' && rest.length === 0) return label(index);
     const entity = typeof index === 'number' ? ({
         machines: () => entityLabel('machine', input.machines[index]?.id ?? index + 1),
         inserters: () => entityLabel('inserter', input.inserters[index]?.id ?? index + 1),
@@ -178,7 +178,7 @@ export function buildValidationIssues(input: Input): BuildValidationIssue[] {
         }
         const [group, index, key] = diagnostic.path;
         let fieldTarget: FocusTarget | undefined;
-        if (group === 'target_output') {
+        if (group === 'setpoint') {
             if (index === 'recipe') fieldTarget = { kind: 'target-recipe' };
             if (index === 'items_per_second') fieldTarget = { kind: 'target-rate' };
             if (index === 'copies') fieldTarget = { kind: 'target-copies' };

@@ -36,7 +36,7 @@ describe("count-only secondary planning provenance", () => {
 
         const explicitCount = { ...config, overrides: { ...config.overrides, terminal_swing_count: 2 } };
         const explicitLcm = { ...config, overrides: { ...config.overrides, lcm: 3 } };
-        const destroyed = { ...config, target_output: { ...config.target_output, counts: "destroyed" as const } };
+        const destroyed = { ...config, setpoint: { ...config.setpoint, counts: "destroyed" as const } };
         for (const optedOut of [explicitCount, explicitLcm, destroyed]) {
             expect(secondaryPlanningCountOf(optedOut, context)).toBeUndefined();
         }
@@ -86,7 +86,7 @@ describe("count-only secondary planning provenance", () => {
 
     it("uses each higher family's actual WeakMap plan count and LCM, not the primitive count or aggregate alias", () => {
         const registry = createEntityRegistryFromConfig(config);
-        const target = TargetProductionRate.fromConfig(config.target_output);
+        const target = TargetProductionRate.fromConfig(config.setpoint);
         const actualResult = (count: number, legacyAggregate: number, lcm: number): BlueprintGenerationResult => {
             const plan = OutputCyclePlan.create(target, registry, config, fraction(count), config.overrides ?? {});
             return { ...base, output_cycle_plan: plan, used_terminal_swing_count: legacyAggregate, used_lcm: lcm,

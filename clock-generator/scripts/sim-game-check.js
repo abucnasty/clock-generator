@@ -100,7 +100,7 @@ const sum = list => list.reduce((a, b) => a + b, 0);
 /** the build's config; with `seeded`, the egg-style seed of a loop given as the game accepted it (the clock is made on the config as it is) */
 async function configOf(seeded = false) {
     const config = await loadSample(opt("--config"));
-    if (seeded && opt("--seed-items") !== undefined) config.overrides = { ...config.overrides, loop_seed_items: Number(opt("--seed-items")) };
+    if (seeded && opt("--seed-items") !== undefined) config.overrides = { ...config.overrides, kick_start_items: Number(opt("--seed-items")) };
     return config;
 }
 
@@ -277,7 +277,7 @@ function judge(ctx, simRecording) {
 
     // production bins: items dropped by the inserters that take the product out, which the game's recording names
     const { outputInserters, recipesMaking } = dist("harness/recording-output.js");
-    const outputIds = outputInserters(game, recipesMaking(config, config.target_output.recipe)).map(it => gameMatch.inserters.get(it.id)).filter(id => id !== undefined);
+    const outputIds = outputInserters(game, recipesMaking(config, config.setpoint.recipe)).map(it => gameMatch.inserters.get(it.id)).filter(id => id !== undefined);
     const dropped = (series, periods) => periods.map(period => {
         let items = 0;
         for (const id of outputIds) {

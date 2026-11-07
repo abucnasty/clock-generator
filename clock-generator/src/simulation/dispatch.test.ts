@@ -91,7 +91,7 @@ describe("the dispatch's update list", () => {
 /** One machine whose output holds one hand, and two inserters that take from it into chests of their own */
 function sharedSource(): SimulationContext {
     return SimulationContext.fromConfig(ConfigSchema.parse({
-        target_output: {recipe: "copper-cable", items_per_second: 5, copies: 1},
+        setpoint: {recipe: "copper-cable", items_per_second: 5, copies: 1},
         machines: [{id: 1, recipe: "copper-cable", productivity: 0, crafting_speed: 1.25, prototype: "assembling-machine-3"}],
         inserters: [1, 2].map(id => ({id, source: {type: "machine", id: 1}, sink: {type: "chest", id},
             prototype: "stack-inserter", quality: "legendary", stack_size: 16, filters: ["copper-cable"]})),

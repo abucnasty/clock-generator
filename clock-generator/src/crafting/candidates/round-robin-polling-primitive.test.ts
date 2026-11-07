@@ -171,7 +171,7 @@ describe("pure primitive grouped construction", () => {
     });
 
     it.each([500000, 600000])("rejects primitive period %s before computing/unrolling by-product clocks", period => {
-        const too_slow = { ...config, target_output: { ...config.target_output, items_per_second: config.target_output.items_per_second * 40 / period } };
+        const too_slow = { ...config, setpoint: { ...config.setpoint, items_per_second: config.setpoint.items_per_second * 40 / period } };
         const compute = vi.spyOn(unplanned, "unplannedInserterClocks");
         try {
             expect(() => constructPrimitiveRoundRobinPolling(too_slow)).toThrow(ClockPeriodLimitError);
@@ -200,7 +200,7 @@ describe("pure primitive grouped construction", () => {
     });
 
     it("preserves consecutive-hand room refusal and cannot exclude a planned loader as an unplanned clock", () => {
-        const registry = createEntityRegistryFromConfig(config), target = TargetProductionRate.fromConfig(config.target_output);
+        const registry = createEntityRegistryFromConfig(config), target = TargetProductionRate.fromConfig(config.setpoint);
         const cycle = OutputCyclePlan.create(target, registry, config, fraction(1));
         const paths = registry.getAll().filter(Entity.isMachine).filter(machine => machine.output.item_name === target.machine_production_rate.item).map(machine => outputPathOf(machine, registry));
         const clocks = unplannedInserterClocks(registry, 40);
@@ -224,7 +224,7 @@ describe("pure primitive grouped construction", () => {
     it("retains ordinary grouped windows exactly when no new route composition is needed", async () => {
         const ordinary = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN);
         const auto = { ...ordinary, overrides: undefined, inserters: ordinary.inserters.map(inserter => ({ ...inserter, overrides: undefined })) };
-        const registry = createEntityRegistryFromConfig(auto), target = TargetProductionRate.fromConfig(auto.target_output);
+        const registry = createEntityRegistryFromConfig(auto), target = TargetProductionRate.fromConfig(auto.setpoint);
         const cycle = OutputCyclePlan.create(target, registry, auto, fraction(1));
         const artifact = constructPrimitiveRoundRobinPolling(auto);
         for (const attempt of artifact.attempts) if (attempt.result.kind === "constructed") {

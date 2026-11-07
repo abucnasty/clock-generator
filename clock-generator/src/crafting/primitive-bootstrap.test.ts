@@ -56,8 +56,8 @@ const acceptedReport: PrimitiveRoundRobinPollingAttemptReport = {
 
 let original: Config;
 
-function config(overrides?: Config['overrides'], counts: Config['target_output']['counts'] = original.target_output.counts): Config {
-    return { ...original, target_output: { ...original.target_output, counts }, overrides,
+function config(overrides?: Config['overrides'], counts: Config['setpoint']['counts'] = original.setpoint.counts): Config {
+    return { ...original, setpoint: { ...original.setpoint, counts }, overrides,
         inserters: original.inserters.map(inserter => ({ ...inserter, overrides: undefined })) };
 }
 

@@ -14,7 +14,7 @@ const FIXTURE = ConfigPaths.IRON_ORE_VOIDER_400_EXACT_SPEED;
 
 async function planOf(edit: (config: Config) => Config = config => config): Promise<OutputCyclePlan> {
     const config = edit(await loadConfigFromFile(FIXTURE));
-    return OutputCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), createEntityRegistryFromConfig(config), config, fraction(1), config.overrides ?? {});
+    return OutputCyclePlan.create(TargetProductionRate.fromConfig(config.setpoint), createEntityRegistryFromConfig(config), config, fraction(1), config.overrides ?? {});
 }
 
 describe("a target that counts an item destroyed", () => {
@@ -45,10 +45,10 @@ describe("a target that counts an item destroyed", () => {
 
     it("is what a target written as the recycler's returns is refused for, with the rate to write", async () => {
         // the cut of the benchmark as it was first written: the 400/3 ore a second the recycler gives back, as made
-        const as_cut = (config: Config): Config => ({ ...config, target_output: { recipe: "iron-ore", items_per_second: 133.333333333, copies: 1 } });
+        const as_cut = (config: Config): Config => ({ ...config, setpoint: { recipe: "iron-ore", items_per_second: 133.333333333, copies: 1 } });
         await expect(planOf(as_cut)).rejects.toThrow("Machine 1 places the iron-ore of the target into chest:1, and the build takes all of it "
             + "back into the machine: none leaves the build, so it is not made. A machine that destroys an item it is brought is planned "
-            + "on what it destroys: set `target_output.counts` to \"destroyed\" and `items_per_second` to the iron-ore it is brought from "
+            + "on what it destroys: set `setpoint.counts` to \"destroyed\" and `items_per_second` to the iron-ore it is brought from "
             + "outside, 400 for the 133.333333 a second it gives back.");
     });
 

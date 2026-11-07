@@ -101,7 +101,7 @@ describe("hands in groups", () => {
 
     it("keeps the dealing by ids where no other dealing puts fewer hands on each other", () => {
         // copies 11 tiles apart: two pairs of hands land on each other for either dealing
-        const gapped = { ...config, target_output: { ...config.target_output, copy_offset: { x: 11, y: 0 } } };
+        const gapped = { ...config, setpoint: { ...config.setpoint, copy_offset: { x: 11, y: 0 } } };
         const by_ids = windowsOf(gapped)();
         const by_belt = windowsOf(gapped, true)();
         const pairs = (windows: typeof by_ids) => dropSpacing(gapped, outputStarts(windows), 112)!.lines.reduce((sum, line) => sum + line.pairs, 0);

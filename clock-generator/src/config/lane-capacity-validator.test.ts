@@ -33,7 +33,7 @@ const gears = (parts: { items_per_second: number; copies?: number; machines?: nu
     const machines = Array.from({ length: parts.machines ?? 1 }, (_, index) => index + 1);
     const chest = parts.input === 'chest';
     return {
-        target_output: { recipe: 'iron-gear-wheel', items_per_second: parts.items_per_second, copies: parts.copies ?? 1 },
+        setpoint: { recipe: 'iron-gear-wheel', items_per_second: parts.items_per_second, copies: parts.copies ?? 1 },
         machines: machines.map(id => ({ id, recipe: 'iron-gear-wheel', productivity: 0, crafting_speed: 1000 })),
         belts: [...(chest ? [] : [parts.input as Belt | undefined ?? belt(1, ['iron-plate'])]), parts.output ?? belt(2, ['iron-gear-wheel'])],
         ...(chest ? { chests: [{ id: 1, type: 'infinity-chest' as const, item_filter: [{ item_name: 'iron-plate', request_count: 100 }] }] } : {}),
@@ -94,7 +94,7 @@ describe('takes from a lane', () => {
     it('checks each lane of a belt with two items on its own', () => {
         // an electronic circuit takes 1 iron plate and 3 copper cables: 30 a second take 30 plates and 90 cables
         const circuits = (items_per_second: number, cable_stack = 4): Config => ({
-            target_output: { recipe: 'electronic-circuit', items_per_second, copies: 1 },
+            setpoint: { recipe: 'electronic-circuit', items_per_second, copies: 1 },
             machines: [{ id: 1, recipe: 'electronic-circuit', productivity: 0, crafting_speed: 1000 }],
             belts: [
                 { id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }, { ingredient: 'copper-cable', stack_size: cable_stack }] },
@@ -154,7 +154,7 @@ describe('drops onto a lane', () => {
     it('checks the takes and the drops on one belt apart', () => {
         // a lane of iron plates taken (120 of 120 fits) and a lane of gears at stack 1 dropped onto (60 of 30 does not)
         const config: Config = {
-            target_output: { recipe: 'iron-gear-wheel', items_per_second: 60, copies: 1 },
+            setpoint: { recipe: 'iron-gear-wheel', items_per_second: 60, copies: 1 },
             machines: [{ id: 1, recipe: 'iron-gear-wheel', productivity: 0, crafting_speed: 1000 }],
             belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }, { ingredient: 'iron-gear-wheel', stack_size: 1 }] }],
             inserters: [inserter(1, { type: 'belt', id: 1 }, { type: 'machine', id: 1 }), inserter(2, { type: 'machine', id: 1 }, { type: 'belt', id: 1 })],

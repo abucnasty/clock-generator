@@ -19,18 +19,18 @@ The type comes from the JSON Schema that zod makes of `ConfigSchema`. The type o
 show, such as a custom check or a transform, is "any, see schema.ts". "Required" is yes when the field must be in its object
 after the engine reads the file: a field with a default is required, but a configuration file can leave it out.
 
-## target_output
+## setpoint
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `target_output` | object | yes | The product that the build must make, and its rate. |
-| `target_output.recipe` | string | yes | The name of the item that the target output counts. |
-| `target_output.items_per_second` | number > 0 | yes | The rate of the target output for all copies together, in items per second. |
-| `target_output.copies` | number > 0 | yes | The number of identical builds in the game, which can be partial, for example 2.25. |
-| `target_output.copy_offset` | object | no | The distance from this build to the next copy, in tiles. |
-| `target_output.copy_offset.x` | number | yes | The x coordinate, in tiles. |
-| `target_output.copy_offset.y` | number | yes | The y coordinate, in tiles. |
-| `target_output.counts` | one of `made`, `destroyed` | no | What the rate counts: "made" (default) for items that the build makes, or "destroyed" for items that it destroys. |
+| `setpoint` | object | yes | The setpoint: the product that the build must make, and the rate it must hold. The clock never changes it. |
+| `setpoint.recipe` | string | yes | The name of the item that the target output counts. |
+| `setpoint.items_per_second` | number > 0 | yes | The rate of the target output for all copies together, in items per second. |
+| `setpoint.copies` | number > 0 | yes | The number of identical builds in the game, which can be partial, for example 2.25. |
+| `setpoint.copy_offset` | object | no | The distance from this build to the next copy, in tiles. |
+| `setpoint.copy_offset.x` | number | yes | The x coordinate, in tiles. |
+| `setpoint.copy_offset.y` | number | yes | The y coordinate, in tiles. |
+| `setpoint.counts` | one of `made`, `destroyed` | no | What the rate counts: "made" (default) for items that the build makes, or "destroyed" for items that it destroys. |
 
 ## machines
 
@@ -293,7 +293,7 @@ after the engine reads the file: a field with a default is required, but a confi
 | `overrides.backed_up_belts` | boolean | no | Whether the input belts are backed up at the pickup, so that the clocks have no belt pickup slack. |
 | `overrides.search_for_fewer_wake_ups` | boolean | no | Whether the generator always does the four searches, to find a clock with fewer wakeups. |
 | `overrides.check_start_dependence` | boolean | no | Whether the generator tests each clock from more starts than the cold start. |
-| `overrides.loop_seed_items` | integer ≥ 0 | no | The number of its own product that a machine gets at the start when its recipe uses that product. |
+| `overrides.kick_start_items` | integer ≥ 0 | no | The kick start: the number of its own product that a machine gets before its clock starts, when its recipe uses that product. |
 | `overrides.disable_swing_backoff` | boolean | no | Not used: set terminal_swing_count to give the number of output swings. |
 | `overrides.derive_clock_windows` | boolean | no | Whether the generator finds the enable windows of other inserters from a run in which only the output inserters have a clock. |
 | `overrides.ignored_lcm_ingredients` | array of string | no | The items that do not change the window cycle time; set each inserter that moves only these items to ALWAYS. |

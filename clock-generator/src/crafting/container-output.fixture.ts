@@ -10,7 +10,7 @@ export const stack = (source: object, sink: object, filters?: string[]) =>
  */
 export function steelHub(items_per_second = 26): Config {
     return ConfigSchema.parse({
-        target_output: { recipe: 'steel-plate', items_per_second, copies: 1 },
+        setpoint: { recipe: 'steel-plate', items_per_second, copies: 1 },
         machines: [
             { id: 1, recipe: 'steel-plate', crafting_speed: 105.875, productivity: 300, type: 'furnace' },
             { id: 2, recipe: 'iron-plate', crafting_speed: 80.0375, productivity: 50, type: 'furnace' },

@@ -1,7 +1,7 @@
 import type { Config } from 'clock-generator/browser';
 
 /** What a target's rate counts: the item made and taken out of the build, or the item brought in and destroyed */
-export type TargetCounts = NonNullable<Config['target_output']['counts']>;
+export type TargetCounts = NonNullable<Config['setpoint']['counts']>;
 
 /** The Counts field of Target Output, its choices and its help: every text of it, in one place */
 export const COUNTS_TEXT = {
@@ -15,7 +15,7 @@ export const COUNTS_TEXT = {
 } as const;
 
 /** What a target counts; a target without `counts` counts the item made */
-export function countsOf(target: Pick<Config['target_output'], 'counts'>): TargetCounts {
+export function countsOf(target: Pick<Config['setpoint'], 'counts'>): TargetCounts {
     return target.counts ?? 'made';
 }
 

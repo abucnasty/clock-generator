@@ -5,7 +5,7 @@ import { readConfigFile, readSavedConfig, serializeConfig } from './usePersisted
 import { formDataToConfig } from '../utils/configForm/configMapping';
 import { createDefaultConfig } from '../utils/configForm/formData';
 
-const targetOutput = { recipe: 'electromagnetic-science-pack', items_per_second: 240, copies: 5 };
+const setpoint = { recipe: 'electromagnetic-science-pack', items_per_second: 240, copies: 5 };
 /** The native metadata of a steel chest, besides its id and position */
 const steelChest = { storage_size: 48, item_filter: 'electromagnetic-science-pack', prototype: 'steel-chest' };
 const typedChest = { type: ChestType.BUFFER_CHEST, id: 3, ...steelChest, position: { x: -598.5, y: 0 } };
@@ -20,7 +20,7 @@ const chestCases = [
 ];
 
 function serializedConfig(chest: object): string {
-    return JSON.stringify({ ...formDataToConfig(createDefaultConfig()), target_output: targetOutput, chests: [chest] });
+    return JSON.stringify({ ...formDataToConfig(createDefaultConfig()), setpoint: setpoint, chests: [chest] });
 }
 
 /** The one chest of the list, after checking it is the only one */

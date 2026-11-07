@@ -162,7 +162,7 @@ function chestDrillsOf(config: Config): ChestDrillConfig[] {
 function takerRates(config: Config, registry: ReadableEntityRegistry): Map<string, Map<string, Fraction>> {
     const rates = new Map<string, Map<string, Fraction>>();
     const forced = config.overrides?.terminal_swing_count;
-    const cycle = OutputCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), registry, config, fraction(1), config.overrides,
+    const cycle = OutputCyclePlan.create(TargetProductionRate.fromConfig(config.setpoint), registry, config, fraction(1), config.overrides,
         undefined, forced !== undefined && !Number.isInteger(forced));
     for (const transfer of cycle.entity_transfer_map.values()) {
         if (!Entity.isInserter(transfer.entity)) {

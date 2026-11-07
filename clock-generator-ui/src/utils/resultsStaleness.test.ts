@@ -7,8 +7,8 @@ import { configKeyOf, generatedForOf, generatedForText, isStale, madeAtText, STA
 /** A build as the page holds it: a target, a machine, and two inserters that differ */
 function form(): ConfigFormData {
     let config = createDefaultConfig();
-    config = edits.updateTargetOutput(config, 'recipe', 'logistic-science-pack');
-    config = edits.updateTargetOutput(config, 'items_per_second', 240);
+    config = edits.updateSetpoint(config, 'recipe', 'logistic-science-pack');
+    config = edits.updateSetpoint(config, 'items_per_second', 240);
     config = edits.updateMachine(config, 0, 'recipe', 'logistic-science-pack');
     config = edits.addInserter(edits.addInserter(config));
     return edits.updateInserter(config, 1, { stack_size: 12 });
@@ -34,8 +34,8 @@ describe('isStale', () => {
     });
 
     it.each<[string, Edit]>([
-        ['the target rate goes from 240 to 200', (config) => edits.updateTargetOutput(config, 'items_per_second', 200)],
-        ['the recipe changes', (config) => edits.updateTargetOutput(config, 'recipe', 'automation-science-pack')],
+        ['the target rate goes from 240 to 200', (config) => edits.updateSetpoint(config, 'items_per_second', 200)],
+        ['the recipe changes', (config) => edits.updateSetpoint(config, 'recipe', 'automation-science-pack')],
         ['a machine is added', (config) => edits.addMachine(config)],
         ['the inserters are reordered', (config) => edits.reorderInserters(config, 0, 1)],
         ['an override changes', (config) => edits.updateOverrides(config, 'lcm', 120)],
@@ -44,7 +44,7 @@ describe('isStale', () => {
     });
 
     it.each<[string, Edit]>([
-        ['an edit is put back', (config) => edits.updateTargetOutput(edits.updateTargetOutput(config, 'items_per_second', 200), 'items_per_second', 240)],
+        ['an edit is put back', (config) => edits.updateSetpoint(edits.updateSetpoint(config, 'items_per_second', 200), 'items_per_second', 240)],
         ['a machine is added and removed again, since the form\'s own ids are not in the key', (config) => {
             const added = edits.addMachine(config);
             return edits.removeMachine(added, added.machines.length - 1);
@@ -59,8 +59,8 @@ describe('generatedForOf', () => {
         let config = form();
         const generatedFor = generatedForOf(formDataToConfig(config), 1_000);
         const key = keyOf(config);
-        config = edits.updateTargetOutput(config, 'items_per_second', 200);
-        config = edits.updateTargetOutput(config, 'recipe', 'automation-science-pack');
+        config = edits.updateSetpoint(config, 'items_per_second', 200);
+        config = edits.updateSetpoint(config, 'recipe', 'automation-science-pack');
         expect(generatedFor).toEqual({
             key,
             recipe: 'logistic-science-pack',
@@ -153,11 +153,11 @@ describe('configKeyOf', () => {
 
 describe('fractional and metadata identity', () => {
     it('keeps omitted and explicit stack, type, quality and Copies distinct', () => {
-        let original = edits.updateTargetOutput(form(), 'copies', 0.0625);
+        let original = edits.updateSetpoint(form(), 'copies', 0.0625);
         original = edits.updateInserter(original, 0, { prototype: 'stack-inserter', quality: 'normal', stack_size: undefined });
         const generated = generatedOf(original);
         const variants = [
-            edits.updateTargetOutput(original, 'copies', 0.5),
+            edits.updateSetpoint(original, 'copies', 0.5),
             edits.updateInserter(original, 0, { prototype: 'fast-inserter' }),
             edits.updateInserter(original, 0, { quality: 'legendary' }),
             edits.updateInserter(original, 0, { stack_size: 16 }),

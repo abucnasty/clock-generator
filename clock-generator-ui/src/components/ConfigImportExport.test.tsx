@@ -37,7 +37,7 @@ beforeEach(() => {
     incoming = { machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0, prototype: 'assembling-machine-1' }],
         drills: [], inserters: [], belts: [], chests: [], guidance: Option.none(), suggested_target: Option.none() };
     validate.mockResolvedValue(incoming);
-    props = { ref: entry, config: null, currentForm, target: currentForm.target_output, onImport: vi.fn(), onApplyPaste: vi.fn(), onReset: vi.fn(), onBuildReplaced: vi.fn(), onUndoable: vi.fn(), onShowIntro: vi.fn(),
+    props = { ref: entry, config: null, currentForm, target: currentForm.setpoint, onImport: vi.fn(), onApplyPaste: vi.fn(), onReset: vi.fn(), onBuildReplaced: vi.fn(), onUndoable: vi.fn(), onShowIntro: vi.fn(),
         pasteIsNextStep: false, buildName: null, buildTitle: 'Test build' };
 });
 

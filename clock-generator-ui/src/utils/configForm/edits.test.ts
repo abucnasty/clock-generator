@@ -71,11 +71,11 @@ describe('ids', () => {
 
 describe('target output', () => {
     it('sets one field, and leaves an optional one, the gap between copies, out when it is cleared', () => {
-        const set = edits.updateTargetOutput(edits.updateTargetOutput(createDefaultConfig(), 'recipe', 'iron-gear-wheel'), 'copy_offset', { x: -12, y: 0 });
-        expect(set.target_output).toEqual({ recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1, copy_offset: { x: -12, y: 0 } });
-        const cleared = edits.updateTargetOutput(set, 'copy_offset', undefined);
-        expect(cleared.target_output).toEqual({ recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 });
-        expect('copy_offset' in cleared.target_output).toBe(false);
+        const set = edits.updateSetpoint(edits.updateSetpoint(createDefaultConfig(), 'recipe', 'iron-gear-wheel'), 'copy_offset', { x: -12, y: 0 });
+        expect(set.setpoint).toEqual({ recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1, copy_offset: { x: -12, y: 0 } });
+        const cleared = edits.updateSetpoint(set, 'copy_offset', undefined);
+        expect(cleared.setpoint).toEqual({ recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 });
+        expect('copy_offset' in cleared.setpoint).toBe(false);
     });
 });
 

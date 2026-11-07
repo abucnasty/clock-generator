@@ -90,7 +90,7 @@ export function assertFeasible(config: Config): void {
         const built = graphOf(config);
         found = {
             issues: built === null ? [] : feasibilityOf(built.facts, built.graph).issues,
-            target: { items_per_second: config.target_output.items_per_second, copies: config.target_output.copies },
+            target: { items_per_second: config.setpoint.items_per_second, copies: config.setpoint.copies },
         };
         checked.set(config, found);
     }

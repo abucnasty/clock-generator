@@ -17,7 +17,7 @@ const stack = (source: object, sink: object) => ({ source, sink, prototype: 'sta
 /** The drill into chest 1, which `chests` gives, and a furnace on iron plates the inserters may feed from it */
 function build(chests: object[], inserters: object[] = []): Config {
     return ConfigSchema.parse({
-        target_output: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
+        setpoint: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
         machines: [{ id: 1, recipe: 'iron-plate', crafting_speed: 5, productivity: 0, type: 'furnace' }],
         drills: { configs: [drill({ type: 'chest', id: 1 })] },
         inserters, belts: [], chests,
@@ -88,7 +88,7 @@ describe('a drill that drops into a chest', () => {
 
 describe('the config of a drill into a chest', () => {
     const base = {
-        target_output: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
+        setpoint: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
         machines: [{ id: 1, recipe: 'iron-plate', crafting_speed: 5, productivity: 0, type: 'furnace' }],
         inserters: [], belts: [], chests: [{ id: 1, type: 'car' }],
     };
@@ -127,7 +127,7 @@ describe('the config of a drill into a chest', () => {
 describe('a clock for a drill into a car between two furnaces', () => {
     it('enables the drill a tick a period on the clocks that meet goal 1, and leaves it always enabled on the others', () => {
         const config = ConfigSchema.parse({
-            target_output: { recipe: 'iron-plate', items_per_second: 80, copies: 1 },
+            setpoint: { recipe: 'iron-plate', items_per_second: 80, copies: 1 },
             machines: [1, 2].map(id => ({ id, recipe: 'iron-plate', crafting_speed: 86.18, productivity: 50, type: 'furnace' })),
             drills: { configs: [drill({ type: 'chest', id: 1 })] },
             inserters: [stack({ type: 'chest', id: 1 }, { type: 'machine', id: 1 }), stack({ type: 'chest', id: 1 }, { type: 'machine', id: 2 }),

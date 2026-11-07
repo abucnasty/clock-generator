@@ -103,7 +103,7 @@ describe("the recorded controls of the blocked-output fixtures", () => {
         const variant = cases.find(it => it.name === name)!;
         const {native, generation} = controls[name];
         const config = blockedOutputClockConfig(variant);
-        expectRunIsConsistent(native, generation!, config.target_output.items_per_second);
+        expectRunIsConsistent(native, generation!, config.setpoint.items_per_second);
         expect(native.target).toBe(BLOCKED_OUTPUT_TARGET);
         // five gears a second over the period: 16 in 192 ticks, or 120 in 1,440 where the hand of 15 rules out 192
         expect({period: native.period, expected: generation!.expected}).toEqual({period: periodOf(variant).ticks, expected: periodOf(variant).expected});

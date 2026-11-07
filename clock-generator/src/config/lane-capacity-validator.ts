@@ -54,7 +54,7 @@ const above = (a: Fraction, b: Fraction): boolean => a.subtract(b).getNumerator 
 /** The flows of one unit at the target, from the planner's transfer plan */
 function laneFlowsOf(config: Config): LaneFlow[] {
     const registry = createEntityRegistryFromConfig(config);
-    const cycle = OutputCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), registry, config, fraction(1));
+    const cycle = OutputCyclePlan.create(TargetProductionRate.fromConfig(config.setpoint), registry, config, fraction(1));
     const seconds = cycle.total_duration_ticks.divide(60);
     const flows: LaneFlow[] = [];
     for (const transfer of cycle.entity_transfer_map.values()) {
@@ -143,29 +143,29 @@ const asIssue = (load: LaneLoad, copies: number): LaneCapacityIssue => ({
 
 /** The lanes one unit's inserters ask for more than they carry, which refuse the config */
 export function laneCapacityIssues(config: Config): LaneCapacityIssue[] {
-    return overCapacity(laneLoads(config), fraction(1)).map(load => asIssue(load, config.target_output.copies));
+    return overCapacity(laneLoads(config), fraction(1)).map(load => asIssue(load, config.setpoint.copies));
 }
 
 /** The lanes within capacity in one unit that are over it once every copy uses them, which is only a warning */
 export function lanesSharedByCopies(config: Config): LaneCapacityIssue[] {
-    const copies = fraction(config.target_output.copies);
+    const copies = fraction(config.setpoint.copies);
     if (!above(copies, fraction(1))) return [];
     const loads = laneLoads(config);
     const refused = overCapacity(loads, fraction(1));
     const touches = (load: LaneLoad) => refused.some(other => other.belt_id === load.belt_id && other.kind === load.kind
         && other.lanes.some(lane => load.lanes.includes(lane)));
-    return overCapacity(loads.filter(load => !touches(load)), copies).map(load => asIssue(load, config.target_output.copies));
+    return overCapacity(loads.filter(load => !touches(load)), copies).map(load => asIssue(load, config.setpoint.copies));
 }
 
 /** The drops, within capacity in one unit and over it with no copy, whose copies together fill a set of lanes exactly */
 export function lanesExactlyFull(config: Config): LaneCapacityIssue[] {
-    const copies = fraction(config.target_output.copies);
+    const copies = fraction(config.setpoint.copies);
     const full = laneLoads(config).filter(load => load.kind === 'drop'
         && load.items_per_second.multiply(copies).subtract(load.capacity_per_second).getNumerator === 0);
     // a set of lanes whose subset is already exactly full is not told again
     const alone = full.filter(load => !full.some(other => other !== load && other.belt_id === load.belt_id
         && other.lanes.length < load.lanes.length && other.lanes.every(lane => load.lanes.includes(lane))));
-    return alone.map(load => asIssue(load, config.target_output.copies));
+    return alone.map(load => asIssue(load, config.setpoint.copies));
 }
 
 /** "Both lanes of belt 1 are exactly full at the target: the 7 copies drop 7 × 34.29 = 240 a second onto lanes that carry 240. ..." */

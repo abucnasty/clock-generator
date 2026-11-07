@@ -276,7 +276,7 @@ describe("the memo of the backpressure loss verdicts of a generation", () => {
         const other_output = { ...clock, stability_check: { ...clock.stability_check, expected_output_items: clock.stability_check.expected_output_items + 1 } };
         const keys = [other_windows, other_period, other_output].map(it => backpressureLossKey(config, it));
         keys.push(backpressureLossKey({ ...config, overrides: { ...config.overrides, backed_up_belts: true } }, clock));
-        keys.push(backpressureLossKey({ ...config, overrides: { ...config.overrides, loop_seed_items: 17 } }, clock));
+        keys.push(backpressureLossKey({ ...config, overrides: { ...config.overrides, kick_start_items: 17 } }, clock));
         expect(new Set([key, ...keys]).size).toBe(keys.length + 1);
     });
 

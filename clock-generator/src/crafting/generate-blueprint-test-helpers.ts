@@ -28,7 +28,7 @@ export const withSearches = (config: Config): Config =>
  */
 export function plannedFractionally(planned_on: Config, made: BlueprintGenerationResult): BlueprintGenerationResult {
     const count = made.used_terminal_swing_count;
-    const output_cycle_plan = OutputCyclePlan.create(TargetProductionRate.fromConfig(planned_on.target_output),
+    const output_cycle_plan = OutputCyclePlan.create(TargetProductionRate.fromConfig(planned_on.setpoint),
         createEntityRegistryFromConfig(planned_on), planned_on, fraction(count), { ...planned_on.overrides, terminal_swing_count: count }, undefined, true);
     return { ...made, output_cycle_plan };
 }

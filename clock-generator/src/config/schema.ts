@@ -15,6 +15,8 @@ import { MachineStatus } from "../state/entity-status";
 import { COPIES_DECIMAL_ERROR, isShortDecimalCopies } from "./copies-value";
 import { migrateBeltSupplyOverrides } from "./migrate-belt-supply";
 import { dropFractionalSwingsOverride } from "./migrate-fractional-swings";
+import { renameLoopSeedItemsToKickStart } from "./migrate-kick-start";
+import { renameTargetOutputToSetpoint } from "./migrate-setpoint";
 import { migrateBlockedSlotFilter } from "./migrate-blocked-slots";
 import { migrateMiningProductivityLevelStep } from "./migrate-mining-productivity";
 import { migrateMachineTypeStep } from "./migrate-machine-type";
@@ -769,7 +771,7 @@ export type ChestConfig = z.infer<typeof ChestConfigSchema>;
 // Config Overrides
 // ============================================================================
 
-export const ConfigOverridesSchema = z.preprocess(dropFractionalSwingsOverride, z.preprocess(migrateBeltSupplyOverrides, z.object({
+export const ConfigOverridesSchema = z.preprocess(renameLoopSeedItemsToKickStart, z.preprocess(dropFractionalSwingsOverride, z.preprocess(migrateBeltSupplyOverrides, z.object({
     lcm: z.number().int().positive().optional().describe("The number of crafting cycles in one window cycle; without it, the generator calculates the number."),
     /**
      * Forces the number of output swings per crafting cycle. Without it the generator picks the count and lowers it
@@ -814,11 +816,11 @@ export const ConfigOverridesSchema = z.preprocess(dropFractionalSwingsOverride, 
     check_start_dependence: z.boolean().optional().describe("Whether the generator tests each clock from more starts than the cold start."),
     /**
      * Items of its own product a machine whose recipe makes its own ingredient (pentapod eggs) is given once when a clock
-     * starts on the staged scaffold: the loop cannot start itself, so the scaffold's machines are seeded by hand.
+     * starts on the staged scaffold: the loop cannot start itself, so the scaffold's machines get their kick start by hand.
      *
      * @default 200
      */
-    loop_seed_items: z.number().int().nonnegative().optional().describe("The number of its own product that a machine gets at the start when its recipe uses that product."),
+    kick_start_items: z.number().int().nonnegative().optional().describe("The kick start: the number of its own product that a machine gets before its clock starts, when its recipe uses that product."),
     /**
      * @deprecated Ignored. Set terminal_swing_count to force an output swing count instead; other counts are
      * offered as potential clocks.
@@ -841,7 +843,7 @@ export const ConfigOverridesSchema = z.preprocess(dropFractionalSwingsOverride, 
      * regardless of the clock period.
      */
     ignored_lcm_ingredients: z.array(z.string()).optional().describe("The items that do not change the window cycle time; set each inserter that moves only these items to ALWAYS.")
-})));
+}))));
 
 export type ConfigOverrides = z.infer<typeof ConfigOverridesSchema>;
 
@@ -849,8 +851,8 @@ export type ConfigOverrides = z.infer<typeof ConfigOverridesSchema>;
 // Root Config
 // ============================================================================
 
-export const ConfigSchema = z.preprocess(normalizePickupCaptureConfig, z.object({
-    target_output: TargetProductionRateConfigSchema.describe("The product that the build must make, and its rate."),
+export const ConfigSchema = z.preprocess(renameTargetOutputToSetpoint, z.preprocess(normalizePickupCaptureConfig, z.object({
+    setpoint: TargetProductionRateConfigSchema.describe("The setpoint: the product that the build must make, and the rate it must hold. The clock never changes it."),
     machines: z.array(MachineConfigurationSchema).describe("The machines of the build."),
     drills: DrillsConfigSchema.optional().describe("The mining drills of the build."),
     inserters: z.array(InserterConfigSchema).describe("The inserters of the build."),
@@ -945,7 +947,7 @@ export const ConfigSchema = z.preprocess(normalizePickupCaptureConfig, z.object(
                 "give every inserter that drops on a belt a `drop` (lane and position), or none"
         });
     }
-}));
+})));
 
 /** Parsed configs have explicit pickup geometry on every belt source. */
 export type ParsedConfig = z.infer<typeof ConfigSchema>;

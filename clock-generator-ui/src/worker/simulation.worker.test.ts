@@ -64,7 +64,7 @@ async function primaryOf(config: Config, streamLogs = false) {
 
 it('answers output-transfer queries from the engine for both recycler products and their actual separate routes', async () => {
     const config: Config = {
-        target_output: { recipe: 'supercapacitor', items_per_second: 1, copies: 1 },
+        setpoint: { recipe: 'supercapacitor', items_per_second: 1, copies: 1 },
         machines: [
             { id: 1, recipe: 'processing-unit-recycling', crafting_speed: 1, productivity: 0, prototype: 'recycler', result_target: { type: 'machine', id: 2 } },
             { id: 2, recipe: 'supercapacitor', crafting_speed: 1, productivity: 0, prototype: 'electromagnetic-plant' },
@@ -104,7 +104,7 @@ it.each(['blocked', 'markers'] as const)('keeps blocked container slots through 
         ],
     });
     const config = formDataToConfig(pastedAndSaved(pasted));
-    config.target_output = { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 };
+    config.setpoint = { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 };
     expect(config.chests![0]).toEqual({ id: 1, type: 'car',
         slot_filters: [{ slot: 1, item: 'iron-plate' }, ...Array.from({ length: 79 }, (_, i) => ({ slot: i + 2, blocked: true }))] });
     expect(await send({ type: 'validate', requestId: 201, config })).toMatchObject({ type: 'validated' });
@@ -142,7 +142,7 @@ it('keeps an out-of-order recycler machine target, byproduct belt, and bend capt
 describe('repeated units: the real engine separates Check and generation recovery, the recomputed conversion and query failure', () => {
     /** Eight gear assemblers between the same two belts, eight repeated units set as half a copy */
     const source: Config = {
-        target_output: { recipe: 'iron-gear-wheel', items_per_second: 4, copies: 0.5 },
+        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 4, copies: 0.5 },
         machines: Array.from({ length: 8 }, (_, i) => ({ id: i + 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 })),
         inserters: Array.from({ length: 8 }, (_, i) => [
             { id: 2 * i + 1, source: { type: 'belt' as const, id: 1 }, sink: { type: 'machine' as const, id: i + 1 }, stack_size: 1, filters: ['iron-plate'] },
@@ -153,7 +153,7 @@ describe('repeated units: the real engine separates Check and generation recover
             { id: 2, type: 'transport-belt', lanes: [{ ingredient: 'iron-gear-wheel', stack_size: 1 }] },
         ], chests: [],
     } as Config;
-    const excessive: Config = { ...source, target_output: { ...source.target_output, items_per_second: 100 } };
+    const excessive: Config = { ...source, setpoint: { ...source.setpoint, items_per_second: 100 } };
     /** Each output inserter drops at a set place on its lane */
     const unsupported: Config = { ...source, inserters: source.inserters.map((inserter, i) => i % 2 === 1
         ? { ...inserter, sink: { type: 'belt', id: 2, drop: { lane: 1, position: 0 } } } : inserter) };
@@ -188,7 +188,7 @@ describe('repeated units: the real engine separates Check and generation recover
 
     it.each([
         { why: 'gives 4 copies of one unit', config: source, response: { type: 'answer', answer: { kind: 'available',
-            plan: { copies: 4, candidate: { machines: [source.machines[0]], target_output: { ...source.target_output, copies: 4 } } } } } },
+            plan: { copies: 4, candidate: { machines: [source.machines[0]], setpoint: { ...source.setpoint, copies: 4 } } } } } },
         { why: 'is refused at Check for a high target', config: excessive, response: { type: 'answer', answer: { kind: 'unavailable',
             stage: 'check', repeatedGroups: 8, reason: { code: 'candidate-check-failed', message: expect.stringContaining("No clock can hold this build's target") } } } },
         { why: 'is refused at the proof for lane drops', config: unsupported, response: { type: 'answer',
@@ -204,7 +204,7 @@ describe('repeated units: the real engine separates Check and generation recover
 
     // a target no clock can hold is a refusal of the build: the engine's opening once and each problem in its own words
     it('Check hands over the opening and each problem when no clock can hold the target', async () => {
-        const unheld: Config = { ...source, target_output: { ...source.target_output, items_per_second: 100, copies: 1 }, machines: [source.machines[0]], inserters: source.inserters.slice(0, 2) };
+        const unheld: Config = { ...source, setpoint: { ...source.setpoint, items_per_second: 100, copies: 1 }, machines: [source.machines[0]], inserters: source.inserters.slice(0, 2) };
         const noClock = expect.stringContaining("No clock can hold this build's target");
         const response = await send({ type: 'validate', requestId: 9, config: unheld });
         expect(response).toMatchObject({ type: 'validation-failed', message: noClock,
@@ -217,7 +217,7 @@ describe('repeated units: the real engine separates Check and generation recover
 
 it('replays detailed activity through the real worker query without changing the saved config', async () => {
     const config = {
-        target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
         machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],
         inserters: [
             { source: { type: 'belt', id: 1 }, sink: { type: 'machine', id: 1 }, stack_size: 1 },
@@ -251,7 +251,7 @@ describe('a captured inserter kind, quality and filter mode', () => {
         expect(pasted.guidance).toMatchObject({ _tag: 'None' });
         const saved = formDataToConfig(pastedAndSaved(pasted));
         expect((await ask({ kind: 'saved-config', config: saved })).problem).toBeNull();
-        return { ...formDataToConfig(configToFormData(saved)), target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 } } as Config;
+        return { ...formDataToConfig(configToFormData(saved)), setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 } } as Config;
     };
     // read as a whitelist, the blacklist would leave the gears without an output inserter and offer a new belt for them
     const blacklist = { filters: ['iron-plate'], filter_mode: 'blacklist' };
@@ -290,7 +290,7 @@ describe('a captured inserter kind, quality and filter mode', () => {
 describe('inserters that take from a belt into chests (#650)', () => {
     // the shape of the build in the issue: belts fill two chests by inserter (3 and 5), and a machine takes from one of them
     const config = {
-        target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
         machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],
         inserters: [
             { id: 1, source: { type: 'belt', id: 1, pickup_length: 1 }, sink: { type: 'machine', id: 1 } },
@@ -344,8 +344,8 @@ describe('inserters that take from a belt into chests (#650)', () => {
 
 describe('live advice on a gear assembler, which does not block', () => {
     /** A gear assembler fed by a legendary stack inserter with its full hand, from a belt of the given stack size */
-    const gears = ({ stack_size = 4, ...target }: { stack_size?: number } & Partial<Config['target_output']> = {}) => ({
-        target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1, ...target },
+    const gears = ({ stack_size = 4, ...target }: { stack_size?: number } & Partial<Config['setpoint']> = {}) => ({
+        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1, ...target },
         machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],
         inserters: [
             { id: 1, source: { type: 'belt', id: 1, pickup_length: 1 }, sink: { type: 'machine', id: 1 } },
@@ -397,7 +397,7 @@ describe('live advice on a gear assembler, which does not block', () => {
 
 it('loads an imported build file that carries the former Fractional swings override, without it', async () => {
     const config = {
-        target_output: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
+        setpoint: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
         machines: [{ id: 1, recipe: 'iron-plate', crafting_speed: 2, productivity: 0, prototype: 'electric-furnace' }],
         inserters: [], belts: [],
     };
@@ -414,7 +414,7 @@ it("gives the crafting machines, fills a prototype's rule on import and paste, a
 
     const furnace = { id: 1, recipe: 'iron-plate', crafting_speed: 2, productivity: 0, prototype: 'electric-furnace' };
     const config = {
-        target_output: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
+        setpoint: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
         machines: [furnace], inserters: [], belts: [],
     };
     // a former type is read as the machine, in a build file, a saved build and a paste from an older Sidecar
@@ -437,7 +437,7 @@ it("gives the crafting machines, fills a prototype's rule on import and paste, a
 it('says live whether the copies\' drops fit at the gap given, for the period estimated from the settings', async () => {
     const live = (copy_offset: { x: number; y: number } | undefined) => {
         const grenade = JSON.parse(grenadeSample) as Config;
-        return coverageOf({ ...grenade, target_output: { ...grenade.target_output, copy_offset } });
+        return coverageOf({ ...grenade, setpoint: { ...grenade.setpoint, copy_offset } });
     };
     const lead = "At about 112 ticks a period (estimated from the target rate: one output hand at the machine's rate), the hands of the 7 copies";
     expect((await live({ x: 12, y: 0 })).dropRoom).toBe(`${lead} fit between each other on belt 1, if the inserters of a copy start together. `

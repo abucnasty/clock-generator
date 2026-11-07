@@ -293,14 +293,14 @@ export interface CopiesUnit {
 
 /**
  * A config holds several identical units of a build, where it should describe one unit and set
- * `target_output.copies`.
+ * `setpoint.copies`.
  */
 export class CopiesError extends Error {
     /** The identical copies found, each with the machine ids of its unit; one entry per copy */
     public readonly units: CopiesUnit[];
     /** The number of identical copies the config holds */
     public readonly copies_found: number;
-    /** `target_output.copies` of the config as given */
+    /** `setpoint.copies` of the config as given */
     public readonly configured_copies: number;
 
     constructor(units: CopiesUnit[], configuredCopies: number) {
@@ -318,7 +318,7 @@ export class CopiesError extends Error {
             .map((unit, i) => `copy ${i + 1}: machines ${unit.machine_ids.join(', ')}`)
             .join('; ');
         return `The config holds ${found} identical copies of a unit of ${size} machine${size === 1 ? '' : 's'} `
-            + `(${listed}). Describe one copy and set target_output.copies to ${fraction(configuredCopies).multiply(found).toDecimal()} `
+            + `(${listed}). Describe one copy and set setpoint.copies to ${fraction(configuredCopies).multiply(found).toDecimal()} `
             + `(now ${configuredCopies}, times ${found}).`;
     }
 }
@@ -342,7 +342,7 @@ export interface LaneCapacityIssue {
     items_per_second: number;
     /** Items a second the lanes carry: half the belt's speed times each lane's stack size */
     capacity_per_second: number;
-    /** `target_output.copies` of the config */
+    /** `setpoint.copies` of the config */
     copies: number;
 }
 

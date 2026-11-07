@@ -1,5 +1,5 @@
 {
-  "target_output": {
+  "setpoint": {
     "recipe": "accumulator",
     "items_per_second": 5,
     "copies": 1

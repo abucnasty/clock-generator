@@ -102,7 +102,7 @@ function sum(values: number[]): number {
 
 /** The run's summary under the protocol, with the baseline's figures for the checks a clock for a random output has to meet */
 export function summarize(report: OreVoiderReport, config: Config, clock: OreVoiderObserved["clock"], sigma_period: number, chance: number): OreVoiderRun {
-    const run = runSummary(report.protocol, {generationVerdict: clock.verdict, target: config.target_output.items_per_second, period: clock.period});
+    const run = runSummary(report.protocol, {generationVerdict: clock.verdict, target: config.setpoint.items_per_second, period: clock.period});
     const b = report.baseline;
     const periods = b.ticks / clock.period;
     // each craft destroys the ore it takes, less what it gives back
@@ -113,7 +113,7 @@ export function summarize(report: OreVoiderReport, config: Config, clock: OreVoi
             clock,
             baseline: {
                 ticks: b.ticks, periods, crafts: b.crafts, placed: b.placed,
-                destroyed, destroyed_expected: config.target_output.items_per_second * b.ticks / 60, destroyed_range: 3 * sigma_period * Math.sqrt(periods),
+                destroyed, destroyed_expected: config.setpoint.items_per_second * b.ticks / 60, destroyed_range: 3 * sigma_period * Math.sqrt(periods),
                 returned_share: b.crafts > 0 ? b.placed / b.crafts : 0,
                 returned_range: b.crafts > 0 ? 3 * Math.sqrt(b.crafts * chance * (1 - chance)) / b.crafts : 0,
                 car_max: b.car_max, car_capacity: report.initial.capacity, full_ticks: b.full_ticks,
@@ -150,7 +150,7 @@ export async function captureOreVoider(variant: OreVoiderCase): Promise<OreVoide
         const margin = selected.result.random_margins!.windows[0];
         const takers = new Set(margin.inserter_ids);
         const per_inserter = selected.result.stability_check.as_built?.wake_ups?.inserters ?? [];
-        const clock = {id: selected.id, period, expected: config.target_output.items_per_second * period / 60, verdict: selected.verdict,
+        const clock = {id: selected.id, period, expected: config.setpoint.items_per_second * period / 60, verdict: selected.verdict,
             wake_ups_per_minute: selected.assessment.wake_ups_per_minute ?? 0,
             taker_wake_ups_per_minute: sum(per_inserter.filter(it => takers.has(it.inserter_id)).map(it => it.wake_ups_per_minute))};
         const sha = clockHash(exported);
@@ -162,7 +162,7 @@ export async function captureOreVoider(variant: OreVoiderCase): Promise<OreVoide
         fs.writeFileSync(path.join(capture.directory, "clock.json"), JSON.stringify({...clock, sha256: sha}) + "\n");
         // the baseline is the protocol's minute: the clock's cycle is its period, which a minute holds whole
         expect(RUN_PROTOCOL.baseline % period, "a whole number of the clock's periods in the baseline").toBe(0);
-        const expectedPerWindow = Math.round(config.target_output.items_per_second * RUN_PROTOCOL.window / 60 * 1e6) / 1e6;
+        const expectedPerWindow = Math.round(config.setpoint.items_per_second * RUN_PROTOCOL.window / 60 * 1e6) / 1e6;
         const {recording} = await recordInFactorio({factorio: process.env.FACTORIO_PATH!, save: process.env.FACTORIO_HARNESS_SAVE!, config,
             clock: {blueprint: encodeBlueprintFile({blueprint: exported.blueprint}), schedule: exported.schedule}, blueprint: scaffoldOf(config_path),
             out: path.join(capture.directory, "recording.json"), work_dir: path.join(capture.directory, "game"),

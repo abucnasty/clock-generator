@@ -43,13 +43,13 @@ function pendingCheck() {
 }
 
 /** A saved build making a gear wheel a second */
-const saved = { ...createDefaultConfig(), target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 } };
-const withCopies = (form: ConfigFormData, copies: number) => ({ ...form, target_output: { ...form.target_output, copies } });
+const saved = { ...createDefaultConfig(), setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 } };
+const withCopies = (form: ConfigFormData, copies: number) => ({ ...form, setpoint: { ...form.setpoint, copies } });
 
 function savedBuilds() {
     const initial = mount(), snapshot = initial.captureBuildMutation(), meta = initial.library.currentMeta;
     const first = run(() => initial.library.addBuild(saved, 'First'));
-    const second = run(() => initial.library.addBuild({ ...createDefaultConfig(), target_output: { recipe: 'copper-cable', items_per_second: 2, copies: 1 } }, 'Second'));
+    const second = run(() => initial.library.addBuild({ ...createDefaultConfig(), setpoint: { recipe: 'copper-cable', items_per_second: 2, copies: 1 } }, 'Second'));
     run(() => initial.library.restore({ meta, form: snapshot.form }));
     return { hook: latest(), first: first.id, second: second.id };
 }
@@ -83,7 +83,7 @@ describe('async build loading ownership', () => {
         expect(await settle(loading)).toBe(true);
         expect(before).toHaveBeenCalledOnce();
         expect(latest().isLoaded).toBe(true);
-        expect(latest().config.target_output.copies).toBe(4);
+        expect(latest().config.setpoint.copies).toBe(4);
     });
 
     it.each([true, false])('finishes startup if the newer load fails (initial answer first: %s)', async initialFirst => {
@@ -93,7 +93,7 @@ describe('async build loading ownership', () => {
         expect(await settle(loading)).toBe(false);
         if (!initialFirst) { initial.resolve(null); await tick(); }
         expect(latest().isLoaded).toBe(true);
-        expect(latest().config.target_output).toEqual(saved.target_output);
+        expect(latest().config.setpoint).toEqual(saved.setpoint);
     });
 
     it('keeps the replayed startup validation current after effect cleanup', async () => {
@@ -105,7 +105,7 @@ describe('async build loading ownership', () => {
         expect(latest().isLoaded).toBe(false);
         newer.resolve(null); await tick();
         expect(latest().isLoaded).toBe(true);
-        expect(latest().config.target_output).toEqual(saved.target_output);
+        expect(latest().config.setpoint).toEqual(saved.setpoint);
     });
 
     it.each(['valid', 'invalid', 'failed'] as const)('only opens the latest requested build, never showing or backing up an older %s answer that finishes after it', async outcome => {
@@ -119,7 +119,7 @@ describe('async build loading ownership', () => {
         if (outcome === 'failed') older.reject(new Error('Old worker failure'));
         expect(await settle(openFirst)).toBe(false);
         expect(latest().library.currentId).toBe(second);
-        expect(latest().config.target_output.recipe).toBe('copper-cable');
+        expect(latest().config.setpoint.recipe).toBe('copper-cable');
         expect(latest().loadNotice).toBeNull();
         expect(localStorage.getItem(backupKey(first))).toBeNull();
     });
@@ -177,7 +177,7 @@ describe('async build loading ownership', () => {
         expect(hook.captureBuildMutation()).toEqual(expected);
         if (thenLoads !== undefined) {
             expect(await settle(hook.library.loadOtherTabVersion(before))).toBe(true);
-            expect(hook.captureBuildMutation().form.target_output.copies).toBe(thenLoads);
+            expect(hook.captureBuildMutation().form.setpoint.copies).toBe(thenLoads);
             expect(before).toHaveBeenCalledOnce();
         }
     });
@@ -208,8 +208,8 @@ describe('authoritative build mutation with whole-build Undo', () => {
 
             // No render/effect between this edit, capture and commit: useUndo's default effect-ref is still older.
             hook.setConfig(metadataEdit);
-            const current = hook.captureBuildMutation(), next = { ...current.form, target_output: { ...current.form.target_output, copies: 8 } };
-            const transform = vi.fn((form: typeof current.form) => ({ ...form, overrides: { loop_seed_items: 0 } }));
+            const current = hook.captureBuildMutation(), next = { ...current.form, setpoint: { ...current.form.setpoint, copies: 8 } };
+            const transform = vi.fn((form: typeof current.form) => ({ ...form, overrides: { kick_start_items: 0 } }));
             hook.setConfig(transform);
             expect(transform).toHaveBeenCalledOnce();
             expected = hook.captureBuildMutation();
@@ -222,7 +222,7 @@ describe('authoritative build mutation with whole-build Undo', () => {
         act(() => message.action!.onClick());
         expect(hook.captureBuildMutation().form).toBe(expected.form);
         expect(hook.captureBuildMutation().form.machines[0]._uuid).toBe('new-ui-identity');
-        expect(hook.captureBuildMutation().form.overrides).toEqual({ loop_seed_items: 0 });
+        expect(hook.captureBuildMutation().form.overrides).toEqual({ kick_start_items: 0 });
     });
 
     it('does not accept delayed initial saved data after a build switch away and back', async () => {

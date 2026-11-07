@@ -10,7 +10,7 @@ const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 
 test("grenade: copies a tile closer put hands on each other, and the insight says so", async () => {
     const config = await loadConfigFromFile(ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY);
-    const closer = {...config, target_output: {...config.target_output, copy_offset: {x: 11, y: 0}}};
+    const closer = {...config, setpoint: {...config.setpoint, copy_offset: {x: 11, y: 0}}};
     const made = generateClockAlternatives(closer, {logger: quiet});
     const selected = made.alternatives[made.selected_index];
     const insight = selected.insights.find(it => it.id === "drop-spacing")!;

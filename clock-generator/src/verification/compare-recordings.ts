@@ -437,7 +437,7 @@ export function compareRecordings(
         }
     }
 
-    const recipes = recipesMaking(config, config.target_output.recipe);
+    const recipes = recipesMaking(config, config.setpoint.recipe);
     const periods_from = (side: Side) => new Set(side.periods.map(period => period.start));
     const outputOf = (side: Side) => {
         const kept = periods_from(side);

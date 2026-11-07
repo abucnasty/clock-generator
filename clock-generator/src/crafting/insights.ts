@@ -4,7 +4,7 @@ import { MAX_RECOVERY_PERIODS, type BackpressureLossVerdict } from "./backpressu
 import { describeSharedItem, type SharedItemDeadlockRisk } from "./deadlock-risk";
 import type { BlueprintGenerationResult } from "./generate-blueprint";
 import { CompactEntityStateTransitions, CompactStateTransitionHistory, transitionsOf } from "./sequence/compact-history";
-import { DEFAULT_LOOP_SEED_ITEMS, loopSeedTaken } from "./runner/cold-start";
+import { DEFAULT_KICK_START_ITEMS, kickStartTaken } from "./runner/cold-start";
 import type { StartDependence } from "./start-dependence";
 import type { WakeUpsFromStarts } from "./wake-ups-from-starts";
 import { notTriedSentence, type SpareTime } from "./why-not-stable";
@@ -164,7 +164,7 @@ function insertionLimitsInsight(result: BlueprintGenerationResult, entities: Com
 }
 
 /** Machines whose recipe makes one of its own ingredients, which the simulation starts already holding that ingredient */
-function loopingRecipeInsight(result: BlueprintGenerationResult, entities: CompactEntityStateTransitions[], loop_seed_items: number): ClockInsight | null {
+function loopingRecipeInsight(result: BlueprintGenerationResult, entities: CompactEntityStateTransitions[], kick_start_items: number): ClockInsight | null {
     const rows = result.machine_facts.flatMap(machine => machine.facts.inputs
         .filter(input => FactorioDataService.findRecipeOrThrow(machine.facts.recipe).results.some(output => output.name === input.item_name))
         .map(input => ({
@@ -172,7 +172,7 @@ function loopingRecipeInsight(result: BlueprintGenerationResult, entities: Compa
             recipe: machine.facts.recipe,
             item: input.item_name,
             per_craft: input.amount_per_craft,
-            started_with: loopSeedTaken(input.item_name, input.automated_insertion_limit, loop_seed_items),
+            started_with: kickStartTaken(input.item_name, input.automated_insertion_limit, kick_start_items),
         })));
     if (rows.length === 0) {
         return null;
@@ -502,13 +502,13 @@ export function lanesExactlyFullInsights(config: Config): ClockInsight[] {
     return [{ id: "lanes-exactly-full", scope: "build", title, what: note, why: "", explanation: "" }];
 }
 
-export function clockInsights(result: BlueprintGenerationResult, holds: boolean, loop_seed_items = DEFAULT_LOOP_SEED_ITEMS): ClockInsight[] {
+export function clockInsights(result: BlueprintGenerationResult, holds: boolean, kick_start_items = DEFAULT_KICK_START_ITEMS): ClockInsight[] {
     // the run the blueprint follows; build-wide numbers are only read from a clock that holds the target
     const run = result.clock_only_run?.state_transition_history ?? result.serializable_state_transition_history;
     // an inserter that never moved in one run is only listed in the other
     const entities = [...run.entities, ...result.serializable_state_transition_history.entities];
     const insights: (ClockInsight | null)[] = [
-        loopingRecipeInsight(result, entities, loop_seed_items),
+        loopingRecipeInsight(result, entities, kick_start_items),
         holds ? spareTimeInsight(result, run) : null,
         insertionLimitsInsight(result, entities),
         outputHandInsight(result, entities),

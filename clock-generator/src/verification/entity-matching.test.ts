@@ -30,7 +30,7 @@ function recordingOf(filters: string[] | undefined) {
 }
 
 const config = {
-    target_output: { recipe: "automation-science-pack", items_per_second: 240, copies: 9 },
+    setpoint: { recipe: "automation-science-pack", items_per_second: 240, copies: 9 },
     machines: [{ id: 1, recipe: "automation-science-pack", productivity: 0, crafting_speed: 1, type: "machine" }],
     inserters: [
         { id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: 16, filters: ["copper-plate", "iron-gear-wheel"] },
@@ -111,7 +111,7 @@ describe("matching inserters that take from chests of different types into one m
         inserters: built_inserters.map((inserter, index) => ({ ...inserter, id: index + 1, name: "stack-inserter", samples: held })),
     });
     const voider = {
-        target_output: { recipe: "iron-ore", items_per_second: 400, copies: 1, counts: "destroyed" },
+        setpoint: { recipe: "iron-ore", items_per_second: 400, copies: 1, counts: "destroyed" },
         machines: [{ ...recycler, productivity: 0, crafting_speed: 16.875, prototype: "recycler", result_target: { type: "chest", id: 1 } }],
         inserters: [1, 2, 3, 4, 5, 6].map(id => ({ id, source: { type: "chest", id: id <= 2 ? 1 : 2 }, sink: { type: "machine", id: 1 }, stack_size: 16, filters: ["iron-ore"] })),
         belts: [],

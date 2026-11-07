@@ -64,7 +64,7 @@ describe("the copies validator with a fractional number of copies", () => {
     const lane = (ingredient: string) => ({ type: "transport-belt", lanes: [{ ingredient, stack_size: 1 }] });
     /** Two identical machines, each fed from belt 1 and dropping on belt 2 */
     const twoUnits = (copies: number): Config => ({
-        target_output: { recipe: "iron-gear-wheel", items_per_second: 1, copies },
+        setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies },
         machines: [gear(1), gear(2)],
         inserters: [1, 2].flatMap(id => [
             { source: { type: "belt", id: 1 }, sink: { type: "machine", id }, stack_size: 1 },
@@ -78,10 +78,10 @@ describe("the copies validator with a fractional number of copies", () => {
         try {
             validateCopies(twoUnits(5.5));
         } catch (error) {
-            expect((error as Error).message).toContain("set target_output.copies to 11 (now 5.5, times 2).");
+            expect((error as Error).message).toContain("set setpoint.copies to 11 (now 5.5, times 2).");
             expect((error as CopiesError).configured_copies).toBe(5.5);
         }
-        expect(() => validateCopies(twoUnits(0.1))).toThrow("set target_output.copies to 0.2 (now 0.1, times 2).");
+        expect(() => validateCopies(twoUnits(0.1))).toThrow("set setpoint.copies to 0.2 (now 0.1, times 2).");
     });
 
     it("does not refuse a config of one unit with 5.5 copies", () => {
@@ -93,7 +93,7 @@ describe("the copies validator with a fractional number of copies", () => {
 
 describe("a clock for a fractional number of copies", () => {
     const build = (copies: number, items_per_second: number): Config => ({
-        target_output: { recipe: "iron-gear-wheel", items_per_second, copies },
+        setpoint: { recipe: "iron-gear-wheel", items_per_second, copies },
         machines: [{ id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1 }],
         inserters: [
             { id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: 1, filters: ["iron-plate"] },

@@ -1,5 +1,5 @@
 {
-  "target_output": {
+  "setpoint": {
     "recipe": "rocket-fuel",
     "items_per_second": 60,
     "copies": 1

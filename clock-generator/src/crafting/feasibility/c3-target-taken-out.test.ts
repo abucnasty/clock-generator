@@ -11,7 +11,7 @@ import { belt, feasibilityOfConfig, infinityChest, inserter, lane, withTarget } 
  * 1, two rotations of 3, a drop of 16 / 4 = 4 stacks), 16 x 60 / 11 = 87.27 gears a second.
  */
 const gears: Config = {
-    target_output: { recipe: "iron-gear-wheel", items_per_second: 960, copies: 11 },
+    setpoint: { recipe: "iron-gear-wheel", items_per_second: 960, copies: 11 },
     machines: [{ id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1000 }],
     belts: [belt(2, [lane("iron-gear-wheel")])],
     chests: [infinityChest(1, ["iron-plate"])],

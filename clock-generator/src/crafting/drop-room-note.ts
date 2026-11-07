@@ -26,7 +26,7 @@ export function estimatedPeriod(config: Config): number | null {
     try {
         const rates = computeMachineTargetRates(config);
         const registry = createEntityRegistryFromConfig(config);
-        const item = TargetProductionRate.fromConfig(config.target_output).machine_production_rate.item;
+        const item = TargetProductionRate.fromConfig(config.setpoint).machine_production_rate.item;
         const machines = registry.getAll().filter(Entity.isMachine).filter(machine => machine.output.item_name === item);
         if (machines.length === 0) return null;
         const ticks = machines.map(machine => {
@@ -68,8 +68,8 @@ function alsoFits(room: DropRoom): string[] {
  * them is not given, or no output inserter has a place (the note that asks for the gap is copyGapNeededNote).
  */
 export function dropRoomNote(config: Config): string | null {
-    const copies = config.target_output.copies;
-    if (!(copies > 1) || config.target_output.copy_offset === undefined) return null;
+    const copies = config.setpoint.copies;
+    if (!(copies > 1) || config.setpoint.copy_offset === undefined) return null;
     let lines;
     try {
         lines = dropLines(config);

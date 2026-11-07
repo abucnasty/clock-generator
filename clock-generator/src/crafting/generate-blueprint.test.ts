@@ -165,7 +165,7 @@ describe("generateClockForConfig", () => {
             // - Modified: 480 items/sec, 12 copies → per-machine rate = 480/12/60/2 = 1/3 items/tick
             const modifiedResult = generateClockForConfig({
                 ...config,
-                target_output: { ...config.target_output, items_per_second: config.target_output.items_per_second * 2, copies: config.target_output.copies * 2 },
+                setpoint: { ...config.setpoint, items_per_second: config.setpoint.items_per_second * 2, copies: config.setpoint.copies * 2 },
             });
             expect(modifiedResult.output_cycle_plan.total_duration.ticks).toBe(result.output_cycle_plan.total_duration.ticks);
         });
@@ -277,7 +277,7 @@ describe("generateClockForConfig", () => {
 
         it("throws when the machines cannot reach the target rate: the feasibility pass first, the planner's assert behind it", async () => {
             const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_160);
-            const over = { ...config, target_output: { ...config.target_output, items_per_second: 1600 } };
+            const over = { ...config, setpoint: { ...config.setpoint, items_per_second: 1600 } };
             expect(() => validateConfig(over)).toThrow(FeasibilityError);
             // the figures are for one of the 24 copies, and the message says so: 1600 / 24 = 66.67 frames a second a copy
             expect(() => validateConfig(over)).toThrow("No clock can hold this build's target of 1600 a second over 24 copies (every figure here is "
@@ -291,9 +291,9 @@ describe("generateClockForConfig", () => {
     describe("config validation", () => {
         it("throw error if the current configuration cannot meet the target production rate", async () => {
             const config = await loadConfigFromFile(ConfigPaths.STONE_BRICK_120_DRILL_DIRECT_INSERT);
-            expect(config.target_output.items_per_second).toBe(120)
+            expect(config.setpoint.items_per_second).toBe(120)
             expect(() => generateClockForConfig(config)).not.toThrowError();
-            config.target_output.items_per_second = 240;
+            config.setpoint.items_per_second = 240;
             expect(() => generateClockForConfig(config)).toThrowError();
         })
     })

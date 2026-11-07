@@ -72,7 +72,7 @@ export function containerClockConfig(variant: ContainerClockCase): Config {
     const supplies = inputs.map((item, index) => ({type: "infinity-chest", id: 10 + index,
         item_filter: [{item_name: item, request_count: 200}]}));
     return ConfigSchema.parse({
-        target_output: {recipe: variant.recipe, items_per_second: CONTAINER_TARGET, copies: 1},
+        setpoint: {recipe: variant.recipe, items_per_second: CONTAINER_TARGET, copies: 1},
         machines: [{id: 1, type: "machine", recipe: variant.recipe, crafting_speed: CONTAINER_CRAFTING_SPEED, productivity: 0}],
         inserters: [
             ...inputs.map((item, index) => ({id: 1 + index, source: {type: "chest", id: 10 + index}, sink: {type: "chest", id: 1},

@@ -1,5 +1,5 @@
 {
-  "target_output": {
+  "setpoint": {
     "recipe": "advanced-circuit",
     "items_per_second": 240,
     "copies": 3

@@ -18,7 +18,7 @@ import {
 const BASE = 'https://clock-generator.example/';
 
 const smallBuild = (): Config => ({
-    target_output: { recipe: 'iron-gear-wheel', items_per_second: 2.5, copies: 1 },
+    setpoint: { recipe: 'iron-gear-wheel', items_per_second: 2.5, copies: 1 },
     machines: [{ id: 1, recipe: 'iron-gear-wheel', productivity: 0, crafting_speed: 1.25 }],
     inserters: [{ source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 }, stack_size: 16 }],
     belts: [],
@@ -26,7 +26,7 @@ const smallBuild = (): Config => ({
 } as unknown as Config);
 
 const bigBuild = (): Config => ({
-    target_output: { recipe: 'electronic-circuit', items_per_second: 30, copies: 4 },
+    setpoint: { recipe: 'electronic-circuit', items_per_second: 30, copies: 4 },
     machines: [
         { id: 1, recipe: 'electronic-circuit', productivity: 0.5, crafting_speed: 2.5 },
         { id: 2, recipe: 'copper-cable', productivity: 0, crafting_speed: 2.5 },
@@ -194,10 +194,39 @@ describe('sharedBuildSummary', () => {
     });
 });
 
+describe('share links made before the setpoint and the kick start were named so', () => {
+    /** A link as the site made it before: the build carries `target_output`, and `loop_seed_items` in its overrides */
+    const formerLink = async () => {
+        const { setpoint, ...rest } = smallBuild();
+        const former = { target_output: setpoint, ...rest, overrides: { loop_seed_items: 50 } } as unknown as Config;
+        return linkTo(former, 'An old link');
+    };
+
+    it('still opens: the build loads with its setpoint and its kick start, and nothing is left under the old names', async () => {
+        const decoded = await decodeShareLink(await formerLink());
+        if (decoded.kind !== 'build') throw new Error(`Expected a decoded build, not ${decoded.problem}`);
+        const file = readConfigFile(JSON.stringify(decoded.config)) as Record<string, any>;
+        expect(file.setpoint).toEqual({ recipe: 'iron-gear-wheel', items_per_second: 2.5, copies: 1 });
+        expect(file.overrides).toEqual({ kick_start_items: 50 });
+        expect('target_output' in file).toBe(false);
+        const parsed = parseFormConfig(ConfigSchema, file);
+        expect(parsed.success).toBe(true);
+        expect(parsed.data!.setpoint.recipe).toBe('iron-gear-wheel');
+        expect(parsed.data!.overrides?.kick_start_items).toBe(50);
+    });
+
+    it('loads to the same build as a link made with the new names, and the schema reads the old names without the file reader as well', async () => {
+        const old = await decodeShareLink(await formerLink());
+        if (old.kind !== 'build') throw new Error('Expected a decoded build');
+        const current = { ...smallBuild(), overrides: { kick_start_items: 50 } };
+        expect(ConfigSchema.parse(old.config)).toEqual(ConfigSchema.parse(current));
+    });
+});
+
 describe('shared builds through the real file and worker boundary', () => {
     it.each([0.0625, 0.0001, 1 / 3])('preserves Copies %s and inserter metadata', async copies => {
         const config = smallBuild();
-        config.target_output.copies = copies;
+        config.setpoint.copies = copies;
         config.inserters = [
             { prototype: 'bulk-inserter', quality: 'normal' },
             { prototype: 'fast-inserter', quality: 'normal' },
@@ -214,14 +243,14 @@ describe('shared builds through the real file and worker boundary', () => {
         expect(parsed.success).toBe(true);
         expect(ConfigSchema.safeParse(file).success).toBe(copiesProblem(copies) === null);
         const exported = JSON.parse(JSON.stringify(formDataToConfig(configToFormData(parsed.data!))));
-        expect(exported.target_output.copies).toBe(copies);
+        expect(exported.setpoint.copies).toBe(copies);
         // Metadata is independent of the Copies refinement; keep its full presence/value matrix once.
         if (copies === 0.0625) expect(metadataOf(exported.inserters)).toStrictEqual(metadataOf(JSON.parse(original).inserters));
         expect(JSON.stringify(config)).toBe(original);
     });
 
     it('rejects malformed decoded config at the worker boundary even with editable Copies', async () => {
-        const config = { ...smallBuild(), machines: 'broken', target_output: { ...smallBuild().target_output, copies: 0.0001 } };
+        const config = { ...smallBuild(), machines: 'broken', setpoint: { ...smallBuild().setpoint, copies: 0.0001 } };
         const decoded = await decodeShareLink({ version: '1', data: await deflatedBase64Url(JSON.stringify({ name: 'Broken', config })) });
         if (decoded.kind !== 'build') throw new Error(`Expected unknown decoded config, not ${decoded.problem}`);
         expect(parseFormConfig(ConfigSchema, readConfigFile(JSON.stringify(decoded.config))).success).toBe(false);

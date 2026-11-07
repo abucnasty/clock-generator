@@ -20,7 +20,7 @@ import {EnableControl} from "./controls/enable-control";
 /** chest (plates) -> inserter 1 -> assembling machine 3 (iron gear wheel) -> inserter 2 -> chest */
 function gearCell(dispatch: InserterDispatch): SimulationContext {
     const context = SimulationContext.fromConfig(ConfigSchema.parse({
-        target_output: {recipe: "iron-gear-wheel", items_per_second: 1, copies: 1},
+        setpoint: {recipe: "iron-gear-wheel", items_per_second: 1, copies: 1},
         machines: [{id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1.25, prototype: "assembling-machine-3"}],
         inserters: [
             {id: 1, source: {type: "chest", id: 1}, sink: {type: "machine", id: 1}, prototype: "stack-inserter", quality: "legendary",

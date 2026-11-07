@@ -14,18 +14,18 @@ const OUT = process.argv[2] ?? path.join(__dirname, "..", "tests", "game", "mech
 /** The hands of the first line: [{copy, inserter (1 or 2 of the pair), slot}] for a pitch and the ticks the pair's inserters start at */
 async function hands(pitch, ticks) {
     const config = await loadSample("GRENADE_240_FILLS_BELT_EXACTLY");
-    config.target_output.copy_offset = { x: pitch, y: 0 };
+    config.setpoint.copy_offset = { x: pitch, y: 0 };
     const [line] = dropLines(config);
     const L = line.tiles_per_tick * PERIOD;
     const mod = (value) => ((value % L) + L) % L;
     const sense = line.flow; // the belt runs west: places grow toward smaller x
-    const place = (inserter, copy) => sense * (inserter.along + copy * pitch * Math.sign(config.target_output.copy_offset.x));
+    const place = (inserter, copy) => sense * (inserter.along + copy * pitch * Math.sign(config.setpoint.copy_offset.x));
     const origin = place(line.inserters[0], 0);
     const starts = new Map(line.inserters.map((inserter, index) => [inserter.id, [ticks[index]]]));
     const other = dropLines(config).slice(1).flatMap((it) => it.inserters.map((inserter, index) => [inserter.id, [ticks[index]]]));
     other.forEach(([id, value]) => starts.set(id, value));
     const result = [];
-    for (let copy = 0; copy < config.target_output.copies; copy++) {
+    for (let copy = 0; copy < config.setpoint.copies; copy++) {
         line.inserters.forEach((inserter, index) => {
             result.push({ copy, which: index + 1, slot: Math.round(mod(place(inserter, copy) - origin - line.tiles_per_tick * ticks[index])) % L });
         });

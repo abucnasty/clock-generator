@@ -48,7 +48,7 @@ export function validateConfig(config: Config, options: { logger?: Logger; fract
 
     const simulation_context = SimulationContext.fromConfig(config);
     // a target that counts an item destroyed is planned by arithmetic: nothing is counted from a run that fills the build
-    if (config.target_output.counts !== "destroyed") {
+    if (config.setpoint.counts !== "destroyed") {
         new PrepareStep(simulation_context).execute();
     }
 
@@ -73,7 +73,7 @@ export function validateConfig(config: Config, options: { logger?: Logger; fract
         transfer_plan: serializable_transfer_plan,
         used_lcm: recipe_lcm,
         output_swings_per_cycle,
-        counts: config.target_output.counts ?? "made",
+        counts: config.setpoint.counts ?? "made",
         cycle_ticks,
         period_ticks: OutputCyclePlan.ticksOfCycles(output_cycle_plan, recipe_lcm),
     };

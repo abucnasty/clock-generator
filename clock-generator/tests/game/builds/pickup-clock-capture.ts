@@ -123,7 +123,7 @@ async function prepare(scenario: PickupClockScenario): Promise<Prepared> {
     const started = performance.now();
     if (scenario.keep_built_clock) {
         const built = scenario.built_clock!;
-        const kept = {config, period: built.period, expected: config.target_output.items_per_second * built.period / 60,
+        const kept = {config, period: built.period, expected: config.setpoint.items_per_second * built.period / 60,
             generationSeconds: 0, generationVerdict: "the build's own clock", clockSha256: scenario.builtClockSha256?.()};
         generated.set(key, kept);
         return kept;
@@ -136,11 +136,11 @@ async function prepare(scenario: PickupClockScenario): Promise<Prepared> {
     // their output is evidence of a shortfall, rather than a reason to skip the game measurement entirely.
     if (process.env.BELT_CLOCK_GENERATION_ONLY === "1" && process.env.BELT_CLOCK_CALIBRATE !== "1") {
         // the rate is a sum of floating-point rates: 26 steel plates a second came out as 26.000000000000004
-        expect(selected.assessment.items_per_second).toBeCloseTo(config.target_output.items_per_second, 9);
+        expect(selected.assessment.items_per_second).toBeCloseTo(config.setpoint.items_per_second, 9);
     }
     const exported = selected.result.subtick ?? selected.result;
     const period = selected.result.subtick?.clock.period_ticks ?? selected.result.simulation_duration.ticks;
-    const prepared = {config, period, expected: config.target_output.items_per_second * period / 60,
+    const prepared = {config, period, expected: config.setpoint.items_per_second * period / 60,
         clock: {blueprint: encodeBlueprintFile({blueprint: exported.blueprint}), schedule: exported.schedule},
         generationSeconds: (performance.now() - started) / 1000, generationVerdict: selected.verdict, clockSha256: clockHash(exported),
         selection: {id: selected.id, holds: selected.assessment.holds, rate: selected.assessment.items_per_second,
@@ -194,15 +194,15 @@ export async function capturePickupClockScenario(scenario: PickupClockScenario) 
         const blueprint = scenario.scaffold();
         fs.writeFileSync(path.join(capture.directory, "scaffold.txt"), blueprint.trim() + "\n");
         const share = scenario.share ?? 1;
-        const target = config.target_output.items_per_second * share;
+        const target = config.setpoint.items_per_second * share;
         const expectedPerWindow = Math.round(target * RUN_PROTOCOL.window / 60 * 1e6) / 1e6;
         const baselineTicks = scenario.baseline?.ticks ?? RUN_PROTOCOL.baseline;
         if (scenario.baseline && (!scenario.baseline.reason.trim() || baselineTicks > RUN_PROTOCOL.maxBaseline || baselineTicks <= RUN_PROTOCOL.baseline)) {
             throw new Error(`${scenario.name}: a longer baseline needs a reason and at most ${RUN_PROTOCOL.maxBaseline} ticks`);
         }
-        const recipes = [...recipesMaking(config, config.target_output.recipe)];
+        const recipes = [...recipesMaking(config, config.setpoint.recipe)];
         // the copies of the config the build holds: those the clock is wired to, or the config's copies times the build's share of them
-        const buildCopies = scenario.copies ?? Math.round((config.target_output.copies ?? 1) * share);
+        const buildCopies = scenario.copies ?? Math.round((config.setpoint.copies ?? 1) * share);
         const finals = config.machines.filter(machine => recipes.includes(machine.recipe)).length * buildCopies;
         const recording = replayDirectory ? JSON.parse(fs.readFileSync(path.join(replayDirectory, "recording.json"), "utf8"))
             : (await recordInFactorio({factorio: process.env.FACTORIO_PATH!, save: process.env.FACTORIO_HARNESS_SAVE!, config, clock, blueprint, built_clock: scenario.built_clock, copies: scenario.copies,
@@ -210,7 +210,7 @@ export async function capturePickupClockScenario(scenario: PickupClockScenario) 
                 ticks: AUDIT_TICKS, record_at_once: true, warmup_ticks: 3600, settle_ticks: RUN_PROTOCOL.cap + 1, seed: [], unclocked: false,
                 lua: composeProbeSource(scenario.probeFile ?? path.join(__dirname, "pickup-clock-speed-probe.lua"), {
                     ...scenario.probe, window: RUN_PROTOCOL.window, expected: expectedPerWindow, baseline: baselineTicks, cap: RUN_PROTOCOL.cap,
-                    recipes, item: config.target_output.recipe, speed: scenario.speed.units / 32, reach,
+                    recipes, item: config.setpoint.recipe, speed: scenario.speed.units / 32, reach,
                 }), game_speed: 1000, watch: false, timeout_seconds: 900, log() {},
             })).recording;
         (scenario.assertHardware ?? assertPickupClockHardware)(recording, config, blueprint);

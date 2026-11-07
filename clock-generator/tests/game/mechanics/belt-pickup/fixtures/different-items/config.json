@@ -1,5 +1,5 @@
 {
-  "target_output": {
+  "setpoint": {
     "recipe": "electromagnetic-science-pack",
     "items_per_second": 30,
     "copies": 1

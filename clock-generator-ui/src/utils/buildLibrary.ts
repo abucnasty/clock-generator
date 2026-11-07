@@ -110,7 +110,8 @@ export function readIndex(text: string | null): IndexRead {
 function recipeOfSavedText(text: string | null): string {
     if (text === null) return '';
     try {
-        const recipe = JSON.parse(text)?.target_output?.recipe;
+        const parsed = JSON.parse(text);
+        const recipe = (parsed?.setpoint ?? parsed?.target_output)?.recipe;
         return typeof recipe === 'string' ? recipe : '';
     } catch {
         return '';

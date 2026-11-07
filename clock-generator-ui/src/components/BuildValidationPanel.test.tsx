@@ -113,7 +113,7 @@ it('shows a refusal of two problems as two errors, opened once and with no confi
 it('names a schema error by the field the player sees and keeps its button to the field', async () => {
     const onReview = vi.fn();
     const issues = buildValidationIssues({ fieldProblems: [], coverage: [], chests: [], inserters: [], machines: [{ id: 1 }], chestIssues: [],
-        coverageText: () => '', failure: { message: 'x', diagnostics: [{ kind: 'field', path: ['target_output', 'items_per_second'], message: 'Too small' }] } });
+        coverageText: () => '', failure: { message: 'x', diagnostics: [{ kind: 'field', path: ['setpoint', 'items_per_second'], message: 'Too small' }] } });
     const { user } = show(<BuildValidationPanel issues={issues} machines={[]} belts={[]} chests={[]} inserters={[]}
         onApplyFix={vi.fn()} onSwitchType={vi.fn()} onEnableRemoval={vi.fn()} onReview={onReview} />);
     expect(screen.getByText('Items per Second: Too small')).toBeDefined();

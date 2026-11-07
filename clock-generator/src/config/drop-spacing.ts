@@ -19,7 +19,7 @@ import type { Config } from "./schema";
 // replays it); the replay is used for the ticks a colliding hand waits.
 //
 // Taken from the config: the places and facings of the inserters (Sidecar 0.12.0), the way the belt runs at the drop
-// (Sidecar 0.14.0) and `target_output.copy_offset`. Taken from the clock: the ticks at which each inserter starts a hand.
+// (Sidecar 0.14.0) and `setpoint.copy_offset`. Taken from the clock: the ticks at which each inserter starts a hand.
 // Nothing here changes a clock or its ranking.
 
 /** The text added to the insight: the check follows no bend of the belt */
@@ -83,8 +83,8 @@ const inserterWords = (ids: readonly number[]) => `${ids.length === 1 ? "inserte
 
 /** The step from one copy to the next along a line */
 function copyStepOf(config: Config, axis: "x" | "y"): CopyStep | null {
-    const offset = config.target_output.copy_offset;
-    if (config.target_output.copies <= 1 || offset === undefined) return null;
+    const offset = config.setpoint.copy_offset;
+    if (config.setpoint.copies <= 1 || offset === undefined) return null;
     const across = axis === "x" ? offset.y : offset.x;
     const along = axis === "x" ? offset.x : offset.y;
     return { along, shared: Math.abs(across) < EPSILON };
@@ -266,7 +266,7 @@ const speedOf = (config: Config, belt_id: number): BeltSpeed =>
 
 /** Whether every line fits with the hands of all copies, for a verdict of one sense of the belt */
 function checkLine(config: Config, line: DropLine, starts: ReadonlyMap<number, readonly number[]>, period: number, step: CopyStep | null, sense: 1 | -1) {
-    const hands = handsOf(line, starts, config.target_output.copies, step, sense);
+    const hands = handsOf(line, starts, config.setpoint.copies, step, sense);
     return { hands, pairs: hands.length > 0 ? collidingPairs(hands, line.tiles_per_tick, period) : [] };
 }
 
@@ -277,7 +277,7 @@ function checkLine(config: Config, line: DropLine, starts: ReadonlyMap<number, r
  */
 export function dropSpacing(config: Config, starts: ReadonlyMap<number, readonly number[]>, period: number): DropSpacing | null {
     if (!(period > 0)) return null;
-    const copies = config.target_output.copies;
+    const copies = config.setpoint.copies;
     const results: { line: DropLine; step: CopyStep | null; sense: 1 | -1; result: DropSpacingLine }[] = [];
     for (const line of dropLines(config)) {
         const step = copyStepOf(config, line.axis);
@@ -414,8 +414,8 @@ function copyWidth(config: Config, axis: "x" | "y"): number | null {
  * the copies' gap is not given or no line is shared.
  */
 export function dropRoom(config: Config, lines: readonly DropLine[], period: number): DropRoom | null {
-    const copies = config.target_output.copies;
-    const offset = config.target_output.copy_offset;
+    const copies = config.setpoint.copies;
+    const offset = config.setpoint.copy_offset;
     const shared = lines.filter(line => copyStepOf(config, line.axis)?.shared === true);
     if (!(period > 0) || !(copies > 1) || offset === undefined || shared.length === 0) return null;
     const signs = shared.map(line => ((line.axis === "x" ? offset.x : offset.y) < 0 ? -1 : 1) as 1 | -1);
@@ -624,7 +624,7 @@ export function dropSpacingTable(spacing: DropSpacing): { columns: string[]; row
  * config does not say where the next copy stands. None otherwise.
  */
 export function copyGapNeededNote(config: Config): string | null {
-    if (!(config.target_output.copies > 1) || config.target_output.copy_offset !== undefined) return null;
+    if (!(config.setpoint.copies > 1) || config.setpoint.copy_offset !== undefined) return null;
     let lines: DropLine[];
     try {
         lines = dropLines(config);
@@ -633,6 +633,6 @@ export function copyGapNeededNote(config: Config): string | null {
     }
     if (lines.length === 0) return null;
     const belts = [...new Set(lines.map(line => line.belt_id))].sort(pair);
-    return `The ${config.target_output.copies} copies may drop onto the same ${belts.length === 1 ? `belt ${belts[0]}` : `belts ${listed(belts)}`}. `
+    return `The ${config.setpoint.copies} copies may drop onto the same ${belts.length === 1 ? `belt ${belts[0]}` : `belts ${listed(belts)}`}. `
         + "Say how far apart they stand to check whether their drops fit between each other.";
 }

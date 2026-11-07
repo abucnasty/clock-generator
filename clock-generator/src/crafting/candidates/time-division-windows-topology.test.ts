@@ -30,7 +30,7 @@ describe("even-hands hard topology preflight", () => {
         expect(plan).not.toHaveBeenCalled();
     });
     const supported: Config = {
-        target_output: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+        setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
         machines: [{ id: 1, recipe: "iron-gear-wheel", prototype: "assembling-machine-3", crafting_speed: 1, productivity: 0 }],
         belts: [], chests: [
             { type: ChestType.INFINITY_CHEST, id: 1, item_filter: [{ item_name: "iron-plate", request_count: 200 }] },

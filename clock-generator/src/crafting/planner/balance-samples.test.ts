@@ -55,7 +55,7 @@ interface Case {
 /** The counts of a sample: output swings a cycle, or hands of a destroyed target brought into each machine */
 function casesOf(config: Config): Case[] {
     const registry = createEntityRegistryFromConfig(config);
-    const target = TargetProductionRate.fromConfig(config.target_output);
+    const target = TargetProductionRate.fromConfig(config.setpoint);
     const item = target.machine_production_rate.item;
     if (target.counts === "destroyed") {
         const basis = destroyedTargetBasisOf(target, registry, config.overrides ?? {});

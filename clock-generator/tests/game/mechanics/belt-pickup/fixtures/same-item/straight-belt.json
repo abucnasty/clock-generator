@@ -1,5 +1,5 @@
 {
-  "target_output": {
+  "setpoint": {
     "recipe": "iron-gear-wheel",
     "items_per_second": 6,
     "copies": 1

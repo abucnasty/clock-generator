@@ -49,7 +49,7 @@ function mapEnableControlOverride(ec: {
 /** The form state of an imported config; `prototypeSource` says where its machines' prototypes came from (an example's are the sample's) */
 export function configToFormData(imported: Config, prototypeSource?: MachineFormData['_prototype_source']): ConfigFormData {
     return {
-        target_output: imported.target_output,
+        setpoint: imported.setpoint,
         machines: imported.machines.map((m) => ({
             id: m.id,
             _uuid: crypto.randomUUID(),

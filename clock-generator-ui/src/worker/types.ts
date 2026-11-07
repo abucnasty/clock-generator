@@ -190,7 +190,7 @@ export interface ClockAlternativeView {
 }
 
 export interface ClockModelAssumptions {
-    loopSeeds: { machineId: string; item: string; items: number }[];
+    kickStarts: { machineId: string; item: string; items: number }[];
     outputDrops: { beltId: number; inserterIds: number[]; mode: 'shared-lanes' | 'free-lane' }[];
     overrides: Config['overrides'];
     machineFuel: { machineId: number; fuel: string }[];

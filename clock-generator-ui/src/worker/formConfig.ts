@@ -11,7 +11,7 @@ import type { z } from 'zod';
 export function parseFormConfig<T>(schema: z.ZodType<T>, config: unknown): z.ZodSafeParseResult<T> {
     const result = schema.safeParse(config);
     if (result.success || !result.error.issues.every((issue) => issue.code === 'too_small' || issue.code === 'too_big'
-        || (issue.code === 'custom' && issue.path.length === 2 && issue.path[0] === 'target_output'
+        || (issue.code === 'custom' && issue.path.length === 2 && issue.path[0] === 'setpoint'
             && issue.path[1] === 'copies' && issue.message === COPIES_DECIMAL_ERROR)
         || (issue.code === 'custom' && issue.params?.editable_chest_settings === true
             && issue.path.length === 3 && issue.path[0] === 'chests' && issue.path[2] === 'item_filter')

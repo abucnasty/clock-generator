@@ -69,10 +69,10 @@ export function OverridesForm({
                 </Typography>
             </AccordionSummary>
             <AccordionDetails>
-                {(importedChecks?.check_start_dependence !== undefined || importedChecks?.loop_seed_items !== undefined) && <Typography variant="body2" sx={{ mb: 2 }}>
+                {(importedChecks?.check_start_dependence !== undefined || importedChecks?.kick_start_items !== undefined) && <Typography variant="body2" sx={{ mb: 2 }}>
                     Imported model settings (read-only):
                     {importedChecks.check_start_dependence !== undefined && ` other-start checks ${importedChecks.check_start_dependence ? 'requested' : 'not requested'}.`}
-                    {importedChecks.loop_seed_items !== undefined && ` Kick start ${importedChecks.loop_seed_items} items per self-feeding machine.`}
+                    {importedChecks.kick_start_items !== undefined && ` Kick start ${importedChecks.kick_start_items} items per self-feeding machine.`}
                 </Typography>}
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                     These options allow you to manually override calculated values.

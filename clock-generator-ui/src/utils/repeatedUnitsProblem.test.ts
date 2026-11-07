@@ -7,7 +7,7 @@ FactorioDataService.initialize(JSON.parse(factorioData));
 
 function build(speeds = [1, 1]) {
     return ConfigSchema.parse({
-        target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 0.1 },
+        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 0.1 },
         machines: speeds.map((crafting_speed, i) => ({ id: i + 1, recipe: 'iron-gear-wheel', productivity: 0, crafting_speed })),
         inserters: speeds.flatMap((_, i) => [
             { source: { type: 'belt', id: 1 }, sink: { type: 'machine', id: i + 1 }, stack_size: 1 },
@@ -35,7 +35,7 @@ describe('repeated unit recovery', () => {
 
     it('does not refuse a heterogeneous unit', () => {
         const config = build([1, 2]);
-        config.target_output.items_per_second = 0.5;
+        config.setpoint.items_per_second = 0.5;
         expect(() => validateConfig(config)).not.toThrow();
     });
 

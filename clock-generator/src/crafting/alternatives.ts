@@ -43,7 +43,7 @@ import { alternativeIdOf, ChestDrillFallbackKind, ClockStrategy, DefinitionSetti
 import { signalsPerMinuteOf } from "./clock-signals";
 import { START_DEPENDENCE_NOT_CHECKED, StartDependence, startDependenceNote } from "./start-dependence";
 import { NotMadeClock, notTriedSentence, WhyNotStable, whyNotStable, whyNotStableClockOf } from "./why-not-stable";
-import { DEFAULT_LOOP_SEED_ITEMS } from "./runner/cold-start";
+import { DEFAULT_KICK_START_ITEMS } from "./runner/cold-start";
 
 
 export interface ClockAlternative {
@@ -481,11 +481,11 @@ function alternativeDefinitionsFor(
     const { lower: lower_counts, higher: higher_counts } = swingCountsListed(swings, context.planned_swings ?? swings, swings_forced, context.period_ticks);
     // a target that counts an item destroyed is planned by arithmetic: its period and every inserter's hands are worked
     // out, not tried, so no other count or search is offered; even hands moves the same hands
-    if (config.target_output.counts === "destroyed" && context.exhaust === true) {
+    if (config.setpoint.counts === "destroyed" && context.exhaust === true) {
         // results that come by small chances: the windows are worked out, and the primary clock opens them in turn
         return [];
     }
-    if (config.target_output.counts === "destroyed") {
+    if (config.setpoint.counts === "destroyed") {
         return [{
             id: "even-hands",
             label: "Even hands",
@@ -845,7 +845,7 @@ function runAlternativeOf(
      */
     settle_unstable?: boolean,
 ): ClockAlternativeRun | null {
-    const copies = config.target_output.copies ?? 1;
+    const copies = config.setpoint.copies ?? 1;
     let result: BlueprintGenerationResult;
     try {
         result = definition.run();
@@ -931,9 +931,9 @@ function runAlternativeOf(
         result = { ...result, chest_drills, always_on_reasons: { ...result.always_on_reasons, ...chestDrillReasons(chest_drills) } };
     }
     const { backpressure_loss } = loss;
-    const strategy = strategyOf(definition.strategy, result, { chest_drill_fallback, destroyed_target: config.target_output.counts === "destroyed",
+    const strategy = strategyOf(definition.strategy, result, { chest_drill_fallback, destroyed_target: config.setpoint.counts === "destroyed",
         ...(definition.settings !== undefined && { definition_settings: definition.settings }) });
-    const label = withOutputSwings(definition, result.used_terminal_swing_count, config.target_output.counts);
+    const label = withOutputSwings(definition, result.used_terminal_swing_count, config.setpoint.counts);
     const inserter_window_count = entity_registry.getAll().filter(Entity.isInserter)
         .reduce((sum, inserter) => sum + (result.clock_windows[inserter.entity_id.id]?.length ?? 0), 0);
     const ranking_window_count = rankingWindowCount(inserter_window_count, result.clock_windows, result.loop_windows);
@@ -1028,7 +1028,7 @@ function runAlternativeOf(
             + (start_dependence_note === null ? "" : ` ${start_dependence_note[0].toUpperCase()}${start_dependence_note.slice(1)}`) + row.description_suffix;
         // what a clock that holds says about the build is read from it, whether it gets back from a loss or not
         const insights = [
-            ...clockInsights(trial.result, trial.held, config.overrides?.loop_seed_items ?? DEFAULT_LOOP_SEED_ITEMS),
+            ...clockInsights(trial.result, trial.held, config.overrides?.kick_start_items ?? DEFAULT_KICK_START_ITEMS),
             ...(backpressure_loss !== null && !backpressure_loss.survives ? [backpressureLossInsight(backpressure_loss, expected_output_items)] : []),
             ...(deadlock_risks.length > 0 ? [deadlockRiskInsight(deadlock_risks)] : []),
             ...beltPickupNotTestedInsights(config),
@@ -1089,7 +1089,7 @@ function runAlternativeOf(
     // own period
     const rounded_ticks = Math.floor(period);
     const rounded_rate = itemsPerSecondOverCopies(expected_output_items, rounded_ticks, copies);
-    const target = config.target_output.items_per_second;
+    const target = config.setpoint.items_per_second;
     const runs_fast = rounded_rate / target - 1;
     const within_machines = rounded_rate <= outputCapacityPerSecond(config) * (1 + 1e-9);
     const may_meet = roundedRateAllowed({ runs_fast, within_machines });
@@ -1138,10 +1138,10 @@ function fastPercent(share: number): string {
  * rate as its Yield trait gives it, as a decimal, added up in the order the entity registry holds the machines
  */
 export function outputCapacityPerSecond(config: Config): number {
-    const item = TargetProductionRate.fromConfig(config.target_output).machine_production_rate.item;
+    const item = TargetProductionRate.fromConfig(config.setpoint).machine_production_rate.item;
     return machinesInOrder(config, traitsOf(config)).map(machine => machine.yield.results[0])
         .filter(main => main.item === item)
-        .reduce((sum, main) => sum + decimalOf(main.per_second), 0) * (config.target_output.copies ?? 1);
+        .reduce((sum, main) => sum + decimalOf(main.per_second), 0) * (config.setpoint.copies ?? 1);
 }
 
 /** Runs the primary (batched swings) alternative and lists the rest as independent tasks */
@@ -1215,7 +1215,7 @@ function planPrimaryAndTasks(
 function fractionalMakesThePrimary(config: Config, primary: AlternativeDefinition, result: BlueprintGenerationResult): boolean {
     const start = fractionalStartOf(result.output_cycle_plan)?.toDecimal();
     const report = result.swing_backoff_report;
-    return primary.id === "planned-belt-slack" && holds(result) && config.target_output.counts !== "destroyed"
+    return primary.id === "planned-belt-slack" && holds(result) && config.setpoint.counts !== "destroyed"
         && config.overrides?.terminal_swing_count === undefined
         && report !== undefined && !report.triggered && report.period_limit_pruning === undefined && report.primitive_grouped_attempt === undefined
         && !(config.overrides?.backed_up_belts === true && takesFuelOffABelt(config))
@@ -1436,7 +1436,7 @@ export function whyNotStableOf(
     const clocks = alternatives.map(alternative => whyNotStableClockOf({ ...alternative,
         as_built: alternative.result.stability_check.as_built, expected_output_items: alternative.result.stability_check.expected_output_items }));
     return whyNotStable(clocks, selected_index, {
-        target_items_per_second: config.target_output.items_per_second,
+        target_items_per_second: config.setpoint.items_per_second,
         backed_up_belts: config.overrides?.backed_up_belts === true,
         not_made,
     });

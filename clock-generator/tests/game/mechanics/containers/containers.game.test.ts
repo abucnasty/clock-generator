@@ -36,7 +36,7 @@ const chestEntity = (x: number, y: number, item?: string) => ({name: "infinity-c
 const inserterEntity = (x: number, y: number, direction: number, filter?: string) => ({name: "stack-inserter", position: {x, y}, direction,
     quality: "legendary", ...(filter ? {use_filters: true, filters: [{index: 1, name: filter}]} : {})});
 /** A machine for the config to have; it is not built and nothing feeds it */
-const idle = {target_output: {recipe: "iron-gear-wheel", items_per_second: 1, copies: 1},
+const idle = {setpoint: {recipe: "iron-gear-wheel", items_per_second: 1, copies: 1},
     machines: [{id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0}], belts: []};
 
 /** Inserters into a silo stand on its north edge (the silo spans -4 to 5), their supplies north of them */
@@ -79,7 +79,7 @@ function infinitySource(name: string, items: string[]): ContainerMechanicCase {
         entities: [{name: "infinity-chest", position: {x: 0.5, y: -2.5}, infinity_settings: {remove_unfiltered_items: false,
             filters: items.map((item, index) => ({name: item, count: 100, mode: "exactly", index: index + 1}))}},
         inserterEntity(0.5, -1.5, 0), {name: "assembling-machine-3", position: {x: 0.5, y: 0.5}, recipe: "advanced-circuit"}],
-        config: {target_output: {recipe: "advanced-circuit", items_per_second: 1, copies: 1}, belts: [],
+        config: {setpoint: {recipe: "advanced-circuit", items_per_second: 1, copies: 1}, belts: [],
             machines: [{id: 1, recipe: "advanced-circuit", crafting_speed: 1.25, productivity: 0}],
             chests: [{type: "infinity-chest", id: 10, item_filter: items.map(item_name => ({item_name, request_count: 100}))}],
             inserters: [{id: 1, source: {type: "chest", id: 10}, sink: {type: "machine", id: 1}, stack_size: 16}]},

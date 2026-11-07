@@ -88,9 +88,9 @@ describe("the recorded clock controls of the belt pickup fixtures", () => {
     test.each(names.map(variant => variant.name))("%s: the game was recorded at the target rate over the pinned period", async name => {
         const variant = names.find(it => it.name === name)!;
         const config = await pickupClockConfig(variant);
-        expectRunIsConsistent(controls[name].native, controls[name].generation!, config.target_output.items_per_second);
+        expectRunIsConsistent(controls[name].native, controls[name].generation!, config.setpoint.items_per_second);
         // the rate of the target is the fixture's: the tier's belt units over four for the electromagnetic family
-        if (variant.family === "electromagnetic") expect(config.target_output.items_per_second).toBe(30 * variant.speed.units / 4);
+        if (variant.family === "electromagnetic") expect(config.setpoint.items_per_second).toBe(30 * variant.speed.units / 4);
     });
 
     test("every recording holds and recovers in the game, and every pin is judged stable", () => {

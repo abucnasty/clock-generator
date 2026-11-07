@@ -20,7 +20,7 @@ function formWithUnsetEnd() {
     form = edits.addInserter(form);
     form = edits.updateInserter(form, 0, { source: { type: 'machine', id: 2 } });
     form = edits.removeMachine(form, 1);
-    return edits.updateTargetOutput(form, 'items_per_second', 0);
+    return edits.updateSetpoint(form, 'items_per_second', 0);
 }
 
 /** The file Export writes, read back the way Import reads it */
@@ -37,7 +37,7 @@ describe('parseFormConfig', () => {
     });
 
     it('preserves imported geometry, fuel and explicit overrides, refuses unsupported geometry edits, and keeps mixed-drop drafts recoverable', () => {
-        let form = edits.updateTargetOutput(createDefaultConfig(), 'recipe', 'rocket-fuel');
+        let form = edits.updateSetpoint(createDefaultConfig(), 'recipe', 'rocket-fuel');
         form.machines[0] = { ...form.machines[0], recipe: 'rocket-fuel-from-jelly', prototype: 'biochamber', fuel: 'nutrients' };
         form = edits.addBelt(form);
         form = edits.addBelt(form);
@@ -45,7 +45,7 @@ describe('parseFormConfig', () => {
         form = edits.addInserter(form);
         form.inserters[0].sink = { type: 'belt', id: 1, drop: { lane: 1, position: 0.125 } };
         form.inserters[1].sink = { type: 'belt', id: 1, drop: { lane: 2, position: 0.5 } };
-        form.overrides = { check_start_dependence: false, loop_seed_items: 0, lcm: 3 };
+        form.overrides = { check_start_dependence: false, kick_start_items: 0, lcm: 3 };
         const original = formDataToConfig(form);
         const imported = exportAndImport(form);
         expect(imported.success).toBe(true);
@@ -54,7 +54,7 @@ describe('parseFormConfig', () => {
         expect(formDataToConfig(edits.updateInserter(form, 0, { sink: { type: 'belt', id: 2 } }))).toEqual(original);
         expect(edits.duplicateEntity(form, 'inserters', 0)).toBe(form);
         expect(edits.updateBelt(form, 0, { type: 'fast-transport-belt' })).toBe(form);
-        const edited = edits.updateTargetOutput(edits.updateInserter(form, 0, { stack_size: 12 }), 'items_per_second', 2);
+        const edited = edits.updateSetpoint(edits.updateInserter(form, 0, { stack_size: 12 }), 'items_per_second', 2);
         const reopened = configToFormData(exportAndImport(edited).data!);
         expect(reopened.inserters.map(ins => ins.sink)).toEqual(form.inserters.map(ins => ins.sink));
         expect(reopened.machines[0].fuel).toBe('nutrients');
@@ -85,12 +85,12 @@ describe('parseFormConfig', () => {
         const imported = configToFormData(result.data!);
         expect(imported.inserters[0].source).toEqual({ type: 'machine', id: 0 });
         expect(imported.inserters[0].sink).toEqual({ type: 'belt', id: 1 });
-        expect(imported.target_output.items_per_second).toBe(0);
+        expect(imported.setpoint.items_per_second).toBe(0);
         expect(imported.machines.map((m) => m.id)).toEqual([1]);
     });
 
     it('gives the checked config when nothing is wrong with it', () => {
-        const form = edits.updateTargetOutput(createDefaultConfig(), 'recipe', 'iron-gear-wheel');
+        const form = edits.updateSetpoint(createDefaultConfig(), 'recipe', 'iron-gear-wheel');
         const result = exportAndImport(form);
         expect(result.success).toBe(true);
         expect(result.data).toEqual(ConfigSchema.parse(formDataToConfig(form)));
@@ -109,7 +109,7 @@ describe('parseFormConfig', () => {
     });
 
     it.each([1, 0.0001, 1 / 3])('never lets editable Copies %s bypass structural validation: rejects malformed entities alongside it', copies => {
-        const config = formDataToConfig(edits.updateTargetOutput(createDefaultConfig(), 'copies', copies));
+        const config = formDataToConfig(edits.updateSetpoint(createDefaultConfig(), 'copies', copies));
         const withoutMachines: Record<string, unknown> = { ...config };
         delete withoutMachines.machines;
         expect(parseFormConfig(ConfigSchema, withoutMachines).success).toBe(false);
@@ -124,26 +124,26 @@ describe('parseFormConfig', () => {
 
 describe('fractional Copies and metadata draft round trips', () => {
     it.each([0.0625, 0.0001, 1 / 3])('retains %s without resetting the editable build', copies => {
-        const form = edits.updateTargetOutput(createDefaultConfig(), 'copies', copies);
+        const form = edits.updateSetpoint(createDefaultConfig(), 'copies', copies);
         form.inserters = [inserter(1, { prototype: 'bulk-inserter', quality: 'normal', sink: { type: 'belt', id: 1 } })];
         const saved = readSavedConfig(serializeConfig(form))!;
-        expect(saved.target_output.copies).toBe(copies);
+        expect(saved.setpoint.copies).toBe(copies);
         const parsed = parseFormConfig(ConfigSchema, formDataToConfig(saved));
         expect(parsed.success).toBe(true);
         const reopened = configToFormData(parsed.data!);
-        expect(reopened.target_output.copies).toBe(copies);
+        expect(reopened.setpoint.copies).toBe(copies);
         if (copies === 0.0625) {
             expect(reopened.inserters[0]).toMatchObject({ prototype: 'bulk-inserter', quality: 'normal' });
             expect(reopened.inserters[0].stack_size).toBeUndefined();
         }
         const file = exportAndImport(reopened);
         expect(file.success).toBe(true);
-        expect(file.data!.target_output.copies).toBe(copies);
+        expect(file.data!.setpoint.copies).toBe(copies);
         expect(ConfigSchema.safeParse(file.data).success).toBe(copiesProblem(copies) === null);
     });
 
     it.each([
-        ['other custom errors at the Copies path', ['target_output', 'copies'], 'A different custom constraint'],
+        ['other custom errors at the Copies path', ['setpoint', 'copies'], 'A different custom constraint'],
         ['the Copies message at another path', ['machines'], COPIES_DECIMAL_ERROR],
     ])('does not allow %s', (_, path, message) => {
         const schema = ConfigSchema.superRefine((_value, ctx) => ctx.addIssue({ code: z.ZodIssueCode.custom, path, message }));

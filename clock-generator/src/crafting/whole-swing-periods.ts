@@ -17,11 +17,11 @@ export function* wholeSwingPeriodsBelow(
     limit_ticks: number,
 ): Generator<SwingPeriodRejection> {
     const config = JSON.parse(snapshot.config_json) as Config;
-    assert(config.target_output.counts !== 'destroyed', 'Whole-swing period arithmetic needs an item-made target with integer output swings.');
+    assert(config.setpoint.counts !== 'destroyed', 'Whole-swing period arithmetic needs an item-made target with integer output swings.');
     assert(Number.isSafeInteger(snapshot.terminal_swing_count) && snapshot.terminal_swing_count >= 1,
         'Whole-swing period arithmetic needs a positive integer initial count.');
     const registry = createEntityRegistryFromConfig(config);
-    const target = TargetProductionRate.fromConfig(config.target_output);
+    const target = TargetProductionRate.fromConfig(config.setpoint);
     for (let count = snapshot.terminal_swing_count - 1; count >= 1; count--) {
         const plan = OutputCyclePlan.create(target, registry, config, fraction(count), { ...config.overrides, terminal_swing_count: count });
         const computed_lcm = EntityTransferCountMap.lcm(plan.entity_transfer_map, config.overrides?.ignored_lcm_ingredients);

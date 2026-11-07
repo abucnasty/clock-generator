@@ -71,8 +71,8 @@ describe("a saved clock for a shorter period, on the utility science 480 sample"
         expect(as_built.actual_output_items).toBe(result.stability_check.expected_output_items);
         expect(result.stability_check.expected_output_items).toBe(768);
         // 768 items in 336 ticks over all the copies is the target rate, 480 a second
-        const per_second = result.stability_check.expected_output_items * 60 / PERIOD * (config.target_output.copies ?? 1);
-        expect(config.target_output.items_per_second).toBe(480);
+        const per_second = result.stability_check.expected_output_items * 60 / PERIOD * (config.setpoint.copies ?? 1);
+        expect(config.setpoint.items_per_second).toBe(480);
         expect(per_second).toBeCloseTo(480, 6);
     });
 

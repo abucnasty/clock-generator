@@ -34,7 +34,7 @@ describe("the rules of the game", () => {
         // GOALS.md: the limit is the automated insertion limit + 64, and in practice the drill stops at a minimum of
         // 114 items, the stack of stone (50) + 64. The function takes the larger of the stack and the limit, + 64.
         const machineInto = (recipe: string) => createEntityRegistryFromConfig(ConfigSchema.parse({
-            target_output: { recipe, items_per_second: 0.1, copies: 1 }, belts: [], inserters: [],
+            setpoint: { recipe, items_per_second: 0.1, copies: 1 }, belts: [], inserters: [],
             machines: [{ id: 1, recipe, crafting_speed: 0.5, productivity: 0 }],
             drills: { configs: [{ id: 1, type: "big-mining-drill", mined_item_name: "stone", speed_bonus: 5, productivity: 440, target: { type: "machine", id: 1 } }] } }));
 

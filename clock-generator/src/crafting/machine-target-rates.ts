@@ -35,12 +35,12 @@ export interface MachineTargetRate {
 export function computeMachineTargetRates(config: Config): MachineTargetRate[] {
     assertOutputTransferGenerationSupported(config);
     validateCopies(config);
-    assert(Number.isFinite(config.target_output.items_per_second) && config.target_output.items_per_second > 0,
+    assert(Number.isFinite(config.setpoint.items_per_second) && config.setpoint.items_per_second > 0,
         "Set a positive target output rate to see at-target rates.");
     assertInserterCoverage(config);
     assertFeasible(config);
     const registry = createEntityRegistryFromConfig(config);
-    const target = TargetProductionRate.fromConfig(config.target_output);
+    const target = TargetProductionRate.fromConfig(config.setpoint);
     const cycle = OutputCyclePlan.create(target, registry, config, fraction(1));
     const seconds = cycle.total_duration_ticks.divide(60);
     const traits = traitsOf(config);

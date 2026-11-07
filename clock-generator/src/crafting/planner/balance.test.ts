@@ -19,7 +19,7 @@ import { balanceBuildOf, balanceOf, LOOP_USES_ALL, periodCyclesOf } from "./bala
 async function balanceAt(file: string, swings: number) {
     const config = await loadConfigFromFile(file) as Config;
     const registry = createEntityRegistryFromConfig(config);
-    const target = TargetProductionRate.fromConfig(config.target_output);
+    const target = TargetProductionRate.fromConfig(config.setpoint);
     const machines = registry.getAll().filter(Entity.isMachine).filter(it => it.output.item_name === target.machine_production_rate.item);
     const ticks = fraction(16).divide(target.machine_production_rate.amount_per_tick.divide(machines.length)).multiply(swings);
     return { config, machines, ticks, balance: madeTargetBalance(machines, registry, config, fraction(swings), 16, ticks.toDecimal()) };
@@ -150,7 +150,7 @@ describe("the balance's machine rows, solved loop by loop", () => {
         if (reversed) raw.machines.reverse();
         const config = await parseConfig(JSON.stringify(raw)) as Config;
         const registry = createEntityRegistryFromConfig(config);
-        const target = TargetProductionRate.fromConfig(config.target_output);
+        const target = TargetProductionRate.fromConfig(config.setpoint);
         const machines = registry.getAll().filter(Entity.isMachine).filter(it => it.output.item_name === target.machine_production_rate.item);
         const ticks = fraction(16).divide(target.machine_production_rate.amount_per_tick.divide(machines.length)).multiply(swings);
         const balance = madeTargetBalance(machines, registry, config, swings, 16, Duration.ofTicks(ticks.toDecimal()).ticks);

@@ -9,7 +9,7 @@ import { planOfConfig, planOfSample } from './planner/plan-test-helpers';
 import { FractionalSwingsRefusedError } from './sequence/cycle/swing-distribution';
 
 const quiet = { log() {}, warn() {}, error() {}, debug() {} };
-const config = { target_output: { counts: 'made' }, overrides: {} } as unknown as Config;
+const config = { setpoint: { counts: 'made' }, overrides: {} } as unknown as Config;
 
 function result(count: number, holds: boolean, fractional = true): BlueprintGenerationResult {
     return { used_terminal_swing_count: count, output_cycle_plan: { fractional_swings_enabled: fractional },

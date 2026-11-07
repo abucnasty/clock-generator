@@ -35,7 +35,7 @@ describe("candidate verification identity", () => {
             changed.inserters[0].source.pickup_length = 0.5;
             changed.inserters[0].source.pickup_layout = "side-entrance";
         }
-        if (difference === "seed") changed.overrides = {...changed.overrides, loop_seed_items: 17};
+        if (difference === "seed") changed.overrides = {...changed.overrides, kick_start_items: 17};
         if (difference === "entity order") changed.inserters.reverse();
         if (difference === "start checks") changed.overrides = {...changed.overrides, check_start_dependence: true};
         expect(signature(changed, result)).not.toBe(signature(config, result));

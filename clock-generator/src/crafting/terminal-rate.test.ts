@@ -14,7 +14,7 @@ import { traitsOf } from "../entities/traits/traits-of";
 async function branchesOf(path: string) {
     const config = await loadConfigFromFile(path);
     const registry = createEntityRegistryFromConfig(config);
-    const target = targetItemOf(config.target_output);
+    const target = targetItemOf(config.setpoint);
     const outputs = registry.getAll().filter(Entity.isMachine).filter(machine => machine.output.item_name === target.item)
         .flatMap(machine => buildOutputInsertersOf(machine, registry));
     const swing_counts = { entries: () => outputs.map(inserter => [inserter.entity_id,

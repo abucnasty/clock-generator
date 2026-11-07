@@ -19,8 +19,8 @@ function sameRecords(a: unknown, b: unknown): boolean {
 /** Apply only the canonical source-index map, retaining actual form rows and UI identity. */
 export function applyRepeatedUnitConversion(form: ConfigFormData, plan: RepeatedUnitConversionPlan): ConfigFormData | null {
     const source = formDataToConfig(form);
-    if (plan.sourceConfigKey !== configKeyOf(source) || plan.copies !== plan.candidate.target_output.copies
-        || plan.previousCopies !== source.target_output.copies || !Number.isInteger(plan.multiplicity) || plan.multiplicity <= 1) return null;
+    if (plan.sourceConfigKey !== configKeyOf(source) || plan.copies !== plan.candidate.setpoint.copies
+        || plan.previousCopies !== source.setpoint.copies || !Number.isInteger(plan.multiplicity) || plan.multiplicity <= 1) return null;
     const sourceRows = rows(source), candidateRows = rows(plan.candidate);
     const maps = {} as Record<ConversionEntityKind, Map<number, number>>;
     for (const kind of kinds) {
@@ -50,7 +50,7 @@ export function applyRepeatedUnitConversion(form: ConfigFormData, plan: Repeated
     try {
         const next: ConfigFormData = {
             ...form,
-            target_output: withCopyOffset({ ...form.target_output, copies: plan.copies }, plan.candidate.target_output.copy_offset),
+            setpoint: withCopyOffset({ ...form.setpoint, copies: plan.copies }, plan.candidate.setpoint.copy_offset),
             machines: plan.retained.machines.map(it => ({ ...form.machines[it.sourceIndex], id: it.resultId })),
             inserters: plan.retained.inserters.map(it => {
                 const row = form.inserters[it.sourceIndex];
@@ -72,7 +72,7 @@ export function applyRepeatedUnitConversion(form: ConfigFormData, plan: Repeated
 }
 
 /** The target with the gap between copies the conversion read from their places, or without the one it could not carry over */
-function withCopyOffset(target: ConfigFormData['target_output'], offset: ConfigFormData['target_output']['copy_offset']): ConfigFormData['target_output'] {
+function withCopyOffset(target: ConfigFormData['setpoint'], offset: ConfigFormData['setpoint']['copy_offset']): ConfigFormData['setpoint'] {
     const next = { ...target };
     delete next.copy_offset;
     return offset === undefined ? next : { ...next, copy_offset: offset };

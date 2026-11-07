@@ -45,8 +45,8 @@ describe("the car paste at 80.78/s", () => {
         const subtick = paste.alternatives.find(alternative => alternative.maker === "planned-belt-slack-subtick")!;
         expect(subtick.rounded).toBeUndefined();
         expect(Math.floor(subtick.result.simulation_duration.ticks)).toBe(285);
-        const rounded_rate = subtick.result.stability_check.expected_output_items * 60 / 285 * (paste_config.target_output.copies ?? 1);
-        expect(rounded_rate / paste_config.target_output.items_per_second - 1).toBeLessThan(0.001);
+        const rounded_rate = subtick.result.stability_check.expected_output_items * 60 / 285 * (paste_config.setpoint.copies ?? 1);
+        expect(rounded_rate / paste_config.setpoint.items_per_second - 1).toBeLessThan(0.001);
         expect(rounded_rate).toBeGreaterThan(outputCapacityPerSecond(paste_config));
     });
 

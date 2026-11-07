@@ -35,7 +35,7 @@ const made = (override: Record<string, any> = {}): any => {
                 as_built: {
                     wake_ups: { wake_ups_per_minute: 3, inserters: [{ inserter_id: 'inserter:1', wake_ups_per_minute: 3 }] },
                     counters: {
-                        deciders: 2, copies: config.target_output.copies ?? 1, wired_inserters: 0, unwired_inserters: 1,
+                        deciders: 2, copies: config.setpoint.copies ?? 1, wired_inserters: 0, unwired_inserters: 1,
                         inserters: [{ inserter_id: 'inserter:1', input_wake_ups_per_minute: 1, output_wake_ups_per_minute: 2, network_width: 0,
                             switch_ons_per_minute: 0, switch_offs_per_minute: 0, switch_ons_at_rest_per_minute: 0, switch_ons_moving_per_minute: 0,
                             swings_per_minute: 1, grabs_per_minute: 1 }],

@@ -297,7 +297,7 @@ function firstClockSpan(
         { ...options, simulate_periods: repeat.scale, observation_ticks: repeat.period_ticks, counter_runs_through: true, machine_stock: true, stock_detail: "hands" });
     const measured = run.stability_check.actual_output_items;
     const judged = judgeCounterSpan(measured, run.stability_check.expected_output_items, repeat, LCM_STABILITY_TOLERANCE);
-    const registry = createEntityRegistryFromConfig(config), target = targetItemOf(config.target_output);
+    const registry = createEntityRegistryFromConfig(config), target = targetItemOf(config.setpoint);
     const output_ids = new Set(targetMachinesOf(target, registry)
         .flatMap(machine => targetInsertersOf(machine, target, registry).map(inserter => inserter.entity_id.id)));
     const stock = run.machine_stock!;
@@ -505,7 +505,7 @@ function longRunOfFreeRunningBuild(
     // what the output inserters drop, counted as the recordings of a build are: by whole periods of the clock that
     // is built, which for a fractional period is the subtick clock and its repeat (see long-run.ts)
     // (or, for a target that counts an item destroyed, what the inserters that bring it in from outside drop)
-    const target = targetItemOf(config.target_output);
+    const target = targetItemOf(config.setpoint);
     // Count at the same boundary as the plan: after an output buffer, not where machines fill it. Machines sharing
     // a buffer share its takers too, so each taker contributes only once.
     const output_ids = new Set(targetMachinesOf(target, registry)
@@ -700,7 +700,7 @@ export function backpressureLossOf(
     }).backpressure_loss!;
     const phase_starts = [...movingPickupPhaseStarts(config)];
     const registry = createEntityRegistryFromConfig(config);
-    const losses: BackpressureLoss[] = [...backpressureLossesOf(registry, config.target_output.recipe), ...excesses];
+    const losses: BackpressureLoss[] = [...backpressureLossesOf(registry, config.setpoint.recipe), ...excesses];
     // a build whose items spoil is tried with losses shorter than its loss limit only
     const loss_limit = lossLimitOf(registry);
     const tried = (loss: BackpressureLoss, index: number): LossOutcome => {

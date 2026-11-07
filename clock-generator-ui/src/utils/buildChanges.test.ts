@@ -7,8 +7,8 @@ import { buildChangesOf, buildChangesText } from './buildChanges';
 /** A build as the page holds it: a target, a machine, three inserters and a belt */
 function form(): ConfigFormData {
     let config = createDefaultConfig();
-    config = edits.updateTargetOutput(config, 'recipe', 'logistic-science-pack');
-    config = edits.updateTargetOutput(config, 'items_per_second', 240);
+    config = edits.updateSetpoint(config, 'recipe', 'logistic-science-pack');
+    config = edits.updateSetpoint(config, 'items_per_second', 240);
     config = edits.updateMachine(config, 0, 'recipe', 'logistic-science-pack');
     config = edits.addInserter(edits.addInserter(edits.addInserter(config)));
     return edits.addBelt(config);
@@ -24,14 +24,14 @@ const changes = (edit: Edit, base = form(), recipeLabel?: (id: string) => string
 const text = (edit: Edit) => buildChangesText(formDataToConfig(form()), formDataToConfig(edit(form())));
 
 describe('buildChangesOf', () => {
-    const toAutomation: Edit = (config) => edits.updateTargetOutput(config, 'recipe', 'automation-science-pack');
+    const toAutomation: Edit = (config) => edits.updateSetpoint(config, 'recipe', 'automation-science-pack');
 
     // what it lists, the edit made to the build (`form()`, or the build given last), and the changes listed
     it.each<[string, Edit, string[], ConfigFormData?]>([
         ['is nothing for the same build', (config) => config, []],
-        ['names the rate with its values', (config) => edits.updateTargetOutput(config, 'items_per_second', 200), ['Items per second (240 → 200)']],
+        ['names the rate with its values', (config) => edits.updateSetpoint(config, 'items_per_second', 200), ['Items per second (240 → 200)']],
         ['names the recipe', toAutomation, ['Recipe (logistic-science-pack → automation-science-pack)']],
-        ['names the copies', (config) => edits.updateTargetOutput(config, 'copies', 2), ['Copies (1 → 2)']],
+        ['names the copies', (config) => edits.updateSetpoint(config, 'copies', 2), ['Copies (1 → 2)']],
         ['counts the inserters when one was added', (config) => edits.addInserter(config), ['Inserters (3 → 4)']],
         ['names one edited inserter by its label', (config) => edits.updateInserter(config, 2, { stack_size: 12 }), ['Inserter 3']],
         ['names two edited inserters together',
@@ -51,7 +51,7 @@ describe('buildChangesOf', () => {
 
     it('lists the changes in the form\'s order, the same each time', () => {
         const edit = (config: ConfigFormData) => edits.updateOverrides(
-            edits.updateInserter(edits.updateTargetOutput(edits.addBelt(config), 'items_per_second', 200), 1, { stack_size: 3 }),
+            edits.updateInserter(edits.updateSetpoint(edits.addBelt(config), 'items_per_second', 200), 1, { stack_size: 3 }),
             'backed_up_belts',
             true,
         );
@@ -64,7 +64,7 @@ describe('buildChangesOf', () => {
 describe('buildChangesText', () => {
     const five: Edit = (config) => edits.updateOverrides(
         edits.updateOverrides(
-            edits.updateTargetOutput(edits.updateTargetOutput(edits.addInserter(config), 'items_per_second', 200), 'copies', 2),
+            edits.updateSetpoint(edits.updateSetpoint(edits.addInserter(config), 'items_per_second', 200), 'copies', 2),
             'lcm',
             120,
         ),
@@ -75,7 +75,7 @@ describe('buildChangesText', () => {
     // what it lists, the edit made to `form()`, and the lines listed
     it.each<[string, Edit, string[]]>([
         ['lists five changes as three, the last with "and 2 more"', five, ['Items per second (240 → 200)', 'Copies (1 → 2)', 'Inserters (3 → 4) and 2 more changes']],
-        ['lists one change as it is', (config) => edits.updateTargetOutput(config, 'copies', 2), ['Copies (1 → 2)']],
+        ['lists one change as it is', (config) => edits.updateSetpoint(config, 'copies', 2), ['Copies (1 → 2)']],
         ['lists nothing for the same build', (config) => config, []],
     ])('%s', (_, edit, expected) => {
         expect(text(edit)).toEqual(expected);

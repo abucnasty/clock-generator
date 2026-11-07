@@ -36,7 +36,7 @@ const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
  * 30 a second, with 3 output hands a cycle (the build of the turbo pickup and front-exit samples).
  */
 const ELECTROMAGNETIC_TURBO_BACKED: Config = {
-    target_output: { recipe: "electromagnetic-science-pack", items_per_second: 30, copies: 1 },
+    setpoint: { recipe: "electromagnetic-science-pack", items_per_second: 30, copies: 1 },
     machines: [{ id: 1, recipe: "electromagnetic-science-pack", productivity: 175, crafting_speed: 109.475, prototype: "electromagnetic-plant" }],
     inserters: [
         { id: 1, source: { type: "machine", id: 1 }, sink: { type: "belt", id: 1 }, stack_size: 16 },

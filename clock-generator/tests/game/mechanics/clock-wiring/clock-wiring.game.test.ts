@@ -56,7 +56,7 @@ describe("the harness wires the clock to the build", () => {
         const selected = alternatives[selected_index];
         const subtick = selected.result.subtick;
         const period = subtick?.clock.period_ticks ?? selected.result.simulation_duration.ticks;
-        const expected = Math.round(config.target_output.items_per_second / config.target_output.copies * period / 60 * 1e6) / 1e6;
+        const expected = Math.round(config.setpoint.items_per_second / config.setpoint.copies * period / 60 * 1e6) / 1e6;
         // the clock with its schedule as the generator made it, which the harness wires without reading descriptions
         const exported = subtick ?? selected.result;
         const result = await recordInFactorio({
@@ -77,13 +77,13 @@ describe("the harness wires the clock to the build", () => {
             log: () => { },
         });
 
-        const periods = outputPerPeriod(result.recording, recipesMaking(config, config.target_output.recipe));
+        const periods = outputPerPeriod(result.recording, recipesMaking(config, config.setpoint.recipe));
         // the first period is left out: the build may still be settling into the clock
         const checked = periods.slice(1);
         expect(checked.length, `the recording of ${result.recording.sample_count} ticks holds whole clock periods after the first`).toBeGreaterThan(1);
         const wrong_length = checked.filter(it => it.end - it.start !== period);
         expect(wrong_length, `every one of the ${checked.length} periods checked lasts ${period} ticks`).toEqual([]);
         const short = checked.filter(it => it.items !== expected);
-        expect(short, `every one of the ${checked.length} periods checked moves ${expected} items of ${config.target_output.recipe}`).toEqual([]);
+        expect(short, `every one of the ${checked.length} periods checked moves ${expected} items of ${config.setpoint.recipe}`).toEqual([]);
     }, 960_000);
 });

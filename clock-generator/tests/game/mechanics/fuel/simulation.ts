@@ -98,7 +98,7 @@ export function simulateMachine(info: ScenarioInfo, spec: FuelCase, ticks: numbe
 /** A burner mining drill of a scenario on iron ore into a chest, with the probe's cheats: the chest emptied, filled at the gap, the drill disabled */
 export function simulateDrill(info: ScenarioInfo, spec: FuelCase, ticks: number): SimRow[] {
     const config = ConfigSchema.parse({
-        target_output: {recipe: "iron-gear-wheel", items_per_second: 1, copies: 1},
+        setpoint: {recipe: "iron-gear-wheel", items_per_second: 1, copies: 1},
         machines: [{id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0}], belts: [], inserters: [],
         chests: [{type: "buffer-chest", id: 1, storage_size: 48, item_filter: "iron-ore"}],
         drills: {configs: [{id: 1, type: "burner-mining-drill", mined_item_name: "iron-ore", speed_bonus: 0, productivity: 0, target: {type: "chest", id: 1}}]},

@@ -47,7 +47,7 @@ export const drill = (id = 1, fields: Partial<DrillFormData> = {}): DrillFormDat
 
 /** A build of the given rows, making a gear wheel a second with one machine, unless told otherwise */
 export const build = (fields: Partial<ConfigFormData> = {}): ConfigFormData =>
-    ({ target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 }, machines: [machine()], inserters: [], belts: [], chests: [], ...fields });
+    ({ setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 }, machines: [machine()], inserters: [], belts: [], chests: [], ...fields });
 
 /** Game names for the ids a test shows: `names({ 'iron-plate': 'Iron plate' }, { 'iron-gear-wheel': 'Iron gear wheel' })` */
 export const names = (item: Record<string, string> = {}, recipe: Record<string, string> = {}): GameNames => ({ item, recipe });

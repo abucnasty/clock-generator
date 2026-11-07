@@ -155,7 +155,7 @@ export function plannedPeriodsOf(
 ): PlannedPeriods {
     const { config, registry } = input;
     const overrides = config.overrides ?? {};
-    const target = TargetProductionRate.fromConfig(config.target_output);
+    const target = TargetProductionRate.fromConfig(config.setpoint);
     const forced = overrides.terminal_swing_count !== undefined;
     const planned = (cycle: OutputCyclePlan, listed_as: PeriodListing, is_fractional = false, swings_exact?: Fraction): PlannedCount => {
         const swings = target.counts === "destroyed" ? exhaust!.hands : plannedTerminalSwingCount(cycle);

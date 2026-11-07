@@ -47,21 +47,21 @@ const oldMainProductRate = (machine: Machine): Fraction => machine.output.produc
 
 /** alternatives.ts outputCapacityPerSecond before R21: a registry built to read the machines */
 function oldOutputCapacityPerSecond(config: Config): number {
-    const item = TargetProductionRate.fromConfig(config.target_output).machine_production_rate.item;
+    const item = TargetProductionRate.fromConfig(config.setpoint).machine_production_rate.item;
     return createEntityRegistryFromConfig(config).getAll().filter(Entity.isMachine)
         .filter(machine => machine.output.item_name === item)
-        .reduce((sum, machine) => sum + machine.output.production_rate.amount_per_second.toDecimal(), 0) * (config.target_output.copies ?? 1);
+        .reduce((sum, machine) => sum + machine.output.production_rate.amount_per_second.toDecimal(), 0) * (config.setpoint.copies ?? 1);
 }
 
 /** machine-target-rates.ts computeMachineTargetRates before R21, line for line */
 function oldComputeMachineTargetRates(config: Config): MachineTargetRate[] {
     assertOutputTransferGenerationSupported(config);
     validateCopies(config);
-    assert(Number.isFinite(config.target_output.items_per_second) && config.target_output.items_per_second > 0,
+    assert(Number.isFinite(config.setpoint.items_per_second) && config.setpoint.items_per_second > 0,
         "Set a positive target output rate to see at-target rates.");
     assertInserterCoverage(config);
     const registry = createEntityRegistryFromConfig(config);
-    const target = TargetProductionRate.fromConfig(config.target_output);
+    const target = TargetProductionRate.fromConfig(config.setpoint);
     const cycle = OutputCyclePlan.create(target, registry, config, fraction(1));
     const seconds = cycle.total_duration_ticks.divide(60);
     const taken = new Map<string, number>();
@@ -213,13 +213,13 @@ function checkOutputCapacity(config: Config, registry: ReadableEntityRegistry, t
             expect(decimalOf(results[index].per_second), `${id} ${output.item_name} rate a second`).toBe(output.production_rate.amount_per_second.toDecimal());
         });
     }
-    const target = TargetProductionRate.fromConfig(config.target_output);
+    const target = TargetProductionRate.fromConfig(config.setpoint);
     const makers = machines.filter(machine => machine.output.item_name === target.machine_production_rate.item);
     checked.targets += 1;
     // plan-run (made) and primitive-grouped-hands: the exact sum, times the copies
     const sum = (rates: Fraction[]) => rates.reduce((a, b) => a.add(b), fraction(0));
-    expect(sum(makers.map(machine => mainProductRateOf(traits, machine.entity_id.id))).multiply(fraction(config.target_output.copies)), "capacity")
-        .toStrictEqual(sum(makers.map(oldMainProductRate)).multiply(fraction(config.target_output.copies)));
+    expect(sum(makers.map(machine => mainProductRateOf(traits, machine.entity_id.id))).multiply(fraction(config.setpoint.copies)), "capacity")
+        .toStrictEqual(sum(makers.map(oldMainProductRate)).multiply(fraction(config.setpoint.copies)));
     expect(sum(makers.map(machine => mainProductRateOf(traits, machine.entity_id.id))).multiply(target.copies), "capacity of the primitive plan")
         .toStrictEqual(sum(makers.map(oldMainProductRate)).multiply(target.copies));
     // alternatives: the decimals added up in order
@@ -310,7 +310,7 @@ function checkConfig(config: Config): void {
 function derivedConfigsOf(config: Config): Config[] {
     return [
         { ...config, overrides: { ...config.overrides, backed_up_belts: config.overrides?.backed_up_belts !== true } },
-        { ...config, target_output: { ...config.target_output, copies: (config.target_output.copies ?? 1) + 1 } },
+        { ...config, setpoint: { ...config.setpoint, copies: (config.setpoint.copies ?? 1) + 1 } },
     ];
 }
 

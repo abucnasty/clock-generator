@@ -22,7 +22,7 @@ function refusalOf(config: Config): unknown {
 /** One gear machine, with hands of 4 so that its inserters carry more than it makes and the machine is what limits the target */
 function build(copies: number, items_per_second: number, crafting_speed: number) {
     return ConfigSchema.parse({
-        target_output: { recipe: 'iron-gear-wheel', copies, items_per_second },
+        setpoint: { recipe: 'iron-gear-wheel', copies, items_per_second },
         machines: [{ id: 1, recipe: 'iron-gear-wheel', productivity: 0, crafting_speed }],
         inserters: [
             { source: { type: 'belt', id: 1 }, sink: { type: 'machine', id: 1 }, stack_size: 4, filters: ['iron-plate'] },
@@ -41,7 +41,7 @@ describe('target capacity agrees with actual engine validation', () => {
             const config = build(copies, 1, crafting_speed);
             const facts = computeMachineFacts(config.machines[0]);
             expect(facts.output_rate_ratio).toBeDefined();
-            const max = machinesMaxOf(config.target_output.recipe, [{ id: 1, facts }])!;
+            const max = machinesMaxOf(config.setpoint.recipe, [{ id: 1, facts }])!;
             const capacity = totalMachineCapacity(max, copies);
             expect(capacity).not.toBeNull();
             if (capacity === null) throw new Error('Expected supported exact capacity');
@@ -95,9 +95,9 @@ describe('target capacity agrees with actual engine validation', () => {
         const config = build(2.25, 1e-23, 0.3);
         const facts = computeMachineFacts(config.machines[0]);
         const max = machinesMaxOf('iron-gear-wheel', [{ id: 1, facts }])!;
-        expect(isTargetAboveMax(config.target_output.items_per_second, 2.25, max)).toBe(false);
+        expect(isTargetAboveMax(config.setpoint.items_per_second, 2.25, max)).toBe(false);
         expect(() => validateConfig(config)).toThrow(/fraction: too many decimal places/);
-        expect(config.target_output.items_per_second).toBe(1e-23);
+        expect(config.setpoint.items_per_second).toBe(1e-23);
     });
 
     it('sums exact ratios before applying Copies and marks mixed legacy facts as approximate', () => {
@@ -112,7 +112,7 @@ describe('target capacity agrees with actual engine validation', () => {
 });
 
 const withRate = (config: Config, items_per_second: number) =>
-    ConfigSchema.parse({ ...config, target_output: { ...config.target_output, items_per_second } });
+    ConfigSchema.parse({ ...config, setpoint: { ...config.setpoint, items_per_second } });
 
 describe('the most a recycler destroys agrees with the engine\'s check of the ore voider samples', () => {
     const maxOf = (sample: unknown) => {
@@ -125,7 +125,7 @@ describe('the most a recycler destroys agrees with the engine\'s check of the or
 
     it('is 405 a second for the exact-speed recycler: 400 passes, and the engine refuses just above it', () => {
         const { config, max } = maxOf(oreVoiderExact);
-        expect(config.target_output.counts).toBe('destroyed');
+        expect(config.setpoint.counts).toBe('destroyed');
         expect(totalMachineCapacity(max, 1)).toBe(405);
         expect(isTargetAboveMax(400, 1, max)).toBe(false);
         expect(() => validateConfig(withRate(config, 400))).not.toThrow();
@@ -199,17 +199,17 @@ describe('over the samples, a target the field allows is never refused by a feas
         // a sample that is refused for another reason is not the one the field speaks for
         if (refusalOf(config) !== undefined) return;
         const form = configToFormData(config);
-        const counts = config.target_output.counts ?? 'made';
+        const counts = config.setpoint.counts ?? 'made';
         const machines = config.machines.map((machine, index) => ({
             id: machine.id,
             facts: computeMachineFacts(machine),
-            comesBack: resultComesBack(form.machines[index], form.inserters, config.target_output.recipe),
+            comesBack: resultComesBack(form.machines[index], form.inserters, config.setpoint.recipe),
         }));
-        const machinesMax = machinesMaxOf(config.target_output.recipe, machines, counts);
+        const machinesMax = machinesMaxOf(config.setpoint.recipe, machines, counts);
         const max = rateMaxOf(machinesMax, { max: targetRateMaxOf(config), current: true });
         if (max === null) return;
         checked++;
-        const copies = config.target_output.copies;
+        const copies = config.setpoint.copies;
         const capacity = totalMachineCapacity(max, copies)!;
         // the field allows what it prints, rounded down
         const allowed = Math.floor(capacity * 1000) / 1000;

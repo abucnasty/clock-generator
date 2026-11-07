@@ -67,7 +67,7 @@ const TICKS = Number(process.env.TICKS ?? GAME_RUN.baseline);
         assertWithinRun(TICKS, long, "TICKS");
         assertWithinRun(ticks, long, `the recording of whole periods of ${clock_ticks} ticks`);
         const target_per_second = selected.result.stability_check.expected_output_items * 60 / period;
-        const recipes = recipesMaking(config, config.target_output.recipe);
+        const recipes = recipesMaking(config, config.setpoint.recipe);
         for (const unclocked of [true, false]) {
             const name = unclocked ? "unclocked" : "clocked";
             const started = Date.now();
@@ -77,7 +77,7 @@ const TICKS = Number(process.env.TICKS ?? GAME_RUN.baseline);
                     factorio: process.env.FACTORIO_PATH, save: process.env.FACTORIO_HARNESS_SAVE, blueprint,
                     out: path.join(out, `${SAMPLE}-${name}.json`), ticks: unclocked ? ticks : TICKS,
                     warmup_ticks: build.warmup, settle_ticks: GAME_RUN.cap + 1, seed: build.seed ?? [],
-                    lua: steadyProbeSource(target_per_second, config.target_output.recipe, recipes, "rule-count-steady.json"), work_dir,
+                    lua: steadyProbeSource(target_per_second, config.setpoint.recipe, recipes, "rule-count-steady.json"), work_dir,
                     clock: unclocked ? undefined : clock, config: unclocked ? undefined : config, unclocked,
                     game_speed: 1000, timeout_seconds: 900, log: () => { }, cache: false,
                 });

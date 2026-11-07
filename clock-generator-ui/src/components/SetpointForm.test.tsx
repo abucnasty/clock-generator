@@ -3,16 +3,16 @@ import { screen, within } from '@testing-library/react';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { names, show } from '../test/fixtures';
-import { TargetOutputForm } from './TargetOutputForm';
+import { SetpointForm } from './SetpointForm';
 import { TARGET_RECIPE_NAME } from '../utils/a11yLabels';
 import { copyOffsetOf, copyOffsetShown, type CopyOffset } from '../utils/copyOffset';
 import { ELEMENT_IDS } from '../utils/firstProblem';
 import { COUNTS_TEXT } from '../utils/targetCounts';
 
-type Props = Parameters<typeof TargetOutputForm>[0];
+type Props = Parameters<typeof SetpointForm>[0];
 const props: Props = { recipe: 'grenade', itemsPerSecond: 240, copies: 7, counts: 'made', machinesMax: null, recipeNames: ['grenade'],
     onRecipeChange: () => {}, onItemsPerSecondChange: () => {}, onCountsChange: () => {}, onCopiesChange: () => {} };
-const form = (overrides: Partial<Props> = {}) => show(<TargetOutputForm {...props} {...overrides} />);
+const form = (overrides: Partial<Props> = {}) => show(<SetpointForm {...props} {...overrides} />);
 const countsField = () => screen.getByRole('combobox', { name: COUNTS_TEXT.label });
 
 describe('what the rate counts', () => {
@@ -30,11 +30,11 @@ describe('what the rate counts', () => {
     it('chooses the item destroyed from what the machines take in, not from the recipes (scrap is no recipe\'s product)', async () => {
         const gameNames = names({ scrap: 'Scrap' }, { 'scrap-recycling': 'Scrap recycling', 'iron-gear-wheel': 'Iron gear wheel' });
         const target = { recipe: 'scrap', itemsPerSecond: 2, copies: 1, recipeNames: ['scrap-recycling', 'iron-gear-wheel'], destroyedItemNames: ['scrap'] };
-        const { user, rerender } = show(<TargetOutputForm {...props} {...target} counts="destroyed" />, { names: gameNames });
+        const { user, rerender } = show(<SetpointForm {...props} {...target} counts="destroyed" />, { names: gameNames });
         await user.click(screen.getByRole('combobox', { name: TARGET_RECIPE_NAME }));
         expect(screen.getAllByRole('option').map(option => option.textContent)).toEqual(['Scrap']);
 
-        rerender(<TargetOutputForm {...props} {...target} recipe="" counts="made" />);
+        rerender(<SetpointForm {...props} {...target} recipe="" counts="made" />);
         await user.click(screen.getByRole('button', { name: TARGET_RECIPE_NAME }));
         const picker = screen.getByRole('dialog', { name: `Choose a recipe for ${TARGET_RECIPE_NAME}` });
         expect(within(picker).getAllByRole('tab').map(tab => tab.getAttribute('aria-label'))).toEqual(['Intermediate products']);
@@ -130,7 +130,7 @@ describe('the gap between copies', () => {
     /** The form as the page holds it: the gap it reports is the gap it shows next */
     function Gap({ initial, onCopyOffsetChange }: { initial: CopyOffset; onCopyOffsetChange: (value: CopyOffset | undefined) => void }) {
         const [copyOffset, setCopyOffset] = useState<CopyOffset | undefined>(initial);
-        return <TargetOutputForm {...props} showCopyOffset copyOffset={copyOffset} onCopyOffsetChange={value => { setCopyOffset(value); onCopyOffsetChange(value); }} />;
+        return <SetpointForm {...props} showCopyOffset copyOffset={copyOffset} onCopyOffsetChange={value => { setCopyOffset(value); onCopyOffsetChange(value); }} />;
     }
     /** The gap field of a form at `initial`, focused; the arrow keys step it as its buttons do */
     const gap = async (initial: CopyOffset) => {

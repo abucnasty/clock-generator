@@ -1,5 +1,5 @@
 {
-  "target_output": {
+  "setpoint": {
     "recipe": "flying-robot-frame",
     "items_per_second": 160,
     "copies": 24

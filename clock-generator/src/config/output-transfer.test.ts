@@ -17,7 +17,7 @@ import { fraction } from '../data-types/fraction';
 
 function cell(recipe = 'supercapacitor'): Config {
     return ConfigSchema.parse({
-        target_output: { recipe: 'supercapacitor', items_per_second: 0.1, copies: 1 },
+        setpoint: { recipe: 'supercapacitor', items_per_second: 0.1, copies: 1 },
         machines: [
             { id: 1, recipe: 'processing-unit-recycling', prototype: 'recycler', crafting_speed: 1, productivity: 0, result_target: { type: 'machine', id: 2 } },
             { id: 2, recipe, prototype: 'electromagnetic-plant', crafting_speed: 1, productivity: 50 },
@@ -140,7 +140,7 @@ describe('physical representation and generation support', () => {
         expect(() => validateConfig(config)).toThrow(refusal);
         expect(() => unclockedRun(config)).toThrow(refusal);
         const registry = createEntityRegistryFromConfig(config);
-        expect(() => OutputCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), registry, config, fraction(1))).toThrow(refusal);
+        expect(() => OutputCyclePlan.create(TargetProductionRate.fromConfig(config.setpoint), registry, config, fraction(1))).toThrow(refusal);
         expect(() => madeTargetBalance(registry.getAll().filter(Entity.isMachine), registry, config, fraction(1), 16)).toThrow(refusal);
     });
     it('does not let an unrelated missing route hide a cardinality refusal', () => {

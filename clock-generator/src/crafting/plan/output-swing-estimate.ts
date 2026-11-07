@@ -29,12 +29,12 @@ export type OutputSwingEstimate =
 
 export function outputSwingEstimate(config: Config, swings: number): OutputSwingEstimate {
     if (!Number.isInteger(swings) || swings < 1) return { swings, verdict: "no rule", reason: `${swings} is no whole count of swings` };
-    if (config.target_output.counts === "destroyed") return { swings, verdict: "no rule", reason: "a target that counts an item destroyed" };
+    if (config.setpoint.counts === "destroyed") return { swings, verdict: "no rule", reason: "a target that counts an item destroyed" };
     const overrides = { ...config.overrides, terminal_swing_count: swings };
     const counted: Config = { ...config, overrides };
     try {
         const entity_registry = createEntityRegistryFromConfig(counted);
-        const target = TargetProductionRate.fromConfig(counted.target_output);
+        const target = TargetProductionRate.fromConfig(counted.setpoint);
         const output_cycle_plan = OutputCyclePlan.create(target, entity_registry, counted, fraction(swings), overrides);
         const recipe_lcm = EntityTransferCountMap.lcm(output_cycle_plan.entity_transfer_map);
         batchedSwingsWindowsByArithmetic({ entity_registry, output_cycle_plan, recipe_lcm,

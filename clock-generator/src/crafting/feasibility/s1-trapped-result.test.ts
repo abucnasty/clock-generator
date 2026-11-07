@@ -9,7 +9,7 @@ describe("S1: a result with no way out stops its machine for good", () => {
      */
     it("a trapped result of a machine the target does not need: it passes", () => {
         const config = {
-            target_output: { recipe: "iron-gear-wheel", items_per_second: 10, copies: 1 },
+            setpoint: { recipe: "iron-gear-wheel", items_per_second: 10, copies: 1 },
             machines: [
                 { id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1000 },
                 { id: 2, recipe: "iron-stick", productivity: 0, crafting_speed: 1000 },
@@ -33,7 +33,7 @@ describe("S1: a result with no way out stops its machine for good", () => {
      * of the 3 a second that 3 gears a second need.
      */
     const chained = (more: Config["inserters"] = []): Config => ({
-        target_output: { recipe: "iron-gear-wheel", items_per_second: 3, copies: 1 },
+        setpoint: { recipe: "iron-gear-wheel", items_per_second: 3, copies: 1 },
         machines: [
             { id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1 },
             { id: 2, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1 },
@@ -69,7 +69,7 @@ describe("S1: a result with no way out stops its machine for good", () => {
 
     it("at 2 gears a second machine 1 alone is enough: it passes, machine 2 may stay idle", () => {
         const config = chained();
-        config.target_output.items_per_second = 2;
+        config.setpoint.items_per_second = 2;
         expect(feasibilityOfConfig(config).issues).toEqual([]);
     });
 });

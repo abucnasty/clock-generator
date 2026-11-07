@@ -36,7 +36,7 @@ export const feasibilityOfConfig = (config: Config) => feasibilityOfFacts(toPlan
 
 /** The config with another target: so many items a second over so many copies */
 export const withTarget = (config: Config, items_per_second: number, copies = 1): Config =>
-    ({ ...structuredClone(config), target_output: { ...config.target_output, items_per_second, copies } });
+    ({ ...structuredClone(config), setpoint: { ...config.setpoint, items_per_second, copies } });
 
 export const belt = (id: number, lanes: readonly Belt["lanes"][number][], extra: Partial<Belt> = {}): Belt =>
     ({ id, type: "turbo-transport-belt", lanes: lanes as Belt["lanes"], ...extra });

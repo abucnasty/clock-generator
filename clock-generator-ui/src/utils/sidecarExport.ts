@@ -45,8 +45,8 @@ function parse(text: string): { ok: true; value: unknown } | { ok: false } {
     }
 }
 
-/** A build file saved by this site has a target output; an export of the mod never does */
-const isBuildFile = (value: unknown) => isObject(value) && 'target_output' in value;
+/** A build file saved by this site has a setpoint (`target_output` in a file from before it was named so); an export of the mod never does */
+const isBuildFile = (value: unknown) => isObject(value) && ('setpoint' in value || 'target_output' in value);
 
 export function readSidecarExport(text: string): SidecarExportRead {
     if (text.trim() === '') {

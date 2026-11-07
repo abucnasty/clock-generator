@@ -232,7 +232,7 @@ describe("the clock of a blueprint with fuel inserters", () => {
 
     it("keeps a clock per fuel interval, on a network of its own, when the period is not a whole number of ticks", async () => {
         const config = await loadConfigFromFile(ConfigPaths.ROCKET_FUEL_60);
-        const slower = { ...config, target_output: { ...config.target_output, items_per_second: 54 } };
+        const slower = { ...config, setpoint: { ...config.setpoint, items_per_second: 54 } };
         const result = generateClockForConfig(slower, { logger: quiet, fuel_consumption_view: false });
 
         expect(Number.isInteger(result.simulation_duration.ticks)).toBe(false);
@@ -318,7 +318,7 @@ describe("the count of a clock", async () => {
         ["agricultural science", generateClockForConfig(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250), { logger: quiet }).blueprint],
         ["rocket fuel, one clock with the fuel clocks", generateClockForConfig(rocket_fuel, { logger: quiet, fuel_consumption_view: false }).blueprint],
         ["rocket fuel, subtick clock and fuel clocks of their own", generateClockForConfig(
-            { ...rocket_fuel, target_output: { ...rocket_fuel.target_output, items_per_second: 54 } },
+            { ...rocket_fuel, setpoint: { ...rocket_fuel.setpoint, items_per_second: 54 } },
             { logger: quiet, fuel_consumption_view: false },
         ).subtick!.blueprint],
     ];

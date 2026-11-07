@@ -218,7 +218,7 @@ export function checkProperties(job: string, config: Config, generated: Pick<Clo
     const checked = Object.fromEntries(PROPERTIES.map(name => [name, 0])) as Record<PropertyName, number>;
     const found: PropertyProblem[] = [];
     const registry = createEntityRegistryFromConfig(config);
-    const copies = config.target_output.copies ?? 1;
+    const copies = config.setpoint.copies ?? 1;
     const note = (property: PropertyName, alternative: Alternative, problems: string[] | null) => {
         if (problems === null) return;
         checked[property]++;
@@ -231,7 +231,7 @@ export function checkProperties(job: string, config: Config, generated: Pick<Clo
         note('stable-holds-and-survives-loss', alternative, stableMeans(alternative));
         note('counters-add-up', alternative, countersAddUp(alternative, copies));
         note('fuel-never-dry', alternative, fuelNeverDry(alternative));
-        note('strategy-and-signals', alternative, strategyAndSignals(alternative, config.target_output.counts === 'destroyed', ids_before));
+        note('strategy-and-signals', alternative, strategyAndSignals(alternative, config.setpoint.counts === 'destroyed', ids_before));
         ids_before.add(alternative.id);
     }
     const excusing = (it: PropertyProblem) => EXCEPTIONS[job]?.[it.property]?.alternatives.includes(it.alternative) === true;
