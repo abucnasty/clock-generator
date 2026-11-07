@@ -23,7 +23,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: the site's terms follow the glossary: enable window, wakeup, window cycle time, recovery, configuration
 - generation: inserters from a belt into a chest are named when the build is refused
 - ui: clocks are named for the practice they follow, and the table shows signals a minute
-- ui: the clock override field is renamed for the window cycle; files and links with the old name still load
+- ui: the Clocked override's window cycle time is renamed; older files and links still load
 
 ### Fixed
 - ui: an unexpected error in the check now says the generator failed, not your build
