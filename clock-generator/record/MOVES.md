@@ -9,7 +9,7 @@ CI checks this file: the "Record check" fails when a selected clock got worse th
 request adds to this file.
 
 ## Record and harness name the window cycle (#710)
-The record format is clock-record-2: the `period` key of each alternative is now `window_cycle_ticks`. No selection, rate, window, wakeup or `clock_sha256` moved.
+The record format is clock-record-2: the `period` key of each clock is now `window_cycle_ticks`. No selection, rate, window, wakeup or `clock_sha256` moved.
 - all 86 jobs: the format and the key
 
 ## Release 0.28.0 (release/0-28-0)
