@@ -21,6 +21,7 @@ import { BlueprintGenerationResult, BuildRun, FractionalSwings, LCM_STABILITY_TO
 import { SimulationTick } from "./runner/simulation-tick";
 import { simulationStateKey } from "./runner/steady-state";
 import { inLoopInserterWindows, loopInserterWindows } from "./candidates/loop-windows";
+import type { LoopStockBound } from "./candidates/loop-stock-bound";
 import { CLOCK_STARTS, ClockStart, StartDependence, StartOutcome, cycleOf, startVerdictOf, startsReachingTarget } from "./start-dependence";
 import { plannedWithFractionalSwings } from "./sequence/cycle/crafting-cycle";
 import { movingPickupPhaseStarts } from "./moving-pickup-phase-starts";
@@ -99,6 +100,13 @@ export interface ClockAssessment {
      * start alone, or when the requested start checks could not run. Actual samples are in `starts`.
      */
     start_dependence: StartDependence | null;
+    /**
+     * #516's two-hop bound on the windows of a clock with windows for a loop of machines (`loop_windows` of its result): the
+     * margins of what the loop's sources leave for its inserters and of the stock its machines hold over the longest gap
+     * between its windows (see loop-stock-bound.ts). A report: no clock is kept, dropped or ranked by it. Absent on any other
+     * clock.
+     */
+    loop_stock_bound?: LoopStockBound;
 }
 
 /**
