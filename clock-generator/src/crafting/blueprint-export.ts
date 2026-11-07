@@ -1,5 +1,5 @@
 import { FactorioBlueprintFile, BlueprintBookBuilder } from "../blueprints/blueprint";
-import { BlueprintGenerationResult } from "./plan/plan-run";
+import { BlueprintGenerationResult } from "./plan/unclocked-run";
 
 /** A book with the modulo-clock and the full-window blueprint when both exist, otherwise the single blueprint */
 export function blueprintFileFor(result: BlueprintGenerationResult): FactorioBlueprintFile {
@@ -15,8 +15,8 @@ export function blueprintFileFor(result: BlueprintGenerationResult): FactorioBlu
     return {
         blueprint_book: {
             ...book,
-            description: "Same clock windows, two ways: the modulo clock checks windows that repeat every few cycles "
-                + "against the clock modulo that length (far fewer decider conditions); the other lists every window on the raw clock.",
+            description: "Same enable windows, two ways: the modulo clock checks enable windows that repeat every few cycles "
+                + "against the clock modulo that length (far fewer decider conditions); the other lists every enable window on the raw clock.",
         },
     };
 }

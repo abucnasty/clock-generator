@@ -30,24 +30,24 @@ export interface GhostWindow {
  */
 export function windowsWithoutGhostWakeUps(
     windows: ReadonlyMap<string, readonly OpenRange[]>,
-    period_ticks: number,
+    window_cycle_ticks: number,
     stock: StockRecording,
     ghosts: readonly GhostWakeUp[],
     fixed: ReadonlySet<string>,
     /**
      * The tick of the run less the tick of the clock, where the run knows it (`AsBuiltStabilityCheck.clock_tick_at_first_judged`):
-     * a window ending at e switches its inserter off in the ticks t with t - offset = e + 1 modulo the period. Else read
+     * a window ending at e switches its inserter off in the ticks t with t - offset = e + 1 modulo the window cycle. Else read
      * off the switch-offs, where only one offset lines them up with the windows.
      */
     clock_offset: number | undefined,
     /** Told why the windows of an inserter with ghost wakeups are left as they are */
     left?: (inserter_id: string, why: string) => void,
 ): { windows: Map<string, OpenRange[]>; shaped: GhostWindow[] } | null {
-    if (!Number.isInteger(period_ticks) || ghosts.length === 0) {
+    if (!Number.isInteger(window_cycle_ticks) || ghosts.length === 0) {
         return null;
     }
     const OFF = FactorioInserterState.DISABLED_BY_CONTROL_BEHAVIOR;
-    const mod = (value: number) => ((value % period_ticks) + period_ticks) % period_ticks;
+    const mod = (value: number) => ((value % window_cycle_ticks) + window_cycle_ticks) % window_cycle_ticks;
     const series = new Map(stock.inserters.map(it => [it.inserter_id, it]));
     const result = new Map(Array.from(windows, ([id, ranges]) => [id, ranges.slice()] as const));
     const shaped: GhostWindow[] = [];
@@ -59,7 +59,7 @@ export function windowsWithoutGhostWakeUps(
         const ranges = windows.get(id);
         const recorded = series.get(id);
         if (fixed.has(id) || ranges === undefined || ranges.length === 0 || recorded === undefined) {
-            left?.(id, fixed.has(id) ? "its windows are fixed" : "no windows");
+            left?.(id, fixed.has(id) ? "its enable windows are fixed" : "no enable windows");
             continue;
         }
         const { factorio_state: states, held } = recorded;
@@ -67,13 +67,13 @@ export function windowsWithoutGhostWakeUps(
         // after the end of a window (a window ends at e when the inserter shows disabled from the tick at position e + 1)
         const ends = new Set(ranges.map(range => mod(range.end_inclusive)));
         const switch_offs: number[] = [];
-        for (let tick = Math.max(1, own[0].switched_off - 2 * period_ticks); tick < states.length; tick++) {
+        for (let tick = Math.max(1, own[0].switched_off - 2 * window_cycle_ticks); tick < states.length; tick++) {
             if (states[tick] === OFF && states[tick - 1] !== OFF) switch_offs.push(tick);
         }
         const offsets = (clock_offset !== undefined ? [mod(clock_offset)] : ranges.map(range => mod(own[0].switched_off - 1 - range.end_inclusive)))
             .filter(k => switch_offs.every(tick => ends.has(mod(tick - 1 - k))));
         if (new Set(offsets).size !== 1) {
-            left?.(id, "its switch-offs do not line up with its windows");
+            left?.(id, "its switch-offs do not line up with its enable windows");
             continue;
         }
         const offset = offsets[0];
@@ -81,7 +81,7 @@ export function windowsWithoutGhostWakeUps(
         let usable = true;
         for (const ghost of own) {
             const index = ranges.findIndex(range => mod(range.end_inclusive) === mod(ghost.switched_off - 1 - offset));
-            if (index < 0) { left?.(id, `no window ends before the switch-off at ${ghost.switched_off}`); usable = false; break; }
+            if (index < 0) { left?.(id, `no enable window ends before the switch-off at ${ghost.switched_off}`); usable = false; break; }
             const range = ranges[index];
             const c = ghost.switched_off;
             // the tick it took the hand it held at the switch-off, or the tick it went to sleep with an empty hand
@@ -91,7 +91,7 @@ export function windowsWithoutGhostWakeUps(
                 while (q > 0 && !(held[q - 1] === 0 && held[q] > 0)) q--;
             }
             const opened = c - (range.end_inclusive - range.start_inclusive + 1);
-            if (q <= opened || q > c) { left?.(id, `the hand or the sleep (tick ${q}) is from before the window ${range.start_inclusive}-${range.end_inclusive}`); usable = false; break; }
+            if (q <= opened || q > c) { left?.(id, `the hand or the sleep (tick ${q}) is from before the enable window ${range.start_inclusive}-${range.end_inclusive}`); usable = false; break; }
             const before = shifts.get(index);
             shifts.set(index, { ticks: Math.max(before?.ticks ?? 0, c - q + 1), ghosts: (before?.ghosts ?? 0) + 1 });
         }

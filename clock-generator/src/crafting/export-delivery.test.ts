@@ -2,15 +2,15 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { parseConfig } from "../config/loader";
 import type { Config } from "../config/schema";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
-import { exportShortfallOfBins, exportShortfallsOfPeriod, exportShortfallsOfRun, exportedItemsOf } from "./export-delivery";
-import { judgedWithExports, judgeRecovery, type WatchedExport } from "./backpressure-loss";
+import { exportShortfallOfBins, exportShortfallsOfWindowCycle, exportShortfallsOfRun, exportedItemsOf } from "./export-delivery";
+import { judgedWithExports, judgeRecovery, type WatchedExport } from "./disturbance-trial";
 import { clockFromWindows, generateClockForConfig, type SerializableClockWindows } from "./generate-blueprint";
 import { quiet } from "./generate-blueprint-test-helpers";
 
 // Gears are the target; a second machine makes copper cable, which two inserters put on belt 2, an export belt of two
 // lanes of cable that consumers outside the config take 3 a second each from
 const SMALL_BUILD = JSON.stringify({
-    target_output: { recipe: "iron-gear-wheel", items_per_second: 4, copies: 1 },
+    setpoint: { recipe: "iron-gear-wheel", items_per_second: 4, copies: 1 },
     machines: [
         { id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 2, type: "machine" },
         { id: 2, recipe: "copper-cable", productivity: 0, crafting_speed: 2, type: "machine" },
@@ -59,13 +59,13 @@ describe("what a belt with a consumption rate receives", () => {
 
         it("is short when both inserters together move less than both lanes take, though more than one lane takes", () => {
             // 6 a second over 1920 ticks is 192 items; 128 are 4 a second, which is above one lane's 3
-            const short = exportShortfallsOfPeriod(exported(), (id) => (id === "inserter:4" || id === "inserter:5" ? 64 : 0), 1920, 1);
+            const short = exportShortfallsOfWindowCycle(exported(), (id) => (id === "inserter:4" || id === "inserter:5" ? 64 : 0), 1920, 1);
             expect(short).toEqual([{ belt_id: 2, item: "copper-cable", item_label: "copper cable", expected_per_second: 6, delivered_per_second: 4, inserter_ids: [4, 5] }]);
         });
 
         it("is not short when the lanes get their rate, or more", () => {
-            expect(exportShortfallsOfPeriod(exported(), () => 96, 1920, 1)).toEqual([]);
-            expect(exportShortfallsOfPeriod(exported(), () => 200, 1920, 1)).toEqual([]);
+            expect(exportShortfallsOfWindowCycle(exported(), () => 96, 1920, 1)).toEqual([]);
+            expect(exportShortfallsOfWindowCycle(exported(), () => 200, 1920, 1)).toEqual([]);
         });
     });
 
@@ -131,7 +131,7 @@ describe("what a belt with a consumption rate receives", () => {
     });
 
     describe("the clock check", () => {
-        // the windows the generator makes for this build with observed windows (period 1920); inserters 4 and 5 are the exports
+        // the windows the generator makes for this build with observed windows (window cycle 1920); inserters 4 and 5 are the exports
         const derived: SerializableClockWindows = {
     "inserter:1": ranges([[1, 17], [40, 55], [241, 257], [280, 295], [481, 497], [520, 535], [721, 737], [760, 775], [961, 977], [1000, 1015], [1201, 1217], [1240, 1255], [1441, 1457], [1480, 1495], [1681, 1697], [1720, 1735]]),
     "inserter:2": ranges([[1, 13], [241, 253], [481, 493], [721, 733], [961, 973], [1201, 1213], [1441, 1453], [1681, 1693]]),

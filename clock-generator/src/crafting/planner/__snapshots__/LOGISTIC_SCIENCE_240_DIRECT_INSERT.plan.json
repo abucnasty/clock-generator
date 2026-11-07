@@ -41,16 +41,16 @@
         "inserter:7/logistic-science-pack",
         "inserter:8/inserter"
       ],
-      "periods": [
-        {"swings":4,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":192,"denominator":1},"cycles":3,"period_ticks":576,"kept":true},
-        {"swings":5,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":240,"denominator":1},"cycles":6,"period_ticks":1440,"kept":true},
-        {"swings":6,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":288,"denominator":1},"cycles":1,"period_ticks":288,"kept":true},
-        {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":144,"denominator":1},"cycles":2,"period_ticks":288,"kept":true},
-        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":96,"denominator":1},"cycles":3,"period_ticks":288,"kept":true},
-        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":48,"denominator":1},"cycles":6,"period_ticks":288,"kept":true},
-        {"swings":4,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":192,"denominator":1},"cycles":3,"period_ticks":576,"kept":true}
+      "window_cycles": [
+        {"swings":4,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":192,"denominator":1},"cycles":3,"window_cycle_ticks":576,"kept":true},
+        {"swings":5,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":240,"denominator":1},"cycles":6,"window_cycle_ticks":1440,"kept":true},
+        {"swings":6,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":288,"denominator":1},"cycles":1,"window_cycle_ticks":288,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":144,"denominator":1},"cycles":2,"window_cycle_ticks":288,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":96,"denominator":1},"cycles":3,"window_cycle_ticks":288,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":48,"denominator":1},"cycles":6,"window_cycle_ticks":288,"kept":true},
+        {"swings":4,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":192,"denominator":1},"cycles":3,"window_cycle_ticks":576,"kept":true}
       ],
-      "duty": [
+      "utilization": [
         {
           "producer": "machine:casting-iron",
           "members": [
@@ -64,7 +64,7 @@
             "numerator": 6283,
             "denominator": 128
           },
-          "duty": {
+          "utilization": {
             "numerator": 512,
             "denominator": 18849
           }
@@ -83,7 +83,7 @@
             "numerator": 2100260416666667,
             "denominator": 100000000000000
           },
-          "duty": {
+          "utilization": {
             "numerator": 2000000000000000,
             "denominator": 2100260416666667
           }
@@ -101,7 +101,7 @@
             "numerator": 747,
             "denominator": 2
           },
-          "duty": {
+          "utilization": {
             "numerator": 40,
             "denominator": 2241
           }
@@ -119,7 +119,7 @@
             "numerator": 6283,
             "denominator": 40
           },
-          "duty": {
+          "utilization": {
             "numerator": 320,
             "denominator": 18849
           }
@@ -135,7 +135,7 @@
       "planned": 4,
       "higher_up_to_ticks": 2400
     },
-    "main_period": {
+    "main_window_cycle": {
       "ticks": 576,
       "exact": {
         "numerator": 576,
@@ -162,5 +162,5 @@
       "action": "none"
     }
   },
-  "result_windows": null
+  "exhaust": null
 }

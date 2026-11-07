@@ -28,7 +28,7 @@ describe("signalsPerMinuteOf", () => {
 
     test("counts a decider of drills by the windows of its drills in a period, over the period", () => {
         const drills = [{ drill_id: 4, window_count: 3 }, { drill_id: 5, window_count: 3 }] as ChestDrillClock[];
-        // 3 windows in a period of 360 ticks: 30 a minute of 3,600 ticks
+        // 3 windows in a window cycle of 360 ticks: 30 a minute of 3,600 ticks
         expect(signalsPerMinuteOf(counters({ 1: 10 }), blueprint(decider({ inserters: [1] }), decider({ drills: [4, 5] })), drills, 360)).toBe(40);
     });
 

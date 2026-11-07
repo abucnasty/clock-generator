@@ -71,7 +71,7 @@
         "expected": 1440,
         "verdict": "stable",
         "selection": {
-          "id": "swings-3",
+          "id": "takt_batches_observed_swings_3",
           "holds": true,
           "rate": 80,
           "supply": null
@@ -149,7 +149,7 @@
         "expected": 1440,
         "verdict": "stable",
         "selection": {
-          "id": "swings-3",
+          "id": "takt_batches_observed_swings_3",
           "holds": true,
           "rate": 80,
           "supply": null
@@ -227,7 +227,7 @@
         "expected": 1440,
         "verdict": "stable",
         "selection": {
-          "id": "swings-1",
+          "id": "takt_batches_observed_swings_1",
           "holds": true,
           "rate": 80,
           "supply": null
@@ -263,7 +263,7 @@
         "expected": 10080,
         "verdict": "stable",
         "selection": {
-          "id": "swings-7",
+          "id": "takt_batches_observed_swings_7",
           "holds": true,
           "rate": 80,
           "supply": null

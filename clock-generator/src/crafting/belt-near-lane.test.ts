@@ -8,11 +8,11 @@ import { simulatedWakeUpsByStart } from "../verification/simulated-recording";
 // Utility science: inserter 1 takes flying robot frames and low density structures off belt 1, inserter 2 takes
 // processing units and low density structures off belt 2, inserter 3 takes the packs away. Recorded in Factorio
 // 2.1.21 on 2026-10-10 under the clock below, 36,000 ticks each: with the low density structures of belt 2 on the lane
-// nearest to inserter 2 it takes them first, and a period moves 64 items through inserter 1 and 128 through inserter
+// nearest to inserter 2 it takes them first, and a window cycle moves 64 items through inserter 1 and 128 through inserter
 // 2; with the lanes of belt 2 swapped it takes the processing units first and each moves 96. The filters of the
 // inserter were the same in both.
 describe("an inserter that picks up from a belt with two items", () => {
-    const PERIOD = 672;
+    const WINDOW_CYCLE = 672;
     const input_windows = [{ start: 37, end: 64 }, { start: 181, end: 197 }, { start: 361, end: 388 }, { start: 517, end: 533 }];
     const windows: SerializableClockWindows = {
         "inserter:3": [{ start: 1, end: 49 }, { start: 169, end: 215 }, { start: 337, end: 373 }, { start: 505, end: 541 }],
@@ -29,23 +29,23 @@ describe("an inserter that picks up from a belt with two items", () => {
         return config;
     };
 
-    /** What inserter 2 takes first in each period, and what the two input inserters move in the last period run */
+    /** What inserter 2 takes first in each window cycle, and what the two input inserters move in the last window cycle run */
     const run = (config: Config) => {
-        const periods = 12;
-        const stock = simulateClockOnly(config, windows, PERIOD, periods);
+        const window_cycles = 12;
+        const stock = simulateClockOnly(config, windows, WINDOW_CYCLE, window_cycles);
         const series = (id: number) => stock.inserters.find(s => s.inserter_id === `inserter:${id}`)!;
         const moved = (id: number) => {
             const held = series(id).held;
             let items = 0;
-            for (let tick = (periods - 1) * PERIOD + 1; tick < periods * PERIOD; tick++) {
+            for (let tick = (window_cycles - 1) * WINDOW_CYCLE + 1; tick < window_cycles * WINDOW_CYCLE; tick++) {
                 items += Math.max(0, held[tick - 1] - held[tick]);
             }
             return items;
         };
         const first_items = new Set<string>();
         const { held, held_item } = series(2);
-        for (let period = 1; period < periods; period++) {
-            for (let tick = period * PERIOD; tick < (period + 1) * PERIOD; tick++) {
+        for (let window_cycle_ticks = 1; window_cycle_ticks < window_cycles; window_cycle_ticks++) {
+            for (let tick = window_cycle_ticks * WINDOW_CYCLE; tick < (window_cycle_ticks + 1) * WINDOW_CYCLE; tick++) {
                 if (held[tick] > 0) {
                     first_items.add(held_item[tick]);
                     break;
@@ -76,8 +76,8 @@ describe("an inserter that picks up from a belt with two items", () => {
     });
 });
 
-// Batched swings with belt pickup slack on the utility science sample, the clock selected for it. Recorded in
-// Factorio 2.1.21 on 2026-10-10: 192 packs in each of 53 periods at 26.8 wake-ups a minute. The generator's long run,
+// Takt Batches with belt pickup slack on the utility science sample, the clock selected for it. Recorded in
+// Factorio 2.1.21 on 2026-10-10: 192 packs in each of 53 window cycles at 26.8 wake-ups a minute. The generator's long run,
 // which starts the clock at its beginning on the empty build of the scaffold's staged start, counted the game's 26.8
 // under the old wake-up rule; the rule "kept-lists" counts more.
 describe("a clock with more than one steady state", () => {

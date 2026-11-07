@@ -1,5 +1,5 @@
 // The per-job checks of the record: what a test of one build checks on the result of a blast job that the record does not hold (the
-// record holds each alternative's verdict, rate, period, wake-ups, windows and clock hash, and hashes the texts and the assessment,
+// record holds each alternative's verdict, rate, window cycle, wake-ups, windows and clock hash, and hashes the texts and the assessment,
 // but cannot say what a text must read). blast.blastrun.ts runs them where the generated result is in hand, on the result the job already
 // made, so a build that is a job of the record is generated once, not once for the record and again by a generation test. A failing
 // check is written into the job file as `checks.failures`; `blast.sh record check` fails on any, naming the job, the check and the

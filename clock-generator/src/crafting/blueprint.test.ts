@@ -16,16 +16,16 @@ import { quiet } from "./generate-blueprint-test-helpers";
 
 /**
  * Replays the circuit in positions, without the 1 every signal counts from: the clock reads the tick's position in
- * the period, and a modulo of it reads that position modulo the modulus
+ * the window cycle, and a modulo of it reads that position modulo the modulus
  */
-function enabledTicksMatch(ranges: OpenRange[], period: number): boolean {
-    const split = splitRepeatingRanges(ranges, period);
+function enabledTicksMatch(ranges: OpenRange[], window_cycle_ticks: number): boolean {
+    const split = splitRepeatingRanges(ranges, window_cycle_ticks);
     if (!split) {
         return true;
     }
     const inAny = (rs: OpenRange[], value: number) => rs.some(r => r.contains(value));
-    for (let tick = period; tick < 3 * period; tick++) {
-        const clock = tick % period;
+    for (let tick = window_cycle_ticks; tick < 3 * window_cycle_ticks; tick++) {
+        const clock = tick % window_cycle_ticks;
         const modulo = clock % split.modulus;
         const expected = inAny(ranges, clock);
         const actual = inAny(split.repeating, modulo) || inAny(split.remaining, clock);
@@ -49,10 +49,10 @@ function conditionWindows(conditions: { first_signal: { name: string }; comparat
     });
 }
 
-function windowsEvery(spacing: number, length: number, period: number, offset = 0): OpenRange[] {
+function windowsEvery(spacing: number, length: number, window_cycle_ticks: number, offset = 0): OpenRange[] {
     const ranges: OpenRange[] = [];
-    for (let start = offset; start < period; start += spacing) {
-        ranges.push(OpenRange.from(start, Math.min(start + length - 1, period - 1)));
+    for (let start = offset; start < window_cycle_ticks; start += spacing) {
+        ranges.push(OpenRange.from(start, Math.min(start + length - 1, window_cycle_ticks - 1)));
     }
     return ranges;
 }
@@ -91,14 +91,14 @@ describe("splitRepeatingRanges", () => {
         let seed = 7;
         const random = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
         for (let trial = 0; trial < 40; trial++) {
-            const period = [96, 240, 528, 960][trial % 4];
-            const base = windowsEvery([12, 24, 48][trial % 3], 1 + Math.floor(random() * 6), period, Math.floor(random() * 12));
+            const window_cycle_ticks = [96, 240, 528, 960][trial % 4];
+            const base = windowsEvery([12, 24, 48][trial % 3], 1 + Math.floor(random() * 6), window_cycle_ticks, Math.floor(random() * 12));
             const extra = Array.from({ length: 3 }, () => {
-                const start = Math.floor(random() * (period - 5));
+                const start = Math.floor(random() * (window_cycle_ticks - 5));
                 return OpenRange.from(start, start + Math.floor(random() * 5));
             });
             const dropped = base.filter(() => random() > 0.1);
-            expect(enabledTicksMatch(OpenRange.reduceRanges([...dropped, ...extra]), period)).toBe(true);
+            expect(enabledTicksMatch(OpenRange.reduceRanges([...dropped, ...extra]), window_cycle_ticks)).toBe(true);
         }
     });
 });
@@ -192,7 +192,7 @@ describe("the clock of a blueprint with fuel inserters", () => {
     it("enables each fuel inserter for its window of every count of its fuel clock, and the others every period", async () => {
         const config = await loadConfigFromFile(ConfigPaths.ROCKET_FUEL_60);
         const result = generateClockForConfig(config, { logger: quiet, fuel_consumption_view: false });
-        const period = result.simulation_duration.ticks;
+        const window_cycle_ticks = result.simulation_duration.ticks;
         const fuel_clock = Object.values(result.unplanned_inserter_clocks!).find(clock => clock.own_clock)!;
         const window_ticks = fuel_clock.window.end - fuel_clock.window.start + 1;
 
@@ -207,11 +207,11 @@ describe("the clock of a blueprint with fuel inserters", () => {
         // the one clock counts a whole number of every fuel clock
         const span = 7040 * 2;
         const bioflux = enabledTicks(blueprint, "bioflux", span);
-        // every period has the same ticks enabled
-        const of_period = (index: number) => bioflux.filter(tick => Math.floor(tick / period) === index).map(tick => tick % period);
-        expect(of_period(1).length).toBeGreaterThan(0);
-        expect(of_period(5)).toEqual(of_period(1));
-        expect(of_period(9)).toEqual(of_period(1));
+        // every window cycle has the same ticks enabled
+        const of_window_cycle = (index: number) => bioflux.filter(tick => Math.floor(tick / window_cycle_ticks) === index).map(tick => tick % window_cycle_ticks);
+        expect(of_window_cycle(1).length).toBeGreaterThan(0);
+        expect(of_window_cycle(5)).toEqual(of_window_cycle(1));
+        expect(of_window_cycle(9)).toEqual(of_window_cycle(1));
 
         // one of the two nutrient combinators is enabled for a window every 176 ticks, the other every 220
         const fuel_windows = (modulus: number) => {
@@ -232,7 +232,7 @@ describe("the clock of a blueprint with fuel inserters", () => {
 
     it("keeps a clock per fuel interval, on a network of its own, when the period is not a whole number of ticks", async () => {
         const config = await loadConfigFromFile(ConfigPaths.ROCKET_FUEL_60);
-        const slower = { ...config, target_output: { ...config.target_output, items_per_second: 54 } };
+        const slower = { ...config, setpoint: { ...config.setpoint, items_per_second: 54 } };
         const result = generateClockForConfig(slower, { logger: quiet, fuel_consumption_view: false });
 
         expect(Number.isInteger(result.simulation_duration.ticks)).toBe(false);
@@ -255,8 +255,8 @@ describe("the target rate in a blueprint", async () => {
 
     it("is in the description of the blueprint, with the clock period", () => {
         expect(rocket_fuel.description).toBe([
-            "Target: 60 [item=rocket-fuel] per second",
-            "Clock period: 128 ticks",
+            "Setpoint: 60 [item=rocket-fuel] per second",
+            "Window cycle time: 128 ticks",
             `Made by Clock Generator ${GENERATOR.version}: https://clock-generator-self.vercel.app`,
             "Source: https://github.com/abucnasty/clock-generator",
         ].join("\n"));
@@ -274,7 +274,7 @@ describe("the target rate in a blueprint", async () => {
 
     it("is on the clock combinator, with the period and how the one clock counts", () => {
         expect(clockDescription(rocket_fuel).split("\n").slice(0, 2)).toEqual([
-            "Clock for [item=rocket-fuel] 60/s. Period 128 ticks; counts 1–2688 on [virtual-signal=signal-T] (21 periods, for the fuel clocks); [virtual-signal=signal-clock] = that mod 128",
+            "Clock for [item=rocket-fuel] 60/s. Window cycle time 128 ticks; counts 1–2688 on [virtual-signal=signal-T] (21 window cycles, for the fuel clocks); [virtual-signal=signal-clock] = that mod 128",
             "Wire every other combinator's output to the inserters it names; set them Enable if Anything > 0",
         ]);
     });
@@ -293,7 +293,7 @@ describe("the target rate in a blueprint", async () => {
     it("gives the rate of all copies and of one", async () => {
         const blueprint = generateClockForConfig(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250), { logger: quiet }).blueprint;
         expect(blueprint.description?.split("\n")[0])
-            .toBe("Target: 250 [item=agricultural-science-pack] per second over 5 copies (50 each)");
+            .toBe("Setpoint: 250 [item=agricultural-science-pack] per second over 5 copies (50 each)");
     });
 });
 
@@ -308,7 +308,7 @@ describe("the count of a clock", async () => {
     const conditionsOf = (blueprint: Blueprint): Condition[] => deciders(blueprint).flatMap(entity => deciderOf(entity).conditions ?? []);
     const readsLock = (entity: Entity) => deciderOf(entity).conditions.some(condition => condition.first_signal.name === "signal-lock");
     const isFilter = (entity: Entity) => readsLock(entity) && deciderOf(entity).outputs.some(output => output.signal.name === "signal-everything");
-    /** A decider that counts: it outputs the count it reads back, at most up to its period */
+    /** A decider that counts: it outputs the count it reads back, at most up to its window cycle */
     const isLoop = (entity: Entity) => readsLock(entity) && !isFilter(entity);
     const windowDeciders = (blueprint: Blueprint) => deciders(blueprint).filter(entity => !readsLock(entity));
     const numberOf = (entity: Entity) => entity.entity_number;
@@ -318,7 +318,7 @@ describe("the count of a clock", async () => {
         ["agricultural science", generateClockForConfig(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250), { logger: quiet }).blueprint],
         ["rocket fuel, one clock with the fuel clocks", generateClockForConfig(rocket_fuel, { logger: quiet, fuel_consumption_view: false }).blueprint],
         ["rocket fuel, subtick clock and fuel clocks of their own", generateClockForConfig(
-            { ...rocket_fuel, target_output: { ...rocket_fuel.target_output, items_per_second: 54 } },
+            { ...rocket_fuel, setpoint: { ...rocket_fuel.setpoint, items_per_second: 54 } },
             { logger: quiet, fuel_consumption_view: false },
         ).subtick!.blueprint],
     ];
@@ -369,7 +369,7 @@ describe("the count of a clock", async () => {
             is_on: false,
         });
         expect(constants[0].player_description).toBe(
-            "Clock lock: switch on to stop every clock; no inserter or drill is enabled while it is on. Off by default. Switching off starts the clocks again from the beginning, and the first period after may be a tick off");
+            "Clock lock: switch on to stop every clock; no inserter or drill is enabled while it is on. Off by default. Switching off starts the clocks again from the beginning, and the first window cycle after may be a tick off");
     });
 
     it.each(blueprints)("is counted by deciders that start over at 1 and wait there while the lock is on (%s)", (_, blueprint) => {
@@ -462,11 +462,11 @@ describe("the count of a clock", async () => {
 
     it("ends at the period, where the clock starts over", () => {
         const [, blueprint] = blueprints[0];
-        const period = Number(/Clock period: (\d+) ticks/.exec(blueprint.description ?? "")![1]);
+        const window_cycle_ticks = Number(/Window cycle time: (\d+) ticks/.exec(blueprint.description ?? "")![1]);
         const clock = blueprint.entities.find(entity => (entity.player_description ?? "").startsWith("Clock for"))!;
-        expect(deciderOf(clock).conditions[0]).toMatchObject({ first_signal: { name: "signal-clock" }, comparator: "<", constant: period });
-        expect(Math.max(...conditionsOf(blueprint).flatMap(it => it.constant === undefined ? [] : [it.constant]))).toBe(period);
-        expect((clock.player_description ?? "").split("\n")[0]).toContain(`Period ${period} ticks; counts 1–${period}`);
+        expect(deciderOf(clock).conditions[0]).toMatchObject({ first_signal: { name: "signal-clock" }, comparator: "<", constant: window_cycle_ticks });
+        expect(Math.max(...conditionsOf(blueprint).flatMap(it => it.constant === undefined ? [] : [it.constant]))).toBe(window_cycle_ticks);
+        expect((clock.player_description ?? "").split("\n")[0]).toContain(`Window cycle time ${window_cycle_ticks} ticks; counts 1–${window_cycle_ticks}`);
     });
 
     it("is, with no modulo and no fuel clock, a clock, the lock and a filter, like the example it follows", () => {
@@ -546,63 +546,63 @@ describe("the count of a clock", async () => {
     });
 
     describe("replaying the circuit", () => {
-        const periodOf = (blueprint: Blueprint) => Number(/Clock period: (\d+) ticks/.exec(blueprint.description ?? "")?.[1]);
+        const windowCycleOf = (blueprint: Blueprint) => Number(/Window cycle time: (\d+) ticks/.exec(blueprint.description ?? "")?.[1]);
         const countedBy = (loop: Entity) => deciderOf(loop).conditions[0].first_signal.name;
-        const periodOfLoop = (loop: Entity) => deciderOf(loop).conditions[0].constant!;
+        const windowCycleOfLoop = (loop: Entity) => deciderOf(loop).conditions[0].constant!;
         const valueOf = (replay: CircuitReplay, entity: Entity, connector: number, signal: string) => replay.network(numberOf(entity), connector).get(signal) ?? 0;
-        /** The windows a combinator is open for, as positions in the period: the values it checks for less 1 */
+        /** The windows a combinator is open for, as positions in the window cycle: the values it checks for less 1 */
         const windowsOf = (decider: Entity) => {
             const { conditions } = deciderOf(decider);
             return conditionWindows(conditions).map(window => [window.start - 1, window.end - 1]);
         };
-        /** The combinators of the windows that read the clock of the period and nothing else */
+        /** The combinators of the windows that read the clock of the window cycle and nothing else */
         const readingTheClock = (blueprint: Blueprint) => windowDeciders(blueprint)
             .filter(decider => deciderOf(decider).conditions.every(condition => condition.first_signal.name === "signal-clock"));
 
         it.each(blueprints)("counts 1 to the period on every clock and starts over (%s)", (_, blueprint) => {
             const replay = new CircuitReplay(blueprint);
             const loops = deciders(blueprint).filter(isLoop);
-            const longest = Math.max(...loops.map(periodOfLoop));
+            const longest = Math.max(...loops.map(windowCycleOfLoop));
             const counts = loops.map(() => [] as number[]);
             for (let tick = 0; tick < 2.5 * longest; tick++) {
                 replay.step();
                 loops.forEach((loop, index) => counts[index].push(replay.output(numberOf(loop)).get(countedBy(loop)) ?? 0));
             }
-            loops.forEach((loop, index) => expect(counts[index]).toEqual(counts[index].map((_, tick) => tick % periodOfLoop(loop) + 1)));
+            loops.forEach((loop, index) => expect(counts[index]).toEqual(counts[index].map((_, tick) => tick % windowCycleOfLoop(loop) + 1)));
         });
 
         it.each(blueprints)("gives the combinators of the windows a clock that counts 1 to its period (%s)", (_, blueprint) => {
             const replay = new CircuitReplay(blueprint);
             const [first] = windowDeciders(blueprint);
             const seen: number[] = [];
-            for (let tick = 0; tick < 2.2 * Math.max(...deciders(blueprint).filter(isLoop).map(periodOfLoop)); tick++) {
+            for (let tick = 0; tick < 2.2 * Math.max(...deciders(blueprint).filter(isLoop).map(windowCycleOfLoop)); tick++) {
                 replay.step();
                 seen.push(valueOf(replay, first, 2, "signal-clock"));
             }
             const steady = seen.slice(20);
             if (blueprint === blueprints[2][1]) {
-                // the subtick clock: the position in the period in 1/9 ticks, from 1, a step of the scale each tick
+                // the subtick clock: the position in the window cycle in 1/9 ticks, from 1, a step of the scale each tick
                 const [scale, modulus] = blueprint.entities.filter(it => it.name === "arithmetic-combinator")
                     .map(it => (it.control_behavior as { arithmetic_conditions: { second_constant: number } }).arithmetic_conditions.second_constant);
                 steady.slice(1).forEach((value, tick) => expect(value - 1).toBe((steady[tick] - 1 + scale) % modulus));
                 expect(Math.min(...steady)).toBeGreaterThanOrEqual(1);
             } else {
-                const period = periodOf(blueprint);
-                expect(steady.slice(1)).toEqual(steady.slice(1).map((_, tick) => steady[tick] % period + 1));
+                const window_cycle_ticks = windowCycleOf(blueprint);
+                expect(steady.slice(1)).toEqual(steady.slice(1).map((_, tick) => steady[tick] % window_cycle_ticks + 1));
                 expect(Math.min(...steady)).toBe(1);
-                expect(Math.max(...steady)).toBe(period);
+                expect(Math.max(...steady)).toBe(window_cycle_ticks);
             }
         });
 
         it.each(blueprints.slice(0, 2))("enables a combinator of a window for its planned window, two ticks after the clock counts it (%s)", (_, blueprint) => {
             const replay = new CircuitReplay(blueprint);
             const loop = blueprint.entities.find(isLoop)!;
-            const period = periodOf(blueprint);
+            const window_cycle_ticks = windowCycleOf(blueprint);
             const deciders_read = readingTheClock(blueprint);
             expect(deciders_read.length).toBeGreaterThan(0);
             const counts: number[] = [];
             const enabled = deciders_read.map(() => [] as boolean[]);
-            for (let tick = 0; tick < 4 * period + 30; tick++) {
+            for (let tick = 0; tick < 4 * window_cycle_ticks + 30; tick++) {
                 replay.step();
                 counts.push(replay.output(numberOf(loop)).get(countedBy(loop)) ?? 0);
                 deciders_read.forEach((decider, index) => enabled[index].push(replay.output(numberOf(decider)).size > 0));
@@ -610,8 +610,8 @@ describe("the count of a clock", async () => {
             // the filter and the combinator are a tick each: what the clock counted two ticks ago is what the combinator answers
             deciders_read.forEach((decider, index) => {
                 const windows = windowsOf(decider);
-                const expected = counts.map((count, tick) => ({ tick, on: windows.some(([a, b]) => { const position = (count - 1) % period; return position >= a && position <= b; }) }));
-                const from = 2 * period + 10;
+                const expected = counts.map((count, tick) => ({ tick, on: windows.some(([a, b]) => { const position = (count - 1) % window_cycle_ticks; return position >= a && position <= b; }) }));
+                const from = 2 * window_cycle_ticks + 10;
                 expect(enabled[index].slice(from + 2)).toEqual(expected.slice(from, counts.length - 2).map(it => it.on));
                 expect(enabled[index].some(Boolean)).toBe(true);
             });
@@ -623,7 +623,7 @@ describe("the count of a clock", async () => {
             const loops = deciders(blueprint).filter(isLoop);
             const filters = deciders(blueprint).filter(isFilter);
             const windows = windowDeciders(blueprint);
-            const period = Number.isInteger(periodOf(blueprint)) ? periodOf(blueprint) : periodOfLoop(loops[0]);
+            const window_cycle_ticks = Number.isInteger(windowCycleOf(blueprint)) ? windowCycleOf(blueprint) : windowCycleOfLoop(loops[0]);
             // the windows of the subtick clock are in 1/9 ticks and left to the other tests
             const reading = blueprint === blueprints[2][1] ? [] : readingTheClock(blueprint);
             const counted = loops[0];
@@ -649,19 +649,19 @@ describe("the count of a clock", async () => {
             replay.setOn(numberOf(lock), false);
             const counts: number[] = [];
             const enabled = reading.map(() => [] as boolean[]);
-            const total = 4 * period + 20;
+            const total = 4 * window_cycle_ticks + 20;
             run(total, () => {
                 counts.push(replay.output(numberOf(counted)).get(countedBy(counted)) ?? 0);
                 reading.forEach((decider, index) => enabled[index].push(replay.output(numberOf(decider)).size > 0));
             });
-            // the count goes on from the 1 it waited at, and starts over at its period
+            // the count goes on from the 1 it waited at, and starts over at its window cycle
             expect(counts.slice(0, 5)).toEqual([2, 3, 4, 5, 6]);
-            expect(counts.slice(0, periodOfLoop(counted) - 1).every((count, tick) => count === tick + 2)).toBe(true);
-            // from the second period the combinators read the clock as exactly as ever
-            const mark = 2 * period + 10;
+            expect(counts.slice(0, windowCycleOfLoop(counted) - 1).every((count, tick) => count === tick + 2)).toBe(true);
+            // from the second window cycle the combinators read the clock as exactly as ever
+            const mark = 2 * window_cycle_ticks + 10;
             reading.forEach((decider, index) => {
                 const windows_of = windowsOf(decider);
-                const expected = counts.map(count => windows_of.some(([a, b]) => (count - 1) % period >= a && (count - 1) % period <= b));
+                const expected = counts.map(count => windows_of.some(([a, b]) => (count - 1) % window_cycle_ticks >= a && (count - 1) % window_cycle_ticks <= b));
                 expect(enabled[index].slice(mark + 2)).toEqual(expected.slice(mark, total - 2));
             });
         });

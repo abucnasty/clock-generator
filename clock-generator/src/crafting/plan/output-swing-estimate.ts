@@ -1,16 +1,16 @@
 import type { Config } from "../../config";
 import { fraction } from "../../data-types/fraction";
-import { CraftingCyclePlan } from "../sequence/cycle/crafting-cycle";
+import { OutputCyclePlan } from "../sequence/cycle/output-cycle";
 import { EntityTransferCountMap } from "../sequence/cycle/swing-counts";
 import { createEntityRegistryFromConfig } from "../sequence/simulation-context";
 import { TargetProductionRate } from "../target-production-rate";
 import { ArithmeticBatchesFallBehind, ArithmeticWindowsNotApplicable, batchedSwingsWindowsByArithmetic } from "./batched-arithmetic";
-import { alwaysEnabledByConfig } from "./plan-run";
+import { alwaysEnabledByConfig } from "./unclocked-run";
 
 /**
  * The output swing estimate: whether the batched-swings clock of a count of output swings a cycle keeps up with its
  * target, from the build's supply, each machine's stock and the length of its output windows, by arithmetic and with
- * no run of the build. The count's cycle is planned as the planning run plans it (CraftingCyclePlan.create, no
+ * no run of the build. The count's cycle is planned as the planning run plans it (OutputCyclePlan.create, no
  * prepare step), and its windows made by the stock walk (batched-arithmetic.ts): the output takes each cycle's hands
  * in one batch from the cycle's start, lengthened to the hands the walk sees come late.
  *
@@ -29,16 +29,16 @@ export type OutputSwingEstimate =
 
 export function outputSwingEstimate(config: Config, swings: number): OutputSwingEstimate {
     if (!Number.isInteger(swings) || swings < 1) return { swings, verdict: "no rule", reason: `${swings} is no whole count of swings` };
-    if (config.target_output.counts === "destroyed") return { swings, verdict: "no rule", reason: "a target that counts an item destroyed" };
+    if (config.setpoint.counts === "destroyed") return { swings, verdict: "no rule", reason: "a target that counts an item destroyed" };
     const overrides = { ...config.overrides, terminal_swing_count: swings };
     const counted: Config = { ...config, overrides };
     try {
         const entity_registry = createEntityRegistryFromConfig(counted);
-        const target = TargetProductionRate.fromConfig(counted.target_output);
-        const crafting_cycle_plan = CraftingCyclePlan.create(target, entity_registry, counted, fraction(swings), overrides);
-        const recipe_lcm = EntityTransferCountMap.lcm(crafting_cycle_plan.entity_transfer_map);
-        batchedSwingsWindowsByArithmetic({ entity_registry, crafting_cycle_plan, recipe_lcm,
-            period_ticks: crafting_cycle_plan.total_duration_ticks.toDecimal() * recipe_lcm,
+        const target = TargetProductionRate.fromConfig(counted.setpoint);
+        const output_cycle_plan = OutputCyclePlan.create(target, entity_registry, counted, fraction(swings), overrides);
+        const recipe_lcm = EntityTransferCountMap.lcm(output_cycle_plan.entity_transfer_map);
+        batchedSwingsWindowsByArithmetic({ entity_registry, output_cycle_plan, recipe_lcm,
+            window_cycle_ticks: output_cycle_plan.total_duration_ticks.toDecimal() * recipe_lcm,
             always_enabled_by_config: alwaysEnabledByConfig(counted) });
         return { swings, verdict: "keeps up" };
     } catch (error) {

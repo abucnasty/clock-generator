@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { generateClockAlternatives } from "./generate-blueprint";
+import { combineClockAlternativeRuns, generateClockAlternatives, COORDINATED_SOURCES_MAKER } from "./generate-blueprint";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 
@@ -20,19 +20,23 @@ const generateOnEarlierSpeeds = async () => {
 };
 
 describe("military science: the shared windows keep the rate and recover where the separate ones do not", () => {
-    test("on the speeds before the build's own the shared clock is selected with 4 deciders", async () => {
+    test("on the speeds before the build's own the shared clock is selected with 4 deciders, the per-branch clock left aside", async () => {
         const generated = await generateOnEarlierSpeeds();
-        const selected = generated.alternatives[generated.selected_index];
-        expect(selected.id).toBe("planned-belt-slack-shared");
+        // the per-branch clock, composed from these after them, is not what this test is about; of today's makers the shared clock is selected
+        const made = generated.alternatives.filter(it => it.maker !== COORDINATED_SOURCES_MAKER);
+        const selected = made[combineClockAlternativeRuns([{ signature: "", alternatives: made }], it => it.ranking).selected_index];
+        expect(selected.id).toBe("round_robin_polling_shared");
+        expect(selected.maker).toBe("planned-belt-slack-shared");
         expect(selected.verdict).toBe("stable");
         expect(selected.deciders).toBe(4);
-        const separate = generated.alternatives.find(it => it.id === "planned-belt-slack")!;
+        const separate = generated.alternatives.find(it => it.maker === "planned-belt-slack")!;
         expect(separate.verdict).toBe("no recovery");
-        // the strategy says which construction made each: the grouped hands rule's windows are round-robin polling, shared or not
-        expect(selected.strategy).toEqual({ family: "round-robin-polling", qualifiers: ["output-swings", "shared-enable-windows"], construction: "grouped-hands",
+        // the strategy says which rule made each: the Round-Robin Polling rule's windows, shared or not
+        expect(selected.strategy).toMatchObject({ id: "round_robin_polling", tuning_method: "calculated", routing: { router: "direct" },
+            settings: { output_count: { kind: "output_swings", count: selected.result.used_terminal_swing_count }, shared_windows: "shared_enable_windows" },
             output_swings: selected.result.used_terminal_swing_count });
-        expect(separate.strategy).toMatchObject({ family: "round-robin-polling", construction: "grouped-hands" });
-        expect(separate.strategy.qualifiers).not.toContain("shared-enable-windows");
+        expect(separate.strategy).toMatchObject({ id: "round_robin_polling", tuning_method: "calculated" });
+        expect(separate.strategy.settings.shared_windows).toBeUndefined();
         // signals a minute: one for each window of a decider, shared by the inserters on it, counted where the wake-ups are
         expect(selected.assessment.signals_per_minute).toBeGreaterThan(0);
     });

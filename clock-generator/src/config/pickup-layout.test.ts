@@ -5,7 +5,7 @@ import {SimulationContext} from "../crafting/sequence/simulation-context";
 
 function config(source: object) {
     return {
-        target_output: {recipe: "iron-gear-wheel", items_per_second: 1, copies: 1},
+        setpoint: {recipe: "iron-gear-wheel", items_per_second: 1, copies: 1},
         machines: [{id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0}],
         inserters: [{id: 1, source: {type: "belt", id: 1, ...source}, sink: {type: "machine", id: 1}}],
         belts: [{id: 1, type: "turbo-transport-belt", lanes: [{ingredient: "iron-plate", stack_size: 4}]}],

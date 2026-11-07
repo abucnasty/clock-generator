@@ -1,9 +1,9 @@
 import { Config } from "../config";
 import { createEntityRegistryFromConfig } from "../crafting/sequence/simulation-context";
 import { configuredHandSize, Entity, EntityId } from "../entities";
-import { clockPeriods, outputPerPeriod, PeriodRange, recipesMaking } from "../harness/recording-output";
+import { clockWindowCycles, outputPerWindowCycle, WindowCycleRange, recipesMaking } from "../harness/recording-output";
 import { EntityMatch } from "./entity-matching";
-import { expandChangeList, Recording, recordedClockPeriod } from "./recording";
+import { expandChangeList, Recording, recordedClockWindowCycle } from "./recording";
 import { extractTransfers } from "./recording-history";
 import { wakeUpsOfRecording } from "./recording-wake-ups";
 
@@ -16,16 +16,16 @@ interface ComparedRecording {
 }
 
 interface CompareRecordingsOptions {
-    /** Items the build is expected to put out in each clock period */
-    expected_output_per_period?: number;
+    /** Items the build is expected to put out in each window cycle */
+    expected_output_per_window_cycle?: number;
     /**
      * Config ids of inserters whose swings do not repeat with the clock: a fuel inserter on a clock of its own. Their
      * states are compared by how much of the time they show, not position by position.
      */
     free_running_inserter_ids?: ReadonlySet<number>;
     /**
-     * Items a period by which what an inserter moves, or a machine finishes, may differ between the two. A hand more
-     * or less over the periods compared is allowed on top: a build that takes several periods to repeat is cut off
+     * Items a window cycle by which what an inserter moves, or a machine finishes, may differ between the two. A hand more
+     * or less over the window cycles compared is allowed on top: a build that takes several window cycles to repeat is cut off
      * at another place in each.
      */
     items_tolerance: number;
@@ -50,8 +50,8 @@ interface StateComparison {
     /** Share of the time the two show the same state, laid over each other clock position by clock position */
     agreement: number;
     /**
-     * How alike the two are in how much of the time they show each state, wherever in the period: an entity the
-     * clock does not hold to a place in the period, like the inserters of a loop of machines, can only be judged by this
+     * How alike the two are in how much of the time they show each state, wherever in the window cycle: an entity the
+     * clock does not hold to a place in the window cycle, like the inserters of a loop of machines, can only be judged by this
      */
     share_agreement: number;
     /** Share of the time in each state */
@@ -61,7 +61,7 @@ interface StateComparison {
     differences: StateDifference[];
 }
 
-interface PeriodCount {
+interface WindowCycleCount {
     mean: number;
     min: number;
     max: number;
@@ -71,10 +71,10 @@ interface InserterComparison {
     config_id: number;
     /** Its ends, e.g. "belt 2 -> machine 3" */
     label: string;
-    /** Items dropped in a clock period */
-    game_items: PeriodCount;
-    sim_items: PeriodCount;
-    /** Hands emptied in a clock period, on average */
+    /** Items dropped in a window cycle */
+    game_items: WindowCycleCount;
+    sim_items: WindowCycleCount;
+    /** Hands emptied in a window cycle, on average */
     game_swings: number;
     sim_swings: number;
     game_wake_ups_per_minute: number;
@@ -85,15 +85,15 @@ interface InserterComparison {
 interface MachineComparison {
     config_id: number;
     recipe: string;
-    /** Crafts and productivity bars finished in a clock period */
-    game_finished: PeriodCount;
-    sim_finished: PeriodCount;
+    /** Crafts and productivity bars finished in a window cycle */
+    game_finished: WindowCycleCount;
+    sim_finished: WindowCycleCount;
     states: StateComparison;
 }
 
 interface OutputComparison {
-    expected_per_period: number | null;
-    /** Items put out in each complete clock period */
+    expected_per_window_cycle: number | null;
+    /** Items put out in each complete window cycle */
     game: number[];
     sim: number[];
 }
@@ -101,8 +101,8 @@ interface OutputComparison {
 interface RecordingComparison {
     /** Positions the clock counts, the same in both */
     clock_ticks: number;
-    game_periods: number;
-    sim_periods: number;
+    game_window_cycles: number;
+    sim_window_cycles: number;
     output: OutputComparison;
     inserters: InserterComparison[];
     machines: MachineComparison[];
@@ -117,35 +117,35 @@ interface RecordingComparison {
 interface Side {
     recording: Recording;
     match: EntityMatch;
-    periods: PeriodRange[];
+    window_cycles: WindowCycleRange[];
     positions: number[];
 }
 
 function sideOf(compared: ComparedRecording): Side {
     const positions = compared.recording.clock?.values ?? [];
-    // a period that starts with the recording is left out: what a hand dropped on its first tick cannot be told
+    // a window cycle that starts with the recording is left out: what a hand dropped on its first tick cannot be told
     // without the sample before it, and a build may still be settling into its clock there
     const from = Math.max(compared.from_sample ?? 0, 1);
     return {
         recording: compared.recording,
         match: compared.match,
-        periods: clockPeriods(positions).filter(period => period.start >= from),
+        window_cycles: clockWindowCycles(positions).filter(window_cycle => window_cycle.start >= from),
         positions,
     };
 }
 
-function periodCount(values: number[]): PeriodCount {
+function windowCycleCount(values: number[]): WindowCycleCount {
     if (values.length === 0) {
         return { mean: 0, min: 0, max: 0 };
     }
     return { mean: values.reduce((sum, value) => sum + value, 0) / values.length, min: Math.min(...values), max: Math.max(...values) };
 }
 
-/** Items that left a hand in each period: every fall of the held count, as a hand goes onto a belt a stack at a time */
-function dropsPerPeriod(held: number[], periods: PeriodRange[]): number[] {
-    return periods.map(period => {
+/** Items that left a hand in each window cycle: every fall of the held count, as a hand goes onto a belt a stack at a time */
+function dropsPerWindowCycle(held: number[], window_cycles: WindowCycleRange[]): number[] {
+    return window_cycles.map(window_cycle => {
         let items = 0;
-        for (let i = Math.max(period.start, 1); i < period.end; i++) {
+        for (let i = Math.max(window_cycle.start, 1); i < window_cycle.end; i++) {
             if (held[i] < held[i - 1]) {
                 items += held[i - 1] - held[i];
             }
@@ -154,13 +154,13 @@ function dropsPerPeriod(held: number[], periods: PeriodRange[]): number[] {
     });
 }
 
-/** How often each state shows at each clock position over the periods, and over all of them */
+/** How often each state shows at each clock position over the window cycles, and over all of them */
 function stateCounts(states: string[], side: Side, clock_ticks: number): { by_position: Map<string, number>[]; total: Map<string, number>; samples: number } {
     const by_position: Map<string, number>[] = Array.from({ length: clock_ticks }, () => new Map());
     const total = new Map<string, number>();
     let samples = 0;
-    for (const period of side.periods) {
-        for (let i = period.start; i < period.end; i++) {
+    for (const window_cycle of side.window_cycles) {
+        for (let i = window_cycle.start; i < window_cycle.end; i++) {
             const at = by_position[side.positions[i]];
             if (at === undefined) {
                 continue;
@@ -205,11 +205,11 @@ function mostCommon(counts: Map<string, number>): string {
     return best;
 }
 
-/** How many times a bar starts over at each clock position, over the periods of a side: it falls where a craft finishes */
+/** How many times a bar starts over at each clock position, over the window cycles of a side: it falls where a craft finishes */
 function barResets(bar: number[], side: Side, clock_ticks: number): number[] {
     const resets = new Array<number>(clock_ticks).fill(0);
-    for (const period of side.periods) {
-        for (let i = Math.max(period.start, 1); i < period.end; i++) {
+    for (const window_cycle of side.window_cycles) {
+        for (let i = Math.max(window_cycle.start, 1); i < window_cycle.end; i++) {
             if (bar[i] < bar[i - 1] && side.positions[i] < clock_ticks) {
                 resets[side.positions[i]]++;
             }
@@ -220,7 +220,7 @@ function barResets(bar: number[], side: Side, clock_ticks: number): number[] {
 
 /**
  * Ticks by which the crafting bar of the simulator starts over before (negative) or after (positive) the game's: the
- * shift around the period that lays most of the game's resets on the simulator's, the smaller shift where two do
+ * shift around the window cycle that lays most of the game's resets on the simulator's, the smaller shift where two do
  * equally well. Null when either side shows no reset.
  */
 function barOffset(game_bar: number[], game: Side, sim_bar: number[], sim: Side, clock_ticks: number): number | null {
@@ -234,7 +234,7 @@ function barOffset(game_bar: number[], game: Side, sim_bar: number[], sim: Side,
         let matched = 0;
         game_resets.forEach((count, position) => {
             // a reset of both at one place counts as many times as the fewer of the two shows it
-            matched += Math.min(count / game.periods.length, sim_resets[(position + shift + clock_ticks) % clock_ticks] / sim.periods.length);
+            matched += Math.min(count / game.window_cycles.length, sim_resets[(position + shift + clock_ticks) % clock_ticks] / sim.window_cycles.length);
         });
         if (matched > best.matched + 1e-9 || Math.abs(matched - best.matched) <= 1e-9 && Math.abs(shift) < Math.abs(best.shift)) {
             best = { shift, matched };
@@ -324,12 +324,12 @@ export function buildDifferences(recording: Recording, match: EntityMatch, confi
 
 /**
  * Lays a recording of the game against a run of the simulator in the same format (see simulated-recording.ts): what
- * every inserter moved and every machine finished in a clock period, the state each showed at each position of the
+ * every inserter moved and every machine finished in a window cycle, the state each showed at each position of the
  * clock, and the wake-ups. Both are read the same way, so a difference is one between the game and the simulator
  * and not between two ways of counting.
  *
- * The two are not laid tick against tick: they start from different stocks, and a build can take several periods to
- * repeat. Each is folded over the positions of the clock instead, over its complete periods.
+ * The two are not laid tick against tick: they start from different stocks, and a build can take several window cycles to
+ * repeat. Each is folded over the positions of the clock instead, over its complete window cycles.
  */
 export function compareRecordings(
     game_recording: ComparedRecording,
@@ -337,23 +337,23 @@ export function compareRecordings(
     config: Config,
     options: Partial<CompareRecordingsOptions> = {},
 ): RecordingComparison {
-    const { expected_output_per_period, free_running_inserter_ids, items_tolerance } = { ...DEFAULT_COMPARE_RECORDINGS_OPTIONS, ...options };
+    const { expected_output_per_window_cycle, free_running_inserter_ids, items_tolerance } = { ...DEFAULT_COMPARE_RECORDINGS_OPTIONS, ...options };
     const game = sideOf(game_recording);
     const sim = sideOf(sim_recording);
     const issues: string[] = buildDifferences(game.recording, game.match, config)
         .map(difference => `The config does not describe the recorded build. ${difference}`);
     const notes: string[] = [];
-    // a hand, or a craft, more or less over the periods compared
-    const periods_compared = Math.max(1, Math.min(game.periods.length, sim.periods.length));
+    // a hand, or a craft, more or less over the window cycles compared
+    const window_cycles_compared = Math.max(1, Math.min(game.window_cycles.length, sim.window_cycles.length));
 
-    const game_clock = recordedClockPeriod(game.recording);
-    const clock_ticks = recordedClockPeriod(sim.recording) ?? 0;
+    const game_clock = recordedClockWindowCycle(game.recording);
+    const clock_ticks = recordedClockWindowCycle(sim.recording) ?? 0;
     if (game_clock === null) {
         issues.push("The recording has no clock values, so it cannot be laid against the clock: was the clock combinator part of what was recorded?");
     } else if (game_clock !== clock_ticks) {
         issues.push(`The recorded clock counts ${game_clock} ticks, the clock of this config ${clock_ticks}: the blueprint that was recorded is not this clock.`);
     }
-    if (game.periods.length === 0 && game_clock !== null) {
+    if (game.window_cycles.length === 0 && game_clock !== null) {
         issues.push("The recording does not hold one complete clock period.");
     }
 
@@ -361,8 +361,8 @@ export function compareRecordings(
         new Map(entities.flatMap(entity => matched.has(entity.id) ? [[matched.get(entity.id)!, entity] as const] : []));
     const statesOf = (side: Side, changes: [number, string][]) => expandChangeList(changes, side.recording.sample_count, "none");
     const wakeUpsBy = (side: Side) => {
-        const from = side.periods[0]?.start ?? 0;
-        const to = side.periods[side.periods.length - 1]?.end ?? 0;
+        const from = side.window_cycles[0]?.start ?? 0;
+        const to = side.window_cycles[side.window_cycles.length - 1]?.end ?? 0;
         return wakeUpsOfRecording(side.recording, side.match, from, to, config);
     };
     const [game_wake_ups, sim_wake_ups] = [wakeUpsBy(game), wakeUpsBy(sim)];
@@ -379,14 +379,14 @@ export function compareRecordings(
         }
         const swingsIn = (side: Side, inserter: typeof sim_inserter) => {
             const swings = extractTransfers(inserter, side.positions).filter(swing => !swing.truncated_end);
-            const counted = side.periods.map(period => swings.filter(swing => swing.end_index > period.start && swing.end_index <= period.end).length);
-            return periodCount(counted).mean;
+            const counted = side.window_cycles.map(window_cycle => swings.filter(swing => swing.end_index > window_cycle.start && swing.end_index <= window_cycle.end).length);
+            return windowCycleCount(counted).mean;
         };
         const comparison: InserterComparison = {
             config_id,
             label: `${sim_inserter.source.type} ${sim_inserter.source.id} -> ${sim_inserter.sink.type} ${sim_inserter.sink.id}`,
-            game_items: periodCount(dropsPerPeriod(game_inserter.samples.held_count, game.periods)),
-            sim_items: periodCount(dropsPerPeriod(sim_inserter.samples.held_count, sim.periods)),
+            game_items: windowCycleCount(dropsPerWindowCycle(game_inserter.samples.held_count, game.window_cycles)),
+            sim_items: windowCycleCount(dropsPerWindowCycle(sim_inserter.samples.held_count, sim.window_cycles)),
             game_swings: swingsIn(game, game_inserter),
             sim_swings: swingsIn(sim, sim_inserter),
             game_wake_ups_per_minute: wakeUpsOfInserter(game_wake_ups, config_id),
@@ -397,7 +397,7 @@ export function compareRecordings(
             ),
         };
         inserters.push(comparison);
-        if (Math.abs(comparison.game_items.mean - comparison.sim_items.mean) > items_tolerance + sim_inserter.stack_size / periods_compared) {
+        if (Math.abs(comparison.game_items.mean - comparison.sim_items.mean) > items_tolerance + sim_inserter.stack_size / window_cycles_compared) {
             issues.push(`Inserter ${config_id} (${comparison.label}) moves ${comparison.game_items.mean.toFixed(2)} items a period in the game `
                 + `and ${comparison.sim_items.mean.toFixed(2)} in the simulator.`);
         }
@@ -412,7 +412,7 @@ export function compareRecordings(
             continue;
         }
         const finishedIn = (side: Side, finished: number[]) =>
-            periodCount(side.periods.map(period => finished[period.end - 1] - finished[Math.max(period.start - 1, 0)]));
+            windowCycleCount(side.window_cycles.map(window_cycle => finished[window_cycle.end - 1] - finished[Math.max(window_cycle.start - 1, 0)]));
         const comparison: MachineComparison = {
             config_id,
             recipe: sim_machine.recipe,
@@ -431,25 +431,25 @@ export function compareRecordings(
             }
         }
         const spread = Math.max(comparison.game_finished.max - comparison.game_finished.min, comparison.sim_finished.max - comparison.sim_finished.min);
-        if (Math.abs(comparison.game_finished.mean - comparison.sim_finished.mean) > items_tolerance + spread / periods_compared) {
+        if (Math.abs(comparison.game_finished.mean - comparison.sim_finished.mean) > items_tolerance + spread / window_cycles_compared) {
             issues.push(`Machine ${config_id} (${comparison.recipe}) finishes ${comparison.game_finished.mean.toFixed(2)} crafts and productivity bars a period `
                 + `in the game and ${comparison.sim_finished.mean.toFixed(2)} in the simulator.`);
         }
     }
 
-    const recipes = recipesMaking(config, config.target_output.recipe);
-    const periods_from = (side: Side) => new Set(side.periods.map(period => period.start));
+    const recipes = recipesMaking(config, config.setpoint.recipe);
+    const window_cycles_from = (side: Side) => new Set(side.window_cycles.map(window_cycle => window_cycle.start));
     const outputOf = (side: Side) => {
-        const kept = periods_from(side);
-        return outputPerPeriod(side.recording, recipes).filter(period => kept.has(period.start)).map(period => period.items);
+        const kept = window_cycles_from(side);
+        return outputPerWindowCycle(side.recording, recipes).filter(window_cycle => kept.has(window_cycle.start)).map(window_cycle => window_cycle.items);
     };
-    const output: OutputComparison = { expected_per_period: expected_output_per_period ?? null, game: outputOf(game), sim: outputOf(sim) };
-    if (expected_output_per_period !== undefined) {
+    const output: OutputComparison = { expected_per_window_cycle: expected_output_per_window_cycle ?? null, game: outputOf(game), sim: outputOf(sim) };
+    if (expected_output_per_window_cycle !== undefined) {
         const off = (who: string, items: number[]) => {
-            const periods = items.flatMap((it, index) => it === expected_output_per_period ? [] : [`${index + 1}: ${it}`]);
-            if (periods.length > 0) {
-                issues.push(`The ${who} put out something other than the expected ${expected_output_per_period} items in ${periods.length} of ${items.length} `
-                    + `clock periods (${periods.slice(0, 8).join(", ")}${periods.length > 8 ? ", ..." : ""}).`);
+            const window_cycles = items.flatMap((it, index) => it === expected_output_per_window_cycle ? [] : [`${index + 1}: ${it}`]);
+            if (window_cycles.length > 0) {
+                issues.push(`The ${who} put out something other than the expected ${expected_output_per_window_cycle} items in ${window_cycles.length} of ${items.length} `
+                    + `clock periods (${window_cycles.slice(0, 8).join(", ")}${window_cycles.length > 8 ? ", ..." : ""}).`);
             }
         };
         off("game", output.game);
@@ -465,8 +465,8 @@ export function compareRecordings(
 
     return {
         clock_ticks,
-        game_periods: game.periods.length,
-        sim_periods: sim.periods.length,
+        game_window_cycles: game.window_cycles.length,
+        sim_window_cycles: sim.window_cycles.length,
         output,
         inserters,
         machines,
@@ -496,7 +496,7 @@ function formatShares(states: StateComparison): string {
     return names.map(name => `${short(name)} ${percent(states.game[name])}/${percent(states.sim[name])}`).join(", ");
 }
 
-function formatCount(count: PeriodCount): string {
+function formatCount(count: WindowCycleCount): string {
     const mean = Number.isInteger(count.mean) ? `${count.mean}` : count.mean.toFixed(2);
     return count.min === count.max ? mean : `${mean} (${count.min}-${count.max})`;
 }
@@ -504,7 +504,7 @@ function formatCount(count: PeriodCount): string {
 function formatOutput(items: number[]): string {
     const counts = new Map<number, number>();
     items.forEach(it => counts.set(it, (counts.get(it) ?? 0) + 1));
-    return Array.from(counts).sort(([, a], [, b]) => b - a).map(([amount, periods]) => `${amount} in ${periods}`).join(", ") || "none";
+    return Array.from(counts).sort(([, a], [, b]) => b - a).map(([amount, window_cycles]) => `${amount} in ${window_cycles}`).join(", ") || "none";
 }
 
 /** Differences listed for an entity before the rest is summed up in a line */
@@ -525,10 +525,10 @@ export function formatRecordingComparison(report: RecordingComparison, options: 
         }
     };
 
-    lines.push(`Clock: ${report.clock_ticks} ticks | complete periods: ${report.game_periods} recorded, ${report.sim_periods} simulated`);
+    lines.push(`Clock: ${report.clock_ticks} ticks | complete periods: ${report.game_window_cycles} recorded, ${report.sim_window_cycles} simulated`);
     lines.push("Every pair of figures is game/simulator.");
     lines.push("");
-    lines.push(`Output a period${report.output.expected_per_period === null ? "" : `, ${report.output.expected_per_period} expected`}:`);
+    lines.push(`Output a period${report.output.expected_per_window_cycle === null ? "" : `, ${report.output.expected_per_window_cycle} expected`}:`);
     lines.push(`  game:      ${formatOutput(report.output.game)} periods`);
     lines.push(`  simulator: ${formatOutput(report.output.sim)} periods`);
     lines.push("");

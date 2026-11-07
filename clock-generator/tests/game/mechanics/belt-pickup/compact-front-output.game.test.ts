@@ -22,7 +22,7 @@ test("compact normal entrance naturally crafts and transfers circuits onto its c
     try {
         const config = await loadConfigFromFile(path.join(fixture, "config.json"));
         configAtSpeed(config, speed);
-        config.target_output.recipe = "electronic-circuit";
+        config.setpoint.recipe = "electronic-circuit";
         config.machines[0] = {...config.machines[0], recipe: "electronic-circuit", productivity: 0, crafting_speed: 1.25};
         config.belts.find(belt => belt.id === 1)!.lanes[0].ingredient = "electronic-circuit";
         for (const lane of config.belts.find(belt => belt.id === 2)!.lanes)

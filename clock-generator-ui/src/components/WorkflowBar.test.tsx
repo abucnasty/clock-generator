@@ -52,7 +52,7 @@ it('turns Generate on again once the build has changed and the refusal is gone',
 });
 
 it('leaves Generate on for the other blocking errors, which it goes to instead', () => {
-    const fieldError = { message: 'x', diagnostics: [{ kind: 'field' as const, path: ['target_output', 'recipe'], message: 'Required' }] };
+    const fieldError = { message: 'x', diagnostics: [{ kind: 'field' as const, path: ['setpoint', 'recipe'], message: 'Required' }] };
     show(<WorkflowBar {...bar(fieldError)} />);
     expect((screen.getByRole('button', { name: 'Generate' }) as HTMLButtonElement).disabled).toBe(false);
 });

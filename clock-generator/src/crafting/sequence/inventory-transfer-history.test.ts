@@ -27,8 +27,8 @@ describe("trimEndsToAvoidBackSwingWakeLists", () => {
             total_transfer_count: fraction(4),
             stack_size: 16,
         }]]);
-        const trim = (transfers: InventoryTransfer[], period_ticks?: number) => InventoryTransferHistory
-            .trimEndsToAvoidBackSwingWakeLists(new InventoryTransferHistory(new Map([[inserter.entity_id, transfers]])), registry, plan, period_ticks)
+        const trim = (transfers: InventoryTransfer[], window_cycle_ticks?: number) => InventoryTransferHistory
+            .trimEndsToAvoidBackSwingWakeLists(new InventoryTransferHistory(new Map([[inserter.entity_id, transfers]])), registry, plan, window_cycle_ticks)
             .get(inserter.entity_id)!
             .map(transfer => [transfer.tick_range.start_inclusive, transfer.tick_range.end_inclusive, transfer.amount]);
         return { trim, back_swing_ticks: inserter.animation.rotation.ticks };
@@ -46,7 +46,7 @@ describe("trimEndsToAvoidBackSwingWakeLists", () => {
         const in_flight: InventoryTransfer = { item_name: "jelly", tick_range: OpenRange.from(1, 50), amount: 120, pickup_tick_before_run: -6 };
         expect(trim([in_flight], 64)).toEqual([
             [1, 50 - back_swing_ticks, 120],
-            // 58 is tick -6 a period later, and the window runs up to where the one from tick 1 takes over
+            // 58 is tick -6 a window cycle later, and the window runs up to where the one from tick 1 takes over
             [58, 64, 0],
         ]);
     });

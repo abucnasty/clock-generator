@@ -90,16 +90,16 @@
         "inserter:29/processing-unit",
         "inserter:29/flying-robot-frame"
       ],
-      "periods": [
-        {"swings":3,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":168,"denominator":1},"cycles":8,"period_ticks":1344,"kept":true},
-        {"swings":4,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":224,"denominator":1},"cycles":6,"period_ticks":1344,"kept":true},
-        {"swings":5,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":280,"denominator":1},"cycles":24,"period_ticks":6720,"kept":true},
-        {"swings":6,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":336,"denominator":1},"cycles":4,"period_ticks":1344,"kept":true},
-        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":112,"denominator":1},"cycles":12,"period_ticks":1344,"kept":true},
-        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":56,"denominator":1},"cycles":24,"period_ticks":1344,"kept":true},
-        {"swings":3,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":168,"denominator":1},"cycles":8,"period_ticks":1344,"kept":true}
+      "window_cycles": [
+        {"swings":3,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":168,"denominator":1},"cycles":8,"window_cycle_ticks":1344,"kept":true},
+        {"swings":4,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":224,"denominator":1},"cycles":6,"window_cycle_ticks":1344,"kept":true},
+        {"swings":5,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":280,"denominator":1},"cycles":24,"window_cycle_ticks":6720,"kept":true},
+        {"swings":6,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":336,"denominator":1},"cycles":4,"window_cycle_ticks":1344,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":112,"denominator":1},"cycles":12,"window_cycle_ticks":1344,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":56,"denominator":1},"cycles":24,"window_cycle_ticks":1344,"kept":true},
+        {"swings":3,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":168,"denominator":1},"cycles":8,"window_cycle_ticks":1344,"kept":true}
       ],
-      "duty": [
+      "utilization": [
         {
           "producer": "machine:utility-science-pack",
           "members": [
@@ -120,7 +120,7 @@
             "numerator": 2100260433333333,
             "denominator": 87500000000000
           },
-          "duty": {
+          "utilization": {
             "numerator": 2000000000000000,
             "denominator": 2100260433333333
           }
@@ -141,7 +141,7 @@
             "numerator": 799,
             "denominator": 15
           },
-          "duty": {
+          "utilization": {
             "numerator": 1800,
             "denominator": 5593
           }
@@ -159,7 +159,7 @@
             "numerator": 235,
             "denominator": 2
           },
-          "duty": {
+          "utilization": {
             "numerator": 30,
             "denominator": 329
           }
@@ -175,7 +175,7 @@
       "planned": 3,
       "higher_up_to_ticks": 2400
     },
-    "main_period": {
+    "main_window_cycle": {
       "ticks": 1344,
       "exact": {
         "numerator": 1344,
@@ -202,5 +202,5 @@
       "action": "none"
     }
   },
-  "result_windows": null
+  "exhaust": null
 }

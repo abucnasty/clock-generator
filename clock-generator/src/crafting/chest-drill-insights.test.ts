@@ -21,6 +21,6 @@ describe("the note on the drills into containers", () => {
             chest_drills: [{ drill_id: 1, chest_id: 1, chest_type: ChestType.CAR, item: "iron-ore", planned: true, enabled_ticks: 1, window_count: 1 }],
         });
         expect(insight.title).toBe("The drills into containers are enabled just in time");
-        expect(insight.what).toBe("Drill 1 drops iron ore into Car 1 and is enabled 1 tick of the 72-tick period, in 1 window.");
+        expect(insight.what).toBe("Drill 1 drops iron ore into Car 1 and is enabled 1 tick of the 72-tick window cycle, in 1 enable window.");
     });
 });

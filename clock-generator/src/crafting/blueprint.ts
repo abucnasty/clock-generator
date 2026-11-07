@@ -7,14 +7,14 @@ import { Duration, OpenRange } from "../data-types";
 import { ReadableEntityRegistry, Inserter, EntityId, Entity } from "../entities";
 import { InventoryTransfer } from "./sequence/inventory-transfer";
 import { InventoryTransferHistory } from "./sequence/inventory-transfer-history";
-import { CraftingCyclePlan } from "./sequence/cycle/crafting-cycle";
+import { OutputCyclePlan } from "./sequence/cycle/output-cycle";
 import { InserterClock } from "./sequence/unplanned-inserter-clock";
 import {
     chestDrillDescriptionLines, clockDescriptionLines, deciderWindows, formatRate, generatorDescriptionLines, itemIcons, lockFilterDescription, PART_OF_THE_CLOCK,
-    plannedDescriptionLines, shownPeriodTicks, turnLine, unplannedDescriptionLines,
+    plannedDescriptionLines, shownWindowCycleTicks, turnLine, unplannedDescriptionLines,
 } from "./descriptions";
 import { GENERATOR } from "../generator";
-import { wholeBounds } from "../common/subtick-period";
+import { wholeBounds } from "../common/subtick-window-cycle";
 import { GROUP_GAP_TILES, placeByTurns, TurnGroup, turnTicks } from "./turn-groups";
 import { FactorioDataService } from "../data/factorio-data-service";
 
@@ -29,8 +29,8 @@ function notClocked(entity_registry: ReadableEntityRegistry, clocked: EntityId[]
 }
 
 /** What the lines of an enabling combinator say about the clock it reads */
-interface PeriodText {
-    /** The period as its lines give it (shownPeriodTicks) */
+interface WindowCycleText {
+    /** The window cycle as its lines give it (shownWindowCycleTicks) */
     ticks: string;
     /** The scale of a subtick clock, whose windows are in 1/scale ticks */
     subtick_scale?: number;
@@ -40,9 +40,9 @@ function createDeciderCombinatorForTransfers(
     inventory_transfers: InventoryTransfer[],
     entity_id: EntityId,
     entity_registry: ReadableEntityRegistry,
-    cycle: CraftingCyclePlan,
-    cycles_in_period: number,
-    period: PeriodText,
+    cycle: OutputCyclePlan,
+    cycles_in_window_cycle: number,
+    window_cycle: WindowCycleText,
     position: Position,
     mapRanges: (ranges: OpenRange[]) => OpenRange[] = ranges => ranges,
     modulo?: { split: ModuloRanges; signal: SignalId },
@@ -83,10 +83,10 @@ function createDeciderCombinatorForTransfers(
             items,
             entity_ids.flatMap(id => {
                 const counts = cycle.entity_transfer_map.get(id);
-                return counts === undefined ? [] : [{ entity_id: id, swings: counts.total_transfer_count.multiply(cycles_in_period) }];
+                return counts === undefined ? [] : [{ entity_id: id, swings: counts.total_transfer_count.multiply(cycles_in_window_cycle) }];
             }),
-            deciderWindows(ranges, clockValueRanges, modulo ? { modulus: modulo.split.modulus, signal: modulo.signal } : undefined, period.subtick_scale),
-            period.ticks,
+            deciderWindows(ranges, clockValueRanges, modulo ? { modulus: modulo.split.modulus, signal: modulo.signal } : undefined, window_cycle.subtick_scale),
+            window_cycle.ticks,
         );
     }
 
@@ -100,8 +100,8 @@ function createDeciderCombinatorForTransfers(
     if (!swing_counts && Entity.isDrill(entity)) {
         // a drill into a chest: its windows are made from the takes out of the chest, outside the swing counts
         description_lines = chestDrillDescriptionLines(entity_ids, entity_registry, items,
-            deciderWindows(ranges, clockValueRanges, modulo ? { modulus: modulo.split.modulus, signal: modulo.signal } : undefined, period.subtick_scale),
-            period.ticks);
+            deciderWindows(ranges, clockValueRanges, modulo ? { modulus: modulo.split.modulus, signal: modulo.signal } : undefined, window_cycle.subtick_scale),
+            window_cycle.ticks);
     }
 
     // after the lines that say what it switches on and when; the lines Factorio keeps are the first ones
@@ -132,27 +132,27 @@ function createDeciderCombinatorForTransfers(
 
 /**
  * The rate the clock was made for, so a blueprint says what it is meant to deliver:
- * "Target: 265 [item=agricultural-science-pack] per second over 5 copies (53 each)"
+ * "Setpoint: 265 [item=agricultural-science-pack] per second over 5 copies (53 each)"
  */
-function targetRateDescription(cycle: CraftingCyclePlan): string {
+function targetRateDescription(cycle: OutputCyclePlan): string {
     const target = cycle.production_rate;
     const item_icon = SignalId.toDescriptionString(SignalId.item(target.total_production_rate.item));
     const total = formatRate(target.total_production_rate.amount_per_second.toDecimal());
     if (target.copies === 1) {
-        return `Target: ${total} ${item_icon} per second`;
+        return `Setpoint: ${total} ${item_icon} per second`;
     }
     const each = formatRate(target.machine_production_rate.amount_per_second.toDecimal());
-    return `Target: ${total} ${item_icon} per second over ${target.copies} copies (${each} each)`;
+    return `Setpoint: ${total} ${item_icon} per second over ${target.copies} copies (${each} each)`;
 }
 
 /**
- * A clock for a fractional period p/q ticks: a normal clock counts p ticks, and two arithmetic
- * combinators turn that into (clock * q) % p, the position in the period in 1/q-tick units.
- * The pattern wraps seamlessly because the clock period p times q is a multiple of p.
+ * A clock for a fractional window cycle p/q ticks: a normal clock counts p ticks, and two arithmetic
+ * combinators turn that into (clock * q) % p, the position in the window cycle in 1/q-tick units.
+ * The pattern wraps seamlessly because the window cycle p times q is a multiple of p.
  */
 export interface SubtickClock {
-    /** p: clock period in ticks, and the modulo applied to the subtick clock */
-    period_ticks: number;
+    /** p: window cycle in ticks, and the modulo applied to the subtick clock */
+    window_cycle_ticks: number;
     /** q: how many scaled units make one tick */
     scale: number;
 }
@@ -166,7 +166,7 @@ const SUBTICK_CLOCK_EXTRA_LATENCY_TICKS = 2;
  * and adds 1 to each modulo of the count (see DeciderCombinatorEntity.clock), and the filter after the subtick clock
  * adds 1 to it. Each modulo and the subtick clock is a tick behind the count: that tick makes up for the one the
  * decider adds, so each is its position in its modulus plus 1 and nothing has to be shifted.
- * The windows stay 0-based positions in the period; only the constants of the deciders are this much more.
+ * The windows stay 0-based positions in the window cycle; only the constants of the deciders are this much more.
  */
 const CLOCK_FIRST_VALUE = 1;
 
@@ -207,7 +207,7 @@ export function lockWires(lock: ConstantCombinatorEntity, receivers: CircuitEnti
     return wires;
 }
 
-/** Decider constants are whole numbers; fractional bounds (from a fractional period's wrap) are rounded inward */
+/** Decider constants are whole numbers; fractional bounds (from a fractional window cycle's wrap) are rounded inward */
 function wholeRanges(ranges: OpenRange[]): OpenRange[] {
     return ranges.flatMap(range => {
         const bounds = wholeBounds(range.start_inclusive, range.end_inclusive);
@@ -241,29 +241,29 @@ function maskRuns(mask: Uint8Array, length: number): OpenRange[] {
 }
 
 /**
- * The split of whole-tick windows in a whole-tick period that needs the fewest decider conditions, or null when
- * no divisor of the period beats listing every window. Long periods (a high LCM) mostly repeat every crafting cycle.
+ * The split of whole-tick windows in a whole-tick window cycle that needs the fewest decider conditions, or null when
+ * no divisor of the window cycle beats listing every window. Long window cycles (a high LCM) mostly repeat every crafting cycle.
  */
-export function splitRepeatingRanges(ranges: OpenRange[], period: number): ModuloRanges | null {
-    if (!Number.isInteger(period) || ranges.length < 2) {
+export function splitRepeatingRanges(ranges: OpenRange[], window_cycle_ticks: number): ModuloRanges | null {
+    if (!Number.isInteger(window_cycle_ticks) || ranges.length < 2) {
         return null;
     }
-    const mask = new Uint8Array(period);
+    const mask = new Uint8Array(window_cycle_ticks);
     for (const range of ranges) {
-        for (let tick = Math.max(0, range.start_inclusive); tick <= Math.min(period - 1, range.end_inclusive); tick++) {
+        for (let tick = Math.max(0, range.start_inclusive); tick <= Math.min(window_cycle_ticks - 1, range.end_inclusive); tick++) {
             mask[tick] = 1;
         }
     }
     let best: ModuloRanges | null = null;
-    let best_count = maskRuns(mask, period).length;
-    for (let modulus = 1; modulus < period; modulus++) {
-        if (period % modulus !== 0) {
+    let best_count = maskRuns(mask, window_cycle_ticks).length;
+    for (let modulus = 1; modulus < window_cycle_ticks; modulus++) {
+        if (window_cycle_ticks % modulus !== 0) {
             continue;
         }
         const repeating_mask = new Uint8Array(modulus);
         for (let position = 0; position < modulus; position++) {
             let every = 1;
-            for (let tick = position; tick < period && every; tick += modulus) {
+            for (let tick = position; tick < window_cycle_ticks && every; tick += modulus) {
                 every = mask[tick];
             }
             repeating_mask[position] = every;
@@ -273,7 +273,7 @@ export function splitRepeatingRanges(ranges: OpenRange[], period: number): Modul
             continue;
         }
         const remaining_mask = mask.map((enabled, tick) => enabled && !repeating_mask[tick % modulus] ? 1 : 0);
-        const remaining = maskRuns(remaining_mask, period);
+        const remaining = maskRuns(remaining_mask, window_cycle_ticks);
         if (repeating.length + remaining.length < best_count) {
             best = { modulus, repeating, remaining };
             best_count = repeating.length + remaining.length;
@@ -282,22 +282,22 @@ export function splitRepeatingRanges(ranges: OpenRange[], period: number): Modul
     return best;
 }
 
-/** The signal one clock for the period and the fuel clocks counts on, which leaves the clock signal for the clock of the period */
+/** The signal one clock for the window cycle and the fuel clocks counts on, which leaves the clock signal for the clock of the window cycle */
 const MERGED_CLOCK_SIGNAL = SignalId.virtual("signal-T");
 
 /** The largest count a signal holds */
 const MAX_SIGNAL_VALUE = 2 ** 31 - 1;
 
 /**
- * Ticks one clock has to count to hold a whole number of periods and of every fuel clock: their least common
- * multiple. Null when the period is not a whole number of ticks or the count does not fit a signal.
+ * Ticks one clock has to count to hold a whole number of window cycles and of every fuel clock: their least common
+ * multiple. Null when the window cycle is not a whole number of ticks or the count does not fit a signal.
  */
-export function mergedClockTicks(period: number, fuel_clock_ticks: number[]): number | null {
-    if (!Number.isInteger(period) || fuel_clock_ticks.some(ticks => !Number.isInteger(ticks) || ticks < 1)) {
+export function mergedClockTicks(window_cycle_ticks: number, fuel_clock_ticks: number[]): number | null {
+    if (!Number.isInteger(window_cycle_ticks) || fuel_clock_ticks.some(ticks => !Number.isInteger(ticks) || ticks < 1)) {
         return null;
     }
     const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
-    let merged = period;
+    let merged = window_cycle_ticks;
     for (const ticks of fuel_clock_ticks) {
         merged = merged / gcd(merged, ticks) * ticks;
         if (merged > MAX_SIGNAL_VALUE) {
@@ -307,22 +307,22 @@ export function mergedClockTicks(period: number, fuel_clock_ticks: number[]): nu
     return merged;
 }
 
-/** Whole-tick windows that run past the end of the period, carried over to its start */
-function wrapRangesIntoPeriod(ranges: OpenRange[], period: number): OpenRange[] {
-    if (!Number.isInteger(period)) {
+/** Whole-tick windows that run past the end of the window cycle, carried over to its start */
+function wrapRangesIntoWindowCycle(ranges: OpenRange[], window_cycle_ticks: number): OpenRange[] {
+    if (!Number.isInteger(window_cycle_ticks)) {
         return ranges;
     }
-    return OpenRange.reduceRanges(ranges.flatMap(range => range.end_inclusive < period || range.start_inclusive >= period
+    return OpenRange.reduceRanges(ranges.flatMap(range => range.end_inclusive < window_cycle_ticks || range.start_inclusive >= window_cycle_ticks
         ? [range]
-        : [OpenRange.from(range.start_inclusive, period - 1), OpenRange.from(0, range.end_inclusive - period)]));
+        : [OpenRange.from(range.start_inclusive, window_cycle_ticks - 1), OpenRange.from(0, range.end_inclusive - window_cycle_ticks)]));
 }
 
 /**
- * Windows in ticks of the p/q period, as 0-based positions of the subtick clock shifted back by the extra combinator
+ * Windows in ticks of the p/q window cycle, as 0-based positions of the subtick clock shifted back by the extra combinator
  * latency. The count is its position plus the first value, a tick ahead, which makes up for one tick of the latency.
  */
 function subtickRanges(ranges: OpenRange[], clock: SubtickClock): OpenRange[] {
-    const { period_ticks: p, scale: q } = clock;
+    const { window_cycle_ticks: p, scale: q } = clock;
     const latency_ticks = SUBTICK_CLOCK_EXTRA_LATENCY_TICKS - CLOCK_FIRST_VALUE;
     const scaled: OpenRange[] = [];
     for (const range of ranges) {
@@ -343,7 +343,7 @@ function subtickRanges(ranges: OpenRange[], clock: SubtickClock): OpenRange[] {
 /** What the combinators of a clock blueprint do, as data, for what builds it to read instead of their descriptions */
 export interface ClockSchedule {
     /**
-     * Ticks the clock counts before it starts over: the period, the whole ticks of a subtick clock, or the count of a
+     * Ticks the clock counts before it starts over: the window cycle, the whole ticks of a subtick clock, or the count of a
      * clock merged with fuel clocks. The game counts only its whole part.
      */
     counted_ticks: number;
@@ -354,17 +354,17 @@ export interface ClockSchedule {
 /** A clock blueprint, whether some of its windows are checked against a modulo of the clock, and its schedule */
 export interface SignalPerInserterBlueprint {
     blueprint: FactorioBlueprint;
-    /** Some window repeats within the period and is checked against the clock modulo its length: a modulo clock */
+    /** Some window repeats within the window cycle and is checked against the clock modulo its length: a modulo clock */
     modulo: boolean;
     schedule: ClockSchedule;
 }
 
 export function createSignalPerInserterBlueprint(
     final_output_item_name: string,
-    cycle: CraftingCyclePlan,
+    cycle: OutputCyclePlan,
     total_duration: Duration,
-    /** The whole number of crafting cycles the period is made of (the recipe LCM), which the swings of a cycle are multiplied by */
-    cycles_in_period: number,
+    /** The whole number of crafting cycles the window cycle is made of (the recipe LCM), which the swings of a cycle are multiplied by */
+    cycles_in_window_cycle: number,
     history: InventoryTransferHistory,
     entityRegistry: ReadableEntityRegistry,
     subtick_clock?: SubtickClock,
@@ -385,23 +385,23 @@ export function createSignalPerInserterBlueprint(
     let x = 0.5;
 
 
-    // Fuel inserters are on clocks of their own, one per interval. One clock counts as many periods as it takes for
+    // Fuel inserters are on clocks of their own, one per interval. One clock counts as many window cycles as it takes for
     // every fuel clock to fit a whole number of times, on a signal of its own, and a modulo of it gives the clock of
-    // the period (on the clock signal, so everything that reads the clock is as without fuel) and each fuel clock.
+    // the window cycle (on the clock signal, so everything that reads the clock is as without fuel) and each fuel clock.
     // A subtick clock, or a count too long for a signal, keeps separate fuel clocks instead.
     const fuel_inserter_clocks = Array.from(inserter_clocks.values())
         .filter(inserter_clock => inserter_clock.own_clock)
         .sort((a, b) => a.inserter_id.number - b.inserter_id.number);
     const fuel_moduli = Array.from(new Set(fuel_inserter_clocks.map(inserter_clock => inserter_clock.modulus))).sort((a, b) => a - b);
     const merged_clock_ticks = subtick_clock || fuel_moduli.length === 0 ? null : mergedClockTicks(total_duration.ticks, fuel_moduli);
-    // the clock of the period is a modulo of the one clock, unless every fuel clock already fits the period
-    const period_modulus = merged_clock_ticks !== null && merged_clock_ticks !== total_duration.ticks ? total_duration.ticks : null;
-    const counted_signal = period_modulus === null ? SignalId.clock : MERGED_CLOCK_SIGNAL;
-    const counted_ticks = merged_clock_ticks ?? (subtick_clock ? subtick_clock.period_ticks : total_duration.ticks);
+    // the clock of the window cycle is a modulo of the one clock, unless every fuel clock already fits the window cycle
+    const window_cycle_modulus = merged_clock_ticks !== null && merged_clock_ticks !== total_duration.ticks ? total_duration.ticks : null;
+    const counted_signal = window_cycle_modulus === null ? SignalId.clock : MERGED_CLOCK_SIGNAL;
+    const counted_ticks = merged_clock_ticks ?? (subtick_clock ? subtick_clock.window_cycle_ticks : total_duration.ticks);
 
     const clock_x = x;
-    const period: PeriodText = {
-        ticks: shownPeriodTicks(total_duration.ticks, subtick_clock !== undefined),
+    const window_cycle: WindowCycleText = {
+        ticks: shownWindowCycleTicks(total_duration.ticks, subtick_clock !== undefined),
         ...(subtick_clock ? { subtick_scale: subtick_clock.scale } : {}),
     };
 
@@ -417,10 +417,10 @@ export function createSignalPerInserterBlueprint(
         ArithmeticCombinatorEntity.withConstant({
             input: SignalId.clock,
             operation: "%",
-            constant: subtick_clock.period_ticks,
+            constant: subtick_clock.window_cycle_ticks,
             output: SignalId.clock,
             position: Position.fromXY(x += 1, 0),
-            description: [`${PART_OF_THE_CLOCK} Subtick clock: ${SignalId.toDescriptionString(SignalId.clock)} mod ${subtick_clock.period_ticks}, the position in 1/${subtick_clock.scale} ticks`],
+            description: [`${PART_OF_THE_CLOCK} Subtick clock: ${SignalId.toDescriptionString(SignalId.clock)} mod ${subtick_clock.window_cycle_ticks}, the position in 1/${subtick_clock.scale} ticks`],
         }),
     ] : [];
 
@@ -430,20 +430,20 @@ export function createSignalPerInserterBlueprint(
 
     const sortedEntityIds = Array.from(inventory_transfers.keys()).sort((a, b) => a.id.localeCompare(b.id));
 
-    // a window that runs past the end of the period carries on at its start
-    const wholeRangesInPeriod = (ranges: OpenRange[]) => wrapRangesIntoPeriod(wholeRanges(ranges), total_duration.ticks);
+    // a window that runs past the end of the window cycle carries on at its start
+    const wholeRangesInWindowCycle = (ranges: OpenRange[]) => wrapRangesIntoWindowCycle(wholeRanges(ranges), total_duration.ticks);
     const splits = new Map(sortedEntityIds.map(entityId => [entityId, subtick_clock || !use_modulo ? null : splitRepeatingRanges(
-        wholeRangesInPeriod(OpenRange.reduceRanges(inventory_transfers.get(entityId)!.map(transfer => transfer.tick_range))),
+        wholeRangesInWindowCycle(OpenRange.reduceRanges(inventory_transfers.get(entityId)!.map(transfer => transfer.tick_range))),
         total_duration.ticks,
     )] as const));
     const split_moduli = Array.from(splits.values()).flatMap(split => split ? [split.modulus] : []);
-    const merged_moduli = merged_clock_ticks === null ? [] : fuel_moduli.concat(period_modulus ?? []);
+    const merged_moduli = merged_clock_ticks === null ? [] : fuel_moduli.concat(window_cycle_modulus ?? []);
     const moduli = Array.from(new Set(split_moduli.concat(merged_moduli))).sort((a, b) => a - b);
     const modulo_letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").filter(letter => `signal-${letter}` !== MERGED_CLOCK_SIGNAL.name);
     const modulo_signals = new Map(moduli.map((modulus, index) => [
         modulus,
-        // the clock of the period is on the clock signal, where everything that reads the clock expects it
-        modulus === period_modulus ? SignalId.clock : SignalId.virtual(`signal-${modulo_letters[index % modulo_letters.length]}`),
+        // the clock of the window cycle is on the clock signal, where everything that reads the clock expects it
+        modulus === window_cycle_modulus ? SignalId.clock : SignalId.virtual(`signal-${modulo_letters[index % modulo_letters.length]}`),
     ] as const));
     const fuel_clocks_by_modulus = new Map<number, InserterClock[]>();
     fuel_inserter_clocks.forEach(inserter_clock =>
@@ -469,13 +469,13 @@ export function createSignalPerInserterBlueprint(
             item_name: final_output_item_name,
             items_per_second: cycle.production_rate.total_production_rate.amount_per_second.toDecimal(),
             copies: cycle.production_rate.copies,
-            period_text: subtick_clock
-                ? `Period ${period.ticks} ticks; counts ${CLOCK_FIRST_VALUE}–${subtick_clock.period_ticks} (${subtick_clock.scale} periods), read in 1/${subtick_clock.scale} ticks`
+            window_cycle_text: subtick_clock
+                ? `Window cycle time ${window_cycle.ticks} ticks; counts ${CLOCK_FIRST_VALUE}–${subtick_clock.window_cycle_ticks} (${subtick_clock.scale} window cycles), read in 1/${subtick_clock.scale} ticks`
                 : !Number.isInteger(total_duration.ticks)
-                    ? `Period ${period.ticks} ticks (${formatRate(total_duration.ticks)} rounded down: runs a little fast); counts ${CLOCK_FIRST_VALUE}–${period.ticks}`
-                    : period_modulus !== null
-                        ? `Period ${period.ticks} ticks; counts ${CLOCK_FIRST_VALUE}–${merged_clock_ticks} on ${SignalId.toDescriptionString(counted_signal)} (${merged_clock_ticks! / total_duration.ticks} periods, for the fuel clocks); ${SignalId.toDescriptionString(SignalId.clock)} = that mod ${total_duration.ticks}`
-                        : `Period ${period.ticks} ticks; counts ${CLOCK_FIRST_VALUE}–${counted_ticks}`,
+                    ? `Window cycle time ${window_cycle.ticks} ticks (${formatRate(total_duration.ticks)} rounded down: runs a little fast); counts ${CLOCK_FIRST_VALUE}–${window_cycle.ticks}`
+                    : window_cycle_modulus !== null
+                        ? `Window cycle time ${window_cycle.ticks} ticks; counts ${CLOCK_FIRST_VALUE}–${merged_clock_ticks} on ${SignalId.toDescriptionString(counted_signal)} (${merged_clock_ticks! / total_duration.ticks} window cycles, for the fuel clocks); ${SignalId.toDescriptionString(SignalId.clock)} = that mod ${total_duration.ticks}`
+                        : `Window cycle time ${window_cycle.ticks} ticks; counts ${CLOCK_FIRST_VALUE}–${counted_ticks}`,
             drills: sortedEntityIds.some(entityId => EntityId.isDrill(entityId)),
             not_clocked: notClocked(entityRegistry, [
                 ...sortedEntityIds.flatMap(entityId => [entityId, ...(history.merged_entities.get(entityId.id) ?? [])]),
@@ -489,7 +489,7 @@ export function createSignalPerInserterBlueprint(
     const lock = ConstantCombinatorEntity.lock({
         position: Position.fromXY(clock.position.x, 1.5),
         description: [
-            "Clock lock: switch on to stop every clock; no inserter or drill is enabled while it is on. Off by default. Switching off starts the clocks again from the beginning, and the first period after may be a tick off",
+            "Clock lock: switch on to stop every clock; no inserter or drill is enabled while it is on. Off by default. Switching off starts the clocks again from the beginning, and the first window cycle after may be a tick off",
         ],
     });
 
@@ -517,12 +517,12 @@ export function createSignalPerInserterBlueprint(
             }
             group.deciders.forEach(decider => x_of.set(sortedEntityIds[decider], x += 1));
             if (group.turn !== null) {
-                const windows = group.deciders.flatMap(decider => wholeRangesInPeriod(inventory_transfers.get(sortedEntityIds[decider])!.map(transfer => transfer.tick_range)));
+                const windows = group.deciders.flatMap(decider => wholeRangesInWindowCycle(inventory_transfers.get(sortedEntityIds[decider])!.map(transfer => transfer.tick_range)));
                 const { start, end } = turnTicks(turns[group.turn].start, windows, total_duration.ticks);
                 const ticks = end < total_duration.ticks
                     ? [OpenRange.from(start, end)]
                     : [OpenRange.from(start, total_duration.ticks - 1), OpenRange.from(0, end - total_duration.ticks)];
-                turn_lines.set(sortedEntityIds[group.deciders[0]], turnLine(index + 1, labelled, clockValueRanges(ticks), period.ticks));
+                turn_lines.set(sortedEntityIds[group.deciders[0]], turnLine(index + 1, labelled, clockValueRanges(ticks), window_cycle.ticks));
             }
         });
     }
@@ -535,10 +535,10 @@ export function createSignalPerInserterBlueprint(
             entityId,
             entityRegistry,
             cycle,
-            cycles_in_period,
-            period,
+            cycles_in_window_cycle,
+            window_cycle,
             Position.fromXY(x_of.get(entityId)!, 0),
-            subtick_clock ? ranges => subtickRanges(ranges, subtick_clock) : wholeRangesInPeriod,
+            subtick_clock ? ranges => subtickRanges(ranges, subtick_clock) : wholeRangesInWindowCycle,
             split ? { split, signal: modulo_signals.get(split.modulus)! } : undefined,
             inserter_clocks.get(entityId.id),
             history.merged_entities.get(entityId.id),
@@ -664,7 +664,7 @@ export function createSignalPerInserterBlueprint(
     const blueprint = new BlueprintBuilder()
         .setLabel(blueprint_label)
         // the game keeps 500 bytes of a blueprint's description too (recorded in Factorio 2.1.21)
-        .setDescription(fitPlayerDescription([targetRateDescription(cycle), `Clock period: ${formatRate(total_duration.ticks)} ticks`, ...generatorDescriptionLines()]))
+        .setDescription(fitPlayerDescription([targetRateDescription(cycle), `Window cycle time: ${formatRate(total_duration.ticks)} ticks`, ...generatorDescriptionLines()]))
         .setEntities(entities)
         .setWires(wires.concat(fuel_wires))
         .build();

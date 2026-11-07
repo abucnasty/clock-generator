@@ -11,7 +11,7 @@ const labels = { item: (id: string) => `<${id}>`, recipe: (id: string) => `[${id
 
 // a furnace, a belt and one container of each kind; drill 1 drops into the car
 const config: Config = {
-    target_output: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
+    setpoint: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
     machines: [{ id: 1, recipe: 'iron-plate', crafting_speed: 5, productivity: 0, prototype: 'electric-furnace' }],
     drills: { configs: [
         { id: 1, type: 'big-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 0, productivity: 0, target: { type: 'chest', id: 2 } }] },

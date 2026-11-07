@@ -28,25 +28,25 @@ export interface ContainerClockCase {
 export const CONTAINER_CRAFTING_SPEED = 3.125;
 /** Products a second: 80% of the machine for both recipes (gears 0.5 s, circuits 0.5 s, one product a craft) */
 export const CONTAINER_TARGET = 5;
-/** The clock's period in ticks, as generated (gears 192, circuits 384): the cuts are sized by it */
-const PERIOD_TICKS = {"iron-gear-wheel": 192, "electronic-circuit": 384} as const;
+/** The clock's window cycle in ticks, as generated (gears 192, circuits 384): the cuts are sized by it */
+const WINDOW_CYCLE_TICKS = {"iron-gear-wheel": 192, "electronic-circuit": 384} as const;
 /** What a craft takes of each input */
 const INPUTS = {"iron-gear-wheel": [["iron-plate", 2]], "electronic-circuit": [["iron-plate", 1], ["copper-cable", 3]]} as const;
 
 /**
- * The periods until a cut input's stock in the container has run out: the most of it the container holds, over what
- * the machine takes of it a period at the target. A cut of two periods, as the belt-fed families have, changes nothing
+ * The window cycles until a cut input's stock in the container has run out: the most of it the container holds, over what
+ * the machine takes of it a window cycle at the target. A cut of two window cycles, as the belt-fed families have, changes nothing
  * here: the container holds thousands of items.
  */
-export function containerDrainPeriods(variant: ContainerClockCase, item: string): number {
+export function containerDrainWindowCycles(variant: ContainerClockCase, item: string): number {
     const container = variant.container;
     const slots = FactorioDataService.containerSlots(container.type as string, (container.quality as string | undefined) ?? "normal");
     const filters = (container.slot_filters ?? []) as {slot: number; item: string}[];
     const taking = slots - filters.filter(filter => filter.item !== item).length;
     const stock = taking * FactorioDataService.findItemOrThrow(item).stack_size;
     const per_craft = INPUTS[variant.recipe].find(([name]) => name === item)![1];
-    const per_period = CONTAINER_TARGET * PERIOD_TICKS[variant.recipe] / 60 * per_craft;
-    return Math.ceil(stock / per_period);
+    const per_window_cycle = CONTAINER_TARGET * WINDOW_CYCLE_TICKS[variant.recipe] / 60 * per_craft;
+    return Math.ceil(stock / per_window_cycle);
 }
 
 const filtered = (from: number, to: number, item: string) =>
@@ -72,7 +72,7 @@ export function containerClockConfig(variant: ContainerClockCase): Config {
     const supplies = inputs.map((item, index) => ({type: "infinity-chest", id: 10 + index,
         item_filter: [{item_name: item, request_count: 200}]}));
     return ConfigSchema.parse({
-        target_output: {recipe: variant.recipe, items_per_second: CONTAINER_TARGET, copies: 1},
+        setpoint: {recipe: variant.recipe, items_per_second: CONTAINER_TARGET, copies: 1},
         machines: [{id: 1, type: "machine", recipe: variant.recipe, crafting_speed: CONTAINER_CRAFTING_SPEED, productivity: 0}],
         inserters: [
             ...inputs.map((item, index) => ({id: 1 + index, source: {type: "chest", id: 10 + index}, sink: {type: "chest", id: 1},

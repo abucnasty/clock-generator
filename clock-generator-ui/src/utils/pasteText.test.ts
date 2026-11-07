@@ -59,7 +59,7 @@ describe('importedAsOneUnitText', () => {
     const proof = (code: string, message: string, repeatedGroups = 2) => ({ stage: 'proof' as const, reason: { code, message }, repeatedGroups });
     it('names the container a drill drops into, and what to do', () => {
         expect(importedAsOneUnitText(proof('unsupported-boundary', 'A drill into a chest is not supported in a repeated unit.'), config)).toEqual({
-            what: 'This export holds 2 identical copies of a build. They can\'t be split into copies yet because a drill drops into a car, so it comes in as one unit.',
+            what: 'This export holds 2 identical copies of a build. They can\'t be split into copies yet because a drill drops into a car, so it comes in as one build.',
             next: 'Check will not run on it like this. Select one complete group in Factorio, export it again, and set Copies to 2.',
         });
         const silo = { ...config, chests: [{ id: 2, type: 'infinity-chest' }] } as unknown as Config;
@@ -68,10 +68,10 @@ describe('importedAsOneUnitText', () => {
     it('gives the engine\'s reason for any other refusal, and says groups that only look alike could not be proved the same', () => {
         const none = {} as Config;
         expect(importedAsOneUnitText(proof('unassigned-entities', 'An unreferenced belt or infinity chest cannot be assigned to a complete unit.', 3), none).what)
-            .toBe('This export holds 3 identical copies of a build. They can\'t be split into copies yet because an unreferenced belt or infinity chest cannot be assigned to a complete unit, so it comes in as one unit.');
+            .toBe('This export holds 3 identical copies of a build. They can\'t be split into copies yet because an unreferenced belt or infinity chest cannot be assigned to a complete unit, so it comes in as one build.');
         expect(importedAsOneUnitText(proof('nonuniform-units', 'x'), none).what)
-            .toBe('This export holds 2 groups that look alike. We couldn\'t prove they are identical, so it comes in as one unit.');
+            .toBe('This export holds 2 groups that look alike. We couldn\'t prove they are identical, so it comes in as one build.');
         expect(importedAsOneUnitText({ stage: 'check', reason: { code: 'candidate-check-failed', message: 'The copy cannot meet the target.' }, repeatedGroups: 4 }, none).what)
-            .toBe('This export holds 4 identical copies of a build. They can\'t be split into copies yet because one copy would not pass Check (The copy cannot meet the target), so it comes in as one unit.');
+            .toBe('This export holds 4 identical copies of a build. They can\'t be split into copies yet because one copy would not pass Check (The copy cannot meet the target), so it comes in as one build.');
     });
 });

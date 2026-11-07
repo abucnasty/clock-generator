@@ -36,7 +36,7 @@ describe('readSavedConfig', () => {
 
     it('reads the saved form state with the legacy fields migrated', () => {
         const saved = JSON.stringify({
-            target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+            setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
             machines: [{ id: 1, recipe: 'iron-gear-wheel', productivity: 0, crafting_speed: 1 }],
             inserters: [{ source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 }, stack_size: 16 }],
             chests: [{ id: 1, storage_size: 2, item_filter: 'iron-gear-wheel' }],
@@ -49,7 +49,7 @@ describe('readSavedConfig', () => {
 
     it('loads a form saved with next ids, dropping them and keeping its ids as saved', () => {
         const saved = JSON.stringify({
-            target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+            setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
             machines: [1, 3].map((id) => ({ id, recipe: 'iron-gear-wheel', productivity: 0, crafting_speed: 1 })),
             inserters: [1, 4].map((id) => ({ id, source: { type: 'machine', id: 1 }, sink: { type: 'machine', id: 3 }, stack_size: 16 })),
             belts: [],
@@ -69,7 +69,7 @@ describe('readSavedConfig', () => {
         vi.spyOn(console, 'warn').mockImplementation(() => { });
         expect(readSavedConfig('{ not json')).toBeNull();
         expect(readSavedConfig('{"machines": []}')).toBeNull();
-        expect(readSavedConfig('{"target_output": {}, "machines": [], "chests": 3}')).toBeNull();
+        expect(readSavedConfig('{"setpoint": {}, "machines": [], "chests": 3}')).toBeNull();
     });
 });
 
@@ -121,7 +121,7 @@ describe('backUpSavedConfig', () => {
 describe('fractional library document serialization', () => {
     it.each([0.0625, 0.0001, 1 / 3])('retains Copies %s and all metadata distinctions', copies => {
         const form = createDefaultConfig();
-        form.target_output.copies = copies;
+        form.setpoint.copies = copies;
         form.inserters = ([
             { prototype: 'bulk-inserter', quality: 'normal' },
             { prototype: 'fast-inserter', quality: 'normal' },
@@ -135,8 +135,8 @@ describe('fractional library document serialization', () => {
         const saved = JSON.parse(text);
         const reopened = readSavedConfig(text)!;
         const exported = JSON.parse(JSON.stringify(formDataToConfig(reopened)));
-        expect(reopened.target_output.copies).toBe(copies);
-        expect(exported.target_output.copies).toBe(copies);
+        expect(reopened.setpoint.copies).toBe(copies);
+        expect(exported.setpoint.copies).toBe(copies);
         expect(serializeConfig(reopened)).toBe(text);
         // Check metadata once; the remaining rows protect preservation of unsupported editable Copies.
         if (copies === 0.0625) {

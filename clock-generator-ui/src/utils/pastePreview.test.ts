@@ -34,7 +34,7 @@ describe('selective Paste preview', () => {
         const result = pastePreview(form, incoming, { ...none, machines: true });
         expect(result.counts.map(row => row.category)).toEqual(['machines', 'drills', 'inserters', 'belts', 'chests']);
         expect(result.counts[0]).toEqual({ category: 'machines', current: 4, incoming: 2, result: 2, replacing: true });
-        expect(form.target_output.recipe).toBe('');
+        expect(form.setpoint.recipe).toBe('');
         expect(pastePreview(form, incoming, none).counts[0]).toMatchObject({ current: 4, incoming: 2, result: 4, replacing: false });
     });
     it('retains current entities for selected empty categories and absent raw drills', () => {
@@ -102,7 +102,7 @@ describe('atomic selective Paste', () => {
             ...current(), machines: [formMachine(1, { recipe: '' })], inserters: [formInserter(2, { _forced_always: true })],
             belts: [belt(4, { lanes: [{ ingredient: '', stack_size: 1 }] })], drills: { configs: [formDrill(3)] },
             chests: [infinityChest(5, { _chest_settings: { buffer_filter: 'coal', storage_size: 2 } })],
-            target_output: { recipe: '', copies: 0, items_per_second: 0 }, overrides: { backed_up_belts: true },
+            setpoint: { recipe: '', copies: 0, items_per_second: 0 }, overrides: { backed_up_belts: true },
         };
         const before = structuredClone({ form, incoming });
         for (let mask = 0; mask < 32; mask++) {
@@ -114,7 +114,7 @@ describe('atomic selective Paste', () => {
                 if (count.replacing) expect(rows(next, count.category)).not.toBe(rows(form, count.category));
                 else expect(rows(next, count.category)).toBe(rows(form, count.category));
             }
-            expect(next.target_output).toBe(form.target_output);
+            expect(next.setpoint).toBe(form.setpoint);
             expect(next.overrides).toBe(form.overrides);
         }
         expect({ form, incoming }).toEqual(before);
@@ -144,14 +144,14 @@ describe('atomic selective Paste', () => {
             if (category !== 'drills') expect(next[category]).toBe(form[category]);
         }
         expect(next).not.toHaveProperty('drills');
-        expect(next.target_output).toBe(form.target_output);
+        expect(next.setpoint).toBe(form.setpoint);
     });
 
     it('replaces Target Output only when both selected and supplied', () => {
         const form = current(), target = { recipe: 'iron-plate', copies: 2, items_per_second: 10 };
-        expect(applyPaste(form, empty(), none, target).target_output).toBe(form.target_output);
-        expect(applyPaste(form, empty(), { ...none, target: true }).target_output).toBe(form.target_output);
-        expect(applyPaste(form, empty(), { ...none, target: true }, target).target_output).toBe(target);
+        expect(applyPaste(form, empty(), none, target).setpoint).toBe(form.setpoint);
+        expect(applyPaste(form, empty(), { ...none, target: true }).setpoint).toBe(form.setpoint);
+        expect(applyPaste(form, empty(), { ...none, target: true }, target).setpoint).toBe(target);
     });
 
     it("takes each imported drill's own productivity, and keeps the drills when they are not replaced", () => {

@@ -10,7 +10,7 @@ vi.mock('../worker/engineClient', () => ({ askEngine }));
 
 /** A gear build whose output inserter's filters are a blacklist of iron plates, as Sidecar captures one */
 const blacklisting = (fields: object = {}): Config => ({
-    target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+    setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
     machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],
     inserters: [
         { id: 1, source: { type: 'belt', id: 1, pickup_length: 1 }, sink: { type: 'machine', id: 1 } },
@@ -57,8 +57,8 @@ describe('the live connection check', () => {
         { change: 'a cargo wagon quality', from: wagon, edit: (config: Config) => ({ ...config, chests: [{ ...config.chests![0], quality: 'legendary' }] }) },
         // and so what a lane is asked for against what it carries
         { change: 'the belt type', from: blacklisting(), edit: (config: Config) => ({ ...config, belts: [{ ...config.belts[0], type: 'transport-belt' }] }) },
-        { change: 'the target rate', from: blacklisting(), edit: (config: Config) => ({ ...config, target_output: { ...config.target_output, items_per_second: 2 } }) },
-        { change: 'the copies', from: blacklisting(), edit: (config: Config) => ({ ...config, target_output: { ...config.target_output, copies: 3 } }) },
+        { change: 'the target rate', from: blacklisting(), edit: (config: Config) => ({ ...config, setpoint: { ...config.setpoint, items_per_second: 2 } }) },
+        { change: 'the copies', from: blacklisting(), edit: (config: Config) => ({ ...config, setpoint: { ...config.setpoint, copies: 3 } }) },
         { change: 'the productivity', from: blacklisting(), edit: (config: Config) => ({ ...config, machines: [{ ...config.machines[0], productivity: 50 }] }) },
     ])('shows no result checked before $change changed, and checks again', async ({ from, edit }) => {
         askEngine.mockResolvedValue(refused);

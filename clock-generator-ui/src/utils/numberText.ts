@@ -97,7 +97,7 @@ export function itemsPerSecondHelper(itemsPerSecond: number, copies: number, loc
 }
 
 /** Under Copies */
-export const COPIES_HELPER = "Describe one identical unit. Copies may include a partial unit, such as 0.5 or 2.25.";
+export const COPIES_HELPER = "Describe only one copy. Copies may be partial, such as 0.5 or 2.25.";
 
 /** A non-breaking space: the headers below wrap before their brackets, never inside them */
 const NBSP = ' ';
@@ -106,8 +106,8 @@ const NBSP = ' ';
 export const WAKE_UPS_HEADER = `Wakeups/min (1${NBSP}copy)`;
 /** Clocks table header of the signals, which are counted on one copy like the wakeups */
 export const SIGNALS_HEADER = `Signals/min (1${NBSP}copy)`;
-/** Clocks table header of what one copy's clock-only run moved in a clock period */
-export const OUTPUT_PER_PERIOD_HEADER = `Output per window cycle (1${NBSP}copy)`;
+/** Clocks table header of what one copy's clock-only run moved in a window cycle */
+export const OUTPUT_PER_WINDOW_CYCLE_HEADER = `Output per window cycle (1${NBSP}copy)`;
 
 /** Clocks table header of the rate, which is the total for all the copies the clocks were made for */
 export function rateHeader(copies: number): string {

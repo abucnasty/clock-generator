@@ -26,21 +26,21 @@ describe('shared engine config', () => {
         expect(result.current.engineConfig).toBe(first.engineConfig);
         expect(formDataToConfig).toHaveBeenCalledOnce();
 
-        stored.config = { ...form, target_output: { ...form.target_output, copies: 5 } };
+        stored.config = { ...form, setpoint: { ...form.setpoint, copies: 5 } };
         rerender();
         const edited = result.current;
         expect(edited.engineConfig).not.toBe(first.engineConfig);
-        expect(edited.engineConfig.target_output.copies).toBe(5);
+        expect(edited.engineConfig.setpoint.copies).toBe(5);
         expect(edited.exportableConfig).toBe(edited.engineConfig);
         expect(formDataToConfig).toHaveBeenCalledTimes(2);
     });
 
     it('keeps an unchecked saved build exportable without using it as the active engine config', () => {
-        const form = createDefaultConfig(), unchecked = { ...form, target_output: { ...form.target_output, copies: 7 } };
+        const form = createDefaultConfig(), unchecked = { ...form, setpoint: { ...form.setpoint, copies: 7 } };
         persistence.mockReturnValue({ config: form, unchecked, setConfig: vi.fn() });
         const value = renderHook(() => useConfigForm()).result.current;
-        expect(value.engineConfig.target_output.copies).toBe(form.target_output.copies);
-        expect(value.exportableConfig?.target_output.copies).toBe(7);
+        expect(value.engineConfig.setpoint.copies).toBe(form.setpoint.copies);
+        expect(value.exportableConfig?.setpoint.copies).toBe(7);
         expect(value.exportableConfig).not.toBe(value.engineConfig);
     });
 });

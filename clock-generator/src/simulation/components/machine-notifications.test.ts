@@ -6,7 +6,7 @@ import {MachineNotificationCause} from "./machine-notifications";
 
 function source(speed = 1.25): MachineState {
     const context = SimulationContext.fromConfig(ConfigSchema.parse({
-        target_output: {recipe: "copper-cable", items_per_second: 5, copies: 1},
+        setpoint: {recipe: "copper-cable", items_per_second: 5, copies: 1},
         machines: [{id: 1, recipe: "copper-cable", productivity: 0, crafting_speed: speed}],
         inserters: [], belts: [],
     }));

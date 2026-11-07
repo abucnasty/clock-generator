@@ -2,7 +2,7 @@ import type { InternalError } from '../utils/internalError';
 import type { ValidationDiagnostic } from '../utils/buildValidation';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { Config, ConfigValidation, DebugSteps, LogMessage, SerializableClockWindows, SerializableTransferHistory, PortableStateTransitionHistory, SwingBackoffReport, GenerationProgress } from 'clock-generator/browser';
-import { combineClockAlternativeRuns, searchesAreNeeded, searchesToRun } from 'clock-generator/light';
+import { combineClockAlternativeRuns, coordinatedSourcesInputOf, searchesAreNeeded, searchesToRun } from 'clock-generator/light';
 import type { ClockAlternativeContext, ClockAlternativeTask, NotMadeClock } from 'clock-generator/browser';
 import type { ClockAlternativeRunView, ClockAlternativeView, CraftingMachineData, FuelViewData, RecipeInfo, ShiftOptionsView, WorkerRequest, WorkerResponse } from '../worker/types';
 import { askEngine, createSimulationWorker, loadFactorioData } from '../worker/engineClient';
@@ -177,6 +177,11 @@ interface Generation {
     waiting: ClockAlternativeTask[];
     /** The searches and fallbacks that were not run */
     skipped: ClockAlternativeTask[];
+    /**
+     * The per-branch clock's task, which waits for every other task: it is made from their runs and the clock they recommend,
+     * so it is queued once nothing else is waiting, queued or running
+     */
+    last: ClockAlternativeTask[];
     /** Primary run first, then one per task in display order */
     runs: (ClockAlternativeRunView | null)[];
     /** The alternatives of each run that could not be made, in the order of `runs` */
@@ -202,14 +207,27 @@ type ResultsView = Pick<UseSimulationWorkerResult,
     'generationAssumptions' | 'alternatives' | 'selectedAlternativeIndex' | 'pendingAlternatives' |
     'skippedSearches' | 'notMade' | 'searchedDeeper' | 'pickRule' | 'generatedFor' | 'stoppedEarly' | 'pickGone'>;
 
+/** The signatures of a run and of the runs listed after it: the clocks the per-branch clock does not list again */
+const signaturesOf = (run: ClockAlternativeRunView): string[] => [run.signature, ...(run.also ?? []).flatMap(signaturesOf)];
+
 /** The labels of the searches a generation did not run; a fallback that was not needed is not one of them */
 const skippedSearchesOf = (generation: Generation): string[] =>
-    generation.skipped.filter(task => !task.fallback).map(pendingClockName);
+    generation.skipped.filter(task => !task.fallback && !task.coordinated_sources).map(pendingClockName);
 
 const emptyResults = (): ResultsView => ({
     generationAssumptions: null, alternatives: [], selectedAlternativeIndex: 0, pendingAlternatives: [],
     skippedSearches: [], notMade: [], searchedDeeper: false, pickRule: null, generatedFor: null, stoppedEarly: false, pickGone: null,
 });
+
+/** A run for `coordinatedSourcesInputOf`: its alternatives that carry a strategy (a live generation's all do; a clock kept before it was carried does not) */
+function withStrategies(run: ClockAlternativeRunView | null): Parameters<typeof coordinatedSourcesInputOf>[0][number] {
+    if (run === null) return null;
+    return {
+        parts: run.parts,
+        alternatives: run.alternatives.flatMap(({ id, strategy }) => strategy === undefined ? [] : [{ id, strategy }]),
+        also: run.also?.map(withStrategies).filter(also => also !== null),
+    };
+}
 
 /** The kept results, opened once for the page (StrictMode mounts the hook twice) */
 let sharedResultsStore: Promise<ResultsStore> | null = null;
@@ -453,11 +471,21 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             const stage = searches.length > 0 ? searches : generation.waiting;
             generation.waiting = generation.waiting.filter(task => !stage.includes(task));
             const run = searches.length > 0
-                ? searchesToRun(generation.runs, it => it.ranking, stage, generation.context!.period_ticks)
+                ? searchesToRun(generation.runs, it => it.ranking, stage, generation.context!.window_cycle_ticks)
                 : searchesAreNeeded(generation.runs, it => it.ranking) ? stage : [];
             generation.queue = orderAlternativeTasks(run);
             generation.skipped = [...generation.skipped, ...stage.filter(task => !run.includes(task))];
             publishAlternatives(generation);
+        }
+        // the per-branch clock, once every other clock is in: from their parts, on the window cycle of the one they recommend; with no
+        // clock to start from it is not made
+        if (generation.last.length > 0 && generation.waiting.length === 0 && generation.queue.length === 0 && generation.running.size === 0
+            && !generation.primaryPending) {
+            const combined = combineClockAlternativeRuns(generation.runs, it => it.ranking);
+            const last = generation.last;
+            generation.last = [];
+            if (combined.alternatives.length > 0) generation.queue = last;
+            else generation.skipped = [...generation.skipped, ...last];
         }
         while (generation.idle.length > 0 && generation.queue.length > 0) {
             const worker = generation.idle.pop()!;
@@ -475,7 +503,9 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 // earlier alias with an empty run, regardless of worker completion order.
                 assessedSignatures: [...new Set([...generation.assessedSignatures,
                     ...generation.runs.slice(0, 1 + generation.tasks.findIndex(candidate => candidate.id === task.id))
-                        .flatMap(run => run?.alternatives.length ? [run.signature] : [])])],
+                        .flatMap(run => task.coordinated_sources === true ? (run === null ? [] : signaturesOf(run)) : run?.alternatives.length ? [run.signature] : [])])],
+                ...(task.coordinated_sources === true && { coordinatedSources: coordinatedSourcesInputOf(generation.runs.map(withStrategies),
+                    (({ alternatives, selected_index }) => alternatives[selected_index].id)(combineClockAlternativeRuns(generation.runs, it => it.ranking))) }),
             } satisfies WorkerRequest);
         }
         if (generation.running.size > 0 || generation.queue.length > 0 || generation.primaryPending) {
@@ -540,8 +570,9 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 generation.tasks = response.tasks;
                 generation.runs = [null, ...response.tasks.map(() => null)];
                 generation.notMade = [[], ...response.tasks.map(() => [])];
-                generation.waiting = response.tasks.filter(task => task.only_when_needed);
-                generation.queue = orderAlternativeTasks(response.tasks.filter(task => !task.only_when_needed));
+                generation.waiting = response.tasks.filter(task => task.only_when_needed && !task.coordinated_sources);
+                generation.last = response.tasks.filter(task => task.coordinated_sources === true);
+                generation.queue = orderAlternativeTasks(response.tasks.filter(task => !task.only_when_needed && !task.coordinated_sources));
                 generation.primaryPending = true;
                 generation.assessedSignatures = [response.primarySignature];
                 // the planning worker goes on with the primary alternative
@@ -590,7 +621,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             unusableWorkersRef.current.add(worker);
             worker.terminate();
         }
-        setLogs(previous => [...previous, { level: 'error', message: `A simulation worker stopped: ${detail}`, timestamp: Date.now() }]);
+        setLogs(previous => [...previous, { level: 'error', message: `The simulator stopped: ${detail}`, timestamp: Date.now() }]);
         console.error('Simulation worker stopped:', detail);
         const check = validationRef.current;
         const outcome = crashOutcome({
@@ -636,7 +667,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             };
             worker.onerror = (event) => {
                 if (!current()) return;
-                const message = event.message || 'The simulation worker stopped unexpectedly';
+                const message = event.message || 'The simulator stopped unexpectedly';
                 if (!started) {
                     reject(new Error(message));
                     return;
@@ -715,7 +746,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         setLogs([]);
         const runId = ++runIdRef.current;
         generationRef.current = {
-            runId, config: engineConfig, debugSteps, streamLogs, context: null, tasks: [], queue: [], waiting: [], skipped: [], runs: [], notMade: [], assumptions: null,
+            runId, config: engineConfig, debugSteps, streamLogs, context: null, tasks: [], queue: [], waiting: [], skipped: [], last: [], runs: [], notMade: [], assumptions: null,
             running: new Map(), done: new Set(), idle: [], completed: 0, primaryPending: false, assessedSignatures: [],
             previous: shownRef.current, generatedFor: run.generatedFor, pickRule: rule, searchedDeeper: run.searchedDeeper,
         };

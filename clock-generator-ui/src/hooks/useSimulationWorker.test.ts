@@ -78,7 +78,7 @@ function checkOnNewWorker(index: number) {
 }
 
 /** A task of a plan, which runs on every build unless the fields say otherwise */
-const task = (id: string, label: string, fields: Pick<Partial<ClockAlternativeTask>, 'only_when_needed' | 'fallback'> = {}): ClockAlternativeTask =>
+const task = (id: string, label: string, fields: Pick<Partial<ClockAlternativeTask>, 'only_when_needed' | 'fallback' | 'coordinated_sources'> = {}): ClockAlternativeTask =>
     ({ id, label, only_when_needed: false, ...fields });
 const twoTasks = [task('one', 'One'), task('two', 'Two')];
 const remaining = task('remaining', 'Remaining');
@@ -110,8 +110,8 @@ function selectionClock(id: string, wakeUps: number): ClockAlternativeView {
     return { id, label: id, verdict: 'stable', ranking: { meets_target_rate: true, rate_off_target: 0,
         holds_expected_output: true, matches_belt_choice: true, wake_ups_per_minute: wakeUps, window_count: 1 },
         assessment: { holds: true, items_per_second: 1, wake_ups_per_minute: wakeUps,
-            backpressure_loss: { survives: true, broken_by: [], recovered_after_periods: 1 }, start_dependence: null },
-        deadlockRisk: null, beltLabel: '', assumptions: { loopSeeds: [], outputDrops: [], machineFuel: [], overrides: undefined },
+            disturbance_trial: { survives: true, broken_by: [], recovered_after_window_cycles: 1 }, start_dependence: null },
+        deadlockRisk: null, beltLabel: '', assumptions: { kickStarts: [], outputDrops: [], machineFuel: [], overrides: undefined },
     } as unknown as ClockAlternativeView;
 }
 /** A plan whose primary alternative offers these clocks, with the task `remaining` still to run when pending. Gives the run's id */
@@ -167,7 +167,7 @@ describe('selection after generation', () => {
         planSelection([recommended, other]);
         call(hook => hook.selectAlternative(1));
         expect(latest().selectedAlternativeIndex).toBe(1);
-        const nextConfig = kind === 'different build' ? { ...config, target_output: { ...config.target_output, items_per_second: 99 } } : config;
+        const nextConfig = kind === 'different build' ? { ...config, setpoint: { ...config.setpoint, items_per_second: 99 } } : config;
         generate(nextConfig, kind === 'deeper search');
         // Reverse the list so choosing index 0 blindly would also fail.
         planSelection([other, recommended]);
@@ -263,7 +263,7 @@ describe('tasks alongside the primary alternative', () => {
         expect(latest().alternatives.map(a => a.id)).toEqual(['swings-1']);
         expect(latest().isRunning).toBe(true);
         expect(latest().generationAssumptions?.complete).toBe(false);
-        expect(latest().pendingAlternatives).toEqual(['Euclidean swings', '2 output swings a cycle']);
+        expect(latest().pendingAlternatives).toEqual(['Euclidean Swings', '2 output swings each output cycle']);
         expect(worker.requests('task').at(-1)?.taskId).toBe('fractional');
 
         finishTask(runId, 'fractional', { signature: 'fractional', alternatives: [selectionClock('fractional', 1)] });
@@ -337,14 +337,14 @@ describe('tasks alongside the primary alternative', () => {
         it('is left out with the searches, and not listed among them, when a clock made before it is stable', async () => {
             await initialize();
             const { requested, finish } = start(searches);
-            // of no wake-ups: no search can improve on it (a stable clock with wake-ups on a short period is searched past)
+            // of no wake-ups: no search can improve on it (a stable clock with wake-ups on a short window cycle is searched past)
             finish('one', selectionClock('one', 0));
             const done = latest();
             expect(requested()).not.toContain('derived');
             expect(requested()).not.toContain('planned-moving-belt');
             expect(done.isRunning).toBe(false);
             expect(done.pendingAlternatives).toEqual([]);
-            expect(done.skippedSearches).toEqual(['Time-study windows']);
+            expect(done.skippedSearches).toEqual(['Time-Study Windows']);
         });
 
         it('waits for the searches the config runs on every build, and is left out when one of them is stable', async () => {
@@ -353,6 +353,46 @@ describe('tasks alongside the primary alternative', () => {
             expect(requested()).toEqual(['derived']);
             finish('derived', selectionClock('derived', 1));
             expect(requested()).toEqual(['derived']);
+            expect(latest().isRunning).toBe(false);
+            expect(latest().skippedSearches).toEqual([]);
+        });
+    });
+
+    describe('the per-branch clock', () => {
+        const coordinatedSources = task('per-branch', 'Coordinated sources', { coordinated_sources: true });
+        const part = (alternative_id: string) => ({ name: alternative_id, alternative_id, verdict: 'stable' as const, window_cycle_ticks: 10,
+            windows: { 'inserter:1': [{ start: 0, end: alternative_id.length }] }, counted: true });
+
+        it('runs last, after the searches, with the parts of every run and the clock they recommend, and is not a skipped search', async () => {
+            await initialize();
+            generate();
+            const runId = answerPlan([task('one', 'One'), task('derived', 'Observed windows', { only_when_needed: true }), coordinatedSources]);
+            const requests = () => workers.flatMap(w => w.requests('task')).filter(m => m.runId === runId);
+            expect(requests().map(m => m.taskId)).toEqual(['one']);
+            finishTask(runId, 'one', { signature: 'one', alternatives: [selectionClock('one', 3)], parts: [part('one')] });
+            expect(requests().map(m => m.taskId)).not.toContain('per-branch');
+            // the search that waits runs or is left out first; only then the per-branch clock
+            if (requests().some(m => m.taskId === 'derived')) {
+                expect(requests().map(m => m.taskId)).not.toContain('per-branch');
+                finishTask(runId, 'derived', null);
+            }
+            const sent = requests().find(m => m.taskId === 'per-branch');
+            expect(sent?.coordinatedSources).toEqual({ recommended_id: 'one', parts: [part('one')] });
+            expect(sent?.assessedSignatures).toContain('one');
+            finishTask(runId, 'per-branch', { signature: 'per-branch', alternatives: [selectionClock('per-branch', 1)] });
+            const done = latest();
+            expect(done.isRunning).toBe(false);
+            expect(done.skippedSearches).not.toContain('Coordinated Sources');
+            expect(done.alternatives.map(it => it.id)).toEqual(['one', 'per-branch']);
+            expect(done.alternatives[done.selectedAlternativeIndex].id).toBe('per-branch');
+        });
+
+        it('is not run where no clock was made to start from', async () => {
+            await initialize();
+            generate();
+            const runId = answerPlan([task('one', 'One'), coordinatedSources]);
+            finishTask(runId, 'one', null);
+            expect(workers.flatMap(w => w.requests('task')).filter(m => m.runId === runId).map(m => m.taskId)).toEqual(['one']);
             expect(latest().isRunning).toBe(false);
             expect(latest().skippedSearches).toEqual([]);
         });
@@ -385,7 +425,7 @@ describe('worker startup failure recovery through the hook', () => {
             detectedCopies: 8, configuredCopies: 0.5, units: [{ machine_ids: [1] }], conversion: { kind: 'available', multiplicity: 8, copies: 4 } };
         const pending = call(hook => hook.validate(config));
         const requestId = workers[0].requests('validate').at(-1)!.requestId;
-        const diagnostics = [{ kind: 'field' as const, path: ['target_output', 'copies'], message: 'Actual Copies refusal' }];
+        const diagnostics = [{ kind: 'field' as const, path: ['setpoint', 'copies'], message: 'Actual Copies refusal' }];
         workers[0].send({ type: 'validation-failed', requestId, message: 'Actual Copies refusal', recovery, diagnostics });
         expect(await pending).toEqual({ kind: 'invalid', message: 'Actual Copies refusal', recovery });
         expect(latest().validation).toMatchObject({ status: 'invalid', recovery, diagnostics });

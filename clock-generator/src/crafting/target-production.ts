@@ -4,7 +4,7 @@ import type { judgeLongRun } from "./long-run";
 export interface TargetProduction {
     valid: boolean;
     shortfall: number;
-    output_items_per_period: number;
+    output_items_per_window_cycle: number;
     evidence: "sample" | "repeating-cycle";
 }
 
@@ -14,13 +14,13 @@ export interface TargetProduction {
  * recurrence and recovery checks, which stay separate; the rate is the mean over the judged span, not rounded.
  */
 export function assessTargetProduction(
-    measured: Pick<ReturnType<typeof judgeLongRun>, "total" | "expected_total" | "output_items_per_period">,
+    measured: Pick<ReturnType<typeof judgeLongRun>, "total" | "expected_total" | "output_items_per_window_cycle">,
     repetition_proven: boolean,
 ): TargetProduction {
     return {
         valid: measured.total >= measured.expected_total,
         shortfall: Math.max(0, measured.expected_total - measured.total),
-        output_items_per_period: measured.output_items_per_period,
+        output_items_per_window_cycle: measured.output_items_per_window_cycle,
         evidence: repetition_proven ? "repeating-cycle" : "sample",
     };
 }

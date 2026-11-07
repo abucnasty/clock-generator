@@ -7,7 +7,7 @@ const sample = (key: keyof typeof ConfigPaths) => loadConfigFromFile(ConfigPaths
 
 describe("the output swing estimate", () => {
     // ELECTROMAGNETIC_SCIENCE_330: the swing backoff starts at 5 output swings a cycle; 5 and 4 make 1,456 of 1,760 and
-    // 656 of 704 items a period in the planning run's clock, 3 holds
+    // 656 of 704 items a window cycle in the planning run's clock, 3 holds
     it("finds where the batched windows by arithmetic fall behind, with no run of the build", async () => {
         const config = await sample("ELECTROMAGNETIC_SCIENCE_330");
         expect(outputSwingEstimate(config, 3).verdict).toBe("keeps up");

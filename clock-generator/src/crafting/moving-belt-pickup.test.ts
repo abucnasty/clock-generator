@@ -3,13 +3,13 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { loadConfigFromFile } from "../config/loader";
 import { Config } from "../config";
 import { simulateRecording } from "../verification/simulated-recording";
-import { outputPerPeriod, recipesMaking } from "../harness/recording-output";
+import { outputPerWindowCycle, recipesMaking } from "../harness/recording-output";
 import { SimulationContext } from "./sequence/simulation-context";
 import { AlwaysEnabledControl } from "../simulation/controls/enable-control";
 import { EntityState } from "../state";
 
 const SAMPLE = GameFixturePaths.DIFFERENT_ITEMS_CONFIG;
-// The old default from 0.17.0: measured at 480–528 instead of 528 per period on both moving underground endpoints.
+// The old default from 0.17.0: measured at 480–528 instead of 528 per window cycle on both moving underground endpoints.
 const OLD_WINDOWS = {
     "inserter:1": Array.from({ length: 11 }, (_, k) => ({ start: 1 + 96 * k, end: 37 + 96 * k })),
     "inserter:2": [[13, 51], [109, 147], [217, 244], [301, 339], [346, 362], [409, 425], [434, 461],
@@ -20,7 +20,7 @@ beforeAll(async () => { config = await loadConfigFromFile(SAMPLE); });
 
 function outputCounts(config: Config): Set<number> {
     const recording = simulateRecording(config, OLD_WINDOWS, 1056, 36_960);
-    return new Set(outputPerPeriod(recording, recipesMaking(config, config.target_output.recipe)).slice(-20).map(p => p.items));
+    return new Set(outputPerWindowCycle(recording, recipesMaking(config, config.setpoint.recipe)).slice(-20).map(p => p.items));
 }
 
 describe("moving pickup affects the verdict of the old default clock", () => {

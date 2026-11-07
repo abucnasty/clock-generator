@@ -26,15 +26,15 @@ describe("generateClockForConfig", () => {
             });
 
             it("has fractional_swings_enabled set to false", () => {
-                expect(result.crafting_cycle_plan.fractional_swings_enabled).toBe(false);
+                expect(result.output_cycle_plan.fractional_swings_enabled).toBe(false);
             });
 
             it("does not have swing_distribution defined", () => {
-                expect(result.crafting_cycle_plan.swing_distribution).toBeUndefined();
+                expect(result.output_cycle_plan.swing_distribution).toBeUndefined();
             });
 
             it("does not have cycle_multiplier defined", () => {
-                expect(result.crafting_cycle_plan.cycle_multiplier).toBeUndefined();
+                expect(result.output_cycle_plan.cycle_multiplier).toBeUndefined();
             });
 
             // configs saved when the switch existed carry use_fractional_swings: true, which is read and dropped
@@ -44,7 +44,7 @@ describe("generateClockForConfig", () => {
                 expect(saved.overrides).toEqual({});
                 expect({ ...saved, overrides: undefined }).toEqual(await parseConfig(JSON.stringify(config)));
                 const again = generateClockForConfig(saved);
-                expect(again.crafting_cycle_plan.fractional_swings_enabled).toBe(false);
+                expect(again.output_cycle_plan.fractional_swings_enabled).toBe(false);
                 expect(again.clock_windows).toEqual(result.clock_windows);
                 expect(again.simulation_duration.ticks).toBe(result.simulation_duration.ticks);
             });
@@ -77,7 +77,7 @@ describe("generateClockForConfig", () => {
 
             it("has correct tick ranges for input inserter transfers", () => {
                 // Get the actual EntityId instances from the map keys
-                const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
+                const keys = Array.from(result.output_cycle_plan.entity_transfer_map.keys());
                 // inserter id 3 is the LDS + blue chip inserter in this configuration
                 const input_inserter_id: EntityId = keys.find(k => k.id === EntityId.forInserter(3).id)!;
 
@@ -97,7 +97,7 @@ describe("generateClockForConfig", () => {
             // belt window trim; these are not recorded
             describe("clock alternatives", () => {
                 let alternatives: ClockAlternative[];
-                const windowsOf = (id: string) => alternatives.find(a => a.id === id)?.result.clock_windows;
+                const windowsOf = (id: string) => alternatives.find(a => a.maker === id)?.result.clock_windows;
 
                 beforeAll(() => {
                     // batched swings is stable, so observed windows are only made when they are asked for
@@ -105,7 +105,7 @@ describe("generateClockForConfig", () => {
                 });
 
                 it.each(["planned-belt-slack", "derived"])("%s is stable", (id) => {
-                    expect(alternatives.find(a => a.id === id)?.verdict).toBe("stable");
+                    expect(alternatives.find(a => a.maker === id)?.verdict).toBe("stable");
                 });
 
                 // inserter 1 and 3 windows end 3 ticks earlier since belt windows close before their last return swing,
@@ -134,7 +134,7 @@ describe("generateClockForConfig", () => {
     });
 
     // One machine, two output hands and nine input hands per 288 ticks. Clocks for it are easy to get to the
-    // expected output in one simulated period without the build actually repeating that period.
+    // expected output in one simulated window cycle without the build actually repeating that window cycle.
     describe("FLYING_ROBOT_FRAME_160 clock-only check", async () => {
         // The sample as it was before it took the lanes of the build (2026-11-05): no near lane on the belt inserters, the
         // output belt's lanes the processing unit and the frame. With the build's own lanes the planned clock is unstable
@@ -177,12 +177,12 @@ describe("generateClockForConfig", () => {
             let planned: ClockAlternative;
 
             beforeAll(() => {
-                planned = alternatives.find(a => a.id === "planned-belt-slack")!;
+                planned = alternatives.find(a => a.maker === "planned-belt-slack")!;
             });
 
             it("is stable and repeats every period", () => {
                 expect(planned.verdict).toBe("stable");
-                expect(planned.result.stability_check.as_built?.repeat_periods).toBe(1);
+                expect(planned.result.stability_check.as_built?.repeat_window_cycles).toBe(1);
             });
 
             // the timelines default to this run; it differs from the planning run the windows were taken from
@@ -200,13 +200,13 @@ describe("generateClockForConfig", () => {
         });
 
         describe("insights", () => {
-            const insightsOf = (id: string) => alternatives.find(a => a.id === id)!.insights;
+            const insightsOf = (id: string) => alternatives.find(a => a.maker === id)!.insights;
             const insight = (id: string, insight_id: string) => insightsOf(id).find(it => it.id === insight_id);
 
             it("says how much time the machine has to spare", () => {
                 expect(insight("planned-belt-slack", "spare-time")).toMatchObject({
                     scope: "build",
-                    title: "Machine 1 (flying-robot-frame) has 9 ticks to spare each clock period",
+                    title: "Machine 1 (flying-robot-frame) has 9 ticks to spare each window cycle",
                     table: { rows: [["Machine 1 (flying-robot-frame)", "279", "9", "17.4"]] },
                 });
             });
@@ -239,7 +239,7 @@ describe("generateClockForConfig", () => {
                 const ids = insightsOf("swings-2").map(it => it.id);
                 expect(ids).toContain("unstable");
                 expect(ids).not.toContain("spare-time");
-                expect(insight("swings-2", "unstable")?.what).toContain("moved 16 of 32 items in a clock period");
+                expect(insight("swings-2", "unstable")?.what).toContain("moved 16 of 32 items in a window cycle");
                 expect(insight("swings-2", "insertion-limits")?.table?.rows).toHaveLength(4);
             });
         });
@@ -248,13 +248,13 @@ describe("generateClockForConfig", () => {
             let uneven: ClockAlternative;
 
             beforeAll(() => {
-                uneven = alternatives.find(a => a.id === "uneven-output")!;
+                uneven = alternatives.find(a => a.maker === "uneven-output")!;
             });
 
             it("is offered and stable from every start phase checked", () => {
                 expect(uneven.verdict).toBe("stable");
                 expect(uneven.result.stability_check.as_built?.start_phases_checked).toBe(112);
-                expect(uneven.result.stability_check.as_built?.repeat_periods).toBe(1);
+                expect(uneven.result.stability_check.as_built?.repeat_window_cycles).toBe(1);
             });
 
             it("moves the second output swing one craft earlier and keeps the first", () => {
@@ -286,13 +286,13 @@ describe("generateClockForConfig", () => {
             let primary: ClockAlternative;
 
             beforeAll(() => {
-                shifted = alternatives.find(a => a.id === "shifted-swings")!;
-                primary = alternatives.find(a => a.id === "planned-belt-slack")!;
+                shifted = alternatives.find(a => a.maker === "shifted-swings")!;
+                primary = alternatives.find(a => a.maker === "planned-belt-slack")!;
             });
 
             it("is offered and stable", () => {
                 expect(shifted.verdict).toBe("stable");
-                expect(shifted.result.stability_check.as_built?.repeat_periods).toBe(1);
+                expect(shifted.result.stability_check.as_built?.repeat_window_cycles).toBe(1);
             });
 
             // the smallest shift that is at least an eighth of the cycle away from the plan and whose neighbours pass too
@@ -367,7 +367,7 @@ describe("generateClockForConfig", () => {
 
             it("is stable and repeats every period", () => {
                 expect(result.stability_check.holds).toBe(true);
-                expect(result.stability_check.repeat_periods).toBe(1);
+                expect(result.stability_check.repeat_window_cycles).toBe(1);
                 expect(result.stability_check.repeat_output_items).toBeUndefined();
             });
         });
@@ -388,7 +388,7 @@ describe("generateClockForConfig", () => {
             });
 
             it("is unstable because the two periods it repeats over move half of it", () => {
-                expect(result.stability_check.repeat_periods).toBe(2);
+                expect(result.stability_check.repeat_window_cycles).toBe(2);
                 expect(result.stability_check.repeat_output_items).toBe(32);
                 expect(result.stability_check.holds).toBe(false);
             });

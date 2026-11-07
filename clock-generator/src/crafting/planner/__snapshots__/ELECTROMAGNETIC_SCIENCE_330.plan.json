@@ -31,15 +31,15 @@
         "inserter:2/electromagnetic-science-pack",
         "inserter:3/electromagnetic-science-pack"
       ],
-      "periods": [
-        {"swings":5,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":160,"denominator":1},"cycles":22,"period_ticks":3520,"kept":true},
-        {"swings":4,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":128,"denominator":1},"cycles":11,"period_ticks":1408,"kept":true},
-        {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":96,"denominator":1},"cycles":22,"period_ticks":2112,"kept":true},
-        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":64,"denominator":1},"cycles":11,"period_ticks":704,"kept":true},
-        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":32,"denominator":1},"cycles":22,"period_ticks":704,"kept":true},
-        {"swings":2,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":64,"denominator":1},"cycles":11,"period_ticks":704,"kept":true}
+      "window_cycles": [
+        {"swings":5,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":160,"denominator":1},"cycles":22,"window_cycle_ticks":3520,"kept":true},
+        {"swings":4,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":128,"denominator":1},"cycles":11,"window_cycle_ticks":1408,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":96,"denominator":1},"cycles":22,"window_cycle_ticks":2112,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":64,"denominator":1},"cycles":11,"window_cycle_ticks":704,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":32,"denominator":1},"cycles":22,"window_cycle_ticks":704,"kept":true},
+        {"swings":2,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":64,"denominator":1},"cycles":11,"window_cycle_ticks":704,"kept":true}
       ],
-      "duty": [
+      "utilization": [
         {
           "producer": "machine:electromagnetic-science-pack",
           "members": [
@@ -53,7 +53,7 @@
             "numerator": 4379,
             "denominator": 400
           },
-          "duty": {
+          "utilization": {
             "numerator": 48000,
             "denominator": 48169
           }
@@ -69,7 +69,7 @@
       "planned": 5,
       "higher_up_to_ticks": 2400
     },
-    "main_period": {
+    "main_window_cycle": {
       "ticks": 3520,
       "exact": {
         "numerator": 3520,
@@ -96,5 +96,5 @@
       "action": "none"
     }
   },
-  "result_windows": null
+  "exhaust": null
 }

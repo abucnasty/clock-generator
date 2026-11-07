@@ -10,7 +10,7 @@ import type { ClockAlternativesResult } from '../../src/crafting/generate-bluepr
 const record = path.resolve(__dirname, '../../record');
 const config = {} as Config;
 const generated = {
-    alternatives: [{ id: 'even-hands', label: 'Even hands: 5 hands brought in per cycle', ranking: { meets_target_rate: true }, deciders: 12 }],
+    alternatives: [{ id: 'even-hands', label: 'Time-Division Windows: 5 hands brought in each output cycle', ranking: { meets_target_rate: true }, deciders: 12 }],
     selected_index: 0,
     skipped_searches: [],
 } as unknown as ClockAlternativesResult;
@@ -18,10 +18,10 @@ const selected = (result: ClockAlternativesResult) => result.alternatives[result
 
 /** One check of each kind the module's files use, with the value it states right and then wrong */
 const kinds = (right: boolean): JobCheck[] => [
-    { name: 'a text is what it must read', run: ({ generated: g }) => { expect(selected(g).label).toBe(right ? 'Even hands: 5 hands brought in per cycle' : 'Even hands: 4 hands brought in per cycle'); } },
+    { name: 'a text is what it must read', run: ({ generated: g }) => { expect(selected(g).label).toBe(right ? 'Time-Division Windows: 5 hands brought in each output cycle' : 'Time-Division Windows: 4 hands brought in each output cycle'); } },
     { name: 'a text contains a phrase', run: ({ generated: g }) => { expect(selected(g).label).toContain(right ? 'hands brought in' : 'share one wake window'); } },
     { name: 'a number is close to a figure', run: ({ generated: g }) => { expect(selected(g).deciders).toBeCloseTo(right ? 12.0001 : 13, 2); } },
-    { name: 'a list holds', run: ({ generated: g }) => { expect(g.skipped_searches).toEqual(right ? [] : ['Uneven output swings']); } },
+    { name: 'a list holds', run: ({ generated: g }) => { expect(g.skipped_searches).toEqual(right ? [] : ['Moved Output Swing']); } },
     { name: 'a relation holds on every alternative', run: ({ generated: g }) => { for (const it of g.alternatives) expect(it.ranking.meets_target_rate, it.id).toBe(right); } },
 ];
 
@@ -37,10 +37,10 @@ describe('runJobChecks', () => {
         const report = runJobChecks('config-X', config, generated, kinds(false));
         expect(report.failures.map(it => it.check)).toEqual(kinds(false).map(it => it.name));
         const [text, contains, close, list, relation] = report.failures;
-        expect([text.expected, text.actual]).toEqual(['Even hands: 4 hands brought in per cycle', 'Even hands: 5 hands brought in per cycle']);
+        expect([text.expected, text.actual]).toEqual(['Time-Division Windows: 4 hands brought in each output cycle', 'Time-Division Windows: 5 hands brought in each output cycle']);
         expect(contains.message).toContain('share one wake window');
         expect(close.message).toContain('13');
-        expect([list.expected, list.actual]).toEqual([JSON.stringify(['Uneven output swings']), JSON.stringify([])]);
+        expect([list.expected, list.actual]).toEqual([JSON.stringify(['Moved Output Swing']), JSON.stringify([])]);
         expect(relation.message).toContain('even-hands');
     });
 

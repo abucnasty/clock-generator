@@ -1,5 +1,5 @@
 {
-  "target_output": {
+  "setpoint": {
     "recipe": "iron-bacteria",
     "items_per_second": 380,
     "copies": 1

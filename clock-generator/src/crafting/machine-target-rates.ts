@@ -8,7 +8,7 @@ import { fraction } from "../data-types/fraction";
 import { Entity } from "../entities";
 import { decimalOf } from "../entities/traits/ratio";
 import { handOfItem, traitsOf, traitsOfMachine } from "../entities/traits/traits-of";
-import { CraftingCyclePlan } from "./sequence/cycle/crafting-cycle";
+import { OutputCyclePlan } from "./sequence/cycle/output-cycle";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { TargetProductionRate } from "./target-production-rate";
 
@@ -35,13 +35,13 @@ export interface MachineTargetRate {
 export function computeMachineTargetRates(config: Config): MachineTargetRate[] {
     assertOutputTransferGenerationSupported(config);
     validateCopies(config);
-    assert(Number.isFinite(config.target_output.items_per_second) && config.target_output.items_per_second > 0,
-        "Set a positive target output rate to see at-target rates.");
+    assert(Number.isFinite(config.setpoint.items_per_second) && config.setpoint.items_per_second > 0,
+        "Set a positive setpoint to see at-target rates.");
     assertInserterCoverage(config);
     assertFeasible(config);
     const registry = createEntityRegistryFromConfig(config);
-    const target = TargetProductionRate.fromConfig(config.target_output);
-    const cycle = CraftingCyclePlan.create(target, registry, config, fraction(1));
+    const target = TargetProductionRate.fromConfig(config.setpoint);
+    const cycle = OutputCyclePlan.create(target, registry, config, fraction(1));
     const seconds = cycle.total_duration_ticks.divide(60);
     const traits = traitsOf(config);
     // the machines in the registry's order, each with its traits

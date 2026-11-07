@@ -7,12 +7,12 @@
   },
   "lcm": 5,
   "terminal_swing_count": 2,
-  "period": 213.33333333333334,
+  "window_cycle_ticks": 213.33333333333334,
   "physical_repeat": {
-    "period_ticks": 640,
+    "window_cycle_ticks": 640,
     "scale": 3
   },
-  "expected_per_period": 160,
+  "expected_per_window_cycle": 160,
   "clock_windows": {
     "inserter:3": [
       {

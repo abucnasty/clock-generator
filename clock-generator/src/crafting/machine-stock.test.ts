@@ -3,7 +3,7 @@ import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import { StockRecorder } from "./machine-stock";
 import { SimulationContext } from "./sequence/simulation-context";
-import { runBuild } from "./plan/plan-run";
+import { runBuild } from "./plan/unclocked-run";
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 
@@ -46,7 +46,7 @@ describe("the stock recorder", () => {
 
     it("hands a run every series at the length of the run, with nothing missing, when it records the whole of its request", async () => {
         const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
-        const run = runBuild(config, { logger: quiet, machine_stock: true, factorio_states: false, simulate_periods: 2 });
+        const run = runBuild(config, { logger: quiet, machine_stock: true, factorio_states: false, simulate_window_cycles: 2 });
         const stock = run.machine_stock!;
         expect(stock.ticks).toBe(run.recorded_duration.ticks);
         for (const series of seriesOf(stock)) {

@@ -9,8 +9,8 @@ const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 
 // On the express moving half-tile pickups a cold plant gets one hand of each ingredient before its output blocks where
 // backed-up belts give it two: 44 packs made against 88, 2.75 hands against 5.5. Planned on 2.75, the whole swings were
-// 2, a period of part ticks that no moving clock can be made for, and the backoff never reached 3, where one holds.
-describe("output swings per cycle of a build on moving belts", () => {
+// 2, a window cycle of part ticks that no moving clock can be made for, and the backoff never reached 3, where one holds.
+describe("output swings each output cycle of a build on moving belts", () => {
     let moving: Config;
     beforeAll(async () => {
         const variant = pickupClockCase("electromagnetic", "express", "underground-entrance", false);
@@ -31,7 +31,7 @@ describe("output swings per cycle of a build on moving belts", () => {
 
 // A target that counts an item destroyed is planned on the hands brought into the machine that destroys it, however
 // many chests the inserters take them from: as Sidecar exports an ore voider, each feeding inserter has a chest of its own
-describe("hands brought in per cycle of a build whose target counts an item destroyed", () => {
+describe("hands brought in each output cycle of a build whose target counts an item destroyed", () => {
     it("are the hands brought into the recycler over all its inserters, from one chest or from one each", async () => {
         const voider = await loadConfigFromFile(ConfigPaths.IRON_ORE_VOIDER_400_EXACT_SPEED);
         expect(validateConfig(voider, { logger: quiet }).output_swings_per_cycle).toBe(5);

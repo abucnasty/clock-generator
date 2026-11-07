@@ -13,7 +13,7 @@ const lanes = () => screen.queryAllByRole('img').map(lane => lane.getAttribute('
 const lane = (label: string) => `${label}, 0 to 100 ticks. Values are available in the tick inspector.`;
 
 const inserter: TimelineEntity = { id: 'inserter:1', type: 'inserter', source: 'belt:1', sink: 'machine:1', items: ['iron-plate'], signals: [] };
-const a: TimelineRecording = { version: 1, mode: 'clock', start_tick: 0, end_tick: 100, period_ticks: 100, requested_ticks: 100, ticks_before_recording: 1000, ticks_per_second: 60, copies: 1, truncated: false, entities: [inserter], events: [] };
+const a: TimelineRecording = { version: 1, mode: 'clock', start_tick: 0, end_tick: 100, window_cycle_ticks: 100, requested_ticks: 100, ticks_before_recording: 1000, ticks_per_second: 60, copies: 1, truncated: false, entities: [inserter], events: [] };
 const machine: TimelineEntity = { id: 'machine:1', type: 'machine', recipe: 'iron-gear-wheel', items: ['iron-gear-wheel'], signals: [
     { id: 'state', label: 'Machine state', group: 'state', unit: 'state', ticks: [0], values: ['working'] },
     { id: 'produced', label: 'Main product made since tick 0', group: 'production', unit: 'items', item: 'iron-gear-wheel', ticks: [0, 10], values: [0, 3] },

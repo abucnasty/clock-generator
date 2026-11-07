@@ -46,7 +46,7 @@ describe("fuel clocks", () => {
         const clock = unplannedInserterClocks(registry, 960).get("inserter:3")!;
 
         expect(clock.own_clock).toBe(true);
-        // the longest divisor of the 960 tick period that is no longer
+        // the longest divisor of the 960 tick window cycle that is no longer
         expect(clock.modulus).toBe(192);
         expect(clock.window.end_inclusive).toBeLessThan(clock.modulus);
     });
@@ -110,11 +110,11 @@ describe("by-product clocks", () => {
 
     it("looks at the machine at least as often as a hand of the by-product builds up, on a divisor of the period", async () => {
         const registry = await registryOf();
-        const period = 128;
-        const clock = unplannedInserterClocks(registry, period).get(byProductOnlyInserters(registry)[0].entity_id.id)!;
+        const window_cycle_ticks = 128;
+        const clock = unplannedInserterClocks(registry, window_cycle_ticks).get(byProductOnlyInserters(registry)[0].entity_id.id)!;
 
         expect(clock.kind).toBe("by-product");
-        expect(period % clock.modulus).toBe(0);
+        expect(window_cycle_ticks % clock.modulus).toBe(0);
         // the seed is made at about 0.047 a tick at most, so a hand of 8 builds up in about 171 ticks, but the stack of 10
         // only has room for 2 over a hand: the machine is looked at at least every 2 / 0.047 = 42 ticks
         expect(clock.modulus).toBeLessThanOrEqual(42);
@@ -139,7 +139,7 @@ describe("by-product clocks", () => {
         const registry = await registryOf();
         const inserter = byProductOnlyInserters(registry)[0];
         const machine = registry.getEntityByIdOrThrow(inserter.source.entity_id);
-        // a prime clock period above the time a hand of seeds takes has no divisor between a swing and that time
+        // a prime window cycle above the time a hand of seeds takes has no divisor between a swing and that time
         expect(() => byProductClockFor(inserter, machine as Machine, registry, 211))
             .toThrow(/cannot keep up: a hand of jellynut-seed the machine makes lasts/);
     });
@@ -154,7 +154,7 @@ describe("sharedFuelClockTicks", () => {
         const shared = sharedFuelClockTicks(128, fuelClocks(95, 95, 138))!;
         expect(shared).toBe(23 * 128);
         expect(moduliOf(shared, 95, 138)).toEqual([92, 128]);
-        // 11 periods give 88 and 128, 8% more enables than 95 and 138
+        // 11 window cycles give 88 and 128, 8% more enables than 95 and 138
         expect(moduliOf(11 * 128, 95, 138)).toEqual([88, 128]);
     });
 
@@ -168,17 +168,17 @@ describe("sharedFuelClockTicks", () => {
     });
 
     it("is the count that enables the least when none up to 10 minutes is within 5%", () => {
-        // no count of 9000 ticks up to 10 minutes has a divisor from 91 to 95: 90 it is, 5.6% more enables, in one period
+        // no count of 9000 ticks up to 10 minutes has a divisor from 91 to 95: 90 it is, 5.6% more enables, in one window cycle
         const shared = sharedFuelClockTicks(9000, fuelClocks(95))!;
         expect(shared).toBe(9000);
         expect(moduliOf(shared, 95)).toEqual([90]);
-        // 7201 = 19 x 379: one period has 19 only, and 4 periods have 76, the longest any count up to 10 minutes has
+        // 7201 = 19 x 379: one window cycle has 19 only, and 4 window cycles have 76, the longest any count up to 10 minutes has
         expect(sharedFuelClockTicks(7201, fuelClocks(200))).toBe(4 * 7201);
         expect(moduliOf(4 * 7201, 200)).toEqual([76]);
     });
 
     it("is null when no count up to 10 minutes has a divisor for a fuel clock", () => {
-        // 30011 is prime, with no divisor from a swing's 12 ticks to 95, and two periods are over 10 minutes
+        // 30011 is prime, with no divisor from a swing's 12 ticks to 95, and two window cycles are over 10 minutes
         expect(sharedFuelClockTicks(30011, fuelClocks(95))).toBeNull();
     });
 

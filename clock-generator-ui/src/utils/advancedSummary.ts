@@ -15,7 +15,7 @@ export function advancedSetCount(overrides: ConfigFormData['overrides']): number
         overrides.terminal_swing_count !== undefined,
         overrides.search_for_fewer_wake_ups === true,
         overrides.check_start_dependence !== undefined,
-        overrides.loop_seed_items !== undefined,
+        overrides.kick_start_items !== undefined,
         (overrides.ignored_lcm_ingredients?.length ?? 0) > 0,
     ].filter(Boolean).length;
 }

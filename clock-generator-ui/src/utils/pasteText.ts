@@ -98,19 +98,19 @@ interface UnavailableConversion {
 }
 
 const lowerFirst = (text: string) => text.charAt(0).toLowerCase() + text.slice(1);
-const withoutPeriod = (text: string) => text.trim().replace(/\.$/, '');
+const withoutWindowCycle = (text: string) => text.trim().replace(/\.$/, '');
 
 /** Why the copies cannot be split, as the end of "They can't be split into copies yet ...": the clause, or null for the groups that only look alike */
 function cannotSplitBecause(checked: UnavailableConversion, config: Config): string | null {
     const { code, message } = checked.reason;
-    if (checked.stage === 'check') return `because one copy would not pass Check (${withoutPeriod(message)})`;
+    if (checked.stage === 'check') return `because one copy would not pass Check (${withoutWindowCycle(message)})`;
     if (code === 'nonuniform-units' || code === 'candidate-still-repeated') return null;
     const into = config.drills?.configs.find(drill => drill.target.type === 'chest');
     if (code === 'unsupported-boundary' && into) {
         const chest = config.chests?.find(row => row.id === into.target.id);
         return `because a drill drops into ${withArticle(chestKindName(chest?.type))}`;
     }
-    return `because ${lowerFirst(withoutPeriod(message))}`;
+    return `because ${lowerFirst(withoutWindowCycle(message))}`;
 }
 
 /** The two paragraphs of the "Imported as one unit" box; the box shows only for an export of several copies */
@@ -118,8 +118,8 @@ export function importedAsOneUnitText(checked: UnavailableConversion, config: Co
     const because = cannotSplitBecause(checked, config);
     return {
         what: because === null
-            ? `This export holds ${checked.repeatedGroups} groups that look alike. We couldn't prove they are identical, so it comes in as one unit.`
-            : `This export holds ${checked.repeatedGroups} identical copies of a build. They can't be split into copies yet ${because}, so it comes in as one unit.`,
+            ? `This export holds ${checked.repeatedGroups} groups that look alike. We couldn't prove they are identical, so it comes in as one build.`
+            : `This export holds ${checked.repeatedGroups} identical copies of a build. They can't be split into copies yet ${because}, so it comes in as one build.`,
         next: `Check will not run on it like this. Select one complete group in Factorio, export it again, and set Copies to ${checked.repeatedGroups}.`,
     };
 }

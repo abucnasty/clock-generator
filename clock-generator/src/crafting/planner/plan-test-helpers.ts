@@ -1,7 +1,7 @@
 /**
  * What the build plan's tests share: a sample's plan as a generation would make it, with the cycle arithmetic of its
  * planning run (one prepare step on the config with fractional swings on and one with them off, as validateConfig
- * makes it), and the validation of the config that the plan's periods are held to.
+ * makes it), and the validation of the config that the plan's window cycles are held to.
  */
 import type { Config } from "../../config/schema";
 import { loadConfigFromFile } from "../../config/loader";
@@ -10,7 +10,7 @@ import type Fraction from "../../data-types/fraction";
 import { toPlannerFacts } from "../facts/to-planner-facts";
 import { feasibilityOf, type Feasibility } from "../feasibility/assert-feasible";
 import { plannerGraphOf } from "../graph/build-graph";
-import { maxSwingsOfPreparedBuild } from "../plan/plan-run";
+import { maxSwingsOfPreparedBuild } from "../plan/unclocked-run";
 import { ConfigValidation, validateConfig } from "../plan/validate-config";
 import { PrepareStep } from "../runner/steps/prepare-step";
 import { createEntityRegistryFromConfig, SimulationContext } from "../sequence/simulation-context";
@@ -29,7 +29,7 @@ export interface PlannedSample {
     readonly config: Config;
     readonly feasibility: Feasibility;
     readonly plan: BuildPlan;
-    /** What validating the config finds (its planning run's period); null where it is refused */
+    /** What validating the config finds (its planning run's window cycle); null where it is refused */
     readonly validation: ConfigValidation | null;
 }
 
@@ -52,7 +52,7 @@ export function planOfConfig(config: Config): PlannedSample {
     const cycle = validation === null ? null : {
         config,
         registry: createEntityRegistryFromConfig(config),
-        max_swings: config.target_output.counts === "destroyed" ? null : max_swings,
+        max_swings: config.setpoint.counts === "destroyed" ? null : max_swings,
     };
     return { config, feasibility, plan: planBuild(facts, graph, feasibility, cycle), validation };
 }

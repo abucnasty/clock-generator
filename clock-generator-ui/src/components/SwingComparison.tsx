@@ -72,10 +72,10 @@ export function SwingComparison({ data }: { data: SwingComparisonData }) {
     const lanes = groupLanes(data);
     const svgWidth = Math.max(width, MIN_SVG_WIDTH);
     const plotWidth = svgWidth - LABEL_WIDTH - PLOT_PADDING * 2;
-    const x = (tick: number) => LABEL_WIDTH + PLOT_PADDING + (tick / data.period) * plotWidth;
+    const x = (tick: number) => LABEL_WIDTH + PLOT_PADDING + (tick / data.window_cycle_ticks) * plotWidth;
     const height = AXIS_HEIGHT + lanes.length * LANE_HEIGHT;
-    const step = [10, 20, 25, 50, 100, 200].find(it => data.period / it <= 12) ?? 500;
-    const ticks = Array.from({ length: Math.floor(data.period / step) + 1 }, (_, i) => i * step);
+    const step = [10, 20, 25, 50, 100, 200].find(it => data.window_cycle_ticks / it <= 12) ?? 500;
+    const ticks = Array.from({ length: Math.floor(data.window_cycle_ticks / step) + 1 }, (_, i) => i * step);
 
     const planColor = theme.palette.text.secondary;
     const okColor = theme.palette.success.main;
@@ -94,7 +94,7 @@ export function SwingComparison({ data }: { data: SwingComparisonData }) {
                 <Legend color={extraColor} text="Only in one run" />
             </Box>
             <ScrollX label={SCROLL_REGION_NAMES.swingComparison}>
-            <svg width={svgWidth} height={height} role="img" aria-label="Plan and exported clock drop ticks per inserter">
+            <svg width={svgWidth} height={height} role="img" aria-label="Plan and blueprint clock drop ticks per inserter">
                 <defs>
                     <marker id="swing-arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
                         <path d="M0,0 L6,3 L0,6 z" fill={movedColor} />
@@ -150,7 +150,7 @@ export function SwingComparison({ data }: { data: SwingComparisonData }) {
             </svg>
             </ScrollX>
             <Typography variant="caption" color="text.secondary">
-                Top row of each lane is the plan, bottom row the exported clock. Inserters that swing identically share a lane.
+                Top row of each lane is the plan, bottom row the blueprint clock. Inserters that swing identically share a lane.
             </Typography>
         </Box>
     );

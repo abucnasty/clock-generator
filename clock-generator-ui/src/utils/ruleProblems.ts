@@ -24,16 +24,16 @@ export const PROBLEM_TEXT = {
     endBeforeStart: (start: number) => `The end must not be before the start (${start}).`,
     // the config file holds a window's end as a number above 0, so a window can't end at tick 0
     endAtZero: "The end must be tick 1 or later: an enable window can't end at tick 0.",
-    pastPeriod: (period: number) => `Past the end of the ${period}-tick window cycle: the last tick is ${period - 1}.`,
+    pastWindowCycle: (window_cycle_ticks: number) => `Past the end of the ${window_cycle_ticks}-tick window cycle: the last tick is ${window_cycle_ticks - 1}.`,
     repeat: 'Enter a whole number of ticks, 1 or more, or leave it empty.',
     pickItem: 'Pick an item.',
     drillConditional: "Mining drills can't use a Conditional rule. Pick another mode.",
     drillNeverIntoContainer: "A drill into a container can't be Never on: it would fill nothing. Pick another mode.",
 } as const;
 
-/** The non-blocking warning of a "Repeat every" that the clock period is not a whole number of */
-const repeatWarning = (repeat: number, period: number) =>
-    `${repeat} ticks doesn't fit a whole number of times into the ${period}-tick window cycle, so the clock can't follow this rule exactly.`;
+/** The non-blocking warning of a "Repeat every" that the window cycle is not a whole number of */
+const repeatWarning = (repeat: number, window_cycle_ticks: number) =>
+    `${repeat} ticks doesn't fit a whole number of times into the ${window_cycle_ticks}-tick window cycle, so the clock can't follow this rule exactly.`;
 
 /** The DOM id of one of the rule form's fields: the form's prefix, then its place ("start", 0) */
 export function ruleFieldId(idPrefix: string, ...place: (string | number)[]): string {
@@ -68,12 +68,12 @@ interface ProblemContext {
 }
 
 /**
- * The period the wake windows must fit in: "Repeat every" when it is valid, else the crafting cycle. None when neither
- * is known, or the cycle is not a whole number of ticks: the engine places a fractional period's ticks itself
+ * The window cycle the wake windows must fit in: "Repeat every" when it is valid, else the output cycle. None when neither
+ * is known, or the cycle is not a whole number of ticks: the engine places a fractional window cycle's ticks itself
  * (`clockPosition` in `enable-control.ts`), so no window can be said to be past its end
  */
-export function rulePeriodOf(draft: Pick<EnableControlDraft, 'periodDuration'>, timing: RuleTiming): number | null {
-    const repeat = repeatTicksOf(draft.periodDuration);
+export function ruleWindowCycleOf(draft: Pick<EnableControlDraft, 'windowCycleDuration'>, timing: RuleTiming): number | null {
+    const repeat = repeatTicksOf(draft.windowCycleDuration);
     if (repeat !== null) return repeat;
     const cycle = timing.cycleTicks;
     return cycle !== null && Number.isInteger(cycle) ? cycle : null;
@@ -120,7 +120,7 @@ export function ruleProblemsOf(draft: EnableControlDraft, { entityType, timing, 
         problems.push({ fieldId: modeFieldId(idPrefix, EnableControlMode.NEVER), field: 'Mode', text: PROBLEM_TEXT.drillNeverIntoContainer });
     }
     if (draft.mode === EnableControlMode.CLOCKED) {
-        const period = rulePeriodOf(draft, timing);
+        const window_cycle_ticks = ruleWindowCycleOf(draft, timing);
         draft.ranges.forEach((window, index) => {
             const n = index + 1;
             const add = (side: 'start' | 'end', text: string) =>
@@ -128,16 +128,16 @@ export function ruleProblemsOf(draft: EnableControlDraft, { entityType, timing, 
             const startProblem = tickProblem(window.start);
             const start = wholeTicksOf(window.start);
             if (startProblem) add('start', startProblem);
-            else if (period !== null && start !== null && start > period - 1) add('start', PROBLEM_TEXT.pastPeriod(period));
+            else if (window_cycle_ticks !== null && start !== null && start > window_cycle_ticks - 1) add('start', PROBLEM_TEXT.pastWindowCycle(window_cycle_ticks));
 
             const endProblem = tickProblem(window.end);
             const end = wholeTicksOf(window.end);
             if (endProblem) add('end', endProblem);
             else if (end !== null && start !== null && end < start) add('end', PROBLEM_TEXT.endBeforeStart(start));
             else if (end === 0) add('end', PROBLEM_TEXT.endAtZero);
-            else if (period !== null && end !== null && end > period - 1) add('end', PROBLEM_TEXT.pastPeriod(period));
+            else if (window_cycle_ticks !== null && end !== null && end > window_cycle_ticks - 1) add('end', PROBLEM_TEXT.pastWindowCycle(window_cycle_ticks));
         });
-        if (draft.periodDuration.trim() !== '' && repeatTicksOf(draft.periodDuration) === null) {
+        if (draft.windowCycleDuration.trim() !== '' && repeatTicksOf(draft.windowCycleDuration) === null) {
             problems.push({ fieldId: ruleFieldId(idPrefix, 'repeat'), field: REPEAT_LABEL, text: PROBLEM_TEXT.repeat });
         }
     } else if (draft.mode === EnableControlMode.CONDITIONAL) {
@@ -152,11 +152,11 @@ export function ruleProblemsOf(draft: EnableControlDraft, { entityType, timing, 
     return problems;
 }
 
-/** The warnings that do not stop Save: a "Repeat every" the clock period is not a whole number of */
+/** The warnings that do not stop Save: a "Repeat every" the window cycle is not a whole number of */
 export function ruleWarningsOf(draft: EnableControlDraft, timing: RuleTiming): string[] {
     if (draft.mode !== EnableControlMode.CLOCKED) return [];
-    const repeat = repeatTicksOf(draft.periodDuration);
-    const period = timing.periodTicks;
-    if (repeat === null || period === null || !Number.isInteger(period) || period % repeat === 0) return [];
-    return [repeatWarning(repeat, period)];
+    const repeat = repeatTicksOf(draft.windowCycleDuration);
+    const window_cycle_ticks = timing.windowCycleTicks;
+    if (repeat === null || window_cycle_ticks === null || !Number.isInteger(window_cycle_ticks) || window_cycle_ticks % repeat === 0) return [];
+    return [repeatWarning(repeat, window_cycle_ticks)];
 }

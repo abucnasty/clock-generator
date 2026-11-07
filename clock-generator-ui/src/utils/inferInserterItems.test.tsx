@@ -22,7 +22,7 @@ const recipeInfo = (name: string) => recipes[name] ?? null;
 /** Inserter 1 puts machine 1's lithium into container 1, and inserter 2 takes it to machine 2's lithium plates; belt 1 carries copper plates */
 function build(type: 'car' | 'tank' | 'cargo-wagon' | 'rocket-silo' = 'rocket-silo') {
     return configToFormData({
-        target_output: { recipe: 'lithium-plate', items_per_second: 1, copies: 1 },
+        setpoint: { recipe: 'lithium-plate', items_per_second: 1, copies: 1 },
         machines: [
             { id: 1, recipe: 'lithium', crafting_speed: 1, productivity: 0 },
             { id: 2, recipe: 'lithium-plate', crafting_speed: 1, productivity: 0 },
@@ -124,7 +124,7 @@ it('explains empty automatic slots without labelling explicit filters as uninfer
 describe('a container filled by drills', () => {
     // the car build: a big mining drill drops iron ore into a car, two inserters take it to two furnaces
     const car = () => configToFormData({
-        target_output: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
+        setpoint: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
         machines: [{ id: 1, recipe: 'iron-plate', crafting_speed: 5, productivity: 0 }, { id: 2, recipe: 'iron-plate', crafting_speed: 5, productivity: 0 }],
         drills: { configs: [{ id: 1, type: 'big-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 0, productivity: 0, target: { type: 'chest', id: 1 } }] },
         belts: [],

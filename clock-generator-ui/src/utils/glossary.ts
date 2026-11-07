@@ -4,8 +4,7 @@
  * terms, and `insteadOf` lists the words they replace.
  *
  * Kept as they are: tick, UPS, combinator, insertion limit, Sidecar mod, Configure and Results, Generate, Stack size and
- * "Copy old clock…". The engine's own text (the clocks' names and descriptions, the Insights prose) is shown as it comes
- * and is not covered yet.
+ * "Copy old clock…".
  */
 
 export interface GlossaryEntry {
@@ -24,6 +23,15 @@ export type GlossaryId =
     | 'swing'
     | 'swing-plan'
     | 'crafting-cycle'
+    | 'strategy'
+    | 'enable_control_strategy'
+    | 'belt_strategy'
+    | 'router'
+    | 'direct'
+    | 'coordinated_sources'
+    | 'tuning_method'
+    | 'selection'
+    | 'unclocked_run'
     | 'window-cycle-time'
     | 'enable-window'
     | 'wakeup'
@@ -80,21 +88,21 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     {
         id: 'swing-plan',
         term: 'swing plan',
-        definition: 'How many swings each inserter makes per crafting cycle.',
+        definition: 'How many swings each inserter makes each output cycle.',
         insteadOf: 'transfer plan',
     },
     {
         id: 'crafting-cycle',
-        term: 'crafting cycle',
-        definition: 'The short stretch of time the plan is built around. In one crafting cycle each output inserter makes a '
-            + 'set number of swings.',
-        insteadOf: 'cycle, output cycle',
+        term: 'output cycle',
+        definition: 'The time in which each output inserter makes its set number of swings at your setpoint. A window cycle is '
+            + 'a whole number of output cycles.',
+        insteadOf: 'crafting cycle, cycle',
     },
     {
         id: 'window-cycle-time',
         term: 'window cycle time',
         definition: 'The time of one window cycle, in ticks. A window cycle is one complete sequence of all the enable windows '
-            + 'of a clock, after which the sequence starts again. The time is a whole number of crafting cycles, and can be a '
+            + 'of a clock, after which the sequence starts again. The time is a whole number of output cycles, and can be a '
             + 'fraction of a tick.',
         insteadOf: 'clock period, period, LCM period',
     },
@@ -133,7 +141,7 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     {
         id: 'configuration',
         term: 'configuration',
-        definition: 'A build, with its setpoint, copies and enable rules: what the site saves and what clocks are made '
+        definition: 'A build, with its setpoint, copies and overrides: what the site saves and what clocks are made '
             + 'for. Saved as a configuration file (Open configuration file…, Save configuration file, Reset configuration).',
         insteadOf: 'config, build file, "build" for what the site saves',
     },
@@ -170,10 +178,10 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     },
     {
         id: 'enable-rule',
-        term: 'enable rule ("rule" for short)',
-        definition: 'The rule that says when an inserter or drill is switched on. Modes: Auto, Always on, Never on, '
-            + 'Clocked, Conditional.',
-        insteadOf: 'enable control, override (only the Advanced section keeps "override"), AUTO, ALWAYS, NEVER, CLOCKED, CONDITIONAL',
+        term: 'Enable Control Strategy override ("override" for short)',
+        definition: 'The setting that overrides the Enable Control Strategy of one inserter or drill. Auto lets the generator '
+            + 'choose the strategy. Always on, Never on, Clocked and Conditional decide the control instead.',
+        insteadOf: 'enable rule, rule, enable control, AUTO, ALWAYS, NEVER, CLOCKED, CONDITIONAL',
     },
     {
         id: 'assembling-machine',
@@ -249,6 +257,65 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
         insteadOf: 'warm, warmed up, settled',
     },
     {
+        id: 'strategy',
+        term: 'strategy',
+        definition: 'One of several ways to do a job. The generator chooses the one that fits your build. The full form names '
+            + 'the job, for example enable control strategy.',
+        insteadOf: 'algorithm, clock type',
+    },
+    {
+        id: 'enable_control_strategy',
+        term: 'Enable Control Strategy',
+        definition: 'How the clock controls one inserter or mining drill: the rule that places its enable windows. Each strategy '
+            + 'is named after a practice with a similar timing problem. A router gives each entity its strategy. The site shows '
+            + 'a strategy by its name, its tuning method and its selection.',
+        insteadOf: 'clocking strategy',
+    },
+    {
+        id: 'belt_strategy',
+        term: 'belt strategy',
+        definition: 'How a belt works in the simulator: Normal or Export. It is not an enable control strategy.',
+    },
+    {
+        id: 'router',
+        term: 'Enable Control Strategy Router ("router" for short)',
+        definition: 'The rule above the strategies. It gives each inserter and mining drill of the clock an Enable Control Strategy. '
+            + 'Or it gives the reason the entity stays always enabled. There are two: Direct and Coordinated Sources. '
+            + 'An override other than Auto decides the entity\'s control before any strategy.',
+    },
+    {
+        id: 'direct',
+        term: 'Direct',
+        definition: 'The router that gives every inserter and mining drill of the clock the one chosen strategy. An entity the '
+            + 'strategy does not control stays always enabled, with its reason.',
+    },
+    {
+        id: 'coordinated_sources',
+        term: 'Coordinated Sources',
+        definition: 'A source is a machine, belt or chest that inserters take from. The inserters of one source use the enable '
+            + 'windows of another clock of the build. All sources use the window cycle of the recommended clock. The generator '
+            + 'sets the sources one at a time, from the output upstream. It keeps the setting with the smallest number of '
+            + 'wakeups for the full clock.',
+    },
+    {
+        id: 'tuning_method',
+        term: 'tuning method',
+        definition: 'How the generator finds the enable windows. Calculated: from the numbers of your build. Observed: around an '
+            + 'unclocked run of your build.',
+    },
+    {
+        id: 'selection',
+        term: 'selection',
+        definition: 'How the generator gets the clock of a strategy. One version: it makes one clock. Best of N versions: it makes '
+            + 'N clocks. It keeps the one with the fewest wakeups that holds the rate. Found by search: it moves the windows '
+            + 'through many placements in the simulator. It keeps the best one that holds the rate.',
+    },
+    {
+        id: 'unclocked_run',
+        term: 'unclocked run',
+        definition: 'A run of your build with no clock: all inserters and mining drills stay on. The generator watches what they do.',
+    },
+    {
         id: 'signal',
         term: 'signal',
         definition: SIGNAL_DEFINITION,
@@ -258,7 +325,7 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
         id: 'lcm',
         term: 'LCM',
         // only in the Swing Plan and Advanced, glossed where it first appears
-        definition: 'The number of crafting cycles in one window cycle.',
+        definition: 'The number of output cycles in one window cycle.',
         insteadOf: 'LCM cycles, LCM period',
         expert: true,
     },

@@ -17,7 +17,7 @@ import { toPlannerFacts } from "../facts/to-planner-facts";
 import { plannerGraphOf } from "../graph/build-graph";
 import { Cut, cutsOf, refuses } from "./checks";
 import { demandOf } from "./demand";
-import { dutiesOf, GroupDuty } from "./duty";
+import { utilizationsOf, GroupUtilization } from "./utilization";
 import { loopTrapIssues, sharedHandIssues } from "./traps";
 
 const RULE_ORDER: readonly FeasibilityRule[] = ["S1", "S2", "S3", "C1", "C2", "C3", "C4", "C5", "C6", "C7"];
@@ -27,8 +27,8 @@ export interface Feasibility {
     readonly cuts: readonly Cut[];
     /** What the build is refused for; none where it passes */
     readonly issues: readonly FeasibilityIssue[];
-    /** The duty of each machine group that must craft; recorded only, it decides nothing (duty.ts) */
-    readonly duties: readonly GroupDuty[];
+    /** The utilization of each machine group that must craft; recorded only, it decides nothing (utilization.ts) */
+    readonly utilizations: readonly GroupUtilization[];
 }
 
 const sameNodes = (a: FeasibilityIssue, b: FeasibilityIssue): boolean =>
@@ -61,7 +61,7 @@ export function feasibilityOf(facts: PlannerFacts, graph: PlannerGraph): Feasibi
         ...loopTrapIssues(demand),
         ...found.filter(issue => !said(issue)),
     ];
-    return { cuts, issues: issues.sort((a, b) => RULE_ORDER.indexOf(a.rule) - RULE_ORDER.indexOf(b.rule)), duties: dutiesOf(demand) };
+    return { cuts, issues: issues.sort((a, b) => RULE_ORDER.indexOf(a.rule) - RULE_ORDER.indexOf(b.rule)), utilizations: utilizationsOf(demand) };
 }
 
 const checked = new WeakMap<Config, { issues: readonly FeasibilityIssue[]; target: { items_per_second: number; copies: number } }>();
@@ -90,7 +90,7 @@ export function assertFeasible(config: Config): void {
         const built = graphOf(config);
         found = {
             issues: built === null ? [] : feasibilityOf(built.facts, built.graph).issues,
-            target: { items_per_second: config.target_output.items_per_second, copies: config.target_output.copies },
+            target: { items_per_second: config.setpoint.items_per_second, copies: config.setpoint.copies },
         };
         checked.set(config, found);
     }

@@ -6,7 +6,7 @@ import { rateVerbs, type TargetCounts } from './targetCounts';
 
 /** The fields of a clock its summary is worked out from, so the tests need not build a whole view */
 export type SummaryClock = Pick<ClockAlternativeView, 'id' | 'label' | 'verdict' | 'ranking' | 'beltLabel' | 'deadlockRisk' | 'assessment' | 'deciders'>
-    & Partial<Pick<ClockAlternativeView, 'strategy' | 'roundedPeriodTicks' | 'roundedRunsFast'>> & { counts?: TargetCounts };
+    & Partial<Pick<ClockAlternativeView, 'strategy' | 'roundedWindowCycleTicks' | 'roundedRunsFast'>> & { counts?: TargetCounts };
 
 /**
  * The smallest distance from the target rate that names a clock by its rate, as the Copy button's "below target"
@@ -165,11 +165,11 @@ export function recoversOf(clock: Pick<SummaryClock, 'verdict' | 'assessment'>):
     value: string;
     detail: string;
 } {
-    const loss = clock.assessment.backpressure_loss;
+    const loss = clock.assessment.disturbance_trial;
     if (loss?.survives === true) return { kind: 'yes', value: SUMMARY_COPY.recoversYes, detail: SUMMARY_COPY.recoversYesDetail };
     if (loss?.survives === false && loss.broken_by.length > 0) return { kind: 'no', value: SUMMARY_COPY.recoversNo, detail: SUMMARY_COPY.recoversNoDetail(lossesOf(clock), notTriedOf(clock)) };
     if (loss?.survives === false) return { kind: 'not-tested', value: SUMMARY_COPY.recoversUnavailable, detail: SUMMARY_COPY.recoversBaselineUnavailableDetail };
-    const notTried = clock.assessment.backpressure_loss_not_tried;
+    const notTried = clock.assessment.disturbance_trial_not_tried;
     return { kind: 'not-tested', value: clock.assessment.holds ? SUMMARY_COPY.recoversUnavailable : SUMMARY_COPY.recoversNotTested,
         detail: notTried !== undefined ? SUMMARY_COPY.recoversNotTriedDetail(notTried) : SUMMARY_COPY.recoversNotTestedDetail };
 }
@@ -188,7 +188,7 @@ export function minutesAndSecondsText(ticks: number): string {
  * longer loss spoils the iron bacteria in the build, …"); null for any other build, or a clock whose losses were not tried
  */
 export function lossLimitText(clock: Pick<SummaryClock, 'assessment'>, itemLabel: (id: string) => string): string | null {
-    const limit = clock.assessment.backpressure_loss?.loss_limit;
+    const limit = clock.assessment.disturbance_trial?.loss_limit;
     if (!limit) return null;
     const name = itemLabel(limit.item);
     return SUMMARY_COPY.recoversLossLimit(minutesAndSecondsText(limit.ticks), name.charAt(0).toLowerCase() + name.slice(1));

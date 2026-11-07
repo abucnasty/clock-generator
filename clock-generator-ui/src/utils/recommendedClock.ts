@@ -13,7 +13,7 @@ export interface PickRule {
 
 /** The fields of a clock the recommendation is worked out from, so the tests need not build a whole view */
 type PickableClock = Pick<ClockAlternativeView, 'id' | 'verdict' | 'ranking' | 'beltLabel' | 'deadlockRisk' | 'inserterWindowCount'> & {
-    assessment: Pick<ClockAlternativeView['assessment'], 'items_per_second'> & Partial<Pick<ClockAlternativeView['assessment'], 'start_dependence' | 'backpressure_loss'>>;
+    assessment: Pick<ClockAlternativeView['assessment'], 'items_per_second'> & Partial<Pick<ClockAlternativeView['assessment'], 'start_dependence' | 'disturbance_trial'>>;
     /** What the rate counts, which the sentences say in their words: none is the item made */
     counts?: TargetCounts;
 };
@@ -35,7 +35,7 @@ export const RECOMMENDED_COPY = {
     unstableDivider: 'Unstable clocks',
     disclosureTitle: 'How clocks are chosen',
     disclosure: [
-        'The simulator checks exported enable windows from a modeled cold start, including clock-phase checks where available. '
+        'The simulator checks the blueprint\'s enable windows from a modeled cold start, including clock-phase checks where available. '
             + 'Extended sampled-start checks are separate and optional; Model and tested starts reports what actually ran. '
             + 'Clocks that hold are also assessed for recovery after a supply stop or an output blockage; an unavailable result is not a pass.',
         'The clock picked for you is the one that holds the rate and has recovery, with the fewest wakeups; on a build '
@@ -179,8 +179,8 @@ export function fewestDecidersReason(
 function reasonOf(alternatives: PickableClock[], pick: PickableClock, rule: PickRule | null): string {
     const { ranking } = pick;
     const rate = figure(pick.assessment.items_per_second - ranking.rate_off_target);
-    if (pick.assessment.backpressure_loss === null && pick.assessment.start_dependence?.verdict !== 'start-dependent') {
-        return `Selected by the engine's rule at ${figure(pick.assessment.items_per_second)}/s. No usable recovery result is available.`;
+    if (pick.assessment.disturbance_trial === null && pick.assessment.start_dependence?.verdict !== 'start-dependent') {
+        return `Recommended by the engine's rule at ${figure(pick.assessment.items_per_second)}/s. No usable recovery result is available.`;
     }
     // on a build with a deadlock risk a clock that holds the rate meets it, recovering or not; elsewhere it is Stable
     const deadlock = pick.deadlockRisk !== null;
@@ -221,7 +221,7 @@ function tieOf(pick: PickableClock, others: PickableClock[], kind: string): stri
     const wakeUps = wakeUpsKey(pick.ranking.wake_ups_per_minute);
     const tiedOnWakeUps = others.filter(other => wakeUpsKey(other.ranking.wake_ups_per_minute) === wakeUps);
     // of equals on wake-ups the one that gets back from a loss sooner is picked, before the windows decide
-    const recovery = (clock: PickableClock) => clock.ranking.recovery_periods ?? Infinity;
+    const recovery = (clock: PickableClock) => clock.ranking.recovery_window_cycles ?? Infinity;
     if (tiedOnWakeUps.length > 0 && tiedOnWakeUps.every(other => recovery(other) > recovery(pick))) {
         return RECOMMENDED_COPY.tieOnRecovery(tiedOnWakeUps.length, kind);
     }
@@ -243,7 +243,7 @@ function tieOf(pick: PickableClock, others: PickableClock[], kind: string): stri
 function nearestReason(alternatives: PickableClock[], pick: PickableClock, rate: string, deadlock: boolean): string {
     const { ranking } = pick;
     if (pick.assessment.start_dependence?.verdict === 'start-dependent') {
-        return `No clock qualifies under the engine's selection rule. This one is assessed at ${figure(pick.assessment.items_per_second)}/s and reaches the setpoint from only some sampled starts. See Model and tested starts.`;
+        return `No clock qualifies under the engine's ranking rule. This one is assessed at ${figure(pick.assessment.items_per_second)}/s and reaches the setpoint from only some sampled starts. See Model and tested starts.`;
     }
     const lead = RECOMMENDED_COPY.noneHolds(rate, deadlock);
     if (ranking.stable_above_target === true) {

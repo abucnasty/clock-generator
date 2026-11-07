@@ -66,7 +66,7 @@ export async function pickupClockConfig(variant: ClockCase): Promise<Config> {
         : variant.geometry === "straight-belt" ? GameFixturePaths.SAME_ITEM_STRAIGHT_CONFIG : GameFixturePaths.SAME_ITEM_CONFIG);
     configAtSpeed(config, variant.speed);
     config.overrides = {...config.overrides, backed_up_belts: variant.backed};
-    if (variant.family === "electromagnetic") config.target_output.items_per_second = 30 * variant.speed.units / 4;
+    if (variant.family === "electromagnetic") config.setpoint.items_per_second = 30 * variant.speed.units / 4;
     for (const inserter of config.inserters) if (inserter.source.type === "belt") {
         inserter.source.pickup_length = variant.geometry === "straight-belt" ? 1 : 0.5;
         inserter.source.pickup_layout = variant.geometry === "straight-belt" ? "side-straight" : variant.geometry === "underground-entrance" ? "side-entrance" : "side-exit";

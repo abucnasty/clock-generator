@@ -58,7 +58,7 @@ describe("handSizeFor with a stack size set on the inserter", () => {
     const handSize = (recipe: string, item: string, sink: Sink, stack_size: number): number => {
         const sink_config = sink.type === "machine" ? { type: "machine", id: 2 } : { type: sink.type, id: 1 };
         const config = {
-            target_output: { recipe: item, items_per_second: 1, copies: 1 },
+            setpoint: { recipe: item, items_per_second: 1, copies: 1 },
             machines: [
                 { id: 1, recipe, productivity: 0, crafting_speed: 1 },
                 ...(sink.type === "machine" ? [{ id: 2, recipe: sink.recipe, productivity: 0, crafting_speed: 1 }] : []),
@@ -144,7 +144,7 @@ describe("an inserter in the simulation takes the hand size it is limited to", (
     /** Items in the hand of an inserter taking seeds off a machine when it starts to swing to the sink */
     const heldWhenSwinging = (sink: "belt" | "chest", stack_size: number): number | undefined => {
         const config = {
-            target_output: { recipe: "jellynut-seed", items_per_second: 1, copies: 1 },
+            setpoint: { recipe: "jellynut-seed", items_per_second: 1, copies: 1 },
             machines: [{ id: 1, recipe: "jellynut-processing", productivity: 0, crafting_speed: 1 }],
             inserters: [{ id: 1, source: { type: "machine", id: 1 }, sink: { type: sink, id: 1 }, stack_size, filters: ["jellynut-seed"] }],
             belts: sink === "belt" ? [{ id: 1, type: "transport-belt", lanes: [{ ingredient: "jellynut-seed", stack_size: 4 }] }] : [],

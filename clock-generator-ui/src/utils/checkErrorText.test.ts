@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { checkErrorText } from './checkErrorText';
 
-const ENGINE = 'The current configuration cannot meet the target production rate. Total output capacity is '
-    + '252.65624125798462 items/second, but target production rate is 400 items/second.';
+const ENGINE = 'The current configuration cannot meet the setpoint. Total output capacity is '
+    + '252.65624125798462 items/second, but the setpoint is 400 items/second.';
 
 describe('checkErrorText', () => {
     it('rounds the rates, says build, and gives a next step', () => {

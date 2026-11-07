@@ -2,8 +2,8 @@ import { OpenRange } from "../../data-types";
 import type { SerializableMachineFacts } from "../../data-types/machine-facts";
 
 /**
- * The stock walk: what one machine holds over the period of a clock, tick by tick, from its supply, the hands that fill
- * it and empty it, its crafting cycle and its craft phase, walked period after period until it repeats (its fixed
+ * The stock walk: what one machine holds over the window cycle of a clock, tick by tick, from its supply, the hands that fill
+ * it and empty it, its crafting cycle and its craft phase, walked window cycle after window cycle until it repeats (its fixed
  * point). It is arithmetic on the machine's facts (insertion limits, output block, ticks and amounts a craft): no
  * build is run and no simulator is asked.
  *
@@ -41,20 +41,20 @@ export interface WalkHand {
     /** Items in a hand */
     hand: number;
     swing: WalkSwing;
-    /** The ticks of the period it is enabled in; absent: always, as far as `quota` lets it */
+    /** The ticks of the window cycle it is enabled in; absent: always, as far as `quota` lets it */
     windows?: readonly OpenRange[];
     /**
-     * Hands it may start in each part of the period, absent for no limit: `quota[i]` hands from `quota_starts[i]` on, the
+     * Hands it may start in each part of the window cycle, absent for no limit: `quota[i]` hands from `quota_starts[i]` on, the
      * hands not started carried on to the next part (a plan's hands a cycle, where it starts a hand as soon as it can)
      */
     quota?: readonly number[];
-    /** Ticks of the period the parts of `quota` start at, ascending, the first 0 */
+    /** Ticks of the window cycle the parts of `quota` start at, ascending, the first 0 */
     quota_starts?: readonly number[];
-    /** Ticks of the period before which a taker starts no hand of a part, by part (a batch held to the start of its cycle) */
+    /** Ticks of the window cycle before which a taker starts no hand of a part, by part (a batch held to the start of its cycle) */
     not_before?: readonly number[];
 }
 
-/** What a machine holds, at the start of a period */
+/** What a machine holds, at the start of a window cycle */
 export interface WalkStock {
     /** Each ingredient's stock */
     inputs: Record<string, number>;
@@ -68,16 +68,16 @@ export interface WalkStock {
 
 export interface StockWalkInput {
     machine: Pick<SerializableMachineFacts, "inputs" | "output_item" | "output_per_craft" | "output_block_size" | "ticks_per_craft">;
-    /** Whole ticks of the period */
-    period_ticks: number;
+    /** Whole ticks of the window cycle */
+    window_cycle_ticks: number;
     fillers: readonly WalkHand[];
     takers: readonly WalkHand[];
     /** Where crafting stops for want of room for the product (its stack); default none */
     output_stack?: number;
     /** What it holds when the walk starts: by default nothing (a cold start) */
     start?: WalkStock;
-    /** Periods walked at most before it is given up as not repeating (default 64) */
-    max_periods?: number;
+    /** Window cycles walked at most before it is given up as not repeating (default 64) */
+    max_window_cycles?: number;
 }
 
 /**
@@ -86,16 +86,16 @@ export interface StockWalkInput {
  */
 export const WINDOW_LATENCY_TICKS = 1;
 
-/** One hand of an inserter in the fixed point's period */
+/** One hand of an inserter in the fixed point's window cycle */
 export interface WalkedHand {
     id: string;
     item: string;
     amount: number;
-    /** Ticks of the period: where it started to fill, where it went into the machine (fillers) or left it (takers) */
+    /** Ticks of the window cycle: where it started to fill, where it went into the machine (fillers) or left it (takers) */
     pickup_tick: number;
     /** For a filler: the tick its drop began (the items are in the machine from then); for a taker the pickup tick */
     machine_tick: number;
-    /** Ticks from its pickup to `machine_tick` (a hand can start in one period and reach the machine in the next) */
+    /** Ticks from its pickup to `machine_tick` (a hand can start in one window cycle and reach the machine in the next) */
     ticks: number;
     /** Ticks it waited with its hand full over the machine (fillers) or empty at it (takers), enabled */
     waited: number;
@@ -105,22 +105,22 @@ export interface WalkedHand {
 }
 
 export interface StockWalk {
-    /** Whether a period's start state came up again within `max_periods` */
+    /** Whether a window cycle's start state came up again within `max_window_cycles` */
     converged: boolean;
-    /** Periods walked before the repeat (or `max_periods`) */
-    periods_walked: number;
-    /** Periods the repeat spans: 1 where every period is the same */
-    repeat_periods: number;
-    /** What the machine holds at the start of the fixed point's first period: the surplus it carries */
+    /** Window cycles walked before the repeat (or `max_window_cycles`) */
+    window_cycles_walked: number;
+    /** Window cycles the repeat spans: 1 where every window cycle is the same */
+    repeat_window_cycles: number;
+    /** What the machine holds at the start of the fixed point's first window cycle: the surplus it carries */
     start: WalkStock;
-    /** The hands of the fixed point's first period, in the order they happened */
+    /** The hands of the fixed point's first window cycle, in the order they happened */
     hands: WalkedHand[];
-    /** Ticks of the period at which a craft started, in the fixed point's first period */
+    /** Ticks of the window cycle at which a craft started, in the fixed point's first window cycle */
     craft_starts: number[];
-    /** What the machine held after each tick of the fixed point's first period: the main product, and each ingredient */
+    /** What the machine held after each tick of the fixed point's first window cycle: the main product, and each ingredient */
     output_stock: number[];
     input_stock: Record<string, number[]>;
-    /** Ticks each taker waited enabled at an empty machine, and each filler with a hand it could not drop, in that period */
+    /** Ticks each taker waited enabled at an empty machine, and each filler with a hand it could not drop, in that window cycle */
     waits: Record<string, number>;
 }
 
@@ -161,15 +161,15 @@ function partOf(starts: readonly number[] | undefined, position: number): number
 }
 
 /**
- * Walks a machine's stock over the period until a period's start state repeats (see the module comment), and returns the
- * fixed point: what it holds at the period's start, every hand of that period with the stock before and after it, its
+ * Walks a machine's stock over the window cycle until a window cycle's start state repeats (see the module comment), and returns the
+ * fixed point: what it holds at the window cycle's start, every hand of that window cycle with the stock before and after it, its
  * craft starts, and its stock after each tick.
  */
 export function walkMachineStock(input: StockWalkInput): StockWalk {
     const { machine, fillers, takers } = input;
-    const period = input.period_ticks;
-    if (!Number.isInteger(period) || period <= 0) throw new Error(`the stock walk needs a period of whole ticks, not ${period}`);
-    const max_periods = input.max_periods ?? 64;
+    const window_cycle_ticks = input.window_cycle_ticks;
+    if (!Number.isInteger(window_cycle_ticks) || window_cycle_ticks <= 0) throw new Error(`the stock walk needs a window cycle time of whole ticks, not ${window_cycle_ticks}`);
+    const max_window_cycles = input.max_window_cycles ?? 64;
     const output_stack = input.output_stack ?? Number.POSITIVE_INFINITY;
     const ticks_per_craft = machine.ticks_per_craft;
     const per_craft = machine.output_per_craft;
@@ -214,10 +214,10 @@ export function walkMachineStock(input: StockWalkInput): StockWalk {
         Math.round(stock.made * 4), [...taker_arms, ...filler_arms].map(arm => [arm.phase, arm.timer, arm.item, arm.amount, arm.item_turn % Math.max(1, arm.spec.items.length),
             arm.spec.quota === undefined ? 0 : arm.started_in_part.reduce((sum, it) => sum + it, 0) - arm.spec.quota.reduce((sum, it) => sum + it, 0)])]);
 
-    // what one period's walk records, kept for the period that turns out to be the fixed point's first
-    interface PeriodRecord { start: WalkStock; hands: WalkedHand[]; craft_starts: number[]; output_stock: number[]; input_stock: Record<string, number[]>; waits: Record<string, number> }
-    let record: PeriodRecord;
-    const startRecord = (): PeriodRecord => ({
+    // what one window cycle's walk records, kept for the window cycle that turns out to be the fixed point's first
+    interface WindowCycleRecord { start: WalkStock; hands: WalkedHand[]; craft_starts: number[]; output_stock: number[]; input_stock: Record<string, number[]>; waits: Record<string, number> }
+    let record: WindowCycleRecord;
+    const startRecord = (): WindowCycleRecord => ({
         start: { inputs: { ...stock.inputs }, output: stock.output, craft: stock.craft, made: stock.made },
         hands: [], craft_starts: [], output_stock: [], input_stock: Object.fromEntries(machine.inputs.map(it => [it.item_name, [] as number[]])),
         waits: Object.fromEntries([...takers, ...fillers].map(it => [it.id, 0])),
@@ -231,7 +231,7 @@ export function walkMachineStock(input: StockWalkInput): StockWalk {
     };
 
     const stepTaker = (arm: Arm, position: number) => {
-        const enabled = inWindows(arm.spec.windows, (position - WINDOW_LATENCY_TICKS + period) % period);
+        const enabled = inWindows(arm.spec.windows, (position - WINDOW_LATENCY_TICKS + window_cycle_ticks) % window_cycle_ticks);
         switch (arm.phase) {
             case "idle":
             case "filling": {
@@ -291,7 +291,7 @@ export function walkMachineStock(input: StockWalkInput): StockWalk {
     };
 
     const stepFiller = (arm: Arm, position: number) => {
-        const enabled = inWindows(arm.spec.windows, (position - WINDOW_LATENCY_TICKS + period) % period);
+        const enabled = inWindows(arm.spec.windows, (position - WINDOW_LATENCY_TICKS + window_cycle_ticks) % window_cycle_ticks);
         switch (arm.phase) {
             case "idle": {
                 if (!enabled || !quotaLeft(arm, position)) return;
@@ -356,19 +356,19 @@ export function walkMachineStock(input: StockWalkInput): StockWalk {
 
     // the walk's tick, counted from its start
     let now = 0;
-    const seen = new Map<string, { period: number; record: PeriodRecord | null }>();
-    const kept: PeriodRecord[] = [];
-    for (let walked = 0; walked <= max_periods; walked++) {
+    const seen = new Map<string, { window_cycle_ticks: number; record: WindowCycleRecord | null }>();
+    const kept: WindowCycleRecord[] = [];
+    for (let walked = 0; walked <= max_window_cycles; walked++) {
         const key = keyOf();
         const earlier = seen.get(key);
         if (earlier !== undefined) {
-            const first = kept[earlier.period];
-            return { converged: true, periods_walked: walked, repeat_periods: walked - earlier.period, ...first };
+            const first = kept[earlier.window_cycle_ticks];
+            return { converged: true, window_cycles_walked: walked, repeat_window_cycles: walked - earlier.window_cycle_ticks, ...first };
         }
-        if (walked === max_periods) break;
+        if (walked === max_window_cycles) break;
         record = startRecord();
-        seen.set(key, { period: walked, record });
-        for (let position = 0; position < period; position++) {
+        seen.set(key, { window_cycle_ticks: walked, record });
+        for (let position = 0; position < window_cycle_ticks; position++) {
             for (const arm of taker_arms) stepTaker(arm, position);
             for (const arm of filler_arms) stepFiller(arm, position);
             stepMachine(position);
@@ -376,16 +376,16 @@ export function walkMachineStock(input: StockWalkInput): StockWalk {
             for (const it of machine.inputs) record.input_stock[it.item_name].push(stock.inputs[it.item_name] ?? 0);
             now++;
         }
-        // a new period starts the parts of the quota again
+        // a new window cycle starts the parts of the quota again
         for (const arm of [...taker_arms, ...filler_arms]) {
             if (arm.spec.quota === undefined) continue;
             const left = arm.spec.quota.reduce((sum, it) => sum + it, 0) - arm.started_in_part.reduce((sum, it) => sum + it, 0);
             arm.started_in_part = arm.spec.quota.map(() => 0);
-            // hands not started are not saved up beyond the next period's first part
+            // hands not started are not saved up beyond the next window cycle's first part
             arm.started_in_part[0] = -Math.max(0, Math.min(left, arm.spec.quota[0]));
         }
         kept.push(record);
     }
     const last = kept[kept.length - 1];
-    return { converged: false, periods_walked: max_periods, repeat_periods: 0, ...last };
+    return { converged: false, window_cycles_walked: max_window_cycles, repeat_window_cycles: 0, ...last };
 }

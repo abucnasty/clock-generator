@@ -1,16 +1,16 @@
 // The simulator's seeded run, shared by scripts/sim-game-check.js and scripts/record-clock.js so that both judge the same run.
 //
 // A recording of the game starts after a warm-up that the simulator does not run, and what that warm-up leaves in the machines decides
-// which inserters wake. The seeded run starts the simulator from a sample of the recording (the start of its first settled period, else
+// which inserters wake. The seeded run starts the simulator from a sample of the recording (the start of its first settled window cycle, else
 // its first sample): seedOf reads what the machines hold, settlingOf picks the sample, simulateRun runs the clock from it, and
-// pairSeeded pairs the periods of the run with the game's. judgedWakeUps is the figure sim-game-check judges the wake-ups on, in wake-ups
+// pairSeeded pairs the window cycles of the run with the game's. judgedWakeUps is the figure sim-game-check judges the wake-ups on, in wake-ups
 // a minute: the seeded run's when the recording gives a complete seed, else the cold run's.
 const { dist, quiet } = require("./lib");
 
 const sum = list => list.reduce((a, b) => a + b, 0);
 const DEFAULT_SIM_OFFSET = 3; // SIMULATED_TICK_TO_CLOCK_POSITION
 
-// ---- the seeded start: a recorded sample of the game (the start of its first settled period, else its first sample) ----
+// ---- the seeded start: a recorded sample of the game (the start of its first settled window cycle, else its first sample) ----
 
 /** a recording's per-sample series from `from` on, and its change lists (status) shifted to match: what recorded-bar.ts reads, seen from the seed sample */
 function samplesFrom(samples, from) {
@@ -77,33 +77,33 @@ function seedOf(game, gameMatch, config, clock, staged, sample) {
 }
 
 /**
- * The periods of a game's recording and of a seeded run, paired by sample: the run's tick t is the game's sample seedSample + t + 1.
- * Every whole period both hold is paired (the periods before the seed sample have none): the state the seed sample gave the run is what
+ * The window cycles of a game's recording and of a seeded run, paired by sample: the run's tick t is the game's sample seedSample + t + 1.
+ * Every whole window cycle both hold is paired (the window cycles before the seed sample have none): the state the seed sample gave the run is what
  * is being tested.
  */
 function pairSeeded(game, sim, seedSample) {
-    const { clockPeriods } = dist("harness/recording-output.js");
-    const g = clockPeriods(game.clock.values);
-    const s = clockPeriods(sim.clock.values);
+    const { clockWindowCycles } = dist("harness/recording-output.js");
+    const g = clockWindowCycles(game.clock.values);
+    const s = clockWindowCycles(sim.clock.values);
     const gp = [], sp = [];
-    for (const gamePeriod of g) {
-        const simPeriod = s.find(it => it.start + 1 + seedSample === gamePeriod.start && it.end + 1 + seedSample === gamePeriod.end);
-        if (simPeriod === undefined) continue;
-        gp.push(gamePeriod); sp.push(simPeriod);
+    for (const gameWindowCycle of g) {
+        const simWindowCycle = s.find(it => it.start + 1 + seedSample === gameWindowCycle.start && it.end + 1 + seedSample === gameWindowCycle.end);
+        if (simWindowCycle === undefined) continue;
+        gp.push(gameWindowCycle); sp.push(simWindowCycle);
     }
     return { game: gp, sim: sp };
 }
 
 /**
- * The periods of the game's recording in which its stock still drifts: what each machine holds at a period's first sample (the items in
- * and out of it, by item) is compared with the range it holds at that sample over the last third of the periods compared; a period with
- * a value outside that range is unsettled. A build that repeats over several periods has its whole cycle in that range, if the last third
+ * The window cycles of the game's recording in which its stock still drifts: what each machine holds at a window cycle's first sample (the items in
+ * and out of it, by item) is compared with the range it holds at that sample over the last third of the window cycles compared; a window cycle with
+ * a value outside that range is unsettled. A build that repeats over several window cycles has its whole cycle in that range, if the last third
  * is as long as the cycle.
  */
-function unsettledPeriods(game, gameMatch, periods) {
+function unsettledWindowCycles(game, gameMatch, window_cycles) {
     const machines = game.machines.filter(m => gameMatch.machines.has(m.id));
-    const values = period => machines.flatMap(m => [...Object.entries(m.samples.inputs), ...Object.entries(m.samples.outputs)].map(([item, list]) => list[period.start]));
-    const states = periods.map(values);
+    const values = window_cycle_ticks => machines.flatMap(m => [...Object.entries(m.samples.inputs), ...Object.entries(m.samples.outputs)].map(([item, list]) => list[window_cycle_ticks.start]));
+    const states = window_cycles.map(values);
     const tail = states.slice(Math.floor(states.length * 2 / 3));
     if (tail.length === 0) return { periods_compared_by_stock: states.length, drifting_periods: [], settled_from: 0, tail_stable: true };
     const rangeOfRows = rows => ({ low: states[0].map((_, i) => Math.min(...rows.map(it => it[i]))), high: states[0].map((_, i) => Math.max(...rows.map(it => it[i]))) });
@@ -117,46 +117,46 @@ function unsettledPeriods(game, gameMatch, periods) {
     return { periods_compared_by_stock: states.length, drifting_periods: drifting, settled_from: drifting.length === 0 ? 0 : drifting[drifting.length - 1] + 1, tail_stable };
 }
 
-/** fewest whole periods that must follow the seed sample for a settled seed to be used */
-const MIN_PERIODS_AFTER_SEED = 3;
+/** fewest whole window cycles that must follow the seed sample for a settled seed to be used */
+const MIN_WINDOW_CYCLES_AFTER_SEED = 3;
 /**
- * Where the simulator is seeded: the first sample of the first settled period of the game's recording (see the top of the file), else
+ * Where the simulator is seeded: the first sample of the first settled window cycle of the game's recording (see the top of the file), else
  * the recording's first sample, with the reason. `how` is "settled" (the default) or "first" (forced).
  */
 function settlingOf(game, gameMatch, how) {
-    const { clockPeriods } = dist("harness/recording-output.js");
-    const periods = clockPeriods(game.clock.values);
-    const u = unsettledPeriods(game, gameMatch, periods);
-    const base = { rule: "first period whose machine stock (in and out) stays inside the range of the last third of the periods", periods_in_recording: periods.length, settled_from_period: u.settled_from, drifting_periods: u.drifting_periods.length };
+    const { clockWindowCycles } = dist("harness/recording-output.js");
+    const window_cycles = clockWindowCycles(game.clock.values);
+    const u = unsettledWindowCycles(game, gameMatch, window_cycles);
+    const base = { rule: "first period whose machine stock (in and out) stays inside the range of the last third of the periods", periods_in_recording: window_cycles.length, settled_from_period: u.settled_from, drifting_periods: u.drifting_periods.length };
     if (how === "first") return { ...base, seed_sample: 0, settles: null, reason: "--seed-at first: seeded at the recording's first sample" };
     if (!u.tail_stable) return { ...base, seed_sample: 0, settles: false, reason: "the stock still drifts in the last third of the recording (its second half leaves its first half's range): not settled within the recording, seeded at the first sample" };
     if (u.settled_from === 0) return { ...base, seed_sample: 0, settles: true, reason: "settled from the first period: seeded at the first sample" };
-    if (periods.length - u.settled_from < MIN_PERIODS_AFTER_SEED) return { ...base, seed_sample: 0, settles: false, reason: `fewer than ${MIN_PERIODS_AFTER_SEED} periods follow the settled period: seeded at the first sample` };
-    return { ...base, seed_sample: periods[u.settled_from].start, settles: true, reason: `settled from period ${u.settled_from} of ${periods.length}: seeded at its first sample` };
+    if (window_cycles.length - u.settled_from < MIN_WINDOW_CYCLES_AFTER_SEED) return { ...base, seed_sample: 0, settles: false, reason: `fewer than ${MIN_WINDOW_CYCLES_AFTER_SEED} periods follow the settled period: seeded at the first sample` };
+    return { ...base, seed_sample: window_cycles[u.settled_from].start, settles: true, reason: `settled from period ${u.settled_from} of ${window_cycles.length}: seeded at its first sample` };
 }
 
-/** the sample ranges of the periods, a game's and a simulator's, paired by index; the first of the game's is left out unless it is staged */
-function pairPeriods(game, sim, staged) {
-    const { clockPeriods } = dist("harness/recording-output.js");
-    const g = clockPeriods(game.clock.values);
-    const s = clockPeriods(sim.clock.values);
-    // a staged start has no settling: the simulator's run is cold and from its first tick, and is judged from its first period
+/** the sample ranges of the window cycles, a game's and a simulator's, paired by index; the first of the game's is left out unless it is staged */
+function pairWindowCycles(game, sim, staged) {
+    const { clockWindowCycles } = dist("harness/recording-output.js");
+    const g = clockWindowCycles(game.clock.values);
+    const s = clockWindowCycles(sim.clock.values);
+    // a staged start has no settling: the simulator's run is cold and from its first tick, and is judged from its first window cycle
     if (staged) return { game: g.slice(1), sim: s };
     // a simulated run is judged on what follows its first third, as the scaffold tests judge it
     const settled = s.filter(it => it.start >= Math.floor(sim.sample_count / 3));
     return { game: g.slice(1), sim: settled };
 }
 
-const rangeOf = periods => ({ from: periods[0].start, to: periods[periods.length - 1].end });
-const binOf = (periods, sample) => { let lo = 0, hi = periods.length - 1; while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (periods[mid].start <= sample) lo = mid; else hi = mid - 1; } return lo; };
+const rangeOf = window_cycles => ({ from: window_cycles[0].start, to: window_cycles[window_cycles.length - 1].end });
+const binOf = (window_cycles, sample) => { let lo = 0, hi = window_cycles.length - 1; while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (window_cycles[mid].start <= sample) lo = mid; else hi = mid - 1; } return lo; };
 
-/** the wake-ups of each inserter in each period, from the ticks the simulator's run counted them at */
-function wakesFromTicks(wake_ticks, periods) {
-    const { from, to } = rangeOf(periods);
+/** the wake-ups of each inserter in each window cycle, from the ticks the simulator's run counted them at */
+function wakesFromTicks(wake_ticks, window_cycles) {
+    const { from, to } = rangeOf(window_cycles);
     const counts = new Map();
     for (const [inserter_id, ticks] of Object.entries(wake_ticks)) {
-        const list = new Array(periods.length).fill(0);
-        for (const tick of ticks) if (tick >= from && tick < to) list[binOf(periods, tick)]++;
+        const list = new Array(window_cycles.length).fill(0);
+        for (const tick of ticks) if (tick >= from && tick < to) list[binOf(window_cycles, tick)]++;
         counts.set(inserter_id, list);
     }
     return counts;
@@ -185,14 +185,14 @@ function readInserters(recording, match) {
     }));
 }
 
-/** the fewest whole periods after which every inserter's status and hand repeat at every tick, over the periods given; all of them when none does */
-function cycleOf(series, ids, periods) {
+/** the fewest whole window cycles after which every inserter's status and hand repeat at every tick, over the window cycles given; all of them when none does */
+function cycleOf(series, ids, window_cycles) {
     const codes = new Map();
     const code = status => { if (!codes.has(status)) codes.set(status, codes.size); return codes.get(status); };
-    const signatures = periods.map(period => ids.map(id => {
+    const signatures = window_cycles.map(window_cycle_ticks => ids.map(id => {
         const it = series.get(id);
         const states = [];
-        for (let i = period.start; i < period.end; i++) states.push(code(it.status[i]) * 1000 + it.held[i]);
+        for (let i = window_cycle_ticks.start; i < window_cycle_ticks.end; i++) states.push(code(it.status[i]) * 1000 + it.held[i]);
         return states.join(",");
     }).join("|"));
     const n = signatures.length;
@@ -203,7 +203,7 @@ function cycleOf(series, ids, periods) {
     }
     return n;
 }
-/** the repeat cycles of the game's recording and of a simulated one, over the periods paired */
+/** the repeat cycles of the game's recording and of a simulated one, over the window cycles paired */
 function cyclesOf(game, gameMatch, simRecording, paired) {
     const { matchOfSimulatedRecording } = dist("verification/simulated-recording.js");
     const gameSeries = insertersByConfigId(game, gameMatch), simSeries = insertersByConfigId(simRecording, matchOfSimulatedRecording(simRecording));
@@ -211,24 +211,24 @@ function cyclesOf(game, gameMatch, simRecording, paired) {
     const n = Math.min(paired.game.length, paired.sim.length);
     return { game: cycleOf(gameSeries, ids, paired.game.slice(0, n)), sim: cycleOf(simSeries, ids, paired.sim.slice(0, n)) };
 }
-/** the mean of the whole cycles of a series a period (all of it where it holds none) */
+/** the mean of the whole cycles of a series a window cycle (all of it where it holds none) */
 const meanOverCycles = (list, cycle) => { const length = Math.floor(list.length / cycle) * cycle || list.length; return length === 0 ? 0 : sum(list.slice(0, length)) / length; };
 
 // ---- the run ----
 
 /**
  * A run of the clock in the simulator, as a recording that also holds the ticks it counted its wake-ups at (`wake_ticks`, by inserter
- * id). `clock` is {windows, period, clock_ticks}. With a `seed` ({sample, position, start_stock, start_hands}, what seedInput gives) the
+ * id). `clock` is {windows, window cycle, clock_ticks}. With a `seed` ({sample, position, start_stock, start_hands}, what seedInput gives) the
  * run starts one tick after the game's first sample, with the machines as it recorded them, and the clock moved so that its tick t is at
  * clock position (t + position + 1), the position of the game's sample t + 1 (main_clock_shift, which the engine takes for a
- * fractional period too); else it is cold, as the scaffold tests start it.
+ * fractional window cycle too); else it is cold, as the scaffold tests start it.
  */
-function simulateRun(config, clock, { periods, seed, offset, staged = false }) {
+function simulateRun(config, clock, { periods: window_cycles, seed, offset, staged = false }) {
     const { simulateClockOnly } = dist("crafting/generate-blueprint.js");
     const { recordingOfStock } = dist("verification/simulated-recording.js");
     const shift = seed === undefined ? 0 : (((offset - (seed.position + 1)) % clock.period) + clock.period) % clock.period;
-    const start = seed !== undefined ? { keep_output_buffers: true, warmup_periods: 0, start_stock: seed.start_stock, start_hands: seed.start_hands, main_clock_shift: shift } : staged ? { warmup_periods: 0 } : {};
-    const stock = simulateClockOnly(config, clock.windows, clock.period, periods, quiet, start);
+    const start = seed !== undefined ? { keep_output_buffers: true, warmup_window_cycles: 0, start_stock: seed.start_stock, start_hands: seed.start_hands, main_clock_shift: shift } : staged ? { warmup_window_cycles: 0 } : {};
+    const stock = simulateClockOnly(config, clock.windows, clock.period, window_cycles, quiet, start);
     const recording = recordingOfStock(stock, config, clock.clock_ticks);
     // the rule on the simulator's own states, read from its stock (a recording of it leaves out what the rule reads of a belt's room and a machine's placed results)
     const { wakeUpsOfStock } = dist("crafting/wake-ups.js");
@@ -250,18 +250,18 @@ function seedOfRecording(game, gameMatch, config, clock, { staged = false, how =
 /** the part of a seed that a run takes */
 const seedInput = seed => ({ sample: seed.sample, position: seed.position, start_stock: seed.start_stock, start_hands: seed.start_hands });
 
-/** the clock periods a seeded run is simulated for: the whole periods the recording holds after the seed sample, and two more */
-const seededPeriods = (game, clock_ticks, seed) => Math.floor((game.sample_count - seed.sample) / clock_ticks) + 2;
-/** the clock periods a cold run is simulated for: half as many again as the recording holds, and two more (a staged one has the recording's, and one more) */
-const coldPeriods = (game, clock_ticks, staged) => {
+/** the window cycles a seeded run is simulated for: the whole window cycles the recording holds after the seed sample, and two more */
+const seededWindowCycles = (game, clock_ticks, seed) => Math.floor((game.sample_count - seed.sample) / clock_ticks) + 2;
+/** the window cycles a cold run is simulated for: half as many again as the recording holds, and two more (a staged one has the recording's, and one more) */
+const coldWindowCycles = (game, clock_ticks, staged) => {
     const recorded = Math.floor(game.sample_count / clock_ticks);
     return staged ? recorded + 1 : Math.ceil(recorded * 1.5) + 2;
 };
 
 /**
- * The wake-ups a minute of a simulated run over the periods sim-game-check judges it on: the mean a period over whole repeat cycles of
- * each inserter the game's recording and the run share, summed, over the periods the run is paired to the game's (`paired`, with the
- * `cycles` of the pairing), and taken to a minute by the clock's period.
+ * The wake-ups a minute of a simulated run over the window cycles sim-game-check judges it on: the mean a window cycle over whole repeat cycles of
+ * each inserter the game's recording and the run share, summed, over the window cycles the run is paired to the game's (`paired`, with the
+ * `cycles` of the pairing), and taken to a minute by the clock's window cycle.
  */
 function wakeUpsPerMinute(game, gameMatch, simRecording, paired, cycles, clock_ticks) {
     const { matchOfSimulatedRecording } = dist("verification/simulated-recording.js");
@@ -277,7 +277,7 @@ function wakeUpsPerMinute(game, gameMatch, simRecording, paired, cycles, clock_t
 /**
  * The simulator's wake-ups a minute on the run sim-game-check judges: the seeded run where the recording gives a complete seed, else
  * the cold run (an incomplete seed is reported and not judged). `config` is a fresh config of the build (a run may change it), `clock`
- * is {windows, period, clock_ticks}. Returns {judged_run, wake_ups_per_minute, seed, settling}.
+ * is {windows, window cycle, clock_ticks}. Returns {judged_run, wake_ups_per_minute, seed, settling}.
  */
 function judgedWakeUps(config, game, gameMatch, clock, { offset = DEFAULT_SIM_OFFSET } = {}) {
     const { seed, settling } = seedOfRecording(game, gameMatch, config, clock);
@@ -285,15 +285,15 @@ function judgedWakeUps(config, game, gameMatch, clock, { offset = DEFAULT_SIM_OF
     const throughJson = value => JSON.parse(JSON.stringify(value));
     const seeded = seed.applied && seed.complete;
     const sim = throughJson(seeded
-        ? simulateRun(config, clock, { periods: seededPeriods(game, clock.clock_ticks, seed), seed: throughJson(seedInput(seed)), offset })
-        : simulateRun(config, clock, { periods: coldPeriods(game, clock.clock_ticks, false), offset }));
-    const paired = seeded ? pairSeeded(game, sim, seed.sample) : pairPeriods(game, sim, false);
+        ? simulateRun(config, clock, { periods: seededWindowCycles(game, clock.clock_ticks, seed), seed: throughJson(seedInput(seed)), offset })
+        : simulateRun(config, clock, { periods: coldWindowCycles(game, clock.clock_ticks, false), offset }));
+    const paired = seeded ? pairSeeded(game, sim, seed.sample) : pairWindowCycles(game, sim, false);
     const cycles = cyclesOf(game, gameMatch, sim, paired);
     const stamp = { applied: seed.applied, complete: seed.complete ?? null, sample: seed.sample ?? null, reason: seed.reason ?? null };
     return { judged_run: seeded ? "seeded" : "cold", wake_ups_per_minute: wakeUpsPerMinute(game, gameMatch, sim, paired, cycles, clock.clock_ticks), seed: stamp, settling };
 }
 
 module.exports = {
-    DEFAULT_SIM_OFFSET, unsettledPeriods, pairSeeded, pairPeriods, rangeOf, binOf, wakesFromTicks, insertersByConfigId, cyclesOf, meanOverCycles,
-    simulateRun, seedOfRecording, seedInput, seededPeriods, coldPeriods, judgedWakeUps,
+    DEFAULT_SIM_OFFSET, unsettledPeriods: unsettledWindowCycles, pairSeeded, pairPeriods: pairWindowCycles, rangeOf, binOf, wakesFromTicks, insertersByConfigId, cyclesOf, meanOverCycles,
+    simulateRun, seedOfRecording, seedInput, seededPeriods: seededWindowCycles, coldPeriods: coldWindowCycles, judgedWakeUps,
 };

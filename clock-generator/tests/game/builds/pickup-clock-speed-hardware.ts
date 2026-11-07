@@ -37,7 +37,7 @@ export function assertPickupClockHardware(recording: Recording, config: Config, 
     const inputBelt = recording.config.belts.find(belt => belt.id === input[0].source.id);
     expect(inputBelt).toMatchObject({type: expectedBelt.type, lanes: expectedBelt.lanes});
     const heldItems = output[0].samples.held_item.map(([, item]) => item).filter(Boolean);
-    expect(heldItems.every(item => item === config.target_output.recipe)).toBe(true);
+    expect(heldItems.every(item => item === config.setpoint.recipe)).toBe(true);
     if (expectedOutput.sink.type === "belt") {
         const outputBelt = config.belts.find(belt => belt.id === expectedOutput.sink.id)!;
         expect(output[0].drop_lane).toEqual({index: 1, length: 1});
@@ -47,7 +47,7 @@ export function assertPickupClockHardware(recording: Recording, config: Config, 
         // Empty output belts are omitted by Sidecar; their sink id falls back to 1 and can alias the input.
         // Only compare output lane metadata when the exported belt actually carries the output product.
         const nativeOutput = recording.config.belts.find(belt => belt.id === output[0].sink.id
-            && belt.lanes.some(lane => lane.ingredient === config.target_output.recipe));
+            && belt.lanes.some(lane => lane.ingredient === config.setpoint.recipe));
         if (nativeOutput) expect(nativeOutput).toMatchObject({type: outputBelt.type, lanes: outputBelt.lanes});
     }
     const entities = (JSON.parse(zlib.inflateSync(Buffer.from(blueprint.trim().slice(1), "base64")).toString()) as

@@ -137,7 +137,7 @@
         "expected": 288,
         "verdict": "stable",
         "selection": {
-          "id": "swings-6",
+          "id": "takt_batches_observed_swings_6",
           "holds": true,
           "rate": 240,
           "supply": "moving"
@@ -145,7 +145,7 @@
         "clock_sha256": "2dd0a096b14293a595477fe6d94fb319d3f65126aafebbbf7c4892a2e2d00a27"
       },
       "previous": {
-        "id": "swings-2",
+        "id": "takt_batches_observed_swings_2",
         "clock_sha256": "be80e121bbde8bc96db94cd4714b4b259e38e77a0ff7ec429cfc032a0c6e6b99"
       }
     },
@@ -219,7 +219,7 @@
         "expected": 96.0,
         "verdict": "stable",
         "selection": {
-          "id": "swings-6",
+          "id": "round_robin_polling_swings_6",
           "holds": true,
           "rate": 240,
           "supply": "backed_up"

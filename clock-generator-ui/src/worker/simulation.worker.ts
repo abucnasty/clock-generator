@@ -99,7 +99,7 @@ function fuelViewOf(result: ClockAlternativeRun['alternatives'][number]['result'
     return {
         plan: result.fuel_plan,
         run: view ? {
-            periods: view.periods,
+            window_cycles: view.window_cycles,
             durationTicks: view.duration_ticks,
             fuelSwingsRecorded: view.fuel_swings_recorded,
             ranOutOfFuel: view.ran_out_of_fuel,
@@ -126,10 +126,10 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         rankingWindowCount: alternative.ranking_window_count,
         assessment: alternative.assessment,
         assumptions: {
-            loopSeeds: result.machine_facts.flatMap(machine => machine.facts.inputs
+            kickStarts: result.machine_facts.flatMap(machine => machine.facts.inputs
                 .filter(input => clockGenerator.FactorioDataService.findRecipeOrThrow(machine.facts.recipe).results.some(output => output.name === input.item_name))
                 .map(input => ({ machineId: machine.entity_id, item: input.item_name,
-                    items: config.overrides?.loop_seed_items ?? clockGenerator.DEFAULT_LOOP_SEED_ITEMS }))),
+                    items: config.overrides?.kick_start_items ?? clockGenerator.DEFAULT_KICK_START_ITEMS }))),
             outputDrops: [...new Set(config.inserters.filter(ins => ins.sink.type === 'belt').map(ins => ins.sink.id))]
                 .map(beltId => {
                     const inserters = config.inserters.filter(ins => ins.sink.type === 'belt' && ins.sink.id === beltId);
@@ -139,8 +139,8 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
             overrides: config.overrides,
             machineFuel: config.machines.flatMap(machine => machine.fuel === undefined ? [] : [{ machineId: machine.id, fuel: machine.fuel }]),
         },
-        copies: result.crafting_cycle_plan.production_rate.copies,
-        ...(config.target_output.counts === 'destroyed' && { counts: 'destroyed' as const }),
+        copies: result.output_cycle_plan.production_rate.copies,
+        ...(config.setpoint.counts === 'destroyed' && { counts: 'destroyed' as const }),
         verdict: alternative.verdict,
         ranking: alternative.ranking,
         deadlockRisk: clockGenerator.deadlockRiskNote(alternative.deadlock_risks),
@@ -149,7 +149,7 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         asBuilt: result.stability_check.as_built ?? null,
         expectedOutputItems: result.stability_check.expected_output_items,
         terminalSwingCount: result.used_terminal_swing_count,
-        cycleTicks: result.crafting_cycle_plan.total_duration.ticks,
+        cycleTicks: result.output_cycle_plan.total_duration.ticks,
         blueprintString: clockGenerator.encodeBlueprintFileBrowser(clockGenerator.blueprintFileFor(result)),
         install: installFactsOf(result),
         transferHistory: result.serializable_transfer_history,
@@ -162,7 +162,7 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         insights: alternative.insights,
         shiftOptions: shiftOptionsOf(result),
         simulationDurationTicks: result.simulation_duration.ticks,
-        ...(alternative.rounded && { roundedPeriodTicks: alternative.rounded.period_ticks, roundedRunsFast: alternative.rounded.runs_fast }),
+        ...(alternative.rounded && { roundedWindowCycleTicks: alternative.rounded.window_cycle_ticks, roundedRunsFast: alternative.rounded.runs_fast }),
         strategy: alternative.strategy,
         swingBackoffReport: result.swing_backoff_report ?? null,
         inserterClocks: result.unplanned_inserter_clocks ?? {},
@@ -170,7 +170,8 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
     }));
     // the same clock made with shared windows, listed after it
     const also = run.also?.flatMap(it => toRunView(it, config) ?? []);
-    return { signature: run.signature, alternatives, ...(also?.length ? { also } : {}) };
+    // the clocks the run made, for the per-branch clock that is made from them
+    return { signature: run.signature, alternatives, ...(also?.length ? { also } : {}), ...(run.parts !== undefined && { parts: run.parts }) };
 }
 
 /** Runs one plan or task with streamed logs and progress; errors are posted instead of thrown */
@@ -212,7 +213,7 @@ function runStreaming(
         flushLogs();
         postResponse(response);
     } catch (error) {
-        const failure = failureOf(error, config, 'Simulation failed');
+        const failure = failureOf(error, config, 'Generate failed');
         postResponse({
             type: 'error',
             runId,
@@ -243,7 +244,7 @@ function handleValidate(requestId: number, config: Config): void {
                     // a build no clock can hold: its opening once, and each problem the engine found on its own
                     : error instanceof clockGenerator.FeasibilityError
                         ? [{ kind: 'refusal' as const, opening: error.opening, problems: error.problems }]
-                        : error instanceof Error && error.message.startsWith('The current configuration cannot meet the target production rate.')
+                        : error instanceof Error && error.message.startsWith('The current configuration cannot meet the setpoint.')
                             ? [{ kind: 'refusal' as const, problems: [error.message] }]
                             : undefined,
         });
@@ -308,7 +309,7 @@ function repeatedUnitsRecoveryOf(error: CopiesError, config: Config): RepeatedUn
     const checked = checkRepeatedUnitConversion(config);
     return {
         kind: 'repeated-units', sourceConfigKey: JSON.stringify(config),
-        detectedCopies: error.units.length, configuredCopies: config.target_output.copies,
+        detectedCopies: error.units.length, configuredCopies: config.setpoint.copies,
         units: error.units.map(unit => ({ machine_ids: [...unit.machine_ids] })),
         conversion: checked.kind === 'available'
             ? { kind: 'available', multiplicity: checked.plan.multiplicity, copies: checked.plan.copies }
@@ -322,7 +323,7 @@ function failureOf(error: unknown, config: Config, fallback: string): { message:
         try {
             return { message: repeatedUnitsProblem(error), stack: error.stack, recovery: repeatedUnitsRecoveryOf(error, config) };
         } catch (failure) {
-            return { message: failure instanceof Error ? failure.message : 'The engine could not check the repeated-unit conversion.',
+            return { message: failure instanceof Error ? failure.message : 'The engine could not check the conversion to copies.',
                 stack: failure instanceof Error ? failure.stack : undefined };
         }
     }
@@ -485,11 +486,15 @@ function handleTask(
     context: import('clock-generator/browser').ClockAlternativeContext,
     taskId: string,
     assessedSignatures: string[] = [],
+    coordinatedSources?: import('clock-generator/browser').CoordinatedSourcesInput,
 ): void {
     runStreaming(runId, config, debugSteps, streamLogs, (options) => {
         requireValidConfig(config);
         const notMade: NotMadeClock[] = [];
-        const run = clockGenerator.runClockAlternativeTask(config, context, taskId, { ...options, on_not_made: clock => notMade.push(clock) }, assessedSignatures);
+        // the per-branch clock is made from the parts of the runs before it, not from the context
+        const run = coordinatedSources !== undefined
+            ? clockGenerator.runCoordinatedSourcesTask(config, coordinatedSources, options, assessedSignatures)
+            : clockGenerator.runClockAlternativeTask(config, context, taskId, { ...options, on_not_made: clock => notMade.push(clock) }, assessedSignatures);
         return { type: 'task-completed', runId, taskId, run: toRunView(run, config), notMade };
     });
 }
@@ -528,7 +533,7 @@ ctx.onmessage = async (event: MessageEvent<WorkerRequest>) => {
             handlePlan(request.runId, request.config, request.debugSteps, request.streamLogs);
             break;
         case 'task':
-            handleTask(request.runId, request.config, request.debugSteps, request.streamLogs, request.context, request.taskId, request.assessedSignatures);
+            handleTask(request.runId, request.config, request.debugSteps, request.streamLogs, request.context, request.taskId, request.assessedSignatures, request.coordinatedSources);
             break;
         case 'query':
             handleQuery(request.requestId, request.query);

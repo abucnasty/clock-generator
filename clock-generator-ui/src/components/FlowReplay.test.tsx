@@ -12,7 +12,7 @@ it('renders replay controls using an agricultural build with recorded fuel and m
     const engine = await import('clock-generator/browser');
     engine.FactorioDataService.initialize(JSON.parse(factorioData));
     const config = engine.parseConfigFromJson(agricultureConfig);
-    const recording = engine.recordSimulationTimeline({ config, mode: 'plan', period_ticks: 600, terminal_swing_count: 1, windows: {} });
+    const recording = engine.recordSimulationTimeline({ config, mode: 'plan', window_cycle_ticks: 600, terminal_swing_count: 1, windows: {} });
     const machine = recording.entities.find(entity => entity.recipe === 'agricultural-science-pack')!;
     const snapshot = flowReplaySnapshot(flowReplayIndex(recording), machine.id, 10);
     expect(snapshot.inventory.some(value => value.unit === 'MJ' && Number(value.value) > 0)).toBe(true);
@@ -20,13 +20,13 @@ it('renders replay controls using an agricultural build with recorded fuel and m
         onTick={() => {}} onChange={() => {}} onInspectActivity={() => {}} />);
     const connections = screen.getByRole('list', { name: 'Connection legend' });
     expect(within(connections).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Selected or hovered route',
-        'Transfer at this tick · item and quantity', 'Recent activity · no quantity', 'Selected entity outline']);
+        'Swing at this tick · item and quantity', 'Recent activity · no quantity', 'Selected entity outline']);
     // the routes' legend comes before the states'
     expect(connections.compareDocumentPosition(screen.getByText('Entity states')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByRole('list', { name: 'Flow replay legend' })).toBeDefined();
-    expect(screen.getByRole('combobox', { name: 'Transfer scope' })).toBeDefined();
-    expect(screen.getByRole('button', { name: 'Previous transfer' })).toBeDefined();
-    expect(screen.getByRole('checkbox', { name: 'Play one crafting cycle' })).toBeDefined();
+    expect(screen.getByRole('combobox', { name: 'Swing scope' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Previous swing' })).toBeDefined();
+    expect(screen.getByRole('checkbox', { name: 'Play one output cycle' })).toBeDefined();
     expect(screen.getByText(/Belts show routes, not physical item positions\.$/)).toBeDefined();
     expect(screen.queryByText(/Highlights cover ticks/)).toBeNull();
     // a replay, not an editor

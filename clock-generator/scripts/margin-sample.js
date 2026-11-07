@@ -16,10 +16,10 @@ const shortened = (clock_windows, side) => Object.fromEntries(Object.entries(clo
     [entity_id, ranges.map(range => range.start === range.end ? range
         : side === "start" ? { start: range.start + 1, end: range.end } : { start: range.start, end: range.end - 1 })]));
 
-const holds = (config, clock_windows, period, swings) => {
+const holds = (config, clock_windows, window_cycle_ticks, swings) => {
     const began = Date.now();
     try {
-        const check = clockFromWindows(config, clock_windows, period, quiet, swings).stability_check;
+        const check = clockFromWindows(config, clock_windows, window_cycle_ticks, quiet, swings).stability_check;
         return { holds: check.as_built?.holds ?? check.holds, items: check.as_built?.actual_output_items ?? check.actual_output_items, seconds: (Date.now() - began) / 1000 };
     } catch (e) {
         return { error: String(e && e.message || e).slice(0, 300), seconds: (Date.now() - began) / 1000 };
@@ -38,22 +38,22 @@ const holds = (config, clock_windows, period, swings) => {
         const tried = new Set();
         for (const alternative of alternatives.filter(a => a.verdict === "stable")) {
             const result = alternative.result;
-            // a subtick clock and the same clock with its period rounded have the same windows
+            // a subtick clock and the same clock with its window cycle rounded have the same windows
             if (tried.has(result.clock_windows)) {
                 continue;
             }
             tried.add(result.clock_windows);
-            const period = result.simulation_duration.ticks;
+            const window_cycle_ticks = result.simulation_duration.ticks;
             // the config the clock was planned on: its output swings per cycle; fractional swings for the fractional alternative
             const planned_on = { ...config, overrides: { ...config.overrides, terminal_swing_count: result.used_terminal_swing_count } };
-            const swings = alternative.id.startsWith("fractional") ? { fractional_swings: true } : {};
+            const swings = alternative.strategy.id === "euclidean_swings" ? { fractional_swings: true } : {};
             row.clocks.push({
-                id: alternative.id, selected: alternative.id === row.selected, period, expected: result.stability_check.expected_output_items,
+                id: alternative.id, selected: alternative.id === row.selected, period: window_cycle_ticks, expected: result.stability_check.expected_output_items,
                 window_count: Object.values(result.clock_windows).reduce((sum, ranges) => sum + ranges.length, 0),
                 one_tick_windows: Object.values(result.clock_windows).reduce((sum, ranges) => sum + ranges.filter(r => r.start === r.end).length, 0),
-                unchanged: holds(planned_on, result.clock_windows, period, swings),
-                shorter_at_start: holds(planned_on, shortened(result.clock_windows, "start"), period, swings),
-                shorter_at_end: holds(planned_on, shortened(result.clock_windows, "end"), period, swings),
+                unchanged: holds(planned_on, result.clock_windows, window_cycle_ticks, swings),
+                shorter_at_start: holds(planned_on, shortened(result.clock_windows, "start"), window_cycle_ticks, swings),
+                shorter_at_end: holds(planned_on, shortened(result.clock_windows, "end"), window_cycle_ticks, swings),
             });
         }
     } catch (e) {

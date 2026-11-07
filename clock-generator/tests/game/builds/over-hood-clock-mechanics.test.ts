@@ -123,8 +123,8 @@ describe("the recorded clock controls of the over-the-hood fixtures", () => {
         const variant = caseNamed(name);
         const {native, generation} = controls[name];
         const config = overHoodClockConfig(variant);
-        expect(config.target_output.items_per_second).toBe(6);
-        expectRunIsConsistent(native, generation!, config.target_output.items_per_second);
+        expect(config.setpoint.items_per_second).toBe(6);
+        expectRunIsConsistent(native, generation!, config.setpoint.items_per_second);
         // every fixture is judged stable, and its run holds the target and recovers from the three disturbances
         expect({native: native.generationVerdict, pinned: generation!.verdict, why: generation!.why_not_stable}).toEqual({native: "stable", pinned: "stable", why: undefined});
         expect(native.disturbances).toHaveLength(3);

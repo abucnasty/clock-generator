@@ -30,13 +30,13 @@ describe("the drops of the grenade build onto its belt", () => {
         expect(spacing.belt_tiles).toBe(14);
         const text = describeDropSpacing(spacing);
         expect(text.title).toBe("Drops onto belt 1 fit between each other");
-        expect(text.what).toBe("In every period of 112 ticks, inserters 1 and 2 of the 7 copies drop 14 hands onto belt 1, and each hand lands on a stretch of belt "
-            + "of its own, so none waits. Inserters 7 and 8 do the same on the other side of the belt. The copies stand 12 tiles apart and the belt moves 14 tiles in a period.");
+        expect(text.what).toBe("In every window cycle of 112 ticks, inserters 1 and 2 of the 7 copies drop 14 hands onto belt 1, and each hand lands on a stretch of belt "
+            + "of its own, so none waits. Inserters 7 and 8 do the same on the other side of the belt. The copies stand 12 tiles apart and the belt moves 14 tiles in a window cycle.");
         expect(text.why).toBe("A tile of a belt lane holds one hand of 16 at stack size 4. A hand dropped where items already lie waits until they have moved on, "
             + "so the hands of all the copies have to land in the gaps the others leave.");
         expect(text.explanation).toBe("This holds for this spacing and these start ticks. Moving one inserter by a tile, or starting one group of inserters at another "
             + "tick, puts hands on top of each other."
-            + " The belt moves 14 tiles a period, so each hand lands on one of 14 tiles. With inserters 1 and 2 as they stand (3 tiles apart), the copies fit 12, 16, 18, 20, 22 or 24 tiles apart; 13, 15, 17, 19, 23 or 25 apart only with a copy's inserters 7 tiles apart; 14 or 21 apart never. The same holds at any of these spacings plus 14. Starting inserter 2 16, 32 or 48 ticks after inserter 1 also fits (a tile every 8 ticks). The belt is taken to run straight past these inserters. This assumes every copy drops onto the belt the way this one does.");
+            + " The belt moves 14 tiles a window cycle, so each hand lands on one of 14 tiles. With inserters 1 and 2 as they stand (3 tiles apart), the copies fit 12, 16, 18, 20, 22 or 24 tiles apart; 13, 15, 17, 19, 23 or 25 apart only with a copy's inserters 7 tiles apart; 14 or 21 apart never. The same holds at any of these spacings plus 14. Starting inserter 2 16, 32 or 48 ticks after inserter 1 also fits (a tile every 8 ticks). The belt is taken to run straight past these inserters. This assumes every copy drops onto the belt the way this one does.");
     });
 
     it("land on each other when the first inserters of the lines start together and the second ones 56 ticks later", async () => {
@@ -45,13 +45,13 @@ describe("the drops of the grenade build onto its belt", () => {
         expect(spacing.fitting_start).toEqual({ inserter_id: 2, ticks: [54, 70], same_as: 1 });
         const text = describeDropSpacing(spacing);
         expect(text.title).toBe("Drops onto belt 1 land on each other");
-        expect(text.what).toBe("In every period of 112 ticks, inserters 1 and 2 of the 7 copies drop 14 hands onto belt 1. 7 pairs of them land on each other, and the later "
+        expect(text.what).toBe("In every window cycle of 112 ticks, inserters 1 and 2 of the 7 copies drop 14 hands onto belt 1. 7 pairs of them land on each other, and the later "
             + "hand of each pair waits, the longest 8 ticks. Inserter 1 starts at tick 6 and inserter 2 at tick 62. Inserters 7 and 8 of the 7 copies drop 14 hands onto belt 1. "
             + "7 pairs of them land on each other, and the later hand of each pair waits, the longest 8 ticks. Inserter 7 starts at tick 6 and inserter 8 at tick 62. "
-            + "The copies stand 12 tiles apart and the belt moves 14 tiles in a period.");
+            + "The copies stand 12 tiles apart and the belt moves 14 tiles in a window cycle.");
         expect(text.explanation).toBe("The simulator does not count this wait: it drops each inserter's hand on a belt of its own, so the rate and stability shown for this "
             + "clock were worked out without it. The hands would fit with inserter 2 starting at tick 54 or 70, or at the same tick "
-            + "as inserter 1. The belt moves 14 tiles a period, so each hand lands on one of 14 tiles. With inserters 1 and 2 as they stand (3 tiles apart), the copies fit 12, 16, 18, 20, 22 or 24 tiles apart; 13, 15, 17, 19, 23 or 25 apart only with a copy's inserters 7 tiles apart; 14 or 21 apart never. The same holds at any of these spacings plus 14. Starting inserter 2 16, 32 or 48 ticks after inserter 1 also fits (a tile every 8 ticks). The belt is taken to run straight past these inserters. This assumes every copy drops onto the belt the way this one does.");
+            + "as inserter 1. The belt moves 14 tiles a window cycle, so each hand lands on one of 14 tiles. With inserters 1 and 2 as they stand (3 tiles apart), the copies fit 12, 16, 18, 20, 22 or 24 tiles apart; 13, 15, 17, 19, 23 or 25 apart only with a copy's inserters 7 tiles apart; 14 or 21 apart never. The same holds at any of these spacings plus 14. Starting inserter 2 16, 32 or 48 ticks after inserter 1 also fits (a tile every 8 ticks). The belt is taken to run straight past these inserters. This assumes every copy drops onto the belt the way this one does.");
     });
 
     it("land on each other when the first inserter of every copy stands a tile off its place", async () => {
@@ -61,12 +61,12 @@ describe("the drops of the grenade build onto its belt", () => {
     });
 
     it("land on each other with copies 11, 13 or 14 tiles apart, and fit at 10 and 16", async () => {
-        const at = async (x: number) => dropSpacing(await grenade(it => { it.target_output.copy_offset = { x, y: 0 }; }), BY_LINE, 112)!.lines.every(line => line.fits);
+        const at = async (x: number) => dropSpacing(await grenade(it => { it.setpoint.copy_offset = { x, y: 0 }; }), BY_LINE, 112)!.lines.every(line => line.fits);
         expect(await Promise.all([10, 11, 12, 13, 14, 16].map(at))).toEqual([true, false, true, false, false, true]);
     });
 
     it("name the spacings of the copies and the distances between a copy's inserters that fit, from the width of a copy for one loop of the belt's 14 tiles", async () => {
-        const room = dropSpacing(await grenade(it => { it.target_output.copy_offset = { x: 13, y: 0 }; }), BY_LINE, 112)!.room!;
+        const room = dropSpacing(await grenade(it => { it.setpoint.copy_offset = { x: 13, y: 0 }; }), BY_LINE, 112)!.room!;
         expect([room.low, room.high, room.loop, room.gap, room.gap_in_scan]).toEqual([12, 25, 14, 13, 13]);
         expect(room.crowded).toBeNull();
         expect(room.fits).toEqual([12, 16, 18, 20, 22, 24]);
@@ -78,7 +78,7 @@ describe("the drops of the grenade build onto its belt", () => {
     });
 
     it("list the same spacings whatever spacing is typed, and place a spacing beyond the loop at the one in the list that fits as it does", async () => {
-        const roomAt = async (x: number) => dropSpacing(await grenade(it => { it.target_output.copy_offset = { x, y: 0 }; }), BY_LINE, 112)!.room!;
+        const roomAt = async (x: number) => dropSpacing(await grenade(it => { it.setpoint.copy_offset = { x, y: 0 }; }), BY_LINE, 112)!.room!;
         const base = await roomAt(12);
         for (const x of [5, 11, 13, 26, 40, 80]) {
             const room = await roomAt(x);
@@ -88,7 +88,7 @@ describe("the drops of the grenade build onto its belt", () => {
         expect((await roomAt(40)).gap_in_scan).toBe(26 - 14 + 0);
         expect((await roomAt(11)).gap_in_scan).toBe(25);
         // a spacing and the spacing plus a loop fit alike
-        const at = async (x: number) => dropSpacing(await grenade(it => { it.target_output.copy_offset = { x, y: 0 }; }), BY_LINE, 112)!.lines.every(line => line.fits);
+        const at = async (x: number) => dropSpacing(await grenade(it => { it.setpoint.copy_offset = { x, y: 0 }; }), BY_LINE, 112)!.lines.every(line => line.fits);
         expect(await Promise.all([12, 26, 40, 13, 27, 41].map(at))).toEqual([true, true, true, false, false, false]);
     });
 
@@ -99,16 +99,16 @@ describe("the drops of the grenade build onto its belt", () => {
         expect(describeDropRoom(room)).not.toMatch(/plus/);
     });
 
-    it("say no spacing fits where the hands of a lane take more of it than the belt moves in a period", async () => {
+    it("say no spacing fits where the hands of a lane take more of it than the belt moves in a window cycle", async () => {
         // 7 copies of 3 inserters drop 21 hands on 14 tiles
         const crowded = await grenade(it => { it.inserters.push({ ...structuredClone(it.inserters[0]), id: 9, position: { x: it.inserters[0].position!.x + 1, y: it.inserters[0].position!.y } }); });
         const room = dropSpacing(crowded, starts({ 1: 0, 2: 0, 7: 0, 8: 0, 9: 0 }), 112)!.room!;
         expect(room.crowded).toEqual({ hands: 21, belt_tiles: 14, hand_tiles: 1 });
         expect([room.fits, room.only_with, room.never, room.starts_after]).toEqual([[], [], [], []]);
-        expect(describeDropRoom(room)).toBe("The belt moves 14 tiles a period, but the 7 copies drop 21 hands on it, so no spacing of the copies fits: some hands always wait for room.");
+        expect(describeDropRoom(room)).toBe("The belt moves 14 tiles a window cycle, but the 7 copies drop 21 hands on it, so no spacing of the copies fits: some hands always wait for room.");
         // 14 hands on 14 tiles are not too many
         expect((await dropSpacing(await grenade(), BY_LINE, 112))!.room!.crowded).toBeNull();
-        // the same at a period of 100 ticks, 12.5 tiles
+        // the same at a window cycle of 100 ticks, 12.5 tiles
         expect(dropSpacing(await grenade(), BY_LINE, 100)!.room!.crowded).toEqual({ hands: 14, belt_tiles: 12.5, hand_tiles: 1 });
     });
 
@@ -148,7 +148,7 @@ describe("the drops of the grenade build onto its belt", () => {
         for (let pitch = 1; pitch <= 28; pitch++) {
             for (let apart = 1; apart <= 13; apart++) {
                 const config = structuredClone(base);
-                config.target_output.copy_offset = { x: pitch, y: 0 };
+                config.setpoint.copy_offset = { x: pitch, y: 0 };
                 for (const [one, two] of [[0, 1], [6, 7]]) config.inserters[two].position = { x: config.inserters[one].position!.x + apart, y: config.inserters[two].position!.y };
                 const fits = dropSpacing(config, starts({ 1: 0, 2: 0, 7: 0, 8: 0 }), 112)!.lines.every(line => line.fits);
                 expect(fits, `pitch ${pitch}, apart ${apart}`).toBe(rule(pitch, apart));
@@ -165,11 +165,11 @@ describe("the drops of the grenade build onto its belt", () => {
     });
 
     it("name no distance between a copy's inserters for a line that does not have two", async () => {
-        const room = dropSpacing(await grenade(it => { it.target_output.copies = 3; it.inserters.push({ ...structuredClone(it.inserters[0]), id: 9, position: { x: it.inserters[0].position!.x + 1, y: it.inserters[0].position!.y } }); }), starts({ 1: 0, 2: 0, 7: 0, 8: 0, 9: 0 }), 112)!.room!;
+        const room = dropSpacing(await grenade(it => { it.setpoint.copies = 3; it.inserters.push({ ...structuredClone(it.inserters[0]), id: 9, position: { x: it.inserters[0].position!.x + 1, y: it.inserters[0].position!.y } }); }), starts({ 1: 0, 2: 0, 7: 0, 8: 0, 9: 0 }), 112)!.room!;
         expect(room.pair).toBeNull();
         expect(room.only_with).toEqual([]);
         expect(room.never).toEqual([]);
-        expect(describeDropRoom(room)).toMatch(/^The belt moves 14 tiles a period, so each hand lands on one of 14 tiles\. With the inserters as they stand, /);
+        expect(describeDropRoom(room)).toMatch(/^The belt moves 14 tiles a window cycle, so each hand lands on one of 14 tiles\. With the inserters as they stand, /);
     });
 
     it("do not list spacings below the width of a copy, and list from 1 where an entity has no place", async () => {
@@ -186,15 +186,15 @@ describe("the drops of the grenade build onto its belt", () => {
     });
 
     it("are not told when the copies' gap is not given, and the note asks for it", async () => {
-        const config = await grenade(it => { delete it.target_output.copy_offset; });
+        const config = await grenade(it => { delete it.setpoint.copy_offset; });
         expect(dropSpacing(config, BY_LINE, 112)).toBeNull();
         expect(copyGapNeededNote(config)).toBe("The 7 copies may drop onto the same belt 1. Say how far apart they stand to check whether their drops fit between each other.");
         expect(copyGapNeededNote(await grenade())).toBeNull();
-        expect(copyGapNeededNote(await grenade(it => { it.target_output.copies = 1; delete it.target_output.copy_offset; }))).toBeNull();
+        expect(copyGapNeededNote(await grenade(it => { it.setpoint.copies = 1; delete it.setpoint.copy_offset; }))).toBeNull();
     });
 
     it("are checked on their own when the copies stand in rows of their own", async () => {
-        const spacing = dropSpacing(await grenade(it => { it.target_output.copy_offset = { x: 0, y: 40 }; }), BY_PLACE, 112)!;
+        const spacing = dropSpacing(await grenade(it => { it.setpoint.copy_offset = { x: 0, y: 40 }; }), BY_PLACE, 112)!;
         expect(spacing.gap).toBeNull();
         expect(spacing.lines.map(line => [line.hands, line.fits])).toEqual([[2, true], [2, true]]);
     });
@@ -211,21 +211,21 @@ describe("the drops of the grenade build onto its belt", () => {
     });
 });
 
-/** The lane model alone: hands of 4 stacks started at tick t of every period, 14 periods, then whether the last three all land at +0, +1, +2, +4 */
-function replayFits(hands: { place: number; tick: number }[], period: number): boolean {
+/** The lane model alone: hands of 4 stacks started at tick t of every window cycle, 14 window cycles, then whether the last three all land at +0, +1, +2, +4 */
+function replayFits(hands: { place: number; tick: number }[], window_cycle_ticks: number): boolean {
     const lane = new LaneTraffic();
     const spots = hands.map(hand => hand.place * 8);
     spots.forEach(spot => lane.registerSpot(spot));
     const active: { hand: number; start: number; placed: number[] }[] = [];
     let late = 0;
-    for (let tick = 0; tick < 15 * period; tick++) {
-        const n = Math.floor(tick / period);
-        if (n < 14) hands.forEach((hand, index) => { if (tick === n * period + hand.tick) active.push({ hand: index, start: tick, placed: [] }); });
+    for (let tick = 0; tick < 15 * window_cycle_ticks; tick++) {
+        const n = Math.floor(tick / window_cycle_ticks);
+        if (n < 14) hands.forEach((hand, index) => { if (tick === n * window_cycle_ticks + hand.tick) active.push({ hand: index, start: tick, placed: [] }); });
         for (const entry of [...active]) {
             if (lane.tryPlace(tick, spots[entry.hand])) entry.placed.push(tick - entry.start);
             if (entry.placed.length === 4) {
                 active.splice(active.indexOf(entry), 1);
-                if (Math.floor(entry.start / period) >= 11 && entry.placed.join() !== "0,1,2,4") late++;
+                if (Math.floor(entry.start / window_cycle_ticks) >= 11 && entry.placed.join() !== "0,1,2,4") late++;
             }
         }
     }
@@ -241,8 +241,8 @@ describe("the test of whether hands fit", () => {
             const gap = 1 + Math.floor(random() * 30) * 0.5, apart = Math.floor(random() * 7), copies = 2 + Math.floor(random() * 5);
             const ticks = [Math.floor(random() * 112), random() < 0.5 ? -1 : Math.floor(random() * 112)];
             const config = await grenade(it => {
-                it.target_output.copies = copies;
-                it.target_output.copy_offset = { x: gap, y: 0 };
+                it.setpoint.copies = copies;
+                it.setpoint.copy_offset = { x: gap, y: 0 };
                 it.inserters[1].position = { x: it.inserters[0].position!.x + apart, y: it.inserters[0].position!.y };
             });
             const tick2 = ticks[1] < 0 ? ticks[0] : ticks[1];

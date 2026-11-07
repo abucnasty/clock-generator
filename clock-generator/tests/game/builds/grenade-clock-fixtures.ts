@@ -43,7 +43,7 @@ const BUILDS = {
 } as const;
 
 /** The id of the alternative the generated clock is: the 112-tick one, which the rule for hands in groups makes stable */
-export const GENERATED_ALTERNATIVE = "planned-belt-slack";
+export const GENERATED_ALTERNATIVE = "round_robin_polling";
 
 const scaffoldOf = (build: GrenadeClockCase["build"]) => fs.readFileSync(path.join(FOLDER, BUILDS[build].file), "utf8").trim();
 

@@ -44,7 +44,7 @@ export interface TimelineRecording {
     /** Tick 0 is the baseline immediately after preparation/warm-up (and the settling asked for); tick n is after simulated tick n. */
     start_tick: 0;
     end_tick: number;
-    period_ticks: number;
+    window_cycle_ticks: number;
     requested_ticks: number;
     ticks_before_recording: number;
     ticks_per_second: 60;
@@ -54,15 +54,15 @@ export interface TimelineRecording {
     events: TimelineEvent[];
 }
 export interface TimelineRecordingOptions {
-    period_ticks: number;
+    window_cycle_ticks: number;
     max_ticks?: number;
     max_points?: number;
     /**
-     * Periods the build runs from its cold start before the recorded period, where more than its warm-up: the recording
-     * then shows a settled period (the long run of the clock judges the build from one), not the first after warm-up.
+     * Window cycles the build runs from its cold start before the recorded window cycle, where more than its warm-up: the recording
+     * then shows a settled window cycle (the long run of the clock judges the build from one), not the first after warm-up.
      */
-    settle_periods?: number;
-    /** Ticks the clock runs from the cold start before the recorded period, the warm-up included; takes precedence over `settle_periods` */
+    settle_window_cycles?: number;
+    /** Ticks the clock runs from the cold start before the recorded window cycle, the warm-up included; takes precedence over `settle_window_cycles` */
     settle_ticks?: number;
 }
 
@@ -193,7 +193,7 @@ export class TimelineRecorder implements TickRecorder {
     }
 
     public recording(mode: "clock" | "plan", requested_ticks: number, ticks_before_recording: number, copies: number): TimelineRecording {
-        return { version: 1, mode, start_tick: 0, end_tick: this.tick, period_ticks: this.options.period_ticks, requested_ticks,
+        return { version: 1, mode, start_tick: 0, end_tick: this.tick, window_cycle_ticks: this.options.window_cycle_ticks, requested_ticks,
             ticks_before_recording, ticks_per_second: 60, copies, truncated: this.clipped, entities: this.entities, events: this.events };
     }
 }

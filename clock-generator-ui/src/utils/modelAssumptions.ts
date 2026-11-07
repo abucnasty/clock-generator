@@ -36,7 +36,7 @@ export function modeledDetails(clock: ClockAlternativeView, itemLabel: (id: stri
     const facts = clock.assumptions;
     if (!facts) return [];
     return [
-        ...facts.loopSeeds.map(seed => {
+        ...facts.kickStarts.map(seed => {
             const id = /^machine:(\d+)$/.exec(seed.machineId);
             const machine = id ? entityLabel('machine', Number(id[1])) : seed.machineId;
             return `${machine} gets a kick start of ${seed.items} ${itemLabel(seed.item)}. Losing those items is a separate recovery question.`;

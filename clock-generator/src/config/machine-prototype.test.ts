@@ -47,7 +47,7 @@ describe("the warnings of a machine's prototype", () => {
     });
 
     it("do not stop a config loading: an unmakeable recipe parses", () => {
-        const parsed = ConfigSchema.safeParse({ target_output: { recipe: "iron-plate", items_per_second: 1, copies: 1 }, belts: [], inserters: [],
+        const parsed = ConfigSchema.safeParse({ setpoint: { recipe: "iron-plate", items_per_second: 1, copies: 1 }, belts: [], inserters: [],
             machines: [machine({ prototype: "cryogenic-plant" })] });
         expect(parsed.success).toBe(true);
     });

@@ -71,7 +71,7 @@
         "expected": 32,
         "verdict": "stable",
         "selection": {
-          "id": "planned-belt-slack",
+          "id": "takt_batches_observed",
           "holds": true,
           "rate": 5,
           "supply": null
@@ -149,7 +149,7 @@
         "expected": 32,
         "verdict": "stable",
         "selection": {
-          "id": "planned-belt-slack",
+          "id": "takt_batches_observed",
           "holds": true,
           "rate": 5,
           "supply": null
@@ -227,7 +227,7 @@
         "expected": 16,
         "verdict": "stable",
         "selection": {
-          "id": "planned-belt-slack",
+          "id": "takt_batches_observed",
           "holds": true,
           "rate": 5,
           "supply": null
@@ -235,7 +235,7 @@
         "clock_sha256": "8f2876cb937d8d4c656c02744984034dc96392929fedd7740832c108d5bb0b14"
       },
       "previous": {
-        "id": "even-hands",
+        "id": "time_division_windows",
         "clock_sha256": "043fabae947152aa1078ccf8f508bdf01a46f9ce171ebd89c336fb070a77a349"
       },
       "second_cut_held_simulated": 33
@@ -310,7 +310,7 @@
         "expected": 16,
         "verdict": "stable",
         "selection": {
-          "id": "planned-belt-slack",
+          "id": "takt_batches_observed",
           "holds": true,
           "rate": 5,
           "supply": null
@@ -318,7 +318,7 @@
         "clock_sha256": "8f2876cb937d8d4c656c02744984034dc96392929fedd7740832c108d5bb0b14"
       },
       "previous": {
-        "id": "even-hands",
+        "id": "time_division_windows",
         "clock_sha256": "043fabae947152aa1078ccf8f508bdf01a46f9ce171ebd89c336fb070a77a349"
       },
       "second_cut_held_simulated": 47
@@ -393,7 +393,7 @@
         "expected": 32,
         "verdict": "stable",
         "selection": {
-          "id": "planned-belt-slack",
+          "id": "takt_batches_observed",
           "holds": true,
           "rate": 5,
           "supply": null
@@ -471,7 +471,7 @@
         "expected": 16,
         "verdict": "stable",
         "selection": {
-          "id": "planned-belt-slack",
+          "id": "takt_batches_observed",
           "holds": true,
           "rate": 5,
           "supply": null
@@ -479,7 +479,7 @@
         "clock_sha256": "8f2876cb937d8d4c656c02744984034dc96392929fedd7740832c108d5bb0b14"
       },
       "previous": {
-        "id": "even-hands",
+        "id": "time_division_windows",
         "clock_sha256": "043fabae947152aa1078ccf8f508bdf01a46f9ce171ebd89c336fb070a77a349"
       },
       "second_cut_held_simulated": 47

@@ -17,7 +17,7 @@ describe('readSidecarExport', () => {
         ['blank and whitespace text', 'empty', ['', '  \n\t ']],
         ['text that does not parse', 'not-json', ['just some words', '{ not json']],
         ['a number, a string, null and an object without machines', 'not-an-export', ['42', '"text"', '{}', 'null']],
-        ['a build file, by its target output', 'build-file', [JSON.stringify({ target_output: { recipe: 'iron-gear-wheel' }, machines: [machine] })]],
+        ['a build file, by its target output', 'build-file', [JSON.stringify({ setpoint: { recipe: 'iron-gear-wheel' }, machines: [machine] })]],
         ['an export with nothing in it, machines that are not a list and an empty array', 'no-entities', [
             JSON.stringify({ machines: [], drills: { configs: [] }, inserters: [], belts: [], chests: [] }), JSON.stringify({ machines: 'none' }), '[]',
         ]],
@@ -86,7 +86,7 @@ describe('looksLikeSidecarExport', () => {
     });
 
     it('is false for a build file and for text that is not JSON', () => {
-        expect(looksLikeSidecarExport(JSON.stringify({ target_output: {}, machines: [machine] }))).toBe(false);
+        expect(looksLikeSidecarExport(JSON.stringify({ setpoint: {}, machines: [machine] }))).toBe(false);
         expect(looksLikeSidecarExport('{ not json')).toBe(false);
         expect(looksLikeSidecarExport('{}')).toBe(false);
     });

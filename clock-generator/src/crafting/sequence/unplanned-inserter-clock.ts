@@ -9,17 +9,17 @@ const WINDOW_SLACK_TICKS = 4;
  * machine's inventory is only looked at inside the window: the rest of the time the inserter ignores it.
  *
  * - "fuel": fills the fuel slot of a burner machine. Nothing in the plan depends on when it swings, so it runs on a
- *   clock of its own that counts `modulus` ticks, whatever the clock period is: the fewer windows, the less often the
+ *   clock of its own that counts `modulus` ticks, whatever the window cycle is: the fewer windows, the less often the
  *   inserter is woken up to find the fuel slot full.
  * - "by-product": takes a by-product, which no machine in the config uses, off its machine. Its `modulus` is a divisor
- *   of the clock period, so the clock of the period holds a whole number of repeats.
+ *   of the window cycle, so the clock of the window cycle holds a whole number of repeats.
  */
 export interface InserterClock {
     inserter_id: EntityId;
     kind: "fuel" | "by-product";
-    /** Ticks between the starts of two windows; divides the clock period unless the inserter has a clock of its own */
+    /** Ticks between the starts of two windows; divides the window cycle unless the inserter has a clock of its own */
     modulus: number;
-    /** The window is on a clock of its own that counts `modulus` ticks, not on the clock of the period */
+    /** The window is on a clock of its own that counts `modulus` ticks, not on the clock of the window cycle */
     own_clock: boolean;
     /** The window within the first `modulus` ticks */
     window: OpenRange;
@@ -109,9 +109,9 @@ export function byProductOnlyInserters(entity_registry: ReadableEntityRegistry):
 }
 
 /** The largest divisor of `period` that is at most `limit`, or null when there is none of at least `minimum` */
-export function largestDivisorAtMost(period: number, limit: number, minimum: number = 1): number | null {
-    for (let divisor = Math.min(Math.floor(limit), period); divisor >= Math.max(minimum, 1); divisor--) {
-        if (period % divisor === 0) {
+export function largestDivisorAtMost(window_cycle_ticks: number, limit: number, minimum: number = 1): number | null {
+    for (let divisor = Math.min(Math.floor(limit), window_cycle_ticks); divisor >= Math.max(minimum, 1); divisor--) {
+        if (window_cycle_ticks % divisor === 0) {
             return divisor;
         }
     }
@@ -131,27 +131,27 @@ function pickupTicks(inserter: Inserter, entity_registry: ReadableEntityRegistry
 
 /**
  * The clock of an inserter that repeats every at most `interval_ticks`, which `index` staggers from the others on the
- * same machine. On the clock of the period (`period_ticks`) it repeats every divisor of the period; on a clock of its
- * own (`period_ticks` null) every `interval_ticks`.
+ * same machine. On the clock of the window cycle (`window_cycle_ticks`) it repeats every divisor of the window cycle; on a clock of its
+ * own (`window_cycle_ticks` null) every `interval_ticks`.
  */
 function clockEvery(
     inserter: Inserter,
     kind: InserterClock["kind"],
     interval_ticks: number,
     pickup_ticks: number,
-    period_ticks: number | null,
+    window_cycle_ticks: number | null,
     index: number,
     cannot_keep_up: () => string,
 ): InserterClock {
     const swing_ticks = inserter.animation.total.ticks + 1;
-    const modulus = period_ticks === null
+    const modulus = window_cycle_ticks === null
         ? (interval_ticks >= swing_ticks ? interval_ticks : null)
-        : largestDivisorAtMost(period_ticks, interval_ticks, swing_ticks);
+        : largestDivisorAtMost(window_cycle_ticks, interval_ticks, swing_ticks);
     if (modulus === null) {
         throw new Error(
             `Inserter ${inserter.entity_id.number} cannot keep up: ${cannot_keep_up()} lasts ${interval_ticks} ticks `
             + `and a swing takes ${swing_ticks}`
-            + (interval_ticks >= swing_ticks && period_ticks !== null ? ` (and no divisor of the ${period_ticks} tick clock fits between them)` : "")
+            + (interval_ticks >= swing_ticks && window_cycle_ticks !== null ? ` (and no divisor of the ${window_cycle_ticks} tick clock fits between them)` : "")
             + ". Add another inserter or raise its stack size."
         );
     }
@@ -163,7 +163,7 @@ function clockEvery(
         inserter_id: inserter.entity_id,
         kind,
         modulus,
-        own_clock: period_ticks === null,
+        own_clock: window_cycle_ticks === null,
         window: OpenRange.from(start, start + window_ticks - 1),
     };
 }
@@ -186,7 +186,7 @@ const CRAFTING_SHARE_MARGIN = 1.1;
  * crafts more than planned, as it can while a build starts up, may run out of fuel for a few ticks before a window.
  *
  * `index` staggers the windows of the inserters that fill the same machine, so they do not all start on the same tick.
- * With `shared_clock_ticks`, the ticks one clock counts for the period and every fuel clock, the window repeats every
+ * With `shared_clock_ticks`, the ticks one clock counts for the window cycle and every fuel clock, the window repeats every
  * divisor of that.
  */
 function fuelClockFor(
@@ -244,33 +244,33 @@ function fuelBurnIntervalTicks(inserter: Inserter, machine: Machine, crafting_sh
     return Math.floor(items_in_slot_at_a_window / (consumption.rate_per_tick * burning_share));
 }
 
-/** Longest the one clock for the period and the fuel clocks is made to count: 10 minutes */
+/** Longest the one clock for the window cycle and the fuel clocks is made to count: 10 minutes */
 const MAX_SHARED_FUEL_CLOCK_TICKS = 36_000;
 
 /** How many more enables than the fuel needs are taken for a shorter clock */
 const SHARED_FUEL_CLOCK_TOLERANCE = 1.05;
 
 /**
- * The ticks one clock counts to hold the period and every fuel clock: a few periods, with each fuel clock a divisor of
+ * The ticks one clock counts to hold the window cycle and every fuel clock: a few window cycles, with each fuel clock a divisor of
  * it that is no longer than its fuel lasts. Fuel clocks of exactly the ticks their fuel lasts seldom share a factor
- * with the period or each other, and the clock that holds them all counts for hours (839040 ticks for a period of 128
+ * with the window cycle or each other, and the clock that holds them all counts for hours (839040 ticks for a window cycle of 128
  * with fuel clocks of 95 and 138). Looking a little more often gives a short one: 1408 ticks holds fuel clocks of 88
  * and 128.
  *
- * It is the fewest periods whose fuel clocks enable no more than `SHARED_FUEL_CLOCK_TOLERANCE` times as often as the
+ * It is the fewest window cycles whose fuel clocks enable no more than `SHARED_FUEL_CLOCK_TOLERANCE` times as often as the
  * fuel needs, or, when no count up to `MAX_SHARED_FUEL_CLOCK_TICKS` does, the one that enables the least. Null when
- * the period is not a whole number of ticks, or no count has a divisor for every fuel clock.
+ * the window cycle is not a whole number of ticks, or no count has a divisor for every fuel clock.
  */
 export function sharedFuelClockTicks(
-    period_ticks: number,
+    window_cycle_ticks: number,
     fuel_clocks: ReadonlyArray<{ burn_interval_ticks: number; swing_ticks: number }>,
 ): number | null {
-    if (!Number.isInteger(period_ticks) || period_ticks < 1 || fuel_clocks.length === 0) {
+    if (!Number.isInteger(window_cycle_ticks) || window_cycle_ticks < 1 || fuel_clocks.length === 0) {
         return null;
     }
     const needed = fuel_clocks.reduce((sum, clock) => sum + 1 / clock.burn_interval_ticks, 0);
     let best: { ticks: number; enables: number } | null = null;
-    for (let ticks = period_ticks; ticks <= Math.max(period_ticks, MAX_SHARED_FUEL_CLOCK_TICKS); ticks += period_ticks) {
+    for (let ticks = window_cycle_ticks; ticks <= Math.max(window_cycle_ticks, MAX_SHARED_FUEL_CLOCK_TICKS); ticks += window_cycle_ticks) {
         const moduli = fuel_clocks.map(clock => largestDivisorAtMost(ticks, clock.burn_interval_ticks, clock.swing_ticks));
         if (moduli.some(modulus => modulus === null)) {
             continue;
@@ -297,13 +297,13 @@ export function sharedFuelClockTicks(
  *   window repeats within `(stack size - hand) / rate` ticks.
  *
  * The window is short: the inserter checks the machine's output only there, picks up what is ready, and swings once its
- * hand is full. When no divisor of the clock period fits the stack's room, the hand's interval is used instead.
+ * hand is full. When no divisor of the window cycle fits the stack's room, the hand's interval is used instead.
  */
 export function byProductClockFor(
     inserter: Inserter,
     machine: Machine,
     entity_registry: ReadableEntityRegistry,
-    period_ticks: number,
+    window_cycle_ticks: number,
     index: number = 0,
 ): InserterClock {
     const by_products = machine.outputs.slice(1).filter(output => inserter.filtered_items.has(output.item_name));
@@ -327,12 +327,12 @@ export function byProductClockFor(
 
     // a divisor that keeps the stack clear if there is one, else one that at least takes a hand as it builds up
     const for_stack = soonest("stack_ticks");
-    const stack_fits = largestDivisorAtMost(period_ticks, for_stack.stack_ticks, swing_ticks) !== null;
+    const stack_fits = largestDivisorAtMost(window_cycle_ticks, for_stack.stack_ticks, swing_ticks) !== null;
     const chosen = stack_fits ? for_stack : soonest("hand_ticks");
     const interval_ticks = stack_fits ? chosen.stack_ticks : chosen.hand_ticks;
     return clockEvery(
         inserter, "by-product", interval_ticks,
-        pickupTicks(inserter, entity_registry, chosen.output.item_name), period_ticks, index,
+        pickupTicks(inserter, entity_registry, chosen.output.item_name), window_cycle_ticks, index,
         () => `a hand of ${chosen.output.item_name} the machine makes`,
     );
 }
@@ -345,7 +345,7 @@ export function byProductClockFor(
  */
 export function unplannedInserterClocks(
     entity_registry: ReadableEntityRegistry,
-    period_ticks: number,
+    window_cycle_ticks: number,
     crafting_shares: ReadonlyMap<string, number> = new Map(),
     measured_fuel_intervals: ReadonlyMap<string, number> = new Map(),
     /** Ids of the inserters the config sets to always enabled, which are on no clock */
@@ -371,7 +371,7 @@ export function unplannedInserterClocks(
             ? measured
             : undefined;
     };
-    const shared_clock_ticks = sharedFuelClockTicks(period_ticks, fuel_inserters.map(({ inserter, machine, crafting_share }) => ({
+    const shared_clock_ticks = sharedFuelClockTicks(window_cycle_ticks, fuel_inserters.map(({ inserter, machine, crafting_share }) => ({
         burn_interval_ticks: (measuredInterval(inserter, machine) ?? fuelBurnIntervalTicks(inserter, machine, crafting_share))
             - fuelDeliveryTicks(inserter, entity_registry, machine.fuel_slot!.fuel.item_name),
         swing_ticks: inserter.animation.total.ticks + 1,
@@ -384,16 +384,16 @@ export function unplannedInserterClocks(
     for (const inserter of byProductOnlyInserters(entity_registry)) {
         const machine = entity_registry.getEntityByIdOrThrow(inserter.source.entity_id);
         if (Entity.isMachine(machine) && !always_enabled_ids.has(inserter.entity_id.id)) {
-            clocks.set(inserter.entity_id.id, byProductClockFor(inserter, machine, entity_registry, period_ticks, nextIndex(machine)));
+            clocks.set(inserter.entity_id.id, byProductClockFor(inserter, machine, entity_registry, window_cycle_ticks, nextIndex(machine)));
         }
     }
     return clocks;
 }
 
-/** The windows of a clock repeated over a clock period, for a clock that divides it */
-export function clockWindowsOverPeriod(clock: InserterClock, period_ticks: number): OpenRange[] {
+/** The windows of a clock repeated over a window cycle, for a clock that divides it */
+export function clockWindowsOverWindowCycle(clock: InserterClock, window_cycle_ticks: number): OpenRange[] {
     const windows: OpenRange[] = [];
-    for (let start = 0; start < period_ticks; start += clock.modulus) {
+    for (let start = 0; start < window_cycle_ticks; start += clock.modulus) {
         windows.push(OpenRange.from(start + clock.window.start_inclusive, start + clock.window.end_inclusive));
     }
     return windows;

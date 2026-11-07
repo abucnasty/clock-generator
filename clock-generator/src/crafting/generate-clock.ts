@@ -1,11 +1,11 @@
-import { ClockPeriodLimitError, type SwingPeriodRejection } from "./plan/clock-period-limit";
-import { wholeSwingPeriodsBelow } from "./whole-swing-periods";
+import { ClockWindowCycleLimitError, type SwingWindowCycleRejection } from "./plan/clock-window-cycle-limit";
+import { wholeSwingWindowCyclesBelow } from "./whole-swing-window-cycles";
 import { Config } from "../config";
 import { defaultLogger } from "../common/logger";
-import { groupedHandsClock } from "./candidates/grouped-hands";
-import { observedWindowsClock } from "./candidates/observed-windows";
-import { resultWindowsClockOfPlan } from "./candidates/result-windows-clock";
-import { BlueprintGenerationResult, GenerateClockOptions, PlanRun, PlannedClock, SwingAttemptResult, SwingBackoffReport, checkedClock, clockOfPlan, clockOfWindows, planRun, slackInsideWindows } from "./plan/plan-run";
+import { roundRobinPollingClock } from "./candidates/round-robin-polling";
+import { timeStudyWindowsClock } from "./candidates/time-study-windows";
+import { exhaustClockOfPlan } from "./candidates/exhaust-clock";
+import { BlueprintGenerationResult, GenerateClockOptions, UnclockedRun, PlannedClock, SwingAttemptResult, SwingBackoffReport, checkedClock, clockOfPlan, clockOfWindows, unclockedRun, slackInsideWindows } from "./plan/unclocked-run";
 import { type GhostWindow, windowsWithoutGhostWakeUps } from "./plan/ghost-windows";
 import { ghostWakeUpsOfStock } from "./wake-ups";
 import { inserterEnds } from "./inserter-counters";
@@ -15,23 +15,23 @@ import type { AsBuiltRun } from "./trial";
 import { ArithmeticWindowsNotApplicable, batchedSwingsWindowsByArithmetic } from "./plan/batched-arithmetic";
 import { sharedLaneShortened } from "./plan/shared-lane-guard";
 import { estimatedOutputSwings } from "./plan/output-swing-estimate";
-import { backpressureLossVerdictOf } from "./trial";
+import { disturbanceTrialVerdictOf } from "./trial";
 import { OpenRange } from "../data-types";
-import { primitiveGroupedOptionsSupported, verifiedPrimitiveGroupedClock } from "./candidates/verified-primitive-grouped";
-import type { PrimitiveGroupedAttemptReport } from "./primitive-grouped-policy";
+import { primitiveRoundRobinPollingOptionsSupported, verifiedPrimitiveRoundRobinPollingClock } from "./candidates/round-robin-polling-primitive-verified";
+import type { PrimitiveRoundRobinPollingAttemptReport } from "./round-robin-polling-primitive-policy";
 import { FractionalSwingsRefusedError, fractionalSwingsWholeAt } from "./sequence/cycle/swing-distribution";
 
 /** New budget-pruned results retain planner-unit requests separately from legacy final-taker aggregate reporting. */
-export function terminalCountForAlternativePlanning(result: Pick<BlueprintGenerationResult, 'used_terminal_swing_count' | 'swing_backoff_report' | 'primitive_grouped' | 'secondary_planning'>): number {
-    if (result.primitive_grouped !== undefined) return result.primitive_grouped.terminal_swing_count;
+export function terminalCountForAlternativePlanning(result: Pick<BlueprintGenerationResult, 'used_terminal_swing_count' | 'swing_backoff_report' | 'primitive_round_robin_polling' | 'secondary_planning'>): number {
+    if (result.primitive_round_robin_polling !== undefined) return result.primitive_round_robin_polling.terminal_swing_count;
     if (result.secondary_planning !== undefined) return result.secondary_planning.terminal_swing_count;
     const report = result.swing_backoff_report;
-    return report?.period_limit_pruning === undefined ? result.used_terminal_swing_count
+    return report?.window_cycle_limit_pruning === undefined ? result.used_terminal_swing_count
         : report.stable_terminal_swing_count ?? report.initial_terminal_swing_count;
 }
 
 /**
- * Generates a clock from a configuration: the planning run (`planRun`), the clock of the plan with its room
+ * Generates a clock from a configuration: the planning run (`unclockedRun`), the clock of the plan with its room
  * (`clockOfPlan`), and the clock-only check and export (`checkedClock`). The config override `derive_clock_windows`
  * makes the observed windows candidate instead, keeping the planned windows where they pass.
  *
@@ -46,18 +46,18 @@ export function generateClockForConfig(
     options: GenerateClockOptions = {}
 ): BlueprintGenerationResult {
     if (config.overrides?.derive_clock_windows) {
-        return observedWindowsClock(config, options, "prefer_planned");
+        return timeStudyWindowsClock(config, options, "prefer_planned");
     }
-    const plan = planRun(config, options);
-    if (plan.run.crafting_cycle_plan.result_windows !== undefined) {
-        // results that come too rarely for whole hands in a period: their windows are the arithmetic's (result-windows.ts)
-        return resultWindowsClockOfPlan(plan, options);
+    const plan = unclockedRun(config, options);
+    if (plan.run.output_cycle_plan.exhaust !== undefined) {
+        // results that come too rarely for whole hands in a window cycle: their windows are the arithmetic's (exhaust.ts)
+        return exhaustClockOfPlan(plan, options);
     }
     if (options.shared_windows === true) {
         // only the grouped hands' windows with the takers that open together sharing one; where there are none the clock is the
         // plan's, not checked and not holding, so that the output swings back off to the next count
-        if (options.verify_as_built !== true) throw new Error("shared windows are made for a clock that is checked as built");
-        const shared = groupedHandsClock(plan, options);
+        if (options.verify_as_built !== true) throw new Error("shared enable windows are made for a clock that is checked as built");
+        const shared = roundRobinPollingClock(plan, options);
         if (shared !== null && shared.stability_check.holds) return shared;
         const unmade = clockOfPlan(plan, { ...options, belt_pickup_slack: "always" });
         const unchecked = checkedClock(plan, unmade, unmade.windows, { ...options, verify_as_built: false, modulo_blueprint: false, fuel_consumption_view: false });
@@ -80,7 +80,7 @@ export function generateClockForConfig(
         // and last its windows shaped against ghost wakeups, where that wakes fewer
         return withoutGhostWakeUps(made, inside, options);
     }
-    const grouped = groupedHandsClock(plan, options);
+    const grouped = roundRobinPollingClock(plan, options);
     if (grouped !== null && grouped.stability_check.holds) {
         return grouped;
     }
@@ -93,25 +93,25 @@ export function generateClockForConfig(
  * the build, they are not the planning run's own and the copies do not share a belt they shorten (shared-lane-guard.ts);
  * null elsewhere, the reason logged
  */
-function arithmeticWindowsOf(plan: PlanRun): Map<string, OpenRange[]> | null {
+function arithmeticWindowsOf(plan: UnclockedRun): Map<string, OpenRange[]> | null {
     const { run } = plan;
     try {
         const { windows } = batchedSwingsWindowsByArithmetic({ entity_registry: run.simulation_context.entity_registry,
-            crafting_cycle_plan: run.crafting_cycle_plan, period_ticks: run.duration.ticks, recipe_lcm: run.recipe_lcm,
+            output_cycle_plan: run.output_cycle_plan, window_cycle_ticks: run.duration.ticks, recipe_lcm: run.recipe_lcm,
             always_enabled_by_config: run.always_enabled_by_config });
         if (sameWindows(windows, plan.unslacked_windows)) {
-            plan.logger.log("Windows by arithmetic: the planning run's own");
+            plan.logger.log("Enable windows by arithmetic: the unclocked run's own");
             return null;
         }
         const shared = sharedLaneShortened(plan.config, windows, plan.unslacked_windows);
         if (shared !== null) {
-            plan.logger.log(`Windows by arithmetic: not used, ${shared}`);
+            plan.logger.log(`Enable windows by arithmetic: not used, ${shared}`);
             return null;
         }
         return windows;
     } catch (error) {
         if (!(error instanceof ArithmeticWindowsNotApplicable)) throw error;
-        plan.logger.log(`Windows by arithmetic: none (${error.message})`);
+        plan.logger.log(`Enable windows by arithmetic: none (${error.message})`);
         return null;
     }
 }
@@ -127,13 +127,13 @@ function sameWindows(a: ReadonlyMap<string, OpenRange[]>, b: ReadonlyMap<string,
  * The clock of the windows made by arithmetic, checked as the planned clock is (the clock-only check from every start
  * phase): on a plan of its own whose stability check is the arithmetic clock's alone, not the planning run's
  */
-function checkedArithmeticClock(made: MadeClocks, plan: PlanRun, windows: Map<string, OpenRange[]>, options: GenerateClockOptions): BlueprintGenerationResult {
-    const own: PlanRun = { ...plan, run: { ...plan.run, stability_check: { ...plan.run.stability_check, holds: true, as_built: undefined } } };
+function checkedArithmeticClock(made: MadeClocks, plan: UnclockedRun, windows: Map<string, OpenRange[]>, options: GenerateClockOptions): BlueprintGenerationResult {
+    const own: UnclockedRun = { ...plan, run: { ...plan.run, stability_check: { ...plan.run.stability_check, holds: true, as_built: undefined } } };
     const clock = clockOfWindows(own, windows, options);
     const checked = checkedAndKept(made, own, clock, clock.windows, options);
     const as_built = checked.stability_check.as_built;
-    plan.logger.log(`Windows by arithmetic: the clock ${as_built?.holds ? "holds" : "does not hold"} as built`
-        + (as_built?.wake_ups === undefined ? "" : `, ${as_built.wake_ups.wake_ups_per_minute.toFixed(2)} wake-ups a minute`));
+    plan.logger.log(`Enable windows by arithmetic: the clock ${as_built?.holds ? "holds" : "does not hold"} as built`
+        + (as_built?.wake_ups === undefined ? "" : `, ${as_built.wake_ups.wake_ups_per_minute.toFixed(2)} wakeups a minute`));
     const result: BlueprintGenerationResult = { ...checked, window_maker: "arithmetic" };
     const kept = made.get(checked);
     if (kept !== undefined) made.set(result, kept);
@@ -146,7 +146,7 @@ function checkedArithmeticClock(made: MadeClocks, plan: PlanRun, windows: Map<st
  * wakes its inserters fewer times a minute, and gets back from every backpressure loss the planned clock gets back from;
  * the planned clock everywhere else
  */
-function arithmeticBesidePlanned(clocks: MadeClocks, plan: PlanRun, planned: BlueprintGenerationResult, windows: Map<string, OpenRange[]>,
+function arithmeticBesidePlanned(clocks: MadeClocks, plan: UnclockedRun, planned: BlueprintGenerationResult, windows: Map<string, OpenRange[]>,
     options: GenerateClockOptions): BlueprintGenerationResult {
     const made = checkedArithmeticClock(clocks, plan, windows, options);
     const wake_ups = (result: BlueprintGenerationResult) => result.stability_check.as_built?.wake_ups?.wake_ups_per_minute;
@@ -154,12 +154,12 @@ function arithmeticBesidePlanned(clocks: MadeClocks, plan: PlanRun, planned: Blu
     if (!made.stability_check.holds || made_wake_ups === undefined || planned_wake_ups === undefined || !(made_wake_ups < planned_wake_ups)) {
         return planned;
     }
-    const survives = (result: BlueprintGenerationResult) => backpressureLossVerdictOf(plan.config, result, plan.logger).backpressure_loss?.survives === true;
+    const survives = (result: BlueprintGenerationResult) => disturbanceTrialVerdictOf(plan.config, result, plan.logger).disturbance_trial?.survives === true;
     if (!survives(made) && survives(planned)) {
-        plan.logger.log("Windows by arithmetic: fewer wake-ups, but the clock does not get back from a loss the planned one gets back from");
+        plan.logger.log("Enable windows by arithmetic: fewer wakeups, but the clock does not go back to its rate by itself after a supply stop or an output blockage, as the planned one does");
         return planned;
     }
-    plan.logger.log(`Windows by arithmetic: the primary clock (${made_wake_ups.toFixed(2)} against ${planned_wake_ups.toFixed(2)} wake-ups a minute)`);
+    plan.logger.log(`Enable windows by arithmetic: the primary clock (${made_wake_ups.toFixed(2)} against ${planned_wake_ups.toFixed(2)} wakeups a minute)`);
     return made;
 }
 
@@ -170,16 +170,16 @@ function arithmeticBesidePlanned(clocks: MadeClocks, plan: PlanRun, planned: Blu
  * its inserters fewer times a minute than the primary and gets back from every backpressure loss the primary gets back
  * from. The slack added after such a window lets the arm, back from its last drop,
  * start a hand the plan does not have, and where that hand waits at its machine it costs a wake-up; it can also join two
- * windows of a period into one (the logistic science sample's two pickup windows of 176 ticks: 20.57 wake-ups a minute
+ * windows of a window cycle into one (the logistic science sample's two pickup windows of 176 ticks: 20.57 wake-ups a minute
  * with the slack inside, 61.71 joined by the slack added; docs/wake-ups.md).
  */
-function withSlackInside(made: MadeClocks, plan: PlanRun, planned: BlueprintGenerationResult, primary: BlueprintGenerationResult,
+function withSlackInside(made: MadeClocks, plan: UnclockedRun, planned: BlueprintGenerationResult, primary: BlueprintGenerationResult,
     options: GenerateClockOptions): BlueprintGenerationResult {
     if (options.belt_pickup_slack !== "always" || planned.belt?.kind !== "moving" || slackInsideWindows(plan) === null) {
         return primary;
     }
     // checked on a copy of the plan: the check writes the as-built result into the stability check of the plan it is given
-    const own: PlanRun = { ...plan, run: { ...plan.run, stability_check: { ...plan.run.stability_check, as_built: undefined } } };
+    const own: UnclockedRun = { ...plan, run: { ...plan.run, stability_check: { ...plan.run.stability_check, as_built: undefined } } };
     const clock = clockOfPlan(own, { ...options, belt_pickup_slack: "inside" });
     const inside = checkedAndKept(made, own, clock, clock.windows, options);
     const wake_ups = (result: BlueprintGenerationResult) => result.stability_check.as_built?.wake_ups?.wake_ups_per_minute;
@@ -188,18 +188,18 @@ function withSlackInside(made: MadeClocks, plan: PlanRun, planned: BlueprintGene
         || !(inside_wake_ups < primary_wake_ups)) {
         return primary;
     }
-    const survives = (result: BlueprintGenerationResult) => backpressureLossVerdictOf(plan.config, result, plan.logger).backpressure_loss?.survives === true;
+    const survives = (result: BlueprintGenerationResult) => disturbanceTrialVerdictOf(plan.config, result, plan.logger).disturbance_trial?.survives === true;
     if (!survives(inside) && survives(primary)) {
-        plan.logger.log("Belt pickup slack inside the windows: fewer wake-ups, but the clock does not get back from a loss the primary one gets back from");
+        plan.logger.log("Belt slack inside the enable windows: fewer wakeups, but the clock does not go back to its rate by itself after a supply stop or an output blockage, as the primary one does");
         return primary;
     }
-    plan.logger.log(`Belt pickup slack inside the windows: the primary clock (${inside_wake_ups.toFixed(2)} against ${primary_wake_ups.toFixed(2)} wake-ups a minute)`);
+    plan.logger.log(`Belt slack inside the enable windows: the primary clock (${inside_wake_ups.toFixed(2)} against ${primary_wake_ups.toFixed(2)} wakeups a minute)`);
     return inside;
 }
 
 /** A clock checked as built, with the plan, clock and windows it was checked on and the check's run (see `checkedAndKept`) */
 interface MadeClock {
-    plan: PlanRun;
+    plan: UnclockedRun;
     clock: PlannedClock;
     windows: Map<string, OpenRange[]>;
     run: AsBuiltRun | undefined;
@@ -207,7 +207,7 @@ interface MadeClock {
 type MadeClocks = Map<BlueprintGenerationResult, MadeClock>;
 
 /** `checkedClock`, keeping in `made` what the result was made and checked on */
-function checkedAndKept(made: MadeClocks, plan: PlanRun, clock: PlannedClock, windows: Map<string, OpenRange[]>,
+function checkedAndKept(made: MadeClocks, plan: UnclockedRun, clock: PlannedClock, windows: Map<string, OpenRange[]>,
     options: GenerateClockOptions): BlueprintGenerationResult {
     let run: AsBuiltRun | undefined;
     const result = checkedClock(plan, clock, windows, options, { on_as_built: checked => { run = checked; } });
@@ -247,7 +247,7 @@ function withoutGhostWakeUps(made: MadeClocks, primary: BlueprintGenerationResul
         : check.first_judged_tick - check.clock_tick_at_first_judged;
     const shaped = windowsWithoutGhostWakeUps(windows, plan.run.duration.ticks, stock, ghosts, fixed, offset, (id, why) => left.push(`${id}: ${why}`));
     if (left.length > 0) {
-        plan.logger.log(`Ghost wakeups: windows left as they are (${left.join("; ")})`);
+        plan.logger.log(`Ghost wakeups: enable windows left as they are (${left.join("; ")})`);
     }
     if (shaped === null) {
         return primary;
@@ -270,8 +270,8 @@ function withoutGhostWakeUps(made: MadeClocks, primary: BlueprintGenerationResul
         best = all;
         moved.push(...shaped.shaped);
     } else {
-        plan.logger.log(`Windows shaped against ${ghosts.length} ghost wakeups (${textOf(shaped.shaped)}): not used, `
-            + (all.stability_check.as_built?.holds ? `${wake_ups(all)?.toFixed(2)} against ${wake_ups(primary)?.toFixed(2)} wake-ups a minute` : "it does not hold as built"));
+        plan.logger.log(`Enable windows shaped against ${ghosts.length} ghost wakeups (${textOf(shaped.shaped)}): not used, `
+            + (all.stability_check.as_built?.holds ? `${wake_ups(all)?.toFixed(2)} against ${wake_ups(primary)?.toFixed(2)} wakeups a minute` : "it does not hold as built"));
         if (inserters.length > 1) for (const id of inserters) {
             const own = new Map(best_windows);
             own.set(id, shaped.windows.get(id)!);
@@ -282,19 +282,19 @@ function withoutGhostWakeUps(made: MadeClocks, primary: BlueprintGenerationResul
                 best_windows = own;
                 moved.push(...shaped_of);
             } else {
-                plan.logger.log(`Windows of ${id} shaped against ghost wakeups (${textOf(shaped_of)}): not used`);
+                plan.logger.log(`Enable windows of ${id} shaped against ghost wakeups (${textOf(shaped_of)}): not used`);
             }
         }
     }
     if (best === primary) {
         return primary;
     }
-    const survives = (it: BlueprintGenerationResult) => backpressureLossVerdictOf(plan.config, it, plan.logger).backpressure_loss?.survives === true;
+    const survives = (it: BlueprintGenerationResult) => disturbanceTrialVerdictOf(plan.config, it, plan.logger).disturbance_trial?.survives === true;
     if (!survives(best) && survives(primary)) {
-        plan.logger.log(`Windows shaped against ghost wakeups (${textOf(moved)}): fewer wake-ups, but the clock does not get back from a loss the primary one gets back from`);
+        plan.logger.log(`Enable windows shaped against ghost wakeups (${textOf(moved)}): fewer wakeups, but the clock does not go back to its rate by itself after a supply stop or an output blockage, as the primary one does`);
         return primary;
     }
-    plan.logger.log(`Windows shaped against ghost wakeups (${textOf(moved)}): the primary clock (${wake_ups(best)!.toFixed(2)} against ${wake_ups(primary)!.toFixed(2)} wake-ups a minute)`);
+    plan.logger.log(`Enable windows shaped against ghost wakeups (${textOf(moved)}): the primary clock (${wake_ups(best)!.toFixed(2)} against ${wake_ups(primary)!.toFixed(2)} wakeups a minute)`);
     const range = (it: OpenRange) => ({ start: it.start_inclusive, end: it.end_inclusive });
     return { ...best, ...(primary.window_maker !== undefined && { window_maker: primary.window_maker }),
         ghost_wakeup_windows: moved.map(it => ({ inserter_id: it.inserter_id, window: range(it.window), shaped: it.shaped === null ? null : range(it.shaped),
@@ -309,11 +309,11 @@ function withoutGhostWakeUps(made: MadeClocks, primary: BlueprintGenerationResul
  * tick before the plan did. Both starts are the plan's; the as-built check decides. Null where no pickup of the
  * planning run was counted from a take.
  */
-function clockWithPickupsFromTheirEntry(made: MadeClocks, plan: PlanRun, options: GenerateClockOptions): BlueprintGenerationResult | null {
+function clockWithPickupsFromTheirEntry(made: MadeClocks, plan: UnclockedRun, options: GenerateClockOptions): BlueprintGenerationResult | null {
     if (!(plan.run.pickups_from_the_take > 0)) {
         return null;
     }
-    const from_entry = planRun(plan.config, { ...options, pickup_start: "entry" });
+    const from_entry = unclockedRun(plan.config, { ...options, pickup_start: "entry" });
     const clock = clockOfPlan(from_entry, options);
     const checked = checkedAndKept(made, from_entry, clock, clock.windows, options);
     const holds = checked.stability_check.as_built?.holds ?? checked.stability_check.holds;
@@ -332,7 +332,7 @@ function clockWithPickupsFromTheirEntry(made: MadeClocks, plan: PlanRun, options
  *
  * Backoff is skipped when `config.overrides.terminal_swing_count` is set: that count is forced as-is.
  *
- * Fractional swings (`options.fractional_swings`) that the insertion limits refuse at a count
+ * Euclidean Swings (`options.fractional_swings`) that the insertion limits refuse at a count
  * (FractionalSwingsRefusedError) are planned at the whole counts below it, the first the cycle plan accepts; a
  * forced count is not. Where the first plan is refused and the count it is made at has every inserter's swings whole,
  * no clock is made: it would be the clock of that many whole output swings, which is offered on its own.
@@ -355,27 +355,27 @@ export function generateClockWithSwingBackoff(
     const logger = options.logger ?? defaultLogger;
 
     const swing_count_forced = config.overrides?.terminal_swing_count !== undefined;
-    const can_prune_periods = !swing_count_forced && options.fractional_swings !== true
-        && config.target_output.counts !== "destroyed";
-    const period_rejections: SwingPeriodRejection[] = [];
+    const can_prune_window_cycles = !swing_count_forced && options.fractional_swings !== true
+        && config.setpoint.counts !== "destroyed";
+    const window_cycle_rejections: SwingWindowCycleRejection[] = [];
     let requested_initial_count: number | undefined;
-    let first_period_refusal: ClockPeriodLimitError | undefined;
-    let period_frontier: Generator<SwingPeriodRejection> | undefined;
+    let first_window_cycle_refusal: ClockWindowCycleLimitError | undefined;
+    let window_cycle_frontier: Generator<SwingWindowCycleRejection> | undefined;
     let generated_count: number | undefined;
-    let primitive_attempt: PrimitiveGroupedAttemptReport | undefined;
+    let primitive_attempt: PrimitiveRoundRobinPollingAttemptReport | undefined;
     const can_lower_refused_fractions = !swing_count_forced && options.fractional_swings === true;
     let first_fractional_refusal: FractionalSwingsRefusedError | undefined;
     const withCount = (count: number): Config => ({ ...config, overrides: { ...config.overrides, terminal_swing_count: count } });
     const generateWithinBudget = (candidate: Config): BlueprintGenerationResult | null => {
         let attempted = candidate;
-        if (period_frontier !== undefined) {
+        if (window_cycle_frontier !== undefined) {
             const ceiling = candidate.overrides?.terminal_swing_count ?? Infinity;
             let eligible: number | undefined;
-            for (let next = period_frontier.next(); !next.done; next = period_frontier.next()) {
-                const period = next.value;
-                if (period.terminal_swing_count > ceiling) continue;
-                if (period.period_ticks >= period.limit_ticks) period_rejections.push(period);
-                else { eligible = period.terminal_swing_count; break; }
+            for (let next = window_cycle_frontier.next(); !next.done; next = window_cycle_frontier.next()) {
+                const window_cycle = next.value;
+                if (window_cycle.terminal_swing_count > ceiling) continue;
+                if (window_cycle.window_cycle_ticks >= window_cycle.limit_ticks) window_cycle_rejections.push(window_cycle);
+                else { eligible = window_cycle.terminal_swing_count; break; }
             }
             if (eligible === undefined) return null;
             attempted = withCount(eligible);
@@ -392,18 +392,18 @@ export function generateClockWithSwingBackoff(
                 const below = Math.ceil(refused.getNumerator / refused.getDenominator) - 1;
                 return below < 1 ? null : generateWithinBudget(withCount(below));
             }
-            if (!can_prune_periods || !(error instanceof ClockPeriodLimitError) || error.arithmetic === undefined) throw error;
-            const initial_refusal = first_period_refusal === undefined && attempted === config;
-            first_period_refusal ??= error;
+            if (!can_prune_window_cycles || !(error instanceof ClockWindowCycleLimitError) || error.arithmetic === undefined) throw error;
+            const initial_refusal = first_window_cycle_refusal === undefined && attempted === config;
+            first_window_cycle_refusal ??= error;
             requested_initial_count ??= error.rejection.terminal_swing_count;
-            period_rejections.push({ ...error.rejection });
+            window_cycle_rejections.push({ ...error.rejection });
             const below = Math.min(error.arithmetic.terminal_swing_count, attempted.overrides?.terminal_swing_count ?? Infinity);
-            period_frontier = wholeSwingPeriodsBelow({ ...error.arithmetic, terminal_swing_count: below }, error.rejection.limit_ticks);
-            if (initial_refusal && generate === generateClockForConfig && primitiveGroupedOptionsSupported(config, options)) {
-                const primitive = verifiedPrimitiveGroupedClock(config, options, error.rejection.terminal_swing_count);
+            window_cycle_frontier = wholeSwingWindowCyclesBelow({ ...error.arithmetic, terminal_swing_count: below }, error.rejection.limit_ticks);
+            if (initial_refusal && generate === generateClockForConfig && primitiveRoundRobinPollingOptionsSupported(config, options)) {
+                const primitive = verifiedPrimitiveRoundRobinPollingClock(config, options, error.rejection.terminal_swing_count);
                 primitive_attempt = primitive.report;
                 if (primitive.clock !== null) {
-                    generated_count = primitive.clock.primitive_grouped!.terminal_swing_count;
+                    generated_count = primitive.clock.primitive_round_robin_polling!.terminal_swing_count;
                     return primitive.clock;
                 }
             }
@@ -411,15 +411,15 @@ export function generateClockWithSwingBackoff(
         }
     };
     const pruningReport = () => ({ ...(primitive_attempt === undefined ? {} : { primitive_grouped_attempt: primitive_attempt }),
-        ...(period_rejections.length === 0 ? {} : { period_limit_pruning: {
-        requested_terminal_swing_count: requested_initial_count!, rejections: period_rejections,
+        ...(window_cycle_rejections.length === 0 ? {} : { window_cycle_limit_pruning: {
+        requested_terminal_swing_count: requested_initial_count!, rejections: window_cycle_rejections,
     } }) });
     const initial_result = generateWithinBudget(config);
-    if (initial_result === null) throw first_period_refusal ?? first_fractional_refusal!;
-    if (first_fractional_refusal !== undefined && !initial_result.crafting_cycle_plan.fractional_swings_enabled) {
+    if (initial_result === null) throw first_window_cycle_refusal ?? first_fractional_refusal!;
+    if (first_fractional_refusal !== undefined && !initial_result.output_cycle_plan.fractional_swings_enabled) {
         throw fractionalSwingsWholeAt(first_fractional_refusal, initial_result.used_terminal_swing_count);
     }
-    const initial_swing_count = period_frontier !== undefined && generated_count !== undefined
+    const initial_swing_count = window_cycle_frontier !== undefined && generated_count !== undefined
         ? generated_count : initial_result.used_terminal_swing_count;
     requested_initial_count ??= initial_swing_count;
 
@@ -433,7 +433,7 @@ export function generateClockWithSwingBackoff(
                 initial_attempt: {
                     terminal_swing_count: initial_swing_count,
                     holds: initial_result.stability_check.holds,
-                    actual_output_items: initial_result.primitive_grouped === undefined ? initial_result.stability_check.actual_output_items
+                    actual_output_items: initial_result.primitive_round_robin_polling === undefined ? initial_result.stability_check.actual_output_items
                         : initial_result.stability_check.as_built!.actual_output_items,
                     expected_output_items: initial_result.stability_check.expected_output_items,
                 },
@@ -477,7 +477,7 @@ export function generateClockWithSwingBackoff(
         logger.log(`Attempting terminal_swing_count=${swings}...`);
         const attempt_result = generateWithinBudget(withCount(swings));
         if (attempt_result === null) break;
-        if ((period_frontier !== undefined || first_fractional_refusal !== undefined) && generated_count !== undefined) swings = generated_count;
+        if ((window_cycle_frontier !== undefined || first_fractional_refusal !== undefined) && generated_count !== undefined) swings = generated_count;
 
         attempts.push({
             terminal_swing_count: swings,

@@ -4,15 +4,15 @@ import { ConfigPaths } from '../config/config-paths';
 import { loadConfigFromFile } from '../config/loader';
 import { fraction } from '../data-types/fraction';
 import { generateClockWithSwingBackoff } from './generate-clock';
-import type { BlueprintGenerationResult } from './plan/plan-run';
+import type { BlueprintGenerationResult } from './plan/unclocked-run';
 import { planOfConfig, planOfSample } from './planner/plan-test-helpers';
 import { FractionalSwingsRefusedError } from './sequence/cycle/swing-distribution';
 
 const quiet = { log() {}, warn() {}, error() {}, debug() {} };
-const config = { target_output: { counts: 'made' }, overrides: {} } as unknown as Config;
+const config = { setpoint: { counts: 'made' }, overrides: {} } as unknown as Config;
 
 function result(count: number, holds: boolean, fractional = true): BlueprintGenerationResult {
-    return { used_terminal_swing_count: count, crafting_cycle_plan: { fractional_swings_enabled: fractional },
+    return { used_terminal_swing_count: count, output_cycle_plan: { fractional_swings_enabled: fractional },
         stability_check: { holds, actual_output_items: holds ? 32 : 16, expected_output_items: 32, used_lcm: 1 } } as unknown as BlueprintGenerationResult;
 }
 
@@ -62,7 +62,7 @@ describe('fractional swings the insertion limits refuse', () => {
     it('make no clock where the count they are planned at has every swing whole: it is the clock of that many output swings', () => {
         const generate = refusingAbove(2, count => result(count, true, false));
         expect(() => generateClockWithSwingBackoff(config, { logger: quiet, fractional_swings: true }, generate))
-            .toThrow(/^refused at 16\/3 At 2 output swings a cycle, the most the insertion limits allow, every inserter swings a whole number of times a cycle: the clock of 2 output swings\.$/);
+            .toThrow(/^refused at 16\/3 At 2 output swings each output cycle, the most the insertion limits allow, every inserter swings a whole number of times each output cycle: the clock of 2 output swings\.$/);
     });
 
     it('are not planned at another count where the config forces one, nor without fractional swings asked for', () => {
@@ -77,12 +77,12 @@ describe('fractional swings the insertion limits refuse', () => {
 
     it('electromagnetic science 330/s: refused at 11/2, 5, 4 and 3 output swings, the build plan lists them at 2, with its fractional inputs', async () => {
         const { plan } = await planOfSample(ConfigPaths.ELECTROMAGNETIC_SCIENCE_330);
-        expect(plan.groups[0].periods.find(choice => choice.listed_as === 'fractional'))
-            .toMatchObject({ swings: 2, fractional: true, period_ticks: 704, kept: true });
+        expect(plan.groups[0].window_cycles.find(choice => choice.listed_as === 'fractional'))
+            .toMatchObject({ swings: 2, fractional: true, window_cycle_ticks: 704, kept: true });
         // forced, the count is planned as it is
         const sample = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_330);
         const { plan: forced } = planOfConfig({ ...sample, overrides: { ...sample.overrides, terminal_swing_count: 3 } });
-        expect(forced.groups[0].periods.find(choice => choice.listed_as === 'fractional'))
+        expect(forced.groups[0].window_cycles.find(choice => choice.listed_as === 'fractional'))
             .toMatchObject({ swings: null, fractional: true, pruned: { rule: 'cycle-refused' } });
     });
 });

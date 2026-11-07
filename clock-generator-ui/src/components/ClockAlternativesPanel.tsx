@@ -26,8 +26,8 @@ import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import { CLOCK_TABLE_NAME, CLOCK_TABLE_REGION, clockHelpName, termsHelpName } from '../utils/a11yLabels';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import { SUMMARY_COPY, beltCellText, clockBadges, foldedMakes, isStartDependent, pickNameMeaning, recoversOf, wakeUpsAverageOf, worksOf } from '../utils/clockSummary';
-import { familyCopyOf, fullClockName, qualifierChipsOf, strategyNameOf } from '../utils/strategyNames';
-import { BadgeChips, QualifierChips } from './StrategyChips';
+import { directRouterOf, familyCopyOf, fullClockName, clockChipsOf, sourceLinesOf, strategyNameOf } from '../utils/strategyNames';
+import { BadgeChips, ClockChips } from './StrategyChips';
 import { SIGNAL_DEFINITION, WAKEUP_DEFINITION, TERMS_FOCUS, type GlossaryId } from '../utils/glossary';
 import { HelpButton } from './HelpButton';
 import { ScrollX } from './ScrollX';
@@ -35,10 +35,10 @@ import { Panel } from './Panel';
 import { RecommendedChip } from './RecommendedChip';
 import { HANDS_TEXT } from '../utils/targetCounts';
 import { TermsList } from './TermsPopover';
-import { OUTPUT_PER_PERIOD_HEADER, SIGNALS_HEADER, WAKE_UPS_HEADER, formatNumberText, makesHeader, rateHeader } from '../utils/numberText';
+import { OUTPUT_PER_WINDOW_CYCLE_HEADER, SIGNALS_HEADER, WAKE_UPS_HEADER, formatNumberText, makesHeader, rateHeader } from '../utils/numberText';
 import { RECOMMENDED_COPY, disclosureRunLine, groupClockRowsByBelt, partitionClockRows, type BeltClockGroups, type ClockRow, type PickRule } from '../utils/recommendedClock';
 
-// fractional (subtick) periods are shown to 3 decimals
+// fractional (subtick) window cycles are shown to 3 decimals
 /** The header of the column that counts a clock's decider combinators */
 const DECIDERS_HEADER = 'Deciders';
 
@@ -60,8 +60,8 @@ const COMPARE_COPY = {
         + 'stop between pickups and the belt refills the gaps; on a moving belt an inserter can be switched off holding a partial hand. A '
         + 'subtick clock never has belt slack. It is not ranked behind other clocks for it. Blank '
         + 'when no clocked inserter picks up from a belt.',
-    swingsHelp: 'Total output swings per crafting cycle of each output machine, shared equally across its output inserters. '
-        + 'Per-inserter counts may be fractional. The clock repeats after a whole number of crafting cycles (the window cycle).',
+    swingsHelp: 'Total output swings each output cycle of each output machine, shared equally across its output inserters. '
+        + 'Per-inserter counts may be fractional. The clock repeats after a whole number of output cycles (the window cycle).',
     signalsHelp: SIGNAL_DEFINITION + ' Counted per minute for one copy of the build, in the same run as the wakeups. No clock is ranked by signals.',
     decidersHelp: 'How many decider combinators the clock\'s blueprint has to switch inserters and drills on and off, not counting the clock itself. Each one is wired to the inserters and drills its description names, so fewer deciders is less wiring to do by hand.',
     windowsHelp: 'How many enable windows the clock has in all: stretches of ticks during which it switches an inserter on.',
@@ -98,11 +98,11 @@ function statusDetail(alternative: ClockAlternativeView): string {
         return `${startup}Clock-phase check unavailable. ${recovery}`;
     }
     const phases = `${startup}${recovery} Checked from ${check.start_phases_checked} clock phase${check.start_phases_checked === 1 ? '' : 's'}`;
-    if (check.repeat_periods === undefined || check.repeat_output_items === undefined) {
+    if (check.repeat_window_cycles === undefined || check.repeat_output_items === undefined) {
         return phases;
     }
-    return `${phases}. The build repeats every ${check.repeat_periods} window cycles, moving ${check.repeat_output_items} of `
-        + `${alternative.expectedOutputItems * check.repeat_periods} items over them`;
+    return `${phases}. The build repeats every ${check.repeat_window_cycles} window cycles, moving ${check.repeat_output_items} of `
+        + `${alternative.expectedOutputItems * check.repeat_window_cycles} items over them`;
 }
 
 /** The engine's description in sentences, so the popover reads as short paragraphs and not one block */
@@ -234,7 +234,7 @@ export function ClockAlternativesPanel({
                 <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: 1, rowGap: 0.5 }}>
                         <Box component="span" sx={{ fontWeight: 600 }}>{strategyNameOf(alternative)}</Box>
-                        <QualifierChips clock={alternative} />
+                        <ClockChips clock={alternative} />
                         <BadgeChips badges={clockBadges(alternatives, index)} meanings={badgeMeanings(alternatives, index, pickRule)} />
                         {index === recommendedIndex && <RecommendedChip isGenerating={isGenerating} />}
                     </Box>
@@ -393,7 +393,7 @@ export function ClockAlternativesPanel({
                                     <TableCell align="right"><HelpHeader label={WAKE_UPS_HEADER} help={COMPARE_COPY.wakeUpsHelp} /></TableCell>
                                     <TableCell align="right"><HelpHeader label={SIGNALS_HEADER} help={COMPARE_COPY.signalsHelp} /></TableCell>
                                     <TableCell align="right">{rateHeader(copies)}</TableCell>
-                                    <TableCell align="right">{OUTPUT_PER_PERIOD_HEADER}</TableCell>
+                                    <TableCell align="right">{OUTPUT_PER_WINDOW_CYCLE_HEADER}</TableCell>
                                     <TableCell><TermsHeader label={COMPARE_COPY.status} focus={TERMS_FOCUS.works} /></TableCell>
                                 </>
                             ) : (
@@ -492,16 +492,22 @@ function badgeMeanings(alternatives: ClockAlternativeView[], index: number, pick
     return meaning ? { [SUMMARY_COPY.fewestDeciders]: meaning } : {};
 }
 
-/** The (i) of a clock: its strategy's definition and practice, then what each chip says */
+/** The (i) of a clock: its strategy's definition and practice, for Coordinated Sources what each source was given, then what each chip says */
 function StrategyHelp({ clock }: { clock: ClockAlternativeView }) {
     const family = familyCopyOf(clock);
+    const sources = sourceLinesOf(clock);
+    const direct = directRouterOf(clock);
     return (
         <>
             {family && <>
                 <Typography variant="body2" sx={{ mb: 0.75 }}>{family.definition}</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>{family.practice}</Typography>
             </>}
-            {qualifierChipsOf(clock).map(chip => (
+            {direct && <Typography variant="body2" sx={{ mb: 0.75 }} data-router="direct"><strong>{direct.name}.</strong> {direct.definition}</Typography>}
+            {sources.map(line => (
+                <Typography key={line} variant="body2" sx={{ mb: 0.75 }} data-source-line="">{line}</Typography>
+            ))}
+            {clockChipsOf(clock).map(chip => (
                 <Typography key={chip.id} variant="body2" sx={{ mb: 0.75 }}><strong>{chip.label}.</strong> {chip.line}</Typography>
             ))}
         </>

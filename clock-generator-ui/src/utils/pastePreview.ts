@@ -66,7 +66,7 @@ export function applyPaste(current: ConfigFormData, incoming: PastedEntities, se
     const withUuid = <T,>(row: T) => ({ ...row, _uuid: crypto.randomUUID() });
     return {
         ...current,
-        target_output: selections.target && target ? target : current.target_output,
+        setpoint: selections.target && target ? target : current.setpoint,
         machines: replacing('machines')
             ? incoming.machines.map(row => withUuid({ ...row, ...(row.prototype !== undefined
                 && { _prototype_source: incoming.picked_machines?.includes(row.id) ? 'recipe' as const : 'sidecar' as const }) }))

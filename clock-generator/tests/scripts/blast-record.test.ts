@@ -16,10 +16,10 @@ afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 const sha = (c: string) => c.repeat(64);
 const run = (...args: string[]) => spawnSync('python3', [record, ...args], { encoding: 'utf8' });
 
-interface Edit { id?: string; verdict?: string; holds?: boolean; rate?: number; period?: number; wake_ups?: number; clock?: string; windows?: Record<string, { start: number; end: number }[]> }
+interface Edit { id?: string; maker?: string; verdict?: string; holds?: boolean; rate?: number; period?: number; wake_ups?: number; clock?: string; windows?: Record<string, { start: number; end: number }[]> }
 /** An alternative as the blast writes it (the fields the record reads, and the heavy ones it leaves out) */
 const alternative = (e: Edit = {}) => ({
-    id: e.id ?? 'even-hands', verdict: e.verdict ?? 'stable', holds: e.holds ?? true, rate: e.rate ?? 640, supply: null, period: e.period ?? 972,
+    id: e.id ?? 'even-hands', ...(e.maker !== undefined && { maker: e.maker }), verdict: e.verdict ?? 'stable', holds: e.holds ?? true, rate: e.rate ?? 640, supply: null, period: e.period ?? 972,
     wake_ups: e.wake_ups ?? 889.0718254784936, clock_sha256: e.clock ?? sha('a'), text_sha256: sha('2'), descriptions_cut: 0,
     windows_sha256: sha('7'), windows: e.windows ?? { 'inserter:1': [{ start: 0, end: 10 }, { start: 54, end: 64 }], 'drill:1': [] },
     results_sha256: sha('3'), results: { label: sha('1'), assessment: sha('9') },
@@ -314,6 +314,37 @@ describe('record.py check --map', () => {
         const dir = written({ OLD: jobFile('OLD') });
         expect(run('check', '--dir', dir, '--map', mapFile('config-OLD\n'), side({ NEW: jobFile('NEW') })).stderr).toContain("expected 'old-job-key new-job-key'");
         expect(run('check', '--dir', dir, '--map', mapFile('a x\nb x\n'), side({ NEW: jobFile('NEW') })).stderr).toContain('both map to x');
+    });
+});
+
+describe('record.py check: the derived ids of the alternatives', () => {
+    const old = () => written({ A: jobFile('A', [alternative({ id: 'planned-belt-slack' }), alternative({ id: 'planned-belt-slack-subtick', clock: sha('b') })]) });
+    const derived = (id: string, maker: string, clock = sha('a')) => alternative({ id, maker, clock });
+
+    it('reads an id of the record as the id the run gave the same maker, so a pure rename of the ids is no difference', () => {
+        const done = run('check', '--dir', old(), side({ A: jobFile('A', [derived('takt_batches', 'planned-belt-slack'), derived('takt_batches_subtick', 'planned-belt-slack-subtick', sha('b'))]) }));
+        expect(done.status, done.stdout).toBe(0);
+        expect(done.stdout).toContain('2 alternative ids of the record read as the derived ids');
+    });
+
+    it('still lists what moved besides the ids', () => {
+        const done = run('check', '--dir', old(), side({ A: jobFile('A', [derived('takt_batches', 'planned-belt-slack', sha('d')), derived('takt_batches_subtick', 'planned-belt-slack-subtick', sha('b'))]) }));
+        expect(done.status).toBe(1);
+        expect(done.stdout).toMatch(/config-A\s+alternatives\[takt_batches\]\.clock_sha256\s+aaaaaaaaaaaa\.\.\s+dddddddddddd\.\./);
+        expect(done.stdout).not.toContain('alternatives (ids, in order)');
+    });
+
+    it('leaves the ids alone where the run has no makers (an engine from before), which are then read as removed and added', () => {
+        const done = run('check', '--dir', old(), side({ A: jobFile('A', [alternative({ id: 'takt_batches' }), alternative({ id: 'takt_batches_subtick', clock: sha('b') })]) }));
+        expect(done.status).toBe(1);
+        expect(done.stdout).toContain('alternatives (ids, in order)');
+    });
+
+    it('does not touch a record whose ids the run has (written after the derivation)', () => {
+        const dir = written({ A: jobFile('A', [derived('takt_batches', 'planned-belt-slack')]) });
+        const done = run('check', '--dir', dir, side({ A: jobFile('A', [derived('takt_batches', 'planned-belt-slack')]) }));
+        expect(done.status, done.stdout).toBe(0);
+        expect(done.stdout).not.toContain('alternative ids of the record read as');
     });
 });
 

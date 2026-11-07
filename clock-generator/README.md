@@ -125,7 +125,7 @@ build without a clock, for recording it in the game.
 
 `src/config/config-paths.ts` names every sample.
 
-A config describes one copy of a build, and `target_output.copies` says how many identical copies stand side by side:
+A config describes one copy of a build, and `setpoint.copies` says how many identical copies stand side by side:
 the generator plans one and multiplies its rate. The copies are assumed identical, with no inserter from one to another,
 and the belts shared between them. A config that itself holds several identical copies (the same machines and
 inserters written out twice or more, joined by no inserter) is refused and told to describe one copy and set `copies`
@@ -226,7 +226,7 @@ Here is a complete configuration for a utility science pack setup. Recipe names 
       "recipe": "utility-science-pack"
     }
   ],
-  "target_output": {
+  "setpoint": {
     "copies": 7,
     "items_per_second": 120,
     "recipe": "utility-science-pack"
@@ -468,7 +468,7 @@ timing; `overrides.backed_up_belts: true` selects backed-up supply independently
 - `backed_up_belts`: items back up at the input pickups and upstream supply refills the gaps, making one stack available each pickup tick (default false)
 - `search_for_fewer_wake_ups`: run the four searches for every build (default false)
 - `check_start_dependence`: try every clock from other starts than the cold start too, and name the clocks that reach their target from some starts only (default false; see `docs/stability.md`, "Start dependence")
-- `loop_seed_items`: items a machine that makes its own ingredient (pentapod eggs) is given once when a clock starts (default 200, as the harness seeds)
+- `kick_start_items`: items a machine that makes its own ingredient (pentapod eggs) is given once when a clock starts (default 200, as the harness seeds)
 
 `src/config/schema.ts` (`ConfigOverridesSchema`) lists the others. Older files using `non_moving_belts` migrate to
 `backed_up_belts` on import; if both are present, `backed_up_belts` takes precedence. New configs and exports use
@@ -637,7 +637,7 @@ try {
 } catch (error) {
     if (error instanceof ConfigValidationError) {
         console.error(error.getFormattedIssues());
-        // Output: target_output.items_per_second: Invalid input: expected number, received string (expected number)
+        // Output: setpoint.items_per_second: Invalid input: expected number, received string (expected number)
     }
 }
 ```

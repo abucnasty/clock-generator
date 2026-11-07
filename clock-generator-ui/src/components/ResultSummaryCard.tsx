@@ -19,7 +19,7 @@ import {
     wakeUpsText,
 } from '../utils/clockSummary';
 import { familyCopyOf, strategyNameOf } from '../utils/strategyNames';
-import { BadgeChips, QualifierChips } from './StrategyChips';
+import { BadgeChips, ClockChips } from './StrategyChips';
 import { RECOMMENDED_COPY, recommendationReason, type PickRule } from '../utils/recommendedClock';
 import { Panel } from './Panel';
 import { Disclosure } from './Disclosure';
@@ -121,7 +121,7 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
                 >
                     {strategyNameOf(selected)}
                 </Typography>
-                <QualifierChips clock={selected} />
+                <ClockChips clock={selected} />
                 <BadgeChips badges={clockBadges(alternatives, selectedIndex)} meanings={fewestDecidersMeaning(alternatives, selectedIndex, props.pickRule)} />
                 {isRecommended && (
                     <RecommendedChip isGenerating={isGenerating} data-card-chip="" />

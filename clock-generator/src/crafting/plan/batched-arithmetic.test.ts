@@ -2,16 +2,16 @@ import { describe, expect, it } from "vitest";
 import { loadConfigFromFile } from "../../config/loader";
 import { ConfigPaths } from "../../config/config-paths";
 import { quiet } from "../generate-blueprint-test-helpers";
-import { planRun } from "./plan-run";
+import { unclockedRun } from "./unclocked-run";
 import { ArithmeticWindowsNotApplicable, batchedSwingsWindowsByArithmetic } from "./batched-arithmetic";
 
 /** The windows by arithmetic of a sample's plan, at its planned output swings or the count given */
 async function arithmeticOf(key: keyof typeof ConfigPaths, swings?: number) {
     const config = await loadConfigFromFile(ConfigPaths[key]);
     const planned = swings === undefined ? config : { ...config, overrides: { ...config.overrides, terminal_swing_count: swings } };
-    const { run } = planRun(planned, { logger: quiet });
-    return () => batchedSwingsWindowsByArithmetic({ entity_registry: run.simulation_context.entity_registry, crafting_cycle_plan: run.crafting_cycle_plan,
-        period_ticks: run.duration.ticks, recipe_lcm: run.recipe_lcm, always_enabled_by_config: run.always_enabled_by_config });
+    const { run } = unclockedRun(planned, { logger: quiet });
+    return () => batchedSwingsWindowsByArithmetic({ entity_registry: run.simulation_context.entity_registry, output_cycle_plan: run.output_cycle_plan,
+        window_cycle_ticks: run.duration.ticks, recipe_lcm: run.recipe_lcm, always_enabled_by_config: run.always_enabled_by_config });
 }
 const ranges = (windows: Map<string, { start_inclusive: number; end_inclusive: number }[]>, id: string) =>
     windows.get(id)!.map(range => [range.start_inclusive, range.end_inclusive]);
@@ -29,7 +29,7 @@ describe("batched swings by arithmetic", () => {
         const { windows, walks } = (await arithmeticOf("PROCESSING_UNIT_15_CHEST_FED"))();
         const walk = walks.get("machine:1")!;
         const hands = walk.hands.filter(hand => hand.id === "inserter:1");
-        // 11/2 hands a cycle: 5 and 6, 11 a period
+        // 11/2 hands a cycle: 5 and 6, 11 a window cycle
         expect(hands).toHaveLength(11);
         // one window a cycle at most, each from a pickup of the walk
         const filler = ranges(windows, "inserter:1");

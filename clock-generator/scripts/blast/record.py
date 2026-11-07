@@ -18,6 +18,11 @@ usage:
                                                     the base, and <dir>, the record of the change), and every job whose selected clock got
                                                     worse (below); exit 1 on any that the --moves text does not name
 
+The ids of the alternatives are derived from the strategy and the settings of their clocks; the slot that made a clock is the `maker` of its
+job-file entry (today's old id). `check` reads an id of the committed record that is a maker of the run, and not an id of it, as the id the
+run gave that maker's clock, so a renamed id is not one alternative removed and another added (the ids in order and every field of the
+alternative then compare under the new id). A run from an engine from before has no makers and no ids to read so.
+
 --map: the blast's rename map (`old-job-key new-job-key` a line, '#' starts a comment): the committed record's jobs are
 renamed through it before the join, so a renamed job compares with its new name; the config hash of a renamed job is
 a field like another (a pure rename keeps it; a config_sha256 row says it did not). --summary: the table is also appended to this file (GITHUB_STEP_SUMMARY).
@@ -119,6 +124,38 @@ def load_jobs(path):
             die(f'{key} is not in the job list of {path} (or has no config hash)')
         records[key] = project(json.load(open(f)), hashes[key])
     return records
+
+
+def load_makers(path):
+    """{job key: {maker: alternative id}} of the job files of a jobs folder or cache entry. Since the ids of the alternatives are derived from
+    the strategy and the settings of their clocks, a job file keeps the slot that made each clock (`maker`, today's old id) beside the id; a
+    job file of an engine from before has none. The record does not hold it (its format does not change)."""
+    out = {}
+    for f in sorted(glob.glob(os.path.join(jobs_dir(path), '*.json'))):
+        if os.path.basename(f).startswith('_'):
+            continue
+        body = json.load(open(f))
+        out[os.path.basename(f)[:-5]] = {a['maker']: a['id'] for a in body.get('alternatives', []) if a.get('maker') is not None}
+    return out
+
+
+def with_derived_ids(before, makers):
+    """the committed records with the ids their alternatives had before they were derived (the maker's id) read as the id the run gave the
+    same maker's clock, so that an id renamed is not read as one alternative removed and another added: {job key: record}, and how many ids
+    were read so. An id the run still has is left alone (a record written after the derivation has none to rename)."""
+    out, renamed = {}, 0
+    for key, record in before.items():
+        by_maker = makers.get(key, {})
+        ids = {a['id'] for a in record.get('alternatives', [])}
+        live = set(by_maker.values())
+        mapping = {old: by_maker[old] for old in ids if old in by_maker and old not in live}
+        if not mapping:
+            out[key] = record
+            continue
+        renamed += len(mapping)
+        out[key] = {**record, 'selected': mapping.get(record['selected'], record['selected']),
+                    'alternatives': [{**a, 'id': mapping.get(a['id'], a['id'])} for a in record['alternatives']]}
+    return out, renamed
 
 
 MODULE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'tests', 'game', 'builds', 'record-properties.ts')
@@ -484,6 +521,9 @@ def main(argv):
     if not before:
         die(f'no records in {directory}')
     renames = load_map(opts['map']) if 'map' in opts else {}
+    before, derived = with_derived_ids(before, load_makers(pos[0]))
+    if derived:
+        print(f'record.py: {derived} alternative ids of the record read as the derived ids of the clocks the same makers made (the run\'s `maker` fields)')
     rows, unused = differences(before, after, renames)
     if renames:
         print(f'renamed through the map: {len(renames) - len(unused)} jobs (a renamed job whose config hash differs is a config_sha256 row below)'

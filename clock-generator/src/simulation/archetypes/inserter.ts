@@ -140,7 +140,7 @@ export class InserterArchetype {
     /**
      * The inserter's key (see simulationStateKey): its components' keys in a fixed order, "|" between them: what its hand
      * has carried by item (its Storage), its Hand (`Hand.key`: phase, scratch, ports and what it holds) and its Wakes
-     * (whether it shows enabled); ticks relative to `tick`. Two equal keys one clock period apart mean the inserter
+     * (whether it shows enabled); ticks relative to `tick`. Two equal keys one window cycle apart mean the inserter
      * repeats. Its Control is the same in every tick of a run (a swap comes between runs) and the counts of items only
      * grow, so neither is keyed; observers only watch.
      */

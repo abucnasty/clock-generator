@@ -8,7 +8,7 @@ import { machineIconName, type ConfigFormData } from './formData';
 import { applyRepeatedUnitConversion } from './repeatedUnitConversion';
 
 const imported = {
-    target_output: { recipe: 'electronic-circuit', items_per_second: 10, copies: 1 },
+    setpoint: { recipe: 'electronic-circuit', items_per_second: 10, copies: 1 },
     machines: [
         { id: 1, recipe: 'copper-cable', productivity: 0, crafting_speed: 2 },
         { id: 2, recipe: 'electronic-circuit', productivity: 50, crafting_speed: 2, type: 'machine' },
@@ -47,7 +47,7 @@ const importedWith = (fields: Record<string, unknown>) => ({ ...imported, ...fie
 describe('canonical repeated-unit form application', () => {
     it('retains source UUIDs and forced metadata through composite extraction and refuses an inconsistent payload', () => {
         const form = configToFormData({
-            target_output: { recipe: 'iron-gear-wheel', items_per_second: 4, copies: 0.5 },
+            setpoint: { recipe: 'iron-gear-wheel', items_per_second: 4, copies: 0.5 },
             machines: Array.from({ length: 6 }, (_, i) => ({ id: i + 1, recipe: i < 4 ? 'iron-gear-wheel' : 'copper-cable', crafting_speed: 1, productivity: 0 })),
             belts: [
                 { id: 1, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1 }, { ingredient: 'copper-plate', stack_size: 1 }] },
@@ -57,7 +57,7 @@ describe('canonical repeated-unit form application', () => {
                 { id: i * 2 + 1, source: { type: 'belt', id: 1, near_lane: i < 4 ? 1 : 2 }, sink: { type: 'machine', id: i + 1 },
                     overrides: { enable_control: { mode: 'ALWAYS' } }, filters: [i < 4 ? 'iron-plate' : 'copper-plate'] },
                 { id: i * 2 + 2, source: { type: 'machine', id: i + 1 }, sink: { type: 'belt', id: 2 }, filters: [i < 4 ? 'iron-gear-wheel' : 'copper-cable'] },
-            ]).flat(), chests: [], overrides: { ignored_lcm_ingredients: ['iron-plate', 'copper-plate'], backed_up_belts: false, loop_seed_items: 0 },
+            ]).flat(), chests: [], overrides: { ignored_lcm_ingredients: ['iron-plate', 'copper-plate'], backed_up_belts: false, kick_start_items: 0 },
         } as Config);
         form.inserters[0]._forced_always = true;
         const before = structuredClone(form), plan = planRepeatedUnitConversion(formDataToConfig(form));
@@ -68,7 +68,7 @@ describe('canonical repeated-unit form application', () => {
         expect(next.inserters[0]._forced_always).toBe(true);
         expect(next.inserters[4].source).toEqual({ ...form.inserters[8].source, id: 1 });
         expect(next.inserters[4].sink.id).toBe(3);
-        expect(next.target_output).toEqual({ ...form.target_output, copies: 1 });
+        expect(next.setpoint).toEqual({ ...form.setpoint, copies: 1 });
         expect(formDataToConfig(next)).toEqual(plan.candidate);
         const corrupted = structuredClone(plan);
         corrupted.candidate.machines[0].recipe = 'electronic-circuit';
@@ -76,7 +76,7 @@ describe('canonical repeated-unit form application', () => {
         const incorrectMap = structuredClone(plan);
         incorrectMap.retained.machines[2].sourceIndex = 5;
         expect(applyRepeatedUnitConversion(form, incorrectMap)).toBeNull();
-        expect(applyRepeatedUnitConversion({ ...form, target_output: { ...form.target_output, items_per_second: 5 } }, plan)).toBeNull();
+        expect(applyRepeatedUnitConversion({ ...form, setpoint: { ...form.setpoint, items_per_second: 5 } }, plan)).toBeNull();
         expect(form).toEqual(before);
     });
 });
@@ -116,7 +116,7 @@ describe('configToFormData', () => {
 
     it('imports an infinity chest without item_filter as empty while preserving removal disabled through a round trip', () => {
         const raw = {
-            target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+            setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
             machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],
             inserters: [{ id: 1, source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 }, stack_size: 1, filters: ['iron-gear-wheel'] }],
             chests: [{ id: 1, type: ChestType.INFINITY_CHEST, remove_unfiltered_items: false }],
@@ -181,10 +181,10 @@ describe('what goes through the form and back as the config gave it', () => {
             inserters: [{ id: 1, source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 1, drop_capture: mark }, stack_size: 16 }],
         }, c => c.inserters[0].sink, true],
         ['the way the belt runs at a drop and the gap between copies', {
-            target_output: { ...imported.target_output, copies: 7, copy_offset: { x: 12, y: 0 } },
+            setpoint: { ...imported.setpoint, copies: 7, copy_offset: { x: 12, y: 0 } },
             inserters: [{ id: 1, source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 1, belt_direction: 12 }, stack_size: 16,
                 position: { x: 1.5, y: 2.5 }, direction: 8 }],
-        }, c => [c.target_output.copy_offset, c.inserters[0].sink], true],
+        }, c => [c.setpoint.copy_offset, c.inserters[0].sink], true],
         ['cars, tanks, cargo wagons and rocket silos', {
             chests: [
                 { id: 1, type: ChestType.CAR, slot_filters: [{ slot: 1, item: 'iron-plate' }], contents: [{ slot: 2, item: 'coal', count: 50 }] },

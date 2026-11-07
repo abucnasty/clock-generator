@@ -1,12 +1,12 @@
 // compare.js: the replay check's verdict (scripts/replay/replay.sh). Lays the results of a replay (one JSON per job,
 // replay.js's) against the base's and says, per job, equal or where it first differs: the run (asbuilt, plan, speed,
-// losses, in that order; the losses only where both sides ran them), the first period whose hash differs and the signals that differ in it (or the figures, or an
+// losses, in that order; the losses only where both sides ran them), the first window cycle whose hash differs and the signals that differ in it (or the figures, or an
 // error that is new, gone or changed). Then the speed figures: the median job's ticks per second of the speed run against
 // the base's, and the scavenges per million ticks. Exits 1 when a job differs or is missing.
 //
 //   node compare.js <base-results> <results> [--json <file>]
 //   node compare.js --dumps <base-dump.json> <dump.json>
-//       two dumps of one period of one run (replay.js --dump): the first tick at which a signal differs, and the entity,
+//       two dumps of one window cycle of one run (replay.js --dump): the first tick at which a signal differs, and the entity,
 //       with both sides' values from there
 'use strict';
 const fs = require('fs');
@@ -34,11 +34,11 @@ function differenceOf(a, b) {
     const gone = names.filter(n => !(n in b.signals)), added = names.filter(n => !(n in a.signals));
     if (gone.length || added.length) return { what: 'signals', gone: gone.slice(0, SHOWN), added: added.slice(0, SHOWN), gone_count: gone.length, added_count: added.length };
     const whole = names.filter(n => !Array.isArray(a.signals[n]) && a.signals[n] !== b.signals[n]);
-    const periods = Math.max(a.periods.length, b.periods.length);
-    for (let p = 0; p < periods; p++) {
+    const window_cycles = Math.max(a.periods.length, b.periods.length);
+    for (let p = 0; p < window_cycles; p++) {
         if (a.periods[p] === b.periods[p]) continue;
         const differ = names.filter(n => Array.isArray(a.signals[n]) && a.signals[n][p] !== b.signals[n]?.[p]);
-        return { what: 'period', period: p, periods, signals: differ.slice(0, SHOWN), signal_count: differ.length,
+        return { what: 'period', period: p, periods: window_cycles, signals: differ.slice(0, SHOWN), signal_count: differ.length,
             ...(whole.length && { whole: whole.slice(0, SHOWN) }) };
     }
     if (whole.length) return { what: 'whole', signals: whole.slice(0, SHOWN), signal_count: whole.length };
@@ -52,7 +52,7 @@ const median = list => {
     return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 };
 
-/** The first tick and signal at which two dumps of one period differ */
+/** The first tick and signal at which two dumps of one window cycle differ */
 function explain(a_file, b_file) {
     const a = JSON.parse(fs.readFileSync(a_file, 'utf8')), b = JSON.parse(fs.readFileSync(b_file, 'utf8'));
     const firsts = [];
@@ -62,7 +62,7 @@ function explain(a_file, b_file) {
         if (!Array.isArray(x) || !Array.isArray(y)) { firsts.push({ name, at: -1, base: x, now: y }); continue; }
         let i = 0;
         while (i < Math.max(x.length, y.length) && JSON.stringify(x[i]) === JSON.stringify(y[i])) i++;
-        // a series is one value per tick of the period; events are rows that start with their tick
+        // a series is one value per tick of the window cycle; events are rows that start with their tick
         const event = Array.isArray(x[i] ?? y[i]);
         firsts.push({ name, at: event ? (x[i] ?? y[i])[0] : i, kind: event ? 'event tick' : 'tick of the period',
             base: x.slice(i, i + 5), now: y.slice(i, i + 5) });

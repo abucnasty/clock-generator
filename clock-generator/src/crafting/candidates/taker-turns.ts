@@ -29,7 +29,7 @@ export function outputAtWindow(machine: Machine, item: string, gap_ticks: number
  * where the windows stay as they are and the clock-only check judges them.
  *
  * The machine's takers into machines of other recipes take the product too, and the rule does not count them: `other_draw`
- * gives what they take (their items a period over the period), and the rule reports, without acting on it, what the machine
+ * gives what they take (their items a window cycle over the window cycle), and the rule reports, without acting on it, what the machine
  * could give these takers with that taken off what it makes, and whether they would then take turns where they do not, or
  * the other way.
  */
@@ -46,7 +46,7 @@ export function turnOffsets(machine: Machine, item: string, turns: readonly (rea
 
 /** What the takers of a machine's product into machines of other recipes take of it, and where the turn rule reports it */
 export interface OtherRecipeDraw {
-    /** Their items a period over the period */
+    /** Their items a window cycle over the window cycle */
     readonly per_tick: number;
     readonly log: (line: string) => void;
 }
@@ -58,7 +58,7 @@ function reportOtherDraw(machine: Machine, item: string, turns: number, slot_tic
     const round = (value: number) => Math.round(value * 100) / 100;
     const verdict = (supply: number) => draw <= supply ? "together" : "in turns";
     const flips = (draw <= given) !== (draw <= with_draw);
-    other_draw.log(`Turns at ${machine.entity_id.id} (${item}, ${turns} turns, a window of ${round(window_ticks)} ticks every ${round(slot_ticks)}): `
+    other_draw.log(`Turns at ${machine.entity_id.id} (${item}, ${turns} turns, an enable window of ${round(window_ticks)} ticks every ${round(slot_ticks)}): `
         + `${draw} against ${round(given)} it can give, ${verdict(given)}; ${round(with_draw)} with the ${round(other_draw.per_tick)} a tick the takers `
         + `into other recipes take, ${verdict(with_draw)}${flips ? " (the decision would flip; reported only)" : ""}`);
 }

@@ -1,10 +1,10 @@
 import { SerializableMachineFacts } from "../data-types/machine-facts";
 import { InserterStatus, MachineStatus } from "../state";
-import { MAX_RECOVERY_PERIODS, type BackpressureLossVerdict } from "./backpressure-loss";
+import { MAX_RECOVERY_WINDOW_CYCLES, type DisturbanceTrialVerdict } from "./disturbance-trial";
 import { describeSharedItem, type SharedItemDeadlockRisk } from "./deadlock-risk";
 import type { BlueprintGenerationResult } from "./generate-blueprint";
 import { CompactEntityStateTransitions, CompactStateTransitionHistory, transitionsOf } from "./sequence/compact-history";
-import { DEFAULT_LOOP_SEED_ITEMS, loopSeedTaken } from "./runner/cold-start";
+import { DEFAULT_KICK_START_ITEMS, kickStartTaken } from "./runner/cold-start";
 import type { StartDependence } from "./start-dependence";
 import type { WakeUpsFromStarts } from "./wake-ups-from-starts";
 import { notTriedSentence, type SpareTime } from "./why-not-stable";
@@ -48,7 +48,7 @@ export interface ClockInsight {
 
 export interface SwingComparison {
     /** Length of the compared run in ticks */
-    period: number;
+    window_cycle_ticks: number;
     inserters: { label: string; planned: number[]; clocked: number[] }[];
 }
 
@@ -58,15 +58,15 @@ const SAME_SWING_TOLERANCE_TICKS = 4;
 const round = (value: number, digits = 1) => Number(value.toFixed(digits));
 const ticksList = (ticks: number[]) => ticks.length === 0 ? "never" : ticks.join(", ");
 
-function workingTicks(run: CompactStateTransitionHistory, entity: CompactEntityStateTransitions, period: number): number {
+function workingTicks(run: CompactStateTransitionHistory, entity: CompactEntityStateTransitions, window_cycle_ticks: number): number {
     const sorted = transitionsOf(run, entity).sort((a, b) => a.tick - b.tick);
     const segments = [
-        { status: entity.initial_status, start: 0, end: sorted[0]?.tick ?? period },
+        { status: entity.initial_status, start: 0, end: sorted[0]?.tick ?? window_cycle_ticks },
         ...sorted.map(it => ({ status: it.to_status, start: it.tick, end: it.tick + it.duration_ticks })),
     ];
     return segments
         .filter(it => it.status === MachineStatus.WORKING)
-        .reduce((sum, it) => sum + Math.max(0, Math.min(it.end, period) - Math.max(it.start, 0)), 0);
+        .reduce((sum, it) => sum + Math.max(0, Math.min(it.end, window_cycle_ticks) - Math.max(it.start, 0)), 0);
 }
 
 function dropTicks(history: CompactStateTransitionHistory, entity_id: string): number[] {
@@ -77,13 +77,13 @@ function dropTicks(history: CompactStateTransitionHistory, entity_id: string): n
         .sort((a, b) => a - b);
 }
 
-/** How much of each clock period the machines are not needed, the slack all timing has to fit in */
+/** How much of each window cycle the machines are not needed, the slack all timing has to fit in */
 function spareTimeInsight(result: BlueprintGenerationResult, run: CompactStateTransitionHistory): ClockInsight | null {
-    const period = run.total_duration_ticks;
+    const window_cycle_ticks = run.total_duration_ticks;
     const machines = run.entities.filter(it => it.entity_type === "machine").map(entity => {
-        const working = workingTicks(run, entity, period);
+        const working = workingTicks(run, entity, window_cycle_ticks);
         const facts = result.machine_facts.find(it => it.entity_id === entity.entity_id)?.facts;
-        return { entity, working, spare: period - working, facts };
+        return { entity, working, spare: window_cycle_ticks - working, facts };
     });
     if (machines.length === 0) {
         return null;
@@ -93,14 +93,14 @@ function spareTimeInsight(result: BlueprintGenerationResult, run: CompactStateTr
     return {
         id: "spare-time",
         scope: "build",
-        title: `${tightest.entity.label} has ${round(tightest.spare)} ticks to spare each clock period`,
-        what: `${tightest.entity.label} crafts for ${round(tightest.working)} of the ${round(period, 3)} ticks in a clock period`
+        title: `${tightest.entity.label} has ${round(tightest.spare)} ticks to spare each window cycle`,
+        what: `${tightest.entity.label} crafts for ${round(tightest.working)} of the ${round(window_cycle_ticks, 3)} ticks in a window cycle`
             + (crafts !== null && tightest.facts ? ` (${crafts} crafts of ${round(tightest.facts.ticks_per_craft)} ticks)` : "")
             + ` and is stopped for the other ${round(tightest.spare)}.`
             + (machines.length > 1 ? " It is the machine with the least time to spare." : ""),
-        why: "At the target rate a machine is not needed the whole time. The ticks left over are the only slack it has: "
+        why: "At the setpoint a machine is not needed the whole time. The ticks left over are the only spare time it has: "
             + "every tick it waits for an ingredient, or stops because its output has not been taken, comes out of them.",
-        explanation: `The swings can make ${tightest.entity.label} wait up to ${round(tightest.spare)} ticks per period. `
+        explanation: `The swings can make ${tightest.entity.label} wait up to ${round(tightest.spare)} ticks each window cycle. `
             + "Any more and it cannot catch up, so the build falls behind the target. The less there is to spare, the less room "
             + "there is to move swings around and the less a late belt pickup is forgiven.",
         table: {
@@ -109,11 +109,11 @@ function spareTimeInsight(result: BlueprintGenerationResult, run: CompactStateTr
                 it.facts ? `${round(it.facts.ticks_per_craft)}` : ""]),
         },
         spare_time: { machine: tightest.entity.label, spare_ticks: tightest.spare, working_ticks: tightest.working,
-            recovery_periods: MAX_RECOVERY_PERIODS },
+            recovery_window_cycles: MAX_RECOVERY_WINDOW_CYCLES },
     };
 }
 
-/** Per ingredient: when the machine takes it, how much comes per hand and how many hands a period needs */
+/** Per ingredient: when the machine takes it, how much comes per hand and how many hands a window cycle needs */
 function insertionLimitsInsight(result: BlueprintGenerationResult, entities: CompactEntityStateTransitions[]): ClockInsight | null {
     const rows: { machine: string; item: string; per_craft: number; limit: number; inserter: string; hand: number; hands: number }[] = [];
     for (const planned of result.serializable_transfer_plan.entities) {
@@ -141,30 +141,30 @@ function insertionLimitsInsight(result: BlueprintGenerationResult, entities: Com
     if (rows.length === 0) {
         return null;
     }
-    // the ingredient with the most hands per period is the one whose hands have to be spaced by the limit
+    // the ingredient with the most hands per window cycle is the one whose hands have to be spaced by the limit
     const example = rows.reduce((a, b) => b.hands > a.hands ? b : a);
     return {
         id: "insertion-limits",
         scope: "build",
         title: "Each machine only takes an ingredient while it is below its insertion limit",
         what: `${example.machine} takes ${example.item} only while it holds fewer than ${example.limit}. `
-            + `${example.inserter} brings ${example.hand} at a time and the clock period needs ${round(example.hands, 2)} `
+            + `${example.inserter} brings ${example.hand} at a time and the window cycle needs ${round(example.hands, 2)} `
             + `hand${example.hands === 1 ? "" : "s"} of it.`,
         why: "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount "
             + "for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes "
             + "in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
-        explanation: "A window only does something while its machine is under the limit. An inserter enabled too early sits idle until "
-            + "enough has been crafted, and its window can close before that. An ingredient that needs several hands per period "
+        explanation: "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until "
+            + "enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle "
             + "cannot have them back to back once the machine holds the limit or more.",
         table: {
-            columns: ["Machine", "Ingredient", "Per craft", "Insertion limit", "Brought by", "Per hand", "Hands per period"],
+            columns: ["Machine", "Ingredient", "Per craft", "Insertion limit", "Brought by", "Per hand", "Hands each window cycle"],
             rows: rows.map(it => [it.machine, it.item, `${it.per_craft}`, `${it.limit}`, it.inserter, `${it.hand}`, `${round(it.hands, 2)}`]),
         },
     };
 }
 
 /** Machines whose recipe makes one of its own ingredients, which the simulation starts already holding that ingredient */
-function loopingRecipeInsight(result: BlueprintGenerationResult, entities: CompactEntityStateTransitions[], loop_seed_items: number): ClockInsight | null {
+function loopingRecipeInsight(result: BlueprintGenerationResult, entities: CompactEntityStateTransitions[], kick_start_items: number): ClockInsight | null {
     const rows = result.machine_facts.flatMap(machine => machine.facts.inputs
         .filter(input => FactorioDataService.findRecipeOrThrow(machine.facts.recipe).results.some(output => output.name === input.item_name))
         .map(input => ({
@@ -172,7 +172,7 @@ function loopingRecipeInsight(result: BlueprintGenerationResult, entities: Compa
             recipe: machine.facts.recipe,
             item: input.item_name,
             per_craft: input.amount_per_craft,
-            started_with: loopSeedTaken(input.item_name, input.automated_insertion_limit, loop_seed_items),
+            started_with: kickStartTaken(input.item_name, input.automated_insertion_limit, kick_start_items),
         })));
     if (rows.length === 0) {
         return null;
@@ -225,11 +225,11 @@ function outputHandInsight(result: BlueprintGenerationResult, entities: CompactE
         title: `A full hand of ${example.item} takes ${round(example.ticks)} ticks to make`,
         what: `${example.machine} makes ${round(example.per_craft, 2)} ${example.item} per craft (productivity included), so the `
             + `${example.hand} that ${example.inserter} carries take ${round(example.crafts)} crafts, about ${round(example.ticks)} ticks.`,
-        why: "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its clock "
-            + "window closes it keeps holding those items until the next window.",
+        why: "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable "
+            + "window closes it keeps holding those items until the next enable window.",
         explanation: `A swing that comes sooner than ${round(example.ticks)} ticks after the last one finds a partial hand unless the machine `
             + "had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps "
-            + "crafting, and the swing completes in a later window. It does mean drops need not line up one to one with windows.",
+            + "crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows.",
         table: {
             columns: ["Machine", "Item", "Taken by", "Hand", "Per craft", "Crafts per hand", "Ticks per hand"],
             rows: rows.map(it => [it.machine, it.item, it.inserter, `${it.hand}`, `${round(it.per_craft, 2)}`, `${round(it.crafts)}`, `${round(it.ticks)}`]),
@@ -264,16 +264,16 @@ function planVersusClockInsight(result: BlueprintGenerationResult): ClockInsight
             + (differing.length > 1 ? ` ${differing.slice(1).map(it => it.label).join(" and ")} differ${differing.length === 2 ? "s" : ""} too.` : "")
             + " The clock still holds its rate.",
         why: "The plan lets each inserter wait for its machine. The blueprint has only the clock, which switches inserters on and "
-            + "off. A window also stays on 2 ticks after the clock closes it, so an inserter that is back in time can start "
-            + "another swing if a full hand is waiting, and one that finds less keeps what it picked up for a later window.",
-        explanation: "The same number of items moves each period either way, but the swings can bunch together instead of landing "
-            + "one to a window. The Timeline tab shows both runs; the exported clock is the one the blueprint follows.",
+            + "off. An enable window also stays on 2 ticks after the clock closes it, so an inserter that is back in time can start "
+            + "another swing if a full hand is waiting, and one that finds less keeps what it picked up for a later enable window.",
+        explanation: "The same number of items moves each window cycle either way, but the swings can bunch together instead of landing "
+            + "one to an enable window. The Timeline tab shows both runs; the clock in the blueprint is the one the blueprint follows.",
         table: {
-            columns: ["Inserter", "Plan drops at", "Exported clock drops at"],
+            columns: ["Inserter", "Plan drops at", "Blueprint clock drops at"],
             rows: differing.map(it => [it.label, ticksList(it.planned), ticksList(it.clocked)]),
         },
         swing_comparison: {
-            period: Math.max(plan.total_duration_ticks, clock_only.total_duration_ticks),
+            window_cycle_ticks: Math.max(plan.total_duration_ticks, clock_only.total_duration_ticks),
             inserters: differing.map(({ label, planned, clocked }) => ({ label, planned, clocked })),
         },
     };
@@ -305,16 +305,16 @@ function wakeUpsInsight(result: BlueprintGenerationResult, entities: CompactEnti
             + `${percent(most.enabled_share)} of the time and is on and waiting for ${percent(most.waiting_share)} of it.`
             + (mostly_enabled.length === 0 ? "" : ` On ${percent(MOSTLY_ENABLED_SHARE)} of the time or more: `
                 + `${mostly_enabled.map(it => `${it.label} (${percent(it.enabled_share)})`).join(", ")}.`),
-        why: "An enabled inserter with nothing to move sleeps on the wake-up list of the machine it waits on, and that machine "
+        why: "An enabled inserter with nothing to move sleeps on the wakeup list of the machine it waits on, and that machine "
             + "wakes it every time it finishes a craft. The inserter looks for something to move, finds nothing or part of a "
             + "hand, and sleeps again. An inserter its clock has disabled is on no list and is never woken. In game the debug "
             + "option show-wakeup-lists draws a line from a waiting inserter to its machine; a line that flickers is this.",
-        explanation: "Each wake-up is a check that moves little or nothing, so among clocks that hold the target the one with the "
+        explanation: "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the "
             + "fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts "
-            + "of the machine it waits on, whether its windows are long, it is left always enabled in a loop of machines, or "
-            + "the config sets it to always enabled.",
+            + "of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or "
+            + "the configuration sets it to always enabled.",
         table: {
-            columns: ["Inserter", "Between", "Wake-ups a minute", "Most it could be woken a minute", "On", "On and waiting"],
+            columns: ["Inserter", "Between", "Wakeups a minute", "Most it could be woken a minute", "On", "On and waiting"],
             rows: rows.map(it => [it.label, it.ends, `${round(it.wake_ups_per_minute)}`, `${round(it.alarms_per_minute)}`,
                 percent(it.enabled_share), percent(it.waiting_share)]),
         },
@@ -345,23 +345,23 @@ function unstableInsight(result: BlueprintGenerationResult): ClockInsight {
     const as_built = check.as_built;
     // a long-run mean is not a whole number of items: shown to two decimals
     const actual = round(as_built?.actual_output_items ?? check.actual_output_items, 2);
-    const repeats = as_built?.repeat_periods !== undefined && as_built.repeat_output_items !== undefined
-        ? ` The build repeats every ${as_built.repeat_periods} periods and moves ${as_built.repeat_output_items} of `
-            + `${check.expected_output_items * as_built.repeat_periods} items over them.`
+    const repeats = as_built?.repeat_window_cycles !== undefined && as_built.repeat_output_items !== undefined
+        ? ` The build repeats every ${as_built.repeat_window_cycles} window cycles and moves ${as_built.repeat_output_items} of `
+            + `${check.expected_output_items * as_built.repeat_window_cycles} items over them.`
         : "";
     const offset = as_built?.failed_start_offset;
     return {
         id: "unstable",
         scope: "clock",
-        title: "This clock does not hold the target rate",
-        what: `Driven only by its clock windows, the build moved ${actual} of ${check.expected_output_items} items `
-            + (as_built?.output_basis === "long-run mean" ? "a clock period on average over a long run" : "in a clock period")
+        title: "This clock does not hold the setpoint",
+        what: `Driven only by its enable windows, the build moved ${actual} of ${check.expected_output_items} items `
+            + (as_built?.output_basis === "long-run mean" ? "a window cycle on average over a long run" : "in a window cycle")
             + (offset ? ` when the clock started ${offset} ticks later relative to the machines` : "") + `.${repeats}`,
         why: "A clock has to work from wherever the machines happen to be when it starts, so it is simulated from several start "
             + "points. A swing that arrives while its machine is at an insertion limit, out of ingredients or without a full hand "
             + "does nothing useful, and once a machine has waited longer than its spare time it cannot catch up.",
-        explanation: "Use a potential clock marked Stable. If none is, lower the target rate, force fewer output swings (which gives "
-            + "the machines more buffer between swings), or yell at abuc to go fix his algorithm.",
+        explanation: "Use a clock marked Stable. If none is, lower the setpoint, force fewer output swings (which gives "
+            + "the machines more buffer between swings), or yell at abuc to go fix his algorithm by opening an issue on GitHub (https://github.com/abucnasty/clock-generator/issues/new).",
     };
 }
 
@@ -383,24 +383,24 @@ export function startDependenceInsight(note: string, dependence: StartDependence
 
 /** The insights for one potential clock, the ones about the whole build first */
 /** Why a clock that holds its expected output is still not listed as stable (GOALS.md, "Backpressure Loss") */
-export function backpressureLossInsight(verdict: BackpressureLossVerdict, expected_output_items: number): ClockInsight {
+export function disturbanceTrialInsight(verdict: DisturbanceTrialVerdict, expected_output_items: number): ClockInsight {
     const what = verdict.broken_by.length > 0
-        ? `This clock moves its ${expected_output_items} items every clock period for as long as nothing runs out and nothing backs up. `
-            + `It does not get back to them after a loss: ${verdict.broken_by.join("; ")}.${notTriedSentence(verdict.not_tried)}`
-        : `The run the losses are tried on did not hold ${expected_output_items} items a clock period with nothing cut, so no loss says `
+        ? `This clock moves its ${expected_output_items} items every window cycle for as long as nothing runs out and nothing backs up. `
+            + `It does not go back to them by itself after a supply stop or an output blockage: ${verdict.broken_by.join("; ")}.${notTriedSentence(verdict.not_tried)}`
+        : `The run the losses are tried on did not hold ${expected_output_items} items a window cycle with nothing cut, so no supply stop or output blockage says `
             + "anything about this clock.";
     return {
         id: "backpressure-loss",
         scope: "clock",
-        title: "This clock does not survive backpressure loss",
+        title: "This clock does not go back to its rate by itself after a supply stop or an output blockage",
         what,
         why: "When an item stops arriving, or the output is not taken away, the machines run dry or fill up. Once it is back, "
-            + "every machine goes on from what it holds then, and the windows of this clock do not bring the build back from "
-            + "there. Each loss is tried in the simulator: "
-            + "cut at four places in the clock period, and for a quarter, a half, three quarters and all of the time the build "
+            + "every machine goes on from what it holds then, and the enable windows of this clock do not bring the build back from "
+            + "there. Each supply stop and output blockage is tried in the simulator: "
+            + "cut at four places in the window cycle, and for a quarter, a half, three quarters and all of the time the build "
             + "takes to stop.",
-        explanation: "Such a build has to be restarted by hand after an input ran out or the output backed up. Use a potential "
-            + "clock marked Stable. Where no clock of a build is, the build may not be able to survive a loss whatever the clock, "
+        explanation: "Such a build has to be restarted by hand after an input ran out or the output backed up. Use a "
+            + "clock marked Stable. Where no clock of a build is, the build may not be able to go back to its rate by itself after a supply stop or an output blockage, whatever the clock, "
             + "and its clocks are offered for what they are.",
     };
 }
@@ -418,9 +418,9 @@ export function deadlockRiskInsight(risks: readonly SharedItemDeadlockRisk[]): C
             + "the shared item is still at its limit, the machine cannot craft, the item never goes down, and the inserter never "
             + "lets go.",
         explanation: "The build then stops for good, whatever the clock does afterwards, and has to be cleared by hand. Whether it "
-            + "happens depends on the timing of the two inserters against each other. The trials for backpressure loss do not see "
-            + "it, so on this build they do not decide which clock is selected: the clocks that hold the target rate are ranked "
-            + "by their wake-ups. A build is free of the risk when each item is brought to a machine by one inserter only, or "
+            + "happens depends on the timing of the two inserters against each other. The loss trials do not see "
+            + "it, so on this build they do not decide which clock is recommended: the clocks that hold the setpoint are ranked "
+            + "by their wakeups. A build is free of the risk when each item is brought to a machine by one inserter only, or "
             + "when an inserter that shares an item brings nothing else.",
     };
 }
@@ -441,7 +441,7 @@ export function beltPickupNotTestedInsights(config: Config): ClockInsight[] {
         what: pickups.map(describeUncalibratedPickup).join(" "),
         why: `${BELT_PICKUP_CALIBRATION}. At other belt stack sizes and hand sizes the simulator's pickup timing has not been `
             + "compared with the game.",
-        explanation: "The clock may not match the game: its rate, stability and wake-ups are worked out from pickup timing "
+        explanation: "The clock may not match the game: its rate, stability and wakeups are worked out from pickup timing "
             + "never checked there.",
     }];
 }
@@ -502,13 +502,13 @@ export function lanesExactlyFullInsights(config: Config): ClockInsight[] {
     return [{ id: "lanes-exactly-full", scope: "build", title, what: note, why: "", explanation: "" }];
 }
 
-export function clockInsights(result: BlueprintGenerationResult, holds: boolean, loop_seed_items = DEFAULT_LOOP_SEED_ITEMS): ClockInsight[] {
+export function clockInsights(result: BlueprintGenerationResult, holds: boolean, kick_start_items = DEFAULT_KICK_START_ITEMS): ClockInsight[] {
     // the run the blueprint follows; build-wide numbers are only read from a clock that holds the target
     const run = result.clock_only_run?.state_transition_history ?? result.serializable_state_transition_history;
     // an inserter that never moved in one run is only listed in the other
     const entities = [...run.entities, ...result.serializable_state_transition_history.entities];
     const insights: (ClockInsight | null)[] = [
-        loopingRecipeInsight(result, entities, loop_seed_items),
+        loopingRecipeInsight(result, entities, kick_start_items),
         holds ? spareTimeInsight(result, run) : null,
         insertionLimitsInsight(result, entities),
         outputHandInsight(result, entities),
@@ -529,7 +529,7 @@ export function chestDrillInsights(result: Pick<BlueprintGenerationResult, "ches
         return [];
     }
     const clocked = drills.filter(drill => drill.enabled_ticks !== null);
-    const period = Number(result.simulation_duration.ticks.toFixed(2));
+    const window_cycle_ticks = Number(result.simulation_duration.ticks.toFixed(2));
     return [{
         id: "chest-drill-windows",
         scope: "clock",
@@ -541,16 +541,16 @@ export function chestDrillInsights(result: Pick<BlueprintGenerationResult, "ches
                 return `${into} and is always enabled: ${drill.always_enabled_because === undefined ? "nothing times it" : chestDrillBecause(drill.always_enabled_because)}.`;
             }
             const ticks = Number(drill.enabled_ticks.toFixed(2));
-            return `${into} and is enabled ${ticks} tick${ticks === 1 ? "" : "s"} of the ${period}-tick period, in ${drill.window_count} window${drill.window_count === 1 ? "" : "s"}.`;
+            return `${into} and is enabled ${ticks} tick${ticks === 1 ? "" : "s"} of the ${window_cycle_ticks}-tick window cycle, in ${drill.window_count} enable window${drill.window_count === 1 ? "" : "s"}.`;
         }).join(" "),
         why: "A drill mines into a hold of its own and, each tick it is enabled, first drops what it holds into the chest, as far "
             + "as the chest has room. What it mines in its last enabled tick stays in the hold while it is disabled and drops "
-            + "first in its next window. Disabled, it keeps its hold and its progress.",
-        explanation: "Each window ends the tick before an inserter takes from the chest, and is as long as the drill needs to mine "
-            + "what is taken until its next window, checked by running the drill against the takes. The windows are not part of "
-            + "the swing counts and do not change the inserters' windows; the clock-only check and the backpressure losses are run "
+            + "first in its next enable window. Disabled, it keeps its hold and its progress.",
+        explanation: "Each enable window ends the tick before an inserter takes from the chest, and is as long as the drill needs to mine "
+            + "what is taken until its next enable window, checked by running the drill against the takes. The enable windows are not part of "
+            + "the swing counts and do not change the inserters' enable windows; the clock-only check and the loss trials are run "
             + "with them. A clock that does not hold with them is made again with them a tick longer, then with the drill always "
             + "enabled. A drill stays always enabled where nothing times it: no inserter of the plan takes its item out of the "
-            + "chest, something else fills the chest with the same item, or the config sets it so.",
+            + "chest, something else fills the chest with the same item, or the configuration sets it so.",
     }];
 }

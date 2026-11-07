@@ -4,7 +4,7 @@ import { EntityTransferCount, EntityTransferCountMap } from "./swing-counts";
 import type Fraction from "../../../data-types/fraction";
 
 /**
- * Fractional swings the insertion limits do not allow: an inserter into a machine would have to swing more often in a
+ * Euclidean Swings the insertion limits do not allow: an inserter into a machine would have to swing more often in a
  * sub-cycle than the machine takes. The cycle plan rethrows it with the output swings a cycle it was asked to plan, which
  * a run that asked for fractional swings without a forced count backs off from (generateClockWithSwingBackoff).
  */
@@ -25,8 +25,8 @@ export class FractionalSwingsRefusedError extends Error {
  */
 export function fractionalSwingsWholeAt(refusal: FractionalSwingsRefusedError, count: number): Error {
     const swings = `${count} output swing${count === 1 ? "" : "s"}`;
-    return new Error(`${refusal.message} At ${swings} a cycle, the most the insertion limits allow, every inserter swings a whole `
-        + `number of times a cycle: the clock of ${swings}.`);
+    return new Error(`${refusal.message} At ${swings} each output cycle, the most the insertion limits allow, every inserter swings a whole `
+        + `number of times each output cycle: the clock of ${swings}.`);
 }
 
 /**
@@ -131,7 +131,7 @@ export function computeMaxSwingsPerSubCycle(constraints: SwingCapacityConstraint
  * The pattern repeats based on the remainder. If we have 6 swings over 4 cycles:
  * - Base: 6/4 = 1 swing per cycle
  * - Remainder: 6 % 4 = 2 extra swings to distribute
- * - Pattern period: 4 / gcd(4, 2) = 2
+ * - Pattern window cycle: 4 / gcd(4, 2) = 2
  * - Result: [1, 2, 1, 2] (alternates every cycle)
  * 
  * @param total_swings Total swings to distribute (numerator)
@@ -233,7 +233,7 @@ function computeSwingDistributionForEntity(
     
     // Calculate total swings across all sub-cycles
     // The transfer_count.total_transfer_count is the fractional count per base cycle
-    // Multiply by cycle_multiplier to get total swings across the extended period
+    // Multiply by cycle_multiplier to get total swings across the extended window cycle
     const total_swings_fraction = transfer_count.total_transfer_count.multiply(cycle_multiplier);
     const total_swings = Math.round(total_swings_fraction.toDecimal());
     

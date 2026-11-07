@@ -7,10 +7,10 @@ function view(overrides: Partial<ClockAlternativeView> = {}): ClockAlternativeVi
     return {
         id: 'swings-1', label: '1 output swing per cycle', verdict: 'unstable',
         ranking: { meets_target_rate: false, rate_off_target: 0, holds_expected_output: false, matches_belt_choice: true, wake_ups_per_minute: null, window_count: 4 },
-        assessment: { holds: false, items_per_second: 7.5, wake_ups_per_minute: null, backpressure_loss: null, start_dependence: null },
+        assessment: { holds: false, items_per_second: 7.5, wake_ups_per_minute: null, disturbance_trial: null, start_dependence: null },
         belt: { kind: 'moving', slack_ticks: [4] },
         asBuilt: { holds: false, actual_output_items: 176, start_phases_checked: 1, failed_start_offset: 0,
-            failed_pickup_phases: { 'inserter:2': [3, 0] }, repeat_periods: 6, repeat_output_items: 880 },
+            failed_pickup_phases: { 'inserter:2': [3, 0] }, repeat_window_cycles: 6, repeat_output_items: 880 },
         expectedOutputItems: 176,
         insights: [],
         ...overrides,
@@ -30,7 +30,7 @@ describe('the note on why no clock is stable', () => {
     it('says what the engine says of the recommended clock, from the clocks on screen', () => {
         const why = whyNotStableOf([view()], 0, false, []);
         expect(why?.cause).toBe('moving lane phases');
-        expect(why?.message).toContain('not when the lanes reach inserter 2 in another phase: from such a start it moves 880 of 1056 items over 6 periods.');
+        expect(why?.message).toContain('not when the lanes reach inserter 2 in another phase: from such a start it moves 880 of 1056 items over 6 window cycles.');
         expect(why?.message).toContain('answer Backed up for the belts and generate again');
         expect(WHY_NOT_STABLE_TITLE[why!.cause]).toBe('Why no clock is stable: moving lane phases');
         // the run's belts were backed up already
@@ -38,11 +38,11 @@ describe('the note on why no clock is stable', () => {
     });
 
     it('reads the target off the recommended clock, and lists the clocks that could not be made', () => {
-        const short = view({ belt: null, asBuilt: null, assessment: { holds: false, items_per_second: 180, wake_ups_per_minute: null, backpressure_loss: null, start_dependence: null },
+        const short = view({ belt: null, asBuilt: null, assessment: { holds: false, items_per_second: 180, wake_ups_per_minute: null, disturbance_trial: null, start_dependence: null },
             ranking: { ...view().ranking, rate_off_target: -60 }, label: '2 output swings per cycle' });
         expect(whyNotStableOf([short], 0, false, [{ id: 'even-hands', label: 'Even hands', reason: 'even hands need a period of whole ticks, not 4.5' }])).toEqual({
             cause: 'nothing holds',
-            message: 'No clock holds the target rate of 240 a second. The closest, 2 output swings per cycle, moves 180 a second, 60 under the target. '
+            message: 'No clock holds the setpoint of 240 a second. The closest, 2 output swings per cycle, moves 180 a second, 60 under the target. '
                 + 'Not made: Even hands (even hands need a period of whole ticks, not 4.5).',
         });
     });

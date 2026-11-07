@@ -101,7 +101,7 @@ export interface InserterCounters {
     wired_inserters: number;
     /** Inserters never disabled: no decider switches them */
     unwired_inserters: number;
-    /** Copies of the build the clock is made for (`target_output.copies`) */
+    /** Copies of the build the clock is made for (`setpoint.copies`) */
     copies: number;
     /** Window deciders of the clock's blueprint (`windowDeciderCount`); null until the blueprint is known (`withNetwork`) */
     deciders: number | null;
@@ -162,7 +162,7 @@ export function inserterEnds(config: Config): InserterEnds[] {
 /** The wake-ups and the counters of a simulated run, from the tick `from_tick` to its end, of the clock's build */
 export function wakeUpsAndCountersOfStock(stock: StockRecording, config: Config, from_tick: number): { wake_ups: WakeUps; counters: InserterCounters } {
     return countersOfStock(stock, countedInserters(config), from_tick,
-        { copies: config.target_output.copies ?? 1, backed_up_belts: config.overrides?.backed_up_belts === true });
+        { copies: config.setpoint.copies ?? 1, backed_up_belts: config.overrides?.backed_up_belts === true });
 }
 
 /** `wakeUpsAndCountersOfStock` for inserters already read from the config */

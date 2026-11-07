@@ -34,7 +34,7 @@ describe("the rules of the game", () => {
         // GOALS.md: the limit is the automated insertion limit + 64, and in practice the drill stops at a minimum of
         // 114 items, the stack of stone (50) + 64. The function takes the larger of the stack and the limit, + 64.
         const machineInto = (recipe: string) => createEntityRegistryFromConfig(ConfigSchema.parse({
-            target_output: { recipe, items_per_second: 0.1, copies: 1 }, belts: [], inserters: [],
+            setpoint: { recipe, items_per_second: 0.1, copies: 1 }, belts: [], inserters: [],
             machines: [{ id: 1, recipe, crafting_speed: 0.5, productivity: 0 }],
             drills: { configs: [{ id: 1, type: "big-mining-drill", mined_item_name: "stone", speed_bonus: 5, productivity: 440, target: { type: "machine", id: 1 } }] } }));
 
@@ -119,7 +119,7 @@ describe("the rules of the game", () => {
 
     describe("room for a hand of fuel", () => {
         // agricultural science: the three inserters that bring nutrients off the belt with their bioflux; without the
-        // room the windows of batched swings closed on partly filled hands, 377 of 400 a period in the game
+        // room the windows of batched swings closed on partly filled hands, 377 of 400 a window cycle in the game
         it("is the ticks a hand of fuel takes to fill, for an inserter that takes fuel off a belt as well as an ingredient", async () => {
             const registry = await registryOf(ConfigPaths.AGRICULTURAL_SCIENCE_250);
             expect(Object.fromEntries(fuelHandRoomTicks(registry))).toEqual({ "inserter:1": 4, "inserter:2": 4, "inserter:11": 4 });

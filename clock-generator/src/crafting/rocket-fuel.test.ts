@@ -35,7 +35,7 @@ describe("generateClockForConfig", () => {
         });
 
         it("clocks the inserter taking the by-product off, so it only looks at the machine now and then", () => {
-            // it is not in the plan, so its clock repeats within the period instead of coming from swing counts
+            // it is not in the plan, so its clock repeats within the window cycle instead of coming from swing counts
             const windows = rocket_fuel.clock_windows["inserter:11"];
             expect(windows.length).toBeGreaterThanOrEqual(1);
             expect(windows[0].end - windows[0].start).toBeLessThan(20);
@@ -56,7 +56,7 @@ describe("generateClockForConfig", () => {
             expect(fuel_inserter.stability_check.holds).toBe(true);
             expect(fuel_inserter.stability_check.as_built?.holds).toBe(true);
 
-            // the fuel clock counts its own ticks, so the fuel inserter has no windows on the clock of the period
+            // the fuel clock counts its own ticks, so the fuel inserter has no windows on the clock of the window cycle
             expect(fuel_inserter.clock_windows["inserter:3"]).toBeUndefined();
             const fuel_clock = fuel_inserter.unplanned_inserter_clocks!["inserter:3"];
             expect(fuel_clock).toMatchObject({ kind: "fuel", own_clock: true });
@@ -85,9 +85,9 @@ describe("generateClockForConfig", () => {
             it("runs the exported clock for several periods so the fuel inserter shows inserting", () => {
                 const view = fuel_inserter.fuel_consumption_view!;
 
-                // a hand of fuel lasts the machine longer than the 960 tick clock, so one period seldom has a swing
-                expect(view.periods).toBeGreaterThanOrEqual(2);
-                expect(view.duration_ticks).toBe(view.periods * fuel_inserter.simulation_duration.ticks);
+                // a hand of fuel lasts the machine longer than the 960 tick clock, so one window cycle seldom has a swing
+                expect(view.window_cycles).toBeGreaterThanOrEqual(2);
+                expect(view.duration_ticks).toBe(view.window_cycles * fuel_inserter.simulation_duration.ticks);
                 expect(view.state_transition_history.total_duration_ticks).toBe(view.duration_ticks);
                 expect(view.fuel_inserter_ids).toEqual(["inserter:3"]);
                 expect(view.fuel_swings_recorded).toBe(true);
@@ -115,7 +115,7 @@ describe("generateClockForConfig", () => {
         });
 
         describe("the blueprint of rocket fuel biochambers", () => {
-            let period: number;
+            let window_cycle_ticks: number;
             let fuel_moduli: number[];
             let entities: BlueprintGenerationResult["blueprint"]["entities"];
             let clocks: typeof entities;
@@ -123,7 +123,7 @@ describe("generateClockForConfig", () => {
             const behavior = (entity: typeof entities[number]) => JSON.stringify(entity.control_behavior ?? {});
 
             beforeAll(() => {
-                period = rocket_fuel.simulation_duration.ticks;
+                window_cycle_ticks = rocket_fuel.simulation_duration.ticks;
                 fuel_moduli = Array.from(new Set(Object.values(rocket_fuel.unplanned_inserter_clocks!)
                     .filter(clock => clock.own_clock).map(clock => clock.modulus))).sort((a, b) => a - b);
                 entities = rocket_fuel.blueprint.entities;
@@ -138,24 +138,24 @@ describe("generateClockForConfig", () => {
             it("counts one clock long enough for the period and every fuel clock to fit a whole number of times", () => {
                 expect(clocks).toHaveLength(1);
                 expect(entities.filter(entity => (entity.player_description ?? "").includes("Fuel clock:"))).toHaveLength(0);
-                // the clock counts 1 to its period, so its condition's constant is the period
+                // the clock counts 1 to its window cycle, so its condition's constant is the window cycle
                 const counted_to = Number(/"constant":(\d+)/.exec(behavior(clocks[0]))![1]);
-                [period, ...fuel_moduli].forEach(ticks => expect(counted_to % ticks).toBe(0));
-                // on a signal of its own, which leaves the clock signal for the clock of the period
+                [window_cycle_ticks, ...fuel_moduli].forEach(ticks => expect(counted_to % ticks).toBe(0));
+                // on a signal of its own, which leaves the clock signal for the clock of the window cycle
                 const { conditions, outputs } = (clocks[0].control_behavior as { decider_conditions: { conditions: { first_signal: { name: string } }[]; outputs: { signal: { name: string }; copy_count_from_input: boolean }[] } }).decider_conditions;
                 expect(conditions[0].first_signal.name).toBe("signal-T");
                 expect(outputs.filter(output => output.copy_count_from_input).map(output => output.signal.name)).toEqual(["signal-T"]);
-                // the clock signal is only the clock of the period starting at 1, like every modulo: a constant row
+                // the clock signal is only the clock of the window cycle starting at 1, like every modulo: a constant row
                 expect(outputs.filter(output => output.signal.name === "signal-clock").map(output => output.copy_count_from_input)).toEqual([false]);
             });
 
             it("gives the clock of the period and each fuel clock as a modulo of the one clock", () => {
-                // a fuel clock of as many ticks as the period is the clock of the period
-                expect(modulos).toHaveLength(new Set([period, ...fuel_moduli]).size);
+                // a fuel clock of as many ticks as the window cycle is the clock of the window cycle
+                expect(modulos).toHaveLength(new Set([window_cycle_ticks, ...fuel_moduli]).size);
                 modulos.forEach(modulo => expect(behavior(modulo)).toContain('"first_signal":{"name":"signal-T"'));
-                const period_clock = modulos.filter(modulo => behavior(modulo).includes('"output_signal":{"name":"signal-clock"'));
-                expect(period_clock).toHaveLength(1);
-                expect(behavior(period_clock[0])).toContain(`"second_constant":${period}`);
+                const window_cycle_clock = modulos.filter(modulo => behavior(modulo).includes('"output_signal":{"name":"signal-clock"'));
+                expect(window_cycle_clock).toHaveLength(1);
+                expect(behavior(window_cycle_clock[0])).toContain(`"second_constant":${window_cycle_ticks}`);
                 fuel_moduli.forEach(modulus =>
                     expect(modulos.filter(modulo => behavior(modulo).includes(`"second_constant":${modulus}`))).toHaveLength(1));
             });

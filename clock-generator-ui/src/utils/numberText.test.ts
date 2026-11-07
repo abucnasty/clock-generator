@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     COPIES_HELPER,
-    OUTPUT_PER_PERIOD_HEADER,
+    OUTPUT_PER_WINDOW_CYCLE_HEADER,
     TICK_DECIMALS,
     WAKE_UPS_HEADER,
     durationText,
@@ -96,7 +96,7 @@ describe('itemsPerSecondHelper', () => {
 describe('the clocks table headers', () => {
     it('are the plan\'s words, with non-breaking spaces inside the brackets', () => {
         expect(WAKE_UPS_HEADER).toBe('Wakeups/min (1\u00a0copy)');
-        expect(OUTPUT_PER_PERIOD_HEADER).toBe('Output per window cycle (1\u00a0copy)');
+        expect(OUTPUT_PER_WINDOW_CYCLE_HEADER).toBe('Output per window cycle (1\u00a0copy)');
     });
 
     it.each([
@@ -111,7 +111,7 @@ describe('the clocks table headers', () => {
 
 describe('COPIES_HELPER', () => {
     it('says what a copy is and what the clock is made for', () => {
-        expect(COPIES_HELPER).toBe("Describe one identical unit. Copies may include a partial unit, such as 0.5 or 2.25.");
+        expect(COPIES_HELPER).toBe("Describe only one copy. Copies may be partial, such as 0.5 or 2.25.");
     });
 });
 

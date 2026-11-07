@@ -52,7 +52,7 @@ it('keeps all known products visible while route data is pending', () => {
 it('shows both recycler results, a single accepted direct target, and the separate actual inserter route', () => {
     showPanel({ summary: transfer({ type: 'machine', id: 3 }, result('electronic-circuit', 'accepted', 'covered'),
         result('advanced-circuit', 'rejected', 'covered', { inserter_id: 4, target: { type: 'belt', id: 2 } })) });
-    expect(screen.getByRole('region', { name: 'Output transfer' })).toBeDefined();
+    expect(screen.getByRole('region', { name: 'Output routes' })).toBeDefined();
     expect(screen.getAllByText(/^Direct to /)).toEqual([product('Electronic circuit').getByText('Direct to Machine 3')]);
     expect(product('Electronic circuit').queryByText(/Inserter/)).toBeNull();
     expect(product('Advanced circuit').getByText('Stays in machine output')).toBeDefined();

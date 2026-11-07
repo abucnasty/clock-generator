@@ -14,7 +14,7 @@ import type { InserterCounters } from "./inserter-counters";
  * It is read from the clock-only run the wake-ups are counted on (`as_built.counters`, same ticks):
  * - a decider that switches inserters sends as many signals as the most of its inserters were switched on, which is the same
  *   for all of them but a window that finds one still enabled;
- * - a decider that switches drills of a chest sends one signal for each window the drills have in a period.
+ * - a decider that switches drills of a chest sends one signal for each window the drills have in a window cycle.
  *
  * Null where the clock had no long run to count on. Nothing ranks or judges a clock by it (ranking stays the wake-ups).
  */
@@ -22,7 +22,7 @@ export function signalsPerMinuteOf(
     counters: InserterCounters | undefined,
     blueprint: FactorioBlueprint,
     chest_drills: readonly ChestDrillClock[] | undefined,
-    clock_period_ticks: number,
+    clock_window_cycle_ticks: number,
 ): number | null {
     if (counters === undefined) {
         return null;
@@ -39,7 +39,7 @@ export function signalsPerMinuteOf(
         if (named.inserters !== undefined) {
             signals += Math.max(0, ...named.inserters.map(number => switched_on.get(EntityId.forInserter(number).id) ?? 0));
         } else if (named.drills !== undefined) {
-            signals += Math.max(0, ...named.drills.map(number => drills.get(number) ?? 0)) * 3600 / clock_period_ticks;
+            signals += Math.max(0, ...named.drills.map(number => drills.get(number) ?? 0)) * 3600 / clock_window_cycle_ticks;
         }
     }
     return signals;

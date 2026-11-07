@@ -33,8 +33,8 @@ interface BlueprintOutputProps {
 
 /** Under the string */
 const STRING_CAPTION = 'Copy this string and import it in Factorio 2.1. Follow the installation steps above.';
-/** Before the clock's period over the string */
-const CLOCK_PERIOD_LABEL = 'Window cycle time:';
+/** Before the clock's window cycle over the string */
+const CLOCK_WINDOW_CYCLE_LABEL = 'Window cycle time:';
 
 /**
  * The selected clock's blueprint string, for reading or copying by hand. Its disclosure in Install names it, so it has
@@ -49,7 +49,7 @@ export function BlueprintOutput({ blueprintString, simulationDurationTicks, rate
         <Box>
             {simulationDurationTicks !== undefined && (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    {CLOCK_PERIOD_LABEL} {durationText(simulationDurationTicks)}
+                    {CLOCK_WINDOW_CYCLE_LABEL} {durationText(simulationDurationTicks)}
                 </Typography>
             )}
             {rateWarning && (
@@ -115,7 +115,7 @@ export function GenerationProgressStatus({ store }: { store: GenerationProgressS
             <Typography variant="body2" sx={{ mt: 1 }}>
                 {progress
                     ? `${progress.total ? `${progress.completed} of ${progress.total} clocks done, running: ` : ''}${progress.step}`
-                    : 'Starting simulation...'}
+                    : 'Starting the simulator...'}
             </Typography>
             {progress?.detail && (
                 <Typography variant="caption" color="text.secondary">

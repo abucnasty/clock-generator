@@ -1,14 +1,14 @@
-// node scripts/clock-only.js <KEY> <swings|-> <never|always|auto> <periods> <output inserter id> [options]
+// node scripts/clock-only.js <KEY> <swings|-> <never|always|auto> <window cycles> <output inserter id> [options]
 // Makes batched swings for a sample and runs the clock on its own, as the blueprint does in game.
 //   <swings>     output swings per cycle to force, - for the planned count
 //   <never|...>  belt pickup slack
 //   --windows '<json>'           windows to run instead, by entity id: {"inserter:11":[{"start":0,"end":42}]}
-//   --hands <inserter> <machine> every hand that inserter drops, a line a period: where in which of its windows
+//   --hands <inserter> <machine> every hand that inserter drops, a line a window cycle: where in which of its windows
 //                                it started to fill, grew, was full and dropped, and what the machine held then.
 //                                Long lines: pipe through `cut -c1-900`.
-// Prints the windows and what the output inserter dropped in each period.
+// Prints the windows and what the output inserter dropped in each window cycle.
 const args = process.argv.slice(2);
-const [key, swings, slack, periods, out] = args;
+const [key, swings, slack, window_cycles, out] = args;
 const option = name => { const at = args.indexOf(name); return at < 0 ? null : args.slice(at + 1); };
 const { dist, quiet, loadSample } = require("./lib");
 const { generateClockForConfig, simulateClockOnly } = dist("crafting/generate-blueprint.js");
@@ -19,14 +19,14 @@ const { generateClockForConfig, simulateClockOnly } = dist("crafting/generate-bl
         config.overrides = { ...config.overrides, terminal_swing_count: Number(swings) };
     }
     const result = generateClockForConfig(config, { logger: quiet, belt_pickup_slack: slack });
-    const period = result.simulation_duration.ticks;
+    const window_cycle_ticks = result.simulation_duration.ticks;
     const override = option("--windows");
     const windows = { ...result.clock_windows, ...(override ? JSON.parse(override[0]) : {}) };
-    console.log(`period ${period}, expected ${result.stability_check.expected_output_items} a period`);
+    console.log(`period ${window_cycle_ticks}, expected ${result.stability_check.expected_output_items} a period`);
     for (const [entity_id, ranges] of Object.entries(windows)) {
         console.log("  ", entity_id, ranges.map(r => `${r.start}-${r.end}`).join(","));
     }
-    const stock = simulateClockOnly(config, windows, period, Number(periods), quiet);
+    const stock = simulateClockOnly(config, windows, window_cycle_ticks, Number(window_cycles), quiet);
 
     const hands = option("--hands");
     if (hands) {
@@ -35,7 +35,7 @@ const { generateClockForConfig, simulateClockOnly } = dist("crafting/generate-bl
         const own = windows[`inserter:${hands[0]}`] ?? [];
         // sample i of the run is two ticks after the clock position its windows are counted in
         const where = i => {
-            const position = ((i - 2) % period + period) % period;
+            const position = ((i - 2) % window_cycle_ticks + window_cycle_ticks) % window_cycle_ticks;
             const index = own.findIndex(r => position >= r.start && position <= r.end);
             return index < 0 ? `out(${position})` : `w${index}+${position - own[index].start}`;
         };
@@ -43,7 +43,7 @@ const { generateClockForConfig, simulateClockOnly } = dist("crafting/generate-bl
         for (let i = 1; i < stock.ticks; i++) {
             const held = series.held[i], before = series.held[i - 1];
             if (held > before && before === 0) {
-                line.push(`[p${Math.floor(i / period)} ${where(i)} ${series.held_item[i].slice(0, 4)}`);
+                line.push(`[p${Math.floor(i / window_cycle_ticks)} ${where(i)} ${series.held_item[i].slice(0, 4)}`);
             } else if (held > before) {
                 line.push(`+${held - before}@${where(i)}`);
             }
@@ -51,7 +51,7 @@ const { generateClockForConfig, simulateClockOnly } = dist("crafting/generate-bl
                 const stock_then = Object.entries(machine.inputs).map(([item, values]) => `${item.slice(0, 4)}=${values[i]}`).join(" ");
                 line.push(`drop ${before - held} at ${where(i)} fuel=${machine.fuel ? machine.fuel[i] : "-"} ${stock_then}]`);
             }
-            if (i % period === period - 1 || i === stock.ticks - 1) {
+            if (i % window_cycle_ticks === window_cycle_ticks - 1 || i === stock.ticks - 1) {
                 console.log(line.join(" "));
                 line = [];
             }
@@ -59,18 +59,18 @@ const { generateClockForConfig, simulateClockOnly } = dist("crafting/generate-bl
     }
 
     const output = stock.inserters.find(s => s.inserter_id === `inserter:${out}`);
-    const per_period = [];
+    const per_window_cycle = [];
     let moved = 0;
     for (let i = 1; i < stock.ticks; i++) {
         if (output.held[i] < output.held[i - 1]) {
             moved += output.held[i - 1] - output.held[i];
         }
-        if (i % period === period - 1) {
-            per_period.push(moved);
+        if (i % window_cycle_ticks === window_cycle_ticks - 1) {
+            per_window_cycle.push(moved);
             moved = 0;
         }
     }
     const tally = {};
-    per_period.forEach(items => tally[items] = (tally[items] ?? 0) + 1);
-    console.log(`inserter ${out} dropped per period:`, JSON.stringify(tally), "first period under the first one's:", per_period.findIndex(items => items < per_period[0]));
+    per_window_cycle.forEach(items => tally[items] = (tally[items] ?? 0) + 1);
+    console.log(`inserter ${out} dropped per period:`, JSON.stringify(tally), "first period under the first one's:", per_window_cycle.findIndex(items => items < per_window_cycle[0]));
 })().catch(e => { console.error(e); process.exit(1); });

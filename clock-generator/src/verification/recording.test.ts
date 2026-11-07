@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CLOCK_TO_WINDOW_TICKS, parseRecording, recordedClockPeriod } from "./recording";
+import { CLOCK_TO_WINDOW_TICKS, parseRecording, recordedClockWindowCycle } from "./recording";
 import { windowPositions } from "./recording-history";
 
 const recording = (clock_values: number[]) => ({
@@ -17,7 +17,7 @@ describe("the recorded clock", () => {
     it("counts 1 to its period in the game and is read as 0-based positions in the period", () => {
         const parsed = parseRecording(recording([1, 2, 3, 4, 1, 2, 3, 4]));
         expect(parsed.clock?.values).toEqual([0, 1, 2, 3, 0, 1, 2, 3]);
-        expect(recordedClockPeriod(parsed)).toBe(4);
+        expect(recordedClockWindowCycle(parsed)).toBe(4);
     });
 
     it("is rejected when it reads 0, which a clock counting from 1 never does", () => {
@@ -34,7 +34,7 @@ describe("the recorded clock of a build's own clock", () => {
     it("may count from 0, and its values are the positions", () => {
         const parsed = parseRecording(stamped([0, 1, 2, 3, 0, 1, 2, 3], { first_value: 0, period: 4 }));
         expect(parsed.clock?.values).toEqual([0, 1, 2, 3, 0, 1, 2, 3]);
-        expect(recordedClockPeriod(parsed)).toBe(4);
+        expect(recordedClockWindowCycle(parsed)).toBe(4);
     });
 
     it("may count from 1 with a period, as a generated clock does", () => {
@@ -71,7 +71,7 @@ describe("the positions of the windows", () => {
         const parsed = parseRecording(recording([1, 2, 3, 4, 1, 2, 3, 4]));
         expect(CLOCK_TO_WINDOW_TICKS).toBe(1);
         expect(windowPositions(parsed)).toEqual([3, 0, 1, 2, 3, 0, 1, 2]);
-        // the periods stay where the clock wraps
+        // the window cycles stay where the clock wraps
         expect(parsed.clock?.values).toEqual([0, 1, 2, 3, 0, 1, 2, 3]);
     });
 

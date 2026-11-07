@@ -22,9 +22,9 @@
 // Writes, in --out:
 //   cells.json             {cells: [{name, config, problems, instances, inserters: {id: {name, offset, wired, has_wire}}}]},
 //                          the scaffold's inserter behind each id of the config, found with the generator's matcher
-//   <alternative id>/<config name>.json   the clock file: {selected, period_ticks, counted_ticks, schedule, blueprint,
+//   <alternative id>/<config name>.json   the clock file: {selected, window_cycle_ticks, counted_ticks, schedule, blueprint,
 //                          clock_windows, ...}; the blueprint's schedule combinators carry the tag clock_generator_inserters
-//   <alternative id>/arm.json   what the arm is: verdict, holds, recovers, wake-ups a minute, period, inserters wired
+//   <alternative id>/arm.json   what the arm is: verdict, holds, recovers, wake-ups a minute, window cycle, inserters wired
 //   always-on/...          the same, for --always-on
 // <alternative id>/ is the folder to give place-clocks as --clocks. An error is written to <out>/error.json and exits 1.
 const path = require("path"), fs = require("fs"), zlib = require("zlib");
@@ -46,7 +46,7 @@ const { encodeBlueprintFile } = dist("blueprints/serde.js");
 const INSERTERS_TAG = "clock_generator_inserters";
 const write = (file, value) => fs.writeFileSync(file, JSON.stringify(value, null, 1));
 
-/** The clock file of an arm: the generator's clock (the subtick one where the period is fractional) with its schedule combinators tagged */
+/** The clock file of an arm: the generator's clock (the subtick one where the window cycle is fractional) with its schedule combinators tagged */
 function clockFileOf(alternative, config_path) {
     const result = alternative.result;
     const exported = result.subtick ?? result;
@@ -61,8 +61,8 @@ function clockFileOf(alternative, config_path) {
     return {
         selected: { id: alternative.id, label: alternative.label, verdict: alternative.verdict, items_per_second: assessment?.items_per_second ?? result.stability_check.expected_output_items },
         config: config_path,
-        period_ticks: result.simulation_duration.ticks,
-        subtick: result.subtick ? { period_ticks: result.subtick.clock.period_ticks, scale: result.subtick.clock.scale } : null,
+        window_cycle_ticks: result.simulation_duration.ticks,
+        subtick: result.subtick ? { window_cycle_ticks: result.subtick.clock.window_cycle_ticks, scale: result.subtick.clock.scale } : null,
         counted_ticks: exported.schedule.counted_ticks,
         schedule: exported.schedule,
         clock_windows: result.clock_windows,
@@ -81,7 +81,7 @@ function alwaysOnFileOf(clock, config_path, version) {
     };
     return {
         selected: { id: "always-on", label: "Always on: wired, never disabled", verdict: "stable", items_per_second: clock.selected.items_per_second },
-        config: config_path, period_ticks: clock.period_ticks, subtick: null, counted_ticks: clock.counted_ticks,
+        config: config_path, window_cycle_ticks: clock.window_cycle_ticks, subtick: null, counted_ticks: clock.counted_ticks,
         schedule: { counted_ticks: clock.counted_ticks, inserter_combinators: [{ entity_number: 1, inserter_ids: ids }] },
         clock_windows: {},
         blueprint: encodeBlueprintFile({ blueprint: { item: "blueprint", label: "Always on", entities: [combinator], icons: [], version }}),
@@ -99,10 +99,10 @@ function armOf(alternative, clock, config_path, selected_id, always_on = false) 
         always_on,
         verdict: clock.selected.verdict,
         holds: always_on ? null : assessment?.holds ?? alternative?.result.stability_check.holds ?? null,
-        recovers: always_on ? null : assessment?.backpressure_loss?.survives ?? null,
+        recovers: always_on ? null : assessment?.disturbance_trial?.survives ?? null,
         wake_ups_per_minute: always_on ? null : assessment?.wake_ups_per_minute ?? as_built?.wake_ups?.wake_ups_per_minute ?? null,
         items_per_second: clock.selected.items_per_second,
-        period_ticks: clock.period_ticks, counted_ticks: clock.counted_ticks,
+        window_cycle_ticks: clock.window_cycle_ticks, counted_ticks: clock.counted_ticks,
         inserters_wired: wired.size, inserter_ids: [...wired].sort((a, b) => a - b),
         schedule_combinators: clock.schedule.inserter_combinators.length,
         clock_file: `${path.basename(config_path, ".json")}.json`,
@@ -149,7 +149,7 @@ function armOf(alternative, clock, config_path, selected_id, always_on = false) 
         write(path.join(folder, "arm.json"), armOf(alternative, clock, config_label, selected_id));
         written.push(path.join(alternative.id, `${name}.json`), path.join(alternative.id, "arm.json"));
         if (alternative.id === selected_id || selected_clock === undefined) selected_clock = clock;
-        console.log(`${name}: ${alternative.id} "${alternative.label}" ${alternative.verdict}, period ${clock.period_ticks}, ${clock.schedule.inserter_combinators.length} schedule combinators`);
+        console.log(`${name}: ${alternative.id} "${alternative.label}" ${alternative.verdict}, period ${clock.window_cycle_ticks}, ${clock.schedule.inserter_combinators.length} schedule combinators`);
     }
     if (flag("always-on")) {
         const version = (alternatives.find(a => a.id === selected_id) ?? alternatives[0]).result.blueprint.version;

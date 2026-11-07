@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import type { Config } from "../config/schema";
-import { generateClockAlternatives, simulateClockOnly, type BlueprintGenerationResult } from "../crafting/generate-blueprint";
+import { combineClockAlternativeRuns, generateClockAlternatives, COORDINATED_SOURCES_MAKER, simulateClockOnly, type BlueprintGenerationResult } from "../crafting/generate-blueprint";
 import type { StockRecording } from "../crafting/machine-stock";
 import { returnTicksOf, wakeUpsOfStock } from "../crafting/wake-ups";
 import { createEntityRegistryFromConfig } from "../crafting/sequence/simulation-context";
@@ -17,11 +17,11 @@ import { quiet } from "../crafting/generate-blueprint-test-helpers";
  * Automation science on the clock that is selected for it (full-hand output swings): a belt inserter into one machine
  * and an output inserter onto a belt, on a clock of 72 ticks
  */
-const PERIODS = 60;
+const WINDOW_CYCLES = 60;
 
 let config: Config;
 let result: BlueprintGenerationResult;
-let period: number;
+let window_cycle_ticks: number;
 let stock: StockRecording;
 let simulated: Recording;
 
@@ -29,11 +29,12 @@ beforeAll(async () => {
     // the recording these tests read is of the clock with one output swing a cycle; the sample is automatic, so it is forced on this copy
     const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
     config = { ...sample, overrides: { ...sample.overrides, terminal_swing_count: 1 } };
-    const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
-    result = alternatives[selected_index].result;
-    period = result.simulation_duration.ticks;
-    stock = simulateClockOnly(config, result.clock_windows, period, PERIODS, quiet);
-    simulated = recordingOfStock(stock, config, period);
+    // the clock the generator recommends from today's makers: the per-branch clock composed from them wakes none of these inserters
+    const made = generateClockAlternatives(config, { logger: quiet }).alternatives.filter(it => it.maker !== COORDINATED_SOURCES_MAKER);
+    result = made[combineClockAlternativeRuns([{ signature: "", alternatives: made }], it => it.ranking).selected_index].result;
+    window_cycle_ticks = result.simulation_duration.ticks;
+    stock = simulateClockOnly(config, result.clock_windows, window_cycle_ticks, WINDOW_CYCLES, quiet);
+    simulated = recordingOfStock(stock, config, window_cycle_ticks);
 });
 
 const compared = (recording: Recording, from_sample?: number) => ({ recording, match: matchOfSimulatedRecording(recording), from_sample });
@@ -73,10 +74,10 @@ const cutFrom = (recording: Recording, from: number): Recording => {
 
 describe("a simulated run in the format of the recorder", () => {
     it("holds one sample a tick and reads the clock three positions on from the tick, around the period", () => {
-        expect(simulated.sample_count).toBe(PERIODS * period);
+        expect(simulated.sample_count).toBe(WINDOW_CYCLES * window_cycle_ticks);
         expect(simulated.clock!.values.slice(0, 3)).toEqual([3, 4, 5]);
-        expect(simulated.clock!.values[period - SIMULATED_TICK_TO_CLOCK_POSITION]).toBe(0);
-        expect(Math.max(...simulated.clock!.values)).toBe(period - 1);
+        expect(simulated.clock!.values[window_cycle_ticks - SIMULATED_TICK_TO_CLOCK_POSITION]).toBe(0);
+        expect(Math.max(...simulated.clock!.values)).toBe(window_cycle_ticks - 1);
     });
 
     it("carries the inserters and machines of the config under its ids, with their ends", () => {
@@ -131,29 +132,29 @@ describe("a simulated run in the format of the recorder", () => {
     });
 
     it("is what simulateRecording returns for a number of ticks", () => {
-        const recording = simulateRecording(config, result.clock_windows, period, 10 * period + 1);
-        expect(recording.sample_count).toBe(11 * period);
-        expect(statesOf(recording, 2)).toEqual(statesOf(simulated, 2).slice(0, 11 * period));
+        const recording = simulateRecording(config, result.clock_windows, window_cycle_ticks, 10 * window_cycle_ticks + 1);
+        expect(recording.sample_count).toBe(11 * window_cycle_ticks);
+        expect(statesOf(recording, 2)).toEqual(statesOf(simulated, 2).slice(0, 11 * window_cycle_ticks));
     });
 });
 
 describe("laying a recording against a simulated run", () => {
-    const expected_output_per_period = 32;
+    const expected_output_per_window_cycle = 32;
 
     it("finds nothing between a run and the same run recorded from a later period on", () => {
-        const game = cutFrom(simulated, 20 * period - SIMULATED_TICK_TO_CLOCK_POSITION);
-        const report = compareRecordings(compared(game), compared(simulated, 10 * period), config, { expected_output_per_period });
+        const game = cutFrom(simulated, 20 * window_cycle_ticks - SIMULATED_TICK_TO_CLOCK_POSITION);
+        const report = compareRecordings(compared(game), compared(simulated, 10 * window_cycle_ticks), config, { expected_output_per_window_cycle });
 
         expect(report.issues).toEqual([]);
-        expect(report.clock_ticks).toBe(period);
-        // the period the recording starts with is left out
-        expect(report.game_periods).toBe(PERIODS - 20 - 1);
+        expect(report.clock_ticks).toBe(window_cycle_ticks);
+        // the window cycle the recording starts with is left out
+        expect(report.game_window_cycles).toBe(WINDOW_CYCLES - 20 - 1);
         expect(report.output.game.every(items => items === 32)).toBe(true);
         expect(report.inserters.map(it => [it.config_id, it.game_items.mean, it.sim_items.mean, it.game_swings])).toEqual([[1, 32, 32, 2], [2, 32, 32, 2]]);
         expect(report.inserters.map(it => it.states.differences)).toEqual([[], []]);
         report.inserters.forEach(it => expect(it.states.agreement).toBeCloseTo(1, 2));
         expect(report.machines[0].states.agreement).toBeCloseTo(1, 2);
-        // counted over other periods of a run that takes several to repeat
+        // counted over other window cycles of a run that takes several to repeat
         expect(Math.abs(report.game_wake_ups_per_minute - report.sim_wake_ups_per_minute)).toBeLessThan(2);
         expect(formatRecordingComparison(report).at(-1)).toBe("RESULT: the simulator moves what the game moved.");
     });
@@ -167,13 +168,13 @@ describe("laying a recording against a simulated run", () => {
                 samples: { ...machine.samples, crafting_progress: [0, 0, 0, ...machine.samples.crafting_progress.slice(0, -3)] },
             })),
         };
-        const report = compareRecordings(compared(game), compared(simulated), config, { expected_output_per_period });
+        const report = compareRecordings(compared(game), compared(simulated), config, { expected_output_per_window_cycle });
         expect(report.notes).toEqual([expect.stringMatching(/^Machine 1's crafting bar runs 3 ticks out of step with the game's.*3 ticks before the game's/)]);
         expect(report.issues).toEqual([]);
-        expect(compareRecordings(compared(simulated), compared(simulated), config, { expected_output_per_period }).notes).toEqual([]);
+        expect(compareRecordings(compared(simulated), compared(simulated), config, { expected_output_per_window_cycle }).notes).toEqual([]);
         // a game recorded without bars has nothing to compare
         const bare = { ...simulated, machines: simulated.machines.map(machine => ({ ...machine, samples: { ...machine.samples, crafting_progress: [], bonus_progress: [] } })) };
-        expect(compareRecordings(compared(bare), compared(simulated), config, { expected_output_per_period }).notes).toEqual([]);
+        expect(compareRecordings(compared(bare), compared(simulated), config, { expected_output_per_window_cycle }).notes).toEqual([]);
     });
 
     it("names the positions of the clock where an inserter shows another state than in the simulator", () => {
@@ -185,7 +186,7 @@ describe("laying a recording against a simulated run", () => {
                 samples: { ...inserter.samples, status: inserter.samples.status.map(([sample, state]) => [sample + 2, state] as [number, string]) },
             }),
         };
-        const report = compareRecordings(compared(game), compared(simulated), config, { expected_output_per_period });
+        const report = compareRecordings(compared(game), compared(simulated), config, { expected_output_per_window_cycle });
         const [, output] = report.inserters;
 
         // what it moved is the same, so it is no issue
@@ -238,7 +239,7 @@ describe("laying a recording against a simulated run", () => {
                 };
             }),
         };
-        const report = compareRecordings(compared(game), compared(simulated), config, { expected_output_per_period });
+        const report = compareRecordings(compared(game), compared(simulated), config, { expected_output_per_window_cycle });
 
         expect(report.inserters[1].game_items.mean).toBeLessThan(32);
         expect(report.inserters[1].sim_items.mean).toBe(32);
@@ -248,9 +249,9 @@ describe("laying a recording against a simulated run", () => {
     });
 
     it("says so when the recorded clock is not the clock of the config", () => {
-        const game = { ...simulated, clock: { values: simulated.clock!.values.map((_, index) => index % (period + 8)) } };
+        const game = { ...simulated, clock: { values: simulated.clock!.values.map((_, index) => index % (window_cycle_ticks + 8)) } };
         const report = compareRecordings(compared(game), compared(simulated), config);
-        expect(report.issues).toContain(`The recorded clock counts ${period + 8} ticks, the clock of this config ${period}: the blueprint that was recorded is not this clock.`);
+        expect(report.issues).toContain(`The recorded clock counts ${window_cycle_ticks + 8} ticks, the clock of this config ${window_cycle_ticks}: the blueprint that was recorded is not this clock.`);
     });
 
     it("notes recorded inserters that are not in the config without calling them a difference", () => {

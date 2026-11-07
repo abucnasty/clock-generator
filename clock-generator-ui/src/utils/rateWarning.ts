@@ -23,7 +23,7 @@ export const COPY_CURRENT_BEST_TOOLTIP = 'More clocks are still being made. This
 
 /** The causes a clock does not recover from, in a sentence part: "coal stops arriving, or after iron plate is not taken away" */
 export function lossesOf(alternative: Pick<ClockAlternativeView, 'assessment'>): string {
-    return alternative.assessment.backpressure_loss?.broken_by.join(', or after ') ?? '';
+    return alternative.assessment.disturbance_trial?.broken_by.join(', or after ') ?? '';
 }
 
 /**
@@ -31,7 +31,7 @@ export function lossesOf(alternative: Pick<ClockAlternativeView, 'assessment'>):
  * (" Not tried, since one failure is enough: coal stops arriving, iron plate is not taken away."); empty when all were tried
  */
 export function notTriedOf(alternative: Pick<ClockAlternativeView, 'assessment'>): string {
-    const notTried = alternative.assessment.backpressure_loss?.not_tried ?? [];
+    const notTried = alternative.assessment.disturbance_trial?.not_tried ?? [];
     return notTried.length === 0 ? '' : ` Not tried, since one failure is enough: ${notTried.join(', ')}.`;
 }
 
@@ -56,15 +56,15 @@ function clockWarningOf(
 ): string | null {
     const warnings: string[] = [];
     if (alternative.assessment.start_dependence?.verdict === 'start-dependent') {
-        warnings.push('This clock depends on how it is started: it reaches the setpoint from some sampled starts and settles differently from others. See Model and tested starts.');
+        warnings.push('This clock depends on how it is started: it reaches the setpoint from some sampled starts and reaches a different steady state from others. See Model and tested starts.');
     } else if (alternative.assessment.start_dependence?.verdict === 'unstable') {
         warnings.push('This clock did not reach the setpoint from any sampled start.');
     }
-    if (alternative.assessment.backpressure_loss?.survives === false || alternative.verdict === 'no recovery') {
+    if (alternative.assessment.disturbance_trial?.survives === false || alternative.verdict === 'no recovery') {
         const losses = lossesOf(alternative);
         warnings.push(losses
             ? `This clock has no recovery: after ${losses} for a while, the build does not go back to its rate by itself in the simulator.${notTriedOf(alternative)}`
-            : alternative.assessment.backpressure_loss === null
+            : alternative.assessment.disturbance_trial === null
                 ? 'No usable recovery result is available for this clock.'
                 : 'Recovery could not be assessed: the simulator baseline for the loss trials was off its expected output.');
     }

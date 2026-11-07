@@ -100,7 +100,7 @@ function DrillRow({ drill, index, count, resourceNames, build, getRecipeInfo, ou
                     <TextField label="Productivity (%)" type="number" size="small" value={drill.productivity} inputProps={{ min: 0, step: 10 }}
                         onChange={(e) => onUpdate(index, { productivity: Math.max(0, parseFloat(e.target.value) || 0) })} sx={{ minWidth: 0, flex: '1 1 140px' }} />
                 </Box>
-                <PanelSection level={4} title="Enable control" sx={{ mt: 2 }}><EnableControlFormContent
+                <PanelSection level={4} title="Enable control override" sx={{ mt: 2 }}><EnableControlFormContent
                     key={ruleRevision + JSON.stringify(drill.overrides?.enable_control)} entityType="drill" entityId={drill.id}
                     currentOverride={drill.overrides?.enable_control} sinkType={drill.target.type === 'chest' ? TargetType.CHEST : TargetType.MACHINE} availableItems={drill.mined_item_name ? [drill.mined_item_name] : []}
                     onCancel={() => setRuleRevision(previous => previous + 1)}

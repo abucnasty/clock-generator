@@ -13,12 +13,12 @@ describe("generateClockForConfig", () => {
 
     // Two iron bacteria cultivation biochambers that give each other the bacteria a craft starts from. Each has two
     // inserters to a chest (1 and 3, 4 and 6); 7 and 8 go between the machines; 9 and 10 bring bioflux and nutrients.
-    // Recorded in Factorio 2.1.21 for 36000 ticks a clock: 576 bacteria in each of 399 periods on the subtick clock,
-    // exactly 380 a second, and in each of 400 periods on the clock rounded to 90 ticks, 384 a second. With belt
+    // Recorded in Factorio 2.1.21 for 36000 ticks a clock: 576 bacteria in each of 399 window cycles on the subtick clock,
+    // exactly 380 a second, and in each of 400 window cycles on the clock rounded to 90 ticks, 384 a second. With belt
     // windows of 8 ticks the subtick clock made 373: a fifth of them closed on a partly filled hand.
     // Recorded again on 2026-10-09 on the scaffold in the samples, for 72,576 ticks: 10,944 in each of the 42 repeats
-    // of 1728 ticks the subtick clock counts, which cut into their 19 periods are 576 in each of 798. These tests
-    // were skipped for a day because the long run counted a period of 90.947 ticks in bins of 90, which hold 570 of
+    // of 1728 ticks the subtick clock counts, which cut into their 19 window cycles are 576 in each of 798. These tests
+    // were skipped for a day because the long run counted a window cycle of 90.947 ticks in bins of 90, which hold 570 of
     // the 576; the clock and the belt pickup rules were never at fault.
     // Recorded on 2026-10-10 on that scaffold, 36,000 ticks each: batched swings at 2 output swings a cycle and
     // observed windows move 10,944 in each of 20 repeats too. The simulator had batched swings at 2 swings at 338 a
@@ -50,40 +50,40 @@ describe("generateClockForConfig", () => {
         });
 
         it("holds the target of 380 a second with 3 hands an inserter a cycle", () => {
-            expect(selected.label).toBe("6 output swings per cycle, subtick clock");
+            expect(selected.label).toBe("Takt Batches: 6 output swings each output cycle, subtick clock");
             expect(selected.verdict).toBe("stable");
             expect(selected.assessment.items_per_second).toBeCloseTo(380, 6);
-            // 6 hands a machine in each of the 3 cycles of the period, over all four output inserters
+            // 6 hands a machine in each of the 3 cycles of the window cycle, over all four output inserters
             expect(selected.result.stability_check.expected_output_items).toBe(2 * 6 * 16 * 3);
         });
 
         it("does not call a clock stable whose swings do not come out whole for each output inserter", () => {
-            const odd = alternatives.filter(a => /(: | )?[135] output swings? per cycle/.test(a.label));
+            const odd = alternatives.filter(a => /(: | )?[135] output swings? each output cycle/.test(a.label));
             expect(odd.length).toBeGreaterThan(0);
             expect(odd.every(a => a.verdict !== "stable")).toBe(true);
         });
 
         // a biochamber takes bacteria under a limit of 28, which holds a hand of 16, so a hand it refuses is taken at the next
-        // window: each loop inserter gets a window of a swing and a tick for each of its 2 hands a period, from midway
+        // window: each loop inserter gets a window of a swing and a tick for each of its 2 hands a window cycle, from midway
         // between the openings of its source's first two output windows (inLoopInserterWindows)
         it("gives the inserters between the machines a window for each hand, and leaves them always enabled in observed windows", () => {
             for (const id of ["inserter:7", "inserter:8"]) {
                 expect(windows[id]).toEqual([{ start: 15, end: 23 }, { start: 60, end: 68 }]);
             }
             expect(selected.result.loop_windows?.in_loop_ids?.slice().sort()).toEqual(["inserter:7", "inserter:8"]);
-            const observed = alternatives.find(a => a.id === "derived-subtick")!;
+            const observed = alternatives.find(a => a.maker === "derived-subtick")!;
             expect(observed.verdict).toBe("stable");
             expect(observed.result.clock_windows["inserter:7"]).toBeUndefined();
             expect(observed.result.clock_windows["inserter:8"]).toBeUndefined();
         });
 
-        // belt pickup slack is not given to a period that is not a whole number of ticks (GOALS.md, the belt a clock is made for)
+        // belt pickup slack is not given to a window cycle that is not a whole number of ticks (GOALS.md, the belt a clock is made for)
         it("names every clock a backed-up belt clock on its clock of 90.947 ticks, the subtick one and the rounded one, and counts none as having left the slack out", () => {
             expect(alternatives.length).toBeGreaterThan(0);
             expect(alternatives.map(a => a.belt)).toEqual(alternatives.map(() => ({ kind: "backed_up" })));
-            expect(alternatives.some(a => a.id.endsWith("-subtick"))).toBe(true);
+            expect(alternatives.some(a => a.id.endsWith("_subtick"))).toBe(true);
             expect(alternatives.every(a => a.ranking.matches_belt_choice)).toBe(true);
-            expect(alternatives[0].description).toContain("The slack is not given to a clock whose period is not a whole number of ticks");
+            expect(alternatives[0].description).toContain("The belt slack is not given to a clock whose window cycle time is not a whole number of ticks");
         });
     });
 
@@ -93,7 +93,7 @@ describe("generateClockForConfig", () => {
     // That recording was of one start of the clock. An inserter that waits for a machine at its output block takes
     // its items a tick after the output inserter has cleared it (see the Hand's idle rule), and with that tick
     // the simulator found a start of the clock from which the derived windows with 2 ticks of padding make 92 of 96 a
-    // period: they passed from 12 starts and failed the check of them all, and the search of the padding then needed two
+    // window cycle: they passed from 12 starts and failed the check of them all, and the search of the padding then needed two
     // paddings in a row to pass, so it found nothing. The search since 2026-10-11 confirms a padding without a passing
     // neighbour when there is none with one: the windows with no padding pass from every start and over the long run,
     // where a tick of padding does not. Whether the game has that state is not recorded; there is no scaffold of this

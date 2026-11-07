@@ -11,7 +11,7 @@ import type { LiveCoverage } from '../worker/types';
  */
 function coverageKey(config: Config): string {
     return JSON.stringify({
-        target: config.target_output,
+        target: config.setpoint,
         machines: config.machines.map(({ id, recipe, fuel, productivity, prototype, result_target }) => [id, recipe, fuel, productivity, prototype,
             result_target?.type ?? null, result_target?.id ?? null]),
         belts: config.belts.map(({ id, type, lanes }) => [id, type, lanes.map(lane => [lane.ingredient, lane.stack_size,

@@ -84,7 +84,8 @@ describe("the fractional swings task", () => {
         expect(plan.context.fractional_is_primary).toBe(true);
         expect(ids(plan)).not.toContain("fractional");
         const made = runClockAlternativeTask(config, { ...plan.context, fractional_is_primary: undefined }, "fractional", options, [signature]);
-        expect(made).toEqual({ signature, alternatives: [] });
+        // merged into the primary's run: it lists nothing, and still carries the clocks it made as parts of the per-branch clock
+        expect({ ...made, parts: undefined }).toEqual({ signature, alternatives: [], parts: undefined });
     });
 
     it("is made where a swing of the first plan is fractional", async () => {

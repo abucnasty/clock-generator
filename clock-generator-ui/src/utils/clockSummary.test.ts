@@ -25,7 +25,7 @@ import {
 
 const TARGET = 240;
 
-type Loss = NonNullable<SummaryClock['assessment']['backpressure_loss']>;
+type Loss = NonNullable<SummaryClock['assessment']['disturbance_trial']>;
 
 interface ClockOptions extends Partial<ClockRanking> {
     verdict?: ClockVerdict;
@@ -49,7 +49,7 @@ function clock(id: string, options: ClockOptions = {}): SummaryClock {
         ...ranking,
     };
     const tried: Loss | null = verdict === 'unstable' ? null : {
-        survives: verdict === 'stable', broken_by: verdict === 'no recovery' ? ['an input stops arriving'] : [], recovered_after_periods: verdict === 'stable' ? 1 : null,
+        survives: verdict === 'stable', broken_by: verdict === 'no recovery' ? ['an input stops arriving'] : [], recovered_after_window_cycles: verdict === 'stable' ? 1 : null,
     };
     return {
         id, label: `Engine name of ${id}`, verdict, beltLabel, deciders,
@@ -59,7 +59,7 @@ function clock(id: string, options: ClockOptions = {}): SummaryClock {
             holds: verdict !== 'unstable',
             items_per_second: TARGET + full.rate_off_target,
             wake_ups_per_minute: full.wake_ups_per_minute,
-            backpressure_loss: loss === null || tried === null ? null : { ...tried, ...loss },
+            disturbance_trial: loss === null || tried === null ? null : { ...tried, ...loss },
             start_dependence: null,
         },
     };
@@ -72,10 +72,10 @@ describe('sampled starts remain separate from rate and recovery', () => {
     it('names a target-rate dependent clock and retains its evaluated recovery and actual sample counts', () => {
         const dependent = clock('dependent', { verdict: 'unstable', meets_target_rate: false });
         dependent.assessment = { ...dependent.assessment, holds: true,
-            backpressure_loss: { survives: true, broken_by: [], recovered_after_periods: 2 },
+            disturbance_trial: { survives: true, broken_by: [], recovered_after_window_cycles: 2 },
             start_dependence: { verdict: 'start-dependent', expected_output_items: 240,
                 starts: ['cold', 'ascending'].map((id, i) => ({ id, label: id, reaches_target: i === 0,
-                    output_items_per_period: i === 0 ? 240 : 120, cycle: null, off_bins: null, span_items: null, long_run_keeps_up: i === 0 })) } };
+                    output_items_per_window_cycle: i === 0 ? 240 : 120, cycle: null, off_bins: null, span_items: null, long_run_keeps_up: i === 0 })) } };
         expect(nameOf([dependent], 'dependent')).toEqual([SUMMARY_COPY.startDependent]);
         expect(worksOf(dependent)).toEqual({ kind: 'caution', text: SUMMARY_COPY.worksStartDependent });
         expect(recoversOf(dependent)).toMatchObject({ kind: 'yes', value: SUMMARY_COPY.recoversYes });
@@ -212,9 +212,9 @@ describe('recoversOf', () => {
     it('says why the recovery of a clock that holds could not be tried', () => {
         const reason = 'A clock of 47.537 ticks does not repeat in whole ticks, so its output cannot be counted by the period';
         const untried = clock('a', { loss: null });
-        untried.assessment.backpressure_loss_not_tried = reason;
+        untried.assessment.disturbance_trial_not_tried = reason;
         expect(recoversOf(untried)).toEqual({ kind: 'not-tested', value: SUMMARY_COPY.recoversUnavailable, detail: SUMMARY_COPY.recoversNotTriedDetail(reason) });
-        // the why itself, and the period that closes it
+        // the why itself, and the window cycle that closes it
         expect(recoversOf(untried).detail).toContain(`: ${reason}.`);
     });
 

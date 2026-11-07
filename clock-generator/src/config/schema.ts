@@ -15,6 +15,8 @@ import { MachineStatus } from "../state/entity-status";
 import { COPIES_DECIMAL_ERROR, isShortDecimalCopies } from "./copies-value";
 import { migrateBeltSupplyOverrides } from "./migrate-belt-supply";
 import { dropFractionalSwingsOverride } from "./migrate-fractional-swings";
+import { renameLoopSeedItemsToKickStart } from "./migrate-kick-start";
+import { renameTargetOutputToSetpoint } from "./migrate-setpoint";
 import { migrateBlockedSlotFilter } from "./migrate-blocked-slots";
 import { migrateMiningProductivityLevelStep } from "./migrate-mining-productivity";
 import { migrateMachineTypeStep } from "./migrate-machine-type";
@@ -135,8 +137,8 @@ export const TARGET_COUNTS = ["made", "destroyed"] as const;
 export type TargetCounts = typeof TARGET_COUNTS[number];
 
 export const TargetProductionRateConfigSchema = z.object({
-    recipe: z.string().describe("The name of the item that the target output counts."),
-    items_per_second: z.number().positive().describe("The rate of the target output for all copies together, in items per second."),
+    recipe: z.string().describe("The name of the item that the setpoint counts."),
+    items_per_second: z.number().positive().describe("The rate of the setpoint for all copies together, in items per second."),
     copies: z.number().positive().refine(isShortDecimalCopies, {
         message: COPIES_DECIMAL_ERROR,
     }).describe("The number of identical builds in the game, which can be partial, for example 2.25."),
@@ -192,7 +194,7 @@ const EnableControlOverrideNeverSchema = z.object({
 const EnableControlOverrideClockedSchema = z.object({
     mode: z.literal(EnableControlMode.CLOCKED).describe("CLOCKED: the entity is enabled during the enable windows that you give."),
     ranges: z.array(EnableControlRangeSchema).min(1).describe("The enable windows of the entity, as tick ranges of the window cycle."),
-    period_duration_ticks: z.number().int().positive().optional().describe("The window cycle time of these enable windows, in ticks; the default is the time of the planned crafting cycles."),
+    period_duration_ticks: z.number().int().positive().optional().describe("The window cycle time of these enable windows, in ticks; the default is the time of the planned output cycles."),
     /**
      * Where the decider of these windows stands in the order the clock's deciders are built, 0 the first: set by the
      * check of an exported clock, which builds them in the order of its blueprint. Of two inserters whose windows open
@@ -368,7 +370,7 @@ const DrillTargetConfigSchema = z.discriminatedUnion("type", [DrillTargetMachine
  * Overrides configuration for mining drills.
  */
 const MiningDrillOverridesConfigSchema = z.object({
-    enable_control: EnableControlOverrideConfigSchema.optional().describe("The enable rule of the drill."),
+    enable_control: EnableControlOverrideConfigSchema.optional().describe("The Enable Control Strategy override of the drill."),
     /**
      * For a drill into a chest on the windows the generator makes for it (no enable control, or AUTO): ticks each window
      * starts earlier than the fewest that keep the chest's takers supplied. The generator tries 1 when a clock does not
@@ -512,7 +514,7 @@ export type InserterAnimationOverrideConfig = z.infer<typeof InserterAnimationOv
  */
 const InserterOverridesConfigSchema = z.object({
     animation: InserterAnimationOverrideConfigSchema.optional().describe("Settings that replace the movement times of the inserter."),
-    enable_control: EnableControlOverrideConfigSchema.optional().describe("The enable rule of the inserter.")
+    enable_control: EnableControlOverrideConfigSchema.optional().describe("The Enable Control Strategy override of the inserter.")
 });
 
 export const InserterConfigSchema = z.object({
@@ -769,13 +771,13 @@ export type ChestConfig = z.infer<typeof ChestConfigSchema>;
 // Config Overrides
 // ============================================================================
 
-export const ConfigOverridesSchema = z.preprocess(dropFractionalSwingsOverride, z.preprocess(migrateBeltSupplyOverrides, z.object({
-    lcm: z.number().int().positive().optional().describe("The number of crafting cycles in one window cycle; without it, the generator calculates the number."),
+export const ConfigOverridesSchema = z.preprocess(renameLoopSeedItemsToKickStart, z.preprocess(dropFractionalSwingsOverride, z.preprocess(migrateBeltSupplyOverrides, z.object({
+    lcm: z.number().int().positive().optional().describe("The number of output cycles in one window cycle; without it, the generator calculates the number."),
     /**
      * Forces the number of output swings per crafting cycle. Without it the generator picks the count and lowers it
      * until the output is stable.
      */
-    terminal_swing_count: z.number().int().positive().optional().describe("The number of output swings in each crafting cycle; without it, the generator chooses the number."),
+    terminal_swing_count: z.number().int().positive().optional().describe("The number of output swings in each output cycle; without it, the generator chooses the number."),
     /**
      * Input supply is backed up at the pickup: items stop between grabs and upstream supply refills the gaps at belt
      * speed, so a hand takes the stacks in reach a tick each and then waits for the belt to bring the rest. Geometry is
@@ -788,7 +790,7 @@ export const ConfigOverridesSchema = z.preprocess(dropFractionalSwingsOverride, 
      *
      * @default false
      */
-    backed_up_belts: z.boolean().optional().describe("Whether the input belts are backed up at the pickup, so that the clocks have no belt pickup slack."),
+    backed_up_belts: z.boolean().optional().describe("Whether the input belts are backed up at the pickup, so that the clocks have no belt slack."),
     /**
      * Run the four searches for every build: observed windows, uneven output swings, shifted swings and full-hand
      * output swings. They take most of the time of a generation.
@@ -801,7 +803,7 @@ export const ConfigOverridesSchema = z.preprocess(dropFractionalSwingsOverride, 
     search_for_fewer_wake_ups: z.boolean().optional().describe("Whether the generator always does the four searches, to find a clock with fewer wakeups."),
     /**
      * Try every clock from other starts than the plain cold start of the staged scaffold too: with the clock standing 30,
-     * 300, 700 and 1000 ticks into its period at the first tick, and with the inserters that compete for one machine's
+     * 300, 700 and 1000 ticks into its window cycle at the first tick, and with the inserters that compete for one machine's
      * product served in ascending config ids and in two random orders. The clock is stable when it reaches its target
      * from every start, start-dependent when it does from some, unstable when it does from none; a start-dependent
      * clock is listed with where it reaches its target and where it settles elsewhere.
@@ -814,11 +816,11 @@ export const ConfigOverridesSchema = z.preprocess(dropFractionalSwingsOverride, 
     check_start_dependence: z.boolean().optional().describe("Whether the generator tests each clock from more starts than the cold start."),
     /**
      * Items of its own product a machine whose recipe makes its own ingredient (pentapod eggs) is given once when a clock
-     * starts on the staged scaffold: the loop cannot start itself, so the scaffold's machines are seeded by hand.
+     * starts on the staged scaffold: the loop cannot start itself, so the scaffold's machines get their kick start by hand.
      *
      * @default 200
      */
-    loop_seed_items: z.number().int().nonnegative().optional().describe("The number of its own product that a machine gets at the start when its recipe uses that product."),
+    kick_start_items: z.number().int().nonnegative().optional().describe("The kick start: the number of its own product that a machine gets before its clock starts, when its recipe uses that product."),
     /**
      * @deprecated Ignored. Set terminal_swing_count to force an output swing count instead; other counts are
      * offered as potential clocks.
@@ -838,10 +840,10 @@ export const ConfigOverridesSchema = z.preprocess(dropFractionalSwingsOverride, 
      * Inserters that exclusively transfer items in this list will not contribute
      * their transfer fractions to the LCM computation, reducing the overall LCM.
      * Any such inserter should be set to ALWAYS enabled so it runs every cycle
-     * regardless of the clock period.
+     * regardless of the window cycle.
      */
     ignored_lcm_ingredients: z.array(z.string()).optional().describe("The items that do not change the window cycle time; set each inserter that moves only these items to ALWAYS.")
-})));
+}))));
 
 export type ConfigOverrides = z.infer<typeof ConfigOverridesSchema>;
 
@@ -849,8 +851,8 @@ export type ConfigOverrides = z.infer<typeof ConfigOverridesSchema>;
 // Root Config
 // ============================================================================
 
-export const ConfigSchema = z.preprocess(normalizePickupCaptureConfig, z.object({
-    target_output: TargetProductionRateConfigSchema.describe("The product that the build must make, and its rate."),
+export const ConfigSchema = z.preprocess(renameTargetOutputToSetpoint, z.preprocess(normalizePickupCaptureConfig, z.object({
+    setpoint: TargetProductionRateConfigSchema.describe("The setpoint: the product that the build must make, and the rate it must hold. The clock never changes it."),
     machines: z.array(MachineConfigurationSchema).describe("The machines of the build."),
     drills: DrillsConfigSchema.optional().describe("The mining drills of the build."),
     inserters: z.array(InserterConfigSchema).describe("The inserters of the build."),
@@ -889,13 +891,13 @@ export const ConfigSchema = z.preprocess(normalizePickupCaptureConfig, z.object(
             const target = config.machines.find(target => target.id === machine.result_target!.id);
             const path = ["machines", index, "result_target"];
             if (!target) {
-                context.addIssue({ code: "custom", path: [...path, "id"], message: `Machine ${machine.id} places its results into machine ${chest_id}, which is not in the config` });
+                context.addIssue({ code: "custom", path: [...path, "id"], message: `Machine ${machine.id} places its results into machine ${chest_id}, which is not in the configuration` });
             } else if (target.id === machine.id) {
                 context.addIssue({ code: "custom", path, message: `Machine ${machine.id} cannot place its results into itself. Pick the machine at its output side.` });
             }
         } else if (!config.chests?.some(chest => chest.id === chest_id)) {
             context.addIssue({ code: "custom", path: ["machines", index, "result_target", "id"],
-                message: `Machine ${machine.id} places its results into chest ${chest_id}, which is not in the config` });
+                message: `Machine ${machine.id} places its results into chest ${chest_id}, which is not in the configuration` });
         }
         // the prototype's game data says whether it places its results itself; without the data this is checked when it loads
         if (FactorioDataService.isAvailable() && !machinePlacesResults(machine)) {
@@ -918,14 +920,14 @@ export const ConfigSchema = z.preprocess(normalizePickupCaptureConfig, z.object(
         const chest_id = drill.target.id;
         if (!config.chests?.some(chest => chest.id === chest_id)) {
             context.addIssue({ code: "custom", path: ["drills", "configs", index, "target", "id"],
-                message: `Drill ${drill.id} drops into chest ${chest_id}, which is not in the config` });
+                message: `Drill ${drill.id} drops into chest ${chest_id}, which is not in the configuration` });
         }
         // a drill into a chest is on the windows the generator makes for it (AUTO), on its own (CLOCKED) or always on;
         // a condition needs an inserter's hand to read, and a drill that never runs fills nothing
         const mode = drill.overrides?.enable_control?.mode;
         if (mode === EnableControlMode.CONDITIONAL || mode === EnableControlMode.NEVER) {
             context.addIssue({ code: "custom", path: ["drills", "configs", index, "overrides", "enable_control"],
-                message: `Drill ${drill.id} drops into a chest; its enable control can be AUTO, CLOCKED or ALWAYS, not ${mode}` });
+                message: `Drill ${drill.id} drops into a chest; its override can be AUTO, CLOCKED or ALWAYS, not ${mode}` });
         }
     });
     // a drop spot is all or none per belt: the lane rule needs every stack on it
@@ -945,7 +947,7 @@ export const ConfigSchema = z.preprocess(normalizePickupCaptureConfig, z.object(
                 "give every inserter that drops on a belt a `drop` (lane and position), or none"
         });
     }
-}));
+})));
 
 /** Parsed configs have explicit pickup geometry on every belt source. */
 export type ParsedConfig = z.infer<typeof ConfigSchema>;

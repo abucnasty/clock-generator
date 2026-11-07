@@ -64,7 +64,7 @@ describe("turnTicks", () => {
     });
 
     it("runs on past the period's last tick where a window wraps over it", () => {
-        // a window of 20 ticks that opens 10 ticks before the period ends and wraps: split into 102..111 and 0..9
+        // a window of 20 ticks that opens 10 ticks before the window cycle ends and wraps: split into 102..111 and 0..9
         expect(turnTicks(100, [range(100, 100), range(102, 111), range(0, 9)], 112)).toEqual({ start: 100, end: 121 });
     });
 

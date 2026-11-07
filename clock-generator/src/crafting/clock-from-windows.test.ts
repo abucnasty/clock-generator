@@ -17,10 +17,10 @@ const windows = (text: string) => text.split(" ").map(range => {
 // on a clock of 528 ticks: 11 crafting cycles of 48 with 2 output swings in each.
 //
 // The windows are those of the clock its reporter tightened by hand from the one version 0.5.0 made. Recorded on the
-// scaffold in Factorio 2.1.21 on 2026-10-10: 704 advanced circuits in each of 68 periods under both, at 355 wake-ups
+// scaffold in Factorio 2.1.21 on 2026-10-10: 704 advanced circuits in each of 68 window cycles under both, at 355 wake-ups
 // a minute under this one and 464 under the generated one.
 describe("a clock built from windows that are given", () => {
-    const PERIOD = 528;
+    const WINDOW_CYCLE = 528;
     const electronic_circuits = windows("1-6 33-54 76-85 129-150 172-182 268-289 316-337 364-385 417-437 460-470");
     const copper_cable = windows("26-47 74-95 122-143 170-191 218-239 266-287 314-335 362-383 410-431 458-479 506-519");
     const plastic = windows("29-42 77-90 125-133 173-178 269-282 317-330 365-378 413-426 461-466");
@@ -44,11 +44,11 @@ describe("a clock built from windows that are given", () => {
     beforeAll(async () => {
         const sample = await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT_240);
         config = { ...sample, overrides: { ...sample.overrides, terminal_swing_count: 2 } };
-        result = clockFromWindows(config, tightened, PERIOD, quiet);
+        result = clockFromWindows(config, tightened, WINDOW_CYCLE, quiet);
     });
 
     it("builds the windows as they are", () => {
-        expect(result.simulation_duration.ticks).toBe(PERIOD);
+        expect(result.simulation_duration.ticks).toBe(WINDOW_CYCLE);
         expect(result.clock_windows).toEqual(tightened);
         expect(result.belt_pickup_slack_ticks).toEqual({});
     });
@@ -72,6 +72,6 @@ describe("a clock built from windows that are given", () => {
     });
 
     it("refuses windows of another period than the config is planned on", () => {
-        expect(() => clockFromWindows(config, tightened, 792, quiet)).toThrow(/of a clock of 792 ticks, and the config is planned on one of 528/);
+        expect(() => clockFromWindows(config, tightened, 792, quiet)).toThrow(/of a clock of 792 ticks, and the configuration is planned on one of 528/);
     });
 });

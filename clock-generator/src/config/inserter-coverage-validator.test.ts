@@ -50,7 +50,7 @@ describe('validateInserterCoverage', () => {
 
     describe('burner fuel', () => {
         const biochamberConfig = (extraInserters: object[]) => ({
-            target_output: { recipe: 'nutrients-from-yumako-mash', items_per_second: 1, copies: 1 },
+            setpoint: { recipe: 'nutrients-from-yumako-mash', items_per_second: 1, copies: 1 },
             machines: [
                 { id: 1, recipe: 'nutrients-from-yumako-mash', productivity: 0, crafting_speed: 2, prototype: 'biochamber' },
             ],

@@ -117,11 +117,11 @@ export function drillConfig(variant: DrillCase, productivity: number, speed_bonu
     const inserters = variant.taker ? [{id: 1, source, sink: {type: "chest", id: 10}, prototype: variant.taker, quality: "normal"}] : [];
     const disposal = {type: "infinity-chest", id: 10, item_filter: [], remove_unfiltered_items: true};
     if (variant.sink === "car") {
-        return ConfigSchema.parse({target_output: {recipe: "iron-gear-wheel", items_per_second: 1, copies: 1}, belts: [], drills, inserters,
+        return ConfigSchema.parse({setpoint: {recipe: "iron-gear-wheel", items_per_second: 1, copies: 1}, belts: [], drills, inserters,
             machines: [{id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0}],
             chests: [{type: "car", id: 1, slot_filters: Array.from({length: 78}, (_, index) => ({slot: index + 1, item: "copper-plate"}))}, disposal]});
     }
-    return ConfigSchema.parse({target_output: {recipe: variant.sink, items_per_second: 0.1, copies: 1}, belts: [], drills, inserters,
+    return ConfigSchema.parse({setpoint: {recipe: variant.sink, items_per_second: 0.1, copies: 1}, belts: [], drills, inserters,
         machines: [{id: 1, recipe: variant.sink, crafting_speed: 0.5, productivity: 0}], chests: inserters.length ? [disposal] : []});
 }
 

@@ -10,10 +10,10 @@ import { TargetProductionRate } from "./target-production-rate";
 // Whether the drops of the copies fit, before Generate
 // ============================================================================
 //
-// The editor says it under "Next copy stands", for a period estimated from the config alone: the ticks one output hand takes at
-// the rate the target asks of a machine, which is the clock planner's base cycle (`CraftingCyclePlan.create`). The clock's own
-// period is that times the cycles in which every inserter moves whole hands, which only the plan knows, so the note says it is
-// an estimate and the result (the drop-spacing insight) speaks of the clock's period.
+// The editor says it under "Next copy stands", for a window cycle estimated from the config alone: the ticks one output hand takes at
+// the rate the target asks of a machine, which is the clock planner's base cycle (`OutputCyclePlan.create`). The clock's own
+// window cycle is that times the cycles in which every inserter moves whole hands, which only the plan knows, so the note says it is
+// an estimate and the result (the drop-spacing insight) speaks of the clock's window cycle.
 
 const WHOLE_TICK_SLACK = 1e-6;
 
@@ -22,11 +22,11 @@ const WHOLE_TICK_SLACK = 1e-6;
  * at least one swing of the output inserter. None where it cannot be told: the machines making the target differ in rate or
  * hand, one of them has not exactly one inserter taking its product out, or the config is refused.
  */
-export function estimatedPeriod(config: Config): number | null {
+export function estimatedWindowCycle(config: Config): number | null {
     try {
         const rates = computeMachineTargetRates(config);
         const registry = createEntityRegistryFromConfig(config);
-        const item = TargetProductionRate.fromConfig(config.target_output).machine_production_rate.item;
+        const item = TargetProductionRate.fromConfig(config.setpoint).machine_production_rate.item;
         const machines = registry.getAll().filter(Entity.isMachine).filter(machine => machine.output.item_name === item);
         if (machines.length === 0) return null;
         const ticks = machines.map(machine => {
@@ -38,14 +38,14 @@ export function estimatedPeriod(config: Config): number | null {
         if (ticks.some(it => it === null)) return null;
         const first = ticks[0]!;
         if (ticks.some(it => Math.abs(it!.ticks - first.ticks) > WHOLE_TICK_SLACK * first.ticks)) return null;
-        const period = Math.floor(first.ticks * (config.overrides?.lcm ?? 1) + WHOLE_TICK_SLACK);
-        return Math.max(period, first.swing);
+        const window_cycle_ticks = Math.floor(first.ticks * (config.overrides?.lcm ?? 1) + WHOLE_TICK_SLACK);
+        return Math.max(window_cycle_ticks, first.swing);
     } catch {
         return null;
     }
 }
 
-export const DROP_ROOM_NOT_ESTIMATED = "The period of the clock cannot be estimated from these settings, so whether the hands of the copies fit between each other is shown in the result after Generate.";
+export const DROP_ROOM_NOT_ESTIMATED = "The window cycle time of the clock cannot be estimated from these settings, so whether the hands of the copies fit between each other is shown in the result after Generate.";
 
 const listed = (values: readonly (string | number)[]): string =>
     values.length <= 1 ? values.join("") : `${values.slice(0, -1).join(", ")} or ${values[values.length - 1]}`;
@@ -63,13 +63,13 @@ function alsoFits(room: DropRoom): string[] {
 }
 
 /**
- * The note under "Next copy stands": whether the hands of the copies fit between each other at the estimated period, with the
+ * The note under "Next copy stands": whether the hands of the copies fit between each other at the estimated window cycle, with the
  * inserters of a copy starting together, and the spacings that would. None where the copies share no belt, the gap between
  * them is not given, or no output inserter has a place (the note that asks for the gap is copyGapNeededNote).
  */
 export function dropRoomNote(config: Config): string | null {
-    const copies = config.target_output.copies;
-    if (!(copies > 1) || config.target_output.copy_offset === undefined) return null;
+    const copies = config.setpoint.copies;
+    if (!(copies > 1) || config.setpoint.copy_offset === undefined) return null;
     let lines;
     try {
         lines = dropLines(config);
@@ -78,18 +78,18 @@ export function dropRoomNote(config: Config): string | null {
     }
     const left_out = uncheckedDrops(config).length > 0 ? ` ${DROP_SPACING_UNCHECKED}` : "";
     if (lines.length === 0) return left_out === "" ? null : DROP_SPACING_UNCHECKED;
-    const period = estimatedPeriod(config);
-    if (period === null) return `${DROP_ROOM_NOT_ESTIMATED}${left_out}`;
-    const room = dropRoom(config, lines, period);
+    const window_cycle_ticks = estimatedWindowCycle(config);
+    if (window_cycle_ticks === null) return `${DROP_ROOM_NOT_ESTIMATED}${left_out}`;
+    const room = dropRoom(config, lines, window_cycle_ticks);
     if (room === null) return null;
     const unchecked = ` ${DROP_SPACING_COPIES_ALIKE}${left_out}`;
-    if (room.crowded !== null) return `At about ${period} ticks a period, ${crowdedText(room.crowded, copies).replace(/^T/, "t")}${unchecked}`;
+    if (room.crowded !== null) return `At about ${window_cycle_ticks} ticks a window cycle, ${crowdedText(room.crowded, copies).replace(/^T/, "t")}${unchecked}`;
     const together = new Map(lines.flatMap(line => line.inserters.map(inserter => [inserter.id, [0]] as const)));
-    const spacing = dropSpacing(config, together, period);
+    const spacing = dropSpacing(config, together, window_cycle_ticks);
     if (spacing === null) return null;
     const belts = [...new Set(spacing.lines.map(line => line.belt_id))].sort((a, b) => a - b);
     const belt = belts.length === 1 ? `belt ${belts[0]}` : `belts ${belts.join(", ")}`;
-    const lead = `At about ${period} ticks a period (estimated from the target rate: one output hand at the machine's rate), the hands of the ${copies} copies`;
+    const lead = `At about ${window_cycle_ticks} ticks a window cycle (estimated from the setpoint: one output hand at the machine's rate), the hands of the ${copies} copies`;
     const more = alsoFits(room);
     const plus = room.loop !== null ? `, and at any of these plus ${room.loop}` : "";
     if (spacing.lines.every(line => line.fits)) {

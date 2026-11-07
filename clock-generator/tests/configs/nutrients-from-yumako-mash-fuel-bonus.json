@@ -1,5 +1,5 @@
 {
-  "target_output": {
+  "setpoint": {
     "recipe": "nutrients",
     "items_per_second": 3,
     "copies": 1

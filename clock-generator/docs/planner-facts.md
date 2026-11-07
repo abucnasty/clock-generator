@@ -65,10 +65,10 @@ traits, and nothing else makes them: a result's `machine_facts` (`machineFactsOf
 the configuration its entity keeps) and the UI's facts query (`computeMachineFacts`, from a machine's parameters) both project
 traits, and a test holds both to the traits `buildTraits` builds from the config, for every machine of every sample.
 
-**The duty of a machine group** is recorded with the feasibility result (`Feasibility.duties`, `src/crafting/feasibility/duty.ts`):
+**The utilization of a machine group** is recorded with the feasibility result (`Feasibility.utilizations`, `src/crafting/feasibility/utilization.ts`):
 the crafts a second the group must make (the pass's own demand figure) over the crafts a second its machines make at their
 crafting speed, as an exact fraction, for each group that must craft. It is recorded only: it skips no check, refuses nothing and
-changes no clock, and a duty of 1 can still clock (the biochamber fuel test config's one machine, `tests/configs/`, is asked exactly what it makes).
+changes no clock, and a utilization of 1 can still clock (the biochamber fuel test config's one machine, `tests/configs/`, is asked exactly what it makes).
 
 **The build plan** (`planBuild`, `src/crafting/planner/plan-build.ts`; types in `src/data-types/build-plan.ts`) is one arithmetic
 pass after the feasibility pass and before any simulation, over the facts, the graph and today's cycle plan
@@ -83,14 +83,14 @@ pass after the feasibility pass and before any simulation, over the facts, the g
   P-limit prunes: a period of 500,000 ticks or more. A count whose cycle the cycle plan refuses is listed with the
   plan's reason (`cycle-refused`), as today its run fails. The planned count is the planning run's (its prepare step);
   a count the simulator later finds unstable is not known here.
-- **Duty**: the duty of each machine group (`Feasibility.duties`) in the group that holds its machines.
+- **Duty**: the utilization of each machine group (`Feasibility.utilizations`) in the group that holds its machines.
 - **Composition**: the main period, the cycle's ticks times the lcm of every hand's denominator or the config's own lcm,
   with each group's cycles, and what is done over the limit (today's swing backoff, or refused).
 - **Result windows** of a target that counts an item destroyed: whole hands, or windows of their own for results that
-  come by small chances (`src/crafting/planner/result-windows.ts`).
+  come by small chances (`src/crafting/planner/exhaust.ts`).
 
 Nothing reads the plan yet but the result windows' decision: a planning run of a destroyed target makes its cycle plan
 with the decision of the config's plan (`buildPlanOfConfig`, once per config object), the same decision it made itself
 before. Each sample's plan is kept in `src/crafting/planner/__snapshots__/<KEY>.plan.json`; `vitest run -u` writes them
 again after a deliberate change, and the test holds every sample's main period to the planning run's
-(`validateConfig`) and its duty to the feasibility pass's.
+(`validateConfig`) and its utilization to the feasibility pass's.

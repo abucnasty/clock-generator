@@ -2,25 +2,25 @@
 // test of each build checked on the result that the record does not hold (see samples.ts for what the record does hold).
 import { expect } from 'vitest';
 import type { JobCheck } from '../record-job-checks';
-import { backpressureLossOf, selectableAsStable } from '../../../../src/crafting/generate-blueprint';
+import { disturbanceTrialOf, COORDINATED_SOURCES_MAKER, selectableAsStable } from '../../../../src/crafting/generate-blueprint';
 import type { ClockAlternative, ClockAlternativesResult } from '../../../../src/crafting/generate-blueprint';
-import { lossId, verdictOf, type BackpressureLossReport } from '../../../../src/crafting/backpressure-loss';
+import { lossId, verdictOf, type DisturbanceTrialReport } from '../../../../src/crafting/disturbance-trial';
 import { START_DEPENDENCE_NOT_CHECKED } from '../../../../src/crafting/start-dependence';
-import { SEARCH_IDS } from '../../../../src/crafting/generate-blueprint-test-helpers';
+import { SEARCH_MAKERS } from '../../../../src/crafting/generate-blueprint-test-helpers';
 import type { Config } from '../../../../src/config/schema';
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 const selectedOf = (generated: ClockAlternativesResult): ClockAlternative => generated.alternatives[generated.selected_index];
-const byId = (generated: ClockAlternativesResult, id: string): ClockAlternative => generated.alternatives.find(alternative => alternative.id === id)!;
+const byMaker = (generated: ClockAlternativesResult, maker: string): ClockAlternative => generated.alternatives.find(alternative => alternative.maker === maker)!;
 
 // Agricultural science with its belts backed up (AGRICULTURAL_SCIENCE_250_BACKED_UP). Three inserters take bioflux off a belt for their
 // biochambers, and the nutrients the biochambers burn. Without room for a hand of nutrients the windows of batched swings close on partly filled
-// hands of bioflux: recorded on the scaffold, 377 of 400 a period.
+// hands of bioflux: recorded on the scaffold, 377 of 400 a window cycle.
 const agriculturalBackedUp: JobCheck[] = [{
     name: 'makes batched swings with room for a hand of fuel, as a clock for a backed-up belt',
     run: ({ generated }) => {
-        const batched = byId(generated, 'planned-belt-slack');
-        expect(batched.label).toBe('Batched swings: 5 output swings per cycle');
+        const batched = byMaker(generated, 'planned-belt-slack');
+        expect(batched.label).toBe('Takt Batches: 5 output swings each output cycle');
         expect(batched.ranking.matches_belt_choice).toBe(true);
         expect(batched.result.belt_pickup_slack_ticks).toEqual({});
         expect(batched.result.fuel_hand_room_ticks).toEqual({ 'inserter:1': 4, 'inserter:2': 4, 'inserter:11': 4 });
@@ -33,19 +33,20 @@ const circuitExportBackedUp: JobCheck[] = [
     {
         name: 'Behavior: the explicit one-cycle plan is offered, in 24 ticks with 32 items, for a backed-up belt',
         run: ({ generated }) => {
-            const plan = byId(generated, 'planned-belt-slack');
+            const plan = byMaker(generated, 'planned-belt-slack');
             expect(plan, 'the explicit behavior plan is offered, independently of the selector').toBeDefined();
             expect(plan.result.stability_check.as_built).toMatchObject({ holds: true, actual_output_items: 32 });
             expect(plan.belt).toEqual({ kind: 'backed_up' });
         },
     },
     {
-        // the guard per taker gates the 12 takers whose hands and a start more take the 24-tick period; that clock does not get back
+        // the guard per taker gates the 12 takers whose hands and a start more take the 24-tick window cycle; that clock does not get back
         // from every loss, so it is remade once with the takers into the target machines (the processing unit machines 2 and 3) unguarded
+        // of the per-hand clock the grouped hands make, which the per-branch clock composed from it is recommended over
         name: 'Selection: the 4 inserters with no window are the circuits into the processing unit machines, which the remake leaves unguarded',
         run: ({ generated }) => {
-            expect(selectedOf(generated).result.always_on_reasons).toEqual(Object.fromEntries([3, 4, 7, 8]
-                .map(number => [`inserter:${number}`, { kind: 'busy', period_ticks: 24 }])));
+            expect(byMaker(generated, 'planned-belt-slack-per-hand').result.always_on_reasons).toEqual(Object.fromEntries([3, 4, 7, 8]
+                .map(number => [`inserter:${number}`, { kind: 'busy', window_cycle_ticks: 24 }])));
         },
     },
 ];
@@ -56,7 +57,7 @@ const inserterCraftingBackedUp: JobCheck[] = [{
     name: 'the simulator tries the loss of the ore, the circuits and the output not taken away, and gets back from each',
     run: ({ config, generated }) => {
         const selected = selectedOf(generated);
-        const report = backpressureLossOf(config, selected.result.clock_windows, selected.result.simulation_duration.ticks,
+        const report = disturbanceTrialOf(config, selected.result.clock_windows, selected.result.simulation_duration.ticks,
             selected.result.stability_check.expected_output_items, quiet);
         expect(report.undisturbed.recovers).toBe(true);
         expect(report.losses.map(outcome => [lossId(outcome.loss), outcome.recovers])).toEqual(
@@ -66,11 +67,11 @@ const inserterCraftingBackedUp: JobCheck[] = [{
 
 // Automation science with one output swing a cycle (AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING): the sample no longer forces it, and with it no
 // clock made without a search is stable, which the last group needs
-const reports = new WeakMap<object, BackpressureLossReport>();
+const reports = new WeakMap<object, DisturbanceTrialReport>();
 /** The backpressure-loss report of an alternative, made once for the checks of a job that read it */
-const reportOf = (config: Config, alternative: ClockAlternative): BackpressureLossReport => {
+const reportOf = (config: Config, alternative: ClockAlternative): DisturbanceTrialReport => {
     if (!reports.has(alternative)) {
-        reports.set(alternative, backpressureLossOf(config, alternative.result.clock_windows, alternative.result.simulation_duration.ticks,
+        reports.set(alternative, disturbanceTrialOf(config, alternative.result.clock_windows, alternative.result.simulation_duration.ticks,
             alternative.result.stability_check.expected_output_items, quiet));
     }
     return reports.get(alternative)!;
@@ -80,9 +81,9 @@ const reportOf = (config: Config, alternative: ClockAlternative): BackpressureLo
  * ghost wakeups (#641): it gets back from none of the build's three losses. Since then no clock of the job breaks on a loss.
  */
 const BROKEN_AUTOMATION_WINDOWS = { "inserter:1": [{ start: 1, end: 20 }], "inserter:2": [{ start: 1, end: 21 }, { start: 37, end: 56 }, { start: 73, end: 73 }] };
-const brokenReportOf = (config: Config, generated: ClockAlternativesResult): BackpressureLossReport => {
-    const fractional = byId(generated, 'fractional');
-    return backpressureLossOf(config, BROKEN_AUTOMATION_WINDOWS, fractional.result.simulation_duration.ticks,
+const brokenReportOf = (config: Config, generated: ClockAlternativesResult): DisturbanceTrialReport => {
+    const fractional = byMaker(generated, 'fractional');
+    return disturbanceTrialOf(config, BROKEN_AUTOMATION_WINDOWS, fractional.result.simulation_duration.ticks,
         fractional.result.stability_check.expected_output_items, quiet);
 };
 const automation: JobCheck[] = [
@@ -130,7 +131,7 @@ const automation: JobCheck[] = [
             const report = reportOf(config, selectedOf(generated));
             expect(report.survives).toBe(report.undisturbed.recovers && report.losses.every(outcome => outcome.recovers));
             expect(report.broken_by).toEqual(report.losses.filter(outcome => !outcome.recovers).map(outcome => lossId(outcome.loss)));
-            expect(report.recovered_after_periods === null).toBe(!report.survives);
+            expect(report.recovered_after_window_cycles === null).toBe(!report.survives);
         },
     },
     {
@@ -139,7 +140,7 @@ const automation: JobCheck[] = [
             const report = reportOf(config, selectedOf(generated));
             const verdict = verdictOf(report);
             expect(verdict.survives).toBe(report.survives);
-            expect(verdict.recovered_after_periods).toBe(report.recovered_after_periods);
+            expect(verdict.recovered_after_window_cycles).toBe(report.recovered_after_window_cycles);
             expect(verdictOf({ ...report, survives: false, losses: report.losses.map(outcome => ({ ...outcome, recovers: outcome.loss.kind !== 'supply' })) }).broken_by)
                 .toEqual(['copper plate stops arriving', 'iron gear wheel stops arriving']);
         },
@@ -148,7 +149,7 @@ const automation: JobCheck[] = [
         name: 'cuts at fewer places when asked, to make the run shorter',
         run: ({ config, generated }) => {
             const selected = selectedOf(generated);
-            const shorter = backpressureLossOf(config, selected.result.clock_windows, selected.result.simulation_duration.ticks,
+            const shorter = disturbanceTrialOf(config, selected.result.clock_windows, selected.result.simulation_duration.ticks,
                 selected.result.stability_check.expected_output_items, quiet, { places: [0] });
             expect(shorter.losses.every(outcome => outcome.trials.length === 4)).toBe(true);
         },
@@ -180,7 +181,8 @@ const automation: JobCheck[] = [
         name: 'runs the searches by default, where no clock made without a search is stable',
         run: ({ generated }) => {
             expect(generated.skipped_searches).toEqual([]);
-            expect(generated.alternatives.filter(a => !SEARCH_IDS.includes(a.id)).some(a => selectableAsStable(a.ranking))).toBe(false);
+            // the per-branch clock is made after the searches and does not count toward the gate
+            expect(generated.alternatives.filter(a => !SEARCH_MAKERS.includes(a.maker) && a.maker !== COORDINATED_SOURCES_MAKER).some(a => selectableAsStable(a.ranking))).toBe(false);
         },
     },
     {
@@ -210,14 +212,14 @@ const forcedSwings: JobCheck[] = [{
 const fractionalSwings: JobCheck[] = [{
     name: 'the fractional swings alternative: a cycle multiplier, a swing distribution that sums to the totals and alternates, a duration extended by the multiplier',
     run: ({ generated }) => {
-        const result = byId(generated, 'fractional').result;
-        expect(result.crafting_cycle_plan.fractional_swings_enabled).toBe(true);
-        expect(result.crafting_cycle_plan.cycle_multiplier).toBeDefined();
-        expect(result.crafting_cycle_plan.cycle_multiplier).toBeGreaterThan(1);
-        expect(result.crafting_cycle_plan.swing_distribution).toBeDefined();
-        expect(result.crafting_cycle_plan.swing_distribution!.size).toBeGreaterThan(0);
-        const distribution = result.crafting_cycle_plan.swing_distribution!;
-        const cycle_multiplier = result.crafting_cycle_plan.cycle_multiplier!;
+        const result = byMaker(generated, 'fractional').result;
+        expect(result.output_cycle_plan.fractional_swings_enabled).toBe(true);
+        expect(result.output_cycle_plan.cycle_multiplier).toBeDefined();
+        expect(result.output_cycle_plan.cycle_multiplier).toBeGreaterThan(1);
+        expect(result.output_cycle_plan.swing_distribution).toBeDefined();
+        expect(result.output_cycle_plan.swing_distribution!.size).toBeGreaterThan(0);
+        const distribution = result.output_cycle_plan.swing_distribution!;
+        const cycle_multiplier = result.output_cycle_plan.cycle_multiplier!;
         for (const swingDist of distribution.values()) {
             const sum = swingDist.swings_per_subcycle.reduce((a, b) => a + b, 0);
             expect(sum).toBe(swingDist.total_swings);
@@ -226,7 +228,7 @@ const fractionalSwings: JobCheck[] = [{
         // Should have alternating distribution (values differ by at most 1)
         const swings = distribution.get('inserter:1')!.swings_per_subcycle;
         expect(Math.max(...swings) - Math.min(...swings)).toBeLessThanOrEqual(1);
-        expect(result.simulation_duration.ticks).toBe(result.crafting_cycle_plan.total_duration.ticks * cycle_multiplier);
+        expect(result.simulation_duration.ticks).toBe(result.output_cycle_plan.total_duration.ticks * cycle_multiplier);
     },
 }];
 

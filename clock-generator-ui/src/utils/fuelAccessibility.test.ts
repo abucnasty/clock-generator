@@ -10,10 +10,10 @@ const levels = (updates: Partial<FuelLevelSeries> = {}): FuelLevelSeries => ({ m
 // Typed input fixtures exercise branches that may not be produced by the real fuel sample; browser parity uses actual worker output.
 function fuel(): FuelViewData {
     const defaults = { machine_id: 'machine', fuel_item: 'coal', hand_size: 4, hand_lasts_ticks: 20, modulus: 20, window: { start: 0, end: 3 }, enables_per_minute: 180, expected_swings_per_minute: 180, swing_share: 1 };
-    return { plan: { period_ticks: 12, merged_clock_ticks: 60, machines: [], inserters: [
+    return { plan: { window_cycle_ticks: 12, merged_clock_ticks: 60, machines: [], inserters: [
         { ...defaults, inserter_id: 'second', inserter_number: 2, machine_number: 7 },
         { ...defaults, inserter_id: 'first', inserter_number: 1, machine_number: 3 },
-    ] }, run: { periods: 2, durationTicks: 25, fuelSwingsRecorded: true, ranOutOfFuel: false,
+    ] }, run: { window_cycles: 2, durationTicks: 25, fuelSwingsRecorded: true, ranOutOfFuel: false,
         levels: [levels()], swings: { second: [{ start: 4.5, end: 6.5, amount: 2 }], first: [
             { start: 4.5, end: 7, amount: 3 }, { start: 0, end: 2, amount: 1 }, { start: 4.5, end: 6, amount: 0.5 },
         ] } } };

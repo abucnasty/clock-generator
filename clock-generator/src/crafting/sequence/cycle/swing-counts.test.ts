@@ -24,7 +24,7 @@ function swingsFor(map: EntityTransferCountMap, inserter_id: number): number {
 describe("the transfers of a cycle", () => {
     // belt -> [1] cable machine -> [2], [3] -> circuit machine -> [5] belt; belt -> [4] circuit machine
     const config = {
-        target_output: { recipe: "electronic-circuit", items_per_second: 10, copies: 1 },
+        setpoint: { recipe: "electronic-circuit", items_per_second: 10, copies: 1 },
         machines: [
             { id: 1, recipe: "copper-cable", productivity: 0, crafting_speed: 1, type: "machine" },
             { id: 2, recipe: "electronic-circuit", productivity: 0, crafting_speed: 1, type: "machine" },
@@ -57,7 +57,7 @@ describe("the transfers of a cycle", () => {
 describe("the transfers of a cycle through belts", () => {
     // belt 1 -> [1] cable machine -> [2] belt 2 -> [3] circuit machine -> [5] belt 3; belt 1 -> [4] circuit machine
     const configWithCableBelt = (cable_belt: object) => ({
-        target_output: { recipe: "electronic-circuit", items_per_second: 10, copies: 1 },
+        setpoint: { recipe: "electronic-circuit", items_per_second: 10, copies: 1 },
         machines: [
             { id: 1, recipe: "copper-cable", productivity: 0, crafting_speed: 1, type: "machine" },
             { id: 2, recipe: "electronic-circuit", productivity: 0, crafting_speed: 1, type: "machine" },
@@ -186,7 +186,7 @@ describe("output machines with several inserters taking from them", async () => 
 describe("EntityTransferCountMap.divide", () => {
     it("divides the hands a machine needs along with the hands planned", () => {
         const config = {
-            target_output: { recipe: "electronic-circuit", items_per_second: 10, copies: 1 },
+            setpoint: { recipe: "electronic-circuit", items_per_second: 10, copies: 1 },
             machines: [{ id: 1, recipe: "electronic-circuit", productivity: 0, crafting_speed: 1, type: "machine" }],
             belts: [{ id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "copper-cable", stack_size: 4 }, { ingredient: "iron-plate", stack_size: 4 }] }],
             inserters: [{ id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: 16 }],

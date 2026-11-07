@@ -1,5 +1,5 @@
 // The protocol of every script that starts Factorio for a check (owner 2026-11-03): a game run is timed in game ticks, never in
-// clock periods. Steady state is the first tick at which the machines that make the target item have finished the target
+// window cycles. Steady state is the first tick at which the machines that make the target item have finished the target
 // amount over the trailing minute (3,600 ticks); the baseline is the minute after it; no run is over 36,000 ticks (ten minutes)
 // unless it is asked for with `--long <reason>`, and then the reason is printed. The judgement is the game tests' own
 // (tests/game/helpers/lua/steady.lua records, tests/game/helpers/run-judgement.js judges): this module only starts it

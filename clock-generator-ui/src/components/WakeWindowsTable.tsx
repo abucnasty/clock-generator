@@ -22,7 +22,7 @@ import { WakeRowMoves } from './WakeRowMoves';
 
 interface WakeWindowsTableProps {
     rows: WakeWindowRow[];
-    periodTicks: number;
+    windowCycleTicks: number;
     mostWakeUpsId: string | null;
 }
 
@@ -30,7 +30,7 @@ const num = (value: number) => formatNumberText(value);
 const NAME = { header: WINDOWS_TABLE_HEADERS.name, rowHeader: true, sx: { whiteSpace: 'nowrap' } } as const;
 
 /** The chart's numbers as two tables: one row per inserter and drill, and one row per wake window */
-export function WakeWindowsTable({ rows, periodTicks, mostWakeUpsId }: WakeWindowsTableProps) {
+export function WakeWindowsTable({ rows, windowCycleTicks, mostWakeUpsId }: WakeWindowsTableProps) {
     const windowRows = rows.flatMap(row => row.windows.map((window, index) => ({ row, window, index })));
     return (
         <Box data-wake-tables sx={{ display: 'grid', gap: 3, mb: 3 }}>
@@ -40,7 +40,7 @@ export function WakeWindowsTable({ rows, periodTicks, mostWakeUpsId }: WakeWindo
                 { header: ROWS_TABLE_HEADERS.onFor, align: 'right', cell: row => onShareText(row.onShare) },
                 { header: ROWS_TABLE_HEADERS.windows, align: 'right', cell: windowCountText },
                 { header: ROWS_TABLE_WAKE_UPS_HEADER, align: 'right', cell: wakeUpsText },
-                { header: ROWS_TABLE_HEADERS.notes, sx: { minWidth: 280 }, cell: row => watchNotes(row, { periodTicks, mostWakeUpsId }).map(note => note.text).join(' ') },
+                { header: ROWS_TABLE_HEADERS.notes, sx: { minWidth: 280 }, cell: row => watchNotes(row, { windowCycleTicks, mostWakeUpsId }).map(note => note.text).join(' ') },
             ]} />
             <DataTable label={WINDOWS_TABLE_LABEL} caption={WINDOWS_TABLE_CAPTION} minWidth={720} rows={windowRows} rowKey={({ row, index }) => `${row.id}-${index}`}
                 empty={NO_WINDOWS_TEXT} columns={[

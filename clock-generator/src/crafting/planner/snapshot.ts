@@ -8,7 +8,7 @@ import type { BuildPlan } from "../../data-types/build-plan";
 export function planSnapshotOf(plan: BuildPlan, sample: string): string {
     const { schema, ...rest } = plan;
     const choices: string[] = [];
-    const groups = rest.groups.map(group => ({ ...group, periods: group.periods.map(choice => {
+    const groups = rest.groups.map(group => ({ ...group, window_cycles: group.window_cycles.map(choice => {
         choices.push(JSON.stringify(choice));
         return `\u0000${choices.length - 1}`;
     }) }));

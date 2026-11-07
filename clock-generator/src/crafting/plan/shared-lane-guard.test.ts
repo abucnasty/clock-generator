@@ -7,7 +7,7 @@ import { sharedLaneShortened } from "./shared-lane-guard";
 
 const windows = (entries: Record<string, [number, number][]>) =>
     new Map(Object.entries(entries).map(([id, ranges]) => [id, ranges.map(([start, end]) => OpenRange.from(start, end))]));
-const copiesOf = (config: Config, copies: number): Config => ({ ...config, target_output: { ...config.target_output, copies } });
+const copiesOf = (config: Config, copies: number): Config => ({ ...config, setpoint: { ...config.setpoint, copies } });
 
 describe("windows by arithmetic on a belt the copies share", () => {
     // INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK: three copies take 3 x 53.33 = 160 ore a second from each ore belt (inserters
@@ -18,7 +18,7 @@ describe("windows by arithmetic on a belt the copies share", () => {
     it("keeps the planning run's windows where the copies take from a belt with room to spare and the arithmetic shortens its takers", async () => {
         const config = await loadConfigFromFile(ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK);
         expect(sharedLaneShortened(config, made, planned)).toBe(
-            "the 3 copies take 160.00 a second from belt 1, of 240.00, and inserter:1, inserter:2 would be open for less than the planning run has them");
+            "the 3 copies take 160.00 a second from belt 1, of 240.00, and inserter:1, inserter:2 would be open for less than the unclocked run has them");
     });
 
     it("leaves a belt the copies take every item of, and a build of one copy", async () => {
@@ -39,8 +39,8 @@ describe("windows by arithmetic on a belt the copies share", () => {
     it("leaves a build whose copies take everything their shared belt carries, not one whose copies leave room", async () => {
         const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240);
         expect(sharedLaneShortened(config, windows({ "inserter:1": [[1, 13]] }), windows({ "inserter:1": [[26, 45]] }))).toBeNull();
-        const slower = { ...config, target_output: { ...config.target_output, items_per_second: 200 } };
+        const slower = { ...config, setpoint: { ...config.setpoint, items_per_second: 200 } };
         expect(sharedLaneShortened(slower, windows({ "inserter:1": [[1, 13]] }), windows({ "inserter:1": [[26, 45]] })))
-            .toBe("the 11 copies take 200.00 a second from belt 2, of 240.00, and inserter:1 would be open for less than the planning run has them");
+            .toBe("the 11 copies take 200.00 a second from belt 2, of 240.00, and inserter:1 would be open for less than the unclocked run has them");
     });
 });

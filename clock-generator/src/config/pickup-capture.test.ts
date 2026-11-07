@@ -6,7 +6,7 @@ import {sidecarPickupInserters} from "./pickup-capture";
 import {SimulationContext} from "../crafting/sequence/simulation-context";
 
 const base = () => ({
-    target_output: {recipe: "iron-gear-wheel", items_per_second: 1, copies: 1},
+    setpoint: {recipe: "iron-gear-wheel", items_per_second: 1, copies: 1},
     machines: [{id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0}],
     inserters: [
         {id: 1, source: {type: "belt", id: 1}, sink: {type: "machine", id: 1}, stack_size: 16},

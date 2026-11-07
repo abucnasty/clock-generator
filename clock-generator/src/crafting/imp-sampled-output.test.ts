@@ -6,7 +6,7 @@ import { parseConfig } from "../config/loader";
 import { OpenRange } from "../data-types";
 import { quiet } from "./generate-blueprint-test-helpers";
 import { judgeLongRun } from "./long-run";
-import { longRunPeriodsOf, runAsBuiltCheck } from "./trial";
+import { longRunWindowCyclesOf, runAsBuiltCheck } from "./trial";
 import { assessTargetProduction } from "./target-production";
 interface ImpFixture {
     config: unknown;
@@ -48,8 +48,8 @@ describe("the archived imp plan's sampled output shortfall", () => {
         expect(fixture.period).toBe(96);
         expect(standard.result.stability_check.expected_output_items).toBe(16);
         expect(diagnostic.result.stability_check.expected_output_items).toBe(16);
-        expect(longRunPeriodsOf(96)).toBe(120);
-        expect(longRunPeriodsOf(96, 72_000)).toBe(750);
+        expect(longRunWindowCyclesOf(96)).toBe(120);
+        expect(longRunWindowCyclesOf(96, 72_000)).toBe(750);
     });
 
     it("preserves the hand-sized deficit in the standard 80-period sample", () => {
@@ -63,16 +63,16 @@ describe("the archived imp plan's sampled output shortfall", () => {
         expect(diagnostic.check.long_run_proven).toBe(false);
         expect(diagnostic.check.holds).toBe(false);
         expect(judged(diagnostic)).toMatchObject({ total: 7904, expected_total: 8000,
-            keeps_up: false, output_items_per_period: 15.808 });
+            keeps_up: false, output_items_per_window_cycle: 15.808 });
         expect(judged(diagnostic).judged).toHaveLength(500);
     });
 
     it("candidate: rejects measured underproduction in both samples without changing the horizon", () => {
         expect(assessTargetProduction(judged(standard), standard.check.long_run_proven === true)).toEqual({
-            valid: false, shortfall: 16, output_items_per_period: 15.8, evidence: "sample",
+            valid: false, shortfall: 16, output_items_per_window_cycle: 15.8, evidence: "sample",
         });
         expect(assessTargetProduction(judged(diagnostic), diagnostic.check.long_run_proven === true)).toEqual({
-            valid: false, shortfall: 96, output_items_per_period: 15.808, evidence: "sample",
+            valid: false, shortfall: 96, output_items_per_window_cycle: 15.808, evidence: "sample",
         });
         // The isolated assessment does not mutate the currently published characterization.
         expect(judged(standard).keeps_up).toBe(true);

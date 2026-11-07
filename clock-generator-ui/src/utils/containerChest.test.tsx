@@ -20,7 +20,7 @@ FactorioDataService.initialize(JSON.parse(factorioData));
 /** Plates from an infinity chest into the container, from it into an assembler making gears, and out to a disposal chest */
 function build(container: Record<string, unknown>): Config {
     return {
-        target_output: { recipe: 'iron-gear-wheel', items_per_second: 5, copies: 1 },
+        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 5, copies: 1 },
         machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 3.125, productivity: 0 }],
         inserters: [
             { id: 1, source: { type: 'chest', id: 10 }, sink: { type: 'chest', id: 1 }, stack_size: 16, filters: ['iron-plate'] },
