@@ -14,6 +14,7 @@ import { sharedItemDeadlockRisks } from "../deadlock-risk";
 import { rankingWindowCount } from "../rank";
 import { turnOffsets } from "./taker-turns";
 import { targetItemOf, targetMachinesOf } from "../sequence/cycle/target-ends";
+import { offerPart, partsWanted } from "./per-branch-parts";
 
 /** Ticks added to the shortest window that starts the last hand: one for the tick a combinator takes, one of margin */
 const WINDOW_MARGIN_TICKS = 2;
@@ -773,6 +774,27 @@ function bestHolding(made: PlanRun, holding: HoldingWay[], shared: boolean): Hol
     return untried ?? (shared ? null : ranked[0] ?? null);
 }
 
+/**
+ * Offers the clock of a way to the per-branch clock as a part (per-branch-parts.ts), whether it holds or not, and the per-hand
+ * shape of its windows where it guards takers of more than one hand (`perHandWindows`), whose own count the composition makes.
+ * Nothing where no part is wanted.
+ */
+export function offerWay(name: string, clock: BlueprintGenerationResult, guarded: readonly GuardedTaker[]): void {
+    if (!partsWanted()) return;
+    const period_ticks = clock.simulation_duration.ticks;
+    const always_on = clock.always_on_reasons;
+    offerPart({ name, period_ticks, windows: clock.clock_windows, counted: clock.stability_check.as_built?.wake_ups !== undefined,
+        ...(always_on !== undefined && { always_on }) });
+    const split = guarded.filter(taker => taker.hands > 1 && clock.clock_windows[taker.inserter_id] !== undefined);
+    if (split.length === 0) return;
+    const windows = { ...clock.clock_windows };
+    for (const taker of split) {
+        windows[taker.inserter_id] = Array.from({ length: taker.hands }, (_, j) => (taker.start + j * taker.cycle_ticks) % period_ticks)
+            .sort((a, b) => a - b).map(tick => ({ start: tick, end: tick }));
+    }
+    offerPart({ name: `${name}, per hand`, period_ticks, windows, ...(always_on !== undefined && { always_on }) });
+}
+
 /** How a way is named in the planning log */
 function wayName(way: GroupedHandsOptions): string {
     const guard = way.surplus_guard ? " with the surplus guard"
@@ -868,6 +890,7 @@ export function groupedHandsClock(
             if (unmoved !== null) { reasons.push(unmoved); continue; }
             // the margin runs start from the cold start only: the clock has to hold from the other start phases too
             const clock_of_windows = finishedClock(made, windows, turns, options, left_open);
+            offerWay(`${wayName(way)}${way.share_windows ? ", shared" : ""}`, clock_of_windows, planned.guarded);
             if (clock_of_windows.stability_check.holds) {
                 holding.push({ way, clock: clock_of_windows, planned, left_open });
                 // the guard per taker that holds and does not get back from a loss is remade once, right after it, with the takers into

@@ -317,6 +317,11 @@ export interface BlueprintGenerationResult {
      * (`(hands - 1) x cycle_ticks + 2` ticks), which the per-hand variant splits into a tick at each pick; absent where none is.
      */
     grouped_hands?: { shared_windows: boolean; harmonic_window_cycle?: true; guarded_takers?: GuardedTaker[] };
+    /**
+     * The windows are the per-branch clock's (candidates/per-branch.ts): which part each group of inserters, by the entity they take
+     * from, took its windows from; absent for any other clock
+     */
+    per_branch?: { parts: Record<string, string> };
     /** The windows are of a planning run that counts every belt pickup from its entry, not from the take that freed it (see clockWithPickupsFromTheirEntry) */
     pickups_from_entry?: true;
     /**

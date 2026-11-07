@@ -38,6 +38,8 @@ export { StatusCategory, statusToCategory } from "./state/status-category";
 
 export { combineClockAlternativeRuns, searchesAreNeeded, searchesToRun } from "./crafting/rank";
 
+export { perBranchInputOf } from "./crafting/candidates/per-branch-parts";
+
 export { whyNotStable, whyNotStableClockOf } from "./crafting/why-not-stable";
 
 export { Option } from "./data-types/option";

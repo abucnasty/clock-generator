@@ -15,7 +15,8 @@ export type StrategyFamily =
     | "moved-output-swing"
     | "signal-offset"
     | "pitch-pickups"
-    | "exhaust";
+    | "exhaust"
+    | "per-branch";
 
 /**
  * What qualifies a clock beyond its family. `output-swings` and `hands-brought-in` are carried by every clock (its count is

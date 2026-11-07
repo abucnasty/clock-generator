@@ -14,7 +14,7 @@ import { CLOCK_STARTS } from "../start-dependence";
 import { TargetProductionRate } from "../target-production-rate";
 import { backpressureLossVerdictOf, clockVerificationSignature, startDependenceVerdictOf } from "../trial";
 import { canonicalVerificationJson } from "../verification-signature";
-import { finishedClock, groupedClockRank, groupedHandsPlan, GroupedHandsNotApplicable, holdsWithMargin } from "./grouped-hands";
+import { finishedClock, groupedClockRank, groupedHandsPlan, GroupedHandsNotApplicable, holdsWithMargin, offerWay } from "./grouped-hands";
 import { constructPrimitiveGroupedHands } from "./primitive-grouped-hands";
 
 export interface VerifiedPrimitiveGroupedResult {
@@ -106,6 +106,7 @@ export function verifiedPrimitiveGroupedClock(
         event.stage = "as-built";
         const left_open = new Map<string, AlwaysOnReason>(built.busy.map(id => [id, { kind: "busy", period_ticks: construction.period_ticks }]));
         let result = finishedClock(made, windows, grouped.turns, { ...options, loop_windows: false }, left_open, room);
+        offerWay(`primitive ${attempt.options.feeder_offset === 1 ? "compact" : "staged"}${attempt.options.surplus_guard === true ? " with the surplus guard" : ""}`, result, grouped.guarded);
         const policy: PrimitiveGroupedPolicy = { strategy: "primitive-grouped", trigger,
             requested_terminal_swing_count, terminal_swing_count: construction.terminal_swing_count, grouped_cycles: construction.grouped_cycles,
             construction_key: key, options: { ...attempt.options, share_windows: false }, loop_refinement: false };

@@ -122,7 +122,8 @@ describe("request-local duplicate verification", () => {
         const recovery = vi.spyOn(trial, "backpressureLossVerdictOf");
         // the plan leaves the fractional task out here, as one that makes the primary clock again: made anyway, it is that duplicate
         const duplicate = runClockAlternativeTask(military, {...plan.context, fractional_is_primary: undefined}, "fractional", {logger: quiet}, [plan.primary!.signature]);
-        expect(duplicate).toEqual({signature: plan.primary!.signature, alternatives: []});
+        // it lists nothing, and still carries the clocks it made as parts of the per-branch clock
+        expect({...duplicate, parts: undefined}).toEqual({signature: plan.primary!.signature, alternatives: [], parts: undefined});
         // its run tries the clocks it chooses its windows between (generate-clock.ts), the primary's among them on this
         // build; the assessment of the duplicate is what it skips, so it tries fewer than the same task not told of the primary
         const skipping = recovery.mock.calls.length;

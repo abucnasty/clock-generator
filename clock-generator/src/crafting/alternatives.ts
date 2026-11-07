@@ -28,7 +28,9 @@ import { generateClockForConfig, generateClockWithSwingBackoff, terminalCountFor
 import { primitiveGroupedOptionsSupported, verifiedPrimitiveGroupedClock } from "./candidates/verified-primitive-grouped";
 import { primitiveGroupedConfigSupported } from "./candidates/primitive-grouped-hands";
 import { MAX_OBSERVED_WINDOWS_PERIOD_TICKS, swingCountsListed } from "./planner/periods";
-import { SecondaryPlanningInvariantError, secondaryPlanningCountOf, withSecondaryPlanningProvenance, type SecondaryPlanningCount } from "./primitive-grouped-policy";
+import { SecondaryPlanningInvariantError, secondaryPlanningCountOf, verificationPlanningConfigOf, withSecondaryPlanningProvenance, type SecondaryPlanningCount } from "./primitive-grouped-policy";
+import { collectingParts, perBranchInputOf, type PerBranchInput, type PerBranchPart } from "./candidates/per-branch-parts";
+import { perBranchClock } from "./candidates/per-branch";
 import { BlueprintGenerationResult, GenerateClockOptions, SimulationStabilityCheck, fractionalStartOf, fractionalSwingsOf } from "./plan/plan-run";
 import { EntityTransferCountMap } from "./sequence/cycle/swing-counts";
 import { withRunMemo } from "./plan/run-memo";
@@ -110,6 +112,11 @@ export interface ClockAlternativeRun<T = ClockAlternative> {
     alternatives: T[];
     /** Runs of the same clock made with shared windows (see `SHARED_WINDOWS_NOTE`), listed after this run when it is */
     also?: ClockAlternativeRun<T>[];
+    /**
+     * The clocks this run made, listed or not, as parts of the per-branch clock (per-branch-parts.ts): its alternatives and the
+     * ways of the constructions it ran. Absent on a run that made none.
+     */
+    parts?: PerBranchPart[];
 }
 
 /** What the remaining alternatives need from the first (batched swings) run */
@@ -144,6 +151,11 @@ export interface ClockAlternativeTask {
      * `searchesAreNeeded` says so of every run before it, theirs included. It is not listed among the skipped searches.
      */
     fallback?: boolean;
+    /**
+     * The per-branch clock: made last, from the parts of every run before it and the clock they recommend
+     * (`perBranchInputOf`), by `runPerBranchTask`, not by `runClockAlternativeTask`. It is not a search and not a fallback.
+     */
+    per_branch?: true;
 }
 
 
@@ -689,11 +701,42 @@ function runAlternative(
     on_not_made?: (clock: NotMadeClock) => void,
     settle_unstable?: boolean,
 ): ClockAlternativeRun | null {
-    const run = runAlternativeOf(definition, config, logger, report, assessed, verification_cache, on_not_made, settle_unstable);
-    if (run === null) return run;
-    const per_hand = perHandRun(definition, run, config, logger, report, assessed, verification_cache, settle_unstable);
-    const with_per_hand = per_hand === null ? run : { ...run, also: [...(run.also ?? []), per_hand] };
-    return sharedRun(definition, with_per_hand, config, logger, report, assessed, verification_cache, settle_unstable);
+    const { value: made, parts } = collectingParts(() => {
+        const run = runAlternativeOf(definition, config, logger, report, assessed, verification_cache, on_not_made, settle_unstable);
+        if (run === null) return run;
+        const per_hand = perHandRun(definition, run, config, logger, report, assessed, verification_cache, settle_unstable);
+        const with_per_hand = per_hand === null ? run : { ...run, also: [...(run.also ?? []), per_hand] };
+        return sharedRun(definition, with_per_hand, config, logger, report, assessed, verification_cache, settle_unstable);
+    });
+    return made === null ? null : withParts(made, config, parts);
+}
+
+/**
+ * A run with its parts for the per-branch clock (`ClockAlternativeRun.parts`): every alternative it lists, its own and those of
+ * the runs listed after it, then the ways the constructions offered while it ran (`ways`)
+ */
+function withParts(run: ClockAlternativeRun, config: Config, ways: readonly PerBranchPart[]): ClockAlternativeRun {
+    const listed: ClockAlternative[] = [];
+    const walk = (it: ClockAlternativeRun) => { listed.push(...it.alternatives); it.also?.forEach(walk); };
+    walk(run);
+    const parts = [...listed.map(alternative => alternativePart(config, alternative)), ...ways,
+        ...(run.parts ?? []).filter(part => part.alternative_id === undefined)];
+    return parts.length === 0 ? run : { ...run, parts };
+}
+
+/** An alternative as a part of the per-branch clock, with how its clock is planned */
+function alternativePart(config: Config, alternative: ClockAlternative): PerBranchPart {
+    const { result } = alternative;
+    const { overrides } = verificationPlanningConfigOf(config, result);
+    return {
+        name: alternative.id, alternative_id: alternative.id, verdict: alternative.verdict,
+        period_ticks: result.simulation_duration.ticks, windows: result.clock_windows,
+        counted: result.stability_check.as_built?.wake_ups !== undefined,
+        ...(result.always_on_reasons !== undefined && { always_on: result.always_on_reasons }),
+        plan: { ...(overrides?.terminal_swing_count !== undefined && { terminal_swing_count: overrides.terminal_swing_count }),
+            ...(overrides?.lcm !== undefined && { lcm: overrides.lcm }),
+            ...(fractionalSwingsOf(result.crafting_cycle_plan).fractional_swings === true && { fractional_swings: true as const }) },
+    };
 }
 
 /**
@@ -1113,7 +1156,8 @@ function planPrimaryAndTasks(
     on_tasks?: (context: ClockAlternativeContext, tasks: ClockAlternativeTask[], primary_signature: string) => void,
 ): ClockAlternativesPlan {
     const logger = options.logger ?? defaultLogger;
-    const definition = primaryDefinition(config, options, options.on_progress_detail);
+    // the primary clock is made here, before its run: the ways its constructions offer are the primary run's parts
+    const { value: definition, parts: primary_ways } = collectingParts(() => primaryDefinition(config, options, options.on_progress_detail));
     const result = definition.run();
     // once a generation; where it goes changes no result, since the coverage check reads the game data itself when it comes first
     warnUncalibratedBeltPickups(config, logger);
@@ -1139,14 +1183,14 @@ function planPrimaryAndTasks(
         ...(result.result_windows !== undefined && { result_windows: true }),
         ...(fractionalMakesThePrimary(config, definition, result) && { fractional_is_primary: true as const }),
     };
-    const tasks = alternativeDefinitions(config, context, {})
+    const tasks: ClockAlternativeTask[] = [...alternativeDefinitions(config, context, {})
         .map(definition => ({
             id: definition.id, label: definition.label, only_when_needed: onlyWhenNeeded(definition, config),
             ...(definition.fallback === true ? { fallback: true } : {}),
-        }));
+        })), { id: PER_BRANCH_ID, label: PER_BRANCH_LABEL, only_when_needed: false, per_branch: true }];
     on_tasks?.(context, tasks, clockVerificationSignature(config, result));
     const primary_run = runAlternative(primary, config, logger, options.on_progress_detail, undefined, undefined, options.on_not_made);
-    return { primary: primary_run, context, tasks };
+    return { primary: primary_run === null ? null : withParts(primary_run, config, primary_ways), context, tasks };
 }
 
 /**
@@ -1211,6 +1255,42 @@ function runTask(
         .find(it => it.id === task_id);
     assert(definition !== undefined, `Unknown clock alternative task "${task_id}"`);
     return runAlternative(definition, config, logger, options.on_progress_detail, new Set(assessed_signatures), undefined, options.on_not_made, !context.primary_stable);
+}
+
+/** The id of the per-branch clock (DESIGN D7) */
+export const PER_BRANCH_ID = "per-branch";
+const PER_BRANCH_LABEL = "Coordinated parts";
+const PER_BRANCH_DESCRIPTION = "Each part of the build gets the enable windows of the clock that fits it, all on one shared window cycle. "
+    + "The inserters that take from one machine, belt or chest take their enable windows from one of the other clocks made for the "
+    + "build, chosen one group at a time from the output upstream by the wakeups of the whole clock, until no group changes.";
+
+/**
+ * Makes the per-branch clock (candidates/per-branch.ts) from the parts of the runs before it and the clock they recommend
+ * (`perBranchInputOf`), checked as every alternative is; listed only where it is stable and another clock than those runs'
+ * (`assessed_signatures`). Null where there is nothing to compose: it is not a clock that could not be made.
+ */
+export function runPerBranchTask(
+    config: Config,
+    input: PerBranchInput,
+    options: GenerateClockOptions = {},
+    assessed_signatures: readonly string[] = [],
+): ClockAlternativeRun | null {
+    return withRunMemo(() => {
+        const logger = options.logger ?? defaultLogger;
+        const quiet = quietOptions(options, logger, options.on_progress_detail);
+        const run = runAlternativeOf({ id: PER_BRANCH_ID, label: PER_BRANCH_LABEL, description: PER_BRANCH_DESCRIPTION, family: "per-branch",
+            run: () => perBranchClock(config, input, { ...quiet, logger }) }, config, logger, options.on_progress_detail, new Set(assessed_signatures), undefined, undefined, false);
+        const listed = run?.alternatives.filter(it => it.verdict === "stable") ?? [];
+        return run === null || listed.length === 0 ? null : { ...run, alternatives: listed };
+    });
+}
+
+/** The signatures of every run and the runs listed after it, for a run that must not make one of their clocks again */
+function signaturesOf(runs: readonly (ClockAlternativeRun | null)[]): string[] {
+    const out: string[] = [];
+    const walk = (run: ClockAlternativeRun) => { out.push(run.signature); run.also?.forEach(walk); };
+    for (const run of runs) if (run !== null) walk(run);
+    return out;
 }
 
 /** The start dependence of a build's clocks in a line: that it was not checked, or which clocks depend on the start */
@@ -1314,6 +1394,16 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
     if (fallbacks.length > 0 && searchesAreNeeded(runs, it => it.ranking)) {
         total += fallbacks.length;
         generate(fallbacks);
+    }
+    // and after every other clock, the per-branch clock, composed from their parts on the period of the one they recommend
+    const so_far = combineClockAlternativeRuns(runs, it => it.ranking);
+    const recommended = so_far.alternatives[so_far.selected_index];
+    if (recommended !== undefined) {
+        current_step = PER_BRANCH_LABEL;
+        total++;
+        report();
+        runs.push(runPerBranchTask(config, perBranchInputOf(runs, recommended.id), { ...options, on_progress_detail: report }, signaturesOf(runs)));
+        completed++;
     }
 
     current_step = "Done";
